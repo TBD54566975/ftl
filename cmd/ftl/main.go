@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -36,4 +37,6 @@ func main() {
 
 	logger := log.New(cli.LogConfig, os.Stderr)
 	ctx = log.ContextWithLogger(ctx, logger)
+
+	fmt.Println(ctx)
 }
