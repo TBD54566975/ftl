@@ -17,13 +17,14 @@ import (
 	"golang.org/x/mod/modfile"
 	"golang.org/x/tools/go/packages"
 
+	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
 )
 
 var fset = token.NewFileSet()
 
 type Config struct {
-	Watch     bool   `negatable:"" help:"Watch for and reload on changes."`
+	Live      bool   `negatable:"" default:"true" help:"Enable live reloading."`
 	FTLSource string `type:"existingdir" help:"Path to FTL source code when developing locally."`
 	Dir       string `arg:"" type:"existingdir" help:"Directory of FTL functions."`
 }
@@ -56,20 +57,11 @@ func Serve(ctx context.Context, config Config) error {
 		return errors.Wrap(err, "go mod tidy")
 	}
 
-	if config.Watch {
-		watcher, err := fsnotify.NewWatcher()
+	if config.Live {
+		err = watchLoop(ctx, scratchDir, root)
 		if err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "watch loop")
 		}
-
-		err = watcher.Add(config.Dir)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		cmd := exec.Command("go", "run", ".")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Dir = scratchDir
 	} else {
 		err = execInRoot(scratchDir, "go", "run", ".")
 		if err != nil {
@@ -77,6 +69,48 @@ func Serve(ctx context.Context, config Config) error {
 		}
 	}
 	return nil
+}
+
+func watchLoop(ctx context.Context, scratchDir, root string) error {
+	logger := log.FromContext(ctx)
+	logger.Info("Live reloading")
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	err = watcher.Add(root)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for {
+		ctx, cancel := context.WithCancel(ctx) //nolint:govet
+		logger.Info("Restarting FTL.drive-go...")
+		cmd := exec.CommandContext(ctx, "go", "run", ".")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Dir = scratchDir
+		err = cmd.Start()
+		if err != nil {
+			cancel()
+			return errors.WithStack(err)
+		}
+
+	skip:
+		select {
+		case <-ctx.Done():
+			cancel()
+			_ = cmd.Wait()
+			return nil
+
+		case ev := <-watcher.Events:
+			if ev.Op == fsnotify.Chmod {
+				goto skip
+			}
+			cancel()
+			_ = cmd.Wait()
+		}
+	}
 }
 
 func execInRoot(root string, command string, args ...string) error {
