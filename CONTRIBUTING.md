@@ -25,7 +25,7 @@ $ . ./bin/activate-hermit
 > **Tip:** Install Hermit's [shell hooks](https://cashapp.github.io/hermit/usage/shell/) to automatically activate Hermit environments when you `cd` into them.
 
 
-If using [GoLand](https://www.jetbrains.com/go/) we highly recommend installing
+If using an IDEA IDE  we highly recommend installing
 the Hermit [IDEA plugin](https://plugins.jetbrains.com/plugin/16882-hermit).
 For most other editors, starting your editor from within a terminal in an
 activated Hermit environment is the best way to ensure the editor's environment
@@ -35,6 +35,14 @@ variables are correctly set. eg. for VSCode:
 $ . ./bin/activate-hermit
 $ code .
 ```
+
+Once the Hermit environment is activated you can type the following to start a
+hot-reloading ftl agent:
+
+```
+$ make dev
+```
+
 
 ## Communications
 
