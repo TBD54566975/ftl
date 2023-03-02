@@ -1,18 +1,23 @@
 package xyz.block.ftl.drive
 
+import com.squareup.ftldemo.Order
+import com.squareup.ftldemo.makePizza
 import jakarta.servlet.http.HttpServlet
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpServletResponse.SC_OK
+import xyz.block.ftl.drive.verb.VerbCassette
 
 class DriveServlet : HttpServlet() {
-  override fun doGet(req: HttpServletRequest?, response: HttpServletResponse?) {
+  private val cassette = VerbCassette(::makePizza)
+
+  override fun doGet(request: HttpServletRequest?, response: HttpServletResponse?) {
     response!!.apply {
       contentType = "text/html"
       status = SC_OK
-      writer.println("Faster Than Light!")
-      
-      // invoke Verb function here.
+
+      // Use format adapters here to translate the request
+      writer.println(cassette.invokeVerb(Order(request!!.getParameter("topping"))))
     }
   }
 }
