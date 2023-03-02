@@ -16,9 +16,13 @@ type Config struct {
 	JSON       bool       `help:"Log in JSON format."`
 }
 
-// FromContext retrieves the current logger from the context.
+// FromContext retrieves the current logger from the context or panics
 func FromContext(ctx context.Context) *slog.Logger {
-	return ctx.Value(contextKey).(*slog.Logger) //nolint:forcetypeassert
+	logger, ok := ctx.Value(contextKey).(*slog.Logger)
+	if ok {
+		return logger
+	}
+	panic("no logger in context")
 }
 
 // ContextWithLogger returns a new context with the given logger attached. Use

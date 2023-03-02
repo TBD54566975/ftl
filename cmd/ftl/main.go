@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,14 +15,14 @@ var version = "dev"
 var cli struct {
 	Version   kong.VersionFlag `help:"Show version information."`
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
+
+	Serve serveCmd `cmd:"" help:"Serve a directory of FTL functions."`
 }
 
 func main() {
-	kong.Parse(&cli,
+	kctx := kong.Parse(&cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
-		kong.HelpOptions{
-			Compact: true,
-		},
+		kong.UsageOnError(),
 		kong.Vars{
 			"version": version,
 		},
@@ -38,5 +37,8 @@ func main() {
 	logger := log.New(cli.LogConfig, os.Stderr)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	fmt.Println(ctx)
+	kctx.BindTo(ctx, (*context.Context)(nil))
+
+	err := kctx.Run(ctx)
+	kctx.FatalIfErrorf(err)
 }

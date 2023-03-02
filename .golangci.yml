@@ -62,6 +62,7 @@ linters:
     - structcheck # doesn't support generics
     - rowserrcheck # doesn't support generics
     - wastedassign # doesn't support generics
+    - goprintffuncname
 
 linters-settings:
   exhaustive:
