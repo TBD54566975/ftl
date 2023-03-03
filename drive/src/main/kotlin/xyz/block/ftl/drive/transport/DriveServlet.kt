@@ -1,4 +1,4 @@
-package xyz.block.ftl.drive
+package xyz.block.ftl.drive.transport
 
 import jakarta.servlet.http.HttpServlet
 import jakarta.servlet.http.HttpServletRequest
