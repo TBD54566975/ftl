@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/alecthomas/kong v0.7.1
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
+	golang.org/x/sync v0.1.0
 	golang.org/x/tools v0.6.0
 )
 
@@ -16,6 +17,7 @@ require (
 require (
 	github.com/alecthomas/assert/v2 v2.2.1
 	github.com/alecthomas/errors v0.0.0-20220327075322-0d29a5bc3d07
+	github.com/cloudflare/tableflip v1.2.3
 	github.com/fsnotify/fsnotify v1.6.0
 	golang.org/x/mod v0.8.0
 	golang.org/x/sys v0.5.0 // indirect

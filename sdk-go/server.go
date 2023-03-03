@@ -6,28 +6,61 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"reflect"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/alecthomas/errors"
+	"github.com/cloudflare/tableflip"
 
 	"github.com/TBD54566975/ftl/common/log"
 )
 
 // Serve starts a hot swappable HTTP server.
-func Serve(ctx context.Context, handler http.Handler) error {
+func Serve(ctx context.Context, handler http.Handler) {
+	upg, err := tableflip.New(tableflip.Options{})
+	if err != nil {
+		panic(err)
+	}
+	defer upg.Stop()
+
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGHUP)
+		for range sig {
+			err = upg.Upgrade()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}()
+
+	l, err := upg.Listen("tcp", "127.0.0.1:8080")
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close() //nolint:gosec
+
 	srv := http.Server{
 		Handler:     handler,
 		Addr:        "127.0.0.1:8080",
 		BaseContext: func(_ net.Listener) context.Context { return ctx },
 		ReadTimeout: time.Minute * 5,
 	}
-	err := srv.ListenAndServe()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return errors.WithStack(err)
+
+	go func() {
+		err := srv.Serve(l)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			panic(err)
+		}
+	}()
+	if err := upg.Ready(); err != nil {
+		panic(err)
 	}
-	return nil
+	<-upg.Exit()
 }
 
 // Handler converts a Verb function into a http.Handler.

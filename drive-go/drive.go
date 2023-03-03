@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/alecthomas/errors"
 	"github.com/fsnotify/fsnotify"
@@ -20,8 +21,6 @@ import (
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
 )
-
-var fset = token.NewFileSet()
 
 type Config struct {
 	Live      bool   `negatable:"" default:"true" help:"Enable live reloading."`
@@ -43,27 +42,23 @@ func Serve(ctx context.Context, config Config) error {
 	root := filepath.Dir(goModFile)
 
 	scratchDir := filepath.Join(root, ".ftl-drive-go")
+	_ = os.RemoveAll(scratchDir)
 	err = os.MkdirAll(scratchDir, 0750)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	err = writeMain(root, scratchDir, module, config.FTLSource, config)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	err = execInRoot(scratchDir, "go", "mod", "tidy")
-	if err != nil {
-		return errors.Wrap(err, "go mod tidy")
-	}
-
 	if config.Live {
-		err = watchLoop(ctx, scratchDir, root)
+		err = watchLoop(ctx, scratchDir, root, module, config)
 		if err != nil {
 			return errors.Wrap(err, "watch loop")
 		}
 	} else {
-		err = execInRoot(scratchDir, "go", "run", ".")
+		err = writeMain(root, scratchDir, module, config)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		err = execInRoot(ctx, scratchDir, "go", "run", ".")
 		if err != nil {
 			return errors.Wrap(err, "go run")
 		}
@@ -71,7 +66,7 @@ func Serve(ctx context.Context, config Config) error {
 	return nil
 }
 
-func watchLoop(ctx context.Context, scratchDir, root string) error {
+func watchLoop(ctx context.Context, scratchDir, root, module string, config Config) error {
 	logger := log.FromContext(ctx)
 	logger.Info("Live reloading")
 	watcher, err := fsnotify.NewWatcher()
@@ -83,45 +78,79 @@ func watchLoop(ctx context.Context, scratchDir, root string) error {
 		return errors.WithStack(err)
 	}
 
-	for {
-		ctx, cancel := context.WithCancel(ctx) //nolint:govet
-		logger.Info("Restarting FTL.drive-go...")
-		cmd := exec.CommandContext(ctx, "go", "run", ".")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Dir = scratchDir
-		err = cmd.Start()
+	rebuild := func() error {
+		err = writeMain(root, scratchDir, module, config)
 		if err != nil {
-			cancel()
+			return errors.WithStack(err)
+		}
+		logger.Info("Restarting FTL.drive-go...")
+		err := execInRoot(ctx, scratchDir, "go", "mod", "tidy")
+		if err != nil {
 			return errors.WithStack(err)
 		}
 
-	skip:
+		err = execInRoot(ctx, scratchDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", "ftl-drive-go")
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		return nil
+	}
+
+	err = rebuild()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	cmd := cmdInRoot(ctx, scratchDir, "./ftl-drive-go")
+	err = cmd.Start()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for {
 		select {
 		case <-ctx.Done():
-			cancel()
+			killCmd(cmd, syscall.SIGKILL)
 			_ = cmd.Wait()
 			return nil
 
 		case ev := <-watcher.Events:
 			if ev.Op == fsnotify.Chmod {
-				goto skip
+				break
 			}
-			cancel()
-			_ = cmd.Wait()
+			logger.Info("Change detected, restarting", "path", ev.Name)
+			err := rebuild()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			killCmd(cmd, syscall.SIGHUP)
 		}
 	}
 }
 
-func execInRoot(root string, command string, args ...string) error {
-	cmd := exec.Command(command, args...)
+func killCmd(cmd *exec.Cmd, signal syscall.Signal) {
+	if cmd != nil && cmd.Process != nil {
+		_ = syscall.Kill(-cmd.Process.Pid, signal)
+	}
+}
+
+func cmdInRoot(ctx context.Context, root, command string, args ...string) *exec.Cmd {
+	log.FromContext(ctx).Debug("exec", "command", fmt.Sprintf("%s %s", command, strings.Join(args, " ")))
+	cmd := exec.CommandContext(ctx, command, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
 	cmd.Dir = root
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	return cmd
+}
+
+func execInRoot(ctx context.Context, root string, command string, args ...string) error {
+	cmd := cmdInRoot(ctx, root, command, args...)
 	return errors.WithStack(cmd.Run())
 }
 
-func writeMain(root, scratchDir, module, ftlSource string, config Config) error {
+func writeMain(root, scratchDir, module string, config Config) error {
 	w, err := generate(config)
 	if err != nil {
 		return errors.WithStack(err)
@@ -145,16 +174,15 @@ func writeMain(root, scratchDir, module, ftlSource string, config Config) error 
 	fmt.Fprintf(goMod, "module main\n")
 	fmt.Fprintf(goMod, "require %s v0.0.0\n", module)
 	fmt.Fprintf(goMod, "replace %s => %s\n", module, root)
-	modules := map[string]string{module: root}
-	if ftlSource != "" {
+	if config.FTLSource != "" {
 		fmt.Fprintf(goMod, "require github.com/TBD54566975/ftl v0.0.0\n")
-		fmt.Fprintf(goMod, "replace github.com/TBD54566975/ftl => %s\n", ftlSource)
-		modules["github.com/TBD54566975/ftl"] = ftlSource
+		fmt.Fprintf(goMod, "replace github.com/TBD54566975/ftl => %s\n", config.FTLSource)
 	}
 	return nil
 }
 
 func generate(config Config) (*codewriter.Writer, error) {
+	fset := token.NewFileSet()
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  config.Dir,
 		Fset: fset,
