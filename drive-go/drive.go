@@ -120,7 +120,8 @@ func watchLoop(ctx context.Context, scratchDir, root, module string, config Conf
 			logger.Info("Change detected, restarting", "path", ev.Name)
 			err := rebuild()
 			if err != nil {
-				return errors.WithStack(err)
+				logger.Error("Failed to rebuild", err)
+				continue
 			}
 			killCmd(cmd, syscall.SIGHUP)
 		}
