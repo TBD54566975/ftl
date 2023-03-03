@@ -25,7 +25,6 @@ func Serve(ctx context.Context, handler http.Handler) {
 	if err != nil {
 		panic(err)
 	}
-	defer upg.Stop()
 
 	go func() {
 		sig := make(chan os.Signal, 1)
@@ -42,7 +41,6 @@ func Serve(ctx context.Context, handler http.Handler) {
 	if err != nil {
 		panic(err)
 	}
-	defer l.Close() //nolint:gosec
 
 	srv := http.Server{
 		Handler:     handler,
@@ -61,6 +59,7 @@ func Serve(ctx context.Context, handler http.Handler) {
 		panic(err)
 	}
 	<-upg.Exit()
+	os.Exit(0)
 }
 
 // Handler converts a Verb function into a http.Handler.
