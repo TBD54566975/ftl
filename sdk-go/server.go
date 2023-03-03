@@ -21,6 +21,7 @@ import (
 
 // Serve starts a hot swappable HTTP server.
 func Serve(ctx context.Context, handler http.Handler) {
+	logger := log.FromContext(ctx)
 	upg, err := tableflip.New(tableflip.Options{})
 	if err != nil {
 		panic(err)
@@ -59,7 +60,13 @@ func Serve(ctx context.Context, handler http.Handler) {
 		panic(err)
 	}
 	<-upg.Exit()
-	os.Exit(0)
+	time.AfterFunc(30*time.Second, func() {
+		logger.Info("Graceful shutdown timed out")
+		os.Exit(1)
+	})
+
+	// Wait for connections to drain.
+	_ = srv.Shutdown(context.Background())
 }
 
 // Handler converts a Verb function into a http.Handler.
