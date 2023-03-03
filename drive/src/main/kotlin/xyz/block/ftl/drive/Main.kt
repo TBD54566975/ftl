@@ -5,7 +5,7 @@ import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.servlet.ServletHandler
 
 fun main(args: Array<String>) {
-  println("Starting FTL Drive...")
+  println("Warming up dilithium chamber...")
 
   val server = Server()
   server.connectors = arrayOf(ServerConnector(server).apply {

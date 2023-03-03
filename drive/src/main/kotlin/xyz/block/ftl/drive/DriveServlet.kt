@@ -1,23 +1,32 @@
 package xyz.block.ftl.drive
 
-import com.squareup.ftldemo.Order
-import com.squareup.ftldemo.makePizza
 import jakarta.servlet.http.HttpServlet
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpServletResponse.SC_OK
-import xyz.block.ftl.drive.verb.VerbCassette
+import xyz.block.ftl.drive.adapter.JsonAdapter
+import xyz.block.ftl.drive.verb.VerbDeck
 
 class DriveServlet : HttpServlet() {
-  private val cassette = VerbCassette(::makePizza)
+  private val deck = VerbDeck()
+  private val jsonAdapter = JsonAdapter()
 
-  override fun doGet(request: HttpServletRequest?, response: HttpServletResponse?) {
+  override fun doPost(request: HttpServletRequest?, response: HttpServletResponse?) {
     response!!.apply {
-      contentType = "text/html"
+      contentType = "application/json"
       status = SC_OK
 
-      // Use format adapters here to translate the request
-      writer.println(cassette.invokeVerb(Order(request!!.getParameter("topping"))))
+      // Simple janky mapping between request URI and verb name
+      val name = request!!.requestURI.substring(1)
+      val cassette = deck.lookup(name)
+      checkNotNull(cassette) { "No such verb available: ${name}" }
+
+      // Use "Connectors" as a layer between http and the verb deck
+      val input = jsonAdapter.readAs(request.reader, cassette.argumentType)
+
+      val output = cassette.invokeVerb(input)
+
+      jsonAdapter.write(output, response.writer)
     }
   }
 }
