@@ -7,157 +7,170 @@ import (
 	"go/token"
 	"go/types"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
-	"github.com/fsnotify/fsnotify"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/tools/go/packages"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
+	"github.com/TBD54566975/ftl/internal/exec"
+	ftlv1 "github.com/TBD54566975/ftl/internal/gen/xyz/block/ftl/v1"
 )
 
 type Config struct {
-	Live      bool   `negatable:"" default:"true" help:"Enable live reloading."`
-	FTLSource string `type:"existingdir" help:"Path to FTL source code when developing locally."`
-	Dir       string `arg:"" type:"existingdir" help:"Directory of FTL functions."`
+	FTLSource  string `env:"FTL_SOURCE" type:"existingdir" help:"Path to FTL source code when developing locally."`
+	WorkingDir string `required:"" type:"existingdir" env:"FTL_WORKING_DIR" help:"Working directory for FTL runtime."`
+	Dir        string `required:"" type:"existingdir" env:"FTL_DRIVE_ROOT" help:"Directory of Go FTL functions."`
 }
 
-// Serve a directory of FTL functions.
-func Serve(ctx context.Context, config Config) error {
-	goModFile, err := findGoModuleFile(config.Dir)
+// New creates a new DriveService for a directory of Go Verbs.
+func New(ctx context.Context, config Config) (ftlv1.DriveServiceServer, error) {
+	logger := log.FromContext(ctx)
+	goModFile := filepath.Join(config.Dir, "go.mod")
+	_, err := os.Stat(goModFile)
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.Wrapf(err, "go.mod not found in %s", config.Dir)
 	}
 	module, err := findGoModule(goModFile)
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 
-	root := filepath.Dir(goModFile)
+	d := &driveServer{
+		Config: config,
+		module: module,
+		cmd:    atomic.New[*exec.Cmd](nil),
+	}
 
-	scratchDir := filepath.Join(root, ".ftl-drive-go")
-	_ = os.RemoveAll(scratchDir)
-	err = os.MkdirAll(scratchDir, 0750)
+	logger.Info("Starting FTL.module")
+
+	// Build and start the sub-process.
+	d.cmd.Store(d.newModuleCmd(ctx))
+	err = d.rebuild(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	finished := make(chan error, 1)
+	go func() { finished <- d.cmd.Load().Run() }()
+
+	socket := filepath.Join(d.WorkingDir, "module.sock")
+
+	dialCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(dialCtx, "unix://"+socket,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info("FTL.module online", "dir", d.Dir)
+
+	d.client = ftlv1.NewModuleServiceClient(conn)
+
+	_, err = d.client.Ping(ctx, &ftlv1.PingRequest{})
+	if err != nil {
+		panic(err)
+	}
+	if err != nil {
+		panic(err)
+	}
+
+	go d.restartModuleOnExit(ctx, finished)
+	return d, nil
+}
+
+type driveServer struct {
+	Config
+	module string
+	client ftlv1.ModuleServiceClient
+	cmd    *atomic.Value[*exec.Cmd]
+}
+
+func (d *driveServer) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
+	return d.client.Call(ctx, req)
+}
+
+func (d *driveServer) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
+	err := d.cmd.Load().Kill(syscall.SIGHUP)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &ftlv1.FileChangeResponse{}, d.rebuild(ctx)
+}
+
+func (*driveServer) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
+	return &ftlv1.PingResponse{}, nil
+}
+
+// Restart the FTL hot reload module if it terminates unexpectedly.
+func (d *driveServer) restartModuleOnExit(ctx context.Context, finished chan error) {
+	logger := log.FromContext(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			_ = d.cmd.Load().Kill(syscall.SIGTERM)
+			return
+
+		case err := <-finished:
+			logger.Warn("FTL module exited, restarting in 1s", "err", err)
+			time.Sleep(time.Second)
+			cmd := d.newModuleCmd(ctx)
+			go func() { finished <- d.cmd.Load().Run() }()
+			d.cmd.Store(cmd)
+		}
+	}
+}
+
+func (d *driveServer) newModuleCmd(ctx context.Context) *exec.Cmd {
+	socket := filepath.Join(d.WorkingDir, "module.sock")
+	cmd := exec.Command(ctx, d.WorkingDir, filepath.Join(d.WorkingDir, "ftl-module"))
+	cmd.Env = append(cmd.Env, "FTL_MODULE_SOCKET="+socket)
+	return cmd
+}
+
+func (d *driveServer) rebuild(ctx context.Context) error {
+	logger := log.FromContext(ctx)
+	err := writeMain(d.Dir, d.WorkingDir, d.module, d.Config)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	logger.Info("Restarting FTL.drive-go...")
+	err = execInRoot(ctx, d.WorkingDir, "go", "mod", "tidy")
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	if config.Live {
-		err = watchLoop(ctx, scratchDir, root, module, config)
-		if err != nil {
-			return errors.Wrap(err, "watch loop")
-		}
-	} else {
-		err = writeMain(root, scratchDir, module, config)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		err = execInRoot(ctx, scratchDir, "go", "run", ".")
-		if err != nil {
-			return errors.Wrap(err, "go run")
-		}
+	err = execInRoot(ctx, d.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", "ftl-module")
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	return nil
 }
 
-func watchLoop(ctx context.Context, scratchDir, root, module string, config Config) error {
-	logger := log.FromContext(ctx)
-	logger.Info("Live reloading")
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	err = watcher.Add(root)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	rebuild := func() error {
-		err = writeMain(root, scratchDir, module, config)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		logger.Info("Restarting FTL.drive-go...")
-		err := execInRoot(ctx, scratchDir, "go", "mod", "tidy")
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		err = execInRoot(ctx, scratchDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", "ftl-drive-go")
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		return nil
-	}
-
-	err = rebuild()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	cmd := cmdInRoot(ctx, scratchDir, "./ftl-drive-go")
-	err = cmd.Start()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			killCmd(cmd, syscall.SIGKILL)
-			_ = cmd.Wait()
-			return nil
-
-		case ev := <-watcher.Events:
-			if ev.Op == fsnotify.Chmod {
-				break
-			}
-			logger.Info("Change detected, restarting", "path", ev.Name)
-			err := rebuild()
-			if err != nil {
-				logger.Error("Failed to rebuild", err)
-				continue
-			}
-			killCmd(cmd, syscall.SIGHUP)
-		}
-	}
-}
-
-func killCmd(cmd *exec.Cmd, signal syscall.Signal) {
-	if cmd != nil && cmd.Process != nil {
-		_ = syscall.Kill(-cmd.Process.Pid, signal)
-	}
-}
-
-func cmdInRoot(ctx context.Context, root, command string, args ...string) *exec.Cmd {
-	log.FromContext(ctx).Debug("exec", "command", fmt.Sprintf("%s %s", command, strings.Join(args, " ")))
-	cmd := exec.CommandContext(ctx, command, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
-	cmd.Dir = root
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd
-}
-
 func execInRoot(ctx context.Context, root string, command string, args ...string) error {
-	cmd := cmdInRoot(ctx, root, command, args...)
+	cmd := exec.Command(ctx, root, command, args...)
 	return errors.WithStack(cmd.Run())
 }
 
-func writeMain(root, scratchDir, module string, config Config) error {
+func writeMain(root, workDir, module string, config Config) error {
 	w, err := generate(config)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	main, err := os.Create(filepath.Join(scratchDir, "main.go"))
+	main, err := os.Create(filepath.Join(workDir, "main.go"))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -167,7 +180,7 @@ func writeMain(root, scratchDir, module string, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	goMod, err := os.Create(filepath.Join(scratchDir, "go.mod"))
+	goMod, err := os.Create(filepath.Join(workDir, "go.mod"))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -207,25 +220,25 @@ func generate(config Config) (*codewriter.Writer, error) {
 	w := codewriter.New("main")
 	w.Import("context")
 	w.Import("os")
-	w.Import("net/http")
 	w.Import("github.com/TBD54566975/ftl/sdk-go")
 	w.Import("github.com/TBD54566975/ftl/common/log")
 
 	w.L(`func main() {`)
 	w.In(func(w *codewriter.Writer) {
-		w.L(`logger := log.New(log.Config{}, os.Stderr)`)
+		w.L(`logger := log.New(log.Config{}, os.Stderr).With("C", "FTL.module")`)
 		w.L(`ctx := log.ContextWithLogger(context.Background(), logger)`)
-		w.L(`mux := http.NewServeMux()`)
-		w.L(`logger.Info("Starting FTL server on 127.0.0.1:8080")`)
+		w.L(`socket := os.Getenv("FTL_MODULE_SOCKET")`)
+		w.L(`if socket == "" { panic("FTL_MODULE_SOCKET not set") }`)
+		w.L(`logger.Info("Starting FTL server on " + socket)`)
+		w.L(`handlers := []sdkgo.Handler{}`)
 		for pkg, endpoints := range endpoints {
 			pkgImp := w.Import(pkg)
 			for _, endpoint := range endpoints {
-				w.L(`logger.Info("  Registering endpoint /%s.%s")`, pkg, endpoint.fn.Name())
-				w.L(`mux.Handle("/%s.%s", sdkgo.Handler(%s.%s))`, pkg, endpoint.fn.Name(), pkgImp, endpoint.fn.Name())
+				w.L(`logger.Info("  Registering endpoint %s.%s")`, pkg, endpoint.fn.Name())
+				w.L(`handlers = append(handlers, sdkgo.Handle(%s.%s))`, pkgImp, endpoint.fn.Name())
 			}
 		}
-		w.L(`mux.Handle("/", http.NotFoundHandler())`)
-		w.L(`sdkgo.Serve(ctx, mux)`)
+		w.L(`sdkgo.Serve(ctx, socket, handlers)`)
 	})
 
 	w.L(`}`)

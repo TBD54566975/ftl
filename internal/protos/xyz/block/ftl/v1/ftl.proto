@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1;
+
+option go_package = "github.com/TBD54566975/ftl/internal/gen/xyz/block/ftl/v1;ftlv1";
+
+message PingRequest {}
+message PingResponse {}
+
+message FileChangeRequest {
+  string path = 1;
+}
+message FileChangeResponse {}
+
+message CallRequest {
+  string verb = 1;
+  bytes body = 2;
+}
+message CallResponse {
+  message Error {
+    string message = 1;
+    // TODO: Richer error type.
+  }
+
+  oneof response {
+    bytes body = 1;
+    Error error = 2;
+  }
+}
+
+message ListRequest {}
+message ListResponse {
+  repeated string verbs = 1;
+}
+
+// DriveService is the service that provides language-specific development and
+// deployment functionality.
+//
+// The DriveService is responsible for hot reloading the ModuleService when code
+// changes, and passing Verb calls through.
+//
+// Each implementation of DriveService:
+//
+// - MUST serve the gRPC service on a Unix socket at the path specified by the
+//   FTL_DRIVE_SOCKET environment variable.
+// - Serve Verbs from the path specified by the FTL_DRIVE_ROOT environment
+//   variable.
+service DriveService {
+  // Ping the Drive for readiness.
+  rpc Ping(PingRequest) returns (PingResponse);
+
+  // FileChange is called when a file is changed.
+  //
+  // The Drive should hot reload the module if a change to the file warrants it.
+  rpc FileChange(FileChangeRequest) returns (FileChangeResponse);
+
+  // Call a Verb on the Drive.
+  rpc Call(CallRequest) returns (CallResponse);
+
+  // List the Verbs available on the Drive.
+  // rpc List(ListRequest) returns (ListResponse);
+}
+
+// ModuleService is an optional hot reloadable server managed by the
+// DriveService that may contain the user's Verbs.
+//
+// Optional because some languages may directly contain Verbs in the Drive.
+service ModuleService {
+  // Ping the Module for readiness.
+  rpc Ping(PingRequest) returns (PingResponse);
+
+  // Call a Verb on the Module.
+  rpc Call(CallRequest) returns (CallResponse);
+
+  // List the Verbs available on the Module.
+  // rpc List(ListRequest) returns (ListResponse);
+}

@@ -2,8 +2,11 @@ package log
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"os"
 
+	"github.com/mattn/go-isatty"
 	"golang.org/x/exp/slog"
 )
 
@@ -50,7 +53,81 @@ func New(config Config, w io.Writer) *slog.Logger {
 			}
 			return a
 		}
-		handler = loptions.NewTextHandler(w)
+		handler = &cliHandler{w: w, isaTTY: isatty.IsTerminal(os.Stdout.Fd()), level: config.Level}
 	}
 	return slog.New(handler)
+}
+
+var colours map[slog.Level]string = map[slog.Level]string{
+	slog.LevelDebug: "\x1b[34m", // Blue
+	slog.LevelInfo:  "\x1b[32m", // Green
+	slog.LevelWarn:  "\x1b[33m", // Yellow
+	slog.LevelError: "\x1b[31m", // Red
+}
+
+type cliHandler struct {
+	parent *cliHandler
+	group  string
+	attrs  []slog.Attr
+	w      io.Writer
+	level  slog.Level
+	isaTTY bool
+}
+
+func (c *cliHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return level >= c.level
+}
+
+func (c *cliHandler) Handle(ctx context.Context, record slog.Record) error {
+	if c.isaTTY {
+		fmt.Fprint(c.w, colours[record.Level]+"\x1b[1m")
+	}
+	fmt.Fprintf(c.w, "%s", record.Message)
+	if c.isaTTY {
+		fmt.Fprintf(c.w, "\x1b[0m")
+	}
+	for _, a := range c.allAttrs(record) {
+		c.printAttr(a)
+	}
+	if c.isaTTY {
+		fmt.Fprint(c.w, "\x1b[0m")
+	}
+	fmt.Fprintln(c.w)
+	return nil
+}
+
+func (c *cliHandler) allAttrs(record slog.Record) (attrs []slog.Attr) {
+	record.Attrs(func(a slog.Attr) {
+		attrs = append(attrs, a)
+	})
+	for p := c; p != nil; p = p.parent {
+		attrs = append(attrs, p.attrs...)
+	}
+	return attrs
+}
+
+func (c *cliHandler) printAttr(a slog.Attr) {
+	fmt.Fprint(c.w, " ")
+	if c.isaTTY {
+		fmt.Fprint(c.w, "\x1b[0m")
+	}
+	fmt.Fprintf(c.w, "%s", a.Key)
+	if c.isaTTY {
+		fmt.Fprintf(c.w, "\x1b[0m\x1b[2m")
+	}
+	fmt.Fprintf(c.w, "=%v", a.Value)
+}
+
+func (c *cliHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	out := *c
+	out.parent = c
+	out.attrs = attrs
+	return &out
+}
+
+func (c *cliHandler) WithGroup(name string) slog.Handler {
+	out := *c
+	out.parent = c
+	out.group = name
+	return &out
 }

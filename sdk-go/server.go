@@ -3,8 +3,6 @@ package sdkgo
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,17 +13,31 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/cloudflare/tableflip"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/TBD54566975/ftl/common/log"
+	ftlv1 "github.com/TBD54566975/ftl/internal/gen/xyz/block/ftl/v1"
 )
 
-// Serve starts a hot swappable HTTP server.
-func Serve(ctx context.Context, handler http.Handler) {
+// Serve starts a hot swappable gRPC server.
+func Serve(ctx context.Context, socket string, handlers []Handler) {
+	ctx, cancel := context.WithCancel(ctx)
 	logger := log.FromContext(ctx)
 	upg, err := tableflip.New(tableflip.Options{})
 	if err != nil {
 		panic(err)
 	}
+
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigch
+		logger.Info("FTL.module-go terminating", "signal", sig)
+		cancel()
+		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
+		os.Exit(0)
+	}()
 
 	go func() {
 		sig := make(chan os.Signal, 1)
@@ -38,20 +50,24 @@ func Serve(ctx context.Context, handler http.Handler) {
 		}
 	}()
 
-	l, err := upg.Listen("tcp", "127.0.0.1:8080")
+	_ = os.Remove(socket)
+	l, err := upg.Listen("unix", socket)
 	if err != nil {
 		panic(err)
 	}
-
-	srv := http.Server{
-		Handler:     handler,
-		Addr:        "127.0.0.1:8080",
-		BaseContext: func(_ net.Listener) context.Context { return ctx },
-		ReadTimeout: time.Minute * 5,
+	gs := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(log.UnaryGRPCInterceptor(logger)),
+		grpc.ChainStreamInterceptor(log.StreamGRPCInterceptor(logger)),
+	)
+	reflection.Register(gs)
+	srv := &moduleServer{handlers: map[string]Handler{}}
+	for _, handler := range handlers {
+		srv.handlers[handler.path] = handler
 	}
+	ftlv1.RegisterModuleServiceServer(gs, srv)
 
 	go func() {
-		err := srv.Serve(l)
+		err := gs.Serve(l)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			panic(err)
 		}
@@ -66,41 +82,65 @@ func Serve(ctx context.Context, handler http.Handler) {
 	})
 
 	// Wait for connections to drain.
-	_ = srv.Shutdown(context.Background())
+	gs.GracefulStop()
 }
 
-// Handler converts a Verb function into a http.Handler.
-func Handler[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) http.Handler {
+type Handler struct {
+	path string
+	fn   func(ctx context.Context, req []byte) ([]byte, error)
+}
+
+// Handle creates a Handler from a Verb.
+func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
 	name := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger := log.FromContext(r.Context())
-		caller := r.Header.Get("X-FTL-Caller")
-		if caller == "" {
-			caller = "?"
-		}
-		logger.Info("Call", "s", caller, "d", name, "ua", r.Header.Get("User-Agent"))
+	return Handler{
+		path: name,
+		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
+			// Decode request.
+			var req Req
+			err := json.Unmarshal(reqdata, &req)
+			if err != nil {
+				return nil, errors.Wrapf(err, "invalid request to verb %s", name)
+			}
 
-		// Decode request.
-		var req Req
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid request to verb %s: %s", name, err.Error()), http.StatusBadRequest)
-			return
-		}
+			// Call Verb.
+			resp, err := verb(ctx, req)
+			if err != nil {
+				return nil, errors.Wrapf(err, "call to verb %s failed", name)
+			}
 
-		// Call Verb.
-		resp, err := verb(r.Context(), req)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Call to Verb %s failed: %s", name, err.Error()), http.StatusInternalServerError)
-			return
-		}
+			respdata, err := json.Marshal(resp)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			return respdata, nil
+		},
+	}
+}
 
-		// Encode response.
-		w.Header().Set("Content-Type", "application/json")
-		enc := json.NewEncoder(w)
-		err = enc.Encode(resp)
-		if err != nil {
-			logger.Error("Failed to encode response", err)
-		}
-	})
+var _ ftlv1.ModuleServiceServer = (*moduleServer)(nil)
+
+type moduleServer struct {
+	handlers map[string]Handler
+}
+
+func (*moduleServer) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
+	return &ftlv1.PingResponse{}, nil
+}
+
+func (s *moduleServer) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
+	handler, ok := s.handlers[req.Verb]
+	if !ok {
+		return nil, errors.Errorf("verb %q not found", req.Verb)
+	}
+	respdata, err := handler.fn(ctx, req.Body)
+	if err != nil {
+		// This makes me slightly ill.
+		return &ftlv1.CallResponse{
+			Response: &ftlv1.CallResponse_Error_{Error: &ftlv1.CallResponse_Error{Message: err.Error()}},
+		}, nil
+	}
+	return &ftlv1.CallResponse{
+		Response: &ftlv1.CallResponse_Body{Body: respdata},
+	}, nil
 }

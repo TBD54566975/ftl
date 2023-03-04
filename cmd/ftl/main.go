@@ -6,8 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/TBD54566975/ftl/common/log"
 	"github.com/alecthomas/kong"
+
+	"github.com/TBD54566975/ftl/common/log"
 )
 
 var version = "dev"
@@ -17,6 +18,7 @@ var cli struct {
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 
 	Serve serveCmd `cmd:"" help:"Serve a directory of FTL functions."`
+	// List  listCmd  `cmd:"" help:"List all FTL functions."`
 }
 
 func main() {
@@ -28,14 +30,21 @@ func main() {
 		},
 	)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	// Handle SIGINT.
-	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	logger := log.New(cli.LogConfig, os.Stderr)
+	logger := log.New(cli.LogConfig, os.Stderr).With("C", "FTL")
 	ctx = log.ContextWithLogger(ctx, logger)
+
+	// Handle signals.
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigch
+		logger.Info("FTL terminating", "signal", sig)
+		cancel()
+		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
+		os.Exit(0)
+	}()
 
 	kctx.BindTo(ctx, (*context.Context)(nil))
 

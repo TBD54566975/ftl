@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ftldir="$(dirname "$0")/.."
-dest="${TMPDIR:-/tmp}/ftl"
+name="$(basename "$0")"
+dest="${TMPDIR:-/tmp}/${name}"
 mkdir -p "$dest"
-(cd "${ftldir}" && ./bin/go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o "$dest/ftl" ./cmd/ftl) && exec "$dest/ftl" "$@"
+(cd "${ftldir}" && ./bin/go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o "$dest/${name}" "./cmd/${name}") && exec "$dest/${name}" "$@"
