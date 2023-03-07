@@ -136,7 +136,7 @@ func (e *Engineer) Manage(ctx context.Context, dir string) (err error) {
 		return errors.WithStack(err)
 	}
 
-	cmdCtx, drvPlugin, err := plugin.Spawn(ctx, dir, exe, ftlv1.NewDriveServiceClient,
+	drvPlugin, cmdCtx, err := plugin.Spawn(ctx, dir, exe, ftlv1.NewDriveServiceClient,
 		plugin.WithEnvars("FTL_MODULE_ROOT="+dir))
 	if err != nil {
 		return errors.WithStack(err)

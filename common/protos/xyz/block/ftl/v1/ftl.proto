@@ -60,18 +60,3 @@ service DriveService {
   // List the Verbs available on the Drive.
   // rpc List(ListRequest) returns (ListResponse);
 }
-
-// ModuleService is an optional hot reloadable server managed by the
-// DriveService that may contain the user's Verbs.
-//
-// Optional because some languages may directly contain Verbs in the Drive.
-service ModuleService {
-  // Ping the Module for readiness.
-  rpc Ping(PingRequest) returns (PingResponse);
-
-  // Call a Verb on the Module.
-  rpc Call(CallRequest) returns (CallResponse);
-
-  // List the Verbs available on the Module.
-  // rpc List(ListRequest) returns (ListResponse);
-}

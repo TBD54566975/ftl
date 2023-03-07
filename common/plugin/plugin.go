@@ -2,15 +2,18 @@ package plugin
 
 import (
 	"context"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
+	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -48,17 +51,24 @@ type Plugin[Client PingableClient] struct {
 //
 // Plugins are gRPC servers that listen on a unix socket passed in an envar.
 //
-// The subprocess should call [Start] to start the gRPC server.
+// If the subprocess is a Go plugin, it should call [Start] to start the gRPC
+// server.
 //
 // "cmdCtx" will be cancelled when the plugin stops.
+//
+// The envars passed to the plugin are:
+//
+//	FTL_PLUGIN_SOCKET - the path to the unix socket to listen on.
+//	FTL_WORKING_DIR - the path to a working directory that the plugin can write state to, if required.
 func Spawn[Client PingableClient](
 	ctx context.Context,
 	dir, exe string,
 	makeClient func(grpc.ClientConnInterface) Client,
 	options ...Option,
 ) (
-	cmdCtx context.Context,
 	plugin *Plugin[Client],
+	// "cmdCtx" will be cancelled when the plugin process stops.
+	cmdCtx context.Context,
 	err error,
 ) {
 	name := "FTL." + filepath.Base(exe)
@@ -69,13 +79,21 @@ func Spawn[Client PingableClient](
 		opt(&opts)
 	}
 	workingDir := filepath.Join(dir, ".ftl")
+
+	// Clean up previous process.
+	pidFile := filepath.Join(workingDir, filepath.Base(exe)+".pid")
+	err = cleanup(logger, pidFile)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+
+	// Start the plugin process.
 	socket := filepath.Join(workingDir, filepath.Base(exe)+".sock")
 	logger.Info("Spawning plugin", "dir", dir, "exe", exe, "socket", socket)
 	cmd := exec.Command(ctx, dir, exe)
 	cmd.Env = append(cmd.Env, "FTL_PLUGIN_SOCKET="+socket)
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
 	cmd.Env = append(cmd.Env, opts.envars...)
-
 	if err = cmd.Start(); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
@@ -85,14 +103,19 @@ func Spawn[Client PingableClient](
 		}
 	}()
 
-	logger.Info("Dialing plugin")
+	// Write the PID file.
+	err = ioutil.WriteFile(pidFile, []byte(strconv.Itoa(cmd.Process.Pid)), 0600)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
 
-	var cancelWithCause context.CancelCauseFunc
 	// Cancel the context if the command exits - this will terminate the Dial immediately.
+	var cancelWithCause context.CancelCauseFunc
 	cmdCtx, cancelWithCause = context.WithCancelCause(ctx)
 	go func() { cancelWithCause(cmd.Wait()) }()
 
-	conn, err := grpc.DialContext(ctx, "unix://"+socket,
+	conn, err := grpc.DialContext(
+		ctx, "unix://"+socket,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -105,14 +128,18 @@ func Spawn[Client PingableClient](
 		_ = conn.Close()
 	}()
 
+	// Wait for the plugin to start.
 	client := makeClient(conn)
-
 	for i := 0; i < 30*10; i++ {
 		_, err = client.Ping(ctx, &ftlv1.PingRequest{})
 		if err == nil {
 			break
 		}
-		time.Sleep(time.Millisecond * 100)
+		select {
+		case <-cmdCtx.Done():
+			return nil, nil, errors.Wrap(cmdCtx.Err(), "plugin process died")
+		case <-time.After(time.Millisecond * 100):
+		}
 	}
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "plugin did not respond to ping")
@@ -120,7 +147,25 @@ func Spawn[Client PingableClient](
 
 	logger.Info(name + " online")
 	plugin = &Plugin[Client]{Cmd: cmd, Client: client}
-	return cmdCtx, plugin, nil
+	return plugin, cmdCtx, nil
+}
+
+func cleanup(logger *slog.Logger, pidFile string) error {
+	pidb, err := ioutil.ReadFile(pidFile)
+	if os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return errors.WithStack(err)
+	}
+	pid, err := strconv.Atoi(string(pidb))
+	if err != nil && !os.IsNotExist(err) {
+		return errors.WithStack(err)
+	}
+	err = syscall.Kill(pid, syscall.SIGKILL)
+	if !errors.Is(err, syscall.ESRCH) {
+		logger.Info("Reaped old plugin", "pid", pid, "err", err)
+	}
+	return nil
 }
 
 type serveCli struct {

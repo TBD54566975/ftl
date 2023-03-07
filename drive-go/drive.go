@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
@@ -47,7 +46,7 @@ func New(ctx context.Context, config Config) (ftlv1.DriveServiceServer, error) {
 	d := &driveServer{
 		Config: config,
 		module: module,
-		plugin: atomic.New[*plugin.Plugin[ftlv1.ModuleServiceClient]](nil),
+		plugin: atomic.New[*plugin.Plugin[ftlv1.DriveServiceClient]](nil),
 	}
 
 	logger.Info("Starting FTL.module")
@@ -59,7 +58,7 @@ func New(ctx context.Context, config Config) (ftlv1.DriveServiceServer, error) {
 	}
 	d.exe = exe
 
-	cmdCtx, plugin, err := plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewModuleServiceClient)
+	plugin, cmdCtx, err := plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewDriveServiceClient)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -73,7 +72,7 @@ type driveServer struct {
 	Config
 	exe    string
 	module string
-	plugin *atomic.Value[*plugin.Plugin[ftlv1.ModuleServiceClient]]
+	plugin *atomic.Value[*plugin.Plugin[ftlv1.DriveServiceClient]]
 }
 
 func (d *driveServer) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
@@ -104,10 +103,9 @@ func (d *driveServer) restartModuleOnExit(ctx, cmdCtx context.Context) {
 
 		case <-cmdCtx.Done():
 			err := cmdCtx.Err()
-			logger.Warn("FTL module exited, restarting in 1s", "err", err)
-			time.Sleep(time.Second)
-			var nextPlugin *plugin.Plugin[ftlv1.ModuleServiceClient]
-			cmdCtx, nextPlugin, err = plugin.Spawn(ctx, d.Config.Dir, d.exe, ftlv1.NewModuleServiceClient)
+			logger.Warn("FTL module exited, restarting", "err", err)
+			var nextPlugin *plugin.Plugin[ftlv1.DriveServiceClient]
+			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, d.Config.Dir, d.exe, ftlv1.NewDriveServiceClient)
 			if err != nil {
 				logger.Error("Failed to restart FTL module", err)
 				continue
@@ -214,7 +212,7 @@ func generate(config Config) (*codewriter.Writer, error) {
 				w.L(`handlers = append(handlers, drivego.Handle(%s.%s))`, pkgImp, endpoint.fn.Name())
 			}
 		}
-		w.L(`plugin.Start(drivego.NewModule(handlers...), ftlv1.RegisterModuleServiceServer)`)
+		w.L(`plugin.Start(drivego.NewUserVerbServer(handlers...), ftlv1.RegisterDriveServiceServer)`)
 	})
 
 	w.L(`}`)
