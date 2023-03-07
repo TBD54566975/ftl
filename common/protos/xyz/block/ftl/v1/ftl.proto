@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1;
 
-option go_package = "github.com/TBD54566975/ftl/internal/gen/xyz/block/ftl/v1;ftlv1";
+option go_package = "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1;ftlv1";
 
 message PingRequest {}
 message PingResponse {}

@@ -9,7 +9,7 @@ dev: ## Run hot reload dev server.
 .PHONY: protos
 protos: ## Regenerate protos.
 	buf lint
-	(cd internal/protos && buf generate)
+	(cd common/protos && buf generate)
 
 .PHONY: protosync
 protosync: ## Synchronise external protos into FTL repo.

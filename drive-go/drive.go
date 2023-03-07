@@ -6,8 +6,8 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -17,19 +17,18 @@ import (
 	"github.com/alecthomas/errors"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/tools/go/packages"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/TBD54566975/ftl/common/exec"
+	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
-	"github.com/TBD54566975/ftl/internal/exec"
-	ftlv1 "github.com/TBD54566975/ftl/internal/gen/xyz/block/ftl/v1"
 )
 
 type Config struct {
 	FTLSource  string `env:"FTL_SOURCE" type:"existingdir" help:"Path to FTL source code when developing locally."`
 	WorkingDir string `required:"" type:"existingdir" env:"FTL_WORKING_DIR" help:"Working directory for FTL runtime."`
-	Dir        string `required:"" type:"existingdir" env:"FTL_DRIVE_ROOT" help:"Directory of Go FTL functions."`
+	Dir        string `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
 }
 
 // New creates a new DriveService for a directory of Go Verbs.
@@ -48,66 +47,46 @@ func New(ctx context.Context, config Config) (ftlv1.DriveServiceServer, error) {
 	d := &driveServer{
 		Config: config,
 		module: module,
-		cmd:    atomic.New[*exec.Cmd](nil),
+		plugin: atomic.New[*plugin.Plugin[ftlv1.ModuleServiceClient]](nil),
 	}
 
 	logger.Info("Starting FTL.module")
 
 	// Build and start the sub-process.
-	d.cmd.Store(d.newModuleCmd(ctx))
-	err = d.rebuild(ctx)
+	exe, err := d.rebuild(ctx)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	finished := make(chan error, 1)
-	go func() { finished <- d.cmd.Load().Run() }()
+	d.exe = exe
 
-	socket := filepath.Join(d.WorkingDir, "module.sock")
-
-	dialCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(dialCtx, "unix://"+socket,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
+	cmdCtx, plugin, err := plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewModuleServiceClient)
 	if err != nil {
-		panic(err)
+		return nil, errors.WithStack(err)
 	}
+	d.plugin.Store(plugin)
 
-	logger.Info("FTL.module online", "dir", d.Dir)
-
-	d.client = ftlv1.NewModuleServiceClient(conn)
-
-	_, err = d.client.Ping(ctx, &ftlv1.PingRequest{})
-	if err != nil {
-		panic(err)
-	}
-	if err != nil {
-		panic(err)
-	}
-
-	go d.restartModuleOnExit(ctx, finished)
+	go d.restartModuleOnExit(ctx, cmdCtx)
 	return d, nil
 }
 
 type driveServer struct {
 	Config
+	exe    string
 	module string
-	client ftlv1.ModuleServiceClient
-	cmd    *atomic.Value[*exec.Cmd]
+	plugin *atomic.Value[*plugin.Plugin[ftlv1.ModuleServiceClient]]
 }
 
 func (d *driveServer) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
-	return d.client.Call(ctx, req)
+	return d.plugin.Load().Client.Call(ctx, req)
 }
 
 func (d *driveServer) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
-	err := d.cmd.Load().Kill(syscall.SIGHUP)
+	err := d.plugin.Load().Cmd.Kill(syscall.SIGHUP)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &ftlv1.FileChangeResponse{}, d.rebuild(ctx)
+	_, err = d.rebuild(ctx)
+	return &ftlv1.FileChangeResponse{}, errors.WithStack(err)
 }
 
 func (*driveServer) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
@@ -115,48 +94,52 @@ func (*driveServer) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingRespon
 }
 
 // Restart the FTL hot reload module if it terminates unexpectedly.
-func (d *driveServer) restartModuleOnExit(ctx context.Context, finished chan error) {
+func (d *driveServer) restartModuleOnExit(ctx, cmdCtx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
 		select {
 		case <-ctx.Done():
-			_ = d.cmd.Load().Kill(syscall.SIGTERM)
+			_ = d.plugin.Load().Cmd.Kill(syscall.SIGTERM)
 			return
 
-		case err := <-finished:
+		case <-cmdCtx.Done():
+			err := cmdCtx.Err()
 			logger.Warn("FTL module exited, restarting in 1s", "err", err)
 			time.Sleep(time.Second)
-			cmd := d.newModuleCmd(ctx)
-			go func() { finished <- d.cmd.Load().Run() }()
-			d.cmd.Store(cmd)
+			var nextPlugin *plugin.Plugin[ftlv1.ModuleServiceClient]
+			cmdCtx, nextPlugin, err = plugin.Spawn(ctx, d.Config.Dir, d.exe, ftlv1.NewModuleServiceClient)
+			if err != nil {
+				logger.Error("Failed to restart FTL module", err)
+				continue
+			}
+			d.plugin.Store(nextPlugin)
 		}
 	}
 }
 
-func (d *driveServer) newModuleCmd(ctx context.Context) *exec.Cmd {
-	socket := filepath.Join(d.WorkingDir, "module.sock")
-	cmd := exec.Command(ctx, d.WorkingDir, filepath.Join(d.WorkingDir, "ftl-module"))
-	cmd.Env = append(cmd.Env, "FTL_MODULE_SOCKET="+socket)
-	return cmd
-}
-
-func (d *driveServer) rebuild(ctx context.Context) error {
+func (d *driveServer) rebuild(ctx context.Context) (exe string, err error) {
 	logger := log.FromContext(ctx)
-	err := writeMain(d.Dir, d.WorkingDir, d.module, d.Config)
+	err = writeMain(d.Dir, d.WorkingDir, d.module, d.Config)
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 	logger.Info("Restarting FTL.drive-go...")
 	err = execInRoot(ctx, d.WorkingDir, "go", "mod", "tidy")
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 
-	err = execInRoot(ctx, d.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", "ftl-module")
+	exe = filepath.Join(d.WorkingDir, "ftl-module")
+	logger.Info("  Compiling FTL.module...")
+	err = execInRoot(ctx, d.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", exe)
 	if err != nil {
-		return errors.WithStack(err)
+		source, merr := ioutil.ReadFile(filepath.Join(d.WorkingDir, "main.go"))
+		if merr != nil {
+			return "", errors.WithStack(err)
+		}
+		return "", errors.Wrap(err, string(source))
 	}
-	return nil
+	return exe, nil
 }
 
 func execInRoot(ctx context.Context, root string, command string, args ...string) error {
@@ -218,27 +201,20 @@ func generate(config Config) (*codewriter.Writer, error) {
 	}
 
 	w := codewriter.New("main")
-	w.Import("context")
-	w.Import("os")
-	w.Import("github.com/TBD54566975/ftl/sdk-go")
-	w.Import("github.com/TBD54566975/ftl/common/log")
+	w.Import("github.com/TBD54566975/ftl/drive-go")
+	w.Import("github.com/TBD54566975/ftl/common/plugin")
+	w.Import(`github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1`)
 
 	w.L(`func main() {`)
 	w.In(func(w *codewriter.Writer) {
-		w.L(`logger := log.New(log.Config{}, os.Stderr).With("C", "FTL.module")`)
-		w.L(`ctx := log.ContextWithLogger(context.Background(), logger)`)
-		w.L(`socket := os.Getenv("FTL_MODULE_SOCKET")`)
-		w.L(`if socket == "" { panic("FTL_MODULE_SOCKET not set") }`)
-		w.L(`logger.Info("Starting FTL server on " + socket)`)
-		w.L(`handlers := []sdkgo.Handler{}`)
+		w.L(`handlers := []drivego.Handler{}`)
 		for pkg, endpoints := range endpoints {
 			pkgImp := w.Import(pkg)
 			for _, endpoint := range endpoints {
-				w.L(`logger.Info("  Registering endpoint %s.%s")`, pkg, endpoint.fn.Name())
-				w.L(`handlers = append(handlers, sdkgo.Handle(%s.%s))`, pkgImp, endpoint.fn.Name())
+				w.L(`handlers = append(handlers, drivego.Handle(%s.%s))`, pkgImp, endpoint.fn.Name())
 			}
 		}
-		w.L(`sdkgo.Serve(ctx, socket, handlers)`)
+		w.L(`plugin.Start(drivego.NewModule(handlers...), ftlv1.RegisterModuleServiceServer)`)
 	})
 
 	w.L(`}`)
@@ -296,34 +272,4 @@ func findGoModule(file string) (string, error) {
 		return "", fmt.Errorf("failed to extract Go module from go.mod file: %w", err)
 	}
 	return goModFile, nil
-}
-
-// Find the go.mod file enclosing "dir".
-func findGoModuleFile(root string) (string, error) {
-	dir := root
-	for dir != "/" {
-		path := filepath.Join(dir, "go.mod")
-		if _, err := os.Stat(path); err == nil {
-			return path, nil
-		}
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			break
-		}
-		dir = filepath.Dir(dir)
-	}
-	return "", fmt.Errorf("no go.mod file found in %s or any parent directory", root)
-}
-
-func typeRef(pkg *packages.Package, t types.Type) (pkgRef, ref string) {
-	if named, ok := t.(*types.Named); ok {
-		pkgRef = named.Obj().Pkg().Path()
-		ref = named.Obj().Name()
-		if pkgRef == pkg.PkgPath {
-			pkgRef = ""
-		} else {
-			ref = path.Base(pkgRef) + "." + ref
-		}
-		return
-	}
-	return "", t.String()
 }

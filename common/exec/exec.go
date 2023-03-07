@@ -40,5 +40,5 @@ func (c *Cmd) Kill(signal syscall.Signal) error {
 	if c.Process == nil {
 		return nil
 	}
-	return errors.WithStack(syscall.Kill(-c.Process.Pid, signal))
+	return errors.WithStack(syscall.Kill(c.Process.Pid, signal))
 }

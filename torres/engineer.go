@@ -8,19 +8,17 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/alecthomas/errors"
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/TBD54566975/ftl/common/exec"
+	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/log"
-	"github.com/TBD54566975/ftl/internal/exec"
-	ftlv1 "github.com/TBD54566975/ftl/internal/gen/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/common/plugin"
 )
 
 // ModuleConfig is the configuration for an FTL module.
@@ -31,9 +29,7 @@ type ModuleConfig struct {
 }
 
 type driveContext struct {
-	conn       *grpc.ClientConn
-	drive      *exec.Cmd
-	client     ftlv1.DriveServiceClient
+	*plugin.Plugin[ftlv1.DriveServiceClient]
 	root       string
 	workingDir string
 }
@@ -75,8 +71,9 @@ func (e *Engineer) watch(ctx context.Context) error {
 			e.lock.Lock()
 			for root, drive := range e.drives {
 				if strings.HasPrefix(path, root) {
-					_, err := drive.client.FileChange(ctx, &ftlv1.FileChangeRequest{Path: path})
+					_, err := drive.Client.FileChange(ctx, &ftlv1.FileChangeRequest{Path: path})
 					if err != nil {
+						e.lock.Unlock()
 						return errors.WithStack(err)
 					}
 				}
@@ -106,13 +103,11 @@ func (e *Engineer) Drives() []string {
 // will pass the following envars through to the Drive:
 //
 //	FTL_DRIVE_SOCKET - Path to a Unix socket that the Drive must serve the gRPC service xyz.block.ftl.v1.DriveService on.
-//	FTL_DRIVE_ROOT - Path to a directory containing Verb source and an ftl.toml file.
+//	FTL_MODULE_ROOT - Path to a directory containing FTL module source and an ftl.toml file.
 //	FTL_WORKING_DIR - Path to a directory that the Drive can use for temporary files.
 func (e *Engineer) Manage(ctx context.Context, dir string) (err error) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
-
-	logger := log.FromContext(ctx)
 
 	dir, err = filepath.Abs(dir)
 	if err != nil {
@@ -141,55 +136,30 @@ func (e *Engineer) Manage(ctx context.Context, dir string) (err error) {
 		return errors.WithStack(err)
 	}
 
-	// Start the language-specific Drive.
-	socket := filepath.Join(workingDir, "drive.sock")
-	name := "FTL.drive-" + config.Language
-	logger.Info("Starting "+name, "dir", dir)
-	cmd := exec.Command(ctx, dir, exe)
-	cmd.Env = append(cmd.Env,
-		"FTL_DRIVE_ROOT="+dir,
-		"FTL_DRIVE_SOCKET="+socket,
-		"FTL_WORKING_DIR="+workingDir,
-	)
-	err = cmd.Start()
+	cmdCtx, drvPlugin, err := plugin.Spawn(ctx, dir, exe, ftlv1.NewDriveServiceClient,
+		plugin.WithEnvars("FTL_MODULE_ROOT="+dir))
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	e.wg.Go(cmd.Wait)
+	e.wg.Go(func() error {
+		<-cmdCtx.Done()
+		return errors.WithStack(cmdCtx.Err())
+	})
+
 	// Ensure we stop the sub-process if anything errors.
 	defer func() {
 		if err != nil {
-			_ = cmd.Kill(syscall.SIGKILL)
+			_ = drvPlugin.Cmd.Kill(syscall.SIGKILL)
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, "unix://"+socket,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
+	err = e.watcher.Add(dir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	client := ftlv1.NewDriveServiceClient(conn)
-
-	_, err = client.Ping(ctx, &ftlv1.PingRequest{})
-	if err != nil {
-		return errors.Wrapf(err, "%s did not respond to ping", name)
-	}
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	logger.Info(name+" online", "dir", dir)
 
 	e.drives[dir] = driveContext{
-		conn:       conn,
-		drive:      cmd,
-		client:     client,
+		Plugin:     drvPlugin,
 		root:       dir,
 		workingDir: workingDir,
 	}

@@ -14,7 +14,7 @@ var contextKey = struct{ string }{"logger"}
 
 // Config for the a logger.
 type Config struct {
-	Level      slog.Level `help:"Log level." default:"info"`
+	Level      slog.Level `help:"Log level." default:"info" env:"LOG_LEVEL"`
 	WithSource bool       `help:"Include source locations."`
 	JSON       bool       `help:"Log in JSON format."`
 }
@@ -60,7 +60,7 @@ func New(config Config, w io.Writer) *slog.Logger {
 
 var colours map[slog.Level]string = map[slog.Level]string{
 	slog.LevelDebug: "\x1b[34m", // Blue
-	slog.LevelInfo:  "\x1b[32m", // Green
+	slog.LevelInfo:  "\x1b[37m", // White
 	slog.LevelWarn:  "\x1b[33m", // Yellow
 	slog.LevelError: "\x1b[31m", // Red
 }
@@ -80,7 +80,7 @@ func (c *cliHandler) Enabled(ctx context.Context, level slog.Level) bool {
 
 func (c *cliHandler) Handle(ctx context.Context, record slog.Record) error {
 	if c.isaTTY {
-		fmt.Fprint(c.w, colours[record.Level]+"\x1b[1m")
+		fmt.Fprint(c.w, colours[record.Level])
 	}
 	fmt.Fprintf(c.w, "%s", record.Message)
 	if c.isaTTY {
@@ -97,11 +97,22 @@ func (c *cliHandler) Handle(ctx context.Context, record slog.Record) error {
 }
 
 func (c *cliHandler) allAttrs(record slog.Record) (attrs []slog.Attr) {
-	record.Attrs(func(a slog.Attr) {
-		attrs = append(attrs, a)
+	seen := map[string]bool{}
+	record.Attrs(func(attr slog.Attr) {
+		if seen[attr.Key] {
+			return
+		}
+		seen[attr.Key] = true
+		attrs = append(attrs, attr)
 	})
 	for p := c; p != nil; p = p.parent {
-		attrs = append(attrs, p.attrs...)
+		for _, attr := range p.attrs {
+			if seen[attr.Key] {
+				continue
+			}
+			seen[attr.Key] = true
+			attrs = append(attrs, attr)
+		}
 	}
 	return attrs
 }

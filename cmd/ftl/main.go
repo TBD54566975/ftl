@@ -30,6 +30,9 @@ func main() {
 		},
 	)
 
+	// Set the log level for child processes.
+	os.Setenv("LOG_LEVEL", cli.LogConfig.Level.String())
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	logger := log.New(cli.LogConfig, os.Stderr).With("C", "FTL")
