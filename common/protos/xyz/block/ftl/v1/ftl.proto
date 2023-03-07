@@ -33,6 +33,16 @@ message ListResponse {
   repeated string verbs = 1;
 }
 
+// FTLService is the service that provides the core functionality of FTL.
+service FTLService {
+  // Ping FTL for readiness.
+  rpc Ping(PingRequest) returns (PingResponse);
+  // Call a Verb.
+  rpc Call(CallRequest) returns (CallResponse);
+  // List Verbs.
+  rpc List(ListRequest) returns (ListResponse);
+}
+
 // DriveService is the service that provides language-specific development and
 // deployment functionality.
 //
@@ -58,5 +68,5 @@ service DriveService {
   rpc Call(CallRequest) returns (CallResponse);
 
   // List the Verbs available on the Drive.
-  // rpc List(ListRequest) returns (ListResponse);
+  rpc List(ListRequest) returns (ListResponse);
 }

@@ -68,11 +68,18 @@ func New(ctx context.Context, config Config) (ftlv1.DriveServiceServer, error) {
 	return d, nil
 }
 
+var _ ftlv1.DriveServiceServer = (*driveServer)(nil)
+
 type driveServer struct {
 	Config
-	exe    string
-	module string
-	plugin *atomic.Value[*plugin.Plugin[ftlv1.DriveServiceClient]]
+	exe      string
+	module   string
+	handlers []Handler
+	plugin   *atomic.Value[*plugin.Plugin[ftlv1.DriveServiceClient]]
+}
+
+func (d *driveServer) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
+	return d.plugin.Load().Client.List(ctx, req)
 }
 
 func (d *driveServer) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
@@ -121,14 +128,13 @@ func (d *driveServer) rebuild(ctx context.Context) (exe string, err error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	logger.Info("Restarting FTL.drive-go...")
 	err = execInRoot(ctx, d.WorkingDir, "go", "mod", "tidy")
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
 	exe = filepath.Join(d.WorkingDir, "ftl-module")
-	logger.Info("  Compiling FTL.module...")
+	logger.Info("Compiling FTL.module...")
 	err = execInRoot(ctx, d.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", exe)
 	if err != nil {
 		source, merr := ioutil.ReadFile(filepath.Join(d.WorkingDir, "main.go"))

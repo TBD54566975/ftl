@@ -65,6 +65,14 @@ type moduleServer struct {
 	handlers map[string]Handler
 }
 
+func (m *moduleServer) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
+	out := &ftlv1.ListResponse{}
+	for handler := range m.handlers {
+		out.Verbs = append(out.Verbs, handler)
+	}
+	return out, nil
+}
+
 func (*moduleServer) FileChange(context.Context, *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
 	return &ftlv1.FileChangeResponse{}, nil
 }

@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/torres"
+	"github.com/TBD54566975/ftl/local"
 )
 
 type serveCmd struct {
@@ -13,7 +13,7 @@ type serveCmd struct {
 }
 
 func (r *serveCmd) Run(ctx context.Context) error {
-	engineer, err := torres.New(ctx)
+	engineer, err := local.New(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}

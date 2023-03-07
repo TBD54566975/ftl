@@ -14,6 +14,168 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
+// FTLServiceClient is the client API for FTLService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type FTLServiceClient interface {
+	// Ping FTL for readiness.
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
+	// Call a Verb.
+	Call(ctx context.Context, in *CallRequest, opts ...grpc.CallOption) (*CallResponse, error)
+	// List Verbs.
+	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
+}
+
+type fTLServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewFTLServiceClient(cc grpc.ClientConnInterface) FTLServiceClient {
+	return &fTLServiceClient{cc}
+}
+
+func (c *fTLServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.FTLService/Ping", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fTLServiceClient) Call(ctx context.Context, in *CallRequest, opts ...grpc.CallOption) (*CallResponse, error) {
+	out := new(CallResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.FTLService/Call", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fTLServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
+	out := new(ListResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.FTLService/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// FTLServiceServer is the server API for FTLService service.
+// All implementations should embed UnimplementedFTLServiceServer
+// for forward compatibility
+type FTLServiceServer interface {
+	// Ping FTL for readiness.
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
+	// Call a Verb.
+	Call(context.Context, *CallRequest) (*CallResponse, error)
+	// List Verbs.
+	List(context.Context, *ListRequest) (*ListResponse, error)
+}
+
+// UnimplementedFTLServiceServer should be embedded to have forward compatible implementations.
+type UnimplementedFTLServiceServer struct {
+}
+
+func (UnimplementedFTLServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+}
+func (UnimplementedFTLServiceServer) Call(context.Context, *CallRequest) (*CallResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Call not implemented")
+}
+func (UnimplementedFTLServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+
+// UnsafeFTLServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to FTLServiceServer will
+// result in compilation errors.
+type UnsafeFTLServiceServer interface {
+	mustEmbedUnimplementedFTLServiceServer()
+}
+
+func RegisterFTLServiceServer(s grpc.ServiceRegistrar, srv FTLServiceServer) {
+	s.RegisterService(&FTLService_ServiceDesc, srv)
+}
+
+func _FTLService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FTLServiceServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.FTLService/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FTLServiceServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FTLService_Call_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FTLServiceServer).Call(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.FTLService/Call",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FTLServiceServer).Call(ctx, req.(*CallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FTLService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FTLServiceServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.FTLService/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FTLServiceServer).List(ctx, req.(*ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// FTLService_ServiceDesc is the grpc.ServiceDesc for FTLService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var FTLService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "xyz.block.ftl.v1.FTLService",
+	HandlerType: (*FTLServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Ping",
+			Handler:    _FTLService_Ping_Handler,
+		},
+		{
+			MethodName: "Call",
+			Handler:    _FTLService_Call_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _FTLService_List_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "xyz/block/ftl/v1/ftl.proto",
+}
+
 // DriveServiceClient is the client API for DriveService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
@@ -26,6 +188,8 @@ type DriveServiceClient interface {
 	FileChange(ctx context.Context, in *FileChangeRequest, opts ...grpc.CallOption) (*FileChangeResponse, error)
 	// Call a Verb on the Drive.
 	Call(ctx context.Context, in *CallRequest, opts ...grpc.CallOption) (*CallResponse, error)
+	// List the Verbs available on the Drive.
+	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 }
 
 type driveServiceClient struct {
@@ -63,6 +227,15 @@ func (c *driveServiceClient) Call(ctx context.Context, in *CallRequest, opts ...
 	return out, nil
 }
 
+func (c *driveServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
+	out := new(ListResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.DriveService/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DriveServiceServer is the server API for DriveService service.
 // All implementations should embed UnimplementedDriveServiceServer
 // for forward compatibility
@@ -75,6 +248,8 @@ type DriveServiceServer interface {
 	FileChange(context.Context, *FileChangeRequest) (*FileChangeResponse, error)
 	// Call a Verb on the Drive.
 	Call(context.Context, *CallRequest) (*CallResponse, error)
+	// List the Verbs available on the Drive.
+	List(context.Context, *ListRequest) (*ListResponse, error)
 }
 
 // UnimplementedDriveServiceServer should be embedded to have forward compatible implementations.
@@ -89,6 +264,9 @@ func (UnimplementedDriveServiceServer) FileChange(context.Context, *FileChangeRe
 }
 func (UnimplementedDriveServiceServer) Call(context.Context, *CallRequest) (*CallResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Call not implemented")
+}
+func (UnimplementedDriveServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 
 // UnsafeDriveServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -156,6 +334,24 @@ func _DriveService_Call_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DriveService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriveServiceServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.DriveService/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriveServiceServer).List(ctx, req.(*ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DriveService_ServiceDesc is the grpc.ServiceDesc for DriveService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -174,6 +370,10 @@ var DriveService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Call",
 			Handler:    _DriveService_Call_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _DriveService_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

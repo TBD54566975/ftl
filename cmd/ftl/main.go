@@ -18,7 +18,7 @@ var cli struct {
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 
 	Serve serveCmd `cmd:"" help:"Serve a directory of FTL functions."`
-	// List  listCmd  `cmd:"" help:"List all FTL functions."`
+	List  listCmd  `cmd:"" help:"List all FTL functions."`
 }
 
 func main() {

@@ -1,5 +1,5 @@
-// Package torres manages FTL drives.
-package torres
+// Package local manages locally running FTL drives.
+package local
 
 import (
 	"context"
@@ -34,20 +34,20 @@ type driveContext struct {
 	workingDir string
 }
 
-type Engineer struct {
+type Local struct {
 	lock    sync.RWMutex
 	watcher *fsnotify.Watcher
 	drives  map[string]driveContext
 	wg      *errgroup.Group
 }
 
-// New creates a new Engineer.
-func New(ctx context.Context) (*Engineer, error) {
+// New creates a new Local drive coordinator.
+func New(ctx context.Context) (*Local, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	e := &Engineer{
+	e := &Local{
 		watcher: watcher,
 		drives:  map[string]driveContext{},
 		wg:      &errgroup.Group{},
@@ -59,7 +59,7 @@ func New(ctx context.Context) (*Engineer, error) {
 }
 
 // Watch FTL modules for changes and notify the Drives.
-func (e *Engineer) watch(ctx context.Context) error {
+func (e *Local) watch(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 	for {
 		select {
@@ -91,7 +91,7 @@ func (e *Engineer) watch(ctx context.Context) error {
 }
 
 // Drives returns the list of active drives.
-func (e *Engineer) Drives() []string {
+func (e *Local) Drives() []string {
 	e.lock.RLock()
 	defer e.lock.Unlock()
 	return maps.Keys(e.drives)
@@ -99,13 +99,13 @@ func (e *Engineer) Drives() []string {
 
 // Manage starts a new Drive to manage a directory of functions.
 //
-// The Drive executable must have the name ftl-drive-<language>. The Engineer
+// The Drive executable must have the name ftl-drive-<language>. The Local
 // will pass the following envars through to the Drive:
 //
 //	FTL_DRIVE_SOCKET - Path to a Unix socket that the Drive must serve the gRPC service xyz.block.ftl.v1.DriveService on.
 //	FTL_MODULE_ROOT - Path to a directory containing FTL module source and an ftl.toml file.
 //	FTL_WORKING_DIR - Path to a directory that the Drive can use for temporary files.
-func (e *Engineer) Manage(ctx context.Context, dir string) (err error) {
+func (e *Local) Manage(ctx context.Context, dir string) (err error) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
@@ -166,6 +166,6 @@ func (e *Engineer) Manage(ctx context.Context, dir string) (err error) {
 	return nil
 }
 
-func (e *Engineer) Wait() error {
+func (e *Local) Wait() error {
 	return errors.WithStack(e.wg.Wait())
 }
