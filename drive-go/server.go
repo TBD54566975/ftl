@@ -81,8 +81,8 @@ func (*moduleServer) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingRespo
 	return &ftlv1.PingResponse{}, nil
 }
 
-func (s *moduleServer) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
-	handler, ok := s.handlers[req.Verb]
+func (m *moduleServer) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
+	handler, ok := m.handlers[req.Verb]
 	if !ok {
 		return nil, errors.Errorf("verb %q not found", req.Verb)
 	}

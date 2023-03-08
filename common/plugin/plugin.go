@@ -177,9 +177,11 @@ type serveCli struct {
 // Start a gRPC server plugin listening on the socket specified by the
 // environment variable FTL_PLUGIN_SOCKET.
 //
-// "create" is called to create the implementation of the service.
+// This function does not return.
+//
 // "Config" is Kong configuration to pass to "create".
-// "register" is called to register the service with the gRPC server.
+// "create" is called to create the implementation of the service.
+// "register" is called to register the service with the gRPC server and is typically a generated function.
 func Start[Impl any, Iface any, Config any](
 	create func(context.Context, Config) (Impl, error),
 	register func(grpc.ServiceRegistrar, Iface),
@@ -222,4 +224,5 @@ func Start[Impl any, Iface any, Config any](
 	register(gs, any(svc).(Iface)) //nolint:forcetypeassert
 	err = gs.Serve(l)
 	kctx.FatalIfErrorf(err)
+	kctx.Exit(0)
 }
