@@ -8,7 +8,7 @@ import xyz.block.ftl.drive.adapter.JsonAdapter
 import xyz.block.ftl.drive.verb.VerbDeck
 
 class DriveServlet : HttpServlet() {
-  private val deck = VerbDeck()
+  private val deck = VerbDeck.instance
   private val jsonAdapter = JsonAdapter()
 
   override fun doPost(request: HttpServletRequest?, response: HttpServletResponse?) {

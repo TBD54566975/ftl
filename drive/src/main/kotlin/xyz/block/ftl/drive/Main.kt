@@ -4,6 +4,7 @@ import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.servlet.ServletHandler
 import xyz.block.ftl.drive.transport.DriveServlet
+import xyz.block.ftl.drive.verb.VerbDeck
 
 val messages = listOf(
   "Warming up dilithium chamber...",
@@ -25,5 +26,6 @@ fun main(args: Array<String>) {
   server.handler = ServletHandler().apply {
     addServletWithMapping(DriveServlet::class.java, "/")
   }
+  VerbDeck.init("com.squareup.ftldemo")
   server.start()
 }
