@@ -25,3 +25,5 @@ jobs:
         run: ./bin/hermit env -r >> $GITHUB_ENV
       - name: golangci-lint
         run: golangci-lint run
+      - name: go-check-sumtype
+        run: go-check-sumtype ./...

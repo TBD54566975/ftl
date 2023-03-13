@@ -63,6 +63,7 @@ linters:
     - rowserrcheck # doesn't support generics
     - wastedassign # doesn't support generics
     - goprintffuncname
+    - dupword
 
 linters-settings:
   exhaustive:
