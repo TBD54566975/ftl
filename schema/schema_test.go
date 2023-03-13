@@ -152,3 +152,41 @@ func TestParser(t *testing.T) {
 	}
 	assert.Equal(t, expected, actual)
 }
+
+func TestValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		errors []string
+	}{
+		{name: "InvalidRequestRef",
+			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
+			errors: []string{
+				"1:25: reference to unknown Data structure \"InvalidRequest\"",
+				"1:41: reference to unknown Data structure \"InvalidResponse\""}},
+		{name: "InvalidDataRef",
+			input: `module test { data Data { user user.User }}`,
+			errors: []string{
+				"1:32: reference to unknown Verb \"user.User\""}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := ParseString("", test.input)
+			if test.errors != nil {
+				assert.Error(t, err, "expected an error")
+				actual := []string{}
+				unwrapped, ok := err.(interface{ Unwrap() []error }) //nolint:errorlint
+				if ok {
+					for _, err := range unwrapped.Unwrap() {
+						actual = append(actual, err.Error())
+					}
+				} else {
+					actual = append(actual, err.Error())
+				}
+				assert.Equal(t, test.errors, actual)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
