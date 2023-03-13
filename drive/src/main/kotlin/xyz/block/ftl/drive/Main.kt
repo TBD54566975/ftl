@@ -8,7 +8,9 @@ import xyz.block.ftl.drive.transport.DriveServlet
 val messages = listOf(
   "Warming up dilithium chamber...",
   "Initializing warp core...",
-  "Sparking matter/anti-matter reactor..."
+  "Sparking matter/anti-matter reactor...",
+  "Engaging Proto-Star Drive...",
+  "Connecting to the Mycelial Network..."
 )
 
 fun main(args: Array<String>) {
