@@ -33,8 +33,16 @@ message ListResponse {
   repeated string verbs = 1;
 }
 
-// FTLService is the service that provides the core functionality of FTL.
-service FTLService {
+message ServeRequest {
+  // Path to local module to serve.
+  string path = 1;
+}
+message ServeResponse {}
+
+// AgentService is the local agent that manages monitoring local Drives.
+service AgentService {
+  // Serve a module as part of the mesh.
+  rpc Serve(ServeRequest) returns (ServeResponse);
   // Ping FTL for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
   // Call a Verb.

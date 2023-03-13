@@ -7,8 +7,12 @@ import (
 	ftl "github.com/TBD54566975/ftl/sdk-go"
 )
 
-type EchoRequest struct{ Name string }
-type EchoResponse struct{ Message string }
+type EchoRequest struct {
+	Name string `json:"name"`
+}
+type EchoResponse struct {
+	Message string `json:"message"`
+}
 
 //ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {

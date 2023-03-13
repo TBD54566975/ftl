@@ -2,13 +2,19 @@ package main
 
 import (
 	"context"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
+	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/socket"
 )
 
 var version = "dev"
@@ -16,9 +22,11 @@ var version = "dev"
 var cli struct {
 	Version   kong.VersionFlag `help:"Show version information."`
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
+	Socket    socket.Socket    `default:"tcp://127.0.0.1:8892" help:"FTL socket." env:"FTL_SOCKET"`
 
-	Serve serveCmd `cmd:"" help:"Serve a directory of FTL functions."`
+	Serve serveCmd `cmd:"" help:"Serve FTL modules."`
 	List  listCmd  `cmd:"" help:"List all FTL functions."`
+	Call  callCmd  `cmd:"" help:"Call an FTL function."`
 }
 
 func main() {
@@ -49,8 +57,27 @@ func main() {
 		os.Exit(0)
 	}()
 
+	kctx.Bind(cli.Socket)
 	kctx.BindTo(ctx, (*context.Context)(nil))
-
-	err := kctx.Run(ctx)
+	err := kctx.BindToProvider(dialAgent(ctx))
 	kctx.FatalIfErrorf(err)
+
+	err = kctx.Run(ctx)
+	kctx.FatalIfErrorf(err)
+}
+
+func dialAgent(ctx context.Context) func() (ftlv1.AgentServiceClient, error) {
+	return func() (ftlv1.AgentServiceClient, error) {
+		conn, err := grpc.DialContext(ctx, "",
+			// grpc.WithBlock(),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+				conn, err := socket.Dial(ctx, cli.Socket)
+				return conn, errors.WithStack(err)
+			}))
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return ftlv1.NewAgentServiceClient(conn), nil
+	}
 }

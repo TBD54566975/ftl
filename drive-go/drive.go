@@ -25,13 +25,13 @@ import (
 )
 
 type Config struct {
-	FTLSource  string `env:"FTL_SOURCE" type:"existingdir" help:"Path to FTL source code when developing locally."`
+	FTLSource  string `required:"" type:"existingdir" env:"FTL_SOURCE" help:"Path to FTL source code when developing locally."`
 	WorkingDir string `required:"" type:"existingdir" env:"FTL_WORKING_DIR" help:"Working directory for FTL runtime."`
 	Dir        string `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
 }
 
 // New creates a new DriveService for a directory of Go Verbs.
-func New(ctx context.Context, config Config) (ftlv1.DriveServiceServer, error) {
+func New(ctx context.Context, config Config) (*Server, error) {
 	logger := log.FromContext(ctx)
 	goModFile := filepath.Join(config.Dir, "go.mod")
 	_, err := os.Stat(goModFile)
@@ -43,10 +43,9 @@ func New(ctx context.Context, config Config) (ftlv1.DriveServiceServer, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	d := &driveServer{
+	d := &Server{
 		Config: config,
 		module: module,
-		plugin: atomic.New[*plugin.Plugin[ftlv1.DriveServiceClient]](nil),
 	}
 
 	logger.Info("Starting FTL.module")
@@ -68,25 +67,25 @@ func New(ctx context.Context, config Config) (ftlv1.DriveServiceServer, error) {
 	return d, nil
 }
 
-var _ ftlv1.DriveServiceServer = (*driveServer)(nil)
+var _ ftlv1.DriveServiceServer = (*Server)(nil)
 
-type driveServer struct {
+type Server struct {
 	Config
 	exe      string
 	module   string
 	handlers []Handler
-	plugin   *atomic.Value[*plugin.Plugin[ftlv1.DriveServiceClient]]
+	plugin   atomic.Value[*plugin.Plugin[ftlv1.DriveServiceClient]]
 }
 
-func (d *driveServer) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
+func (d *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
 	return d.plugin.Load().Client.List(ctx, req)
 }
 
-func (d *driveServer) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
+func (d *Server) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
 	return d.plugin.Load().Client.Call(ctx, req)
 }
 
-func (d *driveServer) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
+func (d *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
 	err := d.plugin.Load().Cmd.Kill(syscall.SIGHUP)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -95,12 +94,12 @@ func (d *driveServer) FileChange(ctx context.Context, req *ftlv1.FileChangeReque
 	return &ftlv1.FileChangeResponse{}, errors.WithStack(err)
 }
 
-func (*driveServer) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
+func (*Server) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
 	return &ftlv1.PingResponse{}, nil
 }
 
 // Restart the FTL hot reload module if it terminates unexpectedly.
-func (d *driveServer) restartModuleOnExit(ctx, cmdCtx context.Context) {
+func (d *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
 		select {
@@ -122,7 +121,7 @@ func (d *driveServer) restartModuleOnExit(ctx, cmdCtx context.Context) {
 	}
 }
 
-func (d *driveServer) rebuild(ctx context.Context) (exe string, err error) {
+func (d *Server) rebuild(ctx context.Context) (exe string, err error) {
 	logger := log.FromContext(ctx)
 	err = writeMain(d.Dir, d.WorkingDir, d.module, d.Config)
 	if err != nil {

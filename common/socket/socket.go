@@ -14,15 +14,25 @@ type Socket struct {
 	Addr    string
 }
 
-func (s Socket) Dial(ctx context.Context) (net.Conn, error) {
+func (s *Socket) UnmarshalText(b []byte) error {
+	tmp, err := Parse(string(b))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	*s = tmp
+	return nil
+}
+
+// Dial a Socket.
+func Dial(ctx context.Context, s Socket) (net.Conn, error) {
 	conn, err := (&net.Dialer{}).DialContext(ctx, s.Network, s.Addr)
 	return conn, errors.WithStack(err)
 }
 
-// Listen on the socket.
+// Listen on a socket.
 //
 // For unix sockets, the socket will be removed if it already exists.
-func (s Socket) Listen() (net.Listener, error) {
+func Listen(s Socket) (net.Listener, error) {
 	if s.Network == "unix" {
 		if err := os.Remove(s.Addr); err != nil && !os.IsNotExist(err) {
 			return nil, errors.WithStack(err)

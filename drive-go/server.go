@@ -3,6 +3,7 @@ package drivego
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"runtime"
 
@@ -26,6 +27,7 @@ func NewUserVerbServer(handlers ...Handler) func(context.Context, UserVerbConfig
 	}
 }
 
+// Handler for a Verb.
 type Handler struct {
 	path string
 	fn   func(ctx context.Context, req []byte) ([]byte, error)
@@ -34,6 +36,7 @@ type Handler struct {
 // Handle creates a Handler from a Verb.
 func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
 	name := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
+	fmt.Println(name)
 	return Handler{
 		path: name,
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {

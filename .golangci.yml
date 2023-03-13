@@ -64,6 +64,7 @@ linters:
     - wastedassign # doesn't support generics
     - goprintffuncname
     - dupword
+    - errchkjson
 
 linters-settings:
   exhaustive:

@@ -14,10 +14,12 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// FTLServiceClient is the client API for FTLService service.
+// AgentServiceClient is the client API for AgentService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type FTLServiceClient interface {
+type AgentServiceClient interface {
+	// Serve a module as part of the mesh.
+	Serve(ctx context.Context, in *ServeRequest, opts ...grpc.CallOption) (*ServeResponse, error)
 	// Ping FTL for readiness.
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	// Call a Verb.
@@ -26,45 +28,56 @@ type FTLServiceClient interface {
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 }
 
-type fTLServiceClient struct {
+type agentServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewFTLServiceClient(cc grpc.ClientConnInterface) FTLServiceClient {
-	return &fTLServiceClient{cc}
+func NewAgentServiceClient(cc grpc.ClientConnInterface) AgentServiceClient {
+	return &agentServiceClient{cc}
 }
 
-func (c *fTLServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+func (c *agentServiceClient) Serve(ctx context.Context, in *ServeRequest, opts ...grpc.CallOption) (*ServeResponse, error) {
+	out := new(ServeResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.AgentService/Serve", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
 	out := new(PingResponse)
-	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.FTLService/Ping", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.AgentService/Ping", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *fTLServiceClient) Call(ctx context.Context, in *CallRequest, opts ...grpc.CallOption) (*CallResponse, error) {
+func (c *agentServiceClient) Call(ctx context.Context, in *CallRequest, opts ...grpc.CallOption) (*CallResponse, error) {
 	out := new(CallResponse)
-	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.FTLService/Call", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.AgentService/Call", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *fTLServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
+func (c *agentServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
 	out := new(ListResponse)
-	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.FTLService/List", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.AgentService/List", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// FTLServiceServer is the server API for FTLService service.
-// All implementations should embed UnimplementedFTLServiceServer
+// AgentServiceServer is the server API for AgentService service.
+// All implementations should embed UnimplementedAgentServiceServer
 // for forward compatibility
-type FTLServiceServer interface {
+type AgentServiceServer interface {
+	// Serve a module as part of the mesh.
+	Serve(context.Context, *ServeRequest) (*ServeResponse, error)
 	// Ping FTL for readiness.
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	// Call a Verb.
@@ -73,103 +86,128 @@ type FTLServiceServer interface {
 	List(context.Context, *ListRequest) (*ListResponse, error)
 }
 
-// UnimplementedFTLServiceServer should be embedded to have forward compatible implementations.
-type UnimplementedFTLServiceServer struct {
+// UnimplementedAgentServiceServer should be embedded to have forward compatible implementations.
+type UnimplementedAgentServiceServer struct {
 }
 
-func (UnimplementedFTLServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+func (UnimplementedAgentServiceServer) Serve(context.Context, *ServeRequest) (*ServeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Serve not implemented")
+}
+func (UnimplementedAgentServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedFTLServiceServer) Call(context.Context, *CallRequest) (*CallResponse, error) {
+func (UnimplementedAgentServiceServer) Call(context.Context, *CallRequest) (*CallResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Call not implemented")
 }
-func (UnimplementedFTLServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+func (UnimplementedAgentServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 
-// UnsafeFTLServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to FTLServiceServer will
+// UnsafeAgentServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AgentServiceServer will
 // result in compilation errors.
-type UnsafeFTLServiceServer interface {
-	mustEmbedUnimplementedFTLServiceServer()
+type UnsafeAgentServiceServer interface {
+	mustEmbedUnimplementedAgentServiceServer()
 }
 
-func RegisterFTLServiceServer(s grpc.ServiceRegistrar, srv FTLServiceServer) {
-	s.RegisterService(&FTLService_ServiceDesc, srv)
+func RegisterAgentServiceServer(s grpc.ServiceRegistrar, srv AgentServiceServer) {
+	s.RegisterService(&AgentService_ServiceDesc, srv)
 }
 
-func _FTLService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _AgentService_Serve_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).Serve(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.AgentService/Serve",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).Serve(ctx, req.(*ServeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PingRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FTLServiceServer).Ping(ctx, in)
+		return srv.(AgentServiceServer).Ping(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/xyz.block.ftl.v1.FTLService/Ping",
+		FullMethod: "/xyz.block.ftl.v1.AgentService/Ping",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FTLServiceServer).Ping(ctx, req.(*PingRequest))
+		return srv.(AgentServiceServer).Ping(ctx, req.(*PingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FTLService_Call_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _AgentService_Call_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CallRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FTLServiceServer).Call(ctx, in)
+		return srv.(AgentServiceServer).Call(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/xyz.block.ftl.v1.FTLService/Call",
+		FullMethod: "/xyz.block.ftl.v1.AgentService/Call",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FTLServiceServer).Call(ctx, req.(*CallRequest))
+		return srv.(AgentServiceServer).Call(ctx, req.(*CallRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FTLService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _AgentService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FTLServiceServer).List(ctx, in)
+		return srv.(AgentServiceServer).List(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/xyz.block.ftl.v1.FTLService/List",
+		FullMethod: "/xyz.block.ftl.v1.AgentService/List",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FTLServiceServer).List(ctx, req.(*ListRequest))
+		return srv.(AgentServiceServer).List(ctx, req.(*ListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// FTLService_ServiceDesc is the grpc.ServiceDesc for FTLService service.
+// AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var FTLService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "xyz.block.ftl.v1.FTLService",
-	HandlerType: (*FTLServiceServer)(nil),
+var AgentService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "xyz.block.ftl.v1.AgentService",
+	HandlerType: (*AgentServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "Serve",
+			Handler:    _AgentService_Serve_Handler,
+		},
+		{
 			MethodName: "Ping",
-			Handler:    _FTLService_Ping_Handler,
+			Handler:    _AgentService_Ping_Handler,
 		},
 		{
 			MethodName: "Call",
-			Handler:    _FTLService_Call_Handler,
+			Handler:    _AgentService_Call_Handler,
 		},
 		{
 			MethodName: "List",
-			Handler:    _FTLService_List_Handler,
+			Handler:    _AgentService_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
