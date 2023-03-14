@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -68,13 +67,10 @@ func main() {
 
 func dialAgent(ctx context.Context) func() (ftlv1.AgentServiceClient, error) {
 	return func() (ftlv1.AgentServiceClient, error) {
-		conn, err := grpc.DialContext(ctx, "",
+		conn, err := grpc.DialContext(ctx, cli.Socket.String(),
 			// grpc.WithBlock(),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-				conn, err := socket.Dial(ctx, cli.Socket)
-				return conn, errors.WithStack(err)
-			}))
+			grpc.WithContextDialer(socket.Dialer))
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

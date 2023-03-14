@@ -21,6 +21,7 @@ import (
 	"github.com/TBD54566975/ftl/common/exec"
 	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/socket"
 )
 
 // PingableClient is a gRPC client that can be pinged.
@@ -87,11 +88,17 @@ func Spawn[Client PingableClient](
 		return nil, nil, errors.WithStack(err)
 	}
 
+	// Find a free port.
+	addr, err := allocatePort()
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+
 	// Start the plugin process.
-	socket := filepath.Join(workingDir, filepath.Base(exe)+".sock")
-	logger.Info("Spawning plugin", "dir", dir, "exe", exe, "socket", socket)
+	pluginSocket := socket.Socket{Network: "tcp", Addr: addr.String()}
+	logger.Info("Spawning plugin", "dir", dir, "exe", exe, "socket", pluginSocket)
 	cmd := exec.Command(ctx, dir, exe)
-	cmd.Env = append(cmd.Env, "FTL_PLUGIN_SOCKET="+socket)
+	cmd.Env = append(cmd.Env, "FTL_PLUGIN_SOCKET="+pluginSocket.String())
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
 	cmd.Env = append(cmd.Env, opts.envars...)
 	if err = cmd.Start(); err != nil {
@@ -116,8 +123,9 @@ func Spawn[Client PingableClient](
 	}
 
 	conn, err := grpc.DialContext(
-		ctx, "unix://"+socket,
+		ctx, pluginSocket.String(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(socket.Dialer),
 	)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -151,6 +159,15 @@ func Spawn[Client PingableClient](
 	return plugin, cmdCtx, nil
 }
 
+func allocatePort() (*net.TCPAddr, error) {
+	l, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to allocate port")
+	}
+	_ = l.Close()
+	return l.Addr().(*net.TCPAddr), nil //nolint:forcetypeassert
+}
+
 func cleanup(logger *slog.Logger, pidFile string) error {
 	pidb, err := ioutil.ReadFile(pidFile)
 	if os.IsNotExist(err) {
@@ -170,8 +187,8 @@ func cleanup(logger *slog.Logger, pidFile string) error {
 }
 
 type serveCli struct {
-	LogConfig log.Config `embed:"" group:"Logging:"`
-	Socket    string     `help:"Socket to listen on." env:"FTL_PLUGIN_SOCKET" required:""`
+	LogConfig log.Config    `embed:"" group:"Logging:"`
+	Socket    socket.Socket `help:"Socket to listen on." env:"FTL_PLUGIN_SOCKET" required:""`
 	kong.Plugins
 }
 
@@ -214,8 +231,7 @@ func Start[Impl any, Iface any, Config any](
 	svc, err := create(ctx, config)
 	kctx.FatalIfErrorf(err)
 
-	_ = os.Remove(cli.Socket)
-	l, err := (&net.ListenConfig{}).Listen(ctx, "unix", cli.Socket)
+	l, err := (&net.ListenConfig{}).Listen(ctx, cli.Socket.Network, cli.Socket.Addr)
 	kctx.FatalIfErrorf(err)
 	gs := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(log.UnaryGRPCInterceptor(logger)),

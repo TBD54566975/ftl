@@ -2,6 +2,7 @@ package socket
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -14,6 +15,10 @@ type Socket struct {
 	Addr    string
 }
 
+func (s Socket) String() string {
+	return fmt.Sprintf("%s://%s", s.Network, s.Addr)
+}
+
 func (s *Socket) UnmarshalText(b []byte) error {
 	tmp, err := Parse(string(b))
 	if err != nil {
@@ -21,6 +26,15 @@ func (s *Socket) UnmarshalText(b []byte) error {
 	}
 	*s = tmp
 	return nil
+}
+
+// Dialer is a convenience function.
+func Dialer(ctx context.Context, addr string) (net.Conn, error) {
+	sock, err := Parse(addr)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return Dial(ctx, sock)
 }
 
 // Dial a Socket.
