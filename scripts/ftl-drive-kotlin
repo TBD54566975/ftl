@@ -1,5 +1,17 @@
 #!/bin/bash
+set -euo pipefail
 
 dir="$(git rev-parse --show-toplevel)/drive-kotlin"
 
-cd "$dir" && exec mvn exec:java
+newest() {
+  find "$1" -type f ! -path '*/.ftl/*' -print0 | xargs -0 -r ls -1 -t | tail -n +1 | head -1 2> /dev/null
+}
+
+cd "$dir"
+
+# Recompile if necessary.
+if [ ! -d target -o \( "$(newest ./src)" -nt "$(newest ./target)" \) ]; then
+  mvn compile
+fi
+
+exec mvn exec:java

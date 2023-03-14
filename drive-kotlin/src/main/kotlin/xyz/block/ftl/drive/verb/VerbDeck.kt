@@ -11,6 +11,8 @@ import kotlin.reflect.jvm.kotlinFunction
 
 class VerbDeck {
   private val logger = Logging.logger(VerbDeck::class)
+  private var module: String? = null
+
   companion object {
     val instance = VerbDeck()
 
@@ -24,6 +26,7 @@ class VerbDeck {
   private val verbs = ConcurrentHashMap<VerbId, VerbCassette<out Any>>()
 
   fun init(module: String) {
+    this.module = module
     logger.info("Scanning for Verbs in ${module}...")
     // Assign scanResult in try-with-resources
     ClassGraph() // Create a new ClassGraph instance
@@ -45,7 +48,19 @@ class VerbDeck {
       }
   }
 
+  fun fullyQualifiedName(id: VerbId): String = module!! + "." + id.qualifiedName
+
+  fun list(): Set<VerbId> = verbs.keys
+
   fun lookup(name: String): VerbCassette<out Any>? = verbs[VerbId(name)]
+
+  fun lookupFullyQualifiedName(name: String): VerbCassette<out Any>? {
+    val prefix = module!! + "."
+    if (name.startsWith(prefix)) {
+      return verbs[VerbId(name.removePrefix(prefix))]
+    }
+    return null
+  }
 
   fun dispatch(context: Context, verb: KFunction<*>, request: Any): Any {
     logger.debug("Local dispatch of ${verb.name} [trace: ${context.trace.verbsTransited}]")

@@ -19,9 +19,8 @@ func Visit(n Node, visit func(n Node, next func() error) error) error {
 
 // Normalise a Node.
 func Normalise[T Node](n T) T {
-	c := n // Shallow copy.
-	var ni Node
-	switch c := any(c).(type) {
+	var ni Node = n
+	switch c := ni.(type) {
 	case Schema:
 		c.Pos = lexer.Position{}
 		c.Modules = normaliseSlice(c.Modules)
@@ -72,7 +71,7 @@ func Normalise[T Node](n T) T {
 	case VerbRef:
 		c.Pos = lexer.Position{}
 		ni = c
-	case Type: // Can never occur in reality.
+	case Type: // Can never occur in reality, but is here to satisfy the sum-type check.
 		panic("??")
 	}
 	if ni == nil {

@@ -3,6 +3,7 @@ syntax = "proto3";
 package xyz.block.ftl.v1;
 
 option go_package = "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1;ftlv1";
+option java_multiple_files = true;
 
 message PingRequest {}
 message PingResponse {}
@@ -54,15 +55,8 @@ service AgentService {
 // DriveService is the service that provides language-specific development and
 // deployment functionality.
 //
-// The DriveService is responsible for hot reloading the ModuleService when code
+// The DriveService is responsible for hot reloading the when code
 // changes, and passing Verb calls through.
-//
-// Each implementation of DriveService:
-//
-// - MUST serve the gRPC service on a Unix socket at the path specified by the
-//   FTL_DRIVE_SOCKET environment variable.
-// - Serve Verbs from the path specified by the FTL_DRIVE_ROOT environment
-//   variable.
 service DriveService {
   // Ping the Drive for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
