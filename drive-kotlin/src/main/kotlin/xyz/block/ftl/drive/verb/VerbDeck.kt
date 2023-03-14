@@ -46,9 +46,9 @@ class VerbDeck {
 
   fun lookup(name: String): VerbCassette<out Any>? = verbs[VerbId(name)]
 
-  fun dispatch(verb: KFunction<*>, request: Any): Any {
+  fun dispatch(context: Context, verb: KFunction<*>, request: Any): Any {
     logger.debug("Local dispatch of ${verb.name}")
-    return verbs[toId(verb)]!!.dispatch(Context.fromLocal(), request)
+    return verbs[toId(verb)]!!.dispatch(Context.fromLocal(context), request)
   }
 
   private fun toId(verb: KFunction<*>) = VerbId(verb.name)

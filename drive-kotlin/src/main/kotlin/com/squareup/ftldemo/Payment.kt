@@ -10,7 +10,7 @@ data class PaymentRequest(val recipient: String, val amount: Long)
 data class PaymentResponse(val id: String, val status: String)
 
 @Verb fun pay(context: Context, request: PaymentRequest): PaymentResponse {
-  Ftl.call(::notifyCustomer, NotifyRequest(request.recipient, 200_00L))
+  Ftl.call(context, ::notifyCustomer, NotifyRequest(request.recipient, 200_00L))
 
   return PaymentResponse(UUID.randomUUID().toString(), "INITIATED")
 }
