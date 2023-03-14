@@ -237,12 +237,14 @@ func (l *Local) Ping(ctx context.Context, req *ftlv1.PingRequest) (*ftlv1.PingRe
 func (l *Local) findDrive(verb string) (driveContext, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
+	modules := make([]string, 0, len(l.drives))
 	for _, drive := range l.drives {
+		modules = append(modules, drive.config.Module)
 		if strings.HasPrefix(verb, drive.config.Module) {
 			return drive, nil
 		}
 	}
-	return driveContext{}, errors.Errorf("could not find module serving Verb %q among %s", verb, strings.Join(maps.Keys(l.drives), ", "))
+	return driveContext{}, errors.Errorf("could not find module serving Verb %q among %s", verb, strings.Join(modules, ", "))
 }
 
 // Watch FTL modules for changes and notify the Drives.

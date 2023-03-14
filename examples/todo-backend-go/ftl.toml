@@ -1,2 +1,2 @@
-module = "todo"
+module = "ftl.dev/todo"
 language = "go"

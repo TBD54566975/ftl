@@ -10,7 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
@@ -75,6 +77,9 @@ type Server struct {
 	module   string
 	handlers []Handler
 	plugin   atomic.Value[*plugin.Plugin[ftlv1.DriveServiceClient]]
+
+	lastRebuildMu sync.Mutex
+	lastRebuild   time.Time
 }
 
 func (d *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
@@ -86,11 +91,14 @@ func (d *Server) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallR
 }
 
 func (d *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
-	err := d.plugin.Load().Cmd.Kill(syscall.SIGHUP)
+	_, err := d.rebuild(ctx)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	_, err = d.rebuild(ctx)
+	err = d.plugin.Load().Cmd.Kill(syscall.SIGHUP)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	return &ftlv1.FileChangeResponse{}, errors.WithStack(err)
 }
 
@@ -110,8 +118,14 @@ func (d *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
 		case <-cmdCtx.Done():
 			err := cmdCtx.Err()
 			logger.Warn("FTL module exited, restarting", "err", err)
+
+			exe, err := d.rebuild(ctx)
+			if err != nil {
+				logger.Error("Failed to rebuild FTL module", err)
+				return
+			}
 			var nextPlugin *plugin.Plugin[ftlv1.DriveServiceClient]
-			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, d.Config.Dir, d.exe, ftlv1.NewDriveServiceClient)
+			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewDriveServiceClient)
 			if err != nil {
 				logger.Error("Failed to restart FTL module", err)
 				continue
@@ -122,6 +136,16 @@ func (d *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
 }
 
 func (d *Server) rebuild(ctx context.Context) (exe string, err error) {
+	d.lastRebuildMu.Lock()
+	defer d.lastRebuildMu.Unlock()
+
+	exe = filepath.Join(d.WorkingDir, "ftl-module")
+
+	if time.Now().Sub(d.lastRebuild) < time.Millisecond*250 {
+		return exe, nil
+	}
+	defer func() { d.lastRebuild = time.Now() }()
+
 	logger := log.FromContext(ctx)
 	err = writeMain(d.Dir, d.WorkingDir, d.module, d.Config)
 	if err != nil {
@@ -132,7 +156,6 @@ func (d *Server) rebuild(ctx context.Context) (exe string, err error) {
 		return "", errors.WithStack(err)
 	}
 
-	exe = filepath.Join(d.WorkingDir, "ftl-module")
 	logger.Info("Compiling FTL.module...")
 	err = execInRoot(ctx, d.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", exe)
 	if err != nil {

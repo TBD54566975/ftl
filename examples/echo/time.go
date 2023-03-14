@@ -6,7 +6,9 @@ import (
 )
 
 type TimeRequest struct{}
-type TimeResponse struct{ Time time.Time }
+type TimeResponse struct {
+	Time time.Time `json:"time"`
+}
 
 //ftl:verb
 func Time(ctx context.Context, req TimeRequest) (TimeResponse, error) {

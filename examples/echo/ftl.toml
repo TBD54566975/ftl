@@ -1,2 +1,2 @@
-module = "echo"
+module = "ftl.dev/echo"
 language = "go"
