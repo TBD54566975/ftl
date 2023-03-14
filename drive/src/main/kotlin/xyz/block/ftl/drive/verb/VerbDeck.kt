@@ -1,8 +1,9 @@
 package xyz.block.ftl.drive.verb
 
 import io.github.classgraph.ClassGraph
+import xyz.block.ftl.Context
+import xyz.block.ftl.Verb
 import xyz.block.ftl.drive.Logging
-import xyz.block.ftl.drive.Verb
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KFunction
 import kotlin.reflect.KFunction1
@@ -20,7 +21,7 @@ class VerbDeck {
 
   data class VerbId(val qualifiedName: String)
 
-  private val verbs = ConcurrentHashMap<VerbId, VerbCassette<out Any, out Any>>()
+  private val verbs = ConcurrentHashMap<VerbId, VerbCassette<out Any>>()
 
   fun init(module: String) {
     logger.info("Scanning for Verbs in ${module}...")
@@ -43,7 +44,12 @@ class VerbDeck {
       }
   }
 
-  fun lookup(name: String): VerbCassette<out Any, out Any>? = verbs[VerbId(name)]
+  fun lookup(name: String): VerbCassette<out Any>? = verbs[VerbId(name)]
+
+  fun dispatch(verb: KFunction<*>, request: Any): Any {
+    logger.debug("Local dispatch of ${verb.name}")
+    return verbs[toId(verb)]!!.dispatch(Context.fromLocal(), request)
+  }
 
   private fun toId(verb: KFunction<*>) = VerbId(verb.name)
 }

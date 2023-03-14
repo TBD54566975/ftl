@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServlet
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpServletResponse.SC_OK
+import xyz.block.ftl.Context
 import xyz.block.ftl.drive.adapter.JsonAdapter
 import xyz.block.ftl.drive.verb.VerbDeck
 
@@ -24,7 +25,7 @@ class DriveServlet : HttpServlet() {
       // Use "Connectors" as a layer between http and the verb deck
       val input = jsonAdapter.readAs(request.reader, cassette.argumentType)
 
-      val output = cassette.invokeVerb(input)
+      val output = cassette.dispatch(Context.fromHttpRequest(request), input)
 
       jsonAdapter.write(output, response.writer)
     }

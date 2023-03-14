@@ -1,6 +1,6 @@
 package com.squareup.ftldemo
 
-import xyz.block.ftl.drive.Verb
+import xyz.block.ftl.Verb
 
 data class Order(val topping: String)
 

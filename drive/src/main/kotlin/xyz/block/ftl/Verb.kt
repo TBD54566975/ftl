@@ -1,4 +1,4 @@
-package xyz.block.ftl.drive
+package xyz.block.ftl
 
 import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.FUNCTION

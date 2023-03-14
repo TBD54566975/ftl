@@ -1,14 +1,30 @@
 package xyz.block.ftl.drive.verb
 
+import xyz.block.ftl.Context
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction1
+import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.staticProperties
 
-@Suppress("UNCHECKED_CAST")
-class VerbCassette<A, R>(private val verb: KFunction1<A, R>) {
-  val argumentType = verb.parameters[0].type.classifier as KClass<*>
+class VerbCassette<R>(private val verb: KFunction<R>) {
+  val argumentType = findArgumentType(verb.parameters)
   val returnType: KClass<*> = verb.returnType.classifier as KClass<*>
 
-  fun invokeVerb(argument: Any): Any {
-    return verb.invoke(argument as A) as Any
+  fun dispatch(context: Context, argument: Any): R {
+    val arguments = verb.parameters.associateWith { parameter ->
+      when (parameter.type.classifier) {
+        Context::class -> context
+        else -> argument
+      }
+    }
+
+    return verb.callBy(arguments)
+  }
+
+  private fun findArgumentType(parameters: List<KParameter>): KClass<*> {
+    return parameters.find {
+        param -> Context::class != param.type.classifier
+    }!!.type.classifier as KClass<*>
   }
 }
