@@ -8,10 +8,15 @@ data class HttpSubContext(
   val params: Map<String, String>,
   val uri: String)
 
-data class TraceSubContext(val verbsTransited: List<VerbDeck.VerbId>)
+data class TraceSubContext(
+  val ingressType: IngressType,
+  val verbsTransited: List<VerbDeck.VerbId>
+)
+
+enum class IngressType { HTTP, LOCAL, AGENT }
 
 class Context(
-  val trace: TraceSubContext = TraceSubContext(listOf()),
+  val trace: TraceSubContext,
   private val http: HttpSubContext?) {
 
   fun http(): HttpSubContext = http!!
@@ -29,11 +34,14 @@ class Context(
       }
 
       return Context(
-        TraceSubContext(listOf(verbId)),
+        TraceSubContext(IngressType.HTTP, listOf(verbId)),
         HttpSubContext(headers.toMap(), params.toMap(), request.requestURI))
     }
 
     fun fromLocal(verbId: VerbDeck.VerbId, propagator: Context) = Context(
-      TraceSubContext(propagator.trace.verbsTransited + verbId), null)
+      TraceSubContext(IngressType.LOCAL, propagator.trace.verbsTransited + verbId), http = null)
+
+    fun fromAgent(verbId: VerbDeck.VerbId) =
+      Context(TraceSubContext(IngressType.AGENT, listOf(verbId)), http = null)
   }
 }

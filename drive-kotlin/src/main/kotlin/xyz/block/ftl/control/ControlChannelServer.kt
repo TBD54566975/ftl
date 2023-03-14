@@ -6,11 +6,19 @@ import io.grpc.Status
 import io.grpc.netty.NettyServerBuilder
 import xyz.block.ftl.Context
 import xyz.block.ftl.drive.verb.VerbDeck
-import xyz.block.ftl.v1.*
+import xyz.block.ftl.v1.CallRequest
+import xyz.block.ftl.v1.CallResponse
+import xyz.block.ftl.v1.DriveServiceGrpcKt
+import xyz.block.ftl.v1.FileChangeRequest
+import xyz.block.ftl.v1.FileChangeResponse
+import xyz.block.ftl.v1.ListRequest
+import xyz.block.ftl.v1.ListResponse
+import xyz.block.ftl.v1.PingRequest
+import xyz.block.ftl.v1.PingResponse
 import java.net.SocketAddress
 
 
-class ControlChannelServer(val deck: VerbDeck) : DriveServiceGrpcKt.DriveServiceCoroutineImplBase() {
+class ControlChannelServer(private val deck: VerbDeck) : DriveServiceGrpcKt.DriveServiceCoroutineImplBase() {
   private val gson = Gson()
 
   override suspend fun ping(request: PingRequest): PingResponse {
@@ -19,10 +27,10 @@ class ControlChannelServer(val deck: VerbDeck) : DriveServiceGrpcKt.DriveService
 
   override suspend fun call(request: CallRequest): CallResponse {
     val cassette = deck.lookupFullyQualifiedName(request.verb) ?: throw Status.NOT_FOUND.asException()
-    val req = gson.fromJson<Any>(request.body.toStringUtf8(), cassette.argumentType.java)
-    var resp: Any
+    val argument = gson.fromJson<Any>(request.body.toStringUtf8(), cassette.argumentType.java)
+    val reply: Any
     try {
-      resp = cassette.dispatch(Context(http = null), req) // TODO: do something with Context
+      reply = cassette.dispatch(Context.fromAgent(cassette.verbId), argument)
     } catch (e: Exception) {
       return CallResponse.newBuilder()
         .setError(
@@ -33,7 +41,7 @@ class ControlChannelServer(val deck: VerbDeck) : DriveServiceGrpcKt.DriveService
         .build()
     }
     return CallResponse.newBuilder()
-      .setBody(ByteString.copyFromUtf8(gson.toJson(resp)))
+      .setBody(ByteString.copyFromUtf8(gson.toJson(reply)))
       .build()
   }
 

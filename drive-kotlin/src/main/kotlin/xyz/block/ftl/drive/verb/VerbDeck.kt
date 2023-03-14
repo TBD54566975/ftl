@@ -28,12 +28,11 @@ class VerbDeck {
   fun init(module: String) {
     this.module = module
     logger.info("Scanning for Verbs in ${module}...")
-    // Assign scanResult in try-with-resources
-    ClassGraph() // Create a new ClassGraph instance
+    ClassGraph()
       .enableAllInfo() // Scan classes, methods, fields, annotations
-      .acceptPackages(module) // Scan com.xyz and subpackages
+      .acceptPackages(module)
       .disableJarScanning()
-      .scan().use { scanResult ->                       // Perform the scan and return a ScanResult
+      .scan().use { scanResult ->
         // Use the ScanResult within the try block, e.g.
         for (clazz in scanResult.getClassesWithMethodAnnotation(Verb::class.java)) {
           clazz.methodInfo.forEach { info ->
