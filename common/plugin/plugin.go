@@ -97,9 +97,15 @@ func Spawn[Client PingableClient](
 	if err = cmd.Start(); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
+	// Cancel the context if the command exits - this will terminate the Dial immediately.
+	var cancelWithCause context.CancelCauseFunc
+	cmdCtx, cancelWithCause = context.WithCancelCause(ctx)
+	go func() { cancelWithCause(cmd.Wait()) }()
+
 	defer func() {
 		if err != nil {
-			_ = cmd.Kill(syscall.SIGKILL)
+			logger.Warn("Plugin failed to start, terminating", "pid", cmd.Process.Pid)
+			_ = cmd.Kill(syscall.SIGTERM)
 		}
 	}()
 
@@ -108,11 +114,6 @@ func Spawn[Client PingableClient](
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-
-	// Cancel the context if the command exits - this will terminate the Dial immediately.
-	var cancelWithCause context.CancelCauseFunc
-	cmdCtx, cancelWithCause = context.WithCancelCause(ctx)
-	go func() { cancelWithCause(cmd.Wait()) }()
 
 	conn, err := grpc.DialContext(
 		ctx, "unix://"+socket,
@@ -130,7 +131,7 @@ func Spawn[Client PingableClient](
 
 	// Wait for the plugin to start.
 	client := makeClient(conn)
-	for i := 0; i < 30*10; i++ {
+	for i := 0; i < 10*10; i++ {
 		_, err = client.Ping(ctx, &ftlv1.PingRequest{})
 		if err == nil {
 			break
