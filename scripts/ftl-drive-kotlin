@@ -1,0 +1,5 @@
+#!/bin/bash
+
+dir="$(git rev-parse --show-toplevel)/drive-kotlin"
+
+cd "$dir" && mvn exec:java
