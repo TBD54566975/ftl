@@ -12,15 +12,16 @@ class Context(
   val http: HttpSubContext?) {
 
   companion object {
-    fun fromHttpRequest(request: HttpServletRequest): Context {
+    fun fromHttpRequest(verbId: VerbDeck.VerbId, request: HttpServletRequest): Context {
       val headers = mutableMapOf<String, String>()
       request.headerNames.asIterator().forEach { name ->
         headers[name] = request.getHeader(name)
       }
 
-      return Context(TraceSubContext(listOf()), HttpSubContext(headers))
+      return Context(TraceSubContext(listOf(verbId)), HttpSubContext(headers))
     }
 
-    fun fromLocal(propagator: Context) = Context(propagator.trace, null)
+    fun fromLocal(verbId: VerbDeck.VerbId, propagator: Context) = Context(
+      TraceSubContext(propagator.trace.verbsTransited + verbId), null)
   }
 }

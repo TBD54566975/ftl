@@ -25,7 +25,7 @@ class DriveServlet : HttpServlet() {
       // Use "Connectors" as a layer between http and the verb deck
       val input = jsonAdapter.readAs(request.reader, cassette.argumentType)
 
-      val output = cassette.dispatch(Context.fromHttpRequest(request), input)
+      val output = cassette.dispatch(Context.fromHttpRequest(cassette.verbId, request), input)
 
       jsonAdapter.write(output, response.writer)
     }

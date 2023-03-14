@@ -7,7 +7,7 @@ import kotlin.reflect.KParameter
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.staticProperties
 
-class VerbCassette<R>(private val verb: KFunction<R>) {
+class VerbCassette<R>(val verbId: VerbDeck.VerbId, private val verb: KFunction<R>) {
   val argumentType = findArgumentType(verb.parameters)
   val returnType: KClass<*> = verb.returnType.classifier as KClass<*>
 

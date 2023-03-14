@@ -37,8 +37,9 @@ class VerbDeck {
             logger.info("    @Verb ${info.name}")
             val function = info.loadClassAndGetMethod().kotlinFunction!!
 
+            val verbId = toId(function)
             @Suppress("UNCHECKED_CAST")
-            verbs[toId(function)] = VerbCassette(function as KFunction1<Any, Any>)
+            verbs[verbId] = VerbCassette(verbId, function as KFunction1<Any, Any>)
           }
         }
       }
@@ -47,8 +48,9 @@ class VerbDeck {
   fun lookup(name: String): VerbCassette<out Any>? = verbs[VerbId(name)]
 
   fun dispatch(context: Context, verb: KFunction<*>, request: Any): Any {
-    logger.debug("Local dispatch of ${verb.name}")
-    return verbs[toId(verb)]!!.dispatch(Context.fromLocal(context), request)
+    logger.debug("Local dispatch of ${verb.name} [trace: ${context.trace.verbsTransited}]")
+    val verbId = toId(verb)
+    return verbs[verbId]!!.dispatch(Context.fromLocal(verbId, context), request)
   }
 
   private fun toId(verb: KFunction<*>) = VerbId(verb.name)

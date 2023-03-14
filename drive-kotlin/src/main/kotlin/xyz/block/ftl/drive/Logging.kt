@@ -20,7 +20,7 @@ class Logging {
     fun logger(name: String): Logger {
       val logger = LoggerFactory.getLogger(name) as Logger
       logger.addAppender(logging.appender)
-      logger.level = Level.INFO
+      logger.level = Level.DEBUG
       logger.isAdditive = false /* set to true if root should log too */
 
       return logger
