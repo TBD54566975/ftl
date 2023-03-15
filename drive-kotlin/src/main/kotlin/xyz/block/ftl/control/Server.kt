@@ -8,22 +8,20 @@ import xyz.block.ftl.Context
 import xyz.block.ftl.drive.verb.VerbDeck
 import xyz.block.ftl.v1.CallRequest
 import xyz.block.ftl.v1.CallResponse
-import xyz.block.ftl.v1.DriveServiceGrpcKt
+import xyz.block.ftl.v1.DevelServiceGrpcKt
 import xyz.block.ftl.v1.FileChangeRequest
 import xyz.block.ftl.v1.FileChangeResponse
 import xyz.block.ftl.v1.ListRequest
 import xyz.block.ftl.v1.ListResponse
 import xyz.block.ftl.v1.PingRequest
 import xyz.block.ftl.v1.PingResponse
+import xyz.block.ftl.v1.VerbServiceGrpcKt
 import java.net.SocketAddress
 
-
-class ControlChannelServer(private val deck: VerbDeck) : DriveServiceGrpcKt.DriveServiceCoroutineImplBase() {
+class VerbServer(private val deck: VerbDeck) : VerbServiceGrpcKt.VerbServiceCoroutineImplBase() {
   private val gson = Gson()
 
-  override suspend fun ping(request: PingRequest): PingResponse {
-    return PingResponse.getDefaultInstance()
-  }
+  override suspend fun ping(request: PingRequest): PingResponse = PingResponse.getDefaultInstance()
 
   override suspend fun call(request: CallRequest): CallResponse {
     val verb = deck.lookupFullyQualifiedName(request.verb) ?: throw Status.NOT_FOUND.asException()
@@ -50,19 +48,26 @@ class ControlChannelServer(private val deck: VerbDeck) : DriveServiceGrpcKt.Driv
       .addAllVerbs(deck.list().map { deck.fullyQualifiedName(it) })
       .build()
   }
+}
 
-  override suspend fun fileChange(request: FileChangeRequest): FileChangeResponse {
-    return FileChangeResponse.getDefaultInstance()
-  }
+class DevelServer() : DevelServiceGrpcKt.DevelServiceCoroutineImplBase() {
+  override suspend fun ping(request: PingRequest): PingResponse = PingResponse.getDefaultInstance()
+  override suspend fun fileChange(request: FileChangeRequest): FileChangeResponse =
+    FileChangeResponse.getDefaultInstance()
 }
 
 /**
- * Start DriveService on the given socket.
+ * Start services on the given socket.
  */
-fun startControlChannelServer(socket: SocketAddress, controlChannel: ControlChannelServer) {
+fun startControlChannelServer(
+  socket: SocketAddress,
+  verbServer: VerbServer,
+  develServer: DevelServer
+) {
   val server = NettyServerBuilder
     .forAddress(socket)
-    .addService(controlChannel)
+    .addService(verbServer)
+    .addService(develServer)
     .build()
   // TODO: Terminate the process if this fails to startup.
   server.start()

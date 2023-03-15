@@ -11,7 +11,7 @@ import (
 
 type listCmd struct{}
 
-func (l *listCmd) Run(ctx context.Context, client ftlv1.AgentServiceClient) error {
+func (l *listCmd) Run(ctx context.Context, client ftlv1.VerbServiceClient) error {
 	resp, err := client.List(ctx, &ftlv1.ListRequest{})
 	if err != nil {
 		return errors.WithStack(err)

@@ -42,33 +42,35 @@ message ServeResponse {}
 
 // AgentService is the local agent that manages monitoring local Drives.
 service AgentService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse);
   // Serve a module as part of the mesh.
   rpc Serve(ServeRequest) returns (ServeResponse);
-  // Ping FTL for readiness.
+}
+
+// VerbService is a common interface shared by multiple services for calling Verbs.
+service VerbService {
+  // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
-  // Call a Verb.
+
+  // Call a Verb on the Drive.
   rpc Call(CallRequest) returns (CallResponse);
-  // List Verbs.
+
+  // List the Verbs available on the service.
   rpc List(ListRequest) returns (ListResponse);
 }
 
-// DriveService is the service that provides language-specific development and
+// DevelService is the service that provides language-specific development and
 // deployment functionality.
 //
-// The DriveService is responsible for hot reloading the when code
-// changes, and passing Verb calls through.
-service DriveService {
-  // Ping the Drive for readiness.
+// The DevelService is responsible for hot reloading when code changes, and
+// passing Verb calls through.
+service DevelService {
+  // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
 
   // FileChange is called when a file is changed.
   //
   // The Drive should hot reload the module if a change to the file warrants it.
   rpc FileChange(FileChangeRequest) returns (FileChangeResponse);
-
-  // Call a Verb on the Drive.
-  rpc Call(CallRequest) returns (CallResponse);
-
-  // List the Verbs available on the Drive.
-  rpc List(ListRequest) returns (ListResponse);
 }

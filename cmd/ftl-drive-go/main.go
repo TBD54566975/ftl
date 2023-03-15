@@ -7,5 +7,6 @@ import (
 )
 
 func main() {
-	plugin.Start(drivego.New, ftlv1.RegisterDriveServiceServer)
+	plugin.Start(drivego.New, ftlv1.RegisterVerbServiceServer,
+		plugin.RegisterAdditionalServer[*drivego.Server](ftlv1.RegisterDevelServiceServer))
 }

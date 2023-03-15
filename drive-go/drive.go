@@ -32,7 +32,7 @@ type Config struct {
 	Dir        string `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
 }
 
-// New creates a new DriveService for a directory of Go Verbs.
+// New creates a new DevelService for a directory of Go Verbs.
 func New(ctx context.Context, config Config) (*Server, error) {
 	logger := log.FromContext(ctx)
 	goModFile := filepath.Join(config.Dir, "go.mod")
@@ -59,7 +59,7 @@ func New(ctx context.Context, config Config) (*Server, error) {
 	}
 	d.exe = exe
 
-	plugin, cmdCtx, err := plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewDriveServiceClient)
+	plugin, cmdCtx, err := plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewVerbServiceClient)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -69,14 +69,16 @@ func New(ctx context.Context, config Config) (*Server, error) {
 	return d, nil
 }
 
-var _ ftlv1.DriveServiceServer = (*Server)(nil)
+var _ ftlv1.DevelServiceServer = (*Server)(nil)
+var _ ftlv1.VerbServiceServer = (*Server)(nil)
 
 type Server struct {
 	Config
-	exe      string
-	module   string
-	handlers []Handler
-	plugin   atomic.Value[*plugin.Plugin[ftlv1.DriveServiceClient]]
+	exe          string
+	module       string
+	handlers     []Handler
+	plugin       atomic.Value[*plugin.Plugin[ftlv1.VerbServiceClient]]
+	develService ftlv1.DevelServiceClient
 
 	lastRebuildMu sync.Mutex
 	lastRebuild   time.Time
@@ -124,8 +126,8 @@ func (d *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
 				logger.Error("Failed to rebuild FTL module", err)
 				return
 			}
-			var nextPlugin *plugin.Plugin[ftlv1.DriveServiceClient]
-			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewDriveServiceClient)
+			var nextPlugin *plugin.Plugin[ftlv1.VerbServiceClient]
+			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewVerbServiceClient)
 			if err != nil {
 				logger.Error("Failed to restart FTL module", err)
 				continue
@@ -240,7 +242,7 @@ func generate(config Config) (*codewriter.Writer, error) {
 				w.L(`handlers = append(handlers, drivego.Handle(%s.%s))`, pkgImp, endpoint.fn.Name())
 			}
 		}
-		w.L(`plugin.Start(drivego.NewUserVerbServer(handlers...), ftlv1.RegisterDriveServiceServer)`)
+		w.L(`plugin.Start(drivego.NewUserVerbServer(handlers...), ftlv1.RegisterVerbServiceServer)`)
 	})
 
 	w.L(`}`)

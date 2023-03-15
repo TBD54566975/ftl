@@ -17,8 +17,8 @@ type UserVerbConfig struct{}
 // NewUserVerbServer starts a new code-generated FTL.drive server for user Verbs.
 //
 // This function is intended to be used by the code generator.
-func NewUserVerbServer(handlers ...Handler) func(context.Context, UserVerbConfig) (ftlv1.DriveServiceServer, error) {
-	return func(ctx context.Context, mc UserVerbConfig) (ftlv1.DriveServiceServer, error) {
+func NewUserVerbServer(handlers ...Handler) func(context.Context, UserVerbConfig) (ftlv1.VerbServiceServer, error) {
+	return func(ctx context.Context, mc UserVerbConfig) (ftlv1.VerbServiceServer, error) {
 		hmap := map[string]Handler{}
 		for _, handler := range handlers {
 			hmap[handler.path] = handler
@@ -62,7 +62,7 @@ func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)
 	}
 }
 
-var _ ftlv1.DriveServiceServer = (*moduleServer)(nil)
+var _ ftlv1.VerbServiceServer = (*moduleServer)(nil)
 
 type moduleServer struct {
 	handlers map[string]Handler
@@ -74,10 +74,6 @@ func (m *moduleServer) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1
 		out.Verbs = append(out.Verbs, handler)
 	}
 	return out, nil
-}
-
-func (*moduleServer) FileChange(context.Context, *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
-	return &ftlv1.FileChangeResponse{}, nil
 }
 
 func (*moduleServer) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {

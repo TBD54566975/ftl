@@ -3,20 +3,14 @@ package plugin
 import (
 	"context"
 	"io/ioutil"
-	"net"
-	"os"
-	"os/signal"
 	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/alecthomas/errors"
-	"github.com/alecthomas/kong"
-	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/reflection"
 
 	"github.com/TBD54566975/ftl/common/exec"
 	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
@@ -30,16 +24,30 @@ type PingableClient interface {
 }
 
 type pluginOptions struct {
-	envars []string
+	envars            []string
+	additionalClients []func(grpc.ClientConnInterface)
 }
 
 // Option used when creating a plugin.
-type Option func(*pluginOptions)
+type Option func(*pluginOptions) error
 
 // WithEnvars sets the environment variables to pass to the plugin.
 func WithEnvars(envars ...string) Option {
-	return func(o *pluginOptions) {
-		o.envars = envars
+	return func(po *pluginOptions) error {
+		po.envars = envars
+		return nil
+	}
+}
+
+// WithExtraClient connects to an additional gRPC service in the same plugin.
+//
+// The client instance is written to "out".
+func WithExtraClient[Client PingableClient](out *Client, makeClient func(grpc.ClientConnInterface) Client) Option {
+	return func(po *pluginOptions) error {
+		po.additionalClients = append(po.additionalClients, func(cci grpc.ClientConnInterface) {
+			*out = makeClient(cci)
+		})
+		return nil
 	}
 }
 
@@ -77,7 +85,9 @@ func Spawn[Client PingableClient](
 
 	opts := pluginOptions{}
 	for _, opt := range options {
-		opt(&opts)
+		if err = opt(&opts); err != nil {
+			return nil, nil, errors.WithStack(err)
+		}
 	}
 	workingDir := filepath.Join(dir, ".ftl")
 
@@ -157,89 +167,4 @@ func Spawn[Client PingableClient](
 	logger.Info(name + " online")
 	plugin = &Plugin[Client]{Cmd: cmd, Client: client}
 	return plugin, cmdCtx, nil
-}
-
-func allocatePort() (*net.TCPAddr, error) {
-	l, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1)})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to allocate port")
-	}
-	_ = l.Close()
-	return l.Addr().(*net.TCPAddr), nil //nolint:forcetypeassert
-}
-
-func cleanup(logger *slog.Logger, pidFile string) error {
-	pidb, err := ioutil.ReadFile(pidFile)
-	if os.IsNotExist(err) {
-		return nil
-	} else if err != nil {
-		return errors.WithStack(err)
-	}
-	pid, err := strconv.Atoi(string(pidb))
-	if err != nil && !os.IsNotExist(err) {
-		return errors.WithStack(err)
-	}
-	err = syscall.Kill(pid, syscall.SIGKILL)
-	if !errors.Is(err, syscall.ESRCH) {
-		logger.Info("Reaped old plugin", "pid", pid, "err", err)
-	}
-	return nil
-}
-
-type serveCli struct {
-	LogConfig log.Config    `embed:"" group:"Logging:"`
-	Socket    socket.Socket `help:"Socket to listen on." env:"FTL_PLUGIN_SOCKET" required:""`
-	kong.Plugins
-}
-
-// Start a gRPC server plugin listening on the socket specified by the
-// environment variable FTL_PLUGIN_SOCKET.
-//
-// This function does not return.
-//
-// "Config" is Kong configuration to pass to "create".
-// "create" is called to create the implementation of the service.
-// "register" is called to register the service with the gRPC server and is typically a generated function.
-func Start[Impl any, Iface any, Config any](
-	create func(context.Context, Config) (Impl, error),
-	register func(grpc.ServiceRegistrar, Iface),
-) {
-	var config Config
-	cli := serveCli{Plugins: kong.Plugins{&config}}
-	kctx := kong.Parse(&cli, kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`))
-
-	name := "FTL." + kctx.Model.Name
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	logger := log.New(cli.LogConfig, os.Stderr).With("C", name)
-	ctx = log.ContextWithLogger(ctx, logger)
-
-	logger.Info("Starting "+name, "socket", cli.Socket)
-
-	// Signal handling.
-	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-sigch
-		logger.Info(name+" terminating", "signal", sig)
-		cancel()
-		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
-		os.Exit(0)
-	}()
-
-	svc, err := create(ctx, config)
-	kctx.FatalIfErrorf(err)
-
-	l, err := (&net.ListenConfig{}).Listen(ctx, cli.Socket.Network, cli.Socket.Addr)
-	kctx.FatalIfErrorf(err)
-	gs := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(log.UnaryGRPCInterceptor(logger)),
-		grpc.ChainStreamInterceptor(log.StreamGRPCInterceptor(logger)),
-	)
-	reflection.Register(gs)
-	register(gs, any(svc).(Iface)) //nolint:forcetypeassert
-	err = gs.Serve(l)
-	kctx.FatalIfErrorf(err)
-	kctx.Exit(0)
 }

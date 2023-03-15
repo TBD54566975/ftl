@@ -3,7 +3,8 @@ package xyz.block.ftl.drive
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.servlet.ServletHandler
-import xyz.block.ftl.control.ControlChannelServer
+import xyz.block.ftl.control.DevelServer
+import xyz.block.ftl.control.VerbServer
 import xyz.block.ftl.control.parseSocket
 import xyz.block.ftl.control.startControlChannelServer
 import xyz.block.ftl.drive.transport.DriveServlet
@@ -36,8 +37,12 @@ fun main(args: Array<String>) {
   if (pluginSocket != null) {
     val controlChannelSocket = parseSocket(pluginSocket)
     logger.info("Listening to Drive control channel on $controlChannelSocket")
-    val controlChannel = ControlChannelServer(VerbDeck.instance)
-    startControlChannelServer(controlChannelSocket, controlChannel)
+
+    startControlChannelServer(
+      controlChannelSocket,
+      VerbServer(VerbDeck.instance),
+      DevelServer()
+    )
   }
 
   server.start()

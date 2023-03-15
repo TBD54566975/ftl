@@ -65,8 +65,8 @@ func main() {
 	kctx.FatalIfErrorf(err)
 }
 
-func dialAgent(ctx context.Context) func() (ftlv1.AgentServiceClient, error) {
-	return func() (ftlv1.AgentServiceClient, error) {
+func dialAgent(ctx context.Context) func() (ftlv1.VerbServiceClient, error) {
+	return func() (ftlv1.VerbServiceClient, error) {
 		conn, err := grpc.DialContext(ctx, cli.Socket.String(),
 			// grpc.WithBlock(),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -74,6 +74,6 @@ func dialAgent(ctx context.Context) func() (ftlv1.AgentServiceClient, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		return ftlv1.NewAgentServiceClient(conn), nil
+		return ftlv1.NewVerbServiceClient(conn), nil
 	}
 }

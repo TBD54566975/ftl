@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/log"
@@ -56,7 +57,9 @@ func (r *serveCmd) Run(ctx context.Context, s socket.Socket) error {
 		grpc.ChainUnaryInterceptor(log.UnaryGRPCInterceptor(logger)),
 		grpc.ChainStreamInterceptor(log.StreamGRPCInterceptor(logger)),
 	)
+	reflection.Register(srv)
 	ftlv1.RegisterAgentServiceServer(srv, agent)
+	ftlv1.RegisterVerbServiceServer(srv, agent)
 
 	mixedHandler := newHTTPandGRPCMux(agent, srv)
 	http2Server := &http2.Server{}

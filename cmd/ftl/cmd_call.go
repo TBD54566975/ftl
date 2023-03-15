@@ -15,7 +15,7 @@ type callCmd struct {
 	Request string        `arg:"" optional:"" help:"JSON request payload." default:"{}"`
 }
 
-func (c *callCmd) Run(ctx context.Context, client ftlv1.AgentServiceClient) error {
+func (c *callCmd) Run(ctx context.Context, client ftlv1.VerbServiceClient) error {
 	resp, err := client.Call(ctx, &ftlv1.CallRequest{
 		Verb: c.Verb,
 		Body: []byte(c.Request),

@@ -35,10 +35,11 @@ type ModuleConfig struct {
 }
 
 type driveContext struct {
-	*plugin.Plugin[ftlv1.DriveServiceClient]
-	root       string
-	workingDir string
-	config     ModuleConfig
+	*plugin.Plugin[ftlv1.VerbServiceClient]
+	develService ftlv1.DevelServiceClient
+	root         string
+	workingDir   string
+	config       ModuleConfig
 }
 
 type Local struct {
@@ -111,8 +112,11 @@ func (l *Local) Manage(ctx context.Context, dir string) (err error) {
 		return errors.WithStack(err)
 	}
 
-	drvPlugin, cmdCtx, err := plugin.Spawn(ctx, dir, exe, ftlv1.NewDriveServiceClient,
-		plugin.WithEnvars("FTL_MODULE_ROOT="+dir))
+	var develClient ftlv1.DevelServiceClient
+	verbServicePlugin, cmdCtx, err := plugin.Spawn(ctx, dir, exe, ftlv1.NewVerbServiceClient,
+		plugin.WithEnvars("FTL_MODULE_ROOT="+dir),
+		plugin.WithExtraClient(&develClient, ftlv1.NewDevelServiceClient),
+	)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -124,7 +128,7 @@ func (l *Local) Manage(ctx context.Context, dir string) (err error) {
 	// Ensure we stop the sub-process if anything errors.
 	defer func() {
 		if err != nil {
-			_ = drvPlugin.Cmd.Kill(syscall.SIGKILL)
+			_ = verbServicePlugin.Cmd.Kill(syscall.SIGKILL)
 		}
 	}()
 
@@ -137,7 +141,7 @@ func (l *Local) Manage(ctx context.Context, dir string) (err error) {
 	}
 
 	l.drives[dir] = driveContext{
-		Plugin:     drvPlugin,
+		Plugin:     verbServicePlugin,
 		root:       dir,
 		workingDir: workingDir,
 		config:     config,
@@ -260,7 +264,7 @@ func (l *Local) watch(ctx context.Context) error {
 			l.lock.Lock()
 			for root, drive := range l.drives {
 				if strings.HasPrefix(path, root) {
-					_, err := drive.Client.FileChange(ctx, &ftlv1.FileChangeRequest{Path: path})
+					_, err := drive.develService.FileChange(ctx, &ftlv1.FileChangeRequest{Path: path})
 					if err != nil {
 						l.lock.Unlock()
 						return errors.WithStack(err)
