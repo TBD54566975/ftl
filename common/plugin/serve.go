@@ -21,7 +21,7 @@ import (
 
 type serveCli struct {
 	LogConfig log.Config    `embed:"" group:"Logging:"`
-	Socket    socket.Socket `help:"Socket to listen on." env:"FTL_PLUGIN_SOCKET" required:""`
+	Socket    socket.Socket `help:"Socket to listen on." env:"FTL_PLUGIN_ENDPOINT" required:""`
 	kong.Plugins
 }
 
@@ -43,7 +43,7 @@ func RegisterAdditionalServer[Impl any, Iface any](register func(grpc.ServiceReg
 }
 
 // Start a gRPC server plugin listening on the socket specified by the
-// environment variable FTL_PLUGIN_SOCKET.
+// environment variable FTL_PLUGIN_ENDPOINT.
 //
 // This function does not return.
 //
@@ -82,12 +82,9 @@ func Start[Impl any, Iface any, Config any](
 	svc, err := create(ctx, config)
 	kctx.FatalIfErrorf(err)
 
-	l, err := (&net.ListenConfig{}).Listen(ctx, cli.Socket.Network, cli.Socket.Addr)
+	l, err := socket.Listen(cli.Socket)
 	kctx.FatalIfErrorf(err)
-	gs := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(log.UnaryGRPCInterceptor(logger)),
-		grpc.ChainStreamInterceptor(log.StreamGRPCInterceptor(logger)),
-	)
+	gs := socket.NewGRPCServer(ctx)
 	reflection.Register(gs)
 	register(gs, any(svc).(Iface)) //nolint:forcetypeassert
 	err = gs.Serve(l)

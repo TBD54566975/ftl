@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
 type listCmd struct{}

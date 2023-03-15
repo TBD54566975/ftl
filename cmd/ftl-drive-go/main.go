@@ -1,9 +1,9 @@
 package main
 
 import (
-	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/plugin"
 	drivego "github.com/TBD54566975/ftl/drive-go"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
 func main() {

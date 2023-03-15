@@ -21,9 +21,10 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/exec"
-	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/metadata"
 	"github.com/TBD54566975/ftl/common/plugin"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
 // ModuleConfig is the configuration for an FTL module.
@@ -81,7 +82,7 @@ func (l *Local) Drives() []string {
 // The Drive executable must have the name ftl-drive-$LANG. The Local
 // will pass the following envars through to the Drive:
 //
-//	FTL_DRIVE_SOCKET - Path to a Unix socket that the Drive must serve the gRPC service xyz.block.ftl.v1.DriveService on.
+//	FTL_DRIVE_ENDPOINT - Path to a Unix socket that the Drive must serve the gRPC service xyz.block.ftl.v1.DriveService on.
 //	FTL_MODULE_ROOT - Path to a directory containing FTL module source and an ftl.toml file.
 //	FTL_WORKING_DIR - Path to a directory that the Drive can use for temporary files.
 func (l *Local) Manage(ctx context.Context, dir string) (err error) {
@@ -213,6 +214,9 @@ func (l *Local) Serve(ctx context.Context, req *ftlv1.ServeRequest) (*ftlv1.Serv
 }
 
 func (l *Local) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
+	logger := log.FromContext(ctx)
+	logger.Info(req.Verb)
+	ctx = metadata.WithDirectRouting(ctx)
 	drive, err := l.findDrive(req.Verb)
 	if err != nil {
 		return nil, errors.WithStack(err)

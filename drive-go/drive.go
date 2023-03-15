@@ -20,16 +20,19 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/TBD54566975/ftl/common/exec"
-	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/metadata"
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
 type Config struct {
-	FTLSource  string `required:"" type:"existingdir" env:"FTL_SOURCE" help:"Path to FTL source code when developing locally."`
-	WorkingDir string `required:"" type:"existingdir" env:"FTL_WORKING_DIR" help:"Working directory for FTL runtime."`
-	Dir        string `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
+	Endpoint   socket.Socket `required:"" help:"FTL endpoint to connect to." env:"FTL_ENDPOINT"`
+	FTLSource  string        `required:"" type:"existingdir" env:"FTL_SOURCE" help:"Path to FTL source code when developing locally."`
+	WorkingDir string        `required:"" type:"existingdir" env:"FTL_WORKING_DIR" help:"Working directory for FTL runtime."`
+	Dir        string        `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
 }
 
 // New creates a new DevelService for a directory of Go Verbs.
@@ -44,9 +47,15 @@ func New(ctx context.Context, config Config) (*Server, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	conn, err := socket.DialGRPC(ctx, config.Endpoint)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to dial FTL")
+	}
+	router := ftlv1.NewVerbServiceClient(conn)
 
 	d := &Server{
 		Config: config,
+		router: router,
 		module: module,
 	}
 
@@ -74,6 +83,7 @@ var _ ftlv1.VerbServiceServer = (*Server)(nil)
 
 type Server struct {
 	Config
+	router       ftlv1.VerbServiceClient
 	exe          string
 	module       string
 	handlers     []Handler
@@ -85,11 +95,17 @@ type Server struct {
 }
 
 func (d *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
-	return d.plugin.Load().Client.List(ctx, req)
+	if metadata.IsDirectRouted(ctx) {
+		return d.plugin.Load().Client.List(ctx, req)
+	}
+	return d.router.List(ctx, req)
 }
 
 func (d *Server) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
-	return d.plugin.Load().Client.Call(ctx, req)
+	if metadata.IsDirectRouted(ctx) || strings.HasPrefix(req.Verb, d.module) {
+		return d.plugin.Load().Client.Call(ctx, req)
+	}
+	return d.router.Call(ctx, req)
 }
 
 func (d *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
@@ -231,7 +247,7 @@ func generate(config Config) (*codewriter.Writer, error) {
 	w := codewriter.New("main")
 	w.Import("github.com/TBD54566975/ftl/drive-go")
 	w.Import("github.com/TBD54566975/ftl/common/plugin")
-	w.Import(`github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1`)
+	w.Import(`github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1`)
 
 	w.L(`func main() {`)
 	w.In(func(w *codewriter.Writer) {

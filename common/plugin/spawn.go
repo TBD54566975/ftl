@@ -10,12 +10,11 @@ import (
 
 	"github.com/alecthomas/errors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/TBD54566975/ftl/common/exec"
-	ftlv1 "github.com/TBD54566975/ftl/common/gen/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/socket"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
 // PingableClient is a gRPC client that can be pinged.
@@ -67,7 +66,7 @@ type Plugin[Client PingableClient] struct {
 //
 // The envars passed to the plugin are:
 //
-//	FTL_PLUGIN_SOCKET - the path to the unix socket to listen on.
+//	FTL_PLUGIN_ENDPOINT - the endpoint URI to listen on
 //	FTL_WORKING_DIR - the path to a working directory that the plugin can write state to, if required.
 func Spawn[Client PingableClient](
 	ctx context.Context,
@@ -108,7 +107,7 @@ func Spawn[Client PingableClient](
 	pluginSocket := socket.Socket{Network: "tcp", Addr: addr.String()}
 	logger.Info("Spawning plugin", "dir", dir, "exe", exe, "socket", pluginSocket)
 	cmd := exec.Command(ctx, dir, exe)
-	cmd.Env = append(cmd.Env, "FTL_PLUGIN_SOCKET="+pluginSocket.String())
+	cmd.Env = append(cmd.Env, "FTL_PLUGIN_ENDPOINT="+pluginSocket.String())
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
 	cmd.Env = append(cmd.Env, opts.envars...)
 	if err = cmd.Start(); err != nil {
@@ -132,11 +131,7 @@ func Spawn[Client PingableClient](
 		return nil, nil, errors.WithStack(err)
 	}
 
-	conn, err := grpc.DialContext(
-		ctx, pluginSocket.String(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithContextDialer(socket.Dialer),
-	)
+	conn, err := socket.DialGRPC(ctx, pluginSocket)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}

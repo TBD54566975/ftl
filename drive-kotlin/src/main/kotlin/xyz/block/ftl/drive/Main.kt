@@ -33,7 +33,7 @@ fun main(args: Array<String>) {
   VerbDeck.init("com.squareup.ftldemo")
 
   // Start control channel if requested.
-  val pluginSocket = System.getenv("FTL_PLUGIN_SOCKET")
+  val pluginSocket = System.getenv("FTL_PLUGIN_ENDPOINT")
   if (pluginSocket != null) {
     val controlChannelSocket = parseSocket(pluginSocket)
     logger.info("Listening to Drive control channel on $controlChannelSocket")

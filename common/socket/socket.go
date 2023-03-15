@@ -8,6 +8,8 @@ import (
 	"os"
 
 	"github.com/alecthomas/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Socket struct {
@@ -40,6 +42,18 @@ func Dialer(ctx context.Context, addr string) (net.Conn, error) {
 // Dial a Socket.
 func Dial(ctx context.Context, s Socket) (net.Conn, error) {
 	conn, err := (&net.Dialer{}).DialContext(ctx, s.Network, s.Addr)
+	return conn, errors.WithStack(err)
+}
+
+// DialGRPC using a Socket.
+//
+// TODO: Extend this to support TLS etc. automatically.
+func DialGRPC(ctx context.Context, s Socket, options ...grpc.DialOption) (*grpc.ClientConn, error) {
+	conn, err := grpc.DialContext(
+		ctx, s.String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(Dialer),
+	)
 	return conn, errors.WithStack(err)
 }
 
