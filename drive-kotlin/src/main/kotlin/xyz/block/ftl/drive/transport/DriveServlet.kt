@@ -19,13 +19,13 @@ class DriveServlet : HttpServlet() {
 
       // Simple janky mapping between request URI and verb name
       val name = request!!.requestURI.substring(1)
-      val cassette = deck.lookup(name)
-      checkNotNull(cassette) { "No such verb available: ${name}" }
+      val verb = deck.lookup(name)
+      checkNotNull(verb) { "No such verb available: ${name}" }
 
       // Use "Connectors" as a layer between http and the verb deck
-      val input = jsonAdapter.readAs(request.reader, cassette.argumentType)
+      val input = jsonAdapter.readAs(request.reader, verb.argumentType)
 
-      val output = cassette.dispatch(Context.fromHttpRequest(cassette.verbId, request), input)
+      val output = deck.dispatch(Context.fromHttpRequest(verb.verbId, request), verb.verbId, input)
 
       jsonAdapter.write(output, response.writer)
     }

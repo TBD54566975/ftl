@@ -4,14 +4,12 @@ import xyz.block.ftl.Context
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
-import kotlin.reflect.full.isSubtypeOf
-import kotlin.reflect.full.staticProperties
 
 class VerbCassette<R>(val verbId: VerbDeck.VerbId, private val verb: KFunction<R>) {
-  val argumentType = findArgumentType(verb.parameters)
+  private val argumentType = findArgumentType(verb.parameters)
   val returnType: KClass<*> = verb.returnType.classifier as KClass<*>
 
-  fun dispatch(context: Context, argument: Any): R {
+  fun invokeVerbInternal(context: Context, argument: Any): R {
     val arguments = verb.parameters.associateWith { parameter ->
       when (parameter.type.classifier) {
         Context::class -> context
@@ -27,4 +25,6 @@ class VerbCassette<R>(val verbId: VerbDeck.VerbId, private val verb: KFunction<R
         param -> Context::class != param.type.classifier
     }!!.type.classifier as KClass<*>
   }
+
+  fun toDescriptor() : VerbDeck.VerbDescriptor = VerbDeck.VerbDescriptor(verbId, argumentType)
 }

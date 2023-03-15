@@ -6,18 +6,25 @@ import xyz.block.ftl.drive.verb.VerbDeck
 data class HttpSubContext(
   val headers: Map<String, String>,
   val params: Map<String, String>,
-  val uri: String)
+  val uri: String
+)
 
 data class TraceSubContext(
   val ingressType: IngressType,
-  val verbsTransited: List<VerbDeck.VerbId>
+  val verbsTransited: List<VerbDeck.VerbId>,
+  val verbsTraced: MutableMap<VerbDeck.VerbId, Any> = mutableMapOf()
 )
 
-enum class IngressType { HTTP, LOCAL, AGENT }
+enum class IngressType {
+  HTTP,
+  LOCAL,
+  AGENT
+}
 
 class Context(
   val trace: TraceSubContext,
-  private val http: HttpSubContext?) {
+  private val http: HttpSubContext?
+) {
 
   fun http(): HttpSubContext = http!!
 
@@ -35,11 +42,17 @@ class Context(
 
       return Context(
         TraceSubContext(IngressType.HTTP, listOf(verbId)),
-        HttpSubContext(headers.toMap(), params.toMap(), request.requestURI))
+        HttpSubContext(headers.toMap(), params.toMap(), request.requestURI)
+      )
     }
 
     fun fromLocal(verbId: VerbDeck.VerbId, propagator: Context) = Context(
-      TraceSubContext(IngressType.LOCAL, propagator.trace.verbsTransited + verbId), http = null)
+      TraceSubContext(
+        IngressType.LOCAL,
+        propagator.trace.verbsTransited + verbId,
+        propagator.trace.verbsTraced
+      ), http = null
+    )
 
     fun fromAgent(verbId: VerbDeck.VerbId) =
       Context(TraceSubContext(IngressType.AGENT, listOf(verbId)), http = null)

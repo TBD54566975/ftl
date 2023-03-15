@@ -26,11 +26,11 @@ class ControlChannelServer(private val deck: VerbDeck) : DriveServiceGrpcKt.Driv
   }
 
   override suspend fun call(request: CallRequest): CallResponse {
-    val cassette = deck.lookupFullyQualifiedName(request.verb) ?: throw Status.NOT_FOUND.asException()
-    val argument = gson.fromJson<Any>(request.body.toStringUtf8(), cassette.argumentType.java)
+    val verb = deck.lookupFullyQualifiedName(request.verb) ?: throw Status.NOT_FOUND.asException()
+    val argument = gson.fromJson<Any>(request.body.toStringUtf8(), verb.argumentType.java)
     val reply: Any
     try {
-      reply = cassette.dispatch(Context.fromAgent(cassette.verbId), argument)
+      reply = deck.dispatch(Context.fromAgent(verb.verbId), verb.verbId, argument)
     } catch (e: Exception) {
       return CallResponse.newBuilder()
         .setError(
