@@ -82,12 +82,12 @@ class VerbDeck {
   }
 
   fun dispatch(context: Context, verbId: VerbId, request: Any): Any {
-    logger.debug("Local dispatch of ${verbId} [trace: ${context.trace}]")
     val cassette = verbs[verbId]!!
 
     // apply any probes that are in effect prior to dispatch
     probes.forEach { probe -> probe.probe(cassette, request, context.trace) }
 
+    logger.debug("Local dispatch of ${verbId} [trace: ${context.trace}]")
     return cassette.invokeVerbInternal(context, request)
   }
 
