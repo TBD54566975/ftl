@@ -3,7 +3,6 @@ package xyz.block.ftl.control
 import com.google.gson.Gson
 import com.google.protobuf.ByteString
 import io.grpc.Status
-import io.grpc.netty.NettyServerBuilder
 import xyz.block.ftl.Context
 import xyz.block.ftl.drive.verb.VerbDeck
 import xyz.block.ftl.v1.CallRequest
@@ -16,9 +15,10 @@ import xyz.block.ftl.v1.ListResponse
 import xyz.block.ftl.v1.PingRequest
 import xyz.block.ftl.v1.PingResponse
 import xyz.block.ftl.v1.VerbServiceGrpcKt
-import java.net.SocketAddress
 
-class VerbServer(private val deck: VerbDeck) : VerbServiceGrpcKt.VerbServiceCoroutineImplBase() {
+class VerbServer(
+  private val deck: VerbDeck
+) : VerbServiceGrpcKt.VerbServiceCoroutineImplBase() {
   private val gson = Gson()
 
   override suspend fun ping(request: PingRequest): PingResponse = PingResponse.getDefaultInstance()
@@ -54,21 +54,4 @@ class DevelServer() : DevelServiceGrpcKt.DevelServiceCoroutineImplBase() {
   override suspend fun ping(request: PingRequest): PingResponse = PingResponse.getDefaultInstance()
   override suspend fun fileChange(request: FileChangeRequest): FileChangeResponse =
     FileChangeResponse.getDefaultInstance()
-}
-
-/**
- * Start services on the given socket.
- */
-fun startControlChannelServer(
-  socket: SocketAddress,
-  verbServer: VerbServer,
-  develServer: DevelServer
-) {
-  val server = NettyServerBuilder
-    .forAddress(socket)
-    .addService(verbServer)
-    .addService(develServer)
-    .build()
-  // TODO: Terminate the process if this fails to startup.
-  server.start()
 }
