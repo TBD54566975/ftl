@@ -50,14 +50,6 @@ message ServeRequest {
 }
 message ServeResponse {}
 
-// AgentService is the local agent that manages monitoring local Drives.
-service AgentService {
-  // Ping service for readiness.
-  rpc Ping(PingRequest) returns (PingResponse);
-  // Serve a module as part of the mesh.
-  rpc Serve(ServeRequest) returns (ServeResponse);
-}
-
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.

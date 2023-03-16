@@ -50,7 +50,6 @@ type Local struct {
 	wg      *errgroup.Group
 }
 
-var _ ftlv1.AgentServiceServer = (*Local)(nil)
 var _ http.Handler = (*Local)(nil)
 
 // New creates a new Local drive coordinator.
@@ -205,14 +204,6 @@ func (l *Local) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (l *Local) Serve(ctx context.Context, req *ftlv1.ServeRequest) (*ftlv1.ServeResponse, error) {
-	err := l.Manage(ctx, req.Path)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return &ftlv1.ServeResponse{}, nil
-}
-
 func (l *Local) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
 	logger := log.FromContext(ctx)
 	logger.Info(req.Verb)
@@ -225,10 +216,9 @@ func (l *Local) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallRe
 }
 
 func (l *Local) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	ctx = metadata.WithDirectRouting(ctx)
 	out := &ftlv1.ListResponse{}
-	for _, drive := range l.drives {
+	for _, drive := range l.allDrives() {
 		resp, err := drive.Client.List(ctx, proto.Clone(req).(*ftlv1.ListRequest))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to list module %q", drive.config.Module)
@@ -240,6 +230,16 @@ func (l *Local) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListRe
 
 func (l *Local) Ping(ctx context.Context, req *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
 	return &ftlv1.PingResponse{}, nil
+}
+
+func (l *Local) allDrives() []driveContext {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	out := make([]driveContext, 0, len(l.drives))
+	for _, drive := range l.drives {
+		out = append(out, drive)
+	}
+	return out
 }
 
 func (l *Local) findDrive(verb string) (driveContext, error) {

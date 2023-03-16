@@ -57,7 +57,6 @@ func (r *serveCmd) Run(ctx context.Context, s socket.Socket) error {
 	// Start agent gRPC and REST servers.
 	srv := socket.NewGRPCServer(ctx)
 	reflection.Register(srv)
-	ftlv1.RegisterAgentServiceServer(srv, agent)
 	ftlv1.RegisterVerbServiceServer(srv, agent)
 
 	mixedHandler := newHTTPandGRPCMux(agent, srv)
