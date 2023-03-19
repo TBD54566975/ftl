@@ -62,10 +62,10 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name Map<string, string>
+    name map<string, string>
   }
   data CreateResponse {
-    name Array<string>
+    name array<string>
   }
   data DestroyRequest {
     // A comment
@@ -129,54 +129,50 @@ func TestParserRoundTrip(t *testing.T) {
 	assert.Equal(t, schema, actual, "%s", schema.String())
 }
 
-func TestParser(t *testing.T) {
-	actual, err := ParseString("", `
-		module todo {
-			data CreateListRequest {}
-			data CreateListResponse {}
+func TestParsing(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		errors   []string
+		expected Schema
+	}{
+		{name: "Example",
+			input: `
+				module todo {
+					data CreateListRequest {}
+					data CreateListResponse {}
 
-			// Create a new list
-			verb createList(CreateListRequest) CreateListResponse
-				calls createList
-		}
-	`)
-	assert.NoError(t, err)
-	actual = Normalise(actual)
-	expected := Schema{
-		Modules: []Module{
-			{
-				Name: "todo",
-				Data: []Data{
-					{Name: "CreateListRequest"},
-					{Name: "CreateListResponse"},
-				},
-				Verbs: []Verb{
-					{Name: "createList",
-						Comments: []string{"Create a new list"},
-						Request:  DataRef{Name: "CreateListRequest"},
-						Response: DataRef{Name: "CreateListResponse"},
-						Metadata: []Metadata{
-							MetadataCalls{Calls: []VerbRef{{Name: "createList"}}},
+					// Create a new list
+					verb createList(todo.CreateListRequest) CreateListResponse
+						calls createList
+				}
+			`,
+			expected: Schema{
+				Modules: []Module{
+					{
+						Name: "todo",
+						Data: []Data{
+							{Name: "CreateListRequest"},
+							{Name: "CreateListResponse"},
+						},
+						Verbs: []Verb{
+							{Name: "createList",
+								Comments: []string{"Create a new list"},
+								Request:  DataRef{Module: "todo", Name: "CreateListRequest"},
+								Response: DataRef{Name: "CreateListResponse"},
+								Metadata: []Metadata{
+									MetadataCalls{Calls: []VerbRef{{Name: "createList"}}},
+								},
+							},
 						},
 					},
 				},
-			},
-		},
-	}
-	assert.Equal(t, expected, actual)
-}
-
-func TestValidation(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  string
-		errors []string
-	}{
+			}},
 		{name: "InvalidRequestRef",
 			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
 			errors: []string{
-				"1:25: reference to unknown Data structure \"InvalidRequest\"",
-				"1:41: reference to unknown Data structure \"InvalidResponse\""}},
+				"1:25: reference to unknown data structure \"InvalidRequest\"",
+				"1:41: reference to unknown data structure \"InvalidResponse\""}},
 		{name: "InvalidDataRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
@@ -193,12 +189,15 @@ func TestValidation(t *testing.T) {
 				"1:28: metadata \"calls verb\" is not valid on data structures",
 				"1:34: reference to unknown Verb \"verb\"",
 			}},
+		{name: "KeywordAsName",
+			input:  `module int { data string { name string } verb verb(string) string }`,
+			errors: []string{"1:14: data structure name \"string\" is a reserved word"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := ParseString("", test.input)
+			actual, err := ParseString("", test.input)
 			if test.errors != nil {
-				assert.Error(t, err, "expected an error")
+				assert.Error(t, err, "expected errors")
 				actual := []string{}
 				errs := errors.UnwrapAll(err)
 				for _, err := range errs {
@@ -206,9 +205,11 @@ func TestValidation(t *testing.T) {
 						actual = append(actual, err.Error())
 					}
 				}
-				assert.Equal(t, test.errors, actual)
+				assert.Equal(t, test.errors, actual, test.input)
 			} else {
 				assert.NoError(t, err)
+				actual = Normalise(actual)
+				assert.Equal(t, test.expected, actual, test.input)
 			}
 		})
 	}

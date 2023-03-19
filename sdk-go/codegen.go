@@ -2,6 +2,7 @@ package sdkgo
 
 import (
 	_ "embed" // For embedding templates.
+	"fmt"
 	"io"
 	"strings"
 	"text/template"
@@ -21,6 +22,7 @@ var tmpl = template.Must(template.New("module").
 		"comment": func(s []string) string {
 			return "// " + strings.Join(s, "\n// ")
 		},
+		"type": genType,
 		"imports": func(m schema.Module) []string {
 			pkgs := map[string]bool{}
 			_ = schema.Visit(m, func(n schema.Node, next func() error) error {
@@ -45,4 +47,21 @@ var tmpl = template.Must(template.New("module").
 // Generate Go stubs for the given module.
 func Generate(module schema.Module, w io.Writer) error {
 	return errors.WithStack(tmpl.Execute(w, module))
+}
+
+func genType(t schema.Type) string {
+	switch t := t.(type) {
+	case schema.Float:
+		return "float64"
+
+	case schema.Int, schema.Bool, schema.String, schema.DataRef, schema.VerbRef:
+		return t.String()
+
+	case schema.Array:
+		return "[]" + genType(t.Element)
+
+	case schema.Map:
+		return "map[" + genType(t.Key) + "]" + genType(t.Value)
+	}
+	panic(fmt.Sprintf("unsupported type %T", t))
 }

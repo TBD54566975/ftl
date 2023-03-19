@@ -3,7 +3,6 @@ package schema
 import (
 	"io"
 	"strings"
-	"text/scanner"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/participle/v2"
@@ -55,13 +54,13 @@ type Bool struct {
 type Array struct {
 	Pos lexer.Position
 
-	Element Type `parser:"'Array' '<' @@ '>'"`
+	Element Type `parser:"'array' '<' @@ '>'"`
 }
 
 type Map struct {
 	Pos lexer.Position
 
-	Key   Type `parser:"'Map' '<' @@"`
+	Key   Type `parser:"'map' '<' @@"`
 	Value Type `parser:"',' @@ '>'"`
 }
 
@@ -143,16 +142,23 @@ type Schema struct {
 	Modules []Module `parser:"@@*"`
 }
 
+var lex = lexer.MustSimple([]lexer.SimpleRule{
+	{Name: "Whitespace", Pattern: `\s+`},
+	{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
+	{Name: "Comment", Pattern: `//.*`},
+	{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
+	{Name: "Number", Pattern: `[0-9]+(?:\.[0-9]+)?`},
+	{Name: "Punct", Pattern: `[-[\]{}<>()*+?.,\\^$|#]`},
+})
+
 var parser = participle.MustBuild[Schema](
-	participle.Lexer(lexer.NewTextScannerLexer(func(s *scanner.Scanner) {
-		s.Mode ^= scanner.SkipComments
-	})),
+	participle.Lexer(lex),
+	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.Map(func(token lexer.Token) (lexer.Token, error) {
 		token.Value = strings.TrimSpace(strings.TrimPrefix(token.Value, "//"))
 		return token, nil
 	}, "Comment"),
-	participle.UseLookahead(2),
 	participle.Union[Type](Int{}, Float{}, String{}, Bool{}, Array{}, Map{}, VerbRef{}, DataRef{}),
 	participle.Union[Metadata](MetadataCalls{}),
 )

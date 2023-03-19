@@ -36,13 +36,13 @@ var _ Type = (*Array)(nil)
 
 func (a Array) schemaChildren() []Node { return []Node{a.Element} }
 func (Array) schemaType()              {}
-func (a Array) String() string         { return "Array<" + a.Element.String() + ">" }
+func (a Array) String() string         { return "array<" + a.Element.String() + ">" }
 
 var _ Type = (*Map)(nil)
 
 func (m Map) schemaChildren() []Node { return []Node{m.Key, m.Value} }
 func (Map) schemaType()              {}
-func (m Map) String() string         { return fmt.Sprintf("Map<%s, %s>", m.Key.String(), m.Value.String()) }
+func (m Map) String() string         { return fmt.Sprintf("map<%s, %s>", m.Key.String(), m.Value.String()) }
 
 var _ Node = (*Field)(nil)
 
@@ -210,4 +210,11 @@ func encodeComments(comments []string) string {
 		fmt.Fprintf(w, "// %s\n", c)
 	}
 	return w.String()
+}
+
+func makeRef(module, name string) string {
+	if module == "" {
+		return name
+	}
+	return module + "." + name
 }
