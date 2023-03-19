@@ -6,12 +6,14 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/errors"
 )
 
 var schema = Schema{
 	Modules: []Module{
 		{
-			Name: "todo",
+			Name:     "todo",
+			Comments: []string{"A comment"},
 			Data: []Data{
 				{
 					Name: "CreateRequest",
@@ -28,7 +30,7 @@ var schema = Schema{
 				{
 					Name: "DestroyRequest",
 					Fields: []Field{
-						{Name: "name", Type: String{Str: true}},
+						{Name: "name", Comments: []string{"A comment"}, Type: String{Str: true}},
 					},
 				},
 				{
@@ -57,14 +59,16 @@ func TestIndent(t *testing.T) {
 
 func TestSchemaString(t *testing.T) {
 	expected := `
+// A comment
 module todo {
   data CreateRequest {
-    name map<string, string>
+    name Map<string, string>
   }
   data CreateResponse {
-    name array<string>
+    name Array<string>
   }
   data DestroyRequest {
+    // A comment
     name string
   }
   data DestroyResponse {
@@ -131,7 +135,9 @@ func TestParser(t *testing.T) {
 			data CreateListRequest {}
 			data CreateListResponse {}
 
+			// Create a new list
 			verb createList(CreateListRequest) CreateListResponse
+				calls createList
 		}
 	`)
 	assert.NoError(t, err)
@@ -145,7 +151,14 @@ func TestParser(t *testing.T) {
 					{Name: "CreateListResponse"},
 				},
 				Verbs: []Verb{
-					{Name: "createList", Request: DataRef{Name: "CreateListRequest"}, Response: DataRef{Name: "CreateListResponse"}},
+					{Name: "createList",
+						Comments: []string{"Create a new list"},
+						Request:  DataRef{Name: "CreateListRequest"},
+						Response: DataRef{Name: "CreateListResponse"},
+						Metadata: []Metadata{
+							MetadataCalls{Calls: []VerbRef{{Name: "createList"}}},
+						},
+					},
 				},
 			},
 		},
@@ -168,6 +181,18 @@ func TestValidation(t *testing.T) {
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
 				"1:32: reference to unknown Verb \"user.User\""}},
+		{name: "InvalidMetadataSyntax",
+			input: `module test { data Data {} calls }`,
+			errors: []string{
+				"1:28: unexpected token \"calls\" (expected \"}\")",
+			},
+		},
+		{name: "InvalidDataMetadata",
+			input: `module test { data Data {} calls verb }`,
+			errors: []string{
+				"1:28: metadata \"calls verb\" is not valid on data structures",
+				"1:34: reference to unknown Verb \"verb\"",
+			}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -175,13 +200,11 @@ func TestValidation(t *testing.T) {
 			if test.errors != nil {
 				assert.Error(t, err, "expected an error")
 				actual := []string{}
-				unwrapped, ok := err.(interface{ Unwrap() []error }) //nolint:errorlint
-				if ok {
-					for _, err := range unwrapped.Unwrap() {
+				errs := errors.UnwrapAll(err)
+				for _, err := range errs {
+					if errors.Innermost(err) {
 						actual = append(actual, err.Error())
 					}
-				} else {
-					actual = append(actual, err.Error())
 				}
 				assert.Equal(t, test.errors, actual)
 			} else {

@@ -24,6 +24,7 @@ var cli struct {
 	Serve serveCmd `cmd:"" help:"Serve FTL modules."`
 	List  listCmd  `cmd:"" help:"List all FTL functions."`
 	Call  callCmd  `cmd:"" help:"Call an FTL function."`
+	Go    goCmd    `cmd:"" help:"Commands specific to Go modules."`
 }
 
 func main() {

@@ -2,6 +2,8 @@ package schema
 
 import (
 	"io"
+	"strings"
+	"text/scanner"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/participle/v2"
@@ -27,55 +29,56 @@ type Type interface {
 }
 
 type Int struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Int bool `parser:"@'int'" json:"bool"`
+	Int bool `parser:"@'int'"`
 }
 
 type Float struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Float bool `parser:"@'float'" json:"float"`
+	Float bool `parser:"@'float'"`
 }
 
 type String struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Str bool `parser:"@'string'" json:"str"`
+	Str bool `parser:"@'string'"`
 }
 
 type Bool struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Bool bool `parser:"@'bool'" json:"bool"`
+	Bool bool `parser:"@'bool'"`
 }
 
 type Array struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Element Type `parser:"'array' '<' @@ '>'" json:"array"`
+	Element Type `parser:"'Array' '<' @@ '>'"`
 }
 
 type Map struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Key   Type `parser:"'map' '<' @@" json:"key"`
-	Value Type `parser:"',' @@ '>'" json:"value"`
+	Key   Type `parser:"'Map' '<' @@"`
+	Value Type `parser:"',' @@ '>'"`
 }
 
 type Field struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Name string `parser:"@Ident" json:"name"`
-	Type Type   `parser:"@@" json:"type"`
+	Comments []string `parser:"@Comment*"`
+	Name     string   `parser:"@Ident"`
+	Type     Type     `parser:"@@"`
 }
 
 // Ref is a reference to another symbol.
 type Ref struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Module string `parser:"(@Ident '.')?" json:"module,omitempty"`
-	Name   string `parser:"@Ident" json:"name"`
+	Module string `parser:"(@Ident '.')?"`
+	Name   string `parser:"@Ident"`
 }
 
 // DataRef is a reference to a data structure.
@@ -83,83 +86,76 @@ type DataRef Ref
 
 // A Data structure.
 type Data struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Name   string  `parser:"'data' @Ident '{'" json:"name"`
-	Fields []Field `parser:"@@* '}'" json:"fields,omitempty"`
+	Name     string     `parser:"'data' @Ident '{'"`
+	Fields   []Field    `parser:"@@* '}'"`
+	Metadata []Metadata `parser:"@@*"`
 }
 
 // VerbRef is a reference to a Verb.
 type VerbRef Ref
 
 type Verb struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Name     string    `parser:"'verb' @Ident" json:"name"`
-	Request  DataRef   `parser:"'(' @@ ')'" json:"request"`
-	Response DataRef   `parser:"@@" json:"response"`
-	Calls    []VerbRef `parser:"('calls' @@ (',' @@)*)?" json:"calls,omitempty"`
+	Comments []string   `parser:"@Comment*"`
+	Name     string     `parser:"'verb' @Ident"`
+	Request  DataRef    `parser:"'(' @@ ')'"`
+	Response DataRef    `parser:"@@"`
+	Metadata []Metadata `parser:"@@*"`
+}
+
+type Metadata interface {
+	Node
+	schemaMetadata()
+}
+
+type MetadataCalls struct {
+	Pos lexer.Position
+
+	Calls []VerbRef `parser:"'calls' @@ (',' @@)*"`
 }
 
 type Module struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
-	Name  string `parser:"'module' @Ident '{'" json:"name"`
-	Data  []Data `parser:"@@*" json:"data,omitempty"`
-	Verbs []Verb `parser:"@@* '}'" json:"verbs,omitempty"`
+	Comments []string `parser:"@Comment*"`
+	Name     string   `parser:"'module' @Ident '{'"`
+	Data     []Data   `parser:"@@*"`
+	Verbs    []Verb   `parser:"@@* '}'"`
+}
+
+// AddData and return its index.
+func (m *Module) AddData(data Data) int {
+	for i, d := range m.Data {
+		if d.Name == data.Name {
+			return i
+		}
+	}
+	m.Data = append(m.Data, data)
+	return len(m.Data) - 1
 }
 
 type Schema struct {
-	Pos lexer.Position `parser:"" json:"-"`
+	Pos lexer.Position
 
 	Modules []Module `parser:"@@*"`
 }
 
 var parser = participle.MustBuild[Schema](
+	participle.Lexer(lexer.NewTextScannerLexer(func(s *scanner.Scanner) {
+		s.Mode ^= scanner.SkipComments
+	})),
+	participle.Unquote(),
+	participle.Map(func(token lexer.Token) (lexer.Token, error) {
+		token.Value = strings.TrimSpace(strings.TrimPrefix(token.Value, "//"))
+		return token, nil
+	}, "Comment"),
 	participle.UseLookahead(2),
 	participle.Union[Type](Int{}, Float{}, String{}, Bool{}, Array{}, Map{}, VerbRef{}, DataRef{}),
+	participle.Union[Metadata](MetadataCalls{}),
 )
-
-// Validate performs semantic analysis of the module.
-func Validate(schema Schema) error {
-	verbs := map[string]bool{}
-	data := map[string]bool{}
-	verbRefs := []VerbRef{}
-	dataRefs := []DataRef{}
-	for _, module := range schema.Modules {
-		err := Visit(module, func(n Node, next func() error) error {
-			switch n := n.(type) {
-			case VerbRef:
-				verbRefs = append(verbRefs, n)
-			case DataRef:
-				dataRefs = append(dataRefs, n)
-			case Verb:
-				verbs[module.Name+"."+n.Name] = true
-				verbs[n.Name] = true
-			case Data:
-				data[module.Name+"."+n.Name] = true
-				data[n.Name] = true
-			default:
-			}
-			return next()
-		})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-	}
-	merr := []error{}
-	for _, ref := range verbRefs {
-		if !verbs[ref.String()] {
-			merr = append(merr, errors.Errorf("%s: reference to unknown Verb %q", ref.Pos, ref))
-		}
-	}
-	for _, ref := range dataRefs {
-		if !data[ref.String()] {
-			merr = append(merr, errors.Errorf("%s: reference to unknown Data structure %q", ref.Pos, ref))
-		}
-	}
-	return errors.Join(merr...)
-}
 
 func ParseBytes(filename string, input []byte) (Schema, error) {
 	mod, err := parser.ParseBytes(filename, input)

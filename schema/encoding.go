@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// This file contains the JSON marshalling and unmarshalling logic as well as
-// support methods for visiting as well as type safety.
+// This file contains the unmarshalling logic as well as support methods for
+// visiting and type safety.
 
 var _ Type = (*Int)(nil)
 
@@ -36,18 +36,23 @@ var _ Type = (*Array)(nil)
 
 func (a Array) schemaChildren() []Node { return []Node{a.Element} }
 func (Array) schemaType()              {}
-func (a Array) String() string         { return "array<" + a.Element.String() + ">" }
+func (a Array) String() string         { return "Array<" + a.Element.String() + ">" }
 
 var _ Type = (*Map)(nil)
 
 func (m Map) schemaChildren() []Node { return []Node{m.Key, m.Value} }
 func (Map) schemaType()              {}
-func (m Map) String() string         { return fmt.Sprintf("map<%s, %s>", m.Key.String(), m.Value.String()) }
+func (m Map) String() string         { return fmt.Sprintf("Map<%s, %s>", m.Key.String(), m.Value.String()) }
 
 var _ Node = (*Field)(nil)
 
 func (f Field) schemaChildren() []Node { return []Node{f.Type} }
-func (f Field) String() string         { return fmt.Sprintf("%s %s", f.Name, f.Type.String()) }
+func (f Field) String() string {
+	w := &strings.Builder{}
+	fmt.Fprint(w, encodeComments(f.Comments))
+	fmt.Fprintf(w, "%s %s", f.Name, f.Type.String())
+	return w.String()
+}
 
 var _ Type = (*DataRef)(nil)
 
@@ -58,50 +63,74 @@ func (s DataRef) String() string       { return s.Name }
 var _ Node = (*Data)(nil)
 
 func (d Data) schemaChildren() []Node {
-	children := make([]Node, len(d.Fields))
-	for i, f := range d.Fields {
-		children[i] = f
+	children := make([]Node, 0, len(d.Fields)+len(d.Metadata))
+	for _, f := range d.Fields {
+		children = append(children, f)
+	}
+	for _, c := range d.Metadata {
+		children = append(children, c)
 	}
 	return children
 }
 func (d Data) String() string {
-	out := &strings.Builder{}
-	fmt.Fprintf(out, "data %s {\n", d.Name)
+	w := &strings.Builder{}
+	fmt.Fprintf(w, "data %s {\n", d.Name)
 	for _, f := range d.Fields {
-		fmt.Fprintln(out, indent(f.String()))
+		fmt.Fprintln(w, indent(f.String()))
 	}
-	fmt.Fprintf(out, "}")
-	return out.String()
+	fmt.Fprintf(w, "}")
+	fmt.Fprint(w, indent(encodeMetadata(d.Metadata)))
+	return w.String()
 }
 
 var _ Type = (*VerbRef)(nil)
 
 func (VerbRef) schemaChildren() []Node { return nil }
 func (VerbRef) schemaType()            {}
-func (v VerbRef) String() string       { return fmt.Sprintf("%s.%s", v.Module, v.Name) }
+func (v VerbRef) String() string       { return makeRef(v.Module, v.Name) }
 
 var _ Node = (*Verb)(nil)
 
 func (v Verb) schemaChildren() []Node {
-	children := make([]Node, 2+len(v.Calls))
+	children := make([]Node, 2+len(v.Metadata))
 	children[0] = v.Request
 	children[1] = v.Response
-	for i, c := range v.Calls {
+	for i, c := range v.Metadata {
 		children[i+2] = c
 	}
 	return children
 }
 func (v Verb) String() string {
 	w := &strings.Builder{}
+	fmt.Fprint(w, encodeComments(v.Comments))
 	fmt.Fprintf(w, "verb %s(%s) %s", v.Name, v.Request, v.Response)
-	if len(v.Calls) > 0 {
-		fmt.Fprintf(w, "\n  calls %s", v.Calls[0])
-		for _, c := range v.Calls[1:] {
-			fmt.Fprintf(w, ", %s", c)
-		}
-	}
+	fmt.Fprint(w, indent(encodeMetadata(v.Metadata)))
 	return w.String()
 }
+
+var _ Metadata = (*MetadataCalls)(nil)
+
+func (v MetadataCalls) String() string {
+	out := &strings.Builder{}
+	fmt.Fprint(out, "calls ")
+	for i, call := range v.Calls {
+		if i > 0 {
+			fmt.Fprint(out, ", ")
+		}
+		fmt.Fprint(out, call)
+	}
+	fmt.Fprintln(out)
+	return out.String()
+}
+
+func (v MetadataCalls) schemaChildren() []Node {
+	out := make([]Node, 0, len(v.Calls))
+	for _, ref := range v.Calls {
+		out = append(out, ref)
+	}
+	return out
+}
+func (MetadataCalls) schemaMetadata() {}
 
 var _ Node = (*Module)(nil)
 
@@ -116,19 +145,20 @@ func (m Module) schemaChildren() []Node {
 	return children
 }
 func (m Module) String() string {
-	out := &strings.Builder{}
-	fmt.Fprintf(out, "module %s {\n", m.Name)
+	w := &strings.Builder{}
+	fmt.Fprint(w, encodeComments(m.Comments))
+	fmt.Fprintf(w, "module %s {\n", m.Name)
 	for _, s := range m.Data {
-		fmt.Fprintln(out, indent(s.String()))
+		fmt.Fprintln(w, indent(s.String()))
 	}
 	if len(m.Verbs) > 0 {
-		fmt.Fprintln(out)
+		fmt.Fprintln(w)
 		for _, v := range m.Verbs {
-			fmt.Fprintln(out, indent(v.String()))
+			fmt.Fprintln(w, indent(v.String()))
 		}
 	}
-	fmt.Fprintln(out, "}")
-	return out.String()
+	fmt.Fprintln(w, "}")
+	return w.String()
 }
 
 var _ Node = (*Schema)(nil)
@@ -153,5 +183,31 @@ func (s Schema) schemaChildren() []Node {
 }
 
 func indent(s string) string {
+	if s == "" {
+		return ""
+	}
 	return "  " + strings.Join(strings.Split(s, "\n"), "\n  ")
+}
+
+func encodeMetadata(metadata []Metadata) string {
+	if len(metadata) == 0 {
+		return ""
+	}
+	w := &strings.Builder{}
+	fmt.Fprintln(w)
+	for _, c := range metadata {
+		fmt.Fprint(w, indent(c.String()))
+	}
+	return w.String()
+}
+
+func encodeComments(comments []string) string {
+	if len(comments) == 0 {
+		return ""
+	}
+	w := &strings.Builder{}
+	for _, c := range comments {
+		fmt.Fprintf(w, "// %s\n", c)
+	}
+	return w.String()
 }

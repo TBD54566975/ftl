@@ -19,59 +19,65 @@ func Visit(n Node, visit func(n Node, next func() error) error) error {
 
 // Normalise a Node.
 func Normalise[T Node](n T) T {
+	var zero lexer.Position
 	var ni Node = n
 	switch c := ni.(type) {
 	case Schema:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		c.Modules = normaliseSlice(c.Modules)
 		ni = c
 	case Module:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		c.Data = normaliseSlice(c.Data)
 		c.Verbs = normaliseSlice(c.Verbs)
 		ni = c
 	case Array:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		c.Element = Normalise(c.Element)
 		ni = c
 	case Bool:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		ni = c
 	case Data:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		c.Fields = normaliseSlice(c.Fields)
+		c.Metadata = normaliseSlice(c.Metadata)
 		ni = c
 	case DataRef:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		ni = c
 	case Field:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		c.Type = Normalise(c.Type)
 		ni = c
 	case Float:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		ni = c
 	case Int:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		ni = c
 	case Map:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		c.Key = Normalise(c.Key)
 		c.Value = Normalise(c.Value)
 		ni = c
 	case String:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		ni = c
 	case Verb:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		c.Request = Normalise(c.Request)
 		c.Response = Normalise(c.Response)
-		c.Calls = normaliseSlice(c.Calls)
+		c.Metadata = normaliseSlice(c.Metadata)
 		ni = c
 	case VerbRef:
-		c.Pos = lexer.Position{}
+		c.Pos = zero
 		ni = c
-	case Type: // Can never occur in reality, but is here to satisfy the sum-type check.
+	case MetadataCalls:
+		c.Pos = zero
+		c.Calls = normaliseSlice(c.Calls)
+		ni = c
+	case Metadata, Type: // Can never occur in reality, but here to satisfy the sum-type check.
 		panic("??")
 	}
 	if ni == nil {

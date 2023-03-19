@@ -1,3 +1,5 @@
+.hermit/
+.vscode/
 .idea/
 *.iml
 target/

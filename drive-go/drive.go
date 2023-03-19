@@ -94,6 +94,10 @@ type Server struct {
 	lastRebuild   time.Time
 }
 
+func (*Server) Schema(context.Context, *ftlv1.SchemaRequest) (*ftlv1.SchemaResponse, error) {
+	panic("unimplemented")
+}
+
 func (d *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
 	if metadata.IsDirectRouted(ctx) {
 		return d.plugin.Load().Client.List(ctx, req)

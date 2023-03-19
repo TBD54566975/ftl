@@ -22,11 +22,12 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.2.1
-	github.com/alecthomas/assert/v2 v2.2.1
+	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/alecthomas/atomic v0.1.0-alpha2
-	github.com/alecthomas/errors v0.1.0
+	github.com/alecthomas/errors v0.2.0
 	github.com/alecthomas/participle/v2 v2.0.0-beta.5
 	github.com/fsnotify/fsnotify v1.6.0
+	github.com/iancoleman/strcase v0.2.0
 	github.com/jordan-bonecutter/goption v1.0.1
 	github.com/mattn/go-isatty v0.0.17
 	golang.org/x/mod v0.8.0

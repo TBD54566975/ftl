@@ -1,0 +1,25 @@
+package {{.Name}}
+
+import (
+  "context"
+{{- range .|imports}}
+  "{{.}}"
+{{- end}}
+)
+
+{{ range .Data -}}
+type {{.Name|title}} struct {
+  {{- range .Fields}}
+  {{.Name|title}} {{.Type}} `json:"{{.Name}}"`
+  {{- end}}
+}
+
+{{end}}
+
+{{- range .Verbs -}}
+{{ if .Comments }}{{ .Comments|comment }}{{ end }}
+func {{.Name|title}}(ctx context.Context, {{.Request}}) ({{.Response}}, error) {
+  panic("Verb stubs should not be called directly, instead use sdkgo.Call()")
+}
+
+{{end}}

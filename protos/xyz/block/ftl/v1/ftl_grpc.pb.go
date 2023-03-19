@@ -182,7 +182,9 @@ var VerbService_ServiceDesc = grpc.ServiceDesc{
 type DevelServiceClient interface {
 	// Ping service for readiness.
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	// FileChange is called when a file is changed.
+	// Return the schema for the module under development.
+	Schema(ctx context.Context, in *SchemaRequest, opts ...grpc.CallOption) (*SchemaResponse, error)
+	// Called when a file is changed.
 	//
 	// The Drive should hot reload the module if a change to the file warrants it.
 	FileChange(ctx context.Context, in *FileChangeRequest, opts ...grpc.CallOption) (*FileChangeResponse, error)
@@ -205,6 +207,15 @@ func (c *develServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...
 	return out, nil
 }
 
+func (c *develServiceClient) Schema(ctx context.Context, in *SchemaRequest, opts ...grpc.CallOption) (*SchemaResponse, error) {
+	out := new(SchemaResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.DevelService/Schema", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *develServiceClient) FileChange(ctx context.Context, in *FileChangeRequest, opts ...grpc.CallOption) (*FileChangeResponse, error) {
 	out := new(FileChangeResponse)
 	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.DevelService/FileChange", in, out, opts...)
@@ -220,7 +231,9 @@ func (c *develServiceClient) FileChange(ctx context.Context, in *FileChangeReque
 type DevelServiceServer interface {
 	// Ping service for readiness.
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	// FileChange is called when a file is changed.
+	// Return the schema for the module under development.
+	Schema(context.Context, *SchemaRequest) (*SchemaResponse, error)
+	// Called when a file is changed.
 	//
 	// The Drive should hot reload the module if a change to the file warrants it.
 	FileChange(context.Context, *FileChangeRequest) (*FileChangeResponse, error)
@@ -232,6 +245,9 @@ type UnimplementedDevelServiceServer struct {
 
 func (UnimplementedDevelServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+}
+func (UnimplementedDevelServiceServer) Schema(context.Context, *SchemaRequest) (*SchemaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Schema not implemented")
 }
 func (UnimplementedDevelServiceServer) FileChange(context.Context, *FileChangeRequest) (*FileChangeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FileChange not implemented")
@@ -266,6 +282,24 @@ func _DevelService_Ping_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DevelService_Schema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SchemaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DevelServiceServer).Schema(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.DevelService/Schema",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DevelServiceServer).Schema(ctx, req.(*SchemaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DevelService_FileChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FileChangeRequest)
 	if err := dec(in); err != nil {
@@ -294,6 +328,10 @@ var DevelService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Ping",
 			Handler:    _DevelService_Ping_Handler,
+		},
+		{
+			MethodName: "Schema",
+			Handler:    _DevelService_Schema_Handler,
 		},
 		{
 			MethodName: "FileChange",

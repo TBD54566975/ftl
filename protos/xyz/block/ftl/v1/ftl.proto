@@ -62,6 +62,11 @@ service VerbService {
   rpc List(ListRequest) returns (ListResponse);
 }
 
+message SchemaRequest {}
+message SchemaResponse {
+  string schema = 1;
+}
+
 // DevelService is the service that provides language-specific development and
 // deployment functionality.
 //
@@ -71,7 +76,10 @@ service DevelService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
 
-  // FileChange is called when a file is changed.
+  // Return the schema for the module under development.
+  rpc Schema(SchemaRequest) returns (SchemaResponse);
+
+  // Called when a file is changed.
   //
   // The Drive should hot reload the module if a change to the file warrants it.
   rpc FileChange(FileChangeRequest) returns (FileChangeResponse);
