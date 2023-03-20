@@ -26,10 +26,13 @@ import (
 	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/schema"
+	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 type Config struct {
 	Endpoint   socket.Socket `required:"" help:"FTL endpoint to connect to." env:"FTL_ENDPOINT"`
+	Module     string        `required:"" env:"FTL_MODULE" help:"The FTL module as configured."`
 	FTLSource  string        `required:"" type:"existingdir" env:"FTL_SOURCE" help:"Path to FTL source code when developing locally."`
 	WorkingDir string        `required:"" type:"existingdir" env:"FTL_WORKING_DIR" help:"Working directory for FTL runtime."`
 	Dir        string        `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
@@ -43,7 +46,7 @@ func New(ctx context.Context, config Config) (*Server, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "go.mod not found in %s", config.Dir)
 	}
-	module, err := findGoModule(goModFile)
+	goModule, err := findGoModule(goModFile)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -53,29 +56,30 @@ func New(ctx context.Context, config Config) (*Server, error) {
 	}
 	router := ftlv1.NewVerbServiceClient(conn)
 
-	d := &Server{
-		Config: config,
-		router: router,
-		module: module,
+	s := &Server{
+		Config:   config,
+		router:   router,
+		module:   config.Module,
+		goModule: goModule,
 	}
 
 	logger.Info("Starting FTL.module")
 
 	// Build and start the sub-process.
-	exe, err := d.rebuild(ctx)
+	exe, err := s.rebuild(ctx)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	d.exe = exe
 
-	plugin, cmdCtx, err := plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewVerbServiceClient)
+	plugin, cmdCtx, err := plugin.Spawn(ctx, s.Config.Dir, exe, ftlv1.NewVerbServiceClient,
+		plugin.WithEnvars("FTL_MODULE="+s.module))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	d.plugin.Store(plugin)
+	s.plugin.Store(plugin)
 
-	go d.restartModuleOnExit(ctx, cmdCtx)
-	return d, nil
+	go s.restartModuleOnExit(ctx, cmdCtx)
+	return s, nil
 }
 
 var _ ftlv1.DevelServiceServer = (*Server)(nil)
@@ -84,8 +88,9 @@ var _ ftlv1.VerbServiceServer = (*Server)(nil)
 type Server struct {
 	Config
 	router       ftlv1.VerbServiceClient
-	exe          string
 	module       string
+	schema       atomic.Value[schema.Schema]
+	goModule     string
 	handlers     []Handler
 	plugin       atomic.Value[*plugin.Plugin[ftlv1.VerbServiceClient]]
 	develService ftlv1.DevelServiceClient
@@ -94,30 +99,38 @@ type Server struct {
 	lastRebuild   time.Time
 }
 
-func (*Server) Schema(context.Context, *ftlv1.SchemaRequest) (*ftlv1.SchemaResponse, error) {
-	panic("unimplemented")
+func (s *Server) Schema(context.Context, *ftlv1.SchemaRequest) (*ftlv1.SchemaResponse, error) {
+	return &ftlv1.SchemaResponse{Schema: s.schema.Load().String()}, nil
 }
 
-func (d *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
-	if metadata.IsDirectRouted(ctx) {
-		return d.plugin.Load().Client.List(ctx, req)
+func (s *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
+	if !metadata.IsDirectRouted(ctx) {
+		return s.router.List(ctx, req)
 	}
-	return d.router.List(ctx, req)
-}
-
-func (d *Server) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
-	if metadata.IsDirectRouted(ctx) || strings.HasPrefix(req.Verb, d.module) {
-		return d.plugin.Load().Client.Call(ctx, req)
+	out := &ftlv1.ListResponse{}
+	for _, module := range s.schema.Load().Modules {
+		for _, verb := range module.Decls {
+			if verb, ok := verb.(schema.Verb); ok {
+				out.Verbs = append(out.Verbs, module.Name+"."+verb.Name)
+			}
+		}
 	}
-	return d.router.Call(ctx, req)
+	return out, nil
 }
 
-func (d *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
-	_, err := d.rebuild(ctx)
+func (s *Server) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
+	if metadata.IsDirectRouted(ctx) || strings.HasPrefix(req.Verb, s.module) {
+		return s.plugin.Load().Client.Call(ctx, req)
+	}
+	return s.router.Call(ctx, req)
+}
+
+func (s *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
+	_, err := s.rebuild(ctx)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	err = d.plugin.Load().Cmd.Kill(syscall.SIGHUP)
+	err = s.plugin.Load().Cmd.Kill(syscall.SIGHUP)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -129,64 +142,72 @@ func (*Server) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, e
 }
 
 // Restart the FTL hot reload module if it terminates unexpectedly.
-func (d *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
+func (s *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
 		select {
 		case <-ctx.Done():
-			_ = d.plugin.Load().Cmd.Kill(syscall.SIGTERM)
+			_ = s.plugin.Load().Cmd.Kill(syscall.SIGTERM)
 			return
 
 		case <-cmdCtx.Done():
 			err := cmdCtx.Err()
 			logger.Warn("FTL module exited, restarting", "err", err)
 
-			exe, err := d.rebuild(ctx)
+			exe, err := s.rebuild(ctx)
 			if err != nil {
 				logger.Error("Failed to rebuild FTL module", err)
 				return
 			}
 			var nextPlugin *plugin.Plugin[ftlv1.VerbServiceClient]
-			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, d.Config.Dir, exe, ftlv1.NewVerbServiceClient)
+			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, s.Config.Dir, exe, ftlv1.NewVerbServiceClient)
 			if err != nil {
 				logger.Error("Failed to restart FTL module", err)
 				continue
 			}
-			d.plugin.Store(nextPlugin)
+			s.plugin.Store(nextPlugin)
 		}
 	}
 }
 
-func (d *Server) rebuild(ctx context.Context) (exe string, err error) {
-	d.lastRebuildMu.Lock()
-	defer d.lastRebuildMu.Unlock()
+func (s *Server) rebuild(ctx context.Context) (exe string, err error) {
+	s.lastRebuildMu.Lock()
+	defer s.lastRebuildMu.Unlock()
 
-	exe = filepath.Join(d.WorkingDir, "ftl-module")
+	exe = filepath.Join(s.WorkingDir, "ftl-module")
 
-	if time.Now().Sub(d.lastRebuild) < time.Millisecond*250 {
+	if time.Now().Sub(s.lastRebuild) < time.Millisecond*250 {
 		return exe, nil
 	}
-	defer func() { d.lastRebuild = time.Now() }()
+	defer func() { s.lastRebuild = time.Now() }()
 
 	logger := log.FromContext(ctx)
-	err = writeMain(d.Dir, d.WorkingDir, d.module, d.Config)
+	err = writeMain(s.Dir, s.WorkingDir, s.goModule, s.Config)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	err = execInRoot(ctx, d.WorkingDir, "go", "mod", "tidy")
+	err = execInRoot(ctx, s.WorkingDir, "go", "mod", "tidy")
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	logger.Info("Compiling FTL.module...")
-	err = execInRoot(ctx, d.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", exe)
+	logger.Info("Extracting schema")
+	module, err := sdkgo.ExtractModule(s.Dir)
 	if err != nil {
-		source, merr := ioutil.ReadFile(filepath.Join(d.WorkingDir, "main.go"))
+		return "", errors.WithStack(err)
+	}
+	s.schema.Store(schema.Schema{Modules: []schema.Module{module}})
+
+	logger.Info("Compiling FTL.module...")
+	err = execInRoot(ctx, s.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", exe)
+	if err != nil {
+		source, merr := ioutil.ReadFile(filepath.Join(s.WorkingDir, "main.go"))
 		if merr != nil {
 			return "", errors.WithStack(err)
 		}
 		return "", errors.Wrap(err, string(source))
 	}
+
 	return exe, nil
 }
 
@@ -249,20 +270,27 @@ func generate(config Config) (*codewriter.Writer, error) {
 	}
 
 	w := codewriter.New("main")
+	w.Import("os")
+	w.Import("context")
 	w.Import("github.com/TBD54566975/ftl/drive-go")
+	w.Import("github.com/TBD54566975/ftl/sdk-go")
 	w.Import("github.com/TBD54566975/ftl/common/plugin")
+	w.Import("github.com/TBD54566975/ftl/common/socket")
 	w.Import(`github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1`)
 
 	w.L(`func main() {`)
 	w.In(func(w *codewriter.Writer) {
-		w.L(`handlers := []drivego.Handler{}`)
+		w.L(`ctx, err := sdkgo.ContextWithClient(context.Background(), socket.MustParse(os.Getenv("FTL_ENDPOINT")))`)
+		w.L(`if err != nil { panic(err) }`)
+		w.L(`ctx = sdkgo.ContextWithModule(ctx, os.Getenv("FTL_MODULE"))`)
+		w.L(`plugin.Start(ctx, drivego.NewUserVerbServer(`)
 		for pkg, endpoints := range endpoints {
 			pkgImp := w.Import(pkg)
 			for _, endpoint := range endpoints {
-				w.L(`handlers = append(handlers, drivego.Handle(%s.%s))`, pkgImp, endpoint.fn.Name())
+				w.L(`  drivego.Handle(%s.%s),`, pkgImp, endpoint.fn.Name())
 			}
 		}
-		w.L(`plugin.Start(drivego.NewUserVerbServer(handlers...), ftlv1.RegisterVerbServiceServer)`)
+		w.L(`), ftlv1.RegisterVerbServiceServer)`)
 	})
 
 	w.L(`}`)

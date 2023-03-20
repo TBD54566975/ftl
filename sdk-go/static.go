@@ -72,7 +72,7 @@ func parseNode(pkg *packages.Package, fset *token.FileSet, node ast.Node, module
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		return errors.WithStack(parseFile(module, directives, node))
+		return errors.WithStack(parseFile(module, directives, node, pkg))
 
 	case *ast.FuncDecl:
 		if node.Doc == nil {
@@ -98,7 +98,7 @@ func parseNode(pkg *packages.Package, fset *token.FileSet, node ast.Node, module
 	return nil
 }
 
-func parseFile(module *schema.Module, directives []ftlDirective, node *ast.File) error {
+func parseFile(module *schema.Module, directives []ftlDirective, node *ast.File, pkg *packages.Package) error {
 	module.Comments = parseComments(node.Doc)
 	for _, dir := range directives {
 		switch dir.kind {
@@ -106,9 +106,12 @@ func parseFile(module *schema.Module, directives []ftlDirective, node *ast.File)
 			if dir.id == "" {
 				return errors.Errorf("%s: module not specified", dir)
 			}
+			if dir.id != pkg.Name {
+				return errors.Errorf("%s: FTL module name %q does not match Go package name %q", dir, dir.id, pkg.Name)
+			}
 			module.Name = dir.id
 		default:
-			return errors.Errorf("invalid directive %q on package", dir)
+			return errors.Errorf("%s: invalid directive", dir)
 		}
 	}
 	return nil
@@ -167,7 +170,7 @@ func parseFunction(pkg *packages.Package, module *schema.Module, directives []ft
 	}
 	verb := schema.Verb{
 		Comments: parseComments(node.Doc),
-		Name:     node.Name.Name,
+		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  req,
 		Response: resp,
 	}
@@ -268,7 +271,7 @@ type ftlDirective struct {
 	attrs map[string]directiveValue
 }
 
-func (f *ftlDirective) String() string {
+func (f ftlDirective) String() string {
 	out := &strings.Builder{}
 	fmt.Fprintf(out, "//ftl:%s", f.kind)
 	if f.id != "" {

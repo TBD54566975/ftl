@@ -33,7 +33,7 @@ type Option func(*pluginOptions) error
 // WithEnvars sets the environment variables to pass to the plugin.
 func WithEnvars(envars ...string) Option {
 	return func(po *pluginOptions) error {
-		po.envars = envars
+		po.envars = append(po.envars, envars...)
 		return nil
 	}
 }
@@ -157,6 +157,10 @@ func Spawn[Client PingableClient](
 	}
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "plugin did not respond to ping")
+	}
+
+	for _, makeClient := range opts.additionalClients {
+		makeClient(conn)
 	}
 
 	logger.Info(name + " online")

@@ -51,6 +51,7 @@ func RegisterAdditionalServer[Impl any, Iface any](register func(grpc.ServiceReg
 // "create" is called to create the implementation of the service.
 // "register" is called to register the service with the gRPC server and is typically a generated function.
 func Start[Impl any, Iface any, Config any](
+	ctx context.Context,
 	create func(context.Context, Config) (Impl, error),
 	register func(grpc.ServiceRegistrar, Iface),
 	options ...StartOption[Impl],
@@ -59,9 +60,14 @@ func Start[Impl any, Iface any, Config any](
 	cli := serveCli{Plugins: kong.Plugins{&config}}
 	kctx := kong.Parse(&cli, kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`))
 
+	so := &startOptions[Impl]{}
+	for _, option := range options {
+		option(so)
+	}
+
 	name := "FTL." + kctx.Model.Name
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	logger := log.New(cli.LogConfig, os.Stderr).With("C", name)
 	ctx = log.ContextWithLogger(ctx, logger)
@@ -87,6 +93,9 @@ func Start[Impl any, Iface any, Config any](
 	gs := socket.NewGRPCServer(ctx)
 	reflection.Register(gs)
 	register(gs, any(svc).(Iface)) //nolint:forcetypeassert
+	for _, register := range so.register {
+		register(gs, svc)
+	}
 	err = gs.Serve(l)
 	kctx.FatalIfErrorf(err)
 	kctx.Exit(0)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -13,9 +14,9 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/TBD54566975/ftl/agent"
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/socket"
-	"github.com/TBD54566975/ftl/local"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
@@ -36,7 +37,7 @@ func (r *serveCmd) Run(ctx context.Context, s socket.Socket) error {
 	// Used by sub-processes to call back into FTL.
 	os.Setenv("FTL_ENDPOINT", s.String())
 
-	agent, err := local.New(ctx)
+	agent, err := agent.New(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -58,10 +59,15 @@ func (r *serveCmd) Run(ctx context.Context, s socket.Socket) error {
 	srv := socket.NewGRPCServer(ctx)
 	reflection.Register(srv)
 	ftlv1.RegisterVerbServiceServer(srv, agent)
+	ftlv1.RegisterDevelServiceServer(srv, agent)
 
 	mixedHandler := newHTTPandGRPCMux(agent, srv)
 	http2Server := &http2.Server{}
-	http1Server := &http.Server{Handler: log.Middleware(logger, h2c.NewHandler(mixedHandler, http2Server)), ReadHeaderTimeout: time.Second * 30}
+	http1Server := &http.Server{
+		Handler:           log.Middleware(logger, h2c.NewHandler(mixedHandler, http2Server)),
+		ReadHeaderTimeout: time.Second * 30,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+	}
 
 	wg.Go(func() error { return errors.WithStack(http1Server.Serve(l)) })
 	wg.Go(agent.Wait)

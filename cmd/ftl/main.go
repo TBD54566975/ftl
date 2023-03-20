@@ -21,10 +21,11 @@ var cli struct {
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 	Endpoint  socket.Socket    `default:"tcp://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 
-	Serve serveCmd `cmd:"" help:"Serve FTL modules."`
-	List  listCmd  `cmd:"" help:"List all FTL functions."`
-	Call  callCmd  `cmd:"" help:"Call an FTL function."`
-	Go    goCmd    `cmd:"" help:"Commands specific to Go modules."`
+	Serve  serveCmd  `cmd:"" help:"Serve FTL modules."`
+	Schema schemaCmd `cmd:"" help:"Retrieve the FTL schema."`
+	List   listCmd   `cmd:"" help:"List all FTL functions."`
+	Call   callCmd   `cmd:"" help:"Call an FTL function."`
+	Go     goCmd     `cmd:"" help:"Commands specific to Go modules."`
 }
 
 func main() {
@@ -57,19 +58,31 @@ func main() {
 
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
-	err := kctx.BindToProvider(dialAgent(ctx))
+	err := kctx.BindToProvider(dialVerbService(ctx))
+	kctx.FatalIfErrorf(err)
+	err = kctx.BindToProvider(dialDevelService(ctx))
 	kctx.FatalIfErrorf(err)
 
 	err = kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
 }
 
-func dialAgent(ctx context.Context) func() (ftlv1.VerbServiceClient, error) {
+func dialVerbService(ctx context.Context) func() (ftlv1.VerbServiceClient, error) {
 	return func() (ftlv1.VerbServiceClient, error) {
 		conn, err := socket.DialGRPC(ctx, cli.Endpoint)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 		return ftlv1.NewVerbServiceClient(conn), nil
+	}
+}
+
+func dialDevelService(ctx context.Context) func() (ftlv1.DevelServiceClient, error) {
+	return func() (ftlv1.DevelServiceClient, error) {
+		conn, err := socket.DialGRPC(ctx, cli.Endpoint)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return ftlv1.NewDevelServiceClient(conn), nil
 	}
 }

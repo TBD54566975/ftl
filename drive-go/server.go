@@ -3,13 +3,11 @@ package drivego
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"reflect"
-	"runtime"
 
 	"github.com/alecthomas/errors"
 
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 type UserVerbConfig struct{}
@@ -21,7 +19,7 @@ func NewUserVerbServer(handlers ...Handler) func(context.Context, UserVerbConfig
 	return func(ctx context.Context, mc UserVerbConfig) (ftlv1.VerbServiceServer, error) {
 		hmap := map[string]Handler{}
 		for _, handler := range handlers {
-			hmap[handler.path] = handler
+			hmap[handler.name] = handler
 		}
 		return &moduleServer{handlers: hmap}, nil
 	}
@@ -29,16 +27,15 @@ func NewUserVerbServer(handlers ...Handler) func(context.Context, UserVerbConfig
 
 // Handler for a Verb.
 type Handler struct {
-	path string
+	name string
 	fn   func(ctx context.Context, req []byte) ([]byte, error)
 }
 
 // Handle creates a Handler from a Verb.
 func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
-	name := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
-	fmt.Println(name)
+	name := sdkgo.VerbRef(verb)
 	return Handler{
-		path: name,
+		name: name,
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
 			// Decode request.
 			var req Req
@@ -64,6 +61,7 @@ func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)
 
 var _ ftlv1.VerbServiceServer = (*moduleServer)(nil)
 
+// This is the server that is compiled into the same binary as user-defined Verbs.
 type moduleServer struct {
 	handlers map[string]Handler
 }

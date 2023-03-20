@@ -1,5 +1,5 @@
-// Package local manages locally running FTL drives.
-package local
+// Package agent runs on developer machines, facilitating hot reloading and routing.
+package agent
 
 import (
 	"context"
@@ -18,6 +18,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/exec"
@@ -25,6 +27,7 @@ import (
 	"github.com/TBD54566975/ftl/common/metadata"
 	"github.com/TBD54566975/ftl/common/plugin"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/schema"
 )
 
 // ModuleConfig is the configuration for an FTL module.
@@ -43,22 +46,24 @@ type driveContext struct {
 	config       ModuleConfig
 }
 
-type Local struct {
+type Agent struct {
 	lock    sync.RWMutex
 	watcher *fsnotify.Watcher
 	drives  map[string]driveContext
 	wg      *errgroup.Group
 }
 
-var _ http.Handler = (*Local)(nil)
+var _ http.Handler = (*Agent)(nil)
+var _ ftlv1.VerbServiceServer = (*Agent)(nil)
+var _ ftlv1.DevelServiceServer = (*Agent)(nil)
 
-// New creates a new Local drive coordinator.
-func New(ctx context.Context) (*Local, error) {
+// New creates a new local agent.
+func New(ctx context.Context) (*Agent, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	e := &Local{
+	e := &Agent{
 		watcher: watcher,
 		drives:  map[string]driveContext{},
 		wg:      &errgroup.Group{},
@@ -70,7 +75,7 @@ func New(ctx context.Context) (*Local, error) {
 }
 
 // Drives returns the list of active drives.
-func (l *Local) Drives() []string {
+func (l *Agent) Drives() []string {
 	l.lock.RLock()
 	defer l.lock.Unlock()
 	return maps.Keys(l.drives)
@@ -78,13 +83,13 @@ func (l *Local) Drives() []string {
 
 // Manage starts a new Drive to manage a directory of functions.
 //
-// The Drive executable must have the name ftl-drive-$LANG. The Local
+// The Drive executable must have the name ftl-drive-$LANG. The Agent
 // will pass the following envars through to the Drive:
 //
-//	FTL_DRIVE_ENDPOINT - Path to a Unix socket that the Drive must serve the gRPC service xyz.block.ftl.v1.DriveService on.
 //	FTL_MODULE_ROOT - Path to a directory containing FTL module source and an ftl.toml file.
 //	FTL_WORKING_DIR - Path to a directory that the Drive can use for temporary files.
-func (l *Local) Manage(ctx context.Context, dir string) (err error) {
+//	FTL_MODULE - The name of the module.
+func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
 	dir, err = filepath.Abs(dir)
 	if err != nil {
 		return errors.WithStack(err)
@@ -102,7 +107,7 @@ func (l *Local) Manage(ctx context.Context, dir string) (err error) {
 	exeName := "ftl-drive-" + config.Language
 	exe, err := exec.LookPath(exeName)
 	if err != nil {
-		return errors.Wrapf(err, "could not find FTL.drive-%s", config.Language)
+		return errors.Wrapf(err, "could not find ftl-drive-%s", config.Language)
 	}
 
 	// Setup the working directory for the module.
@@ -115,6 +120,7 @@ func (l *Local) Manage(ctx context.Context, dir string) (err error) {
 	var develClient ftlv1.DevelServiceClient
 	verbServicePlugin, cmdCtx, err := plugin.Spawn(ctx, dir, exe, ftlv1.NewVerbServiceClient,
 		plugin.WithEnvars("FTL_MODULE_ROOT="+dir),
+		plugin.WithEnvars("FTL_MODULE="+config.Module),
 		plugin.WithExtraClient(&develClient, ftlv1.NewDevelServiceClient),
 	)
 	if err != nil {
@@ -141,15 +147,16 @@ func (l *Local) Manage(ctx context.Context, dir string) (err error) {
 	}
 
 	l.drives[dir] = driveContext{
-		Plugin:     verbServicePlugin,
-		root:       dir,
-		workingDir: workingDir,
-		config:     config,
+		Plugin:       verbServicePlugin,
+		develService: develClient,
+		root:         dir,
+		workingDir:   workingDir,
+		config:       config,
 	}
 	return nil
 }
 
-func (l *Local) Wait() error {
+func (l *Agent) Wait() error {
 	return errors.WithStack(l.wg.Wait())
 }
 
@@ -165,7 +172,7 @@ func writeError(w http.ResponseWriter, status int, msg string, args ...any) {
 }
 
 // ServeHTTP because we want the local agent to also be able to serve Verbs directly via HTTP.
-func (l *Local) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (l *Agent) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	verb := strings.TrimPrefix(r.URL.Path, "/")
 
@@ -204,9 +211,9 @@ func (l *Local) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (l *Local) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
+func (l *Agent) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
 	logger := log.FromContext(ctx)
-	logger.Info(req.Verb)
+	logger.Info("Call " + req.Verb)
 	ctx = metadata.WithDirectRouting(ctx)
 	drive, err := l.findDrive(req.Verb)
 	if err != nil {
@@ -215,7 +222,7 @@ func (l *Local) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallRe
 	return drive.Client.Call(ctx, req)
 }
 
-func (l *Local) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
+func (l *Agent) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
 	ctx = metadata.WithDirectRouting(ctx)
 	out := &ftlv1.ListResponse{}
 	for _, drive := range l.allDrives() {
@@ -228,11 +235,39 @@ func (l *Local) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListRe
 	return out, nil
 }
 
-func (l *Local) Ping(ctx context.Context, req *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
+func (l *Agent) Ping(ctx context.Context, req *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
 	return &ftlv1.PingResponse{}, nil
 }
 
-func (l *Local) allDrives() []driveContext {
+// FileChange implements ftlv1.DevelServiceServer
+func (*Agent) FileChange(context.Context, *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
+	return nil, errors.WithStack(status.Error(codes.NotFound, "not implemented"))
+}
+
+// Schema implements ftlv1.DevelServiceServer
+func (l *Agent) Schema(context.Context, *ftlv1.SchemaRequest) (*ftlv1.SchemaResponse, error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	out := schema.Schema{}
+	for _, drive := range l.drives {
+		resp, err := drive.develService.Schema(context.Background(), &ftlv1.SchemaRequest{})
+		if err != nil {
+			return nil, errors.Wrapf(err, "schema call to %q failed", drive.config.Module)
+		}
+		parsed, err := schema.ParseString("", resp.Schema)
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid schema from module %q", drive.config.Module)
+		}
+		out.Modules = append(out.Modules, parsed.Modules...)
+	}
+	err := schema.Validate(out)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid schema")
+	}
+	return &ftlv1.SchemaResponse{Schema: out.String()}, nil
+}
+
+func (l *Agent) allDrives() []driveContext {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	out := make([]driveContext, 0, len(l.drives))
@@ -242,7 +277,7 @@ func (l *Local) allDrives() []driveContext {
 	return out
 }
 
-func (l *Local) findDrive(verb string) (driveContext, error) {
+func (l *Agent) findDrive(verb string) (driveContext, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	modules := make([]string, 0, len(l.drives))
@@ -256,7 +291,7 @@ func (l *Local) findDrive(verb string) (driveContext, error) {
 }
 
 // Watch FTL modules for changes and notify the Drives.
-func (l *Local) watch(ctx context.Context) error {
+func (l *Agent) watch(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 	for {
 		select {

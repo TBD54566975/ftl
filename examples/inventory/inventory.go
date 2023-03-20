@@ -21,9 +21,6 @@ type Item struct {
 	Count       int
 }
 
-/*
-Foo
-*/
 type CreateRequest struct {
 	ID          ItemRef
 	Description string
@@ -43,7 +40,6 @@ func Create(ctx context.Context, req CreateRequest) (Item, error) {
 type AddRequest struct {
 	ID    ItemRef
 	Count int
-	Foo   map[string]bool
 }
 
 //ftl:verb

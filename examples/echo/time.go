@@ -7,10 +7,10 @@ import (
 
 type TimeRequest struct{}
 type TimeResponse struct {
-	Time time.Time `json:"time"`
+	Time int `json:"time"`
 }
 
 //ftl:verb
 func Time(ctx context.Context, req TimeRequest) (TimeResponse, error) {
-	return TimeResponse{Time: time.Now()}, nil
+	return TimeResponse{Time: int(time.Now().Unix())}, nil
 }

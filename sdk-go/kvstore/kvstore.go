@@ -21,7 +21,7 @@ type KV[V any] struct {
 
 // Require ensures that a configued and provisioned KV store is available.
 func Require[V any]() Interface[V] {
-	return &KV[V]{}
+	return &KV[V]{store: map[string]V{}}
 }
 
 func (k *KV[V]) Put(key string, value V) error {
