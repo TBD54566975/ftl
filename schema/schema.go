@@ -54,14 +54,14 @@ type Bool struct {
 type Array struct {
 	Pos lexer.Position
 
-	Element Type `parser:"'array' '<' @@ '>'"`
+	Element Type `parser:"'[' @@ ']'"`
 }
 
 type Map struct {
 	Pos lexer.Position
 
-	Key   Type `parser:"'map' '<' @@"`
-	Value Type `parser:"',' @@ '>'"`
+	Key   Type `parser:"'{' @@"`
+	Value Type `parser:"':' @@ '}'"`
 }
 
 type Field struct {
@@ -152,7 +152,7 @@ var lex = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "Comment", Pattern: `//.*`},
 	{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
 	{Name: "Number", Pattern: `[0-9]+(?:\.[0-9]+)?`},
-	{Name: "Punct", Pattern: `[-[\]{}<>()*+?.,\\^$|#]`},
+	{Name: "Punct", Pattern: `[-:[\]{}<>()*+?.,\\^$|#]`},
 })
 
 var parser = participle.MustBuild[Schema](

@@ -36,13 +36,13 @@ var _ Type = (*Array)(nil)
 
 func (a Array) schemaChildren() []Node { return []Node{a.Element} }
 func (Array) schemaType()              {}
-func (a Array) String() string         { return "array<" + a.Element.String() + ">" }
+func (a Array) String() string         { return "[" + a.Element.String() + "]" }
 
 var _ Type = (*Map)(nil)
 
 func (m Map) schemaChildren() []Node { return []Node{m.Key, m.Value} }
 func (Map) schemaType()              {}
-func (m Map) String() string         { return fmt.Sprintf("map<%s, %s>", m.Key.String(), m.Value.String()) }
+func (m Map) String() string         { return fmt.Sprintf("{%s: %s}", m.Key.String(), m.Value.String()) }
 
 var _ Node = (*Field)(nil)
 

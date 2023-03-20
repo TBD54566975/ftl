@@ -60,10 +60,10 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name map<string, string>
+    name {string: string}
   }
   data CreateResponse {
-    name array<string>
+    name [string]
   }
   data DestroyRequest {
     // A comment
