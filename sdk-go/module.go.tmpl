@@ -6,20 +6,17 @@ import (
   "{{.}}"
 {{- end}}
 )
-
-{{ range .Data -}}
+{{- range .Decls }}
+{{if is "Data" . }}
 type {{.Name|title}} struct {
   {{- range .Fields}}
   {{.Name|title}} {{.Type|type}} `json:"{{.Name}}"`
   {{- end}}
 }
-
-{{end}}
-
-{{- range .Verbs -}}
-{{ if .Comments }}{{ .Comments|comment }}{{ end }}
+{{- else if is "Verb" .}}
+{{.Comments|comment }}
 func {{.Name|title}}(ctx context.Context, {{.Request}}) ({{.Response}}, error) {
   panic("Verb stubs should not be called directly, instead use sdkgo.Call()")
 }
-
-{{end}}
+{{- end}}
+{{- end}}

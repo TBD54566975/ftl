@@ -20,7 +20,6 @@ func TestCodegen(t *testing.T) {
 			data BasketSummary {
 				items int
 			}
-			
 			// Add an item to the basket.
 			verb Add(ItemRequest) BasketSummary
 			// Remove an item from the basket.
@@ -54,7 +53,6 @@ func Add(ctx context.Context, ItemRequest) (BasketSummary, error) {
 func Remove(ctx context.Context, ItemRequest) (BasketSummary, error) {
   panic("Verb stubs should not be called directly, instead use sdkgo.Call()")
 }
-
 `
 	assert.Equal(t, expected, w.String())
 }

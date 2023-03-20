@@ -121,19 +121,23 @@ type Module struct {
 
 	Comments []string `parser:"@Comment*"`
 	Name     string   `parser:"'module' @Ident '{'"`
-	Data     []Data   `parser:"@@*"`
-	Verbs    []Verb   `parser:"@@* '}'"`
+	Decls    []Decl   `parser:"@@* '}'"`
+}
+
+type Decl interface {
+	Node
+	schemaDecl()
 }
 
 // AddData and return its index.
 func (m *Module) AddData(data Data) int {
-	for i, d := range m.Data {
-		if d.Name == data.Name {
+	for i, d := range m.Decls {
+		if d, ok := d.(Data); ok && d.Name == data.Name {
 			return i
 		}
 	}
-	m.Data = append(m.Data, data)
-	return len(m.Data) - 1
+	m.Decls = append(m.Decls, data)
+	return len(m.Decls) - 1
 }
 
 type Schema struct {
@@ -161,6 +165,7 @@ var parser = participle.MustBuild[Schema](
 	}, "Comment"),
 	participle.Union[Type](Int{}, Float{}, String{}, Bool{}, Array{}, Map{}, VerbRef{}, DataRef{}),
 	participle.Union[Metadata](MetadataCalls{}),
+	participle.Union[Decl](Data{}, Verb{}),
 )
 
 func ParseBytes(filename string, input []byte) (Schema, error) {

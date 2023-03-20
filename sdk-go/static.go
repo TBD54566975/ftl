@@ -171,7 +171,7 @@ func parseFunction(pkg *packages.Package, module *schema.Module, directives []ft
 		Request:  req,
 		Response: resp,
 	}
-	module.Verbs = append(module.Verbs, verb)
+	module.Decls = append(module.Decls, verb)
 	return nil
 }
 

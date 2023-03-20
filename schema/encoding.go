@@ -60,8 +60,10 @@ func (DataRef) schemaChildren() []Node { return nil }
 func (DataRef) schemaType()            {}
 func (s DataRef) String() string       { return s.Name }
 
-var _ Node = (*Data)(nil)
+var _ Decl = (*Data)(nil)
 
+// schemaDecl implements Decl
+func (Data) schemaDecl() {}
 func (d Data) schemaChildren() []Node {
 	children := make([]Node, 0, len(d.Fields)+len(d.Metadata))
 	for _, f := range d.Fields {
@@ -89,8 +91,9 @@ func (VerbRef) schemaChildren() []Node { return nil }
 func (VerbRef) schemaType()            {}
 func (v VerbRef) String() string       { return makeRef(v.Module, v.Name) }
 
-var _ Node = (*Verb)(nil)
+var _ Decl = (*Verb)(nil)
 
+func (v Verb) schemaDecl() {}
 func (v Verb) schemaChildren() []Node {
 	children := make([]Node, 2+len(v.Metadata))
 	children[0] = v.Request
@@ -135,12 +138,9 @@ func (MetadataCalls) schemaMetadata() {}
 var _ Node = (*Module)(nil)
 
 func (m Module) schemaChildren() []Node {
-	children := make([]Node, 0, len(m.Data)+len(m.Verbs))
-	for _, d := range m.Data {
+	children := make([]Node, 0, len(m.Decls))
+	for _, d := range m.Decls {
 		children = append(children, d)
-	}
-	for _, v := range m.Verbs {
-		children = append(children, v)
 	}
 	return children
 }
@@ -148,14 +148,8 @@ func (m Module) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(m.Comments))
 	fmt.Fprintf(w, "module %s {\n", m.Name)
-	for _, s := range m.Data {
+	for _, s := range m.Decls {
 		fmt.Fprintln(w, indent(s.String()))
-	}
-	if len(m.Verbs) > 0 {
-		fmt.Fprintln(w)
-		for _, v := range m.Verbs {
-			fmt.Fprintln(w, indent(v.String()))
-		}
 	}
 	fmt.Fprintln(w, "}")
 	return w.String()

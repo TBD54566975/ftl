@@ -14,37 +14,35 @@ var schema = Schema{
 		{
 			Name:     "todo",
 			Comments: []string{"A comment"},
-			Data: []Data{
-				{
+			Decls: []Decl{
+				Data{
 					Name: "CreateRequest",
 					Fields: []Field{
 						{Name: "name", Type: Map{Key: String{Str: true}, Value: String{Str: true}}},
 					},
 				},
-				{
+				Data{
 					Name: "CreateResponse",
 					Fields: []Field{
 						{Name: "name", Type: Array{Element: String{Str: true}}},
 					},
 				},
-				{
+				Data{
 					Name: "DestroyRequest",
 					Fields: []Field{
 						{Name: "name", Comments: []string{"A comment"}, Type: String{Str: true}},
 					},
 				},
-				{
+				Data{
 					Name: "DestroyResponse",
 					Fields: []Field{
 						{Name: "name", Type: String{Str: true}},
 					},
 				},
-			},
-			Verbs: []Verb{
-				{Name: "create",
+				Verb{Name: "create",
 					Request:  DataRef{Name: "CreateRequest"},
 					Response: DataRef{Name: "CreateResponse"}},
-				{Name: "destroy",
+				Verb{Name: "destroy",
 					Request:  DataRef{Name: "DestroyRequest"},
 					Response: DataRef{Name: "DestroyResponse"},
 				},
@@ -74,7 +72,6 @@ module todo {
   data DestroyResponse {
     name string
   }
-
   verb create(CreateRequest) CreateResponse
   verb destroy(DestroyRequest) DestroyResponse
 }
@@ -151,12 +148,10 @@ func TestParsing(t *testing.T) {
 				Modules: []Module{
 					{
 						Name: "todo",
-						Data: []Data{
-							{Name: "CreateListRequest"},
-							{Name: "CreateListResponse"},
-						},
-						Verbs: []Verb{
-							{Name: "createList",
+						Decls: []Decl{
+							Data{Name: "CreateListRequest"},
+							Data{Name: "CreateListResponse"},
+							Verb{Name: "createList",
 								Comments: []string{"Create a new list"},
 								Request:  DataRef{Module: "todo", Name: "CreateListRequest"},
 								Response: DataRef{Name: "CreateListResponse"},

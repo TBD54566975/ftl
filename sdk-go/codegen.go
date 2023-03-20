@@ -4,6 +4,7 @@ import (
 	_ "embed" // For embedding templates.
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 	"text/template"
 
@@ -20,9 +21,15 @@ var tmpl = template.Must(template.New("module").
 	Funcs(template.FuncMap{
 		"title": strcase.ToCamel,
 		"comment": func(s []string) string {
+			if len(s) == 0 {
+				return ""
+			}
 			return "// " + strings.Join(s, "\n// ")
 		},
 		"type": genType,
+		"is": func(kind string, t schema.Node) bool {
+			return reflect.TypeOf(t).Name() == kind
+		},
 		"imports": func(m schema.Module) []string {
 			pkgs := map[string]bool{}
 			_ = schema.Visit(m, func(n schema.Node, next func() error) error {

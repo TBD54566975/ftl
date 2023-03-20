@@ -28,8 +28,7 @@ func Normalise[T Node](n T) T {
 		ni = c
 	case Module:
 		c.Pos = zero
-		c.Data = normaliseSlice(c.Data)
-		c.Verbs = normaliseSlice(c.Verbs)
+		c.Decls = normaliseSlice(c.Decls)
 		ni = c
 	case Array:
 		c.Pos = zero
@@ -77,7 +76,7 @@ func Normalise[T Node](n T) T {
 		c.Pos = zero
 		c.Calls = normaliseSlice(c.Calls)
 		ni = c
-	case Metadata, Type: // Can never occur in reality, but here to satisfy the sum-type check.
+	case Decl, Metadata, Type: // Can never occur in reality, but here to satisfy the sum-type check.
 		panic("??")
 	}
 	if ni == nil {

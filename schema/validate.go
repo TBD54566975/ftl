@@ -102,6 +102,9 @@ func ValidateModule(module Module) error {
 					merr = append(merr, errors.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
 				}
 			}
+
+		case Array, Bool, DataRef, Field, Float, Int, Map, MetadataCalls, Module, Schema, String, VerbRef:
+		case Type, Metadata, Decl: // Union types.
 		}
 		return next()
 	})
