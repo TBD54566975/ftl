@@ -5,6 +5,17 @@ on:
   pull_request:
 name: CI
 jobs:
+  kotlin:
+    name: Kotlin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        run: ./bin/hermit env -r >> $GITHUB_ENV
+      - name: Kotlin Test
+        working-directory: drive-kotlin
+        run: mvn test
   test:
     name: Test
     runs-on: ubuntu-latest

@@ -44,7 +44,7 @@ func (s *Topic[T]) Subscribe(c chan T) chan T {
 	return c
 }
 
-// Unsubscribe a channel from the topic.
+// Unsubscribe a channel from the topic, closing the channel.
 func (s *Topic[T]) Unsubscribe(c chan T) {
 	s.control <- unsubscribe[T](c)
 }
@@ -66,6 +66,7 @@ func (s *Topic[T]) run() {
 
 			case unsubscribe[T]:
 				delete(subscriptions, msg)
+				close(msg)
 
 			case stop:
 				for ch := range subscriptions {
