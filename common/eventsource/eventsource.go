@@ -14,6 +14,8 @@ type EventSource[T any] struct {
 	value *atomic.Value[T]
 }
 
+var _ atomic.Interface[int] = (*EventSource[int])(nil)
+
 func New[T any]() *EventSource[T] {
 	var t T
 	e := &EventSource[T]{Topic: pubsub.New[T](), value: atomic.New(t)}

@@ -11,6 +11,7 @@ func TestPubsub(t *testing.T) {
 	pubsub := New[string]()
 	ch := make(chan string, 64)
 	pubsub.Subscribe(ch)
+	defer pubsub.Unsubscribe(ch)
 	pubsub.Publish("hello")
 	select {
 	case msg := <-ch:

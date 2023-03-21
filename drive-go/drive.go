@@ -116,6 +116,7 @@ func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 		return errors.WithStack(err)
 	}
 	changes := s.moduleSchema.Subscribe(make(chan schema.Module, 64))
+	defer s.moduleSchema.Unsubscribe(changes)
 	wg.Go(func() error {
 		for module := range changes {
 			if err := s.sendSchema(stream, module); err != nil {

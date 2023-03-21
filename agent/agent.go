@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -239,6 +240,7 @@ func (l *Agent) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListRe
 		}
 		out.Verbs = append(out.Verbs, resp.Verbs...)
 	}
+	sort.Strings(out.Verbs)
 	return out, nil
 }
 
