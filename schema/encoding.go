@@ -148,7 +148,10 @@ func (m Module) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(m.Comments))
 	fmt.Fprintf(w, "module %s {\n", m.Name)
-	for _, s := range m.Decls {
+	for i, s := range m.Decls {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
 		fmt.Fprintln(w, indent(s.String()))
 	}
 	fmt.Fprintln(w, "}")

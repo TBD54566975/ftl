@@ -62,17 +62,22 @@ module todo {
   data CreateRequest {
     name {string: string}
   }
+
   data CreateResponse {
     name [string]
   }
+
   data DestroyRequest {
     // A comment
     name string
   }
+
   data DestroyResponse {
     name string
   }
+
   verb create(CreateRequest) CreateResponse
+
   verb destroy(DestroyRequest) DestroyResponse
 }
 `
