@@ -17,8 +17,10 @@ import (
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
 	"golang.org/x/mod/modfile"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 
+	"github.com/TBD54566975/ftl/common/eventsource"
 	"github.com/TBD54566975/ftl/common/exec"
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/metadata"
@@ -57,10 +59,12 @@ func New(ctx context.Context, config Config) (*Server, error) {
 	router := ftlv1.NewVerbServiceClient(conn)
 
 	s := &Server{
-		Config:   config,
-		router:   router,
-		module:   config.Module,
-		goModule: goModule,
+		Config:         config,
+		router:         router,
+		module:         config.Module,
+		goModule:       goModule,
+		triggerRebuild: make(chan struct{}, 64),
+		moduleSchema:   eventsource.New[schema.Module](),
 	}
 
 	logger.Info("Starting FTL.module")
@@ -87,20 +91,61 @@ var _ ftlv1.VerbServiceServer = (*Server)(nil)
 
 type Server struct {
 	Config
-	router       ftlv1.VerbServiceClient
-	module       string
-	schema       atomic.Value[schema.Schema]
-	goModule     string
-	handlers     []Handler
-	plugin       atomic.Value[*plugin.Plugin[ftlv1.VerbServiceClient]]
-	develService ftlv1.DevelServiceClient
+	router         ftlv1.VerbServiceClient
+	module         string
+	goModule       string
+	triggerRebuild chan struct{}
 
-	lastRebuildMu sync.Mutex
-	lastRebuild   time.Time
+	fullSchema   atomic.Value[schema.Schema]
+	moduleSchema *eventsource.EventSource[schema.Module]
+
+	plugin atomic.Value[*plugin.Plugin[ftlv1.VerbServiceClient]]
+
+	rebuildMu   sync.Mutex
+	lastRebuild time.Time
 }
 
-func (s *Server) Schema(context.Context, *ftlv1.SchemaRequest) (*ftlv1.SchemaResponse, error) {
-	return &ftlv1.SchemaResponse{Schema: s.schema.Load().String()}, nil
+func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
+	wg, ctx := errgroup.WithContext(stream.Context())
+
+	logger := log.FromContext(ctx)
+
+	// Send initial and subsequent schema updates.
+	err := s.sendSchema(stream, s.moduleSchema.Load())
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	changes := s.moduleSchema.Subscribe(make(chan schema.Module, 64))
+	wg.Go(func() error {
+		for module := range changes {
+			if err := s.sendSchema(stream, module); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		return nil
+	})
+
+	// Receive schema updates.
+	wg.Go(func() error {
+		for {
+			received, err := stream.Recv()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			module, err := schema.ParseModuleString(received.Module, received.Schema)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
+			logger.Info("Received schema update", "self", s.module, "module", module.Name)
+
+			fullSchema := s.fullSchema.Load()
+			fullSchema.Upsert(module)
+			s.fullSchema.Store(fullSchema)
+		}
+	})
+
+	return errors.WithStack(wg.Wait())
 }
 
 func (s *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
@@ -108,11 +153,10 @@ func (s *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListR
 		return s.router.List(ctx, req)
 	}
 	out := &ftlv1.ListResponse{}
-	for _, module := range s.schema.Load().Modules {
-		for _, verb := range module.Decls {
-			if verb, ok := verb.(schema.Verb); ok {
-				out.Verbs = append(out.Verbs, module.Name+"."+verb.Name)
-			}
+	module := s.moduleSchema.Load()
+	for _, verb := range module.Decls {
+		if verb, ok := verb.(schema.Verb); ok {
+			out.Verbs = append(out.Verbs, module.Name+"."+verb.Name)
 		}
 	}
 	return out, nil
@@ -166,23 +210,27 @@ func (s *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
 				continue
 			}
 			s.plugin.Store(nextPlugin)
+
+		case <-s.triggerRebuild:
+			// This is not efficient.
+			_ = s.plugin.Load().Cmd.Kill(syscall.SIGTERM)
 		}
 	}
 }
 
 func (s *Server) rebuild(ctx context.Context) (exe string, err error) {
-	s.lastRebuildMu.Lock()
-	defer s.lastRebuildMu.Unlock()
+	s.rebuildMu.Lock()
+	defer s.rebuildMu.Unlock()
 
 	exe = filepath.Join(s.WorkingDir, "ftl-module")
 
-	if time.Now().Sub(s.lastRebuild) < time.Millisecond*250 {
+	if time.Since(s.lastRebuild) < time.Millisecond*250 {
 		return exe, nil
 	}
 	defer func() { s.lastRebuild = time.Now() }()
 
 	logger := log.FromContext(ctx)
-	err = writeMain(s.Dir, s.WorkingDir, s.goModule, s.Config)
+	err = s.writeGoLayout()
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -196,7 +244,7 @@ func (s *Server) rebuild(ctx context.Context) (exe string, err error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	s.schema.Store(schema.Schema{Modules: []schema.Module{module}})
+	s.moduleSchema.Store(module)
 
 	logger.Info("Compiling FTL.module...")
 	err = execInRoot(ctx, s.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", exe)
@@ -211,18 +259,55 @@ func (s *Server) rebuild(ctx context.Context) (exe string, err error) {
 	return exe, nil
 }
 
-func execInRoot(ctx context.Context, root string, command string, args ...string) error {
-	cmd := exec.Command(ctx, root, command, args...)
-	return errors.WithStack(cmd.Run())
+func (s *Server) writeGoLayout() error {
+	if err := s.writeModules(); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := s.writeMain(); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := s.writeGoMod(); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
 
-func writeMain(root, workDir, module string, config Config) error {
-	w, err := generate(config)
+func (s *Server) writeModules() error {
+	_ = os.RemoveAll(filepath.Join(s.WorkingDir, "_modules"))
+	schema := s.fullSchema.Load()
+	for _, module := range schema.Modules {
+		err := s.writeModule(module)
+		if err != nil {
+			return errors.Wrapf(err, "%s: failed to write module", module.Name)
+		}
+	}
+	return nil
+}
+
+func (s *Server) writeModule(module schema.Module) error {
+	err := os.MkdirAll(filepath.Join(s.WorkingDir, "_modules", module.Name), 0750)
+	if err != nil {
+		return errors.Wrapf(err, "%s: failed to create module directory", module.Name)
+	}
+	w, err := os.Create(filepath.Join(s.WorkingDir, "_modules", module.Name, "schema.go"))
+	if err != nil {
+		return errors.Wrapf(err, "%s: failed to create schema file", module.Name)
+	}
+	defer w.Close() //nolint:gosec
+	err = sdkgo.Generate(module, w)
+	if err != nil {
+		return errors.Wrapf(err, "%s: failed to generate schema", module.Name)
+	}
+	return nil
+}
+
+func (s *Server) writeMain() error {
+	w, err := generate(s.Config)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	main, err := os.Create(filepath.Join(workDir, "main.go"))
+	main, err := os.Create(filepath.Join(s.WorkingDir, "main.go"))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -231,18 +316,32 @@ func writeMain(root, workDir, module string, config Config) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	return nil
+}
 
-	goMod, err := os.Create(filepath.Join(workDir, "go.mod"))
+func (s *Server) writeGoMod() error {
+	goMod, err := os.Create(filepath.Join(s.WorkingDir, "go.mod"))
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer goMod.Close() //nolint:gosec
 	fmt.Fprintf(goMod, "module main\n")
-	fmt.Fprintf(goMod, "require %s v0.0.0\n", module)
-	fmt.Fprintf(goMod, "replace %s => %s\n", module, root)
-	if config.FTLSource != "" {
+	fmt.Fprintf(goMod, "require %s v0.0.0\n", s.goModule)
+	fmt.Fprintf(goMod, "replace %s => %s\n", s.goModule, s.Dir)
+	if s.FTLSource != "" {
 		fmt.Fprintf(goMod, "require github.com/TBD54566975/ftl v0.0.0\n")
-		fmt.Fprintf(goMod, "replace github.com/TBD54566975/ftl => %s\n", config.FTLSource)
+		fmt.Fprintf(goMod, "replace github.com/TBD54566975/ftl => %s\n", s.FTLSource)
+	}
+	return nil
+}
+
+func (s *Server) sendSchema(stream ftlv1.DevelService_SyncSchemaServer, module schema.Module) error {
+	err := stream.Send(&ftlv1.SyncSchemaResponse{
+		Module: module.Name,
+		Schema: module.String(),
+	})
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -348,4 +447,9 @@ func findGoModule(file string) (string, error) {
 		return "", fmt.Errorf("failed to extract Go module from go.mod file: %w", err)
 	}
 	return goModFile, nil
+}
+
+func execInRoot(ctx context.Context, root string, command string, args ...string) error {
+	cmd := exec.Command(ctx, root, command, args...)
+	return errors.WithStack(cmd.Run())
 }

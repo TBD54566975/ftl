@@ -146,6 +146,17 @@ type Schema struct {
 	Modules []Module `parser:"@@*"`
 }
 
+// Upsert inserts or replaces a module.
+func (s *Schema) Upsert(module Module) {
+	for i, m := range s.Modules {
+		if m.Name == module.Name {
+			s.Modules[i] = module
+			return
+		}
+	}
+	s.Modules = append(s.Modules, module)
+}
+
 var lex = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "Whitespace", Pattern: `\s+`},
 	{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
@@ -155,7 +166,7 @@ var lex = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "Punct", Pattern: `[-:[\]{}<>()*+?.,\\^$|#]`},
 })
 
-var parser = participle.MustBuild[Schema](
+var parserOptions = []participle.Option{
 	participle.Lexer(lex),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
@@ -166,15 +177,10 @@ var parser = participle.MustBuild[Schema](
 	participle.Union[Type](Int{}, Float{}, String{}, Bool{}, Array{}, Map{}, VerbRef{}, DataRef{}),
 	participle.Union[Metadata](MetadataCalls{}),
 	participle.Union[Decl](Data{}, Verb{}),
-)
-
-func ParseBytes(filename string, input []byte) (Schema, error) {
-	mod, err := parser.ParseBytes(filename, input)
-	if err != nil {
-		return Schema{}, errors.WithStack(err)
-	}
-	return *mod, Validate(*mod)
 }
+
+var parser = participle.MustBuild[Schema](parserOptions...)
+var moduleParser = participle.MustBuild[Module](parserOptions...)
 
 func ParseString(filename, input string) (Schema, error) {
 	mod, err := parser.ParseString(filename, input)
@@ -184,10 +190,26 @@ func ParseString(filename, input string) (Schema, error) {
 	return *mod, Validate(*mod)
 }
 
+func ParseModuleString(filename, input string) (Module, error) {
+	mod, err := moduleParser.ParseString(filename, input)
+	if err != nil {
+		return Module{}, errors.WithStack(err)
+	}
+	return *mod, ValidateModule(*mod)
+}
+
 func Parse(filename string, r io.Reader) (Schema, error) {
 	mod, err := parser.Parse(filename, r)
 	if err != nil {
 		return Schema{}, errors.WithStack(err)
 	}
 	return *mod, Validate(*mod)
+}
+
+func ParseModule(filename string, r io.Reader) (Module, error) {
+	mod, err := moduleParser.Parse(filename, r)
+	if err != nil {
+		return Module{}, errors.WithStack(err)
+	}
+	return *mod, ValidateModule(*mod)
 }

@@ -14,9 +14,12 @@ import (
 	"syscall"
 
 	"github.com/BurntSushi/toml"
+	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
 	"github.com/fsnotify/fsnotify"
+	option "github.com/jordan-bonecutter/goption"
 	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,6 +29,7 @@ import (
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/metadata"
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/common/pubsub"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/schema"
 )
@@ -41,16 +45,18 @@ type ModuleConfig struct {
 type driveContext struct {
 	*plugin.Plugin[ftlv1.VerbServiceClient]
 	develService ftlv1.DevelServiceClient
+	schema       atomic.Value[option.Option[schema.Module]]
 	root         string
 	workingDir   string
 	config       ModuleConfig
 }
 
 type Agent struct {
-	lock    sync.RWMutex
-	watcher *fsnotify.Watcher
-	drives  map[string]driveContext
-	wg      *errgroup.Group
+	lock          sync.RWMutex
+	watcher       *fsnotify.Watcher
+	drives        map[string]*driveContext
+	schemaChanges *pubsub.Topic[schema.Module]
+	wg            *errgroup.Group
 }
 
 var _ http.Handler = (*Agent)(nil)
@@ -64,13 +70,12 @@ func New(ctx context.Context) (*Agent, error) {
 		return nil, errors.WithStack(err)
 	}
 	e := &Agent{
-		watcher: watcher,
-		drives:  map[string]driveContext{},
-		wg:      &errgroup.Group{},
+		watcher:       watcher,
+		drives:        map[string]*driveContext{},
+		wg:            &errgroup.Group{},
+		schemaChanges: pubsub.New[schema.Module](),
 	}
-	e.wg.Go(func() error {
-		return e.watch(ctx)
-	})
+	e.wg.Go(func() error { return e.watch(ctx) })
 	return e, nil
 }
 
@@ -146,13 +151,15 @@ func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
 		return errors.WithStack(err)
 	}
 
-	l.drives[dir] = driveContext{
+	dctx := &driveContext{
 		Plugin:       verbServicePlugin,
 		develService: develClient,
 		root:         dir,
 		workingDir:   workingDir,
 		config:       config,
 	}
+	l.wg.Go(func() error { return l.syncSchemaFromDrive(cmdCtx, dctx) })
+	l.drives[dir] = dctx
 	return nil
 }
 
@@ -239,45 +246,43 @@ func (l *Agent) Ping(ctx context.Context, req *ftlv1.PingRequest) (*ftlv1.PingRe
 	return &ftlv1.PingResponse{}, nil
 }
 
-// FileChange implements ftlv1.DevelServiceServer
 func (*Agent) FileChange(context.Context, *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
-	return nil, errors.WithStack(status.Error(codes.NotFound, "not implemented"))
+	return nil, errors.WithStack(status.Error(codes.Unimplemented, "not implemented"))
 }
 
-// Schema implements ftlv1.DevelServiceServer
-func (l *Agent) Schema(context.Context, *ftlv1.SchemaRequest) (*ftlv1.SchemaResponse, error) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	out := schema.Schema{}
-	for _, drive := range l.drives {
-		resp, err := drive.develService.Schema(context.Background(), &ftlv1.SchemaRequest{})
-		if err != nil {
-			return nil, errors.Wrapf(err, "schema call to %q failed", drive.config.Module)
+func (l *Agent) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
+	drives := l.allDrives()
+	slices.SortStableFunc(drives, func(a, b *driveContext) bool {
+		return a.config.Module < b.config.Module
+	})
+	for i, drive := range drives {
+		module, ok := drive.schema.Load().Get()
+		if !ok {
+			continue
 		}
-		parsed, err := schema.ParseString("", resp.Schema)
+		err := stream.Send(&ftlv1.SyncSchemaResponse{
+			Module: drive.config.Module,
+			Schema: module.String(),
+			More:   i < len(drives)-1,
+		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid schema from module %q", drive.config.Module)
+			return errors.WithStack(err)
 		}
-		out.Modules = append(out.Modules, parsed.Modules...)
 	}
-	err := schema.Validate(out)
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid schema")
-	}
-	return &ftlv1.SchemaResponse{Schema: out.String()}, nil
+	return nil
 }
 
-func (l *Agent) allDrives() []driveContext {
+func (l *Agent) allDrives() []*driveContext {
 	l.lock.Lock()
 	defer l.lock.Unlock()
-	out := make([]driveContext, 0, len(l.drives))
+	out := make([]*driveContext, 0, len(l.drives))
 	for _, drive := range l.drives {
 		out = append(out, drive)
 	}
 	return out
 }
 
-func (l *Agent) findDrive(verb string) (driveContext, error) {
+func (l *Agent) findDrive(verb string) (*driveContext, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	modules := make([]string, 0, len(l.drives))
@@ -287,7 +292,67 @@ func (l *Agent) findDrive(verb string) (driveContext, error) {
 			return drive, nil
 		}
 	}
-	return driveContext{}, errors.Errorf("could not find module serving Verb %q among %s", verb, strings.Join(modules, ", "))
+	return nil, errors.Errorf("could not find module serving Verb %q among %s", verb, strings.Join(modules, ", "))
+}
+
+func (l *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) error {
+	stream, err := drive.develService.SyncSchema(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	wg, _ := errgroup.WithContext(ctx)
+
+	// Receive schema changes from the drive.
+	wg.Go(func() error {
+		for {
+			resp, err := stream.Recv()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			module, err := schema.ParseModuleString("", resp.Schema)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			l.schemaChanges.Publish(module)
+			drive.schema.Store(option.Some(module))
+		}
+	})
+
+	// Send snapshot.
+	drives := l.allDrives()
+	for _, drive := range drives {
+		module, ok := drive.schema.Load().Get()
+		if !ok {
+			continue
+		}
+		if err := l.sendSchema(stream, module); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	// Send changes to the drive.
+	changes := l.schemaChanges.Subscribe(make(chan schema.Module, 64))
+	wg.Go(func() error {
+		for module := range changes {
+			if err := l.sendSchema(stream, module); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		return nil
+	})
+
+	return errors.WithStack(wg.Wait())
+}
+
+func (l *Agent) sendSchema(stream ftlv1.DevelService_SyncSchemaClient, module schema.Module) error {
+	err := stream.Send(&ftlv1.SyncSchemaRequest{
+		Module: module.Name,
+		Schema: module.String(),
+	})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
 
 // Watch FTL modules for changes and notify the Drives.

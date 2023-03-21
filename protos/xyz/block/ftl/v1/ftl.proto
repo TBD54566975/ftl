@@ -62,9 +62,16 @@ service VerbService {
   rpc List(ListRequest) returns (ListResponse);
 }
 
-message SchemaRequest {}
-message SchemaResponse {
-  string schema = 1;
+message SyncSchemaRequest {
+  string module = 1;
+  string schema = 2;
+}
+message SyncSchemaResponse {
+  string module = 1;
+  string schema = 2;
+  // If true, there are more schema changes immediately following this one.
+  // If false, there still may be more schema changes in the future.
+  bool more = 3;
 }
 
 // DevelService is the service that provides language-specific development and
@@ -76,8 +83,10 @@ service DevelService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
 
-  // Return the schema for the module under development.
-  rpc Schema(SchemaRequest) returns (SchemaResponse);
+  // Sync schema changes to and from the service.
+  //
+  // Each request and response contains the schema for a single module.
+  rpc SyncSchema(stream SyncSchemaRequest) returns (stream SyncSchemaResponse);
 
   // Called when a file is changed.
   //

@@ -24,14 +24,26 @@ func IsDirectRouted(ctx context.Context) bool {
 	return len(metadata.ValueFromIncomingContext(ctx, directRoutingKey)) > 0
 }
 
-// MetadatUnaryServerInterceptor propagates FTL metadata through to client calls.
-func MetadatUnaryServerInterceptor() grpc.UnaryServerInterceptor {
+// MetadataUnaryServerInterceptor propagates FTL metadata through to client calls.
+func MetadataUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		md, ok := metadata.FromIncomingContext(ctx)
 		if ok {
 			ctx = propagateMetadata(ctx, md)
 		}
 		return handler(ctx, req)
+	}
+}
+
+// MetadataStreamServerInterceptor propagates FTL metadata through to client calls.
+func MetadataStreamServerInterceptor() grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		ctx := ss.Context()
+		md, ok := metadata.FromIncomingContext(ctx)
+		if ok {
+			ctx = propagateMetadata(ss.Context(), md)
+		}
+		return handler(srv, &wrappedServerStream{ServerStream: ss, ctx: ctx})
 	}
 }
 
@@ -44,3 +56,10 @@ func propagateMetadata(ctx context.Context, md metadata.MD) context.Context {
 	}
 	return metadata.NewOutgoingContext(ctx, out)
 }
+
+type wrappedServerStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (ctx *wrappedServerStream) Context() context.Context { return ctx.ctx }

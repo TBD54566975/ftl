@@ -209,3 +209,30 @@ func TestParsing(t *testing.T) {
 		})
 	}
 }
+
+func TestParseModule(t *testing.T) {
+	input := `
+// A comment
+module todo {
+  data CreateRequest {
+    name {string: string}
+  }
+  data CreateResponse {
+    name [string]
+  }
+  data DestroyRequest {
+    // A comment
+    name string
+  }
+  data DestroyResponse {
+    name string
+  }
+  verb create(CreateRequest) CreateResponse
+  verb destroy(DestroyRequest) DestroyResponse
+}
+`
+	actual, err := ParseModuleString("", input)
+	assert.NoError(t, err)
+	actual = Normalise(actual)
+	assert.Equal(t, schema.Modules[0], actual)
+}

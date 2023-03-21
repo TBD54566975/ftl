@@ -182,8 +182,10 @@ var VerbService_ServiceDesc = grpc.ServiceDesc{
 type DevelServiceClient interface {
 	// Ping service for readiness.
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	// Return the schema for the module under development.
-	Schema(ctx context.Context, in *SchemaRequest, opts ...grpc.CallOption) (*SchemaResponse, error)
+	// Sync schema changes to and from the service.
+	//
+	// Each request and response contains the schema for a single module.
+	SyncSchema(ctx context.Context, opts ...grpc.CallOption) (DevelService_SyncSchemaClient, error)
 	// Called when a file is changed.
 	//
 	// The Drive should hot reload the module if a change to the file warrants it.
@@ -207,13 +209,35 @@ func (c *develServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...
 	return out, nil
 }
 
-func (c *develServiceClient) Schema(ctx context.Context, in *SchemaRequest, opts ...grpc.CallOption) (*SchemaResponse, error) {
-	out := new(SchemaResponse)
-	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.DevelService/Schema", in, out, opts...)
+func (c *develServiceClient) SyncSchema(ctx context.Context, opts ...grpc.CallOption) (DevelService_SyncSchemaClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DevelService_ServiceDesc.Streams[0], "/xyz.block.ftl.v1.DevelService/SyncSchema", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &develServiceSyncSchemaClient{stream}
+	return x, nil
+}
+
+type DevelService_SyncSchemaClient interface {
+	Send(*SyncSchemaRequest) error
+	Recv() (*SyncSchemaResponse, error)
+	grpc.ClientStream
+}
+
+type develServiceSyncSchemaClient struct {
+	grpc.ClientStream
+}
+
+func (x *develServiceSyncSchemaClient) Send(m *SyncSchemaRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *develServiceSyncSchemaClient) Recv() (*SyncSchemaResponse, error) {
+	m := new(SyncSchemaResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *develServiceClient) FileChange(ctx context.Context, in *FileChangeRequest, opts ...grpc.CallOption) (*FileChangeResponse, error) {
@@ -231,8 +255,10 @@ func (c *develServiceClient) FileChange(ctx context.Context, in *FileChangeReque
 type DevelServiceServer interface {
 	// Ping service for readiness.
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	// Return the schema for the module under development.
-	Schema(context.Context, *SchemaRequest) (*SchemaResponse, error)
+	// Sync schema changes to and from the service.
+	//
+	// Each request and response contains the schema for a single module.
+	SyncSchema(DevelService_SyncSchemaServer) error
 	// Called when a file is changed.
 	//
 	// The Drive should hot reload the module if a change to the file warrants it.
@@ -246,8 +272,8 @@ type UnimplementedDevelServiceServer struct {
 func (UnimplementedDevelServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedDevelServiceServer) Schema(context.Context, *SchemaRequest) (*SchemaResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Schema not implemented")
+func (UnimplementedDevelServiceServer) SyncSchema(DevelService_SyncSchemaServer) error {
+	return status.Errorf(codes.Unimplemented, "method SyncSchema not implemented")
 }
 func (UnimplementedDevelServiceServer) FileChange(context.Context, *FileChangeRequest) (*FileChangeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FileChange not implemented")
@@ -282,22 +308,30 @@ func _DevelService_Ping_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DevelService_Schema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SchemaRequest)
-	if err := dec(in); err != nil {
+func _DevelService_SyncSchema_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DevelServiceServer).SyncSchema(&develServiceSyncSchemaServer{stream})
+}
+
+type DevelService_SyncSchemaServer interface {
+	Send(*SyncSchemaResponse) error
+	Recv() (*SyncSchemaRequest, error)
+	grpc.ServerStream
+}
+
+type develServiceSyncSchemaServer struct {
+	grpc.ServerStream
+}
+
+func (x *develServiceSyncSchemaServer) Send(m *SyncSchemaResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *develServiceSyncSchemaServer) Recv() (*SyncSchemaRequest, error) {
+	m := new(SyncSchemaRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(DevelServiceServer).Schema(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/xyz.block.ftl.v1.DevelService/Schema",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DevelServiceServer).Schema(ctx, req.(*SchemaRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 func _DevelService_FileChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -330,14 +364,17 @@ var DevelService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DevelService_Ping_Handler,
 		},
 		{
-			MethodName: "Schema",
-			Handler:    _DevelService_Schema_Handler,
-		},
-		{
 			MethodName: "FileChange",
 			Handler:    _DevelService_FileChange_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SyncSchema",
+			Handler:       _DevelService_SyncSchema_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "xyz/block/ftl/v1/ftl.proto",
 }
