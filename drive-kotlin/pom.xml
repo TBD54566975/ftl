@@ -81,7 +81,9 @@
           <execution>
             <id>make-assembly</id>
             <phase>package</phase>
-            <goals> <goal>single</goal> </goals>
+            <goals>
+              <goal>single</goal>
+            </goals>
             <configuration>
               <archive>
                 <manifest>
@@ -122,9 +124,13 @@
               <goal>compile-custom</goal>
             </goals>
             <configuration>
-              <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <protocArtifact>
+                com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+              </protocArtifact>
               <pluginId>grpc-java</pluginId>
-              <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+              <pluginArtifact>
+                io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}
+              </pluginArtifact>
               <protocPlugins>
                 <protocPlugin>
                   <id>grpc-kotlin</id>
@@ -143,8 +149,11 @@
               <goal>compile-custom</goal>
             </goals>
             <configuration>
-              <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-              <outputDirectory>${project.build.directory}/generated-sources/protobuf/kotlin</outputDirectory>
+              <protocArtifact>
+                com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+              </protocArtifact>
+              <outputDirectory>${project.build.directory}/generated-sources/protobuf/kotlin
+              </outputDirectory>
               <pluginId>kotlin</pluginId>
             </configuration>
           </execution>
@@ -165,6 +174,13 @@
       <artifactId>kotlin-reflect</artifactId>
       <version>1.8.0</version>
     </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-coroutines-core</artifactId>
+      <version>1.6.4</version>
+      <type>pom</type>
+    </dependency>
+
 
     <dependency>
       <groupId>ch.qos.logback</groupId>

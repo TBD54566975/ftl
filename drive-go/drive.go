@@ -137,7 +137,7 @@ func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 				return errors.WithStack(err)
 			}
 
-			logger.Info("Received schema update", "self", s.module, "module", module.Name)
+			logger.Debug("Received schema update", "self", s.module, "module", module.Name)
 
 			fullSchema := s.fullSchema.Load()
 			fullSchema.Upsert(module)
