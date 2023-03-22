@@ -7,7 +7,6 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.ConsoleAppender
 import org.slf4j.LoggerFactory
-import xyz.block.ftl.drive.verb.VerbDeck
 import kotlin.reflect.KClass
 
 class Logging {
@@ -26,7 +25,7 @@ class Logging {
       return logger
     }
 
-    fun logger(kClass: KClass<VerbDeck>): Logger {
+    fun logger(kClass: KClass<*>): Logger {
       return logger(kClass.qualifiedName!!)
     }
 

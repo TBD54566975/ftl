@@ -25,7 +25,7 @@ class VerbDeck {
   }
 
   data class VerbId(val qualifiedName: String)
-  data class VerbDescriptor(val verbId: VerbId, val argumentType: KClass<*>)
+  data class VerbSignature(val verbId: VerbId, val argumentType: KClass<*>)
 
   private var module: String? = null
   private val verbs = ConcurrentHashMap<VerbId, VerbCassette<out Any>>()
@@ -41,16 +41,27 @@ class VerbDeck {
       .scan().use { scanResult ->
         // Use the ScanResult within the try block, e.g.
         for (clazz in scanResult.getClassesWithMethodAnnotation(Verb::class.java)) {
-          clazz.methodInfo.forEach { info ->
-            logger.info("    @Verb ${info.name}")
+          val kClass = clazz.loadClass().kotlin
+          logger.info("    ${kClass.qualifiedName}")
+
+          clazz.methodInfo
+            .filter { info -> info.hasAnnotation(Verb::class.java) }
+            .forEach { info ->
+            logger.info("      @Verb ${info.name}()")
             val function = info.loadClassAndGetMethod().kotlinFunction!!
 
             val verbId = toId(function)
             @Suppress("UNCHECKED_CAST")
-            verbs[verbId] = VerbCassette(verbId, function as KFunction1<Any, Any>)
+            verbs[verbId] = VerbCassette(verbId, kClass, function as KFunction1<Any, Any>)
           }
         }
       }
+
+    // Now go through all the verbs and process their schema.
+    logger.info("Registering schemas...")
+    verbs.values.forEach { verb ->
+      verb.readSchema()
+    }
 
     probes.add(ArgumentTracingProbe())
 
@@ -61,13 +72,13 @@ class VerbDeck {
 
   fun list(): Set<VerbId> = verbs.keys
 
-  fun lookup(name: String): VerbDescriptor? {
+  fun lookup(name: String): VerbSignature? {
     val verbId = VerbId(name)
 
     return verbs[verbId]?.toDescriptor()
   }
 
-  fun lookupFullyQualifiedName(name: String): VerbDescriptor? {
+  fun lookupFullyQualifiedName(name: String): VerbSignature? {
     val prefix = module!! + "."
     val verbId = VerbId(name.removePrefix(prefix))
 
