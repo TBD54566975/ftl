@@ -104,7 +104,7 @@ func Spawn[Client PingableClient](
 
 	// Start the plugin process.
 	pluginSocket := socket.Socket{Network: "tcp", Addr: addr.String()}
-	logger.Infof("Spawning plugin on %s", pluginSocket)
+	logger.Debugf("Spawning plugin on %s", pluginSocket)
 	cmd := exec.Command(ctx, dir, exe)
 	cmd.Env = append(cmd.Env, "FTL_PLUGIN_ENDPOINT="+pluginSocket.String())
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
@@ -162,7 +162,7 @@ func Spawn[Client PingableClient](
 		makeClient(conn)
 	}
 
-	logger.Infof("Plugin online")
+	logger.Debugf("Plugin online")
 	plugin = &Plugin[Client]{Cmd: cmd, Client: client}
 	return plugin, cmdCtx, nil
 }

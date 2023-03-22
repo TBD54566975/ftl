@@ -67,7 +67,7 @@ func New(ctx context.Context, config Config) (*Server, error) {
 		moduleSchema:   eventsource.New[schema.Module](),
 	}
 
-	logger.Infof("Starting drive")
+	logger.Infof("Starting")
 
 	// Build and start the sub-process.
 	exe, err := s.rebuild(ctx)
@@ -83,6 +83,8 @@ func New(ctx context.Context, config Config) (*Server, error) {
 	s.plugin.Store(plugin)
 
 	go s.restartModuleOnExit(ctx, cmdCtx)
+
+	logger.Infof("Online")
 	return s, nil
 }
 

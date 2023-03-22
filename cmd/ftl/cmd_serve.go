@@ -28,6 +28,10 @@ func (r *serveCmd) Run(ctx context.Context, s socket.Socket) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	logger := log.FromContext(ctx).Sub("agent", log.Default)
+	logger.Infof("Starting FTL local agent")
+	ctx = log.ContextWithLogger(ctx, logger)
+
 	wg, ctx := errgroup.WithContext(ctx)
 
 	l, err := socket.Listen(s)
@@ -58,9 +62,6 @@ func (r *serveCmd) Run(ctx context.Context, s socket.Socket) error {
 	reflection.Register(srv)
 	ftlv1.RegisterVerbServiceServer(srv, agent)
 	ftlv1.RegisterDevelServiceServer(srv, agent)
-
-	logger := log.FromContext(ctx).Sub("agent", log.Default)
-	ctx = log.ContextWithLogger(ctx, logger)
 
 	mixedHandler := newHTTPandGRPCMux(agent, srv)
 	http2Server := &http2.Server{}

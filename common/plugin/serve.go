@@ -70,7 +70,7 @@ func Start[Impl any, Iface any, Config any](
 	logger := log.Configure(os.Stderr, cli.LogConfig).Sub(name, log.Default)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	logger.Infof("Starting on %s", cli.Socket)
+	logger.Debugf("Starting on %s", cli.Socket)
 
 	// Signal handling.
 	sigch := make(chan os.Signal, 1)
