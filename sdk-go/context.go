@@ -9,20 +9,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
-type moduleKey struct{}
-
-func ContextWithModule(ctx context.Context, module string) context.Context {
-	return context.WithValue(ctx, moduleKey{}, module)
-}
-
-func ModuleFromContext(ctx context.Context) string {
-	value := ctx.Value(moduleKey{})
-	if value == nil {
-		panic("no module in context")
-	}
-	return value.(string) //nolint:forcetypeassert
-}
-
 type clientKey struct{}
 
 // ContextWithClient returns a context with an ftlv1.VerbServiceClient attached.

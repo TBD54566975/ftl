@@ -124,7 +124,7 @@ func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
 	}
 
 	var develClient ftlv1.DevelServiceClient
-	verbServicePlugin, cmdCtx, err := plugin.Spawn(ctx, dir, exe, ftlv1.NewVerbServiceClient,
+	verbServicePlugin, cmdCtx, err := plugin.Spawn(ctx, config.Module, dir, exe, ftlv1.NewVerbServiceClient,
 		plugin.WithEnvars("FTL_MODULE_ROOT="+dir),
 		plugin.WithEnvars("FTL_MODULE="+config.Module),
 		plugin.WithExtraClient(&develClient, ftlv1.NewDevelServiceClient),
@@ -221,7 +221,7 @@ func (l *Agent) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (l *Agent) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
 	logger := log.FromContext(ctx)
-	logger.Info("Call " + req.Verb)
+	logger.Infof("Calling %s", req.Verb)
 	ctx = metadata.WithDirectRouting(ctx)
 	drive, err := l.findDrive(req.Verb)
 	if err != nil {
@@ -380,7 +380,7 @@ func (l *Agent) watch(ctx context.Context) error {
 			l.lock.Unlock()
 
 		case err := <-l.watcher.Errors:
-			logger.Warn("File watcher error", "err", err)
+			logger.Warnf("File watcher error: %s", err)
 			return err
 
 		case <-ctx.Done():

@@ -70,7 +70,7 @@ type Plugin[Client PingableClient] struct {
 //	FTL_WORKING_DIR - the path to a working directory that the plugin can write state to, if required.
 func Spawn[Client PingableClient](
 	ctx context.Context,
-	dir, exe string,
+	name, dir, exe string,
 	makeClient func(grpc.ClientConnInterface) Client,
 	options ...Option,
 ) (
@@ -79,8 +79,7 @@ func Spawn[Client PingableClient](
 	cmdCtx context.Context,
 	err error,
 ) {
-	name := "FTL." + filepath.Base(exe)
-	logger := log.FromContext(ctx).With("C", name)
+	logger := log.FromContext(ctx).Sub(name, log.Default)
 
 	opts := pluginOptions{}
 	for _, opt := range options {
@@ -105,7 +104,7 @@ func Spawn[Client PingableClient](
 
 	// Start the plugin process.
 	pluginSocket := socket.Socket{Network: "tcp", Addr: addr.String()}
-	logger.Info("Spawning plugin", "dir", dir, "exe", exe, "socket", pluginSocket)
+	logger.Infof("Spawning plugin on %s", pluginSocket)
 	cmd := exec.Command(ctx, dir, exe)
 	cmd.Env = append(cmd.Env, "FTL_PLUGIN_ENDPOINT="+pluginSocket.String())
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
@@ -120,7 +119,7 @@ func Spawn[Client PingableClient](
 
 	defer func() {
 		if err != nil {
-			logger.Warn("Plugin failed to start, terminating", "pid", cmd.Process.Pid)
+			logger.Warnf("Plugin failed to start, terminating pid %d", cmd.Process.Pid)
 			_ = cmd.Kill(syscall.SIGTERM)
 		}
 	}()
@@ -163,7 +162,7 @@ func Spawn[Client PingableClient](
 		makeClient(conn)
 	}
 
-	logger.Info(name + " online")
+	logger.Infof("Plugin online")
 	plugin = &Plugin[Client]{Cmd: cmd, Client: client}
 	return plugin, cmdCtx, nil
 }

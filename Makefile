@@ -6,10 +6,11 @@ help: ## This help.
 dev: ## Run hot reload dev server.
 	reflex -d fancy -c reflex.conf  # https://github.com/cespare/reflex
 
-.PHONY: protos
-protos: ## Regenerate protos.
+.PHONY: generate
+generate: ## Regenerate source.
 	buf lint
 	(cd protos && buf generate)
+	go generate ./...
 
 .PHONY: protosync
 protosync: ## Synchronise external protos into FTL repo.

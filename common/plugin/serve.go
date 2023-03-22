@@ -11,7 +11,6 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
-	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -52,6 +51,7 @@ func RegisterAdditionalServer[Impl any, Iface any](register func(grpc.ServiceReg
 // "register" is called to register the service with the gRPC server and is typically a generated function.
 func Start[Impl any, Iface any, Config any](
 	ctx context.Context,
+	name string,
 	create func(context.Context, Config) (Impl, error),
 	register func(grpc.ServiceRegistrar, Iface),
 	options ...StartOption[Impl],
@@ -65,21 +65,19 @@ func Start[Impl any, Iface any, Config any](
 		option(so)
 	}
 
-	name := "FTL." + kctx.Model.Name
-
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	logger := log.New(cli.LogConfig, os.Stderr).With("C", name)
+	logger := log.Configure(os.Stderr, cli.LogConfig).Sub(name, log.Default)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	logger.Info("Starting "+name, "socket", cli.Socket)
+	logger.Infof("Starting on %s", cli.Socket)
 
 	// Signal handling.
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigch
-		logger.Info(name+" terminating", "signal", sig)
+		logger.Infof("Terminated by signal %s", sig)
 		cancel()
 		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
 		os.Exit(0)
@@ -110,7 +108,7 @@ func allocatePort() (*net.TCPAddr, error) {
 	return l.Addr().(*net.TCPAddr), nil //nolint:forcetypeassert
 }
 
-func cleanup(logger *slog.Logger, pidFile string) error {
+func cleanup(logger *log.Logger, pidFile string) error {
 	pidb, err := ioutil.ReadFile(pidFile)
 	if os.IsNotExist(err) {
 		return nil
@@ -123,7 +121,7 @@ func cleanup(logger *slog.Logger, pidFile string) error {
 	}
 	err = syscall.Kill(pid, syscall.SIGKILL)
 	if !errors.Is(err, syscall.ESRCH) {
-		logger.Info("Reaped old plugin", "pid", pid, "err", err)
+		logger.Warnf("Failed to reap old plugin with pid %d: %s", pid, err)
 	}
 	return nil
 }

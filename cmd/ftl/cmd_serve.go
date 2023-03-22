@@ -53,18 +53,19 @@ func (r *serveCmd) Run(ctx context.Context, s socket.Socket) error {
 		return errors.WithStack(err)
 	}
 
-	logger := log.FromContext(ctx)
-
 	// Start agent gRPC and REST servers.
 	srv := socket.NewGRPCServer(ctx)
 	reflection.Register(srv)
 	ftlv1.RegisterVerbServiceServer(srv, agent)
 	ftlv1.RegisterDevelServiceServer(srv, agent)
 
+	logger := log.FromContext(ctx).Sub("agent", log.Default)
+	ctx = log.ContextWithLogger(ctx, logger)
+
 	mixedHandler := newHTTPandGRPCMux(agent, srv)
 	http2Server := &http2.Server{}
 	http1Server := &http.Server{
-		Handler:           log.Middleware(logger, h2c.NewHandler(mixedHandler, http2Server)),
+		Handler:           h2c.NewHandler(mixedHandler, http2Server),
 		ReadHeaderTimeout: time.Second * 30,
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}

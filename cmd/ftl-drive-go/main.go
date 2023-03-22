@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/TBD54566975/ftl/common/plugin"
 	drivego "github.com/TBD54566975/ftl/drive-go"
@@ -9,6 +10,6 @@ import (
 )
 
 func main() {
-	plugin.Start(context.Background(), drivego.New, ftlv1.RegisterVerbServiceServer,
+	plugin.Start(context.Background(), os.Getenv("FTL_MODULE"), drivego.New, ftlv1.RegisterVerbServiceServer,
 		plugin.RegisterAdditionalServer[*drivego.Server](ftlv1.RegisterDevelServiceServer))
 }

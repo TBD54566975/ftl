@@ -67,7 +67,7 @@ func New(ctx context.Context, config Config) (*Server, error) {
 		moduleSchema:   eventsource.New[schema.Module](),
 	}
 
-	logger.Info("Starting FTL.module")
+	logger.Infof("Starting drive")
 
 	// Build and start the sub-process.
 	exe, err := s.rebuild(ctx)
@@ -75,7 +75,7 @@ func New(ctx context.Context, config Config) (*Server, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	plugin, cmdCtx, err := plugin.Spawn(ctx, s.Config.Dir, exe, ftlv1.NewVerbServiceClient,
+	plugin, cmdCtx, err := plugin.Spawn(ctx, "", s.Config.Dir, exe, ftlv1.NewVerbServiceClient,
 		plugin.WithEnvars("FTL_MODULE="+s.module))
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -138,7 +138,7 @@ func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 				return errors.WithStack(err)
 			}
 
-			logger.Debug("Received schema update", "self", s.module, "module", module.Name)
+			logger.Debugf("Received schema update from %s", module.Name)
 
 			fullSchema := s.fullSchema.Load()
 			fullSchema.Upsert(module)
@@ -197,17 +197,17 @@ func (s *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
 
 		case <-cmdCtx.Done():
 			err := cmdCtx.Err()
-			logger.Warn("FTL module exited, restarting", "err", err)
+			logger.Warnf("Module exited, restarting: %s", err)
 
 			exe, err := s.rebuild(ctx)
 			if err != nil {
-				logger.Error("Failed to rebuild FTL module", err)
+				logger.Errorf(err, "Failed to rebuild FTL module")
 				return
 			}
 			var nextPlugin *plugin.Plugin[ftlv1.VerbServiceClient]
-			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, s.Config.Dir, exe, ftlv1.NewVerbServiceClient)
+			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, s.Config.Module, s.Config.Dir, exe, ftlv1.NewVerbServiceClient)
 			if err != nil {
-				logger.Error("Failed to restart FTL module", err)
+				logger.Errorf(err, "Failed to restart FTL module")
 				continue
 			}
 			s.plugin.Store(nextPlugin)
@@ -223,7 +223,7 @@ func (s *Server) rebuild(ctx context.Context) (exe string, err error) {
 	s.rebuildMu.Lock()
 	defer s.rebuildMu.Unlock()
 
-	exe = filepath.Join(s.WorkingDir, "ftl-module")
+	exe = filepath.Join(s.WorkingDir, s.module)
 
 	if time.Since(s.lastRebuild) < time.Millisecond*250 {
 		return exe, nil
@@ -240,14 +240,14 @@ func (s *Server) rebuild(ctx context.Context) (exe string, err error) {
 		return "", errors.WithStack(err)
 	}
 
-	logger.Info("Extracting schema")
+	logger.Infof("Extracting schema")
 	module, err := sdkgo.ExtractModule(s.Dir)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 	s.moduleSchema.Store(module)
 
-	logger.Info("Compiling FTL.module...")
+	logger.Infof("Compiling FTL module...")
 	err = execInRoot(ctx, s.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", exe)
 	if err != nil {
 		source, merr := ioutil.ReadFile(filepath.Join(s.WorkingDir, "main.go"))
@@ -382,8 +382,7 @@ func generate(config Config) (*codewriter.Writer, error) {
 	w.In(func(w *codewriter.Writer) {
 		w.L(`ctx, err := sdkgo.ContextWithClient(context.Background(), socket.MustParse(os.Getenv("FTL_ENDPOINT")))`)
 		w.L(`if err != nil { panic(err) }`)
-		w.L(`ctx = sdkgo.ContextWithModule(ctx, os.Getenv("FTL_MODULE"))`)
-		w.L(`plugin.Start(ctx, drivego.NewUserVerbServer(`)
+		w.L(`plugin.Start(ctx, %q, drivego.NewUserVerbServer(`, config.Module)
 		for pkg, endpoints := range endpoints {
 			pkgImp := w.Import(pkg)
 			for _, endpoint := range endpoints {

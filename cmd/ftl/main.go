@@ -42,7 +42,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	logger := log.New(cli.LogConfig, os.Stderr).With("C", "FTL")
+	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	// Handle signals.
@@ -50,7 +50,7 @@ func main() {
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigch
-		logger.Info("FTL terminating", "signal", sig)
+		logger.Infof("FTL terminating with signal %s", sig)
 		cancel()
 		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
 		os.Exit(0)
