@@ -13,9 +13,14 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
-type schemaCmd struct{}
+type schemaCmd struct {
+	Get      schemaGetCmd      `cmd:"" default:"" help:"Get the current schema from FTL."`
+	Protobuf schemaProtobufCmd `cmd:"" help:"Generate protobuf schema mirroring the FTL schema structure."`
+}
 
-func (c *schemaCmd) Run(client ftlv1.DevelServiceClient) error {
+type schemaGetCmd struct{}
+
+func (c *schemaGetCmd) Run(client ftlv1.DevelServiceClient) error {
 	ctx := context.Background()
 	stream, err := client.SyncSchema(ctx)
 	if err != nil {
@@ -60,4 +65,11 @@ func (c *schemaCmd) Run(client ftlv1.DevelServiceClient) error {
 			return nil
 		}
 	}
+}
+
+type schemaProtobufCmd struct{}
+
+func (c *schemaProtobufCmd) Run() error {
+	fmt.Println(schema.ProtobufSchema())
+	return nil
 }
