@@ -22,7 +22,7 @@ func (c *schemaCmd) Run(client ftlv1.DevelServiceClient) error {
 		return errors.WithStack(err)
 	}
 	wg, _ := errgroup.WithContext(ctx)
-	modules := make(chan schema.Module)
+	modules := make(chan *schema.Module)
 	wg.Go(func() (err error) {
 		for {
 			resp, err := stream.Recv()

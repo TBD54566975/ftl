@@ -20,7 +20,7 @@ type goSchemaCmd struct {
 }
 
 func (g *goSchemaCmd) Run() error {
-	s := schema.Schema{}
+	s := &schema.Schema{}
 	for _, dir := range g.Dir {
 		module, err := sdkgo.ExtractModule(dir)
 		if err != nil {

@@ -46,7 +46,7 @@ type ModuleConfig struct {
 type driveContext struct {
 	*plugin.Plugin[ftlv1.VerbServiceClient]
 	develService ftlv1.DevelServiceClient
-	schema       atomic.Value[option.Option[schema.Module]]
+	schema       atomic.Value[option.Option[*schema.Module]]
 	root         string
 	workingDir   string
 	config       ModuleConfig
@@ -56,7 +56,7 @@ type Agent struct {
 	lock          sync.RWMutex
 	watcher       *fsnotify.Watcher
 	drives        map[string]*driveContext
-	schemaChanges *pubsub.Topic[schema.Module]
+	schemaChanges *pubsub.Topic[*schema.Module]
 	wg            *errgroup.Group
 }
 
@@ -74,7 +74,7 @@ func New(ctx context.Context) (*Agent, error) {
 		watcher:       watcher,
 		drives:        map[string]*driveContext{},
 		wg:            &errgroup.Group{},
-		schemaChanges: pubsub.New[schema.Module](),
+		schemaChanges: pubsub.New[*schema.Module](),
 	}
 	e.wg.Go(func() error { return e.watch(ctx) })
 	return e, nil
@@ -333,7 +333,7 @@ func (l *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 		}
 	}
 	// Send changes to the drive.
-	changes := l.schemaChanges.Subscribe(make(chan schema.Module, 64))
+	changes := l.schemaChanges.Subscribe(make(chan *schema.Module, 64))
 	wg.Go(func() error {
 		for module := range changes {
 			if err := l.sendSchema(stream, module); err != nil {
@@ -346,7 +346,7 @@ func (l *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 	return errors.WithStack(wg.Wait())
 }
 
-func (l *Agent) sendSchema(stream ftlv1.DevelService_SyncSchemaClient, module schema.Module) error {
+func (l *Agent) sendSchema(stream ftlv1.DevelService_SyncSchemaClient, module *schema.Module) error {
 	err := stream.Send(&ftlv1.SyncSchemaRequest{
 		Module: module.Name,
 		Schema: module.String(),

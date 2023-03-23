@@ -32,19 +32,19 @@ var errorIFaceType = once(func() *types.Interface {
 var ftlCallFuncPath = "github.com/TBD54566975/ftl/sdk-go.Call"
 
 // ExtractModule statically parses Go FTL module source into a schema.Module.
-func ExtractModule(dir string) (schema.Module, error) {
+func ExtractModule(dir string) (*schema.Module, error) {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
 	}, "./...")
 	if err != nil {
-		return schema.Module{}, errors.WithStack(err)
+		return &schema.Module{}, errors.WithStack(err)
 	}
 	if len(pkgs) == 0 {
-		return schema.Module{}, errors.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
+		return &schema.Module{}, errors.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
 	}
-	module := schema.Module{}
+	module := &schema.Module{}
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
 			verbIndex := -1
@@ -56,7 +56,7 @@ func ExtractModule(dir string) (schema.Module, error) {
 				}()
 				switch node := node.(type) {
 				case *ast.CallExpr:
-					if err := visitCallExpr(&module, verbIndex, node, pkg); err != nil {
+					if err := visitCallExpr(module, verbIndex, node, pkg); err != nil {
 						return err
 					}
 
@@ -68,7 +68,7 @@ func ExtractModule(dir string) (schema.Module, error) {
 					if err != nil {
 						return errors.WithStack(err)
 					}
-					err = parseFile(&module, directives, node, pkg)
+					err = parseFile(module, directives, node, pkg)
 					if err != nil {
 						return err
 					}
@@ -81,7 +81,7 @@ func ExtractModule(dir string) (schema.Module, error) {
 					if err != nil {
 						return errors.WithStack(err)
 					}
-					verbIndex, err = parseFunction(pkg, &module, directives, node)
+					verbIndex, err = parseFunction(pkg, module, directives, node)
 					if err != nil {
 						return err
 					}
@@ -106,7 +106,7 @@ func ExtractModule(dir string) (schema.Module, error) {
 				return next()
 			})
 			if err != nil {
-				return schema.Module{}, err
+				return nil, err
 			}
 		}
 	}
@@ -131,15 +131,13 @@ func visitCallExpr(module *schema.Module, verbIndex int, node *ast.CallExpr, pkg
 	if verbFn == nil {
 		return errors.Errorf("Call first argument must be a function but is %s", node.Args[1])
 	}
-	verb := module.Decls[verbIndex].(schema.Verb) //nolint:forcetypeassert
+	verb := module.Decls[verbIndex].(*schema.Verb) //nolint:forcetypeassert
 	moduleName := verbFn.Pkg().Name()
 	if moduleName == pkg.Name {
 		moduleName = ""
 	}
-	ref := schema.VerbRef{Module: moduleName, Name: strcase.ToLowerCamel(verbFn.Name())}
+	ref := &schema.VerbRef{Module: moduleName, Name: strcase.ToLowerCamel(verbFn.Name())}
 	verb.AddCall(ref)
-
-	module.Decls[verbIndex] = verb
 	return nil
 }
 
@@ -215,7 +213,7 @@ func parseFunction(pkg *packages.Package, module *schema.Module, directives []ft
 	if err != nil {
 		return 0, err
 	}
-	verb := schema.Verb{
+	verb := &schema.Verb{
 		Comments: parseComments(node.Doc),
 		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  req,
@@ -233,28 +231,28 @@ func parseComments(doc *ast.CommentGroup) []string {
 	return comments
 }
 
-func parseStruct(pkg *packages.Package, module *schema.Module, node types.Type) (schema.DataRef, error) {
+func parseStruct(pkg *packages.Package, module *schema.Module, node types.Type) (*schema.DataRef, error) {
 	named, ok := node.(*types.Named)
 	if !ok {
-		return schema.DataRef{}, errors.Errorf("expected named type but got %s", node)
+		return nil, errors.Errorf("expected named type but got %s", node)
 	}
 	s, ok := node.Underlying().(*types.Struct)
 	if !ok {
-		return schema.DataRef{}, errors.Errorf("expected struct but got %s", node)
+		return nil, errors.Errorf("expected struct but got %s", node)
 	}
-	out := schema.Data{
+	out := &schema.Data{
 		Name: named.Obj().Name(),
 	}
 	for i := 0; i < s.NumFields(); i++ {
 		f := s.Field(i)
 		ft, err := parseType(pkg, module, f.Type())
 		if err != nil {
-			return schema.DataRef{}, errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
-		out.Fields = append(out.Fields, schema.Field{Name: strcase.ToLowerCamel(f.Name()), Type: ft})
+		out.Fields = append(out.Fields, &schema.Field{Name: strcase.ToLowerCamel(f.Name()), Type: ft})
 	}
 	module.AddData(out)
-	return schema.DataRef{Name: out.Name}, nil
+	return &schema.DataRef{Name: out.Name}, nil
 }
 
 func parseType(pkg *packages.Package, module *schema.Module, node types.Type) (schema.Type, error) {
@@ -262,16 +260,16 @@ func parseType(pkg *packages.Package, module *schema.Module, node types.Type) (s
 	case *types.Basic:
 		switch node.Kind() {
 		case types.String:
-			return schema.String{}, nil
+			return &schema.String{}, nil
 
 		case types.Int:
-			return schema.Int{}, nil
+			return &schema.Int{}, nil
 
 		case types.Bool:
-			return schema.Bool{}, nil
+			return &schema.Bool{}, nil
 
 		case types.Float64:
-			return schema.Float{}, nil
+			return &schema.Float{}, nil
 
 		default:
 			return nil, errors.Errorf("unsupported basic type %s", node)
@@ -292,24 +290,24 @@ func parseType(pkg *packages.Package, module *schema.Module, node types.Type) (s
 	}
 }
 
-func parseMap(pkg *packages.Package, module *schema.Module, node *types.Map) (schema.Map, error) {
+func parseMap(pkg *packages.Package, module *schema.Module, node *types.Map) (*schema.Map, error) {
 	key, err := parseType(pkg, module, node.Key())
 	if err != nil {
-		return schema.Map{}, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	value, err := parseType(pkg, module, node.Elem())
 	if err != nil {
-		return schema.Map{}, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	return schema.Map{Key: key, Value: value}, nil
+	return &schema.Map{Key: key, Value: value}, nil
 }
 
-func parseSlice(pkg *packages.Package, module *schema.Module, node *types.Slice) (schema.Array, error) {
+func parseSlice(pkg *packages.Package, module *schema.Module, node *types.Slice) (*schema.Array, error) {
 	value, err := parseType(pkg, module, node.Elem())
 	if err != nil {
-		return schema.Array{}, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	return schema.Array{Element: value}, nil
+	return &schema.Array{Element: value}, nil
 }
 
 type ftlDirective struct {

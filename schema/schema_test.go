@@ -9,42 +9,42 @@ import (
 	"github.com/alecthomas/errors"
 )
 
-var schema = Schema{
-	Modules: []Module{
+var schema = &Schema{
+	Modules: []*Module{
 		{
 			Name:     "todo",
 			Comments: []string{"A comment"},
 			Decls: []Decl{
-				Data{
+				&Data{
 					Name: "CreateRequest",
-					Fields: []Field{
-						{Name: "name", Type: Map{Key: String{Str: true}, Value: String{Str: true}}},
+					Fields: []*Field{
+						{Name: "name", Type: &Map{Key: &String{Str: true}, Value: &String{Str: true}}},
 					},
 				},
-				Data{
+				&Data{
 					Name: "CreateResponse",
-					Fields: []Field{
-						{Name: "name", Type: Array{Element: String{Str: true}}},
+					Fields: []*Field{
+						{Name: "name", Type: &Array{Element: &String{Str: true}}},
 					},
 				},
-				Data{
+				&Data{
 					Name: "DestroyRequest",
-					Fields: []Field{
-						{Name: "name", Comments: []string{"A comment"}, Type: String{Str: true}},
+					Fields: []*Field{
+						{Name: "name", Comments: []string{"A comment"}, Type: &String{Str: true}},
 					},
 				},
-				Data{
+				&Data{
 					Name: "DestroyResponse",
-					Fields: []Field{
-						{Name: "name", Type: String{Str: true}},
+					Fields: []*Field{
+						{Name: "name", Type: &String{Str: true}},
 					},
 				},
-				Verb{Name: "create",
-					Request:  DataRef{Name: "CreateRequest"},
-					Response: DataRef{Name: "CreateResponse"}},
-				Verb{Name: "destroy",
-					Request:  DataRef{Name: "DestroyRequest"},
-					Response: DataRef{Name: "DestroyResponse"},
+				&Verb{Name: "create",
+					Request:  &DataRef{Name: "CreateRequest"},
+					Response: &DataRef{Name: "CreateResponse"}},
+				&Verb{Name: "destroy",
+					Request:  &DataRef{Name: "DestroyRequest"},
+					Response: &DataRef{Name: "DestroyResponse"},
 				},
 			},
 		},
@@ -114,7 +114,7 @@ Schema
 	i := 0
 	err := Visit(schema, func(n Node, next func() error) error {
 		prefix := strings.Repeat(" ", i)
-		tn := strings.TrimPrefix(fmt.Sprintf("%T", n), "schema.")
+		tn := strings.TrimPrefix(fmt.Sprintf("%T", n), "*schema.")
 		fmt.Fprintf(actual, "%s%s\n", prefix, tn)
 		i += 2
 		defer func() { i -= 2 }()
@@ -136,7 +136,7 @@ func TestParsing(t *testing.T) {
 		name     string
 		input    string
 		errors   []string
-		expected Schema
+		expected *Schema
 	}{
 		{name: "Example",
 			input: `
@@ -149,19 +149,19 @@ func TestParsing(t *testing.T) {
 						calls createList
 				}
 			`,
-			expected: Schema{
-				Modules: []Module{
+			expected: &Schema{
+				Modules: []*Module{
 					{
 						Name: "todo",
 						Decls: []Decl{
-							Data{Name: "CreateListRequest"},
-							Data{Name: "CreateListResponse"},
-							Verb{Name: "createList",
+							&Data{Name: "CreateListRequest"},
+							&Data{Name: "CreateListResponse"},
+							&Verb{Name: "createList",
 								Comments: []string{"Create a new list"},
-								Request:  DataRef{Module: "todo", Name: "CreateListRequest"},
-								Response: DataRef{Name: "CreateListResponse"},
+								Request:  &DataRef{Module: "todo", Name: "CreateListRequest"},
+								Response: &DataRef{Name: "CreateListResponse"},
 								Metadata: []Metadata{
-									MetadataCall{Calls: []VerbRef{{Name: "createList"}}},
+									&MetadataCalls{Calls: []*VerbRef{{Name: "createList"}}},
 								},
 							},
 						},

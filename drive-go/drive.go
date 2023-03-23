@@ -64,7 +64,7 @@ func New(ctx context.Context, config Config) (*Server, error) {
 		module:         config.Module,
 		goModule:       goModule,
 		triggerRebuild: make(chan struct{}, 64),
-		moduleSchema:   eventsource.New[schema.Module](),
+		moduleSchema:   eventsource.New[*schema.Module](),
 	}
 
 	logger.Infof("Starting")
@@ -99,7 +99,7 @@ type Server struct {
 	triggerRebuild chan struct{}
 
 	fullSchema   atomic.Value[schema.Schema]
-	moduleSchema *eventsource.EventSource[schema.Module]
+	moduleSchema *eventsource.EventSource[*schema.Module]
 
 	plugin atomic.Value[*plugin.Plugin[ftlv1.VerbServiceClient]]
 
@@ -117,7 +117,7 @@ func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	changes := s.moduleSchema.Subscribe(make(chan schema.Module, 64))
+	changes := s.moduleSchema.Subscribe(make(chan *schema.Module, 64))
 	defer s.moduleSchema.Unsubscribe(changes)
 	wg.Go(func() error {
 		for module := range changes {
@@ -163,7 +163,7 @@ func (s *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListR
 	out := &ftlv1.ListResponse{}
 	module := s.moduleSchema.Load()
 	for _, verb := range module.Decls {
-		if verb, ok := verb.(schema.Verb); ok {
+		if verb, ok := verb.(*schema.Verb); ok {
 			out.Verbs = append(out.Verbs, module.Name+"."+verb.Name)
 		}
 	}
@@ -292,7 +292,7 @@ func (s *Server) writeModules() error {
 	return nil
 }
 
-func (s *Server) writeModule(module schema.Module) error {
+func (s *Server) writeModule(module *schema.Module) error {
 	err := os.MkdirAll(filepath.Join(s.WorkingDir, "_modules", module.Name), 0750)
 	if err != nil {
 		return errors.Wrapf(err, "%s: failed to create module directory", module.Name)
@@ -343,7 +343,7 @@ func (s *Server) writeGoMod() error {
 	return nil
 }
 
-func (s *Server) sendSchema(stream ftlv1.DevelService_SyncSchemaServer, module schema.Module) error {
+func (s *Server) sendSchema(stream ftlv1.DevelService_SyncSchemaServer, module *schema.Module) error {
 	err := stream.Send(&ftlv1.SyncSchemaResponse{
 		Module: module.Name,
 		Schema: module.String(),

@@ -28,17 +28,17 @@ var tmpl = template.Must(template.New("module").
 		},
 		"type": genType,
 		"is": func(kind string, t schema.Node) bool {
-			return reflect.TypeOf(t).Name() == kind
+			return reflect.Indirect(reflect.ValueOf(t)).Type().Name() == kind
 		},
-		"imports": func(m schema.Module) []string {
+		"imports": func(m *schema.Module) []string {
 			pkgs := map[string]bool{}
 			_ = schema.Visit(m, func(n schema.Node, next func() error) error {
 				switch n := n.(type) {
-				case schema.VerbRef:
+				case *schema.VerbRef:
 					if n.Module != "" {
 						pkgs[n.Module] = true
 					}
-				case schema.DataRef:
+				case *schema.DataRef:
 					if n.Module != "" {
 						pkgs[n.Module] = true
 					}
@@ -52,22 +52,22 @@ var tmpl = template.Must(template.New("module").
 	Parse(tmplSource))
 
 // Generate Go stubs for the given module.
-func Generate(module schema.Module, w io.Writer) error {
+func Generate(module *schema.Module, w io.Writer) error {
 	return errors.WithStack(tmpl.Execute(w, module))
 }
 
 func genType(t schema.Type) string {
 	switch t := t.(type) {
-	case schema.Float:
+	case *schema.Float:
 		return "float64"
 
-	case schema.Int, schema.Bool, schema.String, schema.DataRef, schema.VerbRef:
+	case *schema.Int, *schema.Bool, *schema.String, *schema.DataRef, *schema.VerbRef:
 		return t.String()
 
-	case schema.Array:
+	case *schema.Array:
 		return "[]" + genType(t.Element)
 
-	case schema.Map:
+	case *schema.Map:
 		return "map[" + genType(t.Key) + "]" + genType(t.Value)
 	}
 	panic(fmt.Sprintf("unsupported type %T", t))

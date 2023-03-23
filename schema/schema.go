@@ -88,7 +88,7 @@ type Data struct {
 	Pos lexer.Position
 
 	Name     string     `parser:"'data' @Ident '{'"`
-	Fields   []Field    `parser:"@@* '}'"`
+	Fields   []*Field   `parser:"@@* '}'"`
 	Metadata []Metadata `parser:"@@*"`
 }
 
@@ -100,20 +100,20 @@ type Verb struct {
 
 	Comments []string   `parser:"@Comment*"`
 	Name     string     `parser:"'verb' @Ident"`
-	Request  DataRef    `parser:"'(' @@ ')'"`
-	Response DataRef    `parser:"@@"`
+	Request  *DataRef   `parser:"'(' @@ ')'"`
+	Response *DataRef   `parser:"@@"`
 	Metadata []Metadata `parser:"@@*"`
 }
 
 // AddCall adds a call reference to the Verb.
-func (v *Verb) AddCall(verb VerbRef) {
+func (v *Verb) AddCall(verb *VerbRef) {
 	for _, c := range v.Metadata {
-		if c, ok := c.(MetadataCall); ok {
+		if c, ok := c.(*MetadataCalls); ok {
 			c.Calls = append(c.Calls, verb)
 			return
 		}
 	}
-	v.Metadata = append(v.Metadata, MetadataCall{Calls: []VerbRef{verb}})
+	v.Metadata = append(v.Metadata, &MetadataCalls{Calls: []*VerbRef{verb}})
 }
 
 type Metadata interface {
@@ -121,10 +121,10 @@ type Metadata interface {
 	schemaMetadata()
 }
 
-type MetadataCall struct {
+type MetadataCalls struct {
 	Pos lexer.Position
 
-	Calls []VerbRef `parser:"'calls' @@ (',' @@)*"`
+	Calls []*VerbRef `parser:"'calls' @@ (',' @@)*"`
 }
 
 type Module struct {
@@ -141,9 +141,9 @@ type Decl interface {
 }
 
 // AddData and return its index.
-func (m *Module) AddData(data Data) int {
+func (m *Module) AddData(data *Data) int {
 	for i, d := range m.Decls {
-		if d, ok := d.(Data); ok && d.Name == data.Name {
+		if d, ok := d.(*Data); ok && d.Name == data.Name {
 			return i
 		}
 	}
@@ -154,11 +154,11 @@ func (m *Module) AddData(data Data) int {
 type Schema struct {
 	Pos lexer.Position
 
-	Modules []Module `parser:"@@*"`
+	Modules []*Module `parser:"@@*"`
 }
 
 // Upsert inserts or replaces a module.
-func (s *Schema) Upsert(module Module) {
+func (s *Schema) Upsert(module *Module) {
 	for i, m := range s.Modules {
 		if m.Name == module.Name {
 			s.Modules[i] = module
@@ -185,42 +185,42 @@ var parserOptions = []participle.Option{
 		token.Value = strings.TrimSpace(strings.TrimPrefix(token.Value, "//"))
 		return token, nil
 	}, "Comment"),
-	participle.Union[Type](Int{}, Float{}, String{}, Bool{}, Array{}, Map{}, VerbRef{}, DataRef{}),
-	participle.Union[Metadata](MetadataCall{}),
-	participle.Union[Decl](Data{}, Verb{}),
+	participle.Union[Type](&Int{}, &Float{}, &String{}, &Bool{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}),
+	participle.Union[Metadata](&MetadataCalls{}),
+	participle.Union[Decl](&Data{}, &Verb{}),
 }
 
 var parser = participle.MustBuild[Schema](parserOptions...)
 var moduleParser = participle.MustBuild[Module](parserOptions...)
 
-func ParseString(filename, input string) (Schema, error) {
+func ParseString(filename, input string) (*Schema, error) {
 	mod, err := parser.ParseString(filename, input)
 	if err != nil {
-		return Schema{}, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	return *mod, Validate(*mod)
+	return mod, Validate(mod)
 }
 
-func ParseModuleString(filename, input string) (Module, error) {
+func ParseModuleString(filename, input string) (*Module, error) {
 	mod, err := moduleParser.ParseString(filename, input)
 	if err != nil {
-		return Module{}, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	return *mod, ValidateModule(*mod)
+	return mod, ValidateModule(mod)
 }
 
-func Parse(filename string, r io.Reader) (Schema, error) {
+func Parse(filename string, r io.Reader) (*Schema, error) {
 	mod, err := parser.Parse(filename, r)
 	if err != nil {
-		return Schema{}, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	return *mod, Validate(*mod)
+	return mod, Validate(mod)
 }
 
-func ParseModule(filename string, r io.Reader) (Module, error) {
+func ParseModule(filename string, r io.Reader) (*Module, error) {
 	mod, err := moduleParser.Parse(filename, r)
 	if err != nil {
-		return Module{}, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	return *mod, ValidateModule(*mod)
+	return mod, ValidateModule(mod)
 }
