@@ -47,7 +47,7 @@ func ExtractModule(dir string) (*schema.Module, error) {
 	module := &schema.Module{}
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
-			verbIndex := -1
+			var verb *schema.Verb
 			err := internal.Visit(file, func(node ast.Node, next func() error) (err error) {
 				defer func() {
 					if err != nil {
@@ -56,32 +56,17 @@ func ExtractModule(dir string) (*schema.Module, error) {
 				}()
 				switch node := node.(type) {
 				case *ast.CallExpr:
-					if err := visitCallExpr(module, verbIndex, node, pkg); err != nil {
+					if err := visitCallExpr(module, verb, node, pkg); err != nil {
 						return err
 					}
 
 				case *ast.File:
-					if node.Doc == nil {
-						break
-					}
-					directives, err := parseFTLDirectives(fset, node.Doc)
-					if err != nil {
-						return errors.WithStack(err)
-					}
-					err = parseFile(module, directives, node, pkg)
-					if err != nil {
+					if err := visitFile(module, node, pkg); err != nil {
 						return err
 					}
 
 				case *ast.FuncDecl:
-					if node.Doc == nil {
-						break
-					}
-					directives, err := parseFTLDirectives(fset, node.Doc)
-					if err != nil {
-						return errors.WithStack(err)
-					}
-					verbIndex, err = parseFunction(pkg, module, directives, node)
+					verb, err = visitFuncDecl(pkg, module, node)
 					if err != nil {
 						return err
 					}
@@ -89,17 +74,9 @@ func ExtractModule(dir string) (*schema.Module, error) {
 					if err != nil {
 						return err
 					}
-					verbIndex = -1
+					verb = nil
 					return nil
 
-				case *ast.GenDecl: // global var decl?
-					if node.Doc == nil {
-						break
-					}
-					_, err := parseFTLDirectives(fset, node.Doc)
-					if err != nil {
-						return errors.WithStack(err)
-					}
 				case nil:
 				default:
 				}
@@ -116,7 +93,7 @@ func ExtractModule(dir string) (*schema.Module, error) {
 	return module, schema.ValidateModule(module)
 }
 
-func visitCallExpr(module *schema.Module, verbIndex int, node *ast.CallExpr, pkg *packages.Package) error {
+func visitCallExpr(module *schema.Module, verb *schema.Verb, node *ast.CallExpr, pkg *packages.Package) error {
 	_, fn := deref[*types.Func](pkg, node.Fun)
 	if fn == nil {
 		return nil
@@ -131,7 +108,6 @@ func visitCallExpr(module *schema.Module, verbIndex int, node *ast.CallExpr, pkg
 	if verbFn == nil {
 		return errors.Errorf("Call first argument must be a function but is %s", node.Args[1])
 	}
-	verb := module.Decls[verbIndex].(*schema.Verb) //nolint:forcetypeassert
 	moduleName := verbFn.Pkg().Name()
 	if moduleName == pkg.Name {
 		moduleName = ""
@@ -141,7 +117,14 @@ func visitCallExpr(module *schema.Module, verbIndex int, node *ast.CallExpr, pkg
 	return nil
 }
 
-func parseFile(module *schema.Module, directives []ftlDirective, node *ast.File, pkg *packages.Package) error {
+func visitFile(module *schema.Module, node *ast.File, pkg *packages.Package) error {
+	if node.Doc == nil {
+		return nil
+	}
+	directives, err := parseDirectives(fset, node.Doc)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	module.Comments = parseComments(node.Doc)
 	for _, dir := range directives {
 		switch dir.kind {
@@ -194,33 +177,36 @@ func checkSignature(sig *types.Signature) error {
 }
 
 // "verbIndex" is the index into the Module.Decls of the verb that was parsed.
-func parseFunction(pkg *packages.Package, module *schema.Module, directives []ftlDirective, node *ast.FuncDecl) (verbIndex int, err error) { //nolint:unparam
+func visitFuncDecl(pkg *packages.Package, module *schema.Module, node *ast.FuncDecl) (verb *schema.Verb, err error) { //nolint:unparam
+	if node.Doc == nil {
+		return nil, nil
+	}
 	fnt := pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)               //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		return 0, errors.Errorf("ftl:verb cannot be a method")
+		return nil, errors.Errorf("ftl:verb cannot be a method")
 	}
 	params := sig.Params()
 	results := sig.Results()
 	if err := checkSignature(sig); err != nil {
-		return 0, err
+		return nil, err
 	}
 	req, err := parseStruct(pkg, module, params.At(1).Type())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	resp, err := parseStruct(pkg, module, results.At(0).Type())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	verb := &schema.Verb{
+	verb = &schema.Verb{
 		Comments: parseComments(node.Doc),
 		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  req,
 		Response: resp,
 	}
 	module.Decls = append(module.Decls, verb)
-	return len(module.Decls) - 1, nil
+	return verb, nil
 }
 
 func parseComments(doc *ast.CommentGroup) []string {
@@ -376,9 +362,12 @@ func (d directiveValue) String() string {
 
 var directiveParser = participle.MustBuild[directive](participle.Unquote())
 
-func parseFTLDirectives(fset *token.FileSet, doc *ast.CommentGroup) ([]ftlDirective, error) {
+func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]ftlDirective, error) {
+	if docs == nil {
+		return nil, nil
+	}
 	directives := []ftlDirective{}
-	for _, line := range doc.List {
+	for _, line := range docs.List {
 		if !strings.HasPrefix(line.Text, "//ftl:") {
 			continue
 		}
