@@ -105,12 +105,23 @@ type Verb struct {
 	Metadata []Metadata `parser:"@@*"`
 }
 
+// AddCall adds a call reference to the Verb.
+func (v *Verb) AddCall(verb VerbRef) {
+	for _, c := range v.Metadata {
+		if c, ok := c.(MetadataCall); ok {
+			c.Calls = append(c.Calls, verb)
+			return
+		}
+	}
+	v.Metadata = append(v.Metadata, MetadataCall{Calls: []VerbRef{verb}})
+}
+
 type Metadata interface {
 	Node
 	schemaMetadata()
 }
 
-type MetadataCalls struct {
+type MetadataCall struct {
 	Pos lexer.Position
 
 	Calls []VerbRef `parser:"'calls' @@ (',' @@)*"`
@@ -175,7 +186,7 @@ var parserOptions = []participle.Option{
 		return token, nil
 	}, "Comment"),
 	participle.Union[Type](Int{}, Float{}, String{}, Bool{}, Array{}, Map{}, VerbRef{}, DataRef{}),
-	participle.Union[Metadata](MetadataCalls{}),
+	participle.Union[Metadata](MetadataCall{}),
 	participle.Union[Decl](Data{}, Verb{}),
 }
 

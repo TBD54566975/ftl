@@ -161,7 +161,7 @@ func TestParsing(t *testing.T) {
 								Request:  DataRef{Module: "todo", Name: "CreateListRequest"},
 								Response: DataRef{Name: "CreateListResponse"},
 								Metadata: []Metadata{
-									MetadataCalls{Calls: []VerbRef{{Name: "createList"}}},
+									MetadataCall{Calls: []VerbRef{{Name: "createList"}}},
 								},
 							},
 						},

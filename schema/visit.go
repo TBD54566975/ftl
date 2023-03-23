@@ -72,7 +72,7 @@ func Normalise[T Node](n T) T {
 	case VerbRef:
 		c.Pos = zero
 		ni = c
-	case MetadataCalls:
+	case MetadataCall:
 		c.Pos = zero
 		c.Calls = normaliseSlice(c.Calls)
 		ni = c

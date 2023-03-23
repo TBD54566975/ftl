@@ -18,12 +18,18 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/TBD54566975/ftl/schema"
+	"github.com/TBD54566975/ftl/sdk-go/internal"
 )
 
 var fset = token.NewFileSet()
 
-var contextIfaceType = mustLoadInterface("context", "Context")
-var errorIFaceType = mustLoadInterface("builtin", "error")
+var contextIfaceType = once(func() *types.Interface {
+	return mustLoadRef("context", "Context").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
+})
+var errorIFaceType = once(func() *types.Interface {
+	return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
+})
+var ftlCallFuncPath = "github.com/TBD54566975/ftl/sdk-go.Call"
 
 // ExtractModule statically parses Go FTL module source into a schema.Module.
 func ExtractModule(dir string) (schema.Module, error) {
@@ -41,18 +47,66 @@ func ExtractModule(dir string) (schema.Module, error) {
 	module := schema.Module{}
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
-			var inspectErr error
-			ast.Inspect(file, func(node ast.Node) bool {
-				err := parseNode(pkg, fset, node, &module)
-				if err != nil {
-					pos := fset.Position(node.Pos())
-					inspectErr = errors.Wrap(err, pos.String())
-					return false
+			verbIndex := -1
+			err := internal.Visit(file, func(node ast.Node, next func() error) (err error) {
+				defer func() {
+					if err != nil {
+						err = errors.Wrap(err, fset.Position(node.Pos()).String())
+					}
+				}()
+				switch node := node.(type) {
+				case *ast.CallExpr:
+					if err := visitCallExpr(&module, verbIndex, node, pkg); err != nil {
+						return err
+					}
+
+				case *ast.File:
+					if node.Doc == nil {
+						break
+					}
+					directives, err := parseFTLDirectives(fset, node.Doc)
+					if err != nil {
+						return errors.WithStack(err)
+					}
+					err = parseFile(&module, directives, node, pkg)
+					if err != nil {
+						return err
+					}
+
+				case *ast.FuncDecl:
+					if node.Doc == nil {
+						break
+					}
+					directives, err := parseFTLDirectives(fset, node.Doc)
+					if err != nil {
+						return errors.WithStack(err)
+					}
+					verbIndex, err = parseFunction(pkg, &module, directives, node)
+					if err != nil {
+						return err
+					}
+					err = next()
+					if err != nil {
+						return err
+					}
+					verbIndex = -1
+					return nil
+
+				case *ast.GenDecl: // global var decl?
+					if node.Doc == nil {
+						break
+					}
+					_, err := parseFTLDirectives(fset, node.Doc)
+					if err != nil {
+						return errors.WithStack(err)
+					}
+				case nil:
+				default:
 				}
-				return true
+				return next()
 			})
-			if inspectErr != nil {
-				return schema.Module{}, errors.WithStack(inspectErr)
+			if err != nil {
+				return schema.Module{}, err
 			}
 		}
 	}
@@ -62,39 +116,30 @@ func ExtractModule(dir string) (schema.Module, error) {
 	return module, schema.ValidateModule(module)
 }
 
-func parseNode(pkg *packages.Package, fset *token.FileSet, node ast.Node, module *schema.Module) error {
-	switch node := node.(type) {
-	case *ast.File:
-		if node.Doc == nil {
-			return nil
-		}
-		directives, err := parseFTLDirectives(fset, node.Doc)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		return errors.WithStack(parseFile(module, directives, node, pkg))
-
-	case *ast.FuncDecl:
-		if node.Doc == nil {
-			return nil
-		}
-		directives, err := parseFTLDirectives(fset, node.Doc)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		return errors.WithStack(parseFunction(pkg, module, directives, node))
-
-	case *ast.GenDecl: // global var decl?
-		if node.Doc == nil {
-			return nil
-		}
-		_, err := parseFTLDirectives(fset, node.Doc)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-	case nil:
-	default:
+func visitCallExpr(module *schema.Module, verbIndex int, node *ast.CallExpr, pkg *packages.Package) error {
+	_, fn := deref[*types.Func](pkg, node.Fun)
+	if fn == nil {
+		return nil
 	}
+	if fn.FullName() != ftlCallFuncPath {
+		return nil
+	}
+	if len(node.Args) != 3 {
+		return errors.New("Call must have exactly three arguments")
+	}
+	_, verbFn := deref[*types.Func](pkg, node.Args[1])
+	if verbFn == nil {
+		return errors.Errorf("Call first argument must be a function but is %s", node.Args[1])
+	}
+	verb := module.Decls[verbIndex].(schema.Verb) //nolint:forcetypeassert
+	moduleName := verbFn.Pkg().Name()
+	if moduleName == pkg.Name {
+		moduleName = ""
+	}
+	ref := schema.VerbRef{Module: moduleName, Name: strcase.ToLowerCamel(verbFn.Name())}
+	verb.AddCall(ref)
+
+	module.Decls[verbIndex] = verb
 	return nil
 }
 
@@ -110,6 +155,7 @@ func parseFile(module *schema.Module, directives []ftlDirective, node *ast.File,
 				return errors.Errorf("%s: FTL module name %q does not match Go package name %q", dir, dir.id, pkg.Name)
 			}
 			module.Name = dir.id
+
 		default:
 			return errors.Errorf("%s: invalid directive", dir)
 		}
@@ -149,24 +195,25 @@ func checkSignature(sig *types.Signature) error {
 	return nil
 }
 
-func parseFunction(pkg *packages.Package, module *schema.Module, directives []ftlDirective, node *ast.FuncDecl) error { //nolint:unparam
+// "verbIndex" is the index into the Module.Decls of the verb that was parsed.
+func parseFunction(pkg *packages.Package, module *schema.Module, directives []ftlDirective, node *ast.FuncDecl) (verbIndex int, err error) { //nolint:unparam
 	fnt := pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)               //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		return errors.Errorf("ftl:verb cannot be a method")
+		return 0, errors.Errorf("ftl:verb cannot be a method")
 	}
 	params := sig.Params()
 	results := sig.Results()
 	if err := checkSignature(sig); err != nil {
-		return err
+		return 0, err
 	}
 	req, err := parseStruct(pkg, module, params.At(1).Type())
 	if err != nil {
-		return err
+		return 0, err
 	}
 	resp, err := parseStruct(pkg, module, results.At(0).Type())
 	if err != nil {
-		return err
+		return 0, err
 	}
 	verb := schema.Verb{
 		Comments: parseComments(node.Doc),
@@ -175,7 +222,7 @@ func parseFunction(pkg *packages.Package, module *schema.Module, directives []ft
 		Response: resp,
 	}
 	module.Decls = append(module.Decls, verb)
-	return nil
+	return len(module.Decls) - 1, nil
 }
 
 func parseComments(doc *ast.CommentGroup) []string {
@@ -371,20 +418,38 @@ func once[T any](f func() T) func() T {
 	}
 }
 
-// Lazy load the compile-time type from a package.
-func mustLoadInterface(pkg, name string) func() *types.Interface {
-	return once(func() *types.Interface {
-		pkgs, err := packages.Load(&packages.Config{Fset: fset, Mode: packages.NeedTypes}, pkg)
-		if err != nil {
-			panic(err)
+// Lazy load the compile-time reference from a package.
+func mustLoadRef(pkg, name string) types.Object {
+	pkgs, err := packages.Load(&packages.Config{Fset: fset, Mode: packages.NeedTypes}, pkg)
+	if err != nil {
+		panic(err)
+	}
+	if len(pkgs) != 1 {
+		panic("expected one package")
+	}
+	obj := pkgs[0].Types.Scope().Lookup(name)
+	if obj == nil {
+		panic("interface not found")
+	}
+	return obj
+}
+
+func deref[T types.Object](pkg *packages.Package, node ast.Expr) (string, T) {
+	var obj T
+	switch node := node.(type) {
+	case *ast.Ident:
+		obj, _ = pkg.TypesInfo.Uses[node].(T)
+		return "", obj
+
+	case *ast.SelectorExpr:
+		x, ok := node.X.(*ast.Ident)
+		if !ok {
+			return "", obj
 		}
-		if len(pkgs) != 1 {
-			panic("expected one package")
-		}
-		iface := pkgs[0].Types.Scope().Lookup(name)
-		if iface == nil {
-			panic("interface not found")
-		}
-		return iface.Type().Underlying().(*types.Interface) //nolint:forcetypeassert
-	})
+		obj, _ = pkg.TypesInfo.Uses[node.Sel].(T)
+		return x.Name, obj
+
+	default:
+		return "", obj
+	}
 }

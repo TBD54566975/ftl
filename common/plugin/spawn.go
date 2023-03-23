@@ -162,7 +162,7 @@ func Spawn[Client PingableClient](
 		makeClient(conn)
 	}
 
-	logger.Debugf("Plugin online")
+	logger.Infof("Online")
 	plugin = &Plugin[Client]{Cmd: cmd, Client: client}
 	return plugin, cmdCtx, nil
 }

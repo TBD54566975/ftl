@@ -120,7 +120,7 @@ func cleanup(logger *log.Logger, pidFile string) error {
 		return errors.WithStack(err)
 	}
 	err = syscall.Kill(pid, syscall.SIGKILL)
-	if !errors.Is(err, syscall.ESRCH) {
+	if err != nil && !errors.Is(err, syscall.ESRCH) {
 		logger.Warnf("Failed to reap old plugin with pid %d: %s", pid, err)
 	}
 	return nil

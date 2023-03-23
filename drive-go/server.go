@@ -12,7 +12,7 @@ import (
 
 type UserVerbConfig struct{}
 
-// NewUserVerbServer starts a new code-generated FTL.drive server for user Verbs.
+// NewUserVerbServer starts a new code-generated drive for user Verbs.
 //
 // This function is intended to be used by the code generator.
 func NewUserVerbServer(handlers ...Handler) func(context.Context, UserVerbConfig) (ftlv1.VerbServiceServer, error) {

@@ -143,8 +143,13 @@ func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 			logger.Debugf("Received schema update from %s", module.Name)
 
 			fullSchema := s.fullSchema.Load()
+			oldHash := fullSchema.Hash()
 			fullSchema.Upsert(module)
-			s.fullSchema.Store(fullSchema)
+			newHash := fullSchema.Hash()
+			if oldHash != newHash {
+				s.fullSchema.Store(fullSchema)
+				s.triggerRebuild <- struct{}{}
+			}
 		}
 	})
 

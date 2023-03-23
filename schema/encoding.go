@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"strings"
 )
@@ -111,9 +112,9 @@ func (v Verb) String() string {
 	return w.String()
 }
 
-var _ Metadata = (*MetadataCalls)(nil)
+var _ Metadata = (*MetadataCall)(nil)
 
-func (v MetadataCalls) String() string {
+func (v MetadataCall) String() string {
 	out := &strings.Builder{}
 	fmt.Fprint(out, "calls ")
 	for i, call := range v.Calls {
@@ -126,14 +127,14 @@ func (v MetadataCalls) String() string {
 	return out.String()
 }
 
-func (v MetadataCalls) schemaChildren() []Node {
+func (v MetadataCall) schemaChildren() []Node {
 	out := make([]Node, 0, len(v.Calls))
 	for _, ref := range v.Calls {
 		out = append(out, ref)
 	}
 	return out
 }
-func (MetadataCalls) schemaMetadata() {}
+func (MetadataCall) schemaMetadata() {}
 
 var _ Node = (*Module)(nil)
 
@@ -177,6 +178,10 @@ func (s Schema) schemaChildren() []Node {
 		out[i] = m
 	}
 	return out
+}
+
+func (s Schema) Hash() [sha256.Size]byte {
+	return sha256.Sum256([]byte(s.String()))
 }
 
 func indent(s string) string {

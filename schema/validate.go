@@ -98,12 +98,12 @@ func ValidateModule(module Module) error {
 				merr = append(merr, errors.Errorf("%s: duplicate data structure %q", n.Pos, n.Name))
 			}
 			for _, md := range n.Metadata {
-				if md, ok := md.(MetadataCalls); ok {
+				if md, ok := md.(MetadataCall); ok {
 					merr = append(merr, errors.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
 				}
 			}
 
-		case Array, Bool, DataRef, Field, Float, Int, Map, MetadataCalls, Module, Schema, String, VerbRef:
+		case Array, Bool, DataRef, Field, Float, Int, Map, MetadataCall, Module, Schema, String, VerbRef:
 		case Type, Metadata, Decl: // Union types.
 		}
 		return next()
