@@ -1,0 +1,35 @@
+name: autofmt
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  format:
+    # Check if the PR is not from a fork
+    if: ${{ !contains(github.event.head_commit.message, 'chore(autofmt):') }}
+    #if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Init Hermit
+        run: ./bin/hermit env -r >> $GITHUB_ENV
+      - name: Auto format
+        run: autofmt
+      - name: Check for modified files
+        id: git-check
+        run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
+      - name: Switch to main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git switch main
+      - name: Push changes
+        if: steps.git-check.outputs.modified == 'true'
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git remote set-url origin https://x-access-token:${{ secrets.FTL_AUTOFMT_TOKEN }}@github.com/${{ github.repository }}
+          git commit -am "chore(autofmt): Automated formatting"
+          git push

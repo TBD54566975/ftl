@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/alecthomas/errors"
 )
