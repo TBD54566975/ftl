@@ -65,6 +65,7 @@ linters:
     - goprintffuncname
     - dupword
     - errchkjson
+    - musttag
 
 linters-settings:
   exhaustive:
