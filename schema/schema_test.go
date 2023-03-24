@@ -77,7 +77,9 @@ module todo {
     name string
   }
 
-  verb create(CreateRequest) CreateResponse
+  verb create(CreateRequest) CreateResponse  
+      calls destroy
+      
 
   verb destroy(DestroyRequest) DestroyResponse
 }
@@ -107,6 +109,8 @@ Schema
     Verb
       DataRef
       DataRef
+      MetadataCalls
+        VerbRef
     Verb
       DataRef
       DataRef
@@ -234,6 +238,7 @@ module todo {
     name string
   }
   verb create(CreateRequest) CreateResponse
+  	calls destroy
   verb destroy(DestroyRequest) DestroyResponse
 }
 `

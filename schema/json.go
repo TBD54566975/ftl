@@ -7,23 +7,20 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/alecthomas/errors"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/exp/slices"
 )
 
 func (s *Schema) MarshalJSON() ([]byte, error) {
-	return json.Marshal(marshalJSON(s))
+	data, err := json.Marshal(marshalJSON(s))
+	return data, errors.WithStack(err)
 }
 
 func (s *Schema) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, s)
+	err := json.Unmarshal(data, s)
+	return errors.WithStack(err)
 }
-
-// func unmarshalJSON(r io.Reader, dest any) error {
-// 	dec := json.NewDecoder(r)
-// }
-
-type jsonBody map[string]any
 
 type jsonStruct struct {
 	kind  string
@@ -41,7 +38,9 @@ func (j *jsonStruct) MarshalJSON() ([]byte, error) {
 		for _, f := range j.field {
 			w.WriteByte(',')
 			fmt.Fprintf(w, `%q:`, f.name)
-			json.NewEncoder(w).Encode(f.value)
+			if err := json.NewEncoder(w).Encode(f.value); err != nil {
+				return nil, errors.WithStack(err)
+			}
 		}
 	}
 	w.WriteByte('}')

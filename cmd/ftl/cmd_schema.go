@@ -37,13 +37,8 @@ func (c *schemaGetCmd) Run(client ftlv1.DevelServiceClient) error {
 				}
 				return errors.WithStack(err)
 			}
-			sc, err := schema.ParseString(resp.Module, resp.Schema)
-			if err != nil {
-				return errors.Wrap(err, resp.Schema)
-			}
-			for _, module := range sc.Modules {
-				modules <- module
-			}
+			module := schema.ProtoToModule(resp.Schema)
+			modules <- module
 			if !resp.More {
 				return nil
 			}
@@ -69,7 +64,7 @@ func (c *schemaGetCmd) Run(client ftlv1.DevelServiceClient) error {
 
 type schemaProtobufCmd struct{}
 
-func (c *schemaProtobufCmd) Run() error {
+func (c *schemaProtobufCmd) Run() error { //nolint:unparam
 	fmt.Println(schema.ProtobufSchema())
 	return nil
 }

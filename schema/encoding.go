@@ -114,10 +114,10 @@ func (v *Verb) String() string {
 
 var _ Metadata = (*MetadataCalls)(nil)
 
-func (v *MetadataCalls) String() string {
+func (m *MetadataCalls) String() string {
 	out := &strings.Builder{}
 	fmt.Fprint(out, "calls ")
-	for i, call := range v.Calls {
+	for i, call := range m.Calls {
 		if i > 0 {
 			fmt.Fprint(out, ", ")
 		}
@@ -127,9 +127,9 @@ func (v *MetadataCalls) String() string {
 	return out.String()
 }
 
-func (v *MetadataCalls) schemaChildren() []Node {
-	out := make([]Node, 0, len(v.Calls))
-	for _, ref := range v.Calls {
+func (m *MetadataCalls) schemaChildren() []Node {
+	out := make([]Node, 0, len(m.Calls))
+	for _, ref := range m.Calls {
 		out = append(out, ref)
 	}
 	return out

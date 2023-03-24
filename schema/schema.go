@@ -7,6 +7,13 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"google.golang.org/protobuf/proto"
+)
+
+var (
+	DeclUnion     = []Decl{&Data{}, &Verb{}}
+	TypeUnion     = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
+	MetadataUnion = []Metadata{&MetadataCalls{}}
 )
 
 // A Node in the schema grammar.
@@ -14,6 +21,7 @@ import (
 //sumtype:decl
 type Node interface {
 	String() string
+	ToProto() proto.Message
 	// schemaChildren returns the children of this node.
 	schemaChildren() []Node
 }
@@ -178,10 +186,6 @@ var (
 		{Name: "Punct", Pattern: `[-:[\]{}<>()*+?.,\\^$|#]`},
 	})
 
-	declUnion     = []Decl{&Data{}, &Verb{}}
-	typeUnion     = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
-	metadataUnion = []Metadata{&MetadataCalls{}}
-
 	parserOptions = []participle.Option{
 		participle.Lexer(lex),
 		participle.Elide("Whitespace"),
@@ -190,9 +194,9 @@ var (
 			token.Value = strings.TrimSpace(strings.TrimPrefix(token.Value, "//"))
 			return token, nil
 		}, "Comment"),
-		participle.Union(typeUnion...),
-		participle.Union(metadataUnion...),
-		participle.Union(declUnion...),
+		participle.Union(TypeUnion...),
+		participle.Union(MetadataUnion...),
+		participle.Union(DeclUnion...),
 	}
 
 	parser       = participle.MustBuild[Schema](parserOptions...)

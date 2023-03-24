@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1;
 
+import "xyz/block/ftl/v1/schema/schema.proto";
+
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1;ftlv1";
 option java_multiple_files = true;
 
@@ -63,15 +65,13 @@ service VerbService {
 }
 
 message SyncSchemaRequest {
-  string module = 1;
-  string schema = 2;
+  schema.Module schema = 1;
 }
 message SyncSchemaResponse {
-  string module = 1;
-  string schema = 2;
+  schema.Module schema = 1;
   // If true, there are more schema changes immediately following this one.
   // If false, there still may be more schema changes in the future.
-  bool more = 3;
+  bool more = 2;
 }
 
 // DevelService is the service that provides language-specific development and

@@ -28,6 +28,7 @@ import (
 	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
@@ -135,10 +136,7 @@ func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			module, err := schema.ParseModuleString(received.Module, received.Schema)
-			if err != nil {
-				return errors.WithStack(err)
-			}
+			module := schema.ProtoToModule(received.Schema)
 
 			logger.Debugf("Received schema update from %s", module.Name)
 
@@ -344,9 +342,8 @@ func (s *Server) writeGoMod() error {
 }
 
 func (s *Server) sendSchema(stream ftlv1.DevelService_SyncSchemaServer, module *schema.Module) error {
-	err := stream.Send(&ftlv1.SyncSchemaResponse{
-		Module: module.Name,
-		Schema: module.String(),
+	err := stream.Send(&ftlv1.SyncSchemaResponse{ //nolint:forcetypeassert
+		Schema: module.ToProto().(*pschema.Module),
 	})
 	if err != nil {
 		return errors.WithStack(err)

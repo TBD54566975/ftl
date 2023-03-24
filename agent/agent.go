@@ -32,6 +32,7 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/pubsub"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 )
 
@@ -262,9 +263,8 @@ func (l *Agent) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 		if !ok {
 			continue
 		}
-		err := stream.Send(&ftlv1.SyncSchemaResponse{
-			Module: drive.config.Module,
-			Schema: module.String(),
+		err := stream.Send(&ftlv1.SyncSchemaResponse{ //nolint:forcetypeassert
+			Schema: module.ToProto().(*pschema.Module),
 			More:   i < len(drives)-1,
 		})
 		if err != nil {
@@ -312,10 +312,7 @@ func (l *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			module, err := schema.ParseModuleString("", resp.Schema)
-			if err != nil {
-				return errors.WithStack(err)
-			}
+			module := schema.ProtoToModule(resp.Schema)
 			l.schemaChanges.Publish(module)
 			drive.schema.Store(option.Some(module))
 		}
@@ -347,9 +344,8 @@ func (l *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 }
 
 func (l *Agent) sendSchema(stream ftlv1.DevelService_SyncSchemaClient, module *schema.Module) error {
-	err := stream.Send(&ftlv1.SyncSchemaRequest{
-		Module: module.Name,
-		Schema: module.String(),
+	err := stream.Send(&ftlv1.SyncSchemaRequest{ //nolint:forcetypeassert
+		Schema: module.ToProto().(*pschema.Module),
 	})
 	if err != nil {
 		return errors.WithStack(err)

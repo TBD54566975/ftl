@@ -56,7 +56,7 @@ func ExtractModule(dir string) (*schema.Module, error) {
 				}()
 				switch node := node.(type) {
 				case *ast.CallExpr:
-					if err := visitCallExpr(module, verb, node, pkg); err != nil {
+					if err := visitCallExpr(verb, node, pkg); err != nil {
 						return err
 					}
 
@@ -93,7 +93,7 @@ func ExtractModule(dir string) (*schema.Module, error) {
 	return module, schema.ValidateModule(module)
 }
 
-func visitCallExpr(module *schema.Module, verb *schema.Verb, node *ast.CallExpr, pkg *packages.Package) error {
+func visitCallExpr(verb *schema.Verb, node *ast.CallExpr, pkg *packages.Package) error {
 	_, fn := deref[*types.Func](pkg, node.Fun)
 	if fn == nil {
 		return nil
@@ -177,7 +177,7 @@ func checkSignature(sig *types.Signature) error {
 }
 
 // "verbIndex" is the index into the Module.Decls of the verb that was parsed.
-func visitFuncDecl(pkg *packages.Package, module *schema.Module, node *ast.FuncDecl) (verb *schema.Verb, err error) { //nolint:unparam
+func visitFuncDecl(pkg *packages.Package, module *schema.Module, node *ast.FuncDecl) (verb *schema.Verb, err error) {
 	if node.Doc == nil {
 		return nil, nil
 	}

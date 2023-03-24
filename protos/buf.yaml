@@ -5,3 +5,6 @@ breaking:
 lint:
   use:
     - BASIC
+  ignore_only:
+    FIELD_LOWER_SNAKE_CASE:
+      - xyz/block/ftl/v1
