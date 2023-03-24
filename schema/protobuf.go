@@ -45,9 +45,9 @@ func reflectUnion[T any](union ...T) []reflect.Type {
 }
 
 var unions = map[reflect.Type][]reflect.Type{
-	reflect.TypeOf((*Type)(nil)).Elem():     reflectUnion(TypeUnion...),
-	reflect.TypeOf((*Metadata)(nil)).Elem(): reflectUnion(MetadataUnion...),
-	reflect.TypeOf((*Decl)(nil)).Elem():     reflectUnion(DeclUnion...),
+	reflect.TypeOf((*Type)(nil)).Elem():     reflectUnion(typeUnion...),
+	reflect.TypeOf((*Metadata)(nil)).Elem(): reflectUnion(metadataUnion...),
+	reflect.TypeOf((*Decl)(nil)).Elem():     reflectUnion(declUnion...),
 }
 
 func generateMessage(et reflect.Type, messages map[string]string) {

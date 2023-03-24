@@ -37,6 +37,7 @@ var schema = Normalise(&Schema{
 					Name: "DestroyResponse",
 					Fields: []*Field{
 						{Name: "name", Type: &String{}},
+						{Name: "when", Type: &Time{}},
 					},
 				},
 				&Verb{Name: "create",
@@ -75,6 +76,7 @@ module todo {
 
   data DestroyResponse {
     name string
+    when time
   }
 
   verb create(CreateRequest) CreateResponse  
@@ -106,6 +108,8 @@ Schema
     Data
       Field
         String
+      Field
+        Time
     Verb
       DataRef
       DataRef
@@ -236,6 +240,7 @@ module todo {
   }
   data DestroyResponse {
     name string
+	when time
   }
   verb create(CreateRequest) CreateResponse
   	calls destroy

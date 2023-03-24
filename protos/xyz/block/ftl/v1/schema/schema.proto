@@ -13,14 +13,16 @@ message Array {
 message Bool {}
 
 message Data {
-  string name = 1;
-  repeated Field fields = 2;
-  repeated Metadata metadata = 3;
+  optional Position pos = 1;
+  string name = 2;
+  repeated Field fields = 3;
+  repeated Metadata metadata = 4;
 }
 
 message DataRef {
-  string name = 1;
-  string module = 2;
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
 }
 
 message Decl {
@@ -31,9 +33,10 @@ message Decl {
 }
 
 message Field {
-  string name = 1;
-  repeated string comments = 2;
-  Type type = 3;
+  optional Position pos = 1;
+  string name = 2;
+  repeated string comments = 3;
+  Type type = 4;
 }
 
 message Float {}
@@ -52,20 +55,31 @@ message Metadata {
 }
 
 message MetadataCalls {
-  repeated VerbRef calls = 1;
+  optional Position pos = 1;
+  repeated VerbRef calls = 2;
 }
 
 message Module {
-  string name = 1;
-  repeated string comments = 2;
-  repeated Decl decls = 3;
+  optional Position pos = 1;
+  string name = 2;
+  repeated string comments = 3;
+  repeated Decl decls = 4;
+}
+
+message Position {
+  string filename = 1;
+  int64 line = 2;
+  int64 column = 3;
 }
 
 message Schema {
-  repeated Module modules = 1;
+  optional Position pos = 1;
+  repeated Module modules = 2;
 }
 
 message String {}
+
+message Time {}
 
 message Type {
   oneof value {
@@ -77,18 +91,21 @@ message Type {
     Map map = 6;
     VerbRef verbRef = 7;
     DataRef dataRef = 8;
+    Time time = 9;
   }
 }
 
 message Verb {
-  string name = 1;
-  repeated string comments = 2;
-  DataRef request = 3;
-  DataRef response = 4;
-  repeated Metadata metadata = 5;
+  optional Position pos = 1;
+  string name = 2;
+  repeated string comments = 3;
+  DataRef request = 4;
+  DataRef response = 5;
+  repeated Metadata metadata = 6;
 }
 
 message VerbRef {
-  string name = 1;
-  string module = 2;
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
 }

@@ -8,7 +8,7 @@ import (
 
 var (
 	reservedRefNames = map[string]bool{
-		"int": true, "float": true, "string": true, "bool": true,
+		"int": true, "float": true, "string": true, "bool": true, "time": true,
 	}
 )
 
@@ -103,7 +103,7 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
-		case *Array, *Bool, *DataRef, *Field, *Float, *Int, *Map, *MetadataCalls, *Module, *Schema, *String, *VerbRef:
+		case *Array, *Bool, *DataRef, *Field, *Float, *Int, *Time, *Map, *MetadataCalls, *Module, *Schema, *String, *VerbRef:
 		case Type, Metadata, Decl: // Union types.
 		}
 		return next()

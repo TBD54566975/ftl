@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -11,9 +12,9 @@ import (
 )
 
 var (
-	DeclUnion     = []Decl{&Data{}, &Verb{}}
-	TypeUnion     = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
-	MetadataUnion = []Metadata{&MetadataCalls{}}
+	declUnion     = []Decl{&Data{}, &Verb{}}
+	typeUnion     = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
+	metadataUnion = []Metadata{&MetadataCalls{}}
 )
 
 // A Node in the schema grammar.
@@ -35,57 +36,77 @@ type Type interface {
 	schemaType()
 }
 
+type Position struct {
+	Filename string `json:"filename,omitempty" protobuf:"1"`
+	Offset   int    `json:"-" parser:"" protobuf:"-"`
+	Line     int    `json:"line,omitempty" protobuf:"2"`
+	Column   int    `json:"column,omitempty" protobuf:"3"`
+}
+
+func (p Position) String() string {
+	if p.Filename == "" {
+		return fmt.Sprintf("%d:%d", p.Line, p.Column)
+	}
+	return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
+}
+
 type Int struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"-" parser:"" protobuf:"-"`
 
 	Int bool `parser:"@'int'" json:"-" protobuf:"-"`
 }
 
 type Float struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"-" parser:"" protobuf:"-"`
 
 	Float bool `parser:"@'float'" json:"-" protobuf:"-"`
 }
 
 type String struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"-" parser:"" protobuf:"-"`
 
 	Str bool `parser:"@'string'" json:"-" protobuf:"-"`
 }
 
 type Bool struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"-" parser:"" protobuf:"-"`
 
 	Bool bool `parser:"@'bool'" json:"-" protobuf:"-"`
 }
 
+type Time struct {
+	Pos Position `json:"-" parser:"" protobuf:"-"`
+
+	Time bool `parser:"@'time'" json:"-" protobuf:"-"`
+}
+
 type Array struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"-" parser:"" protobuf:"-"`
 
 	Element Type `parser:"'[' @@ ']'" json:"element,omitempty" protobuf:"1"`
 }
 
 type Map struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"-" parser:"" protobuf:"-"`
 
 	Key   Type `parser:"'{' @@" json:"key,omitempty" protobuf:"1"`
 	Value Type `parser:"':' @@ '}'" json:"value,omitempty" protobuf:"2"`
 }
 
 type Field struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" json:"comments,omitempty" protobuf:"2"`
-	Name     string   `parser:"@Ident" json:"name,omitempty" protobuf:"1"`
-	Type     Type     `parser:"@@" json:"type,omitempty" protobuf:"3"`
+	Comments []string `parser:"@Comment*" json:"comments,omitempty" protobuf:"3"`
+	Name     string   `parser:"@Ident" json:"name,omitempty" protobuf:"2"`
+	Type     Type     `parser:"@@" json:"type,omitempty" protobuf:"4"`
 }
 
 // Ref is a reference to another symbol.
 type Ref struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
-	Module string `parser:"(@Ident '.')?" json:"module,omitempty" protobuf:"2"`
-	Name   string `parser:"@Ident" json:"name,omitempty" protobuf:"1"`
+	Module string `parser:"(@Ident '.')?" json:"module,omitempty" protobuf:"3"`
+	Name   string `parser:"@Ident" json:"name,omitempty" protobuf:"2"`
 }
 
 // DataRef is a reference to a data structure.
@@ -93,24 +114,24 @@ type DataRef Ref
 
 // A Data structure.
 type Data struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
-	Name     string     `parser:"'data' @Ident '{'" json:"name,omitempty" protobuf:"1"`
-	Fields   []*Field   `parser:"@@* '}'" json:"fields,omitempty" protobuf:"2"`
-	Metadata []Metadata `parser:"@@*" json:"metadata,omitempty" protobuf:"3"`
+	Name     string     `parser:"'data' @Ident '{'" json:"name,omitempty" protobuf:"2"`
+	Fields   []*Field   `parser:"@@* '}'" json:"fields,omitempty" protobuf:"3"`
+	Metadata []Metadata `parser:"@@*" json:"metadata,omitempty" protobuf:"4"`
 }
 
 // VerbRef is a reference to a Verb.
 type VerbRef Ref
 
 type Verb struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
-	Comments []string   `parser:"@Comment*" json:"comments,omitempty" protobuf:"2"`
-	Name     string     `parser:"'verb' @Ident" json:"name,omitempty" protobuf:"1"`
-	Request  *DataRef   `parser:"'(' @@ ')'" json:"request,omitempty" protobuf:"3"`
-	Response *DataRef   `parser:"@@" json:"response,omitempty" protobuf:"4"`
-	Metadata []Metadata `parser:"@@*" json:"metadata,omitempty" protobuf:"5"`
+	Comments []string   `parser:"@Comment*" json:"comments,omitempty" protobuf:"3"`
+	Name     string     `parser:"'verb' @Ident" json:"name,omitempty" protobuf:"2"`
+	Request  *DataRef   `parser:"'(' @@ ')'" json:"request,omitempty" protobuf:"4"`
+	Response *DataRef   `parser:"@@" json:"response,omitempty" protobuf:"5"`
+	Metadata []Metadata `parser:"@@*" json:"metadata,omitempty" protobuf:"6"`
 }
 
 // AddCall adds a call reference to the Verb.
@@ -130,17 +151,17 @@ type Metadata interface {
 }
 
 type MetadataCalls struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
-	Calls []*VerbRef `parser:"'calls' @@ (',' @@)*" json:"calls,omitempty" protobuf:"1"`
+	Calls []*VerbRef `parser:"'calls' @@ (',' @@)*" json:"calls,omitempty" protobuf:"2"`
 }
 
 type Module struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" json:"comments,omitempty" protobuf:"2"`
-	Name     string   `parser:"'module' @Ident '{'" json:"name,omitempty" protobuf:"1"`
-	Decls    []Decl   `parser:"@@* '}'" json:"decls,omitempty" protobuf:"3"`
+	Comments []string `parser:"@Comment*" json:"comments,omitempty" protobuf:"3"`
+	Name     string   `parser:"'module' @Ident '{'" json:"name,omitempty" protobuf:"2"`
+	Decls    []Decl   `parser:"@@* '}'" json:"decls,omitempty" protobuf:"4"`
 }
 
 type Decl interface {
@@ -160,9 +181,9 @@ func (m *Module) AddData(data *Data) int {
 }
 
 type Schema struct {
-	Pos lexer.Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
-	Modules []*Module `parser:"@@*" json:"modules,omitempty" protobuf:"1"`
+	Modules []*Module `parser:"@@*" json:"modules,omitempty" protobuf:"2"`
 }
 
 // Upsert inserts or replaces a module.
@@ -194,9 +215,9 @@ var (
 			token.Value = strings.TrimSpace(strings.TrimPrefix(token.Value, "//"))
 			return token, nil
 		}, "Comment"),
-		participle.Union(TypeUnion...),
-		participle.Union(MetadataUnion...),
-		participle.Union(DeclUnion...),
+		participle.Union(typeUnion...),
+		participle.Union(metadataUnion...),
+		participle.Union(declUnion...),
 	}
 
 	parser       = participle.MustBuild[Schema](parserOptions...)

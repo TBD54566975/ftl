@@ -18,7 +18,7 @@ type EchoResponse struct {
 
 //ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
-	tresp, err := ftl.Call(ctx, Time, TimeRequest{})
+	tresp, err := ftl.Call(ctx, GetTime, TimeRequest{})
 	if err != nil {
 		return EchoResponse{}, err
 	}

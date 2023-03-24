@@ -176,6 +176,11 @@ func checkSignature(sig *types.Signature) error {
 	return nil
 }
 
+func goPosToSchemaPos(pos token.Pos) schema.Position {
+	p := fset.Position(pos)
+	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}
+}
+
 // "verbIndex" is the index into the Module.Decls of the verb that was parsed.
 func visitFuncDecl(pkg *packages.Package, module *schema.Module, node *ast.FuncDecl) (verb *schema.Verb, err error) {
 	if node.Doc == nil {
@@ -191,15 +196,16 @@ func visitFuncDecl(pkg *packages.Package, module *schema.Module, node *ast.FuncD
 	if err := checkSignature(sig); err != nil {
 		return nil, err
 	}
-	req, err := parseStruct(pkg, module, params.At(1).Type())
+	req, err := parseStruct(pkg, module, node, params.At(1).Type())
 	if err != nil {
 		return nil, err
 	}
-	resp, err := parseStruct(pkg, module, results.At(0).Type())
+	resp, err := parseStruct(pkg, module, node, results.At(0).Type())
 	if err != nil {
 		return nil, err
 	}
 	verb = &schema.Verb{
+		Pos:      goPosToSchemaPos(node.Pos()),
 		Comments: parseComments(node.Doc),
 		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  req,
@@ -217,83 +223,98 @@ func parseComments(doc *ast.CommentGroup) []string {
 	return comments
 }
 
-func parseStruct(pkg *packages.Package, module *schema.Module, node types.Type) (*schema.DataRef, error) {
-	named, ok := node.(*types.Named)
+func parseStruct(pkg *packages.Package, module *schema.Module, node ast.Node, tnode types.Type) (*schema.DataRef, error) {
+	named, ok := tnode.(*types.Named)
 	if !ok {
-		return nil, errors.Errorf("expected named type but got %s", node)
+		return nil, errors.Errorf("expected named type but got %s", tnode)
 	}
-	s, ok := node.Underlying().(*types.Struct)
+	s, ok := tnode.Underlying().(*types.Struct)
 	if !ok {
-		return nil, errors.Errorf("expected struct but got %s", node)
+		return nil, errors.Errorf("expected struct but got %s", tnode)
 	}
 	out := &schema.Data{
+		Pos:  goPosToSchemaPos(node.Pos()),
 		Name: named.Obj().Name(),
 	}
 	for i := 0; i < s.NumFields(); i++ {
 		f := s.Field(i)
-		ft, err := parseType(pkg, module, f.Type())
+		ft, err := parseType(pkg, module, node, f.Type())
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		out.Fields = append(out.Fields, &schema.Field{Name: strcase.ToLowerCamel(f.Name()), Type: ft})
+		out.Fields = append(out.Fields, &schema.Field{
+			Pos:  goPosToSchemaPos(node.Pos()),
+			Name: strcase.ToLowerCamel(f.Name()),
+			Type: ft,
+		})
 	}
 	module.AddData(out)
-	return &schema.DataRef{Name: out.Name}, nil
+	return &schema.DataRef{
+		Pos:  goPosToSchemaPos(node.Pos()),
+		Name: out.Name,
+	}, nil
 }
 
-func parseType(pkg *packages.Package, module *schema.Module, node types.Type) (schema.Type, error) {
-	switch node := node.Underlying().(type) {
+func parseType(pkg *packages.Package, module *schema.Module, node ast.Node, tnode types.Type) (schema.Type, error) {
+	switch tnode := tnode.Underlying().(type) {
 	case *types.Basic:
-		switch node.Kind() {
+		switch tnode.Kind() {
 		case types.String:
-			return &schema.String{}, nil
+			return &schema.String{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		case types.Int:
 			return &schema.Int{}, nil
 
 		case types.Bool:
-			return &schema.Bool{}, nil
+			return &schema.Bool{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		case types.Float64:
-			return &schema.Float{}, nil
+			return &schema.Float{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		default:
-			return nil, errors.Errorf("unsupported basic type %s", node)
+			return nil, errors.Errorf("unsupported basic type %s", tnode)
 		}
 
 	case *types.Struct:
-		ref, err := parseStruct(pkg, module, node)
+		ref, err := parseStruct(pkg, module, node, tnode)
 		return ref, err
 
 	case *types.Map:
-		return parseMap(pkg, module, node)
+		return parseMap(pkg, module, node, tnode)
 
 	case *types.Slice:
-		return parseSlice(pkg, module, node)
+		return parseSlice(pkg, module, node, tnode)
 
 	default:
 		return nil, errors.Errorf("unsupported type %s", node)
 	}
 }
 
-func parseMap(pkg *packages.Package, module *schema.Module, node *types.Map) (*schema.Map, error) {
-	key, err := parseType(pkg, module, node.Key())
+func parseMap(pkg *packages.Package, module *schema.Module, node ast.Node, tnode *types.Map) (*schema.Map, error) {
+	key, err := parseType(pkg, module, node, tnode.Key())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	value, err := parseType(pkg, module, node.Elem())
+	value, err := parseType(pkg, module, node, tnode.Elem())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &schema.Map{Key: key, Value: value}, nil
+	return &schema.Map{
+		Pos:   goPosToSchemaPos(node.Pos()),
+		Key:   key,
+		Value: value,
+	}, nil
 }
 
-func parseSlice(pkg *packages.Package, module *schema.Module, node *types.Slice) (*schema.Array, error) {
-	value, err := parseType(pkg, module, node.Elem())
+func parseSlice(pkg *packages.Package, module *schema.Module, node ast.Node, tnode *types.Slice) (*schema.Array, error) {
+	value, err := parseType(pkg, module, node, tnode.Elem())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &schema.Array{Element: value}, nil
+	return &schema.Array{
+		Pos:     goPosToSchemaPos(node.Pos()),
+		Element: value,
+	}, nil
 }
 
 type ftlDirective struct {

@@ -33,6 +33,12 @@ func (*Bool) schemaChildren() []Node { return nil }
 func (*Bool) schemaType()            {}
 func (*Bool) String() string         { return "bool" }
 
+var _ Type = (*Time)(nil)
+
+func (*Time) schemaChildren() []Node { return nil }
+func (*Time) schemaType()            {}
+func (*Time) String() string         { return "time" }
+
 var _ Type = (*Array)(nil)
 
 func (a *Array) schemaChildren() []Node { return []Node{a.Element} }

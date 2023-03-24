@@ -82,6 +82,8 @@ func typeToSchema(s *pschema.Type) Type {
 		return &Float{}
 	case *pschema.Type_String_:
 		return &String{}
+	case *pschema.Type_Time:
+		return &Time{}
 	case *pschema.Type_Bool:
 		return &Bool{}
 	case *pschema.Type_Array:

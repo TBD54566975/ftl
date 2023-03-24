@@ -77,6 +77,13 @@ func TestJSON(t *testing.T) {
               "type": {
                 "kind": "string"
               }
+            },
+            {
+              "kind": "field",
+              "name": "when",
+              "type": {
+                "kind": "time"
+              }
             }
           ],
           "name": "DestroyResponse"

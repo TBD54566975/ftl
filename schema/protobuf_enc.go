@@ -60,6 +60,9 @@ func typeToProto(t Type) *pschema.Type {
 	case *String:
 		return &pschema.Type{Value: &pschema.Type_String_{String_: t.ToProto().(*pschema.String)}}
 
+	case *Time:
+		return &pschema.Type{Value: &pschema.Type_Time{Time: t.ToProto().(*pschema.Time)}}
+
 	case *Bool:
 		return &pschema.Type{Value: &pschema.Type_Bool{Bool: t.ToProto().(*pschema.Bool)}}
 
@@ -145,6 +148,10 @@ func (b *Bool) ToProto() proto.Message {
 
 func (f *Float) ToProto() proto.Message {
 	return &pschema.Float{}
+}
+
+func (t *Time) ToProto() proto.Message {
+	return &pschema.Time{}
 }
 
 func (m *Map) ToProto() proto.Message {

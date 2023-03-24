@@ -61,6 +61,9 @@ func genType(t schema.Type) string {
 	case *schema.Float:
 		return "float64"
 
+	case *schema.Time:
+		return "time.Time"
+
 	case *schema.Int, *schema.Bool, *schema.String, *schema.DataRef, *schema.VerbRef:
 		return t.String()
 
