@@ -9,7 +9,7 @@ import (
 	"github.com/alecthomas/errors"
 )
 
-var schema = &Schema{
+var schema = Normalise(&Schema{
 	Modules: []*Module{
 		{
 			Name:     "todo",
@@ -18,25 +18,25 @@ var schema = &Schema{
 				&Data{
 					Name: "CreateRequest",
 					Fields: []*Field{
-						{Name: "name", Type: &Map{Key: &String{Str: true}, Value: &String{Str: true}}},
+						{Name: "name", Type: &Map{Key: &String{}, Value: &String{}}},
 					},
 				},
 				&Data{
 					Name: "CreateResponse",
 					Fields: []*Field{
-						{Name: "name", Type: &Array{Element: &String{Str: true}}},
+						{Name: "name", Type: &Array{Element: &String{}}},
 					},
 				},
 				&Data{
 					Name: "DestroyRequest",
 					Fields: []*Field{
-						{Name: "name", Comments: []string{"A comment"}, Type: &String{Str: true}},
+						{Name: "name", Comments: []string{"A comment"}, Type: &String{}},
 					},
 				},
 				&Data{
 					Name: "DestroyResponse",
 					Fields: []*Field{
-						{Name: "name", Type: &String{Str: true}},
+						{Name: "name", Type: &String{}},
 					},
 				},
 				&Verb{Name: "create",
@@ -50,7 +50,7 @@ var schema = &Schema{
 			},
 		},
 	},
-}
+})
 
 func TestIndent(t *testing.T) {
 	assert.Equal(t, "  a\n  b\n  c", indent("a\nb\nc"))

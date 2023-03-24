@@ -31,7 +31,7 @@ func declListToProto(nodes []Decl) []*pschema.Decl {
 }
 
 func metadataListToProto(nodes []Metadata) []*pschema.Metadata {
-	out := []*pschema.Metadata{}
+	var out []*pschema.Metadata
 	for _, n := range nodes {
 		var v pschema.IsMetadataValue
 		switch n := n.(type) { //nolint:gocritic
@@ -105,8 +105,9 @@ func (d *Data) ToProto() proto.Message {
 
 func (f *Field) ToProto() proto.Message {
 	return &pschema.Field{
-		Name: f.Name,
-		Type: typeToProto(f.Type),
+		Name:     f.Name,
+		Type:     typeToProto(f.Type),
+		Comments: f.Comments,
 	}
 }
 
@@ -148,13 +149,13 @@ func (f *Float) ToProto() proto.Message {
 
 func (m *Map) ToProto() proto.Message {
 	return &pschema.Map{
-		Key:   m.Key.ToProto().(*pschema.Type),
-		Value: m.Value.ToProto().(*pschema.Type),
+		Key:   typeToProto(m.Key),
+		Value: typeToProto(m.Value),
 	}
 }
 
 func (a *Array) ToProto() proto.Message {
 	return &pschema.Array{
-		Element: a.Element.ToProto().(*pschema.Type),
+		Element: typeToProto(a.Element),
 	}
 }
