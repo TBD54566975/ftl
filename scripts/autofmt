@@ -1,6 +1,9 @@
 #!/bin/bash
 set -xeuo pipefail
 
+# Run go mod tidy on all modules
+find . -name 'go.mod' -print0 | xargs -0 dirname | while read dir; do (cd "$dir" && go mod tidy); done
+
 gosimports -w --local github.com/TBD54566975/ftl $(go list -f '{{.Dir}}' ./...)
 buf format -w
 find protos -name '*.pb.go' -print0 | xargs -0 -r git checkout > /dev/null
