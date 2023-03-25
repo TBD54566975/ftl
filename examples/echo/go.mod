@@ -8,7 +8,7 @@ require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/alecthomas/errors v0.2.0 // indirect
-	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
+	github.com/alecthomas/participle/v2 v2.0.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/iancoleman/strcase v0.2.0 // indirect
 	github.com/jordan-bonecutter/goption v1.0.1 // indirect
