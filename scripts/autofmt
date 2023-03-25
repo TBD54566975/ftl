@@ -1,10 +1,20 @@
 #!/bin/bash
-set -xeuo pipefail
+set -euo pipefail
 
 # Run go mod tidy on all modules
 find . -name 'go.mod' -print0 | xargs -0 dirname | while read dir; do (cd "$dir" && go mod tidy); done
 
+# gofmt -w -s
+go list -f '{{range .GoFiles}}{{$.Dir}}/{{.}}
+{{end}}' ./... | xargs -n1 -r gofmt -w -s
+
+# gosimports
 gosimports -w --local github.com/TBD54566975/ftl $(go list -f '{{.Dir}}' ./...)
+
+# Format .proto files
 buf format -w
+
+# Revert changes to generated files.
 find protos -name '*.pb.go' -print0 | xargs -0 -r git checkout > /dev/null
+
 git diff
