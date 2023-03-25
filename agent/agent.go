@@ -333,6 +333,10 @@ func (l *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 	changes := l.schemaChanges.Subscribe(make(chan *schema.Module, 64))
 	wg.Go(func() error {
 		for module := range changes {
+			// Don't send updates back to itself.
+			if module.Name == drive.config.Module {
+				continue
+			}
 			if err := l.sendSchema(stream, module); err != nil {
 				return errors.WithStack(err)
 			}
