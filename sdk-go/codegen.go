@@ -65,7 +65,7 @@ func genType(t schema.Type) string {
 		return "time.Time"
 
 	case *schema.Int, *schema.Bool, *schema.String, *schema.DataRef, *schema.VerbRef:
-		return t.String()
+		return strings.ToLower(t.String())
 
 	case *schema.Array:
 		return "[]" + genType(t.Element)

@@ -13,31 +13,31 @@ var _ Type = (*Int)(nil)
 
 func (*Int) schemaChildren() []Node { return nil }
 func (*Int) schemaType()            {}
-func (*Int) String() string         { return "int" }
+func (*Int) String() string         { return "Int" }
 
 var _ Type = (*Float)(nil)
 
 func (*Float) schemaChildren() []Node { return nil }
 func (*Float) schemaType()            {}
-func (*Float) String() string         { return "float" }
+func (*Float) String() string         { return "Float" }
 
 var _ Type = (*String)(nil)
 
 func (*String) schemaChildren() []Node { return nil }
 func (*String) schemaType()            {}
-func (*String) String() string         { return "string" }
+func (*String) String() string         { return "String" }
 
 var _ Type = (*Bool)(nil)
 
 func (*Bool) schemaChildren() []Node { return nil }
 func (*Bool) schemaType()            {}
-func (*Bool) String() string         { return "bool" }
+func (*Bool) String() string         { return "Bool" }
 
 var _ Type = (*Time)(nil)
 
 func (*Time) schemaChildren() []Node { return nil }
 func (*Time) schemaType()            {}
-func (*Time) String() string         { return "time" }
+func (*Time) String() string         { return "Time" }
 
 var _ Type = (*Array)(nil)
 

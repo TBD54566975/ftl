@@ -53,31 +53,31 @@ func (p Position) String() string {
 type Int struct {
 	Pos Position `json:"-" parser:"" protobuf:"-"`
 
-	Int bool `parser:"@'int'" json:"-" protobuf:"-"`
+	Int bool `parser:"@'Int'" json:"-" protobuf:"-"`
 }
 
 type Float struct {
 	Pos Position `json:"-" parser:"" protobuf:"-"`
 
-	Float bool `parser:"@'float'" json:"-" protobuf:"-"`
+	Float bool `parser:"@'Float'" json:"-" protobuf:"-"`
 }
 
 type String struct {
 	Pos Position `json:"-" parser:"" protobuf:"-"`
 
-	Str bool `parser:"@'string'" json:"-" protobuf:"-"`
+	Str bool `parser:"@'String'" json:"-" protobuf:"-"`
 }
 
 type Bool struct {
 	Pos Position `json:"-" parser:"" protobuf:"-"`
 
-	Bool bool `parser:"@'bool'" json:"-" protobuf:"-"`
+	Bool bool `parser:"@'Bool'" json:"-" protobuf:"-"`
 }
 
 type Time struct {
 	Pos Position `json:"-" parser:"" protobuf:"-"`
 
-	Time bool `parser:"@'time'" json:"-" protobuf:"-"`
+	Time bool `parser:"@'Time'" json:"-" protobuf:"-"`
 }
 
 type Array struct {

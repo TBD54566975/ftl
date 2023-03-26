@@ -62,21 +62,21 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {string: string}
+    name {String: String}
   }
 
   data CreateResponse {
-    name [string]
+    name [String]
   }
 
   data DestroyRequest {
     // A comment
-    name string
+    name String
   }
 
   data DestroyResponse {
-    name string
-    when time
+    name String
+    when Time
   }
 
   verb create(CreateRequest) CreateResponse  
@@ -199,8 +199,8 @@ func TestParsing(t *testing.T) {
 				"1:34: reference to unknown Verb \"verb\"",
 			}},
 		{name: "KeywordAsName",
-			input:  `module int { data string { name string } verb verb(string) string }`,
-			errors: []string{"1:14: data structure name \"string\" is a reserved word"}},
+			input:  `module int { data String { name String } verb verb(String) String }`,
+			errors: []string{"1:14: data structure name \"String\" is a reserved word"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -229,18 +229,18 @@ func TestParseModule(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {string: string}
+    name {String: String}
   }
   data CreateResponse {
-    name [string]
+    name [String]
   }
   data DestroyRequest {
     // A comment
-    name string
+    name String
   }
   data DestroyResponse {
-    name string
-	when time
+    name String
+	when Time
   }
   verb create(CreateRequest) CreateResponse
   	calls destroy

@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	reservedRefNames = map[string]bool{
-		"int": true, "float": true, "string": true, "bool": true, "time": true,
+	// Identifiers that can't be used as data or verb names.
+	reservedIdentNames = map[string]bool{
+		"Int": true, "Float": true, "String": true, "Bool": true, "Time": true,
 	}
 )
 
@@ -82,7 +83,7 @@ func ValidateModule(module *Module) error {
 	err := Visit(module, func(n Node, next func() error) error {
 		switch n := n.(type) {
 		case *Verb:
-			if _, ok := reservedRefNames[n.Name]; ok {
+			if _, ok := reservedIdentNames[n.Name]; ok {
 				merr = append(merr, errors.Errorf("%s: Verb name %q is a reserved word", n.Pos, n.Name))
 			}
 			if _, ok := verbs[n.Name]; ok {
@@ -91,7 +92,7 @@ func ValidateModule(module *Module) error {
 			verbs[n.Name] = true
 
 		case *Data:
-			if _, ok := reservedRefNames[n.Name]; ok {
+			if _, ok := reservedIdentNames[n.Name]; ok {
 				merr = append(merr, errors.Errorf("%s: data structure name %q is a reserved word", n.Pos, n.Name))
 			}
 			if _, ok := data[n.Name]; ok {

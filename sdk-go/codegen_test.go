@@ -14,11 +14,11 @@ func TestCodegen(t *testing.T) {
 	module := `
 		module basket {
 			data ItemRequest {
-				basketID string
-				itemID string
+				basketID String
+				itemID String
 			}
 			data BasketSummary {
-				items int
+				items Int
 			}
 			// Add an item to the basket.
 			verb Add(ItemRequest) BasketSummary
