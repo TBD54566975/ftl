@@ -8,6 +8,7 @@ import (
 	"go/types"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -32,6 +33,9 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
+
+// Base import for all Go FTL modules.
+const syntheticGoPath = "github.com/TBD54566975/ftl/examples"
 
 type Config struct {
 	Endpoint   socket.Socket `required:"" help:"FTL endpoint to connect to." env:"FTL_ENDPOINT"`
@@ -236,6 +240,14 @@ func (s *Server) rebuild(ctx context.Context) (exe string, err error) {
 	defer func() { s.lastRebuild = time.Now() }()
 
 	logger := log.FromContext(ctx)
+
+	logger.Infof("Extracting schema")
+	module, err := sdkgo.ExtractModule(s.Dir)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	s.moduleSchema.Store(module)
+
 	err = s.writeGoLayout()
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -244,13 +256,6 @@ func (s *Server) rebuild(ctx context.Context) (exe string, err error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-
-	logger.Infof("Extracting schema")
-	module, err := sdkgo.ExtractModule(s.Dir)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	s.moduleSchema.Store(module)
 
 	logger.Infof("Compiling FTL module...")
 	err = execInRoot(ctx, s.WorkingDir, "go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid=", "-o", exe)
@@ -291,11 +296,18 @@ func (s *Server) writeModules() error {
 }
 
 func (s *Server) writeModule(module *schema.Module) error {
-	err := os.MkdirAll(filepath.Join(s.WorkingDir, "_modules", module.Name), 0750)
+	modulePath := s.modulePath(module)
+	err := os.MkdirAll(modulePath, 0750)
 	if err != nil {
 		return errors.Wrapf(err, "%s: failed to create module directory", module.Name)
 	}
-	w, err := os.Create(filepath.Join(s.WorkingDir, "_modules", module.Name, "schema.go"))
+	w, err := os.Create(filepath.Join(modulePath, "go.mod"))
+	if err != nil {
+		return errors.Wrapf(err, "%s: failed to create go.mod file", module.Name)
+	}
+	defer w.Close() //nolint:gosec
+
+	w, err = os.Create(filepath.Join(modulePath, "schema.go"))
 	if err != nil {
 		return errors.Wrapf(err, "%s: failed to create schema file", module.Name)
 	}
@@ -305,6 +317,10 @@ func (s *Server) writeModule(module *schema.Module) error {
 		return errors.Wrapf(err, "%s: failed to generate schema", module.Name)
 	}
 	return nil
+}
+
+func (s *Server) modulePath(module *schema.Module) string {
+	return filepath.Join(s.WorkingDir, "_modules", module.Name)
 }
 
 func (s *Server) writeMain() error {
@@ -325,16 +341,30 @@ func (s *Server) writeMain() error {
 	return nil
 }
 
+// Write the go.mod file for the FTL module.
 func (s *Server) writeGoMod() error {
+	managedModules := []*schema.Module{}
+	managedModules = append(managedModules, s.fullSchema.Load().Modules...)
+	managedModulePaths := map[string]bool{}
+	if s.FTLSource != "" {
+		managedModulePaths["github.com/TBD54566975/ftl"] = true
+	}
+	for _, module := range managedModules {
+		managedModulePaths[path.Join(syntheticGoPath, module.Name)] = true
+	}
+
 	goMod, err := os.Create(filepath.Join(s.WorkingDir, "go.mod"))
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer goMod.Close() //nolint:gosec
 	fmt.Fprintf(goMod, "module main\n")
-	fmt.Fprintf(goMod, "require %s v0.0.0\n", s.goModule.Module.Mod.Path)
 	fmt.Fprintf(goMod, "replace %s => %s\n", s.goModule.Module.Mod.Path, s.Dir)
+	// Apply any custom replace directives that aren't replacing FTL modules.
 	for _, replace := range s.goModule.Replace {
+		if managedModulePaths[replace.Old.Path] {
+			continue
+		}
 		newPath := replace.New.Path
 		if strings.HasPrefix(newPath, ".") {
 			newPath, err = filepath.Abs(filepath.Join(s.Dir, newPath))
@@ -343,6 +373,10 @@ func (s *Server) writeGoMod() error {
 			}
 		}
 		fmt.Fprintf(goMod, "replace %s => %s\n", replace.Old.Path, newPath)
+	}
+	for _, module := range managedModules {
+		modulePath := s.modulePath(module)
+		fmt.Fprintf(goMod, "replace %s => %s\n", path.Join(syntheticGoPath, module.Name), modulePath)
 	}
 	if s.FTLSource != "" {
 		fmt.Fprintf(goMod, "require github.com/TBD54566975/ftl v0.0.0\n")

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	timemodule "github.com/TBD54566975/ftl/examples/time"
+
 	ftl "github.com/TBD54566975/ftl/sdk-go"
 )
 
@@ -19,7 +20,7 @@ type EchoResponse struct {
 
 //ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
-	tresp, err := ftl.Call(ctx, timemodule.GetTime, timemodule.TimeRequest{})
+	tresp, err := ftl.Call(ctx, timemodule.Time, timemodule.TimeRequest{})
 	if err != nil {
 		return EchoResponse{}, err
 	}

@@ -17,8 +17,8 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/tools/go/packages"
 
+	"github.com/TBD54566975/ftl/common/goast"
 	"github.com/TBD54566975/ftl/schema"
-	"github.com/TBD54566975/ftl/sdk-go/internal"
 )
 
 var fset = token.NewFileSet()
@@ -48,7 +48,7 @@ func ExtractModule(dir string) (*schema.Module, error) {
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
 			var verb *schema.Verb
-			err := internal.Visit(file, func(node ast.Node, next func() error) (err error) {
+			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				defer func() {
 					if err != nil {
 						err = errors.Wrap(err, fset.Position(node.Pos()).String())

@@ -1,8 +1,11 @@
 package log
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"runtime"
 )
 
 var _ Interface = (*Logger)(nil)
@@ -73,4 +76,48 @@ func (l *Logger) Warnf(format string, args ...interface{}) {
 
 func (l *Logger) Errorf(err error, format string, args ...interface{}) {
 	l.Log(Entry{Level: Error, Message: fmt.Sprintf(format, args...), Error: err})
+}
+
+// WriterAt returns a writer that logs each line at the given level.
+func (l *Logger) WriterAt(level Level) *io.PipeWriter {
+	// Based on MIT licensed Logrus https://github.com/sirupsen/logrus/blob/bdc0db8ead3853c56b7cd1ac2ba4e11b47d7da6b/writer.go#L27
+	reader, writer := io.Pipe()
+	var printFunc func(format string, args ...interface{})
+
+	switch level {
+	case Trace:
+		printFunc = l.Tracef
+	case Debug:
+		printFunc = l.Debugf
+	case Info:
+		printFunc = l.Infof
+	case Warn:
+		printFunc = l.Warnf
+	case Error:
+		printFunc = func(format string, args ...interface{}) {
+			l.Errorf(nil, format, args...)
+		}
+	default:
+		panic(level)
+	}
+
+	go l.writerScanner(reader, printFunc)
+	runtime.SetFinalizer(writer, writerFinalizer)
+
+	return writer
+}
+
+func (l *Logger) writerScanner(reader *io.PipeReader, printFunc func(format string, args ...interface{})) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		printFunc("%s", scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		l.Errorf(err, "Error while reading from Writer")
+	}
+	reader.Close()
+}
+
+func writerFinalizer(writer *io.PipeWriter) {
+	writer.Close()
 }

@@ -1,4 +1,5 @@
-package internal
+// Package goast provides a useful visitor for the Go AST.
+package goast
 
 import (
 	"fmt"

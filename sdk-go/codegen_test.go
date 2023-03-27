@@ -29,7 +29,8 @@ func TestCodegen(t *testing.T) {
 	assert.NoError(t, err)
 	err = Generate(s.Modules[0], w)
 	assert.NoError(t, err)
-	expected := `package basket
+	expected := `//ftl:module basket
+package basket
 
 import (
   "context"
@@ -45,12 +46,16 @@ type BasketSummary struct {
 }
 
 // Add an item to the basket.
-func Add(ctx context.Context, ItemRequest) (BasketSummary, error) {
+//
+//ftl:verb
+func Add(context.Context, ItemRequest) (BasketSummary, error) {
   panic("Verb stubs should not be called directly, instead use sdkgo.Call()")
 }
 
 // Remove an item from the basket.
-func Remove(ctx context.Context, ItemRequest) (BasketSummary, error) {
+//
+//ftl:verb
+func Remove(context.Context, ItemRequest) (BasketSummary, error) {
   panic("Verb stubs should not be called directly, instead use sdkgo.Call()")
 }
 `

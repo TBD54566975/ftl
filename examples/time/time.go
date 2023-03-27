@@ -12,6 +12,6 @@ type TimeResponse struct {
 }
 
 //ftl:verb
-func GetTime(ctx context.Context, req TimeRequest) (TimeResponse, error) {
+func Time(ctx context.Context, req TimeRequest) (TimeResponse, error) {
 	return TimeResponse{Time: int(time.Now().Unix())}, nil
 }
