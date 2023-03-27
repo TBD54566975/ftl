@@ -29,6 +29,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jordan-bonecutter/goption v1.0.1
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-isatty v0.0.17
 	golang.org/x/mod v0.8.0
 	golang.org/x/sys v0.5.0 // indirect

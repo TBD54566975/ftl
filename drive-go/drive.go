@@ -96,7 +96,7 @@ type Server struct {
 	Config
 	router         ftlv1.VerbServiceClient
 	module         string
-	goModule       string
+	goModule       *modfile.File
 	triggerRebuild chan struct{}
 
 	fullSchema   atomic.Value[schema.Schema]
@@ -332,8 +332,18 @@ func (s *Server) writeGoMod() error {
 	}
 	defer goMod.Close() //nolint:gosec
 	fmt.Fprintf(goMod, "module main\n")
-	fmt.Fprintf(goMod, "require %s v0.0.0\n", s.goModule)
-	fmt.Fprintf(goMod, "replace %s => %s\n", s.goModule, s.Dir)
+	fmt.Fprintf(goMod, "require %s v0.0.0\n", s.goModule.Module.Mod.Path)
+	fmt.Fprintf(goMod, "replace %s => %s\n", s.goModule.Module.Mod.Path, s.Dir)
+	for _, replace := range s.goModule.Replace {
+		newPath := replace.New.Path
+		if strings.HasPrefix(newPath, ".") {
+			newPath, err = filepath.Abs(filepath.Join(s.Dir, newPath))
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		fmt.Fprintf(goMod, "replace %s => %s\n", replace.Old.Path, newPath)
+	}
 	if s.FTLSource != "" {
 		fmt.Fprintf(goMod, "require github.com/TBD54566975/ftl v0.0.0\n")
 		fmt.Fprintf(goMod, "replace github.com/TBD54566975/ftl => %s\n", s.FTLSource)
@@ -441,14 +451,14 @@ func extractEndpoints(pkg *packages.Package) (endpoints map[string][]endpoint, r
 	return
 }
 
-func findGoModule(file string) (string, error) {
+func findGoModule(file string) (*modfile.File, error) {
 	goModContent, err := os.ReadFile(file)
 	if err != nil {
-		return "", fmt.Errorf("failed to read go.mod file: %w", err)
+		return nil, errors.Wrap(err, "failed to read go.mod file")
 	}
-	goModFile := modfile.ModulePath(goModContent)
-	if goModFile == "" {
-		return "", fmt.Errorf("failed to extract Go module from go.mod file: %w", err)
+	goModFile, err := modfile.Parse(file, goModContent, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to extract Go module from go.mod file")
 	}
 	return goModFile, nil
 }

@@ -7,6 +7,9 @@ import (
 	"syscall"
 
 	"github.com/alecthomas/errors"
+	"github.com/kballard/go-shellquote"
+
+	"github.com/TBD54566975/ftl/common/log"
 )
 
 type Cmd struct {
@@ -19,10 +22,12 @@ func LookPath(exe string) (string, error) {
 }
 
 func Command(ctx context.Context, dir, exe string, args ...string) *Cmd {
+	logger := log.FromContext(ctx)
 	pgid, err := syscall.Getpgid(0)
 	if err != nil {
 		panic(err)
 	}
+	logger.Tracef("exec: cd %s && %s %s", shellquote.Join(dir), exe, shellquote.Join(args...))
 	cmd := exec.CommandContext(ctx, exe, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pgid:    pgid,

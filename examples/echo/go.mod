@@ -1,10 +1,15 @@
-module ftl.dev/echo
+module github.com/TBD54566975/ftl/examples/echo
 
 go 1.20
 
+replace github.com/TBD54566975/ftl/examples/time => ../time
+
 replace github.com/TBD54566975/ftl => ../..
 
-require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
+require (
+	github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
+	github.com/TBD54566975/ftl/examples/time v0.0.0-00010101000000-000000000000
+)
 
 require (
 	github.com/alecthomas/errors v0.2.0 // indirect

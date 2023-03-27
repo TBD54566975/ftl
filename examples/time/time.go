@@ -1,4 +1,5 @@
-package echo
+//ftl:module time
+package time
 
 import (
 	"context"
