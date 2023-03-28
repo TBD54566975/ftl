@@ -12,22 +12,27 @@ platform "darwin" {
   dest = "${HOME}/Library/Java/JavaVirtualMachines/jbr-${version}.jdk"
 }
 
+on unpack {
+  copy { from = "jbr/post-unpack.sh" to = "${root}/post-unpack.sh" mode = 0750 }
+  run { cmd = "${root}/post-unpack.sh ${dest}" }
+}
+
 version "17.0.6.b469.82" {
   platform "darwin" "arm64" {
-    source = "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-osx-aarch64-fastdebug-b469.82.tar.gz"
+    source = "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-osx-aarch64-b469.82.tar.gz"
   }
 
   platform "darwin" "amd64" {
-    source = "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-osx-x64-fastdebug-b469.82.tar.gz"
+    source = "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-osx-x64-b469.82.tar.gz"
   }
 
   platform "linux" "amd64" {
-    source = "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-linux-x64-fastdebug-b469.82.tar.gz"
+    source = "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-linux-x64-b469.82.tar.gz"
   }
 }
 
 sha256sums = {
-  "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-linux-x64-fastdebug-b469.82.tar.gz": "636675c1372d0df8a5461eac1c4938e1383fba19dcfb8d879b8533ede6dee354",
-  "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-osx-x64-fastdebug-b469.82.tar.gz": "a6ea022c5b26c471519d6e31a6c205327d8b1bf18005025a92b7f0ae63d97473",
-  "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-osx-aarch64-fastdebug-b469.82.tar.gz": "280ce36d97589ff789c8655916e507a9e64ea715b3ef3db75462bf2ee4fbba79",
+  "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-osx-x64-b469.82.tar.gz": "ed073e407d7bef4634d3a1bfe79b70560db50a1a74e94c2aca80bc7c7666b951",
+  "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-osx-aarch64-b469.82.tar.gz": "7abd6420edfc89d3c197aa50a100488452418afd4b2fe5701be43fed3eacc5b2",
+  "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-linux-x64-b469.82.tar.gz": "fb93918c7a8acb56ba3a9aafd7453294d63677914486d20e427111eaa18f05d1",
 }
