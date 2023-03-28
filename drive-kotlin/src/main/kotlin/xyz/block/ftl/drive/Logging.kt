@@ -41,6 +41,7 @@ class Logging {
       logging.appender.start()
 
       logger("org.eclipse.jetty").level = Level.INFO
+      logger("io").level = Level.INFO
     }
   }
 }
