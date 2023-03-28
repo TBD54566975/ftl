@@ -25,6 +25,7 @@ type PingableClient interface {
 type pluginOptions struct {
 	envars            []string
 	additionalClients []func(grpc.ClientConnInterface)
+	startTimeout      time.Duration
 }
 
 // Option used when creating a plugin.
@@ -34,6 +35,14 @@ type Option func(*pluginOptions) error
 func WithEnvars(envars ...string) Option {
 	return func(po *pluginOptions) error {
 		po.envars = append(po.envars, envars...)
+		return nil
+	}
+}
+
+// WithStartTimeout sets the timeout for the language-specific drive plugin to start.
+func WithStartTimeout(timeout time.Duration) Option {
+	return func(po *pluginOptions) error {
+		po.startTimeout = timeout
 		return nil
 	}
 }
@@ -81,7 +90,9 @@ func Spawn[Client PingableClient](
 ) {
 	logger := log.FromContext(ctx).Sub(name, log.Default)
 
-	opts := pluginOptions{}
+	opts := pluginOptions{
+		startTimeout: time.Second * 30,
+	}
 	for _, opt := range options {
 		if err = opt(&opts); err != nil {
 			return nil, nil, errors.WithStack(err)
@@ -130,7 +141,10 @@ func Spawn[Client PingableClient](
 		return nil, nil, errors.WithStack(err)
 	}
 
-	conn, err := socket.DialGRPC(ctx, pluginSocket)
+	dialCtx, cancel := context.WithTimeout(ctx, opts.startTimeout)
+	defer cancel()
+
+	conn, err := socket.DialGRPC(dialCtx, pluginSocket)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
@@ -143,19 +157,35 @@ func Spawn[Client PingableClient](
 
 	// Wait for the plugin to start.
 	client := makeClient(conn)
-	for i := 0; i < 10*10; i++ {
-		_, err = client.Ping(ctx, &ftlv1.PingRequest{})
-		if err == nil {
-			break
+	pingErr := make(chan error)
+	go func() {
+		defer close(pingErr)
+		for {
+			select {
+			case <-dialCtx.Done():
+				return
+			default:
+			}
+			_, err := client.Ping(dialCtx, &ftlv1.PingRequest{})
+			if err != nil {
+				time.Sleep(time.Millisecond * 100)
+				continue
+			}
+			pingErr <- err
 		}
-		select {
-		case <-cmdCtx.Done():
-			return nil, nil, errors.Wrap(cmdCtx.Err(), "plugin process died")
-		case <-time.After(time.Millisecond * 100):
+	}()
+
+	select {
+	case <-dialCtx.Done():
+		return nil, nil, errors.Wrap(dialCtx.Err(), "plugin timed out while starting")
+
+	case <-cmdCtx.Done():
+		return nil, nil, errors.Wrap(cmdCtx.Err(), "plugin process died")
+
+	case err := <-pingErr:
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "plugin failed to respond to ping")
 		}
-	}
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "plugin did not respond to ping")
 	}
 
 	for _, makeClient := range opts.additionalClients {

@@ -42,6 +42,9 @@ func Dialer(ctx context.Context, addr string) (net.Conn, error) {
 // Dial a Socket.
 func Dial(ctx context.Context, s Socket) (net.Conn, error) {
 	conn, err := (&net.Dialer{}).DialContext(ctx, s.Network, s.Addr)
+	if err != nil {
+
+	}
 	return conn, errors.WithStack(err)
 }
 

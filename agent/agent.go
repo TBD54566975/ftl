@@ -367,6 +367,7 @@ func (l *Agent) watch(ctx context.Context) error {
 				continue
 			}
 			path := event.Name
+			logger.Debugf("File changed, notifying drives: %s", path)
 			l.lock.Lock()
 			for root, drive := range l.drives {
 				if strings.HasPrefix(path, root) {
