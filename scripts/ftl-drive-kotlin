@@ -14,4 +14,6 @@ if [ ! -d target -o \( "$(newest ./src)" -nt "$(newest ./target)" \) ]; then
   mvn compile
 fi
 
-exec mvn exec:java
+# This should be different in the production clone
+exec mvn exec:exec -Dexec.executable=java -Dexec.args="-classpath %classpath\
+  -XX:+AllowEnhancedClassRedefinition -XX:HotswapAgent=fatjar -DautoHotswap=true xyz.block.ftl.drive.MainKt"
