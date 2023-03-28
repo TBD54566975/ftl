@@ -14,7 +14,7 @@ platform "darwin" {
 
 on unpack {
   copy { from = "jbr/post-unpack.sh" to = "${root}/post-unpack.sh" mode = 0750 }
-  run { cmd = "${root}/post-unpack.sh ${dest}" }
+  run { cmd = "${root}/post-unpack.sh ${root}" }
 }
 
 version "17.0.6.b469.82" {
