@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -34,6 +33,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
+	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 // ModuleConfig is the configuration for an FTL module.
@@ -183,16 +183,22 @@ func writeError(w http.ResponseWriter, status int, msg string, args ...any) {
 // ServeHTTP because we want the local agent to also be able to serve Verbs directly via HTTP.
 func (l *Agent) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	verb := strings.TrimPrefix(r.URL.Path, "/")
+	cleanedPath := strings.TrimPrefix(r.URL.Path, "/")
 
 	// Root of server lists all the verbs.
-	if verb == "" {
+	if cleanedPath == "" {
 		resp, err := l.List(r.Context(), &ftlv1.ListRequest{})
 		if err != nil {
-			writeError(w, http.StatusBadGateway, "failed to list Verbs %q: %s", verb, err)
+			writeError(w, http.StatusBadGateway, "failed to list Verbs: %s", err)
 			return
 		}
 		_ = json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	verb, err := sdkgo.ParseVerbRef(cleanedPath)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "%s", err.Error())
 		return
 	}
 
@@ -206,7 +212,7 @@ func (l *Agent) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		req = []byte("{}")
 	}
 
-	resp, err := l.Call(r.Context(), &ftlv1.CallRequest{Verb: verb, Body: req})
+	resp, err := l.Call(r.Context(), &ftlv1.CallRequest{Verb: verb.ToProto(), Body: req})
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "failed to call Verb %q: %s", verb, err)
 		return
@@ -224,11 +230,16 @@ func (l *Agent) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallRe
 	logger := log.FromContext(ctx)
 	logger.Infof("Calling %s", req.Verb)
 	ctx = metadata.WithDirectRouting(ctx)
-	drive, err := l.findDrive(req.Verb)
+	drive, err := l.findDrive(req.Verb.ToFTL())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return drive.Client.Call(ctx, req)
+}
+
+// Send implements ftlv1.VerbServiceServer
+func (*Agent) Send(context.Context, *ftlv1.SendRequest) (*ftlv1.SendResponse, error) {
+	panic("unimplemented")
 }
 
 func (l *Agent) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
@@ -241,7 +252,9 @@ func (l *Agent) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListRe
 		}
 		out.Verbs = append(out.Verbs, resp.Verbs...)
 	}
-	sort.Strings(out.Verbs)
+	slices.SortFunc(out.Verbs, func(a, b *pschema.VerbRef) bool {
+		return a.Module < b.Module || (a.Module == b.Module && a.Name < b.Name)
+	})
 	return out, nil
 }
 

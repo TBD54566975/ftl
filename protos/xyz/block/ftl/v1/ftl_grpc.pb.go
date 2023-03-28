@@ -20,9 +20,11 @@ const _ = grpc.SupportPackageIsVersion7
 type VerbServiceClient interface {
 	// Ping service for readiness.
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	// Call a Verb on the Drive.
+	// Issue a synchronous call to a Verb.
 	Call(ctx context.Context, in *CallRequest, opts ...grpc.CallOption) (*CallResponse, error)
-	// List the Verbs available on the service.
+	// Issue an asynchronous call to a Verb.
+	Send(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error)
+	// List the available Verbs.
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 }
 
@@ -52,6 +54,15 @@ func (c *verbServiceClient) Call(ctx context.Context, in *CallRequest, opts ...g
 	return out, nil
 }
 
+func (c *verbServiceClient) Send(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error) {
+	out := new(SendResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.VerbService/Send", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *verbServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
 	out := new(ListResponse)
 	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.VerbService/List", in, out, opts...)
@@ -67,9 +78,11 @@ func (c *verbServiceClient) List(ctx context.Context, in *ListRequest, opts ...g
 type VerbServiceServer interface {
 	// Ping service for readiness.
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	// Call a Verb on the Drive.
+	// Issue a synchronous call to a Verb.
 	Call(context.Context, *CallRequest) (*CallResponse, error)
-	// List the Verbs available on the service.
+	// Issue an asynchronous call to a Verb.
+	Send(context.Context, *SendRequest) (*SendResponse, error)
+	// List the available Verbs.
 	List(context.Context, *ListRequest) (*ListResponse, error)
 }
 
@@ -82,6 +95,9 @@ func (UnimplementedVerbServiceServer) Ping(context.Context, *PingRequest) (*Ping
 }
 func (UnimplementedVerbServiceServer) Call(context.Context, *CallRequest) (*CallResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Call not implemented")
+}
+func (UnimplementedVerbServiceServer) Send(context.Context, *SendRequest) (*SendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Send not implemented")
 }
 func (UnimplementedVerbServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
@@ -134,6 +150,24 @@ func _VerbService_Call_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VerbService_Send_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VerbServiceServer).Send(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.VerbService/Send",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VerbServiceServer).Send(ctx, req.(*SendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _VerbService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListRequest)
 	if err := dec(in); err != nil {
@@ -166,6 +200,10 @@ var VerbService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Call",
 			Handler:    _VerbService_Call_Handler,
+		},
+		{
+			MethodName: "Send",
+			Handler:    _VerbService_Send_Handler,
 		},
 		{
 			MethodName: "List",

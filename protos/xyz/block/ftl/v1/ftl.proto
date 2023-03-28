@@ -10,11 +10,6 @@ option java_multiple_files = true;
 message PingRequest {}
 message PingResponse {}
 
-message FileChangeRequest {
-  string path = 1;
-}
-message FileChangeResponse {}
-
 message Metadata {
   message Pair {
     string key = 1;
@@ -26,7 +21,7 @@ message Metadata {
 message CallRequest {
   Metadata metadata = 1;
 
-  string verb = 2;
+  schema.VerbRef verb = 2;
   bytes body = 3;
 }
 message CallResponse {
@@ -43,24 +38,29 @@ message CallResponse {
 
 message ListRequest {}
 message ListResponse {
-  repeated string verbs = 1;
+  repeated schema.VerbRef verbs = 1;
 }
 
-message ServeRequest {
-  // Path to local module to serve.
-  string path = 1;
+message SendRequest {
+  Metadata metadata = 1;
+
+  schema.VerbRef verb = 2;
+  bytes body = 3;
 }
-message ServeResponse {}
+message SendResponse {}
 
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
 
-  // Call a Verb on the Drive.
+  // Issue a synchronous call to a Verb.
   rpc Call(CallRequest) returns (CallResponse);
 
-  // List the Verbs available on the service.
+  // Issue an asynchronous call to a Verb.
+  rpc Send(SendRequest) returns (SendResponse);
+
+  // List the available Verbs.
   rpc List(ListRequest) returns (ListResponse);
 }
 
@@ -73,6 +73,11 @@ message SyncSchemaResponse {
   // If false, there still may be more schema changes in the future.
   bool more = 2;
 }
+
+message FileChangeRequest {
+  string path = 1;
+}
+message FileChangeResponse {}
 
 // DevelService is the service that provides language-specific development and
 // deployment functionality.

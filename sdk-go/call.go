@@ -16,13 +16,13 @@ import (
 
 // Call a Verb through the Agent.
 func Call[Req, Resp any](ctx context.Context, verb func(ctx context.Context, req Req) (Resp, error), req Req) (resp Resp, err error) {
-	callee := VerbRef(verb)
+	callee := ToVerbRef(verb)
 	client := ClientFromContext(ctx)
 	reqData, err := json.Marshal(req)
 	if err != nil {
 		return resp, errors.Wrapf(err, "%s: failed to marshal request", callee)
 	}
-	cresp, err := client.Call(ctx, &ftlv1.CallRequest{Verb: callee, Body: reqData})
+	cresp, err := client.Call(ctx, &ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData})
 	if err != nil {
 		return resp, errors.Wrapf(err, "%s: failed to call Verb", callee)
 	}
@@ -42,13 +42,13 @@ func Call[Req, Resp any](ctx context.Context, verb func(ctx context.Context, req
 	}
 }
 
-// VerbRef returns the FTL reference for a Verb.
-func VerbRef[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) string {
+// ToVerbRef returns the FTL reference for a Verb.
+func ToVerbRef[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) VerbRef {
 	ref := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
 	return goRefToFTLRef(ref)
 }
 
-func goRefToFTLRef(ref string) string {
+func goRefToFTLRef(ref string) VerbRef {
 	parts := strings.Split(ref[strings.LastIndex(ref, "/")+1:], ".")
-	return parts[len(parts)-2] + "." + strcase.ToLowerCamel(parts[len(parts)-1])
+	return VerbRef{parts[len(parts)-2], strcase.ToLowerCamel(parts[len(parts)-1])}
 }

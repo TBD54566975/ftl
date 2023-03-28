@@ -166,17 +166,22 @@ func (s *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListR
 	module := s.moduleSchema.Load()
 	for _, verb := range module.Decls {
 		if verb, ok := verb.(*schema.Verb); ok {
-			out.Verbs = append(out.Verbs, module.Name+"."+verb.Name)
+			out.Verbs = append(out.Verbs, &pschema.VerbRef{Module: module.Name, Name: verb.Name})
 		}
 	}
 	return out, nil
 }
 
 func (s *Server) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
-	if metadata.IsDirectRouted(ctx) || strings.HasPrefix(req.Verb, s.module) {
+	if metadata.IsDirectRouted(ctx) || req.Verb.Module == s.module {
 		return s.plugin.Load().Client.Call(ctx, req)
 	}
 	return s.router.Call(ctx, req)
+}
+
+// Send implements ftlv1.VerbServiceServer
+func (*Server) Send(context.Context, *ftlv1.SendRequest) (*ftlv1.SendResponse, error) {
+	panic("unimplemented")
 }
 
 func (s *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {

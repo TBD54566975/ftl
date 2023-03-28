@@ -87,11 +87,11 @@ message Type {
     Float float = 2;
     String string = 3;
     Bool bool = 4;
-    Array array = 5;
-    Map map = 6;
-    VerbRef verbRef = 7;
-    DataRef dataRef = 8;
-    Time time = 9;
+    Time time = 5;
+    Array array = 6;
+    Map map = 7;
+    VerbRef verbRef = 8;
+    DataRef dataRef = 9;
   }
 }
 
