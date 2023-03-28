@@ -359,6 +359,7 @@ func (s *Server) writeGoMod() error {
 	}
 	defer goMod.Close() //nolint:gosec
 	fmt.Fprintf(goMod, "module main\n")
+	fmt.Fprintf(goMod, "require %s v0.0.0\n", s.goModule.Module.Mod.Path)
 	fmt.Fprintf(goMod, "replace %s => %s\n", s.goModule.Module.Mod.Path, s.Dir)
 	// Apply any custom replace directives that aren't replacing FTL modules.
 	for _, replace := range s.goModule.Replace {
@@ -376,7 +377,9 @@ func (s *Server) writeGoMod() error {
 	}
 	for _, module := range managedModules {
 		modulePath := s.modulePath(module)
-		fmt.Fprintf(goMod, "replace %s => %s\n", path.Join(syntheticGoPath, module.Name), modulePath)
+		goImportPath := path.Join(syntheticGoPath, module.Name)
+		fmt.Fprintf(goMod, "require %s v0.0.0\n", goImportPath)
+		fmt.Fprintf(goMod, "replace %s => %s\n", goImportPath, modulePath)
 	}
 	if s.FTLSource != "" {
 		fmt.Fprintf(goMod, "require github.com/TBD54566975/ftl v0.0.0\n")
