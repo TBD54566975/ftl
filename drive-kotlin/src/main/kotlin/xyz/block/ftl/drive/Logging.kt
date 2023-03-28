@@ -40,8 +40,7 @@ class Logging {
       logging.appender.context = logging.lc
       logging.appender.start()
 
-      logger("org.eclipse.jetty").level = Level.INFO
-      logger("io").level = Level.INFO
+      logger(Logger.ROOT_LOGGER_NAME).level = Level.INFO
     }
   }
 }
