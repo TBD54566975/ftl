@@ -3,7 +3,7 @@ package ftlv1
 import (
 	"strings"
 
-	option "github.com/jordan-bonecutter/goption"
+	"github.com/alecthomas/types"
 )
 
 func (m *Metadata) Set(key, value string) {
@@ -21,13 +21,13 @@ func (m *Metadata) Add(key, value string) {
 	m.Values = append(m.Values, &Metadata_Pair{Key: key, Value: value})
 }
 
-func (m *Metadata) Get(key string) option.Option[string] {
+func (m *Metadata) Get(key string) types.Option[string] {
 	for _, pair := range m.Values {
 		if strings.EqualFold(pair.Key, key) {
-			return option.Some(pair.Value)
+			return types.Some(pair.Value)
 		}
 	}
-	return option.None[string]()
+	return types.None[string]()
 }
 
 func (m *Metadata) GetAll(key string) (out []string) {

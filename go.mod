@@ -26,9 +26,9 @@ require (
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/errors v0.2.0
 	github.com/alecthomas/participle/v2 v2.0.0
+	github.com/alecthomas/types v0.0.0-20230329042226-25f53f031fd9
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/iancoleman/strcase v0.2.0
-	github.com/jordan-bonecutter/goption v1.0.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-isatty v0.0.17
 	golang.org/x/mod v0.8.0

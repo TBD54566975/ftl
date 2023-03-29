@@ -15,7 +15,7 @@ import (
 )
 
 // Call a Verb through the Agent.
-func Call[Req, Resp any](ctx context.Context, verb func(ctx context.Context, req Req) (Resp, error), req Req) (resp Resp, err error) {
+func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (resp Resp, err error) {
 	callee := ToVerbRef(verb)
 	client := ClientFromContext(ctx)
 	reqData, err := json.Marshal(req)

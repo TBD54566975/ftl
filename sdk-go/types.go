@@ -1,6 +1,7 @@
 package sdkgo
 
 import (
+	"context"
 	"strings"
 
 	"github.com/alecthomas/errors"
@@ -9,15 +10,25 @@ import (
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
+// A Verb is a function that can be called with an input and an output.
+type Verb[Req, Resp any] func(context.Context, Req) (Resp, error)
+
+// A Sink is a function that can be called with an input and no output.
+type Sink[Req any] func(context.Context, Req) error
+
 // Ref is a reference to a Verb or Data.
 type Ref[Proto proto.Message] struct {
 	Module string `json:"module,omitempty"`
 	Name   string `json:"name"`
 }
 
+// VerbRef is a reference to a Verb.
 type VerbRef = Ref[*pschema.VerbRef]
+
+// DataRef is a reference to a Data type.
 type DataRef = Ref[*pschema.DataRef]
 
+// ParseRef parses a reference from a string.
 func ParseRef[Proto proto.Message](ref string) (Ref[Proto], error) {
 	var out Ref[Proto]
 	return out, out.UnmarshalText([]byte(ref))

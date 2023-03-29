@@ -16,8 +16,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 	"github.com/fsnotify/fsnotify"
-	option "github.com/jordan-bonecutter/goption"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
@@ -47,7 +47,7 @@ type ModuleConfig struct {
 type driveContext struct {
 	*plugin.Plugin[ftlv1.VerbServiceClient]
 	develService ftlv1.DevelServiceClient
-	schema       atomic.Value[option.Option[*schema.Module]]
+	schema       atomic.Value[types.Option[*schema.Module]]
 	root         string
 	workingDir   string
 	config       ModuleConfig
@@ -327,7 +327,7 @@ func (l *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 			}
 			module := schema.ProtoToModule(resp.Schema)
 			l.schemaChanges.Publish(module)
-			drive.schema.Store(option.Some(module))
+			drive.schema.Store(types.Some(module))
 		}
 	})
 
