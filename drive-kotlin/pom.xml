@@ -181,6 +181,12 @@
       <type>pom</type>
     </dependency>
 
+    <dependency>
+      <groupId>org.hotswapagent</groupId>
+      <artifactId>hotswap-agent-core</artifactId>
+      <version>1.4.1</version>
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>ch.qos.logback</groupId>

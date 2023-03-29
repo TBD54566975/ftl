@@ -16,4 +16,4 @@ fi
 
 # This should be different in the production clone
 exec mvn exec:exec -Dexec.executable=java -Dexec.args="-classpath %classpath\
-  -XX:+AllowEnhancedClassRedefinition -XX:HotswapAgent=fatjar -DautoHotswap=true xyz.block.ftl.drive.MainKt"
+  -XX:+AllowEnhancedClassRedefinition -XX:HotswapAgent=fatjar xyz.block.ftl.drive.MainKt"
