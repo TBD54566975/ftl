@@ -14,9 +14,9 @@ require (
 require (
 	github.com/alecthomas/errors v0.2.0 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0 // indirect
+	github.com/alecthomas/types v0.0.0-20230329042226-25f53f031fd9 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/iancoleman/strcase v0.2.0 // indirect
-	github.com/jordan-bonecutter/goption v1.0.1 // indirect
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
