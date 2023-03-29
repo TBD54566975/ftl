@@ -17,7 +17,7 @@ func (l *listCmd) Run(ctx context.Context, client ftlv1.VerbServiceClient) error
 		return errors.WithStack(err)
 	}
 	for _, verb := range resp.Verbs {
-		fmt.Println(verb)
+		fmt.Printf("%s.%s\n", verb.Module, verb.Name)
 	}
 	return nil
 }

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/errors"
-	"google.golang.org/protobuf/proto"
 
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
@@ -16,30 +15,22 @@ type Verb[Req, Resp any] func(context.Context, Req) (Resp, error)
 // A Sink is a function that can be called with an input and no output.
 type Sink[Req any] func(context.Context, Req) error
 
-// Ref is a reference to a Verb or Data.
-type Ref[Proto proto.Message] struct {
+func ParseVerbRef(ref string) (VerbRef, error) {
+	m, n, err := parseRef(ref)
+	if err != nil {
+		return VerbRef{}, err
+	}
+	return VerbRef{Module: m, Name: n}, nil
+}
+func VerbRefFromProto(p *pschema.VerbRef) VerbRef { return VerbRef{Module: p.Module, Name: p.Name} }
+
+// VerbRef is a reference to a Verb.
+type VerbRef struct {
 	Module string `json:"module,omitempty"`
 	Name   string `json:"name"`
 }
 
-// VerbRef is a reference to a Verb.
-type VerbRef = Ref[*pschema.VerbRef]
-
-// DataRef is a reference to a Data type.
-type DataRef = Ref[*pschema.DataRef]
-
-// ParseRef parses a reference from a string.
-func ParseRef[Proto proto.Message](ref string) (Ref[Proto], error) {
-	var out Ref[Proto]
-	return out, out.UnmarshalText([]byte(ref))
-}
-
-func ParseVerbRef(ref string) (VerbRef, error)    { return ParseRef[*pschema.VerbRef](ref) }
-func VerbRefFromProto(p *pschema.VerbRef) VerbRef { return VerbRef{Module: p.Module, Name: p.Name} }
-func ParseDataRef(ref string) (DataRef, error)    { return ParseRef[*pschema.DataRef](ref) }
-func DataRefFromProto(p *pschema.DataRef) DataRef { return DataRef{Module: p.Module, Name: p.Name} }
-
-func (v *Ref[Proto]) UnmarshalText(text []byte) error {
+func (v *VerbRef) UnmarshalText(text []byte) error {
 	parts := strings.Split(string(text), ".")
 	if len(parts) != 2 {
 		return errors.Errorf("invalid reference %q", string(text))
@@ -49,21 +40,41 @@ func (v *Ref[Proto]) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (v Ref[Proto]) String() string {
-	return v.Module + "." + v.Name
+func (v VerbRef) String() string            { return v.Module + "." + v.Name }
+func (v VerbRef) ToProto() *pschema.VerbRef { return &pschema.VerbRef{Module: v.Module, Name: v.Name} }
+
+func ParseDataRef(ref string) (DataRef, error) {
+	m, n, err := parseRef(ref)
+	if err != nil {
+		return DataRef{}, err
+	}
+	return DataRef{Module: m, Name: n}, nil
+}
+func DataRefFromProto(p *pschema.DataRef) DataRef { return DataRef{Module: p.Module, Name: p.Name} }
+
+// DataRef is a reference to a Data type.
+type DataRef struct {
+	Module string `json:"module,omitempty"`
+	Name   string `json:"name"`
 }
 
-func (v Ref[Proto]) ToProto() Proto {
-	var p Proto
-	switch p := any(p).(type) {
-	case *pschema.VerbRef:
-		p.Module = v.Module
-		p.Name = v.Name
-	case *pschema.DataRef:
-		p.Module = v.Module
-		p.Name = v.Name
-	default:
-		panic("???")
+func (v *DataRef) UnmarshalText(text []byte) error {
+	parts := strings.Split(string(text), ".")
+	if len(parts) != 2 {
+		return errors.Errorf("invalid reference %q", string(text))
 	}
-	return p
+	v.Module = parts[0]
+	v.Name = parts[1]
+	return nil
+}
+
+func (v DataRef) String() string            { return v.Module + "." + v.Name }
+func (v DataRef) ToProto() *pschema.DataRef { return &pschema.DataRef{Module: v.Module, Name: v.Name} }
+
+func parseRef(s string) (string, string, error) {
+	parts := strings.Split(s, ".")
+	if len(parts) != 2 {
+		return "", "", errors.Errorf("invalid reference %q", s)
+	}
+	return parts[0], parts[1], nil
 }
