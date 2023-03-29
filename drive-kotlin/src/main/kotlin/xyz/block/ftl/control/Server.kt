@@ -5,6 +5,7 @@ import com.google.protobuf.ByteString
 import io.grpc.Status
 import xyz.block.ftl.Context
 import xyz.block.ftl.drive.verb.VerbDeck
+import xyz.block.ftl.protoext.fullyQualified
 import xyz.block.ftl.v1.CallRequest
 import xyz.block.ftl.v1.CallResponse
 import xyz.block.ftl.v1.DevelServiceGrpcKt
@@ -15,6 +16,7 @@ import xyz.block.ftl.v1.ListResponse
 import xyz.block.ftl.v1.PingRequest
 import xyz.block.ftl.v1.PingResponse
 import xyz.block.ftl.v1.VerbServiceGrpcKt
+import xyz.block.ftl.v1.schema.VerbRef
 
 class VerbServer(
   private val deck: VerbDeck
@@ -24,7 +26,8 @@ class VerbServer(
   override suspend fun ping(request: PingRequest): PingResponse = PingResponse.getDefaultInstance()
 
   override suspend fun call(request: CallRequest): CallResponse {
-    val verb = deck.lookupFullyQualifiedName(request.verb) ?: throw Status.NOT_FOUND.asException()
+    val verb = deck.lookupFullyQualifiedName(request.verb.fullyQualified)
+      ?: throw Status.NOT_FOUND.asException()
     val argument = gson.fromJson<Any>(request.body.toStringUtf8(), verb.argumentType.java)
     val reply: Any
     try {
@@ -45,7 +48,12 @@ class VerbServer(
 
   override suspend fun list(request: ListRequest): ListResponse {
     return ListResponse.newBuilder()
-      .addAllVerbs(deck.list().map { deck.fullyQualifiedName(it) })
+      .addAllVerbs(deck.list().map {
+        VerbRef.newBuilder()
+          .setModule(deck.module)
+          .setName(it.qualifiedName)
+          .build()
+      })
       .build()
   }
 }

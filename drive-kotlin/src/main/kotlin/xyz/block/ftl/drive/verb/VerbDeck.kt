@@ -27,7 +27,8 @@ class VerbDeck {
   data class VerbId(val qualifiedName: String)
   data class VerbSignature(val verbId: VerbId, val argumentType: KClass<*>)
 
-  private var module: String? = null
+  var module: String? = null
+    private set
   private val verbs = ConcurrentHashMap<VerbId, VerbCassette<out Any>>()
   private val probes = CopyOnWriteArrayList<TracingProbe>()
 
@@ -47,13 +48,13 @@ class VerbDeck {
           clazz.methodInfo
             .filter { info -> info.hasAnnotation(Verb::class.java) }
             .forEach { info ->
-            logger.info("      @Verb ${info.name}()")
-            val function = info.loadClassAndGetMethod().kotlinFunction!!
+              logger.info("      @Verb ${info.name}()")
+              val function = info.loadClassAndGetMethod().kotlinFunction!!
 
-            val verbId = toId(function)
-            @Suppress("UNCHECKED_CAST")
-            verbs[verbId] = VerbCassette(verbId, kClass, function as KFunction1<Any, Any>)
-          }
+              val verbId = toId(function)
+              @Suppress("UNCHECKED_CAST")
+              verbs[verbId] = VerbCassette(verbId, kClass, function as KFunction1<Any, Any>)
+            }
         }
       }
 
