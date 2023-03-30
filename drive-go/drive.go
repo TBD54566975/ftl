@@ -17,6 +17,7 @@ import (
 
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
+	"github.com/fsnotify/fsnotify"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
@@ -45,8 +46,8 @@ type Config struct {
 	Dir        string        `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
 }
 
-// New creates a new DevelService for a directory of Go Verbs.
-func New(ctx context.Context, config Config) (*Server, error) {
+// Run creates and starts a new DevelService for a directory of Go Verbs.
+func Run(ctx context.Context, config Config) (*Server, error) {
 	logger := log.FromContext(ctx)
 	goModFile := filepath.Join(config.Dir, "go.mod")
 	_, err := os.Stat(goModFile)
@@ -67,12 +68,15 @@ func New(ctx context.Context, config Config) (*Server, error) {
 		Config:         config,
 		router:         router,
 		module:         config.Module,
+		wg:             &errgroup.Group{},
 		goModule:       goModule,
 		triggerRebuild: make(chan struct{}, 64),
 		moduleSchema:   eventsource.New[*schema.Module](),
 	}
 
 	logger.Infof("Starting")
+
+	s.wg.Go(func() error { return s.watchForChanges(ctx) })
 
 	// Build and start the sub-process.
 	exe, err := s.rebuild(ctx)
@@ -87,7 +91,7 @@ func New(ctx context.Context, config Config) (*Server, error) {
 	}
 	s.plugin.Store(plugin)
 
-	go s.restartModuleOnExit(ctx, cmdCtx)
+	s.wg.Go(func() error { return s.restartModuleOnExit(ctx, cmdCtx) })
 
 	logger.Infof("Online")
 	return s, nil
@@ -101,6 +105,7 @@ type Server struct {
 	router         ftlv1.VerbServiceClient
 	module         string
 	goModule       *modfile.File
+	wg             *errgroup.Group
 	triggerRebuild chan struct{}
 
 	fullSchema   atomic.Value[schema.Schema]
@@ -110,6 +115,11 @@ type Server struct {
 
 	rebuildMu   sync.Mutex
 	lastRebuild time.Time
+}
+
+// Wait for the server to exit.
+func (s *Server) Wait() error {
+	return errors.WithStack(s.wg.Wait())
 }
 
 func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
@@ -184,30 +194,30 @@ func (*Server) Send(context.Context, *ftlv1.SendRequest) (*ftlv1.SendResponse, e
 	panic("unimplemented")
 }
 
-func (s *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
-	_, err := s.rebuild(ctx)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	err = s.plugin.Load().Cmd.Kill(syscall.SIGHUP)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return &ftlv1.FileChangeResponse{}, errors.WithStack(err)
-}
+// func (s *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
+// 	_, err := s.rebuild(ctx)
+// 	if err != nil {
+// 		return nil, errors.WithStack(err)
+// 	}
+// 	err = s.plugin.Load().Cmd.Kill(syscall.SIGHUP)
+// 	if err != nil {
+// 		return nil, errors.WithStack(err)
+// 	}
+// 	return &ftlv1.FileChangeResponse{}, errors.WithStack(err)
+// }
 
 func (*Server) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
 	return &ftlv1.PingResponse{}, nil
 }
 
 // Restart the FTL hot reload module if it terminates unexpectedly.
-func (s *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
+func (s *Server) restartModuleOnExit(ctx, cmdCtx context.Context) error {
 	logger := log.FromContext(ctx)
 	for {
 		select {
 		case <-ctx.Done():
 			_ = s.plugin.Load().Cmd.Kill(syscall.SIGTERM)
-			return
+			return nil
 
 		case <-cmdCtx.Done():
 			err := cmdCtx.Err()
@@ -216,7 +226,7 @@ func (s *Server) restartModuleOnExit(ctx, cmdCtx context.Context) {
 			exe, err := s.rebuild(ctx)
 			if err != nil {
 				logger.Errorf(err, "Failed to rebuild FTL module")
-				return
+				continue
 			}
 			var nextPlugin *plugin.Plugin[ftlv1.VerbServiceClient]
 			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, s.Config.Module, s.Config.Dir, exe, ftlv1.NewVerbServiceClient)
@@ -391,6 +401,44 @@ func (s *Server) writeGoMod() error {
 		fmt.Fprintf(goMod, "replace github.com/TBD54566975/ftl => %s\n", s.FTLSource)
 	}
 	return nil
+}
+
+func (s *Server) watchForChanges(ctx context.Context) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if err = watcher.Add(s.Dir); err != nil {
+		return errors.WithStack(err)
+	}
+
+	logger := log.FromContext(ctx)
+	for {
+		select {
+		case event := <-watcher.Events:
+			if event.Op&fsnotify.Chmod == fsnotify.Chmod {
+				continue
+			}
+			path := event.Name
+			logger.Debugf("File changed, notifying drives: %s", path)
+
+			_, err := s.rebuild(ctx)
+			if err != nil {
+				return errors.Wrapf(err, "failed to rebuild after file change")
+			}
+			err = s.plugin.Load().Cmd.Kill(syscall.SIGHUP)
+			if err != nil {
+				return errors.Wrapf(err, "failed to send SIGHUP to plugin")
+			}
+
+		case err := <-watcher.Errors:
+			logger.Warnf("File watcher error: %s", err)
+			return errors.Wrapf(err, "file watcher error")
+
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 func (s *Server) sendSchema(stream ftlv1.DevelService_SyncSchemaServer, module *schema.Module) error {

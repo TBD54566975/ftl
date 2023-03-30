@@ -17,12 +17,9 @@ import (
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
-	"github.com/fsnotify/fsnotify"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/exec"
@@ -55,7 +52,6 @@ type driveContext struct {
 
 type Agent struct {
 	lock          sync.RWMutex
-	watcher       *fsnotify.Watcher
 	drives        map[string]*driveContext
 	schemaChanges *pubsub.Topic[*schema.Module]
 	wg            *errgroup.Group
@@ -67,17 +63,11 @@ var _ ftlv1.DevelServiceServer = (*Agent)(nil)
 
 // New creates a new local agent.
 func New(ctx context.Context) (*Agent, error) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
 	e := &Agent{
-		watcher:       watcher,
 		drives:        map[string]*driveContext{},
 		wg:            &errgroup.Group{},
 		schemaChanges: pubsub.New[*schema.Module](),
 	}
-	e.wg.Go(func() error { return e.watch(ctx) })
 	return e, nil
 }
 
@@ -147,11 +137,6 @@ func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
 
 	l.lock.Lock()
 	defer l.lock.Unlock()
-
-	err = l.watcher.Add(dir)
-	if err != nil {
-		return errors.WithStack(err)
-	}
 
 	dctx := &driveContext{
 		Plugin:       verbServicePlugin,
@@ -262,10 +247,6 @@ func (l *Agent) Ping(ctx context.Context, req *ftlv1.PingRequest) (*ftlv1.PingRe
 	return &ftlv1.PingResponse{}, nil
 }
 
-func (*Agent) FileChange(context.Context, *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
-	return nil, errors.WithStack(status.Error(codes.Unimplemented, "not implemented"))
-}
-
 func (l *Agent) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 	drives := l.allDrives()
 	slices.SortStableFunc(drives, func(a, b *driveContext) bool {
@@ -368,37 +349,4 @@ func (l *Agent) sendSchema(stream ftlv1.DevelService_SyncSchemaClient, module *s
 		return errors.WithStack(err)
 	}
 	return nil
-}
-
-// Watch FTL modules for changes and notify the Drives.
-func (l *Agent) watch(ctx context.Context) error {
-	logger := log.FromContext(ctx)
-	for {
-		select {
-		case event := <-l.watcher.Events:
-			if event.Op&fsnotify.Chmod == fsnotify.Chmod {
-				continue
-			}
-			path := event.Name
-			logger.Debugf("File changed, notifying drives: %s", path)
-			l.lock.Lock()
-			for root, drive := range l.drives {
-				if strings.HasPrefix(path, root) {
-					_, err := drive.develService.FileChange(ctx, &ftlv1.FileChangeRequest{Path: path})
-					if err != nil {
-						l.lock.Unlock()
-						return errors.WithStack(err)
-					}
-				}
-			}
-			l.lock.Unlock()
-
-		case err := <-l.watcher.Errors:
-			logger.Warnf("File watcher error: %s", err)
-			return err
-
-		case <-ctx.Done():
-			return nil
-		}
-	}
 }

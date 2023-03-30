@@ -9,8 +9,6 @@ import xyz.block.ftl.protoext.fullyQualified
 import xyz.block.ftl.v1.CallRequest
 import xyz.block.ftl.v1.CallResponse
 import xyz.block.ftl.v1.DevelServiceGrpcKt
-import xyz.block.ftl.v1.FileChangeRequest
-import xyz.block.ftl.v1.FileChangeResponse
 import xyz.block.ftl.v1.ListRequest
 import xyz.block.ftl.v1.ListResponse
 import xyz.block.ftl.v1.PingRequest
@@ -60,6 +58,4 @@ class VerbServer(
 
 class DevelServer() : DevelServiceGrpcKt.DevelServiceCoroutineImplBase() {
   override suspend fun ping(request: PingRequest): PingResponse = PingResponse.getDefaultInstance()
-  override suspend fun fileChange(request: FileChangeRequest): FileChangeResponse =
-    FileChangeResponse.getDefaultInstance()
 }

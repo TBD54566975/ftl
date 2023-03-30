@@ -74,11 +74,6 @@ message SyncSchemaResponse {
   bool more = 2;
 }
 
-message FileChangeRequest {
-  string path = 1;
-}
-message FileChangeResponse {}
-
 // DevelService is the service that provides language-specific development and
 // deployment functionality.
 //
@@ -92,9 +87,4 @@ service DevelService {
   //
   // Each request and response contains the schema for a single module.
   rpc SyncSchema(stream SyncSchemaRequest) returns (stream SyncSchemaResponse);
-
-  // Called when a file is changed.
-  //
-  // The Drive should hot reload the module if a change to the file warrants it.
-  rpc FileChange(FileChangeRequest) returns (FileChangeResponse);
 }

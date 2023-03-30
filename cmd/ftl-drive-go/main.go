@@ -10,6 +10,6 @@ import (
 )
 
 func main() {
-	plugin.Start(context.Background(), os.Getenv("FTL_MODULE"), drivego.New, ftlv1.RegisterVerbServiceServer,
+	plugin.Start(context.Background(), os.Getenv("FTL_MODULE"), drivego.Run, ftlv1.RegisterVerbServiceServer,
 		plugin.RegisterAdditionalServer[*drivego.Server](ftlv1.RegisterDevelServiceServer))
 }

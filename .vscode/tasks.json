@@ -1,0 +1,38 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "go",
+			"label": "go: test workspace",
+			"command": "test",
+			"args": [
+				"./..."
+			],
+			"problemMatcher": [
+				"$go"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "cd ${workspaceFolder}; go test ./..."
+		},
+		{
+			"type": "process",
+			"label": "go: lint",
+			"command": "golangci-lint",
+			"args": [
+				"run",
+				"./..."
+			],
+			"problemMatcher": [
+				"$eslint-compact"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "cd ${workspaceFolder}; golangci-lint run"
+		}
+	]
+}

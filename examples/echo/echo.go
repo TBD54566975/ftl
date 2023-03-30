@@ -25,5 +25,5 @@ func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 		return EchoResponse{}, err
 	}
 	t := time.Unix(int64(tresp.Time), 0)
-	return EchoResponse{Message: fmt.Sprintf("Hello, %s! It is %s!", req.Name, t)}, nil
+	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name, t)}, nil
 }

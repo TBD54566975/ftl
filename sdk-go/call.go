@@ -43,7 +43,7 @@ func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (re
 }
 
 // ToVerbRef returns the FTL reference for a Verb.
-func ToVerbRef[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) VerbRef {
+func ToVerbRef[Req, Resp any](verb Verb[Req, Resp]) VerbRef {
 	ref := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
 	return goRefToFTLRef(ref)
 }
