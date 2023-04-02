@@ -112,7 +112,11 @@ func visitCallExpr(verb *schema.Verb, node *ast.CallExpr, pkg *packages.Package)
 	if moduleName == pkg.Name {
 		moduleName = ""
 	}
-	ref := &schema.VerbRef{Module: moduleName, Name: strcase.ToLowerCamel(verbFn.Name())}
+	ref := &schema.VerbRef{
+		Pos:    goPosToSchemaPos(node.Pos()),
+		Module: moduleName,
+		Name:   strcase.ToLowerCamel(verbFn.Name()),
+	}
 	verb.AddCall(ref)
 	return nil
 }
@@ -263,7 +267,7 @@ func parseType(pkg *packages.Package, module *schema.Module, node ast.Node, tnod
 			return &schema.String{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		case types.Int:
-			return &schema.Int{}, nil
+			return &schema.Int{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		case types.Bool:
 			return &schema.Bool{Pos: goPosToSchemaPos(node.Pos())}, nil
@@ -276,8 +280,7 @@ func parseType(pkg *packages.Package, module *schema.Module, node ast.Node, tnod
 		}
 
 	case *types.Struct:
-		ref, err := parseStruct(pkg, module, node, tnode)
-		return ref, err
+		return parseStruct(pkg, module, node, tnode)
 
 	case *types.Map:
 		return parseMap(pkg, module, node, tnode)
