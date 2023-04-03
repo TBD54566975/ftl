@@ -117,6 +117,13 @@ func Spawn[Client PingableClient](
 	pluginSocket := socket.Socket{Network: "tcp", Addr: addr.String()}
 	logger.Debugf("Spawning plugin on %s", pluginSocket)
 	cmd := exec.Command(ctx, dir, exe)
+
+	// Send the plugin's stdout to the logger.
+	cmd.Stderr = nil
+	pipe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
 	cmd.Env = append(cmd.Env, "FTL_PLUGIN_ENDPOINT="+pluginSocket.String())
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
 	cmd.Env = append(cmd.Env, opts.envars...)
@@ -127,6 +134,13 @@ func Spawn[Client PingableClient](
 	var cancelWithCause context.CancelCauseFunc
 	cmdCtx, cancelWithCause = context.WithCancelCause(ctx)
 	go func() { cancelWithCause(cmd.Wait()) }()
+
+	go func() {
+		err := log.JSONStreamer(pipe, logger, log.Info)
+		if err != nil {
+			logger.Errorf(err, "Error streaming plugin logs.")
+		}
+	}()
 
 	defer func() {
 		if err != nil {

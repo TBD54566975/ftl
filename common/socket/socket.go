@@ -1,3 +1,4 @@
+// Package socket is a type to represent a (network, addr) pair.
 package socket
 
 import (
@@ -12,9 +13,16 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// Socket represents a (network, addr) pair. Its serialised form is a URI:
+// tcp://127.0.0.1:8080 or unix:///tmp/foo.sock
 type Socket struct {
 	Network string
 	Addr    string
+}
+
+// Valid returns true if the Socket is valid.
+func (s Socket) Valid() bool {
+	return s.Network != "" && s.Addr != ""
 }
 
 func (s Socket) String() string {
@@ -42,9 +50,6 @@ func Dialer(ctx context.Context, addr string) (net.Conn, error) {
 // Dial a Socket.
 func Dial(ctx context.Context, s Socket) (net.Conn, error) {
 	conn, err := (&net.Dialer{}).DialContext(ctx, s.Network, s.Addr)
-	if err != nil {
-
-	}
 	return conn, errors.WithStack(err)
 }
 
@@ -52,11 +57,11 @@ func Dial(ctx context.Context, s Socket) (net.Conn, error) {
 //
 // TODO: Extend this to support TLS etc. automatically.
 func DialGRPC(ctx context.Context, s Socket, options ...grpc.DialOption) (*grpc.ClientConn, error) {
-	conn, err := grpc.DialContext(
-		ctx, s.String(),
+	options = append([]grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(Dialer),
-	)
+	}, options...)
+	conn, err := grpc.DialContext(ctx, s.String(), options...)
 	return conn, errors.WithStack(err)
 }
 

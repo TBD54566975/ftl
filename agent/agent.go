@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/alecthomas/atomic"
@@ -19,7 +21,10 @@ import (
 	"github.com/alecthomas/types"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/exec"
@@ -27,6 +32,7 @@ import (
 	"github.com/TBD54566975/ftl/common/metadata"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/pubsub"
+	"github.com/TBD54566975/ftl/common/socket"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
@@ -51,10 +57,13 @@ type driveContext struct {
 }
 
 type Agent struct {
-	lock          sync.RWMutex
-	drives        map[string]*driveContext
+	lock   sync.RWMutex
+	drives map[string]*driveContext
+	// Each time any module managed by the agent changes, a new schema is
+	// published on this topic.
 	schemaChanges *pubsub.Topic[*schema.Module]
 	wg            *errgroup.Group
+	listen        socket.Socket
 }
 
 var _ http.Handler = (*Agent)(nil)
@@ -62,13 +71,37 @@ var _ ftlv1.VerbServiceServer = (*Agent)(nil)
 var _ ftlv1.DevelServiceServer = (*Agent)(nil)
 
 // New creates a new local agent.
-func New(ctx context.Context) (*Agent, error) {
+func New(ctx context.Context, listen socket.Socket) (*Agent, error) {
 	e := &Agent{
 		drives:        map[string]*driveContext{},
 		wg:            &errgroup.Group{},
 		schemaChanges: pubsub.New[*schema.Module](),
+		listen:        listen,
 	}
 	return e, nil
+}
+
+// Serve starts the agent server.
+func (l *Agent) Serve(ctx context.Context) error {
+	srv := socket.NewGRPCServer(ctx)
+	// Start agent gRPC and REST servers.
+	reflection.Register(srv)
+	ftlv1.RegisterVerbServiceServer(srv, l)
+	ftlv1.RegisterDevelServiceServer(srv, l)
+
+	mixedHandler := newHTTPandGRPCMux(l, srv)
+	http2Server := &http2.Server{}
+	http1Server := &http.Server{
+		Handler:           h2c.NewHandler(mixedHandler, http2Server),
+		ReadHeaderTimeout: time.Second * 30,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+	}
+
+	listener, err := socket.Listen(l.listen)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return errors.WithStack(http1Server.Serve(listener))
 }
 
 // Drives returns the list of active drives.
@@ -118,6 +151,8 @@ func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
 	verbServicePlugin, cmdCtx, err := plugin.Spawn(ctx, config.Module, dir, exe, ftlv1.NewVerbServiceClient,
 		plugin.WithEnvars("FTL_MODULE_ROOT="+dir),
 		plugin.WithEnvars("FTL_MODULE="+config.Module),
+		// Used by sub-processes to call back into FTL.
+		plugin.WithEnvars("FTL_ENDPOINT="+l.listen.String()),
 		plugin.WithExtraClient(&develClient, ftlv1.NewDevelServiceClient),
 	)
 	if err != nil {
@@ -349,4 +384,14 @@ func (l *Agent) sendSchema(stream ftlv1.DevelService_SyncSchemaClient, module *s
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+func newHTTPandGRPCMux(httpHand http.Handler, grpcHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("content-type"), "application/grpc") {
+			grpcHandler.ServeHTTP(w, r)
+			return
+		}
+		httpHand.ServeHTTP(w, r)
+	})
 }

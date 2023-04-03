@@ -19,8 +19,8 @@ import (
 )
 
 type serveCli struct {
-	LogConfig log.Config    `embed:"" group:"Logging:"`
-	Socket    socket.Socket `help:"Socket to listen on." env:"FTL_PLUGIN_ENDPOINT" required:""`
+	LogConfig log.Config    `prefix:"log-" embed:"" group:"Logging:"`
+	Bind      socket.Socket `help:"Socket to listen on." env:"FTL_PLUGIN_ENDPOINT" required:""`
 	kong.Plugins
 }
 
@@ -67,10 +67,16 @@ func Start[Impl any, Iface any, Config any](
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	logger := log.Configure(os.Stderr, cli.LogConfig).Sub(name, log.Default)
+
+	// Configure logging to JSON on stdout. This will be read by the parent process.
+	logConfig := cli.LogConfig
+	logConfig.JSON = true
+	logger := log.Configure(os.Stderr, logConfig)
+
+	logger = logger.Sub(name, log.Default)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	logger.Debugf("Starting on %s", cli.Socket)
+	logger.Debugf("Starting on %s", cli.Bind)
 
 	// Signal handling.
 	sigch := make(chan os.Signal, 1)
@@ -86,7 +92,7 @@ func Start[Impl any, Iface any, Config any](
 	svc, err := create(ctx, config)
 	kctx.FatalIfErrorf(err)
 
-	l, err := socket.Listen(cli.Socket)
+	l, err := socket.Listen(cli.Bind)
 	kctx.FatalIfErrorf(err)
 	gs := socket.NewGRPCServer(ctx)
 	reflection.Register(gs)

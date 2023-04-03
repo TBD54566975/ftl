@@ -6,16 +6,18 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"time"
 )
 
 var _ Interface = (*Logger)(nil)
 
 type Entry struct {
-	Level   Level    `json:"level"`
-	Scope   []string `json:"scope,omitempty"`
-	Message string   `json:"message"`
+	Time    time.Time `json:"-"`
+	Level   Level     `json:"level"`
+	Scope   []string  `json:"scope,omitempty"`
+	Message string    `json:"message"`
 
-	Error error `json:"error,omitempty"`
+	Error error `json:"-"`
 }
 
 // Logger is the concrete logger.
@@ -51,6 +53,9 @@ func (l *Logger) Level() Level {
 func (l *Logger) Log(entry Entry) {
 	if entry.Level < l.level {
 		return
+	}
+	if entry.Time.IsZero() {
+		entry.Time = time.Now()
 	}
 	entry.Scope = l.scope
 	if err := l.sink.Log(entry); err != nil {
