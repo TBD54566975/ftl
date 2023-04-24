@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Run go mod tidy on all modules
-find . -name 'go.mod' -print0 | xargs -0 dirname | while read dir; do (cd "$dir" && go mod tidy); done
+find . -name 'go.mod' ! -path '*/.ftl/*' -print0 | xargs -0 dirname | while read dir; do (echo "$dir"; cd "$dir" && go mod tidy); done
 
 # gofmt -w -s
 go list -f '{{range .GoFiles}}{{$.Dir}}/{{.}}
