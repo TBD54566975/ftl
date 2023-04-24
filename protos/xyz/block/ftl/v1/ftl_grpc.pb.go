@@ -374,3 +374,200 @@ var DevelService_ServiceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "xyz/block/ftl/v1/ftl.proto",
 }
+
+// BackplaneServiceClient is the client API for BackplaneService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type BackplaneServiceClient interface {
+	// Ping service for readiness.
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
+	// Get list of artefacts that differ between the server and client.
+	GetArtefactDiffs(ctx context.Context, in *GetArtefactDiffsRequest, opts ...grpc.CallOption) (*GetArtefactDiffsResponse, error)
+	// Upload artefacts to the server.
+	UploadArtefact(ctx context.Context, opts ...grpc.CallOption) (BackplaneService_UploadArtefactClient, error)
+}
+
+type backplaneServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewBackplaneServiceClient(cc grpc.ClientConnInterface) BackplaneServiceClient {
+	return &backplaneServiceClient{cc}
+}
+
+func (c *backplaneServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.BackplaneService/Ping", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *backplaneServiceClient) GetArtefactDiffs(ctx context.Context, in *GetArtefactDiffsRequest, opts ...grpc.CallOption) (*GetArtefactDiffsResponse, error) {
+	out := new(GetArtefactDiffsResponse)
+	err := c.cc.Invoke(ctx, "/xyz.block.ftl.v1.BackplaneService/GetArtefactDiffs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *backplaneServiceClient) UploadArtefact(ctx context.Context, opts ...grpc.CallOption) (BackplaneService_UploadArtefactClient, error) {
+	stream, err := c.cc.NewStream(ctx, &BackplaneService_ServiceDesc.Streams[0], "/xyz.block.ftl.v1.BackplaneService/UploadArtefact", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &backplaneServiceUploadArtefactClient{stream}
+	return x, nil
+}
+
+type BackplaneService_UploadArtefactClient interface {
+	Send(*UploadArtefactRequest) error
+	CloseAndRecv() (*UploadArtefactResponse, error)
+	grpc.ClientStream
+}
+
+type backplaneServiceUploadArtefactClient struct {
+	grpc.ClientStream
+}
+
+func (x *backplaneServiceUploadArtefactClient) Send(m *UploadArtefactRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *backplaneServiceUploadArtefactClient) CloseAndRecv() (*UploadArtefactResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(UploadArtefactResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// BackplaneServiceServer is the server API for BackplaneService service.
+// All implementations should embed UnimplementedBackplaneServiceServer
+// for forward compatibility
+type BackplaneServiceServer interface {
+	// Ping service for readiness.
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
+	// Get list of artefacts that differ between the server and client.
+	GetArtefactDiffs(context.Context, *GetArtefactDiffsRequest) (*GetArtefactDiffsResponse, error)
+	// Upload artefacts to the server.
+	UploadArtefact(BackplaneService_UploadArtefactServer) error
+}
+
+// UnimplementedBackplaneServiceServer should be embedded to have forward compatible implementations.
+type UnimplementedBackplaneServiceServer struct {
+}
+
+func (UnimplementedBackplaneServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+}
+func (UnimplementedBackplaneServiceServer) GetArtefactDiffs(context.Context, *GetArtefactDiffsRequest) (*GetArtefactDiffsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetArtefactDiffs not implemented")
+}
+func (UnimplementedBackplaneServiceServer) UploadArtefact(BackplaneService_UploadArtefactServer) error {
+	return status.Errorf(codes.Unimplemented, "method UploadArtefact not implemented")
+}
+
+// UnsafeBackplaneServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to BackplaneServiceServer will
+// result in compilation errors.
+type UnsafeBackplaneServiceServer interface {
+	mustEmbedUnimplementedBackplaneServiceServer()
+}
+
+func RegisterBackplaneServiceServer(s grpc.ServiceRegistrar, srv BackplaneServiceServer) {
+	s.RegisterService(&BackplaneService_ServiceDesc, srv)
+}
+
+func _BackplaneService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BackplaneServiceServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.BackplaneService/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BackplaneServiceServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BackplaneService_GetArtefactDiffs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetArtefactDiffsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BackplaneServiceServer).GetArtefactDiffs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xyz.block.ftl.v1.BackplaneService/GetArtefactDiffs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BackplaneServiceServer).GetArtefactDiffs(ctx, req.(*GetArtefactDiffsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BackplaneService_UploadArtefact_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(BackplaneServiceServer).UploadArtefact(&backplaneServiceUploadArtefactServer{stream})
+}
+
+type BackplaneService_UploadArtefactServer interface {
+	SendAndClose(*UploadArtefactResponse) error
+	Recv() (*UploadArtefactRequest, error)
+	grpc.ServerStream
+}
+
+type backplaneServiceUploadArtefactServer struct {
+	grpc.ServerStream
+}
+
+func (x *backplaneServiceUploadArtefactServer) SendAndClose(m *UploadArtefactResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *backplaneServiceUploadArtefactServer) Recv() (*UploadArtefactRequest, error) {
+	m := new(UploadArtefactRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// BackplaneService_ServiceDesc is the grpc.ServiceDesc for BackplaneService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var BackplaneService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "xyz.block.ftl.v1.BackplaneService",
+	HandlerType: (*BackplaneServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Ping",
+			Handler:    _BackplaneService_Ping_Handler,
+		},
+		{
+			MethodName: "GetArtefactDiffs",
+			Handler:    _BackplaneService_GetArtefactDiffs_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "UploadArtefact",
+			Handler:       _BackplaneService_UploadArtefact_Handler,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "xyz/block/ftl/v1/ftl.proto",
+}

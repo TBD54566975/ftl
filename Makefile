@@ -1,4 +1,25 @@
-GEN_SCHEMA_PROTO = protos/xyz/block/ftl/v1/schema/schema.proto
+COMMON_LOG_IN = common/log/api.go
+COMMON_LOG_OUT = common/log/log_level_string.go
+
+SCHEMA_IN = schema/schema.go
+SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
+
+SQLC_IN = sqlc.yaml \
+	backplane/internal/sql/schema/*.sql \
+	backplane/internal/sql/queries.sql
+SQLC_OUT = backplane/internal/sql/db.go \
+	$(shell grep -q copyfrom backplane/internal/sql/queries.sql && echo backplane/internal/sql/copyfrom.go) \
+	backplane/internal/sql/models.go \
+	backplane/internal/sql/queries.sql.go
+
+PROTO_IN = protos/xyz/block/ftl/v1/ftl.proto \
+	protos/xyz/block/ftl/v1/schema/schema.proto
+PROTO_OUT = protos/xyz/block/ftl/v1/ftl_grpc.pb.go \
+	protos/xyz/block/ftl/v1/schema/schema.pb.go \
+	protos/xyz/block/ftl/v1/ftl.pb.go
+
+
+.DEFAULT_GOAL := help
 
 .PHONY: help
 help: ## This help.
@@ -9,13 +30,22 @@ dev: ## Run hot reload dev server.
 	reflex -d fancy -c reflex.conf  # https://github.com/cespare/reflex
 
 .PHONY: generate
-generate: ## Regenerate source.
-	ftl schema protobuf > $(GEN_SCHEMA_PROTO)~ && mv $(GEN_SCHEMA_PROTO)~ $(GEN_SCHEMA_PROTO)
-	buf format -w
-	buf lint
-	(cd protos && buf generate)
-	go generate ./...
+generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate source.
 
 .PHONY: protosync
 protosync: ## Synchronise external protos into FTL repo.
 	protosync
+
+$(PROTO_OUT): $(PROTO_IN)
+	buf format -w
+	buf lint
+	(cd protos && buf generate)
+
+$(SCHEMA_OUT): $(SCHEMA_IN)
+	ftl schema protobuf > $(SCHEMA_OUT)~ && mv $(SCHEMA_OUT)~ $(SCHEMA_OUT)
+
+$(SQLC_OUT): $(SQLC_IN)
+	sqlc generate --experimental
+
+$(COMMON_LOG_OUT): $(COMMON_LOG_IN)
+	go generate $<

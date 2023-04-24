@@ -1,0 +1,9 @@
+#!/bin/bash
+
+flags="-i"
+
+if [ -t 0 ]; then
+  flags="$flags -t"
+fi
+
+docker exec ${flags} ftl-db-1 psql -U postgres "$@"

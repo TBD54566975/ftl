@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1;
 
-import "google/protobuf/timestamp.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1;ftlv1";
@@ -50,20 +49,6 @@ message SendRequest {
 }
 message SendResponse {}
 
-message LogEntry {
-  enum Level {
-    TRACE = 0;
-    DEBUG = 1;
-    INFO = 2;
-    WARN = 3;
-    ERROR = 4;
-  }
-  string message = 1;
-  Level level = 2;
-  string source = 3;
-  google.protobuf.Timestamp timestamp = 4;
-}
-
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.
@@ -102,4 +87,30 @@ service DevelService {
   //
   // Each request and response contains the schema for a single module.
   rpc SyncSchema(stream SyncSchemaRequest) returns (stream SyncSchemaResponse);
+}
+
+message GetArtefactDiffsRequest {
+  repeated string client_digests = 1;
+}
+message GetArtefactDiffsResponse {
+  repeated string missing_digests = 1;
+}
+
+message UploadArtefactRequest {
+  string path = 1;
+  bool executable = 2;
+  string digest = 3;
+  bytes data = 4;
+}
+message UploadArtefactResponse {}
+
+service BackplaneService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse);
+
+  // Get list of artefacts that differ between the server and client.
+  rpc GetArtefactDiffs(GetArtefactDiffsRequest) returns (GetArtefactDiffsResponse);
+
+  // Upload artefacts to the server.
+  rpc UploadArtefact(stream UploadArtefactRequest) returns (UploadArtefactResponse);
 }
