@@ -32,7 +32,7 @@ release:
 	cd console && npm run build
 	rm -rf build
 	mkdir -p build
-	go build -o build/ftl -tags release -ldflags "-X github.com/TBD54566975/ftl/cmd/ftl.version=$(VERSION)" ./cmd/ftl 
+	go build -o build/ftl -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl 
 
 .PHONY: generate
 generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate source.
