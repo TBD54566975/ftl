@@ -4,8 +4,6 @@ github.com/alecthomas/assert/v2 v2.2.2 h1:Z/iVC0xZfWTaFNE6bA3z07T86hd45Xe2eLt6WV
 github.com/alecthomas/assert/v2 v2.2.2/go.mod h1:pXcQ2Asjp247dahGEmsZ6ru0UVwnkhktn7S0bBDLxvQ=
 github.com/alecthomas/atomic v0.1.0-alpha2 h1:dqwXmax66gXvHhsOS4pGPZKqYOlTkapELkLb3MNdlH8=
 github.com/alecthomas/atomic v0.1.0-alpha2/go.mod h1:zD6QGEyw49HIq19caJDc2NMXAy8rNi9ROrxtMXATfyI=
-github.com/alecthomas/errors v0.2.0 h1:UlVPtWHw4N5wdKjzDmMAiJGCWos/YgXT5XZ5QIXNgeA=
-github.com/alecthomas/errors v0.2.0/go.mod h1:0DQf6/xQp3f9rv+k72g2NmeTW2lC74kXA6b/8dN9BwY=
 github.com/alecthomas/errors v0.3.0 h1:ccEaE2WPoJcei4/j+AL/Je56PHbknO2cmNEljql8tTo=
 github.com/alecthomas/errors v0.3.0/go.mod h1:0DQf6/xQp3f9rv+k72g2NmeTW2lC74kXA6b/8dN9BwY=
 github.com/alecthomas/kong v0.7.1 h1:azoTh0IOfwlAX3qN9sHWTxACE2oV8Bg2gAwBsMwDQY4=
