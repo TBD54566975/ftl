@@ -3,6 +3,7 @@ package agent
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -38,6 +39,9 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
+
+//go:embed web/*
+var webStatic embed.FS
 
 // ModuleConfig is the configuration for an FTL module.
 //
@@ -89,7 +93,11 @@ func (l *Agent) Serve(ctx context.Context) error {
 	ftlv1.RegisterVerbServiceServer(srv, l)
 	ftlv1.RegisterDevelServiceServer(srv, l)
 
-	mixedHandler := newHTTPandGRPCMux(l, srv)
+	mux := http.NewServeMux()
+	mux.Handle("/web/", http.FileServer(http.FS(webStatic)))
+	mux.Handle("/", l)
+
+	mixedHandler := newHTTPandGRPCMux(mux, srv)
 	http2Server := &http2.Server{}
 	http1Server := &http.Server{
 		Handler:           h2c.NewHandler(mixedHandler, http2Server),
