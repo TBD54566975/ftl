@@ -20,7 +20,7 @@ func (r *serveCmd) Run(ctx context.Context, s socket.Socket) error {
 	defer cancel()
 
 	logger := log.FromContext(ctx).Sub("agent", log.Default)
-	logger.Infof("Starting FTL local agent")
+	logger.Warnf("Starting FTL local agent on http://%s", s.Addr)
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	agent, err := agent.New(ctx, s)

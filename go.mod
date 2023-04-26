@@ -32,7 +32,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/alecthomas/atomic v0.1.0-alpha2
-	github.com/alecthomas/errors v0.2.0
+	github.com/alecthomas/errors v0.3.0
 	github.com/alecthomas/participle/v2 v2.0.0
 	github.com/alecthomas/types v0.0.0-20230329042226-25f53f031fd9
 	github.com/fsnotify/fsnotify v1.6.0

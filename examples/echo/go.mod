@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	github.com/alecthomas/errors v0.2.0 // indirect
+	github.com/alecthomas/errors v0.3.0 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0 // indirect
 	github.com/alecthomas/types v0.0.0-20230329042226-25f53f031fd9 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect

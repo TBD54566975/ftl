@@ -3,7 +3,6 @@ package agent
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -34,14 +33,12 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/pubsub"
 	"github.com/TBD54566975/ftl/common/socket"
+	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
-
-//go:embed web/*
-var webStatic embed.FS
 
 // ModuleConfig is the configuration for an FTL module.
 //
@@ -93,11 +90,12 @@ func (l *Agent) Serve(ctx context.Context) error {
 	ftlv1.RegisterVerbServiceServer(srv, l)
 	ftlv1.RegisterDevelServiceServer(srv, l)
 
-	mux := http.NewServeMux()
-	mux.Handle("/web/", http.FileServer(http.FS(webStatic)))
-	mux.Handle("/", l)
+	c, err := console.Server(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
-	mixedHandler := newHTTPandGRPCMux(mux, srv)
+	mixedHandler := newHTTPandGRPCMux(c, srv)
 	http2Server := &http2.Server{}
 	http1Server := &http.Server{
 		Handler:           h2c.NewHandler(mixedHandler, http2Server),
@@ -109,6 +107,7 @@ func (l *Agent) Serve(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	return errors.WithStack(http1Server.Serve(listener))
 }
 
