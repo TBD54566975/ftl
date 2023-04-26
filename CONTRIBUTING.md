@@ -40,7 +40,7 @@ Once the Hermit environment is activated you can type the following to start a
 hot-reloading ftl agent:
 
 ```
-$ make dev
+$ ftl serve ./examples/echo ./examples/time
 ```
 
 

@@ -1,3 +1,5 @@
+VERSION = $(shell git describe --tags --always --dirty)
+
 COMMON_LOG_IN = common/log/api.go
 COMMON_LOG_OUT = common/log/log_level_string.go
 
@@ -25,9 +27,12 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftl_grpc.pb.go \
 help: ## This help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: dev
-dev: ## Run hot reload dev server.
-	reflex -d fancy -c reflex.conf  # https://github.com/cespare/reflex
+.PHONY:
+release:
+	cd console && npm run build
+	rm -rf build
+	mkdir -p build
+	go build -o build/ftl -tags release -ldflags "-X github.com/TBD54566975/ftl/cmd/ftl.version=$(VERSION)" ./cmd/ftl 
 
 .PHONY: generate
 generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate source.
