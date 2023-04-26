@@ -29,6 +29,11 @@ func (d *DAO) CreateModule(ctx context.Context, language, name string) (err erro
 	return errors.WithStack(err)
 }
 
+// func (d *DAO) GetArtefectDiff(ctx context.Context, haveDigests []string) (needDigests []string, err error) {
+// 	needDigests, err := d.db.GetArtefactDigests(ctx, haveDigests)
+// 	return needDigests, errors.WithStack(err)
+// }
+
 // CreateArtefact inserts a new artefact into the database and returns its ID.
 func (d *DAO) CreateArtefact(ctx context.Context, path string, executable bool, content []byte) (id int64, err error) {
 	sha256digest := sha256.Sum256(content)

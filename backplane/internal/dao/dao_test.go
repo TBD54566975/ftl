@@ -24,7 +24,7 @@ func TestDAO(t *testing.T) {
 	aid, err := bp.CreateArtefact(ctx, "dir/filename", true, []byte("test"))
 	assert.NoError(t, err)
 
-	module := &schema.Module{Decls: []schema.Decl{}}
+	module := &schema.Module{}
 	err = bp.CreateDeployment(ctx, "test", module, []int64{aid})
 	assert.NoError(t, err)
 

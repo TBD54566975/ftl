@@ -100,7 +100,7 @@ message UploadArtefactRequest {
   string path = 1;
   bool executable = 2;
   string digest = 3;
-  bytes data = 4;
+  bytes content = 4;
 }
 message UploadArtefactResponse {}
 

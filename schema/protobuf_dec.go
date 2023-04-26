@@ -9,7 +9,7 @@ func ProtoToSchema(s *pschema.Schema) *Schema {
 }
 
 func moduleListToSchema(s []*pschema.Module) []*Module {
-	out := []*Module{}
+	var out []*Module
 	for _, n := range s {
 		out = append(out, ProtoToModule(n))
 	}
@@ -25,7 +25,7 @@ func ProtoToModule(s *pschema.Module) *Module {
 }
 
 func declListToSchema(s []*pschema.Decl) []Decl {
-	out := []Decl{}
+	var out []Decl
 	for _, n := range s {
 		switch n := n.Value.(type) {
 		case *pschema.Decl_Verb:
@@ -55,7 +55,7 @@ func dataToSchema(s *pschema.Data) *Data {
 }
 
 func fieldListToSchema(s []*pschema.Field) []*Field {
-	out := []*Field{}
+	var out []*Field
 	for _, n := range s {
 		out = append(out, fieldToSchema(n))
 	}
@@ -122,7 +122,7 @@ func mapToSchema(s *pschema.Map) *Map {
 }
 
 func metadataListToSchema(s []*pschema.Metadata) []Metadata {
-	out := []Metadata{}
+	var out []Metadata
 	for _, n := range s {
 		out = append(out, metadataToSchema(n))
 	}
@@ -140,7 +140,7 @@ func metadataToSchema(s *pschema.Metadata) Metadata {
 }
 
 func verbRefListToSchema(s []*pschema.VerbRef) []*VerbRef {
-	out := []*VerbRef{}
+	var out []*VerbRef
 	for _, n := range s {
 		out = append(out, verbRefToSchema(n))
 	}

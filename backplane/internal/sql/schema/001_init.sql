@@ -34,6 +34,8 @@ CREATE TABLE artefact_contents (
   content BYTEA NOT NULL
 );
 
+CREATE INDEX artefact_contents_artefact_id_idx ON artefact_contents (artefact_id);
+
 -- Associates a deployment with a set of artefacts.
 CREATE TABLE deployment_artefacts (
   deployment_id BIGINT NOT NULL REFERENCES deployments(id) ON DELETE CASCADE,
