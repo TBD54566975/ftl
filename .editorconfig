@@ -1,6 +1,6 @@
 root = true
 
-[*]
+[*.{js,ts,svelte,css,html}]
 indent_style = space
 indent_size = 2
 trim_trailing_whitespace = true
