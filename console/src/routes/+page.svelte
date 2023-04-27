@@ -5,7 +5,9 @@
         <div class="flex-none rounded-full p-1 text-green-400 bg-green-400/10">
           <div class="h-2 w-2 rounded-full bg-current" />
         </div>
-        <h2 class="min-w-0 text-sm font-semibold leading-6 text-white">
+        <h2
+          class="min-w-0 text-sm font-semibold leading-6 text-gray-600 dark:text-white"
+        >
           <a href="/modules/time" class="flex gap-x-2">
             <span class="truncate">Time</span>
             <span class="text-gray-400">/</span>
@@ -48,7 +50,9 @@
         <div class="flex-none rounded-full p-1 text-green-400 bg-green-400/10">
           <div class="h-2 w-2 rounded-full bg-current" />
         </div>
-        <h2 class="min-w-0 text-sm font-semibold leading-6 text-white">
+        <h2
+          class="min-w-0 text-sm font-semibold leading-6 text-gray-600 dark:text-white"
+        >
           <a href="/modules/echo" class="flex gap-x-2">
             <span class="truncate">Echo</span>
             <span class="text-gray-400">/</span>
