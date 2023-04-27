@@ -1,1 +1,1 @@
-<h1 class="text-white">Coming soon...</h1>
+<h1 class="dark:text-white">Coming soon...</h1>
