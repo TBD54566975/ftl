@@ -12,11 +12,11 @@ import (
 	"github.com/alecthomas/errors"
 )
 
-//go:embed all:build
+//go:embed all:dist
 var build embed.FS
 
 func Server(ctx context.Context) (http.Handler, error) {
-	dir, err := fs.Sub(build, "build")
+	dir, err := fs.Sub(build, "dist")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
