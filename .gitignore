@@ -5,5 +5,4 @@
 target/
 build/
 .ftl*/
-.svelte-kit
 .DS_Store

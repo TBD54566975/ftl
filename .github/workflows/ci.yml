@@ -39,3 +39,14 @@ jobs:
         run: golangci-lint run
       - name: go-check-sumtype
         run: go-check-sumtype ./...
+  console:
+    name: Console
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        run: ./bin/hermit env -r >> $GITHUB_ENV
+      - name: Console Lint
+        working-directory: console
+        run: npm run lint
