@@ -17,16 +17,19 @@ import (
 func Server(ctx context.Context) (http.Handler, error) {
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting console dev server")
+	output := logger.WriterAt(log.Debug)
 
 	cmd := exec.Command(ctx, "console", "npm", "install")
-	cmd.Stdout = nil
+	cmd.Stdout = output
+	cmd.Stderr = output
 	err := cmd.Run()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	cmd = exec.Command(ctx, "console", "npm", "run", "dev")
-	cmd.Stdout = nil
+	cmd.Stdout = output
+	cmd.Stderr = output
 	err = cmd.Start()
 	if err != nil {
 		return nil, errors.WithStack(err)
