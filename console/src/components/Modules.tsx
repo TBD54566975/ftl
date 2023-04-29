@@ -1,4 +1,5 @@
 import { ChevronRightIcon } from "@heroicons/react/20/solid";
+import { modules } from "../SampleData";
 
 const statuses = {
   offline: "text-gray-500 bg-gray-100/10",
@@ -9,28 +10,6 @@ const environments = {
   Staging: "text-gray-400 bg-gray-400/10 ring-gray-400/20",
   Production: "text-indigo-400 bg-indigo-400/10 ring-indigo-400/30",
 };
-const modules = [
-  {
-    id: 1,
-    href: "#",
-    projectName: "go",
-    teamName: "Time",
-    status: "offline",
-    statusText: "Initiated 1m 32s ago",
-    description: "Deploys from FTL",
-    environment: "Staging",
-  },
-  {
-    id: 2,
-    href: "#",
-    projectName: "kotlin",
-    teamName: "Echo",
-    status: "online",
-    statusText: "Deployed 3m ago",
-    description: "Deploys from FTL",
-    environment: "Production",
-  },
-];
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
