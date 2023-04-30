@@ -1,26 +1,14 @@
-import { ChevronRightIcon } from "@heroicons/react/20/solid";
-import { modules } from "../SampleData";
+import { ChevronRightIcon } from '@heroicons/react/20/solid'
+import { modules } from '../data/Modules'
+import { classNames } from '../utils'
+import { environments, statuses } from '../data/Types'
 
-const statuses = {
-  offline: "text-gray-500 bg-gray-100/10",
-  online: "text-green-400 bg-green-400/10",
-  error: "text-rose-400 bg-rose-400/10",
-};
-const environments = {
-  Staging: "text-gray-400 bg-gray-400/10 ring-gray-400/20",
-  Production: "text-indigo-400 bg-indigo-400/10 ring-indigo-400/30",
-};
-
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(" ");
-}
-
-export default function Modules() {
+export default function ModuleList() {
   return (
     <div className="py-4">
       <h2 className="text-base font-semibold dark:text-white">Modules</h2>
       <ul role="list" className="divide-y divide-black/5 dark:divide-white/5">
-        {modules.map((module) => (
+        {modules.map(module => (
           <li
             key={module.id}
             className="relative flex items-center space-x-4 py-4"
@@ -30,18 +18,16 @@ export default function Modules() {
                 <div
                   className={classNames(
                     statuses[module.status],
-                    "flex-none rounded-full p-1"
+                    'flex-none rounded-full p-1'
                   )}
                 >
                   <div className="h-2 w-2 rounded-full bg-current" />
                 </div>
                 <h2 className="min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white">
-                  <a href={module.href} className="flex gap-x-2">
-                    <span className="truncate">{module.teamName}</span>
+                  <a href={`modules/${module.id}`} className="flex gap-x-2">
+                    <span className="truncate">{module.name}</span>
                     <span className="text-gray-400">/</span>
-                    <span className="whitespace-nowrap">
-                      {module.projectName}
-                    </span>
+                    <span className="whitespace-nowrap">{module.language}</span>
                     <span className="absolute inset-0" />
                   </a>
                 </h2>
@@ -60,7 +46,7 @@ export default function Modules() {
             <div
               className={classNames(
                 environments[module.environment],
-                "rounded-full flex-none py-1 px-2 text-xs font-medium ring-1 ring-inset"
+                'rounded-full flex-none py-1 px-2 text-xs font-medium ring-1 ring-inset'
               )}
             >
               {module.environment}
@@ -73,5 +59,5 @@ export default function Modules() {
         ))}
       </ul>
     </div>
-  );
+  )
 }

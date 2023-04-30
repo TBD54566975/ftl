@@ -1,15 +1,15 @@
-import { Disclosure } from "@headlessui/react";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
-import { NavLink } from "react-router-dom";
+import { Disclosure } from '@headlessui/react'
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { NavLink } from 'react-router-dom'
+import { classNames } from '../utils'
 
 const navigation = [
-  { name: "Modules", href: "/", current: location.pathname === "/" },
-  { name: "Logs", href: "/logs", current: location.pathname === "/logs" },
-];
-
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(" ");
-}
+  {
+    name: 'Modules',
+    href: '/modules'
+  },
+  { name: 'Logs', href: '/logs' }
+]
 
 export default function Example() {
   return (
@@ -30,15 +30,15 @@ export default function Example() {
                     </div>
                     <div className="hidden md:block">
                       <div className="ml-10 flex items-baseline space-x-4">
-                        {navigation.map((item) => (
+                        {navigation.map(item => (
                           <NavLink
                             to={item.href}
                             className={({ isActive }) =>
                               classNames(
                                 isActive
-                                  ? "bg-indigo-700 text-white"
-                                  : "text-white hover:bg-indigo-500 hover:bg-opacity-75",
-                                "rounded-md px-3 py-2 text-sm font-medium"
+                                  ? 'bg-indigo-700 text-white'
+                                  : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
+                                'rounded-md px-3 py-2 text-sm font-medium'
                               )
                             }
                           >
@@ -71,18 +71,19 @@ export default function Example() {
 
               <Disclosure.Panel className="md:hidden">
                 <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
-                  {navigation.map((item) => (
+                  {navigation.map(item => (
                     <Disclosure.Button
                       key={item.name}
-                      as="a"
-                      href={item.href}
-                      className={classNames(
-                        item.current
-                          ? "bg-indigo-700 text-white"
-                          : "text-white hover:bg-indigo-500 hover:bg-opacity-75",
-                        "block rounded-md px-3 py-2 text-base font-medium"
-                      )}
-                      aria-current={item.current ? "page" : undefined}
+                      as={NavLink}
+                      to={item.href}
+                      className={({ isActive }) =>
+                        classNames(
+                          isActive
+                            ? 'bg-indigo-700 text-white'
+                            : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
+                          'block rounded-md px-3 py-2 text-base font-medium'
+                        )
+                      }
                     >
                       {item.name}
                     </Disclosure.Button>
@@ -94,5 +95,5 @@ export default function Example() {
         </Disclosure>
       </div>
     </>
-  );
+  )
 }
