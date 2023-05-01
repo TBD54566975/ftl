@@ -1,7 +1,7 @@
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import { modules } from '../data/Modules'
-import { classNames } from '../utils'
-import { environments, statuses } from '../data/Types'
+import { modules } from '../../data/Modules'
+import { classNames } from '../../utils'
+import { environments, statuses } from '../../data/Types'
 
 export default function ModuleList() {
   return (

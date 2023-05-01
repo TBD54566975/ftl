@@ -1,6 +1,6 @@
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import { environments } from '../data/Types'
-import { classNames } from '../utils'
+import { classNames } from '../../utils'
+import { environments } from '../../data/Types'
 
 export default function VerbList({ module }) {
   return (

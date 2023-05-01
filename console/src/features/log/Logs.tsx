@@ -1,4 +1,4 @@
-import { classNames } from '../utils'
+import { classNames } from '../../utils'
 
 const statuses = {
   Completed: 'text-green-400 bg-green-400/10',

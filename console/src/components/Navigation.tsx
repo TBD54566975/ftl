@@ -33,6 +33,7 @@ export default function Example() {
                         {navigation.map(item => (
                           <NavLink
                             to={item.href}
+                            key={item.name}
                             className={({ isActive }) =>
                               classNames(
                                 isActive

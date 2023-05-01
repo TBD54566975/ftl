@@ -1,10 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import Logs from './components/Logs'
+import Logs from './features/log/Logs'
 import Layout from './components/Layout'
-import Module from './components/Module'
+import ModulePage from './features/modules/ModulePage'
 import Navigation from './components/Navigation'
-import ModuleList from './components/ModuleList'
-import Verb from './components/Verb'
+import VerbPage from './features/verbs/Verb'
+import ModuleList from './features/modules/ModuleList'
 
 function App() {
   return (
@@ -15,8 +15,8 @@ function App() {
           <Route path="/" element={<Navigate to="/modules" replace />} />
           <Route path="modules">
             <Route index element={<ModuleList />} />
-            <Route path={':id'} element={<Module />} />
-            <Route path={':moduleId/verbs/:id'} element={<Verb />} />
+            <Route path={':id'} element={<ModulePage />} />
+            <Route path={':moduleId/verbs/:id'} element={<VerbPage />} />
           </Route>
           <Route path="logs" element={<Logs />} />
         </Route>
