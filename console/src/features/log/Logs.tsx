@@ -113,7 +113,7 @@ const activityItems = [
 
 export default function Logs() {
   return (
-    <div className="py-4">
+    <>
       <h2 className="text-base font-semibold dark:text-white">Logs</h2>
       <table className="mt-6 w-full whitespace-nowrap text-left">
         <colgroup>
@@ -213,6 +213,6 @@ export default function Logs() {
           ))}
         </tbody>
       </table>
-    </div>
+    </>
   )
 }
