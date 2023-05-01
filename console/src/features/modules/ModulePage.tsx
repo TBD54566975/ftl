@@ -1,11 +1,11 @@
 import { useParams } from 'react-router-dom'
-import { modules } from '../data/Modules'
-import { classNames } from '../utils'
-import { environments, statuses } from '../data/Types'
-import VerbList from './VerbList'
+import { modules } from '../../data/Modules'
+import { classNames } from '../../utils'
+import { environments, statuses } from '../../data/Types'
 import ModuleNotFound from './ModuleNotFound'
+import VerbList from '../verbs/VerbList'
 
-export default function Module() {
+export default function ModulePage() {
   const { id } = useParams()
   const module = modules.find(module => module.id === id?.toLocaleLowerCase())
 

@@ -1,9 +1,9 @@
 import { useParams } from 'react-router-dom'
-import { modules } from '../data/Modules'
-import ModuleNotFound from './ModuleNotFound'
+import { modules } from '../../data/Modules'
 import { ChevronRightIcon, HomeIcon } from '@heroicons/react/20/solid'
+import ModuleNotFound from '../modules/ModuleNotFound'
 
-export default function Verb() {
+export default function VerbPage() {
   const { moduleId, id } = useParams()
   const module = modules.find(
     module => module.id === moduleId?.toLocaleLowerCase()
