@@ -4,7 +4,7 @@ import Layout from './components/Layout'
 import ModulePage from './features/modules/ModulePage'
 import Navigation from './components/Navigation'
 import VerbPage from './features/verbs/Verb'
-import ModuleList from './features/modules/ModuleList'
+import ModulesPage from './features/modules/ModulesPage'
 
 function App() {
   return (
@@ -14,7 +14,7 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/modules" replace />} />
           <Route path="modules">
-            <Route index element={<ModuleList />} />
+            <Route index element={<ModulesPage />} />
             <Route path={':id'} element={<ModulePage />} />
             <Route path={':moduleId/verbs/:id'} element={<VerbPage />} />
           </Route>

@@ -3,9 +3,9 @@ import { modules } from '../../data/Modules'
 import { classNames } from '../../utils'
 import { environments, statuses } from '../../data/Types'
 
-export default function ModuleList() {
+export default function ModulesPage() {
   return (
-    <div className="py-4">
+    <>
       <h2 className="text-base font-semibold dark:text-white">Modules</h2>
       <ul role="list" className="divide-y divide-black/5 dark:divide-white/5">
         {modules.map(module => (
@@ -58,6 +58,6 @@ export default function ModuleList() {
           </li>
         ))}
       </ul>
-    </div>
+    </>
   )
 }
