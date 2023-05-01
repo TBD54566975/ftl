@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1.schema;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema;pschema";
+option java_multiple_files = true;
+
+enum Status {
+  OFFLINE = 0;
+  STARTING = 1;
+  ONLINE = 2;
+  STOPPING = 3;
+  STOPPED = 4;
+  ERRORED = 5;
+}
+
+message VerbRuntime {
+  google.protobuf.Timestamp create_time = 1;
+  google.protobuf.Timestamp start_time = 2;
+  Status status = 3;
+}
