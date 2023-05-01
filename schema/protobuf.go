@@ -11,6 +11,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+var typesWithRuntime = map[string]bool{
+	"Verb": true,
+}
+
 // ProtobufSchema returns a string containing the equivalent protobuf schema
 // for the FTL schema.
 func ProtobufSchema() string {
@@ -26,6 +30,8 @@ package xyz.block.ftl.v1.schema;
 
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema;pschema";
 option java_multiple_files = true;
+
+import "xyz/block/ftl/v1/schema/runtime.proto";
 
 
 `)
@@ -66,7 +72,10 @@ func generateStruct(t reflect.Type, messages map[string]string) {
 	}
 	messages[t.Name()] = ""
 	w := &strings.Builder{}
-	fmt.Fprintf(w, "message %s {", t.Name())
+	fmt.Fprintf(w, "message %s {\n", t.Name())
+	if typesWithRuntime[t.Name()] {
+		fmt.Fprintf(w, "  optional %sRuntime runtime = 31634;\n", t.Name())
+	}
 	fields := reflect.VisibleFields(t)
 	// Sort by protobuf tag
 	slices.SortFunc(fields, func(a, b reflect.StructField) bool {

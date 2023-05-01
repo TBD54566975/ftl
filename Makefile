@@ -3,7 +3,7 @@ VERSION = $(shell git describe --tags --always --dirty)
 COMMON_LOG_IN = common/log/api.go
 COMMON_LOG_OUT = common/log/log_level_string.go
 
-SCHEMA_IN = schema/schema.go
+SCHEMA_IN = schema/schema.go schema/protobuf.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
 SQLC_IN = sqlc.yaml \
