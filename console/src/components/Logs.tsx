@@ -1,117 +1,115 @@
+import { classNames } from '../utils'
+
 const statuses = {
-  Completed: "text-green-400 bg-green-400/10",
-  Error: "text-rose-400 bg-rose-400/10",
-};
+  Completed: 'text-green-400 bg-green-400/10',
+  Error: 'text-rose-400 bg-rose-400/10'
+}
 const activityItems = [
   {
     user: {
-      name: "Michael Foster",
+      name: 'Michael Foster',
       imageUrl:
-        "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     },
-    commit: "2d89f0c8",
-    branch: "main",
-    status: "Completed",
-    duration: "25s",
-    date: "45 minutes ago",
-    dateTime: "2023-01-23T11:00",
+    commit: '2d89f0c8',
+    branch: 'main',
+    status: 'Completed',
+    duration: '25s',
+    date: '45 minutes ago',
+    dateTime: '2023-01-23T11:00'
   },
   {
     user: {
-      name: "Lindsay Walton",
+      name: 'Lindsay Walton',
       imageUrl:
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     },
-    commit: "249df660",
-    branch: "main",
-    status: "Completed",
-    duration: "1m 32s",
-    date: "3 hours ago",
-    dateTime: "2023-01-23T09:00",
+    commit: '249df660',
+    branch: 'main',
+    status: 'Completed',
+    duration: '1m 32s',
+    date: '3 hours ago',
+    dateTime: '2023-01-23T09:00'
   },
   {
     user: {
-      name: "Courtney Henry",
+      name: 'Courtney Henry',
       imageUrl:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     },
-    commit: "11464223",
-    branch: "main",
-    status: "Error",
-    duration: "1m 4s",
-    date: "12 hours ago",
-    dateTime: "2023-01-23T00:00",
+    commit: '11464223',
+    branch: 'main',
+    status: 'Error',
+    duration: '1m 4s',
+    date: '12 hours ago',
+    dateTime: '2023-01-23T00:00'
   },
   {
     user: {
-      name: "Courtney Henry",
+      name: 'Courtney Henry',
       imageUrl:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     },
-    commit: "dad28e95",
-    branch: "main",
-    status: "Completed",
-    duration: "2m 15s",
-    date: "2 days ago",
-    dateTime: "2023-01-21T13:00",
+    commit: 'dad28e95',
+    branch: 'main',
+    status: 'Completed',
+    duration: '2m 15s',
+    date: '2 days ago',
+    dateTime: '2023-01-21T13:00'
   },
   {
     user: {
-      name: "Michael Foster",
+      name: 'Michael Foster',
       imageUrl:
-        "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     },
-    commit: "624bc94c",
-    branch: "main",
-    status: "Completed",
-    duration: "1m 12s",
-    date: "5 days ago",
-    dateTime: "2023-01-18T12:34",
+    commit: '624bc94c',
+    branch: 'main',
+    status: 'Completed',
+    duration: '1m 12s',
+    date: '5 days ago',
+    dateTime: '2023-01-18T12:34'
   },
   {
     user: {
-      name: "Courtney Henry",
+      name: 'Courtney Henry',
       imageUrl:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     },
-    commit: "e111f80e",
-    branch: "main",
-    status: "Completed",
-    duration: "1m 56s",
-    date: "1 week ago",
-    dateTime: "2023-01-16T15:54",
+    commit: 'e111f80e',
+    branch: 'main',
+    status: 'Completed',
+    duration: '1m 56s',
+    date: '1 week ago',
+    dateTime: '2023-01-16T15:54'
   },
   {
     user: {
-      name: "Michael Foster",
+      name: 'Michael Foster',
       imageUrl:
-        "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     },
-    commit: "5e136005",
-    branch: "main",
-    status: "Completed",
-    duration: "3m 45s",
-    date: "1 week ago",
-    dateTime: "2023-01-16T11:31",
+    commit: '5e136005',
+    branch: 'main',
+    status: 'Completed',
+    duration: '3m 45s',
+    date: '1 week ago',
+    dateTime: '2023-01-16T11:31'
   },
   {
     user: {
-      name: "Whitney Francis",
+      name: 'Whitney Francis',
       imageUrl:
-        "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        'https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     },
-    commit: "5c1fd07f",
-    branch: "main",
-    status: "Completed",
-    duration: "37s",
-    date: "2 weeks ago",
-    dateTime: "2023-01-09T08:45",
-  },
-];
-
-function classNames(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
+    commit: '5c1fd07f',
+    branch: 'main',
+    status: 'Completed',
+    duration: '37s',
+    date: '2 weeks ago',
+    dateTime: '2023-01-09T08:45'
+  }
+]
 
 export default function Logs() {
   return (
@@ -160,7 +158,7 @@ export default function Logs() {
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
-          {activityItems.map((item) => (
+          {activityItems.map(item => (
             <tr key={item.commit}>
               <td className="py-4 pl-4 pr-8 sm:pl-6 lg:pl-8">
                 <div className="flex items-center gap-x-4">
@@ -195,7 +193,7 @@ export default function Logs() {
                   <div
                     className={classNames(
                       statuses[item.status],
-                      "flex-none rounded-full p-1"
+                      'flex-none rounded-full p-1'
                     )}
                   >
                     <div className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -216,5 +214,5 @@ export default function Logs() {
         </tbody>
       </table>
     </div>
-  );
+  )
 }
