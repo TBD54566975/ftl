@@ -1,21 +1,21 @@
-import { useParams } from 'react-router-dom'
-import { modules } from '../../data/Modules'
-import { classNames } from '../../utils'
-import { environments, statuses } from '../../data/Types'
+import {useParams} from 'react-router-dom'
+import {modules} from '../../data/Modules'
+import {classNames} from '../../utils'
+import {environments, statuses} from '../../data/Types'
 import ModuleNotFound from './ModuleNotFound'
 import VerbList from '../verbs/VerbList'
-import { useEffect } from 'react'
-import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
-import { createPromiseClient } from '@bufbuild/connect'
-import { createConnectTransport } from '@bufbuild/connect-web'
+import {useEffect} from 'react'
+import {VerbService} from '../../protos/xyz/block/ftl/v1/ftl_connect'
+import {createPromiseClient} from '@bufbuild/connect'
+import {createConnectTransport} from '@bufbuild/connect-web'
 
 export default function ModulePage() {
-  const { id } = useParams()
+  const {id} = useParams()
   const module = modules.find(module => module.id === id?.toLocaleLowerCase())
 
   useEffect(() => {
     const transport = createConnectTransport({
-      baseUrl: 'https://localhost:8892'
+      baseUrl: 'http://localhost:8892',
     })
     const client = createPromiseClient(VerbService, transport)
 
