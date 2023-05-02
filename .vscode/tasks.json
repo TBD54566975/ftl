@@ -11,10 +11,7 @@
 			"problemMatcher": [
 				"$go"
 			],
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
+			"group": "build",
 			"detail": "cd ${workspaceFolder}; go test ./..."
 		},
 		{
@@ -33,6 +30,22 @@
 				"isDefault": true
 			},
 			"detail": "cd ${workspaceFolder}; golangci-lint run"
+		},
+		{
+			"type": "go",
+			"label": "go: build workspace",
+			"command": "build",
+			"args": [
+				"./..."
+			],
+			"problemMatcher": [
+				"$go"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "cd /Users/alec/dev/ftl; go build ./..."
 		}
 	]
 }

@@ -2,15 +2,12 @@
 package socket
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
 
 	"github.com/alecthomas/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Socket represents a (network, addr) pair. Its serialised form is a URI:
@@ -18,6 +15,10 @@ import (
 type Socket struct {
 	Network string
 	Addr    string
+}
+
+func (s Socket) URL() string {
+	return "http://" + s.Addr
 }
 
 // Valid returns true if the Socket is valid.
@@ -36,33 +37,6 @@ func (s *Socket) UnmarshalText(b []byte) error {
 	}
 	*s = tmp
 	return nil
-}
-
-// Dialer is a convenience function.
-func Dialer(ctx context.Context, addr string) (net.Conn, error) {
-	sock, err := Parse(addr)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return Dial(ctx, sock)
-}
-
-// Dial a Socket.
-func Dial(ctx context.Context, s Socket) (net.Conn, error) {
-	conn, err := (&net.Dialer{}).DialContext(ctx, s.Network, s.Addr)
-	return conn, errors.WithStack(err)
-}
-
-// DialGRPC using a Socket.
-//
-// TODO: Extend this to support TLS etc. automatically.
-func DialGRPC(ctx context.Context, s Socket, options ...grpc.DialOption) (*grpc.ClientConn, error) {
-	options = append([]grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithContextDialer(Dialer),
-	}, options...)
-	conn, err := grpc.DialContext(ctx, s.String(), options...)
-	return conn, errors.WithStack(err)
 }
 
 // Listen on a socket.

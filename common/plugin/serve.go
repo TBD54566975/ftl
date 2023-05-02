@@ -2,19 +2,26 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
+	"reflect"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
+	"github.com/bufbuild/connect-go"
+	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/common/socket"
 )
 
@@ -24,20 +31,30 @@ type serveCli struct {
 	kong.Plugins
 }
 
+type serverRegister[Impl any] struct {
+	servicePath string
+	register    func(i Impl, mux *http.ServeMux)
+}
+
 type startOptions[Impl any] struct {
-	register []func(grpc.ServiceRegistrar, Impl)
+	register []serverRegister[Impl]
 }
 
 type StartOption[Impl any] func(*startOptions[Impl])
 
+// ConnectHandlerFactory is a type alias for a function that creates a new Connect request handler.
+type ConnectHandlerFactory[Iface any] func(Iface, ...connect.HandlerOption) (string, http.Handler)
+
 // RegisterAdditionalServer allows a plugin to serve additional gRPC services.
 //
 // "Impl" must be an implementation of "Iface.
-func RegisterAdditionalServer[Impl any, Iface any](register func(grpc.ServiceRegistrar, Iface)) StartOption[Impl] {
+func RegisterAdditionalServer[Impl any, Iface any](servicePath string, register ConnectHandlerFactory[Iface]) StartOption[Impl] {
 	return func(so *startOptions[Impl]) {
-		so.register = append(so.register, func(sr grpc.ServiceRegistrar, i Impl) {
-			register(sr, any(i).(Iface)) //nolint:forcetypeassert
-		})
+		so.register = append(so.register, serverRegister[Impl]{
+			servicePath: servicePath,
+			register: func(i Impl, mux *http.ServeMux) {
+				mux.Handle(register(any(i).(Iface), rpc.DefaultHandlerOptions()...)) //nolint:forcetypeassert
+			}})
 	}
 }
 
@@ -53,12 +70,15 @@ func Start[Impl any, Iface any, Config any](
 	ctx context.Context,
 	name string,
 	create func(context.Context, Config) (Impl, error),
-	register func(grpc.ServiceRegistrar, Iface),
+	servicePath string,
+	register ConnectHandlerFactory[Iface],
 	options ...StartOption[Impl],
 ) {
 	var config Config
 	cli := serveCli{Plugins: kong.Plugins{&config}}
 	kctx := kong.Parse(&cli, kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`))
+
+	mux := http.NewServeMux()
 
 	so := &startOptions[Impl]{}
 	for _, option := range options {
@@ -92,16 +112,35 @@ func Start[Impl any, Iface any, Config any](
 	svc, err := create(ctx, config)
 	kctx.FatalIfErrorf(err)
 
+	if _, ok := any(svc).(Iface); !ok {
+		var iface Iface
+		panic(fmt.Sprintf("%s does not implement %s", reflect.TypeOf(svc), reflect.TypeOf(iface)))
+	}
+
 	l, err := socket.Listen(cli.Bind)
 	kctx.FatalIfErrorf(err)
-	gs := socket.NewGRPCServer(ctx)
-	reflection.Register(gs)
-	register(gs, any(svc).(Iface)) //nolint:forcetypeassert
+
+	servicePaths := []string{servicePath}
+
+	mux.Handle(register(any(svc).(Iface), rpc.DefaultHandlerOptions()...)) //nolint:forcetypeassert
 	for _, register := range so.register {
-		register(gs, svc)
+		register.register(svc, mux)
+		servicePaths = append(servicePaths, register.servicePath)
 	}
-	err = gs.Serve(l)
+
+	reflector := grpcreflect.NewStaticReflector(servicePaths...)
+	mux.Handle(grpcreflect.NewHandlerV1(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+
+	// Start the server.
+	http1Server := &http.Server{
+		Handler:           h2c.NewHandler(mux, &http2.Server{}),
+		ReadHeaderTimeout: time.Second * 30,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+	}
+	err = http1Server.Serve(l)
 	kctx.FatalIfErrorf(err)
+
 	kctx.Exit(0)
 }
 

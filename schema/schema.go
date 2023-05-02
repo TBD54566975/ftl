@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	"github.com/alecthomas/errors"
@@ -15,6 +16,13 @@ var (
 	declUnion     = []Decl{&Data{}, &Verb{}}
 	typeUnion     = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
 	metadataUnion = []Metadata{&MetadataCalls{}}
+
+	// Used by protobuf generation.
+	unions = map[reflect.Type][]reflect.Type{
+		reflect.TypeOf((*Type)(nil)).Elem():     reflectUnion(typeUnion...),
+		reflect.TypeOf((*Metadata)(nil)).Elem(): reflectUnion(metadataUnion...),
+		reflect.TypeOf((*Decl)(nil)).Elem():     reflectUnion(declUnion...),
+	}
 )
 
 // A Node in the schema grammar.

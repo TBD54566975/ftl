@@ -3,9 +3,7 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -19,25 +17,25 @@ import (
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
+	"github.com/bufbuild/connect-go"
+	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/reflection"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/exec"
 	"github.com/TBD54566975/ftl/common/log"
-	"github.com/TBD54566975/ftl/common/metadata"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/pubsub"
+	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
-	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 // ModuleConfig is the configuration for an FTL module.
@@ -49,8 +47,8 @@ type ModuleConfig struct {
 }
 
 type driveContext struct {
-	*plugin.Plugin[ftlv1.VerbServiceClient]
-	develService ftlv1.DevelServiceClient
+	*plugin.Plugin[ftlv1connect.VerbServiceClient]
+	develService ftlv1connect.DevelServiceClient
 	schema       atomic.Value[types.Option[*schema.Module]]
 	root         string
 	workingDir   string
@@ -67,9 +65,8 @@ type Agent struct {
 	listen        socket.Socket
 }
 
-var _ http.Handler = (*Agent)(nil)
-var _ ftlv1.VerbServiceServer = (*Agent)(nil)
-var _ ftlv1.DevelServiceServer = (*Agent)(nil)
+var _ ftlv1connect.VerbServiceHandler = (*Agent)(nil)
+var _ ftlv1connect.DevelServiceHandler = (*Agent)(nil)
 
 // New creates a new local agent.
 func New(ctx context.Context, listen socket.Socket) (*Agent, error) {
@@ -83,27 +80,27 @@ func New(ctx context.Context, listen socket.Socket) (*Agent, error) {
 }
 
 // Serve starts the agent server.
-func (l *Agent) Serve(ctx context.Context) error {
-	srv := socket.NewGRPCServer(ctx)
-	// Start agent gRPC and REST servers.
-	reflection.Register(srv)
-	ftlv1.RegisterVerbServiceServer(srv, l)
-	ftlv1.RegisterDevelServiceServer(srv, l)
+func (a *Agent) Serve(ctx context.Context) error {
+	mux := http.NewServeMux()
+	mux.Handle(ftlv1connect.NewDevelServiceHandler(a, rpc.DefaultHandlerOptions()...))
+	mux.Handle(ftlv1connect.NewVerbServiceHandler(a, rpc.DefaultHandlerOptions()...))
+	reflector := grpcreflect.NewStaticReflector(ftlv1connect.DevelServiceName, ftlv1connect.VerbServiceName)
+	mux.Handle(grpcreflect.NewHandlerV1(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
 
 	c, err := console.Server(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	mux.Handle("/", c)
 
-	mixedHandler := newHTTPandGRPCMux(c, srv)
-	http2Server := &http2.Server{}
 	http1Server := &http.Server{
-		Handler:           h2c.NewHandler(mixedHandler, http2Server),
+		Handler:           h2c.NewHandler(rpc.Middleware(ctx, mux), &http2.Server{}),
 		ReadHeaderTimeout: time.Second * 30,
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}
 
-	listener, err := socket.Listen(l.listen)
+	listener, err := socket.Listen(a.listen)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -112,10 +109,10 @@ func (l *Agent) Serve(ctx context.Context) error {
 }
 
 // Drives returns the list of active drives.
-func (l *Agent) Drives() []string {
-	l.lock.RLock()
-	defer l.lock.Unlock()
-	return maps.Keys(l.drives)
+func (a *Agent) Drives() []string {
+	a.lock.RLock()
+	defer a.lock.Unlock()
+	return maps.Keys(a.drives)
 }
 
 // Manage starts a new Drive to manage a directory of functions.
@@ -126,7 +123,7 @@ func (l *Agent) Drives() []string {
 //	FTL_MODULE_ROOT - Path to a directory containing FTL module source and an ftl.toml file.
 //	FTL_WORKING_DIR - Path to a directory that the Drive can use for temporary files.
 //	FTL_MODULE - The name of the module.
-func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
+func (a *Agent) Manage(ctx context.Context, dir string) (err error) {
 	dir, err = filepath.Abs(dir)
 	if err != nil {
 		return errors.WithStack(err)
@@ -154,18 +151,26 @@ func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
 		return errors.WithStack(err)
 	}
 
-	var develClient ftlv1.DevelServiceClient
-	verbServicePlugin, cmdCtx, err := plugin.Spawn(ctx, config.Module, dir, exe, ftlv1.NewVerbServiceClient,
-		plugin.WithEnvars("FTL_MODULE_ROOT="+dir),
-		plugin.WithEnvars("FTL_MODULE="+config.Module),
-		// Used by sub-processes to call back into FTL.
-		plugin.WithEnvars("FTL_ENDPOINT="+l.listen.String()),
-		plugin.WithExtraClient(&develClient, ftlv1.NewDevelServiceClient),
+	var develClient ftlv1connect.DevelServiceClient
+	verbServicePlugin, cmdCtx, err := plugin.Spawn(ctx, config.Module, dir, exe, ftlv1connect.NewVerbServiceClient,
+		plugin.WithEnvars(
+			"FTL_MODULE_ROOT="+dir,
+			"FTL_MODULE="+config.Module,
+			// Used by sub-processes to call back into FTL.
+			"FTL_ENDPOINT="+a.listen.String(),
+		),
+		plugin.WithExtraClient(&develClient, ftlv1connect.NewDevelServiceClient),
 	)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	l.wg.Go(func() error {
+
+	_, err = develClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	a.wg.Go(func() error {
 		<-cmdCtx.Done()
 		return errors.WithStack(cmdCtx.Err())
 	})
@@ -177,8 +182,8 @@ func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
 		}
 	}()
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	a.lock.Lock()
+	defer a.lock.Unlock()
 
 	dctx := &driveContext{
 		Plugin:       verbServicePlugin,
@@ -187,119 +192,29 @@ func (l *Agent) Manage(ctx context.Context, dir string) (err error) {
 		workingDir:   workingDir,
 		config:       config,
 	}
-	l.wg.Go(func() error { return l.syncSchemaFromDrive(cmdCtx, dctx) })
-	l.drives[dir] = dctx
+	a.wg.Go(func() error { return a.syncSchemaFromDrive(cmdCtx, dctx) })
+	a.wg.Go(func() error { return a.syncSchemaToDrive(cmdCtx, dctx) })
+	a.drives[dir] = dctx
 	return nil
 }
 
-func (l *Agent) Wait() error {
-	return errors.WithStack(l.wg.Wait())
+func (a *Agent) Wait() error {
+	return errors.WithStack(a.wg.Wait())
 }
 
-type Error struct {
-	Error string `json:"error"`
-}
+func (a *Agent) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
+	drives := a.allDrives()
 
-func writeError(w http.ResponseWriter, status int, msg string, args ...any) {
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(struct {
-		Error string `json:"error"`
-	}{fmt.Sprintf(msg, args...)})
-}
-
-// ServeHTTP because we want the local agent to also be able to serve Verbs directly via HTTP.
-func (l *Agent) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	cleanedPath := strings.TrimPrefix(r.URL.Path, "/")
-
-	// Root of server lists all the verbs.
-	if cleanedPath == "" {
-		resp, err := l.List(r.Context(), &ftlv1.ListRequest{})
-		if err != nil {
-			writeError(w, http.StatusBadGateway, "failed to list Verbs: %s", err)
-			return
-		}
-		_ = json.NewEncoder(w).Encode(resp)
-		return
-	}
-
-	verb, err := sdkgo.ParseVerbRef(cleanedPath)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "%s", err.Error())
-		return
-	}
-
-	req, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to read request: %s", err)
-		return
-	}
-
-	if len(req) == 0 {
-		req = []byte("{}")
-	}
-
-	resp, err := l.Call(r.Context(), &ftlv1.CallRequest{Verb: verb.ToProto(), Body: req})
-	if err != nil {
-		writeError(w, http.StatusBadGateway, "failed to call Verb %q: %s", verb, err)
-		return
-	}
-	switch resp := resp.Response.(type) {
-	case *ftlv1.CallResponse_Error_:
-		writeError(w, http.StatusInternalServerError, "verb failed: %s", resp.Error.Message)
-
-	case *ftlv1.CallResponse_Body:
-		_, _ = w.Write(resp.Body)
-	}
-}
-
-func (l *Agent) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
-	logger := log.FromContext(ctx)
-	logger.Infof("Calling %s", req.Verb)
-	ctx = metadata.WithDirectRouting(ctx)
-	drive, err := l.findDrive(req.Verb.ToFTL())
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return drive.Client.Call(ctx, req)
-}
-
-// Send implements ftlv1.VerbServiceServer
-func (*Agent) Send(context.Context, *ftlv1.SendRequest) (*ftlv1.SendResponse, error) {
-	panic("unimplemented")
-}
-
-func (l *Agent) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
-	ctx = metadata.WithDirectRouting(ctx)
-	out := &ftlv1.ListResponse{}
-	for _, drive := range l.allDrives() {
-		resp, err := drive.Client.List(ctx, proto.Clone(req).(*ftlv1.ListRequest))
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to list module %q", drive.config.Module)
-		}
-		out.Verbs = append(out.Verbs, resp.Verbs...)
-	}
-	slices.SortFunc(out.Verbs, func(a, b *pschema.VerbRef) bool {
-		return a.Module < b.Module || (a.Module == b.Module && a.Name < b.Name)
-	})
-	return out, nil
-}
-
-func (l *Agent) Ping(ctx context.Context, req *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
-	return &ftlv1.PingResponse{}, nil
-}
-
-func (l *Agent) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
-	drives := l.allDrives()
 	slices.SortStableFunc(drives, func(a, b *driveContext) bool {
 		return a.config.Module < b.config.Module
 	})
+
 	for i, drive := range drives {
 		module, ok := drive.schema.Load().Get()
 		if !ok {
 			continue
 		}
-		err := stream.Send(&ftlv1.SyncSchemaResponse{ //nolint:forcetypeassert
+		err := stream.Send(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
 			Schema: module.ToProto().(*pschema.Module),
 			More:   i < len(drives)-1,
 		})
@@ -307,24 +222,67 @@ func (l *Agent) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
 			return errors.WithStack(err)
 		}
 	}
+
 	return nil
 }
 
-func (l *Agent) allDrives() []*driveContext {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	out := make([]*driveContext, 0, len(l.drives))
-	for _, drive := range l.drives {
+func (a *Agent) PushSchema(ctx context.Context, req *connect.ClientStream[ftlv1.PushSchemaRequest]) (*connect.Response[ftlv1.PushSchemaResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("FTL agent does not support PushSchema"))
+}
+
+func (a *Agent) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+	logger := log.FromContext(ctx)
+	logger.Infof("Calling %s", req.Msg.Verb)
+	ctx = rpc.WithDirectRouting(ctx)
+	drive, err := a.findDrive(req.Msg.Verb.ToFTL())
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return drive.Client.Call(ctx, req)
+}
+
+func (a *Agent) List(ctx context.Context, req *connect.Request[ftlv1.ListRequest]) (*connect.Response[ftlv1.ListResponse], error) {
+	ctx = rpc.WithDirectRouting(ctx)
+	out := &ftlv1.ListResponse{}
+
+	for _, drive := range a.allDrives() {
+		resp, err := drive.Client.List(ctx, req)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to list module %q", drive.config.Module)
+		}
+		out.Verbs = append(out.Verbs, resp.Msg.Verbs...)
+	}
+
+	slices.SortFunc(out.Verbs, func(a, b *pschema.VerbRef) bool {
+		return a.Module < b.Module || (a.Module == b.Module && a.Name < b.Name)
+	})
+
+	return connect.NewResponse(out), nil
+}
+
+func (*Agent) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+	return connect.NewResponse(&ftlv1.PingResponse{}), nil
+}
+
+func (*Agent) Send(context.Context, *connect.Request[ftlv1.SendRequest]) (*connect.Response[ftlv1.SendResponse], error) {
+	panic("unimplemented")
+}
+
+func (a *Agent) allDrives() []*driveContext {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	out := make([]*driveContext, 0, len(a.drives))
+	for _, drive := range a.drives {
 		out = append(out, drive)
 	}
 	return out
 }
 
-func (l *Agent) findDrive(verb string) (*driveContext, error) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	modules := make([]string, 0, len(l.drives))
-	for _, drive := range l.drives {
+func (a *Agent) findDrive(verb string) (*driveContext, error) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	modules := make([]string, 0, len(a.drives))
+	for _, drive := range a.drives {
 		modules = append(modules, drive.config.Module)
 		if strings.HasPrefix(verb, drive.config.Module) {
 			return drive, nil
@@ -333,72 +291,60 @@ func (l *Agent) findDrive(verb string) (*driveContext, error) {
 	return nil, errors.Errorf("could not find module serving Verb %q among %s", verb, strings.Join(modules, ", "))
 }
 
-func (l *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) error {
-	stream, err := drive.develService.SyncSchema(ctx)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	wg, _ := errgroup.WithContext(ctx)
-
-	// Receive schema changes from the drive.
-	wg.Go(func() error {
-		for {
-			resp, err := stream.Recv()
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			module := schema.ProtoToModule(resp.Schema)
-			l.schemaChanges.Publish(module)
-			drive.schema.Store(types.Some(module))
-		}
-	})
+func (a *Agent) syncSchemaToDrive(ctx context.Context, drive *driveContext) error {
+	stream := drive.develService.PushSchema(ctx)
 
 	// Send snapshot.
-	drives := l.allDrives()
+	drives := a.allDrives()
 	for _, drive := range drives {
 		module, ok := drive.schema.Load().Get()
 		if !ok {
 			continue
 		}
-		if err := l.sendSchema(stream, module); err != nil {
+		if err := a.sendSchema(stream, module); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	// Send changes to the drive.
-	changes := l.schemaChanges.Subscribe(make(chan *schema.Module, 64))
-	wg.Go(func() error {
-		for module := range changes {
-			// Don't send updates back to itself.
-			if module.Name == drive.config.Module {
-				continue
-			}
-			if err := l.sendSchema(stream, module); err != nil {
-				return errors.WithStack(err)
-			}
+	changes := a.schemaChanges.Subscribe(make(chan *schema.Module, 64))
+	for module := range changes {
+		// Don't send updates back to itself.
+		if module.Name == drive.config.Module {
+			continue
 		}
-		return nil
-	})
-
-	return errors.WithStack(wg.Wait())
+		if err := a.sendSchema(stream, module); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
 }
 
-func (l *Agent) sendSchema(stream ftlv1.DevelService_SyncSchemaClient, module *schema.Module) error {
-	err := stream.Send(&ftlv1.SyncSchemaRequest{ //nolint:forcetypeassert
+func (a *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) error {
+	stream, err := drive.develService.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for stream.Receive() {
+		resp := stream.Msg()
+		if errors.Is(err, io.EOF) {
+			return nil
+		} else if err != nil {
+			return errors.WithStack(err)
+		}
+		module := schema.ProtoToModule(resp.Schema)
+		a.schemaChanges.Publish(module)
+		drive.schema.Store(types.Some(module))
+	}
+	return errors.WithStack(stream.Err())
+}
+
+func (a *Agent) sendSchema(stream *connect.ClientStreamForClient[ftlv1.PushSchemaRequest, ftlv1.PushSchemaResponse], module *schema.Module) error {
+	err := stream.Send(&ftlv1.PushSchemaRequest{ //nolint:forcetypeassert
 		Schema: module.ToProto().(*pschema.Module),
 	})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
-}
-
-func newHTTPandGRPCMux(httpHand http.Handler, grpcHandler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("content-type"), "application/grpc") {
-			grpcHandler.ServeHTTP(w, r)
-			return
-		}
-		httpHand.ServeHTTP(w, r)
-	})
 }

@@ -64,10 +64,13 @@ service VerbService {
   rpc List(ListRequest) returns (ListResponse);
 }
 
-message SyncSchemaRequest {
+message PushSchemaRequest {
   schema.Module schema = 1;
 }
-message SyncSchemaResponse {
+message PushSchemaResponse {}
+
+message PullSchemaRequest {}
+message PullSchemaResponse {
   schema.Module schema = 1;
   // If true, there are more schema changes immediately following this one.
   // If false, there still may be more schema changes in the future.
@@ -83,10 +86,11 @@ service DevelService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
 
-  // Sync schema changes to and from the service.
-  //
-  // Each request and response contains the schema for a single module.
-  rpc SyncSchema(stream SyncSchemaRequest) returns (stream SyncSchemaResponse);
+  // Push schema changes to the server.
+  rpc PushSchema(stream PushSchemaRequest) returns (PushSchemaResponse);
+
+  // Pull schema changes from the server.
+  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
 }
 
 message GetArtefactDiffsRequest {

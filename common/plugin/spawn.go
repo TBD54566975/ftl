@@ -9,22 +9,23 @@ import (
 	"time"
 
 	"github.com/alecthomas/errors"
-	"google.golang.org/grpc"
+	"github.com/bufbuild/connect-go"
 
 	"github.com/TBD54566975/ftl/common/exec"
 	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/common/socket"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
 // PingableClient is a gRPC client that can be pinged.
 type PingableClient interface {
-	Ping(ctx context.Context, in *ftlv1.PingRequest, opts ...grpc.CallOption) (*ftlv1.PingResponse, error)
+	Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error)
 }
 
 type pluginOptions struct {
 	envars            []string
-	additionalClients []func(grpc.ClientConnInterface)
+	additionalClients []func(baseURL string, opts ...connect.ClientOption)
 	startTimeout      time.Duration
 }
 
@@ -50,10 +51,10 @@ func WithStartTimeout(timeout time.Duration) Option {
 // WithExtraClient connects to an additional gRPC service in the same plugin.
 //
 // The client instance is written to "out".
-func WithExtraClient[Client PingableClient](out *Client, makeClient func(grpc.ClientConnInterface) Client) Option {
+func WithExtraClient[Client PingableClient](out *Client, makeClient rpc.ClientFactory[Client]) Option {
 	return func(po *pluginOptions) error {
-		po.additionalClients = append(po.additionalClients, func(cci grpc.ClientConnInterface) {
-			*out = makeClient(cci)
+		po.additionalClients = append(po.additionalClients, func(baseURL string, opts ...connect.ClientOption) {
+			*out = rpc.Dial(makeClient, baseURL, opts...)
 		})
 		return nil
 	}
@@ -66,7 +67,7 @@ type Plugin[Client PingableClient] struct {
 
 // Spawn a new sub-process plugin.
 //
-// Plugins are gRPC servers that listen on a unix socket passed in an envar.
+// Plugins are gRPC servers that listen on a socket passed in an envar.
 //
 // If the subprocess is a Go plugin, it should call [Start] to start the gRPC
 // server.
@@ -80,7 +81,7 @@ type Plugin[Client PingableClient] struct {
 func Spawn[Client PingableClient](
 	ctx context.Context,
 	name, dir, exe string,
-	makeClient func(grpc.ClientConnInterface) Client,
+	makeClient rpc.ClientFactory[Client],
 	options ...Option,
 ) (
 	plugin *Plugin[Client],
@@ -158,19 +159,8 @@ func Spawn[Client PingableClient](
 	dialCtx, cancel := context.WithTimeout(ctx, opts.startTimeout)
 	defer cancel()
 
-	conn, err := socket.DialGRPC(dialCtx, pluginSocket)
-	if err != nil {
-		return nil, nil, errors.WithStack(err)
-	}
-
-	// Close the gRPC connection when the context is cancelled.
-	go func() {
-		<-cmdCtx.Done()
-		_ = conn.Close()
-	}()
-
 	// Wait for the plugin to start.
-	client := makeClient(conn)
+	client := rpc.Dial(makeClient, pluginSocket.URL())
 	pingErr := make(chan error)
 	go func() {
 		defer close(pingErr)
@@ -180,8 +170,9 @@ func Spawn[Client PingableClient](
 				return
 			default:
 			}
-			_, err := client.Ping(dialCtx, &ftlv1.PingRequest{})
+			_, err := client.Ping(dialCtx, connect.NewRequest(&ftlv1.PingRequest{}))
 			if err != nil {
+				logger.Tracef("Plugin ping failed: %+v", err)
 				time.Sleep(time.Millisecond * 100)
 				continue
 			}
@@ -203,7 +194,7 @@ func Spawn[Client PingableClient](
 	}
 
 	for _, makeClient := range opts.additionalClients {
-		makeClient(conn)
+		makeClient(pluginSocket.URL())
 	}
 
 	logger.Infof("Online")

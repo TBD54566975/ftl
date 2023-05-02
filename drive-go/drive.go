@@ -17,6 +17,7 @@ import (
 
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
+	"github.com/bufbuild/connect-go"
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
@@ -25,11 +26,12 @@ import (
 	"github.com/TBD54566975/ftl/common/eventsource"
 	"github.com/TBD54566975/ftl/common/exec"
 	"github.com/TBD54566975/ftl/common/log"
-	"github.com/TBD54566975/ftl/common/metadata"
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
@@ -58,12 +60,7 @@ func Run(ctx context.Context, config Config) (*Server, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	conn, err := socket.DialGRPC(ctx, config.Endpoint)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to dial FTL")
-	}
-	router := ftlv1.NewVerbServiceClient(conn)
-
+	router := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.Endpoint.URL())
 	s := &Server{
 		Config:         config,
 		router:         router,
@@ -84,7 +81,7 @@ func Run(ctx context.Context, config Config) (*Server, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	plugin, cmdCtx, err := plugin.Spawn(ctx, "", s.Config.Dir, exe, ftlv1.NewVerbServiceClient,
+	plugin, cmdCtx, err := plugin.Spawn(ctx, "", s.Config.Dir, exe, ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars("FTL_MODULE="+s.module))
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -97,12 +94,12 @@ func Run(ctx context.Context, config Config) (*Server, error) {
 	return s, nil
 }
 
-var _ ftlv1.DevelServiceServer = (*Server)(nil)
-var _ ftlv1.VerbServiceServer = (*Server)(nil)
+var _ ftlv1connect.DevelServiceHandler = (*Server)(nil)
+var _ ftlv1connect.VerbServiceHandler = (*Server)(nil)
 
 type Server struct {
 	Config
-	router         ftlv1.VerbServiceClient
+	router         ftlv1connect.VerbServiceClient
 	module         string
 	goModule       *modfile.File
 	wg             *errgroup.Group
@@ -111,7 +108,7 @@ type Server struct {
 	fullSchema   atomic.Value[schema.Schema]
 	moduleSchema *eventsource.EventSource[*schema.Module]
 
-	plugin atomic.Value[*plugin.Plugin[ftlv1.VerbServiceClient]]
+	plugin atomic.Value[*plugin.Plugin[ftlv1connect.VerbServiceClient]]
 
 	rebuildMu   sync.Mutex
 	lastRebuild time.Time
@@ -122,55 +119,24 @@ func (s *Server) Wait() error {
 	return errors.WithStack(s.wg.Wait())
 }
 
-func (s *Server) SyncSchema(stream ftlv1.DevelService_SyncSchemaServer) error {
-	wg, ctx := errgroup.WithContext(stream.Context())
-
-	logger := log.FromContext(ctx)
-
-	// Send initial and subsequent schema updates.
-	err := s.sendSchema(stream, s.moduleSchema.Load())
-	if err != nil {
-		return errors.WithStack(err)
+func (s *Server) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+	if rpc.IsDirectRouted(ctx) || req.Msg.Verb.Module == s.module {
+		return s.plugin.Load().Client.Call(ctx, req)
 	}
-	changes := s.moduleSchema.Subscribe(make(chan *schema.Module, 64))
-	defer s.moduleSchema.Unsubscribe(changes)
-	wg.Go(func() error {
-		for module := range changes {
-			if err := s.sendSchema(stream, module); err != nil {
-				return errors.WithStack(err)
-			}
-		}
-		return nil
-	})
-
-	// Receive schema updates.
-	wg.Go(func() error {
-		for {
-			received, err := stream.Recv()
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			module := schema.ProtoToModule(received.Schema)
-
-			logger.Debugf("Received schema update from %s", module.Name)
-
-			fullSchema := s.fullSchema.Load()
-			oldHash := fullSchema.Hash()
-			fullSchema.Upsert(module)
-			newHash := fullSchema.Hash()
-			if oldHash != newHash {
-				s.fullSchema.Store(fullSchema)
-				s.triggerRebuild <- struct{}{}
-			}
-		}
-	})
-
-	return errors.WithStack(wg.Wait())
+	resp, err := s.router.Call(ctx, req)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return resp, nil
 }
 
-func (s *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListResponse, error) {
-	if !metadata.IsDirectRouted(ctx) {
-		return s.router.List(ctx, req)
+func (s *Server) List(ctx context.Context, req *connect.Request[ftlv1.ListRequest]) (*connect.Response[ftlv1.ListResponse], error) {
+	if !rpc.IsDirectRouted(ctx) {
+		resp, err := s.router.List(ctx, req)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return resp, nil
 	}
 	out := &ftlv1.ListResponse{}
 	module := s.moduleSchema.Load()
@@ -179,22 +145,54 @@ func (s *Server) List(ctx context.Context, req *ftlv1.ListRequest) (*ftlv1.ListR
 			out.Verbs = append(out.Verbs, &pschema.VerbRef{Module: module.Name, Name: verb.Name})
 		}
 	}
-	return out, nil
+	return connect.NewResponse(out), nil
 }
 
-func (s *Server) Call(ctx context.Context, req *ftlv1.CallRequest) (*ftlv1.CallResponse, error) {
-	if metadata.IsDirectRouted(ctx) || req.Verb.Module == s.module {
-		return s.plugin.Load().Client.Call(ctx, req)
-	}
-	return s.router.Call(ctx, req)
-}
-
-// Send implements ftlv1.VerbServiceServer
-func (*Server) Send(context.Context, *ftlv1.SendRequest) (*ftlv1.SendResponse, error) {
+func (s *Server) Send(ctx context.Context, req *connect.Request[ftlv1.SendRequest]) (*connect.Response[ftlv1.SendResponse], error) {
 	panic("unimplemented")
 }
 
-// func (s *Server) FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
+func (s *Server) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+	return connect.NewResponse(&ftlv1.PingResponse{}), nil
+}
+
+func (s *Server) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
+	// Send initial and subsequent schema updates.
+	err := s.sendSchema(stream, s.moduleSchema.Load())
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	changes := s.moduleSchema.Subscribe(make(chan *schema.Module, 64))
+	defer s.moduleSchema.Unsubscribe(changes)
+	for module := range changes {
+		if err := s.sendSchema(stream, module); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
+}
+
+func (s *Server) PushSchema(ctx context.Context, stream *connect.ClientStream[ftlv1.PushSchemaRequest]) (*connect.Response[ftlv1.PushSchemaResponse], error) {
+	logger := log.FromContext(ctx)
+	for stream.Receive() {
+		received := stream.Msg()
+		module := schema.ProtoToModule(received.Schema)
+
+		logger.Debugf("Received schema update from %s", module.Name)
+
+		fullSchema := s.fullSchema.Load()
+		oldHash := fullSchema.Hash()
+		fullSchema.Upsert(module)
+		newHash := fullSchema.Hash()
+		if oldHash != newHash {
+			s.fullSchema.Store(fullSchema)
+			s.triggerRebuild <- struct{}{}
+		}
+	}
+	return connect.NewResponse(&ftlv1.PushSchemaResponse{}), nil
+}
+
+// func (s *Server) _FileChange(ctx context.Context, req *ftlv1.FileChangeRequest) (*ftlv1.FileChangeResponse, error) {
 // 	_, err := s.rebuild(ctx)
 // 	if err != nil {
 // 		return nil, errors.WithStack(err)
@@ -205,10 +203,6 @@ func (*Server) Send(context.Context, *ftlv1.SendRequest) (*ftlv1.SendResponse, e
 // 	}
 // 	return &ftlv1.FileChangeResponse{}, errors.WithStack(err)
 // }
-
-func (*Server) Ping(context.Context, *ftlv1.PingRequest) (*ftlv1.PingResponse, error) {
-	return &ftlv1.PingResponse{}, nil
-}
 
 // Restart the FTL hot reload module if it terminates unexpectedly.
 func (s *Server) restartModuleOnExit(ctx, cmdCtx context.Context) error {
@@ -228,8 +222,8 @@ func (s *Server) restartModuleOnExit(ctx, cmdCtx context.Context) error {
 				logger.Errorf(err, "Failed to rebuild FTL module")
 				continue
 			}
-			var nextPlugin *plugin.Plugin[ftlv1.VerbServiceClient]
-			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, s.Config.Module, s.Config.Dir, exe, ftlv1.NewVerbServiceClient)
+			var nextPlugin *plugin.Plugin[ftlv1connect.VerbServiceClient]
+			nextPlugin, cmdCtx, err = plugin.Spawn(ctx, s.Config.Module, s.Config.Dir, exe, ftlv1connect.NewVerbServiceClient)
 			if err != nil {
 				logger.Errorf(err, "Failed to restart FTL module")
 				continue
@@ -441,8 +435,8 @@ func (s *Server) watchForChanges(ctx context.Context) error {
 	}
 }
 
-func (s *Server) sendSchema(stream ftlv1.DevelService_SyncSchemaServer, module *schema.Module) error {
-	err := stream.Send(&ftlv1.SyncSchemaResponse{ //nolint:forcetypeassert
+func (s *Server) sendSchema(stream *connect.ServerStream[ftlv1.PullSchemaResponse], module *schema.Module) error {
+	err := stream.Send(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
 		Schema: module.ToProto().(*pschema.Module),
 	})
 	if err != nil {
@@ -480,12 +474,11 @@ func generate(config Config) (*codewriter.Writer, error) {
 	w.Import("github.com/TBD54566975/ftl/sdk-go")
 	w.Import("github.com/TBD54566975/ftl/common/plugin")
 	w.Import("github.com/TBD54566975/ftl/common/socket")
-	w.Import(`github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1`)
+	w.Import(`github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect`)
 
 	w.L(`func main() {`)
 	w.In(func(w *codewriter.Writer) {
-		w.L(`ctx, err := sdkgo.ContextWithClient(context.Background(), socket.MustParse(os.Getenv("FTL_ENDPOINT")))`)
-		w.L(`if err != nil { panic(err) }`)
+		w.L(`ctx := sdkgo.ContextWithClient(context.Background(), socket.MustParse(os.Getenv("FTL_ENDPOINT")))`)
 		w.L(`plugin.Start(ctx, %q, drivego.NewUserVerbServer(`, config.Module)
 		for pkg, endpoints := range endpoints {
 			pkgImp := w.Import(pkg)
@@ -493,7 +486,7 @@ func generate(config Config) (*codewriter.Writer, error) {
 				w.L(`  drivego.Handle(%s.%s),`, pkgImp, endpoint.fn.Name())
 			}
 		}
-		w.L(`), ftlv1.RegisterVerbServiceServer)`)
+		w.L(`), ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)`)
 	})
 
 	w.L(`}`)

@@ -7,18 +7,20 @@ SCHEMA_IN = schema/schema.go schema/protobuf.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
 SQLC_IN = sqlc.yaml \
-	backplane/internal/sql/schema/*.sql \
-	backplane/internal/sql/queries.sql
+		  backplane/internal/sql/schema/*.sql \
+		  backplane/internal/sql/queries.sql
 SQLC_OUT = backplane/internal/sql/db.go \
-	$(shell grep -q copyfrom backplane/internal/sql/queries.sql && echo backplane/internal/sql/copyfrom.go) \
-	backplane/internal/sql/models.go \
-	backplane/internal/sql/queries.sql.go
+		   $(shell grep -q copyfrom backplane/internal/sql/queries.sql && echo backplane/internal/sql/copyfrom.go) \
+		   backplane/internal/sql/models.go \
+		   backplane/internal/sql/queries.sql.go
 
-PROTO_IN = protos/xyz/block/ftl/v1/ftl.proto \
-	protos/xyz/block/ftl/v1/schema/schema.proto
-PROTO_OUT = protos/xyz/block/ftl/v1/ftl_grpc.pb.go \
-	protos/xyz/block/ftl/v1/schema/schema.pb.go \
-	protos/xyz/block/ftl/v1/ftl.pb.go
+PROTO_IN = protos/buf.yaml \
+		   protos/buf.gen.yaml \
+		   protos/xyz/block/ftl/v1/ftl.proto \
+		   protos/xyz/block/ftl/v1/schema/schema.proto
+PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
+			protos/xyz/block/ftl/v1/schema/schema.pb.go \
+			protos/xyz/block/ftl/v1/ftl.pb.go
 
 
 .DEFAULT_GOAL := help

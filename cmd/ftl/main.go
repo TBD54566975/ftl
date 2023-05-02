@@ -6,12 +6,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
 
 	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/common/socket"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
 var version = "dev"
@@ -67,22 +67,14 @@ func main() {
 	kctx.FatalIfErrorf(err)
 }
 
-func dialVerbService(ctx context.Context) func() (ftlv1.VerbServiceClient, error) {
-	return func() (ftlv1.VerbServiceClient, error) {
-		conn, err := socket.DialGRPC(ctx, cli.Endpoint)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		return ftlv1.NewVerbServiceClient(conn), nil
+func dialVerbService(ctx context.Context) func() (ftlv1connect.VerbServiceClient, error) {
+	return func() (ftlv1connect.VerbServiceClient, error) {
+		return rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.URL()), nil
 	}
 }
 
-func dialDevelService(ctx context.Context) func() (ftlv1.DevelServiceClient, error) {
-	return func() (ftlv1.DevelServiceClient, error) {
-		conn, err := socket.DialGRPC(ctx, cli.Endpoint)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		return ftlv1.NewDevelServiceClient(conn), nil
+func dialDevelService(ctx context.Context) func() (ftlv1connect.DevelServiceClient, error) {
+	return func() (ftlv1connect.DevelServiceClient, error) {
+		return rpc.Dial(ftlv1connect.NewDevelServiceClient, cli.Endpoint.URL()), nil
 	}
 }
