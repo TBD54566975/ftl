@@ -15,6 +15,6 @@ gosimports -w --local github.com/TBD54566975/ftl $(go list -f '{{.Dir}}' ./...)
 buf format -w
 
 # Revert changes to generated files.
-find protos -name '*.pb.go' -print0 | xargs -0 -r git checkout > /dev/null
+find protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xargs -0 -r git checkout > /dev/null
 
 git diff

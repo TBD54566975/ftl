@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/errors"
+	"github.com/bufbuild/connect-go"
 	"github.com/iancoleman/strcase"
 
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -22,11 +23,11 @@ func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (re
 	if err != nil {
 		return resp, errors.Wrapf(err, "%s: failed to marshal request", callee)
 	}
-	cresp, err := client.Call(ctx, &ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData})
+	cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData}))
 	if err != nil {
 		return resp, errors.Wrapf(err, "%s: failed to call Verb", callee)
 	}
-	switch cresp := cresp.Response.(type) {
+	switch cresp := cresp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Error_:
 		return resp, errors.Errorf("%s: %s", callee, cresp.Error.Message)
 

@@ -3,6 +3,6 @@ plugins:
   - plugin: go
     out: .
     opt: paths=source_relative
-  - plugin: go-grpc
+  - plugin: connect-go
     out: .
-    opt: paths=source_relative,require_unimplemented_servers=false
+    opt: paths=source_relative
