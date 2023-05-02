@@ -4,10 +4,26 @@ import { classNames } from '../../utils'
 import { environments, statuses } from '../../data/Types'
 import ModuleNotFound from './ModuleNotFound'
 import VerbList from '../verbs/VerbList'
+import { useEffect } from 'react'
+import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
+import { createPromiseClient } from '@bufbuild/connect'
+import { createConnectTransport } from '@bufbuild/connect-web'
 
 export default function ModulePage() {
   const { id } = useParams()
   const module = modules.find(module => module.id === id?.toLocaleLowerCase())
+
+  useEffect(() => {
+    const transport = createConnectTransport({
+      baseUrl: 'https://localhost:8892'
+    })
+    const client = createPromiseClient(VerbService, transport)
+
+    client.list({}).then(res => {
+      console.log('Wessss')
+      console.log(res)
+    })
+  }, [module])
 
   if (module === undefined) {
     return <ModuleNotFound id={id} />
