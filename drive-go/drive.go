@@ -60,10 +60,10 @@ func Run(ctx context.Context, config Config) (*Server, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	router := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.Endpoint.URL())
 	s := &Server{
 		Config:         config,
-		router:         router,
+		agent:          rpc.Dial(ftlv1connect.NewDevelServiceClient, config.Endpoint.URL()),
+		router:         rpc.Dial(ftlv1connect.NewVerbServiceClient, config.Endpoint.URL()),
 		module:         config.Module,
 		wg:             &errgroup.Group{},
 		goModule:       goModule,
@@ -99,6 +99,7 @@ var _ ftlv1connect.VerbServiceHandler = (*Server)(nil)
 
 type Server struct {
 	Config
+	agent          ftlv1connect.DevelServiceClient
 	router         ftlv1connect.VerbServiceClient
 	module         string
 	goModule       *modfile.File
@@ -164,12 +165,18 @@ func (s *Server) PullSchema(ctx context.Context, req *connect.Request[ftlv1.Pull
 	}
 	changes := s.moduleSchema.Subscribe(make(chan *schema.Module, 64))
 	defer s.moduleSchema.Unsubscribe(changes)
-	for module := range changes {
-		if err := s.sendSchema(stream, module); err != nil {
-			return errors.WithStack(err)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+
+		case module := <-changes:
+			if err := s.sendSchema(stream, module); err != nil {
+				return errors.WithStack(err)
+			}
 		}
 	}
-	return nil
 }
 
 func (s *Server) PushSchema(ctx context.Context, stream *connect.ClientStream[ftlv1.PushSchemaRequest]) (*connect.Response[ftlv1.PushSchemaResponse], error) {

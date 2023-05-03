@@ -20,7 +20,7 @@ var DefaultClient = func() *http.Client {
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
 	return &http.Client{
-		Timeout:   time.Second * 10,
+		// Timeout:   time.Second * 10,
 		Transport: netTransport,
 	}
 }()

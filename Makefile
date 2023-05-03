@@ -43,16 +43,16 @@ generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate
 protosync: ## Synchronise external protos into FTL repo.
 	protosync
 
-$(PROTO_OUT): $(PROTO_IN)
+$(PROTO_OUT) &: $(PROTO_IN)
 	buf format -w
 	buf lint
 	(cd protos && buf generate)
 
-$(SCHEMA_OUT): $(SCHEMA_IN)
+$(SCHEMA_OUT) &: $(SCHEMA_IN)
 	ftl schema protobuf > $(SCHEMA_OUT)~ && mv $(SCHEMA_OUT)~ $(SCHEMA_OUT)
 
-$(SQLC_OUT): $(SQLC_IN)
+$(SQLC_OUT) &: $(SQLC_IN)
 	sqlc generate --experimental
 
-$(COMMON_LOG_OUT): $(COMMON_LOG_IN)
+$(COMMON_LOG_OUT) &: $(COMMON_LOG_IN)
 	go generate $<

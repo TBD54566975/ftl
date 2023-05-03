@@ -26,6 +26,7 @@ func (c *schemaGetCmd) Run(ctx context.Context, client ftlv1connect.DevelService
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	wg, _ := errgroup.WithContext(ctx)
 	modules := make(chan *schema.Module)
 	wg.Go(func() (err error) {

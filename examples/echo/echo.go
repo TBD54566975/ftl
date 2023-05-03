@@ -14,6 +14,7 @@ import (
 type EchoRequest struct {
 	Name string `json:"name"`
 }
+
 type EchoResponse struct {
 	Message string `json:"message"`
 }

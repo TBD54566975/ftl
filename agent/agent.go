@@ -3,7 +3,7 @@ package agent
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -203,27 +203,12 @@ func (a *Agent) Wait() error {
 }
 
 func (a *Agent) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
-	drives := a.allDrives()
-
-	slices.SortStableFunc(drives, func(a, b *driveContext) bool {
-		return a.config.Module < b.config.Module
+	return a.watchModuleChanges(ctx, "", func(m *schema.Module, more bool) error {
+		return errors.WithStack(stream.Send(&ftlv1.PullSchemaResponse{
+			Schema: m.ToProto().(*pschema.Module), //nolint:forcetypeassert
+			More:   more,
+		}))
 	})
-
-	for i, drive := range drives {
-		module, ok := drive.schema.Load().Get()
-		if !ok {
-			continue
-		}
-		err := stream.Send(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
-			Schema: module.ToProto().(*pschema.Module),
-			More:   i < len(drives)-1,
-		})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-	}
-
-	return nil
 }
 
 func (a *Agent) PushSchema(ctx context.Context, req *connect.ClientStream[ftlv1.PushSchemaRequest]) (*connect.Response[ftlv1.PushSchemaResponse], error) {
@@ -293,30 +278,45 @@ func (a *Agent) findDrive(verb string) (*driveContext, error) {
 
 func (a *Agent) syncSchemaToDrive(ctx context.Context, drive *driveContext) error {
 	stream := drive.develService.PushSchema(ctx)
+	return a.watchModuleChanges(ctx, drive.config.Module, func(module *schema.Module, more bool) error {
+		return errors.WithStack(stream.Send(&ftlv1.PushSchemaRequest{
+			Schema: module.ToProto().(*pschema.Module), //nolint:forcetypeassert
+		}))
+	})
+}
 
+func (a *Agent) watchModuleChanges(ctx context.Context, skipModule string, sendChange func(module *schema.Module, more bool) error) error {
 	// Send snapshot.
 	drives := a.allDrives()
-	for _, drive := range drives {
+	for i, drive := range drives {
 		module, ok := drive.schema.Load().Get()
 		if !ok {
 			continue
 		}
-		if err := a.sendSchema(stream, module); err != nil {
+		if err := sendChange(module, i < len(drives)-1); err != nil {
 			return errors.WithStack(err)
 		}
 	}
+
 	// Send changes to the drive.
 	changes := a.schemaChanges.Subscribe(make(chan *schema.Module, 64))
-	for module := range changes {
-		// Don't send updates back to itself.
-		if module.Name == drive.config.Module {
-			continue
-		}
-		if err := a.sendSchema(stream, module); err != nil {
-			return errors.WithStack(err)
+	defer a.schemaChanges.Unsubscribe(changes)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+
+		case module := <-changes:
+			// Don't send updates back to itself.
+			if module.Name == skipModule {
+				continue
+			}
+			if err := sendChange(module, false); err != nil {
+				return errors.WithStack(err)
+			}
 		}
 	}
-	return nil
 }
 
 func (a *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) error {
@@ -327,24 +327,10 @@ func (a *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 
 	for stream.Receive() {
 		resp := stream.Msg()
-		if errors.Is(err, io.EOF) {
-			return nil
-		} else if err != nil {
-			return errors.WithStack(err)
-		}
 		module := schema.ProtoToModule(resp.Schema)
 		a.schemaChanges.Publish(module)
 		drive.schema.Store(types.Some(module))
 	}
+	fmt.Println("DONE", stream.Err())
 	return errors.WithStack(stream.Err())
-}
-
-func (a *Agent) sendSchema(stream *connect.ClientStreamForClient[ftlv1.PushSchemaRequest, ftlv1.PushSchemaResponse], module *schema.Module) error {
-	err := stream.Send(&ftlv1.PushSchemaRequest{ //nolint:forcetypeassert
-		Schema: module.ToProto().(*pschema.Module),
-	})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
 }

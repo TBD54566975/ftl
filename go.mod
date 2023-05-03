@@ -3,6 +3,7 @@ module github.com/TBD54566975/ftl
 go 1.20
 
 require (
+	github.com/BurntSushi/toml v1.2.1
 	github.com/alecthomas/kong v0.7.1
 	github.com/bufbuild/connect-go v1.7.0
 	github.com/google/uuid v1.3.0
@@ -27,7 +28,6 @@ require (
 )
 
 require (
-	github.com/BurntSushi/toml v1.2.1
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/errors v0.3.0
