@@ -436,46 +436,108 @@ export class SendResponse extends Message<SendResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.SyncSchemaRequest
+ * @generated from message xyz.block.ftl.v1.PushSchemaRequest
  */
-export class SyncSchemaRequest extends Message<SyncSchemaRequest> {
+export class PushSchemaRequest extends Message<PushSchemaRequest> {
   /**
    * @generated from field: xyz.block.ftl.v1.schema.Module schema = 1;
    */
   schema?: Module;
 
-  constructor(data?: PartialMessage<SyncSchemaRequest>) {
+  constructor(data?: PartialMessage<PushSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.SyncSchemaRequest";
+  static readonly typeName = "xyz.block.ftl.v1.PushSchemaRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "schema", kind: "message", T: Module },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SyncSchemaRequest {
-    return new SyncSchemaRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PushSchemaRequest {
+    return new PushSchemaRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SyncSchemaRequest {
-    return new SyncSchemaRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PushSchemaRequest {
+    return new PushSchemaRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SyncSchemaRequest {
-    return new SyncSchemaRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PushSchemaRequest {
+    return new PushSchemaRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SyncSchemaRequest | PlainMessage<SyncSchemaRequest> | undefined, b: SyncSchemaRequest | PlainMessage<SyncSchemaRequest> | undefined): boolean {
-    return proto3.util.equals(SyncSchemaRequest, a, b);
+  static equals(a: PushSchemaRequest | PlainMessage<PushSchemaRequest> | undefined, b: PushSchemaRequest | PlainMessage<PushSchemaRequest> | undefined): boolean {
+    return proto3.util.equals(PushSchemaRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.SyncSchemaResponse
+ * @generated from message xyz.block.ftl.v1.PushSchemaResponse
  */
-export class SyncSchemaResponse extends Message<SyncSchemaResponse> {
+export class PushSchemaResponse extends Message<PushSchemaResponse> {
+  constructor(data?: PartialMessage<PushSchemaResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.PushSchemaResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PushSchemaResponse {
+    return new PushSchemaResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PushSchemaResponse {
+    return new PushSchemaResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PushSchemaResponse {
+    return new PushSchemaResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PushSchemaResponse | PlainMessage<PushSchemaResponse> | undefined, b: PushSchemaResponse | PlainMessage<PushSchemaResponse> | undefined): boolean {
+    return proto3.util.equals(PushSchemaResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.PullSchemaRequest
+ */
+export class PullSchemaRequest extends Message<PullSchemaRequest> {
+  constructor(data?: PartialMessage<PullSchemaRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.PullSchemaRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PullSchemaRequest {
+    return new PullSchemaRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PullSchemaRequest {
+    return new PullSchemaRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PullSchemaRequest {
+    return new PullSchemaRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PullSchemaRequest | PlainMessage<PullSchemaRequest> | undefined, b: PullSchemaRequest | PlainMessage<PullSchemaRequest> | undefined): boolean {
+    return proto3.util.equals(PullSchemaRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.PullSchemaResponse
+ */
+export class PullSchemaResponse extends Message<PullSchemaResponse> {
   /**
    * @generated from field: xyz.block.ftl.v1.schema.Module schema = 1;
    */
@@ -489,32 +551,32 @@ export class SyncSchemaResponse extends Message<SyncSchemaResponse> {
    */
   more = false;
 
-  constructor(data?: PartialMessage<SyncSchemaResponse>) {
+  constructor(data?: PartialMessage<PullSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.SyncSchemaResponse";
+  static readonly typeName = "xyz.block.ftl.v1.PullSchemaResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "schema", kind: "message", T: Module },
     { no: 2, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SyncSchemaResponse {
-    return new SyncSchemaResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PullSchemaResponse {
+    return new PullSchemaResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SyncSchemaResponse {
-    return new SyncSchemaResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PullSchemaResponse {
+    return new PullSchemaResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SyncSchemaResponse {
-    return new SyncSchemaResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PullSchemaResponse {
+    return new PullSchemaResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SyncSchemaResponse | PlainMessage<SyncSchemaResponse> | undefined, b: SyncSchemaResponse | PlainMessage<SyncSchemaResponse> | undefined): boolean {
-    return proto3.util.equals(SyncSchemaResponse, a, b);
+  static equals(a: PullSchemaResponse | PlainMessage<PullSchemaResponse> | undefined, b: PullSchemaResponse | PlainMessage<PullSchemaResponse> | undefined): boolean {
+    return proto3.util.equals(PullSchemaResponse, a, b);
   }
 }
 

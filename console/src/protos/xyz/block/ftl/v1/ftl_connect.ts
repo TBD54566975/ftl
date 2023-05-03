@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, ListRequest, ListResponse, PingRequest, PingResponse, SendRequest, SendResponse, SyncSchemaRequest, SyncSchemaResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, SendRequest, SendResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -85,17 +85,26 @@ export const DevelService = {
       kind: MethodKind.Unary,
     },
     /**
-     * Sync schema changes to and from the service.
+     * Push schema changes to the server.
      *
-     * Each request and response contains the schema for a single module.
-     *
-     * @generated from rpc xyz.block.ftl.v1.DevelService.SyncSchema
+     * @generated from rpc xyz.block.ftl.v1.DevelService.PushSchema
      */
-    syncSchema: {
-      name: "SyncSchema",
-      I: SyncSchemaRequest,
-      O: SyncSchemaResponse,
-      kind: MethodKind.BiDiStreaming,
+    pushSchema: {
+      name: "PushSchema",
+      I: PushSchemaRequest,
+      O: PushSchemaResponse,
+      kind: MethodKind.ClientStreaming,
+    },
+    /**
+     * Pull schema changes from the server.
+     *
+     * @generated from rpc xyz.block.ftl.v1.DevelService.PullSchema
+     */
+    pullSchema: {
+      name: "PullSchema",
+      I: PullSchemaRequest,
+      O: PullSchemaResponse,
+      kind: MethodKind.ServerStreaming,
     },
   }
 } as const;
