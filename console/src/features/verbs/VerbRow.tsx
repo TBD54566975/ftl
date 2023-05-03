@@ -94,6 +94,12 @@ export const VerbRow: React.FC<Props> = ({ verb }) => {
                   </div>
                 </li>
               )}
+              {(verb?.comments.length ?? 0) > 0 &&
+                verb?.comments.map(comment => (
+                  <div className="pt-4">
+                    <span className="text-gray-300 text-sm">{comment}</span>
+                  </div>
+                ))}
             </ul>
           </Disclosure.Panel>
         </>

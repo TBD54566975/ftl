@@ -12,7 +12,6 @@ import (
 )
 
 type EchoRequest struct {
-	// This is a comment
 	Name string `json:"name"`
 }
 
