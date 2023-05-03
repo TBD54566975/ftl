@@ -19,6 +19,7 @@ import (
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
+	"github.com/rs/cors"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/http2"
@@ -94,8 +95,24 @@ func (a *Agent) Serve(ctx context.Context) error {
 	}
 	mux.Handle("/", c)
 
+	// TODO: Is this a good idea? Who knows!
+	crs := cors.New(cors.Options{
+		AllowedOrigins: []string{a.listen.URL()},
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+		},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: false,
+	})
+	root := crs.Handler(rpc.Middleware(ctx, mux))
+
 	http1Server := &http.Server{
-		Handler:           h2c.NewHandler(rpc.Middleware(ctx, mux), &http2.Server{}),
+		Handler:           h2c.NewHandler(root, &http2.Server{}),
 		ReadHeaderTimeout: time.Second * 30,
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}

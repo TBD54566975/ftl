@@ -8,6 +8,7 @@ require (
 	github.com/bufbuild/connect-go v1.7.0
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v5 v5.3.1
+	github.com/rs/cors v1.9.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	golang.org/x/net v0.9.0
 	golang.org/x/sync v0.1.0

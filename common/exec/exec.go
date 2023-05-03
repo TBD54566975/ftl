@@ -34,8 +34,9 @@ func Command(ctx context.Context, dir, exe string, args ...string) *Cmd {
 		Setpgid: true,
 	}
 	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	output := logger.WriterAt(log.Debug)
+	cmd.Stdout = output
+	cmd.Stderr = output
 	cmd.Env = os.Environ()
 	return &Cmd{cmd}
 }
