@@ -21,7 +21,11 @@ export function useSchema() {
         }
 
         if (!response.more) {
-          setSchema(schemaParts)
+          setSchema(
+            schemaParts.sort(
+              (a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0
+            )
+          )
         }
       }
     }
