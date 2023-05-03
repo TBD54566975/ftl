@@ -9,6 +9,7 @@ import (
 type TimeRequest struct{}
 type TimeResponse struct {
 	Time int `json:"time"`
+	Date int `json:"date"`
 }
 
 //ftl:verb
