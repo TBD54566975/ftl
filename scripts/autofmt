@@ -17,4 +17,6 @@ buf format -w
 # Revert changes to generated files.
 find protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xargs -0 -r git checkout > /dev/null
 
+(cd protos && buf generate)
+
 git diff

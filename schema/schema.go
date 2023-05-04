@@ -124,6 +124,7 @@ type DataRef Ref
 type Data struct {
 	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
+	Comments []string   `parser:"@Comment*" json:"comments,omitempty" protobuf:"5"`
 	Name     string     `parser:"'data' @Ident '{'" json:"name,omitempty" protobuf:"2"`
 	Fields   []*Field   `parser:"@@* '}'" json:"fields,omitempty" protobuf:"3"`
 	Metadata []Metadata `parser:"@@*" json:"metadata,omitempty" protobuf:"4"`

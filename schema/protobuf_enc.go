@@ -101,8 +101,9 @@ func (v *Verb) ToProto() proto.Message {
 
 func (d *Data) ToProto() proto.Message {
 	return &pschema.Data{
-		Name:   d.Name,
-		Fields: nodeListToProto[*pschema.Field](d.Fields),
+		Name:     d.Name,
+		Fields:   nodeListToProto[*pschema.Field](d.Fields),
+		Comments: d.Comments,
 	}
 }
 

@@ -1,3 +1,5 @@
+// This is the echo module.
+//
 //ftl:module echo
 package echo
 
@@ -11,6 +13,7 @@ import (
 	ftl "github.com/TBD54566975/ftl/sdk-go"
 )
 
+// An echo request.
 type EchoRequest struct {
 	Name string `json:"name"`
 }
@@ -19,6 +22,8 @@ type EchoResponse struct {
 	Message string `json:"message"`
 }
 
+// Echo returns a greeting with the current time.
+//
 //ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	tresp, err := ftl.Call(ctx, timemodule.Time, timemodule.TimeRequest{})

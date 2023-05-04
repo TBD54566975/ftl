@@ -101,6 +101,11 @@ export class Data extends Message<Data> {
    */
   metadata: Metadata[] = [];
 
+  /**
+   * @generated from field: repeated string comments = 5;
+   */
+  comments: string[] = [];
+
   constructor(data?: PartialMessage<Data>) {
     super();
     proto3.util.initPartial(data, this);
@@ -113,6 +118,7 @@ export class Data extends Message<Data> {
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "fields", kind: "message", T: Field, repeated: true },
     { no: 4, name: "metadata", kind: "message", T: Metadata, repeated: true },
+    { no: 5, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Data {

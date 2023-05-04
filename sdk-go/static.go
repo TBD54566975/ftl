@@ -15,6 +15,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
+	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/TBD54566975/ftl/common/goast"
@@ -46,6 +47,7 @@ func ExtractModule(dir string) (*schema.Module, error) {
 	}
 	module := &schema.Module{}
 	for _, pkg := range pkgs {
+		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module}
 		for _, file := range pkg.Syntax {
 			var verb *schema.Verb
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
@@ -56,17 +58,17 @@ func ExtractModule(dir string) (*schema.Module, error) {
 				}()
 				switch node := node.(type) {
 				case *ast.CallExpr:
-					if err := visitCallExpr(verb, node, pkg); err != nil {
+					if err := visitCallExpr(pctx, verb, node); err != nil {
 						return err
 					}
 
 				case *ast.File:
-					if err := visitFile(module, node, pkg); err != nil {
+					if err := visitFile(pctx, node); err != nil {
 						return err
 					}
 
 				case *ast.FuncDecl:
-					verb, err = visitFuncDecl(pkg, module, node)
+					verb, err = visitFuncDecl(pctx, node)
 					if err != nil {
 						return err
 					}
@@ -93,8 +95,8 @@ func ExtractModule(dir string) (*schema.Module, error) {
 	return module, schema.ValidateModule(module)
 }
 
-func visitCallExpr(verb *schema.Verb, node *ast.CallExpr, pkg *packages.Package) error {
-	_, fn := deref[*types.Func](pkg, node.Fun)
+func visitCallExpr(pctx *parseContext, verb *schema.Verb, node *ast.CallExpr) error {
+	_, fn := deref[*types.Func](pctx.pkg, node.Fun)
 	if fn == nil {
 		return nil
 	}
@@ -104,12 +106,12 @@ func visitCallExpr(verb *schema.Verb, node *ast.CallExpr, pkg *packages.Package)
 	if len(node.Args) != 3 {
 		return errors.New("Call must have exactly three arguments")
 	}
-	_, verbFn := deref[*types.Func](pkg, node.Args[1])
+	_, verbFn := deref[*types.Func](pctx.pkg, node.Args[1])
 	if verbFn == nil {
 		return errors.Errorf("Call first argument must be a function but is %s", node.Args[1])
 	}
 	moduleName := verbFn.Pkg().Name()
-	if moduleName == pkg.Name {
+	if moduleName == pctx.pkg.Name {
 		moduleName = ""
 	}
 	ref := &schema.VerbRef{
@@ -121,7 +123,7 @@ func visitCallExpr(verb *schema.Verb, node *ast.CallExpr, pkg *packages.Package)
 	return nil
 }
 
-func visitFile(module *schema.Module, node *ast.File, pkg *packages.Package) error {
+func visitFile(pctx *parseContext, node *ast.File) error {
 	if node.Doc == nil {
 		return nil
 	}
@@ -129,17 +131,17 @@ func visitFile(module *schema.Module, node *ast.File, pkg *packages.Package) err
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	module.Comments = parseComments(node.Doc)
+	pctx.module.Comments = parseComments(node.Doc)
 	for _, dir := range directives {
 		switch dir.kind {
 		case "module":
 			if dir.id == "" {
 				return errors.Errorf("%s: module not specified", dir)
 			}
-			if dir.id != pkg.Name {
-				return errors.Errorf("%s: FTL module name %q does not match Go package name %q", dir, dir.id, pkg.Name)
+			if dir.id != pctx.pkg.Name {
+				return errors.Errorf("%s: FTL module name %q does not match Go package name %q", dir, dir.id, pctx.pkg.Name)
 			}
-			module.Name = dir.id
+			pctx.module.Name = dir.id
 
 		default:
 			return errors.Errorf("%s: invalid directive", dir)
@@ -186,12 +188,12 @@ func goPosToSchemaPos(pos token.Pos) schema.Position {
 }
 
 // "verbIndex" is the index into the Module.Decls of the verb that was parsed.
-func visitFuncDecl(pkg *packages.Package, module *schema.Module, node *ast.FuncDecl) (verb *schema.Verb, err error) {
+func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, err error) {
 	if node.Doc == nil {
 		return nil, nil
 	}
-	fnt := pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
-	sig := fnt.Type().(*types.Signature)               //nolint:forcetypeassert
+	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
+	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
 	if sig.Recv() != nil {
 		return nil, errors.Errorf("ftl:verb cannot be a method")
 	}
@@ -200,11 +202,11 @@ func visitFuncDecl(pkg *packages.Package, module *schema.Module, node *ast.FuncD
 	if err := checkSignature(sig); err != nil {
 		return nil, err
 	}
-	req, err := parseStruct(pkg, module, node, params.At(1).Type())
+	req, err := parseStruct(pctx, node, params.At(1).Type())
 	if err != nil {
 		return nil, err
 	}
-	resp, err := parseStruct(pkg, module, node, results.At(0).Type())
+	resp, err := parseStruct(pctx, node, results.At(0).Type())
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +217,7 @@ func visitFuncDecl(pkg *packages.Package, module *schema.Module, node *ast.FuncD
 		Request:  req,
 		Response: resp,
 	}
-	module.Decls = append(module.Decls, verb)
+	pctx.module.Decls = append(pctx.module.Decls, verb)
 	return verb, nil
 }
 
@@ -227,22 +229,44 @@ func parseComments(doc *ast.CommentGroup) []string {
 	return comments
 }
 
-func parseStruct(pkg *packages.Package, module *schema.Module, node ast.Node, tnode types.Type) (*schema.DataRef, error) {
+func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.DataRef, error) {
 	named, ok := tnode.(*types.Named)
 	if !ok {
 		return nil, errors.Errorf("expected named type but got %s", tnode)
-	}
-	s, ok := tnode.Underlying().(*types.Struct)
-	if !ok {
-		return nil, errors.Errorf("expected struct but got %s", tnode)
 	}
 	out := &schema.Data{
 		Pos:  goPosToSchemaPos(node.Pos()),
 		Name: named.Obj().Name(),
 	}
+
+	// Find type declaration so we can extract comments.
+	pos := named.Obj().Pos()
+	pkg, path, _ := pctx.pathEnclosingInterval(pos, pos)
+	if pkg != nil {
+		for i := len(path) - 1; i >= 0; i-- {
+			// We have to check both the type spec and the gen decl because the
+			// type could be declared as either "type Foo struct { ... }" or
+			// "type ( Foo struct { ... } )"
+			switch path := path[i].(type) {
+			case *ast.TypeSpec:
+				if path.Doc != nil {
+					out.Comments = parseComments(path.Doc)
+				}
+			case *ast.GenDecl:
+				if path.Doc != nil {
+					out.Comments = parseComments(path.Doc)
+				}
+			}
+		}
+	}
+
+	s, ok := tnode.Underlying().(*types.Struct)
+	if !ok {
+		return nil, errors.Errorf("expected struct but got %s", tnode)
+	}
 	for i := 0; i < s.NumFields(); i++ {
 		f := s.Field(i)
-		ft, err := parseType(pkg, module, node, f.Type())
+		ft, err := parseType(pctx, node, f.Type())
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -252,14 +276,14 @@ func parseStruct(pkg *packages.Package, module *schema.Module, node ast.Node, tn
 			Type: ft,
 		})
 	}
-	module.AddData(out)
+	pctx.module.AddData(out)
 	return &schema.DataRef{
 		Pos:  goPosToSchemaPos(node.Pos()),
 		Name: out.Name,
 	}, nil
 }
 
-func parseType(pkg *packages.Package, module *schema.Module, node ast.Node, tnode types.Type) (schema.Type, error) {
+func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
 	switch tnode := tnode.Underlying().(type) {
 	case *types.Basic:
 		switch tnode.Kind() {
@@ -280,25 +304,25 @@ func parseType(pkg *packages.Package, module *schema.Module, node ast.Node, tnod
 		}
 
 	case *types.Struct:
-		return parseStruct(pkg, module, node, tnode)
+		return parseStruct(pctx, node, tnode)
 
 	case *types.Map:
-		return parseMap(pkg, module, node, tnode)
+		return parseMap(pctx, node, tnode)
 
 	case *types.Slice:
-		return parseSlice(pkg, module, node, tnode)
+		return parseSlice(pctx, node, tnode)
 
 	default:
 		return nil, errors.Errorf("unsupported type %s", node)
 	}
 }
 
-func parseMap(pkg *packages.Package, module *schema.Module, node ast.Node, tnode *types.Map) (*schema.Map, error) {
-	key, err := parseType(pkg, module, node, tnode.Key())
+func parseMap(pctx *parseContext, node ast.Node, tnode *types.Map) (*schema.Map, error) {
+	key, err := parseType(pctx, node, tnode.Key())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	value, err := parseType(pkg, module, node, tnode.Elem())
+	value, err := parseType(pctx, node, tnode.Elem())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -309,8 +333,8 @@ func parseMap(pkg *packages.Package, module *schema.Module, node ast.Node, tnode
 	}, nil
 }
 
-func parseSlice(pkg *packages.Package, module *schema.Module, node ast.Node, tnode *types.Slice) (*schema.Array, error) {
-	value, err := parseType(pkg, module, node, tnode.Elem())
+func parseSlice(pctx *parseContext, node ast.Node, tnode *types.Slice) (*schema.Array, error) {
+	value, err := parseType(pctx, node, tnode.Elem())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -463,4 +487,42 @@ func deref[T types.Object](pkg *packages.Package, node ast.Expr) (string, T) {
 	default:
 		return "", obj
 	}
+}
+
+type parseContext struct {
+	pkg    *packages.Package
+	pkgs   []*packages.Package
+	module *schema.Module
+}
+
+// pathEnclosingInterval returns the PackageInfo and ast.Node that
+// contain source interval [start, end), and all the node's ancestors
+// up to the AST root.  It searches all ast.Files of all packages in prog.
+// exact is defined as for astutil.PathEnclosingInterval.
+//
+// The zero value is returned if not found.
+func (p *parseContext) pathEnclosingInterval(start, end token.Pos) (pkg *packages.Package, path []ast.Node, exact bool) {
+	for _, info := range p.pkgs {
+		for _, f := range info.Syntax {
+			if f.Pos() == token.NoPos {
+				// This can happen if the parser saw
+				// too many errors and bailed out.
+				// (Use parser.AllErrors to prevent that.)
+				continue
+			}
+			if !tokenFileContainsPos(fset.File(f.Pos()), start) {
+				continue
+			}
+			if path, exact := astutil.PathEnclosingInterval(f, start, end); path != nil {
+				return info, path, exact
+			}
+		}
+	}
+	return nil, nil, false
+}
+
+func tokenFileContainsPos(f *token.File, pos token.Pos) bool {
+	p := int(pos)
+	base := f.Base()
+	return base <= p && p < base+f.Size()
 }
