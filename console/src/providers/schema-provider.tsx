@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react'
-import { DevelService } from '../protos/xyz/block/ftl/v1/ftl_connect'
+import { createContext, useEffect, useState } from 'react'
 import { PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
-import { useClient } from './use-client'
+import { DevelService } from '../protos/xyz/block/ftl/v1/ftl_connect'
+import { useClient } from '../hooks/use-client'
 
-export function useSchema() {
+// eslint-disable-next-line react-refresh/only-export-components
+export const schemaContext = createContext<PullSchemaResponse[]>([])
+
+const SchemaProvider = props => {
   const client = useClient(DevelService)
   const [schema, setSchema] = useState<PullSchemaResponse[]>([])
 
@@ -32,5 +35,11 @@ export function useSchema() {
     fetchSchema()
   }, [client])
 
-  return schema
+  return (
+    <schemaContext.Provider value={schema}>
+      {props.children}
+    </schemaContext.Provider>
+  )
 }
+
+export default SchemaProvider

@@ -5,6 +5,7 @@ import {
 } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils'
 import { Card } from '../../components/Card'
+import { Link } from 'react-router-dom'
 
 type Props = {
   module?: Module
@@ -19,8 +20,8 @@ export const VerbCard: React.FC<Props> = ({ module, verb }) => {
   return (
     <Card>
       <div className="min-w-0 flex-1">
-        <a
-          href={`/modules/${module?.name}/verbs/${verb?.name}`}
+        <Link
+          to={`/modules/${module?.name}/verbs/${verb?.name}`}
           className="focus:outline-none"
         >
           <p className="text-sm font-medium text-gray-900 dark:text-gray-300">
@@ -42,7 +43,7 @@ export const VerbCard: React.FC<Props> = ({ module, verb }) => {
               </div>
             </li>
           )}
-        </a>
+        </Link>
       </div>
     </Card>
   )

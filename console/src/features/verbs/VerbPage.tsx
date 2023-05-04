@@ -1,15 +1,16 @@
-import { useParams } from 'react-router-dom'
-import { ChevronRightIcon, HomeIcon } from '@heroicons/react/20/solid'
-import { useSchema } from '../../hooks/use-schema'
+import { Link, useParams } from 'react-router-dom'
+import { ChevronRightIcon } from '@heroicons/react/20/solid'
 import {
   MetadataCalls,
   Verb
 } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils'
+import { useContext } from 'react'
+import { schemaContext } from '../../providers/schema-provider'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
-  const schema = useSchema()
+  const schema = useContext(schemaContext)
   const module = schema.find(module => module.schema?.name === moduleId)?.schema
 
   const verb = module?.decls.find(
@@ -32,13 +33,12 @@ export default function VerbPage() {
         <ol role="list" className="flex items-center space-x-4">
           <li>
             <div>
-              <a href="/" className="text-gray-400 hover:text-gray-500">
-                <HomeIcon
-                  className="h-5 w-5 flex-shrink-0"
-                  aria-hidden="true"
-                />
-                <span className="sr-only">Home</span>
-              </a>
+              <Link
+                to="/modules"
+                className="text-sm font-medium text-gray-400 hover:text-gray-500"
+              >
+                Modules
+              </Link>
             </div>
           </li>
           <li key={module.name}>
@@ -47,13 +47,13 @@ export default function VerbPage() {
                 className="h-5 w-5 flex-shrink-0 text-gray-400"
                 aria-hidden="true"
               />
-              <a
-                href={`/${module.name}`}
+              <Link
+                to={`/modules/${module.name}`}
                 className="ml-4 text-sm font-medium text-gray-400 hover:text-gray-500"
                 aria-current={'page'}
               >
                 {module.name}
-              </a>
+              </Link>
             </div>
           </li>
         </ol>
@@ -83,7 +83,10 @@ export default function VerbPage() {
 
       {calls?.map(call =>
         call.calls.map(call => (
-          <a href={`/modules/${call.module}/verbs/${call.name}`}>
+          <Link
+            key={`/modules/${call.module}/verbs/${call.name}`}
+            to={`/modules/${call.module}/verbs/${call.name}`}
+          >
             <span
               className={classNames(
                 'text-indigo-400 bg-indigo-400/10 ring-indigo-400/30',
@@ -92,7 +95,7 @@ export default function VerbPage() {
             >
               {call.name}
             </span>
-          </a>
+          </Link>
         ))
       )}
       <div className="flex items-center gap-x-3 pt-6">

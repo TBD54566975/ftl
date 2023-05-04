@@ -1,10 +1,12 @@
 import { classNames } from '../../utils'
 import { statuses } from '../../data/Types'
-import { useSchema } from '../../hooks/use-schema'
 import { Card } from '../../components/Card'
+import { useContext } from 'react'
+import { Link } from 'react-router-dom'
+import { schemaContext } from '../../providers/schema-provider'
 
 export default function ModulesPage() {
-  const schema = useSchema()
+  const schema = useContext(schemaContext)
 
   return (
     <>
@@ -12,8 +14,8 @@ export default function ModulesPage() {
         {schema.map(module => (
           <Card key={module.schema?.name}>
             <div className="min-w-0 flex-1">
-              <a
-                href={`modules/${module.schema?.name}`}
+              <Link
+                to={`${module.schema?.name}`}
                 className="focus:outline-none"
               >
                 <span className="absolute inset-0" aria-hidden="true" />
@@ -42,7 +44,7 @@ export default function ModulesPage() {
                     </div>
                   </div>
                 )}
-              </a>
+              </Link>
             </div>
           </Card>
         ))}

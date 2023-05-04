@@ -4,7 +4,7 @@ import {
   XMarkIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/outline'
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { classNames } from '../utils'
 import { Fragment } from 'react'
 
@@ -83,15 +83,15 @@ export default function Navigation() {
                         {userNavigation.map(item => (
                           <Menu.Item key={item.name}>
                             {({ active }) => (
-                              <a
-                                href={item.href}
+                              <Link
+                                to={item.href}
                                 className={classNames(
                                   active ? 'bg-gray-100' : '',
                                   'block px-4 py-2 text-sm text-gray-700'
                                 )}
                               >
                                 {item.name}
-                              </a>
+                              </Link>
                             )}
                           </Menu.Item>
                         ))}
