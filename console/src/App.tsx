@@ -3,7 +3,7 @@ import Logs from './features/log/Logs'
 import Layout from './components/Layout'
 import ModulePage from './features/modules/ModulePage'
 import Navigation from './components/Navigation'
-import VerbPage from './features/verbs/Verb'
+import VerbPage from './features/verbs/VerbPage'
 import ModulesPage from './features/modules/ModulesPage'
 
 function App() {

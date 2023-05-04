@@ -1,63 +1,52 @@
-import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import { modules } from '../../data/Modules'
 import { classNames } from '../../utils'
-import { environments, statuses } from '../../data/Types'
+import { statuses } from '../../data/Types'
+import { useSchema } from '../../hooks/use-schema'
+import { Card } from '../../components/Card'
 
 export default function ModulesPage() {
+  const schema = useSchema()
+
   return (
     <>
-      <h2 className="text-base font-semibold dark:text-white">Modules</h2>
-      <ul role="list" className="divide-y divide-black/5 dark:divide-white/5">
-        {modules.map(module => (
-          <li
-            key={module.id}
-            className="relative flex items-center space-x-4 py-4"
-          >
-            <div className="min-w-0 flex-auto">
-              <div className="flex items-center gap-x-3">
-                <div
-                  className={classNames(
-                    statuses[module.status],
-                    'flex-none rounded-full p-1'
-                  )}
-                >
-                  <div className="h-2 w-2 rounded-full bg-current" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {schema.map(module => (
+          <Card key={module.schema?.name}>
+            <div className="min-w-0 flex-1">
+              <a
+                href={`modules/${module.schema?.name}`}
+                className="focus:outline-none"
+              >
+                <span className="absolute inset-0" aria-hidden="true" />
+                <div className="min-w-0 flex-auto">
+                  <div className="flex items-center gap-x-3">
+                    <div
+                      className={classNames(
+                        statuses['online'],
+                        'flex-none rounded-full p-1'
+                      )}
+                    >
+                      <div className="h-2 w-2 rounded-full bg-current" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-300">
+                      {module.schema?.name}
+                    </p>
+                  </div>
                 </div>
-                <h2 className="min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white">
-                  <a href={`modules/${module.id}`} className="flex gap-x-2">
-                    <span className="truncate">{module.name}</span>
-                    <span className="text-gray-400">/</span>
-                    <span className="whitespace-nowrap">{module.language}</span>
-                    <span className="absolute inset-0" />
-                  </a>
-                </h2>
-              </div>
-              <div className="mt-3 flex items-center gap-x-2.5 text-xs leading-5 text-gray-400">
-                <p className="truncate">{module.description}</p>
-                <svg
-                  viewBox="0 0 2 2"
-                  className="h-0.5 w-0.5 flex-none fill-gray-300"
-                >
-                  <circle cx={1} cy={1} r={1} />
-                </svg>
-                <p className="whitespace-nowrap">{module.statusText}</p>
-              </div>
+
+                {(module.schema?.comments.length ?? 0) > 0 && (
+                  <div className="min-w-0 flex-auto pt-2">
+                    <div className="flex items-center gap-x-3">
+                      <p className="truncate text-sm text-gray-500">
+                        {module.schema?.comments}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </a>
             </div>
-            <div
-              className={classNames(
-                environments[module.environment],
-                'rounded-full flex-none py-1 px-2 text-xs font-medium ring-1 ring-inset'
-              )}
-            >
-              {module.environment}
-            </div>
-            <ChevronRightIcon
-              className="h-5 w-5 flex-none text-gray-400"
-              aria-hidden="true"
-            />
-          </li>
+          </Card>
         ))}
-      </ul>
+      </div>
     </>
   )
 }
