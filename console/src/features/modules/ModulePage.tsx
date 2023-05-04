@@ -1,8 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { classNames } from '../../utils'
-import { environments, statuses } from '../../data/Types'
+import { statuses } from '../../data/Types'
 import { useSchema } from '../../hooks/use-schema'
-import { TypeList } from '../types/TypeList'
 import { VerbList } from '../verbs/VerbList'
 
 export default function ModulePage() {
@@ -27,6 +26,7 @@ export default function ModulePage() {
             >
               <div className="h-2 w-2 rounded-full bg-current" />
             </div>
+
             <h2 className="min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white">
               <div className="flex gap-x-2">
                 <span className="truncate">{module?.name}</span>
@@ -37,19 +37,9 @@ export default function ModulePage() {
             </h2>
           </div>
         </div>
-        <div
-          className={classNames(
-            environments['Staging'],
-            'rounded-full flex-none py-1 px-2 text-xs font-medium ring-1 ring-inset'
-          )}
-        >
-          Staging
-        </div>
       </div>
-      <h2 className="text-base font-semibold dark:text-white pt-6">Verbs</h2>
+      <p className="truncate text-sm text-gray-500 pt-2">{module.comments}</p>
       <VerbList module={module} />
-      <h2 className="text-base font-semibold dark:text-white pt-6">Types</h2>
-      <TypeList module={module} />
     </>
   )
 }

@@ -1,5 +1,5 @@
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { VerbRow } from './VerbRow'
+import { VerbCard } from './VerbCard'
 
 type Props = {
   module?: Module
@@ -10,14 +10,15 @@ export const VerbList: React.FC<Props> = ({ module }) => {
 
   return (
     <>
-      <dl role="list" className="divide-y divide-black/5 dark:divide-white/5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 py-6">
         {verbs?.map(verb => (
-          <VerbRow
+          <VerbCard
             key={verb.value.value?.name}
+            module={module}
             verb={verb.value.value as Verb}
           />
         ))}
-      </dl>
+      </div>
     </>
   )
 }
