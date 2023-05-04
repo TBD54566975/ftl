@@ -5,6 +5,7 @@ import ModulePage from './features/modules/ModulePage'
 import Navigation from './components/Navigation'
 import VerbPage from './features/verbs/VerbPage'
 import ModulesPage from './features/modules/ModulesPage'
+import GraphPage from './features/graph/GraphPage'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             <Route path={':moduleId/verbs/:id'} element={<VerbPage />} />
           </Route>
           <Route path="logs" element={<Logs />} />
+          <Route path="graph" element={<GraphPage />} />
         </Route>
       </Routes>
     </>

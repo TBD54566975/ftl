@@ -13,7 +13,8 @@ const navigation = [
     name: 'Modules',
     href: '/modules'
   },
-  { name: 'Logs', href: '/logs' }
+  { name: 'Logs', href: '/logs' },
+  { name: 'Graph', href: '/graph' }
 ]
 
 const userNavigation = [{ name: 'Settings', href: '#' }]
