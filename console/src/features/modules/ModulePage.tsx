@@ -1,12 +1,13 @@
 import { useParams } from 'react-router-dom'
 import { classNames } from '../../utils'
 import { statuses } from '../../data/Types'
-import { useSchema } from '../../hooks/use-schema'
 import { VerbList } from '../verbs/VerbList'
+import { useContext } from 'react'
+import { schemaContext } from '../../providers/schema-provider'
 
 export default function ModulePage() {
   const { id } = useParams()
-  const schema = useSchema()
+  const schema = useContext(schemaContext)
   const module = schema.find(module => module.schema?.name === id)?.schema
 
   if (module === undefined) {
