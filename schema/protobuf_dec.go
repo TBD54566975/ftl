@@ -49,8 +49,9 @@ func verbToSchema(s *pschema.Verb) *Verb {
 
 func dataToSchema(s *pschema.Data) *Data {
 	return &Data{
-		Name:   s.Name,
-		Fields: fieldListToSchema(s.Fields),
+		Name:     s.Name,
+		Fields:   fieldListToSchema(s.Fields),
+		Comments: s.Comments,
 	}
 }
 

@@ -83,6 +83,7 @@ func (d *Data) schemaChildren() []Node {
 }
 func (d *Data) String() string {
 	w := &strings.Builder{}
+	fmt.Fprint(w, encodeComments(d.Comments))
 	fmt.Fprintf(w, "data %s {\n", d.Name)
 	for _, f := range d.Fields {
 		fmt.Fprintln(w, indent(f.String()))

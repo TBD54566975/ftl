@@ -19,6 +19,7 @@ message Data {
   string name = 2;
   repeated Field fields = 3;
   repeated Metadata metadata = 4;
+  repeated string comments = 5;
 }
 
 message DataRef {
