@@ -1,6 +1,6 @@
 import { Data } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import React from 'react'
-import { classNames } from '../../utils'
+import { classNames } from '../../utils/react.utils'
 
 type Props = {
   data?: Data

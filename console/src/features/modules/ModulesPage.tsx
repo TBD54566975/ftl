@@ -1,9 +1,9 @@
-import { classNames } from '../../utils'
-import { statuses } from '../../data/Types'
 import { Card } from '../../components/Card'
 import { useContext } from 'react'
 import { Link } from 'react-router-dom'
 import { schemaContext } from '../../providers/schema-provider'
+import { classNames } from '../../utils/react.utils'
+import { statuses } from '../../utils/style.utils'
 
 export default function ModulesPage() {
   const schema = useContext(schemaContext)

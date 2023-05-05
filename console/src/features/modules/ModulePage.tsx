@@ -1,9 +1,9 @@
 import { useParams } from 'react-router-dom'
-import { classNames } from '../../utils'
-import { statuses } from '../../data/Types'
 import { VerbList } from '../verbs/VerbList'
 import { useContext } from 'react'
 import { schemaContext } from '../../providers/schema-provider'
+import { classNames } from '../../utils/react.utils'
+import { statuses } from '../../utils/style.utils'
 
 export default function ModulePage() {
   const { id } = useParams()
