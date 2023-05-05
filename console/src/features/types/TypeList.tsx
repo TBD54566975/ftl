@@ -12,10 +12,7 @@ export const TypeList: React.FC<Props> = ({ module }) => {
     <>
       <dl role="list" className="divide-y divide-black/5 dark:divide-white/5">
         {types?.map(type => (
-          <TypeRow
-            key={type.value.value?.name}
-            data={type.value.value as Data}
-          />
+          <TypeRow key={type.value.value?.name} data={type.value.value as Data} />
         ))}
       </dl>
     </>

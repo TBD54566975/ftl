@@ -12,18 +12,17 @@ export default function GraphPage() {
   const edges: Edge[] = []
   let x = 0
   schema.forEach(module => {
-    const verbs = module.schema?.decls.filter(
-      decl => decl.value.case === 'verb'
-    )
+    const verbs = module.schema?.decls.filter(decl => decl.value.case === 'verb')
     nodes.push({
       id: module.schema?.name ?? '',
       position: { x: x, y: 0 },
       data: { label: module.schema?.name },
+      connectable: false,
       style: {
         backgroundColor: 'rgba(79, 70, 229, 0.4)',
         width: 190,
-        height: (verbs?.length ?? 1) * 50 + 50
-      }
+        height: (verbs?.length ?? 1) * 50 + 50,
+      },
     })
     let y = 40
     module.schema?.decls
@@ -36,11 +35,12 @@ export default function GraphPage() {
         nodes.push({
           id: `${module.schema?.name}-${verb.value.value?.name}`,
           position: { x: x + 20, y: y },
+          connectable: false,
           data: { label: verb.value.value?.name },
           // parent: module.schema?.name,
           style: {
-            backgroundColor: 'rgb(79, 70, 229)'
-          }
+            backgroundColor: 'rgb(79, 70, 229)',
+          },
         })
 
         calls?.map(call =>
@@ -50,11 +50,11 @@ export default function GraphPage() {
               source: `${module.schema?.name}-${verb.value.value?.name}`,
               target: `${call.module}-${call.name}`,
               style: { stroke: 'rgb(251 113 133)' },
-              animated: true
+              animated: true,
             })
             call.name
             call.module
-          })
+          }),
         )
 
         y += 50

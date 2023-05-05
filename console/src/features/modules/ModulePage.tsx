@@ -19,12 +19,7 @@ export default function ModulePage() {
       <div className="relative flex items-center space-x-4">
         <div className="min-w-0 flex-auto">
           <div className="flex items-center gap-x-3">
-            <div
-              className={classNames(
-                statuses['online'],
-                'flex-none rounded-full p-1'
-              )}
-            >
+            <div className={classNames(statuses['online'], 'flex-none rounded-full p-1')}>
               <div className="h-2 w-2 rounded-full bg-current" />
             </div>
 

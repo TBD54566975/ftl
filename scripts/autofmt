@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # Run go mod tidy on all modules
-find . -name 'go.mod' ! -path '*/.ftl/*' -print0 | xargs -0 dirname | while read dir; do (echo "$dir"; cd "$dir" && go mod tidy); done
+find . -name 'go.mod' ! -path '*/.ftl/*' -print0 | xargs -0 dirname | while read dir; do (echo "Tidying Go module in '$dir'..."; cd "$dir" && go mod tidy); done
 
+echo "Formatting Go..."
 # gofmt -w -s
 go list -f '{{range .GoFiles}}{{$.Dir}}/{{.}}
 {{end}}' ./... | xargs -n1 -r gofmt -w -s
@@ -11,6 +12,7 @@ go list -f '{{range .GoFiles}}{{$.Dir}}/{{.}}
 # gosimports
 gosimports -w --local github.com/TBD54566975/ftl $(go list -f '{{.Dir}}' ./...)
 
+echo "Formatting protobufs..."
 # Format .proto files
 buf format -w
 
@@ -18,5 +20,8 @@ buf format -w
 find protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xargs -0 -r git checkout > /dev/null
 
 (cd protos && buf generate)
+
+echo "Formatting TypeScript..."
+(cd console && npm install && prettier --write .)
 
 git diff

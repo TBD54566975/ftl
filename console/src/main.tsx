@@ -14,5 +14,5 @@ root.render(
         <App />
       </SchemaProvider>
     </BrowserRouter>
-  </React.StrictMode>
+  </React.StrictMode>,
 )

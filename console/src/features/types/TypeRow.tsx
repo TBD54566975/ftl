@@ -14,20 +14,12 @@ export const TypeRow: React.FC<Props> = ({ data }) => {
         <>
           <dt>
             <Disclosure.Button className="flex w-full items-start justify-between text-left text-gray-900">
-              <span className="text-base leading-7 text-sm font-semibold text-gray-400">
-                {data?.name}
-              </span>
+              <span className="text-base leading-7 text-sm font-semibold text-gray-400">{data?.name}</span>
               <span className="ml-6 flex h-7 items-center">
                 {open ? (
-                  <MinusSmallIcon
-                    className="h-6 w-6 text-gray-400"
-                    aria-hidden="true"
-                  />
+                  <MinusSmallIcon className="h-6 w-6 text-gray-400" aria-hidden="true" />
                 ) : (
-                  <PlusSmallIcon
-                    className="h-6 w-6 text-gray-400"
-                    aria-hidden="true"
-                  />
+                  <PlusSmallIcon className="h-6 w-6 text-gray-400" aria-hidden="true" />
                 )}
               </span>
             </Disclosure.Button>

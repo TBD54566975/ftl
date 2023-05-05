@@ -1,9 +1,5 @@
 import { Disclosure, Menu, Transition } from '@headlessui/react'
-import {
-  Bars3Icon,
-  XMarkIcon,
-  Cog6ToothIcon
-} from '@heroicons/react/24/outline'
+import { Bars3Icon, XMarkIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
 import { Link, NavLink } from 'react-router-dom'
 import { classNames } from '../utils'
 import { Fragment } from 'react'
@@ -11,10 +7,10 @@ import { Fragment } from 'react'
 const navigation = [
   {
     name: 'Modules',
-    href: '/modules'
+    href: '/modules',
   },
   { name: 'Logs', href: '/logs' },
-  { name: 'Graph', href: '/graph' }
+  { name: 'Graph', href: '/graph' },
 ]
 
 const userNavigation = [{ name: 'Settings', href: '#' }]
@@ -30,12 +26,8 @@ export default function Navigation() {
                 <div className="flex items-center">
                   <div className="flex-shrink-0 flex items-baseline space-x-4">
                     <NavLink to="/">
-                      <span className="text-indigo-200 text-xl font-medium">
-                        FTL
-                      </span>
-                      <span className="px-2 text-rose-400 text-2xl font-medium">
-                        ∞
-                      </span>
+                      <span className="text-indigo-200 text-xl font-medium">FTL</span>
+                      <span className="px-2 text-rose-400 text-2xl font-medium">∞</span>
                     </NavLink>
                   </div>
                   <div className="hidden md:block">
@@ -49,7 +41,7 @@ export default function Navigation() {
                               isActive
                                 ? 'bg-indigo-700 text-white'
                                 : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
-                              'rounded-md px-3 py-2 text-sm font-medium'
+                              'rounded-md px-3 py-2 text-sm font-medium',
                             )
                           }
                         >
@@ -65,10 +57,7 @@ export default function Navigation() {
                     <div>
                       <Menu.Button className="inline-flex items-center justify-center rounded-md p-2 text-indigo-200 hover:bg-indigo-500 hover:text-white">
                         <span className="sr-only">Open user menu</span>
-                        <Cog6ToothIcon
-                          className="block h-6 w-6"
-                          aria-hidden="true"
-                        />
+                        <Cog6ToothIcon className="block h-6 w-6" aria-hidden="true" />
                       </Menu.Button>
                     </div>
                     <Transition
@@ -88,7 +77,7 @@ export default function Navigation() {
                                 to={item.href}
                                 className={classNames(
                                   active ? 'bg-gray-100' : '',
-                                  'block px-4 py-2 text-sm text-gray-700'
+                                  'block px-4 py-2 text-sm text-gray-700',
                                 )}
                               >
                                 {item.name}
@@ -123,10 +112,8 @@ export default function Navigation() {
                     to={item.href}
                     className={({ isActive }) =>
                       classNames(
-                        isActive
-                          ? 'bg-indigo-700 text-white'
-                          : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
-                        'block rounded-md px-3 py-2 text-base font-medium'
+                        isActive ? 'bg-indigo-700 text-white' : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
+                        'block rounded-md px-3 py-2 text-base font-medium',
                       )
                     }
                   >

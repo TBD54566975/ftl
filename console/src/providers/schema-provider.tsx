@@ -14,9 +14,7 @@ const SchemaProvider = props => {
     async function fetchSchema() {
       let schemaParts: PullSchemaResponse[] = []
       for await (const response of client.pullSchema({})) {
-        const currentIndex = schemaParts.findIndex(
-          res => res.schema?.name === response.schema?.name
-        )
+        const currentIndex = schemaParts.findIndex(res => res.schema?.name === response.schema?.name)
         if (currentIndex !== -1) {
           schemaParts[currentIndex] = response
         } else {
@@ -24,22 +22,14 @@ const SchemaProvider = props => {
         }
 
         if (!response.more) {
-          setSchema(
-            schemaParts.sort(
-              (a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0
-            )
-          )
+          setSchema(schemaParts.sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0))
         }
       }
     }
     fetchSchema()
   }, [client])
 
-  return (
-    <schemaContext.Provider value={schema}>
-      {props.children}
-    </schemaContext.Provider>
-  )
+  return <schemaContext.Provider value={schema}>{props.children}</schemaContext.Provider>
 }
 
 export default SchemaProvider

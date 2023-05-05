@@ -12,11 +12,7 @@ export const VerbList: React.FC<Props> = ({ module }) => {
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 py-6">
         {verbs?.map(verb => (
-          <VerbCard
-            key={verb.value.value?.name}
-            module={module}
-            verb={verb.value.value as Verb}
-          />
+          <VerbCard key={verb.value.value?.name} module={module} verb={verb.value.value as Verb} />
         ))}
       </div>
     </>

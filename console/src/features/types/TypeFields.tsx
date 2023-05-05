@@ -17,7 +17,7 @@ export const TypeFields: React.FC<Props> = ({ data }) => {
               <span
                 className={classNames(
                   'text-indigo-400 bg-indigo-400/10 ring-indigo-400/30',
-                  'rounded-full flex-none py-1 px-2 text-xs font-medium ring-1 ring-inset'
+                  'rounded-full flex-none py-1 px-2 text-xs font-medium ring-1 ring-inset',
                 )}
               >
                 {field.name}
