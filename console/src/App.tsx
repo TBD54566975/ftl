@@ -20,8 +20,8 @@ function App() {
             <Route path={':moduleId/verbs/:id'} element={<VerbPage />} />
           </Route>
           <Route path="logs" element={<Logs />} />
-          <Route path="graph" element={<GraphPage />} />
         </Route>
+        <Route path="graph" element={<GraphPage />} />
       </Routes>
     </>
   )
