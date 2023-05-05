@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import ReactFlow, { Controls, MiniMap } from 'reactflow'
+import ReactFlow, { Controls, MiniMap, Node, Edge } from 'reactflow'
 
 import 'reactflow/dist/style.css'
 import { schemaContext } from '../../providers/schema-provider'
@@ -8,10 +8,8 @@ import { MetadataCalls } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 export default function GraphPage() {
   const schema = useContext(schemaContext)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nodes: any[] = []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const edges: any[] = []
+  const nodes: Node[] = []
+  const edges: Edge[] = []
   let x = 0
   schema.forEach(module => {
     const verbs = module.schema?.decls.filter(
