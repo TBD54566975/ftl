@@ -1,9 +1,14 @@
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import { MetadataCalls, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { classNames } from '../../utils'
+import { Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { useContext } from 'react'
 import { schemaContext } from '../../providers/schema-provider'
+import { classNames } from '../../utils/react.utils'
+import { getCalls, getVerbCode } from './utils'
+import { getData } from '../modules/utils'
+import { getCodeBlock } from '../../utils/data.utils'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
@@ -14,9 +19,7 @@ export default function VerbPage() {
     decl => decl.value.case === 'verb' && decl.value.value.name === id?.toLocaleLowerCase(),
   )?.value.value as Verb
 
-  const calls = verb?.metadata
-    .filter(meta => meta.value.case === 'calls')
-    .map(meta => meta.value.value as MetadataCalls)
+  const callData = getData(module).filter(data => [verb.request?.name, verb.response?.name].includes(data.name))
 
   if (module === undefined || verb === undefined) {
     return <></>
@@ -26,7 +29,7 @@ export default function VerbPage() {
     <div className="min-w-0 flex-auto">
       <nav className="flex" aria-label="Breadcrumb">
         <ol role="list" className="flex items-center space-x-4">
-          <li>
+          <li key="/modules">
             <div>
               <Link to="/modules" className="text-sm font-medium text-gray-400 hover:text-gray-500">
                 Modules
@@ -47,17 +50,20 @@ export default function VerbPage() {
           </li>
         </ol>
       </nav>
-      <div className="flex items-center gap-x-3 pt-6">
-        <h2 className="min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white">
-          <div className="flex gap-x-2">
-            <span className="truncate">{verb.name}</span>
-          </div>
-        </h2>
+      <div className="text-sm pt-4">
+        <SyntaxHighlighter language="go" style={atomDark}>
+          {getVerbCode(verb)}
+        </SyntaxHighlighter>
       </div>
-      <div className="relative flex items-center space-x-4">
-        <div className="min-w-0 flex-auto text-indigo-500 dark:text-indigo-400">
-          <code className="text-sm">{`${verb.name}(${verb.request?.name}) -> ${verb.response?.name}`}</code>
-        </div>
+
+      <div className="pt-4">
+        {callData.map(data => (
+          <div key={data.name} className="text-sm">
+            <SyntaxHighlighter language="go" style={atomDark}>
+              {getCodeBlock(data)}
+            </SyntaxHighlighter>
+          </div>
+        ))}
       </div>
 
       <div className="flex items-center gap-x-3 pt-6">
@@ -68,7 +74,7 @@ export default function VerbPage() {
         </h2>
       </div>
 
-      {calls?.map(call =>
+      {getCalls(verb).map(call =>
         call.calls.map(call => (
           <Link key={`/modules/${call.module}/verbs/${call.name}`} to={`/modules/${call.module}/verbs/${call.name}`}>
             <span
@@ -82,6 +88,7 @@ export default function VerbPage() {
           </Link>
         )),
       )}
+
       <div className="flex items-center gap-x-3 pt-6">
         <h2 className="min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white">
           <div className="flex gap-x-2">

@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from 'react'
+import { PropsWithChildren, createContext, useEffect, useState } from 'react'
 import { PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
 import { DevelService } from '../protos/xyz/block/ftl/v1/ftl_connect'
 import { useClient } from '../hooks/use-client'
@@ -6,7 +6,7 @@ import { useClient } from '../hooks/use-client'
 // eslint-disable-next-line react-refresh/only-export-components
 export const schemaContext = createContext<PullSchemaResponse[]>([])
 
-const SchemaProvider = props => {
+const SchemaProvider = (props: PropsWithChildren) => {
   const client = useClient(DevelService)
   const [schema, setSchema] = useState<PullSchemaResponse[]>([])
 

@@ -1,8 +1,8 @@
 import { Disclosure, Menu, Transition } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
 import { Link, NavLink } from 'react-router-dom'
-import { classNames } from '../utils'
 import { Fragment } from 'react'
+import { classNames } from '../utils/react.utils'
 
 const navigation = [
   {
