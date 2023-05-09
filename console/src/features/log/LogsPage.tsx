@@ -1,9 +1,6 @@
 import { classNames } from '../../utils/react.utils'
+import { statuses } from '../../utils/style.utils'
 
-const statuses = {
-  Completed: 'text-green-400 bg-green-400/10',
-  Error: 'text-rose-400 bg-rose-400/10',
-}
 const activityItems = [
   {
     user: {
@@ -111,7 +108,7 @@ const activityItems = [
   },
 ]
 
-export default function Logs() {
+export default function LogsPage() {
   return (
     <>
       <h2 className="text-base font-semibold dark:text-white">Logs</h2>

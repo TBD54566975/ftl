@@ -1,7 +1,7 @@
 import { MetadataCalls, Module, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { Card } from '../../components/Card'
 import { Link } from 'react-router-dom'
 import { classNames } from '../../utils/react.utils'
+import { Card } from '../../components/Card'
 
 type Props = {
   module?: Module

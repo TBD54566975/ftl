@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import Logs from './features/log/Logs'
+import LogsPage from './features/log/LogsPage'
 import Layout from './components/Layout'
 import ModulePage from './features/modules/ModulePage'
 import Navigation from './components/Navigation'
@@ -19,7 +19,7 @@ function App() {
             <Route path={':id'} element={<ModulePage />} />
             <Route path={':moduleId/verbs/:id'} element={<VerbPage />} />
           </Route>
-          <Route path="logs" element={<Logs />} />
+          <Route path="logs" element={<LogsPage />} />
         </Route>
         <Route path="graph" element={<GraphPage />} />
       </Routes>
