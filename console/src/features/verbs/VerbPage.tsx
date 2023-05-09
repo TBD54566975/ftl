@@ -6,9 +6,9 @@ import { Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { useContext } from 'react'
 import { schemaContext } from '../../providers/schema-provider'
 import { classNames } from '../../utils/react.utils'
-import { getCalls, getVerbCode } from './utils'
-import { getData } from '../modules/utils'
+import { getData } from '../modules/module.utils'
 import { getCodeBlock } from '../../utils/data.utils'
+import { getCalls, getVerbCode } from './verb.utils'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
