@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { VerbRuntime } from "./runtime_pb.js";
+import { ModuleRuntime, VerbRuntime } from "./runtime_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.schema.Array
@@ -488,6 +488,11 @@ export class MetadataCalls extends Message<MetadataCalls> {
  */
 export class Module extends Message<Module> {
   /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.ModuleRuntime runtime = 31634;
+   */
+  runtime?: ModuleRuntime;
+
+  /**
    * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
    */
   pos?: Position;
@@ -515,6 +520,7 @@ export class Module extends Message<Module> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Module";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 31634, name: "runtime", kind: "message", T: ModuleRuntime, opt: true },
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },

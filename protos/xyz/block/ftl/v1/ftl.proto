@@ -101,12 +101,25 @@ message GetArtefactDiffsResponse {
 }
 
 message UploadArtefactRequest {
-  string path = 1;
-  bool executable = 2;
-  string digest = 3;
-  bytes content = 4;
+  bytes content = 1;
 }
-message UploadArtefactResponse {}
+message UploadArtefactResponse {
+  bytes digest = 2;
+}
+
+message DeploymentArtefact {
+  string digest = 1;
+  string path = 2;
+  bool executable = 3;
+}
+
+message CreateDeploymentRequest {
+  schema.Module schema = 1;
+  repeated DeploymentArtefact artefacts = 2;
+}
+message CreateDeploymentResponse {
+  string deployment_key = 1;
+}
 
 service BackplaneService {
   // Ping service for readiness.
@@ -116,5 +129,8 @@ service BackplaneService {
   rpc GetArtefactDiffs(GetArtefactDiffsRequest) returns (GetArtefactDiffsResponse);
 
   // Upload artefacts to the server.
-  rpc UploadArtefact(stream UploadArtefactRequest) returns (UploadArtefactResponse);
+  rpc UploadArtefact(UploadArtefactRequest) returns (UploadArtefactResponse);
+
+  // Create a deployment.
+  rpc CreateDeployment(CreateDeploymentRequest) returns (CreateDeploymentResponse);
 }

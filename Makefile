@@ -21,10 +21,10 @@ PROTO_IN = protos/buf.yaml \
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			protos/xyz/block/ftl/v1/schema/schema.pb.go \
 			protos/xyz/block/ftl/v1/ftl.pb.go \
-			console/proto/xyz/block/ftl/v1/schema/runtime_pb.ts \
-			console/proto/xyz/block/ftl/v1/schema/schema_pb.ts \
-			console/proto/xyz/block/ftl/v1/ftl_connect.ts \
-			console/proto/xyz/block/ftl/v1/ftl_pb.ts \
+			console/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
+			console/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
+			console/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
+			console/src/protos/xyz/block/ftl/v1/ftl_pb.ts
 
 
 .DEFAULT_GOAL := help

@@ -35,6 +35,7 @@ require (
 	github.com/alecthomas/participle/v2 v2.0.0
 	github.com/alecthomas/types v0.0.0-20230329042226-25f53f031fd9
 	github.com/bufbuild/connect-grpcreflect-go v1.0.0
+	github.com/deckarep/golang-set/v2 v2.3.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gofrs/flock v0.8.1
 	github.com/iancoleman/strcase v0.2.0

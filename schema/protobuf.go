@@ -12,7 +12,8 @@ import (
 )
 
 var typesWithRuntime = map[string]bool{
-	"Verb": true,
+	"Module": true,
+	"Verb":   true,
 }
 
 // ProtobufSchema returns a string containing the equivalent protobuf schema

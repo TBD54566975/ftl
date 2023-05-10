@@ -32,7 +32,7 @@ func (c *schemaGetCmd) Run(ctx context.Context, client ftlv1connect.DevelService
 	wg.Go(func() (err error) {
 		for stream.Receive() {
 			resp := stream.Msg()
-			module := schema.ProtoToModule(resp.Schema)
+			module := schema.ModuleFromProto(resp.Schema)
 			modules <- module
 			if !resp.More {
 				return nil

@@ -25,13 +25,13 @@ var DefaultClient = func() *http.Client {
 	}
 }()
 
-type PingableClient interface {
+type Pingable interface {
 	Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error)
 }
 
-type ClientFactory[Client PingableClient] func(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) Client
+type ClientFactory[Client Pingable] func(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) Client
 
-func Dial[Client PingableClient](factory ClientFactory[Client], baseURL string, opts ...connect.ClientOption) Client {
+func Dial[Client Pingable](factory ClientFactory[Client], baseURL string, opts ...connect.ClientOption) Client {
 	opts = append(opts, DefaultClientOptions()...)
 	return factory(DefaultClient, baseURL, opts...)
 }

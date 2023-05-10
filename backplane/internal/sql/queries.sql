@@ -12,43 +12,36 @@ SELECT * FROM deployments WHERE module_id = $1;
 -- name: CreateDeployment :one
 INSERT INTO deployments (module_id, "schema")
 VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA)
-RETURNING id;
+RETURNING key;
 
 -- name: GetArtefactDigests :many
 -- Return the digests that exist in the database.
-SELECT digest FROM artefact_contents WHERE digest = ANY(@digests::text[]);
+SELECT id, digest FROM artefacts WHERE digest = ANY(@digests::bytea[]);
 
 -- name: GetDeploymentArtefacts :many
 -- Get all artefacts matching the given digests.
-SELECT created_at, executable, path, content
-FROM artefacts
-INNER JOIN deployment_artefacts ON artefacts.id = deployment_artefacts.artefact_id AND deployment_artefacts.deployment_id = $1
-INNER JOIN artefact_contents ON artefacts.id = artefact_contents.artefact_id
+SELECT deployment_artefacts.created_at, executable, path, digest, executable, content
+FROM deployment_artefacts
+INNER JOIN artefacts ON artefacts.id = deployment_artefacts.artefact_id
 WHERE deployment_id = $1;
 
 -- name: CreateArtefact :one
 -- Create a new artefact and return the artefact ID.
-WITH new_artefact AS (
-  INSERT INTO artefacts (executable, path)
-  VALUES ($1, $2)
-  RETURNING id AS artefact_id
-)
-INSERT INTO artefact_contents (artefact_id, digest, content)
-VALUES ((SELECT artefact_id FROM new_artefact), $3, $4)
-RETURNING artefact_id;
+INSERT INTO artefacts (digest, content)
+VALUES ($1, $2)
+RETURNING id;
 
 -- name: AssociateArtefactWithDeployment :exec
-INSERT INTO deployment_artefacts (deployment_id, artefact_id)
-VALUES ($1, $2);
+INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
+VALUES ((SELECT id FROM deployments WHERE key = $1), $2, $3, $4);
+
+-- name: GetDeployment :one
+SELECT deployments.*, modules.language, modules.name AS module_name FROM deployments
+INNER JOIN modules ON modules.id = deployments.module_id
+WHERE deployments.key = $1;
 
 -- name: GetLatestDeployment :one
 SELECT deployments.*, modules.language, modules.name AS module_name FROM deployments
 INNER JOIN modules ON modules.id = deployments.module_id
 WHERE modules.name = @module_name
 ORDER BY created_at DESC LIMIT 1;
-
--- name: GetArtefactsForDeployment :many
-SELECT * FROM artefacts
-INNER JOIN deployment_artefacts ON artefacts.id = deployment_artefacts.artefact_id
-INNER JOIN artefact_contents ON artefacts.id = artefact_contents.artefact_id
-WHERE deployment_id = $1;

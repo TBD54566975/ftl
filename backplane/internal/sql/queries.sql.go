@@ -13,55 +13,50 @@ import (
 )
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
-INSERT INTO deployment_artefacts (deployment_id, artefact_id)
-VALUES ($1, $2)
+INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
+VALUES ((SELECT id FROM deployments WHERE key = $1), $2, $3, $4)
 `
 
 type AssociateArtefactWithDeploymentParams struct {
-	DeploymentID int64
-	ArtefactID   int64
+	Key        uuid.UUID
+	ArtefactID int64
+	Executable bool
+	Path       string
 }
 
 func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error {
-	_, err := q.db.Exec(ctx, associateArtefactWithDeployment, arg.DeploymentID, arg.ArtefactID)
+	_, err := q.db.Exec(ctx, associateArtefactWithDeployment,
+		arg.Key,
+		arg.ArtefactID,
+		arg.Executable,
+		arg.Path,
+	)
 	return err
 }
 
 const createArtefact = `-- name: CreateArtefact :one
-WITH new_artefact AS (
-  INSERT INTO artefacts (executable, path)
-  VALUES ($1, $2)
-  RETURNING id AS artefact_id
-)
-INSERT INTO artefact_contents (artefact_id, digest, content)
-VALUES ((SELECT artefact_id FROM new_artefact), $3, $4)
-RETURNING artefact_id
+INSERT INTO artefacts (digest, content)
+VALUES ($1, $2)
+RETURNING id
 `
 
 type CreateArtefactParams struct {
-	Executable bool
-	Path       string
-	Digest     []byte
-	Content    []byte
+	Digest  []byte
+	Content []byte
 }
 
 // Create a new artefact and return the artefact ID.
 func (q *Queries) CreateArtefact(ctx context.Context, arg CreateArtefactParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createArtefact,
-		arg.Executable,
-		arg.Path,
-		arg.Digest,
-		arg.Content,
-	)
-	var artefact_id int64
-	err := row.Scan(&artefact_id)
-	return artefact_id, err
+	row := q.db.QueryRow(ctx, createArtefact, arg.Digest, arg.Content)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const createDeployment = `-- name: CreateDeployment :one
 INSERT INTO deployments (module_id, "schema")
 VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA)
-RETURNING id
+RETURNING key
 `
 
 type CreateDeploymentParams struct {
@@ -69,11 +64,11 @@ type CreateDeploymentParams struct {
 	Schema     []byte
 }
 
-func (q *Queries) CreateDeployment(ctx context.Context, arg CreateDeploymentParams) (int64, error) {
+func (q *Queries) CreateDeployment(ctx context.Context, arg CreateDeploymentParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, createDeployment, arg.ModuleName, arg.Schema)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	var key uuid.UUID
+	err := row.Scan(&key)
+	return key, err
 }
 
 const createModule = `-- name: CreateModule :one
@@ -95,69 +90,25 @@ func (q *Queries) CreateModule(ctx context.Context, arg CreateModuleParams) (int
 }
 
 const getArtefactDigests = `-- name: GetArtefactDigests :many
-SELECT digest FROM artefact_contents WHERE digest = ANY($1::text[])
+SELECT id, digest FROM artefacts WHERE digest = ANY($1::bytea[])
 `
 
+type GetArtefactDigestsRow struct {
+	ID     int64
+	Digest []byte
+}
+
 // Return the digests that exist in the database.
-func (q *Queries) GetArtefactDigests(ctx context.Context, digests []string) ([][]byte, error) {
+func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error) {
 	rows, err := q.db.Query(ctx, getArtefactDigests, digests)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items [][]byte
+	var items []GetArtefactDigestsRow
 	for rows.Next() {
-		var digest []byte
-		if err := rows.Scan(&digest); err != nil {
-			return nil, err
-		}
-		items = append(items, digest)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getArtefactsForDeployment = `-- name: GetArtefactsForDeployment :many
-SELECT id, created_at, executable, path, deployment_id, deployment_artefacts.artefact_id, artefact_contents.artefact_id, digest, content FROM artefacts
-INNER JOIN deployment_artefacts ON artefacts.id = deployment_artefacts.artefact_id
-INNER JOIN artefact_contents ON artefacts.id = artefact_contents.artefact_id
-WHERE deployment_id = $1
-`
-
-type GetArtefactsForDeploymentRow struct {
-	ID           int64
-	CreatedAt    pgtype.Timestamp
-	Executable   bool
-	Path         string
-	DeploymentID int64
-	ArtefactID   int64
-	ArtefactID_2 int64
-	Digest       []byte
-	Content      []byte
-}
-
-func (q *Queries) GetArtefactsForDeployment(ctx context.Context, deploymentID int64) ([]GetArtefactsForDeploymentRow, error) {
-	rows, err := q.db.Query(ctx, getArtefactsForDeployment, deploymentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetArtefactsForDeploymentRow
-	for rows.Next() {
-		var i GetArtefactsForDeploymentRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.Executable,
-			&i.Path,
-			&i.DeploymentID,
-			&i.ArtefactID,
-			&i.ArtefactID_2,
-			&i.Digest,
-			&i.Content,
-		); err != nil {
+		var i GetArtefactDigestsRow
+		if err := rows.Scan(&i.ID, &i.Digest); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -168,19 +119,51 @@ func (q *Queries) GetArtefactsForDeployment(ctx context.Context, deploymentID in
 	return items, nil
 }
 
+const getDeployment = `-- name: GetDeployment :one
+SELECT deployments.id, deployments.created_at, deployments.module_id, deployments.key, deployments.schema, modules.language, modules.name AS module_name FROM deployments
+INNER JOIN modules ON modules.id = deployments.module_id
+WHERE deployments.key = $1
+`
+
+type GetDeploymentRow struct {
+	ID         int64
+	CreatedAt  pgtype.Timestamp
+	ModuleID   int64
+	Key        uuid.UUID
+	Schema     []byte
+	Language   string
+	ModuleName string
+}
+
+func (q *Queries) GetDeployment(ctx context.Context, key uuid.UUID) (GetDeploymentRow, error) {
+	row := q.db.QueryRow(ctx, getDeployment, key)
+	var i GetDeploymentRow
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.ModuleID,
+		&i.Key,
+		&i.Schema,
+		&i.Language,
+		&i.ModuleName,
+	)
+	return i, err
+}
+
 const getDeploymentArtefacts = `-- name: GetDeploymentArtefacts :many
-SELECT created_at, executable, path, content
-FROM artefacts
-INNER JOIN deployment_artefacts ON artefacts.id = deployment_artefacts.artefact_id AND deployment_artefacts.deployment_id = $1
-INNER JOIN artefact_contents ON artefacts.id = artefact_contents.artefact_id
+SELECT deployment_artefacts.created_at, executable, path, digest, executable, content
+FROM deployment_artefacts
+INNER JOIN artefacts ON artefacts.id = deployment_artefacts.artefact_id
 WHERE deployment_id = $1
 `
 
 type GetDeploymentArtefactsRow struct {
-	CreatedAt  pgtype.Timestamp
-	Executable bool
-	Path       string
-	Content    []byte
+	CreatedAt    pgtype.Timestamp
+	Executable   bool
+	Path         string
+	Digest       []byte
+	Executable_2 bool
+	Content      []byte
 }
 
 // Get all artefacts matching the given digests.
@@ -197,6 +180,8 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 			&i.CreatedAt,
 			&i.Executable,
 			&i.Path,
+			&i.Digest,
+			&i.Executable_2,
 			&i.Content,
 		); err != nil {
 			return nil, err

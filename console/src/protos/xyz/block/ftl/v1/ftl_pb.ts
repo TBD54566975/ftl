@@ -659,22 +659,7 @@ export class GetArtefactDiffsResponse extends Message<GetArtefactDiffsResponse> 
  */
 export class UploadArtefactRequest extends Message<UploadArtefactRequest> {
   /**
-   * @generated from field: string path = 1;
-   */
-  path = "";
-
-  /**
-   * @generated from field: bool executable = 2;
-   */
-  executable = false;
-
-  /**
-   * @generated from field: string digest = 3;
-   */
-  digest = "";
-
-  /**
-   * @generated from field: bytes content = 4;
+   * @generated from field: bytes content = 1;
    */
   content = new Uint8Array(0);
 
@@ -686,10 +671,7 @@ export class UploadArtefactRequest extends Message<UploadArtefactRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.UploadArtefactRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "executable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "content", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 1, name: "content", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UploadArtefactRequest {
@@ -713,6 +695,11 @@ export class UploadArtefactRequest extends Message<UploadArtefactRequest> {
  * @generated from message xyz.block.ftl.v1.UploadArtefactResponse
  */
 export class UploadArtefactResponse extends Message<UploadArtefactResponse> {
+  /**
+   * @generated from field: bytes digest = 2;
+   */
+  digest = new Uint8Array(0);
+
   constructor(data?: PartialMessage<UploadArtefactResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -721,6 +708,7 @@ export class UploadArtefactResponse extends Message<UploadArtefactResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.UploadArtefactResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 2, name: "digest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UploadArtefactResponse {
@@ -737,6 +725,135 @@ export class UploadArtefactResponse extends Message<UploadArtefactResponse> {
 
   static equals(a: UploadArtefactResponse | PlainMessage<UploadArtefactResponse> | undefined, b: UploadArtefactResponse | PlainMessage<UploadArtefactResponse> | undefined): boolean {
     return proto3.util.equals(UploadArtefactResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.DeploymentArtefact
+ */
+export class DeploymentArtefact extends Message<DeploymentArtefact> {
+  /**
+   * @generated from field: string digest = 1;
+   */
+  digest = "";
+
+  /**
+   * @generated from field: string path = 2;
+   */
+  path = "";
+
+  /**
+   * @generated from field: bool executable = 3;
+   */
+  executable = false;
+
+  constructor(data?: PartialMessage<DeploymentArtefact>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.DeploymentArtefact";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "executable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeploymentArtefact {
+    return new DeploymentArtefact().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeploymentArtefact {
+    return new DeploymentArtefact().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeploymentArtefact {
+    return new DeploymentArtefact().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeploymentArtefact | PlainMessage<DeploymentArtefact> | undefined, b: DeploymentArtefact | PlainMessage<DeploymentArtefact> | undefined): boolean {
+    return proto3.util.equals(DeploymentArtefact, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.CreateDeploymentRequest
+ */
+export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 1;
+   */
+  schema?: Module;
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 2;
+   */
+  artefacts: DeploymentArtefact[] = [];
+
+  constructor(data?: PartialMessage<CreateDeploymentRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.CreateDeploymentRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "schema", kind: "message", T: Module },
+    { no: 2, name: "artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateDeploymentRequest {
+    return new CreateDeploymentRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateDeploymentRequest {
+    return new CreateDeploymentRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateDeploymentRequest {
+    return new CreateDeploymentRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateDeploymentRequest | PlainMessage<CreateDeploymentRequest> | undefined, b: CreateDeploymentRequest | PlainMessage<CreateDeploymentRequest> | undefined): boolean {
+    return proto3.util.equals(CreateDeploymentRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.CreateDeploymentResponse
+ */
+export class CreateDeploymentResponse extends Message<CreateDeploymentResponse> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  constructor(data?: PartialMessage<CreateDeploymentResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.CreateDeploymentResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateDeploymentResponse {
+    return new CreateDeploymentResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateDeploymentResponse {
+    return new CreateDeploymentResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateDeploymentResponse {
+    return new CreateDeploymentResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateDeploymentResponse | PlainMessage<CreateDeploymentResponse> | undefined, b: CreateDeploymentResponse | PlainMessage<CreateDeploymentResponse> | undefined): boolean {
+    return proto3.util.equals(CreateDeploymentResponse, a, b);
   }
 }
 

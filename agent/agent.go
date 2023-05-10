@@ -4,26 +4,19 @@ package agent
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
-	"github.com/rs/cors"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/common/exec"
@@ -31,6 +24,7 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/pubsub"
 	"github.com/TBD54566975/ftl/common/rpc"
+	"github.com/TBD54566975/ftl/common/server"
 	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -38,14 +32,6 @@ import (
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 )
-
-// ModuleConfig is the configuration for an FTL module.
-//
-// Module config files are currently TOML.
-type ModuleConfig struct {
-	Language string `toml:"language"`
-	Module   string `toml:"module"`
-}
 
 type driveContext struct {
 	*plugin.Plugin[ftlv1connect.VerbServiceClient]
@@ -82,47 +68,18 @@ func New(ctx context.Context, listen socket.Socket) (*Agent, error) {
 
 // Serve starts the agent server.
 func (a *Agent) Serve(ctx context.Context) error {
-	mux := http.NewServeMux()
-	mux.Handle(ftlv1connect.NewDevelServiceHandler(a, rpc.DefaultHandlerOptions()...))
-	mux.Handle(ftlv1connect.NewVerbServiceHandler(a, rpc.DefaultHandlerOptions()...))
 	reflector := grpcreflect.NewStaticReflector(ftlv1connect.DevelServiceName, ftlv1connect.VerbServiceName)
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
-
 	c, err := console.Server(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	mux.Handle("/", c)
-
-	// TODO: Is this a good idea? Who knows!
-	crs := cors.New(cors.Options{
-		AllowedOrigins: []string{a.listen.URL()},
-		AllowedMethods: []string{
-			http.MethodHead,
-			http.MethodGet,
-			http.MethodPost,
-			http.MethodPut,
-			http.MethodPatch,
-			http.MethodDelete,
-		},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: false,
-	})
-	root := crs.Handler(rpc.Middleware(ctx, mux))
-
-	http1Server := &http.Server{
-		Handler:           h2c.NewHandler(root, &http2.Server{}),
-		ReadHeaderTimeout: time.Second * 30,
-		BaseContext:       func(net.Listener) context.Context { return ctx },
-	}
-
-	listener, err := socket.Listen(a.listen)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return errors.WithStack(http1Server.Serve(listener))
+	return server.Serve(ctx, a.listen,
+		server.GRPC(ftlv1connect.NewDevelServiceHandler, a),
+		server.GRPC(ftlv1connect.NewVerbServiceHandler, a),
+		server.Route(grpcreflect.NewHandlerV1(reflector)),
+		server.Route(grpcreflect.NewHandlerV1Alpha(reflector)),
+		server.Route("/", c),
+	)
 }
 
 // Drives returns the list of active drives.
@@ -147,9 +104,7 @@ func (a *Agent) Manage(ctx context.Context, dir string) (err error) {
 	}
 
 	// Load the config.
-	path := filepath.Join(dir, "ftl.toml")
-	config := ModuleConfig{}
-	_, err = toml.DecodeFile(path, &config)
+	config, err := LoadConfig(dir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -344,7 +299,7 @@ func (a *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 
 	for stream.Receive() {
 		resp := stream.Msg()
-		module := schema.ProtoToModule(resp.Schema)
+		module := schema.ModuleFromProto(resp.Schema)
 		a.schemaChanges.Publish(module)
 		drive.schema.Store(types.Some(module))
 	}

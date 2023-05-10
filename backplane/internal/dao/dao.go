@@ -1,14 +1,19 @@
+// Package dao provides a data access object for the backplane.
 package dao
 
 import (
 	"context"
-	"crypto/sha256"
+	"strings"
 
 	"github.com/alecthomas/errors"
+	sets "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backplane/internal/sql"
+	"github.com/TBD54566975/ftl/common/maps"
+	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/TBD54566975/ftl/common/slices"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 )
@@ -29,63 +34,98 @@ func (d *DAO) CreateModule(ctx context.Context, language, name string) (err erro
 	return errors.WithStack(err)
 }
 
-// func (d *DAO) GetArtefectDiff(ctx context.Context, haveDigests []string) (needDigests []string, err error) {
-// 	needDigests, err := d.db.GetArtefactDigests(ctx, haveDigests)
-// 	return needDigests, errors.WithStack(err)
-// }
+// GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
+func (d *DAO) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
+	have, err := d.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	haveStr := slices.Map(have, func(in sql.GetArtefactDigestsRow) sha256.SHA256 {
+		return sha256.FromBytes(in.Digest)
+	})
+	return sets.NewSet(digests...).Difference(sets.NewSet(haveStr...)).ToSlice(), nil
+}
 
 // CreateArtefact inserts a new artefact into the database and returns its ID.
-func (d *DAO) CreateArtefact(ctx context.Context, path string, executable bool, content []byte) (id int64, err error) {
-	sha256digest := sha256.Sum256(content)
-	id, err = d.db.CreateArtefact(ctx, sql.CreateArtefactParams{
-		Executable: executable,
-		Path:       path,
-		Digest:     sha256digest[:],
-		Content:    content,
+func (d *DAO) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
+	sha256digest := sha256.Sum(content)
+	_, err = d.db.CreateArtefact(ctx, sql.CreateArtefactParams{
+		Digest:  sha256digest[:],
+		Content: content,
 	})
-	return id, errors.WithStack(err)
+	return sha256digest, errors.WithStack(err)
+}
+
+type DeploymentArtefact struct {
+	Digest     sha256.SHA256
+	Executable bool
+	Path       string
 }
 
 // CreateDeployment creates a new deployment and associates previously created artefacts with it.
+//
+// "artefacts" is a map of artefact digests to relative paths within the deployment.
 func (d *DAO) CreateDeployment(
 	ctx context.Context,
-	module string,
+	language string,
 	schema *schema.Module,
-	artefacts []int64,
-) (err error) {
+	artefacts []DeploymentArtefact,
+) (key uuid.UUID, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return errors.WithStack(err)
+		return uuid.UUID{}, errors.WithStack(err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)()
 
+	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
+		return in.Digest, in
+	})
+
 	schemaBytes, err := proto.Marshal(schema.ToProto())
 	if err != nil {
-		return errors.WithStack(err)
+		return uuid.UUID{}, errors.WithStack(err)
 	}
 
+	_, err = tx.CreateModule(ctx, sql.CreateModuleParams{
+		Language: language, // TODO(aat): "schema" containing language?
+		Name:     schema.Name,
+	})
+
 	// Create the deployment
-	deploymentID, err := tx.CreateDeployment(ctx, sql.CreateDeploymentParams{
-		ModuleName: module,
+	deploymentKey, err := tx.CreateDeployment(ctx, sql.CreateDeploymentParams{
+		ModuleName: schema.Name,
 		Schema:     schemaBytes,
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return uuid.UUID{}, errors.WithStack(err)
+	}
+
+	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
+	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
+	if err != nil {
+		return uuid.UUID{}, errors.WithStack(err)
+	}
+	if len(artefactDigests) != len(artefacts) {
+		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
+		return uuid.UUID{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
 	}
 
 	// Associate the artefacts with the deployment
-	for _, artefactID := range artefacts {
+	for _, row := range artefactDigests {
+		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
 		err = tx.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
-			DeploymentID: deploymentID,
-			ArtefactID:   artefactID,
+			Key:        deploymentKey,
+			ArtefactID: row.ID,
+			Executable: artefact.Executable,
+			Path:       artefact.Path,
 		})
 		if err != nil {
-			return errors.WithStack(err)
+			return uuid.UUID{}, errors.WithStack(err)
 		}
 	}
 
-	return nil
+	return deploymentKey, nil
 }
 
 type Deployment struct {
@@ -99,7 +139,16 @@ type Deployment struct {
 type Artefact struct {
 	Path       string
 	Executable bool
+	Digest     sha256.SHA256
 	Content    []byte
+}
+
+func (d *DAO) GetDeployment(ctx context.Context, id uuid.UUID) (*Deployment, error) {
+	deployment, err := d.db.GetDeployment(ctx, id)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return d.loadDeployment(ctx, sql.GetLatestDeploymentRow(deployment))
 }
 
 func (d *DAO) GetLatestDeployment(ctx context.Context, module string) (*Deployment, error) {
@@ -107,8 +156,12 @@ func (d *DAO) GetLatestDeployment(ctx context.Context, module string) (*Deployme
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	return d.loadDeployment(ctx, deployment)
+}
+
+func (d *DAO) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploymentRow) (*Deployment, error) {
 	pm := &pschema.Module{}
-	err = proto.Unmarshal(deployment.Schema, pm)
+	err := proto.Unmarshal(deployment.Schema, pm)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -116,20 +169,25 @@ func (d *DAO) GetLatestDeployment(ctx context.Context, module string) (*Deployme
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
 		Key:      deployment.Key,
-		Schema:   schema.ProtoToModule(pm),
+		Schema:   schema.ModuleFromProto(pm),
 	}
-	artefacts, err := d.db.GetArtefactsForDeployment(ctx, deployment.ID)
+	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.ID)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	for _, artefact := range artefacts {
-		out.Artefacts = append(out.Artefacts, &Artefact{
-			Path:       artefact.Path,
-			Executable: artefact.Executable,
-			Content:    artefact.Content,
-		})
-	}
+	out.Artefacts = slices.Map(artefacts, func(row sql.GetDeploymentArtefactsRow) *Artefact {
+		return &Artefact{
+			Path:       row.Path,
+			Executable: row.Executable,
+			Content:    row.Content,
+			Digest:     sha256.FromBytes(row.Digest),
+		}
+	})
 	return out, nil
+}
+
+func sha256esToBytes(digests []sha256.SHA256) [][]byte {
+	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
 }
 
 // func fileDigest(path string) (string, error) {

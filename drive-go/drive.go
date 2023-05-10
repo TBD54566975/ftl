@@ -183,7 +183,7 @@ func (s *Server) PushSchema(ctx context.Context, stream *connect.ClientStream[ft
 	logger := log.FromContext(ctx)
 	for stream.Receive() {
 		received := stream.Msg()
-		module := schema.ProtoToModule(received.Schema)
+		module := schema.ModuleFromProto(received.Schema)
 
 		logger.Debugf("Received schema update from %s", module.Name)
 

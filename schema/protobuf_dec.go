@@ -2,7 +2,7 @@ package schema
 
 import pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 
-func ProtoToSchema(s *pschema.Schema) *Schema {
+func FromProto(s *pschema.Schema) *Schema {
 	return &Schema{
 		Modules: moduleListToSchema(s.Modules),
 	}
@@ -11,12 +11,12 @@ func ProtoToSchema(s *pschema.Schema) *Schema {
 func moduleListToSchema(s []*pschema.Module) []*Module {
 	var out []*Module
 	for _, n := range s {
-		out = append(out, ProtoToModule(n))
+		out = append(out, ModuleFromProto(n))
 	}
 	return out
 }
 
-func ProtoToModule(s *pschema.Module) *Module {
+func ModuleFromProto(s *pschema.Module) *Module {
 	return &Module{
 		Name:     s.Name,
 		Comments: s.Comments,
