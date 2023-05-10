@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/alecthomas/kong"
+	"github.com/bufbuild/connect-go"
 
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/rpc"
@@ -21,17 +22,27 @@ var cli struct {
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 	Endpoint  socket.Socket    `default:"tcp://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 
-	Serve  serveCmd  `cmd:"" help:"Serve FTL modules."`
+	Devel  develCmd  `cmd:"" help:"Serve development FTL modules."`
+	Serve  serveCmd  `cmd:"" help:"Start the FTL server."`
 	Schema schemaCmd `cmd:"" help:"Retrieve the FTL schema."`
 	List   listCmd   `cmd:"" help:"List all FTL functions."`
 	Call   callCmd   `cmd:"" help:"Call an FTL function."`
 	Go     goCmd     `cmd:"" help:"Commands specific to Go modules."`
+	Deploy deployCmd `cmd:"" help:"Create a new deployment."`
+	InitDB initDBCmd `cmd:"" name:"initdb" help:"Initialise the FTL database."`
 }
 
 func main() {
 	kctx := kong.Parse(&cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
 		kong.UsageOnError(),
+		kong.AutoGroup(func(parent kong.Visitable, flag *kong.Flag) *kong.Group {
+			node, ok := parent.(*kong.Command)
+			if !ok {
+				return nil
+			}
+			return &kong.Group{Key: node.Name, Title: "Command flags:"}
+		}),
 		kong.Vars{
 			"version": version,
 		},
@@ -58,23 +69,19 @@ func main() {
 
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
-	err := kctx.BindToProvider(dialVerbService(ctx))
+	err := kctx.BindToProvider(makeDialer(ftlv1connect.NewVerbServiceClient))
 	kctx.FatalIfErrorf(err)
-	err = kctx.BindToProvider(dialDevelService(ctx))
+	err = kctx.BindToProvider(makeDialer(ftlv1connect.NewDevelServiceClient))
+	kctx.FatalIfErrorf(err)
+	err = kctx.BindToProvider(makeDialer(ftlv1connect.NewBackplaneServiceClient))
 	kctx.FatalIfErrorf(err)
 
 	err = kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
 }
 
-func dialVerbService(ctx context.Context) func() (ftlv1connect.VerbServiceClient, error) {
-	return func() (ftlv1connect.VerbServiceClient, error) {
-		return rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.URL()), nil
-	}
-}
-
-func dialDevelService(ctx context.Context) func() (ftlv1connect.DevelServiceClient, error) {
-	return func() (ftlv1connect.DevelServiceClient, error) {
-		return rpc.Dial(ftlv1connect.NewDevelServiceClient, cli.Endpoint.URL()), nil
+func makeDialer[Client rpc.Pingable](newClient func(connect.HTTPClient, string, ...connect.ClientOption) Client) func() (Client, error) {
+	return func() (Client, error) {
+		return rpc.Dial(newClient, cli.Endpoint.URL()), nil
 	}
 }

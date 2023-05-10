@@ -63,6 +63,8 @@ message MetadataCalls {
 }
 
 message Module {
+  optional ModuleRuntime runtime = 31634;
+
   optional Position pos = 1;
   string name = 2;
   repeated string comments = 3;

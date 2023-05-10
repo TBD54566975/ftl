@@ -280,7 +280,9 @@ type BackplaneServiceClient interface {
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error)
 	// Upload artefacts to the server.
-	UploadArtefact(context.Context) *connect_go.ClientStreamForClient[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
+	UploadArtefact(context.Context, *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error)
+	// Create a deployment.
+	CreateDeployment(context.Context, *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error)
 }
 
 // NewBackplaneServiceClient constructs a client for the xyz.block.ftl.v1.BackplaneService service.
@@ -308,6 +310,11 @@ func NewBackplaneServiceClient(httpClient connect_go.HTTPClient, baseURL string,
 			baseURL+"/xyz.block.ftl.v1.BackplaneService/UploadArtefact",
 			opts...,
 		),
+		createDeployment: connect_go.NewClient[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse](
+			httpClient,
+			baseURL+"/xyz.block.ftl.v1.BackplaneService/CreateDeployment",
+			opts...,
+		),
 	}
 }
 
@@ -316,6 +323,7 @@ type backplaneServiceClient struct {
 	ping             *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	getArtefactDiffs *connect_go.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
 	uploadArtefact   *connect_go.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
+	createDeployment *connect_go.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.BackplaneService.Ping.
@@ -329,8 +337,13 @@ func (c *backplaneServiceClient) GetArtefactDiffs(ctx context.Context, req *conn
 }
 
 // UploadArtefact calls xyz.block.ftl.v1.BackplaneService.UploadArtefact.
-func (c *backplaneServiceClient) UploadArtefact(ctx context.Context) *connect_go.ClientStreamForClient[v1.UploadArtefactRequest, v1.UploadArtefactResponse] {
-	return c.uploadArtefact.CallClientStream(ctx)
+func (c *backplaneServiceClient) UploadArtefact(ctx context.Context, req *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
+	return c.uploadArtefact.CallUnary(ctx, req)
+}
+
+// CreateDeployment calls xyz.block.ftl.v1.BackplaneService.CreateDeployment.
+func (c *backplaneServiceClient) CreateDeployment(ctx context.Context, req *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
+	return c.createDeployment.CallUnary(ctx, req)
 }
 
 // BackplaneServiceHandler is an implementation of the xyz.block.ftl.v1.BackplaneService service.
@@ -340,7 +353,9 @@ type BackplaneServiceHandler interface {
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error)
 	// Upload artefacts to the server.
-	UploadArtefact(context.Context, *connect_go.ClientStream[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error)
+	UploadArtefact(context.Context, *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error)
+	// Create a deployment.
+	CreateDeployment(context.Context, *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error)
 }
 
 // NewBackplaneServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -360,9 +375,14 @@ func NewBackplaneServiceHandler(svc BackplaneServiceHandler, opts ...connect_go.
 		svc.GetArtefactDiffs,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.BackplaneService/UploadArtefact", connect_go.NewClientStreamHandler(
+	mux.Handle("/xyz.block.ftl.v1.BackplaneService/UploadArtefact", connect_go.NewUnaryHandler(
 		"/xyz.block.ftl.v1.BackplaneService/UploadArtefact",
 		svc.UploadArtefact,
+		opts...,
+	))
+	mux.Handle("/xyz.block.ftl.v1.BackplaneService/CreateDeployment", connect_go.NewUnaryHandler(
+		"/xyz.block.ftl.v1.BackplaneService/CreateDeployment",
+		svc.CreateDeployment,
 		opts...,
 	))
 	return "/xyz.block.ftl.v1.BackplaneService/", mux
@@ -379,6 +399,10 @@ func (UnimplementedBackplaneServiceHandler) GetArtefactDiffs(context.Context, *c
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.GetArtefactDiffs is not implemented"))
 }
 
-func (UnimplementedBackplaneServiceHandler) UploadArtefact(context.Context, *connect_go.ClientStream[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
+func (UnimplementedBackplaneServiceHandler) UploadArtefact(context.Context, *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.UploadArtefact is not implemented"))
+}
+
+func (UnimplementedBackplaneServiceHandler) CreateDeployment(context.Context, *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.CreateDeployment is not implemented"))
 }

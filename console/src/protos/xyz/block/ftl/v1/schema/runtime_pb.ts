@@ -51,6 +51,49 @@ proto3.util.setEnumType(Status, "xyz.block.ftl.v1.schema.Status", [
 ]);
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.ModuleRuntime
+ */
+export class ModuleRuntime extends Message<ModuleRuntime> {
+  /**
+   * @generated from field: google.protobuf.Timestamp create_time = 1;
+   */
+  createTime?: Timestamp;
+
+  /**
+   * @generated from field: string language = 2;
+   */
+  language = "";
+
+  constructor(data?: PartialMessage<ModuleRuntime>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.ModuleRuntime";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "create_time", kind: "message", T: Timestamp },
+    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntime {
+    return new ModuleRuntime().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleRuntime {
+    return new ModuleRuntime().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleRuntime {
+    return new ModuleRuntime().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ModuleRuntime | PlainMessage<ModuleRuntime> | undefined, b: ModuleRuntime | PlainMessage<ModuleRuntime> | undefined): boolean {
+    return proto3.util.equals(ModuleRuntime, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.VerbRuntime
  */
 export class VerbRuntime extends Message<VerbRuntime> {

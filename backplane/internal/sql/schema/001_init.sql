@@ -20,25 +20,20 @@ CREATE TABLE deployments (
 CREATE INDEX deployments_module_id_idx ON deployments (module_id);
 
 CREATE TABLE artefacts (
-  id BIGSERIAL PRIMARY KEY,
+  id BIGSERIAL PRIMARY KEY NOT NULL,
+  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+  -- SHA256 digest of the content.
+  digest BYTEA UNIQUE NOT NULL,
+  content BYTEA NOT NULL
+);
+
+CREATE TABLE deployment_artefacts (
+  artefact_id BIGINT NOT NULL REFERENCES artefacts(id) ON DELETE CASCADE,
+  deployment_id BIGINT NOT NULL REFERENCES deployments(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
   executable BOOLEAN NOT NULL,
   -- Path relative to the module root.
   path VARCHAR(128) NOT NULL
 );
 
-CREATE TABLE artefact_contents (
-  artefact_id BIGINT PRIMARY KEY NOT NULL REFERENCES artefacts(id) ON DELETE CASCADE,
-  -- SHA256 digest of the content.
-  digest BYTEA UNIQUE NOT NULL,
-  content BYTEA NOT NULL
-);
-
-CREATE INDEX artefact_contents_artefact_id_idx ON artefact_contents (artefact_id);
-
--- Associates a deployment with a set of artefacts.
-CREATE TABLE deployment_artefacts (
-  deployment_id BIGINT NOT NULL REFERENCES deployments(id) ON DELETE CASCADE,
-  artefact_id BIGINT NOT NULL REFERENCES artefacts(id) ON DELETE CASCADE,
-  PRIMARY KEY (deployment_id, artefact_id)
-);
+CREATE INDEX deployment_artefacts_deployment_artefact_idx ON deployment_artefacts (artefact_id, deployment_id);

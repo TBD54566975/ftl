@@ -16,6 +16,11 @@ enum Status {
   ERRORED = 5;
 }
 
+message ModuleRuntime {
+  google.protobuf.Timestamp create_time = 1;
+  string language = 2;
+}
+
 message VerbRuntime {
   google.protobuf.Timestamp create_time = 1;
   google.protobuf.Timestamp start_time = 2;

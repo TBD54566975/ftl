@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, SendRequest, SendResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, SendRequest, SendResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -146,7 +146,18 @@ export const BackplaneService = {
       name: "UploadArtefact",
       I: UploadArtefactRequest,
       O: UploadArtefactResponse,
-      kind: MethodKind.ClientStreaming,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Create a deployment.
+     *
+     * @generated from rpc xyz.block.ftl.v1.BackplaneService.CreateDeployment
+     */
+    createDeployment: {
+      name: "CreateDeployment",
+      I: CreateDeploymentRequest,
+      O: CreateDeploymentResponse,
+      kind: MethodKind.Unary,
     },
   }
 } as const;

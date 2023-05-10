@@ -12,7 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Init Hermit
-        run: ./bin/hermit env -r >> $GITHUB_ENV
+        uses: cashapp/activate-hermit@v1
       - name: Kotlin Test
         working-directory: drive-kotlin
         run: mvn --no-transfer-progress --batch-mode test
@@ -23,8 +23,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Init Hermit
-        run: ./bin/hermit env -r >> $GITHUB_ENV
-      - uses: isbang/compose-action@v1.4.1
+        uses: cashapp/activate-hermit@v1
+      - name: Docker Compose
+        run: docker compose up -d --wait
       - name: Test
         run: go test ./...
   lint:
@@ -34,7 +35,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Init Hermit
-        run: ./bin/hermit env -r >> $GITHUB_ENV
+        uses: cashapp/activate-hermit@v1
       - name: golangci-lint
         run: golangci-lint run
       - name: go-check-sumtype
@@ -46,7 +47,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Init Hermit
-        run: ./bin/hermit env -r >> $GITHUB_ENV
+        uses: cashapp/activate-hermit@v1
       - name: Console NPM Install
         working-directory: console
         run: npm install

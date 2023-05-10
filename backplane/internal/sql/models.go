@@ -10,16 +10,10 @@ import (
 )
 
 type Artefact struct {
-	ID         int64
-	CreatedAt  pgtype.Timestamp
-	Executable bool
-	Path       string
-}
-
-type ArtefactContent struct {
-	ArtefactID int64
-	Digest     []byte
-	Content    []byte
+	ID        int64
+	CreatedAt pgtype.Timestamp
+	Digest    []byte
+	Content   []byte
 }
 
 type Deployment struct {
@@ -31,8 +25,11 @@ type Deployment struct {
 }
 
 type DeploymentArtefact struct {
-	DeploymentID int64
 	ArtefactID   int64
+	DeploymentID int64
+	CreatedAt    pgtype.Timestamp
+	Executable   bool
+	Path         string
 }
 
 type Module struct {
