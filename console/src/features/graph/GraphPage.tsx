@@ -4,6 +4,11 @@ import ReactFlow, { Controls, MiniMap, Node, Edge } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { schemaContext } from '../../providers/schema-provider'
 import { MetadataCalls } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { GroupNode } from './GroupNode'
+import { VerbNode } from './VerbNode'
+
+const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode }
+const groupWidth = 200
 
 export default function GraphPage() {
   const schema = useContext(schemaContext)
@@ -16,12 +21,12 @@ export default function GraphPage() {
     nodes.push({
       id: module.schema?.name ?? '',
       position: { x: x, y: 0 },
-      data: { label: module.schema?.name },
-      connectable: false,
+      data: { title: module.schema?.name },
+      type: 'groupNode',
       style: {
-        backgroundColor: 'rgba(79, 70, 229, 0.4)',
-        width: 190,
+        width: groupWidth,
         height: (verbs?.length ?? 1) * 50 + 50,
+        zIndex: -1,
       },
     })
     let y = 40
@@ -36,10 +41,11 @@ export default function GraphPage() {
           id: `${module.schema?.name}-${verb.value.value?.name}`,
           position: { x: x + 20, y: y },
           connectable: false,
-          data: { label: verb.value.value?.name },
-          // parent: module.schema?.name,
+          data: { title: verb.value.value?.name },
+          type: 'verbNode',
           style: {
-            backgroundColor: 'rgb(79, 70, 229)',
+            width: groupWidth - 40,
+            height: 40,
           },
         })
 
@@ -64,7 +70,7 @@ export default function GraphPage() {
 
   return (
     <div style={{ width: '100vw', height: '90vh' }}>
-      <ReactFlow nodes={nodes} edges={edges} fitView>
+      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
         <Controls />
         <MiniMap />
       </ReactFlow>
