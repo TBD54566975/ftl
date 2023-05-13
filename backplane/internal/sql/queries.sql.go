@@ -194,6 +194,57 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 	return items, nil
 }
 
+const getDeploymentsWithArtefacts = `-- name: GetDeploymentsWithArtefacts :many
+SELECT d.id, d.created_at, d.key, m.name
+FROM deployments d
+JOIN modules m ON d.module_id = m.id
+WHERE EXISTS (
+  SELECT 1
+  FROM deployment_artefacts da
+  JOIN artefacts a ON da.artefact_id = a.id
+  WHERE a.digest = ANY($1::bytea[])
+    AND da.deployment_id = d.id
+  HAVING COUNT(*) = $2 -- Number of unique digests provided
+)
+`
+
+type GetDeploymentsWithArtefactsParams struct {
+	Digests [][]byte
+	Count   interface{}
+}
+
+type GetDeploymentsWithArtefactsRow struct {
+	ID        int64
+	CreatedAt pgtype.Timestamp
+	Key       uuid.UUID
+	Name      string
+}
+
+func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, arg GetDeploymentsWithArtefactsParams) ([]GetDeploymentsWithArtefactsRow, error) {
+	rows, err := q.db.Query(ctx, getDeploymentsWithArtefacts, arg.Digests, arg.Count)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDeploymentsWithArtefactsRow
+	for rows.Next() {
+		var i GetDeploymentsWithArtefactsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Key,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestDeployment = `-- name: GetLatestDeployment :one
 SELECT deployments.id, deployments.created_at, deployments.module_id, deployments.key, deployments.schema, modules.language, modules.name AS module_name FROM deployments
 INNER JOIN modules ON modules.id = deployments.module_id

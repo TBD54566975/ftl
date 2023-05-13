@@ -21,6 +21,7 @@ type Querier interface {
 	GetDeployment(ctx context.Context, key uuid.UUID) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
+	GetDeploymentsWithArtefacts(ctx context.Context, arg GetDeploymentsWithArtefactsParams) ([]GetDeploymentsWithArtefactsRow, error)
 	GetLatestDeployment(ctx context.Context, moduleName string) (GetLatestDeploymentRow, error)
 	ListDeployments(ctx context.Context, moduleID int64) ([]Deployment, error)
 	ListModules(ctx context.Context) ([]Module, error)

@@ -45,3 +45,16 @@ SELECT deployments.*, modules.language, modules.name AS module_name FROM deploym
 INNER JOIN modules ON modules.id = deployments.module_id
 WHERE modules.name = @module_name
 ORDER BY created_at DESC LIMIT 1;
+
+-- name: GetDeploymentsWithArtefacts :many
+SELECT d.id, d.created_at, d.key, m.name
+FROM deployments d
+JOIN modules m ON d.module_id = m.id
+WHERE EXISTS (
+  SELECT 1
+  FROM deployment_artefacts da
+  JOIN artefacts a ON da.artefact_id = a.id
+  WHERE a.digest = ANY(@digests::bytea[])
+    AND da.deployment_id = d.id
+  HAVING COUNT(*) = @count -- Number of unique digests provided
+);

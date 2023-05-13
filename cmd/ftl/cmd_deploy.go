@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/agent"
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/TBD54566975/ftl/common/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -39,7 +40,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.BackplaneServic
 	}
 	logger.Infof("Creating deployment for module %s", config.Module)
 
-	filesByHash, err := hashFiles(d.Files)
+	filesByHash, err := hashFiles(base, d.Files)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -48,32 +49,21 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.BackplaneServic
 		return errors.WithStack(err)
 	}
 
-	artefacts := []*ftlv1.DeploymentArtefact{}
 	logger.Infof("Uploading %d files", len(gadResp.Msg.MissingDigests))
 	for _, missing := range gadResp.Msg.MissingDigests {
 		file := filesByHash[missing]
-		content, err := ioutil.ReadFile(file)
+		content, err := ioutil.ReadFile(file.localPath)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		path, err := filepath.Rel(base, file)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		if !filepath.IsLocal(path) {
-			return errors.Errorf("path %q is not local to %q", file, base)
-		}
-		logger.Debugf("Uploading %s", file)
+		logger.Debugf("Uploading %s", relToCWD(file.localPath))
 		resp, err := client.UploadArtefact(ctx, connect.NewRequest(&ftlv1.UploadArtefactRequest{
 			Content: content,
 		}))
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		logger.Infof("Uploaded %s as %s:%s", relToCWD(file), sha256.FromBytes(resp.Msg.Digest), path)
-		artefacts = append(artefacts, &ftlv1.DeploymentArtefact{
-			Digest: missing,
-		})
+		logger.Infof("Uploaded %s as %s:%s", relToCWD(file.localPath), sha256.FromBytes(resp.Msg.Digest), file.Path)
 	}
 	resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 		// TODO(aat): Use real data for this.
@@ -84,7 +74,9 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.BackplaneServic
 				Language:   config.Language,
 			},
 		},
-		Artefacts: artefacts,
+		Artefacts: slices.Map(maps.Values(filesByHash), func(a deploymentArtefact) *ftlv1.DeploymentArtefact {
+			return a.DeploymentArtefact
+		}),
 	}))
 	if err != nil {
 		return errors.WithStack(err)
@@ -93,8 +85,13 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.BackplaneServic
 	return nil
 }
 
-func hashFiles(files []string) (filesByHash map[string]string, err error) {
-	filesByHash = map[string]string{}
+type deploymentArtefact struct {
+	*ftlv1.DeploymentArtefact
+	localPath string
+}
+
+func hashFiles(base string, files []string) (filesByHash map[string]deploymentArtefact, err error) {
+	filesByHash = map[string]deploymentArtefact{}
 	for _, file := range files {
 		r, err := os.Open(file)
 		if err != nil {
@@ -105,7 +102,23 @@ func hashFiles(files []string) (filesByHash map[string]string, err error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		filesByHash[hash.String()] = file
+		info, err := r.Stat()
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		isExecutable := info.Mode()&0111 != 0
+		path, err := filepath.Rel(base, file)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		filesByHash[hash.String()] = deploymentArtefact{
+			DeploymentArtefact: &ftlv1.DeploymentArtefact{
+				Digest:     hash.String(),
+				Path:       path,
+				Executable: isExecutable,
+			},
+			localPath: file,
+		}
 	}
 	return filesByHash, nil
 }

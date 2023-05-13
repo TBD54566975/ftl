@@ -62,9 +62,10 @@ type DeploymentArtefact struct {
 	Path       string
 }
 
-// CreateDeployment creates a new deployment and associates previously created artefacts with it.
+// CreateDeployment (possibly) creates a new deployment and associates
+// previously created artefacts with it.
 //
-// "artefacts" is a map of artefact digests to relative paths within the deployment.
+// If an existing deployment with identical artefacts exists, it is returned.
 func (d *DAO) CreateDeployment(
 	ctx context.Context,
 	language string,
@@ -77,6 +78,18 @@ func (d *DAO) CreateDeployment(
 		return uuid.UUID{}, errors.WithStack(err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)()
+
+	// Check if the deployment already exists and if so, return it.
+	existing, err := tx.GetDeploymentsWithArtefacts(ctx, sql.GetDeploymentsWithArtefactsParams{
+		Count:   len(artefacts),
+		Digests: sha256esToBytes(slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return in.Digest })),
+	})
+	if err != nil {
+		return uuid.UUID{}, errors.WithStack(err)
+	}
+	if len(existing) > 0 {
+		return existing[0].Key, nil
+	}
 
 	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
 		return in.Digest, in
