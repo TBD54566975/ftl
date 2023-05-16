@@ -16,11 +16,13 @@ type Querier interface {
 	CreateArtefact(ctx context.Context, arg CreateArtefactParams) (int64, error)
 	CreateDeployment(ctx context.Context, arg CreateDeploymentParams) (uuid.UUID, error)
 	CreateModule(ctx context.Context, arg CreateModuleParams) (int64, error)
+	GetArtefactContentRange(ctx context.Context, arg GetArtefactContentRangeParams) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
 	GetDeployment(ctx context.Context, key uuid.UUID) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
+	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, arg GetDeploymentsWithArtefactsParams) ([]GetDeploymentsWithArtefactsRow, error)
 	GetLatestDeployment(ctx context.Context, moduleName string) (GetLatestDeploymentRow, error)
 	ListDeployments(ctx context.Context, moduleID int64) ([]Deployment, error)

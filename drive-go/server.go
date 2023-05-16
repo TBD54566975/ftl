@@ -99,7 +99,3 @@ func (m *moduleServer) List(ctx context.Context, req *connect.Request[ftlv1.List
 func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
-
-func (m *moduleServer) Send(ctx context.Context, req *connect.Request[ftlv1.SendRequest]) (*connect.Response[ftlv1.SendResponse], error) {
-	panic("unimplemented")
-}

@@ -149,10 +149,6 @@ func (s *Server) List(ctx context.Context, req *connect.Request[ftlv1.ListReques
 	return connect.NewResponse(out), nil
 }
 
-func (s *Server) Send(ctx context.Context, req *connect.Request[ftlv1.SendRequest]) (*connect.Response[ftlv1.SendResponse], error) {
-	panic("unimplemented")
-}
-
 func (s *Server) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }

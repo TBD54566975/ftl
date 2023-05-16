@@ -3,6 +3,7 @@ package dao
 
 import (
 	"context"
+	"io"
 	"strings"
 
 	"github.com/alecthomas/errors"
@@ -14,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/common/maps"
 	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/common/slices"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 )
@@ -153,7 +155,15 @@ type Artefact struct {
 	Path       string
 	Executable bool
 	Digest     sha256.SHA256
-	Content    []byte
+	Content    io.Reader
+}
+
+func (a *Artefact) ToProto() *ftlv1.DeploymentArtefact {
+	return &ftlv1.DeploymentArtefact{
+		Path:       a.Path,
+		Executable: a.Executable,
+		Digest:     a.Digest.String(),
+	}
 }
 
 func (d *DAO) GetDeployment(ctx context.Context, id uuid.UUID) (*Deployment, error) {
@@ -192,7 +202,7 @@ func (d *DAO) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploy
 		return &Artefact{
 			Path:       row.Path,
 			Executable: row.Executable,
-			Content:    row.Content,
+			Content:    &artefactReader{id: row.ID, db: d.db},
 			Digest:     sha256.FromBytes(row.Digest),
 		}
 	})
@@ -217,3 +227,27 @@ func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 // 	}
 // 	return hex.EncodeToString(h.Sum(nil)), nil
 // }
+
+type artefactReader struct {
+	id     int64
+	db     *sql.DB
+	offset int32
+}
+
+func (r *artefactReader) Read(p []byte) (n int, err error) {
+	content, err := r.db.GetArtefactContentRange(context.Background(), sql.GetArtefactContentRangeParams{
+		Start: r.offset + 1,
+		Count: int32(len(p)),
+		ID:    r.id,
+	})
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+	copy(p, content)
+	clen := len(content)
+	r.offset += int32(clen)
+	if clen == 0 {
+		err = io.EOF
+	}
+	return clen, err
+}

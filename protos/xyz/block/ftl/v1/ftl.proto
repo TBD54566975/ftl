@@ -41,14 +41,6 @@ message ListResponse {
   repeated schema.VerbRef verbs = 1;
 }
 
-message SendRequest {
-  Metadata metadata = 1;
-
-  schema.VerbRef verb = 2;
-  bytes body = 3;
-}
-message SendResponse {}
-
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.
@@ -56,9 +48,6 @@ service VerbService {
 
   // Issue a synchronous call to a Verb.
   rpc Call(CallRequest) returns (CallResponse);
-
-  // Issue an asynchronous call to a Verb.
-  rpc Send(SendRequest) returns (SendResponse);
 
   // List the available Verbs.
   rpc List(ListRequest) returns (ListResponse);
@@ -121,6 +110,16 @@ message CreateDeploymentResponse {
   string deployment_key = 1;
 }
 
+message GetDeploymentArtefactsRequest {
+  string deployment_key = 1;
+  repeated string have_digests = 2;
+}
+
+message GetDeploymentArtefactsResponse {
+  DeploymentArtefact artefact = 1;
+  bytes chunk = 2;
+}
+
 service BackplaneService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
@@ -133,4 +132,24 @@ service BackplaneService {
 
   // Create a deployment.
   rpc CreateDeployment(CreateDeploymentRequest) returns (CreateDeploymentResponse);
+
+  // Stream artefacts from the server.
+  //
+  // Each artefact is streamed one after the other as a sequence of max 1MB
+  // chunks.
+  rpc GetDeploymentArtefacts(GetDeploymentArtefactsRequest) returns (stream GetDeploymentArtefactsResponse);
 }
+
+// message BootstrapRequest {
+//   string deployment_key = 1;
+// }
+
+// // A service that bootstraps a language-specific VerbService.
+// //
+// // The Bootstrap service
+// service BootstrapService {
+//   // Ping service for readiness.
+//   rpc Ping(PingRequest) returns (PingResponse);
+
+//   rpc Bootstrap(BootstrapRequest) returns (stream BootstrapResponse);
+// }
