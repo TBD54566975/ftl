@@ -35,8 +35,6 @@ type VerbServiceClient interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect_go.Request[v1.CallRequest]) (*connect_go.Response[v1.CallResponse], error)
-	// Issue an asynchronous call to a Verb.
-	Send(context.Context, *connect_go.Request[v1.SendRequest]) (*connect_go.Response[v1.SendResponse], error)
 	// List the available Verbs.
 	List(context.Context, *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error)
 }
@@ -61,11 +59,6 @@ func NewVerbServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts
 			baseURL+"/xyz.block.ftl.v1.VerbService/Call",
 			opts...,
 		),
-		send: connect_go.NewClient[v1.SendRequest, v1.SendResponse](
-			httpClient,
-			baseURL+"/xyz.block.ftl.v1.VerbService/Send",
-			opts...,
-		),
 		list: connect_go.NewClient[v1.ListRequest, v1.ListResponse](
 			httpClient,
 			baseURL+"/xyz.block.ftl.v1.VerbService/List",
@@ -78,7 +71,6 @@ func NewVerbServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts
 type verbServiceClient struct {
 	ping *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	call *connect_go.Client[v1.CallRequest, v1.CallResponse]
-	send *connect_go.Client[v1.SendRequest, v1.SendResponse]
 	list *connect_go.Client[v1.ListRequest, v1.ListResponse]
 }
 
@@ -92,11 +84,6 @@ func (c *verbServiceClient) Call(ctx context.Context, req *connect_go.Request[v1
 	return c.call.CallUnary(ctx, req)
 }
 
-// Send calls xyz.block.ftl.v1.VerbService.Send.
-func (c *verbServiceClient) Send(ctx context.Context, req *connect_go.Request[v1.SendRequest]) (*connect_go.Response[v1.SendResponse], error) {
-	return c.send.CallUnary(ctx, req)
-}
-
 // List calls xyz.block.ftl.v1.VerbService.List.
 func (c *verbServiceClient) List(ctx context.Context, req *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error) {
 	return c.list.CallUnary(ctx, req)
@@ -108,8 +95,6 @@ type VerbServiceHandler interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect_go.Request[v1.CallRequest]) (*connect_go.Response[v1.CallResponse], error)
-	// Issue an asynchronous call to a Verb.
-	Send(context.Context, *connect_go.Request[v1.SendRequest]) (*connect_go.Response[v1.SendResponse], error)
 	// List the available Verbs.
 	List(context.Context, *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error)
 }
@@ -131,11 +116,6 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect_go.HandlerOpt
 		svc.Call,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.VerbService/Send", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.VerbService/Send",
-		svc.Send,
-		opts...,
-	))
 	mux.Handle("/xyz.block.ftl.v1.VerbService/List", connect_go.NewUnaryHandler(
 		"/xyz.block.ftl.v1.VerbService/List",
 		svc.List,
@@ -153,10 +133,6 @@ func (UnimplementedVerbServiceHandler) Ping(context.Context, *connect_go.Request
 
 func (UnimplementedVerbServiceHandler) Call(context.Context, *connect_go.Request[v1.CallRequest]) (*connect_go.Response[v1.CallResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.Call is not implemented"))
-}
-
-func (UnimplementedVerbServiceHandler) Send(context.Context, *connect_go.Request[v1.SendRequest]) (*connect_go.Response[v1.SendResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.Send is not implemented"))
 }
 
 func (UnimplementedVerbServiceHandler) List(context.Context, *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error) {
@@ -283,6 +259,11 @@ type BackplaneServiceClient interface {
 	UploadArtefact(context.Context, *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error)
 	// Create a deployment.
 	CreateDeployment(context.Context, *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error)
+	// Stream artefacts from the server.
+	//
+	// Each artefact is streamed one after the other as a sequence of max 1MB
+	// chunks.
+	GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest]) (*connect_go.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error)
 }
 
 // NewBackplaneServiceClient constructs a client for the xyz.block.ftl.v1.BackplaneService service.
@@ -315,15 +296,21 @@ func NewBackplaneServiceClient(httpClient connect_go.HTTPClient, baseURL string,
 			baseURL+"/xyz.block.ftl.v1.BackplaneService/CreateDeployment",
 			opts...,
 		),
+		getDeploymentArtefacts: connect_go.NewClient[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse](
+			httpClient,
+			baseURL+"/xyz.block.ftl.v1.BackplaneService/GetDeploymentArtefacts",
+			opts...,
+		),
 	}
 }
 
 // backplaneServiceClient implements BackplaneServiceClient.
 type backplaneServiceClient struct {
-	ping             *connect_go.Client[v1.PingRequest, v1.PingResponse]
-	getArtefactDiffs *connect_go.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
-	uploadArtefact   *connect_go.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
-	createDeployment *connect_go.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
+	ping                   *connect_go.Client[v1.PingRequest, v1.PingResponse]
+	getArtefactDiffs       *connect_go.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
+	uploadArtefact         *connect_go.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
+	createDeployment       *connect_go.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
+	getDeploymentArtefacts *connect_go.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.BackplaneService.Ping.
@@ -346,6 +333,11 @@ func (c *backplaneServiceClient) CreateDeployment(ctx context.Context, req *conn
 	return c.createDeployment.CallUnary(ctx, req)
 }
 
+// GetDeploymentArtefacts calls xyz.block.ftl.v1.BackplaneService.GetDeploymentArtefacts.
+func (c *backplaneServiceClient) GetDeploymentArtefacts(ctx context.Context, req *connect_go.Request[v1.GetDeploymentArtefactsRequest]) (*connect_go.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error) {
+	return c.getDeploymentArtefacts.CallServerStream(ctx, req)
+}
+
 // BackplaneServiceHandler is an implementation of the xyz.block.ftl.v1.BackplaneService service.
 type BackplaneServiceHandler interface {
 	// Ping service for readiness.
@@ -356,6 +348,11 @@ type BackplaneServiceHandler interface {
 	UploadArtefact(context.Context, *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error)
 	// Create a deployment.
 	CreateDeployment(context.Context, *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error)
+	// Stream artefacts from the server.
+	//
+	// Each artefact is streamed one after the other as a sequence of max 1MB
+	// chunks.
+	GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest], *connect_go.ServerStream[v1.GetDeploymentArtefactsResponse]) error
 }
 
 // NewBackplaneServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -385,6 +382,11 @@ func NewBackplaneServiceHandler(svc BackplaneServiceHandler, opts ...connect_go.
 		svc.CreateDeployment,
 		opts...,
 	))
+	mux.Handle("/xyz.block.ftl.v1.BackplaneService/GetDeploymentArtefacts", connect_go.NewServerStreamHandler(
+		"/xyz.block.ftl.v1.BackplaneService/GetDeploymentArtefacts",
+		svc.GetDeploymentArtefacts,
+		opts...,
+	))
 	return "/xyz.block.ftl.v1.BackplaneService/", mux
 }
 
@@ -405,4 +407,8 @@ func (UnimplementedBackplaneServiceHandler) UploadArtefact(context.Context, *con
 
 func (UnimplementedBackplaneServiceHandler) CreateDeployment(context.Context, *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.CreateDeployment is not implemented"))
+}
+
+func (UnimplementedBackplaneServiceHandler) GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest], *connect_go.ServerStream[v1.GetDeploymentArtefactsResponse]) error {
+	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.GetDeploymentArtefacts is not implemented"))
 }

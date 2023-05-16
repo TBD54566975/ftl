@@ -89,6 +89,25 @@ func (q *Queries) CreateModule(ctx context.Context, arg CreateModuleParams) (int
 	return id, err
 }
 
+const getArtefactContentRange = `-- name: GetArtefactContentRange :one
+SELECT SUBSTRING(a.content FROM $1 FOR $2)::BYTEA AS content
+FROM artefacts a
+WHERE a.id = $3
+`
+
+type GetArtefactContentRangeParams struct {
+	Start int32
+	Count int32
+	ID    int64
+}
+
+func (q *Queries) GetArtefactContentRange(ctx context.Context, arg GetArtefactContentRangeParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, getArtefactContentRange, arg.Start, arg.Count, arg.ID)
+	var content []byte
+	err := row.Scan(&content)
+	return content, err
+}
+
 const getArtefactDigests = `-- name: GetArtefactDigests :many
 SELECT id, digest FROM artefacts WHERE digest = ANY($1::bytea[])
 `
@@ -120,9 +139,10 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 }
 
 const getDeployment = `-- name: GetDeployment :one
-SELECT deployments.id, deployments.created_at, deployments.module_id, deployments.key, deployments.schema, modules.language, modules.name AS module_name FROM deployments
-INNER JOIN modules ON modules.id = deployments.module_id
-WHERE deployments.key = $1
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, m.language, m.name AS module_name
+FROM deployments d
+INNER JOIN modules m ON m.id = d.module_id
+WHERE d.key = $1
 `
 
 type GetDeploymentRow struct {
@@ -151,19 +171,19 @@ func (q *Queries) GetDeployment(ctx context.Context, key uuid.UUID) (GetDeployme
 }
 
 const getDeploymentArtefacts = `-- name: GetDeploymentArtefacts :many
-SELECT deployment_artefacts.created_at, executable, path, digest, executable, content
-FROM deployment_artefacts
-INNER JOIN artefacts ON artefacts.id = deployment_artefacts.artefact_id
+SELECT da.created_at, artefact_id AS id, executable, path, digest, executable
+FROM deployment_artefacts da
+INNER JOIN artefacts ON artefacts.id = da.artefact_id
 WHERE deployment_id = $1
 `
 
 type GetDeploymentArtefactsRow struct {
 	CreatedAt    pgtype.Timestamp
+	ID           int64
 	Executable   bool
 	Path         string
 	Digest       []byte
 	Executable_2 bool
-	Content      []byte
 }
 
 // Get all artefacts matching the given digests.
@@ -178,11 +198,11 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 		var i GetDeploymentArtefactsRow
 		if err := rows.Scan(
 			&i.CreatedAt,
+			&i.ID,
 			&i.Executable,
 			&i.Path,
 			&i.Digest,
 			&i.Executable_2,
-			&i.Content,
 		); err != nil {
 			return nil, err
 		}
@@ -197,11 +217,11 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 const getDeploymentsWithArtefacts = `-- name: GetDeploymentsWithArtefacts :many
 SELECT d.id, d.created_at, d.key, m.name
 FROM deployments d
-JOIN modules m ON d.module_id = m.id
+INNER JOIN modules m ON d.module_id = m.id
 WHERE EXISTS (
   SELECT 1
   FROM deployment_artefacts da
-  JOIN artefacts a ON da.artefact_id = a.id
+  INNER JOIN artefacts a ON da.artefact_id = a.id
   WHERE a.digest = ANY($1::bytea[])
     AND da.deployment_id = d.id
   HAVING COUNT(*) = $2 -- Number of unique digests provided
@@ -220,6 +240,7 @@ type GetDeploymentsWithArtefactsRow struct {
 	Name      string
 }
 
+// Get all deployments that have artefacts matching the given digests.
 func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, arg GetDeploymentsWithArtefactsParams) ([]GetDeploymentsWithArtefactsRow, error) {
 	rows, err := q.db.Query(ctx, getDeploymentsWithArtefacts, arg.Digests, arg.Count)
 	if err != nil {
@@ -246,9 +267,10 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, arg GetDeploy
 }
 
 const getLatestDeployment = `-- name: GetLatestDeployment :one
-SELECT deployments.id, deployments.created_at, deployments.module_id, deployments.key, deployments.schema, modules.language, modules.name AS module_name FROM deployments
-INNER JOIN modules ON modules.id = deployments.module_id
-WHERE modules.name = $1
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, m.language, m.name AS module_name
+FROM deployments d
+INNER JOIN modules m ON m.id = d.module_id
+WHERE m.name = $1
 ORDER BY created_at DESC LIMIT 1
 `
 

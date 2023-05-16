@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, SendRequest, SendResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -34,17 +34,6 @@ export const VerbService = {
       name: "Call",
       I: CallRequest,
       O: CallResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Issue an asynchronous call to a Verb.
-     *
-     * @generated from rpc xyz.block.ftl.v1.VerbService.Send
-     */
-    send: {
-      name: "Send",
-      I: SendRequest,
-      O: SendResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -158,6 +147,20 @@ export const BackplaneService = {
       I: CreateDeploymentRequest,
       O: CreateDeploymentResponse,
       kind: MethodKind.Unary,
+    },
+    /**
+     * Stream artefacts from the server.
+     *
+     * Each artefact is streamed one after the other as a sequence of max 1MB
+     * chunks.
+     *
+     * @generated from rpc xyz.block.ftl.v1.BackplaneService.GetDeploymentArtefacts
+     */
+    getDeploymentArtefacts: {
+      name: "GetDeploymentArtefacts",
+      I: GetDeploymentArtefactsRequest,
+      O: GetDeploymentArtefactsResponse,
+      kind: MethodKind.ServerStreaming,
     },
   }
 } as const;

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"os"
 	"strconv"
 
 	"github.com/alecthomas/errors"
@@ -22,6 +23,15 @@ func SumReader(r io.Reader) (SHA256, error) {
 	var out SHA256
 	copy(out[:], h.Sum(nil))
 	return out, errors.WithStack(err)
+}
+
+func SumFile(path string) (SHA256, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return SHA256{}, errors.WithStack(err)
+	}
+	defer f.Close() //nolint:gosec
+	return SumReader(f)
 }
 
 // FromBytes converts a SHA256 in []byte form to a SHA256.

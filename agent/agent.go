@@ -221,10 +221,6 @@ func (*Agent) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*conne
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
-func (*Agent) Send(context.Context, *connect.Request[ftlv1.SendRequest]) (*connect.Response[ftlv1.SendResponse], error) {
-	panic("unimplemented")
-}
-
 func (a *Agent) allDrives() []*driveContext {
 	a.lock.Lock()
 	defer a.lock.Unlock()

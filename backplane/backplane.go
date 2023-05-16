@@ -2,10 +2,13 @@ package backplane
 
 import (
 	"context"
+	"io"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
+	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl/backplane/internal/dao"
@@ -59,6 +62,41 @@ type Service struct {
 	dao *dao.DAO
 }
 
+func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentArtefactsRequest], resp *connect.ServerStream[ftlv1.GetDeploymentArtefactsResponse]) error {
+	dkey, err := uuid.Parse(req.Msg.DeploymentKey)
+	if err != nil {
+		return connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
+	}
+	deployment, err := s.dao.GetDeployment(ctx, dkey)
+	if err != nil {
+		return connect.NewError(connect.CodeNotFound, errors.WithStack(err))
+	}
+	haveDigests := mapset.NewSet(req.Msg.HaveDigests...)
+	chunk := make([]byte, 1024*1024)
+	for _, artefact := range deployment.Artefacts {
+		if haveDigests.Contains(artefact.Digest.String()) {
+			continue
+		}
+		for {
+			n, err := artefact.Content.Read(chunk)
+			if n != 0 {
+				if err := resp.Send(&ftlv1.GetDeploymentArtefactsResponse{
+					Artefact: artefact.ToProto(),
+					Chunk:    chunk[:n],
+				}); err != nil {
+					return errors.WithStack(err)
+				}
+			}
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				return errors.WithStack(err)
+			}
+		}
+	}
+	return nil
+}
+
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
@@ -68,10 +106,6 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 }
 
 func (s *Service) List(ctx context.Context, req *connect.Request[ftlv1.ListRequest]) (*connect.Response[ftlv1.ListResponse], error) {
-	panic("unimplemented")
-}
-
-func (s *Service) Send(ctx context.Context, req *connect.Request[ftlv1.SendRequest]) (*connect.Response[ftlv1.SendResponse], error) {
 	panic("unimplemented")
 }
 
