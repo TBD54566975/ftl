@@ -2,12 +2,12 @@
 
 The actors in the diagrams are as follows:
 
-| Actor     | Description                                                                                                 |
-| --------- | ----------------------------------------------------------------------------------------------------------- |
-| Backplane | The coordination layer of FTL. This creates and manages runtime instances, routing, resource creation, etc. |
-| Platform  | The platform FTL is running on, eg. Kubernetes, VMs, etc.                                                   |
-| Runtime   | The component of FTL that coordinates with the Backplane to spawn and route to user code.                   |
-| Module    |
+| Actor      | Description                                                                                                |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| Backplane  | The coordination layer of FTL. This creates and manages Runner instances, routing, resource creation, etc. |
+| Platform   | The platform FTL is running on, eg. Kubernetes, VMs, etc.                                                  |
+| Runner     | The component of FTL that coordinates with the Backplane to spawn and route to user code.                  |
+| Deployment | User code serving VerbService for a module written in a particular language.                               |
 
 ## System initialisation
 
@@ -15,11 +15,11 @@ The actors in the diagrams are as follows:
 sequenceDiagram
   participant B as Backplane
   participant P as Platform
-  participant R as Runtime
+  participant R as Runner
 
-  B ->> P: CreateRuntime(language)
+  B ->> P: CreateRunner(language)
   P ->> R: CreateInstance(language)
-  R ->> B: RegisterRuntime(language)
+  R ->> B: RegisterRunner(language)
 ```
 
 ## Creating a deployment
@@ -29,8 +29,8 @@ sequenceDiagram
   participant C as Client
   participant B as Backplane
   box Module
-    participant R as Runtime
-    participant M as Module
+    participant R as Runner
+    participant M as Deployment
   end
 
   C ->> B: GetArtefactDiffs()
@@ -62,12 +62,12 @@ sequenceDiagram
   participant C as Client
   participant B as Backplane
   box LightYellow Module0
-    participant R0 as Runtime0
-    participant M0 as Module0
+    participant R0 as Runner0
+    participant M0 as Deployment0
   end
   box LightGreen Module1
-    participant R1 as Runtime1
-    participant M1 as Module1
+    participant R1 as Runner1
+    participant M1 as Deployment1
   end
 
   C ->> B: Call(V0)
