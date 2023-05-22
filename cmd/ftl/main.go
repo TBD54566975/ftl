@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/bufbuild/connect-go"
 
+	_ "github.com/TBD54566975/ftl/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/common/socket"
@@ -83,6 +84,6 @@ func main() {
 
 func makeDialer[Client rpc.Pingable](newClient func(connect.HTTPClient, string, ...connect.ClientOption) Client) func() (Client, error) {
 	return func() (Client, error) {
-		return rpc.Dial(newClient, cli.Endpoint.URL()), nil
+		return rpc.Dial(newClient, cli.Endpoint.URL().String()), nil
 	}
 }

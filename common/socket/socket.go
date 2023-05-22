@@ -17,8 +17,8 @@ type Socket struct {
 	Addr    string
 }
 
-func (s Socket) URL() string {
-	return "http://" + s.Addr
+func (s Socket) URL() *url.URL {
+	return &url.URL{Scheme: "http", Host: s.Addr}
 }
 
 // Valid returns true if the Socket is valid.

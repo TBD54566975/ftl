@@ -64,6 +64,26 @@ type DeploymentArtefact struct {
 	Path       string
 }
 
+func (d *DeploymentArtefact) ToProto() *ftlv1.DeploymentArtefact {
+	return &ftlv1.DeploymentArtefact{
+		Digest:     d.Digest.String(),
+		Executable: d.Executable,
+		Path:       d.Path,
+	}
+}
+
+func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefact, error) {
+	digest, err := sha256.ParseSHA256(in.Digest)
+	if err != nil {
+		return DeploymentArtefact{}, errors.WithStack(err)
+	}
+	return DeploymentArtefact{
+		Digest:     digest,
+		Executable: in.Executable,
+		Path:       in.Path,
+	}, nil
+}
+
 // CreateDeployment (possibly) creates a new deployment and associates
 // previously created artefacts with it.
 //
@@ -155,7 +175,8 @@ type Artefact struct {
 	Path       string
 	Executable bool
 	Digest     sha256.SHA256
-	Content    io.Reader
+	// ~Zero-cost on-demand reader.
+	Content io.Reader
 }
 
 func (a *Artefact) ToProto() *ftlv1.DeploymentArtefact {

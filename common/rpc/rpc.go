@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
+	"github.com/TBD54566975/ftl/common/log"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
@@ -56,4 +58,28 @@ func (m mergedContext) Value(key any) any {
 		return value
 	}
 	return m.values.Value(key)
+}
+
+// Wait for a client to become available.
+//
+// This will repeatedly call Ping() every 100ms until the service becomes
+// available. TODO: This will probably need to be smarter at some point.
+//
+// If "ctx" is cancelled this will return ctx.Err()
+func Wait(ctx context.Context, client Pingable) error {
+	logger := log.FromContext(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return errors.WithStack(ctx.Err())
+		default:
+		}
+		_, err := client.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+		if err != nil {
+			logger.Tracef("Ping failed waiting for client: %+v", err)
+			time.Sleep(time.Millisecond * 100)
+			continue
+		}
+		return err
+	}
 }

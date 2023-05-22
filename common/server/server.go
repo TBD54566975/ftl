@@ -50,7 +50,7 @@ func Serve(ctx context.Context, listen socket.Socket, options ...Option) error {
 	}
 	// TODO: Is this a good idea? Who knows!
 	crs := cors.New(cors.Options{
-		AllowedOrigins: []string{listen.URL()},
+		AllowedOrigins: []string{listen.URL().String()},
 		AllowedMethods: []string{
 			http.MethodHead,
 			http.MethodGet,

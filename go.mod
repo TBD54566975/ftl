@@ -42,6 +42,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-isatty v0.0.17
 	github.com/pressly/goose/v3 v3.10.0
+	go.uber.org/automaxprocs v1.5.2
 	golang.org/x/mod v0.9.0
 	golang.org/x/sys v0.7.0 // indirect
 )

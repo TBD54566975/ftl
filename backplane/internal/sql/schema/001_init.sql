@@ -36,4 +36,4 @@ CREATE TABLE deployment_artefacts (
   path VARCHAR(128) NOT NULL
 );
 
-CREATE INDEX deployment_artefacts_deployment_artefact_idx ON deployment_artefacts (artefact_id, deployment_id);
+CREATE INDEX deployment_artefacts_deployment_id_idx ON deployment_artefacts (deployment_id);
