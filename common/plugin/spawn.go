@@ -61,8 +61,9 @@ func WithExtraClient[Client PingableClient](out *Client, makeClient rpc.ClientFa
 }
 
 type Plugin[Client PingableClient] struct {
-	Cmd    *exec.Cmd
-	Client Client
+	Cmd      *exec.Cmd
+	Endpoint socket.Socket // The endpoint the plugin is listening on.
+	Client   Client
 }
 
 // Spawn a new sub-process plugin.
@@ -119,7 +120,7 @@ func Spawn[Client PingableClient](
 	logger.Debugf("Spawning plugin on %s", pluginSocket)
 	cmd := exec.Command(ctx, dir, exe)
 
-	// Send the plugin's stdout to the logger.
+	// Send the plugin's stderr to the logger.
 	cmd.Stderr = nil
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
@@ -160,24 +161,17 @@ func Spawn[Client PingableClient](
 	defer cancel()
 
 	// Wait for the plugin to start.
-	client := rpc.Dial(makeClient, pluginSocket.URL())
+	client := rpc.Dial(makeClient, pluginSocket.URL().String())
 	pingErr := make(chan error)
 	go func() {
-		defer close(pingErr)
-		for {
-			select {
-			case <-dialCtx.Done():
-				return
-			default:
-			}
-			_, err := client.Ping(dialCtx, connect.NewRequest(&ftlv1.PingRequest{}))
-			if err != nil {
-				logger.Tracef("Plugin ping failed: %+v", err)
-				time.Sleep(time.Millisecond * 100)
-				continue
-			}
-			pingErr <- err
+		err := rpc.Wait(dialCtx, client)
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			// Deliberately don't close pingErr because the select loop below
+			// will catch dialCtx closing and return a better error.
+			return
 		}
+		pingErr <- err
+		close(pingErr)
 	}()
 
 	select {
@@ -194,10 +188,10 @@ func Spawn[Client PingableClient](
 	}
 
 	for _, makeClient := range opts.additionalClients {
-		makeClient(pluginSocket.URL())
+		makeClient(pluginSocket.URL().String())
 	}
 
 	logger.Infof("Online")
-	plugin = &Plugin[Client]{Cmd: cmd, Client: client}
+	plugin = &Plugin[Client]{Cmd: cmd, Endpoint: pluginSocket, Client: client}
 	return plugin, cmdCtx, nil
 }

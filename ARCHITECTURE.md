@@ -2,12 +2,12 @@
 
 The actors in the diagrams are as follows:
 
-| Actor      | Description                                                                                                |
-| ---------- | ---------------------------------------------------------------------------------------------------------- |
-| Backplane  | The coordination layer of FTL. This creates and manages Runner instances, routing, resource creation, etc. |
-| Platform   | The platform FTL is running on, eg. Kubernetes, VMs, etc.                                                  |
-| Runner     | The component of FTL that coordinates with the Backplane to spawn and route to user code.                  |
-| Deployment | User code serving VerbService for a module written in a particular language.                               |
+| Actor      | Description                                                                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backplane  | The coordination layer of FTL. This creates and manages Runner instances, routing, resource creation, etc.                                                             |
+| Platform   | The platform FTL is running on, eg. Kubernetes, VMs, etc.                                                                                                              |
+| Runner     | The component of FTL that coordinates with the Backplane to spawn and route to user code.                                                                              |
+| Deployment | Optional process containing user code serving VerbService for a module written in a particular language. This code may be dynamically loaded and served by the Runner. |
 
 ## System initialisation
 
@@ -30,7 +30,7 @@ sequenceDiagram
   participant B as Backplane
   box Module
     participant R as Runner
-    participant M as Deployment
+    participant D as Deployment
   end
 
   C ->> B: GetArtefactDiffs()
@@ -47,12 +47,16 @@ sequenceDiagram
   B -->> R: schema
   R ->> B: GetDeploymentArtefacts(id)
   B -->> R: artefacts
-  R ->> M: Start()
+  loop Until alive
+    R ->> D: Ping()
+  end
+  R ->> B: Deployed(id)
+  B ->> B: UpdateRoutingTable()
 ```
 
 ## Routing
 
-This diagram shows a routing example of a client calling verb V0 which calls
+This diagram shows a routing example for a client calling verb V0 which calls
 verb V1.
 
 ```mermaid
@@ -61,21 +65,21 @@ sequenceDiagram
 
   participant C as Client
   participant B as Backplane
-  box LightYellow Module0
+  box Module0
     participant R0 as Runner0
     participant M0 as Deployment0
   end
-  box LightGreen Module1
+  box Module1
     participant R1 as Runner1
     participant M1 as Deployment1
   end
 
-  C ->> B: Call(V0)
-  B ->> R0: Call(V0)
-  R0 ->> M0: Call(V0)
-  M0 ->> B: Call(V1)
-  B ->> R1: Call(V1)
-  R1 ->> M1: Call(V1)
+  C ->> B: Call(Module0.V0)
+  B ->> R0: Call(Module0.V0)
+  R0 ->> M0: Call(Module0.V0)
+  M0 ->> B: Call(Module1.V1)
+  B ->> R1: Call(Module1.V1)
+  R1 ->> M1: Call(Module1.V1)
   M1 -->> R1: R1
   R1 -->> B: R1
   B -->> M0: R1

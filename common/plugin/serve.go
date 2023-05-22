@@ -36,8 +36,14 @@ type serverRegister[Impl any] struct {
 	register    func(i Impl, mux *http.ServeMux)
 }
 
+type handlerPath struct {
+	path    string
+	handler http.Handler
+}
+
 type startOptions[Impl any] struct {
 	register []serverRegister[Impl]
+	handlers []handlerPath
 }
 
 type StartOption[Impl any] func(*startOptions[Impl])
@@ -55,6 +61,13 @@ func RegisterAdditionalServer[Impl any, Iface any](servicePath string, register 
 			register: func(i Impl, mux *http.ServeMux) {
 				mux.Handle(register(any(i).(Iface), rpc.DefaultHandlerOptions()...)) //nolint:forcetypeassert
 			}})
+	}
+}
+
+// RegisterAdditionalHandler allows a plugin to serve additional HTTP handlers.
+func RegisterAdditionalHandler[Impl any](path string, handler http.Handler) StartOption[Impl] {
+	return func(so *startOptions[Impl]) {
+		so.handlers = append(so.handlers, handlerPath{path: path, handler: handler})
 	}
 }
 
@@ -83,6 +96,10 @@ func Start[Impl any, Iface any, Config any](
 	so := &startOptions[Impl]{}
 	for _, option := range options {
 		option(so)
+	}
+
+	for _, handler := range so.handlers {
+		mux.Handle(handler.path, handler.handler)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

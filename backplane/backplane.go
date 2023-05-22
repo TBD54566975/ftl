@@ -7,9 +7,10 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
-	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backplane/internal/dao"
 	"github.com/TBD54566975/ftl/common/log"
@@ -20,8 +21,12 @@ import (
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
+	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 )
+
+// ArtefactChunkSize is size of each chunk streamed to the client.
+const ArtefactChunkSize = 1024 * 1024
 
 type Config struct {
 	Bind socket.Socket `help:"Socket to bind to." default:"tcp://localhost:8892"`
@@ -62,20 +67,33 @@ type Service struct {
 	dao *dao.DAO
 }
 
+func (s *Service) RegisterRunner(ctx context.Context, req *connect.Request[ftlv1.RegisterRunnerRequest]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
+	panic("unimplemented")
+}
+
+func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentRequest]) (*connect.Response[ftlv1.GetDeploymentResponse], error) {
+	deployment, err := s.getDeployment(ctx, req.Msg.DeploymentKey)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
+		Schema:    deployment.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
+		Artefacts: slices.Map(deployment.Artefacts, func(artefact *dao.Artefact) *ftlv1.DeploymentArtefact { return artefact.ToProto() }),
+	}), nil
+}
+
 func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentArtefactsRequest], resp *connect.ServerStream[ftlv1.GetDeploymentArtefactsResponse]) error {
-	dkey, err := uuid.Parse(req.Msg.DeploymentKey)
+	deployment, err := s.getDeployment(ctx, req.Msg.DeploymentKey)
 	if err != nil {
-		return connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
+		return err
 	}
-	deployment, err := s.dao.GetDeployment(ctx, dkey)
-	if err != nil {
-		return connect.NewError(connect.CodeNotFound, errors.WithStack(err))
-	}
-	haveDigests := mapset.NewSet(req.Msg.HaveDigests...)
-	chunk := make([]byte, 1024*1024)
+	chunk := make([]byte, ArtefactChunkSize)
+nextArtefact:
 	for _, artefact := range deployment.Artefacts {
-		if haveDigests.Contains(artefact.Digest.String()) {
-			continue
+		for _, clientArtefact := range req.Msg.HaveArtefacts {
+			if proto.Equal(artefact.ToProto(), clientArtefact) {
+				continue nextArtefact
+			}
 		}
 		for {
 			n, err := artefact.Content.Read(chunk)
@@ -84,13 +102,13 @@ func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Reque
 					Artefact: artefact.ToProto(),
 					Chunk:    chunk[:n],
 				}); err != nil {
-					return errors.WithStack(err)
+					return errors.Wrap(err, "could not send artefact chunk")
 				}
 			}
 			if err == io.EOF {
 				break
 			} else if err != nil {
-				return errors.WithStack(err)
+				return errors.Wrap(err, "could not read artefact chunk")
 			}
 		}
 	}
@@ -155,4 +173,18 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 	logger.Infof("Created deployment %s", key)
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: key.String()}), nil
+}
+
+func (s *Service) getDeployment(ctx context.Context, key string) (*dao.Deployment, error) {
+	dkey, err := uuid.Parse(key)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
+	}
+	deployment, err := s.dao.GetDeployment(ctx, dkey)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
+	} else if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "could not retrieve deployment"))
+	}
+	return deployment, nil
 }

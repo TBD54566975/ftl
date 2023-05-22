@@ -12,7 +12,7 @@ type clientKey struct{}
 
 // ContextWithClient returns a context with an ftlv1.VerbServiceClient attached.
 func ContextWithClient(ctx context.Context, endpoint socket.Socket) context.Context {
-	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint.URL())
+	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint.URL().String())
 	return context.WithValue(ctx, clientKey{}, client)
 }
 

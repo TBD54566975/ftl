@@ -87,6 +87,8 @@ message GetArtefactDiffsRequest {
 }
 message GetArtefactDiffsResponse {
   repeated string missing_digests = 1;
+  // Artefacts that the client already has, and their path+executable status.
+  repeated DeploymentArtefact client_artefacts = 2;
 }
 
 message UploadArtefactRequest {
@@ -112,13 +114,27 @@ message CreateDeploymentResponse {
 
 message GetDeploymentArtefactsRequest {
   string deployment_key = 1;
-  repeated string have_digests = 2;
+  repeated DeploymentArtefact have_artefacts = 2;
 }
-
 message GetDeploymentArtefactsResponse {
   DeploymentArtefact artefact = 1;
   bytes chunk = 2;
 }
+
+message GetDeploymentRequest {
+  string deployment_key = 1;
+}
+message GetDeploymentResponse {
+  schema.Module schema = 1;
+  repeated DeploymentArtefact artefacts = 2;
+}
+
+message RegisterRunnerRequest {
+  // Language the runner supports.
+  string language = 1;
+  string endpoint = 2;
+}
+message RegisterRunnerResponse {}
 
 service BackplaneService {
   // Ping service for readiness.
@@ -127,29 +143,38 @@ service BackplaneService {
   // Get list of artefacts that differ between the server and client.
   rpc GetArtefactDiffs(GetArtefactDiffsRequest) returns (GetArtefactDiffsResponse);
 
-  // Upload artefacts to the server.
+  // Upload an artefact to the server.
   rpc UploadArtefact(UploadArtefactRequest) returns (UploadArtefactResponse);
 
   // Create a deployment.
   rpc CreateDeployment(CreateDeploymentRequest) returns (CreateDeploymentResponse);
 
-  // Stream artefacts from the server.
+  // Get the schema and artefact metadata for a deployment.
+  rpc GetDeployment(GetDeploymentRequest) returns (GetDeploymentResponse);
+
+  // Stream deployment artefacts from the server.
   //
   // Each artefact is streamed one after the other as a sequence of max 1MB
   // chunks.
   rpc GetDeploymentArtefacts(GetDeploymentArtefactsRequest) returns (stream GetDeploymentArtefactsResponse);
+
+  // Register a Runner with the Backplane.
+  rpc RegisterRunner(RegisterRunnerRequest) returns (RegisterRunnerResponse);
 }
 
-// message BootstrapRequest {
-//   string deployment_key = 1;
-// }
+message DeployRequest {
+  string deployment_key = 1;
+}
+message DeployResponse {}
 
-// // A service that bootstraps a language-specific VerbService.
-// //
-// // The Bootstrap service
-// service BootstrapService {
-//   // Ping service for readiness.
-//   rpc Ping(PingRequest) returns (PingResponse);
+// RunnerService is the service that executes Deployments.
+//
+// The Backplane will scale the Runner horizontally as required. The Runner will
+// register itself automatically with the BackplaneService, which will then
+// assign modules to it.
+service RunnerService {
+  rpc Ping(PingRequest) returns (PingResponse);
 
-//   rpc Bootstrap(BootstrapRequest) returns (stream BootstrapResponse);
-// }
+  // Initiate a deployment on this Runner.
+  rpc Deploy(DeployRequest) returns (DeployResponse);
+}
