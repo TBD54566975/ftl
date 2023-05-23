@@ -3,6 +3,7 @@ package backplane
 import (
 	"context"
 	"io"
+	"net/url"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
@@ -17,7 +18,6 @@ import (
 	"github.com/TBD54566975/ftl/common/server"
 	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -29,8 +29,8 @@ import (
 const ArtefactChunkSize = 1024 * 1024
 
 type Config struct {
-	Bind socket.Socket `help:"Socket to bind to." default:"tcp://localhost:8892"`
-	DSN  string        `help:"Postgres DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
+	Bind *url.URL `help:"Socket to bind to." default:"http://localhost:8892"`
+	DSN  string   `help:"Postgres DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -46,7 +46,7 @@ func Start(ctx context.Context, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	logger.Infof("Listening on %s", config.Bind.URL())
+	logger.Infof("Listening on %s", config.Bind)
 
 	svc := &Service{dao: dao.New(conn)}
 

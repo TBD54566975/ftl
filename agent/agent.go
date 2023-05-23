@@ -4,6 +4,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,7 +26,6 @@ import (
 	"github.com/TBD54566975/ftl/common/pubsub"
 	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/common/server"
-	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -49,14 +49,14 @@ type Agent struct {
 	// published on this topic.
 	schemaChanges *pubsub.Topic[*schema.Module]
 	wg            *errgroup.Group
-	listen        socket.Socket
+	listen        *url.URL
 }
 
 var _ ftlv1connect.VerbServiceHandler = (*Agent)(nil)
 var _ ftlv1connect.DevelServiceHandler = (*Agent)(nil)
 
 // New creates a new local agent.
-func New(ctx context.Context, listen socket.Socket) (*Agent, error) {
+func New(ctx context.Context, listen *url.URL) (*Agent, error) {
 	e := &Agent{
 		drives:        map[string]*driveContext{},
 		wg:            &errgroup.Group{},

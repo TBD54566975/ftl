@@ -6,6 +6,7 @@ import (
 	context "context"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
@@ -21,16 +22,15 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/common/server"
-	"github.com/TBD54566975/ftl/common/socket"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 type Config struct {
-	Bind          socket.Socket `help:"Socket to bind to." default:"tcp://localhost:8893"`
-	FTLEndpoint   socket.Socket `help:"FTL endpoint." env:"FTL_ENDPOINT" default:"tcp://localhost:8892"`
-	DeploymentDir string        `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	Bind          *url.URL `help:"Socket to bind to." default:"http://localhost:8893"`
+	FTLEndpoint   *url.URL `help:"FTL endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
+	DeploymentDir string   `help:"Directory to store deployments in." default:"${deploymentdir}"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -42,10 +42,10 @@ func Start(ctx context.Context, config Config) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create deployment directory")
 	}
-	logger.Infof("Using FTL endpoint: %s", config.FTLEndpoint.URL())
-	logger.Infof("Listening on %s", config.Bind.URL())
+	logger.Infof("Using FTL endpoint: %s", config.FTLEndpoint)
+	logger.Infof("Listening on %s", config.Bind)
 
-	backplaneClient := rpc.Dial(ftlv1connect.NewBackplaneServiceClient, config.FTLEndpoint.URL().String())
+	backplaneClient := rpc.Dial(ftlv1connect.NewBackplaneServiceClient, config.FTLEndpoint.String())
 
 	svc := &Service{
 		backplaneClient: backplaneClient,
@@ -76,7 +76,7 @@ type Service struct {
 
 	backplaneClient ftlv1connect.BackplaneServiceClient
 	deploymentDir   string
-	ftlEndpoint     socket.Socket
+	ftlEndpoint     *url.URL
 }
 
 // ServeHTTP proxies through to the deployment.
@@ -138,6 +138,6 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 func (s *Service) makePluginProxy(plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *pluginProxy {
 	return &pluginProxy{
 		plugin: plugin,
-		proxy:  httputil.NewSingleHostReverseProxy(plugin.Endpoint.URL()),
+		proxy:  httputil.NewSingleHostReverseProxy(plugin.Endpoint),
 	}
 }

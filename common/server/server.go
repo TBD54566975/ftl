@@ -5,6 +5,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/alecthomas/errors"
@@ -14,7 +15,6 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/TBD54566975/ftl/common/rpc"
-	"github.com/TBD54566975/ftl/common/socket"
 )
 
 type optionsBundle struct {
@@ -40,7 +40,7 @@ func Route(prefix string, handler http.Handler) Option {
 	}
 }
 
-func Serve(ctx context.Context, listen socket.Socket, options ...Option) error {
+func Serve(ctx context.Context, listen *url.URL, options ...Option) error {
 	opts := &optionsBundle{
 		mux: http.NewServeMux(),
 	}
@@ -50,7 +50,7 @@ func Serve(ctx context.Context, listen socket.Socket, options ...Option) error {
 	}
 	// TODO: Is this a good idea? Who knows!
 	crs := cors.New(cors.Options{
-		AllowedOrigins: []string{listen.URL().String()},
+		AllowedOrigins: []string{listen.String()},
 		AllowedMethods: []string{
 			http.MethodHead,
 			http.MethodGet,
@@ -70,7 +70,7 @@ func Serve(ctx context.Context, listen socket.Socket, options ...Option) error {
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}
 
-	listener, err := socket.Listen(listen)
+	listener, err := net.Listen("tcp", listen.Host)
 	if err != nil {
 		return errors.WithStack(err)
 	}

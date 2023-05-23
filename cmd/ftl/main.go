@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,16 +13,15 @@ import (
 	_ "github.com/TBD54566975/ftl/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/rpc"
-	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
 var version = "dev"
 
-var cli struct {
+type CLI struct {
 	Version   kong.VersionFlag `help:"Show version information."`
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
-	Endpoint  socket.Socket    `default:"tcp://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
+	Endpoint  *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 
 	Devel    develCmd    `cmd:"" help:"Serve development FTL modules."`
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
@@ -33,6 +33,8 @@ var cli struct {
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	InitDB   initDBCmd   `cmd:"" name:"initdb" help:"Initialise the FTL database."`
 }
+
+var cli CLI
 
 func main() {
 	kctx := kong.Parse(&cli,
@@ -84,6 +86,6 @@ func main() {
 
 func makeDialer[Client rpc.Pingable](newClient func(connect.HTTPClient, string, ...connect.ClientOption) Client) func() (Client, error) {
 	return func() (Client, error) {
-		return rpc.Dial(newClient, cli.Endpoint.URL().String()), nil
+		return rpc.Dial(newClient, cli.Endpoint.String()), nil
 	}
 }

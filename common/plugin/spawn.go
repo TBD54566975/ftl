@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"io/ioutil"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -14,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/common/exec"
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/rpc"
-	"github.com/TBD54566975/ftl/common/socket"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
@@ -62,7 +62,7 @@ func WithExtraClient[Client PingableClient](out *Client, makeClient rpc.ClientFa
 
 type Plugin[Client PingableClient] struct {
 	Cmd      *exec.Cmd
-	Endpoint socket.Socket // The endpoint the plugin is listening on.
+	Endpoint *url.URL // The endpoint the plugin is listening on.
 	Client   Client
 }
 
@@ -116,8 +116,8 @@ func Spawn[Client PingableClient](
 	}
 
 	// Start the plugin process.
-	pluginSocket := socket.Socket{Network: "tcp", Addr: addr.String()}
-	logger.Debugf("Spawning plugin on %s", pluginSocket)
+	pluginEndpoint := &url.URL{Scheme: "http", Host: addr.String()}
+	logger.Debugf("Spawning plugin on %s", pluginEndpoint)
 	cmd := exec.Command(ctx, dir, exe)
 
 	// Send the plugin's stderr to the logger.
@@ -126,7 +126,7 @@ func Spawn[Client PingableClient](
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	cmd.Env = append(cmd.Env, "FTL_PLUGIN_ENDPOINT="+pluginSocket.String())
+	cmd.Env = append(cmd.Env, "FTL_PLUGIN_ENDPOINT="+pluginEndpoint.String())
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
 	cmd.Env = append(cmd.Env, opts.envars...)
 	if err = cmd.Start(); err != nil {
@@ -161,7 +161,7 @@ func Spawn[Client PingableClient](
 	defer cancel()
 
 	// Wait for the plugin to start.
-	client := rpc.Dial(makeClient, pluginSocket.URL().String())
+	client := rpc.Dial(makeClient, pluginEndpoint.String())
 	pingErr := make(chan error)
 	go func() {
 		err := rpc.Wait(dialCtx, client)
@@ -188,10 +188,10 @@ func Spawn[Client PingableClient](
 	}
 
 	for _, makeClient := range opts.additionalClients {
-		makeClient(pluginSocket.URL().String())
+		makeClient(pluginEndpoint.String())
 	}
 
 	logger.Infof("Online")
-	plugin = &Plugin[Client]{Cmd: cmd, Endpoint: pluginSocket, Client: client}
+	plugin = &Plugin[Client]{Cmd: cmd, Endpoint: pluginEndpoint, Client: client}
 	return plugin, cmdCtx, nil
 }

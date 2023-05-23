@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"reflect"
@@ -22,12 +23,11 @@ import (
 
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/rpc"
-	"github.com/TBD54566975/ftl/common/socket"
 )
 
 type serveCli struct {
-	LogConfig log.Config    `prefix:"log-" embed:"" group:"Logging:"`
-	Bind      socket.Socket `help:"Socket to listen on." env:"FTL_PLUGIN_ENDPOINT" required:""`
+	LogConfig log.Config `prefix:"log-" embed:"" group:"Logging:"`
+	Bind      *url.URL   `help:"Socket to listen on." env:"FTL_PLUGIN_ENDPOINT" required:""`
 	kong.Plugins
 }
 
@@ -134,7 +134,7 @@ func Start[Impl any, Iface any, Config any](
 		panic(fmt.Sprintf("%s does not implement %s", reflect.TypeOf(svc), reflect.TypeOf(iface)))
 	}
 
-	l, err := socket.Listen(cli.Bind)
+	l, err := net.Listen("tcp", cli.Bind.Host)
 	kctx.FatalIfErrorf(err)
 
 	servicePaths := []string{servicePath}

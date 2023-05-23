@@ -8,22 +8,21 @@ import (
 
 	"github.com/TBD54566975/ftl/agent"
 	"github.com/TBD54566975/ftl/common/log"
-	"github.com/TBD54566975/ftl/common/socket"
 )
 
 type develCmd struct {
 	Dir []string `arg:"" help:"Paths to FTL modules."`
 }
 
-func (r *develCmd) Run(ctx context.Context, s socket.Socket) error {
+func (r *develCmd) Run(ctx context.Context, cli *CLI) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	logger := log.FromContext(ctx).Sub("agent", log.Default)
-	logger.Warnf("Starting FTL local agent on http://%s", s.Addr)
+	logger.Warnf("Starting FTL local agent on %s", cli.Endpoint)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	agent, err := agent.New(ctx, s)
+	agent, err := agent.New(ctx, cli.Endpoint)
 	if err != nil {
 		return errors.WithStack(err)
 	}

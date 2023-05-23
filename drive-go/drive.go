@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"go/types"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,7 +29,6 @@ import (
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/rpc"
-	"github.com/TBD54566975/ftl/common/socket"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -41,11 +41,11 @@ import (
 const syntheticGoPath = "github.com/TBD54566975/ftl/examples"
 
 type Config struct {
-	Endpoint   socket.Socket `required:"" help:"FTL endpoint to connect to." env:"FTL_ENDPOINT"`
-	Module     string        `required:"" env:"FTL_MODULE" help:"The FTL module as configured."`
-	FTLSource  string        `required:"" type:"existingdir" env:"FTL_SOURCE" help:"Path to FTL source code when developing locally."`
-	WorkingDir string        `required:"" type:"existingdir" env:"FTL_WORKING_DIR" help:"Working directory for FTL runtime."`
-	Dir        string        `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
+	Endpoint   *url.URL `required:"" help:"FTL endpoint to connect to." env:"FTL_ENDPOINT"`
+	Module     string   `required:"" env:"FTL_MODULE" help:"The FTL module as configured."`
+	FTLSource  string   `required:"" type:"existingdir" env:"FTL_SOURCE" help:"Path to FTL source code when developing locally."`
+	WorkingDir string   `required:"" type:"existingdir" env:"FTL_WORKING_DIR" help:"Working directory for FTL runtime."`
+	Dir        string   `required:"" type:"existingdir" env:"FTL_MODULE_ROOT" help:"Directory to root of Go FTL module"`
 }
 
 // Run creates and starts a new DevelService for a directory of Go Verbs.
@@ -62,8 +62,8 @@ func Run(ctx context.Context, config Config) (*Server, error) {
 	}
 	s := &Server{
 		Config:         config,
-		agent:          rpc.Dial(ftlv1connect.NewDevelServiceClient, config.Endpoint.URL().String()),
-		router:         rpc.Dial(ftlv1connect.NewVerbServiceClient, config.Endpoint.URL().String()),
+		agent:          rpc.Dial(ftlv1connect.NewDevelServiceClient, config.Endpoint.String()),
+		router:         rpc.Dial(ftlv1connect.NewVerbServiceClient, config.Endpoint.String()),
 		module:         config.Module,
 		wg:             &errgroup.Group{},
 		goModule:       goModule,
@@ -473,15 +473,17 @@ func generate(config Config) (*codewriter.Writer, error) {
 	w := codewriter.New("main")
 	w.Import("os")
 	w.Import("context")
+	w.Import("net/url")
 	w.Import("github.com/TBD54566975/ftl/drive-go")
 	w.Import("github.com/TBD54566975/ftl/sdk-go")
 	w.Import("github.com/TBD54566975/ftl/common/plugin")
-	w.Import("github.com/TBD54566975/ftl/common/socket")
 	w.Import(`github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect`)
 
 	w.L(`func main() {`)
 	w.In(func(w *codewriter.Writer) {
-		w.L(`ctx := sdkgo.ContextWithClient(context.Background(), socket.MustParse(os.Getenv("FTL_ENDPOINT")))`)
+		w.L(`endpoint, err := url.Parse(os.Getenv("FTL_ENDPOINT"))`)
+		w.L(`if err != nil { panic(err) }`)
+		w.L(`ctx := sdkgo.ContextWithClient(context.Background(), endpoint)`)
 		w.L(`plugin.Start(ctx, %q, drivego.NewUserVerbServer(`, config.Module)
 		for pkg, endpoints := range endpoints {
 			pkgImp := w.Import(pkg)
