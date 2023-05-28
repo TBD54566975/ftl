@@ -10,12 +10,12 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/gofrs/flock"
 
-	"github.com/TBD54566975/ftl/backplane/internal/sql"
+	"github.com/TBD54566975/ftl/controlplane/internal/sql"
 )
 
 // OpenForTesting opens a database connection for testing, recreating the
 // database beforehand.
-func OpenForTesting(t *testing.T) sql.DBI {
+func OpenForTesting(t testing.TB) sql.DBI {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

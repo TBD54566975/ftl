@@ -1,4 +1,4 @@
-package dao
+package dal
 
 import (
 	"bytes"
@@ -8,12 +8,12 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/backplane/internal/sql/sqltest"
 	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/TBD54566975/ftl/controlplane/internal/sql/sqltest"
 	"github.com/TBD54566975/ftl/schema"
 )
 
-func TestDAO(t *testing.T) {
+func TestDAL(t *testing.T) {
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
 

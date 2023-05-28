@@ -4,33 +4,38 @@ package runnergo
 
 import (
 	context "context"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"github.com/google/uuid"
+	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/common/download"
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/rpc"
-	"github.com/TBD54566975/ftl/common/server"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 type Config struct {
-	Bind          *url.URL `help:"Socket to bind to." default:"http://localhost:8893"`
-	FTLEndpoint   *url.URL `help:"FTL endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
-	DeploymentDir string   `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	Endpoint        *url.URL      `help:"Endpoint the runner should bind to and advertise." default:"http://localhost:8893"`
+	FTLEndpoint     *url.URL      `help:"FTL endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
+	DeploymentDir   string        `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	HeartbeatPeriod time.Duration `help:"Minimum period between heartbeats." default:"3s"`
+	HeartbeatJitter time.Duration `help:"Jitter to add to heartbeat period." default:"2s"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -43,21 +48,24 @@ func Start(ctx context.Context, config Config) error {
 		return errors.Wrap(err, "failed to create deployment directory")
 	}
 	logger.Infof("Using FTL endpoint: %s", config.FTLEndpoint)
-	logger.Infof("Listening on %s", config.Bind)
+	logger.Infof("Listening on %s", config.Endpoint)
 
-	backplaneClient := rpc.Dial(ftlv1connect.NewBackplaneServiceClient, config.FTLEndpoint.String())
+	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.FTLEndpoint.String())
 
 	svc := &Service{
-		backplaneClient: backplaneClient,
-		deploymentDir:   config.DeploymentDir,
-		ftlEndpoint:     config.FTLEndpoint,
+		config:             config,
+		controlplaneClient: controlplaneClient,
 	}
+	svc.registrationFailure.Store(types.Some(errors.New("not registered with ControlPlane")))
+
+	go svc.registrationLoop(ctx)
+
 	reflector := grpcreflect.NewStaticReflector(ftlv1connect.RunnerServiceName, ftlv1connect.VerbServiceName)
-	return server.Serve(ctx, config.Bind,
-		server.Route("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
-		server.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
-		server.Route(grpcreflect.NewHandlerV1(reflector)),
-		server.Route(grpcreflect.NewHandlerV1Alpha(reflector)),
+	return rpc.Serve(ctx, config.Endpoint,
+		rpc.Route("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
+		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
+		rpc.Route(grpcreflect.NewHandlerV1(reflector)),
+		rpc.Route(grpcreflect.NewHandlerV1Alpha(reflector)),
 	)
 }
 
@@ -74,9 +82,9 @@ type Service struct {
 	lock       sync.Mutex
 	deployment atomic.Value[*pluginProxy]
 
-	backplaneClient ftlv1connect.BackplaneServiceClient
-	deploymentDir   string
-	ftlEndpoint     *url.URL
+	config              Config
+	controlplaneClient  ftlv1connect.ControlPlaneServiceClient
+	registrationFailure atomic.Value[types.Option[error]]
 }
 
 // ServeHTTP proxies through to the deployment.
@@ -89,10 +97,19 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	return connect.NewResponse(&ftlv1.PingResponse{}), nil
+	var notReady *string
+	if err, ok := s.registrationFailure.Load().Get(); ok {
+		msg := err.Error()
+		notReady = &msg
+	}
+	return connect.NewResponse(&ftlv1.PingResponse{NotReady: notReady}), nil
 }
 
-func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (*connect.Response[ftlv1.DeployResponse], error) {
+func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1.DeployToRunnerRequest]) (*connect.Response[ftlv1.DeployToRunnerResponse], error) {
+	if err, ok := s.registrationFailure.Load().Get(); ok {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to register runner"))
+	}
+
 	id, err := uuid.Parse(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
@@ -108,31 +125,31 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("already deployed"))
 	}
 
-	gdResp, err := s.backplaneClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: req.Msg.DeploymentKey}))
+	gdResp, err := s.controlplaneClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: req.Msg.DeploymentKey}))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	err = os.Mkdir(filepath.Join(s.deploymentDir, id.String()), 0700)
+	err = os.Mkdir(filepath.Join(s.config.DeploymentDir, id.String()), 0700)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create deployment directory")
 	}
-	err = download.Artefacts(ctx, s.backplaneClient, id, s.deploymentDir)
+	err = download.Artefacts(ctx, s.controlplaneClient, id, s.config.DeploymentDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to download artefacts")
 	}
 	deployment, _, err := plugin.Spawn(
 		ctx,
 		gdResp.Msg.Schema.Name,
-		filepath.Join(s.deploymentDir, id.String()),
+		filepath.Join(s.config.DeploymentDir, id.String()),
 		"./main",
 		ftlv1connect.NewVerbServiceClient,
-		plugin.WithEnvars("FTL_ENDPOINT="+s.ftlEndpoint.String()),
+		plugin.WithEnvars("FTL_ENDPOINT="+s.config.FTLEndpoint.String()),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
 	s.deployment.Store(s.makePluginProxy(deployment))
-	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
+	return connect.NewResponse(&ftlv1.DeployToRunnerResponse{}), nil
 }
 
 func (s *Service) makePluginProxy(plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *pluginProxy {
@@ -140,4 +157,36 @@ func (s *Service) makePluginProxy(plugin *plugin.Plugin[ftlv1connect.VerbService
 		plugin: plugin,
 		proxy:  httputil.NewSingleHostReverseProxy(plugin.Endpoint),
 	}
+}
+
+func (s *Service) registrationLoop(ctx context.Context) {
+	retry := backoff.Backoff{
+		Max:    s.config.HeartbeatPeriod,
+		Jitter: true,
+	}
+	logger := log.FromContext(ctx)
+	_ = rpc.RetryStreamingClientStream(ctx, retry, s.controlplaneClient.RegisterRunner,
+		func(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.RegisterRunnerRequest, ftlv1.RegisterRunnerResponse]) (err error) {
+			defer func() { s.registrationFailure.Store(types.Some(err)) }()
+			for {
+				err := stream.Send(&ftlv1.RegisterRunnerRequest{
+					Language: "go",
+					Endpoint: s.config.Endpoint.String(),
+				})
+				if err != nil {
+					_, err := stream.CloseAndReceive()
+					return errors.WithStack(err)
+				}
+				s.registrationFailure.Store(types.None[error]())
+				delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
+				logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
+				select {
+				case <-ctx.Done():
+					return errors.WithStack(context.Cause(ctx))
+
+				case <-time.After(delay):
+				}
+			}
+		},
+	)
 }

@@ -8,7 +8,11 @@ option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1;ftlv1";
 option java_multiple_files = true;
 
 message PingRequest {}
-message PingResponse {}
+message PingResponse {
+  // If present, the service is not ready to accept requests and this is the
+  // reason.
+  optional string not_ready = 1;
+}
 
 message Metadata {
   message Pair {
@@ -136,7 +140,12 @@ message RegisterRunnerRequest {
 }
 message RegisterRunnerResponse {}
 
-service BackplaneService {
+message DeployRequest {
+  string deployment_key = 1;
+}
+message DeployResponse {}
+
+service ControlPlaneService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
 
@@ -158,23 +167,29 @@ service BackplaneService {
   // chunks.
   rpc GetDeploymentArtefacts(GetDeploymentArtefactsRequest) returns (stream GetDeploymentArtefactsResponse);
 
-  // Register a Runner with the Backplane.
-  rpc RegisterRunner(RegisterRunnerRequest) returns (RegisterRunnerResponse);
+  // Register a Runner with the ControlPlane.
+  //
+  // Each runner MUST stream a RegisterRunnerRequest to the ControlPlaneService
+  // every 10 seconds to maintain its heartbeat.
+  rpc RegisterRunner(stream RegisterRunnerRequest) returns (RegisterRunnerResponse);
+
+  // Starts a deployment.
+  rpc Deploy(DeployRequest) returns (DeployResponse);
 }
 
-message DeployRequest {
+message DeployToRunnerRequest {
   string deployment_key = 1;
 }
-message DeployResponse {}
+message DeployToRunnerResponse {}
 
 // RunnerService is the service that executes Deployments.
 //
-// The Backplane will scale the Runner horizontally as required. The Runner will
-// register itself automatically with the BackplaneService, which will then
+// The ControlPlane will scale the Runner horizontally as required. The Runner will
+// register itself automatically with the ControlPlaneService, which will then
 // assign modules to it.
 service RunnerService {
   rpc Ping(PingRequest) returns (PingResponse);
 
   // Initiate a deployment on this Runner.
-  rpc Deploy(DeployRequest) returns (DeployResponse);
+  rpc DeployToRunner(DeployToRunnerRequest) returns (DeployToRunnerResponse);
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/common/pubsub"
 	"github.com/TBD54566975/ftl/common/rpc"
-	"github.com/TBD54566975/ftl/common/server"
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -73,12 +72,12 @@ func (a *Agent) Serve(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return server.Serve(ctx, a.listen,
-		server.GRPC(ftlv1connect.NewDevelServiceHandler, a),
-		server.GRPC(ftlv1connect.NewVerbServiceHandler, a),
-		server.Route(grpcreflect.NewHandlerV1(reflector)),
-		server.Route(grpcreflect.NewHandlerV1Alpha(reflector)),
-		server.Route("/", c),
+	return rpc.Serve(ctx, a.listen,
+		rpc.GRPC(ftlv1connect.NewDevelServiceHandler, a),
+		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, a),
+		rpc.Route(grpcreflect.NewHandlerV1(reflector)),
+		rpc.Route(grpcreflect.NewHandlerV1Alpha(reflector)),
+		rpc.Route("/", c),
 	)
 }
 

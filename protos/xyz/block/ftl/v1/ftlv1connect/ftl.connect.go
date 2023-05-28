@@ -25,8 +25,8 @@ const (
 	VerbServiceName = "xyz.block.ftl.v1.VerbService"
 	// DevelServiceName is the fully-qualified name of the DevelService service.
 	DevelServiceName = "xyz.block.ftl.v1.DevelService"
-	// BackplaneServiceName is the fully-qualified name of the BackplaneService service.
-	BackplaneServiceName = "xyz.block.ftl.v1.BackplaneService"
+	// ControlPlaneServiceName is the fully-qualified name of the ControlPlaneService service.
+	ControlPlaneServiceName = "xyz.block.ftl.v1.ControlPlaneService"
 	// RunnerServiceName is the fully-qualified name of the RunnerService service.
 	RunnerServiceName = "xyz.block.ftl.v1.RunnerService"
 )
@@ -251,8 +251,8 @@ func (UnimplementedDevelServiceHandler) PullSchema(context.Context, *connect_go.
 	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.DevelService.PullSchema is not implemented"))
 }
 
-// BackplaneServiceClient is a client for the xyz.block.ftl.v1.BackplaneService service.
-type BackplaneServiceClient interface {
+// ControlPlaneServiceClient is a client for the xyz.block.ftl.v1.ControlPlaneService service.
+type ControlPlaneServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Get list of artefacts that differ between the server and client.
@@ -268,60 +268,70 @@ type BackplaneServiceClient interface {
 	// Each artefact is streamed one after the other as a sequence of max 1MB
 	// chunks.
 	GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest]) (*connect_go.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error)
-	// Register a Runner with the Backplane.
-	RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
+	// Register a Runner with the ControlPlane.
+	//
+	// Each runner MUST stream a RegisterRunnerRequest to the ControlPlaneService
+	// every 10 seconds to maintain its heartbeat.
+	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
+	// Starts a deployment.
+	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
 }
 
-// NewBackplaneServiceClient constructs a client for the xyz.block.ftl.v1.BackplaneService service.
-// By default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped
-// responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
+// NewControlPlaneServiceClient constructs a client for the xyz.block.ftl.v1.ControlPlaneService
+// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
+// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
+// the connect.WithGRPC() or connect.WithGRPCWeb() options.
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewBackplaneServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) BackplaneServiceClient {
+func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) ControlPlaneServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	return &backplaneServiceClient{
+	return &controlplaneServiceClient{
 		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.BackplaneService/Ping",
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/Ping",
 			opts...,
 		),
 		getArtefactDiffs: connect_go.NewClient[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.BackplaneService/GetArtefactDiffs",
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/GetArtefactDiffs",
 			opts...,
 		),
 		uploadArtefact: connect_go.NewClient[v1.UploadArtefactRequest, v1.UploadArtefactResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.BackplaneService/UploadArtefact",
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/UploadArtefact",
 			opts...,
 		),
 		createDeployment: connect_go.NewClient[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.BackplaneService/CreateDeployment",
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/CreateDeployment",
 			opts...,
 		),
 		getDeployment: connect_go.NewClient[v1.GetDeploymentRequest, v1.GetDeploymentResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.BackplaneService/GetDeployment",
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/GetDeployment",
 			opts...,
 		),
 		getDeploymentArtefacts: connect_go.NewClient[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.BackplaneService/GetDeploymentArtefacts",
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/GetDeploymentArtefacts",
 			opts...,
 		),
 		registerRunner: connect_go.NewClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.BackplaneService/RegisterRunner",
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/RegisterRunner",
+			opts...,
+		),
+		deploy: connect_go.NewClient[v1.DeployRequest, v1.DeployResponse](
+			httpClient,
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/Deploy",
 			opts...,
 		),
 	}
 }
 
-// backplaneServiceClient implements BackplaneServiceClient.
-type backplaneServiceClient struct {
+// controlplaneServiceClient implements ControlPlaneServiceClient.
+type controlplaneServiceClient struct {
 	ping                   *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	getArtefactDiffs       *connect_go.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
 	uploadArtefact         *connect_go.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
@@ -329,45 +339,52 @@ type backplaneServiceClient struct {
 	getDeployment          *connect_go.Client[v1.GetDeploymentRequest, v1.GetDeploymentResponse]
 	getDeploymentArtefacts *connect_go.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
 	registerRunner         *connect_go.Client[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
+	deploy                 *connect_go.Client[v1.DeployRequest, v1.DeployResponse]
 }
 
-// Ping calls xyz.block.ftl.v1.BackplaneService.Ping.
-func (c *backplaneServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
+// Ping calls xyz.block.ftl.v1.ControlPlaneService.Ping.
+func (c *controlplaneServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
 }
 
-// GetArtefactDiffs calls xyz.block.ftl.v1.BackplaneService.GetArtefactDiffs.
-func (c *backplaneServiceClient) GetArtefactDiffs(ctx context.Context, req *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error) {
+// GetArtefactDiffs calls xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs.
+func (c *controlplaneServiceClient) GetArtefactDiffs(ctx context.Context, req *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error) {
 	return c.getArtefactDiffs.CallUnary(ctx, req)
 }
 
-// UploadArtefact calls xyz.block.ftl.v1.BackplaneService.UploadArtefact.
-func (c *backplaneServiceClient) UploadArtefact(ctx context.Context, req *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
+// UploadArtefact calls xyz.block.ftl.v1.ControlPlaneService.UploadArtefact.
+func (c *controlplaneServiceClient) UploadArtefact(ctx context.Context, req *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
 	return c.uploadArtefact.CallUnary(ctx, req)
 }
 
-// CreateDeployment calls xyz.block.ftl.v1.BackplaneService.CreateDeployment.
-func (c *backplaneServiceClient) CreateDeployment(ctx context.Context, req *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
+// CreateDeployment calls xyz.block.ftl.v1.ControlPlaneService.CreateDeployment.
+func (c *controlplaneServiceClient) CreateDeployment(ctx context.Context, req *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
 	return c.createDeployment.CallUnary(ctx, req)
 }
 
-// GetDeployment calls xyz.block.ftl.v1.BackplaneService.GetDeployment.
-func (c *backplaneServiceClient) GetDeployment(ctx context.Context, req *connect_go.Request[v1.GetDeploymentRequest]) (*connect_go.Response[v1.GetDeploymentResponse], error) {
+// GetDeployment calls xyz.block.ftl.v1.ControlPlaneService.GetDeployment.
+func (c *controlplaneServiceClient) GetDeployment(ctx context.Context, req *connect_go.Request[v1.GetDeploymentRequest]) (*connect_go.Response[v1.GetDeploymentResponse], error) {
 	return c.getDeployment.CallUnary(ctx, req)
 }
 
-// GetDeploymentArtefacts calls xyz.block.ftl.v1.BackplaneService.GetDeploymentArtefacts.
-func (c *backplaneServiceClient) GetDeploymentArtefacts(ctx context.Context, req *connect_go.Request[v1.GetDeploymentArtefactsRequest]) (*connect_go.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error) {
+// GetDeploymentArtefacts calls xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts.
+func (c *controlplaneServiceClient) GetDeploymentArtefacts(ctx context.Context, req *connect_go.Request[v1.GetDeploymentArtefactsRequest]) (*connect_go.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error) {
 	return c.getDeploymentArtefacts.CallServerStream(ctx, req)
 }
 
-// RegisterRunner calls xyz.block.ftl.v1.BackplaneService.RegisterRunner.
-func (c *backplaneServiceClient) RegisterRunner(ctx context.Context, req *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
-	return c.registerRunner.CallUnary(ctx, req)
+// RegisterRunner calls xyz.block.ftl.v1.ControlPlaneService.RegisterRunner.
+func (c *controlplaneServiceClient) RegisterRunner(ctx context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse] {
+	return c.registerRunner.CallClientStream(ctx)
 }
 
-// BackplaneServiceHandler is an implementation of the xyz.block.ftl.v1.BackplaneService service.
-type BackplaneServiceHandler interface {
+// Deploy calls xyz.block.ftl.v1.ControlPlaneService.Deploy.
+func (c *controlplaneServiceClient) Deploy(ctx context.Context, req *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
+	return c.deploy.CallUnary(ctx, req)
+}
+
+// ControlPlaneServiceHandler is an implementation of the xyz.block.ftl.v1.ControlPlaneService
+// service.
+type ControlPlaneServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Get list of artefacts that differ between the server and client.
@@ -383,91 +400,105 @@ type BackplaneServiceHandler interface {
 	// Each artefact is streamed one after the other as a sequence of max 1MB
 	// chunks.
 	GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest], *connect_go.ServerStream[v1.GetDeploymentArtefactsResponse]) error
-	// Register a Runner with the Backplane.
-	RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
+	// Register a Runner with the ControlPlane.
+	//
+	// Each runner MUST stream a RegisterRunnerRequest to the ControlPlaneService
+	// every 10 seconds to maintain its heartbeat.
+	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
+	// Starts a deployment.
+	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
 }
 
-// NewBackplaneServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
+// NewControlPlaneServiceHandler builds an HTTP handler from the service implementation. It returns
+// the path on which to mount the handler and the handler itself.
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewBackplaneServiceHandler(svc BackplaneServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
+func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
 	mux := http.NewServeMux()
-	mux.Handle("/xyz.block.ftl.v1.BackplaneService/Ping", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.BackplaneService/Ping",
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/Ping", connect_go.NewUnaryHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/Ping",
 		svc.Ping,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.BackplaneService/GetArtefactDiffs", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.BackplaneService/GetArtefactDiffs",
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/GetArtefactDiffs", connect_go.NewUnaryHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/GetArtefactDiffs",
 		svc.GetArtefactDiffs,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.BackplaneService/UploadArtefact", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.BackplaneService/UploadArtefact",
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/UploadArtefact", connect_go.NewUnaryHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/UploadArtefact",
 		svc.UploadArtefact,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.BackplaneService/CreateDeployment", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.BackplaneService/CreateDeployment",
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/CreateDeployment", connect_go.NewUnaryHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/CreateDeployment",
 		svc.CreateDeployment,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.BackplaneService/GetDeployment", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.BackplaneService/GetDeployment",
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/GetDeployment", connect_go.NewUnaryHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/GetDeployment",
 		svc.GetDeployment,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.BackplaneService/GetDeploymentArtefacts", connect_go.NewServerStreamHandler(
-		"/xyz.block.ftl.v1.BackplaneService/GetDeploymentArtefacts",
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/GetDeploymentArtefacts", connect_go.NewServerStreamHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/GetDeploymentArtefacts",
 		svc.GetDeploymentArtefacts,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.BackplaneService/RegisterRunner", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.BackplaneService/RegisterRunner",
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/RegisterRunner", connect_go.NewClientStreamHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/RegisterRunner",
 		svc.RegisterRunner,
 		opts...,
 	))
-	return "/xyz.block.ftl.v1.BackplaneService/", mux
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/Deploy", connect_go.NewUnaryHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/Deploy",
+		svc.Deploy,
+		opts...,
+	))
+	return "/xyz.block.ftl.v1.ControlPlaneService/", mux
 }
 
-// UnimplementedBackplaneServiceHandler returns CodeUnimplemented from all methods.
-type UnimplementedBackplaneServiceHandler struct{}
+// UnimplementedControlPlaneServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedControlPlaneServiceHandler struct{}
 
-func (UnimplementedBackplaneServiceHandler) Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.Ping is not implemented"))
+func (UnimplementedControlPlaneServiceHandler) Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.Ping is not implemented"))
 }
 
-func (UnimplementedBackplaneServiceHandler) GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.GetArtefactDiffs is not implemented"))
+func (UnimplementedControlPlaneServiceHandler) GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs is not implemented"))
 }
 
-func (UnimplementedBackplaneServiceHandler) UploadArtefact(context.Context, *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.UploadArtefact is not implemented"))
+func (UnimplementedControlPlaneServiceHandler) UploadArtefact(context.Context, *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.UploadArtefact is not implemented"))
 }
 
-func (UnimplementedBackplaneServiceHandler) CreateDeployment(context.Context, *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.CreateDeployment is not implemented"))
+func (UnimplementedControlPlaneServiceHandler) CreateDeployment(context.Context, *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.CreateDeployment is not implemented"))
 }
 
-func (UnimplementedBackplaneServiceHandler) GetDeployment(context.Context, *connect_go.Request[v1.GetDeploymentRequest]) (*connect_go.Response[v1.GetDeploymentResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.GetDeployment is not implemented"))
+func (UnimplementedControlPlaneServiceHandler) GetDeployment(context.Context, *connect_go.Request[v1.GetDeploymentRequest]) (*connect_go.Response[v1.GetDeploymentResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.GetDeployment is not implemented"))
 }
 
-func (UnimplementedBackplaneServiceHandler) GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest], *connect_go.ServerStream[v1.GetDeploymentArtefactsResponse]) error {
-	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.GetDeploymentArtefacts is not implemented"))
+func (UnimplementedControlPlaneServiceHandler) GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest], *connect_go.ServerStream[v1.GetDeploymentArtefactsResponse]) error {
+	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts is not implemented"))
 }
 
-func (UnimplementedBackplaneServiceHandler) RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.BackplaneService.RegisterRunner is not implemented"))
+func (UnimplementedControlPlaneServiceHandler) RegisterRunner(context.Context, *connect_go.ClientStream[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.RegisterRunner is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.Deploy is not implemented"))
 }
 
 // RunnerServiceClient is a client for the xyz.block.ftl.v1.RunnerService service.
 type RunnerServiceClient interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Initiate a deployment on this Runner.
-	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
+	DeployToRunner(context.Context, *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error)
 }
 
 // NewRunnerServiceClient constructs a client for the xyz.block.ftl.v1.RunnerService service. By
@@ -485,9 +516,9 @@ func NewRunnerServiceClient(httpClient connect_go.HTTPClient, baseURL string, op
 			baseURL+"/xyz.block.ftl.v1.RunnerService/Ping",
 			opts...,
 		),
-		deploy: connect_go.NewClient[v1.DeployRequest, v1.DeployResponse](
+		deployToRunner: connect_go.NewClient[v1.DeployToRunnerRequest, v1.DeployToRunnerResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.RunnerService/Deploy",
+			baseURL+"/xyz.block.ftl.v1.RunnerService/DeployToRunner",
 			opts...,
 		),
 	}
@@ -495,8 +526,8 @@ func NewRunnerServiceClient(httpClient connect_go.HTTPClient, baseURL string, op
 
 // runnerServiceClient implements RunnerServiceClient.
 type runnerServiceClient struct {
-	ping   *connect_go.Client[v1.PingRequest, v1.PingResponse]
-	deploy *connect_go.Client[v1.DeployRequest, v1.DeployResponse]
+	ping           *connect_go.Client[v1.PingRequest, v1.PingResponse]
+	deployToRunner *connect_go.Client[v1.DeployToRunnerRequest, v1.DeployToRunnerResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.RunnerService.Ping.
@@ -504,16 +535,16 @@ func (c *runnerServiceClient) Ping(ctx context.Context, req *connect_go.Request[
 	return c.ping.CallUnary(ctx, req)
 }
 
-// Deploy calls xyz.block.ftl.v1.RunnerService.Deploy.
-func (c *runnerServiceClient) Deploy(ctx context.Context, req *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
-	return c.deploy.CallUnary(ctx, req)
+// DeployToRunner calls xyz.block.ftl.v1.RunnerService.DeployToRunner.
+func (c *runnerServiceClient) DeployToRunner(ctx context.Context, req *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error) {
+	return c.deployToRunner.CallUnary(ctx, req)
 }
 
 // RunnerServiceHandler is an implementation of the xyz.block.ftl.v1.RunnerService service.
 type RunnerServiceHandler interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Initiate a deployment on this Runner.
-	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
+	DeployToRunner(context.Context, *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error)
 }
 
 // NewRunnerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -528,9 +559,9 @@ func NewRunnerServiceHandler(svc RunnerServiceHandler, opts ...connect_go.Handle
 		svc.Ping,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.RunnerService/Deploy", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.RunnerService/Deploy",
-		svc.Deploy,
+	mux.Handle("/xyz.block.ftl.v1.RunnerService/DeployToRunner", connect_go.NewUnaryHandler(
+		"/xyz.block.ftl.v1.RunnerService/DeployToRunner",
+		svc.DeployToRunner,
 		opts...,
 	))
 	return "/xyz.block.ftl.v1.RunnerService/", mux
@@ -543,6 +574,6 @@ func (UnimplementedRunnerServiceHandler) Ping(context.Context, *connect_go.Reque
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Ping is not implemented"))
 }
 
-func (UnimplementedRunnerServiceHandler) Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Deploy is not implemented"))
+func (UnimplementedRunnerServiceHandler) DeployToRunner(context.Context, *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.DeployToRunner is not implemented"))
 }

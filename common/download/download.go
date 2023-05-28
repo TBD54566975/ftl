@@ -14,8 +14,8 @@ import (
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-// Artefacts downloads artefacts for a deployment from the Backplane.
-func Artefacts(ctx context.Context, client ftlv1connect.BackplaneServiceClient, id uuid.UUID, dest string) error {
+// Artefacts downloads artefacts for a deployment from the ControlPlane.
+func Artefacts(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient, id uuid.UUID, dest string) error {
 	logger := log.FromContext(ctx)
 	stream, err := client.GetDeploymentArtefacts(ctx, connect.NewRequest(&ftlv1.GetDeploymentArtefactsRequest{
 		DeploymentKey: id.String(),

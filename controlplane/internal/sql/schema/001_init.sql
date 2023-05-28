@@ -37,3 +37,14 @@ CREATE TABLE deployment_artefacts (
 );
 
 CREATE INDEX deployment_artefacts_deployment_id_idx ON deployment_artefacts (deployment_id);
+
+-- Runners are processes that are available to run modules.
+CREATE TABLE runners (
+  id BIGSERIAL PRIMARY KEY NOT NULL,
+  last_seen TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+  language VARCHAR(64) NOT NULL,
+  endpoint VARCHAR(255) UNIQUE NOT NULL,
+  deployment_id BIGINT REFERENCES deployments(id) ON DELETE SET NULL
+);
+
+CREATE INDEX runners_language_deployment_id_idx ON runners (language, deployment_id);

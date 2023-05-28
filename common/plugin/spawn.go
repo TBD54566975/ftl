@@ -11,12 +11,15 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/common/exec"
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
+
+const pluginRetryDelay = time.Millisecond * 100
 
 // PingableClient is a gRPC client that can be pinged.
 type PingableClient interface {
@@ -164,7 +167,8 @@ func Spawn[Client PingableClient](
 	client := rpc.Dial(makeClient, pluginEndpoint.String())
 	pingErr := make(chan error)
 	go func() {
-		err := rpc.Wait(dialCtx, client)
+		retry := backoff.Backoff{Min: pluginRetryDelay, Max: pluginRetryDelay}
+		err := rpc.Wait(dialCtx, retry, client)
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			// Deliberately don't close pingErr because the select loop below
 			// will catch dialCtx closing and return a better error.

@@ -2,18 +2,18 @@
 
 The actors in the diagrams are as follows:
 
-| Actor      | Description                                                                                                                                                            |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backplane  | The coordination layer of FTL. This creates and manages Runner instances, routing, resource creation, etc.                                                             |
-| Platform   | The platform FTL is running on, eg. Kubernetes, VMs, etc.                                                                                                              |
-| Runner     | The component of FTL that coordinates with the Backplane to spawn and route to user code.                                                                              |
-| Deployment | Optional process containing user code serving VerbService for a module written in a particular language. This code may be dynamically loaded and served by the Runner. |
+| Actor        | Description                                                                                                                                                            |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ControlPlane | The coordination layer of FTL. This creates and manages Runner instances, routing, resource creation, etc.                                                             |
+| Platform     | The platform FTL is running on, eg. Kubernetes, VMs, etc.                                                                                                              |
+| Runner       | The component of FTL that coordinates with the ControlPlane to spawn and route to user code.                                                                           |
+| Deployment   | Optional process containing user code serving VerbService for a module written in a particular language. This code may be dynamically loaded and served by the Runner. |
 
 ## System initialisation
 
 ```mermaid
 sequenceDiagram
-  participant B as Backplane
+  participant B as ControlPlane
   participant P as Platform
   participant R as Runner
 
@@ -27,7 +27,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant C as Client
-  participant B as Backplane
+  participant B as ControlPlane
   box Module
     participant R as Runner
     participant D as Deployment
@@ -64,7 +64,7 @@ sequenceDiagram
   %% autonumber
 
   participant C as Client
-  participant B as Backplane
+  participant B as ControlPlane
   box Module0
     participant R0 as Runner0
     participant M0 as Deployment0

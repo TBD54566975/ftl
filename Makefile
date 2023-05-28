@@ -7,12 +7,12 @@ SCHEMA_IN = schema/schema.go schema/protobuf.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
 SQLC_IN = sqlc.yaml \
-		  backplane/internal/sql/schema/*.sql \
-		  backplane/internal/sql/queries.sql
-SQLC_OUT = backplane/internal/sql/db.go \
-		   $(shell grep -q copyfrom backplane/internal/sql/queries.sql && echo backplane/internal/sql/copyfrom.go) \
-		   backplane/internal/sql/models.go \
-		   backplane/internal/sql/queries.sql.go
+		  controlplane/internal/sql/schema/*.sql \
+		  controlplane/internal/sql/queries.sql
+SQLC_OUT = controlplane/internal/sql/db.go \
+		   $(shell grep -q copyfrom controlplane/internal/sql/queries.sql && echo controlplane/internal/sql/copyfrom.go) \
+		   controlplane/internal/sql/models.go \
+		   controlplane/internal/sql/queries.sql.go
 
 PROTO_IN = protos/buf.yaml \
 		   protos/buf.gen.yaml \
@@ -57,6 +57,8 @@ $(SCHEMA_OUT) &: $(SCHEMA_IN)
 
 $(SQLC_OUT) &: $(SQLC_IN)
 	sqlc generate --experimental
+	# sqlc 1.18.0 generates a file with a missing import
+	gosimports -w controlplane/internal/sql/querier.go 
 
 $(COMMON_LOG_OUT) &: $(COMMON_LOG_IN)
 	go generate $<
