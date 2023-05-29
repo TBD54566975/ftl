@@ -1,27 +1,43 @@
 package schema
 
-import pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+import (
+	"github.com/alecthomas/errors"
 
-func FromProto(s *pschema.Schema) *Schema {
-	return &Schema{
-		Modules: moduleListToSchema(s.Modules),
+	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+)
+
+// FromProto converts a protobuf Schema to a Schema and validates it.
+func FromProto(s *pschema.Schema) (*Schema, error) {
+	modules, err := moduleListToSchema(s.Modules)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
+	schema := &Schema{
+		Modules: modules,
+	}
+	return schema, Validate(schema)
 }
 
-func moduleListToSchema(s []*pschema.Module) []*Module {
+func moduleListToSchema(s []*pschema.Module) ([]*Module, error) {
 	var out []*Module
 	for _, n := range s {
-		out = append(out, ModuleFromProto(n))
+		module, err := ModuleFromProto(n)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		out = append(out, module)
 	}
-	return out
+	return out, nil
 }
 
-func ModuleFromProto(s *pschema.Module) *Module {
-	return &Module{
+// ModuleFromProto converts a protobuf Module to a Module and validates it.
+func ModuleFromProto(s *pschema.Module) (*Module, error) {
+	module := &Module{
 		Name:     s.Name,
 		Comments: s.Comments,
 		Decls:    declListToSchema(s.Decls),
 	}
+	return module, ValidateModule(module)
 }
 
 func declListToSchema(s []*pschema.Decl) []Decl {

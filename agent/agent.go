@@ -3,7 +3,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -294,10 +293,12 @@ func (a *Agent) syncSchemaFromDrive(ctx context.Context, drive *driveContext) er
 
 	for stream.Receive() {
 		resp := stream.Msg()
-		module := schema.ModuleFromProto(resp.Schema)
+		module, err := schema.ModuleFromProto(resp.Schema)
+		if err != nil {
+			return errors.Wrap(err, "invalid schema from drive")
+		}
 		a.schemaChanges.Publish(module)
 		drive.schema.Store(types.Some(module))
 	}
-	fmt.Println("DONE", stream.Err())
 	return errors.WithStack(stream.Err())
 }

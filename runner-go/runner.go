@@ -27,6 +27,7 @@ import (
 	"github.com/TBD54566975/ftl/common/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/schema"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
@@ -129,7 +130,12 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	err = os.Mkdir(filepath.Join(s.config.DeploymentDir, id.String()), 0700)
+	module, err := schema.ModuleFromProto(gdResp.Msg.Schema)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid module")
+	}
+	deploymentDir := filepath.Join(s.config.DeploymentDir, module.Name, id.String())
+	err = os.Mkdir(deploymentDir, 0700)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create deployment directory")
 	}
@@ -140,7 +146,7 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 	deployment, _, err := plugin.Spawn(
 		ctx,
 		gdResp.Msg.Schema.Name,
-		filepath.Join(s.config.DeploymentDir, id.String()),
+		deploymentDir,
 		"./main",
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars("FTL_ENDPOINT="+s.config.FTLEndpoint.String()),

@@ -96,7 +96,11 @@ func startForTesting(t *testing.T) (*dal.DAL, ftlv1connect.ControlPlaneServiceCl
 
 	combined := &combinedService{Service: svc}
 
-	reflector := grpcreflect.NewStaticReflector(ftlv1connect.RunnerServiceName, ftlv1connect.VerbServiceName, ftlv1connect.ControlPlaneServiceName)
+	reflector := grpcreflect.NewStaticReflector(
+		ftlv1connect.RunnerServiceName,
+		ftlv1connect.VerbServiceName,
+		ftlv1connect.ControlPlaneServiceName,
+	)
 	srv, err := rpc.NewServer(ctx, &url.URL{Scheme: "http", Host: "127.0.0.1:0"},
 		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, combined),
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, combined),
@@ -118,7 +122,7 @@ func startForTesting(t *testing.T) (*dal.DAL, ftlv1connect.ControlPlaneServiceCl
 	case bind = <-srv.Bind.Subscribe(make(chan *url.URL)):
 		t.Logf("bound to %s", bind)
 
-	case <-time.After(time.Second * 5):
+	case <-ctx.Done():
 		t.Fatal("timed out waiting for server to bind")
 	}
 

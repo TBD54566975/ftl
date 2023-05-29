@@ -10,6 +10,8 @@ import (
 
 func TestProtoRoundtrip(t *testing.T) {
 	p := schema.ToProto()
-	actual := Normalise(FromProto(p.(*pschema.Schema))) //nolint:forcetypeassert
+	decoded, err := FromProto(p.(*pschema.Schema))
+	assert.NoError(t, err)
+	actual := Normalise(decoded)
 	assert.Equal(t, schema, actual)
 }

@@ -179,7 +179,10 @@ func (s *Server) PushSchema(ctx context.Context, stream *connect.ClientStream[ft
 	logger := log.FromContext(ctx)
 	for stream.Receive() {
 		received := stream.Msg()
-		module := schema.ModuleFromProto(received.Schema)
+		module, err := schema.ModuleFromProto(received.Schema)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid schema"))
+		}
 
 		logger.Debugf("Received schema update from %s", module.Name)
 

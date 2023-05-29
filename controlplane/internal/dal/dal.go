@@ -272,11 +272,15 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploy
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	module, err := schema.ModuleFromProto(pm)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	out := &Deployment{
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
 		Key:      deployment.Key,
-		Schema:   schema.ModuleFromProto(pm),
+		Schema:   module,
 	}
 	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.ID)
 	if err != nil {

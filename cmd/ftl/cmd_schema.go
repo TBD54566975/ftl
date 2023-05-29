@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
-	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -27,12 +27,14 @@ func (c *schemaGetCmd) Run(ctx context.Context, client ftlv1connect.DevelService
 		return errors.WithStack(err)
 	}
 
-	wg, _ := errgroup.WithContext(ctx)
 	modules := make(chan *schema.Module)
-	wg.Go(func() (err error) {
+	concurrency.Call(ctx, func() error {
 		for stream.Receive() {
 			resp := stream.Msg()
-			module := schema.ModuleFromProto(resp.Schema)
+			module, err := schema.ModuleFromProto(resp.Schema)
+			if err != nil {
+				return errors.WithStack(err)
+			}
 			modules <- module
 			if !resp.More {
 				return nil
@@ -41,13 +43,10 @@ func (c *schemaGetCmd) Run(ctx context.Context, client ftlv1connect.DevelService
 		return errors.WithStack(stream.Err())
 	})
 
-	wait := make(chan error)
-	go func() { wait <- wg.Wait() }()
-
 	for {
 		select {
-		case err := <-wait:
-			return errors.WithStack(err)
+		case <-ctx.Done():
+			return errors.WithStack(context.Cause(ctx))
 
 		case m := <-modules:
 			fmt.Println(m)

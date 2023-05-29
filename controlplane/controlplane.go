@@ -277,7 +277,11 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		}
 	}
 	ms := req.Msg.Schema
-	key, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, schema.ModuleFromProto(ms), artefacts)
+	module, err := schema.ModuleFromProto(ms)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid module schema")
+	}
+	key, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create deployment")
 	}

@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/alecthomas/errors"
@@ -29,6 +30,9 @@ func Validate(schema *Schema) error {
 		if err := ValidateModule(module); err != nil {
 			merr = append(merr, err)
 		}
+		// Note that we don't need to check ref names here because the targets
+		// themselves must be valid, and the refs cannot refer to non-existent
+		// targets.
 		err := Visit(module, func(n Node, next func() error) error {
 			switch n := n.(type) {
 			case *VerbRef:
@@ -36,18 +40,10 @@ func Validate(schema *Schema) error {
 			case *DataRef:
 				dataRefs = append(dataRefs, n)
 			case *Verb:
-				if n.Name == "" {
-					merr = append(merr, errors.Errorf("%s: verb name is required", n.Pos))
-					break
-				}
 				ref := makeRef(module.Name, n.Name)
 				verbs[ref] = true
 				verbs[n.Name] = true
 			case *Data:
-				if n.Name == "" {
-					merr = append(merr, errors.Errorf("%s: data structure name is required", n.Pos))
-					break
-				}
 				ref := makeRef(module.Name, n.Name)
 				data[ref] = true
 				data[n.Name] = true
@@ -72,17 +68,22 @@ func Validate(schema *Schema) error {
 	return errors.Join(merr...)
 }
 
+var validNameRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{2,}$`)
+
 // ValidateModule performs the subset of semantic validation possible on a single module.
 func ValidateModule(module *Module) error {
 	verbs := map[string]bool{}
 	data := map[string]bool{}
 	merr := []error{}
-	if module.Name == "" {
-		merr = append(merr, errors.Errorf("%s: module name is required", module.Pos))
+	if !validNameRe.MatchString(module.Name) {
+		merr = append(merr, errors.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
 	}
 	err := Visit(module, func(n Node, next func() error) error {
 		switch n := n.(type) {
 		case *Verb:
+			if !validNameRe.MatchString(n.Name) {
+				merr = append(merr, errors.Errorf("%s: Verb name %q is invalid", n.Pos, n.Name))
+			}
 			if _, ok := reservedIdentNames[n.Name]; ok {
 				merr = append(merr, errors.Errorf("%s: Verb name %q is a reserved word", n.Pos, n.Name))
 			}
@@ -92,6 +93,9 @@ func ValidateModule(module *Module) error {
 			verbs[n.Name] = true
 
 		case *Data:
+			if !validNameRe.MatchString(n.Name) {
+				merr = append(merr, errors.Errorf("%s: data structure name %q is invalid", n.Pos, n.Name))
+			}
 			if _, ok := reservedIdentNames[n.Name]; ok {
 				merr = append(merr, errors.Errorf("%s: data structure name %q is a reserved word", n.Pos, n.Name))
 			}
