@@ -3,35 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  CallRequest,
-  CallResponse,
-  CreateDeploymentRequest,
-  CreateDeploymentResponse,
-  DeployRequest,
-  DeployResponse,
-  DeployToRunnerRequest,
-  DeployToRunnerResponse,
-  GetArtefactDiffsRequest,
-  GetArtefactDiffsResponse,
-  GetDeploymentArtefactsRequest,
-  GetDeploymentArtefactsResponse,
-  GetDeploymentRequest,
-  GetDeploymentResponse,
-  ListRequest,
-  ListResponse,
-  PingRequest,
-  PingResponse,
-  PullSchemaRequest,
-  PullSchemaResponse,
-  PushSchemaRequest,
-  PushSchemaResponse,
-  RegisterRunnerRequest,
-  RegisterRunnerResponse,
-  UploadArtefactRequest,
-  UploadArtefactResponse,
-} from './ftl_pb.js'
-import { MethodKind } from '@bufbuild/protobuf'
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { MethodKind } from "@bufbuild/protobuf";
 
 /**
  * VerbService is a common interface shared by multiple services for calling Verbs.
@@ -39,7 +12,7 @@ import { MethodKind } from '@bufbuild/protobuf'
  * @generated from service xyz.block.ftl.v1.VerbService
  */
 export const VerbService = {
-  typeName: 'xyz.block.ftl.v1.VerbService',
+  typeName: "xyz.block.ftl.v1.VerbService",
   methods: {
     /**
      * Ping service for readiness.
@@ -47,7 +20,7 @@ export const VerbService = {
      * @generated from rpc xyz.block.ftl.v1.VerbService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -58,7 +31,7 @@ export const VerbService = {
      * @generated from rpc xyz.block.ftl.v1.VerbService.Call
      */
     call: {
-      name: 'Call',
+      name: "Call",
       I: CallRequest,
       O: CallResponse,
       kind: MethodKind.Unary,
@@ -69,13 +42,13 @@ export const VerbService = {
      * @generated from rpc xyz.block.ftl.v1.VerbService.List
      */
     list: {
-      name: 'List',
+      name: "List",
       I: ListRequest,
       O: ListResponse,
       kind: MethodKind.Unary,
     },
-  },
-} as const
+  }
+} as const;
 
 /**
  * DevelService is the service that provides language-specific development and
@@ -87,7 +60,7 @@ export const VerbService = {
  * @generated from service xyz.block.ftl.v1.DevelService
  */
 export const DevelService = {
-  typeName: 'xyz.block.ftl.v1.DevelService',
+  typeName: "xyz.block.ftl.v1.DevelService",
   methods: {
     /**
      * Ping service for readiness.
@@ -95,7 +68,7 @@ export const DevelService = {
      * @generated from rpc xyz.block.ftl.v1.DevelService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -106,7 +79,7 @@ export const DevelService = {
      * @generated from rpc xyz.block.ftl.v1.DevelService.PushSchema
      */
     pushSchema: {
-      name: 'PushSchema',
+      name: "PushSchema",
       I: PushSchemaRequest,
       O: PushSchemaResponse,
       kind: MethodKind.ClientStreaming,
@@ -117,19 +90,19 @@ export const DevelService = {
      * @generated from rpc xyz.block.ftl.v1.DevelService.PullSchema
      */
     pullSchema: {
-      name: 'PullSchema',
+      name: "PullSchema",
       I: PullSchemaRequest,
       O: PullSchemaResponse,
       kind: MethodKind.ServerStreaming,
     },
-  },
-} as const
+  }
+} as const;
 
 /**
  * @generated from service xyz.block.ftl.v1.ControlPlaneService
  */
 export const ControlPlaneService = {
-  typeName: 'xyz.block.ftl.v1.ControlPlaneService',
+  typeName: "xyz.block.ftl.v1.ControlPlaneService",
   methods: {
     /**
      * Ping service for readiness.
@@ -137,7 +110,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -148,7 +121,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs
      */
     getArtefactDiffs: {
-      name: 'GetArtefactDiffs',
+      name: "GetArtefactDiffs",
       I: GetArtefactDiffsRequest,
       O: GetArtefactDiffsResponse,
       kind: MethodKind.Unary,
@@ -159,7 +132,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.UploadArtefact
      */
     uploadArtefact: {
-      name: 'UploadArtefact',
+      name: "UploadArtefact",
       I: UploadArtefactRequest,
       O: UploadArtefactResponse,
       kind: MethodKind.Unary,
@@ -170,7 +143,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.CreateDeployment
      */
     createDeployment: {
-      name: 'CreateDeployment',
+      name: "CreateDeployment",
       I: CreateDeploymentRequest,
       O: CreateDeploymentResponse,
       kind: MethodKind.Unary,
@@ -181,7 +154,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetDeployment
      */
     getDeployment: {
-      name: 'GetDeployment',
+      name: "GetDeployment",
       I: GetDeploymentRequest,
       O: GetDeploymentResponse,
       kind: MethodKind.Unary,
@@ -195,7 +168,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts
      */
     getDeploymentArtefacts: {
-      name: 'GetDeploymentArtefacts',
+      name: "GetDeploymentArtefacts",
       I: GetDeploymentArtefactsRequest,
       O: GetDeploymentArtefactsResponse,
       kind: MethodKind.ServerStreaming,
@@ -209,7 +182,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.RegisterRunner
      */
     registerRunner: {
-      name: 'RegisterRunner',
+      name: "RegisterRunner",
       I: RegisterRunnerRequest,
       O: RegisterRunnerResponse,
       kind: MethodKind.ClientStreaming,
@@ -220,13 +193,13 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Deploy
      */
     deploy: {
-      name: 'Deploy',
+      name: "Deploy",
       I: DeployRequest,
       O: DeployResponse,
       kind: MethodKind.Unary,
     },
-  },
-} as const
+  }
+} as const;
 
 /**
  * RunnerService is the service that executes Deployments.
@@ -238,13 +211,13 @@ export const ControlPlaneService = {
  * @generated from service xyz.block.ftl.v1.RunnerService
  */
 export const RunnerService = {
-  typeName: 'xyz.block.ftl.v1.RunnerService',
+  typeName: "xyz.block.ftl.v1.RunnerService",
   methods: {
     /**
      * @generated from rpc xyz.block.ftl.v1.RunnerService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -255,10 +228,11 @@ export const RunnerService = {
      * @generated from rpc xyz.block.ftl.v1.RunnerService.DeployToRunner
      */
     deployToRunner: {
-      name: 'DeployToRunner',
+      name: "DeployToRunner",
       I: DeployToRunnerRequest,
       O: DeployToRunnerResponse,
       kind: MethodKind.Unary,
     },
-  },
-} as const
+  }
+} as const;
+

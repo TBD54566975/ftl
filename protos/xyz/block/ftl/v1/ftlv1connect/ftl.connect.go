@@ -286,7 +286,7 @@ type ControlPlaneServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) ControlPlaneServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	return &controlplaneServiceClient{
+	return &controlPlaneServiceClient{
 		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
 			httpClient,
 			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/Ping",
@@ -330,8 +330,8 @@ func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL stri
 	}
 }
 
-// controlplaneServiceClient implements ControlPlaneServiceClient.
-type controlplaneServiceClient struct {
+// controlPlaneServiceClient implements ControlPlaneServiceClient.
+type controlPlaneServiceClient struct {
 	ping                   *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	getArtefactDiffs       *connect_go.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
 	uploadArtefact         *connect_go.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
@@ -343,42 +343,42 @@ type controlplaneServiceClient struct {
 }
 
 // Ping calls xyz.block.ftl.v1.ControlPlaneService.Ping.
-func (c *controlplaneServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
+func (c *controlPlaneServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
 }
 
 // GetArtefactDiffs calls xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs.
-func (c *controlplaneServiceClient) GetArtefactDiffs(ctx context.Context, req *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error) {
+func (c *controlPlaneServiceClient) GetArtefactDiffs(ctx context.Context, req *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error) {
 	return c.getArtefactDiffs.CallUnary(ctx, req)
 }
 
 // UploadArtefact calls xyz.block.ftl.v1.ControlPlaneService.UploadArtefact.
-func (c *controlplaneServiceClient) UploadArtefact(ctx context.Context, req *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
+func (c *controlPlaneServiceClient) UploadArtefact(ctx context.Context, req *connect_go.Request[v1.UploadArtefactRequest]) (*connect_go.Response[v1.UploadArtefactResponse], error) {
 	return c.uploadArtefact.CallUnary(ctx, req)
 }
 
 // CreateDeployment calls xyz.block.ftl.v1.ControlPlaneService.CreateDeployment.
-func (c *controlplaneServiceClient) CreateDeployment(ctx context.Context, req *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
+func (c *controlPlaneServiceClient) CreateDeployment(ctx context.Context, req *connect_go.Request[v1.CreateDeploymentRequest]) (*connect_go.Response[v1.CreateDeploymentResponse], error) {
 	return c.createDeployment.CallUnary(ctx, req)
 }
 
 // GetDeployment calls xyz.block.ftl.v1.ControlPlaneService.GetDeployment.
-func (c *controlplaneServiceClient) GetDeployment(ctx context.Context, req *connect_go.Request[v1.GetDeploymentRequest]) (*connect_go.Response[v1.GetDeploymentResponse], error) {
+func (c *controlPlaneServiceClient) GetDeployment(ctx context.Context, req *connect_go.Request[v1.GetDeploymentRequest]) (*connect_go.Response[v1.GetDeploymentResponse], error) {
 	return c.getDeployment.CallUnary(ctx, req)
 }
 
 // GetDeploymentArtefacts calls xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts.
-func (c *controlplaneServiceClient) GetDeploymentArtefacts(ctx context.Context, req *connect_go.Request[v1.GetDeploymentArtefactsRequest]) (*connect_go.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error) {
+func (c *controlPlaneServiceClient) GetDeploymentArtefacts(ctx context.Context, req *connect_go.Request[v1.GetDeploymentArtefactsRequest]) (*connect_go.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error) {
 	return c.getDeploymentArtefacts.CallServerStream(ctx, req)
 }
 
 // RegisterRunner calls xyz.block.ftl.v1.ControlPlaneService.RegisterRunner.
-func (c *controlplaneServiceClient) RegisterRunner(ctx context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse] {
+func (c *controlPlaneServiceClient) RegisterRunner(ctx context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse] {
 	return c.registerRunner.CallClientStream(ctx)
 }
 
 // Deploy calls xyz.block.ftl.v1.ControlPlaneService.Deploy.
-func (c *controlplaneServiceClient) Deploy(ctx context.Context, req *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
+func (c *controlPlaneServiceClient) Deploy(ctx context.Context, req *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
 	return c.deploy.CallUnary(ctx, req)
 }
 
