@@ -1,14 +1,15 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "backplane/internal/sql/queries.sql"
-    schema: "backplane/internal/sql/schema"
+    queries: "controlplane/internal/sql/queries.sql"
+    schema: "controlplane/internal/sql/schema"
     gen:
       go:
         package: "sql"
         sql_package: "pgx/v5"
-        out: "backplane/internal/sql"
+        out: "controlplane/internal/sql"
         emit_interface: true
+        query_parameter_limit: 3
         overrides:
           - db_type: "uuid"
             go_type: "github.com/google/uuid.UUID"

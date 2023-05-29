@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 
+	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
 	"github.com/TBD54566975/ftl/common/log"
@@ -28,6 +29,7 @@ func IsDirectRouted(ctx context.Context) bool {
 
 func DefaultClientOptions() []connect.ClientOption {
 	return []connect.ClientOption{
+		connect.WithGRPC(), // Use gRPC because some servers will not be using Connect.
 		connect.WithInterceptors(MetadataInterceptor()),
 	}
 }
@@ -47,14 +49,16 @@ type metadataInterceptor struct{}
 
 func (*metadataInterceptor) WrapStreamingClient(req connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return func(ctx context.Context, s connect.Spec) connect.StreamingClientConn {
-		log.FromContext(ctx).Tracef("%s (streaming client)", s.Procedure)
+		logger := log.FromContext(ctx)
+		logger.Tracef("%s (streaming client)", s.Procedure)
 		return req(ctx, s)
 	}
 }
 
 func (*metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
-		log.FromContext(ctx).Tracef("%s (streaming handler)", s.Spec().Procedure)
+		logger := log.FromContext(ctx)
+		logger.Tracef("%s (streaming handler)", s.Spec().Procedure)
 		if s.Spec().IsClient {
 			if IsDirectRouted(ctx) {
 				s.RequestHeader().Set(ftlDirectRoutingHeader, "1")
@@ -62,13 +66,19 @@ func (*metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerFun
 		} else if s.RequestHeader().Get(ftlDirectRoutingHeader) != "" {
 			ctx = WithDirectRouting(ctx)
 		}
-		return req(ctx, s)
+		err := errors.WithStack(req(ctx, s))
+		if err != nil {
+			logger.Errorf(err, "Streaming RPC failed: %s", s.Spec().Procedure)
+			return err
+		}
+		return nil
 	}
 }
 
 func (*metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc {
 	return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		log.FromContext(ctx).Tracef("%s (unary)", req.Spec().Procedure)
+		logger := log.FromContext(ctx)
+		logger.Tracef("%s (unary)", req.Spec().Procedure)
 		if req.Spec().IsClient {
 			if IsDirectRouted(ctx) {
 				req.Header().Set(ftlDirectRoutingHeader, "1")
@@ -76,6 +86,12 @@ func (*metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc {
 		} else if req.Header().Get(ftlDirectRoutingHeader) != "" {
 			ctx = WithDirectRouting(ctx)
 		}
-		return uf(ctx, req)
+		resp, err := uf(ctx, req)
+		if err != nil {
+			err = errors.WithStack(err)
+			logger.Errorf(err, "Unary RPC failed: %s", req.Spec().Procedure)
+			return nil, err
+		}
+		return resp, nil
 	})
 }

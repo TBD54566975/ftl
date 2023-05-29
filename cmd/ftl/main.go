@@ -77,7 +77,7 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	err = kctx.BindToProvider(makeDialer(ftlv1connect.NewDevelServiceClient))
 	kctx.FatalIfErrorf(err)
-	err = kctx.BindToProvider(makeDialer(ftlv1connect.NewBackplaneServiceClient))
+	err = kctx.BindToProvider(makeDialer(ftlv1connect.NewControlPlaneServiceClient))
 	kctx.FatalIfErrorf(err)
 
 	err = kctx.Run(ctx)

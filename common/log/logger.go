@@ -80,7 +80,10 @@ func (l *Logger) Warnf(format string, args ...interface{}) {
 }
 
 func (l *Logger) Errorf(err error, format string, args ...interface{}) {
-	l.Log(Entry{Level: Error, Message: fmt.Sprintf(format, args...), Error: err})
+	if err == nil {
+		return
+	}
+	l.Log(Entry{Level: Error, Message: fmt.Sprintf(err.Error()+": "+format, args...), Error: err})
 }
 
 // WriterAt returns a writer that logs each line at the given level.

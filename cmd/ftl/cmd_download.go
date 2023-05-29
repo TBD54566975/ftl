@@ -19,7 +19,7 @@ type downloadCmd struct {
 	Deployment uuid.UUID `help:"Deployment to download." arg:""`
 }
 
-func (d *downloadCmd) Run(ctx context.Context, client ftlv1connect.BackplaneServiceClient) error {
+func (d *downloadCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
 	return download.Artefacts(ctx, client, d.Deployment, d.Dest)
 }
 

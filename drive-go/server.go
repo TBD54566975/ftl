@@ -70,9 +70,8 @@ type moduleServer struct {
 
 func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	handler, ok := m.handlers[sdkgo.VerbRefFromProto(req.Msg.Verb)]
-
 	if !ok {
-		return nil, errors.Errorf("verb %q not found", req.Msg.Verb)
+		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("verb %q not found", req.Msg.Verb))
 	}
 
 	respdata, err := handler.fn(ctx, req.Msg.Body)

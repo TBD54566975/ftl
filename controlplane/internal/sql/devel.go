@@ -6,12 +6,13 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // CreateForDevel creates and migrates a new database for development or testing.
 //
 // If "recreate" is true, the database will be dropped and recreated.
-func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgx.Conn, error) {
+func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Pool, error) {
 	config, err := pgx.ParseConfig(dsn)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -50,7 +51,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgx.Conn, 
 		return nil, errors.WithStack(err)
 	}
 
-	realConn, err := pgx.Connect(ctx, dsn)
+	realConn, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

@@ -1,13 +1,15 @@
--- name: ListModules :many
-SELECT * FROM modules;
-
 -- name: CreateModule :one
 INSERT INTO modules (language, name) VALUES ($1, $2)
 ON CONFLICT (name) DO UPDATE SET language = $1
 RETURNING id;
 
--- name: ListDeployments :many
-SELECT * FROM deployments WHERE module_id = $1;
+-- name: GetDeploymentsByID :many
+SELECT * FROM deployments
+WHERE id = ANY(@ids::BIGINT[]);
+
+-- name: GetModulesByID :many
+SELECT * FROM modules
+WHERE id = ANY(@ids::BIGINT[]);
 
 -- name: CreateDeployment :one
 INSERT INTO deployments (module_id, "schema")
@@ -66,3 +68,39 @@ WHERE EXISTS (
 SELECT SUBSTRING(a.content FROM @start FOR @count)::BYTEA AS content
 FROM artefacts a
 WHERE a.id = @id;
+
+-- name: RegisterRunner :one
+INSERT INTO runners (language, endpoint) VALUES ($1, $2)
+RETURNING id;
+
+-- name: DeleteStaleRunners :one
+WITH deleted AS (
+  DELETE FROM runners
+  WHERE last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+  RETURNING *
+)
+SELECT COUNT(*) FROM deleted;
+
+-- name: HeartbeatRunner :exec
+UPDATE runners SET last_seen = (NOW() AT TIME ZONE 'utc') WHERE id = $1;
+
+-- name: DeregisterRunner :exec
+DELETE FROM runners WHERE id = $1;
+
+-- name: GetIdleRunnersForLanguage :many
+SELECT * FROM runners
+WHERE language = $1
+  AND deployment_id IS NULL;
+
+-- name: GetRunnersForModule :many
+-- Get all runners that are assigned to run the given module.
+SELECT r.*, d.key AS deployment_key, m.id AS module_id, m.name AS module_name
+FROM runners r
+JOIN deployments d ON r.deployment_id = d.id
+JOIN modules m ON d.module_id = m.id
+WHERE m.name = $1;
+
+-- name: AssignDeployment :exec
+UPDATE runners
+SET deployment_id = $2
+WHERE id = $1;

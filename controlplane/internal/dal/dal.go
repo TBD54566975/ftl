@@ -1,43 +1,48 @@
-// Package dao provides a data access object for the backplane.
-package dao
+// Package dal provides a domain abstraction over the ControlPlane database.
+package dal
 
 import (
 	"context"
 	"io"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 	sets "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/TBD54566975/ftl/backplane/internal/sql"
 	"github.com/TBD54566975/ftl/common/maps"
 	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/common/slices"
+	"github.com/TBD54566975/ftl/controlplane/internal/sql"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 )
 
-type DAO struct {
+var ErrConflict = errors.New("conflict")
+
+type DAL struct {
 	db *sql.DB
 }
 
-func New(conn sql.DBI) *DAO {
-	return &DAO{db: sql.NewDB(conn)}
+func New(conn sql.DBI) *DAL {
+	return &DAL{db: sql.NewDB(conn)}
 }
 
-func (d *DAO) CreateModule(ctx context.Context, language, name string) (err error) {
-	_, err = d.db.CreateModule(ctx, sql.CreateModuleParams{
-		Language: language,
-		Name:     name,
-	})
+func (d *DAL) CreateModule(ctx context.Context, language, name string) (err error) {
+	_, err = d.db.CreateModule(ctx, language, name)
 	return errors.WithStack(err)
 }
 
 // GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
-func (d *DAO) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
+func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
 	have, err := d.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -49,12 +54,9 @@ func (d *DAO) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) 
 }
 
 // CreateArtefact inserts a new artefact into the database and returns its ID.
-func (d *DAO) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
+func (d *DAL) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
 	sha256digest := sha256.Sum(content)
-	_, err = d.db.CreateArtefact(ctx, sql.CreateArtefactParams{
-		Digest:  sha256digest[:],
-		Content: content,
-	})
+	_, err = d.db.CreateArtefact(ctx, sha256digest[:], content)
 	return sha256digest, errors.WithStack(err)
 }
 
@@ -88,7 +90,7 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAO) CreateDeployment(
+func (d *DAL) CreateDeployment(
 	ctx context.Context,
 	language string,
 	schema *schema.Module,
@@ -102,10 +104,10 @@ func (d *DAO) CreateDeployment(
 	defer tx.CommitOrRollback(ctx, &err)()
 
 	// Check if the deployment already exists and if so, return it.
-	existing, err := tx.GetDeploymentsWithArtefacts(ctx, sql.GetDeploymentsWithArtefactsParams{
-		Count:   len(artefacts),
-		Digests: sha256esToBytes(slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return in.Digest })),
-	})
+	existing, err := tx.GetDeploymentsWithArtefacts(ctx,
+		sha256esToBytes(slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return in.Digest })),
+		len(artefacts),
+	)
 	if err != nil {
 		return uuid.UUID{}, errors.WithStack(err)
 	}
@@ -122,16 +124,11 @@ func (d *DAO) CreateDeployment(
 		return uuid.UUID{}, errors.WithStack(err)
 	}
 
-	_, err = tx.CreateModule(ctx, sql.CreateModuleParams{
-		Language: language, // TODO(aat): "schema" containing language?
-		Name:     schema.Name,
-	})
+	// TODO(aat): "schema" containing language?
+	_, err = tx.CreateModule(ctx, language, schema.Name)
 
 	// Create the deployment
-	deploymentKey, err := tx.CreateDeployment(ctx, sql.CreateDeploymentParams{
-		ModuleName: schema.Name,
-		Schema:     schemaBytes,
-	})
+	deploymentKey, err := tx.CreateDeployment(ctx, schema.Name, schemaBytes)
 	if err != nil {
 		return uuid.UUID{}, errors.WithStack(err)
 	}
@@ -187,7 +184,7 @@ func (a *Artefact) ToProto() *ftlv1.DeploymentArtefact {
 	}
 }
 
-func (d *DAO) GetDeployment(ctx context.Context, id uuid.UUID) (*Deployment, error) {
+func (d *DAL) GetDeployment(ctx context.Context, id uuid.UUID) (*Deployment, error) {
 	deployment, err := d.db.GetDeployment(ctx, id)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -195,7 +192,7 @@ func (d *DAO) GetDeployment(ctx context.Context, id uuid.UUID) (*Deployment, err
 	return d.loadDeployment(ctx, sql.GetLatestDeploymentRow(deployment))
 }
 
-func (d *DAO) GetLatestDeployment(ctx context.Context, module string) (*Deployment, error) {
+func (d *DAL) GetLatestDeployment(ctx context.Context, module string) (*Deployment, error) {
 	deployment, err := d.db.GetLatestDeployment(ctx, module)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -203,7 +200,73 @@ func (d *DAO) GetLatestDeployment(ctx context.Context, module string) (*Deployme
 	return d.loadDeployment(ctx, deployment)
 }
 
-func (d *DAO) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploymentRow) (*Deployment, error) {
+type RunnerID int64
+
+// RegisterRunner registers a new runner.
+//
+// It will return ErrConflict if a runner with the same endpoint already exists.
+func (d *DAL) RegisterRunner(ctx context.Context, language string, endpoint *url.URL) (RunnerID, error) {
+	id, err := d.db.RegisterRunner(ctx, language, endpoint.String())
+	if isPGConflict(err) {
+		return 0, errors.Wrap(ErrConflict, "runner already registered")
+	}
+	return RunnerID(id), errors.WithStack(err)
+}
+
+func (d *DAL) DeleteStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
+	count, err := d.db.DeleteStaleRunners(ctx, pgtype.Interval{
+		Microseconds: int64(age / time.Microsecond),
+		Valid:        true,
+	})
+	return count, errors.WithStack(err)
+}
+
+func (d *DAL) HeartbeatRunner(ctx context.Context, id RunnerID) error {
+	return errors.WithStack(d.db.HeartbeatRunner(ctx, int64(id)))
+}
+
+func (d *DAL) DeregisterRunner(ctx context.Context, id RunnerID) error {
+	return errors.WithStack(d.db.DeregisterRunner(ctx, int64(id)))
+}
+
+type Runner struct {
+	ID       RunnerID
+	Language string
+	Endpoint string
+	// Assigned deployment key, if any.
+	Deployment types.Option[uuid.UUID]
+}
+
+func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string) ([]Runner, error) {
+	runners, err := d.db.GetIdleRunnersForLanguage(ctx, language)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return slices.Map(runners, func(row sql.Runner) Runner {
+		return Runner{
+			ID:       RunnerID(row.ID),
+			Language: row.Language,
+			Endpoint: row.Endpoint,
+		}
+	}), nil
+}
+
+func (d *DAL) GetRunnersForModule(ctx context.Context, module string) ([]Runner, error) {
+	runners, err := d.db.GetRunnersForModule(ctx, module)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return slices.Map(runners, func(row sql.GetRunnersForModuleRow) Runner {
+		return Runner{
+			ID:         RunnerID(row.ID),
+			Language:   row.Language,
+			Endpoint:   row.Endpoint,
+			Deployment: types.Some(row.DeploymentKey),
+		}
+	}), nil
+}
+
+func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploymentRow) (*Deployment, error) {
 	pm := &pschema.Module{}
 	err := proto.Unmarshal(deployment.Schema, pm)
 	if err != nil {
@@ -256,11 +319,7 @@ type artefactReader struct {
 }
 
 func (r *artefactReader) Read(p []byte) (n int, err error) {
-	content, err := r.db.GetArtefactContentRange(context.Background(), sql.GetArtefactContentRangeParams{
-		Start: r.offset + 1,
-		Count: int32(len(p)),
-		ID:    r.id,
-	})
+	content, err := r.db.GetArtefactContentRange(context.Background(), r.offset+1, int32(len(p)), r.id)
 	if err != nil {
 		return 0, errors.WithStack(err)
 	}
@@ -271,4 +330,16 @@ func (r *artefactReader) Read(p []byte) (n int, err error) {
 		err = io.EOF
 	}
 	return clen, err
+}
+
+// isPGConflict returns true if the error is the result of unique constraint conflict.
+func isPGConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+		return true
+	}
+	return false
 }

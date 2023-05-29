@@ -14,6 +14,7 @@ type Interface interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Warnf(format string, args ...interface{})
+	// Errorf conditionally logs an error. If err is nil, nothing is logged.
 	Errorf(err error, format string, args ...interface{})
 }
 

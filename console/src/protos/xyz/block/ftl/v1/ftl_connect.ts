@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -99,15 +99,15 @@ export const DevelService = {
 } as const;
 
 /**
- * @generated from service xyz.block.ftl.v1.BackplaneService
+ * @generated from service xyz.block.ftl.v1.ControlPlaneService
  */
-export const BackplaneService = {
-  typeName: "xyz.block.ftl.v1.BackplaneService",
+export const ControlPlaneService = {
+  typeName: "xyz.block.ftl.v1.ControlPlaneService",
   methods: {
     /**
      * Ping service for readiness.
      *
-     * @generated from rpc xyz.block.ftl.v1.BackplaneService.Ping
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Ping
      */
     ping: {
       name: "Ping",
@@ -118,7 +118,7 @@ export const BackplaneService = {
     /**
      * Get list of artefacts that differ between the server and client.
      *
-     * @generated from rpc xyz.block.ftl.v1.BackplaneService.GetArtefactDiffs
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs
      */
     getArtefactDiffs: {
       name: "GetArtefactDiffs",
@@ -129,7 +129,7 @@ export const BackplaneService = {
     /**
      * Upload an artefact to the server.
      *
-     * @generated from rpc xyz.block.ftl.v1.BackplaneService.UploadArtefact
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.UploadArtefact
      */
     uploadArtefact: {
       name: "UploadArtefact",
@@ -140,7 +140,7 @@ export const BackplaneService = {
     /**
      * Create a deployment.
      *
-     * @generated from rpc xyz.block.ftl.v1.BackplaneService.CreateDeployment
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.CreateDeployment
      */
     createDeployment: {
       name: "CreateDeployment",
@@ -151,7 +151,7 @@ export const BackplaneService = {
     /**
      * Get the schema and artefact metadata for a deployment.
      *
-     * @generated from rpc xyz.block.ftl.v1.BackplaneService.GetDeployment
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetDeployment
      */
     getDeployment: {
       name: "GetDeployment",
@@ -165,7 +165,7 @@ export const BackplaneService = {
      * Each artefact is streamed one after the other as a sequence of max 1MB
      * chunks.
      *
-     * @generated from rpc xyz.block.ftl.v1.BackplaneService.GetDeploymentArtefacts
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts
      */
     getDeploymentArtefacts: {
       name: "GetDeploymentArtefacts",
@@ -174,14 +174,28 @@ export const BackplaneService = {
       kind: MethodKind.ServerStreaming,
     },
     /**
-     * Register a Runner with the Backplane.
+     * Register a Runner with the ControlPlane.
      *
-     * @generated from rpc xyz.block.ftl.v1.BackplaneService.RegisterRunner
+     * Each runner MUST stream a RegisterRunnerRequest to the ControlPlaneService
+     * every 10 seconds to maintain its heartbeat.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.RegisterRunner
      */
     registerRunner: {
       name: "RegisterRunner",
       I: RegisterRunnerRequest,
       O: RegisterRunnerResponse,
+      kind: MethodKind.ClientStreaming,
+    },
+    /**
+     * Starts a deployment.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Deploy
+     */
+    deploy: {
+      name: "Deploy",
+      I: DeployRequest,
+      O: DeployResponse,
       kind: MethodKind.Unary,
     },
   }
@@ -190,8 +204,8 @@ export const BackplaneService = {
 /**
  * RunnerService is the service that executes Deployments.
  *
- * The Backplane will scale the Runner horizontally as required. The Runner will
- * register itself automatically with the BackplaneService, which will then
+ * The ControlPlane will scale the Runner horizontally as required. The Runner will
+ * register itself automatically with the ControlPlaneService, which will then
  * assign modules to it.
  *
  * @generated from service xyz.block.ftl.v1.RunnerService
@@ -211,12 +225,12 @@ export const RunnerService = {
     /**
      * Initiate a deployment on this Runner.
      *
-     * @generated from rpc xyz.block.ftl.v1.RunnerService.Deploy
+     * @generated from rpc xyz.block.ftl.v1.RunnerService.DeployToRunner
      */
-    deploy: {
-      name: "Deploy",
-      I: DeployRequest,
-      O: DeployResponse,
+    deployToRunner: {
+      name: "DeployToRunner",
+      I: DeployToRunnerRequest,
+      O: DeployToRunnerResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -42,6 +42,14 @@ export class PingRequest extends Message<PingRequest> {
  * @generated from message xyz.block.ftl.v1.PingResponse
  */
 export class PingResponse extends Message<PingResponse> {
+  /**
+   * If present, the service is not ready to accept requests and this is the
+   * reason.
+   *
+   * @generated from field: optional string not_ready = 1;
+   */
+  notReady?: string;
+
   constructor(data?: PartialMessage<PingResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -50,6 +58,7 @@ export class PingResponse extends Message<PingResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.PingResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "not_ready", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PingResponse {
@@ -1092,6 +1101,74 @@ export class DeployResponse extends Message<DeployResponse> {
 
   static equals(a: DeployResponse | PlainMessage<DeployResponse> | undefined, b: DeployResponse | PlainMessage<DeployResponse> | undefined): boolean {
     return proto3.util.equals(DeployResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.DeployToRunnerRequest
+ */
+export class DeployToRunnerRequest extends Message<DeployToRunnerRequest> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  constructor(data?: PartialMessage<DeployToRunnerRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.DeployToRunnerRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeployToRunnerRequest {
+    return new DeployToRunnerRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeployToRunnerRequest {
+    return new DeployToRunnerRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeployToRunnerRequest {
+    return new DeployToRunnerRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeployToRunnerRequest | PlainMessage<DeployToRunnerRequest> | undefined, b: DeployToRunnerRequest | PlainMessage<DeployToRunnerRequest> | undefined): boolean {
+    return proto3.util.equals(DeployToRunnerRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.DeployToRunnerResponse
+ */
+export class DeployToRunnerResponse extends Message<DeployToRunnerResponse> {
+  constructor(data?: PartialMessage<DeployToRunnerResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.DeployToRunnerResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeployToRunnerResponse {
+    return new DeployToRunnerResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeployToRunnerResponse {
+    return new DeployToRunnerResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeployToRunnerResponse {
+    return new DeployToRunnerResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeployToRunnerResponse | PlainMessage<DeployToRunnerResponse> | undefined, b: DeployToRunnerResponse | PlainMessage<DeployToRunnerResponse> | undefined): boolean {
+    return proto3.util.equals(DeployToRunnerResponse, a, b);
   }
 }
 
