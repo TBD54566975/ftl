@@ -19,7 +19,7 @@ import (
 var version = "dev"
 
 type CLI struct {
-	Version   kong.VersionFlag `help:"Show version information."`
+	Version   kong.VersionFlag `help:"Show version."`
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 	Endpoint  *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 

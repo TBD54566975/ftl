@@ -12,9 +12,12 @@ import (
 	runner "github.com/TBD54566975/ftl/runner-go"
 )
 
+var version = "dev"
+
 var config struct {
-	LogConfig    log.Config    `prefix:"log-" embed:""`
-	RunnerConfig runner.Config `embed:""`
+	Version      kong.VersionFlag `help:"Show version."`
+	LogConfig    log.Config       `prefix:"log-" embed:""`
+	RunnerConfig runner.Config    `embed:""`
 }
 
 func main() {
@@ -28,6 +31,7 @@ FTL - Towards a 𝝺-calculus for large-scale systems
 The Runner is the component of FTL that coordinates with the ControlPlane to spawn
 and route to user code.
 	`), kong.Vars{
+		"version":       version,
 		"deploymentdir": filepath.Join(cacheDir, "ftl-runner-go", "deployments"),
 	})
 	logger := log.Configure(os.Stderr, config.LogConfig)

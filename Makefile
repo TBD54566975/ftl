@@ -1,5 +1,7 @@
 VERSION = $(shell git describe --tags --always --dirty)
 
+BINARIES=ftl ftl-control-plane ftl-runner-go
+
 COMMON_LOG_IN = common/log/api.go
 COMMON_LOG_OUT = common/log/log_level_string.go
 
@@ -38,7 +40,11 @@ release:
 	cd console && npm run build
 	rm -rf build
 	mkdir -p build
-	go build -o build/ftl -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl 
+	for binary in $(BINARIES); do \
+		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/$$binary-linux-amd64 -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$$binary ; \
+		CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/$$binary-darwin-amd64 -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$$binary ; \
+		CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/$$binary-darwin-arm64 -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$$binary ; \
+	done
 
 .PHONY: generate
 generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate source.
