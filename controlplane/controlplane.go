@@ -315,7 +315,7 @@ func (s *Service) reapStaleRunners(ctx context.Context) {
 		case <-ctx.Done():
 			return
 
-		case <-time.After(s.heartbeatTimeout):
+		case <-time.After(s.heartbeatTimeout / 4):
 		}
 	}
 }
