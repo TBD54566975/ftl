@@ -84,6 +84,11 @@ func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout time.Duration, arte
 	go svc.reapStaleRunners(ctx)
 	return svc, nil
 }
+
+func (s *Service) StreamDeploymentLogs(ctx context.Context, req *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {
+	panic("unimplemented")
+}
+
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (*connect.Response[ftlv1.DeployResponse], error) {
 	panic("unimplemented")
 }

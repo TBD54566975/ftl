@@ -7,56 +7,80 @@ import (
 	"strings"
 )
 
-const _LevelName = "defaulttracedebuginfowarnerror"
+const (
+	_LevelName_0      = "defaulttrace"
+	_LevelLowerName_0 = "defaulttrace"
+	_LevelName_1      = "debug"
+	_LevelLowerName_1 = "debug"
+	_LevelName_2      = "info"
+	_LevelLowerName_2 = "info"
+	_LevelName_3      = "warn"
+	_LevelLowerName_3 = "warn"
+	_LevelName_4      = "error"
+	_LevelLowerName_4 = "error"
+)
 
-var _LevelIndex = [...]uint8{0, 7, 12, 17, 21, 25, 30}
-
-const _LevelLowerName = "defaulttracedebuginfowarnerror"
+var (
+	_LevelIndex_0 = [...]uint8{0, 7, 12}
+	_LevelIndex_1 = [...]uint8{0, 5}
+	_LevelIndex_2 = [...]uint8{0, 4}
+	_LevelIndex_3 = [...]uint8{0, 4}
+	_LevelIndex_4 = [...]uint8{0, 5}
+)
 
 func (i Level) String() string {
-	i -= -1
-	if i < 0 || i >= Level(len(_LevelIndex)-1) {
-		return fmt.Sprintf("Level(%d)", i+-1)
+	switch {
+	case 0 <= i && i <= 1:
+		return _LevelName_0[_LevelIndex_0[i]:_LevelIndex_0[i+1]]
+	case i == 5:
+		return _LevelName_1
+	case i == 9:
+		return _LevelName_2
+	case i == 13:
+		return _LevelName_3
+	case i == 17:
+		return _LevelName_4
+	default:
+		return fmt.Sprintf("Level(%d)", i)
 	}
-	return _LevelName[_LevelIndex[i]:_LevelIndex[i+1]]
 }
 
 // An "invalid array index" compiler error signifies that the constant values have changed.
 // Re-run the stringer command to generate them again.
 func _LevelNoOp() {
 	var x [1]struct{}
-	_ = x[Default-(-1)]
-	_ = x[Trace-(0)]
-	_ = x[Debug-(1)]
-	_ = x[Info-(2)]
-	_ = x[Warn-(3)]
-	_ = x[Error-(4)]
+	_ = x[Default-(0)]
+	_ = x[Trace-(1)]
+	_ = x[Debug-(5)]
+	_ = x[Info-(9)]
+	_ = x[Warn-(13)]
+	_ = x[Error-(17)]
 }
 
 var _LevelValues = []Level{Default, Trace, Debug, Info, Warn, Error}
 
 var _LevelNameToValueMap = map[string]Level{
-	_LevelName[0:7]:        Default,
-	_LevelLowerName[0:7]:   Default,
-	_LevelName[7:12]:       Trace,
-	_LevelLowerName[7:12]:  Trace,
-	_LevelName[12:17]:      Debug,
-	_LevelLowerName[12:17]: Debug,
-	_LevelName[17:21]:      Info,
-	_LevelLowerName[17:21]: Info,
-	_LevelName[21:25]:      Warn,
-	_LevelLowerName[21:25]: Warn,
-	_LevelName[25:30]:      Error,
-	_LevelLowerName[25:30]: Error,
+	_LevelName_0[0:7]:       Default,
+	_LevelLowerName_0[0:7]:  Default,
+	_LevelName_0[7:12]:      Trace,
+	_LevelLowerName_0[7:12]: Trace,
+	_LevelName_1[0:5]:       Debug,
+	_LevelLowerName_1[0:5]:  Debug,
+	_LevelName_2[0:4]:       Info,
+	_LevelLowerName_2[0:4]:  Info,
+	_LevelName_3[0:4]:       Warn,
+	_LevelLowerName_3[0:4]:  Warn,
+	_LevelName_4[0:5]:       Error,
+	_LevelLowerName_4[0:5]:  Error,
 }
 
 var _LevelNames = []string{
-	_LevelName[0:7],
-	_LevelName[7:12],
-	_LevelName[12:17],
-	_LevelName[17:21],
-	_LevelName[21:25],
-	_LevelName[25:30],
+	_LevelName_0[0:7],
+	_LevelName_0[7:12],
+	_LevelName_1[0:5],
+	_LevelName_2[0:4],
+	_LevelName_3[0:4],
+	_LevelName_4[0:5],
 }
 
 // LevelString retrieves an enum value from the enum constants string name.

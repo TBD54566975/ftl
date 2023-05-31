@@ -458,6 +458,32 @@ func (q *Queries) HeartbeatRunner(ctx context.Context, id int64) error {
 	return err
 }
 
+const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec
+INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, error)
+VALUES ((SELECT id FROM deployments WHERE key=$1 LIMIT 1)::UUID, $2, $3, $4, $5, $6)
+`
+
+type InsertDeploymentLogEntryParams struct {
+	Key       uuid.UUID
+	TimeStamp pgtype.Timestamptz
+	Level     int32
+	Scope     string
+	Message   string
+	Error     pgtype.Text
+}
+
+func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error {
+	_, err := q.db.Exec(ctx, insertDeploymentLogEntry,
+		arg.Key,
+		arg.TimeStamp,
+		arg.Level,
+		arg.Scope,
+		arg.Message,
+		arg.Error,
+	)
+	return err
+}
+
 const registerRunner = `-- name: RegisterRunner :one
 INSERT INTO runners (key, language, endpoint) VALUES ($1, $2, $3)
 ON CONFLICT (key) DO UPDATE SET language = $2, endpoint = $3

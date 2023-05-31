@@ -4,8 +4,46 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3 } from "@bufbuild/protobuf";
+import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { Module, VerbRef } from "./schema/schema_pb.js";
+
+/**
+ * @generated from enum xyz.block.ftl.v1.LogLevel
+ */
+export enum LogLevel {
+  /**
+   * @generated from enum value: TRACE = 0;
+   */
+  TRACE = 0,
+
+  /**
+   * @generated from enum value: DEBUG = 1;
+   */
+  DEBUG = 1,
+
+  /**
+   * @generated from enum value: INFO = 2;
+   */
+  INFO = 2,
+
+  /**
+   * @generated from enum value: WARNING = 3;
+   */
+  WARNING = 3,
+
+  /**
+   * @generated from enum value: ERROR = 4;
+   */
+  ERROR = 4,
+}
+// Retrieve enum metadata with: proto3.getEnumType(LogLevel)
+proto3.util.setEnumType(LogLevel, "xyz.block.ftl.v1.LogLevel", [
+  { no: 0, name: "TRACE" },
+  { no: 1, name: "DEBUG" },
+  { no: 2, name: "INFO" },
+  { no: 3, name: "WARNING" },
+  { no: 4, name: "ERROR" },
+]);
 
 /**
  * @generated from message xyz.block.ftl.v1.PingRequest
@@ -1109,6 +1147,104 @@ export class DeployResponse extends Message<DeployResponse> {
 
   static equals(a: DeployResponse | PlainMessage<DeployResponse> | undefined, b: DeployResponse | PlainMessage<DeployResponse> | undefined): boolean {
     return proto3.util.equals(DeployResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StreamDeploymentLogsRequest
+ */
+export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsRequest> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: int64 time_stamp = 2;
+   */
+  timeStamp = protoInt64.zero;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.LogLevel log_level = 3;
+   */
+  logLevel = LogLevel.TRACE;
+
+  /**
+   * @generated from field: string scope = 4;
+   */
+  scope = "";
+
+  /**
+   * @generated from field: string message = 5;
+   */
+  message = "";
+
+  /**
+   * @generated from field: optional string error = 6;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<StreamDeploymentLogsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StreamDeploymentLogsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "log_level", kind: "enum", T: proto3.getEnumType(LogLevel) },
+    { no: 4, name: "scope", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamDeploymentLogsRequest {
+    return new StreamDeploymentLogsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamDeploymentLogsRequest {
+    return new StreamDeploymentLogsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamDeploymentLogsRequest {
+    return new StreamDeploymentLogsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamDeploymentLogsRequest | PlainMessage<StreamDeploymentLogsRequest> | undefined, b: StreamDeploymentLogsRequest | PlainMessage<StreamDeploymentLogsRequest> | undefined): boolean {
+    return proto3.util.equals(StreamDeploymentLogsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StreamDeploymentLogsResponse
+ */
+export class StreamDeploymentLogsResponse extends Message<StreamDeploymentLogsResponse> {
+  constructor(data?: PartialMessage<StreamDeploymentLogsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StreamDeploymentLogsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamDeploymentLogsResponse {
+    return new StreamDeploymentLogsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamDeploymentLogsResponse {
+    return new StreamDeploymentLogsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamDeploymentLogsResponse {
+    return new StreamDeploymentLogsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamDeploymentLogsResponse | PlainMessage<StreamDeploymentLogsResponse> | undefined, b: StreamDeploymentLogsResponse | PlainMessage<StreamDeploymentLogsResponse> | undefined): boolean {
+    return proto3.util.equals(StreamDeploymentLogsResponse, a, b);
   }
 }
 

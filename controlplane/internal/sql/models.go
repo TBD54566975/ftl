@@ -32,6 +32,17 @@ type DeploymentArtefact struct {
 	Path         string
 }
 
+type DeploymentLog struct {
+	ID           int64
+	DeploymentID int64
+	Verb         pgtype.Text
+	TimeStamp    pgtype.Timestamptz
+	Level        int32
+	Scope        string
+	Message      string
+	Error        pgtype.Text
+}
+
 type Module struct {
 	ID       int64
 	Language string

@@ -147,6 +147,25 @@ message DeployRequest {
 }
 message DeployResponse {}
 
+enum LogLevel {
+  TRACE = 0;
+  DEBUG = 1;
+  INFO = 2;
+  WARNING = 3;
+  ERROR = 4;
+}
+
+message StreamDeploymentLogsRequest {
+  string deployment_key = 1;
+  int64 time_stamp = 2;
+  LogLevel log_level = 3;
+  string scope = 4;
+  string message = 5;
+  optional string error = 6;
+}
+
+message StreamDeploymentLogsResponse {}
+
 service ControlPlaneService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse);
@@ -177,6 +196,9 @@ service ControlPlaneService {
 
   // Starts a deployment.
   rpc Deploy(DeployRequest) returns (DeployResponse);
+
+  // Stream logs from a deployment
+  rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);
 }
 
 message DeployToRunnerRequest {
