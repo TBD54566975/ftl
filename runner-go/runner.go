@@ -54,6 +54,7 @@ func Start(ctx context.Context, config Config) error {
 	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.FTLEndpoint.String())
 
 	svc := &Service{
+		key:                uuid.New(),
 		config:             config,
 		controlplaneClient: controlplaneClient,
 	}
@@ -79,6 +80,7 @@ type pluginProxy struct {
 }
 
 type Service struct {
+	key uuid.UUID
 	// We use double-checked locking around the atomic so that the read fast-path is lock-free.
 	lock       sync.Mutex
 	deployment atomic.Value[*pluginProxy]
@@ -176,6 +178,7 @@ func (s *Service) registrationLoop(ctx context.Context) {
 			defer func() { s.registrationFailure.Store(types.Some(err)) }()
 			for {
 				err := stream.Send(&ftlv1.RegisterRunnerRequest{
+					Key:      s.key.String(),
 					Language: "go",
 					Endpoint: s.config.Endpoint.String(),
 				})

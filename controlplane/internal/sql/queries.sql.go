@@ -89,7 +89,7 @@ const deleteStaleRunners = `-- name: DeleteStaleRunners :one
 WITH deleted AS (
   DELETE FROM runners
   WHERE last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
-  RETURNING id, last_seen, language, endpoint, deployment_id
+  RETURNING id, key, last_seen, language, endpoint, deployment_id
 )
 SELECT COUNT(*) FROM deleted
 `
@@ -308,7 +308,7 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 }
 
 const getIdleRunnersForLanguage = `-- name: GetIdleRunnersForLanguage :many
-SELECT id, last_seen, language, endpoint, deployment_id FROM runners
+SELECT id, key, last_seen, language, endpoint, deployment_id FROM runners
 WHERE language = $1
   AND deployment_id IS NULL
 `
@@ -324,6 +324,7 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 		var i Runner
 		if err := rows.Scan(
 			&i.ID,
+			&i.Key,
 			&i.LastSeen,
 			&i.Language,
 			&i.Endpoint,
@@ -398,7 +399,7 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 }
 
 const getRunnersForModule = `-- name: GetRunnersForModule :many
-SELECT r.id, r.last_seen, r.language, r.endpoint, r.deployment_id, d.key AS deployment_key, m.id AS module_id, m.name AS module_name
+SELECT r.id, r.key, r.last_seen, r.language, r.endpoint, r.deployment_id, d.key AS deployment_key, m.id AS module_id, m.name AS module_name
 FROM runners r
 JOIN deployments d ON r.deployment_id = d.id
 JOIN modules m ON d.module_id = m.id
@@ -407,6 +408,7 @@ WHERE m.name = $1
 
 type GetRunnersForModuleRow struct {
 	ID            int64
+	Key           uuid.UUID
 	LastSeen      pgtype.Timestamp
 	Language      string
 	Endpoint      string
@@ -428,6 +430,7 @@ func (q *Queries) GetRunnersForModule(ctx context.Context, name string) ([]GetRu
 		var i GetRunnersForModuleRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.Key,
 			&i.LastSeen,
 			&i.Language,
 			&i.Endpoint,
@@ -456,12 +459,13 @@ func (q *Queries) HeartbeatRunner(ctx context.Context, id int64) error {
 }
 
 const registerRunner = `-- name: RegisterRunner :one
-INSERT INTO runners (language, endpoint) VALUES ($1, $2)
+INSERT INTO runners (key, language, endpoint) VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET language = $2, endpoint = $3
 RETURNING id
 `
 
-func (q *Queries) RegisterRunner(ctx context.Context, language string, endpoint string) (int64, error) {
-	row := q.db.QueryRow(ctx, registerRunner, language, endpoint)
+func (q *Queries) RegisterRunner(ctx context.Context, key uuid.UUID, language string, endpoint string) (int64, error) {
+	row := q.db.QueryRow(ctx, registerRunner, key, language, endpoint)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

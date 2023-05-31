@@ -40,6 +40,7 @@ type Module struct {
 
 type Runner struct {
 	ID           int64
+	Key          uuid.UUID
 	LastSeen     pgtype.Timestamp
 	Language     string
 	Endpoint     string

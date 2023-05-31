@@ -70,7 +70,8 @@ FROM artefacts a
 WHERE a.id = @id;
 
 -- name: RegisterRunner :one
-INSERT INTO runners (language, endpoint) VALUES ($1, $2)
+INSERT INTO runners (key, language, endpoint) VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET language = $2, endpoint = $3
 RETURNING id;
 
 -- name: DeleteStaleRunners :one

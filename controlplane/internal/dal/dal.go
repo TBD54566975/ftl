@@ -205,8 +205,8 @@ type RunnerID int64
 // RegisterRunner registers a new runner.
 //
 // It will return ErrConflict if a runner with the same endpoint already exists.
-func (d *DAL) RegisterRunner(ctx context.Context, language string, endpoint *url.URL) (RunnerID, error) {
-	id, err := d.db.RegisterRunner(ctx, language, endpoint.String())
+func (d *DAL) RegisterRunner(ctx context.Context, key uuid.UUID, language string, endpoint *url.URL) (RunnerID, error) {
+	id, err := d.db.RegisterRunner(ctx, key, language, endpoint.String())
 	if isPGConflict(err) {
 		return 0, errors.Wrap(ErrConflict, "runner already registered")
 	}

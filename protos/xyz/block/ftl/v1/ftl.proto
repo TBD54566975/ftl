@@ -134,9 +134,11 @@ message GetDeploymentResponse {
 }
 
 message RegisterRunnerRequest {
+  // UUID representing the runner instance.
+  string key = 1;
   // Language the runner supports.
-  string language = 1;
-  string endpoint = 2;
+  string language = 2;
+  string endpoint = 3;
 }
 message RegisterRunnerResponse {}
 

@@ -76,19 +76,14 @@ type Service struct {
 }
 
 func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout time.Duration, artefactChunkSize int) (*Service, error) {
-	logger := log.FromContext(ctx)
-	count, err := dal.DeleteStaleRunners(context.Background(), heartbeatTimeout)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to delete stale runners")
-	}
-	logger.Warnf("Deleted %d stale runners", count)
-	return &Service{
+	svc := &Service{
 		dal:               dal,
 		heartbeatTimeout:  heartbeatTimeout,
 		artefactChunkSize: artefactChunkSize,
-	}, nil
+	}
+	go svc.reapStaleRunners(ctx)
+	return svc, nil
 }
-
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (*connect.Response[ftlv1.DeployResponse], error) {
 	panic("unimplemented")
 }
@@ -110,6 +105,10 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 	if endpoint.Scheme != "http" && endpoint.Scheme != "https" {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Errorf("invalid endpoint scheme %q", endpoint.Scheme))
 	}
+	key, err := uuid.Parse(msg.Key)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.Wrap(err, "invalid key"))
+	}
 
 	// Check if we can contact the runner.
 	client := rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint.String())
@@ -119,7 +118,7 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to connect to runner"))
 	}
 
-	runnerID, err := s.dal.RegisterRunner(ctx, msg.Language, endpoint)
+	runnerID, err := s.dal.RegisterRunner(ctx, key, msg.Language, endpoint)
 	if errors.Is(err, dal.ErrConflict) {
 		return nil, connect.NewError(connect.CodeAlreadyExists, err)
 	} else if err != nil {
@@ -301,4 +300,22 @@ func (s *Service) getDeployment(ctx context.Context, key string) (*dal.Deploymen
 		return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "could not retrieve deployment"))
 	}
 	return deployment, nil
+}
+
+func (s *Service) reapStaleRunners(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	for {
+		count, err := s.dal.DeleteStaleRunners(context.Background(), s.heartbeatTimeout)
+		if err != nil {
+			logger.Errorf(err, "Failed to delete stale runners")
+		} else if count > 0 {
+			logger.Warnf("Deleted %d stale runners", count)
+		}
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-time.After(s.heartbeatTimeout):
+		}
+	}
 }
