@@ -1,6 +1,6 @@
-// Package runnergo contains a server that implements the RunnerService and
+// Package runner contains a server that implements the RunnerService and
 // proxies VerbService requests to user code.
-package runnergo
+package runner
 
 import (
 	context "context"

@@ -9,7 +9,7 @@ import (
 
 	_ "github.com/TBD54566975/ftl/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/common/log"
-	runner "github.com/TBD54566975/ftl/runner-go"
+	"github.com/TBD54566975/ftl/runner"
 )
 
 var version = "dev"
