@@ -51,7 +51,7 @@ func Start(ctx context.Context, config Config) error {
 	logger.Infof("Using FTL endpoint: %s", config.FTLEndpoint)
 	logger.Infof("Listening on %s", config.Endpoint)
 
-	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.FTLEndpoint.String())
+	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.FTLEndpoint.String(), log.Error)
 
 	svc := &Service{
 		key:                uuid.New(),

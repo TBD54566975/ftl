@@ -11,14 +11,14 @@ import (
 
 type Artefact struct {
 	ID        int64
-	CreatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
 	Digest    []byte
 	Content   []byte
 }
 
 type Deployment struct {
 	ID        int64
-	CreatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
 	ModuleID  int64
 	Key       uuid.UUID
 	Schema    []byte
@@ -27,7 +27,7 @@ type Deployment struct {
 type DeploymentArtefact struct {
 	ArtefactID   int64
 	DeploymentID int64
-	CreatedAt    pgtype.Timestamp
+	CreatedAt    pgtype.Timestamptz
 	Executable   bool
 	Path         string
 }
@@ -41,7 +41,7 @@ type Module struct {
 type Runner struct {
 	ID           int64
 	Key          uuid.UUID
-	LastSeen     pgtype.Timestamp
+	LastSeen     pgtype.Timestamptz
 	Language     string
 	Endpoint     string
 	DeploymentID pgtype.Int8

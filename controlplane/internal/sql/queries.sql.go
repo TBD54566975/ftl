@@ -162,7 +162,7 @@ WHERE d.key = $1
 
 type GetDeploymentRow struct {
 	ID         int64
-	CreatedAt  pgtype.Timestamp
+	CreatedAt  pgtype.Timestamptz
 	ModuleID   int64
 	Key        uuid.UUID
 	Schema     []byte
@@ -193,7 +193,7 @@ WHERE deployment_id = $1
 `
 
 type GetDeploymentArtefactsRow struct {
-	CreatedAt    pgtype.Timestamp
+	CreatedAt    pgtype.Timestamptz
 	ID           int64
 	Executable   bool
 	Path         string
@@ -276,7 +276,7 @@ WHERE EXISTS (
 
 type GetDeploymentsWithArtefactsRow struct {
 	ID        int64
-	CreatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
 	Key       uuid.UUID
 	Name      string
 }
@@ -350,7 +350,7 @@ ORDER BY created_at DESC LIMIT 1
 
 type GetLatestDeploymentRow struct {
 	ID         int64
-	CreatedAt  pgtype.Timestamp
+	CreatedAt  pgtype.Timestamptz
 	ModuleID   int64
 	Key        uuid.UUID
 	Schema     []byte
@@ -409,7 +409,7 @@ WHERE m.name = $1
 type GetRunnersForModuleRow struct {
 	ID            int64
 	Key           uuid.UUID
-	LastSeen      pgtype.Timestamp
+	LastSeen      pgtype.Timestamptz
 	Language      string
 	Endpoint      string
 	DeploymentID  pgtype.Int8
