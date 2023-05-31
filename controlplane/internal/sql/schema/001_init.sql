@@ -41,6 +41,8 @@ CREATE INDEX deployment_artefacts_deployment_id_idx ON deployment_artefacts (dep
 -- Runners are processes that are available to run modules.
 CREATE TABLE runners (
   id BIGSERIAL PRIMARY KEY NOT NULL,
+  -- Unique identifier for this runner, generated at startup.
+  key UUID UNIQUE NOT NULL,
   last_seen TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
   language VARCHAR(64) NOT NULL,
   endpoint VARCHAR(255) UNIQUE NOT NULL,

@@ -35,7 +35,7 @@ type Querier interface {
 	// Get all runners that are assigned to run the given module.
 	GetRunnersForModule(ctx context.Context, name string) ([]GetRunnersForModuleRow, error)
 	HeartbeatRunner(ctx context.Context, id int64) error
-	RegisterRunner(ctx context.Context, language string, endpoint string) (int64, error)
+	RegisterRunner(ctx context.Context, key uuid.UUID, language string, endpoint string) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)
