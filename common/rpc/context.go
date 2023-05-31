@@ -3,9 +3,10 @@ package rpc
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/common/log"
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+
+	"github.com/TBD54566975/ftl/common/log"
 )
 
 const ftlDirectRoutingHeader = "FTL-Direct"
