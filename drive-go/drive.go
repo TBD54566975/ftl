@@ -62,8 +62,8 @@ func Run(ctx context.Context, config Config) (*Server, error) {
 	}
 	s := &Server{
 		Config:         config,
-		agent:          rpc.Dial(ftlv1connect.NewDevelServiceClient, config.Endpoint.String()),
-		router:         rpc.Dial(ftlv1connect.NewVerbServiceClient, config.Endpoint.String()),
+		agent:          rpc.Dial(ftlv1connect.NewDevelServiceClient, config.Endpoint.String(), log.Error),
+		router:         rpc.Dial(ftlv1connect.NewVerbServiceClient, config.Endpoint.String(), log.Error),
 		module:         config.Module,
 		wg:             &errgroup.Group{},
 		goModule:       goModule,

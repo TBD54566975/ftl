@@ -63,6 +63,10 @@ func (l *Logger) Log(entry Entry) {
 	}
 }
 
+func (l *Logger) Logf(level Level, format string, args ...interface{}) {
+	l.Log(Entry{Level: level, Message: fmt.Sprintf(format, args...)})
+}
+
 func (l *Logger) Tracef(format string, args ...interface{}) {
 	l.Log(Entry{Level: Trace, Message: fmt.Sprintf(format, args...)})
 }

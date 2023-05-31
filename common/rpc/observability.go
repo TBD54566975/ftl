@@ -27,25 +27,29 @@ func IsDirectRouted(ctx context.Context) bool {
 	return ctx.Value(ftlDirectRoutingKey{}) != nil
 }
 
-func DefaultClientOptions() []connect.ClientOption {
+func DefaultClientOptions(level log.Level) []connect.ClientOption {
 	return []connect.ClientOption{
 		connect.WithGRPC(), // Use gRPC because some servers will not be using Connect.
-		connect.WithInterceptors(MetadataInterceptor()),
+		connect.WithInterceptors(MetadataInterceptor(level)),
 	}
 }
 
 func DefaultHandlerOptions() []connect.HandlerOption {
 	return []connect.HandlerOption{
-		connect.WithInterceptors(MetadataInterceptor()),
+		connect.WithInterceptors(MetadataInterceptor(log.Error)),
 	}
 }
 
 // MetadataInterceptor propagates FTL metadata through servers and clients.
-func MetadataInterceptor() connect.Interceptor {
-	return &metadataInterceptor{}
+func MetadataInterceptor(level log.Level) connect.Interceptor {
+	return &metadataInterceptor{
+		errorLevel: level,
+	}
 }
 
-type metadataInterceptor struct{}
+type metadataInterceptor struct {
+	errorLevel log.Level
+}
 
 func (*metadataInterceptor) WrapStreamingClient(req connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return func(ctx context.Context, s connect.Spec) connect.StreamingClientConn {
@@ -55,7 +59,7 @@ func (*metadataInterceptor) WrapStreamingClient(req connect.StreamingClientFunc)
 	}
 }
 
-func (*metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+func (m *metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (streaming handler)", s.Spec().Procedure)
@@ -68,17 +72,18 @@ func (*metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerFun
 		}
 		err := errors.WithStack(req(ctx, s))
 		if err != nil {
-			logger.Errorf(err, "Streaming RPC failed: %s", s.Spec().Procedure)
+			logger.Logf(m.errorLevel, "Streaming RPC failed: %s: %s", err, s.Spec().Procedure)
 			return err
 		}
 		return nil
 	}
 }
 
-func (*metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc {
+func (m *metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc {
 	return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (unary)", req.Spec().Procedure)
+
 		if req.Spec().IsClient {
 			if IsDirectRouted(ctx) {
 				req.Header().Set(ftlDirectRoutingHeader, "1")
@@ -89,7 +94,7 @@ func (*metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc {
 		resp, err := uf(ctx, req)
 		if err != nil {
 			err = errors.WithStack(err)
-			logger.Errorf(err, "Unary RPC failed: %s", req.Spec().Procedure)
+			logger.Logf(m.errorLevel, "Unary RPC failed: %s: %s", err, req.Spec().Procedure)
 			return nil, err
 		}
 		return resp, nil

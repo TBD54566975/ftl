@@ -19,7 +19,7 @@ var proxy = httputil.NewSingleHostReverseProxy(consoleURL)
 
 func Server(ctx context.Context) (http.Handler, error) {
 	logger := log.FromContext(ctx)
-	logger.Infof("Starting console dev server")
+	logger.Infof("Building console...")
 
 	err := exec.Command(ctx, "console", "npm", "install").Run()
 	if err != nil {
@@ -30,6 +30,8 @@ func Server(ctx context.Context) (http.Handler, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	logger.Infof("Console started")
+
 	return http.HandlerFunc(handler), nil
 }
 

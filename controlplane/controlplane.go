@@ -111,7 +111,7 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 	}
 
 	// Check if we can contact the runner.
-	client := rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint.String())
+	client := rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint.String(), log.Error)
 	retry := backoff.Backoff{}
 	err = rpc.Wait(ctx, retry, client)
 	if err != nil {
