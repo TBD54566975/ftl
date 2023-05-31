@@ -105,3 +105,7 @@ WHERE m.name = $1;
 UPDATE runners
 SET deployment_id = $2
 WHERE id = $1;
+
+-- name: InsertDeploymentLogEntry :exec
+INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, error)
+VALUES ((SELECT id FROM deployments WHERE key=$1 LIMIT 1)::UUID, $2, $3, $4, $5, $6);

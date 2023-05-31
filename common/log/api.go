@@ -27,13 +27,18 @@ type Level int
 // Log levels.
 const (
 	// Default is a special value that means the log level will use a default.
-	Default Level = iota - 1
-	Trace
-	Debug
-	Info
-	Warn
-	Error
+	Default Level = 0
+	Trace   Level = 1
+	Debug   Level = 5
+	Info    Level = 9
+	Warn    Level = 13
+	Error   Level = 17
 )
+
+// Severity returns the open telemetry severity of the log level.
+func (l Level) Severity() int {
+	return int(l)
+}
 
 type contextKey struct{}
 

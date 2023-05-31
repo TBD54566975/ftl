@@ -275,6 +275,8 @@ type ControlPlaneServiceClient interface {
 	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
 	// Starts a deployment.
 	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
+	// Stream logs from a deployment
+	StreamDeploymentLogs(context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
 
 // NewControlPlaneServiceClient constructs a client for the xyz.block.ftl.v1.ControlPlaneService
@@ -327,6 +329,11 @@ func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL stri
 			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/Deploy",
 			opts...,
 		),
+		streamDeploymentLogs: connect_go.NewClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse](
+			httpClient,
+			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs",
+			opts...,
+		),
 	}
 }
 
@@ -340,6 +347,7 @@ type controlPlaneServiceClient struct {
 	getDeploymentArtefacts *connect_go.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
 	registerRunner         *connect_go.Client[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
 	deploy                 *connect_go.Client[v1.DeployRequest, v1.DeployResponse]
+	streamDeploymentLogs   *connect_go.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.ControlPlaneService.Ping.
@@ -382,6 +390,11 @@ func (c *controlPlaneServiceClient) Deploy(ctx context.Context, req *connect_go.
 	return c.deploy.CallUnary(ctx, req)
 }
 
+// StreamDeploymentLogs calls xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs.
+func (c *controlPlaneServiceClient) StreamDeploymentLogs(ctx context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse] {
+	return c.streamDeploymentLogs.CallClientStream(ctx)
+}
+
 // ControlPlaneServiceHandler is an implementation of the xyz.block.ftl.v1.ControlPlaneService
 // service.
 type ControlPlaneServiceHandler interface {
@@ -407,6 +420,8 @@ type ControlPlaneServiceHandler interface {
 	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
 	// Starts a deployment.
 	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
+	// Stream logs from a deployment
+	StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error)
 }
 
 // NewControlPlaneServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -456,6 +471,11 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		svc.Deploy,
 		opts...,
 	))
+	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs", connect_go.NewClientStreamHandler(
+		"/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs",
+		svc.StreamDeploymentLogs,
+		opts...,
+	))
 	return "/xyz.block.ftl.v1.ControlPlaneService/", mux
 }
 
@@ -492,6 +512,10 @@ func (UnimplementedControlPlaneServiceHandler) RegisterRunner(context.Context, *
 
 func (UnimplementedControlPlaneServiceHandler) Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.Deploy is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs is not implemented"))
 }
 
 // RunnerServiceClient is a client for the xyz.block.ftl.v1.RunnerService service.

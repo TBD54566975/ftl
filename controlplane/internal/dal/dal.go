@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/maps"
 	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/common/slices"
@@ -264,6 +265,22 @@ func (d *DAL) GetRunnersForModule(ctx context.Context, module string) ([]Runner,
 			Deployment: types.Some(row.DeploymentKey),
 		}
 	}), nil
+}
+
+func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment uuid.UUID, logEntry log.Entry) error {
+	logError := pgtype.Text{}
+	if logEntry.Error != nil {
+		logError.String = logEntry.Error.Error()
+		logError.Valid = true
+	}
+	return errors.WithStack(d.db.InsertDeploymentLogEntry(ctx, sql.InsertDeploymentLogEntryParams{
+		Key:       deployment,
+		TimeStamp: pgtype.Timestamptz{Time: logEntry.Time, Valid: true},
+		Level:     int32(logEntry.Level.Severity()),
+		Scope:     strings.Join(logEntry.Scope, ":"),
+		Message:   logEntry.Message,
+		Error:     logError,
+	}))
 }
 
 func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploymentRow) (*Deployment, error) {
