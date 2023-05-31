@@ -10,6 +10,7 @@ type Sink interface {
 
 type Interface interface {
 	Log(entry Entry)
+	Logf(level Level, format string, args ...interface{})
 	Tracef(format string, args ...interface{})
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})

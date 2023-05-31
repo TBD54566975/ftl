@@ -57,7 +57,7 @@ func WithStartTimeout(timeout time.Duration) Option {
 func WithExtraClient[Client PingableClient](out *Client, makeClient rpc.ClientFactory[Client]) Option {
 	return func(po *pluginOptions) error {
 		po.additionalClients = append(po.additionalClients, func(baseURL string, opts ...connect.ClientOption) {
-			*out = rpc.Dial(makeClient, baseURL, opts...)
+			*out = rpc.Dial(makeClient, baseURL, log.Trace, opts...)
 		})
 		return nil
 	}
@@ -164,7 +164,7 @@ func Spawn[Client PingableClient](
 	defer cancel()
 
 	// Wait for the plugin to start.
-	client := rpc.Dial(makeClient, pluginEndpoint.String())
+	client := rpc.Dial(makeClient, pluginEndpoint.String(), log.Trace)
 	pingErr := make(chan error)
 	go func() {
 		retry := backoff.Backoff{Min: pluginRetryDelay, Max: pluginRetryDelay}

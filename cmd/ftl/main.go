@@ -86,6 +86,6 @@ func main() {
 
 func makeDialer[Client rpc.Pingable](newClient func(connect.HTTPClient, string, ...connect.ClientOption) Client) func() (Client, error) {
 	return func() (Client, error) {
-		return rpc.Dial(newClient, cli.Endpoint.String()), nil
+		return rpc.Dial(newClient, cli.Endpoint.String(), log.Error), nil
 	}
 }

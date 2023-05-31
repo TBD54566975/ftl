@@ -133,7 +133,7 @@ func startForTesting(t *testing.T) (*dal.DAL, ftlv1connect.ControlPlaneServiceCl
 	}
 
 	// Create client and wait for server to become live.
-	client := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, bind.String())
+	client := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, bind.String(), log.Error)
 
 	// Wait for the server to come up.
 	err = rpc.Wait(ctx, backoff.Backoff{Min: 100 * time.Millisecond, Max: 100 * time.Millisecond}, client)
