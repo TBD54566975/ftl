@@ -100,3 +100,19 @@ func (m *metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc 
 		return resp, nil
 	})
 }
+
+type clientKey[Client Pingable] struct{}
+
+// ContextWithClient returns a context with an RPC client attached.
+func ContextWithClient[Client Pingable](ctx context.Context, client Client) context.Context {
+	return context.WithValue(ctx, clientKey[Client]{}, client)
+}
+
+// ClientFromContext returns the given RPC client from the context, or panics.
+func ClientFromContext[Client Pingable](ctx context.Context) Client {
+	value := ctx.Value(clientKey[Client]{})
+	if value == nil {
+		panic("no RPC client in context")
+	}
+	return value.(Client) //nolint:forcetypeassert
+}

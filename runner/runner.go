@@ -28,7 +28,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/schema"
-	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 type Config struct {
@@ -40,7 +39,8 @@ type Config struct {
 }
 
 func Start(ctx context.Context, config Config) error {
-	ctx = sdkgo.ContextWithClient(ctx, config.FTLEndpoint)
+	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.FTLEndpoint.String(), log.Error)
+	ctx = rpc.ContextWithClient(ctx, client)
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting FTL runner")
 	logger.Infof("Deployment directory: %s", config.DeploymentDir)
@@ -60,7 +60,8 @@ func Start(ctx context.Context, config Config) error {
 	}
 	svc.registrationFailure.Store(types.Some(errors.New("not registered with ControlPlane")))
 
-	go svc.registrationLoop(ctx)
+	retry := backoff.Backoff{Max: config.HeartbeatPeriod, Jitter: true}
+	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlplaneClient.RegisterRunner, svc.registrationLoop)
 
 	reflector := grpcreflect.NewStaticReflector(ftlv1connect.RunnerServiceName, ftlv1connect.VerbServiceName)
 	return rpc.Serve(ctx, config.Endpoint,
@@ -72,6 +73,7 @@ func Start(ctx context.Context, config Config) error {
 }
 
 var _ ftlv1connect.RunnerServiceHandler = (*Service)(nil)
+var _ ftlv1connect.ObservabilityServiceHandler = (*Service)(nil)
 var _ http.Handler = (*Service)(nil)
 
 type pluginProxy struct {
@@ -97,6 +99,17 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "503 No deployment", http.StatusServiceUnavailable)
 	}
+}
+
+func (s *Service) SendMetrics(ctx context.Context, req *connect.ClientStream[ftlv1.SendMetricsRequest]) (*connect.Response[ftlv1.SendMetricsResponse], error) {
+	logger := log.FromContext(ctx)
+	for req.Receive() {
+		logger.Infof("Metrics: %s", req.Msg().Json)
+	}
+	if err := req.Err(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
+	}
+	return connect.NewResponse(&ftlv1.SendMetricsResponse{}), nil
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -151,7 +164,10 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 		deploymentDir,
 		"./main",
 		ftlv1connect.NewVerbServiceClient,
-		plugin.WithEnvars("FTL_ENDPOINT="+s.config.FTLEndpoint.String()),
+		plugin.WithEnvars(
+			"FTL_ENDPOINT="+s.config.FTLEndpoint.String(),
+			"FTL_OBSERVABILITY_ENDPOINT="+s.config.Endpoint.String(),
+		),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to spawn plugin")
@@ -167,35 +183,27 @@ func (s *Service) makePluginProxy(plugin *plugin.Plugin[ftlv1connect.VerbService
 	}
 }
 
-func (s *Service) registrationLoop(ctx context.Context) {
-	retry := backoff.Backoff{
-		Max:    s.config.HeartbeatPeriod,
-		Jitter: true,
-	}
+func (s *Service) registrationLoop(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.RegisterRunnerRequest, ftlv1.RegisterRunnerResponse]) (err error) {
 	logger := log.FromContext(ctx)
-	_ = rpc.RetryStreamingClientStream(ctx, retry, s.controlplaneClient.RegisterRunner,
-		func(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.RegisterRunnerRequest, ftlv1.RegisterRunnerResponse]) (err error) {
-			defer func() { s.registrationFailure.Store(types.Some(err)) }()
-			for {
-				err := stream.Send(&ftlv1.RegisterRunnerRequest{
-					Key:      s.key.String(),
-					Language: "go",
-					Endpoint: s.config.Endpoint.String(),
-				})
-				if err != nil {
-					_, err := stream.CloseAndReceive()
-					return errors.WithStack(err)
-				}
-				s.registrationFailure.Store(types.None[error]())
-				delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
-				logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
-				select {
-				case <-ctx.Done():
-					return errors.WithStack(context.Cause(ctx))
+	defer func() { s.registrationFailure.Store(types.Some(err)) }()
+	for {
+		err := stream.Send(&ftlv1.RegisterRunnerRequest{
+			Key:      s.key.String(),
+			Language: "go",
+			Endpoint: s.config.Endpoint.String(),
+		})
+		if err != nil {
+			_, err := stream.CloseAndReceive()
+			return errors.WithStack(err)
+		}
+		s.registrationFailure.Store(types.None[error]())
+		delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
+		logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
+		select {
+		case <-ctx.Done():
+			return errors.WithStack(context.Cause(ctx))
 
-				case <-time.After(delay):
-				}
-			}
-		},
-	)
+		case <-time.After(delay):
+		}
+	}
 }

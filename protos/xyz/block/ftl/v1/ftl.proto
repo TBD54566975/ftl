@@ -147,23 +147,14 @@ message DeployRequest {
 }
 message DeployResponse {}
 
-enum LogLevel {
-  TRACE = 0;
-  DEBUG = 1;
-  INFO = 2;
-  WARNING = 3;
-  ERROR = 4;
-}
-
 message StreamDeploymentLogsRequest {
   string deployment_key = 1;
   int64 time_stamp = 2;
-  LogLevel log_level = 3;
+  int32 log_level = 3;
   string scope = 4;
   string message = 5;
   optional string error = 6;
 }
-
 message StreamDeploymentLogsResponse {}
 
 service ControlPlaneService {
@@ -216,4 +207,17 @@ service RunnerService {
 
   // Initiate a deployment on this Runner.
   rpc DeployToRunner(DeployToRunnerRequest) returns (DeployToRunnerResponse);
+}
+
+message SendMetricsRequest {
+  bytes json = 1;
+}
+message SendMetricsResponse {}
+
+// ObservabilityService is the service that receives metrics from the Deployment.
+service ObservabilityService {
+  rpc Ping(PingRequest) returns (PingResponse);
+
+  // Send OTEL metrics from the Deployment to the ControlPlane via the Runner.
+  rpc SendMetrics(stream SendMetricsRequest) returns (SendMetricsResponse);
 }
