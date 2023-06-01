@@ -12,13 +12,15 @@ import (
 	"github.com/bufbuild/connect-go"
 	"github.com/iancoleman/strcase"
 
+	"github.com/TBD54566975/ftl/common/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
 // Call a Verb through the Agent.
 func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (resp Resp, err error) {
 	callee := ToVerbRef(verb)
-	client := ClientFromContext(ctx)
+	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	reqData, err := json.Marshal(req)
 	if err != nil {
 		return resp, errors.Wrapf(err, "%s: failed to marshal request", callee)
