@@ -70,6 +70,8 @@ func (e *MetricsExporter) Shutdown(ctx context.Context) error {
 }
 
 func (e *MetricsExporter) sendLoop(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.SendMetricsRequest, ftlv1.SendMetricsResponse]) error {
+	logger := log.FromContext(ctx)
+	logger.Infof("Metrics send loop started")
 	for {
 		select {
 		case <-ctx.Done():
@@ -79,12 +81,16 @@ func (e *MetricsExporter) sendLoop(ctx context.Context, stream *connect.ClientSt
 			if !ok {
 				return nil
 			}
+			logger.Infof("%s", event.Json)
 			if err := stream.Send(event); err != nil {
 				select {
 				case e.queue <- event:
 				default:
 					log.FromContext(ctx).Errorf(errors.WithStack(ErrDroppedEvent), "metrics queue full while handling error")
 				}
+
+				// TODO(wb): This eventually fails with "error:agent:time: unknown: write envelope: EOF: failed to send metrics"
+				logger.Errorf(err, "failed to send metrics")
 				return errors.WithStack(err)
 			}
 		}
