@@ -8,6 +8,38 @@ import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { Module, VerbRef } from "./schema/schema_pb.js";
 
 /**
+ * @generated from enum xyz.block.ftl.v1.RunnerState
+ */
+export enum RunnerState {
+  /**
+   * The Runner is waiting for a deployment.
+   *
+   * @generated from enum value: IDLE = 0;
+   */
+  IDLE = 0,
+
+  /**
+   * The Runner and Control Plane have agreed that the Runner is reserved.
+   *
+   * @generated from enum value: RESERVED = 1;
+   */
+  RESERVED = 1,
+
+  /**
+   * The Runner is assigned to a deployment.
+   *
+   * @generated from enum value: ASSIGNED = 2;
+   */
+  ASSIGNED = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(RunnerState)
+proto3.util.setEnumType(RunnerState, "xyz.block.ftl.v1.RunnerState", [
+  { no: 0, name: "IDLE" },
+  { no: 1, name: "RESERVED" },
+  { no: 2, name: "ASSIGNED" },
+]);
+
+/**
  * @generated from message xyz.block.ftl.v1.PingRequest
  */
 export class PingRequest extends Message<PingRequest> {
@@ -983,6 +1015,23 @@ export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
    */
   endpoint = "";
 
+  /**
+   * @generated from field: optional string deployment = 4;
+   */
+  deployment?: string;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.RunnerState state = 5;
+   */
+  state = RunnerState.IDLE;
+
+  /**
+   * If present, the reason the Runner is transitioning from ASSIGNED to IDLE.
+   *
+   * @generated from field: optional string error = 6;
+   */
+  error?: string;
+
   constructor(data?: PartialMessage<RegisterRunnerRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -994,6 +1043,9 @@ export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
+    { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RegisterRunnerRequest {

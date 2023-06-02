@@ -13,14 +13,14 @@ import (
 )
 
 type Querier interface {
-	AssignDeployment(ctx context.Context, iD int64, deploymentID pgtype.Int8) error
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
 	CreateModule(ctx context.Context, language string, name string) (int64, error)
 	DeleteStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
-	DeregisterRunner(ctx context.Context, id int64) error
+	DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error)
+	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
@@ -30,14 +30,19 @@ type Querier interface {
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
-	GetIdleRunnersForLanguage(ctx context.Context, language string) ([]Runner, error)
+	GetIdleRunnerCountsByLanguage(ctx context.Context) ([]GetIdleRunnerCountsByLanguageRow, error)
+	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error)
 	GetLatestDeployment(ctx context.Context, moduleName string) (GetLatestDeploymentRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
+	GetRoutingTable(ctx context.Context, name string) ([]string, error)
+	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnersState, error)
 	// Get all runners that are assigned to run the given module.
 	GetRunnersForModule(ctx context.Context, name string) ([]GetRunnersForModuleRow, error)
-	HeartbeatRunner(ctx context.Context, id int64) error
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
 	RegisterRunner(ctx context.Context, key sqltypes.Key, language string, endpoint string) (int64, error)
+	// Find idle runners and reserve them for the given deployment.
+	ReserveRunners(ctx context.Context, language string, limit int32, deploymentKey sqltypes.Key) (Runner, error)
+	UpdateRunner(ctx context.Context, key sqltypes.Key, state RunnersState, deploymentKey pgtype.UUID) (pgtype.Int8, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -22,7 +22,7 @@ import (
 )
 
 func TestControlPlaneRegisterRunnerHeartbeatClose(t *testing.T) {
-	t.Skip("Skipping flakey test for now")
+	t.Skip("Sometimes failing with 'timed out waiting for server to bind'")
 	db, client, bind, ctx := startForTesting(t)
 
 	stream := client.RegisterRunner(ctx)
@@ -44,19 +44,19 @@ func TestControlPlaneRegisterRunnerHeartbeatClose(t *testing.T) {
 	assert.NoError(t, err)
 
 	eventually(t, func() bool {
-		runners, err := db.GetIdleRunnersForLanguage(ctx, "go")
+		runners, err := db.GetIdleRunnersForLanguage(ctx, "go", 10)
 		assert.NoError(t, err)
 		return len(runners) > 0
 	})
 
-	runners, err := db.GetIdleRunnersForLanguage(ctx, "go")
+	runners, err := db.GetIdleRunnersForLanguage(ctx, "go", 10)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(runners))
 	assert.Zero(t, runners[0].Deployment)
 }
 
 func TestControlPlaneRegisterRunnerHeartbeatTimeout(t *testing.T) {
-	t.Skip("Skipping flakey test for now")
+	t.Skip("Sometimes failing with 'timed out waiting for server to bind'")
 	db, client, bind, ctx := startForTesting(t)
 
 	key := ulid.Make().String()
@@ -69,14 +69,14 @@ func TestControlPlaneRegisterRunnerHeartbeatTimeout(t *testing.T) {
 	assert.NoError(t, err)
 
 	eventually(t, func() bool {
-		runners, err := db.GetIdleRunnersForLanguage(ctx, "go")
+		runners, err := db.GetIdleRunnersForLanguage(ctx, "go", 10)
 		assert.NoError(t, err)
 		return len(runners) > 0
 	})
 	time.Sleep(time.Second + time.Millisecond*200)
 	_, err = stream.CloseAndReceive()
 	assert.EqualError(t, err, "deadline_exceeded: heartbeat timeout")
-	runners, err := db.GetIdleRunnersForLanguage(ctx, "go")
+	runners, err := db.GetIdleRunnersForLanguage(ctx, "go", 10)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(runners))
 }
@@ -98,7 +98,7 @@ func startForTesting(t *testing.T) (*dal.DAL, ftlv1connect.ControlPlaneServiceCl
 	t.Cleanup(cancel)
 
 	db := dal.New(sqltest.OpenForTesting(t))
-	svc, err := New(ctx, db, 1*time.Second, 1024*1024)
+	svc, err := New(ctx, db, 1*time.Second, 30*time.Second, 1024*1024)
 	assert.NoError(t, err)
 
 	combined := &combinedService{Service: svc}

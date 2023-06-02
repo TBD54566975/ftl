@@ -1,4 +1,4 @@
-package agent
+package moduleconfig
 
 import (
 	"path/filepath"

@@ -23,7 +23,7 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 		Body: []byte(c.Request),
 	}))
 	if err != nil {
-		return errors.Wrap(err, "FTL error")
+		return errors.WithStack(err)
 	}
 	switch resp := resp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Error_:

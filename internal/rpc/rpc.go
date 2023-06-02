@@ -121,23 +121,34 @@ func Wait(ctx context.Context, retry backoff.Backoff, client Pingable) error {
 
 // RetryStreamingClientStream will repeatedly call handler with the stream
 // returned by rpc until handler returns nil or the context is cancelled.
+//
+// If the stream errors, it will be closed and a new call will be issued.
 func RetryStreamingClientStream[Req, Resp any](
 	ctx context.Context,
 	retry backoff.Backoff,
 	rpc func(context.Context) *connect.ClientStreamForClient[Req, Resp],
-	handler func(context.Context, *connect.ClientStreamForClient[Req, Resp]) error,
+	handler func(ctx context.Context, send func(*Req) error) error,
 ) {
 	logger := log.FromContext(ctx)
 	for {
 		stream := rpc(ctx)
-		err := handler(ctx, stream)
-		if err == nil {
-			return
+		var err error
+		for {
+			err = handler(ctx, stream.Send)
+			if err != nil {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			retry.Reset()
 		}
 		_, _ = stream.CloseAndReceive()
 
 		delay := retry.Duration()
-		logger.Warnf("stream handler failed, retrying in %s: %s", delay, err)
+		logger.Warnf("Stream handler failed, retrying in %s: %s", delay, err)
 		select {
 		case <-ctx.Done():
 			return

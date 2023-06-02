@@ -10,7 +10,7 @@ newest() {
 cd "$dir"
 
 # Recompile if necessary.
-if [ ! -d target -o \( "$(newest ./src)" -nt "$(newest ./target)" \) ]; then
+if [ ! -d target ] || [ \( "$(newest ./src)" -nt "$(newest ./target)" \) ]; then
   mvn compile
 fi
 

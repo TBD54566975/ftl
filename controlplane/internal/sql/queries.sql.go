@@ -13,17 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 )
 
-const assignDeployment = `-- name: AssignDeployment :exec
-UPDATE runners
-SET deployment_id = $2
-WHERE id = $1
-`
-
-func (q *Queries) AssignDeployment(ctx context.Context, iD int64, deploymentID pgtype.Int8) error {
-	_, err := q.db.Exec(ctx, assignDeployment, iD, deploymentID)
-	return err
-}
-
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
 VALUES ((SELECT id FROM deployments WHERE key = $1), $2, $3, $4)
@@ -71,7 +60,8 @@ func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, module
 }
 
 const createModule = `-- name: CreateModule :one
-INSERT INTO modules (language, name) VALUES ($1, $2)
+INSERT INTO modules (language, name)
+VALUES ($1, $2)
 ON CONFLICT (name) DO UPDATE SET language = $1
 RETURNING id
 `
@@ -85,11 +75,11 @@ func (q *Queries) CreateModule(ctx context.Context, language string, name string
 
 const deleteStaleRunners = `-- name: DeleteStaleRunners :one
 WITH deleted AS (
-  DELETE FROM runners
-  WHERE last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
-  RETURNING id, key, last_seen, language, endpoint, deployment_id
-)
-SELECT COUNT(*) FROM deleted
+    DELETE FROM runners
+        WHERE last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+        RETURNING 1)
+SELECT COUNT(*)
+FROM deleted
 `
 
 func (q *Queries) DeleteStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error) {
@@ -99,13 +89,40 @@ func (q *Queries) DeleteStaleRunners(ctx context.Context, dollar_1 pgtype.Interv
 	return count, err
 }
 
-const deregisterRunner = `-- name: DeregisterRunner :exec
-DELETE FROM runners WHERE id = $1
+const deregisterRunner = `-- name: DeregisterRunner :one
+WITH deleted AS (
+    DELETE FROM runners WHERE key = $1
+        RETURNING 1)
+SELECT COUNT(*)
+FROM deleted
 `
 
-func (q *Queries) DeregisterRunner(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deregisterRunner, id)
-	return err
+func (q *Queries) DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error) {
+	row := q.db.QueryRow(ctx, deregisterRunner, key)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const expireRunnerReservations = `-- name: ExpireRunnerReservations :one
+WITH rows AS (
+    UPDATE runners
+        SET state = 'idle',
+            deployment_id = NULL,
+            reservation_timeout = NULL
+    WHERE state = 'reserved'
+        AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
+    RETURNING 1
+)
+SELECT COUNT(*)
+FROM rows
+`
+
+func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, expireRunnerReservations)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getArtefactContentRange = `-- name: GetArtefactContentRange :one
@@ -122,7 +139,9 @@ func (q *Queries) GetArtefactContentRange(ctx context.Context, start int32, coun
 }
 
 const getArtefactDigests = `-- name: GetArtefactDigests :many
-SELECT id, digest FROM artefacts WHERE digest = ANY($1::bytea[])
+SELECT id, digest
+FROM artefacts
+WHERE digest = ANY ($1::bytea[])
 `
 
 type GetArtefactDigestsRow struct {
@@ -154,7 +173,7 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 const getDeployment = `-- name: GetDeployment :one
 SELECT d.id, d.created_at, d.module_id, d.key, d.schema, m.language, m.name AS module_name
 FROM deployments d
-INNER JOIN modules m ON m.id = d.module_id
+         INNER JOIN modules m ON m.id = d.module_id
 WHERE d.key = $1
 `
 
@@ -186,7 +205,7 @@ func (q *Queries) GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeplo
 const getDeploymentArtefacts = `-- name: GetDeploymentArtefacts :many
 SELECT da.created_at, artefact_id AS id, executable, path, digest, executable
 FROM deployment_artefacts da
-INNER JOIN artefacts ON artefacts.id = da.artefact_id
+         INNER JOIN artefacts ON artefacts.id = da.artefact_id
 WHERE deployment_id = $1
 `
 
@@ -228,7 +247,8 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 }
 
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many
-SELECT id, created_at, module_id, key, schema FROM deployments
+SELECT id, created_at, module_id, key, schema
+FROM deployments
 WHERE id = ANY($1::BIGINT[])
 `
 
@@ -261,14 +281,13 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 const getDeploymentsWithArtefacts = `-- name: GetDeploymentsWithArtefacts :many
 SELECT d.id, d.created_at, d.key, m.name
 FROM deployments d
-INNER JOIN modules m ON d.module_id = m.id
-WHERE EXISTS (
-  SELECT 1
-  FROM deployment_artefacts da
-  INNER JOIN artefacts a ON da.artefact_id = a.id
-  WHERE a.digest = ANY($1::bytea[])
-    AND da.deployment_id = d.id
-  HAVING COUNT(*) = $2 -- Number of unique digests provided
+         INNER JOIN modules m ON d.module_id = m.id
+WHERE EXISTS (SELECT 1
+              FROM deployment_artefacts da
+                       INNER JOIN artefacts a ON da.artefact_id = a.id
+              WHERE a.digest = ANY ($1::bytea[])
+                AND da.deployment_id = d.id
+              HAVING COUNT(*) = $2 -- Number of unique digests provided
 )
 `
 
@@ -305,14 +324,48 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 	return items, nil
 }
 
-const getIdleRunnersForLanguage = `-- name: GetIdleRunnersForLanguage :many
-SELECT id, key, last_seen, language, endpoint, deployment_id FROM runners
-WHERE language = $1
-  AND deployment_id IS NULL
+const getIdleRunnerCountsByLanguage = `-- name: GetIdleRunnerCountsByLanguage :many
+SELECT language, COUNT(*) AS count
+FROM runners
+WHERE state = 'idle'
+GROUP BY language
+ORDER BY language
 `
 
-func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string) ([]Runner, error) {
-	rows, err := q.db.Query(ctx, getIdleRunnersForLanguage, language)
+type GetIdleRunnerCountsByLanguageRow struct {
+	Language string
+	Count    int64
+}
+
+func (q *Queries) GetIdleRunnerCountsByLanguage(ctx context.Context) ([]GetIdleRunnerCountsByLanguageRow, error) {
+	rows, err := q.db.Query(ctx, getIdleRunnerCountsByLanguage)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetIdleRunnerCountsByLanguageRow
+	for rows.Next() {
+		var i GetIdleRunnerCountsByLanguageRow
+		if err := rows.Scan(&i.Language, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getIdleRunnersForLanguage = `-- name: GetIdleRunnersForLanguage :many
+SELECT id, key, last_seen, reservation_timeout, state, language, endpoint, deployment_id FROM runners
+WHERE language = $1
+  AND state = 'idle'
+LIMIT $2
+`
+
+func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error) {
+	rows, err := q.db.Query(ctx, getIdleRunnersForLanguage, language, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -324,6 +377,8 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 			&i.ID,
 			&i.Key,
 			&i.LastSeen,
+			&i.ReservationTimeout,
+			&i.State,
 			&i.Language,
 			&i.Endpoint,
 			&i.DeploymentID,
@@ -341,9 +396,10 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 const getLatestDeployment = `-- name: GetLatestDeployment :one
 SELECT d.id, d.created_at, d.module_id, d.key, d.schema, m.language, m.name AS module_name
 FROM deployments d
-INNER JOIN modules m ON m.id = d.module_id
+         INNER JOIN modules m ON m.id = d.module_id
 WHERE m.name = $1
-ORDER BY created_at DESC LIMIT 1
+ORDER BY created_at DESC
+LIMIT 1
 `
 
 type GetLatestDeploymentRow struct {
@@ -372,7 +428,8 @@ func (q *Queries) GetLatestDeployment(ctx context.Context, moduleName string) (G
 }
 
 const getModulesByID = `-- name: GetModulesByID :many
-SELECT id, language, name FROM modules
+SELECT id, language, name
+FROM modules
 WHERE id = ANY($1::BIGINT[])
 `
 
@@ -396,24 +453,70 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 	return items, nil
 }
 
-const getRunnersForModule = `-- name: GetRunnersForModule :many
-SELECT r.id, r.key, r.last_seen, r.language, r.endpoint, r.deployment_id, d.key AS deployment_key, m.id AS module_id, m.name AS module_name
+const getRoutingTable = `-- name: GetRoutingTable :many
+SELECT endpoint
 FROM runners r
-JOIN deployments d ON r.deployment_id = d.id
-JOIN modules m ON d.module_id = m.id
+WHERE state = 'assigned'
+  AND r.deployment_id = COALESCE((SELECT d.id
+                                  FROM deployments d
+                                           INNER JOIN modules m ON d.module_id = m.id
+                                  WHERE m.name = $1), -1)
+`
+
+func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]string, error) {
+	rows, err := q.db.Query(ctx, getRoutingTable, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var endpoint string
+		if err := rows.Scan(&endpoint); err != nil {
+			return nil, err
+		}
+		items = append(items, endpoint)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRunnerState = `-- name: GetRunnerState :one
+SELECT state
+FROM runners
+WHERE key = $1
+`
+
+func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnersState, error) {
+	row := q.db.QueryRow(ctx, getRunnerState, key)
+	var state RunnersState
+	err := row.Scan(&state)
+	return state, err
+}
+
+const getRunnersForModule = `-- name: GetRunnersForModule :many
+SELECT r.id, r.key, r.last_seen, r.reservation_timeout, r.state, r.language, r.endpoint, r.deployment_id, d.key AS deployment_key, m.id AS module_id, m.name AS module_name
+FROM runners r
+         JOIN deployments d ON r.deployment_id = d.id
+         JOIN modules m ON d.module_id = m.id
 WHERE m.name = $1
+  AND r.state = 'assigned'
 `
 
 type GetRunnersForModuleRow struct {
-	ID            int64
-	Key           sqltypes.Key
-	LastSeen      pgtype.Timestamptz
-	Language      string
-	Endpoint      string
-	DeploymentID  pgtype.Int8
-	DeploymentKey sqltypes.Key
-	ModuleID      int64
-	ModuleName    string
+	ID                 int64
+	Key                sqltypes.Key
+	LastSeen           pgtype.Timestamptz
+	ReservationTimeout pgtype.Timestamptz
+	State              RunnersState
+	Language           string
+	Endpoint           string
+	DeploymentID       pgtype.Int8
+	DeploymentKey      sqltypes.Key
+	ModuleID           int64
+	ModuleName         string
 }
 
 // Get all runners that are assigned to run the given module.
@@ -430,6 +533,8 @@ func (q *Queries) GetRunnersForModule(ctx context.Context, name string) ([]GetRu
 			&i.ID,
 			&i.Key,
 			&i.LastSeen,
+			&i.ReservationTimeout,
+			&i.State,
 			&i.Language,
 			&i.Endpoint,
 			&i.DeploymentID,
@@ -445,15 +550,6 @@ func (q *Queries) GetRunnersForModule(ctx context.Context, name string) ([]GetRu
 		return nil, err
 	}
 	return items, nil
-}
-
-const heartbeatRunner = `-- name: HeartbeatRunner :exec
-UPDATE runners SET last_seen = (NOW() AT TIME ZONE 'utc') WHERE id = $1
-`
-
-func (q *Queries) HeartbeatRunner(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, heartbeatRunner, id)
-	return err
 }
 
 const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec
@@ -483,8 +579,11 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 }
 
 const registerRunner = `-- name: RegisterRunner :one
-INSERT INTO runners (key, language, endpoint) VALUES ($1, $2, $3)
-ON CONFLICT (key) DO UPDATE SET language = $2, endpoint = $3
+INSERT
+INTO runners (key, language, endpoint)
+VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET language = $2,
+                                endpoint = $3
 RETURNING id
 `
 
@@ -493,4 +592,55 @@ func (q *Queries) RegisterRunner(ctx context.Context, key sqltypes.Key, language
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const reserveRunners = `-- name: ReserveRunners :one
+UPDATE runners
+SET state         = 'reserved',
+    deployment_id = COALESCE((SELECT id
+                              FROM deployments d
+                              WHERE d.key = $3
+                              LIMIT 1), -1)
+WHERE id = (SELECT id
+            FROM runners r
+            WHERE r.language = $1
+              AND r.state = 'idle'
+            LIMIT $2 FOR UPDATE SKIP LOCKED)
+RETURNING runners.id, runners.key, runners.last_seen, runners.reservation_timeout, runners.state, runners.language, runners.endpoint, runners.deployment_id
+`
+
+// Find idle runners and reserve them for the given deployment.
+func (q *Queries) ReserveRunners(ctx context.Context, language string, limit int32, deploymentKey sqltypes.Key) (Runner, error) {
+	row := q.db.QueryRow(ctx, reserveRunners, language, limit, deploymentKey)
+	var i Runner
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.LastSeen,
+		&i.ReservationTimeout,
+		&i.State,
+		&i.Language,
+		&i.Endpoint,
+		&i.DeploymentID,
+	)
+	return i, err
+}
+
+const updateRunner = `-- name: UpdateRunner :one
+UPDATE runners r
+SET state         = $2,
+    last_seen     = (NOW() AT TIME ZONE 'utc'),
+    deployment_id = COALESCE((SELECT id
+                              FROM deployments d
+                              WHERE d.key = $3
+                              LIMIT 1), -1)
+WHERE r.key = $1
+RETURNING r.deployment_id
+`
+
+func (q *Queries) UpdateRunner(ctx context.Context, key sqltypes.Key, state RunnersState, deploymentKey pgtype.UUID) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, updateRunner, key, state, deploymentKey)
+	var deployment_id pgtype.Int8
+	err := row.Scan(&deployment_id)
+	return deployment_id, err
 }

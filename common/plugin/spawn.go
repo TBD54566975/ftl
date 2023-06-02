@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -104,6 +105,10 @@ func Spawn[Client PingableClient](
 		}
 	}
 	workingDir := filepath.Join(dir, ".ftl")
+	err = os.Mkdir(workingDir, 0700)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return nil, nil, errors.WithStack(err)
+	}
 
 	// Clean up previous process.
 	pidFile := filepath.Join(workingDir, filepath.Base(exe)+".pid")
