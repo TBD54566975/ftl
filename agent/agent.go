@@ -174,6 +174,17 @@ func (a *Agent) Wait() error {
 	return errors.WithStack(a.wg.Wait())
 }
 
+func (a *Agent) SendTraces(ctx context.Context, req *connect.ClientStream[ftlv1.SendTracesRequest]) (*connect.Response[ftlv1.SendTracesResponse], error) {
+	logger := log.FromContext(ctx)
+	for req.Receive() {
+		logger.Infof("Traces: %s", req.Msg().Json)
+	}
+	if err := req.Err(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
+	}
+	return connect.NewResponse(&ftlv1.SendTracesResponse{}), nil
+}
+
 func (a *Agent) SendMetrics(ctx context.Context, req *connect.ClientStream[ftlv1.SendMetricsRequest]) (*connect.Response[ftlv1.SendMetricsResponse], error) {
 	logger := log.FromContext(ctx)
 	for req.Receive() {

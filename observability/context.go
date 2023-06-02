@@ -4,7 +4,24 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
+
+type tracerProviderKey struct{}
+
+// ContextWithTracerProvider returns a context with an otel TracerProvider
+func ContextWithTracerProvider(ctx context.Context, tp *trace.TracerProvider) context.Context {
+	return context.WithValue(ctx, tracerProviderKey{}, tp)
+}
+
+// TracerProviderFromContext returns the otel TracerProvider or panics
+func TracerProviderFromContext(ctx context.Context) *trace.TracerProvider {
+	value := ctx.Value(tracerProviderKey{})
+	if value == nil {
+		panic("no otel TracerProvider in context")
+	}
+	return value.(*trace.TracerProvider) //nolint:forcetypeassert
+}
 
 type meterProviderKey struct{}
 

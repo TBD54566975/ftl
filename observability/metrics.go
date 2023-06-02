@@ -17,7 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-var ErrDroppedEvent = errors.New("observability event dropped")
+var ErrDroppedMetricEvent = errors.New("observability metric event dropped")
 
 type MetricsExporterConfig struct {
 	MetricsBuffer int `default:"1048576" help:"Number of metrics to buffer before dropping."`
@@ -55,7 +55,7 @@ func (e *MetricsExporter) Export(ctx context.Context, metrics *metricdata.Resour
 	select {
 	case e.queue <- &ftlv1.SendMetricsRequest{Json: data}:
 	default:
-		return errors.WithStack(ErrDroppedEvent)
+		return errors.WithStack(ErrDroppedMetricEvent)
 	}
 	return nil
 }
@@ -86,7 +86,7 @@ func (e *MetricsExporter) sendLoop(ctx context.Context, stream *connect.ClientSt
 				select {
 				case e.queue <- event:
 				default:
-					log.FromContext(ctx).Errorf(errors.WithStack(ErrDroppedEvent), "metrics queue full while handling error")
+					log.FromContext(ctx).Errorf(errors.WithStack(ErrDroppedMetricEvent), "metrics queue full while handling error")
 				}
 
 				// TODO(wb): This eventually fails with "error:agent:time: unknown: write envelope: EOF: failed to send metrics"

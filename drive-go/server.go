@@ -9,6 +9,7 @@ import (
 	"github.com/bufbuild/connect-go"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/TBD54566975/ftl/common/log"
@@ -42,7 +43,9 @@ func NewUserVerbServer(handlers ...Handler) plugin.Constructor[ftlv1connect.Verb
 		ctx = rpc.ContextWithClient(ctx, observabilityServiceClient)
 
 		// TODO(wb): Do we want to put the meter provider in the context? If so we probably want the Trace and Log stuff there as well
-		ctx = observability.ContextWithMeterProvider(ctx, initOpenTelemetry(ctx, observabilityServiceClient))
+		tracer, meter := initOpenTelemetry(ctx, observabilityServiceClient)
+		ctx = observability.ContextWithTracerProvider(ctx, tracer)
+		ctx = observability.ContextWithMeterProvider(ctx, meter)
 		hmap := map[sdkgo.VerbRef]Handler{}
 		for _, handler := range handlers {
 			hmap[handler.ref] = handler
@@ -123,23 +126,34 @@ func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.Ping
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
-func initOpenTelemetry(ctx context.Context, observabilityServiceClient ftlv1connect.ObservabilityServiceClient) *metric.MeterProvider {
+func initOpenTelemetry(ctx context.Context, observabilityServiceClient ftlv1connect.ObservabilityServiceClient) (*trace.TracerProvider, *metric.MeterProvider) {
 	logger := log.FromContext(ctx)
 	logger.Infof("initOpenTelemetry...")
 
-	// TODO(wb): How to get MetricsExporterConfig values here? Hardcoded for now.
-	exporter := observability.NewMetricsExporter(ctx, observabilityServiceClient, observability.MetricsExporterConfig{MetricsBuffer: 1048576})
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceName("verb"),
 	)
+
+	logger.Infof("Initializing TracesExporter...")
+	spanExporter := observability.NewSpanExporter(ctx, observabilityServiceClient, observability.SpanExporterConfig{TracesBuffer: 1048576})
+
+	tp := trace.NewTracerProvider(
+		trace.WithBatcher(spanExporter),
+		trace.WithResource(res))
+
+	logger.Infof("Initializing MetricsExporter...")
+
+	// TODO(wb): How to get MetricsExporterConfig values here? Hardcoded for now.
+	metricsExporter := observability.NewMetricsExporter(ctx, observabilityServiceClient, observability.MetricsExporterConfig{MetricsBuffer: 1048576})
+
 	provider := metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(exporter)),
+		metric.WithReader(metric.NewPeriodicReader(metricsExporter)),
 	)
 
 	// TODO(wb): Alternatively we could add this to the global otel
 	// otel.SetMeterProvider(provider)
 
-	return provider
+	return tp, provider
 }
