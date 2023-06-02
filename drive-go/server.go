@@ -3,27 +3,39 @@ package drivego
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
+	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/common/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
-type UserVerbConfig struct{}
+type UserVerbConfig struct {
+	FTLEndpoint              *url.URL `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
+	FTLObservabilityEndpoint *url.URL `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" required:""`
+}
 
 // NewUserVerbServer starts a new code-generated drive for user Verbs.
 //
 // This function is intended to be used by the code generator.
-func NewUserVerbServer(handlers ...Handler) func(context.Context, UserVerbConfig) (ftlv1connect.VerbServiceHandler, error) {
-	return func(ctx context.Context, mc UserVerbConfig) (ftlv1connect.VerbServiceHandler, error) {
+func NewUserVerbServer(handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
+	return func(ctx context.Context, mc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
+		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, mc.FTLEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
+		observabilityServiceClient := rpc.Dial(ftlv1connect.NewObservabilityServiceClient, mc.FTLObservabilityEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, observabilityServiceClient)
+		// TODO(wb): Initialse OTEL here.
 		hmap := map[sdkgo.VerbRef]Handler{}
 		for _, handler := range handlers {
 			hmap[handler.ref] = handler
 		}
-		return &moduleServer{handlers: hmap}, nil
+		return ctx, &moduleServer{handlers: hmap}, nil
 	}
 }
 

@@ -71,6 +71,8 @@ func RegisterAdditionalHandler[Impl any](path string, handler http.Handler) Star
 	}
 }
 
+type Constructor[Impl any, Config any] func(context.Context, Config) (context.Context, Impl, error)
+
 // Start a gRPC server plugin listening on the socket specified by the
 // environment variable FTL_PLUGIN_ENDPOINT.
 //
@@ -82,7 +84,7 @@ func RegisterAdditionalHandler[Impl any](path string, handler http.Handler) Star
 func Start[Impl any, Iface any, Config any](
 	ctx context.Context,
 	name string,
-	create func(context.Context, Config) (Impl, error),
+	create Constructor[Impl, Config],
 	servicePath string,
 	register ConnectHandlerFactory[Iface],
 	options ...StartOption[Impl],
@@ -126,7 +128,7 @@ func Start[Impl any, Iface any, Config any](
 		os.Exit(0)
 	}()
 
-	svc, err := create(ctx, config)
+	ctx, svc, err := create(ctx, config)
 	kctx.FatalIfErrorf(err)
 
 	if _, ok := any(svc).(Iface); !ok {

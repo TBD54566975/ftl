@@ -52,6 +52,7 @@ type Agent struct {
 
 var _ ftlv1connect.VerbServiceHandler = (*Agent)(nil)
 var _ ftlv1connect.DevelServiceHandler = (*Agent)(nil)
+var _ ftlv1connect.ObservabilityServiceHandler = (*Agent)(nil)
 
 // New creates a new local agent.
 func New(ctx context.Context, listen *url.URL) (*Agent, error) {
@@ -128,6 +129,7 @@ func (a *Agent) Manage(ctx context.Context, dir string) (err error) {
 			"FTL_MODULE="+config.Module,
 			// Used by sub-processes to call back into FTL.
 			"FTL_ENDPOINT="+a.listen.String(),
+			"FTL_OBSERVABILITY_ENDPOINT="+a.listen.String(),
 		),
 		plugin.WithExtraClient(&develClient, ftlv1connect.NewDevelServiceClient),
 	)
@@ -170,6 +172,17 @@ func (a *Agent) Manage(ctx context.Context, dir string) (err error) {
 
 func (a *Agent) Wait() error {
 	return errors.WithStack(a.wg.Wait())
+}
+
+func (a *Agent) SendMetrics(ctx context.Context, req *connect.ClientStream[ftlv1.SendMetricsRequest]) (*connect.Response[ftlv1.SendMetricsResponse], error) {
+	logger := log.FromContext(ctx)
+	for req.Receive() {
+		logger.Infof("Metrics: %s", req.Msg().Json)
+	}
+	if err := req.Err(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
+	}
+	return connect.NewResponse(&ftlv1.SendMetricsResponse{}), nil
 }
 
 func (a *Agent) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
