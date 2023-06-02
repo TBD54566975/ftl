@@ -29,7 +29,10 @@ type MetricsExporter struct {
 }
 
 func NewMetricsExporter(ctx context.Context, client ftlv1connect.ObservabilityServiceClient, config MetricsExporterConfig) *MetricsExporter {
-	e := &MetricsExporter{client: client, queue: make(chan *ftlv1.SendMetricsRequest, config.MetricsBuffer)}
+	e := &MetricsExporter{
+		client: client,
+		queue:  make(chan *ftlv1.SendMetricsRequest, config.MetricsBuffer),
+	}
 	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, e.client.SendMetrics, e.sendLoop)
 	return e
 }

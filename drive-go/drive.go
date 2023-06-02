@@ -49,16 +49,16 @@ type Config struct {
 }
 
 // Run creates and starts a new DevelService for a directory of Go Verbs.
-func Run(ctx context.Context, config Config) (*Server, error) {
+func Run(ctx context.Context, config Config) (context.Context, *Server, error) {
 	logger := log.FromContext(ctx)
 	goModFile := filepath.Join(config.Dir, "go.mod")
 	_, err := os.Stat(goModFile)
 	if err != nil {
-		return nil, errors.Wrapf(err, "go.mod not found in %s", config.Dir)
+		return nil, nil, errors.Wrapf(err, "go.mod not found in %s", config.Dir)
 	}
 	goModule, err := findGoModule(goModFile)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 	s := &Server{
 		Config:         config,
@@ -78,20 +78,20 @@ func Run(ctx context.Context, config Config) (*Server, error) {
 	// Build and start the sub-process.
 	exe, err := s.rebuild(ctx)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 
 	plugin, cmdCtx, err := plugin.Spawn(ctx, "", s.Config.Dir, exe, ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars("FTL_MODULE="+s.module))
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 	s.plugin.Store(plugin)
 
 	s.wg.Go(func() error { return s.restartModuleOnExit(ctx, cmdCtx) })
 
 	logger.Infof("Online")
-	return s, nil
+	return ctx, s, nil
 }
 
 var _ ftlv1connect.DevelServiceHandler = (*Server)(nil)
@@ -474,33 +474,22 @@ func generate(config Config) (*codewriter.Writer, error) {
 	}
 
 	w := codewriter.New("main")
-	w.Import("os")
 	w.Import("context")
-	w.Import("net/url")
 	w.Import("github.com/TBD54566975/ftl/drive-go")
-	w.Import("github.com/TBD54566975/ftl/common/log")
 	w.Import("github.com/TBD54566975/ftl/common/plugin")
-	w.Import("github.com/TBD54566975/ftl/common/rpc")
 	w.Import(`github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect`)
 
 	w.L(`func main() {`)
 	w.In(func(w *codewriter.Writer) {
-		w.L(`ftlEndpoint, err := url.Parse(os.Getenv("FTL_ENDPOINT"))`)
-		w.L(`if err != nil { panic(err) }`)
-		w.L(`verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, ftlEndpoint.String(), log.Error)`)
-		w.L(`ctx := rpc.ContextWithClient(context.Background(), verbServiceClient)`)
-		w.L(`observabilityEndpoint, err := url.Parse(os.Getenv("FTL_OBSERVABILITY_ENDPOINT"))`)
-		w.L(`if err != nil { panic(err) }`)
-		w.L(`observabilityServiceClient := rpc.Dial(ftlv1connect.NewObservabilityServiceClient, observabilityEndpoint.String(), log.Error)`)
-		w.L(`ctx = rpc.ContextWithClient(ctx, observabilityServiceClient)`)
-		w.L(`plugin.Start(ctx, %q, drivego.NewUserVerbServer(`, config.Module)
+		w.L(`verbConstructor := drivego.NewUserVerbServer(`)
 		for pkg, endpoints := range endpoints {
 			pkgImp := w.Import(pkg)
 			for _, endpoint := range endpoints {
 				w.L(`  drivego.Handle(%s.%s),`, pkgImp, endpoint.fn.Name())
 			}
 		}
-		w.L(`), ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)`)
+		w.L(`)`)
+		w.L(`plugin.Start(context.Background(), %q, verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)`, config.Module)
 	})
 
 	w.L(`}`)
