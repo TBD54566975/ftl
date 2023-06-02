@@ -46,9 +46,12 @@ type startOptions[Impl any] struct {
 	handlers []handlerPath
 }
 
+// StartOption is an option for Start.
 type StartOption[Impl any] func(*startOptions[Impl])
 
 // ConnectHandlerFactory is a type alias for a function that creates a new Connect request handler.
+//
+// This will typically just be the generated NewXYZHandler function.
 type ConnectHandlerFactory[Iface any] func(Iface, ...connect.HandlerOption) (string, http.Handler)
 
 // RegisterAdditionalServer allows a plugin to serve additional gRPC services.
@@ -71,6 +74,7 @@ func RegisterAdditionalHandler[Impl any](path string, handler http.Handler) Star
 	}
 }
 
+// Constructor is a function that creates a new plugin server implementation.
 type Constructor[Impl any, Config any] func(context.Context, Config) (context.Context, Impl, error)
 
 // Start a gRPC server plugin listening on the socket specified by the
