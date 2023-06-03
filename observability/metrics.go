@@ -3,6 +3,7 @@ package observability
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
@@ -17,10 +18,11 @@ import (
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-var ErrDroppedEvent = errors.New("observability event dropped")
+var ErrDroppedMetricEvent = errors.New("observability metric event dropped")
 
 type MetricsExporterConfig struct {
-	MetricsBuffer int `default:"1048576" help:"Number of metrics to buffer before dropping."`
+	Buffer   int           `default:"1048576" help:"Number of metrics to buffer before dropping."`
+	Interval time.Duration `default:"30s" help:"Interval to export metrics."`
 }
 
 type MetricsExporter struct {
@@ -31,7 +33,7 @@ type MetricsExporter struct {
 func NewMetricsExporter(ctx context.Context, client ftlv1connect.ObservabilityServiceClient, config MetricsExporterConfig) *MetricsExporter {
 	e := &MetricsExporter{
 		client: client,
-		queue:  make(chan *ftlv1.SendMetricsRequest, config.MetricsBuffer),
+		queue:  make(chan *ftlv1.SendMetricsRequest, config.Buffer),
 	}
 	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, e.client.SendMetrics, e.sendLoop)
 	return e
@@ -55,7 +57,7 @@ func (e *MetricsExporter) Export(ctx context.Context, metrics *metricdata.Resour
 	select {
 	case e.queue <- &ftlv1.SendMetricsRequest{Json: data}:
 	default:
-		return errors.WithStack(ErrDroppedEvent)
+		return errors.WithStack(ErrDroppedMetricEvent)
 	}
 	return nil
 }
@@ -70,6 +72,8 @@ func (e *MetricsExporter) Shutdown(ctx context.Context) error {
 }
 
 func (e *MetricsExporter) sendLoop(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.SendMetricsRequest, ftlv1.SendMetricsResponse]) error {
+	logger := log.FromContext(ctx)
+	logger.Infof("Metrics send loop started")
 	for {
 		select {
 		case <-ctx.Done():
@@ -79,11 +83,12 @@ func (e *MetricsExporter) sendLoop(ctx context.Context, stream *connect.ClientSt
 			if !ok {
 				return nil
 			}
+			logger.Infof("%s", event.Json)
 			if err := stream.Send(event); err != nil {
 				select {
 				case e.queue <- event:
 				default:
-					log.FromContext(ctx).Errorf(errors.WithStack(ErrDroppedEvent), "metrics queue full while handling error")
+					log.FromContext(ctx).Errorf(errors.WithStack(ErrDroppedMetricEvent), "metrics queue full while handling error")
 				}
 				return errors.WithStack(err)
 			}

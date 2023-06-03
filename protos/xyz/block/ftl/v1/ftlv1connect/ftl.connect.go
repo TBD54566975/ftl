@@ -609,6 +609,8 @@ type ObservabilityServiceClient interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Send OTEL metrics from the Deployment to the ControlPlane via the Runner.
 	SendMetrics(context.Context) *connect_go.ClientStreamForClient[v1.SendMetricsRequest, v1.SendMetricsResponse]
+	// Send OTEL traces from the Deployment to the ControlPlane via the Runner.
+	SendTraces(context.Context) *connect_go.ClientStreamForClient[v1.SendTracesRequest, v1.SendTracesResponse]
 }
 
 // NewObservabilityServiceClient constructs a client for the xyz.block.ftl.v1.ObservabilityService
@@ -631,6 +633,11 @@ func NewObservabilityServiceClient(httpClient connect_go.HTTPClient, baseURL str
 			baseURL+"/xyz.block.ftl.v1.ObservabilityService/SendMetrics",
 			opts...,
 		),
+		sendTraces: connect_go.NewClient[v1.SendTracesRequest, v1.SendTracesResponse](
+			httpClient,
+			baseURL+"/xyz.block.ftl.v1.ObservabilityService/SendTraces",
+			opts...,
+		),
 	}
 }
 
@@ -638,6 +645,7 @@ func NewObservabilityServiceClient(httpClient connect_go.HTTPClient, baseURL str
 type observabilityServiceClient struct {
 	ping        *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	sendMetrics *connect_go.Client[v1.SendMetricsRequest, v1.SendMetricsResponse]
+	sendTraces  *connect_go.Client[v1.SendTracesRequest, v1.SendTracesResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.ObservabilityService.Ping.
@@ -650,12 +658,19 @@ func (c *observabilityServiceClient) SendMetrics(ctx context.Context) *connect_g
 	return c.sendMetrics.CallClientStream(ctx)
 }
 
+// SendTraces calls xyz.block.ftl.v1.ObservabilityService.SendTraces.
+func (c *observabilityServiceClient) SendTraces(ctx context.Context) *connect_go.ClientStreamForClient[v1.SendTracesRequest, v1.SendTracesResponse] {
+	return c.sendTraces.CallClientStream(ctx)
+}
+
 // ObservabilityServiceHandler is an implementation of the xyz.block.ftl.v1.ObservabilityService
 // service.
 type ObservabilityServiceHandler interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Send OTEL metrics from the Deployment to the ControlPlane via the Runner.
 	SendMetrics(context.Context, *connect_go.ClientStream[v1.SendMetricsRequest]) (*connect_go.Response[v1.SendMetricsResponse], error)
+	// Send OTEL traces from the Deployment to the ControlPlane via the Runner.
+	SendTraces(context.Context, *connect_go.ClientStream[v1.SendTracesRequest]) (*connect_go.Response[v1.SendTracesResponse], error)
 }
 
 // NewObservabilityServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -675,6 +690,11 @@ func NewObservabilityServiceHandler(svc ObservabilityServiceHandler, opts ...con
 		svc.SendMetrics,
 		opts...,
 	))
+	mux.Handle("/xyz.block.ftl.v1.ObservabilityService/SendTraces", connect_go.NewClientStreamHandler(
+		"/xyz.block.ftl.v1.ObservabilityService/SendTraces",
+		svc.SendTraces,
+		opts...,
+	))
 	return "/xyz.block.ftl.v1.ObservabilityService/", mux
 }
 
@@ -687,4 +707,8 @@ func (UnimplementedObservabilityServiceHandler) Ping(context.Context, *connect_g
 
 func (UnimplementedObservabilityServiceHandler) SendMetrics(context.Context, *connect_go.ClientStream[v1.SendMetricsRequest]) (*connect_go.Response[v1.SendMetricsResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ObservabilityService.SendMetrics is not implemented"))
+}
+
+func (UnimplementedObservabilityServiceHandler) SendTraces(context.Context, *connect_go.ClientStream[v1.SendTracesRequest]) (*connect_go.Response[v1.SendTracesResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ObservabilityService.SendTraces is not implemented"))
 }
