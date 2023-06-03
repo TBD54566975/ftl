@@ -18,9 +18,6 @@ type TimeResponse struct {
 //
 //ftl:verb
 func Time(ctx context.Context, req TimeRequest) (TimeResponse, error) {
-	// TODO(wb): Do we want to have this in the context so that it can be used by verbs?
-	// Or should we keep our providers internal so they only have our data?
-
 	counter, err := otel.Meter("time.time").Int64Counter("called")
 	if err != nil {
 		return TimeResponse{}, err
