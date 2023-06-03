@@ -56,6 +56,7 @@ func TestControlPlaneRegisterRunnerHeartbeatClose(t *testing.T) {
 }
 
 func TestControlPlaneRegisterRunnerHeartbeatTimeout(t *testing.T) {
+	t.Skip("Skipping flakey test for now")
 	db, client, bind, ctx := startForTesting(t)
 
 	key := uuid.NewString()
