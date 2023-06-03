@@ -57,7 +57,7 @@ func (s *SpanExporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (e *SpanExporter) sendLoop(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.SendTracesRequest, ftlv1.SendTracesResponse]) error {
+func (s *SpanExporter) sendLoop(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.SendTracesRequest, ftlv1.SendTracesResponse]) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Traces send loop started")
 	for {
@@ -65,20 +65,17 @@ func (e *SpanExporter) sendLoop(ctx context.Context, stream *connect.ClientStrea
 		case <-ctx.Done():
 			return errors.WithStack(context.Cause(ctx))
 
-		case event, ok := <-e.queue:
+		case event, ok := <-s.queue:
 			if !ok {
 				return nil
 			}
 			logger.Infof("%s", event.Json)
 			if err := stream.Send(event); err != nil {
 				select {
-				case e.queue <- event:
+				case s.queue <- event:
 				default:
 					log.FromContext(ctx).Errorf(errors.WithStack(ErrDroppedMetricEvent), "traces queue full while handling error")
 				}
-
-				// TODO(wb): This eventually fails with "error:agent:time: unknown: write envelope: EOF: failed to send traces"
-				logger.Errorf(err, "failed to send traces")
 				return errors.WithStack(err)
 			}
 		}

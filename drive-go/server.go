@@ -7,10 +7,6 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/common/plugin"
@@ -22,30 +18,22 @@ import (
 )
 
 type UserVerbConfig struct {
-	FTLEndpoint              *url.URL `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
-	FTLObservabilityEndpoint *url.URL `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" required:""`
+	FTLEndpoint              *url.URL             `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
+	FTLObservabilityEndpoint *url.URL             `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" required:""`
+	Observability            observability.Config `embed:""`
 }
 
 // NewUserVerbServer starts a new code-generated drive for user Verbs.
 //
 // This function is intended to be used by the code generator.
-func NewUserVerbServer(handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
+func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
-		logger := log.FromContext(ctx)
-
-		//TODO(wb): Are the 2 endpoints below supposed to match? Because they do :)
-		logger.Infof("FTLEndpoint: %s", uc.FTLEndpoint)
-		logger.Infof("FTLObservabilityEndpoint: %s", uc.FTLObservabilityEndpoint)
-
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 		observabilityServiceClient := rpc.Dial(ftlv1connect.NewObservabilityServiceClient, uc.FTLObservabilityEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, observabilityServiceClient)
 
-		// TODO(wb): Do we want to put the meter provider in the context? If so we probably want the Trace and Log stuff there as well
-		tracer, meter := initOpenTelemetry(ctx, observabilityServiceClient)
-		ctx = observability.ContextWithTracerProvider(ctx, tracer)
-		ctx = observability.ContextWithMeterProvider(ctx, meter)
+		observability.Init(ctx, observabilityServiceClient, moduleName, uc.Observability)
 		hmap := map[sdkgo.VerbRef]Handler{}
 		for _, handler := range handlers {
 			hmap[handler.ref] = handler
@@ -124,36 +112,4 @@ func (m *moduleServer) List(ctx context.Context, req *connect.Request[ftlv1.List
 
 func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
-}
-
-func initOpenTelemetry(ctx context.Context, observabilityServiceClient ftlv1connect.ObservabilityServiceClient) (*trace.TracerProvider, *metric.MeterProvider) {
-	logger := log.FromContext(ctx)
-	logger.Infof("initOpenTelemetry...")
-
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName("verb"),
-	)
-
-	logger.Infof("Initializing TracesExporter...")
-	spanExporter := observability.NewSpanExporter(ctx, observabilityServiceClient, observability.SpanExporterConfig{TracesBuffer: 1048576})
-
-	tp := trace.NewTracerProvider(
-		trace.WithBatcher(spanExporter),
-		trace.WithResource(res))
-
-	logger.Infof("Initializing MetricsExporter...")
-
-	// TODO(wb): How to get MetricsExporterConfig values here? Hardcoded for now.
-	metricsExporter := observability.NewMetricsExporter(ctx, observabilityServiceClient, observability.MetricsExporterConfig{MetricsBuffer: 1048576})
-
-	provider := metric.NewMeterProvider(
-		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(metricsExporter)),
-	)
-
-	// TODO(wb): Alternatively we could add this to the global otel
-	// otel.SetMeterProvider(provider)
-
-	return tp, provider
 }

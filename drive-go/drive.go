@@ -481,7 +481,7 @@ func generate(config Config) (*codewriter.Writer, error) {
 
 	w.L(`func main() {`)
 	w.In(func(w *codewriter.Writer) {
-		w.L(`verbConstructor := drivego.NewUserVerbServer(`)
+		w.L(`verbConstructor := drivego.NewUserVerbServer(%q,`, config.Module)
 		for pkg, endpoints := range endpoints {
 			pkgImp := w.Import(pkg)
 			for _, endpoint := range endpoints {
