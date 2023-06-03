@@ -18,7 +18,7 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 
-	"github.com/TBD54566975/ftl/common/goast"
+	"github.com/TBD54566975/ftl/internal/goast"
 	"github.com/TBD54566975/ftl/schema"
 )
 

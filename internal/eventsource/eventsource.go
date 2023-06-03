@@ -3,10 +3,10 @@ package eventsource
 import (
 	"github.com/alecthomas/atomic"
 
-	"github.com/TBD54566975/ftl/common/pubsub"
+	"github.com/TBD54566975/ftl/internal/pubsub"
 )
 
-// EventSource is a pubsub.Topic that also stores the last published value.
+// EventSource is a pubsub.Topic that also stores the last published value in an atomic.Value.
 //
 // Updating the value will result in a publish event.
 type EventSource[T any] struct {

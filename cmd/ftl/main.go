@@ -10,9 +10,9 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/bufbuild/connect-go"
 
-	_ "github.com/TBD54566975/ftl/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/TBD54566975/ftl/common/log"
-	"github.com/TBD54566975/ftl/common/rpc"
+	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 

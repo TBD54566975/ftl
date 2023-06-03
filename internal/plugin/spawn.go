@@ -13,9 +13,9 @@ import (
 	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/common/exec"
-	"github.com/TBD54566975/ftl/common/log"
-	"github.com/TBD54566975/ftl/common/rpc"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 

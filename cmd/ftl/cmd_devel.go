@@ -7,7 +7,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/agent"
-	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type develCmd struct {

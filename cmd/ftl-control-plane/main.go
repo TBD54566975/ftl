@@ -6,8 +6,9 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/TBD54566975/ftl/common/log"
 	"github.com/TBD54566975/ftl/controlplane"
+	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 var version = "dev"

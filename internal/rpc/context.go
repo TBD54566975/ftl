@@ -6,7 +6,7 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
-	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 const ftlDirectRoutingHeader = "FTL-Direct"

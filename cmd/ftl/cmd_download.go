@@ -8,8 +8,8 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/google/uuid"
 
-	"github.com/TBD54566975/ftl/common/download"
-	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/TBD54566975/ftl/internal/download"
+	"github.com/TBD54566975/ftl/internal/sha256"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )

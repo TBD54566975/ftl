@@ -10,8 +10,8 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/common/exec"
-	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 var consoleURL, _ = url.Parse("http://localhost:5173")

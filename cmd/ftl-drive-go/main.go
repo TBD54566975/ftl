@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/TBD54566975/ftl/common/plugin"
 	drivego "github.com/TBD54566975/ftl/drive-go"
+	"github.com/TBD54566975/ftl/internal/plugin"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 

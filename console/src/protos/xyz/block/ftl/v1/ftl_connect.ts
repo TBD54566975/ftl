@@ -7,7 +7,7 @@ import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentRes
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
- * VerbService is a common interface shared by multiple services for calling Verbs.
+ * VerbService is a internal interface shared by multiple services for calling Verbs.
  *
  * @generated from service xyz.block.ftl.v1.VerbService
  */

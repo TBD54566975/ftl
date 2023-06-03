@@ -9,15 +9,15 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/concurrency"
-	connect "github.com/bufbuild/connect-go"
+	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"github.com/google/uuid"
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/common/log"
-	"github.com/TBD54566975/ftl/common/rpc"
 	"github.com/TBD54566975/ftl/controlplane/internal/dal"
 	"github.com/TBD54566975/ftl/controlplane/internal/sql/sqltest"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )

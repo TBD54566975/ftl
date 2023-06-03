@@ -13,7 +13,7 @@ import (
 	"github.com/jpillora/backoff"
 	"golang.org/x/net/http2"
 
-	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/internal/log"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 

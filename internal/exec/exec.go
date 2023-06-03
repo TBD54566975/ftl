@@ -9,7 +9,7 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/kballard/go-shellquote"
 
-	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type Cmd struct {
