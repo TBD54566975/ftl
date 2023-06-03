@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/TBD54566975/ftl/common/log"
-	"github.com/TBD54566975/ftl/common/rpc"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+
+	"github.com/TBD54566975/ftl/common/log"
+	"github.com/TBD54566975/ftl/common/rpc"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
 var ErrDroppedTraceEvent = errors.New("observability trace event dropped")

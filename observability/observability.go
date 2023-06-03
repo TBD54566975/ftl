@@ -3,12 +3,13 @@ package observability
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
 type Config struct {
