@@ -7,8 +7,9 @@ package sql
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 )
 
 type Querier interface {
@@ -16,14 +17,14 @@ type Querier interface {
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
-	CreateDeployment(ctx context.Context, moduleName string, schema []byte) (uuid.UUID, error)
+	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
 	CreateModule(ctx context.Context, language string, name string) (int64, error)
 	DeleteStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	DeregisterRunner(ctx context.Context, id int64) error
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
-	GetDeployment(ctx context.Context, key uuid.UUID) (GetDeploymentRow, error)
+	GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
@@ -36,7 +37,7 @@ type Querier interface {
 	GetRunnersForModule(ctx context.Context, name string) ([]GetRunnersForModuleRow, error)
 	HeartbeatRunner(ctx context.Context, id int64) error
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
-	RegisterRunner(ctx context.Context, key uuid.UUID, language string, endpoint string) (int64, error)
+	RegisterRunner(ctx context.Context, key sqltypes.Key, language string, endpoint string) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

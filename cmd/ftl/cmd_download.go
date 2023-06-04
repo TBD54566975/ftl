@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/alecthomas/errors"
-	"github.com/google/uuid"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/sha256"
@@ -16,7 +16,7 @@ import (
 
 type downloadCmd struct {
 	Dest       string    `short:"d" help:"Destination directory." default:"."`
-	Deployment uuid.UUID `help:"Deployment to download." arg:""`
+	Deployment ulid.ULID `help:"Deployment to download." arg:""`
 }
 
 func (d *downloadCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {

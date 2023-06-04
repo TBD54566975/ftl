@@ -11,10 +11,10 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
+	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/console"
@@ -110,7 +110,7 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 	if endpoint.Scheme != "http" && endpoint.Scheme != "https" {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Errorf("invalid endpoint scheme %q", endpoint.Scheme))
 	}
-	key, err := uuid.Parse(msg.Key)
+	key, err := ulid.Parse(msg.Key)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.Wrap(err, "invalid key"))
 	}
@@ -294,7 +294,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 }
 
 func (s *Service) getDeployment(ctx context.Context, key string) (*dal.Deployment, error) {
-	dkey, err := uuid.Parse(key)
+	dkey, err := ulid.Parse(key)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}

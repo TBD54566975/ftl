@@ -33,7 +33,7 @@ syntax = "proto3";
 package google.protobuf;
 
 option cc_enable_arenas = true;
-option go_package = "google.golang.org/protobuf/types/known/timestamppb";
+option go_package = "google.golang.org/protobuf/sqltypes/known/timestamppb";
 option java_package = "com.google.protobuf";
 option java_outer_classname = "TimestampProto";
 option java_multiple_files = true;

@@ -11,10 +11,9 @@ WHERE id = ANY(@ids::BIGINT[]);
 SELECT * FROM modules
 WHERE id = ANY(@ids::BIGINT[]);
 
--- name: CreateDeployment :one
-INSERT INTO deployments (module_id, "schema")
-VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA)
-RETURNING key;
+-- name: CreateDeployment :exec
+INSERT INTO deployments (module_id, "schema", key)
+VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, $1);
 
 -- name: GetArtefactDigests :many
 -- Return the digests that exist in the database.

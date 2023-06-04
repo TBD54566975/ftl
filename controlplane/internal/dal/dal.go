@@ -11,13 +11,14 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	sets "github.com/deckarep/golang-set/v2"
-	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/controlplane/internal/sql"
+	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/sha256"
@@ -96,11 +97,11 @@ func (d *DAL) CreateDeployment(
 	language string,
 	schema *schema.Module,
 	artefacts []DeploymentArtefact,
-) (key uuid.UUID, err error) {
+) (key ulid.ULID, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return uuid.UUID{}, errors.WithStack(err)
+		return ulid.ULID{}, errors.WithStack(err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)()
 
@@ -110,10 +111,10 @@ func (d *DAL) CreateDeployment(
 		len(artefacts),
 	)
 	if err != nil {
-		return uuid.UUID{}, errors.WithStack(err)
+		return ulid.ULID{}, errors.WithStack(err)
 	}
 	if len(existing) > 0 {
-		return existing[0].Key, nil
+		return existing[0].Key.ULID(), nil
 	}
 
 	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
@@ -122,39 +123,40 @@ func (d *DAL) CreateDeployment(
 
 	schemaBytes, err := proto.Marshal(schema.ToProto())
 	if err != nil {
-		return uuid.UUID{}, errors.WithStack(err)
+		return ulid.ULID{}, errors.WithStack(err)
 	}
 
 	// TODO(aat): "schema" containing language?
 	_, err = tx.CreateModule(ctx, language, schema.Name)
 
+	deploymentKey := ulid.Make()
 	// Create the deployment
-	deploymentKey, err := tx.CreateDeployment(ctx, schema.Name, schemaBytes)
+	err = tx.CreateDeployment(ctx, sqltypes.Key(deploymentKey), schema.Name, schemaBytes)
 	if err != nil {
-		return uuid.UUID{}, errors.WithStack(err)
+		return ulid.ULID{}, errors.WithStack(err)
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
 	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
 	if err != nil {
-		return uuid.UUID{}, errors.WithStack(err)
+		return ulid.ULID{}, errors.WithStack(err)
 	}
 	if len(artefactDigests) != len(artefacts) {
 		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return uuid.UUID{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+		return ulid.ULID{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
 	}
 
 	// Associate the artefacts with the deployment
 	for _, row := range artefactDigests {
 		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
 		err = tx.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
-			Key:        deploymentKey,
+			Key:        sqltypes.Key(deploymentKey),
 			ArtefactID: row.ID,
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return uuid.UUID{}, errors.WithStack(err)
+			return ulid.ULID{}, errors.WithStack(err)
 		}
 	}
 
@@ -164,7 +166,7 @@ func (d *DAL) CreateDeployment(
 type Deployment struct {
 	Module    string
 	Language  string
-	Key       uuid.UUID
+	Key       ulid.ULID
 	Schema    *schema.Module
 	Artefacts []*Artefact
 }
@@ -185,8 +187,8 @@ func (a *Artefact) ToProto() *ftlv1.DeploymentArtefact {
 	}
 }
 
-func (d *DAL) GetDeployment(ctx context.Context, id uuid.UUID) (*Deployment, error) {
-	deployment, err := d.db.GetDeployment(ctx, id)
+func (d *DAL) GetDeployment(ctx context.Context, id ulid.ULID) (*Deployment, error) {
+	deployment, err := d.db.GetDeployment(ctx, sqltypes.Key(id))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -206,8 +208,8 @@ type RunnerID int64
 // RegisterRunner registers a new runner.
 //
 // It will return ErrConflict if a runner with the same endpoint already exists.
-func (d *DAL) RegisterRunner(ctx context.Context, key uuid.UUID, language string, endpoint *url.URL) (RunnerID, error) {
-	id, err := d.db.RegisterRunner(ctx, key, language, endpoint.String())
+func (d *DAL) RegisterRunner(ctx context.Context, key ulid.ULID, language string, endpoint *url.URL) (RunnerID, error) {
+	id, err := d.db.RegisterRunner(ctx, sqltypes.Key(key), language, endpoint.String())
 	if isPGConflict(err) {
 		return 0, errors.Wrap(ErrConflict, "runner already registered")
 	}
@@ -235,7 +237,7 @@ type Runner struct {
 	Language string
 	Endpoint string
 	// Assigned deployment key, if any.
-	Deployment types.Option[uuid.UUID]
+	Deployment types.Option[ulid.ULID]
 }
 
 func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string) ([]Runner, error) {
@@ -262,19 +264,19 @@ func (d *DAL) GetRunnersForModule(ctx context.Context, module string) ([]Runner,
 			ID:         RunnerID(row.ID),
 			Language:   row.Language,
 			Endpoint:   row.Endpoint,
-			Deployment: types.Some(row.DeploymentKey),
+			Deployment: types.Some(row.DeploymentKey.ULID()),
 		}
 	}), nil
 }
 
-func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment uuid.UUID, logEntry log.Entry) error {
+func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment ulid.ULID, logEntry log.Entry) error {
 	logError := pgtype.Text{}
 	if logEntry.Error != nil {
 		logError.String = logEntry.Error.Error()
 		logError.Valid = true
 	}
 	return errors.WithStack(d.db.InsertDeploymentLogEntry(ctx, sql.InsertDeploymentLogEntryParams{
-		Key:       deployment,
+		Key:       sqltypes.Key(deployment),
 		TimeStamp: pgtype.Timestamptz{Time: logEntry.Time, Valid: true},
 		Level:     int32(logEntry.Level.Severity()),
 		Scope:     strings.Join(logEntry.Scope, ":"),
@@ -296,7 +298,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploy
 	out := &Deployment{
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
-		Key:      deployment.Key,
+		Key:      deployment.Key.ULID(),
 		Schema:   module,
 	}
 	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.ID)

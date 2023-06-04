@@ -12,4 +12,4 @@ sql:
         query_parameter_limit: 3
         overrides:
           - db_type: "uuid"
-            go_type: "github.com/google/uuid.UUID"
+            go_type: "github.com/TBD54566975/ftl/controlplane/internal/sqltypes.Key"
