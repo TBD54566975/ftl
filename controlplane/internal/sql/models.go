@@ -5,8 +5,9 @@
 package sql
 
 import (
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 )
 
 type Artefact struct {
@@ -20,7 +21,7 @@ type Deployment struct {
 	ID        int64
 	CreatedAt pgtype.Timestamptz
 	ModuleID  int64
-	Key       uuid.UUID
+	Key       sqltypes.Key
 	Schema    []byte
 }
 
@@ -51,7 +52,7 @@ type Module struct {
 
 type Runner struct {
 	ID           int64
-	Key          uuid.UUID
+	Key          sqltypes.Key
 	LastSeen     pgtype.Timestamptz
 	Language     string
 	Endpoint     string

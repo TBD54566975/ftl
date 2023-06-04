@@ -18,8 +18,8 @@ import (
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
-	"github.com/google/uuid"
 	"github.com/jpillora/backoff"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -54,7 +54,7 @@ func Start(ctx context.Context, config Config) error {
 	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.FTLEndpoint.String(), log.Error)
 
 	svc := &Service{
-		key:                uuid.New(),
+		key:                ulid.Make(),
 		config:             config,
 		controlplaneClient: controlplaneClient,
 	}
@@ -82,7 +82,7 @@ type pluginProxy struct {
 }
 
 type Service struct {
-	key uuid.UUID
+	key ulid.ULID
 	// We use double-checked locking around the atomic so that the read fast-path is lock-free.
 	lock       sync.Mutex
 	deployment atomic.Value[*pluginProxy]
@@ -137,7 +137,7 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to register runner"))
 	}
 
-	id, err := uuid.Parse(req.Msg.DeploymentKey)
+	id, err := ulid.Parse(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}

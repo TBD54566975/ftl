@@ -8,8 +8,9 @@ package sql
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 )
 
 const assignDeployment = `-- name: AssignDeployment :exec
@@ -29,7 +30,7 @@ VALUES ((SELECT id FROM deployments WHERE key = $1), $2, $3, $4)
 `
 
 type AssociateArtefactWithDeploymentParams struct {
-	Key        uuid.UUID
+	Key        sqltypes.Key
 	ArtefactID int64
 	Executable bool
 	Path       string
@@ -59,17 +60,14 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 	return id, err
 }
 
-const createDeployment = `-- name: CreateDeployment :one
-INSERT INTO deployments (module_id, "schema")
-VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA)
-RETURNING key
+const createDeployment = `-- name: CreateDeployment :exec
+INSERT INTO deployments (module_id, "schema", key)
+VALUES ((SELECT id FROM modules WHERE name = $2::TEXT LIMIT 1), $3::BYTEA, $1)
 `
 
-func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema []byte) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, createDeployment, moduleName, schema)
-	var key uuid.UUID
-	err := row.Scan(&key)
-	return key, err
+func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error {
+	_, err := q.db.Exec(ctx, createDeployment, key, moduleName, schema)
+	return err
 }
 
 const createModule = `-- name: CreateModule :one
@@ -164,13 +162,13 @@ type GetDeploymentRow struct {
 	ID         int64
 	CreatedAt  pgtype.Timestamptz
 	ModuleID   int64
-	Key        uuid.UUID
+	Key        sqltypes.Key
 	Schema     []byte
 	Language   string
 	ModuleName string
 }
 
-func (q *Queries) GetDeployment(ctx context.Context, key uuid.UUID) (GetDeploymentRow, error) {
+func (q *Queries) GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error) {
 	row := q.db.QueryRow(ctx, getDeployment, key)
 	var i GetDeploymentRow
 	err := row.Scan(
@@ -277,7 +275,7 @@ WHERE EXISTS (
 type GetDeploymentsWithArtefactsRow struct {
 	ID        int64
 	CreatedAt pgtype.Timestamptz
-	Key       uuid.UUID
+	Key       sqltypes.Key
 	Name      string
 }
 
@@ -352,7 +350,7 @@ type GetLatestDeploymentRow struct {
 	ID         int64
 	CreatedAt  pgtype.Timestamptz
 	ModuleID   int64
-	Key        uuid.UUID
+	Key        sqltypes.Key
 	Schema     []byte
 	Language   string
 	ModuleName string
@@ -408,12 +406,12 @@ WHERE m.name = $1
 
 type GetRunnersForModuleRow struct {
 	ID            int64
-	Key           uuid.UUID
+	Key           sqltypes.Key
 	LastSeen      pgtype.Timestamptz
 	Language      string
 	Endpoint      string
 	DeploymentID  pgtype.Int8
-	DeploymentKey uuid.UUID
+	DeploymentKey sqltypes.Key
 	ModuleID      int64
 	ModuleName    string
 }
@@ -464,7 +462,7 @@ VALUES ((SELECT id FROM deployments WHERE key=$1 LIMIT 1)::UUID, $2, $3, $4, $5,
 `
 
 type InsertDeploymentLogEntryParams struct {
-	Key       uuid.UUID
+	Key       sqltypes.Key
 	TimeStamp pgtype.Timestamptz
 	Level     int32
 	Scope     string
@@ -490,7 +488,7 @@ ON CONFLICT (key) DO UPDATE SET language = $2, endpoint = $3
 RETURNING id
 `
 
-func (q *Queries) RegisterRunner(ctx context.Context, key uuid.UUID, language string, endpoint string) (int64, error) {
+func (q *Queries) RegisterRunner(ctx context.Context, key sqltypes.Key, language string, endpoint string) (int64, error) {
 	row := q.db.QueryRow(ctx, registerRunner, key, language, endpoint)
 	var id int64
 	err := row.Scan(&id)

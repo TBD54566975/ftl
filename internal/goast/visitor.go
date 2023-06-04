@@ -3,7 +3,7 @@ package goast
 
 import (
 	"fmt"
-	. "go/ast" //nolint
+	. "go/ast" //nolint:all
 )
 
 type VisitorFunc func(node Node, next func() error) error
@@ -13,11 +13,11 @@ type VisitorFunc func(node Node, next func() error) error
 // The visitor function can call next() to continue traversal.
 //
 // Note that this is based on a direct copy of ast.Walk.
-func Visit(node Node, v VisitorFunc) error { //nolint
+func Visit(node Node, v VisitorFunc) error { //nolint:maintidx
 	return v(node, func() error {
 		// walk children
 		// (the order of the cases matches the order
-		// of the corresponding node types in ast.go)
+		// of the corresponding node sqltypes in ast.go)
 		switch n := node.(type) {
 		// Comments and fields
 		case *Comment:

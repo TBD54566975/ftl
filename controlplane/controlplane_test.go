@@ -11,8 +11,8 @@ import (
 	"github.com/alecthomas/concurrency"
 	"github.com/bufbuild/connect-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
-	"github.com/google/uuid"
 	"github.com/jpillora/backoff"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/TBD54566975/ftl/controlplane/internal/dal"
 	"github.com/TBD54566975/ftl/controlplane/internal/sql/sqltest"
@@ -27,7 +27,7 @@ func TestControlPlaneRegisterRunnerHeartbeatClose(t *testing.T) {
 
 	stream := client.RegisterRunner(ctx)
 	t.Cleanup(func() { _, _ = stream.CloseAndReceive() })
-	key := uuid.NewString()
+	key := ulid.Make().String()
 	err := stream.Send(&ftlv1.RegisterRunnerRequest{
 		Key:      key,
 		Language: "go",
@@ -59,7 +59,7 @@ func TestControlPlaneRegisterRunnerHeartbeatTimeout(t *testing.T) {
 	t.Skip("Skipping flakey test for now")
 	db, client, bind, ctx := startForTesting(t)
 
-	key := uuid.NewString()
+	key := ulid.Make().String()
 	stream := client.RegisterRunner(ctx)
 	err := stream.Send(&ftlv1.RegisterRunnerRequest{
 		Key:      key,

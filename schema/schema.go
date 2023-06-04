@@ -40,7 +40,7 @@ type Node interface {
 //sumtype:decl
 type Type interface {
 	Node
-	// schemaType is a marker to ensure that all types implement the Type interface.
+	// schemaType is a marker to ensure that all sqltypes implement the Type interface.
 	schemaType()
 }
 
