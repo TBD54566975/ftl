@@ -17,6 +17,7 @@ require (
 	github.com/alecthomas/participle/v2 v2.0.0 // indirect
 	github.com/alecthomas/types v0.3.0 // indirect
 	github.com/bufbuild/connect-go v1.7.0 // indirect
+	github.com/bufbuild/connect-grpcreflect-go v1.1.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/iancoleman/strcase v0.2.0 // indirect

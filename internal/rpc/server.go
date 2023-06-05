@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
