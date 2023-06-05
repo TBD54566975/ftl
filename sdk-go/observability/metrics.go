@@ -22,7 +22,7 @@ var ErrDroppedMetricEvent = errors.New("observability metric event dropped")
 
 type MetricsExporterConfig struct {
 	Buffer   int           `default:"1048576" help:"Number of metrics to buffer before dropping."`
-	Interval time.Duration `default:"30s" help:"Interval to export metrics."`
+	Interval time.Duration `default:"30s" help:"Interval to export metrics." env:"FTL_METRICS_INTERVAL"`
 }
 
 type MetricsExporter struct {

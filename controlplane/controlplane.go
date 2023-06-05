@@ -10,7 +10,6 @@ import (
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
-	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
@@ -56,12 +55,9 @@ func Start(ctx context.Context, config Config) error {
 	}
 	logger.Infof("Listening on %s", config.Bind)
 
-	reflector := grpcreflect.NewStaticReflector(ftlv1connect.ControlPlaneServiceName, ftlv1connect.VerbServiceName)
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, svc),
-		rpc.Route(grpcreflect.NewHandlerV1(reflector)),
-		rpc.Route(grpcreflect.NewHandlerV1Alpha(reflector)),
 		rpc.Route("/", c),
 	)
 }

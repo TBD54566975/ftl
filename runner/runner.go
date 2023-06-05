@@ -17,7 +17,6 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
-	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"github.com/jpillora/backoff"
 	"github.com/oklog/ulid/v2"
 
@@ -63,12 +62,9 @@ func Start(ctx context.Context, config Config) error {
 	retry := backoff.Backoff{Max: config.HeartbeatPeriod, Jitter: true}
 	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlplaneClient.RegisterRunner, svc.registrationLoop)
 
-	reflector := grpcreflect.NewStaticReflector(ftlv1connect.RunnerServiceName, ftlv1connect.VerbServiceName)
 	return rpc.Serve(ctx, config.Endpoint,
 		rpc.Route("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
 		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
-		rpc.Route(grpcreflect.NewHandlerV1(reflector)),
-		rpc.Route(grpcreflect.NewHandlerV1Alpha(reflector)),
 	)
 }
 

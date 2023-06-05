@@ -2,9 +2,11 @@ package rpc
 
 import (
 	"context"
+	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/concurrency"
@@ -20,7 +22,8 @@ import (
 const ShutdownGracePeriod = time.Second * 5
 
 type optionsBundle struct {
-	mux *http.ServeMux
+	mux             *http.ServeMux
+	reflectionPaths []string
 }
 
 type Option func(*optionsBundle)
@@ -32,6 +35,7 @@ func GRPC[Iface, Impl Pingable](constructor GRPCServerConstructor[Iface], impl I
 	return func(o *optionsBundle) {
 		options = append(options, DefaultHandlerOptions()...)
 		path, handler := constructor(any(impl).(Iface), options...)
+		o.reflectionPaths = append(o.reflectionPaths, strings.Trim(path, "/"))
 		o.mux.Handle(path, handler)
 	}
 }
@@ -56,6 +60,12 @@ func NewServer(ctx context.Context, listen *url.URL, options ...Option) (*Server
 	for _, option := range options {
 		option(opts)
 	}
+
+	// Register reflection services.
+	reflector := grpcreflect.NewStaticReflector(opts.reflectionPaths...)
+	opts.mux.Handle(grpcreflect.NewHandlerV1(reflector))
+	opts.mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+
 	// TODO: Is this a good idea? Who knows!
 	crs := cors.New(cors.Options{
 		AllowedOrigins: []string{listen.String()},

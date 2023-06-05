@@ -14,7 +14,6 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
-	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
@@ -67,7 +66,6 @@ func New(ctx context.Context, listen *url.URL) (*Agent, error) {
 
 // Serve starts the agent server.
 func (a *Agent) Serve(ctx context.Context) error {
-	reflector := grpcreflect.NewStaticReflector(ftlv1connect.DevelServiceName, ftlv1connect.VerbServiceName)
 	c, err := console.Server(ctx)
 	if err != nil {
 		return errors.WithStack(err)
@@ -75,8 +73,7 @@ func (a *Agent) Serve(ctx context.Context) error {
 	return rpc.Serve(ctx, a.listen,
 		rpc.GRPC(ftlv1connect.NewDevelServiceHandler, a),
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, a),
-		rpc.Route(grpcreflect.NewHandlerV1(reflector)),
-		rpc.Route(grpcreflect.NewHandlerV1Alpha(reflector)),
+		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, a),
 		rpc.Route("/", c),
 	)
 }
