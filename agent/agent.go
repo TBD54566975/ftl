@@ -19,10 +19,10 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/console"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/plugin"
 	"github.com/TBD54566975/ftl/internal/pubsub"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"

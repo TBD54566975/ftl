@@ -21,9 +21,9 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/plugin"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"

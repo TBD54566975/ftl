@@ -24,11 +24,11 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 
+	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/drive-go/codewriter"
 	"github.com/TBD54566975/ftl/internal/eventsource"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/plugin"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -476,7 +476,7 @@ func generate(config Config) (*codewriter.Writer, error) {
 	w := codewriter.New("main")
 	w.Import("context")
 	w.Import("github.com/TBD54566975/ftl/drive-go")
-	w.Import("github.com/TBD54566975/ftl/internal/plugin")
+	w.Import("github.com/TBD54566975/ftl/common/plugin")
 	w.Import(`github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect`)
 
 	w.L(`func main() {`)
