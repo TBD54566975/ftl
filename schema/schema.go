@@ -231,6 +231,7 @@ var (
 
 	parser       = participle.MustBuild[Schema](parserOptions...)
 	moduleParser = participle.MustBuild[Module](parserOptions...)
+	refParser    = participle.MustBuild[Ref](parserOptions...)
 )
 
 func ParseString(filename, input string) (*Schema, error) {
@@ -247,6 +248,11 @@ func ParseModuleString(filename, input string) (*Module, error) {
 		return nil, errors.WithStack(err)
 	}
 	return mod, ValidateModule(mod)
+}
+
+func ParseRef(ref string) (*Ref, error) {
+	r, err := refParser.ParseString("", ref)
+	return r, errors.WithStack(err)
 }
 
 func Parse(filename string, r io.Reader) (*Schema, error) {

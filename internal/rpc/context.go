@@ -2,6 +2,8 @@ package rpc
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/schema"
+	"net/http"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
@@ -10,8 +12,10 @@ import (
 )
 
 const ftlDirectRoutingHeader = "FTL-Direct"
+const ftlVerbHeader = "FTL-Verb"
 
 type ftlDirectRoutingKey struct{}
+type ftlVerbKey struct{}
 
 // WithDirectRouting ensures any hops in Verb routing do not redirect.
 //
@@ -19,6 +23,18 @@ type ftlDirectRoutingKey struct{}
 // when calling back to the Agent.
 func WithDirectRouting(ctx context.Context) context.Context {
 	return context.WithValue(ctx, ftlDirectRoutingKey{}, "1")
+}
+
+// WithVerb sets the module.verb of the current request.
+func WithVerb(ctx context.Context, ref *schema.VerbRef) context.Context {
+	return context.WithValue(ctx, ftlVerbKey{}, ref)
+}
+
+// VerbFromContext returns the module.verb of the current request.
+func VerbFromContext(ctx context.Context) (*schema.VerbRef, bool) {
+	value := ctx.Value(ftlVerbKey{})
+	verb, ok := value.(*schema.VerbRef)
+	return verb, ok
 }
 
 // IsDirectRouted returns true if the incoming request should be directly
@@ -53,6 +69,7 @@ type metadataInterceptor struct {
 
 func (*metadataInterceptor) WrapStreamingClient(req connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return func(ctx context.Context, s connect.Spec) connect.StreamingClientConn {
+		// TODO(aat): I can't figure out how to get the client headers here.
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (streaming client)", s.Procedure)
 		return req(ctx, s)
@@ -63,14 +80,11 @@ func (m *metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerF
 	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (streaming handler)", s.Spec().Procedure)
-		if s.Spec().IsClient {
-			if IsDirectRouted(ctx) {
-				s.RequestHeader().Set(ftlDirectRoutingHeader, "1")
-			}
-		} else if s.RequestHeader().Get(ftlDirectRoutingHeader) != "" {
-			ctx = WithDirectRouting(ctx)
+		ctx, err := updateContext(ctx, s.Spec().IsClient, s.RequestHeader())
+		if err != nil {
+			return err
 		}
-		err := errors.WithStack(req(ctx, s))
+		err = errors.WithStack(req(ctx, s))
 		if err != nil {
 			logger.Logf(m.errorLevel, "Streaming RPC failed: %s: %s", err, s.Spec().Procedure)
 			return err
@@ -83,13 +97,9 @@ func (m *metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc 
 	return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (unary)", req.Spec().Procedure)
-
-		if req.Spec().IsClient {
-			if IsDirectRouted(ctx) {
-				req.Header().Set(ftlDirectRoutingHeader, "1")
-			}
-		} else if req.Header().Get(ftlDirectRoutingHeader) != "" {
-			ctx = WithDirectRouting(ctx)
+		ctx, err := updateContext(ctx, req.Spec().IsClient, req.Header())
+		if err != nil {
+			return nil, err
 		}
 		resp, err := uf(ctx, req)
 		if err != nil {
@@ -115,4 +125,27 @@ func ClientFromContext[Client Pingable](ctx context.Context) Client {
 		panic("no RPC client in context")
 	}
 	return value.(Client) //nolint:forcetypeassert
+}
+
+func updateContext(ctx context.Context, isClient bool, headers http.Header) (context.Context, error) {
+	if isClient {
+		if IsDirectRouted(ctx) {
+			headers.Set(ftlDirectRoutingHeader, "1")
+		}
+		if verb, ok := VerbFromContext(ctx); ok {
+			headers.Set(ftlVerbHeader, verb.String())
+		}
+	} else {
+		if headers.Get(ftlDirectRoutingHeader) != "" {
+			ctx = WithDirectRouting(ctx)
+		}
+		if verb := headers.Get(ftlVerbHeader); verb != "" {
+			ref, err := schema.ParseRef(verb)
+			if err != nil {
+				return nil, errors.Wrapf(err, "invalid verb reference %q", verb)
+			}
+			ctx = WithVerb(ctx, (*schema.VerbRef)(ref))
+		}
+	}
+	return ctx, nil
 }

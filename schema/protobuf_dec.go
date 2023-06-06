@@ -40,6 +40,14 @@ func ModuleFromProto(s *pschema.Module) (*Module, error) {
 	return module, ValidateModule(module)
 }
 
+// VerbRefFromProto converts a protobuf VerbRef to a VerbRef.
+func VerbRefFromProto(s *pschema.VerbRef) *VerbRef {
+	return &VerbRef{
+		Module: s.Module,
+		Name:   s.Name,
+	}
+}
+
 func declListToSchema(s []*pschema.Decl) []Decl {
 	var out []Decl
 	for _, n := range s {

@@ -210,6 +210,7 @@ func (a *Agent) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest
 	logger := log.FromContext(ctx)
 	logger.Infof("Calling %s", req.Msg.Verb)
 	ctx = rpc.WithDirectRouting(ctx)
+	ctx = rpc.WithVerb(ctx, schema.VerbRefFromProto(req.Msg.Verb))
 	drive, err := a.findDrive(req.Msg.Verb.ToFTL())
 	if err != nil {
 		return nil, errors.WithStack(err)
