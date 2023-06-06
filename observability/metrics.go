@@ -8,8 +8,6 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
 	metricSdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -96,13 +94,4 @@ func (e *MetricsExporter) sendLoop(ctx context.Context, stream *connect.ClientSt
 			}
 		}
 	}
-}
-
-func Int64Counter(ctx context.Context, name string, options ...metric.Int64CounterOption) metric.Int64Counter {
-	// TODO(wes): Get the verb name from the context
-	counter, err := otel.GetMeterProvider().Meter("verbname").Int64Counter(name, options...)
-	if err != nil {
-		panic(err)
-	}
-	return counter
 }

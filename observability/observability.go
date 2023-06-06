@@ -41,19 +41,20 @@ func Init(ctx context.Context, observabilityServiceClient ftlv1connect.Observabi
 		semconv.ServiceName(name),
 	)
 
-	spanExporter := NewSpanExporter(ctx, observabilityServiceClient, conf.SpanExporterConfig)
+	ftlSpanExporter := NewSpanExporter(ctx, observabilityServiceClient, conf.SpanExporterConfig)
 
 	tp := trace.NewTracerProvider(
-		trace.WithBatcher(spanExporter),
+		trace.WithBatcher(ftlSpanExporter),
+
 		trace.WithResource(res))
 
 	otel.SetTracerProvider(tp)
 
-	metricsExporter := NewMetricsExporter(ctx, observabilityServiceClient, conf.MetricsExporterConfig)
+	ftlMetricsExporter := NewMetricsExporter(ctx, observabilityServiceClient, conf.MetricsExporterConfig)
 
 	provider := metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(metricsExporter, metric.WithInterval(conf.Interval))),
+		metric.WithReader(metric.NewPeriodicReader(ftlMetricsExporter, metric.WithInterval(conf.Interval))),
 	)
 
 	otel.SetMeterProvider(provider)

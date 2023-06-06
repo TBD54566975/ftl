@@ -70,7 +70,6 @@ func (s *SpanExporter) sendLoop(ctx context.Context, stream *connect.ClientStrea
 			if !ok {
 				return nil
 			}
-			logger.Infof("%s", event.Json)
 			if err := stream.Send(event); err != nil {
 				select {
 				case s.queue <- event:

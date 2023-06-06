@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/TBD54566975/ftl/sdk-go/observability"
+	observability "github.com/TBD54566975/ftl/sdk-go/observability"
 )
 
 type TimeRequest struct{}
@@ -18,10 +18,7 @@ type TimeResponse struct {
 //
 //ftl:verb
 func Time(ctx context.Context, req TimeRequest) (TimeResponse, error) {
-
-	observability.Int64Counter(ctx, "called").Add(ctx, 1)
-
-	_, span := observability.StartSpan(ctx, "amazing")
+	_, span := observability.StartSpan(ctx, "user span")
 	defer span.End()
 
 	return TimeResponse{Time: int(time.Now().Unix())}, nil
