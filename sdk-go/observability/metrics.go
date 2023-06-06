@@ -3,9 +3,10 @@ package observability
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/internal/rpc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+
+	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 func Int64Counter(ctx context.Context, name string, options ...metric.Int64CounterOption) metric.Int64Counter {

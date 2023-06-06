@@ -3,6 +3,10 @@ package observability
 import (
 	"context"
 
+	"github.com/alecthomas/atomic"
+	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
+	"github.com/bufbuild/connect-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -12,12 +16,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/alecthomas/atomic"
-	"github.com/alecthomas/errors"
-
-	"github.com/alecthomas/types"
-
-	"github.com/bufbuild/connect-go"
 )
 
 type Observability struct {
