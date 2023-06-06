@@ -2,13 +2,13 @@ package rpc
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/schema"
 	"net/http"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/schema"
 )
 
 const ftlDirectRoutingHeader = "FTL-Direct"
