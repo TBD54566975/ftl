@@ -121,8 +121,6 @@ func (s *Server) Wait() error {
 }
 
 func (s *Server) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
-	verb, _ := rpc.VerbFromContext(ctx)
-	log.FromContext(ctx).Warnf("Verb Reference: %s", verb)
 	if rpc.IsDirectRouted(ctx) || req.Msg.Verb.Module == s.module {
 		return s.plugin.Load().Client.Call(ctx, req)
 	}

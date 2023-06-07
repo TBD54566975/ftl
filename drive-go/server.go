@@ -11,10 +11,10 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/observability"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
-	"github.com/TBD54566975/ftl/sdk-go/observability"
 )
 
 type UserVerbConfig struct {

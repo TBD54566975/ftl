@@ -2,96 +2,113 @@ package observability
 
 import (
 	"context"
-	"encoding/json"
-	"time"
 
-	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
-	"github.com/jpillora/backoff"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-var ErrDroppedMetricEvent = errors.New("observability metric event dropped")
-
-type MetricsExporterConfig struct {
-	Buffer   int           `default:"1048576" help:"Number of metrics to buffer before dropping."`
-	Interval time.Duration `default:"30s" help:"Interval to export metrics." env:"FTL_METRICS_INTERVAL"`
-}
-
-type MetricsExporter struct {
-	client ftlv1connect.ObservabilityServiceClient
-	queue  chan *ftlv1.SendMetricsRequest
-}
-
-func NewMetricsExporter(ctx context.Context, client ftlv1connect.ObservabilityServiceClient, config MetricsExporterConfig) *MetricsExporter {
-	e := &MetricsExporter{
-		client: client,
-		queue:  make(chan *ftlv1.SendMetricsRequest, config.Buffer),
+func MeterWithVerb(ctx context.Context) metric.Meter {
+	verb, ok := rpc.VerbFromContext(ctx)
+	if !ok {
+		panic("traces: no verb in context")
 	}
-	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, e.client.SendMetrics, e.sendLoop)
-	return e
+	return otel.GetMeterProvider().Meter(verb.Name)
 }
 
-var _ metric.Exporter = (*MetricsExporter)(nil)
-
-func (e *MetricsExporter) Aggregation(kind metric.InstrumentKind) aggregation.Aggregation {
-	return metric.DefaultAggregationSelector(kind)
-}
-
-func (e *MetricsExporter) Temporality(kind metric.InstrumentKind) metricdata.Temporality {
-	return metric.DefaultTemporalitySelector(kind)
-}
-
-func (e *MetricsExporter) Export(ctx context.Context, metrics *metricdata.ResourceMetrics) error {
-	data, err := json.Marshal(metrics)
+func Int64Counter(ctx context.Context, name string, options ...metric.Int64CounterOption) metric.Int64Counter {
+	counter, err := MeterWithVerb(ctx).Int64Counter(name, options...)
 	if err != nil {
-		return errors.WithStack(err)
+		panic(err)
 	}
-	select {
-	case e.queue <- &ftlv1.SendMetricsRequest{Json: data}:
-	default:
-		return errors.WithStack(ErrDroppedMetricEvent)
-	}
-	return nil
+	return counter
 }
 
-func (e *MetricsExporter) ForceFlush(ctx context.Context) error {
-	return nil
-}
-
-func (e *MetricsExporter) Shutdown(ctx context.Context) error {
-	close(e.queue)
-	return nil
-}
-
-func (e *MetricsExporter) sendLoop(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.SendMetricsRequest, ftlv1.SendMetricsResponse]) error {
-	logger := log.FromContext(ctx)
-	logger.Infof("Metrics send loop started")
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.WithStack(context.Cause(ctx))
-
-		case event, ok := <-e.queue:
-			if !ok {
-				return nil
-			}
-			logger.Infof("%s", event.Json)
-			if err := stream.Send(event); err != nil {
-				select {
-				case e.queue <- event:
-				default:
-					log.FromContext(ctx).Errorf(errors.WithStack(ErrDroppedMetricEvent), "metrics queue full while handling error")
-				}
-				return errors.WithStack(err)
-			}
-		}
+func Int64UpDownCounter(ctx context.Context, name string, options ...metric.Int64UpDownCounterOption) metric.Int64UpDownCounter {
+	counter, err := MeterWithVerb(ctx).Int64UpDownCounter(name, options...)
+	if err != nil {
+		panic(err)
 	}
+	return counter
+}
+
+func Int64Histogram(ctx context.Context, name string, options ...metric.Int64HistogramOption) metric.Int64Histogram {
+	counter, err := MeterWithVerb(ctx).Int64Histogram(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Int64ObservableCounter(ctx context.Context, name string, options ...metric.Int64ObservableCounterOption) metric.Int64ObservableCounter {
+	counter, err := MeterWithVerb(ctx).Int64ObservableCounter(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Int64ObservableUpDownCounter(ctx context.Context, name string, options ...metric.Int64ObservableUpDownCounterOption) metric.Int64ObservableUpDownCounter {
+	counter, err := MeterWithVerb(ctx).Int64ObservableUpDownCounter(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Int64ObservableGauge(ctx context.Context, name string, options ...metric.Int64ObservableGaugeOption) metric.Int64ObservableGauge {
+	counter, err := MeterWithVerb(ctx).Int64ObservableGauge(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Float64Counter(ctx context.Context, name string, options ...metric.Float64CounterOption) metric.Float64Counter {
+	counter, err := MeterWithVerb(ctx).Float64Counter(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Float64UpDownCounter(ctx context.Context, name string, options ...metric.Float64UpDownCounterOption) metric.Float64UpDownCounter {
+	counter, err := MeterWithVerb(ctx).Float64UpDownCounter(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Float64Histogram(ctx context.Context, name string, options ...metric.Float64HistogramOption) metric.Float64Histogram {
+	counter, err := MeterWithVerb(ctx).Float64Histogram(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Float64ObservableCounter(ctx context.Context, name string, options ...metric.Float64ObservableCounterOption) metric.Float64ObservableCounter {
+	counter, err := MeterWithVerb(ctx).Float64ObservableCounter(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Float64ObservableUpDownCounter(ctx context.Context, name string, options ...metric.Float64ObservableUpDownCounterOption) metric.Float64ObservableUpDownCounter {
+	counter, err := MeterWithVerb(ctx).Float64ObservableUpDownCounter(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
+}
+
+func Float64ObservableGauge(ctx context.Context, name string, options ...metric.Float64ObservableGaugeOption) metric.Float64ObservableGauge {
+	counter, err := MeterWithVerb(ctx).Float64ObservableGauge(name, options...)
+	if err != nil {
+		panic(err)
+	}
+	return counter
 }

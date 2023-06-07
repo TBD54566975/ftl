@@ -24,6 +24,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/pubsub"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/observability"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -51,7 +52,6 @@ type Agent struct {
 
 var _ ftlv1connect.VerbServiceHandler = (*Agent)(nil)
 var _ ftlv1connect.DevelServiceHandler = (*Agent)(nil)
-var _ ftlv1connect.ObservabilityServiceHandler = (*Agent)(nil)
 
 // New creates a new local agent.
 func New(ctx context.Context, listen *url.URL) (*Agent, error) {
@@ -70,10 +70,12 @@ func (a *Agent) Serve(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	obs := observability.NewService()
+
 	return rpc.Serve(ctx, a.listen,
 		rpc.GRPC(ftlv1connect.NewDevelServiceHandler, a),
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, a),
-		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, a),
+		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, obs),
 		rpc.Route("/", c),
 	)
 }
@@ -169,28 +171,6 @@ func (a *Agent) Manage(ctx context.Context, dir string) (err error) {
 
 func (a *Agent) Wait() error {
 	return errors.WithStack(a.wg.Wait())
-}
-
-func (a *Agent) SendTraces(ctx context.Context, req *connect.ClientStream[ftlv1.SendTracesRequest]) (*connect.Response[ftlv1.SendTracesResponse], error) {
-	logger := log.FromContext(ctx)
-	for req.Receive() {
-		logger.Infof("Traces: %s", req.Msg().Json)
-	}
-	if err := req.Err(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
-	}
-	return connect.NewResponse(&ftlv1.SendTracesResponse{}), nil
-}
-
-func (a *Agent) SendMetrics(ctx context.Context, req *connect.ClientStream[ftlv1.SendMetricsRequest]) (*connect.Response[ftlv1.SendMetricsResponse], error) {
-	logger := log.FromContext(ctx)
-	for req.Receive() {
-		logger.Infof("Metrics: %s", req.Msg().Json)
-	}
-	if err := req.Err(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
-	}
-	return connect.NewResponse(&ftlv1.SendMetricsResponse{}), nil
 }
 
 func (a *Agent) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {

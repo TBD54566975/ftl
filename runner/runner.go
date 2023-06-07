@@ -24,6 +24,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/observability"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/schema"
@@ -59,17 +60,19 @@ func Start(ctx context.Context, config Config) error {
 	}
 	svc.registrationFailure.Store(types.Some(errors.New("not registered with ControlPlane")))
 
+	obs := observability.NewService()
+
 	retry := backoff.Backoff{Max: config.HeartbeatPeriod, Jitter: true}
 	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlplaneClient.RegisterRunner, svc.registrationLoop)
 
 	return rpc.Serve(ctx, config.Endpoint,
 		rpc.Route("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
 		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
+		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, obs),
 	)
 }
 
 var _ ftlv1connect.RunnerServiceHandler = (*Service)(nil)
-var _ ftlv1connect.ObservabilityServiceHandler = (*Service)(nil)
 var _ http.Handler = (*Service)(nil)
 
 type pluginProxy struct {
@@ -95,28 +98,6 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "503 No deployment", http.StatusServiceUnavailable)
 	}
-}
-
-func (s *Service) SendTraces(ctx context.Context, req *connect.ClientStream[ftlv1.SendTracesRequest]) (*connect.Response[ftlv1.SendTracesResponse], error) {
-	logger := log.FromContext(ctx)
-	for req.Receive() {
-		logger.Infof("Traces: %s", req.Msg().Json)
-	}
-	if err := req.Err(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
-	}
-	return connect.NewResponse(&ftlv1.SendTracesResponse{}), nil
-}
-
-func (s *Service) SendMetrics(ctx context.Context, req *connect.ClientStream[ftlv1.SendMetricsRequest]) (*connect.Response[ftlv1.SendMetricsResponse], error) {
-	logger := log.FromContext(ctx)
-	for req.Receive() {
-		logger.Infof("Metrics: %s", req.Msg().Json)
-	}
-	if err := req.Err(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
-	}
-	return connect.NewResponse(&ftlv1.SendMetricsResponse{}), nil
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
