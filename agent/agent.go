@@ -70,7 +70,7 @@ func (a *Agent) Serve(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	obs := observability.NewObservability()
+	obs := observability.NewService()
 
 	return rpc.Serve(ctx, a.listen,
 		rpc.GRPC(ftlv1connect.NewDevelServiceHandler, a),

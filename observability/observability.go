@@ -3,9 +3,7 @@ package observability
 import (
 	"context"
 
-	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
-	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -18,16 +16,14 @@ import (
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-type Observability struct {
-	registrationFailure atomic.Value[types.Option[error]]
-}
+type Observability struct{}
 
 type Config struct {
 	MetricsExporterConfig `embed:"" prefix:"metrics-"`
 	SpanExporterConfig    `embed:"" prefix:"traces-"`
 }
 
-func NewObservability() *Observability {
+func NewService() *Observability {
 	return &Observability{}
 }
 
@@ -59,12 +55,7 @@ func Init(ctx context.Context, observabilityServiceClient ftlv1connect.Observabi
 }
 
 func (o *Observability) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	var notReady *string
-	if err, ok := o.registrationFailure.Load().Get(); ok {
-		msg := err.Error()
-		notReady = &msg
-	}
-	return connect.NewResponse(&ftlv1.PingResponse{NotReady: notReady}), nil
+	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
 func (o *Observability) SendTraces(ctx context.Context, req *connect.ClientStream[ftlv1.SendTracesRequest]) (*connect.Response[ftlv1.SendTracesResponse], error) {

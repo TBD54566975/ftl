@@ -60,7 +60,7 @@ func Start(ctx context.Context, config Config) error {
 	}
 	svc.registrationFailure.Store(types.Some(errors.New("not registered with ControlPlane")))
 
-	obs := observability.NewObservability()
+	obs := observability.NewService()
 
 	retry := backoff.Backoff{Max: config.HeartbeatPeriod, Jitter: true}
 	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlplaneClient.RegisterRunner, svc.registrationLoop)

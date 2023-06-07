@@ -7,7 +7,6 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -16,7 +15,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	sdkgo "github.com/TBD54566975/ftl/sdk-go"
-	sdkObservabilityGo "github.com/TBD54566975/ftl/sdk-go/observability"
 )
 
 type UserVerbConfig struct {
@@ -86,12 +84,6 @@ type moduleServer struct {
 }
 
 func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
-	ctx, span := sdkObservabilityGo.StartSpan(ctx, "ftl.call")
-	span.SetAttributes(attribute.Bool("ftl.internal", true))
-	defer span.End()
-
-	sdkObservabilityGo.Int64Counter(ctx, "ftl.call").Add(ctx, 1)
-
 	handler, ok := m.handlers[sdkgo.VerbRefFromProto(req.Msg.Verb)]
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("verb %q not found", req.Msg.Verb))
