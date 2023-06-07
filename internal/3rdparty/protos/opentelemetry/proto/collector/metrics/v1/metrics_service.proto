@@ -19,10 +19,10 @@ package opentelemetry.proto.collector.metrics.v1;
 import "opentelemetry/proto/metrics/v1/metrics.proto";
 
 option csharp_namespace = "OpenTelemetry.Proto.Collector.Metrics.V1";
-option java_multiple_files = true;
-option java_package = "io.opentelemetry.proto.collector.metrics.v1";
-option java_outer_classname = "MetricsServiceProto";
 option go_package = "go.opentelemetry.io/proto/otlp/collector/metrics/v1";
+option java_multiple_files = true;
+option java_outer_classname = "MetricsServiceProto";
+option java_package = "io.opentelemetry.proto.collector.metrics.v1";
 
 // Service that can be used to push metrics between one Application
 // instrumented with OpenTelemetry and a collector, or between a collector and a

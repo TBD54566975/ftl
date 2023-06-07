@@ -19,14 +19,16 @@ SQLC_OUT = controlplane/internal/sql/db.go \
 PROTO_IN = protos/buf.yaml \
 		   protos/buf.gen.yaml \
 		   protos/xyz/block/ftl/v1/ftl.proto \
-		   protos/xyz/block/ftl/v1/schema/schema.proto
+		   protos/xyz/block/ftl/v1/schema/schema.proto \
+		   internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/metrics_service.proto
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			protos/xyz/block/ftl/v1/schema/schema.pb.go \
 			protos/xyz/block/ftl/v1/ftl.pb.go \
 			console/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
 			console/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
 			console/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
-			console/src/protos/xyz/block/ftl/v1/ftl_pb.ts
+			console/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
+			internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect/metrics_service.connect.go
 
 
 .DEFAULT_GOAL := help
@@ -57,6 +59,7 @@ $(PROTO_OUT) &: $(PROTO_IN)
 	buf format -w
 	buf lint
 	(cd protos && buf generate)
+	(cd internal/3rdparty/protos && buf generate)
 
 $(SCHEMA_OUT) &: $(SCHEMA_IN)
 	ftl schema protobuf > $(SCHEMA_OUT)~ && mv $(SCHEMA_OUT)~ $(SCHEMA_OUT)

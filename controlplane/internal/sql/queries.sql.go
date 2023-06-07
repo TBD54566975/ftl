@@ -8,9 +8,8 @@ package sql
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const assignDeployment = `-- name: AssignDeployment :exec
