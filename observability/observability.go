@@ -2,80 +2,65 @@ package observability
 
 import (
 	"context"
+	"net"
+	"net/url"
+	"time"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	metricsv1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 
+	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
 	"github.com/TBD54566975/ftl/internal/log"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
+
+type Config struct {
+	ObservabilityEndpoint *url.URL      `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" required:""`
+	Interval              time.Duration `default:"30s" help:"Interval to export metrics." env:"FTL_METRICS_INTERVAL"`
+}
 
 type Observability struct{}
 
-type Config struct {
-	MetricsExporterConfig `embed:"" prefix:"metrics-"`
-	SpanExporterConfig    `embed:"" prefix:"traces-"`
+// Export implements v1connect.MetricsServiceHandler
+func (*Observability) Export(ctx context.Context, req *connect.Request[metricsv1.ExportMetricsServiceRequest]) (*connect.Response[metricsv1.ExportMetricsServiceResponse], error) {
+	logger := log.FromContext(ctx)
+	logger.Infof("Metric Req %s:", req.Msg)
+	return connect.NewResponse(&metricsv1.ExportMetricsServiceResponse{}), nil
 }
 
 func NewService() *Observability {
 	return &Observability{}
 }
 
-var _ ftlv1connect.ObservabilityServiceHandler = (*Observability)(nil)
+var _ v1connect.MetricsServiceHandler = (*Observability)(nil)
 
-func Init(ctx context.Context, observabilityServiceClient ftlv1connect.ObservabilityServiceClient, name string, conf Config) {
+func Init(ctx context.Context, name string, config Config) error {
+	_, _, err := net.SplitHostPort(config.ObservabilityEndpoint.Host)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	exporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(config.ObservabilityEndpoint.Host), otlpmetricgrpc.WithInsecure())
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceName(name),
 	)
 
-	ftlSpanExporter := NewSpanExporter(ctx, observabilityServiceClient, conf.SpanExporterConfig)
-
-	tp := trace.NewTracerProvider(
-		trace.WithBatcher(ftlSpanExporter),
-
-		trace.WithResource(res))
-
-	otel.SetTracerProvider(tp)
-
-	ftlMetricsExporter := NewMetricsExporter(ctx, observabilityServiceClient, conf.MetricsExporterConfig)
-
-	provider := metric.NewMeterProvider(
+	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(ftlMetricsExporter, metric.WithInterval(conf.Interval))),
+		metric.WithReader(metric.NewPeriodicReader(exporter, metric.WithInterval(config.Interval))),
 	)
 
-	otel.SetMeterProvider(provider)
-}
+	otel.SetMeterProvider(meterProvider)
 
-func (o *Observability) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	return connect.NewResponse(&ftlv1.PingResponse{}), nil
-}
-
-func (o *Observability) SendTraces(ctx context.Context, req *connect.ClientStream[ftlv1.SendTracesRequest]) (*connect.Response[ftlv1.SendTracesResponse], error) {
-	logger := log.FromContext(ctx)
-	for req.Receive() {
-		logger.Tracef("Traces: %s", req.Msg().Json)
-	}
-	if err := req.Err(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
-	}
-	return connect.NewResponse(&ftlv1.SendTracesResponse{}), nil
-}
-
-func (o *Observability) SendMetrics(ctx context.Context, req *connect.ClientStream[ftlv1.SendMetricsRequest]) (*connect.Response[ftlv1.SendMetricsResponse], error) {
-	logger := log.FromContext(ctx)
-	for req.Receive() {
-		logger.Tracef("Metrics: %s", req.Msg().Json)
-	}
-	if err := req.Err(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.WithStack(err))
-	}
-	return connect.NewResponse(&ftlv1.SendMetricsResponse{}), nil
+	return nil
 }

@@ -20,6 +20,7 @@ import (
 
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/console"
+	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/pubsub"
@@ -70,12 +71,13 @@ func (a *Agent) Serve(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	obs := observability.NewService()
 
 	return rpc.Serve(ctx, a.listen,
 		rpc.GRPC(ftlv1connect.NewDevelServiceHandler, a),
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, a),
-		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, obs),
+		rpc.RawGRPC(v1connect.NewMetricsServiceHandler, obs),
 		rpc.Route("/", c),
 	)
 }
