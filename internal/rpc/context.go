@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
 
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/schema"
@@ -53,6 +54,7 @@ func DefaultClientOptions(level log.Level) []connect.ClientOption {
 func DefaultHandlerOptions() []connect.HandlerOption {
 	return []connect.HandlerOption{
 		connect.WithInterceptors(MetadataInterceptor(log.Error)),
+		connect.WithInterceptors(otelconnect.NewInterceptor()),
 	}
 }
 

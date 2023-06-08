@@ -21,6 +21,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -60,15 +61,15 @@ func Start(ctx context.Context, config Config) error {
 	}
 	svc.registrationFailure.Store(types.Some(errors.New("not registered with ControlPlane")))
 
-	obs := observability.NewService()
-
 	retry := backoff.Backoff{Max: config.HeartbeatPeriod, Jitter: true}
 	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlplaneClient.RegisterRunner, svc.registrationLoop)
+
+	obs := observability.NewService()
 
 	return rpc.Serve(ctx, config.Endpoint,
 		rpc.Route("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
 		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
-		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, obs),
+		rpc.RawGRPC(v1connect.NewMetricsServiceHandler, obs),
 	)
 }
 

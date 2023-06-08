@@ -1535,176 +1535,6 @@ func (*DeployToRunnerResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{29}
 }
 
-type SendMetricsRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Json []byte `protobuf:"bytes,1,opt,name=json,proto3" json:"json,omitempty"`
-}
-
-func (x *SendMetricsRequest) Reset() {
-	*x = SendMetricsRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[30]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SendMetricsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SendMetricsRequest) ProtoMessage() {}
-
-func (x *SendMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[30]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SendMetricsRequest.ProtoReflect.Descriptor instead.
-func (*SendMetricsRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{30}
-}
-
-func (x *SendMetricsRequest) GetJson() []byte {
-	if x != nil {
-		return x.Json
-	}
-	return nil
-}
-
-type SendMetricsResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *SendMetricsResponse) Reset() {
-	*x = SendMetricsResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[31]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SendMetricsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SendMetricsResponse) ProtoMessage() {}
-
-func (x *SendMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[31]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SendMetricsResponse.ProtoReflect.Descriptor instead.
-func (*SendMetricsResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{31}
-}
-
-type SendTracesRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Json []byte `protobuf:"bytes,1,opt,name=json,proto3" json:"json,omitempty"`
-}
-
-func (x *SendTracesRequest) Reset() {
-	*x = SendTracesRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[32]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SendTracesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SendTracesRequest) ProtoMessage() {}
-
-func (x *SendTracesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[32]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SendTracesRequest.ProtoReflect.Descriptor instead.
-func (*SendTracesRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{32}
-}
-
-func (x *SendTracesRequest) GetJson() []byte {
-	if x != nil {
-		return x.Json
-	}
-	return nil
-}
-
-type SendTracesResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *SendTracesResponse) Reset() {
-	*x = SendTracesResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[33]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SendTracesResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SendTracesResponse) ProtoMessage() {}
-
-func (x *SendTracesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[33]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SendTracesResponse.ProtoReflect.Descriptor instead.
-func (*SendTracesResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{33}
-}
-
 type Metadata_Pair struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1717,7 +1547,7 @@ type Metadata_Pair struct {
 func (x *Metadata_Pair) Reset() {
 	*x = Metadata_Pair{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[34]
+		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1730,7 +1560,7 @@ func (x *Metadata_Pair) String() string {
 func (*Metadata_Pair) ProtoMessage() {}
 
 func (x *Metadata_Pair) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[34]
+	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1771,7 +1601,7 @@ type CallResponse_Error struct {
 func (x *CallResponse_Error) Reset() {
 	*x = CallResponse_Error{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[35]
+		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1784,7 +1614,7 @@ func (x *CallResponse_Error) String() string {
 func (*CallResponse_Error) ProtoMessage() {}
 
 func (x *CallResponse_Error) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[35]
+	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1968,15 +1798,7 @@ var file_xyz_block_ftl_v1_ftl_proto_rawDesc = []byte{
 	0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x0d, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x4b,
 	0x65, 0x79, 0x22, 0x18, 0x0a, 0x16, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x54, 0x6f, 0x52, 0x75,
-	0x6e, 0x6e, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x28, 0x0a, 0x12,
-	0x53, 0x65, 0x6e, 0x64, 0x4d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6a, 0x73, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c,
-	0x52, 0x04, 0x6a, 0x73, 0x6f, 0x6e, 0x22, 0x15, 0x0a, 0x13, 0x53, 0x65, 0x6e, 0x64, 0x4d, 0x65,
-	0x74, 0x72, 0x69, 0x63, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x27, 0x0a,
-	0x11, 0x53, 0x65, 0x6e, 0x64, 0x54, 0x72, 0x61, 0x63, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6a, 0x73, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c,
-	0x52, 0x04, 0x6a, 0x73, 0x6f, 0x6e, 0x22, 0x14, 0x0a, 0x12, 0x53, 0x65, 0x6e, 0x64, 0x54, 0x72,
-	0x61, 0x63, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x32, 0xe2, 0x01, 0x0a,
+	0x6e, 0x6e, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x32, 0xe2, 0x01, 0x0a,
 	0x0b, 0x56, 0x65, 0x72, 0x62, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x45, 0x0a, 0x04,
 	0x50, 0x69, 0x6e, 0x67, 0x12, 0x1d, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
 	0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x75,
@@ -2078,29 +1900,11 @@ var file_xyz_block_ftl_v1_ftl_proto_rawDesc = []byte{
 	0x6e, 0x6e, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x28, 0x2e, 0x78, 0x79,
 	0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x44,
 	0x65, 0x70, 0x6c, 0x6f, 0x79, 0x54, 0x6f, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x32, 0x96, 0x02, 0x0a, 0x14, 0x4f, 0x62, 0x73, 0x65, 0x72, 0x76,
-	0x61, 0x62, 0x69, 0x6c, 0x69, 0x74, 0x79, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x45,
-	0x0a, 0x04, 0x50, 0x69, 0x6e, 0x67, 0x12, 0x1d, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f,
-	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63,
-	0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5c, 0x0a, 0x0b, 0x53, 0x65, 0x6e, 0x64, 0x4d, 0x65, 0x74,
-	0x72, 0x69, 0x63, 0x73, 0x12, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
-	0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x6e, 0x64, 0x4d, 0x65, 0x74, 0x72,
-	0x69, 0x63, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25, 0x2e, 0x78, 0x79, 0x7a,
-	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65,
-	0x6e, 0x64, 0x4d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x28, 0x01, 0x12, 0x59, 0x0a, 0x0a, 0x53, 0x65, 0x6e, 0x64, 0x54, 0x72, 0x61, 0x63, 0x65,
-	0x73, 0x12, 0x23, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74,
-	0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x6e, 0x64, 0x54, 0x72, 0x61, 0x63, 0x65, 0x73, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f,
-	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x6e, 0x64, 0x54, 0x72,
-	0x61, 0x63, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x28, 0x01, 0x42, 0x3c,
-	0x50, 0x01, 0x5a, 0x38, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x54,
-	0x42, 0x44, 0x35, 0x34, 0x35, 0x36, 0x36, 0x39, 0x37, 0x35, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2f, 0x78, 0x79, 0x7a, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2f,
-	0x66, 0x74, 0x6c, 0x2f, 0x76, 0x31, 0x3b, 0x66, 0x74, 0x6c, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x33,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x3c, 0x50, 0x01, 0x5a, 0x38, 0x67, 0x69, 0x74, 0x68, 0x75,
+	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x54, 0x42, 0x44, 0x35, 0x34, 0x35, 0x36, 0x36, 0x39, 0x37,
+	0x35, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2f, 0x78, 0x79, 0x7a,
+	0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x76, 0x31, 0x3b, 0x66, 0x74,
+	0x6c, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -2115,7 +1919,7 @@ func file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP() []byte {
 	return file_xyz_block_ftl_v1_ftl_proto_rawDescData
 }
 
-var file_xyz_block_ftl_v1_ftl_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_xyz_block_ftl_v1_ftl_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_xyz_block_ftl_v1_ftl_proto_goTypes = []interface{}{
 	(*PingRequest)(nil),                    // 0: xyz.block.ftl.v1.PingRequest
 	(*PingResponse)(nil),                   // 1: xyz.block.ftl.v1.PingResponse
@@ -2147,29 +1951,25 @@ var file_xyz_block_ftl_v1_ftl_proto_goTypes = []interface{}{
 	(*StreamDeploymentLogsResponse)(nil),   // 27: xyz.block.ftl.v1.StreamDeploymentLogsResponse
 	(*DeployToRunnerRequest)(nil),          // 28: xyz.block.ftl.v1.DeployToRunnerRequest
 	(*DeployToRunnerResponse)(nil),         // 29: xyz.block.ftl.v1.DeployToRunnerResponse
-	(*SendMetricsRequest)(nil),             // 30: xyz.block.ftl.v1.SendMetricsRequest
-	(*SendMetricsResponse)(nil),            // 31: xyz.block.ftl.v1.SendMetricsResponse
-	(*SendTracesRequest)(nil),              // 32: xyz.block.ftl.v1.SendTracesRequest
-	(*SendTracesResponse)(nil),             // 33: xyz.block.ftl.v1.SendTracesResponse
-	(*Metadata_Pair)(nil),                  // 34: xyz.block.ftl.v1.Metadata.Pair
-	(*CallResponse_Error)(nil),             // 35: xyz.block.ftl.v1.CallResponse.Error
-	(*schema.VerbRef)(nil),                 // 36: xyz.block.ftl.v1.schema.VerbRef
-	(*schema.Module)(nil),                  // 37: xyz.block.ftl.v1.schema.Module
+	(*Metadata_Pair)(nil),                  // 30: xyz.block.ftl.v1.Metadata.Pair
+	(*CallResponse_Error)(nil),             // 31: xyz.block.ftl.v1.CallResponse.Error
+	(*schema.VerbRef)(nil),                 // 32: xyz.block.ftl.v1.schema.VerbRef
+	(*schema.Module)(nil),                  // 33: xyz.block.ftl.v1.schema.Module
 }
 var file_xyz_block_ftl_v1_ftl_proto_depIdxs = []int32{
-	34, // 0: xyz.block.ftl.v1.Metadata.values:type_name -> xyz.block.ftl.v1.Metadata.Pair
+	30, // 0: xyz.block.ftl.v1.Metadata.values:type_name -> xyz.block.ftl.v1.Metadata.Pair
 	2,  // 1: xyz.block.ftl.v1.CallRequest.metadata:type_name -> xyz.block.ftl.v1.Metadata
-	36, // 2: xyz.block.ftl.v1.CallRequest.verb:type_name -> xyz.block.ftl.v1.schema.VerbRef
-	35, // 3: xyz.block.ftl.v1.CallResponse.error:type_name -> xyz.block.ftl.v1.CallResponse.Error
-	36, // 4: xyz.block.ftl.v1.ListResponse.verbs:type_name -> xyz.block.ftl.v1.schema.VerbRef
-	37, // 5: xyz.block.ftl.v1.PushSchemaRequest.schema:type_name -> xyz.block.ftl.v1.schema.Module
-	37, // 6: xyz.block.ftl.v1.PullSchemaResponse.schema:type_name -> xyz.block.ftl.v1.schema.Module
+	32, // 2: xyz.block.ftl.v1.CallRequest.verb:type_name -> xyz.block.ftl.v1.schema.VerbRef
+	31, // 3: xyz.block.ftl.v1.CallResponse.error:type_name -> xyz.block.ftl.v1.CallResponse.Error
+	32, // 4: xyz.block.ftl.v1.ListResponse.verbs:type_name -> xyz.block.ftl.v1.schema.VerbRef
+	33, // 5: xyz.block.ftl.v1.PushSchemaRequest.schema:type_name -> xyz.block.ftl.v1.schema.Module
+	33, // 6: xyz.block.ftl.v1.PullSchemaResponse.schema:type_name -> xyz.block.ftl.v1.schema.Module
 	15, // 7: xyz.block.ftl.v1.GetArtefactDiffsResponse.client_artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
-	37, // 8: xyz.block.ftl.v1.CreateDeploymentRequest.schema:type_name -> xyz.block.ftl.v1.schema.Module
+	33, // 8: xyz.block.ftl.v1.CreateDeploymentRequest.schema:type_name -> xyz.block.ftl.v1.schema.Module
 	15, // 9: xyz.block.ftl.v1.CreateDeploymentRequest.artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
 	15, // 10: xyz.block.ftl.v1.GetDeploymentArtefactsRequest.have_artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
 	15, // 11: xyz.block.ftl.v1.GetDeploymentArtefactsResponse.artefact:type_name -> xyz.block.ftl.v1.DeploymentArtefact
-	37, // 12: xyz.block.ftl.v1.GetDeploymentResponse.schema:type_name -> xyz.block.ftl.v1.schema.Module
+	33, // 12: xyz.block.ftl.v1.GetDeploymentResponse.schema:type_name -> xyz.block.ftl.v1.schema.Module
 	15, // 13: xyz.block.ftl.v1.GetDeploymentResponse.artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
 	0,  // 14: xyz.block.ftl.v1.VerbService.Ping:input_type -> xyz.block.ftl.v1.PingRequest
 	3,  // 15: xyz.block.ftl.v1.VerbService.Call:input_type -> xyz.block.ftl.v1.CallRequest
@@ -2188,31 +1988,25 @@ var file_xyz_block_ftl_v1_ftl_proto_depIdxs = []int32{
 	26, // 28: xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs:input_type -> xyz.block.ftl.v1.StreamDeploymentLogsRequest
 	0,  // 29: xyz.block.ftl.v1.RunnerService.Ping:input_type -> xyz.block.ftl.v1.PingRequest
 	28, // 30: xyz.block.ftl.v1.RunnerService.DeployToRunner:input_type -> xyz.block.ftl.v1.DeployToRunnerRequest
-	0,  // 31: xyz.block.ftl.v1.ObservabilityService.Ping:input_type -> xyz.block.ftl.v1.PingRequest
-	30, // 32: xyz.block.ftl.v1.ObservabilityService.SendMetrics:input_type -> xyz.block.ftl.v1.SendMetricsRequest
-	32, // 33: xyz.block.ftl.v1.ObservabilityService.SendTraces:input_type -> xyz.block.ftl.v1.SendTracesRequest
-	1,  // 34: xyz.block.ftl.v1.VerbService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
-	4,  // 35: xyz.block.ftl.v1.VerbService.Call:output_type -> xyz.block.ftl.v1.CallResponse
-	6,  // 36: xyz.block.ftl.v1.VerbService.List:output_type -> xyz.block.ftl.v1.ListResponse
-	1,  // 37: xyz.block.ftl.v1.DevelService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
-	8,  // 38: xyz.block.ftl.v1.DevelService.PushSchema:output_type -> xyz.block.ftl.v1.PushSchemaResponse
-	10, // 39: xyz.block.ftl.v1.DevelService.PullSchema:output_type -> xyz.block.ftl.v1.PullSchemaResponse
-	1,  // 40: xyz.block.ftl.v1.ControlPlaneService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
-	12, // 41: xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs:output_type -> xyz.block.ftl.v1.GetArtefactDiffsResponse
-	14, // 42: xyz.block.ftl.v1.ControlPlaneService.UploadArtefact:output_type -> xyz.block.ftl.v1.UploadArtefactResponse
-	17, // 43: xyz.block.ftl.v1.ControlPlaneService.CreateDeployment:output_type -> xyz.block.ftl.v1.CreateDeploymentResponse
-	21, // 44: xyz.block.ftl.v1.ControlPlaneService.GetDeployment:output_type -> xyz.block.ftl.v1.GetDeploymentResponse
-	19, // 45: xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts:output_type -> xyz.block.ftl.v1.GetDeploymentArtefactsResponse
-	23, // 46: xyz.block.ftl.v1.ControlPlaneService.RegisterRunner:output_type -> xyz.block.ftl.v1.RegisterRunnerResponse
-	25, // 47: xyz.block.ftl.v1.ControlPlaneService.Deploy:output_type -> xyz.block.ftl.v1.DeployResponse
-	27, // 48: xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs:output_type -> xyz.block.ftl.v1.StreamDeploymentLogsResponse
-	1,  // 49: xyz.block.ftl.v1.RunnerService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
-	29, // 50: xyz.block.ftl.v1.RunnerService.DeployToRunner:output_type -> xyz.block.ftl.v1.DeployToRunnerResponse
-	1,  // 51: xyz.block.ftl.v1.ObservabilityService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
-	31, // 52: xyz.block.ftl.v1.ObservabilityService.SendMetrics:output_type -> xyz.block.ftl.v1.SendMetricsResponse
-	33, // 53: xyz.block.ftl.v1.ObservabilityService.SendTraces:output_type -> xyz.block.ftl.v1.SendTracesResponse
-	34, // [34:54] is the sub-list for method output_type
-	14, // [14:34] is the sub-list for method input_type
+	1,  // 31: xyz.block.ftl.v1.VerbService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
+	4,  // 32: xyz.block.ftl.v1.VerbService.Call:output_type -> xyz.block.ftl.v1.CallResponse
+	6,  // 33: xyz.block.ftl.v1.VerbService.List:output_type -> xyz.block.ftl.v1.ListResponse
+	1,  // 34: xyz.block.ftl.v1.DevelService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
+	8,  // 35: xyz.block.ftl.v1.DevelService.PushSchema:output_type -> xyz.block.ftl.v1.PushSchemaResponse
+	10, // 36: xyz.block.ftl.v1.DevelService.PullSchema:output_type -> xyz.block.ftl.v1.PullSchemaResponse
+	1,  // 37: xyz.block.ftl.v1.ControlPlaneService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
+	12, // 38: xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs:output_type -> xyz.block.ftl.v1.GetArtefactDiffsResponse
+	14, // 39: xyz.block.ftl.v1.ControlPlaneService.UploadArtefact:output_type -> xyz.block.ftl.v1.UploadArtefactResponse
+	17, // 40: xyz.block.ftl.v1.ControlPlaneService.CreateDeployment:output_type -> xyz.block.ftl.v1.CreateDeploymentResponse
+	21, // 41: xyz.block.ftl.v1.ControlPlaneService.GetDeployment:output_type -> xyz.block.ftl.v1.GetDeploymentResponse
+	19, // 42: xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts:output_type -> xyz.block.ftl.v1.GetDeploymentArtefactsResponse
+	23, // 43: xyz.block.ftl.v1.ControlPlaneService.RegisterRunner:output_type -> xyz.block.ftl.v1.RegisterRunnerResponse
+	25, // 44: xyz.block.ftl.v1.ControlPlaneService.Deploy:output_type -> xyz.block.ftl.v1.DeployResponse
+	27, // 45: xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs:output_type -> xyz.block.ftl.v1.StreamDeploymentLogsResponse
+	1,  // 46: xyz.block.ftl.v1.RunnerService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
+	29, // 47: xyz.block.ftl.v1.RunnerService.DeployToRunner:output_type -> xyz.block.ftl.v1.DeployToRunnerResponse
+	31, // [31:48] is the sub-list for method output_type
+	14, // [14:31] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name
 	14, // [14:14] is the sub-list for extension extendee
 	0,  // [0:14] is the sub-list for field type_name
@@ -2585,54 +2379,6 @@ func file_xyz_block_ftl_v1_ftl_proto_init() {
 			}
 		}
 		file_xyz_block_ftl_v1_ftl_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SendMetricsRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_xyz_block_ftl_v1_ftl_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SendMetricsResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_xyz_block_ftl_v1_ftl_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SendTracesRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_xyz_block_ftl_v1_ftl_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SendTracesResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_xyz_block_ftl_v1_ftl_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Metadata_Pair); i {
 			case 0:
 				return &v.state
@@ -2644,7 +2390,7 @@ func file_xyz_block_ftl_v1_ftl_proto_init() {
 				return nil
 			}
 		}
-		file_xyz_block_ftl_v1_ftl_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+		file_xyz_block_ftl_v1_ftl_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CallResponse_Error); i {
 			case 0:
 				return &v.state
@@ -2669,9 +2415,9 @@ func file_xyz_block_ftl_v1_ftl_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_xyz_block_ftl_v1_ftl_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   36,
+			NumMessages:   32,
 			NumExtensions: 0,
-			NumServices:   5,
+			NumServices:   4,
 		},
 		GoTypes:           file_xyz_block_ftl_v1_ftl_proto_goTypes,
 		DependencyIndexes: file_xyz_block_ftl_v1_ftl_proto_depIdxs,

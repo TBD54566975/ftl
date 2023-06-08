@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, SendMetricsRequest, SendMetricsResponse, SendTracesRequest, SendTracesResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -243,48 +243,6 @@ export const RunnerService = {
       I: DeployToRunnerRequest,
       O: DeployToRunnerResponse,
       kind: MethodKind.Unary,
-    },
-  }
-} as const;
-
-/**
- * ObservabilityService is the service that receives metrics from the Deployment.
- *
- * @generated from service xyz.block.ftl.v1.ObservabilityService
- */
-export const ObservabilityService = {
-  typeName: "xyz.block.ftl.v1.ObservabilityService",
-  methods: {
-    /**
-     * @generated from rpc xyz.block.ftl.v1.ObservabilityService.Ping
-     */
-    ping: {
-      name: "Ping",
-      I: PingRequest,
-      O: PingResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Send OTEL metrics from the Deployment to the ControlPlane via the Runner.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ObservabilityService.SendMetrics
-     */
-    sendMetrics: {
-      name: "SendMetrics",
-      I: SendMetricsRequest,
-      O: SendMetricsResponse,
-      kind: MethodKind.ClientStreaming,
-    },
-    /**
-     * Send OTEL traces from the Deployment to the ControlPlane via the Runner.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ObservabilityService.SendTraces
-     */
-    sendTraces: {
-      name: "SendTraces",
-      I: SendTracesRequest,
-      O: SendTracesResponse,
-      kind: MethodKind.ClientStreaming,
     },
   }
 } as const;

@@ -18,9 +18,8 @@ import (
 )
 
 type UserVerbConfig struct {
-	FTLEndpoint              *url.URL             `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
-	FTLObservabilityEndpoint *url.URL             `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" required:""`
-	Observability            observability.Config `embed:""`
+	FTLEndpoint         *url.URL             `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
+	ObservabilityConfig observability.Config `embed:"" prefix:"observability-"`
 }
 
 // NewUserVerbServer starts a new code-generated drive for user Verbs.
@@ -30,10 +29,11 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
-		observabilityServiceClient := rpc.Dial(ftlv1connect.NewObservabilityServiceClient, uc.FTLObservabilityEndpoint.String(), log.Error)
-		ctx = rpc.ContextWithClient(ctx, observabilityServiceClient)
 
-		observability.Init(ctx, observabilityServiceClient, moduleName, uc.Observability)
+		err := observability.Init(ctx, moduleName, uc.ObservabilityConfig)
+		if err != nil {
+			return nil, nil, errors.WithStack(err)
+		}
 		hmap := map[sdkgo.VerbRef]Handler{}
 		for _, handler := range handlers {
 			hmap[handler.ref] = handler

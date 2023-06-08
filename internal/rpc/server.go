@@ -29,9 +29,21 @@ type optionsBundle struct {
 type Option func(*optionsBundle)
 
 type GRPCServerConstructor[Iface Pingable] func(svc Iface, opts ...connect.HandlerOption) (string, http.Handler)
+type RawGRPCServerConstructor[Iface any] func(svc Iface, opts ...connect.HandlerOption) (string, http.Handler)
 
 // GRPC is a convenience function for registering a GRPC server with default options.
+// TODO(aat): Do we need pingable here?
 func GRPC[Iface, Impl Pingable](constructor GRPCServerConstructor[Iface], impl Impl, options ...connect.HandlerOption) Option {
+	return func(o *optionsBundle) {
+		options = append(options, DefaultHandlerOptions()...)
+		path, handler := constructor(any(impl).(Iface), options...)
+		o.reflectionPaths = append(o.reflectionPaths, strings.Trim(path, "/"))
+		o.mux.Handle(path, handler)
+	}
+}
+
+// RawGRPC is a convenience function for registering a GRPC server with default options without Pingable.
+func RawGRPC[Iface, Impl any](constructor RawGRPCServerConstructor[Iface], impl Impl, options ...connect.HandlerOption) Option {
 	return func(o *optionsBundle) {
 		options = append(options, DefaultHandlerOptions()...)
 		path, handler := constructor(any(impl).(Iface), options...)
