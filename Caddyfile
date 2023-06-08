@@ -1,0 +1,15 @@
+{
+	servers {
+		protocols h1 h2 h2c h3
+	}
+}
+
+http://ftl.localtest.me {
+	reverse_proxy * {
+		to http://127.0.0.1:8891 http://127.0.0.1:8892
+		flush_interval -1
+		transport http {
+			versions h2c 2
+		}
+	}
+}

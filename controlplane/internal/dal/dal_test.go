@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"net/url"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/TBD54566975/ftl/controlplane/internal/sql/sqltest"
 	"github.com/TBD54566975/ftl/internal/sha256"
@@ -18,30 +21,40 @@ func TestDAL(t *testing.T) {
 	var testSHA = sha256.Sum(testContent)
 
 	conn := sqltest.OpenForTesting(t)
-	bp := New(conn)
-	assert.NotZero(t, bp)
+	dal := New(conn)
+	assert.NotZero(t, dal)
+	var err error
 
 	ctx := context.Background()
 
-	err := bp.CreateModule(ctx, "go", "test")
-	assert.NoError(t, err)
+	t.Run("CreateModule", func(t *testing.T) {
+		err = dal.CreateModule(ctx, "go", "test")
+		assert.NoError(t, err)
+	})
 
-	testSha, err := bp.CreateArtefact(ctx, testContent)
-	assert.NoError(t, err)
+	var testSha sha256.SHA256
+
+	t.Run("CreateArtefact", func(t *testing.T) {
+		testSha, err = dal.CreateArtefact(ctx, testContent)
+		assert.NoError(t, err)
+	})
 
 	module := &schema.Module{Name: "test"}
-	key, err := bp.CreateDeployment(ctx, "go", module, []DeploymentArtefact{{
-		Digest:     testSha,
-		Executable: true,
-		Path:       "dir/filename",
-	}})
-	assert.NoError(t, err)
+	var deploymentKey ulid.ULID
+	t.Run("CreateDeployment", func(t *testing.T) {
+		deploymentKey, err = dal.CreateDeployment(ctx, "go", module, []DeploymentArtefact{{
+			Digest:     testSha,
+			Executable: true,
+			Path:       "dir/filename",
+		}})
+		assert.NoError(t, err)
+	})
 
-	expected := &Deployment{
+	deployment := &Deployment{
 		Module:   "test",
 		Language: "go",
 		Schema:   module,
-		Key:      key,
+		Key:      deploymentKey,
 		Artefacts: []*Artefact{
 			{Path: "dir/filename",
 				Executable: true,
@@ -49,24 +62,126 @@ func TestDAL(t *testing.T) {
 				Content:    bytes.NewReader(testContent)},
 		},
 	}
-	expectedContent := artefactContent(t, expected.Artefacts)
+	expectedContent := artefactContent(t, deployment.Artefacts)
 
-	actual, err := bp.GetLatestDeployment(ctx, "test")
-	assert.NoError(t, err)
-	actualContent := artefactContent(t, actual.Artefacts)
-	assert.Equal(t, expectedContent, actualContent)
-	assert.Equal(t, expected, actual)
+	t.Run("GetLatestDeployment", func(t *testing.T) {
+		actual, err := dal.GetLatestDeployment(ctx, deployment.Module)
+		assert.NoError(t, err)
+		actualContent := artefactContent(t, actual.Artefacts)
+		assert.Equal(t, expectedContent, actualContent)
+		assert.Equal(t, deployment, actual)
+	})
 
-	actual, err = bp.GetDeployment(ctx, key)
-	assert.NoError(t, err)
-	actualContent = artefactContent(t, actual.Artefacts)
-	assert.Equal(t, expectedContent, actualContent)
-	assert.Equal(t, expected, actual)
+	t.Run("GetDeployment", func(t *testing.T) {
+		actual, err := dal.GetDeployment(ctx, deploymentKey)
+		assert.NoError(t, err)
+		actualContent := artefactContent(t, actual.Artefacts)
+		assert.Equal(t, expectedContent, actualContent)
+		assert.Equal(t, deployment, actual)
+	})
 
-	misshingSHA := sha256.MustParseSHA256("fae7e4cbdca7167bbea4098c05d596f50bbb18062b61c1dfca3705b4a6c2888c")
-	missing, err := bp.GetMissingArtefacts(ctx, []sha256.SHA256{testSHA, misshingSHA})
-	assert.NoError(t, err)
-	assert.Equal(t, []sha256.SHA256{misshingSHA}, missing)
+	t.Run("GetMissingDeployment", func(t *testing.T) {
+		_, err := dal.GetDeployment(ctx, ulid.Make())
+		assert.EqualError(t, err, ErrNotFound.Error())
+	})
+
+	t.Run("GetMissingArtefacts", func(t *testing.T) {
+		misshingSHA := sha256.MustParseSHA256("fae7e4cbdca7167bbea4098c05d596f50bbb18062b61c1dfca3705b4a6c2888c")
+		missing, err := dal.GetMissingArtefacts(ctx, []sha256.SHA256{testSHA, misshingSHA})
+		assert.NoError(t, err)
+		assert.Equal(t, []sha256.SHA256{misshingSHA}, missing)
+	})
+
+	runnerID := ulid.Make()
+	t.Run("RegisterRunner", func(t *testing.T) {
+		err = dal.RegisterRunner(ctx, runnerID, "go", &url.URL{Scheme: "http", Host: "localhost:8080"}, types.None[ulid.ULID]())
+		assert.NoError(t, err)
+	})
+
+	t.Run("RegisterRunnerFailsOnDuplicate", func(t *testing.T) {
+		err = dal.RegisterRunner(ctx, ulid.Make(), "go", &url.URL{Scheme: "http", Host: "localhost:8080"}, types.None[ulid.ULID]())
+		assert.Error(t, err)
+		assert.IsError(t, err, ErrConflict)
+	})
+
+	t.Run("GetIdleRunnersForLanguage", func(t *testing.T) {
+		expectedRunner := Runner{
+			Key:      runnerID,
+			Language: "go",
+			Endpoint: "http://localhost:8080",
+			State:    RunnerStateIdle,
+		}
+		runners, err := dal.GetIdleRunnersForLanguage(ctx, "go", 10)
+		assert.NoError(t, err)
+		assert.Equal(t, []Runner{expectedRunner}, runners)
+	})
+
+	expectedRunner := Runner{
+		Key:      runnerID,
+		Language: "go",
+		Endpoint: "http://localhost:8080",
+		State:    RunnerStateReserved,
+	}
+
+	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
+		_, err := dal.ReserveRunnerForDeployment(ctx, "go", ulid.Make())
+		assert.IsError(t, err, ErrInvalidReference)
+		assert.EqualError(t, err, "deployment: invalid reference")
+	})
+
+	t.Run("ReserveRunnerForDeployment", func(t *testing.T) {
+		actualRunner, err := dal.ReserveRunnerForDeployment(ctx, "go", deploymentKey)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedRunner, actualRunner)
+	})
+
+	t.Run("ReserveRunnerForDeploymentFailsOnDuplicate", func(t *testing.T) {
+		_, err = dal.ReserveRunnerForDeployment(ctx, "go", ulid.Make())
+		assert.IsError(t, err, ErrNotFound)
+		assert.EqualError(t, err, `no idle runners for language "go": not found`)
+	})
+
+	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
+		err := dal.UpdateRunner(ctx, runnerID, RunnerStateAssigned, types.Some(deploymentKey))
+		assert.NoError(t, err)
+	})
+
+	t.Run("GetRoutingTable", func(t *testing.T) {
+		routes, err := dal.GetRoutingTable(ctx, deployment.Module)
+		assert.NoError(t, err)
+		assert.Equal(t, []string{expectedRunner.Endpoint}, routes)
+	})
+
+	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
+		err := dal.UpdateRunner(ctx, runnerID, RunnerStateAssigned, types.Some(ulid.Make()))
+		assert.Error(t, err)
+	})
+
+	t.Run("ReleaseRunnerReservation", func(t *testing.T) {
+		err = dal.UpdateRunner(ctx, runnerID, RunnerStateIdle, types.Some(deploymentKey))
+		assert.NoError(t, err)
+	})
+
+	t.Run("ReserveRunnerForDeploymentAfterRelease", func(t *testing.T) {
+		actualRunner, err := dal.ReserveRunnerForDeployment(ctx, "go", deploymentKey)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedRunner, actualRunner)
+	})
+
+	t.Run("GetRoutingTable", func(t *testing.T) {
+		_, err := dal.GetRoutingTable(ctx, deployment.Module)
+		assert.EqualError(t, err, "not found")
+	})
+
+	t.Run("DeregisterRunner", func(t *testing.T) {
+		err = dal.DeregisterRunner(ctx, runnerID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
+		err = dal.DeregisterRunner(ctx, runnerID)
+		assert.EqualError(t, err, "not found")
+	})
 }
 
 func artefactContent(t testing.TB, artefacts []*Artefact) [][]byte {

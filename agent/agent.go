@@ -18,6 +18,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/console"
 	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
@@ -38,7 +39,7 @@ type driveContext struct {
 	schema       atomic.Value[types.Option[*schema.Module]]
 	root         string
 	workingDir   string
-	config       ModuleConfig
+	config       moduleconfig.ModuleConfig
 }
 
 type Agent struct {
@@ -104,7 +105,7 @@ func (a *Agent) Manage(ctx context.Context, dir string) (err error) {
 	}
 
 	// Load the config.
-	config, err := LoadConfig(dir)
+	config, err := moduleconfig.LoadConfig(dir)
 	if err != nil {
 		return errors.WithStack(err)
 	}

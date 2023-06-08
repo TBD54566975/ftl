@@ -40,6 +40,8 @@ jobs:
         run: golangci-lint run
       - name: go-check-sumtype
         run: go-check-sumtype ./...
+      - name: shellcheck
+        run: shellcheck scripts/*
   console:
     name: Console
     runs-on: ubuntu-latest

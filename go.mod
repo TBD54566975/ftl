@@ -44,12 +44,12 @@ require (
 )
 
 require (
-	github.com/alecthomas/assert/v2 v2.2.2
+	github.com/alecthomas/assert/v2 v2.3.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/errors v0.3.0
 	github.com/alecthomas/participle/v2 v2.0.0
-	github.com/alecthomas/types v0.3.0
+	github.com/alecthomas/types v0.5.0
 	github.com/bufbuild/connect-grpcreflect-go v1.1.0
 	github.com/bufbuild/connect-opentelemetry-go v0.3.0
 	github.com/deckarep/golang-set/v2 v2.3.0

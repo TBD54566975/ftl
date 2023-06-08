@@ -25,6 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/unstoppable"
 	"github.com/TBD54566975/ftl/observability"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -35,6 +36,7 @@ type Config struct {
 	Endpoint        *url.URL      `help:"Endpoint the runner should bind to and advertise." default:"http://localhost:8893"`
 	FTLEndpoint     *url.URL      `help:"FTL endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
 	DeploymentDir   string        `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	Language        string        `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
 	HeartbeatPeriod time.Duration `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter time.Duration `help:"Jitter to add to heartbeat period." default:"2s"`
 }
@@ -57,12 +59,13 @@ func Start(ctx context.Context, config Config) error {
 	svc := &Service{
 		key:                ulid.Make(),
 		config:             config,
-		controlplaneClient: controlplaneClient,
+		controlPlaneClient: controlplaneClient,
+		forceUpdate:        make(chan struct{}, 8),
 	}
 	svc.registrationFailure.Store(types.Some(errors.New("not registered with ControlPlane")))
 
 	retry := backoff.Backoff{Max: config.HeartbeatPeriod, Jitter: true}
-	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlplaneClient.RegisterRunner, svc.registrationLoop)
+	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlPlaneClient.RegisterRunner, svc.registrationLoop)
 
 	obs := observability.NewService()
 
@@ -76,25 +79,30 @@ func Start(ctx context.Context, config Config) error {
 var _ ftlv1connect.RunnerServiceHandler = (*Service)(nil)
 var _ http.Handler = (*Service)(nil)
 
-type pluginProxy struct {
+type deployment struct {
+	key    ulid.ULID
 	plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]
 	proxy  *httputil.ReverseProxy
+	// Cancelled when plugin terminates
+	ctx context.Context
 }
 
 type Service struct {
 	key ulid.ULID
 	// We use double-checked locking around the atomic so that the read fast-path is lock-free.
 	lock       sync.Mutex
-	deployment atomic.Value[*pluginProxy]
+	state      atomic.Value[ftlv1.RunnerState]
+	deployment atomic.Value[types.Option[*deployment]]
 
 	config              Config
-	controlplaneClient  ftlv1connect.ControlPlaneServiceClient
+	controlPlaneClient  ftlv1connect.ControlPlaneServiceClient
 	registrationFailure atomic.Value[types.Option[error]]
+	forceUpdate         chan struct{} // Force an update to be sent to the ControlPlane immediately.
 }
 
 // ServeHTTP proxies through to the deployment.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if deployment := s.deployment.Load(); deployment != nil {
+	if deployment, ok := s.deployment.Load().Get(); ok {
 		deployment.proxy.ServeHTTP(w, r)
 	} else {
 		http.Error(w, "503 No deployment", http.StatusServiceUnavailable)
@@ -110,7 +118,7 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	return connect.NewResponse(&ftlv1.PingResponse{NotReady: notReady}), nil
 }
 
-func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1.DeployToRunnerRequest]) (*connect.Response[ftlv1.DeployToRunnerResponse], error) {
+func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1.DeployToRunnerRequest]) (response *connect.Response[ftlv1.DeployToRunnerResponse], err error) {
 	if err, ok := s.registrationFailure.Load().Get(); ok {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to register runner"))
 	}
@@ -121,16 +129,23 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 	}
 
 	// Double-checked lock.
-	if s.deployment.Load() != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("already deployed"))
+	if s.deployment.Load().Ok() {
+		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("already deployed"))
 	}
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	if s.deployment.Load() != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("already deployed"))
+	if s.deployment.Load().Ok() {
+		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("already deployed"))
 	}
 
-	gdResp, err := s.controlplaneClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: req.Msg.DeploymentKey}))
+	s.state.Store(ftlv1.RunnerState_RESERVED)
+	defer func() {
+		if err != nil {
+			s.state.Store(ftlv1.RunnerState_IDLE)
+		}
+	}()
+
+	gdResp, err := s.controlPlaneClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: req.Msg.DeploymentKey}))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -139,16 +154,16 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 		return nil, errors.Wrap(err, "invalid module")
 	}
 	deploymentDir := filepath.Join(s.config.DeploymentDir, module.Name, id.String())
-	err = os.Mkdir(deploymentDir, 0700)
+	err = os.MkdirAll(deploymentDir, 0700)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create deployment directory")
 	}
-	err = download.Artefacts(ctx, s.controlplaneClient, id, s.config.DeploymentDir)
+	err = download.Artefacts(ctx, s.controlPlaneClient, id, deploymentDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to download artefacts")
 	}
-	deployment, _, err := plugin.Spawn(
-		ctx,
+	deployment, cmdCtx, err := plugin.Spawn(
+		unstoppable.Context(ctx),
 		gdResp.Msg.Schema.Name,
 		deploymentDir,
 		"./main",
@@ -161,38 +176,72 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
-	s.deployment.Store(s.makePluginProxy(deployment))
+	s.deployment.Store(types.Some(s.makePluginProxy(cmdCtx, id, deployment)))
+	s.state.Store(ftlv1.RunnerState_ASSIGNED)
+	s.forceUpdate <- struct{}{}
 	return connect.NewResponse(&ftlv1.DeployToRunnerResponse{}), nil
 }
 
-func (s *Service) makePluginProxy(plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *pluginProxy {
-	return &pluginProxy{
+func (s *Service) makePluginProxy(ctx context.Context, key ulid.ULID, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
+	return &deployment{
+		ctx:    ctx,
+		key:    key,
 		plugin: plugin,
 		proxy:  httputil.NewSingleHostReverseProxy(plugin.Endpoint),
 	}
 }
 
-func (s *Service) registrationLoop(ctx context.Context, stream *connect.ClientStreamForClient[ftlv1.RegisterRunnerRequest, ftlv1.RegisterRunnerResponse]) (err error) {
+func (s *Service) registrationLoop(ctx context.Context, send func(*ftlv1.RegisterRunnerRequest) error) error {
 	logger := log.FromContext(ctx)
-	defer func() { s.registrationFailure.Store(types.Some(err)) }()
-	for {
-		err := stream.Send(&ftlv1.RegisterRunnerRequest{
-			Key:      s.key.String(),
-			Language: "go",
-			Endpoint: s.config.Endpoint.String(),
-		})
-		if err != nil {
-			_, err := stream.CloseAndReceive()
-			return errors.WithStack(err)
-		}
-		s.registrationFailure.Store(types.None[error]())
-		delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
-		logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
-		select {
-		case <-ctx.Done():
-			return errors.WithStack(context.Cause(ctx))
 
-		case <-time.After(delay):
+	// Figure out the appropriate state.
+	state := s.state.Load()
+	var errPtr *string
+	var deploymenyKey *string
+	depl, ok := s.deployment.Load().Get()
+	if ok {
+		dkey := depl.key.String()
+		deploymenyKey = &dkey
+		select {
+		case <-depl.ctx.Done():
+			state = ftlv1.RunnerState_IDLE
+			err := context.Cause(depl.ctx)
+			errStr := err.Error()
+			errPtr = &errStr
+			logger.Errorf(err, "Deployment terminated.")
+			s.deployment.Store(types.None[*deployment]())
+
+		default:
+			state = ftlv1.RunnerState_ASSIGNED
 		}
+		s.state.Store(state)
 	}
+
+	err := send(&ftlv1.RegisterRunnerRequest{
+		Key:        s.key.String(),
+		Language:   s.config.Language,
+		Endpoint:   s.config.Endpoint.String(),
+		Deployment: deploymenyKey,
+		State:      state,
+		Error:      errPtr,
+	})
+	if err != nil {
+		s.registrationFailure.Store(types.Some(err))
+		return errors.WithStack(err)
+	}
+	s.registrationFailure.Store(types.None[error]())
+	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
+	logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
+	select {
+
+	case <-ctx.Done():
+		err = context.Cause(ctx)
+		s.registrationFailure.Store(types.Some(err))
+		return errors.WithStack(err)
+
+	case <-s.forceUpdate:
+
+	case <-time.After(delay):
+	}
+	return nil
 }

@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -178,7 +177,7 @@ func allocatePort() (*net.TCPAddr, error) {
 }
 
 func cleanup(logger *log.Logger, pidFile string) error {
-	pidb, err := ioutil.ReadFile(pidFile)
+	pidb, err := os.ReadFile(pidFile)
 	if os.IsNotExist(err) {
 		return nil
 	} else if err != nil {

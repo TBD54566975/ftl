@@ -5,10 +5,57 @@
 package sql
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 )
+
+type RunnersState string
+
+const (
+	RunnersStateIdle     RunnersState = "idle"
+	RunnersStateClaimed  RunnersState = "claimed"
+	RunnersStateReserved RunnersState = "reserved"
+	RunnersStateAssigned RunnersState = "assigned"
+)
+
+func (e *RunnersState) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = RunnersState(s)
+	case string:
+		*e = RunnersState(s)
+	default:
+		return fmt.Errorf("unsupported scan type for RunnersState: %T", src)
+	}
+	return nil
+}
+
+type NullRunnersState struct {
+	RunnersState RunnersState
+	Valid        bool // Valid is true if RunnersState is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullRunnersState) Scan(value interface{}) error {
+	if value == nil {
+		ns.RunnersState, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.RunnersState.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullRunnersState) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.RunnersState), nil
+}
 
 type Artefact struct {
 	ID        int64
@@ -51,10 +98,12 @@ type Module struct {
 }
 
 type Runner struct {
-	ID           int64
-	Key          sqltypes.Key
-	LastSeen     pgtype.Timestamptz
-	Language     string
-	Endpoint     string
-	DeploymentID pgtype.Int8
+	ID                 int64
+	Key                sqltypes.Key
+	LastSeen           pgtype.Timestamptz
+	ReservationTimeout pgtype.Timestamptz
+	State              RunnersState
+	Language           string
+	Endpoint           string
+	DeploymentID       pgtype.Int8
 }

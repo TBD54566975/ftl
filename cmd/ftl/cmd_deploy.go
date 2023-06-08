@@ -12,7 +12,7 @@ import (
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/TBD54566975/ftl/agent"
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -82,7 +82,8 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 		return errors.WithStack(err)
 	}
 	logger.Infof("Created deployment %s", resp.Msg.DeploymentKey)
-	return nil
+	_, err = client.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{DeploymentKey: resp.Msg.GetDeploymentKey()}))
+	return errors.WithStack(err)
 }
 
 type deploymentArtefact struct {
@@ -140,14 +141,14 @@ func longestCommonPathPrefix(paths []string) string {
 	return strings.Join(parts, "/")
 }
 
-func findAndLoadConfig(root string) (agent.ModuleConfig, error) {
+func findAndLoadConfig(root string) (moduleconfig.ModuleConfig, error) {
 	for dir := root; dir != "/"; dir = filepath.Dir(dir) {
-		config, err := agent.LoadConfig(dir)
+		config, err := moduleconfig.LoadConfig(dir)
 		if err == nil {
 			return config, nil
 		}
 	}
-	return agent.ModuleConfig{}, errors.Errorf("no ftl.toml found in %s or any parent directory", root)
+	return moduleconfig.ModuleConfig{}, errors.Errorf("no ftl.toml found in %s or any parent directory", root)
 }
 
 func relToCWD(path string) string {

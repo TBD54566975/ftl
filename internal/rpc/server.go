@@ -52,6 +52,7 @@ func RawGRPC[Iface, Impl any](constructor RawGRPCServerConstructor[Iface], impl 
 	}
 }
 
+// Route adds a HTTP route to the server.
 func Route(prefix string, handler http.Handler) Option {
 	return func(o *optionsBundle) {
 		o.mux.Handle(prefix, handler)

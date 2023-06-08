@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/url"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,10 +33,11 @@ import (
 )
 
 type Config struct {
-	Bind              *url.URL      `help:"Socket to bind to." default:"http://localhost:8892"`
-	DSN               string        `help:"Postgres DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
-	RunnerTimeout     time.Duration `help:"Runner heartbeat timeout." default:"10s"`
-	ArtefactChunkSize int           `help:"Size of each chunk streamed to the client." default:"1048576"`
+	Bind                         *url.URL      `help:"Socket to bind to." default:"http://localhost:8892"`
+	DSN                          string        `help:"Postgres DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
+	RunnerTimeout                time.Duration `help:"Runner heartbeat timeout." default:"10s"`
+	DeploymentReservationTimeout time.Duration `help:"Deployment reservation timeout." default:"120s"`
+	ArtefactChunkSize            int           `help:"Size of each chunk streamed to the client." default:"1048576"`
 }
 
 // Start the ControlPlane. Blocks until the context is cancelled.
@@ -49,7 +54,7 @@ func Start(ctx context.Context, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	svc, err := New(ctx, dal.New(conn), config.RunnerTimeout, config.ArtefactChunkSize)
+	svc, err := New(ctx, dal.New(conn), config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -65,19 +70,32 @@ func Start(ctx context.Context, config Config) error {
 var _ ftlv1connect.ControlPlaneServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 
-type Service struct {
-	dal               *dal.DAL
-	heartbeatTimeout  time.Duration
-	artefactChunkSize int
+type clients struct {
+	verb   ftlv1connect.VerbServiceClient
+	runner ftlv1connect.RunnerServiceClient
 }
 
-func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout time.Duration, artefactChunkSize int) (*Service, error) {
+type Service struct {
+	dal                          *dal.DAL
+	heartbeatTimeout             time.Duration
+	deploymentReservationTimeout time.Duration
+	artefactChunkSize            int
+
+	clientsMu sync.Mutex
+	// Map from endpoint to client.
+	clients map[string]clients
+}
+
+func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
 	svc := &Service{
-		dal:               dal,
-		heartbeatTimeout:  heartbeatTimeout,
-		artefactChunkSize: artefactChunkSize,
+		dal:                          dal,
+		heartbeatTimeout:             heartbeatTimeout,
+		deploymentReservationTimeout: deploymentReservationTimeout,
+		artefactChunkSize:            artefactChunkSize,
+		clients:                      map[string]clients{},
 	}
 	go svc.reapStaleRunners(ctx)
+	go svc.releaseExpiredReservations(ctx)
 	return svc, nil
 }
 
@@ -85,8 +103,28 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, req *connect.ClientS
 	panic("unimplemented")
 }
 
-func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (*connect.Response[ftlv1.DeployResponse], error) {
-	panic("unimplemented")
+func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
+	deploymentKey, err := ulid.Parse(req.Msg.DeploymentKey)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
+	}
+
+	deployment, err := s.dal.GetDeployment(ctx, deploymentKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not find requested deployment")
+	}
+
+	runner, err := s.dal.ReserveRunnerForDeployment(ctx, deployment.Language, deploymentKey)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeResourceExhausted, errors.Wrap(err, "failed to reserve runner"))
+	}
+
+	client := s.clientsForEndpoint(runner.Endpoint)
+	_, err = client.runner.DeployToRunner(ctx, connect.NewRequest(&ftlv1.DeployToRunnerRequest{DeploymentKey: deploymentKey.String()}))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
 
 func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[ftlv1.RegisterRunnerRequest]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
@@ -101,14 +139,14 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 	msg := req.Msg()
 	endpoint, err := url.Parse(msg.Endpoint)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.Wrap(err, "invalid endpoint"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid endpoint"))
 	}
 	if endpoint.Scheme != "http" && endpoint.Scheme != "https" {
-		return nil, connect.NewError(connect.CodeUnavailable, errors.Errorf("invalid endpoint scheme %q", endpoint.Scheme))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("invalid endpoint scheme %q", endpoint.Scheme))
 	}
-	key, err := ulid.Parse(msg.Key)
+	runnerKey, err := ulid.Parse(msg.Key)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.Wrap(err, "invalid key"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid key"))
 	}
 
 	// Check if we can contact the runner.
@@ -119,14 +157,22 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to connect to runner"))
 	}
 
-	runnerID, err := s.dal.RegisterRunner(ctx, key, msg.Language, endpoint)
+	var maybeDeployment types.Option[ulid.ULID]
+	if msg.Deployment != nil {
+		key, err := ulid.Parse(*msg.Deployment)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
+		}
+		maybeDeployment = types.Some(key)
+	}
+	err = s.dal.RegisterRunner(ctx, runnerKey, msg.Language, endpoint, maybeDeployment)
 	if errors.Is(err, dal.ErrConflict) {
 		return nil, connect.NewError(connect.CodeAlreadyExists, err)
 	} else if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	defer func() {
-		err := s.dal.DeregisterRunner(context.Background(), runnerID)
+		err := s.dal.DeregisterRunner(context.Background(), runnerKey)
 		if err != nil {
 			logger.Errorf(err, "Failed to Deregister runner %s", endpoint)
 		} else {
@@ -134,19 +180,16 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 		}
 	}()
 
-	runnerStr := fmt.Sprintf("%s (%d)", endpoint, runnerID)
+	runnerStr := fmt.Sprintf("%s (%s)", endpoint, runnerKey)
 
 	logger.Infof("New runner %s", runnerStr)
 
 	// Start receiving heartbeats from runner.
-	heartbeat := make(chan bool)
+	heartbeat := make(chan *ftlv1.RegisterRunnerRequest)
 	ctx = concurrency.Call(ctx, func() error {
 		for req.Receive() {
-			if err := s.dal.HeartbeatRunner(ctx, runnerID); err != nil {
-				return errors.WithStack(err)
-			}
 			select {
-			case heartbeat <- true:
+			case heartbeat <- req.Msg():
 			case <-ctx.Done():
 				return nil
 			}
@@ -161,8 +204,31 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 	// Loop until we receive a heartbeat or the context is cancelled.
 	for {
 		select {
-		case <-heartbeat:
+		case msg := <-heartbeat:
 			logger.Tracef("Heartbeat received from runner %s", runnerStr)
+			var deploymentKey types.Option[ulid.ULID]
+			if msg.Deployment != nil {
+				key, err := ulid.Parse(*msg.Deployment)
+				if err != nil {
+					return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
+				}
+				deploymentKey = types.Some(key)
+			}
+			fromState, err := s.dal.GetRunnerState(ctx, runnerKey)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get runner state")
+			}
+			toState := dal.RunnerState(strings.ToLower(msg.State.String()))
+
+			// Runner requesting a transition from claimed to idle just means
+			// that the Runner hasn't received the reservation yet.
+			if fromState == dal.RunnerStateClaimed && toState == dal.RunnerStateIdle {
+				toState = dal.RunnerStateClaimed
+			}
+			err = s.dal.UpdateRunner(ctx, runnerKey, toState, deploymentKey)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to set runner state")
+			}
 
 		case <-time.After(s.heartbeatTimeout):
 			err := connect.NewError(connect.CodeDeadlineExceeded, errors.New("heartbeat timeout"))
@@ -232,7 +298,20 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
-	panic("unimplemented")
+	endpoints, err := s.dal.GetRoutingTable(ctx, req.Msg.Verb.Module)
+	if err != nil {
+		if errors.Is(err, dal.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.Wrapf(err, "no runners for module %q", req.Msg.Verb.Module))
+		}
+		return nil, errors.Wrap(err, "failed to get runners for module")
+	}
+	endpoint := endpoints[rand.Intn(len(endpoints))] //nolint:gosec
+	client := s.clientsForEndpoint(endpoint)
+	resp, err := client.verb.Call(ctx, req)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return resp, nil
 }
 
 func (s *Service) List(ctx context.Context, req *connect.Request[ftlv1.ListRequest]) (*connect.Response[ftlv1.ListResponse], error) {
@@ -254,11 +333,12 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 }
 
 func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error) {
-	msg := req.Msg
-	digest, err := s.dal.CreateArtefact(ctx, msg.Content)
+	logger := log.FromContext(ctx)
+	digest, err := s.dal.CreateArtefact(ctx, req.Msg.Content)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	logger.Infof("Created new artefact %s", digest)
 	return connect.NewResponse(&ftlv1.UploadArtefactResponse{Digest: digest[:]}), nil
 }
 
@@ -303,6 +383,21 @@ func (s *Service) getDeployment(ctx context.Context, key string) (*dal.Deploymen
 	return deployment, nil
 }
 
+func (s *Service) clientsForEndpoint(endpoint string) clients {
+	s.clientsMu.Lock()
+	defer s.clientsMu.Unlock()
+	client, ok := s.clients[endpoint]
+	if ok {
+		return client
+	}
+	client = clients{
+		runner: rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
+		verb:   rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
+	}
+	s.clients[endpoint] = client
+	return client
+}
+
 func (s *Service) reapStaleRunners(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
@@ -317,6 +412,23 @@ func (s *Service) reapStaleRunners(ctx context.Context) {
 			return
 
 		case <-time.After(s.heartbeatTimeout / 4):
+		}
+	}
+}
+
+func (s *Service) releaseExpiredReservations(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	for {
+		count, err := s.dal.ExpireRunnerReservations(ctx)
+		if err != nil {
+			logger.Errorf(err, "Failed to expire runner reservations")
+		} else if count > 0 {
+			logger.Warnf("Expired %d runner reservations", count)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(s.deploymentReservationTimeout):
 		}
 	}
 }

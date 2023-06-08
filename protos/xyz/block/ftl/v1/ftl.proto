@@ -133,12 +133,25 @@ message GetDeploymentResponse {
   repeated DeploymentArtefact artefacts = 2;
 }
 
+enum RunnerState {
+  // The Runner is waiting for a deployment.
+  IDLE = 0;
+  // The Runner and Control Plane have agreed that the Runner is reserved.
+  RESERVED = 1;
+  // The Runner is assigned to a deployment.
+  ASSIGNED = 2;
+}
+
 message RegisterRunnerRequest {
   // UUID representing the runner instance.
   string key = 1;
   // Language the runner supports.
   string language = 2;
   string endpoint = 3;
+  optional string deployment = 4;
+  RunnerState state = 5;
+  // If present, the reason the Runner is transitioning from ASSIGNED to IDLE.
+  optional string error = 6;
 }
 message RegisterRunnerResponse {}
 
