@@ -7,7 +7,7 @@
 http://ftl.localtest.me {
 	reverse_proxy * {
 		to http://127.0.0.1:8891 http://127.0.0.1:8892
-        health_uri /healthz
+		health_uri /healthz
 		transport http {
 			versions 1 h2c 2
 		}
