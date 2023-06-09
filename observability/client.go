@@ -28,7 +28,13 @@ func Init(ctx context.Context, name string, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	exporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(config.Endpoint.Host), otlpmetricgrpc.WithInsecure())
+	otelLogger := NewOtelLogger(ctx)
+	otel.SetLogger(otelLogger)
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		otelLogger.Error(err, "OTEL")
+	}))
+
+	ftlExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(config.Endpoint.Host), otlpmetricgrpc.WithInsecure())
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -38,9 +44,15 @@ func Init(ctx context.Context, name string, config Config) error {
 		semconv.ServiceName(name),
 	)
 
+	otelExporter, err := otlpmetricgrpc.New(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(exporter, metric.WithInterval(config.Interval))),
+		metric.WithReader(metric.NewPeriodicReader(ftlExporter, metric.WithInterval(config.Interval))),
+		metric.WithReader(metric.NewPeriodicReader(otelExporter, metric.WithInterval(config.Interval))),
 	)
 
 	otel.SetMeterProvider(meterProvider)
