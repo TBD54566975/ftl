@@ -6,13 +6,11 @@ import (
 	"io"
 	"math/rand"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
-	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -157,15 +155,17 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to connect to runner"))
 	}
 
-	var maybeDeployment types.Option[ulid.ULID]
-	if msg.Deployment != nil {
-		key, err := ulid.Parse(*msg.Deployment)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
-		}
-		maybeDeployment = types.Some(key)
+	maybeDeployment, err := msg.DeploymentAsOptional()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
 	}
-	err = s.dal.RegisterRunner(ctx, runnerKey, msg.Language, endpoint, maybeDeployment)
+	err = s.dal.UpsertRunner(ctx, dal.Runner{
+		Key:        runnerKey,
+		Language:   msg.Language,
+		Endpoint:   msg.Endpoint,
+		State:      dal.RunnerStateFromProto(msg.State),
+		Deployment: maybeDeployment,
+	}) //
 	if errors.Is(err, dal.ErrConflict) {
 		return nil, connect.NewError(connect.CodeAlreadyExists, err)
 	} else if err != nil {
@@ -206,26 +206,28 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 		select {
 		case msg := <-heartbeat:
 			logger.Tracef("Heartbeat received from runner %s", runnerStr)
-			var deploymentKey types.Option[ulid.ULID]
-			if msg.Deployment != nil {
-				key, err := ulid.Parse(*msg.Deployment)
-				if err != nil {
-					return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
-				}
-				deploymentKey = types.Some(key)
+			maybeDeployment, err := msg.DeploymentAsOptional()
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
 			}
 			fromState, err := s.dal.GetRunnerState(ctx, runnerKey)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to get runner state")
 			}
-			toState := dal.RunnerState(strings.ToLower(msg.State.String()))
+			toState := dal.RunnerStateFromProto(msg.State)
 
 			// Runner requesting a transition from claimed to idle just means
 			// that the Runner hasn't received the reservation yet.
 			if fromState == dal.RunnerStateClaimed && toState == dal.RunnerStateIdle {
 				toState = dal.RunnerStateClaimed
 			}
-			err = s.dal.UpdateRunner(ctx, runnerKey, toState, deploymentKey)
+			err = s.dal.UpsertRunner(ctx, dal.Runner{
+				Key:        runnerKey,
+				Language:   msg.Language,
+				Endpoint:   msg.Endpoint,
+				State:      toState,
+				Deployment: maybeDeployment,
+			})
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to set runner state")
 			}

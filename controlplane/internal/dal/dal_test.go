@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"net/url"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -94,12 +93,22 @@ func TestDAL(t *testing.T) {
 
 	runnerID := ulid.Make()
 	t.Run("RegisterRunner", func(t *testing.T) {
-		err = dal.RegisterRunner(ctx, runnerID, "go", &url.URL{Scheme: "http", Host: "localhost:8080"}, types.None[ulid.ULID]())
+		err = dal.UpsertRunner(ctx, Runner{
+			Key:      runnerID,
+			Language: "go",
+			Endpoint: "http://localhost:8080",
+			State:    RunnerStateIdle,
+		})
 		assert.NoError(t, err)
 	})
 
 	t.Run("RegisterRunnerFailsOnDuplicate", func(t *testing.T) {
-		err = dal.RegisterRunner(ctx, ulid.Make(), "go", &url.URL{Scheme: "http", Host: "localhost:8080"}, types.None[ulid.ULID]())
+		err = dal.UpsertRunner(ctx, Runner{
+			Key:      ulid.Make(),
+			Language: "go",
+			Endpoint: "http://localhost:8080",
+			State:    RunnerStateIdle,
+		})
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrConflict)
 	})
@@ -142,7 +151,13 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
-		err := dal.UpdateRunner(ctx, runnerID, RunnerStateAssigned, types.Some(deploymentKey))
+		err := dal.UpsertRunner(ctx, Runner{
+			Key:        runnerID,
+			Language:   "go",
+			Endpoint:   "http://localhost:8080",
+			State:      RunnerStateAssigned,
+			Deployment: types.Some(deploymentKey),
+		})
 		assert.NoError(t, err)
 	})
 
@@ -153,12 +168,24 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
-		err := dal.UpdateRunner(ctx, runnerID, RunnerStateAssigned, types.Some(ulid.Make()))
+		err := dal.UpsertRunner(ctx, Runner{
+			Key:        runnerID,
+			Language:   "go",
+			Endpoint:   "http://localhost:8080",
+			State:      RunnerStateAssigned,
+			Deployment: types.Some(ulid.Make()),
+		})
 		assert.Error(t, err)
 	})
 
 	t.Run("ReleaseRunnerReservation", func(t *testing.T) {
-		err = dal.UpdateRunner(ctx, runnerID, RunnerStateIdle, types.Some(deploymentKey))
+		err = dal.UpsertRunner(ctx, Runner{
+			Key:        runnerID,
+			Language:   "go",
+			Endpoint:   "http://localhost:8080",
+			State:      RunnerStateIdle,
+			Deployment: types.Some(deploymentKey),
+		})
 		assert.NoError(t, err)
 	})
 

@@ -24,6 +24,7 @@ require (
 	github.com/iancoleman/strcase v0.2.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/oklog/ulid/v2 v2.1.0 // indirect
 	github.com/rs/cors v1.9.0 // indirect
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/metric v1.16.0 // indirect

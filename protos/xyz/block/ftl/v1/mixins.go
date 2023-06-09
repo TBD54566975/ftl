@@ -3,7 +3,9 @@ package ftlv1
 import (
 	"strings"
 
+	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
+	"github.com/oklog/ulid/v2"
 )
 
 func (m *Metadata) Set(key, value string) {
@@ -47,4 +49,15 @@ func (m *Metadata) Delete(key string) {
 		}
 	}
 	m.Values = out
+}
+
+func (r *RegisterRunnerRequest) DeploymentAsOptional() (types.Option[ulid.ULID], error) {
+	if r.Deployment == nil {
+		return types.None[ulid.ULID](), nil
+	}
+	key, err := ulid.Parse(*r.Deployment)
+	if err != nil {
+		return types.None[ulid.ULID](), errors.Wrap(err, "invalid deployment key")
+	}
+	return types.Some(key), nil
 }

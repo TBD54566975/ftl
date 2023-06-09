@@ -7,9 +7,9 @@
 http://ftl.localtest.me {
 	reverse_proxy * {
 		to http://127.0.0.1:8891 http://127.0.0.1:8892
-		flush_interval -1
+        health_uri /healthz
 		transport http {
-			versions h2c 2
+			versions 1 h2c 2
 		}
 	}
 }

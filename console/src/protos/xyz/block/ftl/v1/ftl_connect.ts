@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
-import { MethodKind } from "@bufbuild/protobuf";
+import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
  * VerbService is a common interface shared by multiple services for calling Verbs.
@@ -24,6 +24,7 @@ export const VerbService = {
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
      * Issue a synchronous call to a Verb.
@@ -72,6 +73,7 @@ export const DevelService = {
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
      * Push schema changes to the server.
@@ -114,6 +116,7 @@ export const ControlPlaneService = {
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
      * Get list of artefacts that differ between the server and client.
@@ -232,6 +235,7 @@ export const RunnerService = {
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
      * Initiate a deployment on this Runner.
