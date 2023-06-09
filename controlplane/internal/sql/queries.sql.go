@@ -456,11 +456,10 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 const getRoutingTable = `-- name: GetRoutingTable :many
 SELECT endpoint
 FROM runners r
+INNER JOIN deployments d on r.deployment_id = d.id
+INNER JOIN modules m on d.module_id = m.id
 WHERE state = 'assigned'
-  AND r.deployment_id = COALESCE((SELECT d.id
-                                  FROM deployments d
-                                           INNER JOIN modules m ON d.module_id = m.id
-                                  WHERE m.name = $1), -1)
+    AND m.name = $1
 `
 
 func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]string, error) {
@@ -489,9 +488,9 @@ FROM runners
 WHERE key = $1
 `
 
-func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnersState, error) {
+func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error) {
 	row := q.db.QueryRow(ctx, getRunnerState, key)
-	var state RunnersState
+	var state RunnerState
 	err := row.Scan(&state)
 	return state, err
 }
@@ -510,7 +509,7 @@ type GetRunnersForModuleRow struct {
 	Key                sqltypes.Key
 	LastSeen           pgtype.Timestamptz
 	ReservationTimeout pgtype.Timestamptz
-	State              RunnersState
+	State              RunnerState
 	Language           string
 	Endpoint           string
 	DeploymentID       pgtype.Int8
@@ -578,22 +577,6 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 	return err
 }
 
-const registerRunner = `-- name: RegisterRunner :one
-INSERT
-INTO runners (key, language, endpoint)
-VALUES ($1, $2, $3)
-ON CONFLICT (key) DO UPDATE SET language = $2,
-                                endpoint = $3
-RETURNING id
-`
-
-func (q *Queries) RegisterRunner(ctx context.Context, key sqltypes.Key, language string, endpoint string) (int64, error) {
-	row := q.db.QueryRow(ctx, registerRunner, key, language, endpoint)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const reserveRunners = `-- name: ReserveRunners :one
 UPDATE runners
 SET state         = 'reserved',
@@ -626,20 +609,46 @@ func (q *Queries) ReserveRunners(ctx context.Context, language string, limit int
 	return i, err
 }
 
-const updateRunner = `-- name: UpdateRunner :one
-UPDATE runners r
-SET state         = $2,
-    last_seen     = (NOW() AT TIME ZONE 'utc'),
-    deployment_id = COALESCE((SELECT id
+const upsertRunner = `-- name: UpsertRunner :one
+WITH deployment_rel AS (
+    SELECT CASE
+               WHEN $5::UUID IS NULL THEN NULL
+               ELSE COALESCE((SELECT id
                               FROM deployments d
-                              WHERE d.key = $3
-                              LIMIT 1), -1)
-WHERE r.key = $1
-RETURNING r.deployment_id
+                              WHERE d.key = $5
+                              LIMIT 1), -1) END AS id)
+INSERT
+INTO runners (key, language, endpoint, state, deployment_id, last_seen)
+VALUES ($1, $2, $3, $4, (SELECT id FROM deployment_rel), NOW() AT TIME ZONE 'utc')
+ON CONFLICT (key) DO UPDATE SET language      = $2,
+                                endpoint      = $3,
+                                state         = $4,
+                                deployment_id = (SELECT id FROM deployment_rel),
+                                last_seen     = NOW() AT TIME ZONE 'utc'
+RETURNING deployment_id
 `
 
-func (q *Queries) UpdateRunner(ctx context.Context, key sqltypes.Key, state RunnersState, deploymentKey pgtype.UUID) (pgtype.Int8, error) {
-	row := q.db.QueryRow(ctx, updateRunner, key, state, deploymentKey)
+type UpsertRunnerParams struct {
+	Key           sqltypes.Key
+	Language      string
+	Endpoint      string
+	State         RunnerState
+	DeploymentKey pgtype.UUID
+}
+
+// Upsert a runner and return the deployment ID that it is assigned to, if any.
+// If the deployment key is null, then deployment_rel.id will be null,
+// otherwise we try to retrieve the deployments.id using the key. If
+// there is no corresponding deployment, then the deployment ID is -1
+// and the parent statement will fail due to a foreign key constraint.
+func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, upsertRunner,
+		arg.Key,
+		arg.Language,
+		arg.Endpoint,
+		arg.State,
+		arg.DeploymentKey,
+	)
 	var deployment_id pgtype.Int8
 	err := row.Scan(&deployment_id)
 	return deployment_id, err

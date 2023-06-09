@@ -70,6 +70,10 @@ func NewServer(ctx context.Context, listen *url.URL, options ...Option) (*Server
 		mux: http.NewServeMux(),
 	}
 
+	opts.mux.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
 	for _, option := range options {
 		option(opts)
 	}

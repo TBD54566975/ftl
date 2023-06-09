@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect_go.IsAtLeastVersion1_7_0
 
 const (
 	// VerbServiceName is the fully-qualified name of the VerbService service.
@@ -29,6 +29,60 @@ const (
 	ControlPlaneServiceName = "xyz.block.ftl.v1.ControlPlaneService"
 	// RunnerServiceName is the fully-qualified name of the RunnerService service.
 	RunnerServiceName = "xyz.block.ftl.v1.RunnerService"
+)
+
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+//
+// Note that these are different from the fully-qualified method names used by
+// google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
+// reflection-formatted method names, remove the leading slash and convert the remaining slash to a
+// period.
+const (
+	// VerbServicePingProcedure is the fully-qualified name of the VerbService's Ping RPC.
+	VerbServicePingProcedure = "/xyz.block.ftl.v1.VerbService/Ping"
+	// VerbServiceCallProcedure is the fully-qualified name of the VerbService's Call RPC.
+	VerbServiceCallProcedure = "/xyz.block.ftl.v1.VerbService/Call"
+	// VerbServiceListProcedure is the fully-qualified name of the VerbService's List RPC.
+	VerbServiceListProcedure = "/xyz.block.ftl.v1.VerbService/List"
+	// DevelServicePingProcedure is the fully-qualified name of the DevelService's Ping RPC.
+	DevelServicePingProcedure = "/xyz.block.ftl.v1.DevelService/Ping"
+	// DevelServicePushSchemaProcedure is the fully-qualified name of the DevelService's PushSchema RPC.
+	DevelServicePushSchemaProcedure = "/xyz.block.ftl.v1.DevelService/PushSchema"
+	// DevelServicePullSchemaProcedure is the fully-qualified name of the DevelService's PullSchema RPC.
+	DevelServicePullSchemaProcedure = "/xyz.block.ftl.v1.DevelService/PullSchema"
+	// ControlPlaneServicePingProcedure is the fully-qualified name of the ControlPlaneService's Ping
+	// RPC.
+	ControlPlaneServicePingProcedure = "/xyz.block.ftl.v1.ControlPlaneService/Ping"
+	// ControlPlaneServiceGetArtefactDiffsProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetArtefactDiffs RPC.
+	ControlPlaneServiceGetArtefactDiffsProcedure = "/xyz.block.ftl.v1.ControlPlaneService/GetArtefactDiffs"
+	// ControlPlaneServiceUploadArtefactProcedure is the fully-qualified name of the
+	// ControlPlaneService's UploadArtefact RPC.
+	ControlPlaneServiceUploadArtefactProcedure = "/xyz.block.ftl.v1.ControlPlaneService/UploadArtefact"
+	// ControlPlaneServiceCreateDeploymentProcedure is the fully-qualified name of the
+	// ControlPlaneService's CreateDeployment RPC.
+	ControlPlaneServiceCreateDeploymentProcedure = "/xyz.block.ftl.v1.ControlPlaneService/CreateDeployment"
+	// ControlPlaneServiceGetDeploymentProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetDeployment RPC.
+	ControlPlaneServiceGetDeploymentProcedure = "/xyz.block.ftl.v1.ControlPlaneService/GetDeployment"
+	// ControlPlaneServiceGetDeploymentArtefactsProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetDeploymentArtefacts RPC.
+	ControlPlaneServiceGetDeploymentArtefactsProcedure = "/xyz.block.ftl.v1.ControlPlaneService/GetDeploymentArtefacts"
+	// ControlPlaneServiceRegisterRunnerProcedure is the fully-qualified name of the
+	// ControlPlaneService's RegisterRunner RPC.
+	ControlPlaneServiceRegisterRunnerProcedure = "/xyz.block.ftl.v1.ControlPlaneService/RegisterRunner"
+	// ControlPlaneServiceDeployProcedure is the fully-qualified name of the ControlPlaneService's
+	// Deploy RPC.
+	ControlPlaneServiceDeployProcedure = "/xyz.block.ftl.v1.ControlPlaneService/Deploy"
+	// ControlPlaneServiceStreamDeploymentLogsProcedure is the fully-qualified name of the
+	// ControlPlaneService's StreamDeploymentLogs RPC.
+	ControlPlaneServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs"
+	// RunnerServicePingProcedure is the fully-qualified name of the RunnerService's Ping RPC.
+	RunnerServicePingProcedure = "/xyz.block.ftl.v1.RunnerService/Ping"
+	// RunnerServiceDeployToRunnerProcedure is the fully-qualified name of the RunnerService's
+	// DeployToRunner RPC.
+	RunnerServiceDeployToRunnerProcedure = "/xyz.block.ftl.v1.RunnerService/DeployToRunner"
 )
 
 // VerbServiceClient is a client for the xyz.block.ftl.v1.VerbService service.
@@ -53,17 +107,18 @@ func NewVerbServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts
 	return &verbServiceClient{
 		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.VerbService/Ping",
-			opts...,
+			baseURL+VerbServicePingProcedure,
+			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+			connect_go.WithClientOptions(opts...),
 		),
 		call: connect_go.NewClient[v1.CallRequest, v1.CallResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.VerbService/Call",
+			baseURL+VerbServiceCallProcedure,
 			opts...,
 		),
 		list: connect_go.NewClient[v1.ListRequest, v1.ListResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.VerbService/List",
+			baseURL+VerbServiceListProcedure,
 			opts...,
 		),
 	}
@@ -108,18 +163,19 @@ type VerbServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
 	mux := http.NewServeMux()
-	mux.Handle("/xyz.block.ftl.v1.VerbService/Ping", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.VerbService/Ping",
+	mux.Handle(VerbServicePingProcedure, connect_go.NewUnaryHandler(
+		VerbServicePingProcedure,
 		svc.Ping,
-		opts...,
+		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+		connect_go.WithHandlerOptions(opts...),
 	))
-	mux.Handle("/xyz.block.ftl.v1.VerbService/Call", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.VerbService/Call",
+	mux.Handle(VerbServiceCallProcedure, connect_go.NewUnaryHandler(
+		VerbServiceCallProcedure,
 		svc.Call,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.VerbService/List", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.VerbService/List",
+	mux.Handle(VerbServiceListProcedure, connect_go.NewUnaryHandler(
+		VerbServiceListProcedure,
 		svc.List,
 		opts...,
 	))
@@ -163,17 +219,18 @@ func NewDevelServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 	return &develServiceClient{
 		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.DevelService/Ping",
-			opts...,
+			baseURL+DevelServicePingProcedure,
+			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+			connect_go.WithClientOptions(opts...),
 		),
 		pushSchema: connect_go.NewClient[v1.PushSchemaRequest, v1.PushSchemaResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.DevelService/PushSchema",
+			baseURL+DevelServicePushSchemaProcedure,
 			opts...,
 		),
 		pullSchema: connect_go.NewClient[v1.PullSchemaRequest, v1.PullSchemaResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.DevelService/PullSchema",
+			baseURL+DevelServicePullSchemaProcedure,
 			opts...,
 		),
 	}
@@ -218,18 +275,19 @@ type DevelServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewDevelServiceHandler(svc DevelServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
 	mux := http.NewServeMux()
-	mux.Handle("/xyz.block.ftl.v1.DevelService/Ping", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.DevelService/Ping",
+	mux.Handle(DevelServicePingProcedure, connect_go.NewUnaryHandler(
+		DevelServicePingProcedure,
 		svc.Ping,
-		opts...,
+		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+		connect_go.WithHandlerOptions(opts...),
 	))
-	mux.Handle("/xyz.block.ftl.v1.DevelService/PushSchema", connect_go.NewClientStreamHandler(
-		"/xyz.block.ftl.v1.DevelService/PushSchema",
+	mux.Handle(DevelServicePushSchemaProcedure, connect_go.NewClientStreamHandler(
+		DevelServicePushSchemaProcedure,
 		svc.PushSchema,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.DevelService/PullSchema", connect_go.NewServerStreamHandler(
-		"/xyz.block.ftl.v1.DevelService/PullSchema",
+	mux.Handle(DevelServicePullSchemaProcedure, connect_go.NewServerStreamHandler(
+		DevelServicePullSchemaProcedure,
 		svc.PullSchema,
 		opts...,
 	))
@@ -291,47 +349,48 @@ func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL stri
 	return &controlPlaneServiceClient{
 		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/Ping",
-			opts...,
+			baseURL+ControlPlaneServicePingProcedure,
+			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+			connect_go.WithClientOptions(opts...),
 		),
 		getArtefactDiffs: connect_go.NewClient[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/GetArtefactDiffs",
+			baseURL+ControlPlaneServiceGetArtefactDiffsProcedure,
 			opts...,
 		),
 		uploadArtefact: connect_go.NewClient[v1.UploadArtefactRequest, v1.UploadArtefactResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/UploadArtefact",
+			baseURL+ControlPlaneServiceUploadArtefactProcedure,
 			opts...,
 		),
 		createDeployment: connect_go.NewClient[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/CreateDeployment",
+			baseURL+ControlPlaneServiceCreateDeploymentProcedure,
 			opts...,
 		),
 		getDeployment: connect_go.NewClient[v1.GetDeploymentRequest, v1.GetDeploymentResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/GetDeployment",
+			baseURL+ControlPlaneServiceGetDeploymentProcedure,
 			opts...,
 		),
 		getDeploymentArtefacts: connect_go.NewClient[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/GetDeploymentArtefacts",
+			baseURL+ControlPlaneServiceGetDeploymentArtefactsProcedure,
 			opts...,
 		),
 		registerRunner: connect_go.NewClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/RegisterRunner",
+			baseURL+ControlPlaneServiceRegisterRunnerProcedure,
 			opts...,
 		),
 		deploy: connect_go.NewClient[v1.DeployRequest, v1.DeployResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/Deploy",
+			baseURL+ControlPlaneServiceDeployProcedure,
 			opts...,
 		),
 		streamDeploymentLogs: connect_go.NewClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs",
+			baseURL+ControlPlaneServiceStreamDeploymentLogsProcedure,
 			opts...,
 		),
 	}
@@ -431,48 +490,49 @@ type ControlPlaneServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
 	mux := http.NewServeMux()
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/Ping", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/Ping",
+	mux.Handle(ControlPlaneServicePingProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServicePingProcedure,
 		svc.Ping,
-		opts...,
+		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+		connect_go.WithHandlerOptions(opts...),
 	))
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/GetArtefactDiffs", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/GetArtefactDiffs",
+	mux.Handle(ControlPlaneServiceGetArtefactDiffsProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServiceGetArtefactDiffsProcedure,
 		svc.GetArtefactDiffs,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/UploadArtefact", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/UploadArtefact",
+	mux.Handle(ControlPlaneServiceUploadArtefactProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServiceUploadArtefactProcedure,
 		svc.UploadArtefact,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/CreateDeployment", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/CreateDeployment",
+	mux.Handle(ControlPlaneServiceCreateDeploymentProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServiceCreateDeploymentProcedure,
 		svc.CreateDeployment,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/GetDeployment", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/GetDeployment",
+	mux.Handle(ControlPlaneServiceGetDeploymentProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServiceGetDeploymentProcedure,
 		svc.GetDeployment,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/GetDeploymentArtefacts", connect_go.NewServerStreamHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/GetDeploymentArtefacts",
+	mux.Handle(ControlPlaneServiceGetDeploymentArtefactsProcedure, connect_go.NewServerStreamHandler(
+		ControlPlaneServiceGetDeploymentArtefactsProcedure,
 		svc.GetDeploymentArtefacts,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/RegisterRunner", connect_go.NewClientStreamHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/RegisterRunner",
+	mux.Handle(ControlPlaneServiceRegisterRunnerProcedure, connect_go.NewClientStreamHandler(
+		ControlPlaneServiceRegisterRunnerProcedure,
 		svc.RegisterRunner,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/Deploy", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/Deploy",
+	mux.Handle(ControlPlaneServiceDeployProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServiceDeployProcedure,
 		svc.Deploy,
 		opts...,
 	))
-	mux.Handle("/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs", connect_go.NewClientStreamHandler(
-		"/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs",
+	mux.Handle(ControlPlaneServiceStreamDeploymentLogsProcedure, connect_go.NewClientStreamHandler(
+		ControlPlaneServiceStreamDeploymentLogsProcedure,
 		svc.StreamDeploymentLogs,
 		opts...,
 	))
@@ -537,12 +597,13 @@ func NewRunnerServiceClient(httpClient connect_go.HTTPClient, baseURL string, op
 	return &runnerServiceClient{
 		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.RunnerService/Ping",
-			opts...,
+			baseURL+RunnerServicePingProcedure,
+			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+			connect_go.WithClientOptions(opts...),
 		),
 		deployToRunner: connect_go.NewClient[v1.DeployToRunnerRequest, v1.DeployToRunnerResponse](
 			httpClient,
-			baseURL+"/xyz.block.ftl.v1.RunnerService/DeployToRunner",
+			baseURL+RunnerServiceDeployToRunnerProcedure,
 			opts...,
 		),
 	}
@@ -578,13 +639,14 @@ type RunnerServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewRunnerServiceHandler(svc RunnerServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
 	mux := http.NewServeMux()
-	mux.Handle("/xyz.block.ftl.v1.RunnerService/Ping", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.RunnerService/Ping",
+	mux.Handle(RunnerServicePingProcedure, connect_go.NewUnaryHandler(
+		RunnerServicePingProcedure,
 		svc.Ping,
-		opts...,
+		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+		connect_go.WithHandlerOptions(opts...),
 	))
-	mux.Handle("/xyz.block.ftl.v1.RunnerService/DeployToRunner", connect_go.NewUnaryHandler(
-		"/xyz.block.ftl.v1.RunnerService/DeployToRunner",
+	mux.Handle(RunnerServiceDeployToRunnerProcedure, connect_go.NewUnaryHandler(
+		RunnerServiceDeployToRunnerProcedure,
 		svc.DeployToRunner,
 		opts...,
 	))

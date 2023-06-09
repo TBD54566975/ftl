@@ -13,48 +13,48 @@ import (
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 )
 
-type RunnersState string
+type RunnerState string
 
 const (
-	RunnersStateIdle     RunnersState = "idle"
-	RunnersStateClaimed  RunnersState = "claimed"
-	RunnersStateReserved RunnersState = "reserved"
-	RunnersStateAssigned RunnersState = "assigned"
+	RunnerStateIdle     RunnerState = "idle"
+	RunnerStateClaimed  RunnerState = "claimed"
+	RunnerStateReserved RunnerState = "reserved"
+	RunnerStateAssigned RunnerState = "assigned"
 )
 
-func (e *RunnersState) Scan(src interface{}) error {
+func (e *RunnerState) Scan(src interface{}) error {
 	switch s := src.(type) {
 	case []byte:
-		*e = RunnersState(s)
+		*e = RunnerState(s)
 	case string:
-		*e = RunnersState(s)
+		*e = RunnerState(s)
 	default:
-		return fmt.Errorf("unsupported scan type for RunnersState: %T", src)
+		return fmt.Errorf("unsupported scan type for RunnerState: %T", src)
 	}
 	return nil
 }
 
-type NullRunnersState struct {
-	RunnersState RunnersState
-	Valid        bool // Valid is true if RunnersState is not NULL
+type NullRunnerState struct {
+	RunnerState RunnerState
+	Valid       bool // Valid is true if RunnerState is not NULL
 }
 
 // Scan implements the Scanner interface.
-func (ns *NullRunnersState) Scan(value interface{}) error {
+func (ns *NullRunnerState) Scan(value interface{}) error {
 	if value == nil {
-		ns.RunnersState, ns.Valid = "", false
+		ns.RunnerState, ns.Valid = "", false
 		return nil
 	}
 	ns.Valid = true
-	return ns.RunnersState.Scan(value)
+	return ns.RunnerState.Scan(value)
 }
 
 // Value implements the driver Valuer interface.
-func (ns NullRunnersState) Value() (driver.Value, error) {
+func (ns NullRunnerState) Value() (driver.Value, error) {
 	if !ns.Valid {
 		return nil, nil
 	}
-	return string(ns.RunnersState), nil
+	return string(ns.RunnerState), nil
 }
 
 type Artefact struct {
@@ -102,7 +102,7 @@ type Runner struct {
 	Key                sqltypes.Key
 	LastSeen           pgtype.Timestamptz
 	ReservationTimeout pgtype.Timestamptz
-	State              RunnersState
+	State              RunnerState
 	Language           string
 	Endpoint           string
 	DeploymentID       pgtype.Int8

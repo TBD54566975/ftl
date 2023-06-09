@@ -39,7 +39,6 @@ var cli CLI
 func main() {
 	kctx := kong.Parse(&cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
-		kong.UsageOnError(),
 		kong.AutoGroup(func(parent kong.Visitable, flag *kong.Flag) *kong.Group {
 			node, ok := parent.(*kong.Command)
 			if !ok {

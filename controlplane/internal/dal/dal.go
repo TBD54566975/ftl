@@ -6,7 +6,6 @@ import (
 	stdsql "database/sql"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 	"time"
 
@@ -215,24 +214,31 @@ func (d *DAL) GetLatestDeployment(ctx context.Context, module string) (*Deployme
 	return d.loadDeployment(ctx, deployment)
 }
 
-// RegisterRunner registers a new runner.
+// UpsertRunner registers or updates a new runner.
 //
-// It will return ErrConflict if a runner with the same endpoint already exists.
-func (d *DAL) RegisterRunner(
-	ctx context.Context,
-	key ulid.ULID,
-	language string,
-	endpoint *url.URL,
-	deployment types.Option[ulid.ULID],
-) error {
-	var deploymentSQLKey pgtype.UUID
-	if deploymentKey, ok := deployment.Get(); ok {
-		deploymentSQLKey.Valid = true
-		deploymentSQLKey.Bytes = deploymentKey
+// ErrConflict will be returned if a runner with the same endpoint and a
+// different key already exists.
+func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
+	var pgDeploymentKey pgtype.UUID
+	if dkey, ok := runner.Deployment.Get(); ok {
+		pgDeploymentKey.Valid = true
+		pgDeploymentKey.Bytes = dkey
 	}
-	_, err := d.db.RegisterRunner(ctx, sqltypes.Key(key), language, endpoint.String())
+	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
+		Key:           sqltypes.Key(runner.Key),
+		Language:      runner.Language,
+		Endpoint:      runner.Endpoint,
+		State:         sql.RunnerState(runner.State),
+		DeploymentKey: pgDeploymentKey,
+	})
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
+	}
+	if err != nil {
+		return errors.WithStack(translatePGError(err))
+	}
+	if runner.Deployment.Ok() && !deploymentID.Valid {
+		return errors.Errorf("deployment %s not found", runner.Deployment)
 	}
 	return nil
 }
@@ -352,27 +358,14 @@ type RunnerState string
 
 // Runner states.
 const (
-	RunnerStateIdle     = RunnerState(sql.RunnersStateIdle)
-	RunnerStateClaimed  = RunnerState(sql.RunnersStateClaimed)
-	RunnerStateReserved = RunnerState(sql.RunnersStateReserved)
-	RunnerStateAssigned = RunnerState(sql.RunnersStateAssigned)
+	RunnerStateIdle     = RunnerState(sql.RunnerStateIdle)
+	RunnerStateClaimed  = RunnerState(sql.RunnerStateClaimed)
+	RunnerStateReserved = RunnerState(sql.RunnerStateReserved)
+	RunnerStateAssigned = RunnerState(sql.RunnerStateAssigned)
 )
 
-// UpdateRunner updates the state of the given Runner.
-func (d *DAL) UpdateRunner(ctx context.Context, runnerKey ulid.ULID, state RunnerState, deploymentKey types.Option[ulid.ULID]) error {
-	var deploymentKeyField pgtype.UUID
-	if key, ok := deploymentKey.Get(); ok {
-		deploymentKeyField.Valid = true
-		deploymentKeyField.Bytes = key
-	}
-	deploymentID, err := d.db.UpdateRunner(ctx, sqltypes.Key(runnerKey), sql.RunnersState(state), deploymentKeyField)
-	if err != nil {
-		return errors.WithStack(translatePGError(err))
-	}
-	if deploymentKey.Ok() && !deploymentID.Valid {
-		return errors.Errorf("deployment %s not found", deploymentKey)
-	}
-	return nil
+func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
+	return RunnerState(strings.ToLower(state.String()))
 }
 
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey ulid.ULID) (RunnerState, error) {

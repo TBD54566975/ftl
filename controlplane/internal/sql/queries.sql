@@ -73,13 +73,28 @@ SELECT SUBSTRING(a.content FROM @start FOR @count)::BYTEA AS content
 FROM artefacts a
 WHERE a.id = @id;
 
--- name: RegisterRunner :one
+-- name: UpsertRunner :one
+-- Upsert a runner and return the deployment ID that it is assigned to, if any.
+WITH deployment_rel AS (
+-- If the deployment key is null, then deployment_rel.id will be null,
+-- otherwise we try to retrieve the deployments.id using the key. If
+-- there is no corresponding deployment, then the deployment ID is -1
+-- and the parent statement will fail due to a foreign key constraint.
+    SELECT CASE
+               WHEN sqlc.narg('deployment_key')::UUID IS NULL THEN NULL
+               ELSE COALESCE((SELECT id
+                              FROM deployments d
+                              WHERE d.key = sqlc.narg('deployment_key')
+                              LIMIT 1), -1) END AS id)
 INSERT
-INTO runners (key, language, endpoint)
-VALUES ($1, $2, $3)
-ON CONFLICT (key) DO UPDATE SET language = $2,
-                                endpoint = $3
-RETURNING id;
+INTO runners (key, language, endpoint, state, deployment_id, last_seen)
+VALUES ($1, $2, $3, $4, (SELECT id FROM deployment_rel), NOW() AT TIME ZONE 'utc')
+ON CONFLICT (key) DO UPDATE SET language      = $2,
+                                endpoint      = $3,
+                                state         = $4,
+                                deployment_id = (SELECT id FROM deployment_rel),
+                                last_seen     = NOW() AT TIME ZONE 'utc'
+RETURNING deployment_id;
 
 -- name: DeleteStaleRunners :one
 WITH deleted AS (
@@ -139,25 +154,13 @@ SELECT state
 FROM runners
 WHERE key = $1;
 
--- name: UpdateRunner :one
-UPDATE runners r
-SET state         = $2,
-    last_seen     = (NOW() AT TIME ZONE 'utc'),
-    deployment_id = COALESCE((SELECT id
-                              FROM deployments d
-                              WHERE d.key = sqlc.narg('deployment_key')
-                              LIMIT 1), -1)
-WHERE r.key = $1
-RETURNING r.deployment_id;
-
 -- name: GetRoutingTable :many
 SELECT endpoint
 FROM runners r
+INNER JOIN deployments d on r.deployment_id = d.id
+INNER JOIN modules m on d.module_id = m.id
 WHERE state = 'assigned'
-  AND r.deployment_id = COALESCE((SELECT d.id
-                                  FROM deployments d
-                                           INNER JOIN modules m ON d.module_id = m.id
-                                  WHERE m.name = $1), -1);
+    AND m.name = $1;
 
 -- name: ExpireRunnerReservations :one
 WITH rows AS (

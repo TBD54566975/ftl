@@ -54,7 +54,7 @@ CREATE TABLE deployment_logs
     error         TEXT
 );
 
-CREATE TYPE runners_state AS ENUM (
+CREATE TYPE runner_state AS ENUM (
     -- The Runner is available to run deployments.
     'idle',
     -- The ControlPlane has claimed the Runner, but it has not acked.
@@ -74,7 +74,7 @@ CREATE TABLE runners
     last_seen           TIMESTAMPTZ    NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     -- If the runner is reserved, this is the time at which the reservation expires.
     reservation_timeout TIMESTAMPTZ,
-    state               runners_state  NOT NULL DEFAULT 'idle',
+    state               runner_state  NOT NULL DEFAULT 'idle',
     language            VARCHAR        NOT NULL,
     endpoint            VARCHAR UNIQUE NOT NULL,
     deployment_id       BIGINT         REFERENCES deployments (id) ON DELETE SET NULL
