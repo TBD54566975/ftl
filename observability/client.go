@@ -3,6 +3,8 @@ package observability
 import (
 	"context"
 	"net"
+	"net/url"
+	"time"
 
 	"github.com/alecthomas/errors"
 	"go.opentelemetry.io/otel"
@@ -12,13 +14,21 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
+type Config struct {
+	Endpoint *url.URL      `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" placeholder:"URL"`
+	Interval time.Duration `default:"30s" help:"Interval to export metrics." env:"FTL_METRICS_INTERVAL"`
+}
+
 func Init(ctx context.Context, name string, config Config) error {
-	_, _, err := net.SplitHostPort(config.ObservabilityEndpoint.Host)
+	if config.Endpoint == nil {
+		return errors.Errorf("FTL_OBSERVABILITY_ENDPOINT is required")
+	}
+	_, _, err := net.SplitHostPort(config.Endpoint.Host)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	exporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(config.ObservabilityEndpoint.Host), otlpmetricgrpc.WithInsecure())
+	exporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(config.Endpoint.Host), otlpmetricgrpc.WithInsecure())
 	if err != nil {
 		return errors.WithStack(err)
 	}

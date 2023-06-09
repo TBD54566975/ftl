@@ -2,8 +2,6 @@ package observability
 
 import (
 	"context"
-	"net/url"
-	"time"
 
 	"github.com/bufbuild/connect-go"
 	metricsv1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
@@ -11,11 +9,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
 	"github.com/TBD54566975/ftl/internal/log"
 )
-
-type Config struct {
-	ObservabilityEndpoint *url.URL      `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" required:""`
-	Interval              time.Duration `default:"30s" help:"Interval to export metrics." env:"FTL_METRICS_INTERVAL"`
-}
 
 type Observability struct{}
 

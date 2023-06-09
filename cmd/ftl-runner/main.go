@@ -9,15 +9,17 @@ import (
 
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/observability"
 	"github.com/TBD54566975/ftl/runner"
 )
 
 var version = "dev"
 
 var config struct {
-	Version      kong.VersionFlag `help:"Show version."`
-	LogConfig    log.Config       `prefix:"log-" embed:""`
-	RunnerConfig runner.Config    `embed:""`
+	Version             kong.VersionFlag     `help:"Show version."`
+	LogConfig           log.Config           `prefix:"log-" embed:""`
+	ObservabilityConfig observability.Config `embed:"" prefix:"observability-"`
+	RunnerConfig        runner.Config        `embed:""`
 }
 
 func main() {
@@ -32,10 +34,15 @@ The Runner is the component of FTL that coordinates with the ControlPlane to spa
 and route to user code.
 	`), kong.Vars{
 		"version":       version,
-		"deploymentdir": filepath.Join(cacheDir, "ftl-runner-go", "deployments"),
+		"deploymentdir": filepath.Join(cacheDir, "ftl-runner", "deployments"),
 	})
 	logger := log.Configure(os.Stderr, config.LogConfig)
 	ctx := log.ContextWithLogger(context.Background(), logger)
+	if config.ObservabilityConfig.Endpoint == nil {
+		config.ObservabilityConfig.Endpoint = config.RunnerConfig.FTLEndpoint
+	}
+	err = observability.Init(ctx, "ftl-runner", config.ObservabilityConfig)
+	kctx.FatalIfErrorf(err)
 	err = runner.Start(ctx, config.RunnerConfig)
 	kctx.FatalIfErrorf(err)
 }
