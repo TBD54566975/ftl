@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/go-logr/logr"
+
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type logSink struct {
