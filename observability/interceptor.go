@@ -3,7 +3,6 @@ package observability
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/errors"
@@ -13,9 +12,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/schema"
 )
 
-const ftlDirectRoutingHeader = "FTL-Direct"
 const ftlVerbHeader = "FTL-Verb"
 
 const (
@@ -41,17 +40,17 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 
 		resp, err := next(ctx, req)
 
-		if verbRef := req.Header().Get(ftlVerbHeader); verbRef != "" {
-			verb, module, err := parseRef(verbRef)
+		if verb := req.Header().Get(ftlVerbHeader); verb != "" {
+			verbRef, err := schema.ParseRef(verb)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
 
 			meter := otel.GetMeterProvider().Meter(
 				instrumentationName,
-				metric.WithInstrumentationAttributes(attribute.String("ftl.verbRef", verbRef)),
-				metric.WithInstrumentationAttributes(attribute.String("ftl.verb", verb)),
-				metric.WithInstrumentationAttributes(attribute.String("ftl.module", module)),
+				metric.WithInstrumentationAttributes(attribute.String("ftl.verbRef", verb)),
+				metric.WithInstrumentationAttributes(attribute.String("ftl.verb", verbRef.Name)),
+				metric.WithInstrumentationAttributes(attribute.String("ftl.module", verbRef.Module)),
 			)
 
 			counter, err := meter.Int64Counter(fmt.Sprintf(durationFormat, verbRef))
@@ -85,12 +84,4 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
 		return nil
 	}
-}
-
-func parseRef(s string) (string, string, error) {
-	parts := strings.Split(s, ".")
-	if len(parts) != 2 {
-		return "", "", errors.Errorf("invalid reference %q", s)
-	}
-	return parts[0], parts[1], nil
 }
