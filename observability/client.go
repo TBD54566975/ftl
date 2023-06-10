@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
@@ -56,6 +57,25 @@ func Init(ctx context.Context, name string, config Config) error {
 	)
 
 	otel.SetMeterProvider(meterProvider)
+
+	tp := trace.NewTracerProvider(
+		trace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName(name),
+		)),
+	)
+
+	// Set the global tracer provider
+	otel.SetTracerProvider(tp)
+
+	// Generate some log messages using OpenTelemetry APIs
+	tracer := tp.Tracer("example")
+
+	for i := 1; i <= 5; i++ {
+		_, span := tracer.Start(ctx, "exampleSpan")
+		time.Sleep(time.Second)
+		span.End()
+	}
 
 	return nil
 }
