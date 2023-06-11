@@ -41,29 +41,10 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		resp, err := next(ctx, req)
 
 		if verb := req.Header().Get(ftlVerbHeader); verb != "" {
-			verbRef, err := schema.ParseRef(verb)
-			if err != nil {
-				return nil, errors.WithStack(err)
+			metricsErr := i.recordVerbCallMetrics(ctx, verb, start)
+			if metricsErr != nil {
+				logger.Errorf(metricsErr, "Failed to record metrics for verb: %s", verb)
 			}
-
-			meter := otel.GetMeterProvider().Meter(
-				instrumentationName,
-				metric.WithInstrumentationAttributes(attribute.String("ftl.verbRef", verb)),
-				metric.WithInstrumentationAttributes(attribute.String("ftl.verb", verbRef.Name)),
-				metric.WithInstrumentationAttributes(attribute.String("ftl.module", verbRef.Module)),
-			)
-
-			counter, err := meter.Int64Counter(fmt.Sprintf(durationFormat, verbRef))
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-			counter.Add(ctx, 1)
-
-			histogram, err := meter.Int64Histogram(fmt.Sprintf(durationFormat, verbRef), metric.WithUnit(unitMilliseconds))
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-			histogram.Record(ctx, time.Since(start).Milliseconds())
 		}
 
 		if err != nil {
@@ -74,6 +55,7 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		return resp, nil
 	}
 }
+
 func (i *Interceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return func(ctx context.Context, s connect.Spec) connect.StreamingClientConn {
 		return next(ctx, s)
@@ -82,6 +64,33 @@ func (i *Interceptor) WrapStreamingClient(next connect.StreamingClientFunc) conn
 
 func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
-		return nil
+		return next(ctx, s)
 	}
+}
+
+func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, verb string, start time.Time) error {
+	verbRef, err := schema.ParseRef(verb)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	meter := otel.GetMeterProvider().Meter(
+		instrumentationName,
+		metric.WithInstrumentationAttributes(attribute.String("ftl.verbRef", verb)),
+		metric.WithInstrumentationAttributes(attribute.String("ftl.verb", verbRef.Name)),
+		metric.WithInstrumentationAttributes(attribute.String("ftl.module", verbRef.Module)),
+	)
+
+	counter, err := meter.Int64Counter(fmt.Sprintf(durationFormat, verbRef))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	counter.Add(ctx, 1)
+
+	histogram, err := meter.Int64Histogram(fmt.Sprintf(durationFormat, verbRef), metric.WithUnit(unitMilliseconds))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	histogram.Record(ctx, time.Since(start).Milliseconds())
+	return nil
 }
