@@ -13,11 +13,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type Config struct {
-	Endpoint *url.URL      `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" placeholder:"URL"`
-	Interval time.Duration `default:"30s" help:"Interval to export metrics." env:"FTL_METRICS_INTERVAL"`
+	Endpoint   *url.URL      `help:"FTL observability endpoint." env:"FTL_OBSERVABILITY_ENDPOINT" placeholder:"URL"`
+	Interval   time.Duration `default:"30s" help:"Interval to export metrics." env:"FTL_METRICS_INTERVAL"`
+	LogLevel   log.Level     `default:"error" help:"OTEL log level."`
+	ExportOTEL bool          `help:"Export metrics to OTEL."`
 }
 
 func Init(ctx context.Context, name string, config Config) error {
@@ -29,11 +33,10 @@ func Init(ctx context.Context, name string, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	otelLogger := NewOtelLogger(ctx)
+	logger := log.FromContext(ctx).Sub("otel", config.LogLevel)
+	otelLogger := NewOtelLogger(logger)
 	otel.SetLogger(otelLogger)
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		otelLogger.Error(err, "OTEL")
-	}))
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { logger.Errorf(err, "OTEL") }))
 
 	ftlExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(config.Endpoint.Host), otlpmetricgrpc.WithInsecure())
 	if err != nil {
@@ -45,17 +48,21 @@ func Init(ctx context.Context, name string, config Config) error {
 		semconv.ServiceName(name),
 	)
 
-	otelExporter, err := otlpmetricgrpc.New(ctx)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	meterProvider := metric.NewMeterProvider(
+	metricOptions := []metric.Option{
 		metric.WithResource(res),
 		metric.WithReader(metric.NewPeriodicReader(ftlExporter, metric.WithInterval(config.Interval))),
-		metric.WithReader(metric.NewPeriodicReader(otelExporter, metric.WithInterval(config.Interval))),
-	)
+	}
+	if config.ExportOTEL {
+		otelExporter, err := otlpmetricgrpc.New(ctx)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		metricOptions = append(metricOptions, metric.WithReader(metric.NewPeriodicReader(otelExporter, metric.WithInterval(config.Interval))))
+	} else {
+		log.FromContext(ctx).Warnf("OTEL metrics export is disabled")
+	}
 
+	meterProvider := metric.NewMeterProvider(metricOptions...)
 	otel.SetMeterProvider(meterProvider)
 
 	tp := trace.NewTracerProvider(
@@ -67,15 +74,5 @@ func Init(ctx context.Context, name string, config Config) error {
 
 	// Set the global tracer provider
 	otel.SetTracerProvider(tp)
-
-	// Generate some log messages using OpenTelemetry APIs
-	tracer := tp.Tracer("example")
-
-	for i := 1; i <= 5; i++ {
-		_, span := tracer.Start(ctx, "exampleSpan")
-		time.Sleep(time.Second)
-		span.End()
-	}
-
 	return nil
 }

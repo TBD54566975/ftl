@@ -1,7 +1,6 @@
 package observability
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -15,6 +14,14 @@ type logSink struct {
 	logger    *log.Logger
 }
 
+func NewOtelLogger(logger *log.Logger) logr.Logger {
+	sink := &logSink{
+		name:   "otel",
+		logger: logger,
+	}
+	return logr.New(sink)
+}
+
 var _ logr.LogSink = &logSink{}
 
 func (l *logSink) Init(info logr.RuntimeInfo) {
@@ -24,12 +31,12 @@ func (l logSink) Enabled(level int) bool {
 	return true
 }
 
-// otel uses the following mapping for level to our log.Level
-// 4 = Info
-// 8 = Debug
-// 1 = Warning
-// 0 = Error
 func (l logSink) Info(level int, msg string, kvs ...interface{}) {
+	// otel uses the following mapping for level to our log.Level
+	// 4 = Info
+	// 8 = Debug
+	// 1 = Warning
+	// 0 = Error
 	var logLevel log.Level
 	switch level {
 	case 4:
@@ -80,14 +87,4 @@ func (l logSink) WithValues(kvs ...interface{}) logr.LogSink {
 		keyValues: newMap,
 		logger:    l.logger,
 	}
-}
-
-func NewOtelLogger(ctx context.Context) logr.Logger {
-	logger := log.FromContext(ctx)
-
-	sink := &logSink{
-		name:   "otel",
-		logger: logger,
-	}
-	return logr.New(sink)
 }
