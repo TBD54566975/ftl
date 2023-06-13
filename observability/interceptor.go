@@ -12,10 +12,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/schema"
 )
-
-const ftlVerbHeader = "FTL-Verb"
 
 const (
 	instrumentationName = "ftl"
@@ -40,7 +39,7 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 
 		resp, err := next(ctx, req)
 
-		if verb := req.Header().Get(ftlVerbHeader); verb != "" {
+		if verb := req.Header().Get(headers.VerbHeader); verb != "" {
 			metricsErr := i.recordVerbCallMetrics(ctx, verb, start)
 			if metricsErr != nil {
 				logger.Errorf(metricsErr, "Failed to record metrics for verb: %s", verb)

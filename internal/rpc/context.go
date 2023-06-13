@@ -9,12 +9,10 @@ import (
 	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/observability"
 	"github.com/TBD54566975/ftl/schema"
 )
-
-const ftlDirectRoutingHeader = "FTL-Direct"
-const ftlVerbHeader = "FTL-Verb"
 
 type ftlDirectRoutingKey struct{}
 type ftlVerbKey struct{}
@@ -27,16 +25,26 @@ func WithDirectRouting(ctx context.Context) context.Context {
 	return context.WithValue(ctx, ftlDirectRoutingKey{}, "1")
 }
 
-// WithVerb sets the module.verb of the current request.
-func WithVerb(ctx context.Context, ref *schema.VerbRef) context.Context {
-	return context.WithValue(ctx, ftlVerbKey{}, ref)
+// WithVerbs adds the module.verb chain from the current request to the context.
+func WithVerbs(ctx context.Context, verbs []*schema.VerbRef) context.Context {
+	return context.WithValue(ctx, ftlVerbKey{}, verbs)
 }
 
-// VerbFromContext returns the module.verb of the current request.
+// VerbFromContext returns the current module.verb of the current request.
 func VerbFromContext(ctx context.Context) (*schema.VerbRef, bool) {
 	value := ctx.Value(ftlVerbKey{})
-	verb, ok := value.(*schema.VerbRef)
-	return verb, ok
+	verbs, ok := value.([]*schema.VerbRef)
+	if len(verbs) == 0 {
+		return nil, false
+	}
+	return verbs[len(verbs)-1], ok
+}
+
+// VerbsFromContext returns the module.verb chain of the current request.
+func VerbsFromContext(ctx context.Context) ([]*schema.VerbRef, bool) {
+	value := ctx.Value(ftlVerbKey{})
+	verbs, ok := value.([]*schema.VerbRef)
+	return verbs, ok
 }
 
 // IsDirectRouted returns true if the incoming request should be directly
@@ -84,7 +92,7 @@ func (m *metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerF
 	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (streaming handler)", s.Spec().Procedure)
-		ctx, err := updateContext(ctx, s.Spec().IsClient, s.RequestHeader())
+		ctx, err := propagateHeaders(ctx, s.Spec().IsClient, s.RequestHeader())
 		if err != nil {
 			return err
 		}
@@ -98,10 +106,10 @@ func (m *metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerF
 }
 
 func (m *metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc {
-	return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (unary)", req.Spec().Procedure)
-		ctx, err := updateContext(ctx, req.Spec().IsClient, req.Header())
+		ctx, err := propagateHeaders(ctx, req.Spec().IsClient, req.Header())
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +120,7 @@ func (m *metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc 
 			return nil, err
 		}
 		return resp, nil
-	})
+	}
 }
 
 type clientKey[Client Pingable] struct{}
@@ -131,24 +139,22 @@ func ClientFromContext[Client Pingable](ctx context.Context) Client {
 	return value.(Client) //nolint:forcetypeassert
 }
 
-func updateContext(ctx context.Context, isClient bool, headers http.Header) (context.Context, error) {
+func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (context.Context, error) {
 	if isClient {
 		if IsDirectRouted(ctx) {
-			headers.Set(ftlDirectRoutingHeader, "1")
+			headers.SetDirectRouted(header)
 		}
-		if verb, ok := VerbFromContext(ctx); ok {
-			headers.Set(ftlVerbHeader, verb.String())
+		if verbs, ok := VerbsFromContext(ctx); ok {
+			headers.SetCallers(header, verbs)
 		}
 	} else {
-		if headers.Get(ftlDirectRoutingHeader) != "" {
+		if headers.IsDirectRouted(header) {
 			ctx = WithDirectRouting(ctx)
 		}
-		if verb := headers.Get(ftlVerbHeader); verb != "" {
-			ref, err := schema.ParseRef(verb)
-			if err != nil {
-				return nil, errors.Wrapf(err, "invalid verb reference %q", verb)
-			}
-			ctx = WithVerb(ctx, (*schema.VerbRef)(ref))
+		if verbs, err := headers.GetCallers(header); err != nil {
+			return nil, errors.WithStack(err)
+		} else { //nolint:revive
+			ctx = WithVerbs(ctx, verbs)
 		}
 	}
 	return ctx, nil

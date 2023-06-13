@@ -22,6 +22,7 @@ import (
 	"github.com/TBD54566975/ftl/controlplane/internal/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -309,6 +310,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 	endpoint := endpoints[rand.Intn(len(endpoints))] //nolint:gosec
 	client := s.clientsForEndpoint(endpoint)
+	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
 	resp, err := client.verb.Call(ctx, req)
 	if err != nil {
 		return nil, errors.WithStack(err)
