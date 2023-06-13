@@ -7,6 +7,7 @@ require (
 	github.com/alecthomas/kong v0.7.1
 	github.com/bufbuild/connect-go v1.8.0
 	github.com/go-logr/logr v1.2.4
+	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/oklog/ulid/v2 v2.1.0
@@ -27,7 +28,6 @@ require (
 	github.com/alecthomas/repr v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
