@@ -117,6 +117,10 @@ type Ref struct {
 	Name   string `parser:"@Ident" json:"name,omitempty" protobuf:"2"`
 }
 
+func (r *Ref) String() string {
+	return makeRef(r.Module, r.Name)
+}
+
 // DataRef is a reference to a data structure.
 type DataRef Ref
 
