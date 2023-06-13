@@ -2,7 +2,7 @@ package observability
 
 import (
 	"context"
-	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/alecthomas/errors"
@@ -18,9 +18,13 @@ import (
 
 const (
 	instrumentationName = "ftl"
-	verbKey             = "ftl.verb"
-	durationFormat      = "%s.duration"
-	requestCountFormat  = "%s.request.count"
+	verbRefKey          = "ftl.verb.ref"
+	sourceVerbKey       = "ftl.source.verb"
+	sourceModuleKey     = "ftl.source.module"
+	destVerbKey         = "ftl.dest.verb"
+	destModuleKey       = "ftl.dest.module"
+	callLatency         = "call.latency"
+	callRequestCount    = "call.request.count"
 	unitMilliseconds    = "ms"
 )
 
@@ -40,7 +44,7 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		resp, err := next(ctx, req)
 
 		if verb := req.Header().Get(headers.VerbHeader); verb != "" {
-			metricsErr := i.recordVerbCallMetrics(ctx, verb, start)
+			metricsErr := i.recordVerbCallMetrics(ctx, verb, start, req.Header())
 			if metricsErr != nil {
 				logger.Errorf(metricsErr, "Failed to record metrics for verb: %s", verb)
 			}
@@ -67,29 +71,37 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 	}
 }
 
-func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, verb string, start time.Time) error {
-	verbRef, err := schema.ParseRef(verb)
+func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, verb string, start time.Time, header http.Header) error {
+	sourceVerbRef, err := schema.ParseRef(verb)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	meter := otel.GetMeterProvider().Meter(
-		instrumentationName,
-		metric.WithInstrumentationAttributes(attribute.String("ftl.verbRef", verb)),
-		metric.WithInstrumentationAttributes(attribute.String("ftl.verb", verbRef.Name)),
-		metric.WithInstrumentationAttributes(attribute.String("ftl.module", verbRef.Module)),
-	)
-
-	counter, err := meter.Int64Counter(fmt.Sprintf(durationFormat, verbRef))
+	caller, err := headers.GetCaller(header)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	counter.Add(ctx, 1)
 
-	histogram, err := meter.Int64Histogram(fmt.Sprintf(durationFormat, verbRef), metric.WithUnit(unitMilliseconds))
+	attributes := []attribute.KeyValue{
+		attribute.String(verbRefKey, verb),
+		attribute.String(sourceVerbKey, sourceVerbRef.Name),
+		attribute.String(sourceModuleKey, sourceVerbRef.Module),
+		attribute.String(destVerbKey, caller.Value().Name),
+		attribute.String(destModuleKey, caller.Value().Module),
+	}
+
+	meter := otel.GetMeterProvider().Meter(instrumentationName)
+
+	counter, err := meter.Int64Counter(callRequestCount)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	histogram.Record(ctx, time.Since(start).Milliseconds())
+	counter.Add(ctx, 1, metric.WithAttributes(attributes...))
+
+	histogram, err := meter.Int64Histogram(callLatency, metric.WithUnit(unitMilliseconds))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	histogram.Record(ctx, time.Since(start).Milliseconds(), metric.WithAttributes(attributes...))
 	return nil
 }
