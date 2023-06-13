@@ -40,6 +40,32 @@ proto3.util.setEnumType(RunnerState, "xyz.block.ftl.v1.RunnerState", [
 ]);
 
 /**
+ * @generated from enum xyz.block.ftl.v1.MetricType
+ */
+export enum MetricType {
+  /**
+   * @generated from enum value: COUNTER = 0;
+   */
+  COUNTER = 0,
+
+  /**
+   * @generated from enum value: GAUGE = 1;
+   */
+  GAUGE = 1,
+
+  /**
+   * @generated from enum value: HISTOGRAM = 2;
+   */
+  HISTOGRAM = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(MetricType)
+proto3.util.setEnumType(MetricType, "xyz.block.ftl.v1.MetricType", [
+  { no: 0, name: "COUNTER" },
+  { no: 1, name: "GAUGE" },
+  { no: 2, name: "HISTOGRAM" },
+]);
+
+/**
  * @generated from message xyz.block.ftl.v1.PingRequest
  */
 export class PingRequest extends Message<PingRequest> {
@@ -1327,6 +1353,88 @@ export class DeployToRunnerResponse extends Message<DeployToRunnerResponse> {
 
   static equals(a: DeployToRunnerResponse | PlainMessage<DeployToRunnerResponse> | undefined, b: DeployToRunnerResponse | PlainMessage<DeployToRunnerResponse> | undefined): boolean {
     return proto3.util.equals(DeployToRunnerResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.SendMetricRequest
+ */
+export class SendMetricRequest extends Message<SendMetricRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.MetricType type = 2;
+   */
+  type = MetricType.COUNTER;
+
+  /**
+   * All of the datapoints for a give metric name, which could include multiple verb/module combinations.
+   *
+   * @generated from field: bytes datapoints = 3;
+   */
+  datapoints = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<SendMetricRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.SendMetricRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type", kind: "enum", T: proto3.getEnumType(MetricType) },
+    { no: 3, name: "datapoints", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SendMetricRequest {
+    return new SendMetricRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SendMetricRequest {
+    return new SendMetricRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SendMetricRequest {
+    return new SendMetricRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SendMetricRequest | PlainMessage<SendMetricRequest> | undefined, b: SendMetricRequest | PlainMessage<SendMetricRequest> | undefined): boolean {
+    return proto3.util.equals(SendMetricRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.SendMetricResponse
+ */
+export class SendMetricResponse extends Message<SendMetricResponse> {
+  constructor(data?: PartialMessage<SendMetricResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.SendMetricResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SendMetricResponse {
+    return new SendMetricResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SendMetricResponse {
+    return new SendMetricResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SendMetricResponse {
+    return new SendMetricResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SendMetricResponse | PlainMessage<SendMetricResponse> | undefined, b: SendMetricResponse | PlainMessage<SendMetricResponse> | undefined): boolean {
+    return proto3.util.equals(SendMetricResponse, a, b);
   }
 }
 

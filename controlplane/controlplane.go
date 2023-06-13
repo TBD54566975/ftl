@@ -62,12 +62,14 @@ func Start(ctx context.Context, config Config) error {
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, svc),
+		rpc.RawGRPC(ftlv1connect.NewObservabilityServiceHandler, svc),
 		rpc.Route("/", c),
 	)
 }
 
 var _ ftlv1connect.ControlPlaneServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
+var _ ftlv1connect.ObservabilityServiceHandler = (*Service)(nil)
 
 type clients struct {
 	verb   ftlv1connect.VerbServiceClient
@@ -319,6 +321,10 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 }
 
 func (s *Service) List(ctx context.Context, req *connect.Request[ftlv1.ListRequest]) (*connect.Response[ftlv1.ListResponse], error) {
+	panic("unimplemented")
+}
+
+func (s *Service) SendMetric(context.Context, *connect.Request[ftlv1.SendMetricRequest]) (*connect.Response[ftlv1.SendMetricResponse], error) {
 	panic("unimplemented")
 }
 

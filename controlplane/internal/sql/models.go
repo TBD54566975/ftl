@@ -13,6 +13,49 @@ import (
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 )
 
+type MetricType string
+
+const (
+	MetricTypeCounter   MetricType = "counter"
+	MetricTypeGauge     MetricType = "gauge"
+	MetricTypeHistogram MetricType = "histogram"
+)
+
+func (e *MetricType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MetricType(s)
+	case string:
+		*e = MetricType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MetricType: %T", src)
+	}
+	return nil
+}
+
+type NullMetricType struct {
+	MetricType MetricType
+	Valid      bool // Valid is true if MetricType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMetricType) Scan(value interface{}) error {
+	if value == nil {
+		ns.MetricType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MetricType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMetricType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MetricType), nil
+}
+
 type RunnerState string
 
 const (
@@ -89,6 +132,20 @@ type DeploymentLog struct {
 	Scope        string
 	Message      string
 	Error        pgtype.Text
+}
+
+type Metric struct {
+	ID           int64
+	RunnerKey    sqltypes.Key
+	StartTime    pgtype.Timestamptz
+	EndTime      pgtype.Timestamptz
+	SourceModule string
+	SourceVerb   string
+	DestModule   string
+	DestVerb     string
+	Metric       string
+	Type         MetricType
+	Value        []byte
 }
 
 type Module struct {

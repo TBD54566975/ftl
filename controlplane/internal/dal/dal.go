@@ -428,6 +428,34 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploy
 	return out, nil
 }
 
+type Metric struct {
+	RunnerKey    ulid.ULID
+	StartTime    uint64
+	EndTime      uint64
+	SourceModule string
+	SourceVerb   string
+	DestModule   string
+	DestVerb     string
+	Metric       string
+	Type         string
+	Value        []byte
+}
+
+func (d *DAL) InsertMetricEntry(ctx context.Context, metricEntry Metric) error {
+	return errors.WithStack(translatePGError(d.db.InsertMetricEntry(ctx, sql.InsertMetricEntryParams{
+		RunnerKey:    sqltypes.Key(metricEntry.RunnerKey),
+		StartTime:    pgtype.Timestamptz{Time: time.Unix(0, int64(metricEntry.StartTime)), Valid: true},
+		EndTime:      pgtype.Timestamptz{Time: time.Unix(0, int64(metricEntry.EndTime)), Valid: true},
+		SourceModule: metricEntry.SourceModule,
+		SourceVerb:   metricEntry.SourceVerb,
+		DestModule:   metricEntry.DestModule,
+		DestVerb:     metricEntry.DestVerb,
+		Metric:       metricEntry.Metric,
+		Type:         sql.MetricType(metricEntry.Type),
+		Value:        metricEntry.Value,
+	})))
+}
+
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
 }

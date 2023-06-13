@@ -577,6 +577,40 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 	return err
 }
 
+const insertMetricEntry = `-- name: InsertMetricEntry :exec
+INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, metric, type, value)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+`
+
+type InsertMetricEntryParams struct {
+	RunnerKey    sqltypes.Key
+	StartTime    pgtype.Timestamptz
+	EndTime      pgtype.Timestamptz
+	SourceModule string
+	SourceVerb   string
+	DestModule   string
+	DestVerb     string
+	Metric       string
+	Type         MetricType
+	Value        []byte
+}
+
+func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error {
+	_, err := q.db.Exec(ctx, insertMetricEntry,
+		arg.RunnerKey,
+		arg.StartTime,
+		arg.EndTime,
+		arg.SourceModule,
+		arg.SourceVerb,
+		arg.DestModule,
+		arg.DestVerb,
+		arg.Metric,
+		arg.Type,
+		arg.Value,
+	)
+	return err
+}
+
 const reserveRunners = `-- name: ReserveRunners :one
 UPDATE runners
 SET state         = 'reserved',

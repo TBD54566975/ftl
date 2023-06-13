@@ -229,3 +229,23 @@ service RunnerService {
   // Initiate a deployment on this Runner.
   rpc DeployToRunner(DeployToRunnerRequest) returns (DeployToRunnerResponse);
 }
+
+enum MetricType {
+  COUNTER = 0;
+  GAUGE = 1;
+  HISTOGRAM = 2;
+}
+
+message SendMetricRequest {
+  string name = 1;
+  MetricType type = 2;
+
+  // All of the datapoints for a give metric name, which could include multiple verb/module combinations.
+  bytes datapoints = 3;
+}
+
+message SendMetricResponse {}
+
+service ObservabilityService {
+  rpc SendMetric(SendMetricRequest) returns (SendMetricResponse);
+}
