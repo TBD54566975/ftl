@@ -16,12 +16,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
 	"github.com/oklog/ulid/v2"
-	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/console"
 	"github.com/TBD54566975/ftl/controlplane/internal/dal"
-	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/sha256"
@@ -63,14 +61,12 @@ func Start(ctx context.Context, config Config) error {
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, svc),
-		rpc.RawGRPC(v1connect.NewMetricsServiceHandler, svc),
 		rpc.Route("/", c),
 	)
 }
 
 var _ ftlv1connect.ControlPlaneServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
-var _ v1connect.MetricsServiceHandler = (*Service)(nil)
 
 type clients struct {
 	verb   ftlv1connect.VerbServiceClient
@@ -99,10 +95,6 @@ func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout, deploymentReservat
 	go svc.reapStaleRunners(ctx)
 	go svc.releaseExpiredReservations(ctx)
 	return svc, nil
-}
-
-func (s *Service) Export(ctx context.Context, c *connect.Request[v1.ExportMetricsServiceRequest]) (*connect.Response[v1.ExportMetricsServiceResponse], error) {
-	return connect.NewResponse(&v1.ExportMetricsServiceResponse{}), nil
 }
 
 func (s *Service) StreamDeploymentLogs(ctx context.Context, req *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {

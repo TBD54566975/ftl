@@ -18,7 +18,6 @@ func NewService() *Observability {
 
 var _ v1connect.MetricsServiceHandler = (*Observability)(nil)
 
-// Export implements v1connect.MetricsServiceHandler
 func (*Observability) Export(ctx context.Context, req *connect.Request[metricsv1.ExportMetricsServiceRequest]) (*connect.Response[metricsv1.ExportMetricsServiceResponse], error) {
 	logger := log.FromContext(ctx)
 	for i := range req.Msg.ResourceMetrics {

@@ -39,7 +39,7 @@ and route to user code.
 	logger := log.Configure(os.Stderr, config.LogConfig)
 	ctx := log.ContextWithLogger(context.Background(), logger)
 	if config.ObservabilityConfig.Endpoint == nil {
-		config.ObservabilityConfig.Endpoint = config.RunnerConfig.FTLEndpoint
+		config.ObservabilityConfig.Endpoint = config.RunnerConfig.Endpoint
 	}
 	err = observability.Init(ctx, "ftl-runner", config.ObservabilityConfig)
 	kctx.FatalIfErrorf(err)
