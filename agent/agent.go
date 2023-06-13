@@ -26,6 +26,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/pubsub"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/observability"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -190,14 +191,21 @@ func (a *Agent) PushSchema(ctx context.Context, req *connect.ClientStream[ftlv1.
 }
 
 func (a *Agent) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+	verbs, err := headers.GetCallers(req.Header())
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	logger := log.FromContext(ctx)
 	logger.Infof("Calling %s", req.Msg.Verb)
 	ctx = rpc.WithDirectRouting(ctx)
-	ctx = rpc.WithVerb(ctx, schema.VerbRefFromProto(req.Msg.Verb))
+	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
+	verbs = append(verbs, verbRef)
+	ctx = rpc.WithVerbs(ctx, verbs)
 	drive, err := a.findDrive(req.Msg.Verb.ToFTL())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	headers.AddCaller(req.Header(), verbRef)
 	return drive.Client.Call(ctx, req)
 }
 
