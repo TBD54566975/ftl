@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { Module, VerbRef } from "./schema/schema_pb.js";
+import { ScopeMetrics } from "../../../../opentelemetry/proto/metrics/v1/metrics_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.RunnerState
@@ -1361,21 +1362,14 @@ export class DeployToRunnerResponse extends Message<DeployToRunnerResponse> {
  */
 export class SendMetricRequest extends Message<SendMetricRequest> {
   /**
-   * @generated from field: string name = 1;
+   * @generated from field: string runner_key = 1;
    */
-  name = "";
+  runnerKey = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.MetricType type = 2;
+   * @generated from field: repeated opentelemetry.proto.metrics.v1.ScopeMetrics scope_metrics = 2;
    */
-  type = MetricType.COUNTER;
-
-  /**
-   * All of the datapoints for a give metric name, which could include multiple verb/module combinations.
-   *
-   * @generated from field: bytes datapoints = 3;
-   */
-  datapoints = new Uint8Array(0);
+  scopeMetrics: ScopeMetrics[] = [];
 
   constructor(data?: PartialMessage<SendMetricRequest>) {
     super();
@@ -1385,9 +1379,8 @@ export class SendMetricRequest extends Message<SendMetricRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.SendMetricRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "type", kind: "enum", T: proto3.getEnumType(MetricType) },
-    { no: 3, name: "datapoints", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 1, name: "runner_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "scope_metrics", kind: "message", T: ScopeMetrics, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SendMetricRequest {

@@ -143,7 +143,7 @@ type Metric struct {
 	SourceVerb   string
 	DestModule   string
 	DestVerb     string
-	Metric       string
+	Name         string
 	Type         MetricType
 	Value        []byte
 }

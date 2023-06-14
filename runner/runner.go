@@ -33,28 +33,28 @@ import (
 )
 
 type Config struct {
-	Endpoint        *url.URL      `help:"Endpoint the runner should bind to and advertise." default:"http://localhost:8893"`
-	FTLEndpoint     *url.URL      `help:"FTL endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
-	DeploymentDir   string        `help:"Directory to store deployments in." default:"${deploymentdir}"`
-	Language        string        `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
-	HeartbeatPeriod time.Duration `help:"Minimum period between heartbeats." default:"3s"`
-	HeartbeatJitter time.Duration `help:"Jitter to add to heartbeat period." default:"2s"`
+	Endpoint             *url.URL      `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
+	ControlPlaneEndpoint *url.URL      `name:"ftl-endpoint" help:"Control Plane endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
+	DeploymentDir        string        `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	Language             string        `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
+	HeartbeatPeriod      time.Duration `help:"Minimum period between heartbeats." default:"3s"`
+	HeartbeatJitter      time.Duration `help:"Jitter to add to heartbeat period." default:"2s"`
 }
 
 func Start(ctx context.Context, config Config) error {
-	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.FTLEndpoint.String(), log.Error)
+	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, client)
 	logger := log.FromContext(ctx)
-	logger.Infof("Starting FTL runner")
+	logger.Infof("Starting FTL Runner")
 	logger.Infof("Deployment directory: %s", config.DeploymentDir)
 	err := os.MkdirAll(config.DeploymentDir, 0700)
 	if err != nil {
 		return errors.Wrap(err, "failed to create deployment directory")
 	}
-	logger.Infof("Using FTL endpoint: %s", config.FTLEndpoint)
+	logger.Infof("Using FTL endpoint: %s", config.ControlPlaneEndpoint)
 	logger.Infof("Listening on %s", config.Endpoint)
 
-	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.FTLEndpoint.String(), log.Error)
+	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
 
 	svc := &Service{
 		key:                ulid.Make(),
@@ -67,7 +67,9 @@ func Start(ctx context.Context, config Config) error {
 	retry := backoff.Backoff{Max: config.HeartbeatPeriod, Jitter: true}
 	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlPlaneClient.RegisterRunner, svc.registrationLoop)
 
-	obs := observability.NewService()
+	observabilityClient := rpc.Dial(ftlv1connect.NewObservabilityServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
+
+	obs := observability.NewService(svc.key, observabilityClient)
 
 	return rpc.Serve(ctx, config.Endpoint,
 		rpc.Route("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
@@ -169,7 +171,7 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 		"./main",
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars(
-			"FTL_ENDPOINT="+s.config.FTLEndpoint.String(),
+			"FTL_ENDPOINT="+s.config.ControlPlaneEndpoint.String(),
 			"FTL_OBSERVABILITY_ENDPOINT="+s.config.Endpoint.String(),
 		),
 	)

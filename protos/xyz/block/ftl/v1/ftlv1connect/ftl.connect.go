@@ -85,6 +85,9 @@ const (
 	// RunnerServiceDeployToRunnerProcedure is the fully-qualified name of the RunnerService's
 	// DeployToRunner RPC.
 	RunnerServiceDeployToRunnerProcedure = "/xyz.block.ftl.v1.RunnerService/DeployToRunner"
+	// ObservabilityServicePingProcedure is the fully-qualified name of the ObservabilityService's Ping
+	// RPC.
+	ObservabilityServicePingProcedure = "/xyz.block.ftl.v1.ObservabilityService/Ping"
 	// ObservabilityServiceSendMetricProcedure is the fully-qualified name of the ObservabilityService's
 	// SendMetric RPC.
 	ObservabilityServiceSendMetricProcedure = "/xyz.block.ftl.v1.ObservabilityService/SendMetric"
@@ -671,6 +674,8 @@ func (UnimplementedRunnerServiceHandler) DeployToRunner(context.Context, *connec
 
 // ObservabilityServiceClient is a client for the xyz.block.ftl.v1.ObservabilityService service.
 type ObservabilityServiceClient interface {
+	// Ping service for readiness.
+	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	SendMetric(context.Context, *connect_go.Request[v1.SendMetricRequest]) (*connect_go.Response[v1.SendMetricResponse], error)
 }
 
@@ -684,6 +689,12 @@ type ObservabilityServiceClient interface {
 func NewObservabilityServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) ObservabilityServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &observabilityServiceClient{
+		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
+			httpClient,
+			baseURL+ObservabilityServicePingProcedure,
+			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+			connect_go.WithClientOptions(opts...),
+		),
 		sendMetric: connect_go.NewClient[v1.SendMetricRequest, v1.SendMetricResponse](
 			httpClient,
 			baseURL+ObservabilityServiceSendMetricProcedure,
@@ -694,7 +705,13 @@ func NewObservabilityServiceClient(httpClient connect_go.HTTPClient, baseURL str
 
 // observabilityServiceClient implements ObservabilityServiceClient.
 type observabilityServiceClient struct {
+	ping       *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	sendMetric *connect_go.Client[v1.SendMetricRequest, v1.SendMetricResponse]
+}
+
+// Ping calls xyz.block.ftl.v1.ObservabilityService.Ping.
+func (c *observabilityServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
+	return c.ping.CallUnary(ctx, req)
 }
 
 // SendMetric calls xyz.block.ftl.v1.ObservabilityService.SendMetric.
@@ -705,6 +722,8 @@ func (c *observabilityServiceClient) SendMetric(ctx context.Context, req *connec
 // ObservabilityServiceHandler is an implementation of the xyz.block.ftl.v1.ObservabilityService
 // service.
 type ObservabilityServiceHandler interface {
+	// Ping service for readiness.
+	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	SendMetric(context.Context, *connect_go.Request[v1.SendMetricRequest]) (*connect_go.Response[v1.SendMetricResponse], error)
 }
 
@@ -715,6 +734,12 @@ type ObservabilityServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewObservabilityServiceHandler(svc ObservabilityServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
 	mux := http.NewServeMux()
+	mux.Handle(ObservabilityServicePingProcedure, connect_go.NewUnaryHandler(
+		ObservabilityServicePingProcedure,
+		svc.Ping,
+		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+		connect_go.WithHandlerOptions(opts...),
+	))
 	mux.Handle(ObservabilityServiceSendMetricProcedure, connect_go.NewUnaryHandler(
 		ObservabilityServiceSendMetricProcedure,
 		svc.SendMetric,
@@ -725,6 +750,10 @@ func NewObservabilityServiceHandler(svc ObservabilityServiceHandler, opts ...con
 
 // UnimplementedObservabilityServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedObservabilityServiceHandler struct{}
+
+func (UnimplementedObservabilityServiceHandler) Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ObservabilityService.Ping is not implemented"))
+}
 
 func (UnimplementedObservabilityServiceHandler) SendMetric(context.Context, *connect_go.Request[v1.SendMetricRequest]) (*connect_go.Response[v1.SendMetricResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ObservabilityService.SendMetric is not implemented"))

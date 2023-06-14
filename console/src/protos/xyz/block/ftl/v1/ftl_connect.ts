@@ -258,6 +258,18 @@ export const ObservabilityService = {
   typeName: "xyz.block.ftl.v1.ObservabilityService",
   methods: {
     /**
+     * Ping service for readiness.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ObservabilityService.Ping
+     */
+    ping: {
+      name: "Ping",
+      I: PingRequest,
+      O: PingResponse,
+      kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
+    },
+    /**
      * @generated from rpc xyz.block.ftl.v1.ObservabilityService.SendMetric
      */
     sendMetric: {

@@ -2,79 +2,51 @@ package observability
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+	"github.com/oklog/ulid/v2"
 	colmetricsv1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricsv1 "go.opentelemetry.io/proto/otlp/metrics/v1"
 
 	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
-	"github.com/TBD54566975/ftl/internal/log"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-type Observability struct{}
+type Observability struct {
+	runnerKey ulid.ULID
+	client    ftlv1connect.ObservabilityServiceClient
+}
 
-func NewService() *Observability {
-	return &Observability{}
+func NewService(runnerKey ulid.ULID, client ftlv1connect.ObservabilityServiceClient) *Observability {
+	return &Observability{
+		runnerKey: runnerKey,
+		client:    client,
+	}
 }
 
 var _ v1connect.MetricsServiceHandler = (*Observability)(nil)
 
-func (*Observability) Export(ctx context.Context, req *connect.Request[colmetricsv1.ExportMetricsServiceRequest]) (*connect.Response[colmetricsv1.ExportMetricsServiceResponse], error) {
+func (o *Observability) Export(ctx context.Context, req *connect.Request[colmetricsv1.ExportMetricsServiceRequest]) (*connect.Response[colmetricsv1.ExportMetricsServiceResponse], error) {
+	ftlMetrics := []*metricsv1.ScopeMetrics{}
+
 	for i := range req.Msg.ResourceMetrics {
 		for j := range req.Msg.ResourceMetrics[i].ScopeMetrics {
 			scopeMetrics := req.Msg.ResourceMetrics[i].ScopeMetrics[j]
 			if scopeMetrics.Scope.Name == instrumentationName {
-				err := sendMetrics(ctx, scopeMetrics)
-				if err != nil {
-					return nil, errors.WithStack(err)
-				}
+				ftlMetrics = append(ftlMetrics, scopeMetrics)
 			}
 		}
+	}
+
+	_, err := o.client.SendMetric(ctx, connect.NewRequest(&ftlv1.SendMetricRequest{
+		RunnerKey:    o.runnerKey.String(),
+		ScopeMetrics: ftlMetrics,
+	}))
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 
 	return connect.NewResponse(&colmetricsv1.ExportMetricsServiceResponse{}), nil
-}
-
-func sendMetrics(ctx context.Context, metrics *metricsv1.ScopeMetrics) error {
-	logger := log.FromContext(ctx)
-
-	for i := range metrics.Metrics {
-		metric := metrics.Metrics[i]
-
-		var metricRequest *ftlv1.SendMetricRequest
-		if sum := metric.GetSum(); sum != nil {
-			jsonBytes, err := json.Marshal(sum.DataPoints)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			metricRequest = &ftlv1.SendMetricRequest{
-				Name:       metric.Name,
-				Type:       ftlv1.MetricType_COUNTER,
-				Datapoints: jsonBytes,
-			}
-		}
-		if histogram := metric.GetHistogram(); histogram != nil {
-			jsonBytes, err := json.Marshal(histogram.DataPoints)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			metricRequest = &ftlv1.SendMetricRequest{
-				Name:       metric.Name,
-				Type:       ftlv1.MetricType_HISTOGRAM,
-				Datapoints: jsonBytes,
-			}
-		}
-
-		if metricRequest == nil {
-			logger.Warnf("Unknown metric type for: %s", metric.Name)
-			continue
-		}
-
-		logger.Tracef("Sending metric: %s", metricRequest.Name)
-	}
-
-	return nil
 }

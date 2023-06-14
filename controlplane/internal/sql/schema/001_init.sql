@@ -100,12 +100,12 @@ CREATE TABLE metrics
     source_verb   VARCHAR     NOT NULL,
     dest_module   VARCHAR     NOT NULL,
     dest_verb     VARCHAR     NOT NULL,
-    metric        VARCHAR     NOT NULL,
+    name          VARCHAR     NOT NULL,
     type          metric_type NOT NULL,
     value         JSONB       NOT NULL
 );
 
-CREATE INDEX metrics_metric_idx ON metrics (metric);
+CREATE INDEX metrics_name_idx ON metrics (name);
 CREATE INDEX metrics_source_module_idx ON metrics (source_module);
 CREATE INDEX metrics_source_verb_idx ON metrics (source_verb);
 CREATE INDEX metrics_dest_module_idx ON metrics (dest_module);

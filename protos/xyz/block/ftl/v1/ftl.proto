@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1;
 
+import "opentelemetry/proto/metrics/v1/metrics.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1;ftlv1";
@@ -237,15 +238,17 @@ enum MetricType {
 }
 
 message SendMetricRequest {
-  string name = 1;
-  MetricType type = 2;
-
-  // All of the datapoints for a give metric name, which could include multiple verb/module combinations.
-  bytes datapoints = 3;
+  string runner_key = 1;
+  repeated opentelemetry.proto.metrics.v1.ScopeMetrics scope_metrics = 2;
 }
 
 message SendMetricResponse {}
 
 service ObservabilityService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
   rpc SendMetric(SendMetricRequest) returns (SendMetricResponse);
 }

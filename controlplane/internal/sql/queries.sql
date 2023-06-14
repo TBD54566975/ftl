@@ -181,5 +181,5 @@ INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, e
 VALUES ((SELECT id FROM deployments WHERE key=$1 LIMIT 1)::UUID, $2, $3, $4, $5, $6);
 
 -- name: InsertMetricEntry :exec
-INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, metric, type, value)
+INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type, value)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);

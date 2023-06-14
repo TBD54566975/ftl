@@ -53,23 +53,25 @@ func Start(ctx context.Context, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	svc, err := New(ctx, dal.New(conn), config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
+	dal := dal.New(conn)
+	svc, err := New(ctx, dal, config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	logger.Infof("Listening on %s", config.Bind)
 
+	observability := NewObservabilityService(dal)
+
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, svc),
-		rpc.RawGRPC(ftlv1connect.NewObservabilityServiceHandler, svc),
+		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, observability),
 		rpc.Route("/", c),
 	)
 }
 
 var _ ftlv1connect.ControlPlaneServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
-var _ ftlv1connect.ObservabilityServiceHandler = (*Service)(nil)
 
 type clients struct {
 	verb   ftlv1connect.VerbServiceClient
@@ -321,10 +323,6 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 }
 
 func (s *Service) List(ctx context.Context, req *connect.Request[ftlv1.ListRequest]) (*connect.Response[ftlv1.ListResponse], error) {
-	panic("unimplemented")
-}
-
-func (s *Service) SendMetric(context.Context, *connect.Request[ftlv1.SendMetricRequest]) (*connect.Response[ftlv1.SendMetricResponse], error) {
 	panic("unimplemented")
 }
 

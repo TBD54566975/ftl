@@ -4,6 +4,7 @@ package dal
 import (
 	"context"
 	stdsql "database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -428,31 +429,63 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploy
 	return out, nil
 }
 
+type DataPoint interface {
+	isDataPoint()
+}
+
+type MetricHistogram struct {
+	Count  int64
+	Sum    int64
+	Bucket []int64
+}
+
+func (MetricHistogram) isDataPoint() {}
+
+type MetricCounter struct {
+	Value int64
+}
+
+func (MetricCounter) isDataPoint() {}
+
 type Metric struct {
 	RunnerKey    ulid.ULID
-	StartTime    uint64
-	EndTime      uint64
+	StartTime    time.Time
+	EndTime      time.Time
 	SourceModule string
 	SourceVerb   string
 	DestModule   string
 	DestVerb     string
-	Metric       string
-	Type         string
-	Value        []byte
+	Name         string
+	DataPoint    DataPoint
 }
 
-func (d *DAL) InsertMetricEntry(ctx context.Context, metricEntry Metric) error {
+func (d *DAL) InsertMetricEntry(ctx context.Context, metric Metric) error {
+	var metricType sql.MetricType
+	switch metric.DataPoint.(type) {
+	case MetricHistogram:
+		metricType = sql.MetricTypeHistogram
+	case MetricCounter:
+		metricType = sql.MetricTypeCounter
+	default:
+		panic(fmt.Sprintf("unknown metric type %T", metric.DataPoint))
+	}
+
+	datapointJSON, err := json.Marshal(metric.DataPoint)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	return errors.WithStack(translatePGError(d.db.InsertMetricEntry(ctx, sql.InsertMetricEntryParams{
-		RunnerKey:    sqltypes.Key(metricEntry.RunnerKey),
-		StartTime:    pgtype.Timestamptz{Time: time.Unix(0, int64(metricEntry.StartTime)), Valid: true},
-		EndTime:      pgtype.Timestamptz{Time: time.Unix(0, int64(metricEntry.EndTime)), Valid: true},
-		SourceModule: metricEntry.SourceModule,
-		SourceVerb:   metricEntry.SourceVerb,
-		DestModule:   metricEntry.DestModule,
-		DestVerb:     metricEntry.DestVerb,
-		Metric:       metricEntry.Metric,
-		Type:         sql.MetricType(metricEntry.Type),
-		Value:        metricEntry.Value,
+		RunnerKey:    sqltypes.Key(metric.RunnerKey),
+		StartTime:    pgtype.Timestamptz{Time: metric.StartTime, Valid: true},
+		EndTime:      pgtype.Timestamptz{Time: metric.EndTime, Valid: true},
+		SourceModule: metric.SourceModule,
+		SourceVerb:   metric.SourceVerb,
+		DestModule:   metric.DestModule,
+		DestVerb:     metric.DestVerb,
+		Name:         metric.Name,
+		Type:         metricType,
+		Value:        datapointJSON,
 	})))
 }
 
