@@ -23,9 +23,7 @@ type CLI struct {
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 	Endpoint  *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 
-	Devel    develCmd    `cmd:"" help:"Serve development FTL modules."`
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
-	Schema   schemaCmd   `cmd:"" help:"Retrieve the FTL schema."`
 	List     listCmd     `cmd:"" help:"List all FTL functions."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
 	Go       goCmd       `cmd:"" help:"Commands specific to Go modules."`
@@ -73,8 +71,6 @@ func main() {
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
 	err := kctx.BindToProvider(makeDialer(ftlv1connect.NewVerbServiceClient))
-	kctx.FatalIfErrorf(err)
-	err = kctx.BindToProvider(makeDialer(ftlv1connect.NewDevelServiceClient))
 	kctx.FatalIfErrorf(err)
 	err = kctx.BindToProvider(makeDialer(ftlv1connect.NewControlPlaneServiceClient))
 	kctx.FatalIfErrorf(err)

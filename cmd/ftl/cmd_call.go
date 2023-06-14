@@ -7,14 +7,14 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
+	"github.com/TBD54566975/ftl/go-runtime/sdk"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
-	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 type callCmd struct {
-	Verb    sdkgo.VerbRef `arg:"" required:"" help:"Full path of Verb to call."`
-	Request string        `arg:"" optional:"" help:"JSON request payload." default:"{}"`
+	Verb    sdk.VerbRef `arg:"" required:"" help:"Full path of Verb to call."`
+	Request string      `arg:"" optional:"" help:"JSON request payload." default:"{}"`
 }
 
 func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient) error {

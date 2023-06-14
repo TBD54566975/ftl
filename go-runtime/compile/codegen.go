@@ -1,4 +1,4 @@
-package sdkgo
+package compile
 
 import (
 	_ "embed" // For embedding templates.

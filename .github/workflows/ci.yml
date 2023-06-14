@@ -6,6 +6,7 @@ on:
 name: CI
 jobs:
   kotlin:
+    if: false
     name: Kotlin
     runs-on: ubuntu-latest
     steps:

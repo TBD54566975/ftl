@@ -60,35 +60,12 @@ service VerbService {
   rpc List(ListRequest) returns (ListResponse);
 }
 
-message PushSchemaRequest {
-  schema.Module schema = 1;
-}
-message PushSchemaResponse {}
-
 message PullSchemaRequest {}
 message PullSchemaResponse {
   schema.Module schema = 1;
   // If true, there are more schema changes immediately following this one.
   // If false, there still may be more schema changes in the future.
   bool more = 2;
-}
-
-// DevelService is the service that provides language-specific development and
-// deployment functionality.
-//
-// The DevelService is responsible for hot reloading when code changes, and
-// passing Verb calls through.
-service DevelService {
-  // Ping service for readiness.
-  rpc Ping(PingRequest) returns (PingResponse) {
-    option idempotency_level = NO_SIDE_EFFECTS;
-  }
-
-  // Push schema changes to the server.
-  rpc PushSchema(stream PushSchemaRequest) returns (PushSchemaResponse);
-
-  // Pull schema changes from the server.
-  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
 }
 
 message GetArtefactDiffsRequest {
@@ -210,6 +187,10 @@ service ControlPlaneService {
 
   // Stream logs from a deployment
   rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);
+
+  // Pull schema changes from the Control Plane.
+  // TODO(aat): Implement this.
+  //  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
 }
 
 message DeployToRunnerRequest {

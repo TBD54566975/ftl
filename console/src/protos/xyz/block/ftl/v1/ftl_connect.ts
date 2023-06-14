@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, SendMetricRequest, SendMetricResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, RegisterRunnerRequest, RegisterRunnerResponse, SendMetricRequest, SendMetricResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -47,55 +47,6 @@ export const VerbService = {
       I: ListRequest,
       O: ListResponse,
       kind: MethodKind.Unary,
-    },
-  }
-} as const;
-
-/**
- * DevelService is the service that provides language-specific development and
- * deployment functionality.
- *
- * The DevelService is responsible for hot reloading when code changes, and
- * passing Verb calls through.
- *
- * @generated from service xyz.block.ftl.v1.DevelService
- */
-export const DevelService = {
-  typeName: "xyz.block.ftl.v1.DevelService",
-  methods: {
-    /**
-     * Ping service for readiness.
-     *
-     * @generated from rpc xyz.block.ftl.v1.DevelService.Ping
-     */
-    ping: {
-      name: "Ping",
-      I: PingRequest,
-      O: PingResponse,
-      kind: MethodKind.Unary,
-      idempotency: MethodIdempotency.NoSideEffects,
-    },
-    /**
-     * Push schema changes to the server.
-     *
-     * @generated from rpc xyz.block.ftl.v1.DevelService.PushSchema
-     */
-    pushSchema: {
-      name: "PushSchema",
-      I: PushSchemaRequest,
-      O: PushSchemaResponse,
-      kind: MethodKind.ClientStreaming,
-    },
-    /**
-     * Pull schema changes from the server.
-     *
-     * @generated from rpc xyz.block.ftl.v1.DevelService.PullSchema
-     */
-    pullSchema: {
-      name: "PullSchema",
-      I: PullSchemaRequest,
-      O: PullSchemaResponse,
-      kind: MethodKind.ServerStreaming,
     },
   }
 } as const;
