@@ -18,12 +18,13 @@ import (
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/TBD54566975/ftl/common/model"
+	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/console"
 	"github.com/TBD54566975/ftl/controlplane/internal/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
-	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -263,7 +264,7 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 	}
 	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
 		Schema:    deployment.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
-		Artefacts: slices.Map(deployment.Artefacts, func(artefact *dal.Artefact) *ftlv1.DeploymentArtefact { return artefact.ToProto() }),
+		Artefacts: slices.Map(deployment.Artefacts, func(artefact *model.Artefact) *ftlv1.DeploymentArtefact { return artefact.ToProto() }),
 	}), nil
 }
 
@@ -272,6 +273,7 @@ func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return err
 	}
+	defer deployment.Close()
 	chunk := make([]byte, s.artefactChunkSize)
 nextArtefact:
 	for _, artefact := range deployment.Artefacts {
@@ -290,7 +292,7 @@ nextArtefact:
 					return errors.Wrap(err, "could not send artefact chunk")
 				}
 			}
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			} else if err != nil {
 				return errors.Wrap(err, "could not read artefact chunk")
@@ -377,7 +379,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: key.String()}), nil
 }
 
-func (s *Service) getDeployment(ctx context.Context, key string) (*dal.Deployment, error) {
+func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deployment, error) {
 	dkey, err := ulid.Parse(key)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))

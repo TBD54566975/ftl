@@ -23,8 +23,6 @@ const _ = connect_go.IsAtLeastVersion1_7_0
 const (
 	// VerbServiceName is the fully-qualified name of the VerbService service.
 	VerbServiceName = "xyz.block.ftl.v1.VerbService"
-	// DevelServiceName is the fully-qualified name of the DevelService service.
-	DevelServiceName = "xyz.block.ftl.v1.DevelService"
 	// ControlPlaneServiceName is the fully-qualified name of the ControlPlaneService service.
 	ControlPlaneServiceName = "xyz.block.ftl.v1.ControlPlaneService"
 	// RunnerServiceName is the fully-qualified name of the RunnerService service.
@@ -47,12 +45,6 @@ const (
 	VerbServiceCallProcedure = "/xyz.block.ftl.v1.VerbService/Call"
 	// VerbServiceListProcedure is the fully-qualified name of the VerbService's List RPC.
 	VerbServiceListProcedure = "/xyz.block.ftl.v1.VerbService/List"
-	// DevelServicePingProcedure is the fully-qualified name of the DevelService's Ping RPC.
-	DevelServicePingProcedure = "/xyz.block.ftl.v1.DevelService/Ping"
-	// DevelServicePushSchemaProcedure is the fully-qualified name of the DevelService's PushSchema RPC.
-	DevelServicePushSchemaProcedure = "/xyz.block.ftl.v1.DevelService/PushSchema"
-	// DevelServicePullSchemaProcedure is the fully-qualified name of the DevelService's PullSchema RPC.
-	DevelServicePullSchemaProcedure = "/xyz.block.ftl.v1.DevelService/PullSchema"
 	// ControlPlaneServicePingProcedure is the fully-qualified name of the ControlPlaneService's Ping
 	// RPC.
 	ControlPlaneServicePingProcedure = "/xyz.block.ftl.v1.ControlPlaneService/Ping"
@@ -203,118 +195,6 @@ func (UnimplementedVerbServiceHandler) Call(context.Context, *connect_go.Request
 
 func (UnimplementedVerbServiceHandler) List(context.Context, *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.List is not implemented"))
-}
-
-// DevelServiceClient is a client for the xyz.block.ftl.v1.DevelService service.
-type DevelServiceClient interface {
-	// Ping service for readiness.
-	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
-	// Push schema changes to the server.
-	PushSchema(context.Context) *connect_go.ClientStreamForClient[v1.PushSchemaRequest, v1.PushSchemaResponse]
-	// Pull schema changes from the server.
-	PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest]) (*connect_go.ServerStreamForClient[v1.PullSchemaResponse], error)
-}
-
-// NewDevelServiceClient constructs a client for the xyz.block.ftl.v1.DevelService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewDevelServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) DevelServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	return &develServiceClient{
-		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
-			httpClient,
-			baseURL+DevelServicePingProcedure,
-			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
-			connect_go.WithClientOptions(opts...),
-		),
-		pushSchema: connect_go.NewClient[v1.PushSchemaRequest, v1.PushSchemaResponse](
-			httpClient,
-			baseURL+DevelServicePushSchemaProcedure,
-			opts...,
-		),
-		pullSchema: connect_go.NewClient[v1.PullSchemaRequest, v1.PullSchemaResponse](
-			httpClient,
-			baseURL+DevelServicePullSchemaProcedure,
-			opts...,
-		),
-	}
-}
-
-// develServiceClient implements DevelServiceClient.
-type develServiceClient struct {
-	ping       *connect_go.Client[v1.PingRequest, v1.PingResponse]
-	pushSchema *connect_go.Client[v1.PushSchemaRequest, v1.PushSchemaResponse]
-	pullSchema *connect_go.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
-}
-
-// Ping calls xyz.block.ftl.v1.DevelService.Ping.
-func (c *develServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
-	return c.ping.CallUnary(ctx, req)
-}
-
-// PushSchema calls xyz.block.ftl.v1.DevelService.PushSchema.
-func (c *develServiceClient) PushSchema(ctx context.Context) *connect_go.ClientStreamForClient[v1.PushSchemaRequest, v1.PushSchemaResponse] {
-	return c.pushSchema.CallClientStream(ctx)
-}
-
-// PullSchema calls xyz.block.ftl.v1.DevelService.PullSchema.
-func (c *develServiceClient) PullSchema(ctx context.Context, req *connect_go.Request[v1.PullSchemaRequest]) (*connect_go.ServerStreamForClient[v1.PullSchemaResponse], error) {
-	return c.pullSchema.CallServerStream(ctx, req)
-}
-
-// DevelServiceHandler is an implementation of the xyz.block.ftl.v1.DevelService service.
-type DevelServiceHandler interface {
-	// Ping service for readiness.
-	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
-	// Push schema changes to the server.
-	PushSchema(context.Context, *connect_go.ClientStream[v1.PushSchemaRequest]) (*connect_go.Response[v1.PushSchemaResponse], error)
-	// Pull schema changes from the server.
-	PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest], *connect_go.ServerStream[v1.PullSchemaResponse]) error
-}
-
-// NewDevelServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewDevelServiceHandler(svc DevelServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle(DevelServicePingProcedure, connect_go.NewUnaryHandler(
-		DevelServicePingProcedure,
-		svc.Ping,
-		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
-		connect_go.WithHandlerOptions(opts...),
-	))
-	mux.Handle(DevelServicePushSchemaProcedure, connect_go.NewClientStreamHandler(
-		DevelServicePushSchemaProcedure,
-		svc.PushSchema,
-		opts...,
-	))
-	mux.Handle(DevelServicePullSchemaProcedure, connect_go.NewServerStreamHandler(
-		DevelServicePullSchemaProcedure,
-		svc.PullSchema,
-		opts...,
-	))
-	return "/xyz.block.ftl.v1.DevelService/", mux
-}
-
-// UnimplementedDevelServiceHandler returns CodeUnimplemented from all methods.
-type UnimplementedDevelServiceHandler struct{}
-
-func (UnimplementedDevelServiceHandler) Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.DevelService.Ping is not implemented"))
-}
-
-func (UnimplementedDevelServiceHandler) PushSchema(context.Context, *connect_go.ClientStream[v1.PushSchemaRequest]) (*connect_go.Response[v1.PushSchemaResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.DevelService.PushSchema is not implemented"))
-}
-
-func (UnimplementedDevelServiceHandler) PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest], *connect_go.ServerStream[v1.PullSchemaResponse]) error {
-	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.DevelService.PullSchema is not implemented"))
 }
 
 // ControlPlaneServiceClient is a client for the xyz.block.ftl.v1.ControlPlaneService service.

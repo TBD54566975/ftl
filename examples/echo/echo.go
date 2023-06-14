@@ -10,7 +10,7 @@ import (
 
 	timemodule "github.com/TBD54566975/ftl/examples/time"
 
-	ftl "github.com/TBD54566975/ftl/sdk-go"
+	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 
 // An echo request.

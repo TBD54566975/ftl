@@ -4,7 +4,7 @@ package basket
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/sdk-go/kvstore"
+	"github.com/TBD54566975/ftl/go-runtime/sdk/kvstore"
 )
 
 //ftl:resource

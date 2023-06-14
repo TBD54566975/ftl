@@ -1,4 +1,4 @@
-package sdkgo
+package compile
 
 import (
 	"strings"

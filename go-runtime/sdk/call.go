@@ -1,4 +1,4 @@
-package sdkgo
+package sdk
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-// Call a Verb through the Agent.
+// Call a Verb through the FTL Control Plane.
 func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (resp Resp, err error) {
 	callee := ToVerbRef(verb)
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)

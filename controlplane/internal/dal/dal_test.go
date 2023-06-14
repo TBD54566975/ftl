@@ -10,8 +10,9 @@ import (
 	"github.com/alecthomas/types"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/TBD54566975/ftl/common/model"
+	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/controlplane/internal/sql/sqltest"
-	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/schema"
 )
 
@@ -49,16 +50,16 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	deployment := &Deployment{
+	deployment := &model.Deployment{
 		Module:   "test",
 		Language: "go",
 		Schema:   module,
 		Key:      deploymentKey,
-		Artefacts: []*Artefact{
+		Artefacts: []*model.Artefact{
 			{Path: "dir/filename",
 				Executable: true,
 				Digest:     testSHA,
-				Content:    bytes.NewReader(testContent)},
+				Content:    io.NopCloser(bytes.NewReader(testContent))},
 		},
 	}
 	expectedContent := artefactContent(t, deployment.Artefacts)
@@ -211,7 +212,7 @@ func TestDAL(t *testing.T) {
 	})
 }
 
-func artefactContent(t testing.TB, artefacts []*Artefact) [][]byte {
+func artefactContent(t testing.TB, artefacts []*model.Artefact) [][]byte {
 	t.Helper()
 	var result [][]byte
 	for _, a := range artefacts {

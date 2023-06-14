@@ -20,11 +20,12 @@ import (
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/TBD54566975/ftl/common/model"
+	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/controlplane/internal/sql"
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
-	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -175,31 +176,7 @@ func (d *DAL) CreateDeployment(
 	return deploymentKey, nil
 }
 
-type Deployment struct {
-	Module    string
-	Language  string
-	Key       ulid.ULID
-	Schema    *schema.Module
-	Artefacts []*Artefact
-}
-
-type Artefact struct {
-	Path       string
-	Executable bool
-	Digest     sha256.SHA256
-	// ~Zero-cost on-demand reader.
-	Content io.Reader
-}
-
-func (a *Artefact) ToProto() *ftlv1.DeploymentArtefact {
-	return &ftlv1.DeploymentArtefact{
-		Path:       a.Path,
-		Executable: a.Executable,
-		Digest:     a.Digest.String(),
-	}
-}
-
-func (d *DAL) GetDeployment(ctx context.Context, id ulid.ULID) (*Deployment, error) {
+func (d *DAL) GetDeployment(ctx context.Context, id ulid.ULID) (*model.Deployment, error) {
 	deployment, err := d.db.GetDeployment(ctx, sqltypes.Key(id))
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
@@ -207,7 +184,7 @@ func (d *DAL) GetDeployment(ctx context.Context, id ulid.ULID) (*Deployment, err
 	return d.loadDeployment(ctx, sql.GetLatestDeploymentRow(deployment))
 }
 
-func (d *DAL) GetLatestDeployment(ctx context.Context, module string) (*Deployment, error) {
+func (d *DAL) GetLatestDeployment(ctx context.Context, module string) (*model.Deployment, error) {
 	deployment, err := d.db.GetLatestDeployment(ctx, module)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
@@ -398,7 +375,7 @@ func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment ulid.ULID
 	})))
 }
 
-func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploymentRow) (*Deployment, error) {
+func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploymentRow) (*model.Deployment, error) {
 	pm := &pschema.Module{}
 	err := proto.Unmarshal(deployment.Schema, pm)
 	if err != nil {
@@ -408,7 +385,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploy
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	out := &Deployment{
+	out := &model.Deployment{
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
 		Key:      deployment.Key.ULID(),
@@ -418,8 +395,8 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploy
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	out.Artefacts = slices.Map(artefacts, func(row sql.GetDeploymentArtefactsRow) *Artefact {
-		return &Artefact{
+	out.Artefacts = slices.Map(artefacts, func(row sql.GetDeploymentArtefactsRow) *model.Artefact {
+		return &model.Artefact{
 			Path:       row.Path,
 			Executable: row.Executable,
 			Content:    &artefactReader{id: row.ID, db: d.db},
@@ -498,6 +475,8 @@ type artefactReader struct {
 	db     *sql.DB
 	offset int32
 }
+
+func (r *artefactReader) Close() error { return nil }
 
 func (r *artefactReader) Read(p []byte) (n int, err error) {
 	content, err := r.db.GetArtefactContentRange(context.Background(), r.offset+1, int32(len(p)), r.id)

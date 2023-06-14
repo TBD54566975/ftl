@@ -1,4 +1,4 @@
-package sdkgo
+package compile
 
 import (
 	stderrors "errors" //nolint:depguard
@@ -30,10 +30,10 @@ var contextIfaceType = once(func() *types.Interface {
 var errorIFaceType = once(func() *types.Interface {
 	return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 })
-var ftlCallFuncPath = "github.com/TBD54566975/ftl/sdk-go.Call"
+var ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/sdk.Call"
 
-// ExtractModule statically parses Go FTL module source into a schema.Module.
-func ExtractModule(dir string) (*schema.Module, error) {
+// ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
+func ExtractModuleSchema(dir string) (*schema.Module, error) {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,

@@ -6,8 +6,8 @@ import (
 
 	"github.com/alecthomas/errors"
 
+	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/schema"
-	sdkgo "github.com/TBD54566975/ftl/sdk-go"
 )
 
 type goCmd struct {
@@ -22,7 +22,7 @@ type goSchemaCmd struct {
 func (g *goSchemaCmd) Run() error {
 	s := &schema.Schema{}
 	for _, dir := range g.Dir {
-		module, err := sdkgo.ExtractModule(dir)
+		module, err := compile.ExtractModuleSchema(dir)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -45,7 +45,7 @@ func (g *goGenerateCmd) Run() error {
 		return errors.WithStack(err)
 	}
 	for _, module := range s.Modules {
-		if err := sdkgo.Generate(module, os.Stdout); err != nil {
+		if err := compile.Generate(module, os.Stdout); err != nil {
 			return errors.WithStack(err)
 		}
 	}

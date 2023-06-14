@@ -21,11 +21,10 @@ package v1connect
 import (
 	context "context"
 	errors "errors"
-	http "net/http"
-	strings "strings"
-
 	connect_go "github.com/bufbuild/connect-go"
 	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	http "net/http"
+	strings "strings"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are

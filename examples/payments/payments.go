@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/sdk-go/kvstore"
+	"github.com/TBD54566975/ftl/go-runtime/sdk/kvstore"
 )
 
 var payments = kvstore.Require[Account]()
