@@ -7,7 +7,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/TBD54566975/ftl/common/sha256"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/schema"
 )
 
