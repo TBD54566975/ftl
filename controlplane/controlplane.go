@@ -53,15 +53,19 @@ func Start(ctx context.Context, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	svc, err := New(ctx, dal.New(conn), config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
+	dal := dal.New(conn)
+	svc, err := New(ctx, dal, config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	logger.Infof("Listening on %s", config.Bind)
 
+	observability := NewObservabilityService(dal)
+
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, svc),
+		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, observability),
 		rpc.Route("/", c),
 	)
 }

@@ -39,6 +39,7 @@ type Querier interface {
 	// Get all runners that are assigned to run the given module.
 	GetRunnersForModule(ctx context.Context, name string) ([]GetRunnersForModuleRow, error)
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
+	InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error
 	// Find idle runners and reserve them for the given deployment.
 	ReserveRunners(ctx context.Context, language string, limit int32, deploymentKey sqltypes.Key) (Runner, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.

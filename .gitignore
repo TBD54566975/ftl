@@ -4,6 +4,7 @@
 *.iml
 target/
 build/
+deploy/
 .ftl*/
 .DS_Store
 /logs/

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, PushSchemaRequest, PushSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, SendMetricRequest, SendMetricResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -246,6 +246,36 @@ export const RunnerService = {
       name: "DeployToRunner",
       I: DeployToRunnerRequest,
       O: DeployToRunnerResponse,
+      kind: MethodKind.Unary,
+    },
+  }
+} as const;
+
+/**
+ * @generated from service xyz.block.ftl.v1.ObservabilityService
+ */
+export const ObservabilityService = {
+  typeName: "xyz.block.ftl.v1.ObservabilityService",
+  methods: {
+    /**
+     * Ping service for readiness.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ObservabilityService.Ping
+     */
+    ping: {
+      name: "Ping",
+      I: PingRequest,
+      O: PingResponse,
+      kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.ObservabilityService.SendMetric
+     */
+    sendMetric: {
+      name: "SendMetric",
+      I: SendMetricRequest,
+      O: SendMetricResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -29,6 +29,8 @@ const (
 	ControlPlaneServiceName = "xyz.block.ftl.v1.ControlPlaneService"
 	// RunnerServiceName is the fully-qualified name of the RunnerService service.
 	RunnerServiceName = "xyz.block.ftl.v1.RunnerService"
+	// ObservabilityServiceName is the fully-qualified name of the ObservabilityService service.
+	ObservabilityServiceName = "xyz.block.ftl.v1.ObservabilityService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -83,6 +85,12 @@ const (
 	// RunnerServiceDeployToRunnerProcedure is the fully-qualified name of the RunnerService's
 	// DeployToRunner RPC.
 	RunnerServiceDeployToRunnerProcedure = "/xyz.block.ftl.v1.RunnerService/DeployToRunner"
+	// ObservabilityServicePingProcedure is the fully-qualified name of the ObservabilityService's Ping
+	// RPC.
+	ObservabilityServicePingProcedure = "/xyz.block.ftl.v1.ObservabilityService/Ping"
+	// ObservabilityServiceSendMetricProcedure is the fully-qualified name of the ObservabilityService's
+	// SendMetric RPC.
+	ObservabilityServiceSendMetricProcedure = "/xyz.block.ftl.v1.ObservabilityService/SendMetric"
 )
 
 // VerbServiceClient is a client for the xyz.block.ftl.v1.VerbService service.
@@ -662,4 +670,91 @@ func (UnimplementedRunnerServiceHandler) Ping(context.Context, *connect_go.Reque
 
 func (UnimplementedRunnerServiceHandler) DeployToRunner(context.Context, *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.DeployToRunner is not implemented"))
+}
+
+// ObservabilityServiceClient is a client for the xyz.block.ftl.v1.ObservabilityService service.
+type ObservabilityServiceClient interface {
+	// Ping service for readiness.
+	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
+	SendMetric(context.Context, *connect_go.Request[v1.SendMetricRequest]) (*connect_go.Response[v1.SendMetricResponse], error)
+}
+
+// NewObservabilityServiceClient constructs a client for the xyz.block.ftl.v1.ObservabilityService
+// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
+// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
+// the connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewObservabilityServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) ObservabilityServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	return &observabilityServiceClient{
+		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
+			httpClient,
+			baseURL+ObservabilityServicePingProcedure,
+			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+			connect_go.WithClientOptions(opts...),
+		),
+		sendMetric: connect_go.NewClient[v1.SendMetricRequest, v1.SendMetricResponse](
+			httpClient,
+			baseURL+ObservabilityServiceSendMetricProcedure,
+			opts...,
+		),
+	}
+}
+
+// observabilityServiceClient implements ObservabilityServiceClient.
+type observabilityServiceClient struct {
+	ping       *connect_go.Client[v1.PingRequest, v1.PingResponse]
+	sendMetric *connect_go.Client[v1.SendMetricRequest, v1.SendMetricResponse]
+}
+
+// Ping calls xyz.block.ftl.v1.ObservabilityService.Ping.
+func (c *observabilityServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
+	return c.ping.CallUnary(ctx, req)
+}
+
+// SendMetric calls xyz.block.ftl.v1.ObservabilityService.SendMetric.
+func (c *observabilityServiceClient) SendMetric(ctx context.Context, req *connect_go.Request[v1.SendMetricRequest]) (*connect_go.Response[v1.SendMetricResponse], error) {
+	return c.sendMetric.CallUnary(ctx, req)
+}
+
+// ObservabilityServiceHandler is an implementation of the xyz.block.ftl.v1.ObservabilityService
+// service.
+type ObservabilityServiceHandler interface {
+	// Ping service for readiness.
+	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
+	SendMetric(context.Context, *connect_go.Request[v1.SendMetricRequest]) (*connect_go.Response[v1.SendMetricResponse], error)
+}
+
+// NewObservabilityServiceHandler builds an HTTP handler from the service implementation. It returns
+// the path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewObservabilityServiceHandler(svc ObservabilityServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
+	mux := http.NewServeMux()
+	mux.Handle(ObservabilityServicePingProcedure, connect_go.NewUnaryHandler(
+		ObservabilityServicePingProcedure,
+		svc.Ping,
+		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+		connect_go.WithHandlerOptions(opts...),
+	))
+	mux.Handle(ObservabilityServiceSendMetricProcedure, connect_go.NewUnaryHandler(
+		ObservabilityServiceSendMetricProcedure,
+		svc.SendMetric,
+		opts...,
+	))
+	return "/xyz.block.ftl.v1.ObservabilityService/", mux
+}
+
+// UnimplementedObservabilityServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedObservabilityServiceHandler struct{}
+
+func (UnimplementedObservabilityServiceHandler) Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ObservabilityService.Ping is not implemented"))
+}
+
+func (UnimplementedObservabilityServiceHandler) SendMetric(context.Context, *connect_go.Request[v1.SendMetricRequest]) (*connect_go.Response[v1.SendMetricResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ObservabilityService.SendMetric is not implemented"))
 }
