@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -46,6 +47,8 @@ func main() {
 		}),
 		kong.Vars{
 			"version": version,
+			"os":      runtime.GOOS,
+			"arch":    runtime.GOARCH,
 		},
 	)
 
