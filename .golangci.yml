@@ -120,3 +120,4 @@ issues:
     - "should have comment or be unexported"
     - "package-comments"
     - "parameter testing.TB should have name tb"
+    - "blank-imports"
