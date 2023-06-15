@@ -367,6 +367,9 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		}
 	}
 	ms := req.Msg.Schema
+	if ms.Runtime == nil {
+		return nil, errors.New("missing runtime metadata")
+	}
 	module, err := schema.ModuleFromProto(ms)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid module schema")

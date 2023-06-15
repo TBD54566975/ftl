@@ -21,14 +21,14 @@ import (
 const ftlModuleSourceBase = "github.com/TBD54566975/ftl/examples"
 
 type Config struct {
+	OS        string   `short:"o" help:"Target operating system." default:"${os}"`
+	Arch      string   `short:"a" help:"Target architecture." default:"${arch}"`
 	FTLSource string   `short:"S" help:"Path to FTL source code."`
 	Dir       string   `short:"d" help:"Path to root directory of module." type:"existingdir" required:""`
 	Modules   []string `short:"m" help:"External module paths to include." type:"existingdir"`
 }
 
 // Compile a Go FTL module into a deployable executable.
-//
-// "external" is a list of external modules to generate stubs for in the build
 func Compile(ctx context.Context, config Config) (*model.Deployment, error) {
 	logger := log.FromContext(ctx)
 	logger.Infof("Compiling %s", config.Dir)
@@ -60,7 +60,12 @@ func Compile(ctx context.Context, config Config) (*model.Deployment, error) {
 	dest := filepath.Join(buildDir, "main")
 
 	logger.Infof("Compiling")
-	err = exec.Command(ctx, buildDir, "go", "build", "-o", dest).Run()
+	cmd := exec.Command(ctx, buildDir, "go", "build", "-trimpath", "-ldflags=-s -w -buildid=", "-o", dest)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "CGO_ENABLED=0")
+	cmd.Env = append(cmd.Env, "GOOS="+config.OS)
+	cmd.Env = append(cmd.Env, "GOARCH="+config.Arch)
+	err = cmd.Run()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -75,9 +80,10 @@ func Compile(ctx context.Context, config Config) (*model.Deployment, error) {
 		return nil, errors.WithStack(err)
 	}
 	return &model.Deployment{
-		Key:    ulid.Make(),
-		Schema: mainModuleSchema,
-		Module: mainModuleSchema.Name,
+		Language: "go",
+		Key:      ulid.Make(),
+		Schema:   mainModuleSchema,
+		Module:   mainModuleSchema.Name,
 		Artefacts: []*model.Artefact{
 			{Path: "main", Executable: true, Digest: digest, Content: r},
 		},
