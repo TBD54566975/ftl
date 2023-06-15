@@ -1,4 +1,4 @@
-package compile
+package generate
 
 import (
 	_ "embed" // For embedding templates.
@@ -15,9 +15,9 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
-//go:embed module.go.tmpl
-var tmplSource string
-var tmpl = template.Must(template.New("module").
+//go:embed external_module.go.tmpl
+var moduleTmplSource string
+var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 	Funcs(template.FuncMap{
 		"title": strcase.ToCamel,
 		"comment": func(s []string) string {
@@ -49,11 +49,11 @@ var tmpl = template.Must(template.New("module").
 			return maps.Keys(pkgs)
 		},
 	}).
-	Parse(tmplSource))
+	Parse(moduleTmplSource))
 
-// Generate Go stubs for the given module.
-func Generate(module *schema.Module, w io.Writer) error {
-	return errors.WithStack(tmpl.Execute(w, module))
+// GenerateExternalModule Go stubs for the given module.
+func GenerateExternalModule(w io.Writer, module *schema.Module) error {
+	return errors.WithStack(moduleTmpl.Execute(w, module))
 }
 
 func genType(t schema.Type) string {

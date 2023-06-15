@@ -1,4 +1,4 @@
-package compile
+package generate
 
 import (
 	"strings"
@@ -27,7 +27,7 @@ func TestCodegen(t *testing.T) {
 		}`
 	s, err := schema.ParseString("", module)
 	assert.NoError(t, err)
-	err = Generate(s.Modules[0], w)
+	err = GenerateExternalModule(w, s.Modules[0])
 	assert.NoError(t, err)
 	expected := `//ftl:module basket
 package basket
@@ -49,14 +49,14 @@ type BasketSummary struct {
 //
 //ftl:verb
 func Add(context.Context, ItemRequest) (BasketSummary, error) {
-  panic("Verb stubs should not be called directly, instead use sdkgo.Call()")
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/sdk.Call()")
 }
 
 // Remove an item from the basket.
 //
 //ftl:verb
 func Remove(context.Context, ItemRequest) (BasketSummary, error) {
-  panic("Verb stubs should not be called directly, instead use sdkgo.Call()")
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/sdk.Call()")
 }
 `
 	assert.Equal(t, expected, w.String())

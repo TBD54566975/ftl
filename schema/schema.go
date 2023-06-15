@@ -193,6 +193,26 @@ func (m *Module) AddData(data *Data) int {
 	return len(m.Decls) - 1
 }
 
+func (m *Module) Verbs() []*Verb {
+	var verbs []*Verb
+	for _, d := range m.Decls {
+		if v, ok := d.(*Verb); ok {
+			verbs = append(verbs, v)
+		}
+	}
+	return verbs
+}
+
+func (m *Module) Data() []*Data {
+	var data []*Data
+	for _, d := range m.Decls {
+		if v, ok := d.(*Data); ok {
+			data = append(data, v)
+		}
+	}
+	return data
+}
+
 type Schema struct {
 	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 

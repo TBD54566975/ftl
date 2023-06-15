@@ -22,15 +22,16 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
-var fset = token.NewFileSet()
-
-var contextIfaceType = once(func() *types.Interface {
-	return mustLoadRef("context", "Context").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
-})
-var errorIFaceType = once(func() *types.Interface {
-	return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
-})
-var ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/sdk.Call"
+var (
+	fset             = token.NewFileSet()
+	contextIfaceType = once(func() *types.Interface {
+		return mustLoadRef("context", "Context").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
+	})
+	errorIFaceType = once(func() *types.Interface {
+		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
+	})
+	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/sdk.Call"
+)
 
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
 func ExtractModuleSchema(dir string) (*schema.Module, error) {
