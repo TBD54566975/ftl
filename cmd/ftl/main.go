@@ -27,6 +27,7 @@ type CLI struct {
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
 	List     listCmd     `cmd:"" help:"List all FTL functions."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
+	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
 	Go       goCmd       `cmd:"" help:"Commands specific to Go modules."`
 	Deploy   deployCmd   `cmd:"" help:"Create a new deployment."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
