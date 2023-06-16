@@ -53,7 +53,7 @@ func Start(ctx context.Context, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	dal := dal.New(conn)
+	dal := dal.NewPostgres(conn)
 	svc, err := New(ctx, dal, config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
 	if err != nil {
 		return errors.WithStack(err)
@@ -79,7 +79,7 @@ type clients struct {
 }
 
 type Service struct {
-	dal                          *dal.DAL
+	dal                          dal.DAL
 	heartbeatTimeout             time.Duration
 	deploymentReservationTimeout time.Duration
 	artefactChunkSize            int
@@ -89,7 +89,7 @@ type Service struct {
 	clients map[string]clients
 }
 
-func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
+func New(ctx context.Context, dal dal.DAL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
 	svc := &Service{
 		dal:                          dal,
 		heartbeatTimeout:             heartbeatTimeout,

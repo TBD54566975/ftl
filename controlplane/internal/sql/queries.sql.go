@@ -91,20 +91,6 @@ func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, module
 	return err
 }
 
-const createModule = `-- name: CreateModule :one
-INSERT INTO modules (language, name)
-VALUES ($1, $2)
-ON CONFLICT (name) DO UPDATE SET language = $1
-RETURNING id
-`
-
-func (q *Queries) CreateModule(ctx context.Context, language string, name string) (int64, error) {
-	row := q.db.QueryRow(ctx, createModule, language, name)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const deleteStaleRunners = `-- name: DeleteStaleRunners :one
 WITH deleted AS (
     DELETE FROM runners
@@ -476,42 +462,6 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 	return items, nil
 }
 
-const getLatestDeployment = `-- name: GetLatestDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.min_replicas, m.language, m.name AS module_name
-FROM deployments d
-         INNER JOIN modules m ON m.id = d.module_id
-WHERE m.name = $1
-ORDER BY created_at DESC
-LIMIT 1
-`
-
-type GetLatestDeploymentRow struct {
-	ID          int64
-	CreatedAt   pgtype.Timestamptz
-	ModuleID    int64
-	Key         sqltypes.Key
-	Schema      []byte
-	MinReplicas int32
-	Language    string
-	ModuleName  string
-}
-
-func (q *Queries) GetLatestDeployment(ctx context.Context, moduleName string) (GetLatestDeploymentRow, error) {
-	row := q.db.QueryRow(ctx, getLatestDeployment, moduleName)
-	var i GetLatestDeploymentRow
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.ModuleID,
-		&i.Key,
-		&i.Schema,
-		&i.MinReplicas,
-		&i.Language,
-		&i.ModuleName,
-	)
-	return i, err
-}
-
 const getModulesByID = `-- name: GetModulesByID :many
 SELECT id, language, name
 FROM modules
@@ -707,6 +657,20 @@ RETURNING 1
 func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error {
 	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
 	return err
+}
+
+const upsertModule = `-- name: UpsertModule :one
+INSERT INTO modules (language, name)
+VALUES ($1, $2)
+ON CONFLICT (name) DO UPDATE SET language = $1
+RETURNING id
+`
+
+func (q *Queries) UpsertModule(ctx context.Context, language string, name string) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertModule, language, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const upsertRunner = `-- name: UpsertRunner :one

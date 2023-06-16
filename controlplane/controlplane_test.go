@@ -91,13 +91,13 @@ func (*combinedService) DeployToRunner(context.Context, *connect.Request[ftlv1.D
 
 var _ ftlv1connect.RunnerServiceHandler = (*combinedService)(nil)
 
-func startForTesting(t *testing.T) (*dal.DAL, ftlv1connect.ControlPlaneServiceClient, *url.URL, context.Context) {
+func startForTesting(t *testing.T) (dal.DAL, ftlv1connect.ControlPlaneServiceClient, *url.URL, context.Context) {
 	t.Helper()
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{Level: log.Warn}))
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second) // Test timeout
 	t.Cleanup(cancel)
 
-	db := dal.New(sqltest.OpenForTesting(t))
+	db := dal.NewPostgres(sqltest.OpenForTesting(t))
 	svc, err := New(ctx, db, 1*time.Second, 30*time.Second, 1024*1024)
 	assert.NoError(t, err)
 

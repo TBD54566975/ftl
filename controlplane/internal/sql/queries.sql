@@ -1,4 +1,4 @@
--- name: CreateModule :one
+-- name: UpsertModule :one
 INSERT INTO modules (language, name)
 VALUES ($1, $2)
 ON CONFLICT (name) DO UPDATE SET language = $1
@@ -46,14 +46,6 @@ SELECT d.*, m.language, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
 WHERE d.key = $1;
-
--- name: GetLatestDeployment :one
-SELECT d.*, m.language, m.name AS module_name
-FROM deployments d
-         INNER JOIN modules m ON m.id = d.module_id
-WHERE m.name = @module_name
-ORDER BY created_at DESC
-LIMIT 1;
 
 -- name: GetDeploymentsWithArtefacts :many
 -- Get all deployments that have artefacts matching the given digests.

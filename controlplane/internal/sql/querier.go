@@ -19,7 +19,6 @@ type Querier interface {
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
-	CreateModule(ctx context.Context, language string, name string) (int64, error)
 	DeleteStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
@@ -36,7 +35,6 @@ type Querier interface {
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
 	GetIdleRunnerCountsByLanguage(ctx context.Context) ([]GetIdleRunnerCountsByLanguageRow, error)
 	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error)
-	GetLatestDeployment(ctx context.Context, moduleName string) (GetLatestDeploymentRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetRoutingTable(ctx context.Context, name string) ([]string, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
@@ -45,6 +43,7 @@ type Querier interface {
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
 	InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error
 	SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error
+	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
 	// If the deployment key is null, then deployment_rel.id will be null,
 	// otherwise we try to retrieve the deployments.id using the key. If

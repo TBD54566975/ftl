@@ -68,6 +68,7 @@ linters:
     - errchkjson
     - musttag
     - gofmt # autofmt
+    - interfacebloat
 
 linters-settings:
   exhaustive:
