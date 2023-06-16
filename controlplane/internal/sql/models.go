@@ -8,9 +8,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type MetricType string
@@ -108,11 +107,12 @@ type Artefact struct {
 }
 
 type Deployment struct {
-	ID        int64
-	CreatedAt pgtype.Timestamptz
-	ModuleID  int64
-	Key       sqltypes.Key
-	Schema    []byte
+	ID          int64
+	CreatedAt   pgtype.Timestamptz
+	ModuleID    int64
+	Key         sqltypes.Key
+	Schema      []byte
+	MinReplicas int32
 }
 
 type DeploymentArtefact struct {

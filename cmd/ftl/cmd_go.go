@@ -65,6 +65,7 @@ func (g *goGenerateCmd) Run() error {
 }
 
 type goDeployCmd struct {
+	MinReplicas int32 `arg:"" help:"Minimum number of replicas to deploy." default:"1"`
 	compile.Config
 }
 
@@ -122,6 +123,7 @@ func (g *goDeployCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneS
 
 	_, err = client.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{
 		DeploymentKey: cdResp.Msg.DeploymentKey,
+		MinReplicas:   g.MinReplicas,
 	}))
 	if err != nil {
 		return errors.Wrapf(err, "failed to deploy %q", cdResp.Msg.DeploymentKey)

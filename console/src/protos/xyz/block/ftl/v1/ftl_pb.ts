@@ -1064,6 +1064,11 @@ export class DeployRequest extends Message<DeployRequest> {
    */
   deploymentKey = "";
 
+  /**
+   * @generated from field: int32 min_replicas = 2;
+   */
+  minReplicas = 0;
+
   constructor(data?: PartialMessage<DeployRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1073,6 +1078,7 @@ export class DeployRequest extends Message<DeployRequest> {
   static readonly typeName = "xyz.block.ftl.v1.DeployRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeployRequest {
