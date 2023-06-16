@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
-	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/model"
@@ -108,7 +107,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, req *connect.ClientS
 }
 
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
-	deploymentKey, err := ulid.Parse(req.Msg.DeploymentKey)
+	deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
@@ -118,7 +117,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, errors.Wrap(err, "could not find requested deployment")
 	}
 
-	runner, err := s.dal.ReserveRunnerForDeployment(ctx, deployment.Language, deploymentKey)
+	runner, err := s.dal.ClaimRunnerForDeployment(ctx, deployment.Language, deploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeResourceExhausted, errors.Wrap(err, "failed to reserve runner"))
 	}
@@ -148,7 +147,7 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 	if endpoint.Scheme != "http" && endpoint.Scheme != "https" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("invalid endpoint scheme %q", endpoint.Scheme))
 	}
-	runnerKey, err := ulid.Parse(msg.Key)
+	runnerKey, err := model.ParseRunnerKey(msg.Key)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid key"))
 	}
@@ -264,7 +263,7 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 	}
 	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
 		Schema:    deployment.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
-		Artefacts: slices.Map(deployment.Artefacts, func(artefact *model.Artefact) *ftlv1.DeploymentArtefact { return artefact.ToProto() }),
+		Artefacts: slices.Map(deployment.Artefacts, ftlv1.ArtefactToProto),
 	}), nil
 }
 
@@ -278,7 +277,7 @@ func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Reque
 nextArtefact:
 	for _, artefact := range deployment.Artefacts {
 		for _, clientArtefact := range req.Msg.HaveArtefacts {
-			if proto.Equal(artefact.ToProto(), clientArtefact) {
+			if proto.Equal(ftlv1.ArtefactToProto(artefact), clientArtefact) {
 				continue nextArtefact
 			}
 		}
@@ -286,7 +285,7 @@ nextArtefact:
 			n, err := artefact.Content.Read(chunk)
 			if n != 0 {
 				if err := resp.Send(&ftlv1.GetDeploymentArtefactsResponse{
-					Artefact: artefact.ToProto(),
+					Artefact: ftlv1.ArtefactToProto(artefact),
 					Chunk:    chunk[:n],
 				}); err != nil {
 					return errors.Wrap(err, "could not send artefact chunk")
@@ -383,7 +382,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 }
 
 func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deployment, error) {
-	dkey, err := ulid.Parse(key)
+	dkey, err := model.ParseDeploymentKey(key)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}

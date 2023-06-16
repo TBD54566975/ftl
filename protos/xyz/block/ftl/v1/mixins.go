@@ -5,8 +5,17 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
-	"github.com/oklog/ulid/v2"
+
+	"github.com/TBD54566975/ftl/common/model"
 )
+
+func ArtefactToProto(artefact *model.Artefact) *DeploymentArtefact {
+	return &DeploymentArtefact{
+		Path:       artefact.Path,
+		Executable: artefact.Executable,
+		Digest:     artefact.Digest.String(),
+	}
+}
 
 func (m *Metadata) Set(key, value string) {
 	out := make([]*Metadata_Pair, 0, len(m.Values))
@@ -51,13 +60,13 @@ func (m *Metadata) Delete(key string) {
 	m.Values = out
 }
 
-func (r *RegisterRunnerRequest) DeploymentAsOptional() (types.Option[ulid.ULID], error) {
+func (r *RegisterRunnerRequest) DeploymentAsOptional() (types.Option[model.DeploymentKey], error) {
 	if r.Deployment == nil {
-		return types.None[ulid.ULID](), nil
+		return types.None[model.DeploymentKey](), nil
 	}
-	key, err := ulid.Parse(*r.Deployment)
+	key, err := model.ParseDeploymentKey(*r.Deployment)
 	if err != nil {
-		return types.None[ulid.ULID](), errors.Wrap(err, "invalid deployment key")
+		return types.None[model.DeploymentKey](), errors.Wrap(err, "invalid deployment key")
 	}
 	return types.Some(key), nil
 }

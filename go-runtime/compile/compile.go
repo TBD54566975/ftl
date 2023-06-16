@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/alecthomas/errors"
-	"github.com/oklog/ulid/v2"
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
@@ -81,7 +80,7 @@ func Compile(ctx context.Context, config Config) (*model.Deployment, error) {
 	}
 	return &model.Deployment{
 		Language: "go",
-		Key:      ulid.Make(),
+		Key:      model.NewDeploymentKey(),
 		Schema:   mainModuleSchema,
 		Module:   mainModuleSchema.Name,
 		Artefacts: []*model.Artefact{

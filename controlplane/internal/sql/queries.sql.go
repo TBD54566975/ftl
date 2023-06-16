@@ -8,9 +8,8 @@ package sql
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
@@ -236,6 +235,41 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 			&i.Digest,
 			&i.Executable_2,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDeploymentReplicaCounts = `-- name: GetDeploymentReplicaCounts :many
+SELECT d.key, COUNT(*) AS count
+FROM runners r
+INNER JOIN deployments d ON r.deployment_id = d.id
+WHERE r.state = 'assigned'
+GROUP BY d.key
+ORDER BY d.key
+`
+
+type GetDeploymentReplicaCountsRow struct {
+	Key   sqltypes.Key
+	Count int64
+}
+
+// Get the number of runners assigned to each deployment.
+func (q *Queries) GetDeploymentReplicaCounts(ctx context.Context) ([]GetDeploymentReplicaCountsRow, error) {
+	rows, err := q.db.Query(ctx, getDeploymentReplicaCounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDeploymentReplicaCountsRow
+	for rows.Next() {
+		var i GetDeploymentReplicaCountsRow
+		if err := rows.Scan(&i.Key, &i.Count); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -613,7 +647,7 @@ func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryPa
 
 const reserveRunners = `-- name: ReserveRunners :one
 UPDATE runners
-SET state         = 'reserved',
+SET state         = 'claimed',
     deployment_id = COALESCE((SELECT id
                               FROM deployments d
                               WHERE d.key = $3

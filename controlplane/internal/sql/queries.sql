@@ -127,10 +127,20 @@ FROM runners r
 WHERE m.name = $1
   AND r.state = 'assigned';
 
+-- name: GetDeploymentReplicaCounts :many
+-- Get the number of runners assigned to each deployment.
+SELECT d.key, COUNT(*) AS count
+FROM runners r
+INNER JOIN deployments d ON r.deployment_id = d.id
+WHERE r.state = 'assigned'
+GROUP BY d.key
+ORDER BY d.key;
+
+
 -- name: ReserveRunners :one
 -- Find idle runners and reserve them for the given deployment.
 UPDATE runners
-SET state         = 'reserved',
+SET state         = 'claimed',
     deployment_id = COALESCE((SELECT id
                               FROM deployments d
                               WHERE d.key = @deployment_key
