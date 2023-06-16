@@ -1,4 +1,4 @@
-// Package dal provides a domain abstraction over the ControlPlane database.
+// Package dal provides a data abstraction layer for the ControlPlane
 package dal
 
 import (
@@ -32,32 +32,21 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
-var (
-	// ErrConflict is returned by select methods in the DAL when a resource already exists.
-	//
-	// Its use will be documented in the corresponding methods.
-	ErrConflict = errors.New("conflict")
-	// ErrInvalidReference is returned by select methods in the DAL when a reference to another resource is invalid.
-	ErrInvalidReference = errors.New("invalid reference")
-	// ErrNotFound is returned by select methods in the DAL when no results are found.
-	ErrNotFound = errors.New("not found")
-)
-
-type DAL struct {
+type Postgres struct {
 	db *sql.DB
 }
 
-func New(conn sql.DBI) *DAL {
-	return &DAL{db: sql.NewDB(conn)}
+func NewPostgres(conn sql.DBI) *Postgres {
+	return &Postgres{db: sql.NewDB(conn)}
 }
 
-func (d *DAL) CreateModule(ctx context.Context, language, name string) (err error) {
-	_, err = d.db.CreateModule(ctx, language, name)
+func (d *Postgres) UpsertModule(ctx context.Context, language, name string) (err error) {
+	_, err = d.db.UpsertModule(ctx, language, name)
 	return errors.WithStack(translatePGError(err))
 }
 
 // GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
-func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
+func (d *Postgres) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
 	have, err := d.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
@@ -69,7 +58,7 @@ func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) 
 }
 
 // CreateArtefact inserts a new artefact into the database and returns its ID.
-func (d *DAL) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
+func (d *Postgres) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
 	sha256digest := sha256.Sum(content)
 	_, err = d.db.CreateArtefact(ctx, sha256digest[:], content)
 	return sha256digest, errors.WithStack(translatePGError(err))
@@ -105,7 +94,7 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact) (key model.DeploymentKey, err error) {
+func (d *Postgres) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact) (key model.DeploymentKey, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -135,7 +124,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 	}
 
 	// TODO(aat): "schema" containing language?
-	_, err = tx.CreateModule(ctx, language, schema.Name)
+	_, err = tx.UpsertModule(ctx, language, schema.Name)
 
 	deploymentKey := ulid.Make()
 	// Create the deployment
@@ -171,16 +160,8 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 	return model.DeploymentKey(deploymentKey), nil
 }
 
-func (d *DAL) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {
+func (d *Postgres) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {
 	deployment, err := d.db.GetDeployment(ctx, sqltypes.Key(id))
-	if err != nil {
-		return nil, errors.WithStack(translatePGError(err))
-	}
-	return d.loadDeployment(ctx, sql.GetLatestDeploymentRow(deployment))
-}
-
-func (d *DAL) GetLatestDeployment(ctx context.Context, module string) (*model.Deployment, error) {
-	deployment, err := d.db.GetLatestDeployment(ctx, module)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
@@ -191,7 +172,7 @@ func (d *DAL) GetLatestDeployment(ctx context.Context, module string) (*model.De
 //
 // ErrConflict will be returned if a runner with the same endpoint and a
 // different key already exists.
-func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
+func (d *Postgres) UpsertRunner(ctx context.Context, runner Runner) error {
 	var pgDeploymentKey pgtype.UUID
 	if dkey, ok := runner.Deployment.Get(); ok {
 		pgDeploymentKey.Valid = true
@@ -217,7 +198,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 }
 
 // DeleteStaleRunners deletes runners that have not had heartbeats for the given duration.
-func (d *DAL) DeleteStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
+func (d *Postgres) DeleteStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
 	count, err := d.db.DeleteStaleRunners(ctx, pgtype.Interval{
 		Microseconds: int64(age / time.Microsecond),
 		Valid:        true,
@@ -226,7 +207,7 @@ func (d *DAL) DeleteStaleRunners(ctx context.Context, age time.Duration) (int64,
 }
 
 // DeregisterRunner deregisters the given runner.
-func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
+func (d *Postgres) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 	count, err := d.db.DeregisterRunner(ctx, sqltypes.Key(key))
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
@@ -250,7 +231,7 @@ type Runner struct {
 //
 // Once a runner is reserved, it will be unavailable for other reservations
 // or deployments and will not be returned by GetIdleRunnersForLanguage.
-func (d *DAL) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey) (Runner, error) {
+func (d *Postgres) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey) (Runner, error) {
 	runner, err := d.db.ClaimRunner(ctx, language, sqltypes.Key(deployment))
 	if err != nil {
 		if isNotFound(err) {
@@ -277,7 +258,7 @@ func (d *DAL) ClaimRunnerForDeployment(ctx context.Context, language string, dep
 }
 
 // SetDeploymentReplicas activates the given deployment.
-func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
+func (d *Postgres) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
 	err := d.db.SetDeploymentDesiredReplicas(ctx, sqltypes.Key(key), int32(minReplicas))
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
@@ -296,7 +277,7 @@ type Reconciliation struct {
 
 // GetDeploymentsNeedingReconciliation returns deployments that have a
 // mismatch between the number of assigned and required replicas.
-func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconciliation, error) {
+func (d *Postgres) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconciliation, error) {
 	counts, err := d.db.GetDeploymentsNeedingReconciliation(ctx)
 	if err != nil {
 		if isNotFound(err) {
@@ -318,7 +299,7 @@ func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconc
 // GetIdleRunnersForLanguage returns up to limit idle runners for the given language.
 //
 // If no runners are available, it will return an empty slice.
-func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string, limit int) ([]Runner, error) {
+func (d *Postgres) GetIdleRunnersForLanguage(ctx context.Context, language string, limit int) ([]Runner, error) {
 	runners, err := d.db.GetIdleRunnersForLanguage(ctx, language, int32(limit))
 	if isNotFound(err) {
 		return nil, nil
@@ -338,7 +319,7 @@ func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string, li
 // GetRunnersForModule returns all runners for the given module.
 //
 // If no runners are available, it will return an empty slice.
-func (d *DAL) GetRunnersForModule(ctx context.Context, module string) ([]Runner, error) {
+func (d *Postgres) GetRunnersForModule(ctx context.Context, module string) ([]Runner, error) {
 	runners, err := d.db.GetRunnersForModule(ctx, module)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
@@ -358,7 +339,7 @@ func (d *DAL) GetRunnersForModule(ctx context.Context, module string) ([]Runner,
 }
 
 // GetRoutingTable returns the endpoints for all runners for the given module.
-func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]string, error) {
+func (d *Postgres) GetRoutingTable(ctx context.Context, module string) ([]string, error) {
 	routes, err := d.db.GetRoutingTable(ctx, module)
 	if len(routes) == 0 {
 		return nil, errors.WithStack(ErrNotFound)
@@ -380,7 +361,7 @@ func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
 	return RunnerState(strings.ToLower(state.String()))
 }
 
-func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
+func (d *Postgres) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
 	state, err := d.db.GetRunnerState(ctx, sqltypes.Key(runnerKey))
 	if err != nil {
 		return "", errors.WithStack(translatePGError(err))
@@ -389,12 +370,12 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (Ru
 }
 
 // ExpireRunnerReservations and return the count.
-func (d *DAL) ExpireRunnerReservations(ctx context.Context) (int64, error) {
+func (d *Postgres) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 	count, err := d.db.ExpireRunnerReservations(ctx)
 	return count, errors.WithStack(translatePGError(err))
 }
 
-func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment model.DeploymentKey, logEntry log.Entry) error {
+func (d *Postgres) InsertDeploymentLogEntry(ctx context.Context, deployment model.DeploymentKey, logEntry log.Entry) error {
 	logError := pgtype.Text{}
 	if logEntry.Error != nil {
 		logError.String = logEntry.Error.Error()
@@ -410,7 +391,7 @@ func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment model.Dep
 	})))
 }
 
-func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploymentRow) (*model.Deployment, error) {
+func (d *Postgres) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRow) (*model.Deployment, error) {
 	pm := &pschema.Module{}
 	err := proto.Unmarshal(deployment.Schema, pm)
 	if err != nil {
@@ -471,7 +452,7 @@ type Metric struct {
 	DataPoint    DataPoint
 }
 
-func (d *DAL) InsertMetricEntry(ctx context.Context, metric Metric) error {
+func (d *Postgres) InsertMetricEntry(ctx context.Context, metric Metric) error {
 	var metricType sql.MetricType
 	switch metric.DataPoint.(type) {
 	case MetricHistogram:
@@ -535,7 +516,7 @@ func translatePGError(err error) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.ForeignKeyViolation {
-			return errors.Wrap(ErrInvalidReference, strings.TrimSuffix(strings.TrimPrefix(pgErr.ConstraintName, pgErr.TableName+"_"), "_id_fkey"))
+			return errors.Wrap(ErrNotFound, strings.TrimSuffix(strings.TrimPrefix(pgErr.ConstraintName, pgErr.TableName+"_"), "_id_fkey"))
 		} else if pgErr.Code == pgerrcode.UniqueViolation {
 			return ErrConflict
 		}

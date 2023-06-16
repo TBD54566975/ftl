@@ -15,19 +15,30 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
-func TestDAL(t *testing.T) {
+func TestPostgresDAL(t *testing.T) {
+	conn := sqltest.OpenForTesting(t)
+	dal := NewPostgres(conn)
+	assert.NotZero(t, dal)
+	testDAL(t, dal)
+}
+
+func TestLocalDAL(t *testing.T) {
+	dal := NewLocal(t.TempDir())
+	assert.NotZero(t, dal)
+	testDAL(t, dal)
+}
+
+func testDAL(t *testing.T, dal DAL) {
+	t.Helper()
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
 
-	conn := sqltest.OpenForTesting(t)
-	dal := New(conn)
-	assert.NotZero(t, dal)
 	var err error
 
 	ctx := context.Background()
 
-	t.Run("CreateModule", func(t *testing.T) {
-		err = dal.CreateModule(ctx, "go", "test")
+	t.Run("UpsertModule", func(t *testing.T) {
+		err = dal.UpsertModule(ctx, "go", "test")
 		assert.NoError(t, err)
 	})
 
@@ -63,14 +74,6 @@ func TestDAL(t *testing.T) {
 	}
 	expectedContent := artefactContent(t, deployment.Artefacts)
 
-	t.Run("GetLatestDeployment", func(t *testing.T) {
-		actual, err := dal.GetLatestDeployment(ctx, deployment.Module)
-		assert.NoError(t, err)
-		actualContent := artefactContent(t, actual.Artefacts)
-		assert.Equal(t, expectedContent, actualContent)
-		assert.Equal(t, deployment, actual)
-	})
-
 	t.Run("GetDeployment", func(t *testing.T) {
 		actual, err := dal.GetDeployment(ctx, deploymentKey)
 		assert.NoError(t, err)
@@ -81,7 +84,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetMissingDeployment", func(t *testing.T) {
 		_, err := dal.GetDeployment(ctx, model.NewDeploymentKey())
-		assert.EqualError(t, err, ErrNotFound.Error())
+		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("GetMissingArtefacts", func(t *testing.T) {
@@ -134,8 +137,9 @@ func TestDAL(t *testing.T) {
 
 	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
 		_, err := dal.ClaimRunnerForDeployment(ctx, "go", model.NewDeploymentKey())
-		assert.IsError(t, err, ErrInvalidReference)
-		assert.EqualError(t, err, "deployment: invalid reference")
+		assert.Error(t, err)
+		assert.IsError(t, err, ErrNotFound)
+		assert.EqualError(t, err, "deployment: not found")
 	})
 
 	t.Run("ClaimRunnerForDeployment", func(t *testing.T) {
@@ -147,7 +151,6 @@ func TestDAL(t *testing.T) {
 	t.Run("ReserveRunnerForDeploymentFailsOnDuplicate", func(t *testing.T) {
 		_, err = dal.ClaimRunnerForDeployment(ctx, "go", model.NewDeploymentKey())
 		assert.IsError(t, err, ErrNotFound)
-		assert.EqualError(t, err, `no idle runners for language "go": not found`)
 	})
 
 	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
@@ -176,15 +179,15 @@ func TestDAL(t *testing.T) {
 			Deployment: types.Some(model.NewDeploymentKey()),
 		})
 		assert.Error(t, err)
+		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("ReleaseRunnerReservation", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:        runnerID,
-			Language:   "go",
-			Endpoint:   "http://localhost:8080",
-			State:      RunnerStateIdle,
-			Deployment: types.Some(deploymentKey),
+			Key:      runnerID,
+			Language: "go",
+			Endpoint: "http://localhost:8080",
+			State:    RunnerStateIdle,
 		})
 		assert.NoError(t, err)
 	})
@@ -197,7 +200,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetRoutingTable", func(t *testing.T) {
 		_, err := dal.GetRoutingTable(ctx, deployment.Module)
-		assert.EqualError(t, err, "not found")
+		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("DeregisterRunner", func(t *testing.T) {
@@ -207,7 +210,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
 		err = dal.DeregisterRunner(ctx, runnerID)
-		assert.EqualError(t, err, "not found")
+		assert.IsError(t, err, ErrNotFound)
 	})
 }
 

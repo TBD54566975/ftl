@@ -3,7 +3,7 @@ package controlplane
 import (
 	"context"
 
-	connect "github.com/bufbuild/connect-go"
+	"github.com/bufbuild/connect-go"
 
 	"github.com/TBD54566975/ftl/controlplane/internal/dal"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -12,12 +12,12 @@ import (
 )
 
 type ObservabilityService struct {
-	dal *dal.DAL
+	dal dal.DAL
 }
 
 var _ ftlv1connect.ObservabilityServiceHandler = (*ObservabilityService)(nil)
 
-func NewObservabilityService(dal *dal.DAL) *ObservabilityService {
+func NewObservabilityService(dal dal.DAL) *ObservabilityService {
 	return &ObservabilityService{
 		dal: dal,
 	}
