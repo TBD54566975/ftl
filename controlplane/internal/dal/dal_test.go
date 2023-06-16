@@ -8,7 +8,6 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types"
-	"github.com/oklog/ulid/v2"
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
@@ -40,7 +39,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	module := &schema.Module{Name: "test"}
-	var deploymentKey ulid.ULID
+	var deploymentKey model.DeploymentKey
 	t.Run("CreateDeployment", func(t *testing.T) {
 		deploymentKey, err = dal.CreateDeployment(ctx, "go", module, []DeploymentArtefact{{
 			Digest:     testSha,
@@ -81,7 +80,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("GetMissingDeployment", func(t *testing.T) {
-		_, err := dal.GetDeployment(ctx, ulid.Make())
+		_, err := dal.GetDeployment(ctx, model.NewDeploymentKey())
 		assert.EqualError(t, err, ErrNotFound.Error())
 	})
 
@@ -92,7 +91,7 @@ func TestDAL(t *testing.T) {
 		assert.Equal(t, []sha256.SHA256{misshingSHA}, missing)
 	})
 
-	runnerID := ulid.Make()
+	runnerID := model.NewRunnerKey()
 	t.Run("RegisterRunner", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
 			Key:      runnerID,
@@ -105,7 +104,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("RegisterRunnerFailsOnDuplicate", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:      ulid.Make(),
+			Key:      model.NewRunnerKey(),
 			Language: "go",
 			Endpoint: "http://localhost:8080",
 			State:    RunnerStateIdle,
@@ -130,23 +129,23 @@ func TestDAL(t *testing.T) {
 		Key:      runnerID,
 		Language: "go",
 		Endpoint: "http://localhost:8080",
-		State:    RunnerStateReserved,
+		State:    RunnerStateClaimed,
 	}
 
 	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
-		_, err := dal.ReserveRunnerForDeployment(ctx, "go", ulid.Make())
+		_, err := dal.ClaimRunnerForDeployment(ctx, "go", model.NewDeploymentKey())
 		assert.IsError(t, err, ErrInvalidReference)
 		assert.EqualError(t, err, "deployment: invalid reference")
 	})
 
-	t.Run("ReserveRunnerForDeployment", func(t *testing.T) {
-		actualRunner, err := dal.ReserveRunnerForDeployment(ctx, "go", deploymentKey)
+	t.Run("ClaimRunnerForDeployment", func(t *testing.T) {
+		actualRunner, err := dal.ClaimRunnerForDeployment(ctx, "go", deploymentKey)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedRunner, actualRunner)
 	})
 
 	t.Run("ReserveRunnerForDeploymentFailsOnDuplicate", func(t *testing.T) {
-		_, err = dal.ReserveRunnerForDeployment(ctx, "go", ulid.Make())
+		_, err = dal.ClaimRunnerForDeployment(ctx, "go", model.NewDeploymentKey())
 		assert.IsError(t, err, ErrNotFound)
 		assert.EqualError(t, err, `no idle runners for language "go": not found`)
 	})
@@ -174,7 +173,7 @@ func TestDAL(t *testing.T) {
 			Language:   "go",
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
-			Deployment: types.Some(ulid.Make()),
+			Deployment: types.Some(model.NewDeploymentKey()),
 		})
 		assert.Error(t, err)
 	})
@@ -191,7 +190,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("ReserveRunnerForDeploymentAfterRelease", func(t *testing.T) {
-		actualRunner, err := dal.ReserveRunnerForDeployment(ctx, "go", deploymentKey)
+		actualRunner, err := dal.ClaimRunnerForDeployment(ctx, "go", deploymentKey)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedRunner, actualRunner)
 	})

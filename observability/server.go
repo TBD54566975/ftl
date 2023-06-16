@@ -5,21 +5,21 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
-	"github.com/oklog/ulid/v2"
 	colmetricsv1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricsv1 "go.opentelemetry.io/proto/otlp/metrics/v1"
 
+	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
 type Observability struct {
-	runnerKey ulid.ULID
+	runnerKey model.RunnerKey
 	client    ftlv1connect.ObservabilityServiceClient
 }
 
-func NewService(runnerKey ulid.ULID, client ftlv1connect.ObservabilityServiceClient) *Observability {
+func NewService(runnerKey model.RunnerKey, client ftlv1connect.ObservabilityServiceClient) *Observability {
 	return &Observability{
 		runnerKey: runnerKey,
 		client:    client,

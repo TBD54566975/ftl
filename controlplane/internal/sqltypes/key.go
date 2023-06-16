@@ -26,7 +26,3 @@ func (u *Key) Scan(src interface{}) error {
 	*u = Key(id)
 	return nil
 }
-
-func (u Key) ULID() ulid.ULID {
-	return ulid.ULID(u)
-}

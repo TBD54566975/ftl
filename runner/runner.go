@@ -18,8 +18,8 @@ import (
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
-	"github.com/oklog/ulid/v2"
 
+	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
 	"github.com/TBD54566975/ftl/internal/download"
@@ -57,7 +57,7 @@ func Start(ctx context.Context, config Config) error {
 	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
 
 	svc := &Service{
-		key:                ulid.Make(),
+		key:                model.NewRunnerKey(),
 		config:             config,
 		controlPlaneClient: controlplaneClient,
 		forceUpdate:        make(chan struct{}, 8),
@@ -82,7 +82,7 @@ var _ ftlv1connect.RunnerServiceHandler = (*Service)(nil)
 var _ http.Handler = (*Service)(nil)
 
 type deployment struct {
-	key    ulid.ULID
+	key    model.DeploymentKey
 	plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]
 	proxy  *httputil.ReverseProxy
 	// Cancelled when plugin terminates
@@ -90,7 +90,7 @@ type deployment struct {
 }
 
 type Service struct {
-	key ulid.ULID
+	key model.RunnerKey
 	// We use double-checked locking around the atomic so that the read fast-path is lock-free.
 	lock       sync.Mutex
 	state      atomic.Value[ftlv1.RunnerState]
@@ -125,7 +125,7 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to register runner"))
 	}
 
-	id, err := ulid.Parse(req.Msg.DeploymentKey)
+	id, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
@@ -184,7 +184,7 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 	return connect.NewResponse(&ftlv1.DeployToRunnerResponse{}), nil
 }
 
-func (s *Service) makePluginProxy(ctx context.Context, key ulid.ULID, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
+func (s *Service) makePluginProxy(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
 	return &deployment{
 		ctx:    ctx,
 		key:    key,

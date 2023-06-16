@@ -5,7 +5,7 @@ BINARIES=ftl ftl-control-plane ftl-runner-go
 COMMON_LOG_IN = internal/log/api.go
 COMMON_LOG_OUT = internal/log/log_level_string.go
 
-SCHEMA_IN = schema/schema.go schema/protobuf.go
+SCHEMA_IN = schema/schema.go schema/protobuf.go cmd/ftl/cmd_schema.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
 SQLC_IN = sqlc.yaml \

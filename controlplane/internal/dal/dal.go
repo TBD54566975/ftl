@@ -105,16 +105,11 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(
-	ctx context.Context,
-	language string,
-	schema *schema.Module,
-	artefacts []DeploymentArtefact,
-) (key ulid.ULID, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact) (key model.DeploymentKey, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return ulid.ULID{}, errors.WithStack(err)
+		return model.DeploymentKey{}, errors.WithStack(err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)()
 
@@ -124,10 +119,10 @@ func (d *DAL) CreateDeployment(
 		len(artefacts),
 	)
 	if err != nil {
-		return ulid.ULID{}, errors.WithStack(err)
+		return model.DeploymentKey{}, errors.WithStack(err)
 	}
 	if len(existing) > 0 {
-		return existing[0].Key.ULID(), nil
+		return model.DeploymentKey(existing[0].Key), nil
 	}
 
 	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
@@ -136,7 +131,7 @@ func (d *DAL) CreateDeployment(
 
 	schemaBytes, err := proto.Marshal(schema.ToProto())
 	if err != nil {
-		return ulid.ULID{}, errors.WithStack(err)
+		return model.DeploymentKey{}, errors.WithStack(err)
 	}
 
 	// TODO(aat): "schema" containing language?
@@ -146,17 +141,17 @@ func (d *DAL) CreateDeployment(
 	// Create the deployment
 	err = tx.CreateDeployment(ctx, sqltypes.Key(deploymentKey), schema.Name, schemaBytes)
 	if err != nil {
-		return ulid.ULID{}, errors.WithStack(translatePGError(err))
+		return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
 	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
 	if err != nil {
-		return ulid.ULID{}, errors.WithStack(err)
+		return model.DeploymentKey{}, errors.WithStack(err)
 	}
 	if len(artefactDigests) != len(artefacts) {
 		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return ulid.ULID{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+		return model.DeploymentKey{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
 	}
 
 	// Associate the artefacts with the deployment
@@ -169,14 +164,14 @@ func (d *DAL) CreateDeployment(
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return ulid.ULID{}, errors.WithStack(translatePGError(err))
+			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
 		}
 	}
 
-	return deploymentKey, nil
+	return model.DeploymentKey(deploymentKey), nil
 }
 
-func (d *DAL) GetDeployment(ctx context.Context, id ulid.ULID) (*model.Deployment, error) {
+func (d *DAL) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {
 	deployment, err := d.db.GetDeployment(ctx, sqltypes.Key(id))
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
@@ -231,7 +226,7 @@ func (d *DAL) DeleteStaleRunners(ctx context.Context, age time.Duration) (int64,
 }
 
 // DeregisterRunner deregisters the given runner.
-func (d *DAL) DeregisterRunner(ctx context.Context, key ulid.ULID) error {
+func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 	count, err := d.db.DeregisterRunner(ctx, sqltypes.Key(key))
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
@@ -243,19 +238,19 @@ func (d *DAL) DeregisterRunner(ctx context.Context, key ulid.ULID) error {
 }
 
 type Runner struct {
-	Key      ulid.ULID
+	Key      model.RunnerKey
 	Language string
 	Endpoint string
 	State    RunnerState
 	// Assigned deployment key, if any.
-	Deployment types.Option[ulid.ULID]
+	Deployment types.Option[model.DeploymentKey]
 }
 
-// ReserveRunnerForDeployment reserves a runner for the given deployment.
+// ClaimRunnerForDeployment reserves a runner for the given deployment.
 //
 // Once a runner is reserved, it will be unavailable for other reservations
 // or deployments and will not be returned by GetIdleRunnersForLanguage.
-func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, language string, deployment ulid.ULID) (Runner, error) {
+func (d *DAL) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey) (Runner, error) {
 	runner, err := d.db.ReserveRunners(ctx, language, 1, sqltypes.Key(deployment))
 	if err != nil {
 		if isNotFound(err) {
@@ -274,7 +269,7 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, language string, d
 		return Runner{}, errors.WithStack(translatePGError(err))
 	}
 	return Runner{
-		Key:      runner.Key.ULID(),
+		Key:      model.RunnerKey(runner.Key),
 		Language: runner.Language,
 		Endpoint: runner.Endpoint,
 		State:    RunnerState(runner.State),
@@ -293,7 +288,7 @@ func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string, li
 	}
 	return slices.Map(runners, func(row sql.Runner) Runner {
 		return Runner{
-			Key:      row.Key.ULID(),
+			Key:      model.RunnerKey(row.Key),
 			Language: row.Language,
 			Endpoint: row.Endpoint,
 			State:    RunnerState(row.State),
@@ -314,11 +309,11 @@ func (d *DAL) GetRunnersForModule(ctx context.Context, module string) ([]Runner,
 	}
 	return slices.Map(runners, func(row sql.GetRunnersForModuleRow) Runner {
 		return Runner{
-			Key:        row.Key.ULID(),
+			Key:        model.RunnerKey(row.Key),
 			Language:   row.Language,
 			Endpoint:   row.Endpoint,
 			State:      RunnerState(row.State),
-			Deployment: types.Some(row.DeploymentKey.ULID()),
+			Deployment: types.Some(model.DeploymentKey(row.DeploymentKey)),
 		}
 	}), nil
 }
@@ -346,7 +341,7 @@ func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
 	return RunnerState(strings.ToLower(state.String()))
 }
 
-func (d *DAL) GetRunnerState(ctx context.Context, runnerKey ulid.ULID) (RunnerState, error) {
+func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
 	state, err := d.db.GetRunnerState(ctx, sqltypes.Key(runnerKey))
 	if err != nil {
 		return "", errors.WithStack(translatePGError(err))
@@ -354,12 +349,13 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey ulid.ULID) (RunnerSt
 	return RunnerState(state), nil
 }
 
+// ExpireRunnerReservations and return the count.
 func (d *DAL) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 	count, err := d.db.ExpireRunnerReservations(ctx)
 	return count, errors.WithStack(translatePGError(err))
 }
 
-func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment ulid.ULID, logEntry log.Entry) error {
+func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment model.DeploymentKey, logEntry log.Entry) error {
 	logError := pgtype.Text{}
 	if logEntry.Error != nil {
 		logError.String = logEntry.Error.Error()
@@ -388,7 +384,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetLatestDeploy
 	out := &model.Deployment{
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
-		Key:      deployment.Key.ULID(),
+		Key:      model.DeploymentKey(deployment.Key),
 		Schema:   module,
 	}
 	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.ID)
@@ -425,7 +421,7 @@ type MetricCounter struct {
 func (MetricCounter) isDataPoint() {}
 
 type Metric struct {
-	RunnerKey    ulid.ULID
+	RunnerKey    model.RunnerKey
 	StartTime    time.Time
 	EndTime      time.Time
 	SourceModule string

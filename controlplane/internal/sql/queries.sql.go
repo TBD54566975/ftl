@@ -246,6 +246,41 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 	return items, nil
 }
 
+const getDeploymentReplicaCounts = `-- name: GetDeploymentReplicaCounts :many
+SELECT d.key, COUNT(*) AS count
+FROM runners r
+INNER JOIN deployments d ON r.deployment_id = d.id
+WHERE r.state = 'assigned'
+GROUP BY d.key
+ORDER BY d.key
+`
+
+type GetDeploymentReplicaCountsRow struct {
+	Key   sqltypes.Key
+	Count int64
+}
+
+// Get the number of runners assigned to each deployment.
+func (q *Queries) GetDeploymentReplicaCounts(ctx context.Context) ([]GetDeploymentReplicaCountsRow, error) {
+	rows, err := q.db.Query(ctx, getDeploymentReplicaCounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDeploymentReplicaCountsRow
+	for rows.Next() {
+		var i GetDeploymentReplicaCountsRow
+		if err := rows.Scan(&i.Key, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many
 SELECT id, created_at, module_id, key, schema
 FROM deployments
@@ -613,7 +648,7 @@ func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryPa
 
 const reserveRunners = `-- name: ReserveRunners :one
 UPDATE runners
-SET state         = 'reserved',
+SET state         = 'claimed',
     deployment_id = COALESCE((SELECT id
                               FROM deployments d
                               WHERE d.key = $3

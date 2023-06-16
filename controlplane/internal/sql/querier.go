@@ -27,6 +27,8 @@ type Querier interface {
 	GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
+	// Get the number of runners assigned to each deployment.
+	GetDeploymentReplicaCounts(ctx context.Context) ([]GetDeploymentReplicaCountsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
