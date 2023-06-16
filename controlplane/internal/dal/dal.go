@@ -251,7 +251,7 @@ type Runner struct {
 // Once a runner is reserved, it will be unavailable for other reservations
 // or deployments and will not be returned by GetIdleRunnersForLanguage.
 func (d *DAL) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey) (Runner, error) {
-	runner, err := d.db.ReserveRunners(ctx, language, 1, sqltypes.Key(deployment))
+	runner, err := d.db.ClaimRunner(ctx, language, sqltypes.Key(deployment))
 	if err != nil {
 		if isNotFound(err) {
 			counts, err := d.db.GetIdleRunnerCountsByLanguage(ctx)
@@ -274,6 +274,45 @@ func (d *DAL) ClaimRunnerForDeployment(ctx context.Context, language string, dep
 		Endpoint: runner.Endpoint,
 		State:    RunnerState(runner.State),
 	}, nil
+}
+
+// SetDeploymentReplicas activates the given deployment.
+func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
+	err := d.db.SetDeploymentDesiredReplicas(ctx, sqltypes.Key(key), int32(minReplicas))
+	if err != nil {
+		return errors.WithStack(translatePGError(err))
+	}
+	return nil
+}
+
+type Reconciliation struct {
+	Deployment model.DeploymentKey
+	Module     string
+	Language   string
+
+	AssignedReplicas int
+	RequiredReplicas int
+}
+
+// GetDeploymentsNeedingReconciliation returns deployments that have a
+// mismatch between the number of assigned and required replicas.
+func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconciliation, error) {
+	counts, err := d.db.GetDeploymentsNeedingReconciliation(ctx)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, nil
+		}
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	return slices.Map(counts, func(t sql.GetDeploymentsNeedingReconciliationRow) Reconciliation {
+		return Reconciliation{
+			Deployment:       model.DeploymentKey(t.Key),
+			Module:           t.ModuleName,
+			Language:         t.Language,
+			AssignedReplicas: int(t.AssignedRunnersCount),
+			RequiredReplicas: int(t.RequiredRunnersCount),
+		}
+	}), nil
 }
 
 // GetIdleRunnersForLanguage returns up to limit idle runners for the given language.

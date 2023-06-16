@@ -7,12 +7,12 @@ RETURNING id;
 -- name: GetDeploymentsByID :many
 SELECT *
 FROM deployments
-WHERE id = ANY(@ids::BIGINT[]);
+WHERE id = ANY (@ids::BIGINT[]);
 
 -- name: GetModulesByID :many
 SELECT *
 FROM modules
-WHERE id = ANY(@ids::BIGINT[]);
+WHERE id = ANY (@ids::BIGINT[]);
 
 -- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", key)
@@ -113,7 +113,8 @@ SELECT COUNT(*)
 FROM deleted;
 
 -- name: GetIdleRunnersForLanguage :many
-SELECT * FROM runners
+SELECT *
+FROM runners
 WHERE language = $1
   AND state = 'idle'
 LIMIT $2;
@@ -127,18 +128,28 @@ FROM runners r
 WHERE m.name = $1
   AND r.state = 'assigned';
 
--- name: GetDeploymentReplicaCounts :many
--- Get the number of runners assigned to each deployment.
-SELECT d.key, COUNT(*) AS count
-FROM runners r
-INNER JOIN deployments d ON r.deployment_id = d.id
-WHERE r.state = 'assigned'
-GROUP BY d.key
-ORDER BY d.key;
+-- name: SetDeploymentDesiredReplicas :exec
+UPDATE deployments
+SET min_replicas = $2
+WHERE key = $1
+RETURNING 1;
 
 
--- name: ReserveRunners :one
--- Find idle runners and reserve them for the given deployment.
+-- name: GetDeploymentsNeedingReconciliation :many
+-- Get deployments that have a mismatch between the number of assigned and required replicas.
+SELECT d.key               AS key,
+       m.name              AS module_name,
+       m.language          AS language,
+       COUNT(r.id)         AS assigned_runners_count,
+       SUM(d.min_replicas) AS required_runners_count
+FROM deployments d
+         INNER JOIN modules m ON m.id = d.module_id
+         LEFT JOIN runners r ON d.id = r.deployment_id AND r.state = 'assigned'
+GROUP BY d.key, m.name, m.language
+HAVING COUNT(r.id) != SUM(d.min_replicas);
+
+-- name: ClaimRunner :one
+-- Find an idle runner and claim it for the given deployment.
 UPDATE runners
 SET state         = 'claimed',
     deployment_id = COALESCE((SELECT id
@@ -149,7 +160,7 @@ WHERE id = (SELECT id
             FROM runners r
             WHERE r.language = $1
               AND r.state = 'idle'
-            LIMIT $2 FOR UPDATE SKIP LOCKED)
+            LIMIT 1 FOR UPDATE SKIP LOCKED)
 RETURNING runners.*;
 
 -- name: GetIdleRunnerCountsByLanguage :many
@@ -167,10 +178,10 @@ WHERE key = $1;
 -- name: GetRoutingTable :many
 SELECT endpoint
 FROM runners r
-INNER JOIN deployments d on r.deployment_id = d.id
-INNER JOIN modules m on d.module_id = m.id
+         INNER JOIN deployments d on r.deployment_id = d.id
+         INNER JOIN modules m on d.module_id = m.id
 WHERE state = 'assigned'
-    AND m.name = $1;
+  AND m.name = $1;
 
 -- name: ExpireRunnerReservations :one
 WITH rows AS (
@@ -178,18 +189,18 @@ WITH rows AS (
         SET state = 'idle',
             deployment_id = NULL,
             reservation_timeout = NULL
-    WHERE state = 'reserved'
-        AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
-    RETURNING 1
-)
+        WHERE state = 'reserved'
+            AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
+        RETURNING 1)
 SELECT COUNT(*)
 FROM rows;
 
 
 -- name: InsertDeploymentLogEntry :exec
 INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, error)
-VALUES ((SELECT id FROM deployments WHERE key=$1 LIMIT 1)::UUID, $2, $3, $4, $5, $6);
+VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $5, $6);
 
 -- name: InsertMetricEntry :exec
-INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type, value)
+INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
+                     value)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);

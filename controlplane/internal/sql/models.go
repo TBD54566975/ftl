@@ -108,11 +108,12 @@ type Artefact struct {
 }
 
 type Deployment struct {
-	ID        int64
-	CreatedAt pgtype.Timestamptz
-	ModuleID  int64
-	Key       sqltypes.Key
-	Schema    []byte
+	ID          int64
+	CreatedAt   pgtype.Timestamptz
+	ModuleID    int64
+	Key         sqltypes.Key
+	Schema      []byte
+	MinReplicas int32
 }
 
 type DeploymentArtefact struct {

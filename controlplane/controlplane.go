@@ -99,6 +99,7 @@ func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout, deploymentReservat
 	}
 	go svc.reapStaleRunners(ctx)
 	go svc.releaseExpiredReservations(ctx)
+	go svc.reconcileDeployments(ctx)
 	return svc, nil
 }
 
@@ -112,21 +113,14 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
 
-	deployment, err := s.dal.GetDeployment(ctx, deploymentKey)
+	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, int(req.Msg.MinReplicas))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not find requested deployment")
+		if errors.Is(err, dal.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
+		}
+		return nil, errors.Wrap(err, "could not set deployment replicas")
 	}
 
-	runner, err := s.dal.ClaimRunnerForDeployment(ctx, deployment.Language, deploymentKey)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeResourceExhausted, errors.Wrap(err, "failed to reserve runner"))
-	}
-
-	client := s.clientsForEndpoint(runner.Endpoint)
-	_, err = client.runner.DeployToRunner(ctx, connect.NewRequest(&ftlv1.DeployToRunnerRequest{DeploymentKey: deploymentKey.String()}))
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
 
@@ -443,4 +437,59 @@ func (s *Service) releaseExpiredReservations(ctx context.Context) {
 		case <-time.After(s.deploymentReservationTimeout):
 		}
 	}
+}
+
+func (s *Service) reconcileDeployments(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	for {
+		reconciliation, err := s.dal.GetDeploymentsNeedingReconciliation(ctx)
+		if err != nil {
+			logger.Errorf(err, "Failed to get deployments needing reconciliation")
+		}
+		for _, reconcile := range reconciliation {
+			logger.Infof("Reconciling %s", reconcile.Deployment)
+			if reconcile.AssignedReplicas < reconcile.RequiredReplicas {
+				require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
+				deployment := model.Deployment{
+					Module:   reconcile.Module,
+					Language: reconcile.Language,
+					Key:      reconcile.Deployment,
+				}
+				logger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
+				reconciled := true
+				for i := 0; i < require; i++ {
+					if err := s.deployToRunner(ctx, deployment); err != nil {
+						logger.Warnf("Failed to deploy to runner: %s", err)
+						reconciled = false
+						break
+					}
+				}
+				if reconciled {
+					logger.Infof("Reconciled %s", reconcile.Deployment)
+				} else {
+					logger.Warnf("Failed to reconcile %s", reconcile.Deployment)
+				}
+			}
+			select {
+			case <-ctx.Done():
+				return
+
+			case <-time.After(time.Second):
+			}
+		}
+
+	}
+}
+
+func (s *Service) deployToRunner(ctx context.Context, reconcile model.Deployment) error {
+	runner, err := s.dal.ClaimRunnerForDeployment(ctx, reconcile.Language, reconcile.Key)
+	if err != nil {
+		return errors.Wrapf(err, "failed to claim runners for %s", reconcile.Key)
+	}
+	client := s.clientsForEndpoint(runner.Endpoint)
+	_, err = client.runner.DeployToRunner(ctx, connect.NewRequest(&ftlv1.DeployToRunnerRequest{DeploymentKey: reconcile.Key.String()}))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }

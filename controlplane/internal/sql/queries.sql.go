@@ -35,6 +35,38 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 	return err
 }
 
+const claimRunner = `-- name: ClaimRunner :one
+UPDATE runners
+SET state         = 'claimed',
+    deployment_id = COALESCE((SELECT id
+                              FROM deployments d
+                              WHERE d.key = $2
+                              LIMIT 1), -1)
+WHERE id = (SELECT id
+            FROM runners r
+            WHERE r.language = $1
+              AND r.state = 'idle'
+            LIMIT 1 FOR UPDATE SKIP LOCKED)
+RETURNING runners.id, runners.key, runners.last_seen, runners.reservation_timeout, runners.state, runners.language, runners.endpoint, runners.deployment_id
+`
+
+// Find an idle runner and claim it for the given deployment.
+func (q *Queries) ClaimRunner(ctx context.Context, language string, deploymentKey sqltypes.Key) (Runner, error) {
+	row := q.db.QueryRow(ctx, claimRunner, language, deploymentKey)
+	var i Runner
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.LastSeen,
+		&i.ReservationTimeout,
+		&i.State,
+		&i.Language,
+		&i.Endpoint,
+		&i.DeploymentID,
+	)
+	return i, err
+}
+
 const createArtefact = `-- name: CreateArtefact :one
 INSERT INTO artefacts (digest, content)
 VALUES ($1, $2)
@@ -110,10 +142,9 @@ WITH rows AS (
         SET state = 'idle',
             deployment_id = NULL,
             reservation_timeout = NULL
-    WHERE state = 'reserved'
-        AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
-    RETURNING 1
-)
+        WHERE state = 'reserved'
+            AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
+        RETURNING 1)
 SELECT COUNT(*)
 FROM rows
 `
@@ -171,20 +202,21 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 }
 
 const getDeployment = `-- name: GetDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, m.language, m.name AS module_name
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.min_replicas, m.language, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
 WHERE d.key = $1
 `
 
 type GetDeploymentRow struct {
-	ID         int64
-	CreatedAt  pgtype.Timestamptz
-	ModuleID   int64
-	Key        sqltypes.Key
-	Schema     []byte
-	Language   string
-	ModuleName string
+	ID          int64
+	CreatedAt   pgtype.Timestamptz
+	ModuleID    int64
+	Key         sqltypes.Key
+	Schema      []byte
+	MinReplicas int32
+	Language    string
+	ModuleName  string
 }
 
 func (q *Queries) GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error) {
@@ -196,6 +228,7 @@ func (q *Queries) GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeplo
 		&i.ModuleID,
 		&i.Key,
 		&i.Schema,
+		&i.MinReplicas,
 		&i.Language,
 		&i.ModuleName,
 	)
@@ -246,45 +279,10 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 	return items, nil
 }
 
-const getDeploymentReplicaCounts = `-- name: GetDeploymentReplicaCounts :many
-SELECT d.key, COUNT(*) AS count
-FROM runners r
-INNER JOIN deployments d ON r.deployment_id = d.id
-WHERE r.state = 'assigned'
-GROUP BY d.key
-ORDER BY d.key
-`
-
-type GetDeploymentReplicaCountsRow struct {
-	Key   sqltypes.Key
-	Count int64
-}
-
-// Get the number of runners assigned to each deployment.
-func (q *Queries) GetDeploymentReplicaCounts(ctx context.Context) ([]GetDeploymentReplicaCountsRow, error) {
-	rows, err := q.db.Query(ctx, getDeploymentReplicaCounts)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDeploymentReplicaCountsRow
-	for rows.Next() {
-		var i GetDeploymentReplicaCountsRow
-		if err := rows.Scan(&i.Key, &i.Count); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many
-SELECT id, created_at, module_id, key, schema
+SELECT id, created_at, module_id, key, schema, min_replicas
 FROM deployments
-WHERE id = ANY($1::BIGINT[])
+WHERE id = ANY ($1::BIGINT[])
 `
 
 func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error) {
@@ -302,6 +300,55 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 			&i.ModuleID,
 			&i.Key,
 			&i.Schema,
+			&i.MinReplicas,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDeploymentsNeedingReconciliation = `-- name: GetDeploymentsNeedingReconciliation :many
+SELECT d.key               AS key,
+       m.name              AS module_name,
+       m.language          AS language,
+       COUNT(r.id)         AS assigned_runners_count,
+       SUM(d.min_replicas) AS required_runners_count
+FROM deployments d
+         INNER JOIN modules m ON m.id = d.module_id
+         LEFT JOIN runners r ON d.id = r.deployment_id AND r.state = 'assigned'
+GROUP BY d.key, m.name, m.language
+HAVING COUNT(r.id) != SUM(d.min_replicas)
+`
+
+type GetDeploymentsNeedingReconciliationRow struct {
+	Key                  sqltypes.Key
+	ModuleName           string
+	Language             string
+	AssignedRunnersCount int64
+	RequiredRunnersCount int64
+}
+
+// Get deployments that have a mismatch between the number of assigned and required replicas.
+func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error) {
+	rows, err := q.db.Query(ctx, getDeploymentsNeedingReconciliation)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDeploymentsNeedingReconciliationRow
+	for rows.Next() {
+		var i GetDeploymentsNeedingReconciliationRow
+		if err := rows.Scan(
+			&i.Key,
+			&i.ModuleName,
+			&i.Language,
+			&i.AssignedRunnersCount,
+			&i.RequiredRunnersCount,
 		); err != nil {
 			return nil, err
 		}
@@ -393,7 +440,8 @@ func (q *Queries) GetIdleRunnerCountsByLanguage(ctx context.Context) ([]GetIdleR
 }
 
 const getIdleRunnersForLanguage = `-- name: GetIdleRunnersForLanguage :many
-SELECT id, key, last_seen, reservation_timeout, state, language, endpoint, deployment_id FROM runners
+SELECT id, key, last_seen, reservation_timeout, state, language, endpoint, deployment_id
+FROM runners
 WHERE language = $1
   AND state = 'idle'
 LIMIT $2
@@ -429,7 +477,7 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 }
 
 const getLatestDeployment = `-- name: GetLatestDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, m.language, m.name AS module_name
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.min_replicas, m.language, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
 WHERE m.name = $1
@@ -438,13 +486,14 @@ LIMIT 1
 `
 
 type GetLatestDeploymentRow struct {
-	ID         int64
-	CreatedAt  pgtype.Timestamptz
-	ModuleID   int64
-	Key        sqltypes.Key
-	Schema     []byte
-	Language   string
-	ModuleName string
+	ID          int64
+	CreatedAt   pgtype.Timestamptz
+	ModuleID    int64
+	Key         sqltypes.Key
+	Schema      []byte
+	MinReplicas int32
+	Language    string
+	ModuleName  string
 }
 
 func (q *Queries) GetLatestDeployment(ctx context.Context, moduleName string) (GetLatestDeploymentRow, error) {
@@ -456,6 +505,7 @@ func (q *Queries) GetLatestDeployment(ctx context.Context, moduleName string) (G
 		&i.ModuleID,
 		&i.Key,
 		&i.Schema,
+		&i.MinReplicas,
 		&i.Language,
 		&i.ModuleName,
 	)
@@ -465,7 +515,7 @@ func (q *Queries) GetLatestDeployment(ctx context.Context, moduleName string) (G
 const getModulesByID = `-- name: GetModulesByID :many
 SELECT id, language, name
 FROM modules
-WHERE id = ANY($1::BIGINT[])
+WHERE id = ANY ($1::BIGINT[])
 `
 
 func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, error) {
@@ -491,10 +541,10 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 const getRoutingTable = `-- name: GetRoutingTable :many
 SELECT endpoint
 FROM runners r
-INNER JOIN deployments d on r.deployment_id = d.id
-INNER JOIN modules m on d.module_id = m.id
+         INNER JOIN deployments d on r.deployment_id = d.id
+         INNER JOIN modules m on d.module_id = m.id
 WHERE state = 'assigned'
-    AND m.name = $1
+  AND m.name = $1
 `
 
 func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]string, error) {
@@ -588,7 +638,7 @@ func (q *Queries) GetRunnersForModule(ctx context.Context, name string) ([]GetRu
 
 const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec
 INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, error)
-VALUES ((SELECT id FROM deployments WHERE key=$1 LIMIT 1)::UUID, $2, $3, $4, $5, $6)
+VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $5, $6)
 `
 
 type InsertDeploymentLogEntryParams struct {
@@ -613,7 +663,8 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 }
 
 const insertMetricEntry = `-- name: InsertMetricEntry :exec
-INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type, value)
+INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
+                     value)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
@@ -646,36 +697,16 @@ func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryPa
 	return err
 }
 
-const reserveRunners = `-- name: ReserveRunners :one
-UPDATE runners
-SET state         = 'claimed',
-    deployment_id = COALESCE((SELECT id
-                              FROM deployments d
-                              WHERE d.key = $3
-                              LIMIT 1), -1)
-WHERE id = (SELECT id
-            FROM runners r
-            WHERE r.language = $1
-              AND r.state = 'idle'
-            LIMIT $2 FOR UPDATE SKIP LOCKED)
-RETURNING runners.id, runners.key, runners.last_seen, runners.reservation_timeout, runners.state, runners.language, runners.endpoint, runners.deployment_id
+const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
+UPDATE deployments
+SET min_replicas = $2
+WHERE key = $1
+RETURNING 1
 `
 
-// Find idle runners and reserve them for the given deployment.
-func (q *Queries) ReserveRunners(ctx context.Context, language string, limit int32, deploymentKey sqltypes.Key) (Runner, error) {
-	row := q.db.QueryRow(ctx, reserveRunners, language, limit, deploymentKey)
-	var i Runner
-	err := row.Scan(
-		&i.ID,
-		&i.Key,
-		&i.LastSeen,
-		&i.ReservationTimeout,
-		&i.State,
-		&i.Language,
-		&i.Endpoint,
-		&i.DeploymentID,
-	)
-	return i, err
+func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error {
+	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
+	return err
 }
 
 const upsertRunner = `-- name: UpsertRunner :one

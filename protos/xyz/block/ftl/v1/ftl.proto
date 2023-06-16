@@ -139,6 +139,7 @@ message RegisterRunnerResponse {}
 
 message DeployRequest {
   string deployment_key = 1;
+  int32 min_replicas = 2;
 }
 message DeployResponse {}
 

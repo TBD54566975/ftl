@@ -14,6 +14,8 @@ import (
 
 type Querier interface {
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
+	// Find an idle runner and claim it for the given deployment.
+	ClaimRunner(ctx context.Context, language string, deploymentKey sqltypes.Key) (Runner, error)
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
@@ -27,9 +29,9 @@ type Querier interface {
 	GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
-	// Get the number of runners assigned to each deployment.
-	GetDeploymentReplicaCounts(ctx context.Context) ([]GetDeploymentReplicaCountsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
+	// Get deployments that have a mismatch between the number of assigned and required replicas.
+	GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error)
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
 	GetIdleRunnerCountsByLanguage(ctx context.Context) ([]GetIdleRunnerCountsByLanguageRow, error)
@@ -42,8 +44,7 @@ type Querier interface {
 	GetRunnersForModule(ctx context.Context, name string) ([]GetRunnersForModuleRow, error)
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
 	InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error
-	// Find idle runners and reserve them for the given deployment.
-	ReserveRunners(ctx context.Context, language string, limit int32, deploymentKey sqltypes.Key) (Runner, error)
+	SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
 	// If the deployment key is null, then deployment_rel.id will be null,
 	// otherwise we try to retrieve the deployments.id using the key. If
