@@ -37,11 +37,12 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 
 const claimRunner = `-- name: ClaimRunner :one
 UPDATE runners
-SET state         = 'claimed',
-    deployment_id = COALESCE((SELECT id
-                              FROM deployments d
-                              WHERE d.key = $2
-                              LIMIT 1), -1)
+SET state               = 'claimed',
+    reservation_timeout = $2,
+    deployment_id       = COALESCE((SELECT id
+                                    FROM deployments d
+                                    WHERE d.key = $3
+                                    LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
             WHERE r.language = $1
@@ -51,8 +52,8 @@ RETURNING runners.id, runners.key, runners.last_seen, runners.reservation_timeou
 `
 
 // Find an idle runner and claim it for the given deployment.
-func (q *Queries) ClaimRunner(ctx context.Context, language string, deploymentKey sqltypes.Key) (Runner, error) {
-	row := q.db.QueryRow(ctx, claimRunner, language, deploymentKey)
+func (q *Queries) ClaimRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error) {
+	row := q.db.QueryRow(ctx, claimRunner, language, reservationTimeout, deploymentKey)
 	var i Runner
 	err := row.Scan(
 		&i.ID,
@@ -128,7 +129,7 @@ WITH rows AS (
         SET state = 'idle',
             deployment_id = NULL,
             reservation_timeout = NULL
-        WHERE state = 'reserved'
+        WHERE (state = 'reserved' OR state = 'claimed')
             AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
         RETURNING 1)
 SELECT COUNT(*)
@@ -528,62 +529,6 @@ func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerS
 	var state RunnerState
 	err := row.Scan(&state)
 	return state, err
-}
-
-const getRunnersForModule = `-- name: GetRunnersForModule :many
-SELECT r.id, r.key, r.last_seen, r.reservation_timeout, r.state, r.language, r.endpoint, r.deployment_id, d.key AS deployment_key, m.id AS module_id, m.name AS module_name
-FROM runners r
-         JOIN deployments d ON r.deployment_id = d.id
-         JOIN modules m ON d.module_id = m.id
-WHERE m.name = $1
-  AND r.state = 'assigned'
-`
-
-type GetRunnersForModuleRow struct {
-	ID                 int64
-	Key                sqltypes.Key
-	LastSeen           pgtype.Timestamptz
-	ReservationTimeout pgtype.Timestamptz
-	State              RunnerState
-	Language           string
-	Endpoint           string
-	DeploymentID       pgtype.Int8
-	DeploymentKey      sqltypes.Key
-	ModuleID           int64
-	ModuleName         string
-}
-
-// Get all runners that are assigned to run the given module.
-func (q *Queries) GetRunnersForModule(ctx context.Context, name string) ([]GetRunnersForModuleRow, error) {
-	rows, err := q.db.Query(ctx, getRunnersForModule, name)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetRunnersForModuleRow
-	for rows.Next() {
-		var i GetRunnersForModuleRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Key,
-			&i.LastSeen,
-			&i.ReservationTimeout,
-			&i.State,
-			&i.Language,
-			&i.Endpoint,
-			&i.DeploymentID,
-			&i.DeploymentKey,
-			&i.ModuleID,
-			&i.ModuleName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec

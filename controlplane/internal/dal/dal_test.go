@@ -135,21 +135,53 @@ func testDAL(t *testing.T, dal DAL) {
 		State:    RunnerStateClaimed,
 	}
 
+	t.Run("GetDeploymentsNeedingReconciliation", func(t *testing.T) {
+		reconcile, err := dal.GetDeploymentsNeedingReconciliation(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, []Reconciliation{}, reconcile)
+	})
+
+	t.Run("SetDeploymentReplicas", func(t *testing.T) {
+		err := dal.SetDeploymentReplicas(ctx, deploymentKey, 1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("GetDeploymentsNeedingReconciliation", func(t *testing.T) {
+		reconcile, err := dal.GetDeploymentsNeedingReconciliation(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, []Reconciliation{{
+			Deployment:       deploymentKey,
+			Module:           deployment.Module,
+			Language:         deployment.Language,
+			AssignedReplicas: 0,
+			RequiredReplicas: 1,
+		}}, reconcile)
+	})
+
 	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
-		_, err := dal.ClaimRunnerForDeployment(ctx, "go", model.NewDeploymentKey())
+		_, err := dal.ClaimRunnerForDeployment(ctx, "go", model.NewDeploymentKey(), 0)
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrNotFound)
 		assert.EqualError(t, err, "deployment: not found")
 	})
 
 	t.Run("ClaimRunnerForDeployment", func(t *testing.T) {
-		actualRunner, err := dal.ClaimRunnerForDeployment(ctx, "go", deploymentKey)
+		actualRunner, err := dal.ClaimRunnerForDeployment(ctx, "go", deploymentKey, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedRunner, actualRunner)
 	})
 
-	t.Run("ReserveRunnerForDeploymentFailsOnDuplicate", func(t *testing.T) {
-		_, err = dal.ClaimRunnerForDeployment(ctx, "go", model.NewDeploymentKey())
+	t.Run("ExpireRunnerClaims", func(t *testing.T) {
+		count, err := dal.ExpireRunnerClaims(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, count)
+		runners, err := dal.GetIdleRunnersForLanguage(ctx, "go", 10)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(runners))
+	})
+
+	t.Run("ReserveRunnerForDeploymentFailsOnInvalidDeployment", func(t *testing.T) {
+		_, err = dal.ClaimRunnerForDeployment(ctx, "go", model.NewDeploymentKey(), 0)
 		assert.IsError(t, err, ErrNotFound)
 	})
 
@@ -162,6 +194,12 @@ func testDAL(t *testing.T, dal DAL) {
 			Deployment: types.Some(deploymentKey),
 		})
 		assert.NoError(t, err)
+	})
+
+	t.Run("GetDeploymentsNeedingReconciliation", func(t *testing.T) {
+		reconcile, err := dal.GetDeploymentsNeedingReconciliation(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, []Reconciliation{}, reconcile)
 	})
 
 	t.Run("GetRoutingTable", func(t *testing.T) {
@@ -193,7 +231,7 @@ func testDAL(t *testing.T, dal DAL) {
 	})
 
 	t.Run("ReserveRunnerForDeploymentAfterRelease", func(t *testing.T) {
-		actualRunner, err := dal.ClaimRunnerForDeployment(ctx, "go", deploymentKey)
+		actualRunner, err := dal.ClaimRunnerForDeployment(ctx, "go", deploymentKey, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedRunner, actualRunner)
 	})

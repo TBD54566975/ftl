@@ -111,15 +111,6 @@ WHERE language = $1
   AND state = 'idle'
 LIMIT $2;
 
--- name: GetRunnersForModule :many
--- Get all runners that are assigned to run the given module.
-SELECT r.*, d.key AS deployment_key, m.id AS module_id, m.name AS module_name
-FROM runners r
-         JOIN deployments d ON r.deployment_id = d.id
-         JOIN modules m ON d.module_id = m.id
-WHERE m.name = $1
-  AND r.state = 'assigned';
-
 -- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2
@@ -143,11 +134,12 @@ HAVING COUNT(r.id) != SUM(d.min_replicas);
 -- name: ClaimRunner :one
 -- Find an idle runner and claim it for the given deployment.
 UPDATE runners
-SET state         = 'claimed',
-    deployment_id = COALESCE((SELECT id
-                              FROM deployments d
-                              WHERE d.key = @deployment_key
-                              LIMIT 1), -1)
+SET state               = 'claimed',
+    reservation_timeout = $2,
+    deployment_id       = COALESCE((SELECT id
+                                    FROM deployments d
+                                    WHERE d.key = @deployment_key
+                                    LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
             WHERE r.language = $1
@@ -181,7 +173,7 @@ WITH rows AS (
         SET state = 'idle',
             deployment_id = NULL,
             reservation_timeout = NULL
-        WHERE state = 'reserved'
+        WHERE (state = 'reserved' OR state = 'claimed')
             AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
         RETURNING 1)
 SELECT COUNT(*)

@@ -51,7 +51,7 @@ type DAL interface {
 	//
 	// Once a runner is reserved, it will be unavailable for other reservations
 	// or deployments and will not be returned by GetIdleRunnersForLanguage.
-	ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey) (Runner, error)
+	ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey, reservationTimeout time.Duration) (Runner, error)
 	// SetDeploymentReplicas activates the given deployment.
 	SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error
 	// GetDeploymentsNeedingReconciliation returns deployments that have a
@@ -61,15 +61,11 @@ type DAL interface {
 	//
 	// If no runners are available, it will return an empty slice.
 	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int) ([]Runner, error)
-	// GetRunnersForModule returns all runners for the given module.
-	//
-	// If no runners are available, it will return an empty slice.
-	GetRunnersForModule(ctx context.Context, module string) ([]Runner, error)
 	// GetRoutingTable returns the endpoints for all runners for the given module.
 	GetRoutingTable(ctx context.Context, module string) ([]string, error)
 	GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error)
 	// ExpireRunnerReservations and return the count.
-	ExpireRunnerReservations(ctx context.Context) (int64, error)
+	ExpireRunnerClaims(ctx context.Context) (int64, error)
 	InsertDeploymentLogEntry(ctx context.Context, deployment model.DeploymentKey, logEntry log.Entry) error
 	InsertMetricEntry(ctx context.Context, metric Metric) error
 }

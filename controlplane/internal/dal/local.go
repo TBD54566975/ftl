@@ -23,7 +23,8 @@ import (
 
 type localRunner struct {
 	Runner
-	lastUpdated time.Time
+	lastUpdated        time.Time
+	reservationTimeout time.Time
 }
 
 type localDeployment struct {
@@ -214,7 +215,7 @@ func (m *Local) DeregisterRunner(ctx context.Context, key model.RunnerKey) error
 	return nil
 }
 
-func (m *Local) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey) (Runner, error) {
+func (m *Local) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey, reservationTimeout time.Duration) (Runner, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if _, ok := m.deployments[deployment]; !ok {
@@ -223,6 +224,7 @@ func (m *Local) ClaimRunnerForDeployment(ctx context.Context, language string, d
 	for _, runner := range m.runners {
 		if runner.Language == language && runner.State == RunnerStateIdle {
 			runner.State = RunnerStateClaimed
+			runner.reservationTimeout = time.Now().Add(reservationTimeout)
 			return runner.Runner, nil
 		}
 	}
@@ -243,7 +245,28 @@ func (m *Local) SetDeploymentReplicas(ctx context.Context, key model.DeploymentK
 func (m *Local) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconciliation, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	panic("implement me")
+	out := []Reconciliation{}
+	deploymentCounts := map[model.DeploymentKey]int{}
+	for _, runner := range m.runners {
+		if runner.State == RunnerStateAssigned {
+			if dkey, ok := runner.Deployment.Get(); ok {
+				deploymentCounts[dkey]++
+			}
+		}
+	}
+	for _, deployment := range m.deployments {
+		assignedReplicas := deploymentCounts[deployment.partialDeployment.Key]
+		if deployment.minReplicas != assignedReplicas {
+			out = append(out, Reconciliation{
+				Deployment:       deployment.partialDeployment.Key,
+				Module:           deployment.partialDeployment.Module,
+				Language:         deployment.partialDeployment.Language,
+				AssignedReplicas: assignedReplicas,
+				RequiredReplicas: deployment.minReplicas,
+			})
+		}
+	}
+	return out, nil
 }
 
 func (m *Local) GetIdleRunnersForLanguage(ctx context.Context, language string, limit int) ([]Runner, error) {
@@ -259,12 +282,6 @@ func (m *Local) GetIdleRunnersForLanguage(ctx context.Context, language string, 
 		}
 	}
 	return runners, nil
-}
-
-func (m *Local) GetRunnersForModule(ctx context.Context, module string) ([]Runner, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	panic("implement me")
 }
 
 func (m *Local) GetRoutingTable(ctx context.Context, module string) ([]string, error) {
@@ -296,10 +313,18 @@ func (m *Local) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (
 	return runner.State, nil
 }
 
-func (m *Local) ExpireRunnerReservations(ctx context.Context) (int64, error) {
+func (m *Local) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	panic("implement me")
+	var count int64
+	for _, runner := range m.runners {
+		if runner.State == RunnerStateClaimed || runner.State == RunnerStateReserved {
+			runner.State = RunnerStateIdle
+			runner.reservationTimeout = time.Time{}
+			count++
+		}
+	}
+	return count, nil
 }
 
 func (m *Local) InsertDeploymentLogEntry(ctx context.Context, deployment model.DeploymentKey, logEntry log.Entry) error {
