@@ -15,7 +15,7 @@ import (
 type Querier interface {
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	// Find an idle runner and claim it for the given deployment.
-	ClaimRunner(ctx context.Context, language string, deploymentKey sqltypes.Key) (Runner, error)
+	ClaimRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error)
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
@@ -38,8 +38,6 @@ type Querier interface {
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetRoutingTable(ctx context.Context, name string) ([]string, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
-	// Get all runners that are assigned to run the given module.
-	GetRunnersForModule(ctx context.Context, name string) ([]GetRunnersForModuleRow, error)
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
 	InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error
 	SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error

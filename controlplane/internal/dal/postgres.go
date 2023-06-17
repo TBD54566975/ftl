@@ -231,8 +231,8 @@ type Runner struct {
 //
 // Once a runner is reserved, it will be unavailable for other reservations
 // or deployments and will not be returned by GetIdleRunnersForLanguage.
-func (d *Postgres) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey) (Runner, error) {
-	runner, err := d.db.ClaimRunner(ctx, language, sqltypes.Key(deployment))
+func (d *Postgres) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey, reservationTimeout time.Duration) (Runner, error) {
+	runner, err := d.db.ClaimRunner(ctx, language, pgtype.Timestamptz{Time: time.Now().Add(reservationTimeout), Valid: true}, sqltypes.Key(deployment))
 	if err != nil {
 		if isNotFound(err) {
 			counts, err := d.db.GetIdleRunnerCountsByLanguage(ctx)
@@ -316,28 +316,6 @@ func (d *Postgres) GetIdleRunnersForLanguage(ctx context.Context, language strin
 	}), nil
 }
 
-// GetRunnersForModule returns all runners for the given module.
-//
-// If no runners are available, it will return an empty slice.
-func (d *Postgres) GetRunnersForModule(ctx context.Context, module string) ([]Runner, error) {
-	runners, err := d.db.GetRunnersForModule(ctx, module)
-	if err != nil {
-		return nil, errors.WithStack(translatePGError(err))
-	}
-	if len(runners) == 0 {
-		return nil, errors.WithStack(ErrNotFound)
-	}
-	return slices.Map(runners, func(row sql.GetRunnersForModuleRow) Runner {
-		return Runner{
-			Key:        model.RunnerKey(row.Key),
-			Language:   row.Language,
-			Endpoint:   row.Endpoint,
-			State:      RunnerState(row.State),
-			Deployment: types.Some(model.DeploymentKey(row.DeploymentKey)),
-		}
-	}), nil
-}
-
 // GetRoutingTable returns the endpoints for all runners for the given module.
 func (d *Postgres) GetRoutingTable(ctx context.Context, module string) ([]string, error) {
 	routes, err := d.db.GetRoutingTable(ctx, module)
@@ -369,8 +347,7 @@ func (d *Postgres) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey
 	return RunnerState(state), nil
 }
 
-// ExpireRunnerReservations and return the count.
-func (d *Postgres) ExpireRunnerReservations(ctx context.Context) (int64, error) {
+func (d *Postgres) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	count, err := d.db.ExpireRunnerReservations(ctx)
 	return count, errors.WithStack(translatePGError(err))
 }

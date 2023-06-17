@@ -425,7 +425,7 @@ func (s *Service) reapStaleRunners(ctx context.Context) {
 func (s *Service) releaseExpiredReservations(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
-		count, err := s.dal.ExpireRunnerReservations(ctx)
+		count, err := s.dal.ExpireRunnerClaims(ctx)
 		if err != nil {
 			logger.Errorf(err, "Failed to expire runner reservations")
 		} else if count > 0 {
@@ -445,44 +445,45 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 		reconciliation, err := s.dal.GetDeploymentsNeedingReconciliation(ctx)
 		if err != nil {
 			logger.Errorf(err, "Failed to get deployments needing reconciliation")
-		}
-		for _, reconcile := range reconciliation {
-			logger.Infof("Reconciling %s", reconcile.Deployment)
-			if reconcile.AssignedReplicas < reconcile.RequiredReplicas {
-				require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
-				deployment := model.Deployment{
-					Module:   reconcile.Module,
-					Language: reconcile.Language,
-					Key:      reconcile.Deployment,
-				}
-				logger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
-				reconciled := true
-				for i := 0; i < require; i++ {
-					if err := s.deployToRunner(ctx, deployment); err != nil {
-						logger.Warnf("Failed to deploy to runner: %s", err)
-						reconciled = false
-						break
+		} else {
+			for _, reconcile := range reconciliation {
+				logger.Infof("Reconciling %s", reconcile.Deployment)
+				if reconcile.AssignedReplicas < reconcile.RequiredReplicas {
+					require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
+					deployment := model.Deployment{
+						Module:   reconcile.Module,
+						Language: reconcile.Language,
+						Key:      reconcile.Deployment,
+					}
+					logger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
+					reconciled := true
+					for i := 0; i < require; i++ {
+						if err := s.deployToRunner(ctx, deployment); err != nil {
+							logger.Warnf("Failed to deploy to runner: %s", err)
+							reconciled = false
+							break
+						}
+					}
+					if reconciled {
+						logger.Infof("Reconciled %s", reconcile.Deployment)
+					} else {
+						logger.Warnf("Failed to reconcile %s", reconcile.Deployment)
 					}
 				}
-				if reconciled {
-					logger.Infof("Reconciled %s", reconcile.Deployment)
-				} else {
-					logger.Warnf("Failed to reconcile %s", reconcile.Deployment)
-				}
-			}
-			select {
-			case <-ctx.Done():
-				return
-
-			case <-time.After(time.Second):
 			}
 		}
 
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-time.After(time.Second):
+		}
 	}
 }
 
 func (s *Service) deployToRunner(ctx context.Context, reconcile model.Deployment) error {
-	runner, err := s.dal.ClaimRunnerForDeployment(ctx, reconcile.Language, reconcile.Key)
+	runner, err := s.dal.ClaimRunnerForDeployment(ctx, reconcile.Language, reconcile.Key, s.deploymentReservationTimeout)
 	if err != nil {
 		return errors.Wrapf(err, "failed to claim runners for %s", reconcile.Key)
 	}
