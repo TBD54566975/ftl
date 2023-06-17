@@ -317,10 +317,6 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	return resp, nil
 }
 
-func (s *Service) List(ctx context.Context, req *connect.Request[ftlv1.ListRequest]) (*connect.Response[ftlv1.ListResponse], error) {
-	panic("unimplemented")
-}
-
 func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftlv1.GetArtefactDiffsRequest]) (*connect.Response[ftlv1.GetArtefactDiffsResponse], error) {
 	byteDigests, err := slices.MapErr(req.Msg.ClientDigests, sha256.ParseSHA256)
 	if err != nil {

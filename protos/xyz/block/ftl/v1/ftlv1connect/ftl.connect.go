@@ -43,8 +43,6 @@ const (
 	VerbServicePingProcedure = "/xyz.block.ftl.v1.VerbService/Ping"
 	// VerbServiceCallProcedure is the fully-qualified name of the VerbService's Call RPC.
 	VerbServiceCallProcedure = "/xyz.block.ftl.v1.VerbService/Call"
-	// VerbServiceListProcedure is the fully-qualified name of the VerbService's List RPC.
-	VerbServiceListProcedure = "/xyz.block.ftl.v1.VerbService/List"
 	// ControlPlaneServicePingProcedure is the fully-qualified name of the ControlPlaneService's Ping
 	// RPC.
 	ControlPlaneServicePingProcedure = "/xyz.block.ftl.v1.ControlPlaneService/Ping"
@@ -91,8 +89,6 @@ type VerbServiceClient interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect_go.Request[v1.CallRequest]) (*connect_go.Response[v1.CallResponse], error)
-	// List the available Verbs.
-	List(context.Context, *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error)
 }
 
 // NewVerbServiceClient constructs a client for the xyz.block.ftl.v1.VerbService service. By
@@ -116,11 +112,6 @@ func NewVerbServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts
 			baseURL+VerbServiceCallProcedure,
 			opts...,
 		),
-		list: connect_go.NewClient[v1.ListRequest, v1.ListResponse](
-			httpClient,
-			baseURL+VerbServiceListProcedure,
-			opts...,
-		),
 	}
 }
 
@@ -128,7 +119,6 @@ func NewVerbServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts
 type verbServiceClient struct {
 	ping *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	call *connect_go.Client[v1.CallRequest, v1.CallResponse]
-	list *connect_go.Client[v1.ListRequest, v1.ListResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.VerbService.Ping.
@@ -141,19 +131,12 @@ func (c *verbServiceClient) Call(ctx context.Context, req *connect_go.Request[v1
 	return c.call.CallUnary(ctx, req)
 }
 
-// List calls xyz.block.ftl.v1.VerbService.List.
-func (c *verbServiceClient) List(ctx context.Context, req *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error) {
-	return c.list.CallUnary(ctx, req)
-}
-
 // VerbServiceHandler is an implementation of the xyz.block.ftl.v1.VerbService service.
 type VerbServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect_go.Request[v1.CallRequest]) (*connect_go.Response[v1.CallResponse], error)
-	// List the available Verbs.
-	List(context.Context, *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error)
 }
 
 // NewVerbServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -174,11 +157,6 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect_go.HandlerOpt
 		svc.Call,
 		opts...,
 	))
-	mux.Handle(VerbServiceListProcedure, connect_go.NewUnaryHandler(
-		VerbServiceListProcedure,
-		svc.List,
-		opts...,
-	))
 	return "/xyz.block.ftl.v1.VerbService/", mux
 }
 
@@ -191,10 +169,6 @@ func (UnimplementedVerbServiceHandler) Ping(context.Context, *connect_go.Request
 
 func (UnimplementedVerbServiceHandler) Call(context.Context, *connect_go.Request[v1.CallRequest]) (*connect_go.Response[v1.CallResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.Call is not implemented"))
-}
-
-func (UnimplementedVerbServiceHandler) List(context.Context, *connect_go.Request[v1.ListRequest]) (*connect_go.Response[v1.ListResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.List is not implemented"))
 }
 
 // ControlPlaneServiceClient is a client for the xyz.block.ftl.v1.ControlPlaneService service.

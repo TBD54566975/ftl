@@ -25,7 +25,6 @@ type CLI struct {
 	Endpoint  *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
-	List     listCmd     `cmd:"" help:"List all FTL functions."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
 	Go       goCmd       `cmd:"" help:"Commands specific to Go modules."`

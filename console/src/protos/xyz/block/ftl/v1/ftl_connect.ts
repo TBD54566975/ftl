@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ListRequest, ListResponse, PingRequest, PingResponse, RegisterRunnerRequest, RegisterRunnerResponse, SendMetricRequest, SendMetricResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerRequest, RegisterRunnerResponse, SendMetricRequest, SendMetricResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -35,17 +35,6 @@ export const VerbService = {
       name: "Call",
       I: CallRequest,
       O: CallResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * List the available Verbs.
-     *
-     * @generated from rpc xyz.block.ftl.v1.VerbService.List
-     */
-    list: {
-      name: "List",
-      I: ListRequest,
-      O: ListResponse,
       kind: MethodKind.Unary,
     },
   }

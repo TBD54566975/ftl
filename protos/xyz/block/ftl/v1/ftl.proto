@@ -41,11 +41,6 @@ message CallResponse {
   }
 }
 
-message ListRequest {}
-message ListResponse {
-  repeated schema.VerbRef verbs = 1;
-}
-
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.
@@ -55,9 +50,6 @@ service VerbService {
 
   // Issue a synchronous call to a Verb.
   rpc Call(CallRequest) returns (CallResponse);
-
-  // List the available Verbs.
-  rpc List(ListRequest) returns (ListResponse);
 }
 
 message PullSchemaRequest {}

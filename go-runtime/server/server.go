@@ -102,14 +102,6 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	}), nil
 }
 
-func (m *moduleServer) List(ctx context.Context, req *connect.Request[ftlv1.ListRequest]) (*connect.Response[ftlv1.ListResponse], error) {
-	out := &ftlv1.ListResponse{}
-	for handler := range m.handlers {
-		out.Verbs = append(out.Verbs, handler.ToProto())
-	}
-	return connect.NewResponse(out), nil
-}
-
 func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
