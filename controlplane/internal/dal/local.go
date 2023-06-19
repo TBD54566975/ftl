@@ -21,6 +21,8 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
+var _ DAL = (*Local)(nil)
+
 type localRunner struct {
 	Runner
 	lastUpdated        time.Time
@@ -31,6 +33,17 @@ type localDeployment struct {
 	minReplicas       int
 	partialDeployment model.Deployment
 	artefacts         func() []*model.Artefact
+}
+
+func NewLocal(blobStoreDir string) *Local {
+	return &Local{
+		blobStoreDir:              blobStoreDir,
+		modules:                   map[string]*sql.Module{},
+		deployments:               map[model.DeploymentKey]*localDeployment{},
+		deploymentsByArtefactHash: map[sha256.SHA256]*localDeployment{},
+		runners:                   map[model.RunnerKey]*localRunner{},
+		runnersByEndpoint:         map[string]*localRunner{},
+	}
 }
 
 // Local is an in-memory DAL for local development and testing.
@@ -44,15 +57,21 @@ type Local struct {
 	runnersByEndpoint         map[string]*localRunner
 }
 
-func NewLocal(blobStoreDir string) *Local {
-	return &Local{
-		blobStoreDir:              blobStoreDir,
-		modules:                   map[string]*sql.Module{},
-		deployments:               map[model.DeploymentKey]*localDeployment{},
-		deploymentsByArtefactHash: map[sha256.SHA256]*localDeployment{},
-		runners:                   map[model.RunnerKey]*localRunner{},
-		runnersByEndpoint:         map[string]*localRunner{},
+func (m *Local) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	if _, ok := m.deployments[deployment]; !ok {
+		return nil, errors.Wrapf(ErrNotFound, "deployment %q not found", deployment)
 	}
+	runners := []Runner{}
+	for _, runner := range m.runners {
+		if depl, ok := runner.Deployment.Get(); ok && depl == deployment {
+			if depl == deployment {
+				runners = append(runners, runner.Runner)
+			}
+		}
+	}
+	return runners, nil
 }
 
 func (m *Local) UpsertModule(ctx context.Context, language, name string) (err error) {

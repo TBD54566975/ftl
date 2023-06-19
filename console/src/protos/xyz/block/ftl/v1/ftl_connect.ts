@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, DeployToRunnerRequest, DeployToRunnerResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerRequest, RegisterRunnerResponse, SendMetricRequest, SendMetricResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerRequest, RegisterRunnerResponse, SendMetricRequest, SendMetricResponse, StartDeployRequest, StartDeployResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, TerminateResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -133,12 +133,12 @@ export const ControlPlaneService = {
     /**
      * Starts a deployment.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Deploy
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.StartDeploy
      */
-    deploy: {
-      name: "Deploy",
-      I: DeployRequest,
-      O: DeployResponse,
+    startDeploy: {
+      name: "StartDeploy",
+      I: StartDeployRequest,
+      O: StartDeployResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -180,12 +180,23 @@ export const RunnerService = {
     /**
      * Initiate a deployment on this Runner.
      *
-     * @generated from rpc xyz.block.ftl.v1.RunnerService.DeployToRunner
+     * @generated from rpc xyz.block.ftl.v1.RunnerService.Deploy
      */
-    deployToRunner: {
-      name: "DeployToRunner",
-      I: DeployToRunnerRequest,
-      O: DeployToRunnerResponse,
+    deploy: {
+      name: "Deploy",
+      I: DeployRequest,
+      O: DeployResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Terminate the deployment on this Runner.
+     *
+     * @generated from rpc xyz.block.ftl.v1.RunnerService.Terminate
+     */
+    terminate: {
+      name: "Terminate",
+      I: TerminateRequest,
+      O: TerminateResponse,
       kind: MethodKind.Unary,
     },
   }

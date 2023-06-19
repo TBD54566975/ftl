@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/alecthomas/atomic"
@@ -90,14 +91,14 @@ type deployment struct {
 }
 
 type Service struct {
-	key model.RunnerKey
-	// We use double-checked locking around the atomic so that the read fast-path is lock-free.
+	key        model.RunnerKey
 	lock       sync.Mutex
 	state      atomic.Value[ftlv1.RunnerState]
 	deployment atomic.Value[types.Option[*deployment]]
 
-	config              Config
-	controlPlaneClient  ftlv1connect.ControlPlaneServiceClient
+	config             Config
+	controlPlaneClient ftlv1connect.ControlPlaneServiceClient
+	// Failed to register with the ControlPlane
 	registrationFailure atomic.Value[types.Option[error]]
 	forceUpdate         chan struct{} // Force an update to be sent to the ControlPlane immediately.
 }
@@ -120,7 +121,7 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	return connect.NewResponse(&ftlv1.PingResponse{NotReady: notReady}), nil
 }
 
-func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1.DeployToRunnerRequest]) (response *connect.Response[ftlv1.DeployToRunnerResponse], err error) {
+func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
 	if err, ok := s.registrationFailure.Load().Get(); ok {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to register runner"))
 	}
@@ -130,10 +131,6 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
 
-	// Double-checked lock.
-	if s.deployment.Load().Ok() {
-		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("already deployed"))
-	}
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if s.deployment.Load().Ok() {
@@ -144,6 +141,7 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 	defer func() {
 		if err != nil {
 			s.state.Store(ftlv1.RunnerState_IDLE)
+			s.deployment.Store(types.None[*deployment]())
 		}
 	}()
 
@@ -181,7 +179,37 @@ func (s *Service) DeployToRunner(ctx context.Context, req *connect.Request[ftlv1
 	s.deployment.Store(types.Some(s.makePluginProxy(cmdCtx, id, deployment)))
 	s.state.Store(ftlv1.RunnerState_ASSIGNED)
 	s.forceUpdate <- struct{}{}
-	return connect.NewResponse(&ftlv1.DeployToRunnerResponse{}), nil
+	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
+}
+
+func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.TerminateRequest]) (*connect.Response[ftlv1.TerminateResponse], error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	depl, ok := s.deployment.Load().Get()
+	if !ok {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("no deployment"))
+	}
+
+	// Soft kill.
+	err := depl.plugin.Cmd.Kill(syscall.SIGTERM)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to kill plugin")
+	}
+	// Hard kill after 10 seconds.
+	select {
+	case <-depl.ctx.Done():
+	case <-time.After(10 * time.Second):
+		err := depl.plugin.Cmd.Kill(syscall.SIGKILL)
+		if err != nil {
+			// Should we os.Exit(1) here?
+			return nil, errors.Wrap(err, "failed to kill plugin")
+		}
+	}
+
+	s.deployment.Store(types.None[*deployment]())
+	s.state.Store(ftlv1.RunnerState_IDLE)
+	s.forceUpdate <- struct{}{}
+	return connect.NewResponse(&ftlv1.TerminateResponse{}), nil
 }
 
 func (s *Service) makePluginProxy(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
@@ -235,7 +263,6 @@ func (s *Service) registrationLoop(ctx context.Context, send func(*ftlv1.Registe
 	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
 	logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
 	select {
-
 	case <-ctx.Done():
 		err = context.Cause(ctx)
 		s.registrationFailure.Store(types.Some(err))

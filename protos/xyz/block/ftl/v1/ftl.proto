@@ -129,11 +129,11 @@ message RegisterRunnerRequest {
 }
 message RegisterRunnerResponse {}
 
-message DeployRequest {
+message StartDeployRequest {
   string deployment_key = 1;
   int32 min_replicas = 2;
 }
-message DeployResponse {}
+message StartDeployResponse {}
 
 message StreamDeploymentLogsRequest {
   string deployment_key = 1;
@@ -176,7 +176,7 @@ service ControlPlaneService {
   rpc RegisterRunner(stream RegisterRunnerRequest) returns (RegisterRunnerResponse);
 
   // Starts a deployment.
-  rpc Deploy(DeployRequest) returns (DeployResponse);
+  rpc StartDeploy(StartDeployRequest) returns (StartDeployResponse);
 
   // Stream logs from a deployment
   rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);
@@ -186,10 +186,15 @@ service ControlPlaneService {
   //  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
 }
 
-message DeployToRunnerRequest {
+message DeployRequest {
   string deployment_key = 1;
 }
-message DeployToRunnerResponse {}
+message DeployResponse {}
+
+message TerminateRequest {
+  string deployment_key = 1;
+}
+message TerminateResponse {}
 
 // RunnerService is the service that executes Deployments.
 //
@@ -202,7 +207,10 @@ service RunnerService {
   }
 
   // Initiate a deployment on this Runner.
-  rpc DeployToRunner(DeployToRunnerRequest) returns (DeployToRunnerResponse);
+  rpc Deploy(DeployRequest) returns (DeployResponse);
+
+  // Terminate the deployment on this Runner.
+  rpc Terminate(TerminateRequest) returns (TerminateResponse);
 }
 
 enum MetricType {

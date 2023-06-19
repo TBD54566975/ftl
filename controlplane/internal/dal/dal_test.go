@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types"
@@ -166,7 +167,7 @@ func testDAL(t *testing.T, dal DAL) {
 	})
 
 	t.Run("ClaimRunnerForDeployment", func(t *testing.T) {
-		actualRunner, err := dal.ClaimRunnerForDeployment(ctx, "go", deploymentKey, 0)
+		actualRunner, err := dal.ClaimRunnerForDeployment(ctx, "go", deploymentKey, -time.Second)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedRunner, actualRunner)
 	})
@@ -200,6 +201,18 @@ func testDAL(t *testing.T, dal DAL) {
 		reconcile, err := dal.GetDeploymentsNeedingReconciliation(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, []Reconciliation{}, reconcile)
+	})
+
+	t.Run("GetRunnersForDeployment", func(t *testing.T) {
+		runners, err := dal.GetRunnersForDeployment(ctx, deploymentKey)
+		assert.NoError(t, err)
+		assert.Equal(t, []Runner{Runner{
+			Key:        runnerID,
+			Language:   "go",
+			Endpoint:   "http://localhost:8080",
+			State:      RunnerStateAssigned,
+			Deployment: types.Some(deploymentKey),
+		}}, runners)
 	})
 
 	t.Run("GetRoutingTable", func(t *testing.T) {

@@ -299,16 +299,16 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 }
 
 const getDeploymentsNeedingReconciliation = `-- name: GetDeploymentsNeedingReconciliation :many
-SELECT d.key               AS key,
-       m.name              AS module_name,
-       m.language          AS language,
-       COUNT(r.id)         AS assigned_runners_count,
-       SUM(d.min_replicas) AS required_runners_count
+SELECT d.key                  AS key,
+       m.name                 AS module_name,
+       m.language             AS language,
+       COUNT(r.id)            AS assigned_runners_count,
+       d.min_replicas::BIGINT AS required_runners_count
 FROM deployments d
-         INNER JOIN modules m ON m.id = d.module_id
-         LEFT JOIN runners r ON d.id = r.deployment_id AND r.state = 'assigned'
-GROUP BY d.key, m.name, m.language
-HAVING COUNT(r.id) != SUM(d.min_replicas)
+         LEFT JOIN runners r ON d.id = r.deployment_id
+         JOIN modules m ON d.module_id = m.id
+GROUP BY d.key, d.min_replicas, m.name, m.language
+HAVING COUNT(r.id) <> d.min_replicas
 `
 
 type GetDeploymentsNeedingReconciliationRow struct {
@@ -528,6 +528,43 @@ func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerS
 	var state RunnerState
 	err := row.Scan(&state)
 	return state, err
+}
+
+const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
+SELECT r.id, r.key, r.last_seen, r.reservation_timeout, r.state, r.language, r.endpoint, r.deployment_id
+FROM runners r
+         INNER JOIN deployments d on r.deployment_id = d.id
+WHERE state = 'assigned'
+  AND d.key = $1
+`
+
+func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error) {
+	rows, err := q.db.Query(ctx, getRunnersForDeployment, key)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Runner
+	for rows.Next() {
+		var i Runner
+		if err := rows.Scan(
+			&i.ID,
+			&i.Key,
+			&i.LastSeen,
+			&i.ReservationTimeout,
+			&i.State,
+			&i.Language,
+			&i.Endpoint,
+			&i.DeploymentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec

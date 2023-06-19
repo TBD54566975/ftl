@@ -68,4 +68,5 @@ type DAL interface {
 	ExpireRunnerClaims(ctx context.Context) (int64, error)
 	InsertDeploymentLogEntry(ctx context.Context, deployment model.DeploymentKey, logEntry log.Entry) error
 	InsertMetricEntry(ctx context.Context, metric Metric) error
+	GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error)
 }

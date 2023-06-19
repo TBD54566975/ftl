@@ -32,12 +32,32 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
+var _ DAL = (*Postgres)(nil)
+
+func NewPostgres(conn sql.DBI) *Postgres {
+	return &Postgres{db: sql.NewDB(conn)}
+}
+
 type Postgres struct {
 	db *sql.DB
 }
 
-func NewPostgres(conn sql.DBI) *Postgres {
-	return &Postgres{db: sql.NewDB(conn)}
+func (d *Postgres) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error) {
+	runners := []Runner{}
+	rows, err := d.db.GetRunnersForDeployment(ctx, sqltypes.Key(deployment))
+	if err != nil {
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	for _, row := range rows {
+		runners = append(runners, Runner{
+			Key:        model.RunnerKey(row.Key),
+			Language:   row.Language,
+			Endpoint:   row.Endpoint,
+			State:      RunnerState(row.State),
+			Deployment: types.Some(deployment),
+		})
+	}
+	return runners, nil
 }
 
 func (d *Postgres) UpsertModule(ctx context.Context, language, name string) (err error) {
