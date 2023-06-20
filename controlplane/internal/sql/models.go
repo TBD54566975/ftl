@@ -8,8 +8,9 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
 )
 
 type MetricType string

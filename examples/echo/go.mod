@@ -15,7 +15,7 @@ require (
 	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/errors v0.3.0 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0 // indirect
-	github.com/alecthomas/types v0.5.0 // indirect
+	github.com/alecthomas/types v0.6.0 // indirect
 	github.com/bufbuild/connect-go v1.8.0 // indirect
 	github.com/bufbuild/connect-grpcreflect-go v1.1.0 // indirect
 	github.com/bufbuild/connect-opentelemetry-go v0.3.0 // indirect
