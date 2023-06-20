@@ -38,6 +38,7 @@ type Querier interface {
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetRoutingTable(ctx context.Context, name string) ([]string, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
+	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
 	InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error
 	SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error

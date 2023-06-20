@@ -82,7 +82,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 		return errors.WithStack(err)
 	}
 	logger.Infof("Created deployment %s", resp.Msg.DeploymentKey)
-	_, err = client.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{DeploymentKey: resp.Msg.GetDeploymentKey()}))
+	_, err = client.StartDeploy(ctx, connect.NewRequest(&ftlv1.StartDeployRequest{DeploymentKey: resp.Msg.GetDeploymentKey()}))
 	return errors.WithStack(err)
 }
 

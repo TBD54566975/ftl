@@ -11,6 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	sdkgo "github.com/TBD54566975/ftl/go-runtime/sdk"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/observability"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -34,10 +35,7 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		if err != nil {
 			return nil, nil, errors.WithStack(err)
 		}
-		hmap := map[sdkgo.VerbRef]Handler{}
-		for _, handler := range handlers {
-			hmap[handler.ref] = handler
-		}
+		hmap := maps.FromSlice(handlers, func(h Handler) (sdkgo.VerbRef, Handler) { return h.ref, h })
 		return ctx, &moduleServer{handlers: hmap}, nil
 	}
 }

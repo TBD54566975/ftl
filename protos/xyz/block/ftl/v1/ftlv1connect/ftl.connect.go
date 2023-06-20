@@ -64,17 +64,18 @@ const (
 	// ControlPlaneServiceRegisterRunnerProcedure is the fully-qualified name of the
 	// ControlPlaneService's RegisterRunner RPC.
 	ControlPlaneServiceRegisterRunnerProcedure = "/xyz.block.ftl.v1.ControlPlaneService/RegisterRunner"
-	// ControlPlaneServiceDeployProcedure is the fully-qualified name of the ControlPlaneService's
-	// Deploy RPC.
-	ControlPlaneServiceDeployProcedure = "/xyz.block.ftl.v1.ControlPlaneService/Deploy"
+	// ControlPlaneServiceStartDeployProcedure is the fully-qualified name of the ControlPlaneService's
+	// StartDeploy RPC.
+	ControlPlaneServiceStartDeployProcedure = "/xyz.block.ftl.v1.ControlPlaneService/StartDeploy"
 	// ControlPlaneServiceStreamDeploymentLogsProcedure is the fully-qualified name of the
 	// ControlPlaneService's StreamDeploymentLogs RPC.
 	ControlPlaneServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs"
 	// RunnerServicePingProcedure is the fully-qualified name of the RunnerService's Ping RPC.
 	RunnerServicePingProcedure = "/xyz.block.ftl.v1.RunnerService/Ping"
-	// RunnerServiceDeployToRunnerProcedure is the fully-qualified name of the RunnerService's
-	// DeployToRunner RPC.
-	RunnerServiceDeployToRunnerProcedure = "/xyz.block.ftl.v1.RunnerService/DeployToRunner"
+	// RunnerServiceDeployProcedure is the fully-qualified name of the RunnerService's Deploy RPC.
+	RunnerServiceDeployProcedure = "/xyz.block.ftl.v1.RunnerService/Deploy"
+	// RunnerServiceTerminateProcedure is the fully-qualified name of the RunnerService's Terminate RPC.
+	RunnerServiceTerminateProcedure = "/xyz.block.ftl.v1.RunnerService/Terminate"
 	// ObservabilityServicePingProcedure is the fully-qualified name of the ObservabilityService's Ping
 	// RPC.
 	ObservabilityServicePingProcedure = "/xyz.block.ftl.v1.ObservabilityService/Ping"
@@ -194,7 +195,7 @@ type ControlPlaneServiceClient interface {
 	// every 10 seconds to maintain its heartbeat.
 	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
 	// Starts a deployment.
-	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
+	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
@@ -245,9 +246,9 @@ func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL stri
 			baseURL+ControlPlaneServiceRegisterRunnerProcedure,
 			opts...,
 		),
-		deploy: connect_go.NewClient[v1.DeployRequest, v1.DeployResponse](
+		startDeploy: connect_go.NewClient[v1.StartDeployRequest, v1.StartDeployResponse](
 			httpClient,
-			baseURL+ControlPlaneServiceDeployProcedure,
+			baseURL+ControlPlaneServiceStartDeployProcedure,
 			opts...,
 		),
 		streamDeploymentLogs: connect_go.NewClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse](
@@ -267,7 +268,7 @@ type controlPlaneServiceClient struct {
 	getDeployment          *connect_go.Client[v1.GetDeploymentRequest, v1.GetDeploymentResponse]
 	getDeploymentArtefacts *connect_go.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
 	registerRunner         *connect_go.Client[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
-	deploy                 *connect_go.Client[v1.DeployRequest, v1.DeployResponse]
+	startDeploy            *connect_go.Client[v1.StartDeployRequest, v1.StartDeployResponse]
 	streamDeploymentLogs   *connect_go.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
 
@@ -306,9 +307,9 @@ func (c *controlPlaneServiceClient) RegisterRunner(ctx context.Context) *connect
 	return c.registerRunner.CallClientStream(ctx)
 }
 
-// Deploy calls xyz.block.ftl.v1.ControlPlaneService.Deploy.
-func (c *controlPlaneServiceClient) Deploy(ctx context.Context, req *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
-	return c.deploy.CallUnary(ctx, req)
+// StartDeploy calls xyz.block.ftl.v1.ControlPlaneService.StartDeploy.
+func (c *controlPlaneServiceClient) StartDeploy(ctx context.Context, req *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error) {
+	return c.startDeploy.CallUnary(ctx, req)
 }
 
 // StreamDeploymentLogs calls xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs.
@@ -340,7 +341,7 @@ type ControlPlaneServiceHandler interface {
 	// every 10 seconds to maintain its heartbeat.
 	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
 	// Starts a deployment.
-	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
+	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error)
 }
@@ -388,9 +389,9 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		svc.RegisterRunner,
 		opts...,
 	))
-	mux.Handle(ControlPlaneServiceDeployProcedure, connect_go.NewUnaryHandler(
-		ControlPlaneServiceDeployProcedure,
-		svc.Deploy,
+	mux.Handle(ControlPlaneServiceStartDeployProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServiceStartDeployProcedure,
+		svc.StartDeploy,
 		opts...,
 	))
 	mux.Handle(ControlPlaneServiceStreamDeploymentLogsProcedure, connect_go.NewClientStreamHandler(
@@ -432,8 +433,8 @@ func (UnimplementedControlPlaneServiceHandler) RegisterRunner(context.Context, *
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.RegisterRunner is not implemented"))
 }
 
-func (UnimplementedControlPlaneServiceHandler) Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.Deploy is not implemented"))
+func (UnimplementedControlPlaneServiceHandler) StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.StartDeploy is not implemented"))
 }
 
 func (UnimplementedControlPlaneServiceHandler) StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error) {
@@ -444,7 +445,9 @@ func (UnimplementedControlPlaneServiceHandler) StreamDeploymentLogs(context.Cont
 type RunnerServiceClient interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Initiate a deployment on this Runner.
-	DeployToRunner(context.Context, *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error)
+	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
+	// Terminate the deployment on this Runner.
+	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.TerminateResponse], error)
 }
 
 // NewRunnerServiceClient constructs a client for the xyz.block.ftl.v1.RunnerService service. By
@@ -463,9 +466,14 @@ func NewRunnerServiceClient(httpClient connect_go.HTTPClient, baseURL string, op
 			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
 			connect_go.WithClientOptions(opts...),
 		),
-		deployToRunner: connect_go.NewClient[v1.DeployToRunnerRequest, v1.DeployToRunnerResponse](
+		deploy: connect_go.NewClient[v1.DeployRequest, v1.DeployResponse](
 			httpClient,
-			baseURL+RunnerServiceDeployToRunnerProcedure,
+			baseURL+RunnerServiceDeployProcedure,
+			opts...,
+		),
+		terminate: connect_go.NewClient[v1.TerminateRequest, v1.TerminateResponse](
+			httpClient,
+			baseURL+RunnerServiceTerminateProcedure,
 			opts...,
 		),
 	}
@@ -473,8 +481,9 @@ func NewRunnerServiceClient(httpClient connect_go.HTTPClient, baseURL string, op
 
 // runnerServiceClient implements RunnerServiceClient.
 type runnerServiceClient struct {
-	ping           *connect_go.Client[v1.PingRequest, v1.PingResponse]
-	deployToRunner *connect_go.Client[v1.DeployToRunnerRequest, v1.DeployToRunnerResponse]
+	ping      *connect_go.Client[v1.PingRequest, v1.PingResponse]
+	deploy    *connect_go.Client[v1.DeployRequest, v1.DeployResponse]
+	terminate *connect_go.Client[v1.TerminateRequest, v1.TerminateResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.RunnerService.Ping.
@@ -482,16 +491,23 @@ func (c *runnerServiceClient) Ping(ctx context.Context, req *connect_go.Request[
 	return c.ping.CallUnary(ctx, req)
 }
 
-// DeployToRunner calls xyz.block.ftl.v1.RunnerService.DeployToRunner.
-func (c *runnerServiceClient) DeployToRunner(ctx context.Context, req *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error) {
-	return c.deployToRunner.CallUnary(ctx, req)
+// Deploy calls xyz.block.ftl.v1.RunnerService.Deploy.
+func (c *runnerServiceClient) Deploy(ctx context.Context, req *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
+	return c.deploy.CallUnary(ctx, req)
+}
+
+// Terminate calls xyz.block.ftl.v1.RunnerService.Terminate.
+func (c *runnerServiceClient) Terminate(ctx context.Context, req *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.TerminateResponse], error) {
+	return c.terminate.CallUnary(ctx, req)
 }
 
 // RunnerServiceHandler is an implementation of the xyz.block.ftl.v1.RunnerService service.
 type RunnerServiceHandler interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	// Initiate a deployment on this Runner.
-	DeployToRunner(context.Context, *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error)
+	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
+	// Terminate the deployment on this Runner.
+	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.TerminateResponse], error)
 }
 
 // NewRunnerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -507,9 +523,14 @@ func NewRunnerServiceHandler(svc RunnerServiceHandler, opts ...connect_go.Handle
 		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
 		connect_go.WithHandlerOptions(opts...),
 	))
-	mux.Handle(RunnerServiceDeployToRunnerProcedure, connect_go.NewUnaryHandler(
-		RunnerServiceDeployToRunnerProcedure,
-		svc.DeployToRunner,
+	mux.Handle(RunnerServiceDeployProcedure, connect_go.NewUnaryHandler(
+		RunnerServiceDeployProcedure,
+		svc.Deploy,
+		opts...,
+	))
+	mux.Handle(RunnerServiceTerminateProcedure, connect_go.NewUnaryHandler(
+		RunnerServiceTerminateProcedure,
+		svc.Terminate,
 		opts...,
 	))
 	return "/xyz.block.ftl.v1.RunnerService/", mux
@@ -522,8 +543,12 @@ func (UnimplementedRunnerServiceHandler) Ping(context.Context, *connect_go.Reque
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Ping is not implemented"))
 }
 
-func (UnimplementedRunnerServiceHandler) DeployToRunner(context.Context, *connect_go.Request[v1.DeployToRunnerRequest]) (*connect_go.Response[v1.DeployToRunnerResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.DeployToRunner is not implemented"))
+func (UnimplementedRunnerServiceHandler) Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Deploy is not implemented"))
+}
+
+func (UnimplementedRunnerServiceHandler) Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.TerminateResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Terminate is not implemented"))
 }
 
 // ObservabilityServiceClient is a client for the xyz.block.ftl.v1.ObservabilityService service.

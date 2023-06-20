@@ -120,17 +120,16 @@ RETURNING 1;
 
 -- name: GetDeploymentsNeedingReconciliation :many
 -- Get deployments that have a mismatch between the number of assigned and required replicas.
-SELECT d.key               AS key,
-       m.name              AS module_name,
-       m.language          AS language,
-       COUNT(r.id)         AS assigned_runners_count,
-       SUM(d.min_replicas) AS required_runners_count
+SELECT d.key                  AS key,
+       m.name                 AS module_name,
+       m.language             AS language,
+       COUNT(r.id)            AS assigned_runners_count,
+       d.min_replicas::BIGINT AS required_runners_count
 FROM deployments d
-         INNER JOIN modules m ON m.id = d.module_id
-         LEFT JOIN runners r ON d.id = r.deployment_id AND r.state = 'assigned'
-GROUP BY d.key, m.name, m.language
-HAVING COUNT(r.id) != SUM(d.min_replicas);
-
+         LEFT JOIN runners r ON d.id = r.deployment_id
+         JOIN modules m ON d.module_id = m.id
+GROUP BY d.key, d.min_replicas, m.name, m.language
+HAVING COUNT(r.id) <> d.min_replicas;
 -- name: ClaimRunner :one
 -- Find an idle runner and claim it for the given deployment.
 UPDATE runners
@@ -166,6 +165,13 @@ FROM runners r
          INNER JOIN modules m on d.module_id = m.id
 WHERE state = 'assigned'
   AND m.name = $1;
+
+-- name: GetRunnersForDeployment :many
+SELECT r.*
+FROM runners r
+         INNER JOIN deployments d on r.deployment_id = d.id
+WHERE state = 'assigned'
+  AND d.key = $1;
 
 -- name: ExpireRunnerReservations :one
 WITH rows AS (

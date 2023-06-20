@@ -85,7 +85,12 @@ type combinedService struct {
 	*Service
 }
 
-func (*combinedService) DeployToRunner(context.Context, *connect.Request[ftlv1.DeployToRunnerRequest]) (*connect.Response[ftlv1.DeployToRunnerResponse], error) {
+func (s *combinedService) Terminate(ctx context.Context, c *connect.Request[ftlv1.TerminateRequest]) (*connect.Response[ftlv1.TerminateResponse], error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*combinedService) Deploy(context.Context, *connect.Request[ftlv1.DeployRequest]) (*connect.Response[ftlv1.DeployResponse], error) {
 	panic("unimplemented")
 }
 
