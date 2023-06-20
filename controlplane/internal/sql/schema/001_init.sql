@@ -64,7 +64,9 @@ CREATE TYPE runner_state AS ENUM (
     -- The Runner has acked the claim, but has not yet been assigned a deployment.
     'reserved',
     -- The Runner has been assigned a deployment.
-    'assigned'
+    'assigned',
+    -- Deploy failed.
+    'failed'
     );
 
 -- Runners are processes that are available to run modules.

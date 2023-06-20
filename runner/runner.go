@@ -61,12 +61,9 @@ func Start(ctx context.Context, config Config) error {
 		key:                model.NewRunnerKey(),
 		config:             config,
 		controlPlaneClient: controlplaneClient,
-		forceUpdate:        make(chan struct{}, 8),
 	}
-	svc.registrationFailure.Store(types.Some(errors.New("not registered with ControlPlane")))
 
-	retry := backoff.Backoff{Max: config.HeartbeatPeriod, Jitter: true}
-	go rpc.RetryStreamingClientStream(ctx, retry, svc.controlPlaneClient.RegisterRunner, svc.registrationLoop)
+	go svc.registrationLoop(ctx)
 
 	observabilityClient := rpc.Dial(ftlv1connect.NewObservabilityServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
 
@@ -100,7 +97,6 @@ type Service struct {
 	controlPlaneClient ftlv1connect.ControlPlaneServiceClient
 	// Failed to register with the ControlPlane
 	registrationFailure atomic.Value[types.Option[error]]
-	forceUpdate         chan struct{} // Force an update to be sent to the ControlPlane immediately.
 }
 
 // ServeHTTP proxies through to the deployment.
@@ -137,7 +133,26 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("already deployed"))
 	}
 
-	s.state.Store(ftlv1.RunnerState_RESERVED)
+	// Set the state of the Runner, and update the ControlPlane.
+	setState := func(state ftlv1.RunnerState) error {
+		s.state.Store(state)
+		deploymentKey := types.None[string]()
+		if depl, ok := s.deployment.Load().Get(); ok {
+			deploymentKey = types.Some(depl.key.String())
+		}
+		_, err := s.controlPlaneClient.RegisterRunner(ctx, connect.NewRequest(&ftlv1.RegisterRunnerRequest{
+			Key:        s.key.String(),
+			Language:   s.config.Language,
+			Endpoint:   s.config.Endpoint.String(),
+			Deployment: deploymentKey.Ptr(),
+			State:      state,
+		}))
+		return errors.WithStack(err)
+	}
+
+	if err := setState(ftlv1.RunnerState_RESERVED); err != nil {
+		return nil, errors.WithStack(err)
+	}
 	defer func() {
 		if err != nil {
 			s.state.Store(ftlv1.RunnerState_IDLE)
@@ -177,8 +192,9 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
 	s.deployment.Store(types.Some(s.makePluginProxy(cmdCtx, id, deployment)))
-	s.state.Store(ftlv1.RunnerState_ASSIGNED)
-	s.forceUpdate <- struct{}{}
+	if err := setState(ftlv1.RunnerState_ASSIGNED); err != nil {
+		return nil, errors.WithStack(err)
+	}
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
 
@@ -208,7 +224,6 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 
 	s.deployment.Store(types.None[*deployment]())
 	s.state.Store(ftlv1.RunnerState_IDLE)
-	s.forceUpdate <- struct{}{}
 	return connect.NewResponse(&ftlv1.TerminateResponse{}), nil
 }
 
@@ -221,56 +236,63 @@ func (s *Service) makePluginProxy(ctx context.Context, key model.DeploymentKey, 
 	}
 }
 
-func (s *Service) registrationLoop(ctx context.Context, send func(*ftlv1.RegisterRunnerRequest) error) error {
+func (s *Service) registrationLoop(ctx context.Context) {
 	logger := log.FromContext(ctx)
+	retry := backoff.Backoff{Max: s.config.HeartbeatPeriod, Jitter: true}
 
-	// Figure out the appropriate state.
-	state := s.state.Load()
-	var errPtr *string
-	var deploymenyKey *string
-	depl, ok := s.deployment.Load().Get()
-	if ok {
-		dkey := depl.key.String()
-		deploymenyKey = &dkey
-		select {
-		case <-depl.ctx.Done():
-			state = ftlv1.RunnerState_IDLE
-			err := context.Cause(depl.ctx)
-			errStr := err.Error()
-			errPtr = &errStr
-			logger.Errorf(err, "Deployment terminated.")
-			s.deployment.Store(types.None[*deployment]())
+	for {
+		// Figure out the appropriate state.
+		state := s.state.Load()
+		var errPtr *string
+		var deploymenyKey *string
+		depl, ok := s.deployment.Load().Get()
+		if ok {
+			dkey := depl.key.String()
+			deploymenyKey = &dkey
+			select {
+			case <-depl.ctx.Done():
+				state = ftlv1.RunnerState_IDLE
+				err := context.Cause(depl.ctx)
+				errStr := err.Error()
+				errPtr = &errStr
+				logger.Errorf(err, "Deployment terminated.")
+				s.deployment.Store(types.None[*deployment]())
 
-		default:
-			state = ftlv1.RunnerState_ASSIGNED
+			default:
+				state = ftlv1.RunnerState_ASSIGNED
+			}
+			s.state.Store(state)
 		}
-		s.state.Store(state)
-	}
 
-	err := send(&ftlv1.RegisterRunnerRequest{
-		Key:        s.key.String(),
-		Language:   s.config.Language,
-		Endpoint:   s.config.Endpoint.String(),
-		Deployment: deploymenyKey,
-		State:      state,
-		Error:      errPtr,
-	})
-	if err != nil {
-		s.registrationFailure.Store(types.Some(err))
-		return errors.WithStack(err)
-	}
-	s.registrationFailure.Store(types.None[error]())
-	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
-	logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
-	select {
-	case <-ctx.Done():
-		err = context.Cause(ctx)
-		s.registrationFailure.Store(types.Some(err))
-		return errors.WithStack(err)
+		logger.Tracef("Registering with ControlPlane as %s", state)
+		_, err := s.controlPlaneClient.RegisterRunner(ctx, connect.NewRequest(&ftlv1.RegisterRunnerRequest{
+			Key:        s.key.String(),
+			Language:   s.config.Language,
+			Endpoint:   s.config.Endpoint.String(),
+			Deployment: deploymenyKey,
+			State:      state,
+			Error:      errPtr,
+		}))
+		if err != nil {
+			logger.Errorf(err, "failed to register with ControlPlane")
+			s.registrationFailure.Store(types.Some(err))
+			time.Sleep(retry.Duration())
+			continue
+		} else {
+			s.registrationFailure.Store(types.None[error]())
+			retry.Reset()
+		}
 
-	case <-s.forceUpdate:
+		// Wait for the next heartbeat.
+		delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
+		logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
+		select {
+		case <-ctx.Done():
+			err = context.Cause(ctx)
+			s.registrationFailure.Store(types.Some(err))
+			return
 
-	case <-time.After(delay):
+		case <-time.After(delay):
+		}
 	}
-	return nil
 }

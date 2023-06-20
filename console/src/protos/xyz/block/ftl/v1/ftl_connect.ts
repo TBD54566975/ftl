@@ -119,7 +119,7 @@ export const ControlPlaneService = {
     /**
      * Register a Runner with the ControlPlane.
      *
-     * Each runner MUST stream a RegisterRunnerRequest to the ControlPlaneService
+     * Each runner issue a RegisterRunnerRequest to the ControlPlaneService
      * every 10 seconds to maintain its heartbeat.
      *
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.RegisterRunner
@@ -128,7 +128,7 @@ export const ControlPlaneService = {
       name: "RegisterRunner",
       I: RegisterRunnerRequest,
       O: RegisterRunnerResponse,
-      kind: MethodKind.ClientStreaming,
+      kind: MethodKind.Unary,
     },
     /**
      * Starts a deployment.
