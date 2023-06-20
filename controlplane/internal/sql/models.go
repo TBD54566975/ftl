@@ -63,6 +63,7 @@ const (
 	RunnerStateClaimed  RunnerState = "claimed"
 	RunnerStateReserved RunnerState = "reserved"
 	RunnerStateAssigned RunnerState = "assigned"
+	RunnerStateFailed   RunnerState = "failed"
 )
 
 func (e *RunnerState) Scan(src interface{}) error {

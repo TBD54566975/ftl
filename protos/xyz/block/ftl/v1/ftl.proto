@@ -171,9 +171,9 @@ service ControlPlaneService {
 
   // Register a Runner with the ControlPlane.
   //
-  // Each runner MUST stream a RegisterRunnerRequest to the ControlPlaneService
+  // Each runner issue a RegisterRunnerRequest to the ControlPlaneService
   // every 10 seconds to maintain its heartbeat.
-  rpc RegisterRunner(stream RegisterRunnerRequest) returns (RegisterRunnerResponse);
+  rpc RegisterRunner(RegisterRunnerRequest) returns (RegisterRunnerResponse);
 
   // Starts a deployment.
   rpc StartDeploy(StartDeployRequest) returns (StartDeployResponse);

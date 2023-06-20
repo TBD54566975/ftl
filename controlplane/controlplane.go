@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 	"github.com/jackc/pgx/v5"
@@ -124,16 +123,9 @@ func (s *Service) StartDeploy(ctx context.Context, req *connect.Request[ftlv1.St
 	return connect.NewResponse(&ftlv1.StartDeployResponse{}), nil
 }
 
-func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[ftlv1.RegisterRunnerRequest]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
+func (s *Service) RegisterRunner(ctx context.Context, req *connect.Request[ftlv1.RegisterRunnerRequest]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
 	logger := log.FromContext(ctx)
-	// Initial endpoint creation.
-	if !req.Receive() {
-		if req.Err() != nil {
-			return nil, errors.WithStack(req.Err())
-		}
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("initial registration not received"))
-	}
-	msg := req.Msg()
+	msg := req.Msg
 	endpoint, err := url.Parse(msg.Endpoint)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid endpoint"))
@@ -158,11 +150,21 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
 	}
+	oldState, err := s.dal.GetRunnerState(ctx, runnerKey)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	newState := dal.RunnerStateFromProto(msg.State)
+	// This captures the case where the ControlPlane has assigned a Runner to a Deployment,
+	// but the Runner has not yet received the assignment.
+	if oldState == dal.RunnerStateAssigned && newState == dal.RunnerStateIdle {
+		newState = dal.RunnerStateAssigned
+	}
 	err = s.dal.UpsertRunner(ctx, dal.Runner{
 		Key:        runnerKey,
 		Language:   msg.Language,
 		Endpoint:   msg.Endpoint,
-		State:      dal.RunnerStateFromProto(msg.State),
+		State:      newState,
 		Deployment: maybeDeployment,
 	}) //
 	if errors.Is(err, dal.ErrConflict) {
@@ -170,87 +172,9 @@ func (s *Service) RegisterRunner(ctx context.Context, req *connect.ClientStream[
 	} else if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	defer func() {
-		err := s.dal.DeregisterRunner(context.Background(), runnerKey)
-		if err != nil {
-			logger.Errorf(err, "Failed to Deregister runner %s", endpoint)
-		} else {
-			logger.Infof("Deregistered runner %s", endpoint)
-		}
-	}()
-
 	runnerStr := fmt.Sprintf("%s (%s)", endpoint, runnerKey)
-
-	logger.Infof("New runner %s", runnerStr)
-
-	// Start receiving heartbeats from runner.
-	heartbeat := make(chan *ftlv1.RegisterRunnerRequest)
-	ctx = concurrency.Call(ctx, func() error {
-		for req.Receive() {
-			select {
-			case heartbeat <- req.Msg():
-			case <-ctx.Done():
-				return nil
-			}
-		}
-		if req.Err() != nil {
-			logger.Errorf(req.Err(), "Heartbeat error from runner %s", runnerStr)
-			return errors.WithStack(req.Err())
-		}
-		return nil
-	})
-
-	// Loop until we receive a heartbeat or the context is cancelled.
-	for {
-		select {
-		case msg := <-heartbeat:
-			logger.Tracef("Heartbeat received from runner %s", runnerStr)
-			maybeDeployment, err := msg.DeploymentAsOptional()
-			if err != nil {
-				return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
-			}
-			fromState, err := s.dal.GetRunnerState(ctx, runnerKey)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to get runner state")
-			}
-			toState := dal.RunnerStateFromProto(msg.State)
-
-			// Runner requesting a transition from claimed to idle just means
-			// that the Runner hasn't received the reservation yet.
-			if fromState == dal.RunnerStateClaimed && toState == dal.RunnerStateIdle {
-				toState = dal.RunnerStateClaimed
-			}
-			if fromState != toState {
-				logger.Debugf("Runner %s state transition %s -> %s", runnerStr, fromState, toState)
-			}
-			err = s.dal.UpsertRunner(ctx, dal.Runner{
-				Key:        runnerKey,
-				Language:   msg.Language,
-				Endpoint:   msg.Endpoint,
-				State:      toState,
-				Deployment: maybeDeployment,
-			})
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to set runner state")
-			}
-
-		case <-time.After(s.heartbeatTimeout):
-			err := connect.NewError(connect.CodeDeadlineExceeded, errors.New("heartbeat timeout"))
-			logger.Errorf(err, "Heartbeat timeout from runner %s", runnerStr)
-			return nil, err
-
-		case <-ctx.Done():
-			err := context.Cause(ctx)
-			if errors.Is(err, context.Canceled) {
-				err = nil
-			}
-			if err != nil {
-				logger.Errorf(err, "Context cancelled for runner %s heartbeat", runnerStr)
-				return nil, connect.NewError(connect.CodeAborted, errors.Wrap(err, "heartbeat cancelled"))
-			}
-			return connect.NewResponse(&ftlv1.RegisterRunnerResponse{}), nil
-		}
-	}
+	logger.Tracef("Heartbeat received from runner %s", runnerStr)
+	return connect.NewResponse(&ftlv1.RegisterRunnerResponse{}), nil
 }
 
 func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentRequest]) (*connect.Response[ftlv1.GetDeploymentResponse], error) {

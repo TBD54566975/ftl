@@ -49,7 +49,7 @@ require (
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/errors v0.3.0
 	github.com/alecthomas/participle/v2 v2.0.0
-	github.com/alecthomas/types v0.5.0
+	github.com/alecthomas/types v0.6.0
 	github.com/bufbuild/connect-grpcreflect-go v1.1.0
 	github.com/bufbuild/connect-opentelemetry-go v0.3.0
 	github.com/deckarep/golang-set/v2 v2.3.0

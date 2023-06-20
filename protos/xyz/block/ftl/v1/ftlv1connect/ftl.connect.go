@@ -191,9 +191,9 @@ type ControlPlaneServiceClient interface {
 	GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest]) (*connect_go.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error)
 	// Register a Runner with the ControlPlane.
 	//
-	// Each runner MUST stream a RegisterRunnerRequest to the ControlPlaneService
+	// Each runner issue a RegisterRunnerRequest to the ControlPlaneService
 	// every 10 seconds to maintain its heartbeat.
-	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
+	RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
 	// Starts a deployment.
 	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
 	// Stream logs from a deployment
@@ -303,8 +303,8 @@ func (c *controlPlaneServiceClient) GetDeploymentArtefacts(ctx context.Context, 
 }
 
 // RegisterRunner calls xyz.block.ftl.v1.ControlPlaneService.RegisterRunner.
-func (c *controlPlaneServiceClient) RegisterRunner(ctx context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse] {
-	return c.registerRunner.CallClientStream(ctx)
+func (c *controlPlaneServiceClient) RegisterRunner(ctx context.Context, req *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
+	return c.registerRunner.CallUnary(ctx, req)
 }
 
 // StartDeploy calls xyz.block.ftl.v1.ControlPlaneService.StartDeploy.
@@ -337,9 +337,9 @@ type ControlPlaneServiceHandler interface {
 	GetDeploymentArtefacts(context.Context, *connect_go.Request[v1.GetDeploymentArtefactsRequest], *connect_go.ServerStream[v1.GetDeploymentArtefactsResponse]) error
 	// Register a Runner with the ControlPlane.
 	//
-	// Each runner MUST stream a RegisterRunnerRequest to the ControlPlaneService
+	// Each runner issue a RegisterRunnerRequest to the ControlPlaneService
 	// every 10 seconds to maintain its heartbeat.
-	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
+	RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
 	// Starts a deployment.
 	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
 	// Stream logs from a deployment
@@ -384,7 +384,7 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		svc.GetDeploymentArtefacts,
 		opts...,
 	))
-	mux.Handle(ControlPlaneServiceRegisterRunnerProcedure, connect_go.NewClientStreamHandler(
+	mux.Handle(ControlPlaneServiceRegisterRunnerProcedure, connect_go.NewUnaryHandler(
 		ControlPlaneServiceRegisterRunnerProcedure,
 		svc.RegisterRunner,
 		opts...,
@@ -429,7 +429,7 @@ func (UnimplementedControlPlaneServiceHandler) GetDeploymentArtefacts(context.Co
 	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts is not implemented"))
 }
 
-func (UnimplementedControlPlaneServiceHandler) RegisterRunner(context.Context, *connect_go.ClientStream[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
+func (UnimplementedControlPlaneServiceHandler) RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.RegisterRunner is not implemented"))
 }
 
