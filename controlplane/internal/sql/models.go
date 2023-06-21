@@ -8,9 +8,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type MetricType string
@@ -60,10 +59,8 @@ type RunnerState string
 
 const (
 	RunnerStateIdle     RunnerState = "idle"
-	RunnerStateClaimed  RunnerState = "claimed"
 	RunnerStateReserved RunnerState = "reserved"
 	RunnerStateAssigned RunnerState = "assigned"
-	RunnerStateFailed   RunnerState = "failed"
 )
 
 func (e *RunnerState) Scan(src interface{}) error {

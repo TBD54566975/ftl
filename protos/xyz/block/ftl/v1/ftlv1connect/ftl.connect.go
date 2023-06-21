@@ -72,6 +72,8 @@ const (
 	ControlPlaneServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs"
 	// RunnerServicePingProcedure is the fully-qualified name of the RunnerService's Ping RPC.
 	RunnerServicePingProcedure = "/xyz.block.ftl.v1.RunnerService/Ping"
+	// RunnerServiceReserveProcedure is the fully-qualified name of the RunnerService's Reserve RPC.
+	RunnerServiceReserveProcedure = "/xyz.block.ftl.v1.RunnerService/Reserve"
 	// RunnerServiceDeployProcedure is the fully-qualified name of the RunnerService's Deploy RPC.
 	RunnerServiceDeployProcedure = "/xyz.block.ftl.v1.RunnerService/Deploy"
 	// RunnerServiceTerminateProcedure is the fully-qualified name of the RunnerService's Terminate RPC.
@@ -193,7 +195,7 @@ type ControlPlaneServiceClient interface {
 	//
 	// Each runner issue a RegisterRunnerRequest to the ControlPlaneService
 	// every 10 seconds to maintain its heartbeat.
-	RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
+	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RunnerHeartbeat, v1.RegisterRunnerResponse]
 	// Starts a deployment.
 	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
 	// Stream logs from a deployment
@@ -241,7 +243,7 @@ func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL stri
 			baseURL+ControlPlaneServiceGetDeploymentArtefactsProcedure,
 			opts...,
 		),
-		registerRunner: connect_go.NewClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse](
+		registerRunner: connect_go.NewClient[v1.RunnerHeartbeat, v1.RegisterRunnerResponse](
 			httpClient,
 			baseURL+ControlPlaneServiceRegisterRunnerProcedure,
 			opts...,
@@ -267,7 +269,7 @@ type controlPlaneServiceClient struct {
 	createDeployment       *connect_go.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
 	getDeployment          *connect_go.Client[v1.GetDeploymentRequest, v1.GetDeploymentResponse]
 	getDeploymentArtefacts *connect_go.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
-	registerRunner         *connect_go.Client[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
+	registerRunner         *connect_go.Client[v1.RunnerHeartbeat, v1.RegisterRunnerResponse]
 	startDeploy            *connect_go.Client[v1.StartDeployRequest, v1.StartDeployResponse]
 	streamDeploymentLogs   *connect_go.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
@@ -303,8 +305,8 @@ func (c *controlPlaneServiceClient) GetDeploymentArtefacts(ctx context.Context, 
 }
 
 // RegisterRunner calls xyz.block.ftl.v1.ControlPlaneService.RegisterRunner.
-func (c *controlPlaneServiceClient) RegisterRunner(ctx context.Context, req *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
-	return c.registerRunner.CallUnary(ctx, req)
+func (c *controlPlaneServiceClient) RegisterRunner(ctx context.Context) *connect_go.ClientStreamForClient[v1.RunnerHeartbeat, v1.RegisterRunnerResponse] {
+	return c.registerRunner.CallClientStream(ctx)
 }
 
 // StartDeploy calls xyz.block.ftl.v1.ControlPlaneService.StartDeploy.
@@ -339,7 +341,7 @@ type ControlPlaneServiceHandler interface {
 	//
 	// Each runner issue a RegisterRunnerRequest to the ControlPlaneService
 	// every 10 seconds to maintain its heartbeat.
-	RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
+	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RunnerHeartbeat]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
 	// Starts a deployment.
 	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
 	// Stream logs from a deployment
@@ -384,7 +386,7 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		svc.GetDeploymentArtefacts,
 		opts...,
 	))
-	mux.Handle(ControlPlaneServiceRegisterRunnerProcedure, connect_go.NewUnaryHandler(
+	mux.Handle(ControlPlaneServiceRegisterRunnerProcedure, connect_go.NewClientStreamHandler(
 		ControlPlaneServiceRegisterRunnerProcedure,
 		svc.RegisterRunner,
 		opts...,
@@ -429,7 +431,7 @@ func (UnimplementedControlPlaneServiceHandler) GetDeploymentArtefacts(context.Co
 	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts is not implemented"))
 }
 
-func (UnimplementedControlPlaneServiceHandler) RegisterRunner(context.Context, *connect_go.Request[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
+func (UnimplementedControlPlaneServiceHandler) RegisterRunner(context.Context, *connect_go.ClientStream[v1.RunnerHeartbeat]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.RegisterRunner is not implemented"))
 }
 
@@ -444,10 +446,12 @@ func (UnimplementedControlPlaneServiceHandler) StreamDeploymentLogs(context.Cont
 // RunnerServiceClient is a client for the xyz.block.ftl.v1.RunnerService service.
 type RunnerServiceClient interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
+	// Reserve synchronously reserves a Runner for a deployment but does nothing else.
+	Reserve(context.Context, *connect_go.Request[v1.ReserveRequest]) (*connect_go.Response[v1.ReserveResponse], error)
 	// Initiate a deployment on this Runner.
 	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
 	// Terminate the deployment on this Runner.
-	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.TerminateResponse], error)
+	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RunnerHeartbeat], error)
 }
 
 // NewRunnerServiceClient constructs a client for the xyz.block.ftl.v1.RunnerService service. By
@@ -466,12 +470,17 @@ func NewRunnerServiceClient(httpClient connect_go.HTTPClient, baseURL string, op
 			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
 			connect_go.WithClientOptions(opts...),
 		),
+		reserve: connect_go.NewClient[v1.ReserveRequest, v1.ReserveResponse](
+			httpClient,
+			baseURL+RunnerServiceReserveProcedure,
+			opts...,
+		),
 		deploy: connect_go.NewClient[v1.DeployRequest, v1.DeployResponse](
 			httpClient,
 			baseURL+RunnerServiceDeployProcedure,
 			opts...,
 		),
-		terminate: connect_go.NewClient[v1.TerminateRequest, v1.TerminateResponse](
+		terminate: connect_go.NewClient[v1.TerminateRequest, v1.RunnerHeartbeat](
 			httpClient,
 			baseURL+RunnerServiceTerminateProcedure,
 			opts...,
@@ -482,13 +491,19 @@ func NewRunnerServiceClient(httpClient connect_go.HTTPClient, baseURL string, op
 // runnerServiceClient implements RunnerServiceClient.
 type runnerServiceClient struct {
 	ping      *connect_go.Client[v1.PingRequest, v1.PingResponse]
+	reserve   *connect_go.Client[v1.ReserveRequest, v1.ReserveResponse]
 	deploy    *connect_go.Client[v1.DeployRequest, v1.DeployResponse]
-	terminate *connect_go.Client[v1.TerminateRequest, v1.TerminateResponse]
+	terminate *connect_go.Client[v1.TerminateRequest, v1.RunnerHeartbeat]
 }
 
 // Ping calls xyz.block.ftl.v1.RunnerService.Ping.
 func (c *runnerServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
+}
+
+// Reserve calls xyz.block.ftl.v1.RunnerService.Reserve.
+func (c *runnerServiceClient) Reserve(ctx context.Context, req *connect_go.Request[v1.ReserveRequest]) (*connect_go.Response[v1.ReserveResponse], error) {
+	return c.reserve.CallUnary(ctx, req)
 }
 
 // Deploy calls xyz.block.ftl.v1.RunnerService.Deploy.
@@ -497,17 +512,19 @@ func (c *runnerServiceClient) Deploy(ctx context.Context, req *connect_go.Reques
 }
 
 // Terminate calls xyz.block.ftl.v1.RunnerService.Terminate.
-func (c *runnerServiceClient) Terminate(ctx context.Context, req *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.TerminateResponse], error) {
+func (c *runnerServiceClient) Terminate(ctx context.Context, req *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RunnerHeartbeat], error) {
 	return c.terminate.CallUnary(ctx, req)
 }
 
 // RunnerServiceHandler is an implementation of the xyz.block.ftl.v1.RunnerService service.
 type RunnerServiceHandler interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
+	// Reserve synchronously reserves a Runner for a deployment but does nothing else.
+	Reserve(context.Context, *connect_go.Request[v1.ReserveRequest]) (*connect_go.Response[v1.ReserveResponse], error)
 	// Initiate a deployment on this Runner.
 	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
 	// Terminate the deployment on this Runner.
-	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.TerminateResponse], error)
+	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RunnerHeartbeat], error)
 }
 
 // NewRunnerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -522,6 +539,11 @@ func NewRunnerServiceHandler(svc RunnerServiceHandler, opts ...connect_go.Handle
 		svc.Ping,
 		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
 		connect_go.WithHandlerOptions(opts...),
+	))
+	mux.Handle(RunnerServiceReserveProcedure, connect_go.NewUnaryHandler(
+		RunnerServiceReserveProcedure,
+		svc.Reserve,
+		opts...,
 	))
 	mux.Handle(RunnerServiceDeployProcedure, connect_go.NewUnaryHandler(
 		RunnerServiceDeployProcedure,
@@ -543,11 +565,15 @@ func (UnimplementedRunnerServiceHandler) Ping(context.Context, *connect_go.Reque
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Ping is not implemented"))
 }
 
+func (UnimplementedRunnerServiceHandler) Reserve(context.Context, *connect_go.Request[v1.ReserveRequest]) (*connect_go.Response[v1.ReserveResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Reserve is not implemented"))
+}
+
 func (UnimplementedRunnerServiceHandler) Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Deploy is not implemented"))
 }
 
-func (UnimplementedRunnerServiceHandler) Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.TerminateResponse], error) {
+func (UnimplementedRunnerServiceHandler) Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RunnerHeartbeat], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Terminate is not implemented"))
 }
 

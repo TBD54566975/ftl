@@ -59,14 +59,10 @@ CREATE TABLE deployment_logs
 CREATE TYPE runner_state AS ENUM (
     -- The Runner is available to run deployments.
     'idle',
-    -- The ControlPlane has claimed the Runner, but it has not acked.
-    'claimed',
-    -- The Runner has acked the claim, but has not yet been assigned a deployment.
+    -- The Runner is reserved but has not yet deployed.
     'reserved',
     -- The Runner has been assigned a deployment.
-    'assigned',
-    -- Deploy failed.
-    'failed'
+    'assigned'
     );
 
 -- Runners are processes that are available to run modules.

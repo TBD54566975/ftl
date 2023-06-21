@@ -234,21 +234,33 @@ func (m *Local) DeregisterRunner(ctx context.Context, key model.RunnerKey) error
 	return nil
 }
 
-func (m *Local) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey, reservationTimeout time.Duration) (Runner, error) {
-	m.lock.Lock()
+func (m *Local) ReserveRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey, reservationTimeout time.Duration) (Reservation, error) {
+	panic("not implemented")
+	m.lock.Lock() //nolint:govet
 	defer m.lock.Unlock()
 	if _, ok := m.deployments[deployment]; !ok {
-		return Runner{}, errors.Wrap(ErrNotFound, "deployment")
+		return nil, errors.Wrap(ErrNotFound, "deployment")
 	}
 	for _, runner := range m.runners {
 		if runner.Language == language && runner.State == RunnerStateIdle {
-			runner.State = RunnerStateClaimed
+			runner.State = RunnerStateReserved
 			runner.reservationTimeout = time.Now().Add(reservationTimeout)
-			return runner.Runner, nil
+			return &localClaim{runner: runner, lock: &m.lock}, nil
 		}
 	}
-	return Runner{}, errors.Wrap(ErrNotFound, "no idle runners found")
+	return nil, errors.Wrap(ErrNotFound, "no idle runners found")
 }
+
+var _ Reservation = &localClaim{}
+
+type localClaim struct {
+	lock   *sync.Mutex
+	runner *localRunner
+}
+
+func (l *localClaim) Runner() Runner                 { return l.runner.Runner }
+func (l *localClaim) Commit(context.Context) error   { panic("not implemented") }
+func (l *localClaim) Rollback(context.Context) error { panic("not implemented") }
 
 func (m *Local) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
 	m.lock.Lock()
@@ -336,8 +348,9 @@ func (m *Local) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	var count int64
+	now := time.Now()
 	for _, runner := range m.runners {
-		if runner.State == RunnerStateClaimed || runner.State == RunnerStateReserved {
+		if runner.State == RunnerStateReserved && runner.reservationTimeout.Before(now) {
 			runner.State = RunnerStateIdle
 			runner.reservationTimeout = time.Time{}
 			count++

@@ -130,11 +130,14 @@ FROM deployments d
          JOIN modules m ON d.module_id = m.id
 GROUP BY d.key, d.min_replicas, m.name, m.language
 HAVING COUNT(r.id) <> d.min_replicas;
--- name: ClaimRunner :one
--- Find an idle runner and claim it for the given deployment.
+
+-- name: ReserveRunner :one
+-- Find an idle runner and reserve it for the given deployment.
 UPDATE runners
-SET state               = 'claimed',
+SET state               = 'reserved',
     reservation_timeout = $2,
+    -- If a deployment is not found, then the deployment ID is -1
+    -- and the update will fail due to a FK constraint.
     deployment_id       = COALESCE((SELECT id
                                     FROM deployments d
                                     WHERE d.key = @deployment_key
@@ -145,13 +148,6 @@ WHERE id = (SELECT id
               AND r.state = 'idle'
             LIMIT 1 FOR UPDATE SKIP LOCKED)
 RETURNING runners.*;
-
--- name: GetIdleRunnerCountsByLanguage :many
-SELECT language, COUNT(*) AS count
-FROM runners
-WHERE state = 'idle'
-GROUP BY language
-ORDER BY language;
 
 -- name: GetRunnerState :one
 SELECT state
@@ -179,7 +175,7 @@ WITH rows AS (
         SET state = 'idle',
             deployment_id = NULL,
             reservation_timeout = NULL
-        WHERE (state = 'reserved' OR state = 'claimed')
+        WHERE state = 'reserved'
             AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
         RETURNING 1)
 SELECT COUNT(*)
