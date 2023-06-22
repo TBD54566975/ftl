@@ -120,7 +120,7 @@ func Wait(ctx context.Context, retry backoff.Backoff, client Pingable) error {
 }
 
 // RetryStreamingClientStream will repeatedly call handler with the stream
-// returned by rpc until handler returns nil or the context is cancelled.
+// returned by "rpc" until handler returns nil or the context is cancelled.
 //
 // If the stream errors, it will be closed and a new call will be issued.
 func RetryStreamingClientStream[Req, Resp any](

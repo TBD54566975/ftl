@@ -61,9 +61,11 @@ func Start(ctx context.Context, config Config) error {
 		key:                model.NewRunnerKey(),
 		config:             config,
 		controlPlaneClient: controlplaneClient,
+		forceUpdate:        make(chan struct{}, 16),
 	}
+	svc.state.Store(ftlv1.RunnerState_IDLE)
 
-	go svc.registrationLoop(ctx)
+	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controlplaneClient.RegisterRunner, svc.registrationLoop)
 
 	observabilityClient := rpc.Dial(ftlv1connect.NewObservabilityServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
 
@@ -88,15 +90,23 @@ type deployment struct {
 }
 
 type Service struct {
-	key        model.RunnerKey
-	lock       sync.Mutex
-	state      atomic.Value[ftlv1.RunnerState]
-	deployment atomic.Value[types.Option[*deployment]]
+	key         model.RunnerKey
+	lock        sync.Mutex
+	state       atomic.Value[ftlv1.RunnerState]
+	forceUpdate chan struct{}
+	deployment  atomic.Value[types.Option[*deployment]]
 
 	config             Config
 	controlPlaneClient ftlv1connect.ControlPlaneServiceClient
 	// Failed to register with the ControlPlane
 	registrationFailure atomic.Value[types.Option[error]]
+}
+
+func (s *Service) Reserve(ctx context.Context, c *connect.Request[ftlv1.ReserveRequest]) (*connect.Response[ftlv1.ReserveResponse], error) {
+	if !s.state.CompareAndSwap(ftlv1.RunnerState_IDLE, ftlv1.RunnerState_RESERVED) {
+		return nil, errors.Errorf("can only reserve from IDLE state, not %s", s.state.Load())
+	}
+	return connect.NewResponse(&ftlv1.ReserveResponse{}), nil
 }
 
 // ServeHTTP proxies through to the deployment.
@@ -109,12 +119,12 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	var notReady *string
-	if err, ok := s.registrationFailure.Load().Get(); ok {
-		msg := err.Error()
-		notReady = &msg
-	}
-	return connect.NewResponse(&ftlv1.PingResponse{NotReady: notReady}), nil
+	// var notReady *string
+	// if err, ok := s.registrationFailure.Load().Get(); ok {
+	// 	msg := err.Error()
+	// 	notReady = &msg
+	// }
+	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
@@ -134,28 +144,15 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	}
 
 	// Set the state of the Runner, and update the ControlPlane.
-	setState := func(state ftlv1.RunnerState) error {
+	setState := func(state ftlv1.RunnerState) {
 		s.state.Store(state)
-		deploymentKey := types.None[string]()
-		if depl, ok := s.deployment.Load().Get(); ok {
-			deploymentKey = types.Some(depl.key.String())
-		}
-		_, err := s.controlPlaneClient.RegisterRunner(ctx, connect.NewRequest(&ftlv1.RegisterRunnerRequest{
-			Key:        s.key.String(),
-			Language:   s.config.Language,
-			Endpoint:   s.config.Endpoint.String(),
-			Deployment: deploymentKey.Ptr(),
-			State:      state,
-		}))
-		return errors.WithStack(err)
+		s.forceUpdate <- struct{}{}
 	}
 
-	if err := setState(ftlv1.RunnerState_RESERVED); err != nil {
-		return nil, errors.WithStack(err)
-	}
+	setState(ftlv1.RunnerState_RESERVED)
 	defer func() {
 		if err != nil {
-			s.state.Store(ftlv1.RunnerState_IDLE)
+			setState(ftlv1.RunnerState_IDLE)
 			s.deployment.Store(types.None[*deployment]())
 		}
 	}()
@@ -192,22 +189,27 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
 	s.deployment.Store(types.Some(s.makePluginProxy(cmdCtx, id, deployment)))
-	if err := setState(ftlv1.RunnerState_ASSIGNED); err != nil {
-		return nil, errors.WithStack(err)
-	}
+	setState(ftlv1.RunnerState_ASSIGNED)
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
 
-func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.TerminateRequest]) (*connect.Response[ftlv1.TerminateResponse], error) {
+func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.TerminateRequest]) (*connect.Response[ftlv1.RunnerHeartbeat], error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	depl, ok := s.deployment.Load().Get()
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("no deployment"))
 	}
+	deploymentKey, err := model.ParseDeploymentKey(c.Msg.DeploymentKey)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
+	}
+	if depl.key != deploymentKey {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("deployment key mismatch"))
+	}
 
 	// Soft kill.
-	err := depl.plugin.Cmd.Kill(syscall.SIGTERM)
+	err = depl.plugin.Cmd.Kill(syscall.SIGTERM)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to kill plugin")
 	}
@@ -224,7 +226,12 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 
 	s.deployment.Store(types.None[*deployment]())
 	s.state.Store(ftlv1.RunnerState_IDLE)
-	return connect.NewResponse(&ftlv1.TerminateResponse{}), nil
+	return connect.NewResponse(&ftlv1.RunnerHeartbeat{
+		Key:      s.key.String(),
+		Language: s.config.Language,
+		Endpoint: s.config.Endpoint.String(),
+		State:    ftlv1.RunnerState_IDLE,
+	}), nil
 }
 
 func (s *Service) makePluginProxy(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
@@ -236,63 +243,60 @@ func (s *Service) makePluginProxy(ctx context.Context, key model.DeploymentKey, 
 	}
 }
 
-func (s *Service) registrationLoop(ctx context.Context) {
+func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1.RunnerHeartbeat) error) error {
 	logger := log.FromContext(ctx)
-	retry := backoff.Backoff{Max: s.config.HeartbeatPeriod, Jitter: true}
 
-	for {
-		// Figure out the appropriate state.
-		state := s.state.Load()
-		var errPtr *string
-		var deploymenyKey *string
-		depl, ok := s.deployment.Load().Get()
-		if ok {
-			dkey := depl.key.String()
-			deploymenyKey = &dkey
-			select {
-			case <-depl.ctx.Done():
-				state = ftlv1.RunnerState_IDLE
-				err := context.Cause(depl.ctx)
-				errStr := err.Error()
-				errPtr = &errStr
-				logger.Errorf(err, "Deployment terminated.")
-				s.deployment.Store(types.None[*deployment]())
-
-			default:
-				state = ftlv1.RunnerState_ASSIGNED
-			}
-			s.state.Store(state)
-		}
-
-		logger.Tracef("Registering with ControlPlane as %s", state)
-		_, err := s.controlPlaneClient.RegisterRunner(ctx, connect.NewRequest(&ftlv1.RegisterRunnerRequest{
-			Key:        s.key.String(),
-			Language:   s.config.Language,
-			Endpoint:   s.config.Endpoint.String(),
-			Deployment: deploymenyKey,
-			State:      state,
-			Error:      errPtr,
-		}))
-		if err != nil {
-			logger.Errorf(err, "failed to register with ControlPlane")
-			s.registrationFailure.Store(types.Some(err))
-			time.Sleep(retry.Duration())
-			continue
-		} else {
-			s.registrationFailure.Store(types.None[error]())
-			retry.Reset()
-		}
-
-		// Wait for the next heartbeat.
-		delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
-		logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
+	// Figure out the appropriate state.
+	state := s.state.Load()
+	var errPtr *string
+	var deploymentKey *string
+	depl, ok := s.deployment.Load().Get()
+	if ok {
+		dkey := depl.key.String()
+		deploymentKey = &dkey
 		select {
-		case <-ctx.Done():
-			err = context.Cause(ctx)
-			s.registrationFailure.Store(types.Some(err))
-			return
+		case <-depl.ctx.Done():
+			state = ftlv1.RunnerState_IDLE
+			err := context.Cause(depl.ctx)
+			errStr := err.Error()
+			errPtr = &errStr
+			logger.Errorf(err, "Deployment terminated.")
+			s.deployment.Store(types.None[*deployment]())
 
-		case <-time.After(delay):
+		default:
+			state = ftlv1.RunnerState_ASSIGNED
 		}
+		s.state.Store(state)
 	}
+
+	logger.Tracef("Registering with ControlPlane as %s", state)
+	err := send(&ftlv1.RunnerHeartbeat{
+		Key:        s.key.String(),
+		Language:   s.config.Language,
+		Endpoint:   s.config.Endpoint.String(),
+		Deployment: deploymentKey,
+		State:      state,
+		Error:      errPtr,
+	})
+	if err != nil {
+		logger.Errorf(err, "failed to register with ControlPlane")
+		s.registrationFailure.Store(types.Some(err))
+		return errors.WithStack(err)
+	}
+	s.registrationFailure.Store(types.None[error]())
+
+	// Wait for the next heartbeat.
+	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
+	logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
+	select {
+	case <-ctx.Done():
+		err = context.Cause(ctx)
+		s.registrationFailure.Store(types.Some(err))
+		return errors.WithStack(err)
+
+	case <-s.forceUpdate:
+
+	case <-time.After(delay):
+	}
+	return nil
 }

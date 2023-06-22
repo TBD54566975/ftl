@@ -116,7 +116,7 @@ enum RunnerState {
   ASSIGNED = 2;
 }
 
-message RegisterRunnerRequest {
+message RunnerHeartbeat {
   // UUID representing the runner instance.
   string key = 1;
   // Language the runner supports.
@@ -127,6 +127,7 @@ message RegisterRunnerRequest {
   // If present, the reason the Runner is transitioning from ASSIGNED to IDLE.
   optional string error = 6;
 }
+
 message RegisterRunnerResponse {}
 
 message StartDeployRequest {
@@ -173,7 +174,7 @@ service ControlPlaneService {
   //
   // Each runner issue a RegisterRunnerRequest to the ControlPlaneService
   // every 10 seconds to maintain its heartbeat.
-  rpc RegisterRunner(RegisterRunnerRequest) returns (RegisterRunnerResponse);
+  rpc RegisterRunner(stream RunnerHeartbeat) returns (RegisterRunnerResponse);
 
   // Starts a deployment.
   rpc StartDeploy(StartDeployRequest) returns (StartDeployResponse);
@@ -194,7 +195,11 @@ message DeployResponse {}
 message TerminateRequest {
   string deployment_key = 1;
 }
-message TerminateResponse {}
+
+message ReserveRequest {
+  string deployment_key = 1;
+}
+message ReserveResponse {}
 
 // RunnerService is the service that executes Deployments.
 //
@@ -206,11 +211,14 @@ service RunnerService {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
+  // Reserve synchronously reserves a Runner for a deployment but does nothing else.
+  rpc Reserve(ReserveRequest) returns (ReserveResponse);
+
   // Initiate a deployment on this Runner.
   rpc Deploy(DeployRequest) returns (DeployResponse);
 
   // Terminate the deployment on this Runner.
-  rpc Terminate(TerminateRequest) returns (TerminateResponse);
+  rpc Terminate(TerminateRequest) returns (RunnerHeartbeat);
 }
 
 enum MetricType {

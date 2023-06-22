@@ -52,7 +52,7 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 
 		if err != nil {
 			err = errors.WithStack(err)
-			logger.Errorf(err, "Unary RPC failed: %s: %s", req.Spec().Procedure)
+			logger.Errorf(err, "Unary RPC failed: %s", req.Spec().Procedure)
 			return nil, err
 		}
 		return resp, nil

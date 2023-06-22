@@ -60,7 +60,7 @@ func (m *Metadata) Delete(key string) {
 	m.Values = out
 }
 
-func (r *RegisterRunnerRequest) DeploymentAsOptional() (types.Option[model.DeploymentKey], error) {
+func (r *RunnerHeartbeat) DeploymentAsOptional() (types.Option[model.DeploymentKey], error) {
 	if r.Deployment == nil {
 		return types.None[model.DeploymentKey](), nil
 	}

@@ -884,9 +884,9 @@ export class GetDeploymentResponse extends Message<GetDeploymentResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.RegisterRunnerRequest
+ * @generated from message xyz.block.ftl.v1.RunnerHeartbeat
  */
-export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
+export class RunnerHeartbeat extends Message<RunnerHeartbeat> {
   /**
    * UUID representing the runner instance.
    *
@@ -923,13 +923,13 @@ export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
    */
   error?: string;
 
-  constructor(data?: PartialMessage<RegisterRunnerRequest>) {
+  constructor(data?: PartialMessage<RunnerHeartbeat>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.RegisterRunnerRequest";
+  static readonly typeName = "xyz.block.ftl.v1.RunnerHeartbeat";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -939,20 +939,20 @@ export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
     { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RegisterRunnerRequest {
-    return new RegisterRunnerRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RunnerHeartbeat {
+    return new RunnerHeartbeat().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RegisterRunnerRequest {
-    return new RegisterRunnerRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RunnerHeartbeat {
+    return new RunnerHeartbeat().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RegisterRunnerRequest {
-    return new RegisterRunnerRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RunnerHeartbeat {
+    return new RunnerHeartbeat().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RegisterRunnerRequest | PlainMessage<RegisterRunnerRequest> | undefined, b: RegisterRunnerRequest | PlainMessage<RegisterRunnerRequest> | undefined): boolean {
-    return proto3.util.equals(RegisterRunnerRequest, a, b);
+  static equals(a: RunnerHeartbeat | PlainMessage<RunnerHeartbeat> | undefined, b: RunnerHeartbeat | PlainMessage<RunnerHeartbeat> | undefined): boolean {
+    return proto3.util.equals(RunnerHeartbeat, a, b);
   }
 }
 
@@ -1265,33 +1265,70 @@ export class TerminateRequest extends Message<TerminateRequest> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.TerminateResponse
+ * @generated from message xyz.block.ftl.v1.ReserveRequest
  */
-export class TerminateResponse extends Message<TerminateResponse> {
-  constructor(data?: PartialMessage<TerminateResponse>) {
+export class ReserveRequest extends Message<ReserveRequest> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  constructor(data?: PartialMessage<ReserveRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.TerminateResponse";
+  static readonly typeName = "xyz.block.ftl.v1.ReserveRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReserveRequest {
+    return new ReserveRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ReserveRequest {
+    return new ReserveRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ReserveRequest {
+    return new ReserveRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ReserveRequest | PlainMessage<ReserveRequest> | undefined, b: ReserveRequest | PlainMessage<ReserveRequest> | undefined): boolean {
+    return proto3.util.equals(ReserveRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.ReserveResponse
+ */
+export class ReserveResponse extends Message<ReserveResponse> {
+  constructor(data?: PartialMessage<ReserveResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.ReserveResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TerminateResponse {
-    return new TerminateResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReserveResponse {
+    return new ReserveResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TerminateResponse {
-    return new TerminateResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ReserveResponse {
+    return new ReserveResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TerminateResponse {
-    return new TerminateResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ReserveResponse {
+    return new ReserveResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TerminateResponse | PlainMessage<TerminateResponse> | undefined, b: TerminateResponse | PlainMessage<TerminateResponse> | undefined): boolean {
-    return proto3.util.equals(TerminateResponse, a, b);
+  static equals(a: ReserveResponse | PlainMessage<ReserveResponse> | undefined, b: ReserveResponse | PlainMessage<ReserveResponse> | undefined): boolean {
+    return proto3.util.equals(ReserveResponse, a, b);
   }
 }
 

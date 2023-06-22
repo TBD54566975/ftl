@@ -27,7 +27,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/slices"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
 )
@@ -82,32 +81,6 @@ func (d *Postgres) CreateArtefact(ctx context.Context, content []byte) (digest s
 	sha256digest := sha256.Sum(content)
 	_, err = d.db.CreateArtefact(ctx, sha256digest[:], content)
 	return sha256digest, errors.WithStack(translatePGError(err))
-}
-
-type DeploymentArtefact struct {
-	Digest     sha256.SHA256
-	Executable bool
-	Path       string
-}
-
-func (d *DeploymentArtefact) ToProto() *ftlv1.DeploymentArtefact {
-	return &ftlv1.DeploymentArtefact{
-		Digest:     d.Digest.String(),
-		Executable: d.Executable,
-		Path:       d.Path,
-	}
-}
-
-func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefact, error) {
-	digest, err := sha256.ParseSHA256(in.Digest)
-	if err != nil {
-		return DeploymentArtefact{}, errors.WithStack(err)
-	}
-	return DeploymentArtefact{
-		Digest:     digest,
-		Executable: in.Executable,
-		Path:       in.Path,
-	}, nil
 }
 
 // CreateDeployment (possibly) creates a new deployment and associates
@@ -238,44 +211,56 @@ func (d *Postgres) DeregisterRunner(ctx context.Context, key model.RunnerKey) er
 	return nil
 }
 
-type Runner struct {
-	Key      model.RunnerKey
-	Language string
-	Endpoint string
-	State    RunnerState
-	// Assigned deployment key, if any.
-	Deployment types.Option[model.DeploymentKey]
-}
-
-// ClaimRunnerForDeployment reserves a runner for the given deployment.
-//
-// Once a runner is reserved, it will be unavailable for other reservations
-// or deployments and will not be returned by GetIdleRunnersForLanguage.
-func (d *Postgres) ClaimRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey, reservationTimeout time.Duration) (Runner, error) {
-	runner, err := d.db.ClaimRunner(ctx, language, pgtype.Timestamptz{Time: time.Now().Add(reservationTimeout), Valid: true}, sqltypes.Key(deployment))
+func (d *Postgres) ReserveRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey, reservationTimeout time.Duration) (Reservation, error) {
+	ctx, cancel := context.WithTimeout(ctx, reservationTimeout)
+	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		if isNotFound(err) {
-			counts, err := d.db.GetIdleRunnerCountsByLanguage(ctx)
-			if err != nil {
-				return Runner{}, errors.WithStack(translatePGError(err))
-			}
-			msg := fmt.Sprintf("no idle runners for language %q", language)
-			if len(counts) > 0 {
-				msg += ": available: " + strings.Join(slices.Map(counts, func(in sql.GetIdleRunnerCountsByLanguageRow) string {
-					return fmt.Sprintf("%s:%d", in.Language, in.Count)
-				}), ", ")
-			}
-			return Runner{}, errors.Wrap(ErrNotFound, msg)
-		}
-		return Runner{}, errors.WithStack(translatePGError(err))
+		cancel()
+		return nil, errors.WithStack(translatePGError(err))
 	}
-	return Runner{
-		Key:      model.RunnerKey(runner.Key),
-		Language: runner.Language,
-		Endpoint: runner.Endpoint,
-		State:    RunnerState(runner.State),
+	runner, err := tx.ReserveRunner(ctx, language, pgtype.Timestamptz{Time: time.Now().Add(reservationTimeout), Valid: true}, sqltypes.Key(deployment))
+	if err != nil {
+		if rerr := tx.Rollback(context.Background()); rerr != nil {
+			err = errors.Join(err, errors.WithStack(translatePGError(rerr)))
+		}
+		cancel()
+		if isNotFound(err) {
+			return nil, errors.Wrapf(ErrNotFound, "no idle runners for language %q", language)
+		}
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	return &postgresClaim{
+		cancel: cancel,
+		tx:     tx,
+		runner: Runner{
+			Key:        model.RunnerKey(runner.Key),
+			Language:   runner.Language,
+			Endpoint:   runner.Endpoint,
+			State:      RunnerState(runner.State),
+			Deployment: types.Some(deployment),
+		},
 	}, nil
 }
+
+var _ Reservation = (*postgresClaim)(nil)
+
+type postgresClaim struct {
+	tx     *sql.Tx
+	runner Runner
+	cancel context.CancelFunc
+}
+
+func (p *postgresClaim) Commit(ctx context.Context) error {
+	defer p.cancel()
+	return errors.WithStack(translatePGError(p.tx.Commit(ctx)))
+}
+
+func (p *postgresClaim) Rollback(ctx context.Context) error {
+	defer p.cancel()
+	return errors.WithStack(translatePGError(p.tx.Rollback(ctx)))
+}
+
+func (p *postgresClaim) Runner() Runner { return p.runner }
 
 // SetDeploymentReplicas activates the given deployment.
 func (d *Postgres) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
@@ -284,15 +269,6 @@ func (d *Postgres) SetDeploymentReplicas(ctx context.Context, key model.Deployme
 		return errors.WithStack(translatePGError(err))
 	}
 	return nil
-}
-
-type Reconciliation struct {
-	Deployment model.DeploymentKey
-	Module     string
-	Language   string
-
-	AssignedReplicas int
-	RequiredReplicas int
 }
 
 // GetDeploymentsNeedingReconciliation returns deployments that have a
@@ -343,20 +319,6 @@ func (d *Postgres) GetRoutingTable(ctx context.Context, module string) ([]string
 		return nil, errors.WithStack(ErrNotFound)
 	}
 	return routes, errors.WithStack(translatePGError(err))
-}
-
-type RunnerState string
-
-// Runner states.
-const (
-	RunnerStateIdle     = RunnerState(sql.RunnerStateIdle)
-	RunnerStateClaimed  = RunnerState(sql.RunnerStateClaimed)
-	RunnerStateReserved = RunnerState(sql.RunnerStateReserved)
-	RunnerStateAssigned = RunnerState(sql.RunnerStateAssigned)
-)
-
-func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
-	return RunnerState(strings.ToLower(state.String()))
 }
 
 func (d *Postgres) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
@@ -417,36 +379,6 @@ func (d *Postgres) loadDeployment(ctx context.Context, deployment sql.GetDeploym
 		}
 	})
 	return out, nil
-}
-
-type DataPoint interface {
-	isDataPoint()
-}
-
-type MetricHistogram struct {
-	Count  int64
-	Sum    int64
-	Bucket []int64
-}
-
-func (MetricHistogram) isDataPoint() {}
-
-type MetricCounter struct {
-	Value int64
-}
-
-func (MetricCounter) isDataPoint() {}
-
-type Metric struct {
-	RunnerKey    model.RunnerKey
-	StartTime    time.Time
-	EndTime      time.Time
-	SourceModule string
-	SourceVerb   string
-	DestModule   string
-	DestVerb     string
-	Name         string
-	DataPoint    DataPoint
 }
 
 func (d *Postgres) InsertMetricEntry(ctx context.Context, metric Metric) error {
@@ -510,6 +442,9 @@ func isNotFound(err error) bool {
 }
 
 func translatePGError(err error) error {
+	if err == nil {
+		return nil
+	}
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.ForeignKeyViolation {

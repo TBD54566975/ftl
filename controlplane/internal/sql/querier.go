@@ -14,8 +14,6 @@ import (
 
 type Querier interface {
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
-	// Find an idle runner and claim it for the given deployment.
-	ClaimRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error)
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
@@ -33,7 +31,6 @@ type Querier interface {
 	GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error)
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
-	GetIdleRunnerCountsByLanguage(ctx context.Context) ([]GetIdleRunnerCountsByLanguageRow, error)
 	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetRoutingTable(ctx context.Context, name string) ([]string, error)
@@ -41,6 +38,8 @@ type Querier interface {
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
 	InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error
+	// Find an idle runner and reserve it for the given deployment.
+	ReserveRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.

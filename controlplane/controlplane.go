@@ -123,58 +123,76 @@ func (s *Service) StartDeploy(ctx context.Context, req *connect.Request[ftlv1.St
 	return connect.NewResponse(&ftlv1.StartDeployResponse{}), nil
 }
 
-func (s *Service) RegisterRunner(ctx context.Context, req *connect.Request[ftlv1.RegisterRunnerRequest]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
-	logger := log.FromContext(ctx)
-	msg := req.Msg
-	endpoint, err := url.Parse(msg.Endpoint)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid endpoint"))
-	}
-	if endpoint.Scheme != "http" && endpoint.Scheme != "https" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("invalid endpoint scheme %q", endpoint.Scheme))
-	}
-	runnerKey, err := model.ParseRunnerKey(msg.Key)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid key"))
-	}
+func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStream[ftlv1.RunnerHeartbeat]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
+	initialised := false
 
-	// Check if we can contact the runner.
+	logger := log.FromContext(ctx)
+	for stream.Receive() {
+		msg := stream.Msg()
+		endpoint, err := url.Parse(msg.Endpoint)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid endpoint"))
+		}
+		if endpoint.Scheme != "http" && endpoint.Scheme != "https" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("invalid endpoint scheme %q", endpoint.Scheme))
+		}
+		runnerKey, err := model.ParseRunnerKey(msg.Key)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid key"))
+		}
+
+		runnerStr := fmt.Sprintf("%s (%s)", endpoint, runnerKey)
+		logger.Tracef("Heartbeat received from runner %s", runnerStr)
+
+		if !initialised {
+			// Deregister the runner if the Runner disconnects.
+			defer func() {
+				err := s.dal.DeregisterRunner(context.Background(), runnerKey)
+				if err != nil {
+					logger.Errorf(err, "Could not deregister runner %s", runnerStr)
+				}
+			}()
+			err = s.pingRunner(ctx, endpoint)
+			if err != nil {
+				return nil, errors.Wrap(err, "runner callback failed")
+			}
+			initialised = true
+		}
+
+		maybeDeployment, err := msg.DeploymentAsOptional()
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
+		}
+		err = s.dal.UpsertRunner(ctx, dal.Runner{
+			Key:        runnerKey,
+			Language:   msg.Language,
+			Endpoint:   msg.Endpoint,
+			State:      dal.RunnerStateFromProto(msg.State),
+			Deployment: maybeDeployment,
+		})
+		if errors.Is(err, dal.ErrConflict) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, err)
+		} else if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+	if stream.Err() != nil {
+		return nil, errors.WithStack(stream.Err())
+	}
+	return connect.NewResponse(&ftlv1.RegisterRunnerResponse{}), nil
+}
+
+// Check if we can contact the runner.
+func (s *Service) pingRunner(ctx context.Context, endpoint *url.URL) error {
 	client := rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint.String(), log.Error)
 	retry := backoff.Backoff{}
-	err = rpc.Wait(ctx, retry, client)
+	heartbeatCtx, cancel := context.WithTimeout(ctx, s.heartbeatTimeout)
+	defer cancel()
+	err := rpc.Wait(heartbeatCtx, retry, client)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to connect to runner"))
+		return connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to connect to runner"))
 	}
-
-	maybeDeployment, err := msg.DeploymentAsOptional()
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
-	}
-	oldState, err := s.dal.GetRunnerState(ctx, runnerKey)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	newState := dal.RunnerStateFromProto(msg.State)
-	// This captures the case where the ControlPlane has assigned a Runner to a Deployment,
-	// but the Runner has not yet received the assignment.
-	if oldState == dal.RunnerStateAssigned && newState == dal.RunnerStateIdle {
-		newState = dal.RunnerStateAssigned
-	}
-	err = s.dal.UpsertRunner(ctx, dal.Runner{
-		Key:        runnerKey,
-		Language:   msg.Language,
-		Endpoint:   msg.Endpoint,
-		State:      newState,
-		Deployment: maybeDeployment,
-	}) //
-	if errors.Is(err, dal.ErrConflict) {
-		return nil, connect.NewError(connect.CodeAlreadyExists, err)
-	} else if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	runnerStr := fmt.Sprintf("%s (%s)", endpoint, runnerKey)
-	logger.Tracef("Heartbeat received from runner %s", runnerStr)
-	return connect.NewResponse(&ftlv1.RegisterRunnerResponse{}), nil
+	return nil
 }
 
 func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentRequest]) (*connect.Response[ftlv1.GetDeploymentResponse], error) {
@@ -312,6 +330,7 @@ func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deploym
 	return deployment, nil
 }
 
+// Return or create the RunnerService and VerbService clients for a Runner endpoint.
 func (s *Service) clientsForEndpoint(endpoint string) clients {
 	s.clientsMu.Lock()
 	defer s.clientsMu.Unlock()
@@ -415,22 +434,45 @@ func (s *Service) terminateRandomRunner(ctx context.Context, key model.Deploymen
 	}
 	runner := runners[rand.Intn(len(runners))] //nolint:gosec
 	client := s.clientsForEndpoint(runner.Endpoint)
-	_, err = client.runner.Terminate(ctx, connect.NewRequest(&ftlv1.TerminateRequest{DeploymentKey: key.String()}))
+	resp, err := client.runner.Terminate(ctx, connect.NewRequest(&ftlv1.TerminateRequest{DeploymentKey: key.String()}))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	err = s.dal.UpsertRunner(ctx, dal.Runner{
+		Key:      runner.Key,
+		Language: runner.Language,
+		Endpoint: runner.Endpoint,
+		State:    dal.RunnerStateFromProto(resp.Msg.State),
+	})
+	return errors.WithStack(err)
+}
+
+func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error {
+	client, err := s.reserveRunner(ctx, reconcile)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	_, err = client.runner.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{DeploymentKey: reconcile.Key.String()}))
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
 }
 
-func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error {
-	runner, err := s.dal.ClaimRunnerForDeployment(ctx, reconcile.Language, reconcile.Key, s.deploymentReservationTimeout)
+func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment) (client clients, err error) {
+	// A timeout context applied to the transaction and the Runner.Reserve() call.
+	reservationCtx, cancel := context.WithTimeout(ctx, s.deploymentReservationTimeout)
+	defer cancel()
+	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Language, reconcile.Key, s.deploymentReservationTimeout)
 	if err != nil {
-		return errors.Wrapf(err, "failed to claim runners for %s", reconcile.Key)
+		return clients{}, errors.Wrapf(err, "failed to claim runners for %s", reconcile.Key)
 	}
-	client := s.clientsForEndpoint(runner.Endpoint)
-	_, err = client.runner.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{DeploymentKey: reconcile.Key.String()}))
-	if err != nil {
+
+	err = errors.WithStack(dal.WithReservation(reservationCtx, claim, func() error {
+		client = s.clientsForEndpoint(claim.Runner().Endpoint)
+		_, err = client.runner.Reserve(reservationCtx, connect.NewRequest(&ftlv1.ReserveRequest{DeploymentKey: reconcile.Key.String()}))
 		return errors.WithStack(err)
-	}
-	return nil
+	}))
+	return
 }

@@ -35,39 +35,6 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 	return err
 }
 
-const claimRunner = `-- name: ClaimRunner :one
-UPDATE runners
-SET state               = 'claimed',
-    reservation_timeout = $2,
-    deployment_id       = COALESCE((SELECT id
-                                    FROM deployments d
-                                    WHERE d.key = $3
-                                    LIMIT 1), -1)
-WHERE id = (SELECT id
-            FROM runners r
-            WHERE r.language = $1
-              AND r.state = 'idle'
-            LIMIT 1 FOR UPDATE SKIP LOCKED)
-RETURNING runners.id, runners.key, runners.last_seen, runners.reservation_timeout, runners.state, runners.language, runners.endpoint, runners.deployment_id
-`
-
-// Find an idle runner and claim it for the given deployment.
-func (q *Queries) ClaimRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error) {
-	row := q.db.QueryRow(ctx, claimRunner, language, reservationTimeout, deploymentKey)
-	var i Runner
-	err := row.Scan(
-		&i.ID,
-		&i.Key,
-		&i.LastSeen,
-		&i.ReservationTimeout,
-		&i.State,
-		&i.Language,
-		&i.Endpoint,
-		&i.DeploymentID,
-	)
-	return i, err
-}
-
 const createArtefact = `-- name: CreateArtefact :one
 INSERT INTO artefacts (digest, content)
 VALUES ($1, $2)
@@ -129,7 +96,7 @@ WITH rows AS (
         SET state = 'idle',
             deployment_id = NULL,
             reservation_timeout = NULL
-        WHERE (state = 'reserved' OR state = 'claimed')
+        WHERE state = 'reserved'
             AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
         RETURNING 1)
 SELECT COUNT(*)
@@ -393,39 +360,6 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 	return items, nil
 }
 
-const getIdleRunnerCountsByLanguage = `-- name: GetIdleRunnerCountsByLanguage :many
-SELECT language, COUNT(*) AS count
-FROM runners
-WHERE state = 'idle'
-GROUP BY language
-ORDER BY language
-`
-
-type GetIdleRunnerCountsByLanguageRow struct {
-	Language string
-	Count    int64
-}
-
-func (q *Queries) GetIdleRunnerCountsByLanguage(ctx context.Context) ([]GetIdleRunnerCountsByLanguageRow, error) {
-	rows, err := q.db.Query(ctx, getIdleRunnerCountsByLanguage)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetIdleRunnerCountsByLanguageRow
-	for rows.Next() {
-		var i GetIdleRunnerCountsByLanguageRow
-		if err := rows.Scan(&i.Language, &i.Count); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getIdleRunnersForLanguage = `-- name: GetIdleRunnersForLanguage :many
 SELECT id, key, last_seen, reservation_timeout, state, language, endpoint, deployment_id
 FROM runners
@@ -627,6 +561,41 @@ func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryPa
 		arg.Value,
 	)
 	return err
+}
+
+const reserveRunner = `-- name: ReserveRunner :one
+UPDATE runners
+SET state               = 'reserved',
+    reservation_timeout = $2,
+    -- If a deployment is not found, then the deployment ID is -1
+    -- and the update will fail due to a FK constraint.
+    deployment_id       = COALESCE((SELECT id
+                                    FROM deployments d
+                                    WHERE d.key = $3
+                                    LIMIT 1), -1)
+WHERE id = (SELECT id
+            FROM runners r
+            WHERE r.language = $1
+              AND r.state = 'idle'
+            LIMIT 1 FOR UPDATE SKIP LOCKED)
+RETURNING runners.id, runners.key, runners.last_seen, runners.reservation_timeout, runners.state, runners.language, runners.endpoint, runners.deployment_id
+`
+
+// Find an idle runner and reserve it for the given deployment.
+func (q *Queries) ReserveRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error) {
+	row := q.db.QueryRow(ctx, reserveRunner, language, reservationTimeout, deploymentKey)
+	var i Runner
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.LastSeen,
+		&i.ReservationTimeout,
+		&i.State,
+		&i.Language,
+		&i.Endpoint,
+		&i.DeploymentID,
+	)
+	return i, err
 }
 
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
