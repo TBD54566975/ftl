@@ -24,7 +24,6 @@ func TestPostgresDAL(t *testing.T) {
 }
 
 func TestLocalDAL(t *testing.T) {
-	t.Skip("Disabled temporarily.")
 	dal := NewLocal(t.TempDir())
 	assert.NotZero(t, dal)
 	testDAL(t, dal)
