@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
@@ -24,6 +25,7 @@ import (
 var _ DAL = (*Local)(nil)
 
 type localRunner struct {
+	locked bool
 	Runner
 	lastUpdated        time.Time
 	reservationTimeout time.Time
@@ -48,7 +50,7 @@ func NewLocal(blobStoreDir string) *Local {
 
 // Local is an in-memory DAL for local development and testing.
 type Local struct {
-	lock                      sync.Mutex
+	lock                      sync.RWMutex
 	blobStoreDir              string
 	modules                   map[string]*sql.Module
 	deployments               map[model.DeploymentKey]*localDeployment
@@ -58,8 +60,8 @@ type Local struct {
 }
 
 func (m *Local) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	if _, ok := m.deployments[deployment]; !ok {
 		return nil, errors.Wrapf(ErrNotFound, "deployment %q not found", deployment)
 	}
@@ -85,8 +87,8 @@ func (m *Local) UpsertModule(ctx context.Context, language, name string) (err er
 }
 
 func (m *Local) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	missing := make([]sha256.SHA256, 0, len(digests))
 	for _, digest := range digests {
 		_, err := os.Stat(m.blobPath(digest))
@@ -100,8 +102,8 @@ func (m *Local) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256
 }
 
 func (m *Local) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	fw, err := os.CreateTemp(m.blobStoreDir, "blob-*")
 	if err != nil {
 		return sha256.SHA256{}, errors.WithStack(err)
@@ -176,8 +178,8 @@ func (m *Local) CreateDeployment(ctx context.Context, language string, schema *s
 }
 
 func (m *Local) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	deployment, ok := m.deployments[id]
 	if !ok {
 		return nil, errors.Wrap(ErrNotFound, "deployment")
@@ -214,7 +216,7 @@ func (m *Local) DeleteStaleRunners(ctx context.Context, age time.Duration) (int6
 	defer m.lock.Unlock()
 	var count int64
 	for _, runner := range m.runners {
-		if time.Since(runner.lastUpdated) > age {
+		if time.Since(runner.lastUpdated) > age && !runner.locked {
 			count++
 			delete(m.runners, runner.Key)
 			delete(m.runnersByEndpoint, runner.Endpoint)
@@ -226,8 +228,7 @@ func (m *Local) DeleteStaleRunners(ctx context.Context, age time.Duration) (int6
 func (m *Local) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	_, ok := m.runners[key]
-	if !ok {
+	if _, ok := m.runners[key]; !ok {
 		return errors.Wrap(ErrNotFound, "runner")
 	}
 	delete(m.runners, key)
@@ -235,32 +236,50 @@ func (m *Local) DeregisterRunner(ctx context.Context, key model.RunnerKey) error
 }
 
 func (m *Local) ReserveRunnerForDeployment(ctx context.Context, language string, deployment model.DeploymentKey, reservationTimeout time.Duration) (Reservation, error) {
-	panic("not implemented")
-	m.lock.Lock() //nolint:govet
+	m.lock.Lock()
 	defer m.lock.Unlock()
 	if _, ok := m.deployments[deployment]; !ok {
 		return nil, errors.Wrap(ErrNotFound, "deployment")
 	}
 	for _, runner := range m.runners {
-		if runner.Language == language && runner.State == RunnerStateIdle {
-			runner.State = RunnerStateReserved
+		if runner.Language == language && runner.State == RunnerStateIdle && !runner.locked {
+			runner.locked = true
 			runner.reservationTimeout = time.Now().Add(reservationTimeout)
-			return &localClaim{runner: runner, lock: &m.lock}, nil
+
+			future := runner.Runner
+			future.State = RunnerStateReserved
+			future.Deployment = types.Some(deployment)
+			return &localReservation{runner: runner, lock: &m.lock, future: future}, nil
 		}
 	}
 	return nil, errors.Wrap(ErrNotFound, "no idle runners found")
 }
 
-var _ Reservation = &localClaim{}
+var _ Reservation = &localReservation{}
 
-type localClaim struct {
-	lock   *sync.Mutex
+type localReservation struct {
+	lock   *sync.RWMutex
 	runner *localRunner
+	future Runner
 }
 
-func (l *localClaim) Runner() Runner                 { return l.runner.Runner }
-func (l *localClaim) Commit(context.Context) error   { panic("not implemented") }
-func (l *localClaim) Rollback(context.Context) error { panic("not implemented") }
+func (l *localReservation) Runner() Runner { return l.future }
+
+func (l *localReservation) Commit(context.Context) error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.runner.locked = false
+	l.runner.State = l.future.State
+	l.runner.Key = l.future.Key
+	return nil
+}
+
+func (l *localReservation) Rollback(context.Context) error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.runner.locked = false
+	return nil
+}
 
 func (m *Local) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
 	m.lock.Lock()
@@ -274,8 +293,8 @@ func (m *Local) SetDeploymentReplicas(ctx context.Context, key model.DeploymentK
 }
 
 func (m *Local) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconciliation, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	out := []Reconciliation{}
 	deploymentCounts := map[model.DeploymentKey]int{}
 	for _, runner := range m.runners {
@@ -301,8 +320,8 @@ func (m *Local) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reco
 }
 
 func (m *Local) GetIdleRunnersForLanguage(ctx context.Context, language string, limit int) ([]Runner, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	var runners []Runner
 	for _, runner := range m.runners {
 		if runner.Language == language && runner.State == RunnerStateIdle {
@@ -316,8 +335,8 @@ func (m *Local) GetIdleRunnersForLanguage(ctx context.Context, language string, 
 }
 
 func (m *Local) GetRoutingTable(ctx context.Context, module string) ([]string, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	var endpoints []string
 	for _, runner := range m.runners {
 		if runner.State == RunnerStateAssigned {
@@ -335,8 +354,8 @@ func (m *Local) GetRoutingTable(ctx context.Context, module string) ([]string, e
 }
 
 func (m *Local) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	runner, ok := m.runners[runnerKey]
 	if !ok {
 		return RunnerStateIdle, errors.Wrap(ErrNotFound, "runner")
@@ -369,6 +388,35 @@ func (m *Local) InsertMetricEntry(ctx context.Context, metric Metric) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	panic("implement me")
+}
+
+// runnerSpinLock spins until the runner-lock is released,
+// releasing the database lock while it does so.
+//
+// It will always return with the database lock held.
+// If the runner doesn't exist this will return false.
+// This MUST be called with the database lock held.
+func (m *Local) runnerSpinLock(key model.RunnerKey) bool {
+	deadline := time.Now().Add(time.Second * 5)
+	if m.lock.TryLock() {
+		panic("runnerSpinLock MUST be called with the lock held")
+	}
+	for {
+		runner, ok := m.runners[key]
+		if !ok {
+			return false
+		}
+		if !runner.locked {
+			runner.locked = true
+			return true
+		}
+		m.lock.Unlock()
+		time.Sleep(time.Millisecond)
+		if time.Now().After(deadline) {
+			panic("runnerSpinLock timed out")
+		}
+		m.lock.Lock()
+	}
 }
 
 type lazyFileReader struct {
