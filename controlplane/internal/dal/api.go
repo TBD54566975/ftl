@@ -101,15 +101,13 @@ type MetricCounter struct {
 func (MetricCounter) isDataPoint() {}
 
 type Metric struct {
-	RunnerKey    model.RunnerKey
-	StartTime    time.Time
-	EndTime      time.Time
-	SourceModule string
-	SourceVerb   string
-	DestModule   string
-	DestVerb     string
-	Name         string
-	DataPoint    DataPoint
+	RunnerKey  model.RunnerKey
+	StartTime  time.Time
+	EndTime    time.Time
+	sourceVerb schema.VerbRef
+	destVerb   schema.VerbRef
+	Name       string
+	DataPoint  DataPoint
 }
 
 // A Reservation of a Runner.

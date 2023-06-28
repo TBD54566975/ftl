@@ -210,7 +210,7 @@ func testDAL(t *testing.T, dal DAL) {
 	t.Run("GetRunnersForDeployment", func(t *testing.T) {
 		runners, err := dal.GetRunnersForDeployment(ctx, deploymentKey)
 		assert.NoError(t, err)
-		assert.Equal(t, []Runner{Runner{
+		assert.Equal(t, []Runner{{
 			Key:        runnerID,
 			Language:   "go",
 			Endpoint:   "http://localhost:8080",
