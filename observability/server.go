@@ -40,12 +40,14 @@ func (o *Observability) Export(ctx context.Context, req *connect.Request[colmetr
 		}
 	}
 
-	_, err := o.client.SendMetric(ctx, connect.NewRequest(&ftlv1.SendMetricRequest{
-		RunnerKey:    o.runnerKey.String(),
-		ScopeMetrics: ftlMetrics,
-	}))
-	if err != nil {
-		return nil, errors.WithStack(err)
+	if len(ftlMetrics) > 0 {
+		_, err := o.client.SendMetric(ctx, connect.NewRequest(&ftlv1.SendMetricRequest{
+			RunnerKey:    o.runnerKey.String(),
+			ScopeMetrics: ftlMetrics,
+		}))
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	return connect.NewResponse(&colmetricsv1.ExportMetricsServiceResponse{}), nil
