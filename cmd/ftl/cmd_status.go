@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+	"github.com/golang/protobuf/jsonpb"
 
 	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -15,6 +17,7 @@ import (
 )
 
 type statusCmd struct {
+	JSON   bool `help:"Output JSON."`
 	Schema bool `help:"Show schema."`
 }
 
@@ -23,6 +26,16 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	if s.JSON {
+		msg := status.Msg
+		if !s.Schema {
+			for _, deployment := range msg.Deployments {
+				deployment.Schema = nil
+			}
+		}
+		return errors.WithStack((&jsonpb.Marshaler{}).Marshal(os.Stdout, status.Msg))
+	}
+
 	runnerFmt := "%-27s%-9s%-9s%-27s%s\n"
 	fmt.Printf(runnerFmt, "Runner", "State", "Language", "Deployment", "Endpoint")
 	fmt.Printf(runnerFmt, strings.Repeat("-", 26), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 26), strings.Repeat("-", 8))
