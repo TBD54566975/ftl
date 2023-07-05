@@ -29,3 +29,21 @@ func Filter[T any](slice []T, fn func(T) bool) []T {
 	}
 	return result
 }
+
+// GroupBy groups the elements of a slice by the result of a function.
+func GroupBy[T any, K comparable](slice []T, fn func(T) K) map[K][]T {
+	result := make(map[K][]T)
+	for _, v := range slice {
+		key := fn(v)
+		result[key] = append(result[key], v)
+	}
+	return result
+}
+
+func Reduce[T, U any](slice []T, initial U, fn func(U, T) U) U {
+	result := initial
+	for _, v := range slice {
+		result = fn(result, v)
+	}
+	return result
+}

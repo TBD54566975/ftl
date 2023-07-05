@@ -41,6 +41,53 @@ type Postgres struct {
 	db *sql.DB
 }
 
+func (d *Postgres) GetStatus(ctx context.Context) (Status, error) {
+	runners, err := d.db.GetActiveRunners(ctx)
+	if err != nil {
+		return Status{}, errors.Wrap(translatePGError(err), "could not get active runners")
+	}
+	deployments, err := d.db.GetActiveDeployments(ctx)
+	if err != nil {
+		return Status{}, errors.Wrap(translatePGError(err), "could not get active deployments")
+	}
+	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
+		protoSchema := &pschema.Module{}
+		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
+			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
+		}
+		modelSchema, err := schema.ModuleFromProto(protoSchema)
+		if err != nil {
+			return Deployment{}, errors.Wrapf(err, "%q: invalid schema in database", in.ModuleName)
+		}
+		return Deployment{
+			Key:         model.DeploymentKey(in.Key),
+			Module:      in.ModuleName,
+			Language:    in.Language,
+			MinReplicas: int(in.MinReplicas),
+			Schema:      modelSchema,
+		}, nil
+	})
+	if err != nil {
+		return Status{}, errors.WithStack(err)
+	}
+	return Status{
+		Deployments: statusDeployments,
+		Runners: slices.Map(runners, func(in sql.GetActiveRunnersRow) Runner {
+			var deployment types.Option[model.DeploymentKey]
+			if in.DeploymentKey.Valid {
+				deployment = types.Some(model.DeploymentKey(in.DeploymentKey.Bytes))
+			}
+			return Runner{
+				Key:        model.RunnerKey(in.RunnerKey),
+				Language:   in.Language,
+				Endpoint:   in.Endpoint,
+				State:      RunnerState(in.State),
+				Deployment: deployment,
+			}
+		}),
+	}, nil
+}
+
 func (d *Postgres) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error) {
 	runners := []Runner{}
 	rows, err := d.db.GetRunnersForDeployment(ctx, sqltypes.Key(deployment))

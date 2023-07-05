@@ -7,9 +7,8 @@ package sql
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -20,6 +19,8 @@ type Querier interface {
 	DeleteStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
+	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
+	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)

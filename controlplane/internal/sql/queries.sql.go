@@ -8,9 +8,8 @@ package sql
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
@@ -108,6 +107,95 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getActiveDeployments = `-- name: GetActiveDeployments :many
+SELECT d.id, d.key, d.min_replicas, d.created_at, d.schema, m.name AS module_name, m.language
+FROM deployments d
+         INNER JOIN modules m on d.module_id = m.id
+WHERE min_replicas > 0
+ORDER BY d.key
+`
+
+type GetActiveDeploymentsRow struct {
+	ID          int64
+	Key         sqltypes.Key
+	MinReplicas int32
+	CreatedAt   pgtype.Timestamptz
+	Schema      []byte
+	ModuleName  string
+	Language    string
+}
+
+func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error) {
+	rows, err := q.db.Query(ctx, getActiveDeployments)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveDeploymentsRow
+	for rows.Next() {
+		var i GetActiveDeploymentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Key,
+			&i.MinReplicas,
+			&i.CreatedAt,
+			&i.Schema,
+			&i.ModuleName,
+			&i.Language,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getActiveRunners = `-- name: GetActiveRunners :many
+SELECT r.key AS runner_key, r.language, r.endpoint, r.state, r.last_seen, d.key AS deployment_key
+FROM runners r
+         LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
+ORDER BY r.key
+`
+
+type GetActiveRunnersRow struct {
+	RunnerKey     sqltypes.Key
+	Language      string
+	Endpoint      string
+	State         RunnerState
+	LastSeen      pgtype.Timestamptz
+	DeploymentKey pgtype.UUID
+}
+
+func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error) {
+	rows, err := q.db.Query(ctx, getActiveRunners)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveRunnersRow
+	for rows.Next() {
+		var i GetActiveRunnersRow
+		if err := rows.Scan(
+			&i.RunnerKey,
+			&i.Language,
+			&i.Endpoint,
+			&i.State,
+			&i.LastSeen,
+			&i.DeploymentKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getArtefactContentRange = `-- name: GetArtefactContentRange :one

@@ -260,7 +260,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 			err := context.Cause(depl.ctx)
 			errStr := err.Error()
 			errPtr = &errStr
-			logger.Errorf(err, "Deployment terminated.")
+			logger.Errorf(err, "Deployment terminated")
 			s.deployment.Store(types.None[*deployment]())
 
 		default:

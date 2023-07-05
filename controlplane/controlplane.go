@@ -88,6 +88,39 @@ type Service struct {
 	clients map[string]clients
 }
 
+func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
+	status, err := s.dal.GetStatus(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get status")
+	}
+	resp := &ftlv1.StatusResponse{
+		Runners: slices.Map(status.Runners, func(r dal.Runner) *ftlv1.StatusResponse_Runner {
+			var deployment *string
+			if d, ok := r.Deployment.Get(); ok {
+				asString := d.String()
+				deployment = &asString
+			}
+			return &ftlv1.StatusResponse_Runner{
+				Key:        r.Key.String(),
+				Language:   r.Language,
+				Endpoint:   r.Endpoint,
+				State:      r.State.ToProto(),
+				Deployment: deployment,
+			}
+		}),
+		Deployments: slices.Map(status.Deployments, func(d dal.Deployment) *ftlv1.StatusResponse_Deployment {
+			return &ftlv1.StatusResponse_Deployment{
+				Key:         d.Key.String(),
+				Language:    d.Language,
+				Name:        d.Module,
+				MinReplicas: int32(d.MinReplicas),
+				Schema:      d.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
+			}
+		}),
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func New(ctx context.Context, dal dal.DAL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
 	svc := &Service{
 		dal:                          dal,
