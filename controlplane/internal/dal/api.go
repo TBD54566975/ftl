@@ -82,6 +82,10 @@ func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
 	return RunnerState(strings.ToLower(state.String()))
 }
 
+func (s RunnerState) ToProto() ftlv1.RunnerState {
+	return ftlv1.RunnerState(ftlv1.RunnerState_value[strings.ToUpper(string(s))])
+}
+
 type DataPoint interface {
 	isDataPoint()
 }
@@ -110,6 +114,19 @@ type Metric struct {
 	DataPoint  DataPoint
 }
 
+type Deployment struct {
+	Key         model.DeploymentKey
+	Language    string
+	Module      string
+	MinReplicas int
+	Schema      *schema.Module
+}
+
+type Status struct {
+	Runners     []Runner
+	Deployments []Deployment
+}
+
 // A Reservation of a Runner.
 type Reservation interface {
 	Runner() Runner
@@ -133,6 +150,8 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 // interfaces as services are split out of the ControlPlane (eg. metrics,
 // logging, etc.)
 type DAL interface {
+	// GetStatus of the ControlPlane.
+	GetStatus(ctx context.Context) (Status, error)
 	UpsertModule(ctx context.Context, language, name string) (err error)
 	// GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
 	GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error)

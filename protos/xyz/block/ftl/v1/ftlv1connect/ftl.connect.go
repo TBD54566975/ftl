@@ -46,6 +46,9 @@ const (
 	// ControlPlaneServicePingProcedure is the fully-qualified name of the ControlPlaneService's Ping
 	// RPC.
 	ControlPlaneServicePingProcedure = "/xyz.block.ftl.v1.ControlPlaneService/Ping"
+	// ControlPlaneServiceStatusProcedure is the fully-qualified name of the ControlPlaneService's
+	// Status RPC.
+	ControlPlaneServiceStatusProcedure = "/xyz.block.ftl.v1.ControlPlaneService/Status"
 	// ControlPlaneServiceGetArtefactDiffsProcedure is the fully-qualified name of the
 	// ControlPlaneService's GetArtefactDiffs RPC.
 	ControlPlaneServiceGetArtefactDiffsProcedure = "/xyz.block.ftl.v1.ControlPlaneService/GetArtefactDiffs"
@@ -178,6 +181,7 @@ func (UnimplementedVerbServiceHandler) Call(context.Context, *connect_go.Request
 type ControlPlaneServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
+	Status(context.Context, *connect_go.Request[v1.StatusRequest]) (*connect_go.Response[v1.StatusResponse], error)
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error)
 	// Upload an artefact to the server.
@@ -217,6 +221,11 @@ func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL stri
 			baseURL+ControlPlaneServicePingProcedure,
 			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
 			connect_go.WithClientOptions(opts...),
+		),
+		status: connect_go.NewClient[v1.StatusRequest, v1.StatusResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceStatusProcedure,
+			opts...,
 		),
 		getArtefactDiffs: connect_go.NewClient[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse](
 			httpClient,
@@ -264,6 +273,7 @@ func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL stri
 // controlPlaneServiceClient implements ControlPlaneServiceClient.
 type controlPlaneServiceClient struct {
 	ping                   *connect_go.Client[v1.PingRequest, v1.PingResponse]
+	status                 *connect_go.Client[v1.StatusRequest, v1.StatusResponse]
 	getArtefactDiffs       *connect_go.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
 	uploadArtefact         *connect_go.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
 	createDeployment       *connect_go.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
@@ -277,6 +287,11 @@ type controlPlaneServiceClient struct {
 // Ping calls xyz.block.ftl.v1.ControlPlaneService.Ping.
 func (c *controlPlaneServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
+}
+
+// Status calls xyz.block.ftl.v1.ControlPlaneService.Status.
+func (c *controlPlaneServiceClient) Status(ctx context.Context, req *connect_go.Request[v1.StatusRequest]) (*connect_go.Response[v1.StatusResponse], error) {
+	return c.status.CallUnary(ctx, req)
 }
 
 // GetArtefactDiffs calls xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs.
@@ -324,6 +339,7 @@ func (c *controlPlaneServiceClient) StreamDeploymentLogs(ctx context.Context) *c
 type ControlPlaneServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
+	Status(context.Context, *connect_go.Request[v1.StatusRequest]) (*connect_go.Response[v1.StatusResponse], error)
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error)
 	// Upload an artefact to the server.
@@ -360,6 +376,11 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		svc.Ping,
 		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
 		connect_go.WithHandlerOptions(opts...),
+	))
+	mux.Handle(ControlPlaneServiceStatusProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServiceStatusProcedure,
+		svc.Status,
+		opts...,
 	))
 	mux.Handle(ControlPlaneServiceGetArtefactDiffsProcedure, connect_go.NewUnaryHandler(
 		ControlPlaneServiceGetArtefactDiffsProcedure,
@@ -409,6 +430,10 @@ type UnimplementedControlPlaneServiceHandler struct{}
 
 func (UnimplementedControlPlaneServiceHandler) Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.Ping is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) Status(context.Context, *connect_go.Request[v1.StatusRequest]) (*connect_go.Response[v1.StatusResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.Status is not implemented"))
 }
 
 func (UnimplementedControlPlaneServiceHandler) GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error) {

@@ -2,6 +2,7 @@ package schema
 
 import (
 	"github.com/alecthomas/errors"
+	"google.golang.org/protobuf/proto"
 
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
@@ -38,6 +39,14 @@ func ModuleFromProto(s *pschema.Module) (*Module, error) {
 		Decls:    declListToSchema(s.Decls),
 	}
 	return module, ValidateModule(module)
+}
+
+func ModuleFromBytes(b []byte) (*Module, error) {
+	s := &pschema.Module{}
+	if err := proto.Unmarshal(b, s); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return ModuleFromProto(s)
 }
 
 // VerbRefFromProto converts a protobuf VerbRef to a VerbRef.

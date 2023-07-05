@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"bytes"
 	"context"
 	stdlibsha256 "crypto/sha256"
 	"encoding/json"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
+	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
@@ -57,6 +59,35 @@ type Local struct {
 	deploymentsByArtefactHash map[sha256.SHA256]*localDeployment
 	runners                   map[model.RunnerKey]*localRunner
 	runnersByEndpoint         map[string]*localRunner
+}
+
+func (m *Local) GetStatus(ctx context.Context) (Status, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	runners := slices.Map(maps.Values(m.runners), func(t *localRunner) Runner { return t.Runner })
+	sort.Slice(runners, func(i, j int) bool {
+		lhs := runners[i].Key.ULID()
+		rhs := runners[j].Key.ULID()
+		return bytes.Compare(lhs[:], rhs[:]) < 0
+	})
+	deployments := slices.Map(maps.Values(m.deployments), func(t *localDeployment) Deployment {
+		return Deployment{
+			Key:         t.partialDeployment.Key,
+			Language:    t.partialDeployment.Language,
+			Module:      t.partialDeployment.Module,
+			MinReplicas: t.minReplicas,
+			Schema:      t.partialDeployment.Schema,
+		}
+	})
+	sort.Slice(deployments, func(i, j int) bool {
+		lhs := deployments[i].Key.ULID()
+		rhs := deployments[j].Key.ULID()
+		return bytes.Compare(lhs[:], rhs[:]) < 0
+	})
+	return Status{
+		Runners:     runners,
+		Deployments: deployments,
+	}, nil
 }
 
 func (m *Local) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error) {
@@ -264,7 +295,6 @@ type localReservation struct {
 }
 
 func (l *localReservation) Runner() Runner { return l.future }
-
 func (l *localReservation) Commit(context.Context) error {
 	l.lock.Lock()
 	defer l.lock.Unlock()

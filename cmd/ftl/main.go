@@ -24,6 +24,7 @@ type CLI struct {
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 	Endpoint  *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 
+	Status   statusCmd   `cmd:"" help:"Show FTL status."`
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`

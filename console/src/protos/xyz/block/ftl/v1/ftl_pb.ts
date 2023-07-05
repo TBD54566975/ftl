@@ -1160,6 +1160,202 @@ export class StreamDeploymentLogsResponse extends Message<StreamDeploymentLogsRe
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.StatusRequest
+ */
+export class StatusRequest extends Message<StatusRequest> {
+  constructor(data?: PartialMessage<StatusRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StatusRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {
+    return new StatusRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusRequest {
+    return new StatusRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusRequest {
+    return new StatusRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusRequest | PlainMessage<StatusRequest> | undefined, b: StatusRequest | PlainMessage<StatusRequest> | undefined): boolean {
+    return proto3.util.equals(StatusRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StatusResponse
+ */
+export class StatusResponse extends Message<StatusResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Runner runners = 1;
+   */
+  runners: StatusResponse_Runner[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Deployment deployments = 2;
+   */
+  deployments: StatusResponse_Deployment[] = [];
+
+  constructor(data?: PartialMessage<StatusResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StatusResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "runners", kind: "message", T: StatusResponse_Runner, repeated: true },
+    { no: 2, name: "deployments", kind: "message", T: StatusResponse_Deployment, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse {
+    return new StatusResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse {
+    return new StatusResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse {
+    return new StatusResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse | PlainMessage<StatusResponse> | undefined, b: StatusResponse | PlainMessage<StatusResponse> | undefined): boolean {
+    return proto3.util.equals(StatusResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StatusResponse.Runner
+ */
+export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key = "";
+
+  /**
+   * @generated from field: string language = 2;
+   */
+  language = "";
+
+  /**
+   * @generated from field: string endpoint = 3;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.RunnerState state = 4;
+   */
+  state = RunnerState.IDLE;
+
+  /**
+   * @generated from field: optional string deployment = 5;
+   */
+  deployment?: string;
+
+  constructor(data?: PartialMessage<StatusResponse_Runner>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.Runner";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
+    { no: 5, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Runner {
+    return new StatusResponse_Runner().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_Runner {
+    return new StatusResponse_Runner().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_Runner {
+    return new StatusResponse_Runner().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse_Runner | PlainMessage<StatusResponse_Runner> | undefined, b: StatusResponse_Runner | PlainMessage<StatusResponse_Runner> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_Runner, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StatusResponse.Deployment
+ */
+export class StatusResponse_Deployment extends Message<StatusResponse_Deployment> {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key = "";
+
+  /**
+   * @generated from field: string language = 2;
+   */
+  language = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: int32 min_replicas = 4;
+   */
+  minReplicas = 0;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 5;
+   */
+  schema?: Module;
+
+  constructor(data?: PartialMessage<StatusResponse_Deployment>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.Deployment";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "schema", kind: "message", T: Module },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Deployment {
+    return new StatusResponse_Deployment().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_Deployment {
+    return new StatusResponse_Deployment().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_Deployment {
+    return new StatusResponse_Deployment().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse_Deployment | PlainMessage<StatusResponse_Deployment> | undefined, b: StatusResponse_Deployment | PlainMessage<StatusResponse_Deployment> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_Deployment, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.DeployRequest
  */
 export class DeployRequest extends Message<DeployRequest> {

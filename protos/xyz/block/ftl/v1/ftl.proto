@@ -146,11 +146,34 @@ message StreamDeploymentLogsRequest {
 }
 message StreamDeploymentLogsResponse {}
 
+message StatusRequest {}
+message StatusResponse {
+  message Runner {
+    string key = 1;
+    string language = 2;
+    string endpoint = 3;
+    RunnerState state = 4;
+    optional string deployment = 5;
+  }
+  repeated Runner runners = 1;
+
+  message Deployment {
+    string key = 1;
+    string language = 2;
+    string name = 3;
+    int32 min_replicas = 4;
+    schema.Module schema = 5;
+  }
+  repeated Deployment deployments = 2;
+}
+
 service ControlPlaneService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  rpc Status(StatusRequest) returns (StatusResponse);
 
   // Get list of artefacts that differ between the server and client.
   rpc GetArtefactDiffs(GetArtefactDiffsRequest) returns (GetArtefactDiffsResponse);
