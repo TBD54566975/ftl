@@ -93,7 +93,7 @@ type DataPoint interface {
 type MetricHistogram struct {
 	Count  int64
 	Sum    int64
-	Bucket []int64
+	Bucket []uint64
 }
 
 func (MetricHistogram) isDataPoint() {}
@@ -108,8 +108,8 @@ type Metric struct {
 	RunnerKey  model.RunnerKey
 	StartTime  time.Time
 	EndTime    time.Time
-	sourceVerb schema.VerbRef
-	destVerb   schema.VerbRef
+	SourceVerb schema.VerbRef
+	DestVerb   schema.VerbRef
 	Name       string
 	DataPoint  DataPoint
 }

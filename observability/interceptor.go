@@ -19,13 +19,14 @@ import (
 const (
 	instrumentationName = "ftl"
 	verbRefKey          = "ftl.verb.ref"
-	sourceVerbKey       = "ftl.source.verb"
-	sourceModuleKey     = "ftl.source.module"
-	destVerbKey         = "ftl.dest.verb"
-	destModuleKey       = "ftl.dest.module"
-	callLatency         = "call.latency"
-	callRequestCount    = "call.request.count"
-	unitMilliseconds    = "ms"
+
+	SourceVerbKey    = "ftl.source.verb"   // SourceVerbKey is the key for the source verb.
+	SourceModuleKey  = "ftl.source.module" // SourceModuleKey is the key for the source module.
+	DestVerbKey      = "ftl.dest.verb"     // DestVerbKey is the key for the destination verb.
+	DestModuleKey    = "ftl.dest.module"   // DestModuleKey is the key for the destination module.
+	callLatency      = "call.latency"
+	callRequestCount = "call.request.count"
+	unitMilliseconds = "ms"
 )
 
 type Interceptor struct{}
@@ -42,6 +43,11 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		logger := log.FromContext(ctx)
 
 		resp, err := next(ctx, req)
+		if err != nil {
+			err = errors.WithStack(err)
+			logger.Errorf(err, "Unary RPC failed: %s", req.Spec().Procedure)
+			return nil, err
+		}
 
 		if verb := req.Header().Get(headers.VerbHeader); verb != "" {
 			metricsErr := i.recordVerbCallMetrics(ctx, verb, start, req.Header())
@@ -50,11 +56,6 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			}
 		}
 
-		if err != nil {
-			err = errors.WithStack(err)
-			logger.Errorf(err, "Unary RPC failed: %s", req.Spec().Procedure)
-			return nil, err
-		}
 		return resp, nil
 	}
 }
@@ -84,10 +85,10 @@ func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, verb string, st
 
 	attributes := []attribute.KeyValue{
 		attribute.String(verbRefKey, verb),
-		attribute.String(sourceVerbKey, sourceVerbRef.Name),
-		attribute.String(sourceModuleKey, sourceVerbRef.Module),
-		attribute.String(destVerbKey, caller.Value().Name),
-		attribute.String(destModuleKey, caller.Value().Module),
+		attribute.String(SourceVerbKey, sourceVerbRef.Name),
+		attribute.String(SourceModuleKey, sourceVerbRef.Module),
+		attribute.String(DestVerbKey, caller.Value().Name),
+		attribute.String(DestModuleKey, caller.Value().Module),
 	}
 
 	meter := otel.GetMeterProvider().Meter(instrumentationName)
