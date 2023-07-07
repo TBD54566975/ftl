@@ -196,4 +196,5 @@ type DAL interface {
 	InsertDeploymentLogEntry(ctx context.Context, deployment model.DeploymentKey, logEntry log.Entry) error
 	InsertMetricEntry(ctx context.Context, metric Metric) error
 	GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error)
+	GetMetricsForSourceModules(ctx context.Context, modules []string) ([]Metric, error)
 }

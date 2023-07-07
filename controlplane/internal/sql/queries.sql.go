@@ -490,6 +490,44 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 	return items, nil
 }
 
+const getMetricsBySourceModules = `-- name: GetMetricsBySourceModules :many
+SELECT id, runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type, value
+FROM metrics
+WHERE source_module = ANY($1::string[])
+`
+
+func (q *Queries) GetMetricsBySourceModules(ctx context.Context, dollar_1 []string) ([]Metric, error) {
+	rows, err := q.db.Query(ctx, getMetricsBySourceModules, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Metric
+	for rows.Next() {
+		var i Metric
+		if err := rows.Scan(
+			&i.ID,
+			&i.RunnerKey,
+			&i.StartTime,
+			&i.EndTime,
+			&i.SourceModule,
+			&i.SourceVerb,
+			&i.DestModule,
+			&i.DestVerb,
+			&i.Name,
+			&i.Type,
+			&i.Value,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getModulesByID = `-- name: GetModulesByID :many
 SELECT id, language, name
 FROM modules

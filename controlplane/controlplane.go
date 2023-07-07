@@ -60,11 +60,13 @@ func Start(ctx context.Context, config Config) error {
 	logger.Infof("Listening on %s", config.Bind)
 
 	observability := NewObservabilityService(dal)
+	console := NewConsoleService(dal)
 
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, observability),
+		rpc.GRPC(ftlv1connect.NewConsoleServiceHandler, console),
 		rpc.Route("/", c),
 	)
 }

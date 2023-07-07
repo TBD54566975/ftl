@@ -1,17 +1,15 @@
-import { Card } from '../../components/Card'
 import { useContext } from 'react'
-import { Link } from 'react-router-dom'
-import { schemaContext } from '../../providers/schema-provider'
-import { classNames } from '../../utils/react.utils'
-import { statuses } from '../../utils/style.utils'
+import { modulesContext } from '../../providers/modules-provider'
 
 export default function ModulesPage() {
-  const schema = useContext(schemaContext)
+  const modules = useContext(modulesContext)
+
+  console.log(modules)
 
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {schema.map(module => (
+        {/* {schema.map(module => (
           <Card key={module.schema?.name}>
             <div className="min-w-0 flex-1">
               <Link to={`${module.schema?.name}`} className="focus:outline-none">
@@ -35,7 +33,7 @@ export default function ModulesPage() {
               </Link>
             </div>
           </Card>
-        ))}
+        ))} */}
       </div>
     </>
   )

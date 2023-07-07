@@ -423,6 +423,12 @@ func (m *Local) InsertMetricEntry(ctx context.Context, metric Metric) error {
 	panic("implement me")
 }
 
+func (m *Local) GetMetricsForSourceModules(ctx context.Context, modules []string) ([]Metric, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	panic("implement me")
+}
+
 // runnerSpinLock spins until the runner-lock is released,
 // releasing the database lock while it does so.
 //

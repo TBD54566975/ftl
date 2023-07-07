@@ -1913,6 +1913,319 @@ func (*SendMetricResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{34}
 }
 
+type MetricCounter struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Value int64 `protobuf:"varint,1,opt,name=value,proto3" json:"value,omitempty"`
+}
+
+func (x *MetricCounter) Reset() {
+	*x = MetricCounter{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[33]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MetricCounter) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MetricCounter) ProtoMessage() {}
+
+func (x *MetricCounter) ProtoReflect() protoreflect.Message {
+	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[33]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MetricCounter.ProtoReflect.Descriptor instead.
+func (*MetricCounter) Descriptor() ([]byte, []int) {
+	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *MetricCounter) GetValue() int64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+type MetricHistorgram struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Count  int64    `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	Sum    int64    `protobuf:"varint,2,opt,name=sum,proto3" json:"sum,omitempty"`
+	Bucket []uint64 `protobuf:"varint,3,rep,packed,name=bucket,proto3" json:"bucket,omitempty"`
+}
+
+func (x *MetricHistorgram) Reset() {
+	*x = MetricHistorgram{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[34]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MetricHistorgram) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MetricHistorgram) ProtoMessage() {}
+
+func (x *MetricHistorgram) ProtoReflect() protoreflect.Message {
+	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[34]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MetricHistorgram.ProtoReflect.Descriptor instead.
+func (*MetricHistorgram) Descriptor() ([]byte, []int) {
+	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *MetricHistorgram) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *MetricHistorgram) GetSum() int64 {
+	if x != nil {
+		return x.Sum
+	}
+	return 0
+}
+
+func (x *MetricHistorgram) GetBucket() []uint64 {
+	if x != nil {
+		return x.Bucket
+	}
+	return nil
+}
+
+type Verb struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	VerbRef     *schema.VerbRef   `protobuf:"bytes,1,opt,name=verb_ref,json=verbRef,proto3" json:"verb_ref,omitempty"`
+	CallCount   *MetricCounter    `protobuf:"bytes,2,opt,name=call_count,json=callCount,proto3" json:"call_count,omitempty"`
+	CallLatency *MetricHistorgram `protobuf:"bytes,3,opt,name=call_latency,json=callLatency,proto3" json:"call_latency,omitempty"`
+}
+
+func (x *Verb) Reset() {
+	*x = Verb{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[35]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Verb) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Verb) ProtoMessage() {}
+
+func (x *Verb) ProtoReflect() protoreflect.Message {
+	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[35]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Verb.ProtoReflect.Descriptor instead.
+func (*Verb) Descriptor() ([]byte, []int) {
+	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *Verb) GetVerbRef() *schema.VerbRef {
+	if x != nil {
+		return x.VerbRef
+	}
+	return nil
+}
+
+func (x *Verb) GetCallCount() *MetricCounter {
+	if x != nil {
+		return x.CallCount
+	}
+	return nil
+}
+
+func (x *Verb) GetCallLatency() *MetricHistorgram {
+	if x != nil {
+		return x.CallLatency
+	}
+	return nil
+}
+
+type Module struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name string  `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Verb []*Verb `protobuf:"bytes,2,rep,name=verb,proto3" json:"verb,omitempty"`
+}
+
+func (x *Module) Reset() {
+	*x = Module{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[36]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Module) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Module) ProtoMessage() {}
+
+func (x *Module) ProtoReflect() protoreflect.Message {
+	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[36]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Module.ProtoReflect.Descriptor instead.
+func (*Module) Descriptor() ([]byte, []int) {
+	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *Module) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Module) GetVerb() []*Verb {
+	if x != nil {
+		return x.Verb
+	}
+	return nil
+}
+
+type GetModulesRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *GetModulesRequest) Reset() {
+	*x = GetModulesRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[37]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetModulesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModulesRequest) ProtoMessage() {}
+
+func (x *GetModulesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[37]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModulesRequest.ProtoReflect.Descriptor instead.
+func (*GetModulesRequest) Descriptor() ([]byte, []int) {
+	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{37}
+}
+
+type GetModulesResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Verb []*Module `protobuf:"bytes,2,rep,name=verb,proto3" json:"verb,omitempty"`
+}
+
+func (x *GetModulesResponse) Reset() {
+	*x = GetModulesResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[38]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetModulesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModulesResponse) ProtoMessage() {}
+
+func (x *GetModulesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_xyz_block_ftl_v1_ftl_proto_msgTypes[38]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModulesResponse.ProtoReflect.Descriptor instead.
+func (*GetModulesResponse) Descriptor() ([]byte, []int) {
+	return file_xyz_block_ftl_v1_ftl_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *GetModulesResponse) GetVerb() []*Module {
+	if x != nil {
+		return x.Verb
+	}
+	return nil
+}
+
 type Metadata_Pair struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3136,7 +3449,7 @@ func file_xyz_block_ftl_v1_ftl_proto_init() {
 			NumEnums:      2,
 			NumMessages:   39,
 			NumExtensions: 0,
-			NumServices:   4,
+			NumServices:   5,
 		},
 		GoTypes:           file_xyz_block_ftl_v1_ftl_proto_goTypes,
 		DependencyIndexes: file_xyz_block_ftl_v1_ftl_proto_depIdxs,

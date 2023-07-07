@@ -458,6 +458,39 @@ func (d *Postgres) InsertMetricEntry(ctx context.Context, metric Metric) error {
 	})))
 }
 
+func (d *Postgres) GetMetricsForSourceModules(ctx context.Context, modules []string) ([]Metric, error) {
+	dbMetrics, err := d.db.GetMetricsBySourceModules(ctx, modules)
+	if err != nil {
+		return []Metric{}, errors.Wrap(translatePGError(err), "could not get metrics")
+	}
+	metrics, err := slices.MapErr(dbMetrics, func(in sql.Metric) (Metric, error) {
+		var datapoint DataPoint
+		if err := json.Unmarshal([]byte(in.Value), &datapoint); err != nil {
+			return Metric{}, errors.Wrapf(err, "%q: could not unmarshal datapoint", in.Value)
+		}
+
+		return Metric{
+			RunnerKey: model.RunnerKey(in.RunnerKey),
+			StartTime: in.StartTime.Time,
+			EndTime:   in.EndTime.Time,
+			SourceVerb: schema.VerbRef{
+				Module: in.SourceModule,
+				Name:   in.SourceVerb,
+			},
+			DestVerb: schema.VerbRef{
+				Module: in.DestModule,
+				Name:   in.DestVerb,
+			},
+			Name:      in.Name,
+			DataPoint: datapoint,
+		}, err
+	})
+	if err != nil {
+		return []Metric{}, errors.WithStack(err)
+	}
+	return metrics, nil
+}
+
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
 }
