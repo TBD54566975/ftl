@@ -20,12 +20,10 @@ PROTO_IN = protos/buf.yaml \
 		   protos/buf.gen.yaml \
 		   protos/xyz/block/ftl/v1/ftl.proto \
 		   protos/xyz/block/ftl/v1/schema/schema.proto \
-		   internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/metrics_service.proto \
-		   internal/3rdparty/protos/opentelemetry/proto/metrics/v1/metrics.proto
+		   internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/metrics_service.proto
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			protos/xyz/block/ftl/v1/schema/schema.pb.go \
 			protos/xyz/block/ftl/v1/ftl.pb.go \
-			console/src/protos/internal/3rdparty/protos/opentelemetry/proto/metrics/v1/metrics_pb.js \
 			console/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
 			console/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
 			console/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \

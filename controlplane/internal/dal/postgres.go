@@ -465,7 +465,7 @@ func (d *Postgres) GetMetricsForSourceModules(ctx context.Context, modules []str
 	}
 	metrics, err := slices.MapErr(dbMetrics, func(in sql.Metric) (Metric, error) {
 		var datapoint DataPoint
-		if err := json.Unmarshal([]byte(in.Value), &datapoint); err != nil {
+		if err := json.Unmarshal((in.Value), &datapoint); err != nil {
 			return Metric{}, errors.Wrapf(err, "%q: could not unmarshal datapoint", in.Value)
 		}
 
