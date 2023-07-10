@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, SendMetricRequest, SendMetricResponse, StartDeployRequest, StartDeployResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, SendMetricRequest, SendMetricResponse, StartDeployRequest, StartDeployResponse, StatusRequest, StatusResponse, StopDeployRequest, StopDeployResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -148,6 +148,17 @@ export const ControlPlaneService = {
       name: "StartDeploy",
       I: StartDeployRequest,
       O: StartDeployResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Stop a deployment.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.StopDeploy
+     */
+    stopDeploy: {
+      name: "StopDeploy",
+      I: StopDeployRequest,
+      O: StopDeployResponse,
       kind: MethodKind.Unary,
     },
     /**

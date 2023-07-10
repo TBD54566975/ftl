@@ -10,6 +10,10 @@ function deps() {
 cat <<EOF > reflex.conf
 # Generated file. DO NOT MODIFY
 
+# sqlc regeneration
+-r '(sqlc.yaml|controlplane/internal/sql/queries\.sql|controlplane/internal/sql/schema/.*\.sql|protos/xyz/block/ftl/v1/ftl\.proto)$' \
+-- make generate
+
 # Control Plane
 -s \\
 -r '($(deps ./cmd/ftl-control-plane))/[^/]*\.go$' \\

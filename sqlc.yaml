@@ -13,3 +13,6 @@ sql:
         overrides:
           - db_type: "uuid"
             go_type: "github.com/TBD54566975/ftl/controlplane/internal/sqltypes.Key"
+          - db_type: "uuid"
+            nullable: true
+            go_type: "github.com/TBD54566975/ftl/controlplane/internal/sqltypes.NullKey"

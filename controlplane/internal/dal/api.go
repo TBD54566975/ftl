@@ -151,7 +151,7 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 // logging, etc.)
 type DAL interface {
 	// GetStatus of the ControlPlane.
-	GetStatus(ctx context.Context) (Status, error)
+	GetStatus(ctx context.Context, all bool) (Status, error)
 	UpsertModule(ctx context.Context, language, name string) (err error)
 	// GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
 	GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error)

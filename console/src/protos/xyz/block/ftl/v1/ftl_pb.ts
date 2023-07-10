@@ -1062,6 +1062,74 @@ export class StartDeployResponse extends Message<StartDeployResponse> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.StopDeployRequest
+ */
+export class StopDeployRequest extends Message<StopDeployRequest> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  constructor(data?: PartialMessage<StopDeployRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StopDeployRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StopDeployRequest {
+    return new StopDeployRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StopDeployRequest {
+    return new StopDeployRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StopDeployRequest {
+    return new StopDeployRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StopDeployRequest | PlainMessage<StopDeployRequest> | undefined, b: StopDeployRequest | PlainMessage<StopDeployRequest> | undefined): boolean {
+    return proto3.util.equals(StopDeployRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StopDeployResponse
+ */
+export class StopDeployResponse extends Message<StopDeployResponse> {
+  constructor(data?: PartialMessage<StopDeployResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StopDeployResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StopDeployResponse {
+    return new StopDeployResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StopDeployResponse {
+    return new StopDeployResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StopDeployResponse {
+    return new StopDeployResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StopDeployResponse | PlainMessage<StopDeployResponse> | undefined, b: StopDeployResponse | PlainMessage<StopDeployResponse> | undefined): boolean {
+    return proto3.util.equals(StopDeployResponse, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.StreamDeploymentLogsRequest
  */
 export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsRequest> {
@@ -1163,6 +1231,13 @@ export class StreamDeploymentLogsResponse extends Message<StreamDeploymentLogsRe
  * @generated from message xyz.block.ftl.v1.StatusRequest
  */
 export class StatusRequest extends Message<StatusRequest> {
+  /**
+   * Show all deployments, even those that are not running.
+   *
+   * @generated from field: bool all = 1;
+   */
+  all = false;
+
   constructor(data?: PartialMessage<StatusRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1171,6 +1246,7 @@ export class StatusRequest extends Message<StatusRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StatusRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "all", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {

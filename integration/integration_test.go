@@ -14,6 +14,7 @@ import (
 
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
@@ -21,6 +22,12 @@ var binaries = []string{"ftl-control-plane", "ftl-runner"}
 
 type assertion func(client ftlv1connect.ControlPlaneServiceClient)
 type asserts []assertion
+
+type fixture interface {
+	up() error
+	down() error
+}
+type fixtures []fixture
 
 func TestIntegration(t *testing.T) {
 	binDir := t.TempDir()
@@ -33,15 +40,28 @@ func TestIntegration(t *testing.T) {
 	}
 	tests := []struct {
 		name         string
-		assertions   asserts
 		extraRunners int
+		fixtures     fixtures
+		assertions   asserts
 	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			run(t, ctx, "ftl-control-plane")
 			run(t, ctx, "ftl-runner", "--language=go")
+			client := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, "localhost:8893", log.Warn)
 			for i := 0; i < tt.extraRunners; i++ {
 				run(t, ctx, "ftl-runner", "--language=go", "--endpoint=http://localhost:"+strconv.Itoa(8893+i))
+			}
+			for _, fixture := range tt.fixtures {
+				err := fixture.up()
+				assert.NoError(t, err, "fixture failed")
+			}
+			for _, assertion := range tt.assertions {
+				assertion(client)
+			}
+			for _, fixture := range tt.fixtures {
+				err := fixture.down()
+				assert.NoError(t, err, "fixture failed")
 			}
 		})
 	}

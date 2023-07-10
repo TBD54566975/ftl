@@ -136,6 +136,11 @@ message StartDeployRequest {
 }
 message StartDeployResponse {}
 
+message StopDeployRequest {
+  string deployment_key = 1;
+}
+message StopDeployResponse {}
+
 message StreamDeploymentLogsRequest {
   string deployment_key = 1;
   int64 time_stamp = 2;
@@ -146,7 +151,10 @@ message StreamDeploymentLogsRequest {
 }
 message StreamDeploymentLogsResponse {}
 
-message StatusRequest {}
+message StatusRequest {
+  // Show all deployments, even those that are not running.
+  bool all = 1;
+}
 message StatusResponse {
   message Runner {
     string key = 1;
@@ -201,6 +209,9 @@ service ControlPlaneService {
 
   // Starts a deployment.
   rpc StartDeploy(StartDeployRequest) returns (StartDeployResponse);
+
+  // Stop a deployment.
+  rpc StopDeploy(StopDeployRequest) returns (StopDeployResponse);
 
   // Stream logs from a deployment
   rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);

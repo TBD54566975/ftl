@@ -70,6 +70,9 @@ const (
 	// ControlPlaneServiceStartDeployProcedure is the fully-qualified name of the ControlPlaneService's
 	// StartDeploy RPC.
 	ControlPlaneServiceStartDeployProcedure = "/xyz.block.ftl.v1.ControlPlaneService/StartDeploy"
+	// ControlPlaneServiceStopDeployProcedure is the fully-qualified name of the ControlPlaneService's
+	// StopDeploy RPC.
+	ControlPlaneServiceStopDeployProcedure = "/xyz.block.ftl.v1.ControlPlaneService/StopDeploy"
 	// ControlPlaneServiceStreamDeploymentLogsProcedure is the fully-qualified name of the
 	// ControlPlaneService's StreamDeploymentLogs RPC.
 	ControlPlaneServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControlPlaneService/StreamDeploymentLogs"
@@ -202,6 +205,8 @@ type ControlPlaneServiceClient interface {
 	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RunnerHeartbeat, v1.RegisterRunnerResponse]
 	// Starts a deployment.
 	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
+	// Stop a deployment.
+	StopDeploy(context.Context, *connect_go.Request[v1.StopDeployRequest]) (*connect_go.Response[v1.StopDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
@@ -262,6 +267,11 @@ func NewControlPlaneServiceClient(httpClient connect_go.HTTPClient, baseURL stri
 			baseURL+ControlPlaneServiceStartDeployProcedure,
 			opts...,
 		),
+		stopDeploy: connect_go.NewClient[v1.StopDeployRequest, v1.StopDeployResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceStopDeployProcedure,
+			opts...,
+		),
 		streamDeploymentLogs: connect_go.NewClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse](
 			httpClient,
 			baseURL+ControlPlaneServiceStreamDeploymentLogsProcedure,
@@ -281,6 +291,7 @@ type controlPlaneServiceClient struct {
 	getDeploymentArtefacts *connect_go.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
 	registerRunner         *connect_go.Client[v1.RunnerHeartbeat, v1.RegisterRunnerResponse]
 	startDeploy            *connect_go.Client[v1.StartDeployRequest, v1.StartDeployResponse]
+	stopDeploy             *connect_go.Client[v1.StopDeployRequest, v1.StopDeployResponse]
 	streamDeploymentLogs   *connect_go.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
 
@@ -329,6 +340,11 @@ func (c *controlPlaneServiceClient) StartDeploy(ctx context.Context, req *connec
 	return c.startDeploy.CallUnary(ctx, req)
 }
 
+// StopDeploy calls xyz.block.ftl.v1.ControlPlaneService.StopDeploy.
+func (c *controlPlaneServiceClient) StopDeploy(ctx context.Context, req *connect_go.Request[v1.StopDeployRequest]) (*connect_go.Response[v1.StopDeployResponse], error) {
+	return c.stopDeploy.CallUnary(ctx, req)
+}
+
 // StreamDeploymentLogs calls xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs.
 func (c *controlPlaneServiceClient) StreamDeploymentLogs(ctx context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse] {
 	return c.streamDeploymentLogs.CallClientStream(ctx)
@@ -360,6 +376,8 @@ type ControlPlaneServiceHandler interface {
 	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RunnerHeartbeat]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
 	// Starts a deployment.
 	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
+	// Stop a deployment.
+	StopDeploy(context.Context, *connect_go.Request[v1.StopDeployRequest]) (*connect_go.Response[v1.StopDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error)
 }
@@ -417,6 +435,11 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		svc.StartDeploy,
 		opts...,
 	))
+	mux.Handle(ControlPlaneServiceStopDeployProcedure, connect_go.NewUnaryHandler(
+		ControlPlaneServiceStopDeployProcedure,
+		svc.StopDeploy,
+		opts...,
+	))
 	mux.Handle(ControlPlaneServiceStreamDeploymentLogsProcedure, connect_go.NewClientStreamHandler(
 		ControlPlaneServiceStreamDeploymentLogsProcedure,
 		svc.StreamDeploymentLogs,
@@ -462,6 +485,10 @@ func (UnimplementedControlPlaneServiceHandler) RegisterRunner(context.Context, *
 
 func (UnimplementedControlPlaneServiceHandler) StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.StartDeploy is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) StopDeploy(context.Context, *connect_go.Request[v1.StopDeployRequest]) (*connect_go.Response[v1.StopDeployResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControlPlaneService.StopDeploy is not implemented"))
 }
 
 func (UnimplementedControlPlaneServiceHandler) StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error) {
