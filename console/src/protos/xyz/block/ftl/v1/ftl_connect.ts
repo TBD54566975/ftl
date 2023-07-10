@@ -3,40 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { MethodIdempotency, MethodKind } from '@bufbuild/protobuf'
-import {
-  CallRequest,
-  CallResponse,
-  CreateDeploymentRequest,
-  CreateDeploymentResponse,
-  DeployRequest,
-  DeployResponse,
-  GetArtefactDiffsRequest,
-  GetArtefactDiffsResponse,
-  GetDeploymentArtefactsRequest,
-  GetDeploymentArtefactsResponse,
-  GetDeploymentRequest,
-  GetDeploymentResponse,
-  PingRequest,
-  PingResponse,
-  RegisterRunnerResponse,
-  ReserveRequest,
-  ReserveResponse,
-  RunnerHeartbeat,
-  SendMetricRequest,
-  SendMetricResponse,
-  StartDeployRequest,
-  StartDeployResponse,
-  StatusRequest,
-  StatusResponse,
-  StopDeployRequest,
-  StopDeployResponse,
-  StreamDeploymentLogsRequest,
-  StreamDeploymentLogsResponse,
-  TerminateRequest,
-  UploadArtefactRequest,
-  UploadArtefactResponse,
-} from './ftl_pb.js'
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetModulesRequest, GetModulesResponse, PingRequest, PingResponse, RegisterRunnerResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, SendMetricRequest, SendMetricResponse, StartDeployRequest, StartDeployResponse, StatusRequest, StatusResponse, StopDeployRequest, StopDeployResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
  * VerbService is a common interface shared by multiple services for calling Verbs.
@@ -44,7 +12,7 @@ import {
  * @generated from service xyz.block.ftl.v1.VerbService
  */
 export const VerbService = {
-  typeName: 'xyz.block.ftl.v1.VerbService',
+  typeName: "xyz.block.ftl.v1.VerbService",
   methods: {
     /**
      * Ping service for readiness.
@@ -52,7 +20,7 @@ export const VerbService = {
      * @generated from rpc xyz.block.ftl.v1.VerbService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -64,19 +32,19 @@ export const VerbService = {
      * @generated from rpc xyz.block.ftl.v1.VerbService.Call
      */
     call: {
-      name: 'Call',
+      name: "Call",
       I: CallRequest,
       O: CallResponse,
       kind: MethodKind.Unary,
     },
-  },
-} as const
+  }
+} as const;
 
 /**
  * @generated from service xyz.block.ftl.v1.ControlPlaneService
  */
 export const ControlPlaneService = {
-  typeName: 'xyz.block.ftl.v1.ControlPlaneService',
+  typeName: "xyz.block.ftl.v1.ControlPlaneService",
   methods: {
     /**
      * Ping service for readiness.
@@ -84,7 +52,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -94,7 +62,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Status
      */
     status: {
-      name: 'Status',
+      name: "Status",
       I: StatusRequest,
       O: StatusResponse,
       kind: MethodKind.Unary,
@@ -105,7 +73,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs
      */
     getArtefactDiffs: {
-      name: 'GetArtefactDiffs',
+      name: "GetArtefactDiffs",
       I: GetArtefactDiffsRequest,
       O: GetArtefactDiffsResponse,
       kind: MethodKind.Unary,
@@ -116,7 +84,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.UploadArtefact
      */
     uploadArtefact: {
-      name: 'UploadArtefact',
+      name: "UploadArtefact",
       I: UploadArtefactRequest,
       O: UploadArtefactResponse,
       kind: MethodKind.Unary,
@@ -127,7 +95,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.CreateDeployment
      */
     createDeployment: {
-      name: 'CreateDeployment',
+      name: "CreateDeployment",
       I: CreateDeploymentRequest,
       O: CreateDeploymentResponse,
       kind: MethodKind.Unary,
@@ -138,7 +106,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetDeployment
      */
     getDeployment: {
-      name: 'GetDeployment',
+      name: "GetDeployment",
       I: GetDeploymentRequest,
       O: GetDeploymentResponse,
       kind: MethodKind.Unary,
@@ -152,7 +120,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts
      */
     getDeploymentArtefacts: {
-      name: 'GetDeploymentArtefacts',
+      name: "GetDeploymentArtefacts",
       I: GetDeploymentArtefactsRequest,
       O: GetDeploymentArtefactsResponse,
       kind: MethodKind.ServerStreaming,
@@ -166,7 +134,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.RegisterRunner
      */
     registerRunner: {
-      name: 'RegisterRunner',
+      name: "RegisterRunner",
       I: RunnerHeartbeat,
       O: RegisterRunnerResponse,
       kind: MethodKind.ClientStreaming,
@@ -177,7 +145,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.StartDeploy
      */
     startDeploy: {
-      name: 'StartDeploy',
+      name: "StartDeploy",
       I: StartDeployRequest,
       O: StartDeployResponse,
       kind: MethodKind.Unary,
@@ -188,7 +156,7 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.StopDeploy
      */
     stopDeploy: {
-      name: 'StopDeploy',
+      name: "StopDeploy",
       I: StopDeployRequest,
       O: StopDeployResponse,
       kind: MethodKind.Unary,
@@ -199,13 +167,13 @@ export const ControlPlaneService = {
      * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs
      */
     streamDeploymentLogs: {
-      name: 'StreamDeploymentLogs',
+      name: "StreamDeploymentLogs",
       I: StreamDeploymentLogsRequest,
       O: StreamDeploymentLogsResponse,
       kind: MethodKind.ClientStreaming,
     },
-  },
-} as const
+  }
+} as const;
 
 /**
  * RunnerService is the service that executes Deployments.
@@ -217,13 +185,13 @@ export const ControlPlaneService = {
  * @generated from service xyz.block.ftl.v1.RunnerService
  */
 export const RunnerService = {
-  typeName: 'xyz.block.ftl.v1.RunnerService',
+  typeName: "xyz.block.ftl.v1.RunnerService",
   methods: {
     /**
      * @generated from rpc xyz.block.ftl.v1.RunnerService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -235,7 +203,7 @@ export const RunnerService = {
      * @generated from rpc xyz.block.ftl.v1.RunnerService.Reserve
      */
     reserve: {
-      name: 'Reserve',
+      name: "Reserve",
       I: ReserveRequest,
       O: ReserveResponse,
       kind: MethodKind.Unary,
@@ -246,7 +214,7 @@ export const RunnerService = {
      * @generated from rpc xyz.block.ftl.v1.RunnerService.Deploy
      */
     deploy: {
-      name: 'Deploy',
+      name: "Deploy",
       I: DeployRequest,
       O: DeployResponse,
       kind: MethodKind.Unary,
@@ -257,19 +225,19 @@ export const RunnerService = {
      * @generated from rpc xyz.block.ftl.v1.RunnerService.Terminate
      */
     terminate: {
-      name: 'Terminate',
+      name: "Terminate",
       I: TerminateRequest,
       O: RunnerHeartbeat,
       kind: MethodKind.Unary,
     },
-  },
-} as const
+  }
+} as const;
 
 /**
  * @generated from service xyz.block.ftl.v1.ObservabilityService
  */
 export const ObservabilityService = {
-  typeName: 'xyz.block.ftl.v1.ObservabilityService',
+  typeName: "xyz.block.ftl.v1.ObservabilityService",
   methods: {
     /**
      * Ping service for readiness.
@@ -277,7 +245,7 @@ export const ObservabilityService = {
      * @generated from rpc xyz.block.ftl.v1.ObservabilityService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -287,19 +255,19 @@ export const ObservabilityService = {
      * @generated from rpc xyz.block.ftl.v1.ObservabilityService.SendMetric
      */
     sendMetric: {
-      name: 'SendMetric',
+      name: "SendMetric",
       I: SendMetricRequest,
       O: SendMetricResponse,
       kind: MethodKind.Unary,
     },
-  },
-} as const
+  }
+} as const;
 
 /**
  * @generated from service xyz.block.ftl.v1.ConsoleService
  */
 export const ConsoleService = {
-  typeName: 'xyz.block.ftl.v1.ConsoleService',
+  typeName: "xyz.block.ftl.v1.ConsoleService",
   methods: {
     /**
      * Ping service for readiness.
@@ -307,7 +275,7 @@ export const ConsoleService = {
      * @generated from rpc xyz.block.ftl.v1.ConsoleService.Ping
      */
     ping: {
-      name: 'Ping',
+      name: "Ping",
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
@@ -317,10 +285,11 @@ export const ConsoleService = {
      * @generated from rpc xyz.block.ftl.v1.ConsoleService.GetModules
      */
     getModules: {
-      name: 'GetModules',
+      name: "GetModules",
       I: GetModulesRequest,
       O: GetModulesResponse,
       kind: MethodKind.Unary,
     },
-  },
-} as const
+  }
+} as const;
+

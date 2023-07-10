@@ -461,12 +461,12 @@ func (d *Postgres) InsertMetricEntry(ctx context.Context, metric Metric) error {
 func (d *Postgres) GetMetricsForSourceModules(ctx context.Context, modules []string) ([]Metric, error) {
 	dbMetrics, err := d.db.GetMetricsBySourceModules(ctx, modules)
 	if err != nil {
-		return []Metric{}, errors.Wrap(translatePGError(err), "could not get metrics")
+		return nil, errors.Wrap(translatePGError(err), "could not get metrics")
 	}
 	metrics, err := slices.MapErr(dbMetrics, func(in sql.Metric) (Metric, error) {
 		var datapoint DataPoint
 		if err := json.Unmarshal((in.Value), &datapoint); err != nil {
-			return Metric{}, errors.Wrapf(err, "%q: could not unmarshal datapoint", in.Value)
+			return Metric{}, errors.Wrapf(err, "could not unmarshal datapoint for row %q: ", in.ID)
 		}
 
 		return Metric{
@@ -486,7 +486,7 @@ func (d *Postgres) GetMetricsForSourceModules(ctx context.Context, modules []str
 		}, err
 	})
 	if err != nil {
-		return []Metric{}, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	return metrics, nil
 }
