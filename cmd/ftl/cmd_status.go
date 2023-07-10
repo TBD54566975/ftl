@@ -17,12 +17,13 @@ import (
 )
 
 type statusCmd struct {
+	All    bool `help:"Show all deployments, even those that are not running."`
 	JSON   bool `help:"Output JSON."`
 	Schema bool `help:"Show schema."`
 }
 
 func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
-	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
+	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{All: s.All}))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -36,20 +37,20 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 		return errors.WithStack((&jsonpb.Marshaler{}).Marshal(os.Stdout, status.Msg))
 	}
 
-	runnerFmt := "%-27s%-9s%-9s%-27s%s\n"
+	runnerFmt := "%-28s%-9s%-9s%-28s%s\n"
 	fmt.Printf(runnerFmt, "Runner", "State", "Language", "Deployment", "Endpoint")
-	fmt.Printf(runnerFmt, strings.Repeat("-", 26), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 26), strings.Repeat("-", 8))
+	fmt.Printf(runnerFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 27), strings.Repeat("-", 8))
 	for _, runner := range status.Msg.Runners {
-		fmt.Printf(runnerFmt, cleanKey(runner.Key), runner.State, runner.Language, cleanKey(runner.GetDeployment()), runner.Endpoint)
+		fmt.Printf(runnerFmt, runner.Key, runner.State, runner.Language, runner.GetDeployment(), runner.Endpoint)
 	}
 	fmt.Println()
-	deploymentFmt := "%-27s%-15s%-5v%s\n"
+	deploymentFmt := "%-28s%-15s%-5v%s\n"
 	if s.Schema {
 		fmt.Printf(deploymentFmt, "Deployment", "Name", "N", "Schema")
-		fmt.Printf(deploymentFmt, strings.Repeat("-", 26), strings.Repeat("-", 14), strings.Repeat("-", 4), strings.Repeat("-", 33))
+		fmt.Printf(deploymentFmt, strings.Repeat("-", 27), strings.Repeat("-", 14), strings.Repeat("-", 4), strings.Repeat("-", 33))
 	} else {
 		fmt.Printf(deploymentFmt, "Deployment", "Name", "N", "")
-		fmt.Printf(deploymentFmt, strings.Repeat("-", 26), strings.Repeat("-", 14), strings.Repeat("-", 4), "")
+		fmt.Printf(deploymentFmt, strings.Repeat("-", 27), strings.Repeat("-", 14), strings.Repeat("-", 4), "")
 	}
 	for _, deployment := range status.Msg.Deployments {
 		active := slices.Reduce(status.Msg.Runners, 0, func(i int, runner *ftlv1.StatusResponse_Runner) int {
@@ -65,9 +66,9 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 				return errors.Wrapf(err, "%q: invalid schema", deployment.Name)
 			}
 			mst := indent(ms.String(), 47)
-			fmt.Printf(deploymentFmt, cleanKey(deployment.Key), deployment.Name, count, mst)
+			fmt.Printf(deploymentFmt, deployment.Key, deployment.Name, count, mst)
 		} else {
-			fmt.Printf(deploymentFmt, cleanKey(deployment.Key), deployment.Name, count, "")
+			fmt.Printf(deploymentFmt, deployment.Key, deployment.Name, count, "")
 		}
 	}
 	return nil
@@ -76,12 +77,4 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 // Indent every line in "s" by "indent".
 func indent(s string, indent int) string {
 	return strings.ReplaceAll(s, "\n", "\n"+strings.Repeat(" ", indent))
-}
-
-func cleanKey(key string) string {
-	parts := strings.Split(key, ":")
-	if len(parts) == 3 {
-		return parts[2]
-	}
-	return key
 }

@@ -89,7 +89,7 @@ type Service struct {
 }
 
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx)
+	status, err := s.dal.GetStatus(ctx, req.Msg.All)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get status")
 	}
@@ -154,6 +154,21 @@ func (s *Service) StartDeploy(ctx context.Context, req *connect.Request[ftlv1.St
 	}
 
 	return connect.NewResponse(&ftlv1.StartDeployResponse{}), nil
+}
+
+func (s *Service) StopDeploy(ctx context.Context, req *connect.Request[ftlv1.StopDeployRequest]) (*connect.Response[ftlv1.StopDeployResponse], error) {
+	deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, 0)
+	if err != nil {
+		if errors.Is(err, dal.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
+		}
+		return nil, errors.Wrap(err, "could not set deployment replicas")
+	}
+	return connect.NewResponse(&ftlv1.StopDeployResponse{}), nil
 }
 
 func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStream[ftlv1.RunnerHeartbeat]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {

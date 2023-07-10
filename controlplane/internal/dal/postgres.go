@@ -41,16 +41,16 @@ type Postgres struct {
 	db *sql.DB
 }
 
-func (d *Postgres) GetStatus(ctx context.Context) (Status, error) {
+func (d *Postgres) GetStatus(ctx context.Context, all bool) (Status, error) {
 	runners, err := d.db.GetActiveRunners(ctx)
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get active runners")
 	}
-	deployments, err := d.db.GetActiveDeployments(ctx)
+	deployments, err := d.db.GetDeployments(ctx, all)
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get active deployments")
 	}
-	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
+	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetDeploymentsRow) (Deployment, error) {
 		protoSchema := &pschema.Module{}
 		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
@@ -74,8 +74,9 @@ func (d *Postgres) GetStatus(ctx context.Context) (Status, error) {
 		Deployments: statusDeployments,
 		Runners: slices.Map(runners, func(in sql.GetActiveRunnersRow) Runner {
 			var deployment types.Option[model.DeploymentKey]
-			if in.DeploymentKey.Valid {
-				deployment = types.Some(model.DeploymentKey(in.DeploymentKey.Bytes))
+			// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
+			if in.DeploymentKey != nil {
+				deployment = types.Some[model.DeploymentKey](in.DeploymentKey.([16]byte)) //nolint:forcetypeassert
 			}
 			return Runner{
 				Key:        model.RunnerKey(in.RunnerKey),
@@ -213,10 +214,9 @@ func (d *Postgres) GetDeployment(ctx context.Context, id model.DeploymentKey) (*
 // ErrConflict will be returned if a runner with the same endpoint and a
 // different key already exists.
 func (d *Postgres) UpsertRunner(ctx context.Context, runner Runner) error {
-	var pgDeploymentKey pgtype.UUID
+	var pgDeploymentKey types.Option[sqltypes.Key]
 	if dkey, ok := runner.Deployment.Get(); ok {
-		pgDeploymentKey.Valid = true
-		pgDeploymentKey.Bytes = dkey
+		pgDeploymentKey = types.Some(sqltypes.Key(dkey))
 	}
 	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
 		Key:           sqltypes.Key(runner.Key),

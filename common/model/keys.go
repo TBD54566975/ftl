@@ -23,12 +23,11 @@ type RunnerKey = keyType[runnerKey]
 
 func parseKey[KT keyType[U], U any](key string) (KT, error) {
 	var zero KT
-	kind := strings.TrimSuffix(reflect.TypeOf(*new(U)).Name(), "Key")
-	prefix := "ftl:" + kind + ":"
-	if !strings.HasPrefix(key, prefix) {
+	kind := kindFromType[U]()
+	if !strings.HasPrefix(key, kind) {
 		return zero, errors.Errorf("invalid %s key %q", kind, key)
 	}
-	ulid, err := ulid.Parse(key[len(prefix):])
+	ulid, err := ulid.Parse(key[len(kind):])
 	if err != nil {
 		return KT(ulid), err
 	}
@@ -39,12 +38,9 @@ func parseKey[KT keyType[U], U any](key string) (KT, error) {
 // named struct in the form <name>Key, eg. "runnerKey"
 type keyType[T any] ulid.ULID
 
-func (d keyType[T]) Kind() string {
-	var zero T
-	return strings.TrimSuffix(reflect.TypeOf(zero).Name(), "Key")
-}
+func (d keyType[T]) Kind() string { return kindFromType[T]() }
 func (d keyType[T]) String() string {
-	return "ftl:" + d.Kind() + ":" + ulid.ULID(d).String()
+	return d.Kind() + ulid.ULID(d).String()
 }
 func (d keyType[T]) ULID() ulid.ULID              { return ulid.ULID(d) }
 func (d keyType[T]) MarshalText() ([]byte, error) { return []byte(d.String()), nil }
@@ -55,4 +51,9 @@ func (d *keyType[T]) UnmarshalText(bytes []byte) error {
 	}
 	*d = id
 	return nil
+}
+
+func kindFromType[T any]() string {
+	var zero T
+	return strings.ToUpper(strings.TrimSuffix(reflect.TypeOf(zero).Name(), "Key")[:1])
 }

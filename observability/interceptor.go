@@ -87,8 +87,8 @@ func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, verb string, st
 		attribute.String(verbRefKey, verb),
 		attribute.String(SourceVerbKey, sourceVerbRef.Name),
 		attribute.String(SourceModuleKey, sourceVerbRef.Module),
-		attribute.String(DestVerbKey, caller.Value().Name),
-		attribute.String(DestModuleKey, caller.Value().Module),
+		attribute.String(DestVerbKey, caller.MustGet().Name),
+		attribute.String(DestModuleKey, caller.MustGet().Module),
 	}
 
 	meter := otel.GetMeterProvider().Meter(instrumentationName)
