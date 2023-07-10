@@ -1,0 +1,29 @@
+#!/bin/bash
+set -euo pipefail
+
+function deps() {
+  go list -f '{{range .Deps}}{{.}}
+{{end}}
+' "$1" | grep ^github.com/TBD54566975/ftl | cut -d/ -f4- | tr '\n' '|' | sed 's,|$,,'
+}
+
+cat <<EOF > reflex.conf
+# Generated file. DO NOT MODIFY
+
+# Control Plane
+-s \\
+-r '($(deps ./cmd/ftl-control-plane))/[^/]*\.go$' \\
+-- ftl-control-plane $@
+
+# Runner 1
+-s \\
+-r '($(deps ./cmd/ftl-runner))/[^/]*\.go$' \\
+-- ftl-runner --language go --endpoint http://localhost:8894 $@
+
+# Runner 2
+-s \\
+-r '($(deps ./cmd/ftl-runner))/[^/]*\.go$' \\
+-- ftl-runner --language go --endpoint http://localhost:8895 $@
+EOF
+
+reflex -s -d none -g reflex.conf -- reflex -d fancy -c reflex.conf
