@@ -300,6 +300,8 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		}
 		return nil, errors.Wrap(err, "failed to get runners for module")
 	}
+	endpoint := endpoints[rand.Intn(len(endpoints))] //nolint:gosec
+	client := s.clientsForEndpoint(endpoint)
 
 	verbs, err := headers.GetCallers(req.Header())
 	if err != nil {
@@ -308,10 +310,8 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
 	verbs = append(verbs, verbRef)
 	ctx = rpc.WithVerbs(ctx, verbs)
-
-	endpoint := endpoints[rand.Intn(len(endpoints))] //nolint:gosec
-	client := s.clientsForEndpoint(endpoint)
 	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
+
 	resp, err := client.verb.Call(ctx, req)
 	if err != nil {
 		return nil, errors.WithStack(err)

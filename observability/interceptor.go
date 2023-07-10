@@ -2,7 +2,6 @@ package observability
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/alecthomas/errors"
@@ -49,11 +48,14 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			return nil, err
 		}
 
-		if verb := req.Header().Get(headers.VerbHeader); verb != "" {
-			metricsErr := i.recordVerbCallMetrics(ctx, verb, start, req.Header())
-			if metricsErr != nil {
-				logger.Errorf(metricsErr, "Failed to record metrics for verb: %s", verb)
-			}
+		callers, err := headers.GetCallers(req.Header())
+		if err != nil {
+			logger.Errorf(err, "Failed to get callers from headers")
+		}
+
+		metricsErr := i.recordVerbCallMetrics(ctx, callers, start)
+		if metricsErr != nil {
+			logger.Errorf(metricsErr, "Failed to record metrics for call: %v", callers)
 		}
 
 		return resp, nil
@@ -72,23 +74,22 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 	}
 }
 
-func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, verb string, start time.Time, header http.Header) error {
-	sourceVerbRef, err := schema.ParseRef(verb)
-	if err != nil {
-		return errors.WithStack(err)
+func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, callers []*schema.VerbRef, start time.Time) error {
+	if len(callers) == 0 {
+		return nil // no callers, no metrics
 	}
-
-	caller, err := headers.GetCaller(header)
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	destRef := callers[len(callers)-1]
 
 	attributes := []attribute.KeyValue{
-		attribute.String(verbRefKey, verb),
-		attribute.String(SourceVerbKey, sourceVerbRef.Name),
-		attribute.String(SourceModuleKey, sourceVerbRef.Module),
-		attribute.String(DestVerbKey, caller.MustGet().Name),
-		attribute.String(DestModuleKey, caller.MustGet().Module),
+		attribute.String(verbRefKey, destRef.String()),
+		attribute.String(DestVerbKey, destRef.Name),
+		attribute.String(DestModuleKey, destRef.Module),
+	}
+
+	if len(callers) > 1 {
+		sourceRef := callers[len(callers)-2]
+		attributes = append(attributes, attribute.String(SourceVerbKey, sourceRef.Name))
+		attributes = append(attributes, attribute.String(SourceModuleKey, sourceRef.Module))
 	}
 
 	meter := otel.GetMeterProvider().Meter(instrumentationName)
