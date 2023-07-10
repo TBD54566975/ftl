@@ -276,38 +276,3 @@ service ObservabilityService {
 
   rpc SendMetric(SendMetricRequest) returns (SendMetricResponse);
 }
-
-message MetricCounter {
-  int64 value = 1;
-}
-
-message MetricHistorgram {
-  int64 count = 1;
-  int64 sum = 2;
-  repeated uint64 bucket = 3;
-}
-
-message Verb {
-  schema.VerbRef verb_ref = 1;
-  MetricCounter call_count = 2;
-  MetricHistorgram call_latency = 3;
-}
-
-message Module {
-  string name = 1;
-  repeated Verb verb = 2;
-}
-
-message GetModulesRequest {}
-message GetModulesResponse {
-  repeated Module verb = 2;
-}
-
-service ConsoleService {
-  // Ping service for readiness.
-  rpc Ping(PingRequest) returns (PingResponse) {
-    option idempotency_level = NO_SIDE_EFFECTS;
-  }
-
-  rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
-}

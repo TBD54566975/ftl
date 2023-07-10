@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetModulesRequest, GetModulesResponse, PingRequest, PingResponse, RegisterRunnerResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, SendMetricRequest, SendMetricResponse, StartDeployRequest, StartDeployResponse, StatusRequest, StatusResponse, StopDeployRequest, StopDeployResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, SendMetricRequest, SendMetricResponse, StartDeployRequest, StartDeployResponse, StatusRequest, StatusResponse, StopDeployRequest, StopDeployResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -258,36 +258,6 @@ export const ObservabilityService = {
       name: "SendMetric",
       I: SendMetricRequest,
       O: SendMetricResponse,
-      kind: MethodKind.Unary,
-    },
-  }
-} as const;
-
-/**
- * @generated from service xyz.block.ftl.v1.ConsoleService
- */
-export const ConsoleService = {
-  typeName: "xyz.block.ftl.v1.ConsoleService",
-  methods: {
-    /**
-     * Ping service for readiness.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ConsoleService.Ping
-     */
-    ping: {
-      name: "Ping",
-      I: PingRequest,
-      O: PingResponse,
-      kind: MethodKind.Unary,
-      idempotency: MethodIdempotency.NoSideEffects,
-    },
-    /**
-     * @generated from rpc xyz.block.ftl.v1.ConsoleService.GetModules
-     */
-    getModules: {
-      name: "GetModules",
-      I: GetModulesRequest,
-      O: GetModulesResponse,
       kind: MethodKind.Unary,
     },
   }

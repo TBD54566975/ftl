@@ -1,7 +1,7 @@
 import { PropsWithChildren, createContext, useEffect, useState } from 'react'
 import { useClient } from '../hooks/use-client'
-import { ConsoleService } from '../protos/xyz/block/ftl/v1/ftl_connect'
-import { GetModulesResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
+import { ConsoleService } from '../protos/xyz/block/ftl/v1/console_connect'
+import { GetModulesResponse } from '../protos/xyz/block/ftl/v1/console_pb'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const modulesContext = createContext<GetModulesResponse>(new GetModulesResponse())
