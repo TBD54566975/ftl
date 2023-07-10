@@ -27,7 +27,8 @@ message Verb {
 
 message Module {
   string name = 1;
-  repeated Verb verbs = 2;
+  string language = 2;
+  repeated Verb verbs = 3;
 }
 
 message GetModulesRequest {}
