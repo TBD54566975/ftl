@@ -42,7 +42,7 @@ help: ## This help.
 
 .PHONY:
 release:
-	cd console && npm run build
+	cd console/client && npm run build
 	rm -rf build
 	mkdir -p build
 	for binary in $(BINARIES); do \

@@ -21,12 +21,12 @@ func Server(ctx context.Context) (http.Handler, error) {
 	logger := log.FromContext(ctx)
 	logger.Infof("Building console...")
 
-	err := exec.Command(ctx, "console", "npm", "install").Run()
+	err := exec.Command(ctx, "console/client", "npm", "install").Run()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	err = exec.Command(ctx, "console", "npm", "run", "dev").Start()
+	err = exec.Command(ctx, "console/client", "npm", "run", "dev").Start()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

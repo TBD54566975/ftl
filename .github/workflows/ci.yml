@@ -52,8 +52,8 @@ jobs:
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Console NPM Install
-        working-directory: console
+        working-directory: console/client
         run: npm install
       - name: Console Lint
-        working-directory: console
+        working-directory: console/client
         run: npm run lint

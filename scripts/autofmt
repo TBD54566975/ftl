@@ -25,7 +25,7 @@ find protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xargs -0 -r 
 (cd protos && buf generate)
 
 echo "Formatting TypeScript..."
-(cd console && npm install && prettier --write .)
+(cd console/client && npm install && prettier --write .)
 
 echo "Formatting Caddyfile"
 caddy fmt --overwrite
