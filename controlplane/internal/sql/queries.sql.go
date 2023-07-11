@@ -496,8 +496,8 @@ FROM metrics
 WHERE source_module = ANY($1::string[])
 `
 
-func (q *Queries) GetMetricsBySourceModules(ctx context.Context, dollar_1 []string) ([]Metric, error) {
-	rows, err := q.db.Query(ctx, getMetricsBySourceModules, dollar_1)
+func (q *Queries) GetMetricsBySourceModules(ctx context.Context, modules []string) ([]Metric, error) {
+	rows, err := q.db.Query(ctx, getMetricsBySourceModules, modules)
 	if err != nil {
 		return nil, err
 	}

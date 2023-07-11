@@ -158,7 +158,12 @@ export class Module extends Message<Module> {
   name = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Verb verbs = 2;
+   * @generated from field: string language = 2;
+   */
+  language = "";
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Verb verbs = 3;
    */
   verbs: Verb[] = [];
 
@@ -171,7 +176,8 @@ export class Module extends Message<Module> {
   static readonly typeName = "xyz.block.ftl.v1.console.Module";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "verbs", kind: "message", T: Verb, repeated: true },
+    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "verbs", kind: "message", T: Verb, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {

@@ -50,12 +50,12 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 
 		callers, err := headers.GetCallers(req.Header())
 		if err != nil {
-			logger.Errorf(err, "Failed to get callers from headers")
+			return nil, errors.WithStack(err)
 		}
 
-		metricsErr := i.recordVerbCallMetrics(ctx, callers, start)
-		if metricsErr != nil {
-			logger.Errorf(metricsErr, "Failed to record metrics for call: %v", callers)
+		err = i.recordVerbCallMetrics(ctx, callers, start)
+		if err != nil {
+			return nil, errors.WithStack(err)
 		}
 
 		return resp, nil

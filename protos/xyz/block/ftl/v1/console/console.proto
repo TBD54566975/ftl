@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package xyz.block.ftl.v1;
+package xyz.block.ftl.v1.console;
 
 import "xyz/block/ftl/v1/ftl.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
-option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1;ftlv1";
+option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console;pbconsole";
 option java_multiple_files = true;
 
 message MetricCounter {

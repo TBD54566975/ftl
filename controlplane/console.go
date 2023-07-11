@@ -8,14 +8,15 @@ import (
 
 	"github.com/TBD54566975/ftl/controlplane/internal/dal"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
+	pbconsole "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console"
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 )
 
 type ConsoleService struct {
 	dal dal.DAL
 }
 
-var _ ftlv1connect.ConsoleServiceHandler = (*ConsoleService)(nil)
+var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
 
 func NewConsoleService(dal dal.DAL) *ConsoleService {
 	return &ConsoleService{
@@ -27,22 +28,22 @@ func (*ConsoleService) Ping(context.Context, *connect.Request[ftlv1.PingRequest]
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
-func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[ftlv1.GetModulesRequest]) (*connect.Response[ftlv1.GetModulesResponse], error) {
-	status, err := c.dal.GetStatus(ctx, true)
+func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pbconsole.GetModulesRequest]) (*connect.Response[pbconsole.GetModulesResponse], error) {
+	status, err := c.dal.GetStatus(ctx, false)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	var modules []*ftlv1.Module
+	var modules []*pbconsole.Module
 	for _, deployment := range status.Deployments {
-		modules = append(modules, &ftlv1.Module{
+		modules = append(modules, &pbconsole.Module{
 			Name:     deployment.Module,
 			Language: deployment.Language,
-			Verbs:    []*ftlv1.Verb{},
+			Verbs:    []*pbconsole.Verb{},
 		})
 	}
 
-	return connect.NewResponse(&ftlv1.GetModulesResponse{
+	return connect.NewResponse(&pbconsole.GetModulesResponse{
 		Modules: modules,
 	}), nil
 }

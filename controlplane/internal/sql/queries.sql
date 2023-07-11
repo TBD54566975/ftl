@@ -212,4 +212,4 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 -- name: GetMetricsBySourceModules :many
 SELECT *
 FROM metrics
-WHERE source_module = ANY($1::string[]);
+WHERE source_module = ANY(@modules::string[]);
