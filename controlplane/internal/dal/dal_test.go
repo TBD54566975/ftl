@@ -16,21 +16,10 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
-func TestPostgresDAL(t *testing.T) {
+func TestDAL(t *testing.T) {
 	conn := sqltest.OpenForTesting(t)
-	dal := NewPostgres(conn)
+	dal := New(conn)
 	assert.NotZero(t, dal)
-	testDAL(t, dal)
-}
-
-func TestLocalDAL(t *testing.T) {
-	dal := NewLocal(t.TempDir())
-	assert.NotZero(t, dal)
-	testDAL(t, dal)
-}
-
-func testDAL(t *testing.T, dal DAL) {
-	t.Helper()
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
 
