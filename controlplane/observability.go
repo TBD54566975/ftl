@@ -18,12 +18,12 @@ import (
 )
 
 type ObservabilityService struct {
-	dal dal.DAL
+	dal *dal.DAL
 }
 
 var _ ftlv1connect.ObservabilityServiceHandler = (*ObservabilityService)(nil)
 
-func NewObservabilityService(dal dal.DAL) *ObservabilityService {
+func NewObservabilityService(dal *dal.DAL) *ObservabilityService {
 	return &ObservabilityService{
 		dal: dal,
 	}

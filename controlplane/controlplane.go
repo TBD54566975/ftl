@@ -33,7 +33,7 @@ import (
 
 type Config struct {
 	Bind                         *url.URL      `help:"Socket to bind to." default:"http://localhost:8892"`
-	DSN                          string        `help:"Postgres DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
+	DSN                          string        `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
 	RunnerTimeout                time.Duration `help:"Runner heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration `help:"Deployment reservation timeout." default:"120s"`
 	ArtefactChunkSize            int           `help:"Size of each chunk streamed to the client." default:"1048576"`
@@ -53,7 +53,7 @@ func Start(ctx context.Context, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	dal := dal.NewPostgres(conn)
+	dal := dal.New(conn)
 	svc, err := New(ctx, dal, config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
 	if err != nil {
 		return errors.WithStack(err)
@@ -81,7 +81,7 @@ type clients struct {
 }
 
 type Service struct {
-	dal                          dal.DAL
+	dal                          *dal.DAL
 	heartbeatTimeout             time.Duration
 	deploymentReservationTimeout time.Duration
 	artefactChunkSize            int
@@ -124,7 +124,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	return connect.NewResponse(resp), nil
 }
 
-func New(ctx context.Context, dal dal.DAL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
+func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
 	svc := &Service{
 		dal:                          dal,
 		heartbeatTimeout:             heartbeatTimeout,

@@ -13,12 +13,12 @@ import (
 )
 
 type ConsoleService struct {
-	dal dal.DAL
+	dal *dal.DAL
 }
 
 var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
 
-func NewConsoleService(dal dal.DAL) *ConsoleService {
+func NewConsoleService(dal *dal.DAL) *ConsoleService {
 	return &ConsoleService{
 		dal: dal,
 	}
