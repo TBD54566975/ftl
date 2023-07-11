@@ -32,12 +32,20 @@ export enum RunnerState {
    * @generated from enum value: ASSIGNED = 2;
    */
   ASSIGNED = 2,
+
+  /**
+   * The Runner is dead.
+   *
+   * @generated from enum value: DEAD = 3;
+   */
+  DEAD = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(RunnerState)
 proto3.util.setEnumType(RunnerState, "xyz.block.ftl.v1.RunnerState", [
   { no: 0, name: "IDLE" },
   { no: 1, name: "RESERVED" },
   { no: 2, name: "ASSIGNED" },
+  { no: 3, name: "DEAD" },
 ]);
 
 /**
@@ -1234,9 +1242,14 @@ export class StatusRequest extends Message<StatusRequest> {
   /**
    * Show all deployments, even those that are not running.
    *
-   * @generated from field: bool all = 1;
+   * @generated from field: bool all_deployments = 1;
    */
-  all = false;
+  allDeployments = false;
+
+  /**
+   * @generated from field: bool all_runners = 2;
+   */
+  allRunners = false;
 
   constructor(data?: PartialMessage<StatusRequest>) {
     super();
@@ -1246,7 +1259,8 @@ export class StatusRequest extends Message<StatusRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StatusRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "all", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 1, name: "all_deployments", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "all_runners", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {

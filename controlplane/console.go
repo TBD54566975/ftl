@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/alecthomas/errors"
-	connect "github.com/bufbuild/connect-go"
+	"github.com/bufbuild/connect-go"
 
 	"github.com/TBD54566975/ftl/controlplane/internal/dal"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -29,7 +29,7 @@ func (*ConsoleService) Ping(context.Context, *connect.Request[ftlv1.PingRequest]
 }
 
 func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pbconsole.GetModulesRequest]) (*connect.Response[pbconsole.GetModulesResponse], error) {
-	status, err := c.dal.GetStatus(ctx, false)
+	status, err := c.dal.GetStatus(ctx, false, false)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

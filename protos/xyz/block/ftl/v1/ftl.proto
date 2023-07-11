@@ -114,6 +114,8 @@ enum RunnerState {
   RESERVED = 1;
   // The Runner is assigned to a deployment.
   ASSIGNED = 2;
+  // The Runner is dead.
+  DEAD = 3;
 }
 
 message RunnerHeartbeat {
@@ -153,7 +155,8 @@ message StreamDeploymentLogsResponse {}
 
 message StatusRequest {
   // Show all deployments, even those that are not running.
-  bool all = 1;
+  bool all_deployments = 1;
+  bool all_runners = 2;
 }
 message StatusResponse {
   message Runner {

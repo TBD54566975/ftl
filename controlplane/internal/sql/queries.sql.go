@@ -58,28 +58,14 @@ func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, module
 	return err
 }
 
-const deleteStaleRunners = `-- name: DeleteStaleRunners :one
-WITH deleted AS (
-    DELETE FROM runners
-        WHERE last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
-        RETURNING 1)
-SELECT COUNT(*)
-FROM deleted
-`
-
-func (q *Queries) DeleteStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error) {
-	row := q.db.QueryRow(ctx, deleteStaleRunners, dollar_1)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const deregisterRunner = `-- name: DeregisterRunner :one
-WITH deleted AS (
-    DELETE FROM runners WHERE key = $1
+WITH matches AS (
+    UPDATE runners
+        SET state = 'dead'
+        WHERE key = $1
         RETURNING 1)
 SELECT COUNT(*)
-FROM deleted
+FROM matches
 `
 
 func (q *Queries) DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error) {
@@ -118,6 +104,7 @@ SELECT DISTINCT ON (r.key) r.key                                                
                            COALESCE(CASE WHEN r.deployment_id IS NOT NULL THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
+WHERE $1::bool = true OR r.state <> 'dead'
 ORDER BY r.key
 `
 
@@ -130,8 +117,8 @@ type GetActiveRunnersRow struct {
 	DeploymentKey interface{}
 }
 
-func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error) {
-	rows, err := q.db.Query(ctx, getActiveRunners)
+func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error) {
+	rows, err := q.db.Query(ctx, getActiveRunners, all)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +353,7 @@ SELECT d.key                  AS key,
        COUNT(r.id)            AS assigned_runners_count,
        d.min_replicas::BIGINT AS required_runners_count
 FROM deployments d
-         LEFT JOIN runners r ON d.id = r.deployment_id
+         LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
          JOIN modules m ON d.module_id = m.id
 GROUP BY d.key, d.min_replicas, m.name, m.language
 HAVING COUNT(r.id) <> d.min_replicas
@@ -491,23 +478,40 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 }
 
 const getMetricsBySourceModules = `-- name: GetMetricsBySourceModules :many
-SELECT id, runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type, value
-FROM metrics
+SELECT r.key AS runner_key, m.id, m.runner_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
+FROM metrics m
+INNER JOIN runners r on m.runner_id = r.id
 WHERE source_module = ANY($1::string[])
 `
 
-func (q *Queries) GetMetricsBySourceModules(ctx context.Context, modules []string) ([]Metric, error) {
+type GetMetricsBySourceModulesRow struct {
+	RunnerKey    sqltypes.Key
+	ID           int64
+	RunnerID     pgtype.Int8
+	StartTime    pgtype.Timestamptz
+	EndTime      pgtype.Timestamptz
+	SourceModule string
+	SourceVerb   string
+	DestModule   string
+	DestVerb     string
+	Name         string
+	Type         MetricType
+	Value        []byte
+}
+
+func (q *Queries) GetMetricsBySourceModules(ctx context.Context, modules []string) ([]GetMetricsBySourceModulesRow, error) {
 	rows, err := q.db.Query(ctx, getMetricsBySourceModules, modules)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Metric
+	var items []GetMetricsBySourceModulesRow
 	for rows.Next() {
-		var i Metric
+		var i GetMetricsBySourceModulesRow
 		if err := rows.Scan(
-			&i.ID,
 			&i.RunnerKey,
+			&i.ID,
+			&i.RunnerID,
 			&i.StartTime,
 			&i.EndTime,
 			&i.SourceModule,
@@ -660,13 +664,13 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 }
 
 const insertMetricEntry = `-- name: InsertMetricEntry :exec
-INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
+INSERT INTO metrics (runner_id, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
                      value)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+VALUES ((SELECT id FROM runners WHERE key = $1), $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type InsertMetricEntryParams struct {
-	RunnerKey    sqltypes.Key
+	Key          sqltypes.Key
 	StartTime    pgtype.Timestamptz
 	EndTime      pgtype.Timestamptz
 	SourceModule string
@@ -680,7 +684,7 @@ type InsertMetricEntryParams struct {
 
 func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error {
 	_, err := q.db.Exec(ctx, insertMetricEntry,
-		arg.RunnerKey,
+		arg.Key,
 		arg.StartTime,
 		arg.EndTime,
 		arg.SourceModule,
@@ -692,6 +696,23 @@ func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryPa
 		arg.Value,
 	)
 	return err
+}
+
+const killStaleRunners = `-- name: KillStaleRunners :one
+WITH matches AS (
+    UPDATE runners
+        SET state = 'dead'
+        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+        RETURNING 1)
+SELECT COUNT(*)
+FROM matches
+`
+
+func (q *Queries) KillStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error) {
+	row := q.db.QueryRow(ctx, killStaleRunners, dollar_1)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const reserveRunner = `-- name: ReserveRunner :one

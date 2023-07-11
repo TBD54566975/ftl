@@ -41,12 +41,12 @@ type Postgres struct {
 	db *sql.DB
 }
 
-func (d *Postgres) GetStatus(ctx context.Context, all bool) (Status, error) {
-	runners, err := d.db.GetActiveRunners(ctx)
+func (d *Postgres) GetStatus(ctx context.Context, allDeployments bool, allRunners bool) (Status, error) {
+	runners, err := d.db.GetActiveRunners(ctx, allRunners)
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get active runners")
 	}
-	deployments, err := d.db.GetDeployments(ctx, all)
+	deployments, err := d.db.GetDeployments(ctx, allDeployments)
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get active deployments")
 	}
@@ -237,9 +237,9 @@ func (d *Postgres) UpsertRunner(ctx context.Context, runner Runner) error {
 	return nil
 }
 
-// DeleteStaleRunners deletes runners that have not had heartbeats for the given duration.
-func (d *Postgres) DeleteStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.DeleteStaleRunners(ctx, pgtype.Interval{
+// KillStaleRunners deletes runners that have not had heartbeats for the given duration.
+func (d *Postgres) KillStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
+	count, err := d.db.KillStaleRunners(ctx, pgtype.Interval{
 		Microseconds: int64(age / time.Microsecond),
 		Valid:        true,
 	})
@@ -445,7 +445,7 @@ func (d *Postgres) InsertMetricEntry(ctx context.Context, metric Metric) error {
 	}
 
 	return errors.WithStack(translatePGError(d.db.InsertMetricEntry(ctx, sql.InsertMetricEntryParams{
-		RunnerKey:    sqltypes.Key(metric.RunnerKey),
+		Key:          sqltypes.Key(metric.RunnerKey),
 		StartTime:    pgtype.Timestamptz{Time: metric.StartTime, Valid: true},
 		EndTime:      pgtype.Timestamptz{Time: metric.EndTime, Valid: true},
 		SourceModule: metric.SourceVerb.Module,
@@ -463,7 +463,7 @@ func (d *Postgres) GetMetricsForSourceModules(ctx context.Context, modules []str
 	if err != nil {
 		return nil, errors.Wrap(translatePGError(err), "could not get metrics")
 	}
-	metrics, err := slices.MapErr(dbMetrics, func(in sql.Metric) (Metric, error) {
+	metrics, err := slices.MapErr(dbMetrics, func(in sql.GetMetricsBySourceModulesRow) (Metric, error) {
 		var datapoint DataPoint
 		if err := json.Unmarshal((in.Value), &datapoint); err != nil {
 			return Metric{}, errors.Wrapf(err, "could not unmarshal datapoint for row %d: ", in.ID)

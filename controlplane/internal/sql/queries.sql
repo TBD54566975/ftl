@@ -88,21 +88,24 @@ ON CONFLICT (key) DO UPDATE SET language      = $2,
                                 last_seen     = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id;
 
--- name: DeleteStaleRunners :one
-WITH deleted AS (
-    DELETE FROM runners
-        WHERE last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+-- name: KillStaleRunners :one
+WITH matches AS (
+    UPDATE runners
+        SET state = 'dead'
+        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
-FROM deleted;
+FROM matches;
 
 
 -- name: DeregisterRunner :one
-WITH deleted AS (
-    DELETE FROM runners WHERE key = $1
+WITH matches AS (
+    UPDATE runners
+        SET state = 'dead'
+        WHERE key = $1
         RETURNING 1)
 SELECT COUNT(*)
-FROM deleted;
+FROM matches;
 
 -- name: GetActiveRunners :many
 SELECT DISTINCT ON (r.key) r.key                                                      AS runner_key,
@@ -113,6 +116,7 @@ SELECT DISTINCT ON (r.key) r.key                                                
                            COALESCE(CASE WHEN r.deployment_id IS NOT NULL THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
+WHERE sqlc.arg('all')::bool = true OR r.state <> 'dead'
 ORDER BY r.key;
 
 -- name: GetDeployments :many
@@ -144,7 +148,7 @@ SELECT d.key                  AS key,
        COUNT(r.id)            AS assigned_runners_count,
        d.min_replicas::BIGINT AS required_runners_count
 FROM deployments d
-         LEFT JOIN runners r ON d.id = r.deployment_id
+         LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
          JOIN modules m ON d.module_id = m.id
 GROUP BY d.key, d.min_replicas, m.name, m.language
 HAVING COUNT(r.id) <> d.min_replicas;
@@ -205,11 +209,12 @@ INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, e
 VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $5, $6);
 
 -- name: InsertMetricEntry :exec
-INSERT INTO metrics (runner_key, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
+INSERT INTO metrics (runner_id, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
                      value)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+VALUES ((SELECT id FROM runners WHERE key = $1), $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
 -- name: GetMetricsBySourceModules :many
-SELECT *
-FROM metrics
+SELECT r.key AS runner_key, m.*
+FROM metrics m
+INNER JOIN runners r on m.runner_id = r.id
 WHERE source_module = ANY(@modules::string[]);

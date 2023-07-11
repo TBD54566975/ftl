@@ -61,6 +61,7 @@ const (
 	RunnerStateIdle     RunnerState = "idle"
 	RunnerStateReserved RunnerState = "reserved"
 	RunnerStateAssigned RunnerState = "assigned"
+	RunnerStateDead     RunnerState = "dead"
 )
 
 func (e *RunnerState) Scan(src interface{}) error {
@@ -135,7 +136,7 @@ type DeploymentLog struct {
 
 type Metric struct {
 	ID           int64
-	RunnerKey    sqltypes.Key
+	RunnerID     pgtype.Int8
 	StartTime    pgtype.Timestamptz
 	EndTime      pgtype.Timestamptz
 	SourceModule string

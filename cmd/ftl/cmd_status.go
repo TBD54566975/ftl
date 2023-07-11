@@ -17,13 +17,14 @@ import (
 )
 
 type statusCmd struct {
-	All    bool `help:"Show all deployments, even those that are not running."`
-	JSON   bool `help:"Output JSON."`
-	Schema bool `help:"Show schema."`
+	AllDeployments bool `help:"Show all deployments, even those that are not running."`
+	AllRunners     bool `help:"Show all runners, even those that are not running."`
+	JSON           bool `help:"Output JSON."`
+	Schema         bool `help:"Show schema."`
 }
 
 func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
-	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{All: s.All}))
+	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{AllDeployments: s.AllDeployments, AllRunners: s.AllRunners}))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -54,7 +55,7 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 	}
 	for _, deployment := range status.Msg.Deployments {
 		active := slices.Reduce(status.Msg.Runners, 0, func(i int, runner *ftlv1.StatusResponse_Runner) int {
-			if runner.GetDeployment() == deployment.Key {
+			if runner.State != ftlv1.RunnerState_DEAD && runner.GetDeployment() == deployment.Key {
 				return i + 1
 			}
 			return i

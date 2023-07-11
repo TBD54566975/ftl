@@ -76,6 +76,7 @@ const (
 	RunnerStateIdle     = RunnerState(sql.RunnerStateIdle)
 	RunnerStateReserved = RunnerState(sql.RunnerStateReserved)
 	RunnerStateAssigned = RunnerState(sql.RunnerStateAssigned)
+	RunnerStateDead     = RunnerState(sql.RunnerStateDead)
 )
 
 func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
@@ -151,7 +152,7 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 // logging, etc.)
 type DAL interface {
 	// GetStatus of the ControlPlane.
-	GetStatus(ctx context.Context, all bool) (Status, error)
+	GetStatus(ctx context.Context, allDeployments bool, allRunners bool) (Status, error)
 	UpsertModule(ctx context.Context, language, name string) (err error)
 	// GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
 	GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error)
@@ -168,8 +169,8 @@ type DAL interface {
 	// ErrConflict will be returned if a runner with the same endpoint and a
 	// different key already exists.
 	UpsertRunner(ctx context.Context, runner Runner) error
-	// DeleteStaleRunners deletes runners that have not had heartbeats for the given duration.
-	DeleteStaleRunners(ctx context.Context, age time.Duration) (int64, error)
+	// KillStaleRunners deletes runners that have not had heartbeats for the given duration.
+	KillStaleRunners(ctx context.Context, age time.Duration) (int64, error)
 	// DeregisterRunner deregisters the given runner.
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) error
 	// ReserveRunnerForDeployment reserves a runner for the given deployment.
