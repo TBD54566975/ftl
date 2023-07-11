@@ -26,11 +26,11 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			protos/xyz/block/ftl/v1/schema/schema.pb.go \
 			protos/xyz/block/ftl/v1/console/console.pb.go \
 			protos/xyz/block/ftl/v1/ftl.pb.go \
-			console/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
-			console/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
-			console/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
-			console/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
-			console/src/protos/xyz/block/ftl/v1/console/console_pb.ts \
+			console/client/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
+			console/client/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
+			console/client/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
+			console/client/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
+			console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts \
 			internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect/metrics_service.connect.go
 
 
