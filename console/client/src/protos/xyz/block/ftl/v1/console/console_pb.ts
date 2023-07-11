@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { VerbRef } from "../schema/schema_pb.js";
+import { Data, Verb as Verb$1 } from "../schema/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.console.MetricCounter
@@ -98,9 +98,9 @@ export class MetricHistorgram extends Message<MetricHistorgram> {
  */
 export class Verb extends Message<Verb> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.VerbRef verb_ref = 1;
+   * @generated from field: xyz.block.ftl.v1.schema.Verb verb = 1;
    */
-  verbRef?: VerbRef;
+  verb?: Verb$1;
 
   /**
    * @generated from field: xyz.block.ftl.v1.console.MetricCounter call_count = 2;
@@ -125,7 +125,7 @@ export class Verb extends Message<Verb> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.Verb";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "verb_ref", kind: "message", T: VerbRef },
+    { no: 1, name: "verb", kind: "message", T: Verb$1 },
     { no: 2, name: "call_count", kind: "message", T: MetricCounter },
     { no: 3, name: "call_latency", kind: "message", T: MetricHistorgram },
     { no: 4, name: "call_error_count", kind: "message", T: MetricCounter },
@@ -167,6 +167,11 @@ export class Module extends Message<Module> {
    */
   verbs: Verb[] = [];
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Data data = 4;
+   */
+  data: Data[] = [];
+
   constructor(data?: PartialMessage<Module>) {
     super();
     proto3.util.initPartial(data, this);
@@ -178,6 +183,7 @@ export class Module extends Message<Module> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "verbs", kind: "message", T: Verb, repeated: true },
+    { no: 4, name: "data", kind: "message", T: Data, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {

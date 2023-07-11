@@ -19,7 +19,7 @@ message MetricHistorgram {
 }
 
 message Verb {
-  schema.VerbRef verb_ref = 1;
+  schema.Verb verb = 1;
   MetricCounter call_count = 2;
   MetricHistorgram call_latency = 3;
   MetricCounter call_error_count = 4;
@@ -29,6 +29,7 @@ message Module {
   string name = 1;
   string language = 2;
   repeated Verb verbs = 3;
+  repeated schema.Data data = 4;
 }
 
 message GetModulesRequest {}

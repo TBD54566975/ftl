@@ -1,25 +1,21 @@
+import { ChevronRightIcon } from '@heroicons/react/20/solid'
+import { useContext } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Link, useParams } from 'react-router-dom'
-import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import { Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { useContext } from 'react'
-import { schemaContext } from '../../providers/schema-provider'
-import { classNames } from '../../utils/react.utils'
-import { getData } from '../modules/module.utils'
+import { modulesContext } from '../../providers/modules-provider'
 import { getCodeBlock } from '../../utils/data.utils'
+import { classNames } from '../../utils/react.utils'
 import { getCalls, getVerbCode } from './verb.utils'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
-  const schema = useContext(schemaContext)
-  const module = schema.find(module => module.schema?.name === moduleId)?.schema
+  const modules = useContext(modulesContext)
+  const module = modules.modules.find(m => m.name === moduleId)
 
-  const verb = module?.decls.find(
-    decl => decl.value.case === 'verb' && decl.value.value.name === id?.toLocaleLowerCase(),
-  )?.value.value as Verb
+  const verb = module?.verbs.find(v => v.verb?.name === id?.toLocaleLowerCase())?.verb
 
-  const callData = getData(module).filter(data => [verb.request?.name, verb.response?.name].includes(data.name))
+  const callData = module?.data.filter(data => [verb?.request?.name, verb?.response?.name].includes(data.name))
 
   if (module === undefined || verb === undefined) {
     return <></>
@@ -57,7 +53,7 @@ export default function VerbPage() {
       </div>
 
       <div className="pt-4">
-        {callData.map(data => (
+        {callData?.map(data => (
           <div key={data.name} className="text-sm">
             <SyntaxHighlighter language="go" style={atomDark}>
               {getCodeBlock(data)}

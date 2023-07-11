@@ -1,23 +1,23 @@
 import { useContext, useEffect } from 'react'
-import ReactFlow, { Controls, MiniMap, useNodesState, useEdgesState } from 'reactflow'
-import { schemaContext } from '../../providers/schema-provider'
+import ReactFlow, { Controls, MiniMap, useEdgesState, useNodesState } from 'reactflow'
+import 'reactflow/dist/style.css'
+import { modulesContext } from '../../providers/modules-provider'
 import { GroupNode } from './GroupNode'
 import { VerbNode } from './VerbNode'
 import { layoutNodes } from './create-layout'
-import 'reactflow/dist/style.css'
 
 const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode }
 
 export default function GraphPage() {
-  const schema = useContext(schemaContext)
+  const modules = useContext(modulesContext)
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
 
   useEffect(() => {
-    const { nodes, edges } = layoutNodes(schema)
+    const { nodes, edges } = layoutNodes(modules.modules)
     setNodes(nodes)
     setEdges(edges)
-  }, [schema, setEdges, setNodes])
+  }, [modules, setEdges, setNodes])
 
   return (
     <div style={{ width: '100vw', height: '90vh' }}>

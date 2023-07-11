@@ -1,7 +1,8 @@
-import { MetadataCalls, Module, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { Link } from 'react-router-dom'
-import { classNames } from '../../utils/react.utils'
 import { Card } from '../../components/Card'
+import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { MetadataCalls } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { classNames } from '../../utils/react.utils'
 
 type Props = {
   module?: Module
@@ -9,15 +10,15 @@ type Props = {
 }
 
 export const VerbCard: React.FC<Props> = ({ module, verb }) => {
-  const calls = verb?.metadata
+  const calls = verb?.verb?.metadata
     .filter(meta => meta.value.case === 'calls')
     .map(meta => meta.value.value as MetadataCalls)
 
   return (
     <Card>
       <div className="min-w-0 flex-1">
-        <Link to={`/modules/${module?.name}/verbs/${verb?.name}`} className="focus:outline-none">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-300">{verb?.name}</p>
+        <Link to={`/modules/${module?.name}/verbs/${verb?.verb?.name}`} className="focus:outline-none">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-300">{verb?.verb?.name}</p>
           {(calls?.length ?? 0) > 0 && (
             <li className="flex items-center space-x-4 pt-2">
               <div className="relative flex items-center space-x-4">
