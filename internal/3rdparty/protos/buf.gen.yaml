@@ -3,3 +3,9 @@ plugins:
   - plugin: connect-go
     out: .
     opt: paths=source_relative
+  - plugin: buf.build/bufbuild/es
+    out: ../../../console/src/protos
+    opt: target=ts
+  - plugin: buf.build/bufbuild/connect-es
+    out: ../../../console/src/protos
+    opt: target=ts

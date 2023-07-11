@@ -1,5 +1,5 @@
 dest = "internal/3rdparty/protos"
-sources = ["./protos", "opentelemetry/proto/collector/metrics/v1/metrics_service.proto"]
+sources = ["./protos", "opentelemetry/proto/collector/metrics/v1/metrics_service.proto", "opentelemetry/proto/metrics/v1/metrics.proto"]
 
 repo "https://github.com/grpc/grpc.git" {
   prefix = "grpc/"

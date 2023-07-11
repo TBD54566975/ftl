@@ -25,6 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/schema"
@@ -60,11 +61,13 @@ func Start(ctx context.Context, config Config) error {
 	logger.Infof("Listening on %s", config.Bind)
 
 	observability := NewObservabilityService(dal)
+	console := NewConsoleService(dal)
 
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewObservabilityServiceHandler, observability),
+		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 		rpc.Route("/", c),
 	)
 }

@@ -33,6 +33,7 @@ type Querier interface {
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
 	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error)
+	GetMetricsBySourceModules(ctx context.Context, modules []string) ([]Metric, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetRoutingTable(ctx context.Context, name string) ([]string, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
