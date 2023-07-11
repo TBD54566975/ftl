@@ -92,7 +92,7 @@ type Service struct {
 }
 
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx, req.Msg.All)
+	status, err := s.dal.GetStatus(ctx, req.Msg.AllDeployments, req.Msg.AllRunners)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get status")
 	}
@@ -409,11 +409,11 @@ func (s *Service) clientsForEndpoint(endpoint string) clients {
 func (s *Service) reapStaleRunners(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
-		count, err := s.dal.DeleteStaleRunners(context.Background(), s.heartbeatTimeout)
+		count, err := s.dal.KillStaleRunners(context.Background(), s.heartbeatTimeout)
 		if err != nil {
 			logger.Errorf(err, "Failed to delete stale runners")
 		} else if count > 0 {
-			logger.Warnf("Deleted %d stale runners", count)
+			logger.Warnf("Reaped %d stale runners", count)
 		}
 		select {
 		case <-ctx.Done():

@@ -61,7 +61,7 @@ type Local struct {
 	runnersByEndpoint         map[string]*localRunner
 }
 
-func (m *Local) GetStatus(ctx context.Context, all bool) (Status, error) {
+func (m *Local) GetStatus(ctx context.Context, allDeployments bool, allRunners bool) (Status, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	runners := slices.Map(maps.Values(m.runners), func(t *localRunner) Runner { return t.Runner })
@@ -80,7 +80,7 @@ func (m *Local) GetStatus(ctx context.Context, all bool) (Status, error) {
 		}
 	})
 	deployments = slices.Filter(deployments, func(t Deployment) bool {
-		return all || t.MinReplicas > 0
+		return allDeployments || t.MinReplicas > 0
 	})
 	sort.Slice(deployments, func(i, j int) bool {
 		lhs := deployments[i].Key.ULID()
@@ -245,7 +245,7 @@ func (m *Local) UpsertRunner(ctx context.Context, runner Runner) error {
 	return nil
 }
 
-func (m *Local) DeleteStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
+func (m *Local) KillStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	var count int64

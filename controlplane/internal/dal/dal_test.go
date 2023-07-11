@@ -266,7 +266,7 @@ func testDAL(t *testing.T, dal DAL) {
 	})
 
 	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
-		err = dal.DeregisterRunner(ctx, runnerID)
+		err = dal.DeregisterRunner(ctx, model.NewRunnerKey())
 		assert.IsError(t, err, ErrNotFound)
 	})
 }
