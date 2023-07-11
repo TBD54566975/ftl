@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/alecthomas/errors"
@@ -25,6 +26,7 @@ const (
 	DestModuleKey    = "ftl.dest.module"   // DestModuleKey is the key for the destination module.
 	callLatency      = "call.latency"
 	callRequestCount = "call.request.count"
+	callErrorCount   = "call.error.count"
 	unitMilliseconds = "ms"
 )
 
@@ -43,17 +45,17 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 
 		resp, err := next(ctx, req)
 		if err != nil {
+			// Record FTL errors for non-wire errors.
+			if !connect.IsWireError(err) {
+				recordVerbCallError(ctx, req.Header())
+			}
+
 			err = errors.WithStack(err)
 			logger.Errorf(err, "Unary RPC failed: %s", req.Spec().Procedure)
 			return nil, err
 		}
 
-		callers, err := headers.GetCallers(req.Header())
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		err = i.recordVerbCallMetrics(ctx, callers, start)
+		err = recordVerbCallMetrics(ctx, req.Header(), start)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -74,9 +76,53 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 	}
 }
 
-func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, callers []*schema.VerbRef, start time.Time) error {
+func recordVerbCallMetrics(ctx context.Context, header http.Header, start time.Time) error {
+	callers, err := headers.GetCallers(header)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	if len(callers) == 0 {
 		return nil // no callers, no metrics
+	}
+
+	attributes := createAttributes(callers)
+
+	meter := otel.GetMeterProvider().Meter(instrumentationName)
+	counter, err := meter.Int64Counter(callRequestCount)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	counter.Add(ctx, 1, metric.WithAttributes(attributes...))
+
+	histogram, err := meter.Int64Histogram(callLatency, metric.WithUnit(unitMilliseconds))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	histogram.Record(ctx, time.Since(start).Milliseconds(), metric.WithAttributes(attributes...))
+	return nil
+}
+
+func recordVerbCallError(ctx context.Context, header http.Header) {
+	// TODO: Should we ignore this error if we're already handling an error?
+	callers, _ := headers.GetCallers(header)
+	if len(callers) == 0 {
+		return
+	}
+
+	attributes := createAttributes(callers)
+
+	meter := otel.GetMeterProvider().Meter(instrumentationName)
+	counter, err := meter.Int64Counter(callErrorCount)
+	if err != nil {
+		return
+	}
+	counter.Add(ctx, 1, metric.WithAttributes(attributes...))
+}
+
+func createAttributes(callers []*schema.VerbRef) []attribute.KeyValue {
+	if len(callers) == 0 {
+		return nil // no callers, no attributes
 	}
 	destRef := callers[len(callers)-1]
 
@@ -91,19 +137,5 @@ func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, callers []*sche
 		attributes = append(attributes, attribute.String(SourceVerbKey, sourceRef.Name))
 		attributes = append(attributes, attribute.String(SourceModuleKey, sourceRef.Module))
 	}
-
-	meter := otel.GetMeterProvider().Meter(instrumentationName)
-
-	counter, err := meter.Int64Counter(callRequestCount)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	counter.Add(ctx, 1, metric.WithAttributes(attributes...))
-
-	histogram, err := meter.Int64Histogram(callLatency, metric.WithUnit(unitMilliseconds))
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	histogram.Record(ctx, time.Since(start).Milliseconds(), metric.WithAttributes(attributes...))
-	return nil
+	return attributes
 }
