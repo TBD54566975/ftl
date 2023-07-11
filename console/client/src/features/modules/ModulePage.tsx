@@ -1,14 +1,14 @@
-import { useParams } from 'react-router-dom'
-import { VerbList } from '../verbs/VerbList'
 import { useContext } from 'react'
-import { schemaContext } from '../../providers/schema-provider'
+import { useParams } from 'react-router-dom'
+import { modulesContext } from '../../providers/modules-provider'
 import { classNames } from '../../utils/react.utils'
 import { statuses } from '../../utils/style.utils'
+import { VerbList } from '../verbs/VerbList'
 
 export default function ModulePage() {
   const { id } = useParams()
-  const schema = useContext(schemaContext)
-  const module = schema.find(module => module.schema?.name === id)?.schema
+  const modules = useContext(modulesContext)
+  const module = modules.modules.find(module => module?.name === id)
 
   if (module === undefined) {
     return <></>
@@ -27,14 +27,13 @@ export default function ModulePage() {
               <div className="flex gap-x-2">
                 <span className="truncate">{module?.name}</span>
                 <span className="text-gray-400">/</span>
-                <span className="whitespace-nowrap">go</span>
+                <span className="whitespace-nowrap">{module.language}</span>
                 <span className="absolute inset-0" />
               </div>
             </h2>
           </div>
         </div>
       </div>
-      <p className="truncate text-sm text-gray-500 pt-2">{module.comments}</p>
       <VerbList module={module} />
     </>
   )

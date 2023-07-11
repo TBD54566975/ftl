@@ -10,6 +10,8 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pbconsole "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
+	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/schema"
 )
 
 type ConsoleService struct {
@@ -36,10 +38,28 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 
 	var modules []*pbconsole.Module
 	for _, deployment := range status.Deployments {
+		verbs := []*pbconsole.Verb{}
+		data := []*pschema.Data{}
+		for _, decl := range deployment.Schema.Decls {
+			switch decl := decl.(type) {
+			case *schema.Verb:
+				//nolint:forcetypeassert
+				verbs = append(verbs, &pbconsole.Verb{
+					Verb:           decl.ToProto().(*pschema.Verb),
+					CallCount:      &pbconsole.MetricCounter{},
+					CallLatency:    &pbconsole.MetricHistorgram{},
+					CallErrorCount: &pbconsole.MetricCounter{},
+				})
+			case *schema.Data:
+				//nolint:forcetypeassert
+				data = append(data, decl.ToProto().(*pschema.Data))
+			}
+		}
 		modules = append(modules, &pbconsole.Module{
 			Name:     deployment.Module,
 			Language: deployment.Language,
-			Verbs:    []*pbconsole.Verb{},
+			Verbs:    verbs,
+			Data:     data,
 		})
 	}
 
