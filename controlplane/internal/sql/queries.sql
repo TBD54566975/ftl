@@ -213,8 +213,9 @@ INSERT INTO metrics (runner_id, start_time, end_time, source_module, source_verb
                      value)
 VALUES ((SELECT id FROM runners WHERE key = $1), $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
--- name: GetMetricsBySourceModules :many
-SELECT r.key AS runner_key, m.*
-FROM metrics m
-INNER JOIN runners r on m.runner_id = r.id
-WHERE source_module = ANY(@modules::string[]);
+-- name: GetLatestModuleMetrics :many
+SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name)
+       r.key AS runner_key, m.*
+FROM runners r, metrics m
+WHERE dest_module = ANY(@modules::text[])
+ORDER BY dest_module, dest_verb, source_module, source_verb, name, end_time DESC;

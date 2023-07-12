@@ -8,8 +8,6 @@ import { statuses } from '../../utils/style.utils'
 export default function ModulesPage() {
   const modules = useContext(modulesContext)
 
-  console.log(modules)
-
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
