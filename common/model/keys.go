@@ -38,10 +38,8 @@ func parseKey[KT keyType[U], U any](key string) (KT, error) {
 // named struct in the form <name>Key, eg. "runnerKey"
 type keyType[T any] ulid.ULID
 
-func (d keyType[T]) Kind() string { return kindFromType[T]() }
-func (d keyType[T]) String() string {
-	return d.Kind() + ulid.ULID(d).String()
-}
+func (d keyType[T]) Kind() string                 { return kindFromType[T]() }
+func (d keyType[T]) String() string               { return d.Kind() + ulid.ULID(d).String() }
 func (d keyType[T]) ULID() ulid.ULID              { return ulid.ULID(d) }
 func (d keyType[T]) MarshalText() ([]byte, error) { return []byte(d.String()), nil }
 func (d *keyType[T]) UnmarshalText(bytes []byte) error {

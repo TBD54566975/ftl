@@ -16,6 +16,7 @@ import (
 
 type ftlDirectRoutingKey struct{}
 type ftlVerbKey struct{}
+type requestIDKey struct{}
 
 // WithDirectRouting ensures any hops in Verb routing do not redirect.
 //
@@ -51,6 +52,18 @@ func VerbsFromContext(ctx context.Context) ([]*schema.VerbRef, bool) {
 // routed and never redirected.
 func IsDirectRouted(ctx context.Context) bool {
 	return ctx.Value(ftlDirectRoutingKey{}) != nil
+}
+
+// RequestIDFromContext returns the request ID from the context, if any.
+func RequestIDFromContext(ctx context.Context) (int64, bool) {
+	value := ctx.Value(requestIDKey{})
+	id, ok := value.(int64)
+	return id, ok
+}
+
+// WithRequestID adds the request ID to the context.
+func WithRequestID(ctx context.Context, id int64) context.Context {
+	return context.WithValue(ctx, requestIDKey{}, id)
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
@@ -147,6 +160,9 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if verbs, ok := VerbsFromContext(ctx); ok {
 			headers.SetCallers(header, verbs)
 		}
+		if id, ok := RequestIDFromContext(ctx); ok {
+			headers.SetRequestID(header, id)
+		}
 	} else {
 		if headers.IsDirectRouted(header) {
 			ctx = WithDirectRouting(ctx)
@@ -155,6 +171,11 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 			return nil, errors.WithStack(err)
 		} else { //nolint:revive
 			ctx = WithVerbs(ctx, verbs)
+		}
+		if id, err := headers.GetRequestID(header); err != nil {
+			return nil, errors.WithStack(err)
+		} else if id != 0 {
+			ctx = WithRequestID(ctx, id)
 		}
 	}
 	return ctx, nil

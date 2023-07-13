@@ -306,10 +306,19 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	endpoint := endpoints[rand.Intn(len(endpoints))] //nolint:gosec
 	client := s.clientsForEndpoint(endpoint)
 
+	// Inject the request ID if this is an ingress call.
 	verbs, err := headers.GetCallers(req.Header())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	if len(verbs) == 0 {
+		requestID, err := s.dal.CreateRequest(ctx, req.Peer().Addr)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		headers.SetRequestID(req.Header(), requestID)
+	}
+
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
 	verbs = append(verbs, verbRef)
 	ctx = rpc.WithVerbs(ctx, verbs)
