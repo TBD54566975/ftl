@@ -479,10 +479,11 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 
 const getLatestModuleMetrics = `-- name: GetLatestModuleMetrics :many
 SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name)
-       r.key AS runner_key, m.id, m.runner_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
-FROM runners r, metrics m
+    r.key AS runner_key, m.id, m.runner_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
+FROM runners r
+JOIN metrics m ON r.id = m.runner_id
 WHERE dest_module = ANY($1::text[])
-ORDER BY dest_module, dest_verb, source_module, source_verb, name, end_time DESC
+ORDER BY dest_module, dest_verb, source_module, source_verb, name
 `
 
 type GetLatestModuleMetricsRow struct {
