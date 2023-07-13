@@ -45,15 +45,16 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		return nil, errors.WithStack(err)
 	}
 
-	metrics, err := c.dal.GetLatestModuleMetrics(ctx, moduleNames)
+	moduleMetrics, err := c.dal.GetLatestModuleMetrics(ctx, moduleNames)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
-		verbs := []*pbconsole.Verb{}
-		data := []*pschema.Data{}
+		var verbs []*pbconsole.Verb
+		var data []*pschema.Data
+
 		for _, decl := range deployment.Schema.Decls {
 
 			switch decl := decl.(type) {
@@ -61,9 +62,9 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				//nolint:forcetypeassert
 				verbs = append(verbs, &pbconsole.Verb{
 					Verb:           decl.ToProto().(*pschema.Verb),
-					CallCount:      getCounterMetric(metrics, deployment.Module, decl.Name, observability.CallRequestCount),
-					CallLatency:    getHistogramMetric(metrics, deployment.Module, decl.Name, observability.CallLatency),
-					CallErrorCount: getCounterMetric(metrics, deployment.Module, decl.Name, observability.CallErrorCount),
+					CallCount:      getCounterMetric(moduleMetrics, deployment.Module, decl.Name, observability.CallRequestCount),
+					CallLatency:    getHistogramMetric(moduleMetrics, deployment.Module, decl.Name, observability.CallLatency),
+					CallErrorCount: getCounterMetric(moduleMetrics, deployment.Module, decl.Name, observability.CallErrorCount),
 				})
 			case *schema.Data:
 				//nolint:forcetypeassert
@@ -83,36 +84,37 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}), nil
 }
 
-func getCounterMetric(metrics []dal.Metric, module string, verb string, metricName string) *pbconsole.MetricCounter {
-	for _, metric := range metrics {
-		if metric.DestVerb.Module == module && metric.DestVerb.Name == verb && metric.Name == metricName {
-			switch count := metric.DataPoint.(type) {
-			case dal.MetricCounter:
-				return &pbconsole.MetricCounter{
-					Value: count.Value,
-				}
-			default:
-				return nil
-			}
+func getCounterMetric(metrics map[dal.MetricModuleKey]dal.Metric, module string, verb string, metricName string) *pbconsole.MetricCounter {
+	metric := metrics[dal.MetricModuleKey{
+		Module: module,
+		Verb:   verb,
+		Metric: metricName,
+	}]
+	switch count := metric.DataPoint.(type) {
+	case dal.MetricCounter:
+		return &pbconsole.MetricCounter{
+			Value: count.Value,
 		}
+	default:
+		return nil
 	}
-	return nil
+
 }
 
-func getHistogramMetric(metrics []dal.Metric, module string, verb string, metricName string) *pbconsole.MetricHistorgram {
-	for _, metric := range metrics {
-		if metric.DestVerb.Module == module && metric.DestVerb.Name == verb && metric.Name == metricName {
-			switch histogram := metric.DataPoint.(type) {
-			case dal.MetricHistogram:
-				return &pbconsole.MetricHistorgram{
-					Sum:    histogram.Sum,
-					Count:  histogram.Count,
-					Bucket: histogram.Bucket,
-				}
-			default:
-				return nil
-			}
+func getHistogramMetric(metrics map[dal.MetricModuleKey]dal.Metric, module string, verb string, metricName string) *pbconsole.MetricHistorgram {
+	metric := metrics[dal.MetricModuleKey{
+		Module: module,
+		Verb:   verb,
+		Metric: metricName,
+	}]
+	switch histogram := metric.DataPoint.(type) {
+	case dal.MetricHistogram:
+		return &pbconsole.MetricHistorgram{
+			Sum:    histogram.Sum,
+			Count:  histogram.Count,
+			Bucket: histogram.Bucket,
 		}
+	default:
+		return nil
 	}
-	return nil
 }

@@ -131,6 +131,12 @@ type Metric struct {
 	DataPoint  DataPoint
 }
 
+type MetricModuleKey struct {
+	Module string
+	Verb   string
+	Metric string
+}
+
 type Deployment struct {
 	Key         model.DeploymentKey
 	Language    string
@@ -621,32 +627,41 @@ func (d *DAL) InsertMetricEntry(ctx context.Context, metric Metric) error {
 }
 
 // GetLatestModuleMetrics returns the latest metrics for the given modules.
-func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) ([]Metric, error) {
+func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) (map[MetricModuleKey]Metric, error) {
 	dbMetrics, err := d.db.GetLatestModuleMetrics(ctx, modules)
 	if err != nil {
 		return nil, errors.Wrap(translatePGError(err), "could not get metrics")
 	}
-	metrics, err := slices.MapErr(dbMetrics, func(in sql.GetLatestModuleMetricsRow) (Metric, error) {
+
+	moduleMetrics := map[MetricModuleKey]Metric{}
+
+	for _, in := range dbMetrics {
 		var datapoint DataPoint
 
 		switch in.Type {
 		case sql.MetricTypeCounter:
 			var counter MetricCounter
 			if err := json.Unmarshal(in.Value, &counter); err != nil {
-				return Metric{}, errors.Wrapf(err, "could not unmarshal MetricCounter datapoint for row %d", in.ID)
+				return nil, errors.Wrapf(err, "could not unmarshal MetricCounter datapoint for row %d", in.ID)
 			}
 			datapoint = counter
 		case sql.MetricTypeHistogram:
 			var histogram MetricHistogram
 			if err := json.Unmarshal(in.Value, &histogram); err != nil {
-				return Metric{}, errors.Wrapf(err, "could not unmarshal MetricHistogram datapoint for row %d", in.ID)
+				return nil, errors.Wrapf(err, "could not unmarshal MetricHistogram datapoint for row %d", in.ID)
 			}
 			datapoint = histogram
 		default:
-			return Metric{}, errors.Wrapf(err, "unknown metric type datapoint for row %d", in.ID)
+			return nil, errors.Wrapf(err, "unknown metric type datapoint for row %d", in.ID)
 		}
 
-		return Metric{
+		key := MetricModuleKey{
+			Module: in.DestModule,
+			Verb:   in.DestVerb,
+			Metric: in.Name,
+		}
+
+		moduleMetrics[key] = Metric{
 			RunnerKey: model.RunnerKey(in.RunnerKey),
 			StartTime: in.StartTime.Time,
 			EndTime:   in.EndTime.Time,
@@ -660,12 +675,13 @@ func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) ([]M
 			},
 			Name:      in.Name,
 			DataPoint: datapoint,
-		}, err
-	})
+		}
+	}
+
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return metrics, nil
+	return moduleMetrics, nil
 }
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
