@@ -16,6 +16,7 @@ type Querier interface {
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
+	CreateRequest(ctx context.Context, sourceAddr string) (int64, error)
 	DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error)

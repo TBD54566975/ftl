@@ -1,6 +1,7 @@
 package headers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/alecthomas/errors"
@@ -16,6 +17,10 @@ const (
 	//
 	// One header will be present for each hop in the request path.
 	VerbHeader = "FTL-Verb"
+	// RequestIDHeader is the header used to pass the inbound request ID.
+	RequestIDHeader = "FTL-Request-ID"
+	// RequestOriginHeader is the header used to pass the origin of the request.
+	RequestOriginHeader = "FTL-Request-Origin"
 )
 
 func IsDirectRouted(header http.Header) bool {
@@ -24,6 +29,26 @@ func IsDirectRouted(header http.Header) bool {
 
 func SetDirectRouted(header http.Header) {
 	header.Set(DirectRoutingHeader, "1")
+}
+
+func SetRequestID(header http.Header, id int64) {
+	header.Set(RequestIDHeader, fmt.Sprintf("%d", id))
+}
+
+// GetRequestID from an incoming request.
+//
+// Will return (0, nil) if no request ID is present.
+func GetRequestID(header http.Header) (int64, error) {
+	idStr := header.Get(RequestIDHeader)
+	if idStr == "" {
+		return 0, nil
+	}
+	var id int64
+	_, err := fmt.Sscanf(idStr, "%d", &id)
+	if err != nil {
+		return 0, errors.Wrapf(err, "invalid %s header %q", RequestIDHeader, idStr)
+	}
+	return id, nil
 }
 
 // GetCallers history from an incoming request.

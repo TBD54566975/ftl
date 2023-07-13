@@ -58,6 +58,18 @@ func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, module
 	return err
 }
 
+const createRequest = `-- name: CreateRequest :one
+INSERT INTO requests (source_addr) VALUES ($1)
+RETURNING id
+`
+
+func (q *Queries) CreateRequest(ctx context.Context, sourceAddr string) (int64, error) {
+	row := q.db.QueryRow(ctx, createRequest, sourceAddr)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const deregisterRunner = `-- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
@@ -479,7 +491,7 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 
 const getLatestModuleMetrics = `-- name: GetLatestModuleMetrics :many
 SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name)
-    r.key AS runner_key, m.id, m.runner_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
+    r.key AS runner_key, m.id, m.runner_id, m.request_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
 FROM runners r
 JOIN metrics m ON r.id = m.runner_id
 WHERE dest_module = ANY($1::text[])
@@ -489,7 +501,8 @@ ORDER BY dest_module, dest_verb, source_module, source_verb, name
 type GetLatestModuleMetricsRow struct {
 	RunnerKey    sqltypes.Key
 	ID           int64
-	RunnerID     pgtype.Int8
+	RunnerID     int64
+	RequestID    int64
 	StartTime    pgtype.Timestamptz
 	EndTime      pgtype.Timestamptz
 	SourceModule string
@@ -514,6 +527,7 @@ func (q *Queries) GetLatestModuleMetrics(ctx context.Context, modules []string) 
 			&i.RunnerKey,
 			&i.ID,
 			&i.RunnerID,
+			&i.RequestID,
 			&i.StartTime,
 			&i.EndTime,
 			&i.SourceModule,

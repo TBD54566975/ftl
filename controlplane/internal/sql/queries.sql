@@ -220,3 +220,7 @@ FROM runners r
 JOIN metrics m ON r.id = m.runner_id
 WHERE dest_module = ANY(@modules::text[])
 ORDER BY dest_module, dest_verb, source_module, source_verb, name;
+
+-- name: CreateRequest :one
+INSERT INTO requests (source_addr) VALUES ($1)
+RETURNING id;

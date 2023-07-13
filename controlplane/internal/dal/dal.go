@@ -122,6 +122,7 @@ type MetricCounter struct {
 func (MetricCounter) isDataPoint() {}
 
 type Metric struct {
+	RequestID  int64
 	RunnerKey  model.RunnerKey
 	StartTime  time.Time
 	EndTime    time.Time
@@ -662,6 +663,7 @@ func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) (map
 		}
 
 		moduleMetrics[key] = Metric{
+			RequestID: in.RequestID,
 			RunnerKey: model.RunnerKey(in.RunnerKey),
 			StartTime: in.StartTime.Time,
 			EndTime:   in.EndTime.Time,
@@ -682,6 +684,11 @@ func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) (map
 		return nil, errors.WithStack(err)
 	}
 	return moduleMetrics, nil
+}
+
+func (d *DAL) CreateRequest(ctx context.Context, addr string) (int64, error) {
+	id, err := d.db.CreateRequest(ctx, addr)
+	return id, errors.WithStack(err)
 }
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {

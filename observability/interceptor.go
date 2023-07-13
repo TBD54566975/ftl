@@ -23,6 +23,7 @@ const (
 	SourceModuleKey  = "ftl.source.module"  // SourceModuleKey is the key for the source module.
 	DestVerbKey      = "ftl.dest.verb"      // DestVerbKey is the key for the destination verb.
 	DestModuleKey    = "ftl.dest.module"    // DestModuleKey is the key for the destination module.
+	RequestIDKey     = "ftl.request_id"     // RequestIDKey is the request ID.
 	CallLatency      = "call.latency"       // CallLatency is the key for the call latency.
 	CallRequestCount = "call.request.count" // CallRequestCount is the key for the call request count.
 	CallErrorCount   = "call.error.count"   // CallErrorCount is the key for the call error count.
@@ -49,12 +50,17 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			return nil, err
 		}
 
+		requestID, err := headers.GetRequestID(req.Header())
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
 		callers, err := headers.GetCallers(req.Header())
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
-		err = i.recordVerbCallMetrics(ctx, callers, start)
+		err = i.recordVerbCallMetrics(ctx, requestID, callers, start)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -75,7 +81,7 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 	}
 }
 
-func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, callers []*schema.VerbRef, start time.Time) error {
+func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, requestID int64, callers []*schema.VerbRef, start time.Time) error {
 	if len(callers) == 0 {
 		return nil // no callers, no metrics
 	}
@@ -85,6 +91,7 @@ func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, callers []*sche
 		attribute.String(verbRefKey, destRef.String()),
 		attribute.String(DestVerbKey, destRef.Name),
 		attribute.String(DestModuleKey, destRef.Module),
+		attribute.Int64(RequestIDKey, requestID),
 	}
 
 	if len(callers) > 1 {

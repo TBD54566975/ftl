@@ -136,7 +136,8 @@ type DeploymentLog struct {
 
 type Metric struct {
 	ID           int64
-	RunnerID     pgtype.Int8
+	RunnerID     int64
+	RequestID    int64
 	StartTime    pgtype.Timestamptz
 	EndTime      pgtype.Timestamptz
 	SourceModule string
@@ -152,6 +153,11 @@ type Module struct {
 	ID       int64
 	Language string
 	Name     string
+}
+
+type Request struct {
+	ID         int64
+	SourceAddr string
 }
 
 type Runner struct {
