@@ -477,14 +477,15 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 	return items, nil
 }
 
-const getMetricsBySourceModules = `-- name: GetMetricsBySourceModules :many
-SELECT r.key AS runner_key, m.id, m.runner_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
-FROM metrics m
-INNER JOIN runners r on m.runner_id = r.id
-WHERE source_module = ANY($1::string[])
+const getLatestModuleMetrics = `-- name: GetLatestModuleMetrics :many
+SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name)
+       r.key AS runner_key, m.id, m.runner_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
+FROM runners r, metrics m
+WHERE dest_module = ANY($1::text[])
+ORDER BY dest_module, dest_verb, source_module, source_verb, name, end_time DESC
 `
 
-type GetMetricsBySourceModulesRow struct {
+type GetLatestModuleMetricsRow struct {
 	RunnerKey    sqltypes.Key
 	ID           int64
 	RunnerID     pgtype.Int8
@@ -499,15 +500,15 @@ type GetMetricsBySourceModulesRow struct {
 	Value        []byte
 }
 
-func (q *Queries) GetMetricsBySourceModules(ctx context.Context, modules []string) ([]GetMetricsBySourceModulesRow, error) {
-	rows, err := q.db.Query(ctx, getMetricsBySourceModules, modules)
+func (q *Queries) GetLatestModuleMetrics(ctx context.Context, modules []string) ([]GetLatestModuleMetricsRow, error) {
+	rows, err := q.db.Query(ctx, getLatestModuleMetrics, modules)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetMetricsBySourceModulesRow
+	var items []GetLatestModuleMetricsRow
 	for rows.Next() {
-		var i GetMetricsBySourceModulesRow
+		var i GetLatestModuleMetricsRow
 		if err := rows.Scan(
 			&i.RunnerKey,
 			&i.ID,

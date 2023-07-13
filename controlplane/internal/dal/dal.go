@@ -467,6 +467,40 @@ func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconc
 	}), nil
 }
 
+// GetActiveDeployments returns all active deployments.
+func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
+	rows, err := d.db.GetDeployments(ctx, false)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, nil
+		}
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	deployments, err := slices.MapErr(rows, func(in sql.GetDeploymentsRow) (Deployment, error) {
+		protoSchema := &pschema.Module{}
+		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
+			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
+		}
+		modelSchema, err := schema.ModuleFromProto(protoSchema)
+		if err != nil {
+			return Deployment{}, errors.Wrapf(err, "%q: invalid schema in database", in.ModuleName)
+		}
+		return Deployment{
+			Key:         model.DeploymentKey(in.Key),
+			Module:      in.ModuleName,
+			Language:    in.Language,
+			MinReplicas: int(in.MinReplicas),
+			Schema:      modelSchema,
+		}, nil
+	})
+
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return deployments, nil
+}
+
 // GetIdleRunnersForLanguage returns up to limit idle runners for the given language.
 //
 // If no runners are available, it will return an empty slice.
@@ -586,15 +620,30 @@ func (d *DAL) InsertMetricEntry(ctx context.Context, metric Metric) error {
 	})))
 }
 
-func (d *DAL) GetMetricsForSourceModules(ctx context.Context, modules []string) ([]Metric, error) {
-	dbMetrics, err := d.db.GetMetricsBySourceModules(ctx, modules)
+// GetLatestModuleMetrics returns the latest metrics for the given modules.
+func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) ([]Metric, error) {
+	dbMetrics, err := d.db.GetLatestModuleMetrics(ctx, modules)
 	if err != nil {
 		return nil, errors.Wrap(translatePGError(err), "could not get metrics")
 	}
-	metrics, err := slices.MapErr(dbMetrics, func(in sql.GetMetricsBySourceModulesRow) (Metric, error) {
+	metrics, err := slices.MapErr(dbMetrics, func(in sql.GetLatestModuleMetricsRow) (Metric, error) {
 		var datapoint DataPoint
-		if err := json.Unmarshal((in.Value), &datapoint); err != nil {
-			return Metric{}, errors.Wrapf(err, "could not unmarshal datapoint for row %d: ", in.ID)
+
+		switch in.Type {
+		case sql.MetricTypeCounter:
+			var counter MetricCounter
+			if err := json.Unmarshal(in.Value, &counter); err != nil {
+				return Metric{}, errors.Wrapf(err, "could not unmarshal MetricCounter datapoint for row %d", in.ID)
+			}
+			datapoint = counter
+		case sql.MetricTypeHistogram:
+			var histogram MetricHistogram
+			if err := json.Unmarshal(in.Value, &histogram); err != nil {
+				return Metric{}, errors.Wrapf(err, "could not unmarshal MetricHistogram datapoint for row %d", in.ID)
+			}
+			datapoint = histogram
+		default:
+			return Metric{}, errors.Wrapf(err, "unknown metric type datapoint for row %d", in.ID)
 		}
 
 		return Metric{

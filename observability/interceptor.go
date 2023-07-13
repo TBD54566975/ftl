@@ -19,12 +19,13 @@ const (
 	instrumentationName = "ftl"
 	verbRefKey          = "ftl.verb.ref"
 
-	SourceVerbKey    = "ftl.source.verb"   // SourceVerbKey is the key for the source verb.
-	SourceModuleKey  = "ftl.source.module" // SourceModuleKey is the key for the source module.
-	DestVerbKey      = "ftl.dest.verb"     // DestVerbKey is the key for the destination verb.
-	DestModuleKey    = "ftl.dest.module"   // DestModuleKey is the key for the destination module.
-	callLatency      = "call.latency"
-	callRequestCount = "call.request.count"
+	SourceVerbKey    = "ftl.source.verb"    // SourceVerbKey is the key for the source verb.
+	SourceModuleKey  = "ftl.source.module"  // SourceModuleKey is the key for the source module.
+	DestVerbKey      = "ftl.dest.verb"      // DestVerbKey is the key for the destination verb.
+	DestModuleKey    = "ftl.dest.module"    // DestModuleKey is the key for the destination module.
+	CallLatency      = "call.latency"       // CallLatency is the key for the call latency.
+	CallRequestCount = "call.request.count" // CallRequestCount is the key for the call request count.
+	CallErrorCount   = "call.error.count"   // CallErrorCount is the key for the call error count.
 	unitMilliseconds = "ms"
 )
 
@@ -94,13 +95,13 @@ func (i *Interceptor) recordVerbCallMetrics(ctx context.Context, callers []*sche
 
 	meter := otel.GetMeterProvider().Meter(instrumentationName)
 
-	counter, err := meter.Int64Counter(callRequestCount)
+	counter, err := meter.Int64Counter(CallRequestCount)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	counter.Add(ctx, 1, metric.WithAttributes(attributes...))
 
-	histogram, err := meter.Int64Histogram(callLatency, metric.WithUnit(unitMilliseconds))
+	histogram, err := meter.Int64Histogram(CallLatency, metric.WithUnit(unitMilliseconds))
 	if err != nil {
 		return errors.WithStack(err)
 	}
