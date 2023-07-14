@@ -108,7 +108,7 @@ SELECT COUNT(*)
 FROM matches;
 
 -- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key                                                      AS runner_key,
+SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
                            r.language,
                            r.endpoint,
                            r.state,
@@ -116,14 +116,16 @@ SELECT DISTINCT ON (r.key) r.key                                                
                            COALESCE(CASE WHEN r.deployment_id IS NOT NULL THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
-WHERE sqlc.arg('all')::bool = true OR r.state <> 'dead'
+WHERE sqlc.arg('all')::bool = true
+   OR r.state <> 'dead'
 ORDER BY r.key;
 
 -- name: GetDeployments :many
 SELECT d.id, d.key, d.min_replicas, d.created_at, d.schema, m.name AS module_name, m.language
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
-WHERE sqlc.arg('all')::bool = true OR min_replicas > 0
+WHERE sqlc.arg('all')::bool = true
+   OR min_replicas > 0
 ORDER BY d.key;
 
 -- name: GetIdleRunnersForLanguage :many
@@ -214,13 +216,39 @@ INSERT INTO metrics (runner_id, request_id, start_time, end_time, source_module,
 VALUES ((SELECT id FROM runners WHERE key = $1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
 
 -- name: GetLatestModuleMetrics :many
-SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name)
-    r.key AS runner_key, m.*
+SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name) r.key AS runner_key,
+                                                                              m.*
 FROM runners r
-JOIN metrics m ON r.id = m.runner_id
-WHERE dest_module = ANY(@modules::text[])
+         JOIN metrics m ON r.id = m.runner_id
+WHERE dest_module = ANY (@modules::text[])
 ORDER BY dest_module, dest_verb, source_module, source_verb, name;
 
--- name: CreateRequest :one
-INSERT INTO requests (source_addr) VALUES ($1)
+-- name: CreateIngressRequest :one
+INSERT INTO ingress (source_addr)
+VALUES ($1)
 RETURNING id;
+
+-- name: UpsertControlPlane :one
+INSERT INTO controlplane (key, endpoint)
+VALUES ($1, $2)
+ON CONFLICT (key) DO UPDATE SET state     = 'live',
+                                endpoint  = $2,
+                                last_seen = NOW() AT TIME ZONE 'utc'
+RETURNING id;
+
+-- name: KillStaleControlPlanes :one
+-- Mark any controlplane entries that haven't been updated recently as dead.
+WITH matches AS (
+    UPDATE controlplane
+        SET state = 'dead'
+        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+        RETURNING 1)
+SELECT COUNT(*)
+FROM matches;
+
+-- name: GetControlPlanes :many
+SELECT c.*
+FROM controlplane c
+WHERE sqlc.arg('all')::bool = true
+   OR c.state <> 'dead'
+ORDER BY c.key;

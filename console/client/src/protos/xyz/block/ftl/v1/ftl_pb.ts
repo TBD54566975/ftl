@@ -9,43 +9,63 @@ import { Module, VerbRef } from "./schema/schema_pb.js";
 import { ScopeMetrics } from "../../../../opentelemetry/proto/metrics/v1/metrics_pb.js";
 
 /**
+ * @generated from enum xyz.block.ftl.v1.ControlPlaneState
+ */
+export enum ControlPlaneState {
+  /**
+   * @generated from enum value: CONTROLPLANE_LIVE = 0;
+   */
+  CONTROLPLANE_LIVE = 0,
+
+  /**
+   * @generated from enum value: CONTROLPLANE_DEAD = 1;
+   */
+  CONTROLPLANE_DEAD = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(ControlPlaneState)
+proto3.util.setEnumType(ControlPlaneState, "xyz.block.ftl.v1.ControlPlaneState", [
+  { no: 0, name: "CONTROLPLANE_LIVE" },
+  { no: 1, name: "CONTROLPLANE_DEAD" },
+]);
+
+/**
  * @generated from enum xyz.block.ftl.v1.RunnerState
  */
 export enum RunnerState {
   /**
    * The Runner is waiting for a deployment.
    *
-   * @generated from enum value: IDLE = 0;
+   * @generated from enum value: RUNNER_IDLE = 0;
    */
-  IDLE = 0,
+  RUNNER_IDLE = 0,
 
   /**
    * The Runner and Control Plane have agreed that the Runner is reserved.
    *
-   * @generated from enum value: RESERVED = 1;
+   * @generated from enum value: RUNNER_RESERVED = 1;
    */
-  RESERVED = 1,
+  RUNNER_RESERVED = 1,
 
   /**
    * The Runner is assigned to a deployment.
    *
-   * @generated from enum value: ASSIGNED = 2;
+   * @generated from enum value: RUNNER_ASSIGNED = 2;
    */
-  ASSIGNED = 2,
+  RUNNER_ASSIGNED = 2,
 
   /**
    * The Runner is dead.
    *
-   * @generated from enum value: DEAD = 3;
+   * @generated from enum value: RUNNER_DEAD = 3;
    */
-  DEAD = 3,
+  RUNNER_DEAD = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(RunnerState)
 proto3.util.setEnumType(RunnerState, "xyz.block.ftl.v1.RunnerState", [
-  { no: 0, name: "IDLE" },
-  { no: 1, name: "RESERVED" },
-  { no: 2, name: "ASSIGNED" },
-  { no: 3, name: "DEAD" },
+  { no: 0, name: "RUNNER_IDLE" },
+  { no: 1, name: "RUNNER_RESERVED" },
+  { no: 2, name: "RUNNER_ASSIGNED" },
+  { no: 3, name: "RUNNER_DEAD" },
 ]);
 
 /**
@@ -922,7 +942,7 @@ export class RunnerHeartbeat extends Message<RunnerHeartbeat> {
   /**
    * @generated from field: xyz.block.ftl.v1.RunnerState state = 5;
    */
-  state = RunnerState.IDLE;
+  state = RunnerState.RUNNER_IDLE;
 
   /**
    * If present, the reason the Runner is transitioning from ASSIGNED to IDLE.
@@ -1251,6 +1271,11 @@ export class StatusRequest extends Message<StatusRequest> {
    */
   allRunners = false;
 
+  /**
+   * @generated from field: bool all_controlplanes = 3;
+   */
+  allControlplanes = false;
+
   constructor(data?: PartialMessage<StatusRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1261,6 +1286,7 @@ export class StatusRequest extends Message<StatusRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "all_deployments", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "all_runners", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "all_controlplanes", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {
@@ -1285,12 +1311,17 @@ export class StatusRequest extends Message<StatusRequest> {
  */
 export class StatusResponse extends Message<StatusResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Runner runners = 1;
+   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.ControlPlane controlplanes = 1;
+   */
+  controlplanes: StatusResponse_ControlPlane[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Runner runners = 2;
    */
   runners: StatusResponse_Runner[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Deployment deployments = 2;
+   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Deployment deployments = 3;
    */
   deployments: StatusResponse_Deployment[] = [];
 
@@ -1302,8 +1333,9 @@ export class StatusResponse extends Message<StatusResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "runners", kind: "message", T: StatusResponse_Runner, repeated: true },
-    { no: 2, name: "deployments", kind: "message", T: StatusResponse_Deployment, repeated: true },
+    { no: 1, name: "controlplanes", kind: "message", T: StatusResponse_ControlPlane, repeated: true },
+    { no: 2, name: "runners", kind: "message", T: StatusResponse_Runner, repeated: true },
+    { no: 3, name: "deployments", kind: "message", T: StatusResponse_Deployment, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse {
@@ -1320,6 +1352,55 @@ export class StatusResponse extends Message<StatusResponse> {
 
   static equals(a: StatusResponse | PlainMessage<StatusResponse> | undefined, b: StatusResponse | PlainMessage<StatusResponse> | undefined): boolean {
     return proto3.util.equals(StatusResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StatusResponse.ControlPlane
+ */
+export class StatusResponse_ControlPlane extends Message<StatusResponse_ControlPlane> {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key = "";
+
+  /**
+   * @generated from field: string endpoint = 2;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.ControlPlaneState state = 4;
+   */
+  state = ControlPlaneState.CONTROLPLANE_LIVE;
+
+  constructor(data?: PartialMessage<StatusResponse_ControlPlane>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.ControlPlane";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(ControlPlaneState) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_ControlPlane {
+    return new StatusResponse_ControlPlane().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_ControlPlane {
+    return new StatusResponse_ControlPlane().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_ControlPlane {
+    return new StatusResponse_ControlPlane().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse_ControlPlane | PlainMessage<StatusResponse_ControlPlane> | undefined, b: StatusResponse_ControlPlane | PlainMessage<StatusResponse_ControlPlane> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_ControlPlane, a, b);
   }
 }
 
@@ -1345,7 +1426,7 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
   /**
    * @generated from field: xyz.block.ftl.v1.RunnerState state = 4;
    */
-  state = RunnerState.IDLE;
+  state = RunnerState.RUNNER_IDLE;
 
   /**
    * @generated from field: optional string deployment = 5;

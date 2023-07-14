@@ -96,11 +96,27 @@ const (
 )
 
 func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
-	return RunnerState(strings.ToLower(state.String()))
+	return RunnerState(strings.ToLower(strings.TrimPrefix(state.String(), "RUNNER_")))
 }
 
 func (s RunnerState) ToProto() ftlv1.RunnerState {
-	return ftlv1.RunnerState(ftlv1.RunnerState_value[strings.ToUpper(string(s))])
+	return ftlv1.RunnerState(ftlv1.RunnerState_value["RUNNER_"+strings.ToUpper(string(s))])
+}
+
+type ControlPlaneState string
+
+// ControlPlane states.
+const (
+	ControlPlaneStateLive = ControlPlaneState(sql.ControlplaneStateLive)
+	ControlPlaneStateDead = ControlPlaneState(sql.ControlplaneStateDead)
+)
+
+func ControlPlaneStateFromProto(state ftlv1.ControlPlaneState) ControlPlaneState {
+	return ControlPlaneState(strings.ToLower(strings.TrimPrefix(state.String(), "CONTROLPLANE_")))
+}
+
+func (s ControlPlaneState) ToProto() ftlv1.ControlPlaneState {
+	return ftlv1.ControlPlaneState(ftlv1.ControlPlaneState_value["CONTROLPLANE_"+strings.ToUpper(string(s))])
 }
 
 type DataPoint interface {
@@ -146,9 +162,16 @@ type Deployment struct {
 	Schema      *schema.Module
 }
 
+type ControlPlane struct {
+	Key      model.ControlPlaneKey
+	Endpoint string
+	State    ControlPlaneState
+}
+
 type Status struct {
-	Runners     []Runner
-	Deployments []Deployment
+	ControlPlanes []ControlPlane
+	Runners       []Runner
+	Deployments   []Deployment
 }
 
 // A Reservation of a Runner.
@@ -181,7 +204,11 @@ type DAL struct {
 	db *sql.DB
 }
 
-func (d *DAL) GetStatus(ctx context.Context, allDeployments bool, allRunners bool) (Status, error) {
+func (d *DAL) GetStatus(ctx context.Context, allControlPlanes, allRunners, allDeployments bool) (Status, error) {
+	controlplanes, err := d.db.GetControlPlanes(ctx, allControlPlanes)
+	if err != nil {
+		return Status{}, errors.Wrap(translatePGError(err), "could not get control planes")
+	}
 	runners, err := d.db.GetActiveRunners(ctx, allRunners)
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get active runners")
@@ -211,6 +238,13 @@ func (d *DAL) GetStatus(ctx context.Context, allDeployments bool, allRunners boo
 		return Status{}, errors.WithStack(err)
 	}
 	return Status{
+		ControlPlanes: slices.Map(controlplanes, func(in sql.Controlplane) ControlPlane {
+			return ControlPlane{
+				Key:      model.ControlPlaneKey(in.Key),
+				Endpoint: in.Endpoint,
+				State:    ControlPlaneState(in.State),
+			}
+		}),
 		Deployments: statusDeployments,
 		Runners: slices.Map(runners, func(in sql.GetActiveRunnersRow) Runner {
 			var deployment types.Option[model.DeploymentKey]
@@ -380,6 +414,15 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 // KillStaleRunners deletes runners that have not had heartbeats for the given duration.
 func (d *DAL) KillStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
 	count, err := d.db.KillStaleRunners(ctx, pgtype.Interval{
+		Microseconds: int64(age / time.Microsecond),
+		Valid:        true,
+	})
+	return count, errors.WithStack(err)
+}
+
+// KillStaleControlPlanes deletes control-planes that have not had heartbeats for the given duration.
+func (d *DAL) KillStaleControlPlanes(ctx context.Context, age time.Duration) (int64, error) {
+	count, err := d.db.KillStaleControlPlanes(ctx, pgtype.Interval{
 		Microseconds: int64(age / time.Microsecond),
 		Valid:        true,
 	})
@@ -696,9 +739,14 @@ func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) (map
 	return moduleMetrics, nil
 }
 
-func (d *DAL) CreateRequest(ctx context.Context, addr string) (int64, error) {
-	id, err := d.db.CreateRequest(ctx, addr)
+func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (int64, error) {
+	id, err := d.db.CreateIngressRequest(ctx, addr)
 	return id, errors.WithStack(err)
+}
+
+func (d *DAL) UpsertControlPlane(ctx context.Context, key model.ControlPlaneKey, addr string) (int64, error) {
+	id, err := d.db.UpsertControlPlane(ctx, sqltypes.Key(key), addr)
+	return id, errors.WithStack(translatePGError(err))
 }
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {

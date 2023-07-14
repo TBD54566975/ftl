@@ -63,7 +63,7 @@ func Start(ctx context.Context, config Config) error {
 		controlPlaneClient: controlplaneClient,
 		forceUpdate:        make(chan struct{}, 16),
 	}
-	svc.state.Store(ftlv1.RunnerState_IDLE)
+	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 
 	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controlplaneClient.RegisterRunner, svc.registrationLoop)
 
@@ -103,7 +103,7 @@ type Service struct {
 }
 
 func (s *Service) Reserve(ctx context.Context, c *connect.Request[ftlv1.ReserveRequest]) (*connect.Response[ftlv1.ReserveResponse], error) {
-	if !s.state.CompareAndSwap(ftlv1.RunnerState_IDLE, ftlv1.RunnerState_RESERVED) {
+	if !s.state.CompareAndSwap(ftlv1.RunnerState_RUNNER_IDLE, ftlv1.RunnerState_RUNNER_RESERVED) {
 		return nil, errors.Errorf("can only reserve from IDLE state, not %s", s.state.Load())
 	}
 	return connect.NewResponse(&ftlv1.ReserveResponse{}), nil
@@ -149,10 +149,10 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		s.forceUpdate <- struct{}{}
 	}
 
-	setState(ftlv1.RunnerState_RESERVED)
+	setState(ftlv1.RunnerState_RUNNER_RESERVED)
 	defer func() {
 		if err != nil {
-			setState(ftlv1.RunnerState_IDLE)
+			setState(ftlv1.RunnerState_RUNNER_IDLE)
 			s.deployment.Store(types.None[*deployment]())
 		}
 	}()
@@ -189,7 +189,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
 	s.deployment.Store(types.Some(s.makePluginProxy(cmdCtx, id, deployment)))
-	setState(ftlv1.RunnerState_ASSIGNED)
+	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
 
@@ -225,12 +225,12 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	}
 
 	s.deployment.Store(types.None[*deployment]())
-	s.state.Store(ftlv1.RunnerState_IDLE)
+	s.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 	return connect.NewResponse(&ftlv1.RunnerHeartbeat{
 		Key:      s.key.String(),
 		Language: s.config.Language,
 		Endpoint: s.config.Endpoint.String(),
-		State:    ftlv1.RunnerState_IDLE,
+		State:    ftlv1.RunnerState_RUNNER_IDLE,
 	}), nil
 }
 
@@ -256,7 +256,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		deploymentKey = &dkey
 		select {
 		case <-depl.ctx.Done():
-			state = ftlv1.RunnerState_IDLE
+			state = ftlv1.RunnerState_RUNNER_IDLE
 			err := context.Cause(depl.ctx)
 			errStr := err.Error()
 			errPtr = &errStr
@@ -264,7 +264,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 			s.deployment.Store(types.None[*deployment]())
 
 		default:
-			state = ftlv1.RunnerState_ASSIGNED
+			state = ftlv1.RunnerState_RUNNER_ASSIGNED
 		}
 		s.state.Store(state)
 	}

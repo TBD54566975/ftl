@@ -13,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/controlplane/internal/sql/sqltest"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/schema"
 )
 
@@ -273,4 +274,14 @@ func artefactContent(t testing.TB, artefacts []*model.Artefact) [][]byte {
 		a.Content = nil
 	}
 	return result
+}
+
+func TestRunnerStateFromProto(t *testing.T) {
+	state := ftlv1.RunnerState_RUNNER_IDLE
+	assert.Equal(t, RunnerStateIdle, RunnerStateFromProto(state))
+}
+
+func TestControlPlaneStateFromProto(t *testing.T) {
+	state := ftlv1.ControlPlaneState_CONTROLPLANE_LIVE
+	assert.Equal(t, ControlPlaneStateLive, ControlPlaneStateFromProto(state))
 }
