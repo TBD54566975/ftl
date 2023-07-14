@@ -16,13 +16,14 @@ type Querier interface {
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
-	CreateRequest(ctx context.Context, sourceAddr string) (int64, error)
+	CreateIngressRequest(ctx context.Context, sourceAddr string) (int64, error)
 	DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error)
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
+	GetControlPlanes(ctx context.Context, all bool) ([]Controlplane, error)
 	GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
@@ -40,10 +41,13 @@ type Querier interface {
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
 	InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error
+	// Mark any controlplane entries that haven't been updated recently as dead.
+	KillStaleControlPlanes(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	KillStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error
+	UpsertControlPlane(ctx context.Context, key sqltypes.Key, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
 	// If the deployment key is null, then deployment_rel.id will be null,

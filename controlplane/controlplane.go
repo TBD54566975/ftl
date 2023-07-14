@@ -54,7 +54,7 @@ func Start(ctx context.Context, config Config) error {
 	}
 
 	dal := dal.New(conn)
-	svc, err := New(ctx, dal, config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
+	svc, err := New(ctx, dal, config.Bind, config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -85,6 +85,7 @@ type Service struct {
 	heartbeatTimeout             time.Duration
 	deploymentReservationTimeout time.Duration
 	artefactChunkSize            int
+	key                          model.ControlPlaneKey
 
 	clientsMu sync.Mutex
 	// Map from endpoint to client.
@@ -92,11 +93,18 @@ type Service struct {
 }
 
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx, req.Msg.AllDeployments, req.Msg.AllRunners)
+	status, err := s.dal.GetStatus(ctx, req.Msg.AllControlplanes, req.Msg.AllRunners, req.Msg.AllDeployments)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get status")
 	}
 	resp := &ftlv1.StatusResponse{
+		Controlplanes: slices.Map(status.ControlPlanes, func(c dal.ControlPlane) *ftlv1.StatusResponse_ControlPlane {
+			return &ftlv1.StatusResponse_ControlPlane{
+				Key:      c.Key.String(),
+				Endpoint: c.Endpoint,
+				State:    c.State.ToProto(),
+			}
+		}),
 		Runners: slices.Map(status.Runners, func(r dal.Runner) *ftlv1.StatusResponse_Runner {
 			var deployment *string
 			if d, ok := r.Deployment.Get(); ok {
@@ -124,14 +132,17 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	return connect.NewResponse(resp), nil
 }
 
-func New(ctx context.Context, dal *dal.DAL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
+func New(ctx context.Context, dal *dal.DAL, bind *url.URL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
 	svc := &Service{
 		dal:                          dal,
 		heartbeatTimeout:             heartbeatTimeout,
 		deploymentReservationTimeout: deploymentReservationTimeout,
 		artefactChunkSize:            artefactChunkSize,
 		clients:                      map[string]clients{},
+		key:                          model.NewControlPlaneKey(),
 	}
+	go svc.heartbeatControlPlane(ctx, bind)
+	go svc.reapStaleControlPlanes(ctx)
 	go svc.reapStaleRunners(ctx)
 	go svc.releaseExpiredReservations(ctx)
 	go svc.reconcileDeployments(ctx)
@@ -312,7 +323,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 	if len(verbs) == 0 {
-		requestID, err := s.dal.CreateRequest(ctx, req.Peer().Addr)
+		requestID, err := s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -544,4 +555,39 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 		return errors.WithStack(err)
 	}))
 	return
+}
+
+func (s *Service) reapStaleControlPlanes(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	for {
+		count, err := s.dal.KillStaleControlPlanes(context.Background(), s.heartbeatTimeout)
+		if err != nil {
+			logger.Errorf(err, "Failed to delete stale control-planes")
+		} else if count > 0 {
+			logger.Warnf("Reaped %d stale control-planes", count)
+		}
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-time.After(s.heartbeatTimeout / 4):
+		}
+	}
+}
+
+// Periodically update the DB with the current state of the control-plane.
+func (s *Service) heartbeatControlPlane(ctx context.Context, addr *url.URL) {
+	logger := log.FromContext(ctx)
+	for {
+		_, err := s.dal.UpsertControlPlane(ctx, s.key, addr.String())
+		if err != nil {
+			logger.Errorf(err, "Failed to heartbeat control-plane")
+		}
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-time.After(s.heartbeatTimeout / 4):
+		}
+	}
 }

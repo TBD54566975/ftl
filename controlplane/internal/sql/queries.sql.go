@@ -58,13 +58,14 @@ func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, module
 	return err
 }
 
-const createRequest = `-- name: CreateRequest :one
-INSERT INTO requests (source_addr) VALUES ($1)
+const createIngressRequest = `-- name: CreateIngressRequest :one
+INSERT INTO ingress (source_addr)
+VALUES ($1)
 RETURNING id
 `
 
-func (q *Queries) CreateRequest(ctx context.Context, sourceAddr string) (int64, error) {
-	row := q.db.QueryRow(ctx, createRequest, sourceAddr)
+func (q *Queries) CreateIngressRequest(ctx context.Context, sourceAddr string) (int64, error) {
+	row := q.db.QueryRow(ctx, createIngressRequest, sourceAddr)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -108,7 +109,7 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 }
 
 const getActiveRunners = `-- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key                                                      AS runner_key,
+SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
                            r.language,
                            r.endpoint,
                            r.state,
@@ -116,7 +117,8 @@ SELECT DISTINCT ON (r.key) r.key                                                
                            COALESCE(CASE WHEN r.deployment_id IS NOT NULL THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
-WHERE $1::bool = true OR r.state <> 'dead'
+WHERE $1::bool = true
+   OR r.state <> 'dead'
 ORDER BY r.key
 `
 
@@ -191,6 +193,41 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	for rows.Next() {
 		var i GetArtefactDigestsRow
 		if err := rows.Scan(&i.ID, &i.Digest); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getControlPlanes = `-- name: GetControlPlanes :many
+SELECT c.id, c.key, c.created, c.last_seen, c.state, c.endpoint
+FROM controlplane c
+WHERE $1::bool = true
+   OR c.state <> 'dead'
+ORDER BY c.key
+`
+
+func (q *Queries) GetControlPlanes(ctx context.Context, all bool) ([]Controlplane, error) {
+	rows, err := q.db.Query(ctx, getControlPlanes, all)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Controlplane
+	for rows.Next() {
+		var i Controlplane
+		if err := rows.Scan(
+			&i.ID,
+			&i.Key,
+			&i.Created,
+			&i.LastSeen,
+			&i.State,
+			&i.Endpoint,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -283,7 +320,8 @@ const getDeployments = `-- name: GetDeployments :many
 SELECT d.id, d.key, d.min_replicas, d.created_at, d.schema, m.name AS module_name, m.language
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
-WHERE $1::bool = true OR min_replicas > 0
+WHERE $1::bool = true
+   OR min_replicas > 0
 ORDER BY d.key
 `
 
@@ -453,7 +491,7 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 }
 
 const getIdleRunnersForLanguage = `-- name: GetIdleRunnersForLanguage :many
-SELECT id, key, last_seen, reservation_timeout, state, language, endpoint, deployment_id
+SELECT id, key, created, last_seen, reservation_timeout, state, language, endpoint, deployment_id
 FROM runners
 WHERE language = $1
   AND state = 'idle'
@@ -472,6 +510,7 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 		if err := rows.Scan(
 			&i.ID,
 			&i.Key,
+			&i.Created,
 			&i.LastSeen,
 			&i.ReservationTimeout,
 			&i.State,
@@ -490,11 +529,11 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 }
 
 const getLatestModuleMetrics = `-- name: GetLatestModuleMetrics :many
-SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name)
-    r.key AS runner_key, m.id, m.runner_id, m.request_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
+SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name) r.key AS runner_key,
+                                                                              m.id, m.runner_id, m.request_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
 FROM runners r
-JOIN metrics m ON r.id = m.runner_id
-WHERE dest_module = ANY($1::text[])
+         JOIN metrics m ON r.id = m.runner_id
+WHERE dest_module = ANY ($1::text[])
 ORDER BY dest_module, dest_verb, source_module, source_verb, name
 `
 
@@ -617,7 +656,7 @@ func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerS
 }
 
 const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, r.key, r.last_seen, r.reservation_timeout, r.state, r.language, r.endpoint, r.deployment_id
+SELECT r.id, r.key, r.created, r.last_seen, r.reservation_timeout, r.state, r.language, r.endpoint, r.deployment_id
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
@@ -636,6 +675,7 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key)
 		if err := rows.Scan(
 			&i.ID,
 			&i.Key,
+			&i.Created,
 			&i.LastSeen,
 			&i.ReservationTimeout,
 			&i.State,
@@ -714,6 +754,24 @@ func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryPa
 	return err
 }
 
+const killStaleControlPlanes = `-- name: KillStaleControlPlanes :one
+WITH matches AS (
+    UPDATE controlplane
+        SET state = 'dead'
+        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+        RETURNING 1)
+SELECT COUNT(*)
+FROM matches
+`
+
+// Mark any controlplane entries that haven't been updated recently as dead.
+func (q *Queries) KillStaleControlPlanes(ctx context.Context, dollar_1 pgtype.Interval) (int64, error) {
+	row := q.db.QueryRow(ctx, killStaleControlPlanes, dollar_1)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const killStaleRunners = `-- name: KillStaleRunners :one
 WITH matches AS (
     UPDATE runners
@@ -746,7 +804,7 @@ WHERE id = (SELECT id
             WHERE r.language = $1
               AND r.state = 'idle'
             LIMIT 1 FOR UPDATE SKIP LOCKED)
-RETURNING runners.id, runners.key, runners.last_seen, runners.reservation_timeout, runners.state, runners.language, runners.endpoint, runners.deployment_id
+RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.reservation_timeout, runners.state, runners.language, runners.endpoint, runners.deployment_id
 `
 
 // Find an idle runner and reserve it for the given deployment.
@@ -756,6 +814,7 @@ func (q *Queries) ReserveRunner(ctx context.Context, language string, reservatio
 	err := row.Scan(
 		&i.ID,
 		&i.Key,
+		&i.Created,
 		&i.LastSeen,
 		&i.ReservationTimeout,
 		&i.State,
@@ -776,6 +835,22 @@ RETURNING 1
 func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error {
 	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
 	return err
+}
+
+const upsertControlPlane = `-- name: UpsertControlPlane :one
+INSERT INTO controlplane (key, endpoint)
+VALUES ($1, $2)
+ON CONFLICT (key) DO UPDATE SET state     = 'live',
+                                endpoint  = $2,
+                                last_seen = NOW() AT TIME ZONE 'utc'
+RETURNING id
+`
+
+func (q *Queries) UpsertControlPlane(ctx context.Context, key sqltypes.Key, endpoint string) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertControlPlane, key, endpoint)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const upsertModule = `-- name: UpsertModule :one

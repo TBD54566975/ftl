@@ -107,15 +107,20 @@ message GetDeploymentResponse {
   repeated DeploymentArtefact artefacts = 2;
 }
 
+enum ControlPlaneState {
+  CONTROLPLANE_LIVE = 0;
+  CONTROLPLANE_DEAD = 1;
+}
+
 enum RunnerState {
   // The Runner is waiting for a deployment.
-  IDLE = 0;
+  RUNNER_IDLE = 0;
   // The Runner and Control Plane have agreed that the Runner is reserved.
-  RESERVED = 1;
+  RUNNER_RESERVED = 1;
   // The Runner is assigned to a deployment.
-  ASSIGNED = 2;
+  RUNNER_ASSIGNED = 2;
   // The Runner is dead.
-  DEAD = 3;
+  RUNNER_DEAD = 3;
 }
 
 message RunnerHeartbeat {
@@ -157,8 +162,16 @@ message StatusRequest {
   // Show all deployments, even those that are not running.
   bool all_deployments = 1;
   bool all_runners = 2;
+  bool all_controlplanes = 3;
 }
 message StatusResponse {
+  message ControlPlane {
+    string key = 1;
+    string endpoint = 2;
+    ControlPlaneState state = 4;
+  }
+  repeated ControlPlane controlplanes = 1;
+
   message Runner {
     string key = 1;
     string language = 2;
@@ -166,7 +179,7 @@ message StatusResponse {
     RunnerState state = 4;
     optional string deployment = 5;
   }
-  repeated Runner runners = 1;
+  repeated Runner runners = 2;
 
   message Deployment {
     string key = 1;
@@ -175,7 +188,7 @@ message StatusResponse {
     int32 min_replicas = 4;
     schema.Module schema = 5;
   }
-  repeated Deployment deployments = 2;
+  repeated Deployment deployments = 3;
 }
 
 service ControlPlaneService {

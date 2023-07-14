@@ -17,10 +17,11 @@ import (
 )
 
 type statusCmd struct {
-	AllDeployments bool `help:"Show all deployments, even those that are not running."`
-	AllRunners     bool `help:"Show all runners, even those that are not running."`
-	JSON           bool `help:"Output JSON."`
-	Schema         bool `help:"Show schema."`
+	AllControlPlanes bool `help:"Show all control planes, even those that are not running."`
+	AllDeployments   bool `help:"Show all deployments, even those that are not running."`
+	AllRunners       bool `help:"Show all runners, even those that are not running."`
+	JSON             bool `help:"Output JSON."`
+	Schema           bool `help:"Show schema."`
 }
 
 func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
@@ -38,13 +39,22 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 		return errors.WithStack((&jsonpb.Marshaler{}).Marshal(os.Stdout, status.Msg))
 	}
 
+	controlPlaneFmt := "%-28s%-9s%s\n"
+	fmt.Printf(controlPlaneFmt, "ControlPlane", "State", "Endpoint")
+	fmt.Printf(controlPlaneFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8))
+	for _, controlPlane := range status.Msg.Controlplanes {
+		fmt.Printf(controlPlaneFmt, controlPlane.Key, strings.TrimPrefix(controlPlane.State.String(), "CONTROLPLANE_"), controlPlane.Endpoint)
+	}
+	fmt.Println()
+
 	runnerFmt := "%-28s%-9s%-9s%-28s%s\n"
 	fmt.Printf(runnerFmt, "Runner", "State", "Language", "Deployment", "Endpoint")
 	fmt.Printf(runnerFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 27), strings.Repeat("-", 8))
 	for _, runner := range status.Msg.Runners {
-		fmt.Printf(runnerFmt, runner.Key, runner.State, runner.Language, runner.GetDeployment(), runner.Endpoint)
+		fmt.Printf(runnerFmt, runner.Key, strings.TrimPrefix(runner.State.String(), "RUNNER_"), runner.Language, runner.GetDeployment(), runner.Endpoint)
 	}
 	fmt.Println()
+
 	deploymentFmt := "%-28s%-15s%-5v%s\n"
 	if s.Schema {
 		fmt.Printf(deploymentFmt, "Deployment", "Name", "N", "Schema")
@@ -55,7 +65,7 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 	}
 	for _, deployment := range status.Msg.Deployments {
 		active := slices.Reduce(status.Msg.Runners, 0, func(i int, runner *ftlv1.StatusResponse_Runner) int {
-			if runner.State != ftlv1.RunnerState_DEAD && runner.GetDeployment() == deployment.Key {
+			if runner.State != ftlv1.RunnerState_RUNNER_DEAD && runner.GetDeployment() == deployment.Key {
 				return i + 1
 			}
 			return i

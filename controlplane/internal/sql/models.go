@@ -12,6 +12,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ControlplaneState string
+
+const (
+	ControlplaneStateLive ControlplaneState = "live"
+	ControlplaneStateDead ControlplaneState = "dead"
+)
+
+func (e *ControlplaneState) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ControlplaneState(s)
+	case string:
+		*e = ControlplaneState(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ControlplaneState: %T", src)
+	}
+	return nil
+}
+
+type NullControlplaneState struct {
+	ControlplaneState ControlplaneState
+	Valid             bool // Valid is true if ControlplaneState is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullControlplaneState) Scan(value interface{}) error {
+	if value == nil {
+		ns.ControlplaneState, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ControlplaneState.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullControlplaneState) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ControlplaneState), nil
+}
+
 type MetricType string
 
 const (
@@ -106,6 +148,15 @@ type Artefact struct {
 	Content   []byte
 }
 
+type Controlplane struct {
+	ID       int64
+	Key      sqltypes.Key
+	Created  pgtype.Timestamptz
+	LastSeen pgtype.Timestamptz
+	State    ControlplaneState
+	Endpoint string
+}
+
 type Deployment struct {
 	ID          int64
 	CreatedAt   pgtype.Timestamptz
@@ -134,6 +185,11 @@ type DeploymentLog struct {
 	Error        pgtype.Text
 }
 
+type Ingress struct {
+	ID         int64
+	SourceAddr string
+}
+
 type Metric struct {
 	ID           int64
 	RunnerID     int64
@@ -155,14 +211,10 @@ type Module struct {
 	Name     string
 }
 
-type Request struct {
-	ID         int64
-	SourceAddr string
-}
-
 type Runner struct {
 	ID                 int64
 	Key                sqltypes.Key
+	Created            pgtype.Timestamptz
 	LastSeen           pgtype.Timestamptz
 	ReservationTimeout pgtype.Timestamptz
 	State              RunnerState
