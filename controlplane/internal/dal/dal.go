@@ -158,6 +158,11 @@ type Reservation interface {
 	Rollback(ctx context.Context) error
 }
 
+type Route struct {
+	Runner   model.RunnerKey
+	Endpoint string
+}
+
 func WithReservation(ctx context.Context, reservation Reservation, fn func() error) error {
 	if err := fn(); err != nil {
 		if rerr := reservation.Rollback(ctx); rerr != nil {
@@ -529,12 +534,17 @@ func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string, li
 }
 
 // GetRoutingTable returns the endpoints for all runners for the given module.
-func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]string, error) {
+func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]Route, error) {
 	routes, err := d.db.GetRoutingTable(ctx, module)
 	if len(routes) == 0 {
 		return nil, errors.WithStack(ErrNotFound)
 	}
-	return routes, errors.WithStack(translatePGError(err))
+	return slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
+		return Route{
+			Runner:   model.RunnerKey(row.Key),
+			Endpoint: row.Endpoint,
+		}
+	}), errors.WithStack(translatePGError(err))
 }
 
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {

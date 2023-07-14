@@ -304,7 +304,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.Wrap(err, "failed to get runners for module")
 	}
 	endpoint := endpoints[rand.Intn(len(endpoints))] //nolint:gosec
-	client := s.clientsForEndpoint(endpoint)
+	client := s.clientsForEndpoint(endpoint.Endpoint)
 
 	// Inject the request ID if this is an ingress call.
 	verbs, err := headers.GetCallers(req.Header())
