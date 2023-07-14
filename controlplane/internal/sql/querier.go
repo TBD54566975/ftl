@@ -35,7 +35,7 @@ type Querier interface {
 	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error)
 	GetLatestModuleMetrics(ctx context.Context, modules []string) ([]GetLatestModuleMetricsRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
-	GetRoutingTable(ctx context.Context, name string) ([]string, error)
+	GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error

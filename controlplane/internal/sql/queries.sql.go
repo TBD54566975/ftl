@@ -575,7 +575,7 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 }
 
 const getRoutingTable = `-- name: GetRoutingTable :many
-SELECT endpoint
+SELECT endpoint, r.key
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
          INNER JOIN modules m on d.module_id = m.id
@@ -583,19 +583,24 @@ WHERE state = 'assigned'
   AND m.name = $1
 `
 
-func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]string, error) {
+type GetRoutingTableRow struct {
+	Endpoint string
+	Key      sqltypes.Key
+}
+
+func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error) {
 	rows, err := q.db.Query(ctx, getRoutingTable, name)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []GetRoutingTableRow
 	for rows.Next() {
-		var endpoint string
-		if err := rows.Scan(&endpoint); err != nil {
+		var i GetRoutingTableRow
+		if err := rows.Scan(&i.Endpoint, &i.Key); err != nil {
 			return nil, err
 		}
-		items = append(items, endpoint)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -680,13 +685,14 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 }
 
 const insertMetricEntry = `-- name: InsertMetricEntry :exec
-INSERT INTO metrics (runner_id, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
+INSERT INTO metrics (runner_id, request_id, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
                      value)
-VALUES ((SELECT id FROM runners WHERE key = $1), $2, $3, $4, $5, $6, $7, $8, $9, $10)
+VALUES ((SELECT id FROM runners WHERE key = $1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 `
 
 type InsertMetricEntryParams struct {
 	Key          sqltypes.Key
+	RequestID    int64
 	StartTime    pgtype.Timestamptz
 	EndTime      pgtype.Timestamptz
 	SourceModule string
@@ -701,6 +707,7 @@ type InsertMetricEntryParams struct {
 func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error {
 	_, err := q.db.Exec(ctx, insertMetricEntry,
 		arg.Key,
+		arg.RequestID,
 		arg.StartTime,
 		arg.EndTime,
 		arg.SourceModule,
