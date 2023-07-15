@@ -32,17 +32,17 @@ import (
 )
 
 type Config struct {
-	Endpoint             *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
-	Key                  model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" required:"R00000000000000000000000000"`
-	ControlPlaneEndpoint *url.URL        `name:"ftl-endpoint" help:"Control Plane endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
-	DeploymentDir        string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
-	Language             string          `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
-	HeartbeatPeriod      time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
-	HeartbeatJitter      time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
+	Endpoint           *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
+	Key                model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" required:"R00000000000000000000000000"`
+	ControllerEndpoint *url.URL        `name:"ftl-endpoint" help:"Control Plane endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
+	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	Language           string          `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
+	HeartbeatPeriod    time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
+	HeartbeatJitter    time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
 }
 
 func Start(ctx context.Context, config Config) error {
-	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
+	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.ControllerEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, client)
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting FTL Runner")
@@ -51,10 +51,10 @@ func Start(ctx context.Context, config Config) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create deployment directory")
 	}
-	logger.Infof("Using FTL endpoint: %s", config.ControlPlaneEndpoint)
+	logger.Infof("Using FTL endpoint: %s", config.ControllerEndpoint)
 	logger.Infof("Listening on %s", config.Endpoint)
 
-	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
+	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
 	key := config.Key
 	if key == (model.RunnerKey{}) {
@@ -62,14 +62,14 @@ func Start(ctx context.Context, config Config) error {
 	}
 
 	svc := &Service{
-		key:                key,
-		config:             config,
-		controlPlaneClient: controlplaneClient,
-		forceUpdate:        make(chan struct{}, 16),
+		key:              key,
+		config:           config,
+		controllerClient: controllerClient,
+		forceUpdate:      make(chan struct{}, 16),
 	}
 	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 
-	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controlplaneClient.RegisterRunner, svc.registrationLoop)
+	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
 
 	return rpc.Serve(ctx, config.Endpoint,
 		rpc.Route("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
@@ -95,9 +95,9 @@ type Service struct {
 	forceUpdate chan struct{}
 	deployment  atomic.Value[types.Option[*deployment]]
 
-	config             Config
-	controlPlaneClient ftlv1connect.ControlPlaneServiceClient
-	// Failed to register with the ControlPlane
+	config           Config
+	controllerClient ftlv1connect.ControllerServiceClient
+	// Failed to register with the Controller
 	registrationFailure atomic.Value[types.Option[error]]
 }
 
@@ -142,7 +142,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("already deployed"))
 	}
 
-	// Set the state of the Runner, and update the ControlPlane.
+	// Set the state of the Runner, and update the Controller.
 	setState := func(state ftlv1.RunnerState) {
 		s.state.Store(state)
 		s.forceUpdate <- struct{}{}
@@ -156,7 +156,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		}
 	}()
 
-	gdResp, err := s.controlPlaneClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: req.Msg.DeploymentKey}))
+	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: req.Msg.DeploymentKey}))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -169,7 +169,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create deployment directory")
 	}
-	err = download.Artefacts(ctx, s.controlPlaneClient, id, deploymentDir)
+	err = download.Artefacts(ctx, s.controllerClient, id, deploymentDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to download artefacts")
 	}
@@ -180,7 +180,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		"./main",
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars(
-			"FTL_ENDPOINT="+s.config.ControlPlaneEndpoint.String(),
+			"FTL_ENDPOINT="+s.config.ControllerEndpoint.String(),
 			"FTL_OBSERVABILITY_ENDPOINT="+s.config.Endpoint.String(),
 		),
 	)
@@ -268,7 +268,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		s.state.Store(state)
 	}
 
-	logger.Tracef("Registering with ControlPlane as %s", state)
+	logger.Tracef("Registering with Controller as %s", state)
 	err := send(&ftlv1.RunnerHeartbeat{
 		Key:        s.key.String(),
 		Language:   s.config.Language,
@@ -278,7 +278,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		Error:      errPtr,
 	})
 	if err != nil {
-		logger.Errorf(err, "failed to register with ControlPlane")
+		logger.Errorf(err, "failed to register with Controller")
 		s.registrationFailure.Store(types.Some(err))
 		return errors.WithStack(err)
 	}
@@ -286,7 +286,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 
 	// Wait for the next heartbeat.
 	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
-	logger.Tracef("Registered with ControlPlane, next heartbeat in %s", delay)
+	logger.Tracef("Registered with Controller, next heartbeat in %s", delay)
 	select {
 	case <-ctx.Done():
 		err = context.Cause(ctx)

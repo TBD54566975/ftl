@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/controlplane"
+	"github.com/TBD54566975/ftl/controller"
 )
 
 type initDBCmd struct {
@@ -14,7 +14,7 @@ type initDBCmd struct {
 }
 
 func (c *initDBCmd) Run(ctx context.Context) error {
-	conn, err := controlplane.CreateForDevel(ctx, c.DSN, c.Recreate)
+	conn, err := controller.CreateForDevel(ctx, c.DSN, c.Recreate)
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -15,7 +15,7 @@ type killCmd struct {
 	Deployment model.DeploymentKey `arg:"" help:"Deployment to kill."`
 }
 
-func (k *killCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
+func (k *killCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	_, err := client.StopDeploy(ctx, connect.NewRequest(&ftlv1.StopDeployRequest{DeploymentKey: k.Deployment.String()}))
 	if err != nil {
 		return errors.WithStack(err)

@@ -69,7 +69,7 @@ type goDeployCmd struct {
 	compile.Config
 }
 
-func (g *goDeployCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
+func (g *goDeployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
 	deployment, err := compile.Compile(ctx, g.Config)
 	if err != nil {

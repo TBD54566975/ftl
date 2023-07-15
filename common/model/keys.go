@@ -21,11 +21,11 @@ func ParseRunnerKey(key string) (RunnerKey, error) { return parseKey[RunnerKey](
 type runnerKey struct{}
 type RunnerKey = keyType[runnerKey]
 
-func NewControlPlaneKey() ControlPlaneKey                      { return ControlPlaneKey(ulid.Make()) }
-func ParseControlPlaneKey(key string) (ControlPlaneKey, error) { return parseKey[ControlPlaneKey](key) }
+func NewControllerKey() ControllerKey                      { return ControllerKey(ulid.Make()) }
+func ParseControllerKey(key string) (ControllerKey, error) { return parseKey[ControllerKey](key) }
 
-type controlPlaneKey struct{}
-type ControlPlaneKey = keyType[controlPlaneKey]
+type controllerKey struct{}
+type ControllerKey = keyType[controllerKey]
 
 func parseKey[KT keyType[U], U any](key string) (KT, error) {
 	var zero KT

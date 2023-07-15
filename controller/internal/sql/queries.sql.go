@@ -8,7 +8,7 @@ package sql
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/TBD54566975/ftl/controller/internal/sqltypes"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -203,23 +203,23 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	return items, nil
 }
 
-const getControlPlanes = `-- name: GetControlPlanes :many
+const getControllers = `-- name: GetControllers :many
 SELECT c.id, c.key, c.created, c.last_seen, c.state, c.endpoint
-FROM controlplane c
+FROM controller c
 WHERE $1::bool = true
    OR c.state <> 'dead'
 ORDER BY c.key
 `
 
-func (q *Queries) GetControlPlanes(ctx context.Context, all bool) ([]Controlplane, error) {
-	rows, err := q.db.Query(ctx, getControlPlanes, all)
+func (q *Queries) GetControllers(ctx context.Context, all bool) ([]Controller, error) {
+	rows, err := q.db.Query(ctx, getControllers, all)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Controlplane
+	var items []Controller
 	for rows.Next() {
-		var i Controlplane
+		var i Controller
 		if err := rows.Scan(
 			&i.ID,
 			&i.Key,
@@ -761,9 +761,9 @@ func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryPa
 	return err
 }
 
-const killStaleControlPlanes = `-- name: KillStaleControlPlanes :one
+const killStaleControllers = `-- name: KillStaleControllers :one
 WITH matches AS (
-    UPDATE controlplane
+    UPDATE controller
         SET state = 'dead'
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
         RETURNING 1)
@@ -771,9 +771,9 @@ SELECT COUNT(*)
 FROM matches
 `
 
-// Mark any controlplane entries that haven't been updated recently as dead.
-func (q *Queries) KillStaleControlPlanes(ctx context.Context, dollar_1 pgtype.Interval) (int64, error) {
-	row := q.db.QueryRow(ctx, killStaleControlPlanes, dollar_1)
+// Mark any controller entries that haven't been updated recently as dead.
+func (q *Queries) KillStaleControllers(ctx context.Context, dollar_1 pgtype.Interval) (int64, error) {
+	row := q.db.QueryRow(ctx, killStaleControllers, dollar_1)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -844,8 +844,8 @@ func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes
 	return err
 }
 
-const upsertControlPlane = `-- name: UpsertControlPlane :one
-INSERT INTO controlplane (key, endpoint)
+const upsertController = `-- name: UpsertController :one
+INSERT INTO controller (key, endpoint)
 VALUES ($1, $2)
 ON CONFLICT (key) DO UPDATE SET state     = 'live',
                                 endpoint  = $2,
@@ -853,8 +853,8 @@ ON CONFLICT (key) DO UPDATE SET state     = 'live',
 RETURNING id
 `
 
-func (q *Queries) UpsertControlPlane(ctx context.Context, key sqltypes.Key, endpoint string) (int64, error) {
-	row := q.db.QueryRow(ctx, upsertControlPlane, key, endpoint)
+func (q *Queries) UpsertController(ctx context.Context, key sqltypes.Key, endpoint string) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertController, key, endpoint)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

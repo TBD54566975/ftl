@@ -12,7 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
-	"github.com/TBD54566975/ftl/controlplane/internal/sql/sqltest"
+	"github.com/TBD54566975/ftl/controller/internal/sql/sqltest"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/schema"
 )
@@ -281,7 +281,7 @@ func TestRunnerStateFromProto(t *testing.T) {
 	assert.Equal(t, RunnerStateIdle, RunnerStateFromProto(state))
 }
 
-func TestControlPlaneStateFromProto(t *testing.T) {
-	state := ftlv1.ControlPlaneState_CONTROLPLANE_LIVE
-	assert.Equal(t, ControlPlaneStateLive, ControlPlaneStateFromProto(state))
+func TestControllerStateFromProto(t *testing.T) {
+	state := ftlv1.ControllerState_CONTROLLER_LIVE
+	assert.Equal(t, ControllerStateLive, ControllerStateFromProto(state))
 }

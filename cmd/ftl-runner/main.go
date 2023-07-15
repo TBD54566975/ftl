@@ -30,7 +30,7 @@ func main() {
 	kctx := kong.Parse(&config, kong.Description(`
 FTL - Towards a 𝝺-calculus for large-scale systems
 
-The Runner is the component of FTL that coordinates with the ControlPlane to spawn
+The Runner is the component of FTL that coordinates with the Controller to spawn
 and route to user code.
 	`), kong.Vars{
 		"version":       version,

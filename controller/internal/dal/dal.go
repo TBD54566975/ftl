@@ -1,4 +1,4 @@
-// Package dal provides a data abstraction layer for the ControlPlane
+// Package dal provides a data abstraction layer for the Controller
 package dal
 
 import (
@@ -22,8 +22,8 @@ import (
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
-	"github.com/TBD54566975/ftl/controlplane/internal/sql"
-	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/TBD54566975/ftl/controller/internal/sql"
+	"github.com/TBD54566975/ftl/controller/internal/sqltypes"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -103,20 +103,20 @@ func (s RunnerState) ToProto() ftlv1.RunnerState {
 	return ftlv1.RunnerState(ftlv1.RunnerState_value["RUNNER_"+strings.ToUpper(string(s))])
 }
 
-type ControlPlaneState string
+type ControllerState string
 
-// ControlPlane states.
+// Controller states.
 const (
-	ControlPlaneStateLive = ControlPlaneState(sql.ControlplaneStateLive)
-	ControlPlaneStateDead = ControlPlaneState(sql.ControlplaneStateDead)
+	ControllerStateLive = ControllerState(sql.ControllerStateLive)
+	ControllerStateDead = ControllerState(sql.ControllerStateDead)
 )
 
-func ControlPlaneStateFromProto(state ftlv1.ControlPlaneState) ControlPlaneState {
-	return ControlPlaneState(strings.ToLower(strings.TrimPrefix(state.String(), "CONTROLPLANE_")))
+func ControllerStateFromProto(state ftlv1.ControllerState) ControllerState {
+	return ControllerState(strings.ToLower(strings.TrimPrefix(state.String(), "CONTROLLER_")))
 }
 
-func (s ControlPlaneState) ToProto() ftlv1.ControlPlaneState {
-	return ftlv1.ControlPlaneState(ftlv1.ControlPlaneState_value["CONTROLPLANE_"+strings.ToUpper(string(s))])
+func (s ControllerState) ToProto() ftlv1.ControllerState {
+	return ftlv1.ControllerState(ftlv1.ControllerState_value["CONTROLLER_"+strings.ToUpper(string(s))])
 }
 
 type DataPoint interface {
@@ -162,16 +162,16 @@ type Deployment struct {
 	Schema      *schema.Module
 }
 
-type ControlPlane struct {
-	Key      model.ControlPlaneKey
+type Controller struct {
+	Key      model.ControllerKey
 	Endpoint string
-	State    ControlPlaneState
+	State    ControllerState
 }
 
 type Status struct {
-	ControlPlanes []ControlPlane
-	Runners       []Runner
-	Deployments   []Deployment
+	Controllers []Controller
+	Runners     []Runner
+	Deployments []Deployment
 }
 
 // A Reservation of a Runner.
@@ -204,8 +204,8 @@ type DAL struct {
 	db *sql.DB
 }
 
-func (d *DAL) GetStatus(ctx context.Context, allControlPlanes, allRunners, allDeployments bool) (Status, error) {
-	controlplanes, err := d.db.GetControlPlanes(ctx, allControlPlanes)
+func (d *DAL) GetStatus(ctx context.Context, allControllers, allRunners, allDeployments bool) (Status, error) {
+	controllers, err := d.db.GetControllers(ctx, allControllers)
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get control planes")
 	}
@@ -238,11 +238,11 @@ func (d *DAL) GetStatus(ctx context.Context, allControlPlanes, allRunners, allDe
 		return Status{}, errors.WithStack(err)
 	}
 	return Status{
-		ControlPlanes: slices.Map(controlplanes, func(in sql.Controlplane) ControlPlane {
-			return ControlPlane{
-				Key:      model.ControlPlaneKey(in.Key),
+		Controllers: slices.Map(controllers, func(in sql.Controller) Controller {
+			return Controller{
+				Key:      model.ControllerKey(in.Key),
 				Endpoint: in.Endpoint,
-				State:    ControlPlaneState(in.State),
+				State:    ControllerState(in.State),
 			}
 		}),
 		Deployments: statusDeployments,
@@ -420,9 +420,9 @@ func (d *DAL) KillStaleRunners(ctx context.Context, age time.Duration) (int64, e
 	return count, errors.WithStack(err)
 }
 
-// KillStaleControlPlanes deletes control-planes that have not had heartbeats for the given duration.
-func (d *DAL) KillStaleControlPlanes(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleControlPlanes(ctx, pgtype.Interval{
+// KillStaleControllers deletes controllers that have not had heartbeats for the given duration.
+func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int64, error) {
+	count, err := d.db.KillStaleControllers(ctx, pgtype.Interval{
 		Microseconds: int64(age / time.Microsecond),
 		Valid:        true,
 	})
@@ -744,8 +744,8 @@ func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (int64, err
 	return id, errors.WithStack(err)
 }
 
-func (d *DAL) UpsertControlPlane(ctx context.Context, key model.ControlPlaneKey, addr string) (int64, error) {
-	id, err := d.db.UpsertControlPlane(ctx, sqltypes.Key(key), addr)
+func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {
+	id, err := d.db.UpsertController(ctx, sqltypes.Key(key), addr)
 	return id, errors.WithStack(translatePGError(err))
 }
 

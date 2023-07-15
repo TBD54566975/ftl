@@ -8,23 +8,23 @@ import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { Module, VerbRef } from "./schema/schema_pb.js";
 
 /**
- * @generated from enum xyz.block.ftl.v1.ControlPlaneState
+ * @generated from enum xyz.block.ftl.v1.ControllerState
  */
-export enum ControlPlaneState {
+export enum ControllerState {
   /**
-   * @generated from enum value: CONTROLPLANE_LIVE = 0;
+   * @generated from enum value: CONTROLLER_LIVE = 0;
    */
-  CONTROLPLANE_LIVE = 0,
+  CONTROLLER_LIVE = 0,
 
   /**
-   * @generated from enum value: CONTROLPLANE_DEAD = 1;
+   * @generated from enum value: CONTROLLER_DEAD = 1;
    */
-  CONTROLPLANE_DEAD = 1,
+  CONTROLLER_DEAD = 1,
 }
-// Retrieve enum metadata with: proto3.getEnumType(ControlPlaneState)
-proto3.util.setEnumType(ControlPlaneState, "xyz.block.ftl.v1.ControlPlaneState", [
-  { no: 0, name: "CONTROLPLANE_LIVE" },
-  { no: 1, name: "CONTROLPLANE_DEAD" },
+// Retrieve enum metadata with: proto3.getEnumType(ControllerState)
+proto3.util.setEnumType(ControllerState, "xyz.block.ftl.v1.ControllerState", [
+  { no: 0, name: "CONTROLLER_LIVE" },
+  { no: 1, name: "CONTROLLER_DEAD" },
 ]);
 
 /**
@@ -1245,9 +1245,9 @@ export class StatusRequest extends Message<StatusRequest> {
   allRunners = false;
 
   /**
-   * @generated from field: bool all_controlplanes = 3;
+   * @generated from field: bool all_controllers = 3;
    */
-  allControlplanes = false;
+  allControllers = false;
 
   constructor(data?: PartialMessage<StatusRequest>) {
     super();
@@ -1259,7 +1259,7 @@ export class StatusRequest extends Message<StatusRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "all_deployments", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "all_runners", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "all_controlplanes", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "all_controllers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {
@@ -1284,9 +1284,9 @@ export class StatusRequest extends Message<StatusRequest> {
  */
 export class StatusResponse extends Message<StatusResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.ControlPlane controlplanes = 1;
+   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Controller controllers = 1;
    */
-  controlplanes: StatusResponse_ControlPlane[] = [];
+  controllers: StatusResponse_Controller[] = [];
 
   /**
    * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Runner runners = 2;
@@ -1306,7 +1306,7 @@ export class StatusResponse extends Message<StatusResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "controlplanes", kind: "message", T: StatusResponse_ControlPlane, repeated: true },
+    { no: 1, name: "controllers", kind: "message", T: StatusResponse_Controller, repeated: true },
     { no: 2, name: "runners", kind: "message", T: StatusResponse_Runner, repeated: true },
     { no: 3, name: "deployments", kind: "message", T: StatusResponse_Deployment, repeated: true },
   ]);
@@ -1329,9 +1329,9 @@ export class StatusResponse extends Message<StatusResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.StatusResponse.ControlPlane
+ * @generated from message xyz.block.ftl.v1.StatusResponse.Controller
  */
-export class StatusResponse_ControlPlane extends Message<StatusResponse_ControlPlane> {
+export class StatusResponse_Controller extends Message<StatusResponse_Controller> {
   /**
    * @generated from field: string key = 1;
    */
@@ -1343,37 +1343,37 @@ export class StatusResponse_ControlPlane extends Message<StatusResponse_ControlP
   endpoint = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.ControlPlaneState state = 4;
+   * @generated from field: xyz.block.ftl.v1.ControllerState state = 4;
    */
-  state = ControlPlaneState.CONTROLPLANE_LIVE;
+  state = ControllerState.CONTROLLER_LIVE;
 
-  constructor(data?: PartialMessage<StatusResponse_ControlPlane>) {
+  constructor(data?: PartialMessage<StatusResponse_Controller>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.ControlPlane";
+  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.Controller";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(ControlPlaneState) },
+    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(ControllerState) },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_ControlPlane {
-    return new StatusResponse_ControlPlane().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Controller {
+    return new StatusResponse_Controller().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_ControlPlane {
-    return new StatusResponse_ControlPlane().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_Controller {
+    return new StatusResponse_Controller().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_ControlPlane {
-    return new StatusResponse_ControlPlane().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_Controller {
+    return new StatusResponse_Controller().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StatusResponse_ControlPlane | PlainMessage<StatusResponse_ControlPlane> | undefined, b: StatusResponse_ControlPlane | PlainMessage<StatusResponse_ControlPlane> | undefined): boolean {
-    return proto3.util.equals(StatusResponse_ControlPlane, a, b);
+  static equals(a: StatusResponse_Controller | PlainMessage<StatusResponse_Controller> | undefined, b: StatusResponse_Controller | PlainMessage<StatusResponse_Controller> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_Controller, a, b);
   }
 }
 

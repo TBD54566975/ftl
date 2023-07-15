@@ -26,7 +26,7 @@ type deployCmd struct {
 	Files []string `arg:"" help:"Files to upload." type:"existingfile"`
 }
 
-func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
+func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
 	base := d.Base
 	if base == "" {

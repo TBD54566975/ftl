@@ -19,7 +19,7 @@ type downloadCmd struct {
 	Deployment model.DeploymentKey `help:"Deployment to download." arg:""`
 }
 
-func (d *downloadCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
+func (d *downloadCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	return download.Artefacts(ctx, client, d.Deployment, d.Dest)
 }
 

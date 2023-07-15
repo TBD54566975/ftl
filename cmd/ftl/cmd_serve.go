@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/controlplane"
+	"github.com/TBD54566975/ftl/controller"
 )
 
 type serveCmd struct {
-	controlplane.Config
+	controller.Config
 }
 
 func (s *serveCmd) Run(ctx context.Context) error {
-	return controlplane.Start(ctx, s.Config)
+	return controller.Start(ctx, s.Config)
 }

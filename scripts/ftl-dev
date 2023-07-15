@@ -11,13 +11,13 @@ cat <<EOF > reflex.conf
 # Generated file. DO NOT MODIFY
 
 # sqlc regeneration
--r '(sqlc.yaml|controlplane/internal/sql/queries\.sql|controlplane/internal/sql/schema/.*\.sql|protos/xyz/block/ftl/v1/ftl\.proto)$' \
+-r '(sqlc.yaml|controller/internal/sql/queries\.sql|controller/internal/sql/schema/.*\.sql|protos/xyz/block/ftl/v1/ftl\.proto)$' \
 -- make generate
 
 # Control Plane
 -s \\
--r '($(deps ./cmd/ftl-control-plane))/[^/]*\.go$' \\
--- ftl-control-plane --key C01H5BRT09Y07547SETZ4HWRA09 $@
+-r '($(deps ./cmd/ftl-controller))/[^/]*\.go$' \\
+-- ftl-controller --key C01H5BRT09Y07547SETZ4HWRA09 $@
 
 # Runner 1
 -s \\

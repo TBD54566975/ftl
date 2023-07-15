@@ -41,15 +41,15 @@ export const VerbService = {
 } as const;
 
 /**
- * @generated from service xyz.block.ftl.v1.ControlPlaneService
+ * @generated from service xyz.block.ftl.v1.ControllerService
  */
-export const ControlPlaneService = {
-  typeName: "xyz.block.ftl.v1.ControlPlaneService",
+export const ControllerService = {
+  typeName: "xyz.block.ftl.v1.ControllerService",
   methods: {
     /**
      * Ping service for readiness.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Ping
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.Ping
      */
     ping: {
       name: "Ping",
@@ -59,7 +59,7 @@ export const ControlPlaneService = {
       idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.Status
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.Status
      */
     status: {
       name: "Status",
@@ -70,7 +70,7 @@ export const ControlPlaneService = {
     /**
      * Get list of artefacts that differ between the server and client.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetArtefactDiffs
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.GetArtefactDiffs
      */
     getArtefactDiffs: {
       name: "GetArtefactDiffs",
@@ -81,7 +81,7 @@ export const ControlPlaneService = {
     /**
      * Upload an artefact to the server.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.UploadArtefact
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.UploadArtefact
      */
     uploadArtefact: {
       name: "UploadArtefact",
@@ -92,7 +92,7 @@ export const ControlPlaneService = {
     /**
      * Create a deployment.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.CreateDeployment
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.CreateDeployment
      */
     createDeployment: {
       name: "CreateDeployment",
@@ -103,7 +103,7 @@ export const ControlPlaneService = {
     /**
      * Get the schema and artefact metadata for a deployment.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetDeployment
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.GetDeployment
      */
     getDeployment: {
       name: "GetDeployment",
@@ -117,7 +117,7 @@ export const ControlPlaneService = {
      * Each artefact is streamed one after the other as a sequence of max 1MB
      * chunks.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.GetDeploymentArtefacts
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.GetDeploymentArtefacts
      */
     getDeploymentArtefacts: {
       name: "GetDeploymentArtefacts",
@@ -126,12 +126,12 @@ export const ControlPlaneService = {
       kind: MethodKind.ServerStreaming,
     },
     /**
-     * Register a Runner with the ControlPlane.
+     * Register a Runner with the Controller.
      *
-     * Each runner issue a RegisterRunnerRequest to the ControlPlaneService
+     * Each runner issue a RegisterRunnerRequest to the ControllerService
      * every 10 seconds to maintain its heartbeat.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.RegisterRunner
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.RegisterRunner
      */
     registerRunner: {
       name: "RegisterRunner",
@@ -142,7 +142,7 @@ export const ControlPlaneService = {
     /**
      * Starts a deployment.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.StartDeploy
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.StartDeploy
      */
     startDeploy: {
       name: "StartDeploy",
@@ -153,7 +153,7 @@ export const ControlPlaneService = {
     /**
      * Stop a deployment.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.StopDeploy
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.StopDeploy
      */
     stopDeploy: {
       name: "StopDeploy",
@@ -164,7 +164,7 @@ export const ControlPlaneService = {
     /**
      * Stream logs from a deployment
      *
-     * @generated from rpc xyz.block.ftl.v1.ControlPlaneService.StreamDeploymentLogs
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs
      */
     streamDeploymentLogs: {
       name: "StreamDeploymentLogs",
@@ -178,8 +178,8 @@ export const ControlPlaneService = {
 /**
  * RunnerService is the service that executes Deployments.
  *
- * The ControlPlane will scale the Runner horizontally as required. The Runner will
- * register itself automatically with the ControlPlaneService, which will then
+ * The Controller will scale the Runner horizontally as required. The Runner will
+ * register itself automatically with the ControllerService, which will then
  * assign modules to it.
  *
  * @generated from service xyz.block.ftl.v1.RunnerService

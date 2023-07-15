@@ -18,9 +18,9 @@ import (
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-var binaries = []string{"ftl-control-plane", "ftl-runner"}
+var binaries = []string{"ftl-controller", "ftl-runner"}
 
-type assertion func(client ftlv1connect.ControlPlaneServiceClient)
+type assertion func(client ftlv1connect.ControllerServiceClient)
 type asserts []assertion
 
 type fixture interface {
@@ -46,9 +46,9 @@ func TestIntegration(t *testing.T) {
 	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			run(t, ctx, "ftl-control-plane")
+			run(t, ctx, "ftl-controller")
 			run(t, ctx, "ftl-runner", "--language=go")
-			client := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, "localhost:8893", log.Warn)
+			client := rpc.Dial(ftlv1connect.NewControllerServiceClient, "localhost:8893", log.Warn)
 			for i := 0; i < tt.extraRunners; i++ {
 				run(t, ctx, "ftl-runner", "--language=go", "--endpoint=http://localhost:"+strconv.Itoa(8893+i))
 			}
