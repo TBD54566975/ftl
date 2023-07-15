@@ -22,12 +22,10 @@ import (
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect"
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/unstoppable"
-	"github.com/TBD54566975/ftl/observability"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/schema"
@@ -73,14 +71,9 @@ func Start(ctx context.Context, config Config) error {
 
 	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controlplaneClient.RegisterRunner, svc.registrationLoop)
 
-	observabilityClient := rpc.Dial(ftlv1connect.NewObservabilityServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
-
-	obs := observability.NewService(svc.key, observabilityClient)
-
 	return rpc.Serve(ctx, config.Endpoint,
 		rpc.Route("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
 		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
-		rpc.RawGRPC(v1connect.NewMetricsServiceHandler, obs),
 	)
 }
 

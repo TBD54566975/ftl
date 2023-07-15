@@ -20,8 +20,7 @@ PROTO_IN = protos/buf.yaml \
 		   protos/buf.gen.yaml \
 		   protos/xyz/block/ftl/v1/ftl.proto \
 		   protos/xyz/block/ftl/v1/console/console.proto \
-		   protos/xyz/block/ftl/v1/schema/schema.proto \
-		   internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/metrics_service.proto
+		   protos/xyz/block/ftl/v1/schema/schema.proto
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			protos/xyz/block/ftl/v1/schema/schema.pb.go \
 			protos/xyz/block/ftl/v1/console/console.pb.go \
@@ -30,8 +29,7 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			console/client/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
 			console/client/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
 			console/client/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
-			console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts \
-			internal/3rdparty/protos/opentelemetry/proto/collector/metrics/v1/v1connect/metrics_service.connect.go
+			console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts
 
 
 .DEFAULT_GOAL := help
