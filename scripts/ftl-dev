@@ -17,17 +17,17 @@ cat <<EOF > reflex.conf
 # Control Plane
 -s \\
 -r '($(deps ./cmd/ftl-control-plane))/[^/]*\.go$' \\
--- ftl-control-plane $@
+-- ftl-control-plane --key C01H5BRT09Y07547SETZ4HWRA09 $@
 
 # Runner 1
 -s \\
 -r '($(deps ./cmd/ftl-runner))/[^/]*\.go$' \\
--- ftl-runner --language go --endpoint http://localhost:8894 $@
+-- ftl-runner --key R01H5BTS6ABP1EHGZSAGJMBV50A --language go --endpoint http://localhost:8894 $@
 
 # Runner 2
 -s \\
 -r '($(deps ./cmd/ftl-runner))/[^/]*\.go$' \\
--- ftl-runner --language go --endpoint http://localhost:8895 $@
+-- ftl-runner --key R01H5BTSGKQ8AZ9S22N9N1SM9HV --language go --endpoint http://localhost:8895 $@
 EOF
 
 reflex -s -d none -g reflex.conf -- reflex -d fancy -c reflex.conf

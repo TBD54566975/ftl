@@ -17,6 +17,7 @@ import (
 )
 
 type statusCmd struct {
+	All              bool `help:"Show all control planes, deployments, and runners, even those that are not running."`
 	AllControlPlanes bool `help:"Show all control planes, even those that are not running."`
 	AllDeployments   bool `help:"Show all deployments, even those that are not running."`
 	AllRunners       bool `help:"Show all runners, even those that are not running."`
@@ -25,7 +26,11 @@ type statusCmd struct {
 }
 
 func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
-	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{AllDeployments: s.AllDeployments, AllRunners: s.AllRunners}))
+	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
+		AllControlplanes: s.All || s.AllControlPlanes,
+		AllDeployments:   s.All || s.AllDeployments,
+		AllRunners:       s.All || s.AllRunners,
+	}))
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
+	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/model"
@@ -32,11 +33,12 @@ import (
 )
 
 type Config struct {
-	Bind                         *url.URL      `help:"Socket to bind to." default:"http://localhost:8892"`
-	DSN                          string        `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
-	RunnerTimeout                time.Duration `help:"Runner heartbeat timeout." default:"10s"`
-	DeploymentReservationTimeout time.Duration `help:"Deployment reservation timeout." default:"120s"`
-	ArtefactChunkSize            int           `help:"Size of each chunk streamed to the client." default:"1048576"`
+	Bind                         *url.URL              `help:"Socket to bind to." default:"http://localhost:8892"`
+	Key                          model.ControlPlaneKey `help:"ControlPlane key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
+	DSN                          string                `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
+	RunnerTimeout                time.Duration         `help:"Runner heartbeat timeout." default:"10s"`
+	DeploymentReservationTimeout time.Duration         `help:"Deployment reservation timeout." default:"120s"`
+	ArtefactChunkSize            int                   `help:"Size of each chunk streamed to the client." default:"1048576"`
 }
 
 // Start the ControlPlane. Blocks until the context is cancelled.
@@ -54,7 +56,7 @@ func Start(ctx context.Context, config Config) error {
 	}
 
 	dal := dal.New(conn)
-	svc, err := New(ctx, dal, config.Bind, config.RunnerTimeout, config.DeploymentReservationTimeout, config.ArtefactChunkSize)
+	svc, err := New(ctx, dal, config)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -132,16 +134,20 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	return connect.NewResponse(resp), nil
 }
 
-func New(ctx context.Context, dal *dal.DAL, bind *url.URL, heartbeatTimeout, deploymentReservationTimeout time.Duration, artefactChunkSize int) (*Service, error) {
+func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
+	key := config.Key
+	if config.Key.ULID() == (ulid.ULID{}) {
+		key = model.NewControlPlaneKey()
+	}
 	svc := &Service{
 		dal:                          dal,
-		heartbeatTimeout:             heartbeatTimeout,
-		deploymentReservationTimeout: deploymentReservationTimeout,
-		artefactChunkSize:            artefactChunkSize,
+		heartbeatTimeout:             config.RunnerTimeout,
+		deploymentReservationTimeout: config.DeploymentReservationTimeout,
+		artefactChunkSize:            config.ArtefactChunkSize,
 		clients:                      map[string]clients{},
-		key:                          model.NewControlPlaneKey(),
+		key:                          key,
 	}
-	go svc.heartbeatControlPlane(ctx, bind)
+	go svc.heartbeatControlPlane(ctx, config.Bind)
 	go svc.reapStaleControlPlanes(ctx)
 	go svc.reapStaleRunners(ctx)
 	go svc.releaseExpiredReservations(ctx)

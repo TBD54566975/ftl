@@ -34,12 +34,13 @@ import (
 )
 
 type Config struct {
-	Endpoint             *url.URL      `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
-	ControlPlaneEndpoint *url.URL      `name:"ftl-endpoint" help:"Control Plane endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
-	DeploymentDir        string        `help:"Directory to store deployments in." default:"${deploymentdir}"`
-	Language             string        `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
-	HeartbeatPeriod      time.Duration `help:"Minimum period between heartbeats." default:"3s"`
-	HeartbeatJitter      time.Duration `help:"Jitter to add to heartbeat period." default:"2s"`
+	Endpoint             *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
+	Key                  model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" required:"R00000000000000000000000000"`
+	ControlPlaneEndpoint *url.URL        `name:"ftl-endpoint" help:"Control Plane endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
+	DeploymentDir        string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	Language             string          `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
+	HeartbeatPeriod      time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
+	HeartbeatJitter      time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -57,8 +58,13 @@ func Start(ctx context.Context, config Config) error {
 
 	controlplaneClient := rpc.Dial(ftlv1connect.NewControlPlaneServiceClient, config.ControlPlaneEndpoint.String(), log.Error)
 
+	key := config.Key
+	if key == (model.RunnerKey{}) {
+		key = model.NewRunnerKey()
+	}
+
 	svc := &Service{
-		key:                model.NewRunnerKey(),
+		key:                key,
 		config:             config,
 		controlPlaneClient: controlplaneClient,
 		forceUpdate:        make(chan struct{}, 16),
