@@ -106,9 +106,9 @@ message GetDeploymentResponse {
   repeated DeploymentArtefact artefacts = 2;
 }
 
-enum ControlPlaneState {
-  CONTROLPLANE_LIVE = 0;
-  CONTROLPLANE_DEAD = 1;
+enum ControllerState {
+  CONTROLLER_LIVE = 0;
+  CONTROLLER_DEAD = 1;
 }
 
 enum RunnerState {
@@ -161,15 +161,15 @@ message StatusRequest {
   // Show all deployments, even those that are not running.
   bool all_deployments = 1;
   bool all_runners = 2;
-  bool all_controlplanes = 3;
+  bool all_controllers = 3;
 }
 message StatusResponse {
-  message ControlPlane {
+  message Controller {
     string key = 1;
     string endpoint = 2;
-    ControlPlaneState state = 4;
+    ControllerState state = 4;
   }
-  repeated ControlPlane controlplanes = 1;
+  repeated Controller controllers = 1;
 
   message Runner {
     string key = 1;
@@ -190,7 +190,7 @@ message StatusResponse {
   repeated Deployment deployments = 3;
 }
 
-service ControlPlaneService {
+service ControllerService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
@@ -216,9 +216,9 @@ service ControlPlaneService {
   // chunks.
   rpc GetDeploymentArtefacts(GetDeploymentArtefactsRequest) returns (stream GetDeploymentArtefactsResponse);
 
-  // Register a Runner with the ControlPlane.
+  // Register a Runner with the Controller.
   //
-  // Each runner issue a RegisterRunnerRequest to the ControlPlaneService
+  // Each runner issue a RegisterRunnerRequest to the ControllerService
   // every 10 seconds to maintain its heartbeat.
   rpc RegisterRunner(stream RunnerHeartbeat) returns (RegisterRunnerResponse);
 
@@ -252,8 +252,8 @@ message ReserveResponse {}
 
 // RunnerService is the service that executes Deployments.
 //
-// The ControlPlane will scale the Runner horizontally as required. The Runner will
-// register itself automatically with the ControlPlaneService, which will then
+// The Controller will scale the Runner horizontally as required. The Runner will
+// register itself automatically with the ControllerService, which will then
 // assign modules to it.
 service RunnerService {
   rpc Ping(PingRequest) returns (PingResponse) {

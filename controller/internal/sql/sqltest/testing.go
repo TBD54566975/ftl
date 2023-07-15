@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/gofrs/flock"
 
-	"github.com/TBD54566975/ftl/controlplane/internal/sql"
+	"github.com/TBD54566975/ftl/controller/internal/sql"
 )
 
 // OpenForTesting opens a database connection for testing, recreating the

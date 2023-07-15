@@ -228,27 +228,27 @@ INSERT INTO ingress (source_addr)
 VALUES ($1)
 RETURNING id;
 
--- name: UpsertControlPlane :one
-INSERT INTO controlplane (key, endpoint)
+-- name: UpsertController :one
+INSERT INTO controller (key, endpoint)
 VALUES ($1, $2)
 ON CONFLICT (key) DO UPDATE SET state     = 'live',
                                 endpoint  = $2,
                                 last_seen = NOW() AT TIME ZONE 'utc'
 RETURNING id;
 
--- name: KillStaleControlPlanes :one
--- Mark any controlplane entries that haven't been updated recently as dead.
+-- name: KillStaleControllers :one
+-- Mark any controller entries that haven't been updated recently as dead.
 WITH matches AS (
-    UPDATE controlplane
+    UPDATE controller
         SET state = 'dead'
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
 FROM matches;
 
--- name: GetControlPlanes :many
+-- name: GetControllers :many
 SELECT c.*
-FROM controlplane c
+FROM controller c
 WHERE sqlc.arg('all')::bool = true
    OR c.state <> 'dead'
 ORDER BY c.key;

@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/TBD54566975/ftl/controlplane"
+	"github.com/TBD54566975/ftl/controller"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -16,7 +16,7 @@ var version = "dev"
 var cli struct {
 	Version            kong.VersionFlag    `help:"Show version."`
 	LogConfig          log.Config          `embed:"" prefix:"log-"`
-	ControlPlaneConfig controlplane.Config `embed:""`
+	ControllerConfig controller.Config `embed:""`
 }
 
 func main() {
@@ -26,6 +26,6 @@ func main() {
 		kong.Vars{"version": version},
 	)
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
-	err := controlplane.Start(ctx, cli.ControlPlaneConfig)
+	err := controller.Start(ctx, cli.ControllerConfig)
 	kctx.FatalIfErrorf(err)
 }

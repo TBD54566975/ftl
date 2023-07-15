@@ -18,16 +18,16 @@ import (
 
 type statusCmd struct {
 	All              bool `help:"Show all control planes, deployments, and runners, even those that are not running."`
-	AllControlPlanes bool `help:"Show all control planes, even those that are not running."`
+	AllControllers bool `help:"Show all control planes, even those that are not running."`
 	AllDeployments   bool `help:"Show all deployments, even those that are not running."`
 	AllRunners       bool `help:"Show all runners, even those that are not running."`
 	JSON             bool `help:"Output JSON."`
 	Schema           bool `help:"Show schema."`
 }
 
-func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneServiceClient) error {
+func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
-		AllControlplanes: s.All || s.AllControlPlanes,
+		AllControllers: s.All || s.AllControllers,
 		AllDeployments:   s.All || s.AllDeployments,
 		AllRunners:       s.All || s.AllRunners,
 	}))
@@ -44,11 +44,11 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControlPlaneSer
 		return errors.WithStack((&jsonpb.Marshaler{}).Marshal(os.Stdout, status.Msg))
 	}
 
-	controlPlaneFmt := "%-28s%-9s%s\n"
-	fmt.Printf(controlPlaneFmt, "ControlPlane", "State", "Endpoint")
-	fmt.Printf(controlPlaneFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8))
-	for _, controlPlane := range status.Msg.Controlplanes {
-		fmt.Printf(controlPlaneFmt, controlPlane.Key, strings.TrimPrefix(controlPlane.State.String(), "CONTROLPLANE_"), controlPlane.Endpoint)
+	controllerFmt := "%-28s%-9s%s\n"
+	fmt.Printf(controllerFmt, "Controller", "State", "Endpoint")
+	fmt.Printf(controllerFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8))
+	for _, controller := range status.Msg.Controllers {
+		fmt.Printf(controllerFmt, controller.Key, strings.TrimPrefix(controller.State.String(), "CONTROLLER_"), controller.Endpoint)
 	}
 	fmt.Println()
 

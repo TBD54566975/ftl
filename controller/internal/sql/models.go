@@ -8,50 +8,50 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/controlplane/internal/sqltypes"
+	"github.com/TBD54566975/ftl/controller/internal/sqltypes"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type ControlplaneState string
+type ControllerState string
 
 const (
-	ControlplaneStateLive ControlplaneState = "live"
-	ControlplaneStateDead ControlplaneState = "dead"
+	ControllerStateLive ControllerState = "live"
+	ControllerStateDead ControllerState = "dead"
 )
 
-func (e *ControlplaneState) Scan(src interface{}) error {
+func (e *ControllerState) Scan(src interface{}) error {
 	switch s := src.(type) {
 	case []byte:
-		*e = ControlplaneState(s)
+		*e = ControllerState(s)
 	case string:
-		*e = ControlplaneState(s)
+		*e = ControllerState(s)
 	default:
-		return fmt.Errorf("unsupported scan type for ControlplaneState: %T", src)
+		return fmt.Errorf("unsupported scan type for ControllerState: %T", src)
 	}
 	return nil
 }
 
-type NullControlplaneState struct {
-	ControlplaneState ControlplaneState
-	Valid             bool // Valid is true if ControlplaneState is not NULL
+type NullControllerState struct {
+	ControllerState ControllerState
+	Valid           bool // Valid is true if ControllerState is not NULL
 }
 
 // Scan implements the Scanner interface.
-func (ns *NullControlplaneState) Scan(value interface{}) error {
+func (ns *NullControllerState) Scan(value interface{}) error {
 	if value == nil {
-		ns.ControlplaneState, ns.Valid = "", false
+		ns.ControllerState, ns.Valid = "", false
 		return nil
 	}
 	ns.Valid = true
-	return ns.ControlplaneState.Scan(value)
+	return ns.ControllerState.Scan(value)
 }
 
 // Value implements the driver Valuer interface.
-func (ns NullControlplaneState) Value() (driver.Value, error) {
+func (ns NullControllerState) Value() (driver.Value, error) {
 	if !ns.Valid {
 		return nil, nil
 	}
-	return string(ns.ControlplaneState), nil
+	return string(ns.ControllerState), nil
 }
 
 type MetricType string
@@ -148,12 +148,12 @@ type Artefact struct {
 	Content   []byte
 }
 
-type Controlplane struct {
+type Controller struct {
 	ID       int64
 	Key      sqltypes.Key
 	Created  pgtype.Timestamptz
 	LastSeen pgtype.Timestamptz
-	State    ControlplaneState
+	State    ControllerState
 	Endpoint string
 }
 

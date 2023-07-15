@@ -14,9 +14,9 @@ func TestRPCContext(t *testing.T) {
 	ctx := context.Background()
 	verbClient := ftlv1connect.NewVerbServiceClient(http.DefaultClient, "http://localhost:8080")
 	ctx = ContextWithClient(ctx, verbClient)
-	controlplaneClient := ftlv1connect.NewControlPlaneServiceClient(http.DefaultClient, "http://localhost:8080")
-	ctx = ContextWithClient(ctx, controlplaneClient)
+	controllerClient := ftlv1connect.NewControllerServiceClient(http.DefaultClient, "http://localhost:8080")
+	ctx = ContextWithClient(ctx, controllerClient)
 
 	assert.Equal(t, verbClient, ClientFromContext[ftlv1connect.VerbServiceClient](ctx))
-	assert.Equal(t, controlplaneClient, ClientFromContext[ftlv1connect.ControlPlaneServiceClient](ctx))
+	assert.Equal(t, controllerClient, ClientFromContext[ftlv1connect.ControllerServiceClient](ctx))
 }

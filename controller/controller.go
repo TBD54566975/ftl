@@ -1,4 +1,4 @@
-package controlplane
+package controller
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/console"
-	"github.com/TBD54566975/ftl/controlplane/internal/dal"
+	"github.com/TBD54566975/ftl/controller/internal/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
@@ -34,17 +34,17 @@ import (
 
 type Config struct {
 	Bind                         *url.URL              `help:"Socket to bind to." default:"http://localhost:8892"`
-	Key                          model.ControlPlaneKey `help:"ControlPlane key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
+	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
 	DSN                          string                `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
 	RunnerTimeout                time.Duration         `help:"Runner heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration         `help:"Deployment reservation timeout." default:"120s"`
 	ArtefactChunkSize            int                   `help:"Size of each chunk streamed to the client." default:"1048576"`
 }
 
-// Start the ControlPlane. Blocks until the context is cancelled.
+// Start the Controller. Blocks until the context is cancelled.
 func Start(ctx context.Context, config Config) error {
 	logger := log.FromContext(ctx)
-	logger.Infof("Starting FTL controlplane")
+	logger.Infof("Starting FTL controller")
 	conn, err := pgxpool.New(ctx, config.DSN)
 	if err != nil {
 		return nil
@@ -66,13 +66,13 @@ func Start(ctx context.Context, config Config) error {
 
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
-		rpc.GRPC(ftlv1connect.NewControlPlaneServiceHandler, svc),
+		rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
 		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 		rpc.Route("/", c),
 	)
 }
 
-var _ ftlv1connect.ControlPlaneServiceHandler = (*Service)(nil)
+var _ ftlv1connect.ControllerServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 
 type clients struct {
@@ -85,7 +85,7 @@ type Service struct {
 	heartbeatTimeout             time.Duration
 	deploymentReservationTimeout time.Duration
 	artefactChunkSize            int
-	key                          model.ControlPlaneKey
+	key                          model.ControllerKey
 
 	clientsMu sync.Mutex
 	// Map from endpoint to client.
@@ -93,13 +93,13 @@ type Service struct {
 }
 
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx, req.Msg.AllControlplanes, req.Msg.AllRunners, req.Msg.AllDeployments)
+	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers, req.Msg.AllRunners, req.Msg.AllDeployments)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get status")
 	}
 	resp := &ftlv1.StatusResponse{
-		Controlplanes: slices.Map(status.ControlPlanes, func(c dal.ControlPlane) *ftlv1.StatusResponse_ControlPlane {
-			return &ftlv1.StatusResponse_ControlPlane{
+		Controllers: slices.Map(status.Controllers, func(c dal.Controller) *ftlv1.StatusResponse_Controller {
+			return &ftlv1.StatusResponse_Controller{
 				Key:      c.Key.String(),
 				Endpoint: c.Endpoint,
 				State:    c.State.ToProto(),
@@ -135,7 +135,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 	key := config.Key
 	if config.Key.ULID() == (ulid.ULID{}) {
-		key = model.NewControlPlaneKey()
+		key = model.NewControllerKey()
 	}
 	svc := &Service{
 		dal:                          dal,
@@ -145,8 +145,8 @@ func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 		clients:                      map[string]clients{},
 		key:                          key,
 	}
-	go svc.heartbeatControlPlane(ctx, config.Bind)
-	go svc.reapStaleControlPlanes(ctx)
+	go svc.heartbeatController(ctx, config.Bind)
+	go svc.reapStaleControllers(ctx)
 	go svc.reapStaleRunners(ctx)
 	go svc.releaseExpiredReservations(ctx)
 	go svc.reconcileDeployments(ctx)
@@ -561,14 +561,14 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 	return
 }
 
-func (s *Service) reapStaleControlPlanes(ctx context.Context) {
+func (s *Service) reapStaleControllers(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
-		count, err := s.dal.KillStaleControlPlanes(context.Background(), s.heartbeatTimeout)
+		count, err := s.dal.KillStaleControllers(context.Background(), s.heartbeatTimeout)
 		if err != nil {
-			logger.Errorf(err, "Failed to delete stale control-planes")
+			logger.Errorf(err, "Failed to delete stale controllers")
 		} else if count > 0 {
-			logger.Warnf("Reaped %d stale control-planes", count)
+			logger.Warnf("Reaped %d stale controllers", count)
 		}
 		select {
 		case <-ctx.Done():
@@ -579,13 +579,13 @@ func (s *Service) reapStaleControlPlanes(ctx context.Context) {
 	}
 }
 
-// Periodically update the DB with the current state of the control-plane.
-func (s *Service) heartbeatControlPlane(ctx context.Context, addr *url.URL) {
+// Periodically update the DB with the current state of the controller.
+func (s *Service) heartbeatController(ctx context.Context, addr *url.URL) {
 	logger := log.FromContext(ctx)
 	for {
-		_, err := s.dal.UpsertControlPlane(ctx, s.key, addr.String())
+		_, err := s.dal.UpsertController(ctx, s.key, addr.String())
 		if err != nil {
-			logger.Errorf(err, "Failed to heartbeat control-plane")
+			logger.Errorf(err, "Failed to heartbeat controller")
 		}
 		select {
 		case <-ctx.Done():
