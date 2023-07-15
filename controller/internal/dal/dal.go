@@ -170,8 +170,8 @@ type Controller struct {
 
 type Status struct {
 	Controllers []Controller
-	Runners       []Runner
-	Deployments   []Deployment
+	Runners     []Runner
+	Deployments []Deployment
 }
 
 // A Reservation of a Runner.

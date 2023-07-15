@@ -33,12 +33,12 @@ import (
 )
 
 type Config struct {
-	Bind                         *url.URL              `help:"Socket to bind to." default:"http://localhost:8892"`
+	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892"`
 	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
-	DSN                          string                `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
-	RunnerTimeout                time.Duration         `help:"Runner heartbeat timeout." default:"10s"`
-	DeploymentReservationTimeout time.Duration         `help:"Deployment reservation timeout." default:"120s"`
-	ArtefactChunkSize            int                   `help:"Size of each chunk streamed to the client." default:"1048576"`
+	DSN                          string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
+	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
+	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
+	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 }
 
 // Start the Controller. Blocks until the context is cancelled.

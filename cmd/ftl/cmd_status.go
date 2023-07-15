@@ -17,19 +17,19 @@ import (
 )
 
 type statusCmd struct {
-	All              bool `help:"Show all control planes, deployments, and runners, even those that are not running."`
+	All            bool `help:"Show all control planes, deployments, and runners, even those that are not running."`
 	AllControllers bool `help:"Show all control planes, even those that are not running."`
-	AllDeployments   bool `help:"Show all deployments, even those that are not running."`
-	AllRunners       bool `help:"Show all runners, even those that are not running."`
-	JSON             bool `help:"Output JSON."`
-	Schema           bool `help:"Show schema."`
+	AllDeployments bool `help:"Show all deployments, even those that are not running."`
+	AllRunners     bool `help:"Show all runners, even those that are not running."`
+	JSON           bool `help:"Output JSON."`
+	Schema         bool `help:"Show schema."`
 }
 
 func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
 		AllControllers: s.All || s.AllControllers,
-		AllDeployments:   s.All || s.AllDeployments,
-		AllRunners:       s.All || s.AllRunners,
+		AllDeployments: s.All || s.AllDeployments,
+		AllRunners:     s.All || s.AllRunners,
 	}))
 	if err != nil {
 		return errors.WithStack(err)

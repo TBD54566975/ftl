@@ -14,8 +14,8 @@ import (
 var version = "dev"
 
 var cli struct {
-	Version            kong.VersionFlag    `help:"Show version."`
-	LogConfig          log.Config          `embed:"" prefix:"log-"`
+	Version          kong.VersionFlag  `help:"Show version."`
+	LogConfig        log.Config        `embed:"" prefix:"log-"`
 	ControllerConfig controller.Config `embed:""`
 }
 
