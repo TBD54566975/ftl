@@ -636,37 +636,68 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path stri
 	return items, nil
 }
 
-const getModuleCalls = `-- name: GetModuleCalls :exec
+const getModuleCalls = `-- name: GetModuleCalls :many
 SELECT r.key  AS runner_key,
-       conn.key AS controller,
+       conn.key AS controller_key,
        c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.controller_id = conn.id
+         JOIN controller conn ON conn.id = conn.id
 WHERE dest_module = ANY ($1::text[])
 `
 
 type GetModuleCallsRow struct {
-	RunnerKey    sqltypes.Key
-	Controller   sqltypes.Key
-	ID           int64
-	RequestID    int64
-	RunnerID     int64
-	ControllerID int64
-	Time         pgtype.Timestamptz
-	DestModule   string
-	DestVerb     string
-	SourceModule string
-	SourceVerb   string
-	DurationMs   int64
-	Request      []byte
-	Response     []byte
-	Error        pgtype.Text
+	RunnerKey     sqltypes.Key
+	ControllerKey sqltypes.Key
+	ID            int64
+	RequestID     int64
+	RunnerID      int64
+	ControllerID  int64
+	Time          pgtype.Timestamptz
+	DestModule    string
+	DestVerb      string
+	SourceModule  string
+	SourceVerb    string
+	DurationMs    int64
+	Request       []byte
+	Response      []byte
+	Error         pgtype.Text
 }
 
-func (q *Queries) GetModuleCalls(ctx context.Context, modules []string) error {
-	_, err := q.db.Exec(ctx, getModuleCalls, modules)
-	return err
+func (q *Queries) GetModuleCalls(ctx context.Context, modules []string) ([]GetModuleCallsRow, error) {
+	rows, err := q.db.Query(ctx, getModuleCalls, modules)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetModuleCallsRow
+	for rows.Next() {
+		var i GetModuleCallsRow
+		if err := rows.Scan(
+			&i.RunnerKey,
+			&i.ControllerKey,
+			&i.ID,
+			&i.RequestID,
+			&i.RunnerID,
+			&i.ControllerID,
+			&i.Time,
+			&i.DestModule,
+			&i.DestVerb,
+			&i.SourceModule,
+			&i.SourceVerb,
+			&i.DurationMs,
+			&i.Request,
+			&i.Response,
+			&i.Error,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getModulesByID = `-- name: GetModulesByID :many

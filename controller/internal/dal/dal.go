@@ -132,10 +132,12 @@ func (s ControllerState) ToProto() ftlv1.ControllerState {
 	return ftlv1.ControllerState(ftlv1.ControllerState_value["CONTROLLER_"+strings.ToUpper(string(s))])
 }
 
-type CallEntry struct {
+type Call struct {
+	ID            int64
 	RequestID     int64
 	RunnerKey     model.RunnerKey
 	ControllerKey model.ControllerKey
+	Time          time.Time
 	SourceVerb    schema.VerbRef
 	DestVerb      schema.VerbRef
 	Duration      time.Duration
@@ -718,7 +720,7 @@ func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, add
 	return id, errors.WithStack(translatePGError(err))
 }
 
-func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
+func (d *DAL) InsertCallEntry(ctx context.Context, call *Call) error {
 	callError := pgtype.Text{}
 	if call.Error != nil {
 		callError.String = call.Error.Error()
@@ -739,26 +741,43 @@ func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
 	})))
 }
 
-// func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[ModuleCallKey][]CallEntry, error) {
-//	calls, err := d.db.GetModuleCalls(ctx, modules)
-//	if err != nil {
-//		return nil, errors.WithStack(translatePGError(err))
-//	}
-//	out := map[ModuleCallKey][]CallEntry{}
-//	for _, call := range calls {
-//		out[ModuleCallKey{
-//			Module: call.Module,
-//			Method: call.Method,
-//		}] = append(out[ModuleCallKey{
-//			Module: call.Module,
-//			Method: call.Method,
-//		}], CallEntry{
-//			Deployment: model.DeploymentKey(call.Deployment),
-//			Endpoint:   call.Endpoint,
-//		})
-//	}
-//	return out, nil
-// }
+func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[ModuleCallKey][]Call, error) {
+	calls, err := d.db.GetModuleCalls(ctx, modules)
+	if err != nil {
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	out := map[ModuleCallKey][]Call{}
+	for _, call := range calls {
+		key := ModuleCallKey{
+			Module: call.DestModule,
+			Verb:   call.DestVerb,
+		}
+		var callError error
+		if call.Error.Valid {
+			callError = errors.New(call.Error.String)
+		}
+		out[key] = append(out[key], Call{
+			ID:            call.ID,
+			RequestID:     call.RequestID,
+			RunnerKey:     model.RunnerKey(call.RunnerKey),
+			ControllerKey: model.ControllerKey(call.ControllerKey),
+			Time:          call.Time.Time,
+			SourceVerb: schema.VerbRef{
+				Module: call.SourceModule,
+				Name:   call.SourceVerb,
+			},
+			DestVerb: schema.VerbRef{
+				Module: call.DestModule,
+				Name:   call.DestVerb,
+			},
+			Duration: time.Duration(call.DurationMs) * time.Millisecond,
+			Request:  call.Request,
+			Response: call.Response,
+			Error:    callError,
+		})
+	}
+	return out, nil
+}
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })

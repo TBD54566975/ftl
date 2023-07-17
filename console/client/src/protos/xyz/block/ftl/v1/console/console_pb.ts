@@ -17,19 +17,19 @@ export class Call extends Message<Call> {
   id = protoInt64.zero;
 
   /**
-   * @generated from field: int64 runner_id = 2;
+   * @generated from field: string runner_key = 2;
    */
-  runnerId = protoInt64.zero;
+  runnerKey = "";
 
   /**
-   * @generated from field: int64 ingress_id = 3;
+   * @generated from field: int64 request_id = 3;
    */
-  ingressId = protoInt64.zero;
+  requestId = protoInt64.zero;
 
   /**
-   * @generated from field: int64 controller_id = 4;
+   * @generated from field: string controller_key = 4;
    */
-  controllerId = protoInt64.zero;
+  controllerKey = "";
 
   /**
    * @generated from field: int64 time_stamp = 5;
@@ -57,9 +57,9 @@ export class Call extends Message<Call> {
   destVerb = "";
 
   /**
-   * @generated from field: int32 duration_ms = 10;
+   * @generated from field: int64 duration_ms = 10;
    */
-  durationMs = 0;
+  durationMs = protoInt64.zero;
 
   /**
    * @generated from field: bytes request = 11;
@@ -72,9 +72,9 @@ export class Call extends Message<Call> {
   response = new Uint8Array(0);
 
   /**
-   * @generated from field: bytes error = 13;
+   * @generated from field: string error = 13;
    */
-  error = new Uint8Array(0);
+  error = "";
 
   constructor(data?: PartialMessage<Call>) {
     super();
@@ -85,18 +85,18 @@ export class Call extends Message<Call> {
   static readonly typeName = "xyz.block.ftl.v1.console.Call";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 2, name: "runner_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "ingress_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 4, name: "controller_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 2, name: "runner_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "request_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "controller_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 6, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "source_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "duration_ms", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 10, name: "duration_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 11, name: "request", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 12, name: "response", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 13, name: "error", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 13, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Call {
