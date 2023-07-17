@@ -54,12 +54,19 @@ message Map {
 message Metadata {
   oneof value {
     MetadataCalls calls = 1;
+    MetadataIngress ingress = 2;
   }
 }
 
 message MetadataCalls {
   optional Position pos = 1;
   repeated VerbRef calls = 2;
+}
+
+message MetadataIngress {
+  optional Position pos = 1;
+  string method = 2;
+  string path = 3;
 }
 
 message Module {

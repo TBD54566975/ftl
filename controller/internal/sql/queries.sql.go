@@ -59,7 +59,7 @@ func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, module
 }
 
 const createIngressRequest = `-- name: CreateIngressRequest :one
-INSERT INTO ingress (source_addr)
+INSERT INTO ingress_requests (source_addr)
 VALUES ($1)
 RETURNING id
 `
@@ -69,6 +69,30 @@ func (q *Queries) CreateIngressRequest(ctx context.Context, sourceAddr string) (
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const createIngressRoute = `-- name: CreateIngressRoute :exec
+INSERT INTO ingress_routes (deployment_id, module, verb, method, path)
+    VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5)
+`
+
+type CreateIngressRouteParams struct {
+	Key    sqltypes.Key
+	Module string
+	Verb   string
+	Method string
+	Path   string
+}
+
+func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error {
+	_, err := q.db.Exec(ctx, createIngressRoute,
+		arg.Key,
+		arg.Module,
+		arg.Verb,
+		arg.Method,
+		arg.Path,
+	)
+	return err
 }
 
 const deregisterRunner = `-- name: DeregisterRunner :one
@@ -147,6 +171,48 @@ func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRu
 			&i.State,
 			&i.LastSeen,
 			&i.DeploymentKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllIngressRoutes = `-- name: GetAllIngressRoutes :many
+SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
+FROM ingress_routes ir
+         INNER JOIN deployments d ON ir.deployment_id = d.id
+WHERE $1::bool = true
+    OR d.min_replicas > 0
+`
+
+type GetAllIngressRoutesRow struct {
+	DeploymentKey sqltypes.Key
+	Module        string
+	Verb          string
+	Method        string
+	Path          string
+}
+
+func (q *Queries) GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIngressRoutesRow, error) {
+	rows, err := q.db.Query(ctx, getAllIngressRoutes, all)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllIngressRoutesRow
+	for rows.Next() {
+		var i GetAllIngressRoutesRow
+		if err := rows.Scan(
+			&i.DeploymentKey,
+			&i.Module,
+			&i.Verb,
+			&i.Method,
+			&i.Path,
 		); err != nil {
 			return nil, err
 		}
@@ -517,6 +583,48 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 			&i.Language,
 			&i.Endpoint,
 			&i.DeploymentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getIngressRoutes = `-- name: GetIngressRoutes :many
+SELECT r.key AS runner_key, endpoint, ir.module, ir.verb
+FROM ingress_routes ir
+         INNER JOIN runners r ON ir.deployment_id = r.deployment_id
+WHERE r.state = 'assigned'
+  AND ir.method = $1
+  AND ir.path = $2
+`
+
+type GetIngressRoutesRow struct {
+	RunnerKey sqltypes.Key
+	Endpoint  string
+	Module    string
+	Verb      string
+}
+
+// Get the runner endpoints corresponding to the given ingress route.
+func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error) {
+	rows, err := q.db.Query(ctx, getIngressRoutes, method, path)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetIngressRoutesRow
+	for rows.Next() {
+		var i GetIngressRoutesRow
+		if err := rows.Scan(
+			&i.RunnerKey,
+			&i.Endpoint,
+			&i.Module,
+			&i.Verb,
 		); err != nil {
 			return nil, err
 		}

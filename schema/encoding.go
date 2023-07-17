@@ -143,6 +143,15 @@ func (m *MetadataCalls) schemaChildren() []Node {
 }
 func (*MetadataCalls) schemaMetadata() {}
 
+var _ Metadata = (*MetadataIngress)(nil)
+
+func (m *MetadataIngress) String() string {
+	return fmt.Sprintf("ingress %s %s", strings.ToUpper(m.Method), m.Path)
+}
+
+func (m *MetadataIngress) schemaChildren() []Node { return nil }
+func (*MetadataIngress) schemaMetadata()          {}
+
 var _ Node = (*Module)(nil)
 
 func (m *Module) schemaChildren() []Node {

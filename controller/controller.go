@@ -2,9 +2,11 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -68,7 +70,8 @@ func Start(ctx context.Context, config Config) error {
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
 		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
-		rpc.Route("/", c),
+		rpc.HTTP("/ingress/", http.StripPrefix("/ingress", svc)),
+		rpc.HTTP("/", c),
 	)
 }
 
@@ -92,8 +95,88 @@ type Service struct {
 	clients map[string]clients
 }
 
+func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
+	key := config.Key
+	if config.Key.ULID() == (ulid.ULID{}) {
+		key = model.NewControllerKey()
+	}
+	svc := &Service{
+		dal:                          dal,
+		heartbeatTimeout:             config.RunnerTimeout,
+		deploymentReservationTimeout: config.DeploymentReservationTimeout,
+		artefactChunkSize:            config.ArtefactChunkSize,
+		clients:                      map[string]clients{},
+		key:                          key,
+	}
+	go svc.heartbeatController(ctx, config.Bind)
+	go svc.reapStaleControllers(ctx)
+	go svc.reapStaleRunners(ctx)
+	go svc.releaseExpiredReservations(ctx)
+	go svc.reconcileDeployments(ctx)
+	return svc, nil
+}
+
+// ServeHTTP handles ingress routes.
+func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	logger := log.FromContext(r.Context())
+	logger.Infof("%s %s", r.Method, r.URL.Path)
+	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method, r.URL.Path)
+	if err != nil {
+		if errors.Is(err, dal.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	route := routes[rand.Intn(len(routes))] //nolint:gosec
+	client := s.clientsForEndpoint(route.Endpoint)
+	var body []byte
+	switch r.Method {
+	case http.MethodPost, http.MethodPut:
+		body, err = io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+	default:
+		// TODO: Transcode query parameters into JSON.
+		payload := map[string]string{}
+		for key, value := range r.URL.Query() {
+			payload[key] = value[len(value)-1]
+		}
+		body, err = json.Marshal(payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	resp, err := client.verb.Call(r.Context(), connect.NewRequest(&ftlv1.CallRequest{
+		Verb: &pschema.VerbRef{Module: route.Module, Name: route.Verb},
+		Body: body,
+	}))
+	if err != nil {
+		if connectErr := new(connect.Error); errors.As(err, &connectErr) {
+			http.Error(w, err.Error(), connectCodeToHTTP(connectErr.Code()))
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	switch msg := resp.Msg.Response.(type) {
+	case *ftlv1.CallResponse_Body:
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_, _ = w.Write(msg.Body)
+
+	case *ftlv1.CallResponse_Error_:
+		http.Error(w, msg.Error.Message, http.StatusInternalServerError)
+	}
+}
+
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers, req.Msg.AllRunners, req.Msg.AllDeployments)
+	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers, req.Msg.AllRunners, req.Msg.AllDeployments, req.Msg.AllIngressRoutes)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get status")
 	}
@@ -128,29 +211,17 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 				Schema:      d.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
 			}
 		}),
+		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
+			return &ftlv1.StatusResponse_IngressRoute{
+				DeploymentKey: r.Deployment.String(),
+				Module:        r.Module,
+				Verb:          r.Verb,
+				Method:        r.Method,
+				Path:          r.Path,
+			}
+		}),
 	}
 	return connect.NewResponse(resp), nil
-}
-
-func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
-	key := config.Key
-	if config.Key.ULID() == (ulid.ULID{}) {
-		key = model.NewControllerKey()
-	}
-	svc := &Service{
-		dal:                          dal,
-		heartbeatTimeout:             config.RunnerTimeout,
-		deploymentReservationTimeout: config.DeploymentReservationTimeout,
-		artefactChunkSize:            config.ArtefactChunkSize,
-		clients:                      map[string]clients{},
-		key:                          key,
-	}
-	go svc.heartbeatController(ctx, config.Bind)
-	go svc.reapStaleControllers(ctx)
-	go svc.reapStaleRunners(ctx)
-	go svc.releaseExpiredReservations(ctx)
-	go svc.reconcileDeployments(ctx)
-	return svc, nil
 }
 
 func (s *Service) StreamDeploymentLogs(ctx context.Context, req *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {
@@ -392,7 +463,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid module schema")
 	}
-	key, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts)
+	ingressRoutes := extractIngressRoutingEntries(req.Msg)
+	key, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create deployment")
 	}
@@ -489,11 +561,13 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 					}
 				} else if require < 0 {
 					logger.Infof("Need %d less runners for %s", -require, reconcile.Deployment)
-					err := s.terminateRandomRunner(ctx, deployment.Key)
+					ok, err := s.terminateRandomRunner(ctx, deployment.Key)
 					if err != nil {
 						logger.Warnf("Failed to terminate runner: %s", err)
-					} else {
+					} else if ok {
 						logger.Infof("Reconciled %s", reconcile.Deployment)
+					} else {
+						logger.Warnf("Failed to terminate runner: no runners found")
 					}
 				}
 			}
@@ -508,19 +582,19 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 	}
 }
 
-func (s *Service) terminateRandomRunner(ctx context.Context, key model.DeploymentKey) error {
+func (s *Service) terminateRandomRunner(ctx context.Context, key model.DeploymentKey) (bool, error) {
 	runners, err := s.dal.GetRunnersForDeployment(ctx, key)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get runner for %s", key)
+		return false, errors.Wrapf(err, "failed to get runner for %s", key)
 	}
 	if len(runners) == 0 {
-		return nil
+		return false, nil
 	}
 	runner := runners[rand.Intn(len(runners))] //nolint:gosec
 	client := s.clientsForEndpoint(runner.Endpoint)
 	resp, err := client.runner.Terminate(ctx, connect.NewRequest(&ftlv1.TerminateRequest{DeploymentKey: key.String()}))
 	if err != nil {
-		return errors.WithStack(err)
+		return false, errors.WithStack(err)
 	}
 	err = s.dal.UpsertRunner(ctx, dal.Runner{
 		Key:      runner.Key,
@@ -528,7 +602,7 @@ func (s *Service) terminateRandomRunner(ctx context.Context, key model.Deploymen
 		Endpoint: runner.Endpoint,
 		State:    dal.RunnerStateFromProto(resp.Msg.State),
 	})
-	return errors.WithStack(err)
+	return true, errors.WithStack(err)
 }
 
 func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error {
@@ -594,4 +668,62 @@ func (s *Service) heartbeatController(ctx context.Context, addr *url.URL) {
 		case <-time.After(s.heartbeatTimeout / 4):
 		}
 	}
+}
+
+// Copied from the Apache-licensed connect-go source.
+func connectCodeToHTTP(code connect.Code) int {
+	switch code {
+	case connect.CodeCanceled:
+		return 408
+	case connect.CodeUnknown:
+		return 500
+	case connect.CodeInvalidArgument:
+		return 400
+	case connect.CodeDeadlineExceeded:
+		return 408
+	case connect.CodeNotFound:
+		return 404
+	case connect.CodeAlreadyExists:
+		return 409
+	case connect.CodePermissionDenied:
+		return 403
+	case connect.CodeResourceExhausted:
+		return 429
+	case connect.CodeFailedPrecondition:
+		return 412
+	case connect.CodeAborted:
+		return 409
+	case connect.CodeOutOfRange:
+		return 400
+	case connect.CodeUnimplemented:
+		return 404
+	case connect.CodeInternal:
+		return 500
+	case connect.CodeUnavailable:
+		return 503
+	case connect.CodeDataLoss:
+		return 500
+	case connect.CodeUnauthenticated:
+		return 401
+	default:
+		return 500 // same as CodeUnknown
+	}
+}
+
+func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {
+	var ingressRoutes []dal.IngressRoutingEntry
+	for _, decl := range req.Schema.Decls {
+		if verb, ok := decl.Value.(*pschema.Decl_Verb); ok {
+			for _, metadata := range verb.Verb.Metadata {
+				if ingress, ok := metadata.Value.(*pschema.Metadata_Ingress); ok {
+					ingressRoutes = append(ingressRoutes, dal.IngressRoutingEntry{
+						Verb:   verb.Verb.Name,
+						Method: ingress.Ingress.Method,
+						Path:   ingress.Ingress.Path,
+					})
+				}
+			}
+		}
+	}
+	return ingressRoutes
 }

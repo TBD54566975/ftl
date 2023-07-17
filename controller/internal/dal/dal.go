@@ -41,6 +41,21 @@ var (
 	ErrNotFound = errors.New("not found")
 )
 
+type IngressRoute struct {
+	Runner   model.RunnerKey
+	Endpoint string
+	Module   string
+	Verb     string
+}
+
+type IngressRouteEntry struct {
+	Deployment model.DeploymentKey
+	Module     string
+	Verb       string
+	Method     string
+	Path       string
+}
+
 type DeploymentArtefact struct {
 	Digest     sha256.SHA256
 	Executable bool
@@ -169,9 +184,10 @@ type Controller struct {
 }
 
 type Status struct {
-	Controllers []Controller
-	Runners     []Runner
-	Deployments []Deployment
+	Controllers   []Controller
+	Runners       []Runner
+	Deployments   []Deployment
+	IngressRoutes []IngressRouteEntry
 }
 
 // A Reservation of a Runner.
@@ -204,7 +220,10 @@ type DAL struct {
 	db *sql.DB
 }
 
-func (d *DAL) GetStatus(ctx context.Context, allControllers, allRunners, allDeployments bool) (Status, error) {
+func (d *DAL) GetStatus(
+	ctx context.Context,
+	allControllers, allRunners, allDeployments, allIngressRoutes bool,
+) (Status, error) {
 	controllers, err := d.db.GetControllers(ctx, allControllers)
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get control planes")
@@ -216,6 +235,10 @@ func (d *DAL) GetStatus(ctx context.Context, allControllers, allRunners, allDepl
 	deployments, err := d.db.GetDeployments(ctx, allDeployments)
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get active deployments")
+	}
+	ingressRoutes, err := d.db.GetAllIngressRoutes(ctx, allIngressRoutes)
+	if err != nil {
+		return Status{}, errors.Wrap(translatePGError(err), "could not get ingress routes")
 	}
 	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetDeploymentsRow) (Deployment, error) {
 		protoSchema := &pschema.Module{}
@@ -258,6 +281,15 @@ func (d *DAL) GetStatus(ctx context.Context, allControllers, allRunners, allDepl
 				Endpoint:   in.Endpoint,
 				State:      RunnerState(in.State),
 				Deployment: deployment,
+			}
+		}),
+		IngressRoutes: slices.Map(ingressRoutes, func(in sql.GetAllIngressRoutesRow) IngressRouteEntry {
+			return IngressRouteEntry{
+				Deployment: model.DeploymentKey(in.DeploymentKey),
+				Module:     in.Module,
+				Verb:       in.Verb,
+				Method:     in.Method,
+				Path:       in.Path,
 			}
 		}),
 	}, nil
@@ -305,11 +337,23 @@ func (d *DAL) CreateArtefact(ctx context.Context, content []byte) (digest sha256
 	return sha256digest, errors.WithStack(translatePGError(err))
 }
 
+type IngressRoutingEntry struct {
+	Verb   string
+	Method string
+	Path   string
+}
+
 // CreateDeployment (possibly) creates a new deployment and associates
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact) (key model.DeploymentKey, err error) {
+func (d *DAL) CreateDeployment(
+	ctx context.Context,
+	language string,
+	schema *schema.Module,
+	artefacts []DeploymentArtefact,
+	ingressRoutes []IngressRoutingEntry,
+) (key model.DeploymentKey, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -366,6 +410,19 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 			ArtefactID: row.ID,
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
+		})
+		if err != nil {
+			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
+		}
+	}
+
+	for _, ingressRoute := range ingressRoutes {
+		err = tx.CreateIngressRoute(ctx, sql.CreateIngressRouteParams{
+			Key:    sqltypes.Key(deploymentKey),
+			Method: ingressRoute.Method,
+			Path:   ingressRoute.Path,
+			Module: schema.Name,
+			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
 			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
@@ -579,6 +636,9 @@ func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string, li
 // GetRoutingTable returns the endpoints for all runners for the given module.
 func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]Route, error) {
 	routes, err := d.db.GetRoutingTable(ctx, module)
+	if err != nil {
+		return nil, errors.WithStack(translatePGError(err))
+	}
 	if len(routes) == 0 {
 		return nil, errors.WithStack(ErrNotFound)
 	}
@@ -587,7 +647,7 @@ func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]Route, erro
 			Runner:   model.RunnerKey(row.Key),
 			Endpoint: row.Endpoint,
 		}
-	}), errors.WithStack(translatePGError(err))
+	}), nil
 }
 
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
@@ -742,6 +802,24 @@ func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) (map
 func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (int64, error) {
 	id, err := d.db.CreateIngressRequest(ctx, addr)
 	return id, errors.WithStack(err)
+}
+
+func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) ([]IngressRoute, error) {
+	routes, err := d.db.GetIngressRoutes(ctx, method, path)
+	if err != nil {
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	if len(routes) == 0 {
+		return nil, errors.WithStack(ErrNotFound)
+	}
+	return slices.Map(routes, func(row sql.GetIngressRoutesRow) IngressRoute {
+		return IngressRoute{
+			Runner:   model.RunnerKey(row.RunnerKey),
+			Endpoint: row.Endpoint,
+			Module:   row.Module,
+			Verb:     row.Verb,
+		}
+	}), nil
 }
 
 func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {

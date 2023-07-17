@@ -22,6 +22,7 @@ func Validate(schema *Schema) error {
 	verbRefs := []*VerbRef{}
 	dataRefs := []*DataRef{}
 	merr := []error{}
+	ingress := map[string]*Verb{}
 	for _, module := range schema.Modules {
 		if _, seen := modules[module.Name]; seen {
 			merr = append(merr, errors.Errorf("%s: duplicate module %q", module.Pos, module.Name))
@@ -40,6 +41,14 @@ func Validate(schema *Schema) error {
 			case *DataRef:
 				dataRefs = append(dataRefs, n)
 			case *Verb:
+				for _, md := range n.Metadata {
+					if md, ok := md.(*MetadataIngress); ok {
+						if existing, ok := ingress[md.String()]; ok {
+							return errors.Errorf("duplicate %q for %s:%q and %s:%q", md.String(), existing.Pos, existing.Name, n.Pos, n.Name)
+						}
+						ingress[md.String()] = n
+					}
+				}
 				ref := makeRef(module.Name, n.Name)
 				verbs[ref] = true
 				verbs[n.Name] = true
@@ -108,7 +117,9 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
-		case *Array, *Bool, *DataRef, *Field, *Float, *Int, *Time, *Map, *MetadataCalls, *Module, *Schema, *String, *VerbRef:
+		case *Array, *Bool, *DataRef, *Field, *Float, *Int,
+			*Time, *Map, *Module, *Schema, *String, *VerbRef,
+			*MetadataCalls, *MetadataIngress:
 		case Type, Metadata, Decl: // Union sqltypes.
 		}
 		return next()

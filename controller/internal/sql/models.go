@@ -185,9 +185,17 @@ type DeploymentLog struct {
 	Error        pgtype.Text
 }
 
-type Ingress struct {
+type IngressRequest struct {
 	ID         int64
 	SourceAddr string
+}
+
+type IngressRoute struct {
+	Method       string
+	Path         string
+	DeploymentID int64
+	Module       string
+	Verb         string
 }
 
 type Metric struct {

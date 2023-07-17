@@ -1233,8 +1233,6 @@ export class StreamDeploymentLogsResponse extends Message<StreamDeploymentLogsRe
  */
 export class StatusRequest extends Message<StatusRequest> {
   /**
-   * Show all deployments, even those that are not running.
-   *
    * @generated from field: bool all_deployments = 1;
    */
   allDeployments = false;
@@ -1249,6 +1247,11 @@ export class StatusRequest extends Message<StatusRequest> {
    */
   allControllers = false;
 
+  /**
+   * @generated from field: bool all_ingress_routes = 4;
+   */
+  allIngressRoutes = false;
+
   constructor(data?: PartialMessage<StatusRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1260,6 +1263,7 @@ export class StatusRequest extends Message<StatusRequest> {
     { no: 1, name: "all_deployments", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "all_runners", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 3, name: "all_controllers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "all_ingress_routes", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {
@@ -1298,6 +1302,11 @@ export class StatusResponse extends Message<StatusResponse> {
    */
   deployments: StatusResponse_Deployment[] = [];
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.IngressRoute ingress_routes = 4;
+   */
+  ingressRoutes: StatusResponse_IngressRoute[] = [];
+
   constructor(data?: PartialMessage<StatusResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1309,6 +1318,7 @@ export class StatusResponse extends Message<StatusResponse> {
     { no: 1, name: "controllers", kind: "message", T: StatusResponse_Controller, repeated: true },
     { no: 2, name: "runners", kind: "message", T: StatusResponse_Runner, repeated: true },
     { no: 3, name: "deployments", kind: "message", T: StatusResponse_Deployment, repeated: true },
+    { no: 4, name: "ingress_routes", kind: "message", T: StatusResponse_IngressRoute, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse {
@@ -1496,6 +1506,67 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
 
   static equals(a: StatusResponse_Deployment | PlainMessage<StatusResponse_Deployment> | undefined, b: StatusResponse_Deployment | PlainMessage<StatusResponse_Deployment> | undefined): boolean {
     return proto3.util.equals(StatusResponse_Deployment, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StatusResponse.IngressRoute
+ */
+export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressRoute> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: string module = 2;
+   */
+  module = "";
+
+  /**
+   * @generated from field: string verb = 3;
+   */
+  verb = "";
+
+  /**
+   * @generated from field: string method = 4;
+   */
+  method = "";
+
+  /**
+   * @generated from field: string path = 5;
+   */
+  path = "";
+
+  constructor(data?: PartialMessage<StatusResponse_IngressRoute>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.IngressRoute";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_IngressRoute {
+    return new StatusResponse_IngressRoute().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_IngressRoute {
+    return new StatusResponse_IngressRoute().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_IngressRoute {
+    return new StatusResponse_IngressRoute().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse_IngressRoute | PlainMessage<StatusResponse_IngressRoute> | undefined, b: StatusResponse_IngressRoute | PlainMessage<StatusResponse_IngressRoute> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_IngressRoute, a, b);
   }
 }
 

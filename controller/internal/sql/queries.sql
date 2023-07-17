@@ -224,7 +224,7 @@ WHERE dest_module = ANY (@modules::text[])
 ORDER BY dest_module, dest_verb, source_module, source_verb, name;
 
 -- name: CreateIngressRequest :one
-INSERT INTO ingress (source_addr)
+INSERT INTO ingress_requests (source_addr)
 VALUES ($1)
 RETURNING id;
 
@@ -252,3 +252,23 @@ FROM controller c
 WHERE sqlc.arg('all')::bool = true
    OR c.state <> 'dead'
 ORDER BY c.key;
+
+-- name: CreateIngressRoute :exec
+INSERT INTO ingress_routes (deployment_id, module, verb, method, path)
+    VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5);
+
+-- name: GetIngressRoutes :many
+-- Get the runner endpoints corresponding to the given ingress route.
+SELECT r.key AS runner_key, endpoint, ir.module, ir.verb
+FROM ingress_routes ir
+         INNER JOIN runners r ON ir.deployment_id = r.deployment_id
+WHERE r.state = 'assigned'
+  AND ir.method = $1
+  AND ir.path = $2;
+
+-- name: GetAllIngressRoutes :many
+SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
+FROM ingress_routes ir
+         INNER JOIN deployments d ON ir.deployment_id = d.id
+WHERE sqlc.arg('all')::bool = true
+    OR d.min_replicas > 0;

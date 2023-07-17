@@ -17,9 +17,11 @@ type Querier interface {
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
 	CreateIngressRequest(ctx context.Context, sourceAddr string) (int64, error)
+	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error)
+	GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIngressRoutesRow, error)
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
@@ -34,6 +36,8 @@ type Querier interface {
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
 	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error)
+	// Get the runner endpoints corresponding to the given ingress route.
+	GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error)
 	GetLatestModuleMetrics(ctx context.Context, modules []string) ([]GetLatestModuleMetricsRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error)
