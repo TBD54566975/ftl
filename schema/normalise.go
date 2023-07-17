@@ -52,6 +52,8 @@ func Normalise[T Node](n T) T {
 	case *MetadataCalls:
 		c.Pos = zero
 		c.Calls = normaliseSlice(c.Calls)
+	case *MetadataIngress:
+		c.Pos = zero
 	case Decl, Metadata, Type: // Can never occur in reality, but here to satisfy the sum-type check.
 		panic("??")
 	}

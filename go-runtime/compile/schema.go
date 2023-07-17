@@ -13,8 +13,6 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/participle/v2"
 	"github.com/iancoleman/strcase"
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 
@@ -59,8 +57,11 @@ func ExtractModuleSchema(dir string) (*schema.Module, error) {
 				}()
 				switch node := node.(type) {
 				case *ast.CallExpr:
-					if err := visitCallExpr(pctx, verb, node); err != nil {
-						return err
+					// Only track calls when we're in a verb.
+					if verb != nil {
+						if err := visitCallExpr(pctx, verb, node); err != nil {
+							return err
+						}
 					}
 
 				case *ast.File:
@@ -136,13 +137,15 @@ func visitFile(pctx *parseContext, node *ast.File) error {
 	for _, dir := range directives {
 		switch dir.kind {
 		case "module":
-			if dir.id == "" {
+			moduleAttr := dir.getPositional(0)
+			if moduleAttr == nil {
 				return errors.Errorf("%s: module not specified", dir)
 			}
-			if dir.id != pctx.pkg.Name {
-				return errors.Errorf("%s: FTL module name %q does not match Go package name %q", dir, dir.id, pctx.pkg.Name)
+			moduleName := moduleAttr.Value.Text()
+			if moduleAttr.Value.Text() != pctx.pkg.Name {
+				return errors.Errorf("%s: FTL module name %q does not match Go package name %q", dir, moduleName, pctx.pkg.Name)
 			}
-			pctx.module.Name = dir.id
+			pctx.module.Name = moduleName
 
 		default:
 			return errors.Errorf("%s: invalid directive", dir)
@@ -188,9 +191,39 @@ func goPosToSchemaPos(pos token.Pos) schema.Position {
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}
 }
 
-// "verbIndex" is the index into the Module.Decls of the verb that was parsed.
 func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, err error) {
 	if node.Doc == nil {
+		return nil, nil
+	}
+	directives, err := parseDirectives(fset, node.Doc)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	var metadata []schema.Metadata
+	isVerb := false
+	for _, dir := range directives {
+		switch dir.kind {
+		case "verb":
+			isVerb = true
+		case "ingress":
+			methodAttr := dir.getPositional(0)
+			if methodAttr == nil {
+				return nil, errors.Errorf("%s: ingress method not specified", dir.pos)
+			}
+			pathAttr := dir.getPositional(1)
+			if pathAttr == nil {
+				return nil, errors.Errorf("%s: ingress path not specified", dir.pos)
+			}
+			metadata = append(metadata, &schema.MetadataIngress{
+				Pos:    dir.pos,
+				Method: methodAttr.Value.Text(),
+				Path:   pathAttr.Value.Text(),
+			})
+		default:
+			return nil, errors.Errorf("invalid directive: %s", dir)
+		}
+	}
+	if !isVerb {
 		return nil, nil
 	}
 	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
@@ -217,6 +250,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  req,
 		Response: resp,
+		Metadata: metadata,
 	}
 	pctx.module.Decls = append(pctx.module.Decls, verb)
 	return verb, nil
@@ -347,20 +381,20 @@ func parseSlice(pctx *parseContext, node ast.Node, tnode *types.Slice) (*schema.
 
 type ftlDirective struct {
 	kind  string
-	id    string
-	attrs map[string]directiveValue
+	attrs []directiveAttr
+	pos   schema.Position
 }
 
 func (f ftlDirective) String() string {
 	out := &strings.Builder{}
 	fmt.Fprintf(out, "//ftl:%s", f.kind)
-	if f.id != "" {
-		fmt.Fprintf(out, " %s", f.id)
-	}
-	keys := maps.Keys(f.attrs)
-	slices.Sort(keys)
-	for _, key := range keys {
-		fmt.Fprintf(out, " %s=%s", key, f.attrs[key])
+	for _, attr := range f.attrs {
+		if attr.Key != nil {
+			fmt.Fprintf(out, " %s=", *attr.Key)
+		} else {
+			fmt.Fprintf(out, " ")
+		}
+		fmt.Fprintf(out, "%s", attr.Value)
 	}
 	return out.String()
 }
@@ -368,21 +402,37 @@ func (f ftlDirective) String() string {
 // A little parser for Go FTL comment-directives.
 type directive struct {
 	Kind  string          `parser:"'ftl' ':' @Ident"`
-	ID    string          `parser:"( @(Ident | String)"`
-	Attrs []directiveAttr `parser:"  @@* )?"`
+	Attrs []directiveAttr `parser:"  @@*"`
+}
+
+func (f *ftlDirective) getPositional(i int) *directiveAttr {
+	if i < len(f.attrs) && f.attrs[i].Key == nil {
+		return &f.attrs[i]
+	}
+	return nil
+}
+
+func (f *ftlDirective) get(key string) *directiveAttr {
+	for _, attr := range f.attrs {
+		if attr.Key != nil && *attr.Key == key {
+			return &attr
+		}
+	}
+	return nil
 }
 
 type directiveAttr struct {
-	Key   string         `parser:"@Ident '='"`
+	Key   *string        `parser:"(@Ident '=')?"` // Key is optional.
 	Value directiveValue `parser:"@@"`
 }
 
 type directiveValue struct {
-	Ident *string  `parser:"  @Ident"`
+	Bool  *dirBool `parser:"  @('true'|'false')"`
+	Ident *string  `parser:"| @Ident"`
+	Path  *string  `parser:"| @('/' Ident)+"`
 	Str   *string  `parser:"| @String"`
 	Int   *int64   `parser:"| @Int"`
 	Float *float64 `parser:"| @Float"`
-	Bool  *dirBool `parser:"| @('true'|'false')"`
 }
 
 type dirBool bool
@@ -392,10 +442,32 @@ func (b *dirBool) UnmarshalText(d []byte) error {
 	return nil
 }
 
+// Text returns the text representation of the directive value.
+func (d directiveValue) Text() string {
+	switch {
+	case d.Ident != nil:
+		return *d.Ident
+	case d.Path != nil:
+		return *d.Path
+	case d.Str != nil:
+		return *d.Str
+	case d.Int != nil:
+		return strconv.FormatInt(*d.Int, 10)
+	case d.Float != nil:
+		return strconv.FormatFloat(*d.Float, 'g', 2, 64)
+	case d.Bool != nil:
+		return strconv.FormatBool(bool(*d.Bool))
+	default:
+		panic("??")
+	}
+}
+
 func (d directiveValue) String() string {
 	switch {
 	case d.Ident != nil:
 		return *d.Ident
+	case d.Path != nil:
+		return *d.Path
 	case d.Str != nil:
 		return strconv.Quote(*d.Str)
 	case d.Int != nil:
@@ -409,13 +481,13 @@ func (d directiveValue) String() string {
 	}
 }
 
-var directiveParser = participle.MustBuild[directive](participle.Unquote())
+var directiveParser = participle.MustBuild[directive](participle.Unquote(), participle.UseLookahead(2))
 
 func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]ftlDirective, error) {
 	if docs == nil {
 		return nil, nil
 	}
-	directives := []ftlDirective{}
+	var directives []ftlDirective
 	for _, line := range docs.List {
 		if !strings.HasPrefix(line.Text, "//ftl:") {
 			continue
@@ -436,11 +508,11 @@ func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]ftlDirectiv
 			}
 			return nil, errors.Wrap(err, "invalid directive")
 		}
-		attrs := map[string]directiveValue{}
-		for _, attr := range ast.Attrs {
-			attrs[attr.Key] = attr.Value
-		}
-		directives = append(directives, ftlDirective{kind: ast.Kind, id: ast.ID, attrs: attrs})
+		directives = append(directives, ftlDirective{
+			kind:  ast.Kind,
+			attrs: ast.Attrs,
+			pos:   goPosToSchemaPos(line.Pos()),
+		})
 	}
 	return directives, nil
 }

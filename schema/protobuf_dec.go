@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"fmt"
+
 	"github.com/alecthomas/errors"
 	"google.golang.org/protobuf/proto"
 
@@ -164,13 +166,21 @@ func metadataListToSchema(s []*pschema.Metadata) []Metadata {
 }
 
 func metadataToSchema(s *pschema.Metadata) Metadata {
-	switch s := s.Value.(type) { //nolint:gocritic
+	switch s := s.Value.(type) {
 	case *pschema.Metadata_Calls:
 		return &MetadataCalls{
 			Calls: verbRefListToSchema(s.Calls.Calls),
 		}
+
+	case *pschema.Metadata_Ingress:
+		return &MetadataIngress{
+			Method: s.Ingress.Method,
+			Path:   s.Ingress.Path,
+		}
+
+	default:
+		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}
-	panic("unreachable")
 }
 
 func verbRefListToSchema(s []*pschema.VerbRef) []*VerbRef {

@@ -15,7 +15,7 @@ import (
 var (
 	declUnion     = []Decl{&Data{}, &Verb{}}
 	typeUnion     = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
-	metadataUnion = []Metadata{&MetadataCalls{}}
+	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}}
 
 	// Used by protobuf generation.
 	unions = map[reflect.Type][]reflect.Type{
@@ -167,6 +167,13 @@ type MetadataCalls struct {
 	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
 	Calls []*VerbRef `parser:"'calls' @@ (',' @@)*" json:"calls,omitempty" protobuf:"2"`
+}
+
+type MetadataIngress struct {
+	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+
+	Method string `parser:"'ingress' @('GET' | 'POST')" json:"method,omitempty" protobuf:"2"`
+	Path   string `parser:"@('/' @Ident)+" json:"path,omitempty" protobuf:"3"`
 }
 
 type Module struct {

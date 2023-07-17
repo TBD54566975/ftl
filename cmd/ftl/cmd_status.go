@@ -17,19 +17,21 @@ import (
 )
 
 type statusCmd struct {
-	All            bool `help:"Show all control planes, deployments, and runners, even those that are not running."`
-	AllControllers bool `help:"Show all control planes, even those that are not running."`
-	AllDeployments bool `help:"Show all deployments, even those that are not running."`
-	AllRunners     bool `help:"Show all runners, even those that are not running."`
-	JSON           bool `help:"Output JSON."`
-	Schema         bool `help:"Show schema."`
+	All              bool `help:"Show all control planes, deployments, and runners, even those that are not running."`
+	AllControllers   bool `help:"Show all control planes, even those that are not running."`
+	AllDeployments   bool `help:"Show all deployments, even those that are not running."`
+	AllRunners       bool `help:"Show all runners, even those that are not running."`
+	AllIngressRoutes bool `help:"Show all ingress routes, even those that are not running."`
+	JSON             bool `help:"Output JSON."`
+	Schema           bool `help:"Show schema."`
 }
 
 func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
-		AllControllers: s.All || s.AllControllers,
-		AllDeployments: s.All || s.AllDeployments,
-		AllRunners:     s.All || s.AllRunners,
+		AllControllers:   s.All || s.AllControllers,
+		AllDeployments:   s.All || s.AllDeployments,
+		AllRunners:       s.All || s.AllRunners,
+		AllIngressRoutes: s.All || s.AllIngressRoutes,
 	}))
 	if err != nil {
 		return errors.WithStack(err)
@@ -86,6 +88,14 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		} else {
 			fmt.Printf(deploymentFmt, deployment.Key, deployment.Name, count, "")
 		}
+	}
+	fmt.Println()
+
+	ingressFmt := "%-7s%-38s%-28s%-7s\n"
+	fmt.Printf(ingressFmt, "Method", "Path", "Deployment", "Verb")
+	fmt.Printf(ingressFmt, strings.Repeat("-", 6), strings.Repeat("-", 37), strings.Repeat("-", 27), strings.Repeat("-", 4))
+	for _, ingress := range status.Msg.IngressRoutes {
+		fmt.Printf(ingressFmt, ingress.Method, ingress.Path, ingress.DeploymentKey, ingress.Verb)
 	}
 	return nil
 }

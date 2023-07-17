@@ -2,6 +2,8 @@
 package schema
 
 import (
+	"fmt"
+
 	"google.golang.org/protobuf/proto"
 
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -34,9 +36,15 @@ func metadataListToProto(nodes []Metadata) []*pschema.Metadata {
 	var out []*pschema.Metadata
 	for _, n := range nodes {
 		var v pschema.IsMetadataValue
-		switch n := n.(type) { //nolint:gocritic
+		switch n := n.(type) {
 		case *MetadataCalls:
 			v = &pschema.Metadata_Calls{Calls: n.ToProto().(*pschema.MetadataCalls)}
+
+		case *MetadataIngress:
+			v = &pschema.Metadata_Ingress{Ingress: n.ToProto().(*pschema.MetadataIngress)}
+
+		default:
+			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}
 		out = append(out, &pschema.Metadata{Value: v})
 	}
@@ -75,14 +83,24 @@ func typeToProto(t Type) *pschema.Type {
 	panic("unreachable")
 }
 
+func (p Position) ToProto() proto.Message {
+	return &pschema.Position{
+		Line:     int64(p.Line),
+		Column:   int64(p.Column),
+		Filename: p.Filename,
+	}
+}
+
 func (s *Schema) ToProto() proto.Message {
 	return &pschema.Schema{
+		Pos:     s.Pos.ToProto().(*pschema.Position),
 		Modules: nodeListToProto[*pschema.Module](s.Modules),
 	}
 }
 
 func (m *Module) ToProto() proto.Message {
 	return &pschema.Module{
+		Pos:      m.Pos.ToProto().(*pschema.Position),
 		Name:     m.Name,
 		Comments: m.Comments,
 		Decls:    declListToProto(m.Decls),
@@ -91,6 +109,7 @@ func (m *Module) ToProto() proto.Message {
 
 func (v *Verb) ToProto() proto.Message {
 	return &pschema.Verb{
+		Pos:      v.Pos.ToProto().(*pschema.Position),
 		Name:     v.Name,
 		Comments: v.Comments,
 		Request:  v.Request.ToProto().(*pschema.DataRef),
@@ -101,6 +120,7 @@ func (v *Verb) ToProto() proto.Message {
 
 func (d *Data) ToProto() proto.Message {
 	return &pschema.Data{
+		Pos:      d.Pos.ToProto().(*pschema.Position),
 		Name:     d.Name,
 		Fields:   nodeListToProto[*pschema.Field](d.Fields),
 		Comments: d.Comments,
@@ -109,6 +129,7 @@ func (d *Data) ToProto() proto.Message {
 
 func (f *Field) ToProto() proto.Message {
 	return &pschema.Field{
+		Pos:      f.Pos.ToProto().(*pschema.Position),
 		Name:     f.Name,
 		Type:     typeToProto(f.Type),
 		Comments: f.Comments,
@@ -117,6 +138,7 @@ func (f *Field) ToProto() proto.Message {
 
 func (v *VerbRef) ToProto() proto.Message {
 	return &pschema.VerbRef{
+		Pos:    v.Pos.ToProto().(*pschema.Position),
 		Name:   v.Name,
 		Module: v.Module,
 	}
@@ -124,6 +146,7 @@ func (v *VerbRef) ToProto() proto.Message {
 
 func (s *DataRef) ToProto() proto.Message {
 	return &pschema.DataRef{
+		Pos:    s.Pos.ToProto().(*pschema.Position),
 		Name:   s.Name,
 		Module: s.Module,
 	}
@@ -131,7 +154,16 @@ func (s *DataRef) ToProto() proto.Message {
 
 func (m *MetadataCalls) ToProto() proto.Message {
 	return &pschema.MetadataCalls{
+		Pos:   m.Pos.ToProto().(*pschema.Position),
 		Calls: nodeListToProto[*pschema.VerbRef](m.Calls),
+	}
+}
+
+func (m *MetadataIngress) ToProto() proto.Message {
+	return &pschema.MetadataIngress{
+		Pos:    m.Pos.ToProto().(*pschema.Position),
+		Method: m.Method,
+		Path:   m.Path,
 	}
 }
 
