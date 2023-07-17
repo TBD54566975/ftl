@@ -661,7 +661,7 @@ type GetModuleCallsRow struct {
 	DurationMs   int64
 	Request      []byte
 	Response     []byte
-	Error        []byte
+	Error        pgtype.Text
 }
 
 func (q *Queries) GetModuleCalls(ctx context.Context, modules []string) error {
@@ -798,7 +798,7 @@ type InsertCallEntryParams struct {
 	DurationMs   int64
 	Request      []byte
 	Response     []byte
-	Error        []byte
+	Error        pgtype.Text
 }
 
 func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error {

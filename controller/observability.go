@@ -4,57 +4,47 @@ import (
 	"context"
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/controller/internal/dal"
-	"github.com/TBD54566975/ftl/internal/log"
+	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/schema"
 	"github.com/alecthomas/errors"
 	"time"
 )
 
-type callDuration struct {
+type call struct {
 	requestID     int64
 	runnerKey     model.RunnerKey
 	controllerKey model.ControllerKey
 	startTime     time.Time
 	destVerb      *schema.VerbRef
 	callers       []*schema.VerbRef
-	request       []byte
-	response      []byte
+	request       *ftlv1.CallRequest
+	response      *ftlv1.CallResponse
 }
 
-type callError struct {
-	requestID     int64
-	runnerKey     model.RunnerKey
-	controllerKey model.ControllerKey
-	startTime     time.Time
-	destVerb      *schema.VerbRef
-	callers       []*schema.VerbRef
-	request       []byte
-	error         error
-}
-
-func (s *Service) recordCallDuration(ctx context.Context, callDuration *callDuration) error {
+func (s *Service) recordCall(ctx context.Context, call *call) error {
 	sourceVerb := schema.VerbRef{}
-	if len(callDuration.callers) > 1 {
-		sourceVerb = *callDuration.callers[1]
+	if len(call.callers) > 0 {
+		sourceVerb = *call.callers[0]
+	}
+
+	var callError error
+	if call.response.GetError() != nil {
+		callError = errors.New(call.response.GetError().GetMessage())
 	}
 	err := s.dal.InsertCallEntry(ctx, &dal.CallEntry{
-		RequestID:     callDuration.requestID,
-		RunnerKey:     callDuration.runnerKey,
-		ControllerKey: callDuration.controllerKey,
-		Duration:      time.Since(callDuration.startTime),
+		RequestID:     call.requestID,
+		RunnerKey:     call.runnerKey,
+		ControllerKey: call.controllerKey,
+		Duration:      time.Since(call.startTime),
 		SourceVerb:    sourceVerb,
-		DestVerb:      *callDuration.destVerb,
-		Request:       callDuration.request,
-		Response:      callDuration.response,
+		DestVerb:      *call.destVerb,
+		Request:       call.request.GetBody(),
+		Response:      call.response.GetBody(),
+		Error:         callError,
 	})
+
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
 	return nil
-}
-
-func (s *Service) recordCallError(ctx context.Context, callError *callError) {
-	logger := log.FromContext(ctx)
-	logger.Warnf("recordCallError not implemented")
 }

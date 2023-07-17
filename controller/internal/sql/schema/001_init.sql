@@ -141,7 +141,7 @@ CREATE TABLE calls
     duration_ms   BIGINT      NOT NULL,
     request       JSONB       NOT NULL,
     response      JSONB,
-    error         JSONB
+    error         TEXT
 );
 
 CREATE INDEX calls_duration_ms_idx ON calls (duration_ms);

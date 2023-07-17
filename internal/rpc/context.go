@@ -2,16 +2,14 @@ package rpc
 
 import (
 	"context"
-	"net/http"
-
-	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
 	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
+	"net/http"
 
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
-	"github.com/TBD54566975/ftl/observability"
 	"github.com/TBD54566975/ftl/schema"
+	"github.com/alecthomas/errors"
+	"github.com/bufbuild/connect-go"
 )
 
 type ftlDirectRoutingKey struct{}
@@ -77,7 +75,6 @@ func DefaultHandlerOptions() []connect.HandlerOption {
 	return []connect.HandlerOption{
 		connect.WithInterceptors(MetadataInterceptor(log.Error)),
 		connect.WithInterceptors(otelconnect.NewInterceptor()),
-		connect.WithInterceptors(observability.NewInterceptor()),
 	}
 }
 

@@ -141,7 +141,7 @@ type CallEntry struct {
 	Duration      time.Duration
 	Request       []byte
 	Response      []byte
-	Error         []byte
+	Error         error
 }
 
 type ModuleCallKey struct {
@@ -719,6 +719,11 @@ func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, add
 }
 
 func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
+	callError := pgtype.Text{}
+	if call.Error != nil {
+		callError.String = call.Error.Error()
+		callError.Valid = true
+	}
 	return errors.WithStack(translatePGError(d.db.InsertCallEntry(ctx, sql.InsertCallEntryParams{
 		Key:          sqltypes.Key(call.RunnerKey),
 		RequestID:    call.RequestID,
@@ -730,7 +735,7 @@ func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
 		DurationMs:   call.Duration.Milliseconds(),
 		Request:      call.Request,
 		Response:     call.Response,
-		Error:        call.Error,
+		Error:        callError,
 	})))
 }
 

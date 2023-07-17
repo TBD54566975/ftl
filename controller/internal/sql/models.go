@@ -118,7 +118,7 @@ type Call struct {
 	DurationMs   int64
 	Request      []byte
 	Response     []byte
-	Error        []byte
+	Error        pgtype.Text
 }
 
 type Controller struct {

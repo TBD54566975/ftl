@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bufbuild/connect-go"
+	"github.com/jackc/pgx/v5"
+	"github.com/oklog/ulid/v2"
 	"io"
 	"math/rand"
 	"net/http"
@@ -12,11 +15,8 @@ import (
 	"time"
 
 	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
-	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/model"
@@ -383,8 +383,6 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
-	logger := log.FromContext(ctx)
-	logger.Warnf("Call %s", req.Msg.Verb)
 	routes, err := s.dal.GetRoutingTable(ctx, req.Msg.Verb.Module)
 	if err != nil {
 		if errors.Is(err, dal.ErrNotFound) {
@@ -416,35 +414,23 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
-	callers = append(callers, verbRef)
-	ctx = rpc.WithVerbs(ctx, callers)
+	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
 
 	resp, err := client.verb.Call(ctx, req)
 	if err != nil {
-		s.recordCallError(ctx, &callError{
-			requestID:     requestID,
-			runnerKey:     route.Runner,
-			controllerKey: s.key,
-			startTime:     start,
-			destVerb:      verbRef,
-			callers:       callers,
-			request:       req.Msg.GetBody(),
-			error:         err,
-		})
 		return nil, errors.WithStack(err)
 	}
 
-	logger.Warnf("requestid %d %s", requestID, verbRef.Name)
-	err = s.recordCallDuration(ctx, &callDuration{
+	err = s.recordCall(ctx, &call{
 		requestID:     requestID,
 		runnerKey:     route.Runner,
 		controllerKey: s.key,
 		startTime:     start,
 		destVerb:      verbRef,
 		callers:       callers,
-		request:       req.Msg.GetBody(),
-		response:      resp.Msg.GetBody(),
+		request:       req.Msg,
+		response:      resp.Msg,
 	})
 
 	if err != nil {
