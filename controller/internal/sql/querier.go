@@ -38,13 +38,13 @@ type Querier interface {
 	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error)
-	GetLatestModuleMetrics(ctx context.Context, modules []string) ([]GetLatestModuleMetricsRow, error)
+	GetModuleCalls(ctx context.Context, modules []string) error
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)
+	InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
-	InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	KillStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)

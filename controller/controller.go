@@ -382,35 +382,71 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
-	endpoints, err := s.dal.GetRoutingTable(ctx, req.Msg.Verb.Module)
+	start := time.Now()
+	logger := log.FromContext(ctx)
+	logger.Warnf("Call %s", req.Msg.Verb)
+	routes, err := s.dal.GetRoutingTable(ctx, req.Msg.Verb.Module)
 	if err != nil {
 		if errors.Is(err, dal.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.Wrapf(err, "no runners for module %q", req.Msg.Verb.Module))
 		}
 		return nil, errors.Wrap(err, "failed to get runners for module")
 	}
-	endpoint := endpoints[rand.Intn(len(endpoints))] //nolint:gosec
-	client := s.clientsForEndpoint(endpoint.Endpoint)
+	route := routes[rand.Intn(len(routes))] //nolint:gosec
+	client := s.clientsForEndpoint(route.Endpoint)
 
 	// Inject the request ID if this is an ingress call.
-	verbs, err := headers.GetCallers(req.Header())
+	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if len(verbs) == 0 {
-		requestID, err := s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
+
+	var requestID int64
+	if len(callers) == 0 {
+		requestID, err = s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 		headers.SetRequestID(req.Header(), requestID)
+	} else {
+		requestID, err = headers.GetRequestID(req.Header())
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
-	verbs = append(verbs, verbRef)
-	ctx = rpc.WithVerbs(ctx, verbs)
+	callers = append(callers, verbRef)
+	ctx = rpc.WithVerbs(ctx, callers)
 	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
 
 	resp, err := client.verb.Call(ctx, req)
+	if err != nil {
+		s.recordCallError(ctx, &callError{
+			requestID:     requestID,
+			runnerKey:     route.Runner,
+			controllerKey: s.key,
+			startTime:     start,
+			destVerb:      verbRef,
+			callers:       callers,
+			request:       req.Msg.GetBody(),
+			error:         err,
+		})
+		return nil, errors.WithStack(err)
+	}
+
+	logger.Warnf("requestid %d %s", requestID, verbRef.Name)
+	err = s.recordCallDuration(ctx, &callDuration{
+		requestID:     requestID,
+		runnerKey:     route.Runner,
+		controllerKey: s.key,
+		startTime:     start,
+		destVerb:      verbRef,
+		callers:       callers,
+		request:       req.Msg.GetBody(),
+		response:      resp.Msg.GetBody(),
+	})
+
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

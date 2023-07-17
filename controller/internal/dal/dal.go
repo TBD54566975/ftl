@@ -4,8 +4,6 @@ package dal
 import (
 	"context"
 	stdsql "database/sql"
-	"encoding/json"
-	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -134,39 +132,21 @@ func (s ControllerState) ToProto() ftlv1.ControllerState {
 	return ftlv1.ControllerState(ftlv1.ControllerState_value["CONTROLLER_"+strings.ToUpper(string(s))])
 }
 
-type DataPoint interface {
-	isDataPoint()
+type CallEntry struct {
+	RequestID     int64
+	RunnerKey     model.RunnerKey
+	ControllerKey model.ControllerKey
+	SourceVerb    schema.VerbRef
+	DestVerb      schema.VerbRef
+	Duration      time.Duration
+	Request       []byte
+	Response      []byte
+	Error         []byte
 }
 
-type MetricHistogram struct {
-	Count  int64
-	Sum    int64
-	Bucket []uint64
-}
-
-func (MetricHistogram) isDataPoint() {}
-
-type MetricCounter struct {
-	Value int64
-}
-
-func (MetricCounter) isDataPoint() {}
-
-type Metric struct {
-	RequestID  int64
-	RunnerKey  model.RunnerKey
-	StartTime  time.Time
-	EndTime    time.Time
-	SourceVerb schema.VerbRef
-	DestVerb   schema.VerbRef
-	Name       string
-	DataPoint  DataPoint
-}
-
-type MetricModuleKey struct {
+type ModuleCallKey struct {
 	Module string
 	Verb   string
-	Metric string
 }
 
 type Deployment struct {
@@ -710,95 +690,6 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	return out, nil
 }
 
-func (d *DAL) InsertMetricEntry(ctx context.Context, metric Metric) error {
-	var metricType sql.MetricType
-	switch metric.DataPoint.(type) {
-	case MetricHistogram:
-		metricType = sql.MetricTypeHistogram
-	case MetricCounter:
-		metricType = sql.MetricTypeCounter
-	default:
-		panic(fmt.Sprintf("unknown metric type %T", metric.DataPoint))
-	}
-
-	datapointJSON, err := json.Marshal(metric.DataPoint)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return errors.WithStack(translatePGError(d.db.InsertMetricEntry(ctx, sql.InsertMetricEntryParams{
-		Key:          sqltypes.Key(metric.RunnerKey),
-		StartTime:    pgtype.Timestamptz{Time: metric.StartTime, Valid: true},
-		EndTime:      pgtype.Timestamptz{Time: metric.EndTime, Valid: true},
-		SourceModule: metric.SourceVerb.Module,
-		SourceVerb:   metric.SourceVerb.Name,
-		DestModule:   metric.DestVerb.Module,
-		DestVerb:     metric.DestVerb.Name,
-		Name:         metric.Name,
-		Type:         metricType,
-		Value:        datapointJSON,
-	})))
-}
-
-// GetLatestModuleMetrics returns the latest metrics for the given modules.
-func (d *DAL) GetLatestModuleMetrics(ctx context.Context, modules []string) (map[MetricModuleKey]Metric, error) {
-	dbMetrics, err := d.db.GetLatestModuleMetrics(ctx, modules)
-	if err != nil {
-		return nil, errors.Wrap(translatePGError(err), "could not get metrics")
-	}
-
-	moduleMetrics := map[MetricModuleKey]Metric{}
-
-	for _, in := range dbMetrics {
-		var datapoint DataPoint
-
-		switch in.Type {
-		case sql.MetricTypeCounter:
-			var counter MetricCounter
-			if err := json.Unmarshal(in.Value, &counter); err != nil {
-				return nil, errors.Wrapf(err, "could not unmarshal MetricCounter datapoint for row %d", in.ID)
-			}
-			datapoint = counter
-		case sql.MetricTypeHistogram:
-			var histogram MetricHistogram
-			if err := json.Unmarshal(in.Value, &histogram); err != nil {
-				return nil, errors.Wrapf(err, "could not unmarshal MetricHistogram datapoint for row %d", in.ID)
-			}
-			datapoint = histogram
-		default:
-			return nil, errors.Wrapf(err, "unknown metric type datapoint for row %d", in.ID)
-		}
-
-		key := MetricModuleKey{
-			Module: in.DestModule,
-			Verb:   in.DestVerb,
-			Metric: in.Name,
-		}
-
-		moduleMetrics[key] = Metric{
-			RequestID: in.RequestID,
-			RunnerKey: model.RunnerKey(in.RunnerKey),
-			StartTime: in.StartTime.Time,
-			EndTime:   in.EndTime.Time,
-			SourceVerb: schema.VerbRef{
-				Module: in.SourceModule,
-				Name:   in.SourceVerb,
-			},
-			DestVerb: schema.VerbRef{
-				Module: in.DestModule,
-				Name:   in.DestVerb,
-			},
-			Name:      in.Name,
-			DataPoint: datapoint,
-		}
-	}
-
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return moduleMetrics, nil
-}
-
 func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (int64, error) {
 	id, err := d.db.CreateIngressRequest(ctx, addr)
 	return id, errors.WithStack(err)
@@ -826,6 +717,43 @@ func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, add
 	id, err := d.db.UpsertController(ctx, sqltypes.Key(key), addr)
 	return id, errors.WithStack(translatePGError(err))
 }
+
+func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
+	return errors.WithStack(translatePGError(d.db.InsertCallEntry(ctx, sql.InsertCallEntryParams{
+		Key:          sqltypes.Key(call.RunnerKey),
+		RequestID:    call.RequestID,
+		Key_2:        sqltypes.Key(call.ControllerKey),
+		SourceModule: call.SourceVerb.Module,
+		SourceVerb:   call.SourceVerb.Name,
+		DestModule:   call.DestVerb.Module,
+		DestVerb:     call.DestVerb.Name,
+		DurationMs:   call.Duration.Milliseconds(),
+		Request:      call.Request,
+		Response:     call.Response,
+		Error:        call.Error,
+	})))
+}
+
+// func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[ModuleCallKey][]CallEntry, error) {
+//	calls, err := d.db.GetModuleCalls(ctx, modules)
+//	if err != nil {
+//		return nil, errors.WithStack(translatePGError(err))
+//	}
+//	out := map[ModuleCallKey][]CallEntry{}
+//	for _, call := range calls {
+//		out[ModuleCallKey{
+//			Module: call.Module,
+//			Method: call.Method,
+//		}] = append(out[ModuleCallKey{
+//			Module: call.Module,
+//			Method: call.Method,
+//		}], CallEntry{
+//			Deployment: model.DeploymentKey(call.Deployment),
+//			Endpoint:   call.Endpoint,
+//		})
+//	}
+//	return out, nil
+// }
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
