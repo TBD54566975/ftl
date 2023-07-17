@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/bufbuild/connect-go"
-	"github.com/jackc/pgx/v5"
-	"github.com/oklog/ulid/v2"
 	"io"
 	"math/rand"
 	"net/http"
@@ -15,8 +12,11 @@ import (
 	"time"
 
 	"github.com/alecthomas/errors"
+	"github.com/bufbuild/connect-go"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
+	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/model"

@@ -2,11 +2,13 @@ package observability
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/internal/log"
+
 	"github.com/alecthomas/errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/sdk/metric"
+
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type Config struct {
