@@ -356,3 +356,77 @@ export class GetCallsResponse extends Message<GetCallsResponse> {
   }
 }
 
+/**
+ * @generated from message xyz.block.ftl.v1.console.GetRequestCallsRequest
+ */
+export class GetRequestCallsRequest extends Message<GetRequestCallsRequest> {
+  /**
+   * @generated from field: int64 request_id = 1;
+   */
+  requestId = protoInt64.zero;
+
+  constructor(data?: PartialMessage<GetRequestCallsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.GetRequestCallsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "request_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRequestCallsRequest {
+    return new GetRequestCallsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRequestCallsRequest {
+    return new GetRequestCallsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRequestCallsRequest {
+    return new GetRequestCallsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRequestCallsRequest | PlainMessage<GetRequestCallsRequest> | undefined, b: GetRequestCallsRequest | PlainMessage<GetRequestCallsRequest> | undefined): boolean {
+    return proto3.util.equals(GetRequestCallsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.GetRequestCallsResponse
+ */
+export class GetRequestCallsResponse extends Message<GetRequestCallsResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Call calls = 1;
+   */
+  calls: Call[] = [];
+
+  constructor(data?: PartialMessage<GetRequestCallsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.GetRequestCallsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "calls", kind: "message", T: Call, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRequestCallsResponse {
+    return new GetRequestCallsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRequestCallsResponse {
+    return new GetRequestCallsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRequestCallsResponse {
+    return new GetRequestCallsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRequestCallsResponse | PlainMessage<GetRequestCallsResponse> | undefined, b: GetRequestCallsResponse | PlainMessage<GetRequestCallsResponse> | undefined): boolean {
+    return proto3.util.equals(GetRequestCallsResponse, a, b);
+  }
+}
+

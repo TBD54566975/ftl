@@ -50,6 +50,14 @@ message GetCallsResponse {
   repeated Call calls = 1;
 }
 
+message GetRequestCallsRequest {
+  int64 request_id = 1;
+}
+
+message GetRequestCallsResponse {
+  repeated Call calls = 1;
+}
+
 service ConsoleService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -58,4 +66,5 @@ service ConsoleService {
 
   rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
   rpc GetCalls(GetCallsRequest) returns (GetCallsResponse);
+  rpc GetRequestCalls(GetRequestCallsRequest) returns (GetRequestCallsResponse);
 }

@@ -225,6 +225,16 @@ FROM runners r
          JOIN controller conn ON conn.id = conn.id
 WHERE dest_module = ANY (@modules::text[]);
 
+-- name: GetRequestCalls :many
+SELECT r.key  AS runner_key,
+       conn.key AS controller_key,
+       c.*
+FROM runners r
+         JOIN calls c ON r.id = c.runner_id
+         JOIN controller conn ON conn.id = conn.id
+WHERE request_id = $1
+ORDER BY time DESC;
+
 -- name: CreateIngressRequest :one
 INSERT INTO ingress_requests (source_addr)
 VALUES ($1)

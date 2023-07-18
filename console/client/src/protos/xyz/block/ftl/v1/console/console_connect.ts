@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { GetCallsRequest, GetCallsResponse, GetModulesRequest, GetModulesResponse } from "./console_pb.js";
+import { GetCallsRequest, GetCallsResponse, GetModulesRequest, GetModulesResponse, GetRequestCallsRequest, GetRequestCallsResponse } from "./console_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.console.ConsoleService
@@ -41,6 +41,15 @@ export const ConsoleService = {
       name: "GetCalls",
       I: GetCallsRequest,
       O: GetCallsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetRequestCalls
+     */
+    getRequestCalls: {
+      name: "GetRequestCalls",
+      I: GetRequestCallsRequest,
+      O: GetRequestCallsResponse,
       kind: MethodKind.Unary,
     },
   }
