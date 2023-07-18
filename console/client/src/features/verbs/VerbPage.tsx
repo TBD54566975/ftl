@@ -1,7 +1,5 @@
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import { Chart, registerables } from 'chart.js'
 import { useContext } from 'react'
-import { Bar } from 'react-chartjs-2'
 import { Link, useParams } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -9,7 +7,6 @@ import { modulesContext } from '../../providers/modules-provider'
 import { getCodeBlock } from '../../utils/data.utils'
 import { classNames } from '../../utils/react.utils'
 import { getCalls, getVerbCode } from './verb.utils'
-Chart.register(...registerables)
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
@@ -20,21 +17,6 @@ export default function VerbPage() {
   const callData = module?.data.filter(data =>
     [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(data.name),
   )
-
-  const data = {
-    labels: [0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000],
-    datasets: [
-      {
-        label: 'Latency (ms)',
-        data: verb?.callLatency?.bucket.map(bucket => Number(bucket)),
-        backgroundColor: 'rgba(78, 72, 224, 1.0)',
-      },
-    ],
-  }
-
-  const options = {
-    aspectRatio: 4,
-  }
 
   if (module === undefined || verb === undefined) {
     return <></>
@@ -106,9 +88,6 @@ export default function VerbPage() {
             <span className="truncate">Metrics</span>
           </div>
         </h2>
-
-        <Bar data={data} options={options} />
-        <span className="text-gray-900 dark:text-white">{`Total Calls: ${verb?.callCount?.value}`}</span>
       </div>
 
       <div className="flex items-center gap-x-3 pt-6">

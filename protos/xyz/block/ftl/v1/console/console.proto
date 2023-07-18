@@ -8,21 +8,26 @@ import "xyz/block/ftl/v1/schema/schema.proto";
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console;pbconsole";
 option java_multiple_files = true;
 
-message MetricCounter {
-  int64 value = 1;
-}
+message Call {
+  int64 id = 1;
+  string runner_key = 2;
+  int64 request_id = 3;
+  string controller_key = 4;
+  int64 time_stamp = 5;
 
-message MetricHistorgram {
-  int64 count = 1;
-  int64 sum = 2;
-  repeated uint64 bucket = 3;
+  string source_module = 6;
+  string source_verb = 7;
+  string dest_module = 8;
+  string dest_verb = 9;
+  int64 duration_ms = 10;
+  bytes request = 11;
+  bytes response = 12;
+  string error = 13;
 }
 
 message Verb {
   schema.Verb verb = 1;
-  MetricCounter call_count = 2;
-  MetricHistorgram call_latency = 3;
-  MetricCounter call_error_count = 4;
+  repeated Call calls = 2;
 }
 
 message Module {

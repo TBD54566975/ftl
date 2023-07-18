@@ -8,88 +8,111 @@ import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { Data, Verb as Verb$1 } from "../schema/schema_pb.js";
 
 /**
- * @generated from message xyz.block.ftl.v1.console.MetricCounter
+ * @generated from message xyz.block.ftl.v1.console.Call
  */
-export class MetricCounter extends Message<MetricCounter> {
+export class Call extends Message<Call> {
   /**
-   * @generated from field: int64 value = 1;
+   * @generated from field: int64 id = 1;
    */
-  value = protoInt64.zero;
+  id = protoInt64.zero;
 
-  constructor(data?: PartialMessage<MetricCounter>) {
+  /**
+   * @generated from field: string runner_key = 2;
+   */
+  runnerKey = "";
+
+  /**
+   * @generated from field: int64 request_id = 3;
+   */
+  requestId = protoInt64.zero;
+
+  /**
+   * @generated from field: string controller_key = 4;
+   */
+  controllerKey = "";
+
+  /**
+   * @generated from field: int64 time_stamp = 5;
+   */
+  timeStamp = protoInt64.zero;
+
+  /**
+   * @generated from field: string source_module = 6;
+   */
+  sourceModule = "";
+
+  /**
+   * @generated from field: string source_verb = 7;
+   */
+  sourceVerb = "";
+
+  /**
+   * @generated from field: string dest_module = 8;
+   */
+  destModule = "";
+
+  /**
+   * @generated from field: string dest_verb = 9;
+   */
+  destVerb = "";
+
+  /**
+   * @generated from field: int64 duration_ms = 10;
+   */
+  durationMs = protoInt64.zero;
+
+  /**
+   * @generated from field: bytes request = 11;
+   */
+  request = new Uint8Array(0);
+
+  /**
+   * @generated from field: bytes response = 12;
+   */
+  response = new Uint8Array(0);
+
+  /**
+   * @generated from field: string error = 13;
+   */
+  error = "";
+
+  constructor(data?: PartialMessage<Call>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.MetricCounter";
+  static readonly typeName = "xyz.block.ftl.v1.console.Call";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "value", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 1, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 2, name: "runner_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "request_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "controller_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 6, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "source_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "duration_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 11, name: "request", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 12, name: "response", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 13, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricCounter {
-    return new MetricCounter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Call {
+    return new Call().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetricCounter {
-    return new MetricCounter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Call {
+    return new Call().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetricCounter {
-    return new MetricCounter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Call {
+    return new Call().fromJsonString(jsonString, options);
   }
 
-  static equals(a: MetricCounter | PlainMessage<MetricCounter> | undefined, b: MetricCounter | PlainMessage<MetricCounter> | undefined): boolean {
-    return proto3.util.equals(MetricCounter, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.console.MetricHistorgram
- */
-export class MetricHistorgram extends Message<MetricHistorgram> {
-  /**
-   * @generated from field: int64 count = 1;
-   */
-  count = protoInt64.zero;
-
-  /**
-   * @generated from field: int64 sum = 2;
-   */
-  sum = protoInt64.zero;
-
-  /**
-   * @generated from field: repeated uint64 bucket = 3;
-   */
-  bucket: bigint[] = [];
-
-  constructor(data?: PartialMessage<MetricHistorgram>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.MetricHistorgram";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 2, name: "sum", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "bucket", kind: "scalar", T: 4 /* ScalarType.UINT64 */, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricHistorgram {
-    return new MetricHistorgram().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetricHistorgram {
-    return new MetricHistorgram().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetricHistorgram {
-    return new MetricHistorgram().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: MetricHistorgram | PlainMessage<MetricHistorgram> | undefined, b: MetricHistorgram | PlainMessage<MetricHistorgram> | undefined): boolean {
-    return proto3.util.equals(MetricHistorgram, a, b);
+  static equals(a: Call | PlainMessage<Call> | undefined, b: Call | PlainMessage<Call> | undefined): boolean {
+    return proto3.util.equals(Call, a, b);
   }
 }
 
@@ -103,19 +126,9 @@ export class Verb extends Message<Verb> {
   verb?: Verb$1;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.console.MetricCounter call_count = 2;
+   * @generated from field: repeated xyz.block.ftl.v1.console.Call calls = 2;
    */
-  callCount?: MetricCounter;
-
-  /**
-   * @generated from field: xyz.block.ftl.v1.console.MetricHistorgram call_latency = 3;
-   */
-  callLatency?: MetricHistorgram;
-
-  /**
-   * @generated from field: xyz.block.ftl.v1.console.MetricCounter call_error_count = 4;
-   */
-  callErrorCount?: MetricCounter;
+  calls: Call[] = [];
 
   constructor(data?: PartialMessage<Verb>) {
     super();
@@ -126,9 +139,7 @@ export class Verb extends Message<Verb> {
   static readonly typeName = "xyz.block.ftl.v1.console.Verb";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "verb", kind: "message", T: Verb$1 },
-    { no: 2, name: "call_count", kind: "message", T: MetricCounter },
-    { no: 3, name: "call_latency", kind: "message", T: MetricHistorgram },
-    { no: 4, name: "call_error_count", kind: "message", T: MetricCounter },
+    { no: 2, name: "calls", kind: "message", T: Call, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {

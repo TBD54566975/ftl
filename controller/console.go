@@ -8,7 +8,6 @@ import (
 
 	"github.com/TBD54566975/ftl/controller/internal/dal"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/observability"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pbconsole "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
@@ -45,7 +44,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		return nil, errors.WithStack(err)
 	}
 
-	moduleMetrics, err := c.dal.GetLatestModuleMetrics(ctx, moduleNames)
+	moduleCalls, err := c.dal.GetModuleCalls(ctx, moduleNames)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -56,21 +55,22 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		var data []*pschema.Data
 
 		for _, decl := range deployment.Schema.Decls {
-
 			switch decl := decl.(type) {
 			case *schema.Verb:
 				//nolint:forcetypeassert
 				verbs = append(verbs, &pbconsole.Verb{
-					Verb:           decl.ToProto().(*pschema.Verb),
-					CallCount:      getCounterMetric(moduleMetrics, deployment.Module, decl.Name, observability.CallRequestCount),
-					CallLatency:    getHistogramMetric(moduleMetrics, deployment.Module, decl.Name, observability.CallLatency),
-					CallErrorCount: getCounterMetric(moduleMetrics, deployment.Module, decl.Name, observability.CallErrorCount),
+					Verb: decl.ToProto().(*pschema.Verb),
+					Calls: getModuleCalls(moduleCalls[dal.ModuleCallKey{
+						Module: deployment.Module,
+						Verb:   decl.Name,
+					}]),
 				})
 			case *schema.Data:
 				//nolint:forcetypeassert
 				data = append(data, decl.ToProto().(*pschema.Data))
 			}
 		}
+
 		modules = append(modules, &pbconsole.Module{
 			Name:     deployment.Module,
 			Language: deployment.Language,
@@ -84,37 +84,26 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}), nil
 }
 
-func getCounterMetric(metrics map[dal.MetricModuleKey]dal.Metric, module string, verb string, metricName string) *pbconsole.MetricCounter {
-	metric := metrics[dal.MetricModuleKey{
-		Module: module,
-		Verb:   verb,
-		Metric: metricName,
-	}]
-	switch count := metric.DataPoint.(type) {
-	case dal.MetricCounter:
-		return &pbconsole.MetricCounter{
-			Value: count.Value,
+func getModuleCalls(calls []dal.Call) []*pbconsole.Call {
+	return slices.Map(calls, func(call dal.Call) *pbconsole.Call {
+		var errorMessage string
+		if call.Error != nil {
+			errorMessage = call.Error.Error()
 		}
-	default:
-		return nil
-	}
-
-}
-
-func getHistogramMetric(metrics map[dal.MetricModuleKey]dal.Metric, module string, verb string, metricName string) *pbconsole.MetricHistorgram {
-	metric := metrics[dal.MetricModuleKey{
-		Module: module,
-		Verb:   verb,
-		Metric: metricName,
-	}]
-	switch histogram := metric.DataPoint.(type) {
-	case dal.MetricHistogram:
-		return &pbconsole.MetricHistorgram{
-			Sum:    histogram.Sum,
-			Count:  histogram.Count,
-			Bucket: histogram.Bucket,
+		return &pbconsole.Call{
+			Id:            call.ID,
+			RunnerKey:     call.RunnerKey.String(),
+			RequestId:     call.RequestID,
+			ControllerKey: call.ControllerKey.String(),
+			TimeStamp:     call.Time.Unix(),
+			SourceModule:  call.SourceVerb.Module,
+			SourceVerb:    call.SourceVerb.Name,
+			DestModule:    call.DestVerb.Module,
+			DestVerb:      call.DestVerb.Name,
+			DurationMs:    call.Duration.Milliseconds(),
+			Request:       call.Request,
+			Response:      call.Response,
+			Error:         errorMessage,
 		}
-	default:
-		return nil
-	}
+	})
 }

@@ -636,54 +636,59 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path stri
 	return items, nil
 }
 
-const getLatestModuleMetrics = `-- name: GetLatestModuleMetrics :many
-SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name) r.key AS runner_key,
-                                                                              m.id, m.runner_id, m.request_id, m.start_time, m.end_time, m.source_module, m.source_verb, m.dest_module, m.dest_verb, m.name, m.type, m.value
+const getModuleCalls = `-- name: GetModuleCalls :many
+SELECT r.key  AS runner_key,
+       conn.key AS controller_key,
+       c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
-         JOIN metrics m ON r.id = m.runner_id
+         JOIN calls c ON r.id = c.runner_id
+         JOIN controller conn ON conn.id = conn.id
 WHERE dest_module = ANY ($1::text[])
-ORDER BY dest_module, dest_verb, source_module, source_verb, name
 `
 
-type GetLatestModuleMetricsRow struct {
-	RunnerKey    sqltypes.Key
-	ID           int64
-	RunnerID     int64
-	RequestID    int64
-	StartTime    pgtype.Timestamptz
-	EndTime      pgtype.Timestamptz
-	SourceModule string
-	SourceVerb   string
-	DestModule   string
-	DestVerb     string
-	Name         string
-	Type         MetricType
-	Value        []byte
+type GetModuleCallsRow struct {
+	RunnerKey     sqltypes.Key
+	ControllerKey sqltypes.Key
+	ID            int64
+	RequestID     int64
+	RunnerID      int64
+	ControllerID  int64
+	Time          pgtype.Timestamptz
+	DestModule    string
+	DestVerb      string
+	SourceModule  string
+	SourceVerb    string
+	DurationMs    int64
+	Request       []byte
+	Response      []byte
+	Error         pgtype.Text
 }
 
-func (q *Queries) GetLatestModuleMetrics(ctx context.Context, modules []string) ([]GetLatestModuleMetricsRow, error) {
-	rows, err := q.db.Query(ctx, getLatestModuleMetrics, modules)
+func (q *Queries) GetModuleCalls(ctx context.Context, modules []string) ([]GetModuleCallsRow, error) {
+	rows, err := q.db.Query(ctx, getModuleCalls, modules)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetLatestModuleMetricsRow
+	var items []GetModuleCallsRow
 	for rows.Next() {
-		var i GetLatestModuleMetricsRow
+		var i GetModuleCallsRow
 		if err := rows.Scan(
 			&i.RunnerKey,
+			&i.ControllerKey,
 			&i.ID,
-			&i.RunnerID,
 			&i.RequestID,
-			&i.StartTime,
-			&i.EndTime,
-			&i.SourceModule,
-			&i.SourceVerb,
+			&i.RunnerID,
+			&i.ControllerID,
+			&i.Time,
 			&i.DestModule,
 			&i.DestVerb,
-			&i.Name,
-			&i.Type,
-			&i.Value,
+			&i.SourceModule,
+			&i.SourceVerb,
+			&i.DurationMs,
+			&i.Request,
+			&i.Response,
+			&i.Error,
 		); err != nil {
 			return nil, err
 		}
@@ -806,6 +811,44 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key)
 	return items, nil
 }
 
+const insertCallEntry = `-- name: InsertCallEntry :exec
+INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module, dest_verb,
+                   duration_ms, request, response, error)
+VALUES ((SELECT id FROM runners WHERE runners.key = $1), $2, (SELECT id FROM controller WHERE controller.key = $3),
+        $4, $5, $6, $7, $8, $9, $10, $11)
+`
+
+type InsertCallEntryParams struct {
+	Key          sqltypes.Key
+	RequestID    int64
+	Key_2        sqltypes.Key
+	SourceModule string
+	SourceVerb   string
+	DestModule   string
+	DestVerb     string
+	DurationMs   int64
+	Request      []byte
+	Response     []byte
+	Error        pgtype.Text
+}
+
+func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error {
+	_, err := q.db.Exec(ctx, insertCallEntry,
+		arg.Key,
+		arg.RequestID,
+		arg.Key_2,
+		arg.SourceModule,
+		arg.SourceVerb,
+		arg.DestModule,
+		arg.DestVerb,
+		arg.DurationMs,
+		arg.Request,
+		arg.Response,
+		arg.Error,
+	)
+	return err
+}
+
 const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec
 INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, error)
 VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $5, $6)
@@ -828,43 +871,6 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 		arg.Scope,
 		arg.Message,
 		arg.Error,
-	)
-	return err
-}
-
-const insertMetricEntry = `-- name: InsertMetricEntry :exec
-INSERT INTO metrics (runner_id, request_id, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
-                     value)
-VALUES ((SELECT id FROM runners WHERE key = $1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-`
-
-type InsertMetricEntryParams struct {
-	Key          sqltypes.Key
-	RequestID    int64
-	StartTime    pgtype.Timestamptz
-	EndTime      pgtype.Timestamptz
-	SourceModule string
-	SourceVerb   string
-	DestModule   string
-	DestVerb     string
-	Name         string
-	Type         MetricType
-	Value        []byte
-}
-
-func (q *Queries) InsertMetricEntry(ctx context.Context, arg InsertMetricEntryParams) error {
-	_, err := q.db.Exec(ctx, insertMetricEntry,
-		arg.Key,
-		arg.RequestID,
-		arg.StartTime,
-		arg.EndTime,
-		arg.SourceModule,
-		arg.SourceVerb,
-		arg.DestModule,
-		arg.DestVerb,
-		arg.Name,
-		arg.Type,
-		arg.Value,
 	)
 	return err
 }

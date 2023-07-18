@@ -54,49 +54,6 @@ func (ns NullControllerState) Value() (driver.Value, error) {
 	return string(ns.ControllerState), nil
 }
 
-type MetricType string
-
-const (
-	MetricTypeCounter   MetricType = "counter"
-	MetricTypeGauge     MetricType = "gauge"
-	MetricTypeHistogram MetricType = "histogram"
-)
-
-func (e *MetricType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = MetricType(s)
-	case string:
-		*e = MetricType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for MetricType: %T", src)
-	}
-	return nil
-}
-
-type NullMetricType struct {
-	MetricType MetricType
-	Valid      bool // Valid is true if MetricType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullMetricType) Scan(value interface{}) error {
-	if value == nil {
-		ns.MetricType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.MetricType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullMetricType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.MetricType), nil
-}
-
 type RunnerState string
 
 const (
@@ -148,6 +105,22 @@ type Artefact struct {
 	Content   []byte
 }
 
+type Call struct {
+	ID           int64
+	RequestID    int64
+	RunnerID     int64
+	ControllerID int64
+	Time         pgtype.Timestamptz
+	DestModule   string
+	DestVerb     string
+	SourceModule string
+	SourceVerb   string
+	DurationMs   int64
+	Request      []byte
+	Response     []byte
+	Error        pgtype.Text
+}
+
 type Controller struct {
 	ID       int64
 	Key      sqltypes.Key
@@ -196,21 +169,6 @@ type IngressRoute struct {
 	DeploymentID int64
 	Module       string
 	Verb         string
-}
-
-type Metric struct {
-	ID           int64
-	RunnerID     int64
-	RequestID    int64
-	StartTime    pgtype.Timestamptz
-	EndTime      pgtype.Timestamptz
-	SourceModule string
-	SourceVerb   string
-	DestModule   string
-	DestVerb     string
-	Name         string
-	Type         MetricType
-	Value        []byte
 }
 
 type Module struct {

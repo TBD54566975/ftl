@@ -210,18 +210,20 @@ FROM rows;
 INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, error)
 VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $5, $6);
 
--- name: InsertMetricEntry :exec
-INSERT INTO metrics (runner_id, request_id, start_time, end_time, source_module, source_verb, dest_module, dest_verb, name, type,
-                     value)
-VALUES ((SELECT id FROM runners WHERE key = $1), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+-- name: InsertCallEntry :exec
+INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module, dest_verb,
+                   duration_ms, request, response, error)
+VALUES ((SELECT id FROM runners WHERE runners.key = $1), $2, (SELECT id FROM controller WHERE controller.key = $3),
+        $4, $5, $6, $7, $8, $9, $10, $11);
 
--- name: GetLatestModuleMetrics :many
-SELECT DISTINCT ON (dest_module, dest_verb, source_module, source_verb, name) r.key AS runner_key,
-                                                                              m.*
+-- name: GetModuleCalls :many
+SELECT r.key  AS runner_key,
+       conn.key AS controller_key,
+       c.*
 FROM runners r
-         JOIN metrics m ON r.id = m.runner_id
-WHERE dest_module = ANY (@modules::text[])
-ORDER BY dest_module, dest_verb, source_module, source_verb, name;
+         JOIN calls c ON r.id = c.runner_id
+         JOIN controller conn ON conn.id = conn.id
+WHERE dest_module = ANY (@modules::text[]);
 
 -- name: CreateIngressRequest :one
 INSERT INTO ingress_requests (source_addr)
