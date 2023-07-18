@@ -82,8 +82,19 @@ func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbco
 	}), nil
 }
 
-func convertModuleCalls(calls []dal.Call) []*pbconsole.Call {
-	return slices.Map(calls, func(call dal.Call) *pbconsole.Call {
+func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Request[pbconsole.GetRequestCallsRequest]) (*connect.Response[pbconsole.GetRequestCallsResponse], error) {
+	calls, err := c.dal.GetRequestCalls(ctx, req.Msg.RequestId)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return connect.NewResponse(&pbconsole.GetRequestCallsResponse{
+		Calls: convertModuleCalls(calls),
+	}), nil
+}
+
+func convertModuleCalls(calls []dal.CallEntry) []*pbconsole.Call {
+	return slices.Map(calls, func(call dal.CallEntry) *pbconsole.Call {
 		var errorMessage string
 		if call.Error != nil {
 			errorMessage = call.Error.Error()

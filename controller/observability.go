@@ -33,7 +33,7 @@ func (s *Service) recordCall(ctx context.Context, call *call) error {
 	if call.response.GetError() != nil {
 		callError = errors.New(call.response.GetError().GetMessage())
 	}
-	err := s.dal.InsertCallEntry(ctx, &dal.Call{
+	err := s.dal.InsertCallEntry(ctx, &dal.CallEntry{
 		RequestID:     call.requestID,
 		RunnerKey:     call.runnerKey,
 		ControllerKey: call.controllerKey,

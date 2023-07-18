@@ -6,6 +6,7 @@ import LogsPage from './features/log/LogsPage'
 import ModulePage from './features/modules/ModulePage'
 import ModulesPage from './features/modules/ModulesPage'
 import VerbPage from './features/verbs/VerbPage'
+import RequestPage from './features/requests/RequestPage.tsx'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path={':moduleId/verbs/:id'} element={<VerbPage />} />
           </Route>
           <Route path="logs" element={<LogsPage />} />
+          <Route path={'requests/:id'} element={<RequestPage />} />
         </Route>
         <Route path="graph" element={<GraphPage />} />
       </Routes>

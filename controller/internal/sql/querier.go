@@ -40,6 +40,7 @@ type Querier interface {
 	GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error)
 	GetModuleCalls(ctx context.Context, modules []string) ([]GetModuleCallsRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
+	GetRequestCalls(ctx context.Context, requestID int64) ([]GetRequestCallsRow, error)
 	GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)

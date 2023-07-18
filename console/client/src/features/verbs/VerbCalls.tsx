@@ -2,6 +2,7 @@ import { Call, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/consol
 import React, { useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
+import { Link } from 'react-router-dom'
 
 type Props = {
   module?: Module
@@ -26,11 +27,11 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
         <table className="mt-6 w-full text-left">
           <thead className="border-b border-white/10 text-sm leading-6 dark:text-white">
             <tr>
-              <th scope="col" className="py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8">
-                Source
-              </th>
               <th scope="col" className="hidden py-2 pl-0 pr-8 font-semibold sm:table-cell">
                 Request
+              </th>
+              <th scope="col" className="py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8">
+                Source
               </th>
               <th scope="col" className="py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20">
                 Time
@@ -52,17 +53,19 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
           <tbody className="divide-y divide-black/5 dark:divide-white/5">
             {calls.map(call => (
               <tr key={call.destModule}>
+                <td className="hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8">
+                  <div className="flex gap-x-3">
+                    <div className="font-mono text-sm leading-6 text-indigo-600 dark:text-indigo-400">
+                      <Link to={`/requests/${call.requestId.toString()}`} className="focus:outline-none">
+                        {call.requestId.toString()}
+                      </Link>
+                    </div>
+                  </div>
+                </td>
                 <td className="py-4 pl-4 pr-8 sm:pl-6 lg:pl-8">
                   <div className="flex items-center gap-x-4">
                     <div className="truncate text-sm font-medium leading-6 text-gray-700 dark:text-white">
                       {call.sourceModule.length > 0 && [call.sourceModule, call.sourceVerb].join(':')}
-                    </div>
-                  </div>
-                </td>
-                <td className="hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8">
-                  <div className="flex gap-x-3">
-                    <div className="font-mono text-sm leading-6 text-gray-500 dark:text-gray-400">
-                      {call.requestId.toString()}
                     </div>
                   </div>
                 </td>
