@@ -20,14 +20,13 @@ message Call {
   string dest_module = 8;
   string dest_verb = 9;
   int64 duration_ms = 10;
-  bytes request = 11;
-  bytes response = 12;
+  string request = 11;
+  string response = 12;
   string error = 13;
 }
 
 message Verb {
   schema.Verb verb = 1;
-  repeated Call calls = 2;
 }
 
 message Module {
@@ -42,6 +41,15 @@ message GetModulesResponse {
   repeated Module modules = 1;
 }
 
+message GetCallsRequest {
+  string module = 1;
+  string verb = 2;
+}
+
+message GetCallsResponse {
+  repeated Call calls = 1;
+}
+
 service ConsoleService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -49,4 +57,5 @@ service ConsoleService {
   }
 
   rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
+  rpc GetCalls(GetCallsRequest) returns (GetCallsResponse);
 }

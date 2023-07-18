@@ -39,6 +39,8 @@ const (
 	// ConsoleServiceGetModulesProcedure is the fully-qualified name of the ConsoleService's GetModules
 	// RPC.
 	ConsoleServiceGetModulesProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetModules"
+	// ConsoleServiceGetCallsProcedure is the fully-qualified name of the ConsoleService's GetCalls RPC.
+	ConsoleServiceGetCallsProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetCalls"
 )
 
 // ConsoleServiceClient is a client for the xyz.block.ftl.v1.console.ConsoleService service.
@@ -46,6 +48,7 @@ type ConsoleServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	GetModules(context.Context, *connect_go.Request[console.GetModulesRequest]) (*connect_go.Response[console.GetModulesResponse], error)
+	GetCalls(context.Context, *connect_go.Request[console.GetCallsRequest]) (*connect_go.Response[console.GetCallsResponse], error)
 }
 
 // NewConsoleServiceClient constructs a client for the xyz.block.ftl.v1.console.ConsoleService
@@ -69,6 +72,11 @@ func NewConsoleServiceClient(httpClient connect_go.HTTPClient, baseURL string, o
 			baseURL+ConsoleServiceGetModulesProcedure,
 			opts...,
 		),
+		getCalls: connect_go.NewClient[console.GetCallsRequest, console.GetCallsResponse](
+			httpClient,
+			baseURL+ConsoleServiceGetCallsProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -76,6 +84,7 @@ func NewConsoleServiceClient(httpClient connect_go.HTTPClient, baseURL string, o
 type consoleServiceClient struct {
 	ping       *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	getModules *connect_go.Client[console.GetModulesRequest, console.GetModulesResponse]
+	getCalls   *connect_go.Client[console.GetCallsRequest, console.GetCallsResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.console.ConsoleService.Ping.
@@ -88,12 +97,18 @@ func (c *consoleServiceClient) GetModules(ctx context.Context, req *connect_go.R
 	return c.getModules.CallUnary(ctx, req)
 }
 
+// GetCalls calls xyz.block.ftl.v1.console.ConsoleService.GetCalls.
+func (c *consoleServiceClient) GetCalls(ctx context.Context, req *connect_go.Request[console.GetCallsRequest]) (*connect_go.Response[console.GetCallsResponse], error) {
+	return c.getCalls.CallUnary(ctx, req)
+}
+
 // ConsoleServiceHandler is an implementation of the xyz.block.ftl.v1.console.ConsoleService
 // service.
 type ConsoleServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
 	GetModules(context.Context, *connect_go.Request[console.GetModulesRequest]) (*connect_go.Response[console.GetModulesResponse], error)
+	GetCalls(context.Context, *connect_go.Request[console.GetCallsRequest]) (*connect_go.Response[console.GetCallsResponse], error)
 }
 
 // NewConsoleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -114,6 +129,11 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect_go.Hand
 		svc.GetModules,
 		opts...,
 	))
+	mux.Handle(ConsoleServiceGetCallsProcedure, connect_go.NewUnaryHandler(
+		ConsoleServiceGetCallsProcedure,
+		svc.GetCalls,
+		opts...,
+	))
 	return "/xyz.block.ftl.v1.console.ConsoleService/", mux
 }
 
@@ -126,4 +146,8 @@ func (UnimplementedConsoleServiceHandler) Ping(context.Context, *connect_go.Requ
 
 func (UnimplementedConsoleServiceHandler) GetModules(context.Context, *connect_go.Request[console.GetModulesRequest]) (*connect_go.Response[console.GetModulesResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetModules is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetCalls(context.Context, *connect_go.Request[console.GetCallsRequest]) (*connect_go.Response[console.GetCallsResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetCalls is not implemented"))
 }

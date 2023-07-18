@@ -62,14 +62,14 @@ export class Call extends Message<Call> {
   durationMs = protoInt64.zero;
 
   /**
-   * @generated from field: bytes request = 11;
+   * @generated from field: string request = 11;
    */
-  request = new Uint8Array(0);
+  request = "";
 
   /**
-   * @generated from field: bytes response = 12;
+   * @generated from field: string response = 12;
    */
-  response = new Uint8Array(0);
+  response = "";
 
   /**
    * @generated from field: string error = 13;
@@ -94,8 +94,8 @@ export class Call extends Message<Call> {
     { no: 8, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 10, name: "duration_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 11, name: "request", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 12, name: "response", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 11, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 13, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
@@ -125,11 +125,6 @@ export class Verb extends Message<Verb> {
    */
   verb?: Verb$1;
 
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Call calls = 2;
-   */
-  calls: Call[] = [];
-
   constructor(data?: PartialMessage<Verb>) {
     super();
     proto3.util.initPartial(data, this);
@@ -139,7 +134,6 @@ export class Verb extends Message<Verb> {
   static readonly typeName = "xyz.block.ftl.v1.console.Verb";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "verb", kind: "message", T: Verb$1 },
-    { no: 2, name: "calls", kind: "message", T: Call, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {
@@ -279,6 +273,86 @@ export class GetModulesResponse extends Message<GetModulesResponse> {
 
   static equals(a: GetModulesResponse | PlainMessage<GetModulesResponse> | undefined, b: GetModulesResponse | PlainMessage<GetModulesResponse> | undefined): boolean {
     return proto3.util.equals(GetModulesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.GetCallsRequest
+ */
+export class GetCallsRequest extends Message<GetCallsRequest> {
+  /**
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  /**
+   * @generated from field: string verb = 2;
+   */
+  verb = "";
+
+  constructor(data?: PartialMessage<GetCallsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.GetCallsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCallsRequest {
+    return new GetCallsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCallsRequest {
+    return new GetCallsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCallsRequest {
+    return new GetCallsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCallsRequest | PlainMessage<GetCallsRequest> | undefined, b: GetCallsRequest | PlainMessage<GetCallsRequest> | undefined): boolean {
+    return proto3.util.equals(GetCallsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.GetCallsResponse
+ */
+export class GetCallsResponse extends Message<GetCallsResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Call calls = 1;
+   */
+  calls: Call[] = [];
+
+  constructor(data?: PartialMessage<GetCallsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.GetCallsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "calls", kind: "message", T: Call, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCallsResponse {
+    return new GetCallsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCallsResponse {
+    return new GetCallsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCallsResponse {
+    return new GetCallsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCallsResponse | PlainMessage<GetCallsResponse> | undefined, b: GetCallsResponse | PlainMessage<GetCallsResponse> | undefined): boolean {
+    return proto3.util.equals(GetCallsResponse, a, b);
   }
 }
 
