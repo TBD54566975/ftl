@@ -22,8 +22,9 @@ import (
 )
 
 type deployCmd struct {
-	Base  string   `help:"Base directory relative to files to upload."`
-	Files []string `arg:"" help:"Files to upload." type:"existingfile"`
+	Replicas int32    `short:"n" help:"Number of replicas to deploy." default:"1"`
+	Base     string   `help:"Base directory relative to files to upload."`
+	Files    []string `arg:"" help:"Files to upload." type:"existingfile"`
 }
 
 func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
@@ -82,7 +83,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return errors.WithStack(err)
 	}
 	logger.Infof("Created deployment %s", resp.Msg.DeploymentKey)
-	_, err = client.StartDeploy(ctx, connect.NewRequest(&ftlv1.StartDeployRequest{DeploymentKey: resp.Msg.GetDeploymentKey()}))
+	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{DeploymentKey: resp.Msg.GetDeploymentKey(), MinReplicas: d.Replicas}))
 	return errors.WithStack(err)
 }
 

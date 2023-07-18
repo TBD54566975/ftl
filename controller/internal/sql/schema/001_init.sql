@@ -23,6 +23,9 @@ CREATE TABLE deployments
 );
 
 CREATE INDEX deployments_module_id_idx ON deployments (module_id);
+-- Only allow one deployment per module.
+CREATE UNIQUE INDEX deployments_unique_idx ON deployments (module_id)
+    WHERE min_replicas > 0;
 
 CREATE TABLE artefacts
 (

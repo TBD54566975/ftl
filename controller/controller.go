@@ -228,7 +228,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, req *connect.ClientS
 	panic("unimplemented")
 }
 
-func (s *Service) StartDeploy(ctx context.Context, req *connect.Request[ftlv1.StartDeployRequest]) (response *connect.Response[ftlv1.StartDeployResponse], err error) {
+func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.UpdateDeployRequest]) (response *connect.Response[ftlv1.UpdateDeployResponse], err error) {
 	deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
@@ -242,22 +242,24 @@ func (s *Service) StartDeploy(ctx context.Context, req *connect.Request[ftlv1.St
 		return nil, errors.Wrap(err, "could not set deployment replicas")
 	}
 
-	return connect.NewResponse(&ftlv1.StartDeployResponse{}), nil
+	return connect.NewResponse(&ftlv1.UpdateDeployResponse{}), nil
 }
 
-func (s *Service) StopDeploy(ctx context.Context, req *connect.Request[ftlv1.StopDeployRequest]) (*connect.Response[ftlv1.StopDeployResponse], error) {
-	deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
+func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.ReplaceDeployRequest]) (*connect.Response[ftlv1.ReplaceDeployResponse], error) {
+	newDeploymentKey, err := model.ParseDeploymentKey(c.Msg.DeploymentKey)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
 	}
-	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, 0)
+	err = s.dal.ReplaceDeployment(ctx, newDeploymentKey, int(c.Msg.MinReplicas))
 	if err != nil {
 		if errors.Is(err, dal.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
+		} else if errors.Is(err, dal.ErrConflict) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.WithStack(err))
 		}
-		return nil, errors.Wrap(err, "could not set deployment replicas")
+		return nil, errors.Wrap(err, "could not replace deployment")
 	}
-	return connect.NewResponse(&ftlv1.StopDeployResponse{}), nil
+	return connect.NewResponse(&ftlv1.ReplaceDeployResponse{}), nil
 }
 
 func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStream[ftlv1.RunnerHeartbeat]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {

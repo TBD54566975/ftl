@@ -87,6 +87,8 @@ message CreateDeploymentRequest {
 }
 message CreateDeploymentResponse {
   string deployment_key = 1;
+  // Currently active deployment for this module, if any.
+  optional string active_deployment_key = 2;
 }
 
 message GetDeploymentArtefactsRequest {
@@ -136,16 +138,17 @@ message RunnerHeartbeat {
 
 message RegisterRunnerResponse {}
 
-message StartDeployRequest {
+message UpdateDeployRequest {
   string deployment_key = 1;
   int32 min_replicas = 2;
 }
-message StartDeployResponse {}
+message UpdateDeployResponse {}
 
-message StopDeployRequest {
+message ReplaceDeployRequest {
   string deployment_key = 1;
+  int32 min_replicas = 2;
 }
-message StopDeployResponse {}
+message ReplaceDeployResponse {}
 
 message StreamDeploymentLogsRequest {
   string deployment_key = 1;
@@ -231,11 +234,14 @@ service ControllerService {
   // every 10 seconds to maintain its heartbeat.
   rpc RegisterRunner(stream RunnerHeartbeat) returns (RegisterRunnerResponse);
 
-  // Starts a deployment.
-  rpc StartDeploy(StartDeployRequest) returns (StartDeployResponse);
+  // Update an existing deployment.
+  rpc UpdateDeploy(UpdateDeployRequest) returns (UpdateDeployResponse);
 
-  // Stop a deployment.
-  rpc StopDeploy(StopDeployRequest) returns (StopDeployResponse);
+  // Gradually replace an existing deployment with a new one.
+  //
+  // If a deployment already exists for the module of the new deployment,
+  // it will be scaled down and replaced by the new one.
+  rpc ReplaceDeploy(ReplaceDeployRequest) returns (ReplaceDeployResponse);
 
   // Stream logs from a deployment
   rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);

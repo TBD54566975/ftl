@@ -28,6 +28,7 @@ type CLI struct {
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
+	Update   updateCmd   `cmd:"" help:"Update a deployment."`
 	Kill     killCmd     `cmd:"" help:"Kill a deployment."`
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
 	Go       goCmd       `cmd:"" help:"Commands specific to Go modules."`

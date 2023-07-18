@@ -40,12 +40,28 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 		fmt.Print("]")
 		return nil
 	}
-	runnerFmt := "%-28s%-9s%-9s%-28s%s\n"
-	fmt.Printf(runnerFmt, "Runner", "State", "Language", "Deployment", "Endpoint")
-	fmt.Printf(runnerFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 27), strings.Repeat("-", 8))
+	runnerFmt := "%-28s%-9s%-9s%-9s%-28s\n"
+	fmt.Printf(runnerFmt, "Deployment", "State", "Language", "Module", "Runner")
+	fmt.Printf(runnerFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 27))
 	for _, runner := range status.Msg.Runners {
-		fmt.Printf(runnerFmt, runner.Key, strings.TrimPrefix(runner.State.String(), "RUNNER_"), runner.Language, runner.GetDeployment(), runner.Endpoint)
+		if runner.State != ftlv1.RunnerState_RUNNER_ASSIGNED && !s.All {
+			continue
+		}
+		deployment := deploymentByKey(status.Msg, runner.GetDeployment())
+		module := ""
+		if deployment != nil {
+			module = deployment.Name
+		}
+		fmt.Printf(runnerFmt, runner.GetDeployment(), strings.TrimPrefix(runner.State.String(), "RUNNER_"), runner.Language, module, runner.Key)
 	}
-	fmt.Println()
+	return nil
+}
+
+func deploymentByKey(resp *ftlv1.StatusResponse, key string) *ftlv1.StatusResponse_Deployment {
+	for _, deployment := range resp.Deployments {
+		if deployment.Key == key {
+			return deployment
+		}
+	}
 	return nil
 }

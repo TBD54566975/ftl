@@ -690,6 +690,13 @@ export class CreateDeploymentResponse extends Message<CreateDeploymentResponse> 
    */
   deploymentKey = "";
 
+  /**
+   * Currently active deployment for this module, if any.
+   *
+   * @generated from field: optional string active_deployment_key = 2;
+   */
+  activeDeploymentKey?: string;
+
   constructor(data?: PartialMessage<CreateDeploymentResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -699,6 +706,7 @@ export class CreateDeploymentResponse extends Message<CreateDeploymentResponse> 
   static readonly typeName = "xyz.block.ftl.v1.CreateDeploymentResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "active_deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateDeploymentResponse {
@@ -989,9 +997,9 @@ export class RegisterRunnerResponse extends Message<RegisterRunnerResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.StartDeployRequest
+ * @generated from message xyz.block.ftl.v1.UpdateDeployRequest
  */
-export class StartDeployRequest extends Message<StartDeployRequest> {
+export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
   /**
    * @generated from field: string deployment_key = 1;
    */
@@ -1002,131 +1010,137 @@ export class StartDeployRequest extends Message<StartDeployRequest> {
    */
   minReplicas = 0;
 
-  constructor(data?: PartialMessage<StartDeployRequest>) {
+  constructor(data?: PartialMessage<UpdateDeployRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.StartDeployRequest";
+  static readonly typeName = "xyz.block.ftl.v1.UpdateDeployRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StartDeployRequest {
-    return new StartDeployRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateDeployRequest {
+    return new UpdateDeployRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StartDeployRequest {
-    return new StartDeployRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateDeployRequest {
+    return new UpdateDeployRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StartDeployRequest {
-    return new StartDeployRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateDeployRequest {
+    return new UpdateDeployRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StartDeployRequest | PlainMessage<StartDeployRequest> | undefined, b: StartDeployRequest | PlainMessage<StartDeployRequest> | undefined): boolean {
-    return proto3.util.equals(StartDeployRequest, a, b);
+  static equals(a: UpdateDeployRequest | PlainMessage<UpdateDeployRequest> | undefined, b: UpdateDeployRequest | PlainMessage<UpdateDeployRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateDeployRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.StartDeployResponse
+ * @generated from message xyz.block.ftl.v1.UpdateDeployResponse
  */
-export class StartDeployResponse extends Message<StartDeployResponse> {
-  constructor(data?: PartialMessage<StartDeployResponse>) {
+export class UpdateDeployResponse extends Message<UpdateDeployResponse> {
+  constructor(data?: PartialMessage<UpdateDeployResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.StartDeployResponse";
+  static readonly typeName = "xyz.block.ftl.v1.UpdateDeployResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StartDeployResponse {
-    return new StartDeployResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateDeployResponse {
+    return new UpdateDeployResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StartDeployResponse {
-    return new StartDeployResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateDeployResponse {
+    return new UpdateDeployResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StartDeployResponse {
-    return new StartDeployResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateDeployResponse {
+    return new UpdateDeployResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StartDeployResponse | PlainMessage<StartDeployResponse> | undefined, b: StartDeployResponse | PlainMessage<StartDeployResponse> | undefined): boolean {
-    return proto3.util.equals(StartDeployResponse, a, b);
+  static equals(a: UpdateDeployResponse | PlainMessage<UpdateDeployResponse> | undefined, b: UpdateDeployResponse | PlainMessage<UpdateDeployResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateDeployResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.StopDeployRequest
+ * @generated from message xyz.block.ftl.v1.ReplaceDeployRequest
  */
-export class StopDeployRequest extends Message<StopDeployRequest> {
+export class ReplaceDeployRequest extends Message<ReplaceDeployRequest> {
   /**
    * @generated from field: string deployment_key = 1;
    */
   deploymentKey = "";
 
-  constructor(data?: PartialMessage<StopDeployRequest>) {
+  /**
+   * @generated from field: int32 min_replicas = 2;
+   */
+  minReplicas = 0;
+
+  constructor(data?: PartialMessage<ReplaceDeployRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.StopDeployRequest";
+  static readonly typeName = "xyz.block.ftl.v1.ReplaceDeployRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StopDeployRequest {
-    return new StopDeployRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReplaceDeployRequest {
+    return new ReplaceDeployRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StopDeployRequest {
-    return new StopDeployRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ReplaceDeployRequest {
+    return new ReplaceDeployRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StopDeployRequest {
-    return new StopDeployRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ReplaceDeployRequest {
+    return new ReplaceDeployRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StopDeployRequest | PlainMessage<StopDeployRequest> | undefined, b: StopDeployRequest | PlainMessage<StopDeployRequest> | undefined): boolean {
-    return proto3.util.equals(StopDeployRequest, a, b);
+  static equals(a: ReplaceDeployRequest | PlainMessage<ReplaceDeployRequest> | undefined, b: ReplaceDeployRequest | PlainMessage<ReplaceDeployRequest> | undefined): boolean {
+    return proto3.util.equals(ReplaceDeployRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.StopDeployResponse
+ * @generated from message xyz.block.ftl.v1.ReplaceDeployResponse
  */
-export class StopDeployResponse extends Message<StopDeployResponse> {
-  constructor(data?: PartialMessage<StopDeployResponse>) {
+export class ReplaceDeployResponse extends Message<ReplaceDeployResponse> {
+  constructor(data?: PartialMessage<ReplaceDeployResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.StopDeployResponse";
+  static readonly typeName = "xyz.block.ftl.v1.ReplaceDeployResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StopDeployResponse {
-    return new StopDeployResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReplaceDeployResponse {
+    return new ReplaceDeployResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StopDeployResponse {
-    return new StopDeployResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ReplaceDeployResponse {
+    return new ReplaceDeployResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StopDeployResponse {
-    return new StopDeployResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ReplaceDeployResponse {
+    return new ReplaceDeployResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StopDeployResponse | PlainMessage<StopDeployResponse> | undefined, b: StopDeployResponse | PlainMessage<StopDeployResponse> | undefined): boolean {
-    return proto3.util.equals(StopDeployResponse, a, b);
+  static equals(a: ReplaceDeployResponse | PlainMessage<ReplaceDeployResponse> | undefined, b: ReplaceDeployResponse | PlainMessage<ReplaceDeployResponse> | undefined): boolean {
+    return proto3.util.equals(ReplaceDeployResponse, a, b);
   }
 }
 
