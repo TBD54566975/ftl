@@ -7,6 +7,7 @@ import { modulesContext } from '../../providers/modules-provider'
 import { getCodeBlock } from '../../utils/data.utils'
 import { classNames } from '../../utils/react.utils'
 import { getCalls, getVerbCode } from './verb.utils'
+import { VerbCalls } from './VerbCalls.tsx'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
@@ -82,13 +83,8 @@ export default function VerbPage() {
           </Link>
         )),
       )}
-      <div>
-        <h2 className="min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white pt-4">
-          <div className="flex gap-x-2">
-            <span className="truncate">Metrics</span>
-          </div>
-        </h2>
-      </div>
+
+      <VerbCalls module={module} verb={verb} />
 
       <div className="flex items-center gap-x-3 pt-6">
         <h2 className="min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white">

@@ -37,18 +37,6 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		return nil, errors.WithStack(err)
 	}
 
-	moduleNames, err := slices.MapErr(deployments, func(in dal.Deployment) (string, error) {
-		return in.Module, nil
-	})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	moduleCalls, err := c.dal.GetModuleCalls(ctx, moduleNames)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
 		var verbs []*pbconsole.Verb
@@ -60,10 +48,6 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				//nolint:forcetypeassert
 				verbs = append(verbs, &pbconsole.Verb{
 					Verb: decl.ToProto().(*pschema.Verb),
-					Calls: getModuleCalls(moduleCalls[dal.ModuleCallKey{
-						Module: deployment.Module,
-						Verb:   decl.Name,
-					}]),
 				})
 			case *schema.Data:
 				//nolint:forcetypeassert
@@ -84,7 +68,21 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}), nil
 }
 
-func getModuleCalls(calls []dal.Call) []*pbconsole.Call {
+func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbconsole.GetCallsRequest]) (*connect.Response[pbconsole.GetCallsResponse], error) {
+	calls, err := c.dal.GetModuleCalls(ctx, []string{req.Msg.Module})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return connect.NewResponse(&pbconsole.GetCallsResponse{
+		Calls: convertModuleCalls(calls[dal.ModuleCallKey{
+			Module: req.Msg.Module,
+			Verb:   req.Msg.Verb,
+		}]),
+	}), nil
+}
+
+func convertModuleCalls(calls []dal.Call) []*pbconsole.Call {
 	return slices.Map(calls, func(call dal.Call) *pbconsole.Call {
 		var errorMessage string
 		if call.Error != nil {
@@ -101,8 +99,8 @@ func getModuleCalls(calls []dal.Call) []*pbconsole.Call {
 			DestModule:    call.DestVerb.Module,
 			DestVerb:      call.DestVerb.Name,
 			DurationMs:    call.Duration.Milliseconds(),
-			Request:       call.Request,
-			Response:      call.Response,
+			Request:       string(call.Request),
+			Response:      string(call.Response),
 			Error:         errorMessage,
 		}
 	})
