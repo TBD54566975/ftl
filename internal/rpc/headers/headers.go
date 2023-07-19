@@ -1,7 +1,7 @@
 package headers
 
 import (
-	"fmt"
+	"github.com/TBD54566975/ftl/common/model"
 	"net/http"
 
 	"github.com/alecthomas/errors"
@@ -31,24 +31,24 @@ func SetDirectRouted(header http.Header) {
 	header.Set(DirectRoutingHeader, "1")
 }
 
-func SetRequestKey(header http.Header, key string) {
-	header.Set(RequestIDHeader, key)
+func SetRequestKey(header http.Header, key model.IngressRequestKey) {
+	header.Set(RequestIDHeader, key.String())
 }
 
 // GetRequestKey from an incoming request.
 //
 // Will return ("", nil) if no request key is present.
-func GetRequestKey(header http.Header) (string, error) {
+func GetRequestKey(header http.Header) (model.IngressRequestKey, bool, error) {
 	keyStr := header.Get(RequestIDHeader)
 	if keyStr == "" {
-		return "", nil
+		return model.IngressRequestKey{}, false, nil
 	}
-	var key string
-	_, err := fmt.Sscanf(keyStr, "%s", &key)
+
+	var key, err = model.ParseIngressRequestKey(keyStr)
 	if err != nil {
-		return "", errors.Wrapf(err, "invalid %s header %q", RequestIDHeader, keyStr)
+		return model.IngressRequestKey{}, false, errors.WithStack(err)
 	}
-	return key, nil
+	return key, true, nil
 }
 
 // GetCallers history from an incoming request.

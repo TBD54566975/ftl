@@ -393,26 +393,29 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	route := routes[rand.Intn(len(routes))] //nolint:gosec
 	client := s.clientsForEndpoint(route.Endpoint)
 
-	// Inject the request ID if this is an ingress call.
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	logger := log.FromContext(ctx)
-	var requestKey string
+	var requestKey model.IngressRequestKey
 	if len(callers) == 0 {
-		key, err := s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
+		// Inject the request ID if this is an ingress call.
+		requestKey, err = s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		requestKey = key.String()
 		headers.SetRequestKey(req.Header(), requestKey)
 		logger.Warnf("Setting request ID %s", requestKey)
 	} else {
-		requestKey, err = headers.GetRequestKey(req.Header())
+		var ok bool
+		requestKey, ok, err = headers.GetRequestKey(req.Header())
 		if err != nil {
 			return nil, errors.WithStack(err)
+		}
+		if !ok {
+			return nil, errors.New("request Key is missing")
 		}
 		logger.Warnf("Using request ID %s", requestKey)
 	}
@@ -426,13 +429,8 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 
-	key, err := model.ParseIngressRequestKey(requestKey)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	err = s.recordCall(ctx, &call{
-		requestKey:    key,
+		requestKey:    requestKey,
 		runnerKey:     route.Runner,
 		controllerKey: s.key,
 		startTime:     start,

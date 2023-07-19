@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/common/model"
 	"net/http"
 
 	"github.com/alecthomas/errors"
@@ -54,15 +55,22 @@ func IsDirectRouted(ctx context.Context) bool {
 }
 
 // RequestKeyFromContext returns the request Key from the context, if any.
-func RequestKeyFromContext(ctx context.Context) (string, bool) {
+func RequestKeyFromContext(ctx context.Context) (model.IngressRequestKey, bool, error) {
 	value := ctx.Value(requestIDKey{})
-	key, ok := value.(string)
-	return key, ok
+	keyStr, ok := value.(string)
+	if !ok {
+		return model.IngressRequestKey{}, false, nil
+	}
+	key, err := model.ParseIngressRequestKey(keyStr)
+	if err != nil {
+		return model.IngressRequestKey{}, false, errors.Wrap(err, "invalid request Key")
+	}
+	return key, true, nil
 }
 
 // WithRequestKey adds the request Key to the context.
-func WithRequestKey(ctx context.Context, key string) context.Context {
-	return context.WithValue(ctx, requestIDKey{}, key)
+func WithRequestKey(ctx context.Context, key model.IngressRequestKey) context.Context {
+	return context.WithValue(ctx, requestIDKey{}, key.String())
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
@@ -158,8 +166,13 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if verbs, ok := VerbsFromContext(ctx); ok {
 			headers.SetCallers(header, verbs)
 		}
-		if key, ok := RequestKeyFromContext(ctx); ok {
-			headers.SetRequestKey(header, key)
+		if key, ok, err := RequestKeyFromContext(ctx); ok {
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			if ok {
+				headers.SetRequestKey(header, key)
+			}
 		}
 	} else {
 		if headers.IsDirectRouted(header) {
@@ -170,9 +183,9 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		} else { //nolint:revive
 			ctx = WithVerbs(ctx, verbs)
 		}
-		if key, err := headers.GetRequestKey(header); err != nil {
+		if key, ok, err := headers.GetRequestKey(header); err != nil {
 			return nil, errors.WithStack(err)
-		} else if key != "" {
+		} else if ok {
 			ctx = WithRequestKey(ctx, key)
 		}
 	}
