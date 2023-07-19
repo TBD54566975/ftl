@@ -53,16 +53,16 @@ func IsDirectRouted(ctx context.Context) bool {
 	return ctx.Value(ftlDirectRoutingKey{}) != nil
 }
 
-// RequestIDFromContext returns the request ID from the context, if any.
-func RequestIDFromContext(ctx context.Context) (int64, bool) {
+// RequestKeyFromContext returns the request Key from the context, if any.
+func RequestKeyFromContext(ctx context.Context) (string, bool) {
 	value := ctx.Value(requestIDKey{})
-	id, ok := value.(int64)
-	return id, ok
+	key, ok := value.(string)
+	return key, ok
 }
 
-// WithRequestID adds the request ID to the context.
-func WithRequestID(ctx context.Context, id int64) context.Context {
-	return context.WithValue(ctx, requestIDKey{}, id)
+// WithRequestKey adds the request Key to the context.
+func WithRequestKey(ctx context.Context, key string) context.Context {
+	return context.WithValue(ctx, requestIDKey{}, key)
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
@@ -158,8 +158,8 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if verbs, ok := VerbsFromContext(ctx); ok {
 			headers.SetCallers(header, verbs)
 		}
-		if id, ok := RequestIDFromContext(ctx); ok {
-			headers.SetRequestID(header, id)
+		if key, ok := RequestKeyFromContext(ctx); ok {
+			headers.SetRequestKey(header, key)
 		}
 	} else {
 		if headers.IsDirectRouted(header) {
@@ -170,10 +170,10 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		} else { //nolint:revive
 			ctx = WithVerbs(ctx, verbs)
 		}
-		if id, err := headers.GetRequestID(header); err != nil {
+		if key, err := headers.GetRequestKey(header); err != nil {
 			return nil, errors.WithStack(err)
-		} else if id != 0 {
-			ctx = WithRequestID(ctx, id)
+		} else if key != "" {
+			ctx = WithRequestKey(ctx, key)
 		}
 	}
 	return ctx, nil

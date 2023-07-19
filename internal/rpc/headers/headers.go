@@ -31,24 +31,24 @@ func SetDirectRouted(header http.Header) {
 	header.Set(DirectRoutingHeader, "1")
 }
 
-func SetRequestID(header http.Header, id int64) {
-	header.Set(RequestIDHeader, fmt.Sprintf("%d", id))
+func SetRequestKey(header http.Header, key string) {
+	header.Set(RequestIDHeader, key)
 }
 
-// GetRequestID from an incoming request.
+// GetRequestKey from an incoming request.
 //
-// Will return (0, nil) if no request ID is present.
-func GetRequestID(header http.Header) (int64, error) {
-	idStr := header.Get(RequestIDHeader)
-	if idStr == "" {
-		return 0, nil
+// Will return ("", nil) if no request key is present.
+func GetRequestKey(header http.Header) (string, error) {
+	keyStr := header.Get(RequestIDHeader)
+	if keyStr == "" {
+		return "", nil
 	}
-	var id int64
-	_, err := fmt.Sscanf(idStr, "%d", &id)
+	var key string
+	_, err := fmt.Sscanf(keyStr, "%s", &key)
 	if err != nil {
-		return 0, errors.Wrapf(err, "invalid %s header %q", RequestIDHeader, idStr)
+		return "", errors.Wrapf(err, "invalid %s header %q", RequestIDHeader, keyStr)
 	}
-	return id, nil
+	return key, nil
 }
 
 // GetCallers history from an incoming request.

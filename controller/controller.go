@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -399,18 +400,22 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 
-	var requestID int64
+	logger := log.FromContext(ctx)
+	var requestKey string
 	if len(callers) == 0 {
-		requestID, err = s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
+		requestId, err := s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		headers.SetRequestID(req.Header(), requestID)
+		requestKey = strconv.FormatInt(requestId, 10)
+		headers.SetRequestKey(req.Header(), requestKey)
+		logger.Warnf("Setting request ID %s", requestKey)
 	} else {
-		requestID, err = headers.GetRequestID(req.Header())
+		requestKey, err = headers.GetRequestKey(req.Header())
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		logger.Warnf("Using request ID %s", requestKey)
 	}
 
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
@@ -422,8 +427,12 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 
+	requestId, err := strconv.ParseInt(requestKey, 10, 64)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	err = s.recordCall(ctx, &call{
-		requestID:     requestID,
+		requestID:     requestId,
 		runnerKey:     route.Runner,
 		controllerKey: s.key,
 		startTime:     start,
