@@ -391,6 +391,8 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
+	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
+
 	routes, err := s.dal.GetRoutingTable(ctx, req.Msg.Verb.Module)
 	if err != nil {
 		if errors.Is(err, dal.ErrNotFound) {
@@ -408,7 +410,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 
 	var requestKey model.IngressRequestKey
 	if len(callers) == 0 {
-		// Inject the request ID if this is an ingress Call.
+		// Inject the request key if this is an ingress call.
 		requestKey, err = s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -425,15 +427,26 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		}
 	}
 
-	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
+	callRecord := &call{
+		requestKey:    requestKey,
+		controllerKey: s.key,
+		runnerKey:     route.Runner,
+		startTime:     start,
+		destVerb:      verbRef,
+		callers:       callers,
+		request:       req.Msg,
+	}
+
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
 
 	resp, err := client.verb.Call(ctx, req)
 	if err != nil {
+		s.recordCallError(ctx, callRecord, err)
 		return nil, errors.WithStack(err)
 	}
 
+<<<<<<< HEAD
 	err = s.recordCall(ctx, &Call{
 		requestKey:    requestKey,
 		runnerKey:     route.Runner,
@@ -445,6 +458,10 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		response:      resp.Msg,
 	})
 
+=======
+	callRecord.response = resp.Msg
+	err = s.recordCall(ctx, callRecord)
+>>>>>>> b71a577 (Add more error handling to ftl calls)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
