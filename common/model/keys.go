@@ -27,6 +27,14 @@ func ParseControllerKey(key string) (ControllerKey, error) { return parseKey[Con
 type controllerKey struct{}
 type ControllerKey = keyType[controllerKey]
 
+func NewIngressRequestKey() IngressRequestKey { return IngressRequestKey(ulid.Make()) }
+func ParseIngressRequestKey(key string) (IngressRequestKey, error) {
+	return parseKey[IngressRequestKey](key)
+}
+
+type ingressRequestKey struct{}
+type IngressRequestKey = keyType[ingressRequestKey]
+
 func parseKey[KT keyType[U], U any](key string) (KT, error) {
 	var zero KT
 	kind := kindFromType[U]()

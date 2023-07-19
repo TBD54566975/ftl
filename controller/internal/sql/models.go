@@ -160,6 +160,7 @@ type DeploymentLog struct {
 
 type IngressRequest struct {
 	ID         int64
+	Key        sqltypes.Key
 	SourceAddr string
 }
 

@@ -5,22 +5,22 @@ import { useEffect, useState } from 'react'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 
 export default function RequestPage() {
-  const { id } = useParams()
+  const { key } = useParams()
   const client = useClient(ConsoleService)
   const [calls, setCalls] = useState<Call[]>([])
 
   useEffect(() => {
     const fetchRequestCalls = async () => {
-      if (id === undefined) {
+      if (key === undefined) {
         return
       }
-      const response = await client.getRequestCalls({ requestId: BigInt(id) })
+      const response = await client.getRequestCalls({ requestKey: key })
       setCalls(response.calls)
     }
     fetchRequestCalls()
-  }, [client, id])
+  }, [client, key])
 
-  if (id === undefined) {
+  if (key === undefined) {
     return <></>
   }
 
@@ -61,7 +61,7 @@ export default function RequestPage() {
               <td className="hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8">
                 <div className="flex gap-x-3">
                   <div className="font-mono text-sm leading-6 text-gray-500 dark:text-gray-400">
-                    {call.requestId.toString()}
+                    {call.requestKey.toString()}
                   </div>
                 </div>
               </td>

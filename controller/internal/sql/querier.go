@@ -16,7 +16,7 @@ type Querier interface {
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error
-	CreateIngressRequest(ctx context.Context, sourceAddr string) (int64, error)
+	CreateIngressRequest(ctx context.Context, key sqltypes.Key, sourceAddr string) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
@@ -40,7 +40,7 @@ type Querier interface {
 	GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error)
 	GetModuleCalls(ctx context.Context, modules []string) ([]GetModuleCallsRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
-	GetRequestCalls(ctx context.Context, requestID int64) ([]GetRequestCallsRow, error)
+	GetRequestCalls(ctx context.Context, key sqltypes.Key) ([]GetRequestCallsRow, error)
 	GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)

@@ -56,8 +56,8 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
                 <td className="hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8">
                   <div className="flex gap-x-3">
                     <div className="font-mono text-sm leading-6 text-indigo-600 dark:text-indigo-400">
-                      <Link to={`/requests/${call.requestId.toString()}`} className="focus:outline-none">
-                        {call.requestId.toString()}
+                      <Link to={`/requests/${call.requestKey.toString()}`} className="focus:outline-none">
+                        {call.requestKey.toString()}
                       </Link>
                     </div>
                   </div>

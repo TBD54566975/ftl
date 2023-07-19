@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
 
@@ -403,11 +402,11 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	logger := log.FromContext(ctx)
 	var requestKey string
 	if len(callers) == 0 {
-		requestId, err := s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
+		key, err := s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		requestKey = strconv.FormatInt(requestId, 10)
+		requestKey = key.String()
 		headers.SetRequestKey(req.Header(), requestKey)
 		logger.Warnf("Setting request ID %s", requestKey)
 	} else {
@@ -427,12 +426,13 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 
-	requestId, err := strconv.ParseInt(requestKey, 10, 64)
+	key, err := model.ParseIngressRequestKey(requestKey)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	err = s.recordCall(ctx, &call{
-		requestID:     requestId,
+		requestKey:    key,
 		runnerKey:     route.Runner,
 		controllerKey: s.key,
 		startTime:     start,

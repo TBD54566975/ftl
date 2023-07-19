@@ -22,9 +22,9 @@ export class Call extends Message<Call> {
   runnerKey = "";
 
   /**
-   * @generated from field: int64 request_id = 3;
+   * @generated from field: string request_key = 3;
    */
-  requestId = protoInt64.zero;
+  requestKey = "";
 
   /**
    * @generated from field: string controller_key = 4;
@@ -86,7 +86,7 @@ export class Call extends Message<Call> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 2, name: "runner_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "request_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "controller_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 6, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -361,9 +361,9 @@ export class GetCallsResponse extends Message<GetCallsResponse> {
  */
 export class GetRequestCallsRequest extends Message<GetRequestCallsRequest> {
   /**
-   * @generated from field: int64 request_id = 1;
+   * @generated from field: string request_key = 1;
    */
-  requestId = protoInt64.zero;
+  requestKey = "";
 
   constructor(data?: PartialMessage<GetRequestCallsRequest>) {
     super();
@@ -373,7 +373,7 @@ export class GetRequestCallsRequest extends Message<GetRequestCallsRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.GetRequestCallsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "request_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRequestCallsRequest {
