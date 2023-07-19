@@ -2,11 +2,11 @@ package controller
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/common/model"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
+	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/controller/internal/dal"
 	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"

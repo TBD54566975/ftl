@@ -2,13 +2,13 @@ package rpc
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/common/model"
 	"net/http"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
 
+	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/schema"

@@ -1,12 +1,12 @@
 package headers
 
 import (
-	"github.com/TBD54566975/ftl/common/model"
 	"net/http"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 
+	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/schema"
 )
 
