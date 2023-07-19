@@ -48,15 +48,13 @@ func (t *Tx) Rollback(ctx context.Context) error {
 //	func myFunc() (err error) {
 //	  tx, err := db.Begin(ctx)
 //	  if err != nil { return err }
-//	  defer tx.CommitOrRollback(ctx, &err)()
+//	  defer tx.CommitOrRollback(ctx, &err)
 //	  ...
 //	}
-func (t *Tx) CommitOrRollback(ctx context.Context, err *error) func() {
-	return func() {
-		if *err != nil {
-			_ = t.Rollback(ctx)
-		} else {
-			*err = errors.WithStack(t.Commit(ctx))
-		}
+func (t *Tx) CommitOrRollback(ctx context.Context, err *error) {
+	if *err != nil {
+		_ = t.Rollback(ctx)
+	} else {
+		*err = errors.WithStack(t.Commit(ctx))
 	}
 }

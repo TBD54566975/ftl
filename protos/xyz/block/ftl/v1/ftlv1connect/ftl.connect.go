@@ -64,12 +64,12 @@ const (
 	// ControllerServiceRegisterRunnerProcedure is the fully-qualified name of the ControllerService's
 	// RegisterRunner RPC.
 	ControllerServiceRegisterRunnerProcedure = "/xyz.block.ftl.v1.ControllerService/RegisterRunner"
-	// ControllerServiceStartDeployProcedure is the fully-qualified name of the ControllerService's
-	// StartDeploy RPC.
-	ControllerServiceStartDeployProcedure = "/xyz.block.ftl.v1.ControllerService/StartDeploy"
-	// ControllerServiceStopDeployProcedure is the fully-qualified name of the ControllerService's
-	// StopDeploy RPC.
-	ControllerServiceStopDeployProcedure = "/xyz.block.ftl.v1.ControllerService/StopDeploy"
+	// ControllerServiceUpdateDeployProcedure is the fully-qualified name of the ControllerService's
+	// UpdateDeploy RPC.
+	ControllerServiceUpdateDeployProcedure = "/xyz.block.ftl.v1.ControllerService/UpdateDeploy"
+	// ControllerServiceReplaceDeployProcedure is the fully-qualified name of the ControllerService's
+	// ReplaceDeploy RPC.
+	ControllerServiceReplaceDeployProcedure = "/xyz.block.ftl.v1.ControllerService/ReplaceDeploy"
 	// ControllerServiceStreamDeploymentLogsProcedure is the fully-qualified name of the
 	// ControllerService's StreamDeploymentLogs RPC.
 	ControllerServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControllerService/StreamDeploymentLogs"
@@ -194,10 +194,13 @@ type ControllerServiceClient interface {
 	// Each runner issue a RegisterRunnerRequest to the ControllerService
 	// every 10 seconds to maintain its heartbeat.
 	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RunnerHeartbeat, v1.RegisterRunnerResponse]
-	// Starts a deployment.
-	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
-	// Stop a deployment.
-	StopDeploy(context.Context, *connect_go.Request[v1.StopDeployRequest]) (*connect_go.Response[v1.StopDeployResponse], error)
+	// Update an existing deployment.
+	UpdateDeploy(context.Context, *connect_go.Request[v1.UpdateDeployRequest]) (*connect_go.Response[v1.UpdateDeployResponse], error)
+	// Gradually replace an existing deployment with a new one.
+	//
+	// If a deployment already exists for the module of the new deployment,
+	// it will be scaled down and replaced by the new one.
+	ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
@@ -253,14 +256,14 @@ func NewControllerServiceClient(httpClient connect_go.HTTPClient, baseURL string
 			baseURL+ControllerServiceRegisterRunnerProcedure,
 			opts...,
 		),
-		startDeploy: connect_go.NewClient[v1.StartDeployRequest, v1.StartDeployResponse](
+		updateDeploy: connect_go.NewClient[v1.UpdateDeployRequest, v1.UpdateDeployResponse](
 			httpClient,
-			baseURL+ControllerServiceStartDeployProcedure,
+			baseURL+ControllerServiceUpdateDeployProcedure,
 			opts...,
 		),
-		stopDeploy: connect_go.NewClient[v1.StopDeployRequest, v1.StopDeployResponse](
+		replaceDeploy: connect_go.NewClient[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse](
 			httpClient,
-			baseURL+ControllerServiceStopDeployProcedure,
+			baseURL+ControllerServiceReplaceDeployProcedure,
 			opts...,
 		),
 		streamDeploymentLogs: connect_go.NewClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse](
@@ -281,8 +284,8 @@ type controllerServiceClient struct {
 	getDeployment          *connect_go.Client[v1.GetDeploymentRequest, v1.GetDeploymentResponse]
 	getDeploymentArtefacts *connect_go.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
 	registerRunner         *connect_go.Client[v1.RunnerHeartbeat, v1.RegisterRunnerResponse]
-	startDeploy            *connect_go.Client[v1.StartDeployRequest, v1.StartDeployResponse]
-	stopDeploy             *connect_go.Client[v1.StopDeployRequest, v1.StopDeployResponse]
+	updateDeploy           *connect_go.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
+	replaceDeploy          *connect_go.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
 	streamDeploymentLogs   *connect_go.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 }
 
@@ -326,14 +329,14 @@ func (c *controllerServiceClient) RegisterRunner(ctx context.Context) *connect_g
 	return c.registerRunner.CallClientStream(ctx)
 }
 
-// StartDeploy calls xyz.block.ftl.v1.ControllerService.StartDeploy.
-func (c *controllerServiceClient) StartDeploy(ctx context.Context, req *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error) {
-	return c.startDeploy.CallUnary(ctx, req)
+// UpdateDeploy calls xyz.block.ftl.v1.ControllerService.UpdateDeploy.
+func (c *controllerServiceClient) UpdateDeploy(ctx context.Context, req *connect_go.Request[v1.UpdateDeployRequest]) (*connect_go.Response[v1.UpdateDeployResponse], error) {
+	return c.updateDeploy.CallUnary(ctx, req)
 }
 
-// StopDeploy calls xyz.block.ftl.v1.ControllerService.StopDeploy.
-func (c *controllerServiceClient) StopDeploy(ctx context.Context, req *connect_go.Request[v1.StopDeployRequest]) (*connect_go.Response[v1.StopDeployResponse], error) {
-	return c.stopDeploy.CallUnary(ctx, req)
+// ReplaceDeploy calls xyz.block.ftl.v1.ControllerService.ReplaceDeploy.
+func (c *controllerServiceClient) ReplaceDeploy(ctx context.Context, req *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error) {
+	return c.replaceDeploy.CallUnary(ctx, req)
 }
 
 // StreamDeploymentLogs calls xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs.
@@ -364,10 +367,13 @@ type ControllerServiceHandler interface {
 	// Each runner issue a RegisterRunnerRequest to the ControllerService
 	// every 10 seconds to maintain its heartbeat.
 	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RunnerHeartbeat]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
-	// Starts a deployment.
-	StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error)
-	// Stop a deployment.
-	StopDeploy(context.Context, *connect_go.Request[v1.StopDeployRequest]) (*connect_go.Response[v1.StopDeployResponse], error)
+	// Update an existing deployment.
+	UpdateDeploy(context.Context, *connect_go.Request[v1.UpdateDeployRequest]) (*connect_go.Response[v1.UpdateDeployResponse], error)
+	// Gradually replace an existing deployment with a new one.
+	//
+	// If a deployment already exists for the module of the new deployment,
+	// it will be scaled down and replaced by the new one.
+	ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error)
 }
@@ -420,14 +426,14 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect_g
 		svc.RegisterRunner,
 		opts...,
 	))
-	mux.Handle(ControllerServiceStartDeployProcedure, connect_go.NewUnaryHandler(
-		ControllerServiceStartDeployProcedure,
-		svc.StartDeploy,
+	mux.Handle(ControllerServiceUpdateDeployProcedure, connect_go.NewUnaryHandler(
+		ControllerServiceUpdateDeployProcedure,
+		svc.UpdateDeploy,
 		opts...,
 	))
-	mux.Handle(ControllerServiceStopDeployProcedure, connect_go.NewUnaryHandler(
-		ControllerServiceStopDeployProcedure,
-		svc.StopDeploy,
+	mux.Handle(ControllerServiceReplaceDeployProcedure, connect_go.NewUnaryHandler(
+		ControllerServiceReplaceDeployProcedure,
+		svc.ReplaceDeploy,
 		opts...,
 	))
 	mux.Handle(ControllerServiceStreamDeploymentLogsProcedure, connect_go.NewClientStreamHandler(
@@ -473,12 +479,12 @@ func (UnimplementedControllerServiceHandler) RegisterRunner(context.Context, *co
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.RegisterRunner is not implemented"))
 }
 
-func (UnimplementedControllerServiceHandler) StartDeploy(context.Context, *connect_go.Request[v1.StartDeployRequest]) (*connect_go.Response[v1.StartDeployResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.StartDeploy is not implemented"))
+func (UnimplementedControllerServiceHandler) UpdateDeploy(context.Context, *connect_go.Request[v1.UpdateDeployRequest]) (*connect_go.Response[v1.UpdateDeployResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.UpdateDeploy is not implemented"))
 }
 
-func (UnimplementedControllerServiceHandler) StopDeploy(context.Context, *connect_go.Request[v1.StopDeployRequest]) (*connect_go.Response[v1.StopDeployResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.StopDeploy is not implemented"))
+func (UnimplementedControllerServiceHandler) ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.ReplaceDeploy is not implemented"))
 }
 
 func (UnimplementedControllerServiceHandler) StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error) {

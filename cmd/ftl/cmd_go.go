@@ -121,7 +121,7 @@ func (g *goDeployCmd) Run(ctx context.Context, client ftlv1connect.ControllerSer
 	}
 	logger.Infof("Created deployment %s", cdResp.Msg.DeploymentKey)
 
-	_, err = client.StartDeploy(ctx, connect.NewRequest(&ftlv1.StartDeployRequest{
+	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{
 		DeploymentKey: cdResp.Msg.DeploymentKey,
 		MinReplicas:   g.MinReplicas,
 	}))

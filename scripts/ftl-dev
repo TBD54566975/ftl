@@ -3,11 +3,15 @@ set -euo pipefail
 
 tmux \
   set -g mouse on \; \
-  new-session 'watchexec -r -e go -- ftl-controller --key C01H5BRT09Y07547SETZ4HWRA09' \; \
+  set -g status off \; \
+  new-session 'caddy run' \; \
+  split-window 'watchexec -r -e go -i "examples/**" -- ftl-controller --key C01H5BRT09Y07547SETZ4HWRA09 --bind http://localhost:8892' \; \
   select-layout even-vertical \; \
-  split-window 'watchexec -r -e go -- ftl-runner --key R01H5BTS6ABP1EHGZSAGJMBV50A --language go --endpoint http://localhost:8894' \; \
+  split-window 'watchexec -r -e go -i "examples/**" -- ftl-controller --key C01H5P7W7T3375PDBAQY6VS2GM7 --bind http://localhost:8891' \; \
   select-layout even-vertical \; \
-  split-window 'watchexec -r -e go -- ftl-runner --key R01H5BTSGKQ8AZ9S22N9N1SM9HV --language go --endpoint http://localhost:8895' \; \
+  split-window 'watchexec -r -e go -i "examples/**" -- ftl-runner --key R01H5BTS6ABP1EHGZSAGJMBV50A --language go --endpoint http://localhost:8894' \; \
   select-layout even-vertical \; \
-  split-window 'watchexec -e yaml -e sql -w protos/xyz/block/ftl/v1 -- make generate' \; \
+  split-window 'watchexec -r -e go -i "examples/**" -- ftl-runner --key R01H5BTSGKQ8AZ9S22N9N1SM9HV --language go --endpoint http://localhost:8895' \; \
+  select-layout even-vertical \; \
+  split-window 'watchexec -e yaml -e sql -e proto -i "examples/**" --debounce 1s -- make generate' \; \
   select-layout even-vertical

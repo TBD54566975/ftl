@@ -341,7 +341,7 @@ func (d *DAL) CreateDeployment(
 	if err != nil {
 		return model.DeploymentKey{}, errors.WithStack(err)
 	}
-	defer tx.CommitOrRollback(ctx, &err)()
+	defer tx.CommitOrRollback(ctx, &err)
 
 	// Check if the deployment already exists and if so, return it.
 	existing, err := tx.GetDeploymentsWithArtefacts(ctx,
@@ -536,6 +536,40 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	err := d.db.SetDeploymentDesiredReplicas(ctx, sqltypes.Key(key), int32(minReplicas))
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
+	}
+	return nil
+}
+
+// ReplaceDeployment replaces an old deployment of a module with a new deployment.
+func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.DeploymentKey, minReplicas int) (err error) {
+	// Start the transaction
+	tx, err := d.db.Begin(ctx)
+	if err != nil {
+		return errors.WithStack(translatePGError(err))
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+	newDeployment, err := tx.GetDeployment(ctx, sqltypes.Key(newDeploymentKey))
+	if err != nil {
+		return errors.WithStack(translatePGError(err))
+	}
+	// If there's an existing deployment, set its desired replicas to 0
+	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
+	if err == nil {
+		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Key, sqltypes.Key(newDeploymentKey), int32(minReplicas))
+		if err != nil {
+			return errors.WithStack(translatePGError(err))
+		}
+		if count == 1 {
+			return errors.Wrap(ErrConflict, "deployment already exists")
+		}
+	} else if !isNotFound(err) {
+		return errors.WithStack(translatePGError(err))
+	} else {
+		// Set the desired replicas for the new deployment
+		err = tx.SetDeploymentDesiredReplicas(ctx, sqltypes.Key(newDeploymentKey), int32(minReplicas))
+		if err != nil {
+			return errors.WithStack(translatePGError(err))
+		}
 	}
 	return nil
 }

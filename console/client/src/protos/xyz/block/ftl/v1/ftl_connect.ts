@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, StartDeployRequest, StartDeployResponse, StatusRequest, StatusResponse, StopDeployRequest, StopDeployResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -140,25 +140,28 @@ export const ControllerService = {
       kind: MethodKind.ClientStreaming,
     },
     /**
-     * Starts a deployment.
+     * Update an existing deployment.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControllerService.StartDeploy
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.UpdateDeploy
      */
-    startDeploy: {
-      name: "StartDeploy",
-      I: StartDeployRequest,
-      O: StartDeployResponse,
+    updateDeploy: {
+      name: "UpdateDeploy",
+      I: UpdateDeployRequest,
+      O: UpdateDeployResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * Stop a deployment.
+     * Gradually replace an existing deployment with a new one.
      *
-     * @generated from rpc xyz.block.ftl.v1.ControllerService.StopDeploy
+     * If a deployment already exists for the module of the new deployment,
+     * it will be scaled down and replaced by the new one.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.ReplaceDeploy
      */
-    stopDeploy: {
-      name: "StopDeploy",
-      I: StopDeployRequest,
-      O: StopDeployResponse,
+    replaceDeploy: {
+      name: "ReplaceDeploy",
+      I: ReplaceDeployRequest,
+      O: ReplaceDeployResponse,
       kind: MethodKind.Unary,
     },
     /**

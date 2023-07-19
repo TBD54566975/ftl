@@ -41,6 +41,18 @@ RETURNING id;
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
 VALUES ((SELECT id FROM deployments WHERE key = $1), $2, $3, $4);
 
+-- name: ReplaceDeployment :one
+WITH update_container AS (
+    UPDATE deployments AS d
+        SET min_replicas = update_deployments.min_replicas
+        FROM (VALUES (sqlc.arg('old_deployment')::UUID, 0),
+                     (sqlc.arg('new_deployment')::UUID, sqlc.arg('min_replicas')::INT))
+            AS update_deployments(key, min_replicas)
+        WHERE d.key = update_deployments.key
+        RETURNING 1
+)
+SELECT COUNT(*) FROM update_container;
+
 -- name: GetDeployment :one
 SELECT d.*, m.language, m.name AS module_name
 FROM deployments d
@@ -141,6 +153,14 @@ SET min_replicas = $2
 WHERE key = $1
 RETURNING 1;
 
+-- name: GetExistingDeploymentForModule :one
+SELECT d.*
+FROM deployments d
+         INNER JOIN modules m on d.module_id = m.id
+WHERE m.name = $1
+  AND min_replicas > 0
+LIMIT 1;
+
 
 -- name: GetDeploymentsNeedingReconciliation :many
 -- Get deployments that have a mismatch between the number of assigned and required replicas.
@@ -154,6 +174,7 @@ FROM deployments d
          JOIN modules m ON d.module_id = m.id
 GROUP BY d.key, d.min_replicas, m.name, m.language
 HAVING COUNT(r.id) <> d.min_replicas;
+
 
 -- name: ReserveRunner :one
 -- Find an idle runner and reserve it for the given deployment.
