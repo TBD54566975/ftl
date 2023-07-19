@@ -11,7 +11,7 @@ option java_multiple_files = true;
 message Call {
   int64 id = 1;
   string runner_key = 2;
-  int64 request_id = 3;
+  string request_key = 3;
   string controller_key = 4;
   int64 time_stamp = 5;
 
@@ -51,7 +51,7 @@ message GetCallsResponse {
 }
 
 message GetRequestCallsRequest {
-  int64 request_id = 1;
+  string request_key = 1;
 }
 
 message GetRequestCallsResponse {

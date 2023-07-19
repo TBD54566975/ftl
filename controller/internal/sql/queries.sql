@@ -234,32 +234,35 @@ VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $
 -- name: InsertCallEntry :exec
 INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module, dest_verb,
                    duration_ms, request, response, error)
-VALUES ((SELECT id FROM runners WHERE runners.key = $1), $2, (SELECT id FROM controller WHERE controller.key = $3),
+VALUES ((SELECT id FROM runners WHERE runners.key = $1),
+        (SELECT id FROM ingress_requests WHERE ingress_requests.key = $2),
+        (SELECT id FROM controller WHERE controller.key = $3),
         $4, $5, $6, $7, $8, $9, $10, $11);
 
 -- name: GetModuleCalls :many
-SELECT r.key  AS runner_key,
+SELECT r.key    AS runner_key,
        conn.key AS controller_key,
+       ir.key   AS ingress_request_key,
        c.*
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = conn.id
+         JOIN ingress_requests ir ON ir.id = ir.id
 WHERE dest_module = ANY (@modules::text[]);
 
 -- name: GetRequestCalls :many
-SELECT r.key  AS runner_key,
+SELECT r.key    AS runner_key,
        conn.key AS controller_key,
        c.*
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = conn.id
-WHERE request_id = $1
+WHERE request_id = (SELECT id FROM ingress_requests WHERE ingress_requests.key = $1)
 ORDER BY time DESC;
 
--- name: CreateIngressRequest :one
-INSERT INTO ingress_requests (source_addr)
-VALUES ($1)
-RETURNING id;
+-- name: CreateIngressRequest :exec
+INSERT INTO ingress_requests (key, source_addr)
+VALUES ($1, $2);
 
 -- name: UpsertController :one
 INSERT INTO controller (key, endpoint)

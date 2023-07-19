@@ -395,24 +395,31 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	route := routes[rand.Intn(len(routes))] //nolint:gosec
 	client := s.clientsForEndpoint(route.Endpoint)
 
-	// Inject the request ID if this is an ingress call.
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	var requestID int64
+	logger := log.FromContext(ctx)
+	var requestKey model.IngressRequestKey
 	if len(callers) == 0 {
-		requestID, err = s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
+		// Inject the request ID if this is an ingress call.
+		requestKey, err = s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		headers.SetRequestID(req.Header(), requestID)
+		headers.SetRequestKey(req.Header(), requestKey)
+		logger.Warnf("Setting request ID %s", requestKey)
 	} else {
-		requestID, err = headers.GetRequestID(req.Header())
+		var ok bool
+		requestKey, ok, err = headers.GetRequestKey(req.Header())
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		if !ok {
+			return nil, errors.New("request Key is missing")
+		}
+		logger.Warnf("Using request ID %s", requestKey)
 	}
 
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
@@ -425,7 +432,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 
 	err = s.recordCall(ctx, &call{
-		requestID:     requestID,
+		requestKey:    requestKey,
 		runnerKey:     route.Runner,
 		controllerKey: s.key,
 		startTime:     start,

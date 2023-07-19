@@ -8,6 +8,7 @@ import (
 	"github.com/bufbuild/connect-go"
 	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
 
+	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/schema"
@@ -53,16 +54,23 @@ func IsDirectRouted(ctx context.Context) bool {
 	return ctx.Value(ftlDirectRoutingKey{}) != nil
 }
 
-// RequestIDFromContext returns the request ID from the context, if any.
-func RequestIDFromContext(ctx context.Context) (int64, bool) {
+// RequestKeyFromContext returns the request Key from the context, if any.
+func RequestKeyFromContext(ctx context.Context) (model.IngressRequestKey, bool, error) {
 	value := ctx.Value(requestIDKey{})
-	id, ok := value.(int64)
-	return id, ok
+	keyStr, ok := value.(string)
+	if !ok {
+		return model.IngressRequestKey{}, false, nil
+	}
+	key, err := model.ParseIngressRequestKey(keyStr)
+	if err != nil {
+		return model.IngressRequestKey{}, false, errors.Wrap(err, "invalid request Key")
+	}
+	return key, true, nil
 }
 
-// WithRequestID adds the request ID to the context.
-func WithRequestID(ctx context.Context, id int64) context.Context {
-	return context.WithValue(ctx, requestIDKey{}, id)
+// WithRequestKey adds the request Key to the context.
+func WithRequestKey(ctx context.Context, key model.IngressRequestKey) context.Context {
+	return context.WithValue(ctx, requestIDKey{}, key.String())
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
@@ -158,8 +166,13 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if verbs, ok := VerbsFromContext(ctx); ok {
 			headers.SetCallers(header, verbs)
 		}
-		if id, ok := RequestIDFromContext(ctx); ok {
-			headers.SetRequestID(header, id)
+		if key, ok, err := RequestKeyFromContext(ctx); ok {
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			if ok {
+				headers.SetRequestKey(header, key)
+			}
 		}
 	} else {
 		if headers.IsDirectRouted(header) {
@@ -170,10 +183,10 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		} else { //nolint:revive
 			ctx = WithVerbs(ctx, verbs)
 		}
-		if id, err := headers.GetRequestID(header); err != nil {
+		if key, ok, err := headers.GetRequestKey(header); err != nil {
 			return nil, errors.WithStack(err)
-		} else if id != 0 {
-			ctx = WithRequestID(ctx, id)
+		} else if ok {
+			ctx = WithRequestKey(ctx, key)
 		}
 	}
 	return ctx, nil

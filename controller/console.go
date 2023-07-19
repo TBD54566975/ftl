@@ -6,6 +6,7 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
+	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/controller/internal/dal"
 	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -83,7 +84,11 @@ func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbco
 }
 
 func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Request[pbconsole.GetRequestCallsRequest]) (*connect.Response[pbconsole.GetRequestCallsResponse], error) {
-	calls, err := c.dal.GetRequestCalls(ctx, req.Msg.RequestId)
+	requestKey, err := model.ParseIngressRequestKey(req.Msg.RequestKey)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	calls, err := c.dal.GetRequestCalls(ctx, requestKey)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -102,7 +107,7 @@ func convertModuleCalls(calls []dal.CallEntry) []*pbconsole.Call {
 		return &pbconsole.Call{
 			Id:            call.ID,
 			RunnerKey:     call.RunnerKey.String(),
-			RequestId:     call.RequestID,
+			RequestKey:    call.RequestKey.String(),
 			ControllerKey: call.ControllerKey.String(),
 			TimeStamp:     call.Time.Unix(),
 			SourceModule:  call.SourceVerb.Module,

@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/model"
@@ -134,7 +133,7 @@ func (s ControllerState) ToProto() ftlv1.ControllerState {
 
 type CallEntry struct {
 	ID            int64
-	RequestID     int64
+	RequestKey    model.IngressRequestKey
 	RunnerKey     model.RunnerKey
 	ControllerKey model.ControllerKey
 	Time          time.Time
@@ -367,7 +366,7 @@ func (d *DAL) CreateDeployment(
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, schema.Name)
 
-	deploymentKey := ulid.Make()
+	deploymentKey := model.NewDeploymentKey()
 	// Create the deployment
 	err = tx.CreateDeployment(ctx, sqltypes.Key(deploymentKey), schema.Name, schemaBytes)
 	if err != nil {
@@ -411,7 +410,7 @@ func (d *DAL) CreateDeployment(
 		}
 	}
 
-	return model.DeploymentKey(deploymentKey), nil
+	return deploymentKey, nil
 }
 
 func (d *DAL) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {
@@ -726,9 +725,10 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	return out, nil
 }
 
-func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (int64, error) {
-	id, err := d.db.CreateIngressRequest(ctx, addr)
-	return id, errors.WithStack(err)
+func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (model.IngressRequestKey, error) {
+	key := model.NewIngressRequestKey()
+	err := d.db.CreateIngressRequest(ctx, sqltypes.Key(key), addr)
+	return key, errors.WithStack(err)
 }
 
 func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) ([]IngressRoute, error) {
@@ -762,8 +762,8 @@ func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
 	}
 	return errors.WithStack(translatePGError(d.db.InsertCallEntry(ctx, sql.InsertCallEntryParams{
 		Key:          sqltypes.Key(call.RunnerKey),
-		RequestID:    call.RequestID,
-		Key_2:        sqltypes.Key(call.ControllerKey),
+		Key_2:        sqltypes.Key(call.RequestKey),
+		Key_3:        sqltypes.Key(call.ControllerKey),
 		SourceModule: call.SourceVerb.Module,
 		SourceVerb:   call.SourceVerb.Name,
 		DestModule:   call.DestVerb.Module,
@@ -792,7 +792,7 @@ func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[ModuleC
 		}
 		out[key] = append(out[key], CallEntry{
 			ID:            call.ID,
-			RequestID:     call.RequestID,
+			RequestKey:    model.IngressRequestKey(call.IngressRequestKey),
 			RunnerKey:     model.RunnerKey(call.RunnerKey),
 			ControllerKey: model.ControllerKey(call.ControllerKey),
 			Time:          call.Time.Time,
@@ -813,8 +813,8 @@ func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[ModuleC
 	return out, nil
 }
 
-func (d *DAL) GetRequestCalls(ctx context.Context, requestID int64) ([]CallEntry, error) {
-	calls, err := d.db.GetRequestCalls(ctx, requestID)
+func (d *DAL) GetRequestCalls(ctx context.Context, requestKey model.IngressRequestKey) ([]CallEntry, error) {
+	calls, err := d.db.GetRequestCalls(ctx, sqltypes.Key(requestKey))
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
@@ -826,7 +826,7 @@ func (d *DAL) GetRequestCalls(ctx context.Context, requestID int64) ([]CallEntry
 		}
 		out = append(out, CallEntry{
 			ID:            call.ID,
-			RequestID:     call.RequestID,
+			RequestKey:    requestKey,
 			RunnerKey:     model.RunnerKey(call.RunnerKey),
 			ControllerKey: model.ControllerKey(call.ControllerKey),
 			Time:          call.Time.Time,

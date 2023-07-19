@@ -58,17 +58,14 @@ func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, module
 	return err
 }
 
-const createIngressRequest = `-- name: CreateIngressRequest :one
-INSERT INTO ingress_requests (source_addr)
-VALUES ($1)
-RETURNING id
+const createIngressRequest = `-- name: CreateIngressRequest :exec
+INSERT INTO ingress_requests (key, source_addr)
+VALUES ($1, $2)
 `
 
-func (q *Queries) CreateIngressRequest(ctx context.Context, sourceAddr string) (int64, error) {
-	row := q.db.QueryRow(ctx, createIngressRequest, sourceAddr)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+func (q *Queries) CreateIngressRequest(ctx context.Context, key sqltypes.Key, sourceAddr string) error {
+	_, err := q.db.Exec(ctx, createIngressRequest, key, sourceAddr)
+	return err
 }
 
 const createIngressRoute = `-- name: CreateIngressRoute :exec
@@ -660,31 +657,34 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path stri
 }
 
 const getModuleCalls = `-- name: GetModuleCalls :many
-SELECT r.key  AS runner_key,
+SELECT r.key    AS runner_key,
        conn.key AS controller_key,
+       ir.key   AS ingress_request_key,
        c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = conn.id
+         JOIN ingress_requests ir ON ir.id = ir.id
 WHERE dest_module = ANY ($1::text[])
 `
 
 type GetModuleCallsRow struct {
-	RunnerKey     sqltypes.Key
-	ControllerKey sqltypes.Key
-	ID            int64
-	RequestID     int64
-	RunnerID      int64
-	ControllerID  int64
-	Time          pgtype.Timestamptz
-	DestModule    string
-	DestVerb      string
-	SourceModule  string
-	SourceVerb    string
-	DurationMs    int64
-	Request       []byte
-	Response      []byte
-	Error         pgtype.Text
+	RunnerKey         sqltypes.Key
+	ControllerKey     sqltypes.Key
+	IngressRequestKey sqltypes.Key
+	ID                int64
+	RequestID         int64
+	RunnerID          int64
+	ControllerID      int64
+	Time              pgtype.Timestamptz
+	DestModule        string
+	DestVerb          string
+	SourceModule      string
+	SourceVerb        string
+	DurationMs        int64
+	Request           []byte
+	Response          []byte
+	Error             pgtype.Text
 }
 
 func (q *Queries) GetModuleCalls(ctx context.Context, modules []string) ([]GetModuleCallsRow, error) {
@@ -699,6 +699,7 @@ func (q *Queries) GetModuleCalls(ctx context.Context, modules []string) ([]GetMo
 		if err := rows.Scan(
 			&i.RunnerKey,
 			&i.ControllerKey,
+			&i.IngressRequestKey,
 			&i.ID,
 			&i.RequestID,
 			&i.RunnerID,
@@ -750,13 +751,13 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 }
 
 const getRequestCalls = `-- name: GetRequestCalls :many
-SELECT r.key  AS runner_key,
+SELECT r.key    AS runner_key,
        conn.key AS controller_key,
        c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = conn.id
-WHERE request_id = $1
+WHERE request_id = (SELECT id FROM ingress_requests WHERE ingress_requests.key = $1)
 ORDER BY time DESC
 `
 
@@ -778,8 +779,8 @@ type GetRequestCallsRow struct {
 	Error         pgtype.Text
 }
 
-func (q *Queries) GetRequestCalls(ctx context.Context, requestID int64) ([]GetRequestCallsRow, error) {
-	rows, err := q.db.Query(ctx, getRequestCalls, requestID)
+func (q *Queries) GetRequestCalls(ctx context.Context, key sqltypes.Key) ([]GetRequestCallsRow, error) {
+	rows, err := q.db.Query(ctx, getRequestCalls, key)
 	if err != nil {
 		return nil, err
 	}
@@ -902,14 +903,16 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key)
 const insertCallEntry = `-- name: InsertCallEntry :exec
 INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module, dest_verb,
                    duration_ms, request, response, error)
-VALUES ((SELECT id FROM runners WHERE runners.key = $1), $2, (SELECT id FROM controller WHERE controller.key = $3),
+VALUES ((SELECT id FROM runners WHERE runners.key = $1),
+        (SELECT id FROM ingress_requests WHERE ingress_requests.key = $2),
+        (SELECT id FROM controller WHERE controller.key = $3),
         $4, $5, $6, $7, $8, $9, $10, $11)
 `
 
 type InsertCallEntryParams struct {
 	Key          sqltypes.Key
-	RequestID    int64
 	Key_2        sqltypes.Key
+	Key_3        sqltypes.Key
 	SourceModule string
 	SourceVerb   string
 	DestModule   string
@@ -923,8 +926,8 @@ type InsertCallEntryParams struct {
 func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error {
 	_, err := q.db.Exec(ctx, insertCallEntry,
 		arg.Key,
-		arg.RequestID,
 		arg.Key_2,
+		arg.Key_3,
 		arg.SourceModule,
 		arg.SourceVerb,
 		arg.DestModule,

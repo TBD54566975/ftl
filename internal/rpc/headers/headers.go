@@ -1,12 +1,12 @@
 package headers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 
+	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/schema"
 )
 
@@ -31,24 +31,24 @@ func SetDirectRouted(header http.Header) {
 	header.Set(DirectRoutingHeader, "1")
 }
 
-func SetRequestID(header http.Header, id int64) {
-	header.Set(RequestIDHeader, fmt.Sprintf("%d", id))
+func SetRequestKey(header http.Header, key model.IngressRequestKey) {
+	header.Set(RequestIDHeader, key.String())
 }
 
-// GetRequestID from an incoming request.
+// GetRequestKey from an incoming request.
 //
-// Will return (0, nil) if no request ID is present.
-func GetRequestID(header http.Header) (int64, error) {
-	idStr := header.Get(RequestIDHeader)
-	if idStr == "" {
-		return 0, nil
+// Will return ("", nil) if no request key is present.
+func GetRequestKey(header http.Header) (model.IngressRequestKey, bool, error) {
+	keyStr := header.Get(RequestIDHeader)
+	if keyStr == "" {
+		return model.IngressRequestKey{}, false, nil
 	}
-	var id int64
-	_, err := fmt.Sscanf(idStr, "%d", &id)
+
+	var key, err = model.ParseIngressRequestKey(keyStr)
 	if err != nil {
-		return 0, errors.Wrapf(err, "invalid %s header %q", RequestIDHeader, idStr)
+		return model.IngressRequestKey{}, false, errors.WithStack(err)
 	}
-	return id, nil
+	return key, true, nil
 }
 
 // GetCallers history from an incoming request.

@@ -21,7 +21,7 @@ export default function App() {
             <Route path={':moduleId/verbs/:id'} element={<VerbPage />} />
           </Route>
           <Route path="logs" element={<LogsPage />} />
-          <Route path={'requests/:id'} element={<RequestPage />} />
+          <Route path={'requests/:key'} element={<RequestPage />} />
         </Route>
         <Route path="graph" element={<GraphPage />} />
       </Routes>

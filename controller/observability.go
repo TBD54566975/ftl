@@ -13,7 +13,7 @@ import (
 )
 
 type call struct {
-	requestID     int64
+	requestKey    model.IngressRequestKey
 	runnerKey     model.RunnerKey
 	controllerKey model.ControllerKey
 	startTime     time.Time
@@ -34,7 +34,7 @@ func (s *Service) recordCall(ctx context.Context, call *call) error {
 		callError = errors.New(call.response.GetError().GetMessage())
 	}
 	err := s.dal.InsertCallEntry(ctx, &dal.CallEntry{
-		RequestID:     call.requestID,
+		RequestKey:    call.requestKey,
 		RunnerKey:     call.runnerKey,
 		ControllerKey: call.controllerKey,
 		Duration:      time.Since(call.startTime),
