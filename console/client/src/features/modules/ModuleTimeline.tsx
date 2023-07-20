@@ -5,6 +5,7 @@ import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_co
 import { RocketLaunchIcon } from '@heroicons/react/24/solid'
 import { classNames } from '../../utils/react.utils.ts'
 import { Link } from 'react-router-dom'
+import { dateFromTimestamp } from '../../utils/date.utils.ts'
 
 type Props = {
   module?: Module
@@ -62,10 +63,10 @@ export const ModuleTimeline: React.FC<Props> = ({ module }) => {
                   ({entry.entry.value.durationMs.toString()} ms).
                 </p>
                 <time
-                  dateTime={new Date(Number(entry.timeStamp)).toLocaleString()}
+                  dateTime={dateFromTimestamp(entry.timeStamp)}
                   className="flex-none py-0.5 text-xs leading-5 text-gray-500"
                 >
-                  {new Date(Number(entry.timeStamp)).toLocaleString()}
+                  {dateFromTimestamp(entry.timeStamp)}
                 </time>
               </>
             ) : (
@@ -79,10 +80,10 @@ export const ModuleTimeline: React.FC<Props> = ({ module }) => {
                   <span className="font-medium text-gray-900 dark:text-white">{entry.entry.value?.language}</span>.
                 </p>
                 <time
-                  dateTime={new Date(Number(entry.timeStamp)).toLocaleString()}
+                  dateTime={dateFromTimestamp(entry.timeStamp)}
                   className="flex-none py-0.5 text-xs leading-5 text-gray-500"
                 >
-                  {new Date(Number(entry.timeStamp)).toLocaleString()}
+                  {dateFromTimestamp(entry.timeStamp)}
                 </time>
               </>
             )}
