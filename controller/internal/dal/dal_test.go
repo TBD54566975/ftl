@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
 	"testing"
 	"time"
 
@@ -13,20 +14,21 @@ import (
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/controller/internal/sql/sqltest"
+	"github.com/TBD54566975/ftl/internal/log"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/schema"
 )
 
 func TestDAL(t *testing.T) {
-	conn := sqltest.OpenForTesting(t)
+	logger := log.Configure(os.Stderr, log.Config{Level: log.Debug})
+	ctx := log.ContextWithLogger(context.Background(), logger)
+	conn := sqltest.OpenForTesting(ctx, t)
 	dal := New(conn)
 	assert.NotZero(t, dal)
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
 
 	var err error
-
-	ctx := context.Background()
 
 	t.Run("UpsertModule", func(t *testing.T) {
 		err = dal.UpsertModule(ctx, "go", "test")

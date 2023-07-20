@@ -21,6 +21,14 @@ func LookPath(exe string) (string, error) {
 	return path, errors.WithStack(err)
 }
 
+func Capture(ctx context.Context, dir, exe string, args ...string) ([]byte, error) {
+	cmd := Command(ctx, dir, exe, args...)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	out, err := cmd.CombinedOutput()
+	return out, errors.WithStack(err)
+}
+
 func Command(ctx context.Context, dir, exe string, args ...string) *Cmd {
 	logger := log.FromContext(ctx)
 	pgid, err := syscall.Getpgid(0)

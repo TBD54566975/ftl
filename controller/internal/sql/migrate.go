@@ -4,10 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"os"
+	"strings"
 
 	"github.com/alecthomas/errors"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
-	"github.com/pressly/goose/v3"
+
+	"github.com/TBD54566975/ftl/internal/exec"
 )
 
 //go:embed schema/*.sql
@@ -20,9 +23,14 @@ func Migrate(ctx context.Context, dsn string) error {
 		return errors.Wrap(err, "failed to connect to database")
 	}
 	defer conn.Close()
-	goose.SetBaseFS(migrations)
-	goose.SetLogger(goose.NopLogger())
-	err = goose.Up(conn, "schema")
+	output, err := exec.Capture(ctx, ".", "git", "rev-parse", "--show-toplevel")
+	if err != nil {
+		return errors.Wrap(err, "failed to find git root")
+	}
+	cmd := exec.Command(ctx, strings.TrimSpace(string(output)), "dbmate", "--url="+dsn, "--migrations-dir=controller/internal/sql/schema", "up")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, "failed to run migrations")
 	}

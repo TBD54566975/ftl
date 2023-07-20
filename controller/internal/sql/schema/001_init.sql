@@ -1,4 +1,4 @@
--- +goose Up
+-- migrate:up
 CREATE
     EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -153,3 +153,5 @@ CREATE INDEX calls_source_module_idx ON calls (source_module);
 CREATE INDEX calls_source_verb_idx ON calls (source_verb);
 CREATE INDEX calls_dest_module_idx ON calls (dest_module);
 CREATE INDEX calls_dest_verb_idx ON calls (dest_verb);
+
+-- migrate:down

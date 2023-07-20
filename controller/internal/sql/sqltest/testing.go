@@ -15,9 +15,9 @@ import (
 
 // OpenForTesting opens a database connection for testing, recreating the
 // database beforehand.
-func OpenForTesting(t testing.TB) sql.DBI {
+func OpenForTesting(ctx context.Context, t testing.TB) sql.DBI {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	// Acquire lock for this DB.
 	lockPath := filepath.Join(os.TempDir(), "ftl-db-test.lock")
