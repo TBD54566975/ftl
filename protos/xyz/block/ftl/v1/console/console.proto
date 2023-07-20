@@ -25,6 +25,21 @@ message Call {
   string error = 13;
 }
 
+message Deployment {
+  string key = 1;
+  string language = 2;
+  string name = 3;
+  int32 min_replicas = 4;
+}
+
+message TimelineEntry {
+  int64 time_stamp = 1;
+  oneof entry {
+    Call call = 2;
+    Deployment deployment = 3;
+  }
+}
+
 message Verb {
   schema.Verb verb = 1;
 }
@@ -58,6 +73,14 @@ message GetRequestCallsResponse {
   repeated Call calls = 1;
 }
 
+message GetTimelineRequest {
+  string module = 1;
+}
+
+message GetTimelineResponse {
+  repeated TimelineEntry entries = 1;
+}
+
 service ConsoleService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -67,4 +90,5 @@ service ConsoleService {
   rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
   rpc GetCalls(GetCallsRequest) returns (GetCallsResponse);
   rpc GetRequestCalls(GetRequestCallsRequest) returns (GetRequestCallsResponse);
+  rpc GetTimeline(GetTimelineRequest) returns (GetTimelineResponse);
 }

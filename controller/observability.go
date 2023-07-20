@@ -12,7 +12,7 @@ import (
 	"github.com/TBD54566975/ftl/schema"
 )
 
-type call struct {
+type Call struct {
 	requestKey    model.IngressRequestKey
 	runnerKey     model.RunnerKey
 	controllerKey model.ControllerKey
@@ -23,7 +23,7 @@ type call struct {
 	response      *ftlv1.CallResponse
 }
 
-func (s *Service) recordCall(ctx context.Context, call *call) error {
+func (s *Service) recordCall(ctx context.Context, call *Call) error {
 	sourceVerb := schema.VerbRef{}
 	if len(call.callers) > 0 {
 		sourceVerb = *call.callers[0]

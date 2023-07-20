@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Link } from 'react-router-dom'
+import { dateFromTimestamp } from '../../utils/date.utils.ts'
 
 type Props = {
   module?: Module
@@ -72,7 +73,7 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
                 <td className="hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8">
                   <div className="flex gap-x-3">
                     <div className="font-mono text-sm leading-6 text-gray-500 dark:text-gray-400">
-                      {new Date(Number(call.timeStamp)).toLocaleString()}
+                      {dateFromTimestamp(call.timeStamp)}
                     </div>
                   </div>
                 </td>

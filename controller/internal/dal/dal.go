@@ -151,6 +151,7 @@ type Deployment struct {
 	Module      string
 	MinReplicas int
 	Schema      *schema.Module
+	CreatedAt   time.Time
 }
 
 type Controller struct {
@@ -613,6 +614,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 			Language:    in.Language,
 			MinReplicas: int(in.MinReplicas),
 			Schema:      modelSchema,
+			CreatedAt:   in.CreatedAt.Time,
 		}, nil
 	})
 

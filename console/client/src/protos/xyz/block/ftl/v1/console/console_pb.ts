@@ -117,6 +117,117 @@ export class Call extends Message<Call> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.console.Deployment
+ */
+export class Deployment extends Message<Deployment> {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key = "";
+
+  /**
+   * @generated from field: string language = 2;
+   */
+  language = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: int32 min_replicas = 4;
+   */
+  minReplicas = 0;
+
+  constructor(data?: PartialMessage<Deployment>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Deployment";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Deployment {
+    return new Deployment().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Deployment {
+    return new Deployment().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Deployment {
+    return new Deployment().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Deployment | PlainMessage<Deployment> | undefined, b: Deployment | PlainMessage<Deployment> | undefined): boolean {
+    return proto3.util.equals(Deployment, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.TimelineEntry
+ */
+export class TimelineEntry extends Message<TimelineEntry> {
+  /**
+   * @generated from field: int64 time_stamp = 1;
+   */
+  timeStamp = protoInt64.zero;
+
+  /**
+   * @generated from oneof xyz.block.ftl.v1.console.TimelineEntry.entry
+   */
+  entry: {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.Call call = 2;
+     */
+    value: Call;
+    case: "call";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.Deployment deployment = 3;
+     */
+    value: Deployment;
+    case: "deployment";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<TimelineEntry>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.TimelineEntry";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 2, name: "call", kind: "message", T: Call, oneof: "entry" },
+    { no: 3, name: "deployment", kind: "message", T: Deployment, oneof: "entry" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineEntry {
+    return new TimelineEntry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineEntry {
+    return new TimelineEntry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineEntry {
+    return new TimelineEntry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TimelineEntry | PlainMessage<TimelineEntry> | undefined, b: TimelineEntry | PlainMessage<TimelineEntry> | undefined): boolean {
+    return proto3.util.equals(TimelineEntry, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.console.Verb
  */
 export class Verb extends Message<Verb> {
@@ -427,6 +538,80 @@ export class GetRequestCallsResponse extends Message<GetRequestCallsResponse> {
 
   static equals(a: GetRequestCallsResponse | PlainMessage<GetRequestCallsResponse> | undefined, b: GetRequestCallsResponse | PlainMessage<GetRequestCallsResponse> | undefined): boolean {
     return proto3.util.equals(GetRequestCallsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.GetTimelineRequest
+ */
+export class GetTimelineRequest extends Message<GetTimelineRequest> {
+  /**
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<GetTimelineRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.GetTimelineRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTimelineRequest {
+    return new GetTimelineRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetTimelineRequest {
+    return new GetTimelineRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetTimelineRequest {
+    return new GetTimelineRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetTimelineRequest | PlainMessage<GetTimelineRequest> | undefined, b: GetTimelineRequest | PlainMessage<GetTimelineRequest> | undefined): boolean {
+    return proto3.util.equals(GetTimelineRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.GetTimelineResponse
+ */
+export class GetTimelineResponse extends Message<GetTimelineResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.TimelineEntry entries = 1;
+   */
+  entries: TimelineEntry[] = [];
+
+  constructor(data?: PartialMessage<GetTimelineResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.GetTimelineResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "entries", kind: "message", T: TimelineEntry, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTimelineResponse {
+    return new GetTimelineResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetTimelineResponse {
+    return new GetTimelineResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetTimelineResponse {
+    return new GetTimelineResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined, b: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined): boolean {
+    return proto3.util.equals(GetTimelineResponse, a, b);
   }
 }
 
