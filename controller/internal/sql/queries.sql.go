@@ -70,7 +70,7 @@ func (q *Queries) CreateIngressRequest(ctx context.Context, key sqltypes.Key, so
 
 const createIngressRoute = `-- name: CreateIngressRoute :exec
 INSERT INTO ingress_routes (deployment_id, module, verb, method, path)
-    VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5)
+VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5)
 `
 
 type CreateIngressRouteParams struct {
@@ -184,7 +184,7 @@ SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
 FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
 WHERE $1::bool = true
-    OR d.min_replicas > 0
+   OR d.min_replicas > 0
 `
 
 type GetAllIngressRoutesRow struct {
@@ -657,14 +657,14 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path stri
 }
 
 const getModuleCalls = `-- name: GetModuleCalls :many
-SELECT r.key    AS runner_key,
-       conn.key AS controller_key,
-       ir.key   AS ingress_request_key,
-       c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
+SELECT DISTINCT r.key    AS runner_key,
+                conn.key AS controller_key,
+                ir.key   AS ingress_request_key,
+                c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.id = conn.id
-         JOIN ingress_requests ir ON ir.id = ir.id
+         JOIN controller conn ON conn.id = c.controller_id
+         JOIN ingress_requests ir ON ir.id = c.request_id
 WHERE dest_module = ANY ($1::text[])
 `
 
@@ -751,12 +751,12 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 }
 
 const getRequestCalls = `-- name: GetRequestCalls :many
-SELECT r.key    AS runner_key,
+SELECT DISTINCT r.key    AS runner_key,
        conn.key AS controller_key,
        c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.id = conn.id
+         JOIN controller conn ON conn.id = c.controller_id
 WHERE request_id = (SELECT id FROM ingress_requests WHERE ingress_requests.key = $1)
 ORDER BY time DESC
 `
@@ -1009,9 +1009,9 @@ WITH update_container AS (
                      ($2::UUID, $3::INT))
             AS update_deployments(key, min_replicas)
         WHERE d.key = update_deployments.key
-        RETURNING 1
-)
-SELECT COUNT(*) FROM update_container
+        RETURNING 1)
+SELECT COUNT(*)
+FROM update_container
 `
 
 func (q *Queries) ReplaceDeployment(ctx context.Context, oldDeployment sqltypes.Key, newDeployment sqltypes.Key, minReplicas int32) (int64, error) {

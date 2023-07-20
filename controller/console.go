@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
 
@@ -74,11 +73,11 @@ func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbco
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-
+	
 	return connect.NewResponse(&pbconsole.GetCallsResponse{
-		Calls: convertModuleCalls(calls[dal.ModuleCallKey{
+		Calls: convertModuleCalls(calls[schema.VerbRef{
 			Module: req.Msg.Module,
-			Verb:   req.Msg.Verb,
+			Name:   req.Msg.Verb,
 		}]),
 	}), nil
 }
