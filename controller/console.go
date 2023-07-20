@@ -2,9 +2,10 @@ package controller
 
 import (
 	"context"
+	"sort"
+
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
-	"sort"
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/controller/internal/dal"
