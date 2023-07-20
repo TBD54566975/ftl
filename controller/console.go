@@ -2,9 +2,9 @@ package controller
 
 import (
 	"context"
-
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+	"sort"
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/controller/internal/dal"
@@ -95,6 +95,60 @@ func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Reque
 
 	return connect.NewResponse(&pbconsole.GetRequestCallsResponse{
 		Calls: convertModuleCalls(calls),
+	}), nil
+}
+
+type ByTimeStamp []*pbconsole.TimelineEntry
+
+func (a ByTimeStamp) Len() int           { return len(a) }
+func (a ByTimeStamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByTimeStamp) Less(i, j int) bool { return a[i].TimeStamp < a[j].TimeStamp }
+
+func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[pbconsole.GetTimelineRequest]) (*connect.Response[pbconsole.GetTimelineResponse], error) {
+	var timelineEntries []*pbconsole.TimelineEntry
+
+	dbCalls, err := c.dal.GetModuleCalls(ctx, []string{req.Msg.Module})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	for _, callEntries := range dbCalls {
+		calls := convertModuleCalls(callEntries)
+		for _, call := range calls {
+			timelineEntries = append(timelineEntries, &pbconsole.TimelineEntry{
+				TimeStamp: call.TimeStamp,
+				Entry: &pbconsole.TimelineEntry_Call{
+					Call: call,
+				},
+			})
+		}
+	}
+
+	deployments, err := c.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	for _, deployment := range deployments {
+		if deployment.Module == req.Msg.Module {
+			timelineEntries = append(timelineEntries, &pbconsole.TimelineEntry{
+				TimeStamp: deployment.CreatedAt.Unix(),
+				Entry: &pbconsole.TimelineEntry_Deployment{
+					Deployment: &pbconsole.Deployment{
+						Key:         deployment.Key.String(),
+						Language:    deployment.Language,
+						Name:        deployment.Module,
+						MinReplicas: int32(deployment.MinReplicas),
+					},
+				},
+			})
+		}
+	}
+
+	sort.Sort(ByTimeStamp(timelineEntries))
+
+	return connect.NewResponse(&pbconsole.GetTimelineResponse{
+		Entries: timelineEntries,
 	}), nil
 }
 

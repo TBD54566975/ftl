@@ -400,16 +400,14 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 
-	logger := log.FromContext(ctx)
 	var requestKey model.IngressRequestKey
 	if len(callers) == 0 {
-		// Inject the request ID if this is an ingress call.
+		// Inject the request ID if this is an ingress Call.
 		requestKey, err = s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 		headers.SetRequestKey(req.Header(), requestKey)
-		logger.Warnf("Setting request ID %s", requestKey)
 	} else {
 		var ok bool
 		requestKey, ok, err = headers.GetRequestKey(req.Header())
@@ -419,7 +417,6 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		if !ok {
 			return nil, errors.New("request Key is missing")
 		}
-		logger.Warnf("Using request ID %s", requestKey)
 	}
 
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
@@ -431,7 +428,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 
-	err = s.recordCall(ctx, &call{
+	err = s.recordCall(ctx, &Call{
 		requestKey:    requestKey,
 		runnerKey:     route.Runner,
 		controllerKey: s.key,
@@ -650,7 +647,7 @@ func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error 
 }
 
 func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment) (client clients, err error) {
-	// A timeout context applied to the transaction and the Runner.Reserve() call.
+	// A timeout context applied to the transaction and the Runner.Reserve() Call.
 	reservationCtx, cancel := context.WithTimeout(ctx, s.deploymentReservationTimeout)
 	defer cancel()
 	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Language, reconcile.Key, s.deploymentReservationTimeout)
