@@ -49,9 +49,9 @@ WITH update_container AS (
                      (sqlc.arg('new_deployment')::UUID, sqlc.arg('min_replicas')::INT))
             AS update_deployments(key, min_replicas)
         WHERE d.key = update_deployments.key
-        RETURNING 1
-)
-SELECT COUNT(*) FROM update_container;
+        RETURNING 1)
+SELECT COUNT(*)
+FROM update_container;
 
 -- name: GetDeployment :one
 SELECT d.*, m.language, m.name AS module_name
@@ -240,23 +240,23 @@ VALUES ((SELECT id FROM runners WHERE runners.key = $1),
         $4, $5, $6, $7, $8, $9, $10, $11);
 
 -- name: GetModuleCalls :many
-SELECT r.key    AS runner_key,
-       conn.key AS controller_key,
-       ir.key   AS ingress_request_key,
-       c.*
+SELECT DISTINCT r.key    AS runner_key,
+                conn.key AS controller_key,
+                ir.key   AS ingress_request_key,
+                c.*
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.id = conn.id
-         JOIN ingress_requests ir ON ir.id = ir.id
+         JOIN controller conn ON conn.id = c.controller_id
+         JOIN ingress_requests ir ON ir.id = c.request_id
 WHERE dest_module = ANY (@modules::text[]);
 
 -- name: GetRequestCalls :many
-SELECT r.key    AS runner_key,
+SELECT DISTINCT r.key    AS runner_key,
        conn.key AS controller_key,
        c.*
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.id = conn.id
+         JOIN controller conn ON conn.id = c.controller_id
 WHERE request_id = (SELECT id FROM ingress_requests WHERE ingress_requests.key = $1)
 ORDER BY time DESC;
 
@@ -291,7 +291,7 @@ ORDER BY c.key;
 
 -- name: CreateIngressRoute :exec
 INSERT INTO ingress_routes (deployment_id, module, verb, method, path)
-    VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5);
+VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5);
 
 -- name: GetIngressRoutes :many
 -- Get the runner endpoints corresponding to the given ingress route.
@@ -307,4 +307,4 @@ SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
 FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
 WHERE sqlc.arg('all')::bool = true
-    OR d.min_replicas > 0;
+   OR d.min_replicas > 0;

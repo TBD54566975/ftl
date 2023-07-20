@@ -145,11 +145,6 @@ type CallEntry struct {
 	Error         error
 }
 
-type ModuleCallKey struct {
-	Module string
-	Verb   string
-}
-
 type Deployment struct {
 	Key         model.DeploymentKey
 	Language    string
@@ -775,16 +770,17 @@ func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
 	})))
 }
 
-func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[ModuleCallKey][]CallEntry, error) {
+func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.VerbRef][]CallEntry, error) {
 	calls, err := d.db.GetModuleCalls(ctx, modules)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	out := map[ModuleCallKey][]CallEntry{}
+
+	out := map[schema.VerbRef][]CallEntry{}
 	for _, call := range calls {
-		key := ModuleCallKey{
+		key := schema.VerbRef{
 			Module: call.DestModule,
-			Verb:   call.DestVerb,
+			Name:   call.DestVerb,
 		}
 		var callError error
 		if call.Error.Valid {

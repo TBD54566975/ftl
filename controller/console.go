@@ -76,9 +76,9 @@ func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbco
 	}
 
 	return connect.NewResponse(&pbconsole.GetCallsResponse{
-		Calls: convertModuleCalls(calls[dal.ModuleCallKey{
+		Calls: convertModuleCalls(calls[schema.VerbRef{
 			Module: req.Msg.Module,
-			Verb:   req.Msg.Verb,
+			Name:   req.Msg.Verb,
 		}]),
 	}), nil
 }
