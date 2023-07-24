@@ -27,7 +27,7 @@ func TestCodegen(t *testing.T) {
 		}`
 	s, err := schema.ParseString("", module)
 	assert.NoError(t, err)
-	err = GenerateExternalModule(w, s.Modules[0])
+	err = ExternalModule(w, s.Modules[0])
 	assert.NoError(t, err)
 	expected := `//ftl:module basket
 package basket

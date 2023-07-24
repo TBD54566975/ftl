@@ -19,6 +19,6 @@ var mainTmpl = template.Must(template.New("main.go.tmpl").
 	}).
 	Parse(mainTmplSource))
 
-func GenerateMain(w io.Writer, module *schema.Module) error {
+func Main(w io.Writer, module *schema.Module) error {
 	return errors.WithStack(mainTmpl.Execute(w, module))
 }

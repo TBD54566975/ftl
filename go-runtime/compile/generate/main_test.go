@@ -11,7 +11,7 @@ import (
 
 func TestGenerateMain(t *testing.T) {
 	w := &strings.Builder{}
-	err := GenerateMain(w, &schema.Module{
+	err := Main(w, &schema.Module{
 		Name: "echo",
 		Decls: []schema.Decl{
 			&schema.Verb{Name: "echo", Metadata: []schema.Metadata{

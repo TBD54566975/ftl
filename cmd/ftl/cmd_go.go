@@ -57,7 +57,7 @@ func (g *goGenerateCmd) Run() error {
 		return errors.WithStack(err)
 	}
 	for _, module := range s.Modules {
-		if err := generate.GenerateExternalModule(os.Stdout, module); err != nil {
+		if err := generate.ExternalModule(os.Stdout, module); err != nil {
 			return errors.WithStack(err)
 		}
 	}

@@ -51,8 +51,8 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 	}).
 	Parse(moduleTmplSource))
 
-// GenerateExternalModule Go stubs for the given module.
-func GenerateExternalModule(w io.Writer, module *schema.Module) error {
+// ExternalModule Go stubs for the given module.
+func ExternalModule(w io.Writer, module *schema.Module) error {
 	return errors.WithStack(moduleTmpl.Execute(w, module))
 }
 
