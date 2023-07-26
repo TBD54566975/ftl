@@ -706,24 +706,6 @@ func (s *Service) heartbeatController(ctx context.Context, addr *url.URL) {
 
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
 	moduleSchemas := map[string]schema.Module{}
-	deployments, err := s.dal.GetActiveDeployments(ctx)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	for i, deployment := range deployments {
-		moduleSchemas[deployment.Schema.Name] = *deployment.Schema
-		//nolint:forcetypeassert
-		err := sendChange(&ftlv1.PullSchemaResponse{
-			DeploymentKey: deployment.Key.String(),
-			Schema:        deployment.Schema.ToProto().(*pschema.Module),
-			More:          i < len(deployments)-1,
-			ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
-		})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-	}
 
 	for {
 		dbDeployments := map[string]dal.Deployment{}
@@ -756,21 +738,16 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 			moduleSchemas[deployment.Schema.Name] = *deployment.Schema
 		}
 
-		var keysToRemove []string
 		for name, moduleSchema := range moduleSchemas {
 			if dbDeployment, ok := dbDeployments[name]; !ok {
-				keysToRemove = append(keysToRemove, name)
 				//nolint:forcetypeassert
 				changesToSend = append(changesToSend, &ftlv1.PullSchemaResponse{
 					DeploymentKey: dbDeployment.Key.String(),
 					Schema:        moduleSchema.ToProto().(*pschema.Module),
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
 				})
+				delete(moduleSchemas, name)
 			}
-		}
-
-		for _, key := range keysToRemove {
-			delete(moduleSchemas, key)
 		}
 
 		for i, change := range changesToSend {
