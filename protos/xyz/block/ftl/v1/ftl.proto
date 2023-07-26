@@ -51,12 +51,20 @@ service VerbService {
   rpc Call(CallRequest) returns (CallResponse);
 }
 
+enum DeploymentChangeType {
+  DEPLOYMENT_ADDED = 0;
+  DEPLOYMENT_REMOVED = 1;
+  DEPLOYMENT_CHANGED = 2;
+}
+
 message PullSchemaRequest {}
 message PullSchemaResponse {
-  schema.Module schema = 1;
+  string deployment_key = 1;
+  schema.Module schema = 2;
   // If true, there are more schema changes immediately following this one.
   // If false, there still may be more schema changes in the future.
-  bool more = 2;
+  bool more = 3;
+  DeploymentChangeType change_type = 4;
 }
 
 message GetArtefactDiffsRequest {
@@ -247,8 +255,7 @@ service ControllerService {
   rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);
 
   // Pull schema changes from the Control Plane.
-  // TODO(aat): Implement this.
-  //  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
+  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
 }
 
 message DeployRequest {
