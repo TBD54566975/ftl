@@ -91,7 +91,7 @@ func Compile(ctx context.Context, config Config) (*model.Deployment, error) {
 
 func generateBuildContext(buildDir string, goModConfig generate.GoModConfig, allSchema *schema.Schema, config Config) error {
 	mainModuleSchema := allSchema.Modules[0]
-	err := generate.File(filepath.Join(buildDir, "main.go"), generate.GenerateMain, mainModuleSchema)
+	err := generate.File(filepath.Join(buildDir, "main.go"), generate.Main, mainModuleSchema)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -102,7 +102,7 @@ func generateBuildContext(buildDir string, goModConfig generate.GoModConfig, all
 
 	for _, module := range allSchema.Modules[1:] {
 		moduleDir := filepath.Join(buildDir, "_modules", module.Name)
-		err = generate.File(filepath.Join(moduleDir, "main.go"), generate.GenerateExternalModule, module)
+		err = generate.File(filepath.Join(moduleDir, "main.go"), generate.ExternalModule, module)
 		if err != nil {
 			return errors.WithStack(err)
 		}

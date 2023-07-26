@@ -6,7 +6,6 @@ on:
 name: CI
 jobs:
   kotlin:
-    if: false
     name: Kotlin
     runs-on: ubuntu-latest
     steps:
@@ -15,8 +14,8 @@ jobs:
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Kotlin Test
-        working-directory: drive-kotlin
-        run: mvn --no-transfer-progress --batch-mode test
+        working-directory: kotlin-runtime
+        run: gradle test
   test:
     name: Test
     runs-on: ubuntu-latest

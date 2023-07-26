@@ -9,9 +9,9 @@ tmux \
   select-layout even-vertical \; \
   split-window 'watchexec -r -e go -i "examples/**" -- ftl-controller --key C01H5P7W7T3375PDBAQY6VS2GM7 --bind http://localhost:8891 || read' \; \
   select-layout even-vertical \; \
-  split-window 'watchexec -r -e go -i "examples/**" -- ftl-runner --key R01H5BTS6ABP1EHGZSAGJMBV50A --language go --endpoint http://localhost:8894 || read' \; \
+  split-window 'watchexec -r -e go -i "examples/**" -- ftl-runner --key R01H5BTS6ABP1EHGZSAGJMBV50A --language go --bind http://localhost:8894 || read' \; \
   select-layout even-vertical \; \
-  split-window 'watchexec -r -e go -i "examples/**" -- ftl-runner --key R01H5BTSGKQ8AZ9S22N9N1SM9HV --language go --endpoint http://localhost:8895 || read' \; \
+  split-window 'watchexec -r -e go -i "examples/**" -- ftl-runner --key R01H5BTSGKQ8AZ9S22N9N1SM9HV --language go --bind http://localhost:8895 || read' \; \
   select-layout even-vertical \; \
   split-window 'watchexec -e yaml -e sql -e proto -i "examples/**" --debounce 1s -- make generate' \; \
   select-layout even-vertical

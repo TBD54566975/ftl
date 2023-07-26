@@ -1,8 +1,0 @@
-HOTSWAP AGENT: 16:53:48.069 WARNING (org.hotswap.agent.watch.nio.WatcherNIO2) - Watcher on /Users/dhanji/src/ftl/drive-kotlin/target/classes/META-INF not valid, removing path=
-HOTSWAP AGENT: 16:53:48.696 RELOAD (org.hotswap.agent.config.PluginManager) - Reloading classes [com.squareup.ftldemo.NotifyVerb, com.squareup.ftldemo.NotifyRequest, com.squareup.ftldemo.NotifyResponse] (autoHotswap)
-HOTSWAP AGENT: 16:53:48.705 ERROR (org.hotswap.agent.plugin.jdk.JdkPlugin) - classReload() exception No such field java.beans.Introspector.declaredMethodCache on null.
-HOTSWAP AGENT: 16:53:48.708 ERROR (org.hotswap.agent.plugin.jdk.JdkPlugin) - classReload() exception class java.io.ObjectStreamClass$Caches$1 cannot be cast to class java.util.Map (java.io.ObjectStreamClass$Caches$1 and java.util.Map are in module java.base of loader 'bootstrap').
-HOTSWAP AGENT: 16:53:48.713 ERROR (org.hotswap.agent.plugin.jdk.JdkPlugin) - classReload() exception No such field java.beans.Introspector.declaredMethodCache on null.
-HOTSWAP AGENT: 16:53:48.714 ERROR (org.hotswap.agent.plugin.jdk.JdkPlugin) - classReload() exception class java.io.ObjectStreamClass$Caches$1 cannot be cast to class java.util.Map (java.io.ObjectStreamClass$Caches$1 and java.util.Map are in module java.base of loader 'bootstrap').
-HOTSWAP AGENT: 16:53:48.716 ERROR (org.hotswap.agent.plugin.jdk.JdkPlugin) - classReload() exception No such field java.beans.Introspector.declaredMethodCache on null.
-HOTSWAP AGENT: 16:53:48.717 ERROR (org.hotswap.agent.plugin.jdk.JdkPlugin) - classReload() exception class java.io.ObjectStreamClass$Caches$1 cannot be cast to class java.util.Map (java.io.ObjectStreamClass$Caches$1 and java.util.Map are in module java.base of loader 'bootstrap').

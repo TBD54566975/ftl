@@ -32,7 +32,7 @@ import (
 )
 
 type Config struct {
-	Endpoint           *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
+	Bind               *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
 	Key                model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" default:"R00000000000000000000000000"`
 	ControllerEndpoint *url.URL        `name:"ftl-endpoint" help:"Control Plane endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
 	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
@@ -52,7 +52,7 @@ func Start(ctx context.Context, config Config) error {
 		return errors.Wrap(err, "failed to create deployment directory")
 	}
 	logger.Infof("Using FTL endpoint: %s", config.ControllerEndpoint)
-	logger.Infof("Listening on %s", config.Endpoint)
+	logger.Infof("Listening on %s", config.Bind)
 
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
@@ -71,7 +71,7 @@ func Start(ctx context.Context, config Config) error {
 
 	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
 
-	return rpc.Serve(ctx, config.Endpoint,
+	return rpc.Serve(ctx, config.Bind,
 		rpc.HTTP("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
 		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
 	)
@@ -181,7 +181,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars(
 			"FTL_ENDPOINT="+s.config.ControllerEndpoint.String(),
-			"FTL_OBSERVABILITY_ENDPOINT="+s.config.Endpoint.String(),
+			"FTL_OBSERVABILITY_ENDPOINT="+s.config.Bind.String(),
 		),
 	)
 	if err != nil {
@@ -228,7 +228,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	return connect.NewResponse(&ftlv1.RunnerHeartbeat{
 		Key:      s.key.String(),
 		Language: s.config.Language,
-		Endpoint: s.config.Endpoint.String(),
+		Endpoint: s.config.Bind.String(),
 		State:    ftlv1.RunnerState_RUNNER_IDLE,
 	}), nil
 }
@@ -272,7 +272,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	err := send(&ftlv1.RunnerHeartbeat{
 		Key:        s.key.String(),
 		Language:   s.config.Language,
-		Endpoint:   s.config.Endpoint.String(),
+		Endpoint:   s.config.Bind.String(),
 		Deployment: deploymentKey,
 		State:      state,
 		Error:      errPtr,
