@@ -56,7 +56,7 @@ func (s *Service) recordCall(ctx context.Context, call *Call) error {
 //
 // This is used when a call fails, but we still want to record the error.
 // Because of that, we only log failures within this function vs. returning another error.
-func (s *Service) recordCallError(ctx context.Context, call *call, callError error) {
+func (s *Service) recordCallError(ctx context.Context, call *Call, callError error) {
 	logger := log.FromContext(ctx)
 	sourceVerb := schema.VerbRef{}
 	if len(call.callers) > 0 {

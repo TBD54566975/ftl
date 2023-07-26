@@ -427,7 +427,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		}
 	}
 
-	callRecord := &call{
+	callRecord := &Call{
 		requestKey:    requestKey,
 		controllerKey: s.key,
 		runnerKey:     route.Runner,
@@ -446,22 +446,8 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 
-<<<<<<< HEAD
-	err = s.recordCall(ctx, &Call{
-		requestKey:    requestKey,
-		runnerKey:     route.Runner,
-		controllerKey: s.key,
-		startTime:     start,
-		destVerb:      verbRef,
-		callers:       callers,
-		request:       req.Msg,
-		response:      resp.Msg,
-	})
-
-=======
 	callRecord.response = resp.Msg
 	err = s.recordCall(ctx, callRecord)
->>>>>>> b71a577 (Add more error handling to ftl calls)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
