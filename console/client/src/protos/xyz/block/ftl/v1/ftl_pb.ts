@@ -8,6 +8,32 @@ import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { Module, VerbRef } from "./schema/schema_pb.js";
 
 /**
+ * @generated from enum xyz.block.ftl.v1.DeploymentChangeType
+ */
+export enum DeploymentChangeType {
+  /**
+   * @generated from enum value: DEPLOYMENT_ADDED = 0;
+   */
+  DEPLOYMENT_ADDED = 0,
+
+  /**
+   * @generated from enum value: DEPLOYMENT_REMOVED = 1;
+   */
+  DEPLOYMENT_REMOVED = 1,
+
+  /**
+   * @generated from enum value: DEPLOYMENT_CHANGED = 2;
+   */
+  DEPLOYMENT_CHANGED = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(DeploymentChangeType)
+proto3.util.setEnumType(DeploymentChangeType, "xyz.block.ftl.v1.DeploymentChangeType", [
+  { no: 0, name: "DEPLOYMENT_ADDED" },
+  { no: 1, name: "DEPLOYMENT_REMOVED" },
+  { no: 2, name: "DEPLOYMENT_CHANGED" },
+]);
+
+/**
  * @generated from enum xyz.block.ftl.v1.ControllerState
  */
 export enum ControllerState {
@@ -392,7 +418,12 @@ export class PullSchemaRequest extends Message<PullSchemaRequest> {
  */
 export class PullSchemaResponse extends Message<PullSchemaResponse> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 1;
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 2;
    */
   schema?: Module;
 
@@ -400,9 +431,14 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
    * If true, there are more schema changes immediately following this one.
    * If false, there still may be more schema changes in the future.
    *
-   * @generated from field: bool more = 2;
+   * @generated from field: bool more = 3;
    */
   more = false;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.DeploymentChangeType change_type = 4;
+   */
+  changeType = DeploymentChangeType.DEPLOYMENT_ADDED;
 
   constructor(data?: PartialMessage<PullSchemaResponse>) {
     super();
@@ -412,8 +448,10 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.PullSchemaResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "schema", kind: "message", T: Module },
-    { no: 2, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "schema", kind: "message", T: Module },
+    { no: 3, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "change_type", kind: "enum", T: proto3.getEnumType(DeploymentChangeType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PullSchemaResponse {

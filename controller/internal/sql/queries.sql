@@ -161,7 +161,6 @@ WHERE m.name = $1
   AND min_replicas > 0
 LIMIT 1;
 
-
 -- name: GetDeploymentsNeedingReconciliation :many
 -- Get deployments that have a mismatch between the number of assigned and required replicas.
 SELECT d.key                  AS key,
@@ -252,8 +251,8 @@ WHERE dest_module = ANY (@modules::text[]);
 
 -- name: GetRequestCalls :many
 SELECT DISTINCT r.key    AS runner_key,
-       conn.key AS controller_key,
-       c.*
+                conn.key AS controller_key,
+                c.*
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = c.controller_id

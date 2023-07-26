@@ -73,6 +73,9 @@ const (
 	// ControllerServiceStreamDeploymentLogsProcedure is the fully-qualified name of the
 	// ControllerService's StreamDeploymentLogs RPC.
 	ControllerServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControllerService/StreamDeploymentLogs"
+	// ControllerServicePullSchemaProcedure is the fully-qualified name of the ControllerService's
+	// PullSchema RPC.
+	ControllerServicePullSchemaProcedure = "/xyz.block.ftl.v1.ControllerService/PullSchema"
 	// RunnerServicePingProcedure is the fully-qualified name of the RunnerService's Ping RPC.
 	RunnerServicePingProcedure = "/xyz.block.ftl.v1.RunnerService/Ping"
 	// RunnerServiceReserveProcedure is the fully-qualified name of the RunnerService's Reserve RPC.
@@ -203,6 +206,8 @@ type ControllerServiceClient interface {
 	ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
+	// Pull schema changes from the Control Plane.
+	PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest]) (*connect_go.ServerStreamForClient[v1.PullSchemaResponse], error)
 }
 
 // NewControllerServiceClient constructs a client for the xyz.block.ftl.v1.ControllerService
@@ -271,6 +276,11 @@ func NewControllerServiceClient(httpClient connect_go.HTTPClient, baseURL string
 			baseURL+ControllerServiceStreamDeploymentLogsProcedure,
 			opts...,
 		),
+		pullSchema: connect_go.NewClient[v1.PullSchemaRequest, v1.PullSchemaResponse](
+			httpClient,
+			baseURL+ControllerServicePullSchemaProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -287,6 +297,7 @@ type controllerServiceClient struct {
 	updateDeploy           *connect_go.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
 	replaceDeploy          *connect_go.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
 	streamDeploymentLogs   *connect_go.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
+	pullSchema             *connect_go.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.ControllerService.Ping.
@@ -344,6 +355,11 @@ func (c *controllerServiceClient) StreamDeploymentLogs(ctx context.Context) *con
 	return c.streamDeploymentLogs.CallClientStream(ctx)
 }
 
+// PullSchema calls xyz.block.ftl.v1.ControllerService.PullSchema.
+func (c *controllerServiceClient) PullSchema(ctx context.Context, req *connect_go.Request[v1.PullSchemaRequest]) (*connect_go.ServerStreamForClient[v1.PullSchemaResponse], error) {
+	return c.pullSchema.CallServerStream(ctx, req)
+}
+
 // ControllerServiceHandler is an implementation of the xyz.block.ftl.v1.ControllerService service.
 type ControllerServiceHandler interface {
 	// Ping service for readiness.
@@ -376,6 +392,8 @@ type ControllerServiceHandler interface {
 	ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error)
+	// Pull schema changes from the Control Plane.
+	PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest], *connect_go.ServerStream[v1.PullSchemaResponse]) error
 }
 
 // NewControllerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -441,6 +459,11 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect_g
 		svc.StreamDeploymentLogs,
 		opts...,
 	))
+	mux.Handle(ControllerServicePullSchemaProcedure, connect_go.NewServerStreamHandler(
+		ControllerServicePullSchemaProcedure,
+		svc.PullSchema,
+		opts...,
+	))
 	return "/xyz.block.ftl.v1.ControllerService/", mux
 }
 
@@ -489,6 +512,10 @@ func (UnimplementedControllerServiceHandler) ReplaceDeploy(context.Context, *con
 
 func (UnimplementedControllerServiceHandler) StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs is not implemented"))
+}
+
+func (UnimplementedControllerServiceHandler) PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest], *connect_go.ServerStream[v1.PullSchemaResponse]) error {
+	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.PullSchema is not implemented"))
 }
 
 // RunnerServiceClient is a client for the xyz.block.ftl.v1.RunnerService service.

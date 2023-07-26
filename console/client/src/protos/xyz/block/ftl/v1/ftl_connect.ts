@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ReserveRequest, ReserveResponse, RunnerHeartbeat, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -174,6 +174,17 @@ export const ControllerService = {
       I: StreamDeploymentLogsRequest,
       O: StreamDeploymentLogsResponse,
       kind: MethodKind.ClientStreaming,
+    },
+    /**
+     * Pull schema changes from the Control Plane.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.PullSchema
+     */
+    pullSchema: {
+      name: "PullSchema",
+      I: PullSchemaRequest,
+      O: PullSchemaResponse,
+      kind: MethodKind.ServerStreaming,
     },
   }
 } as const;

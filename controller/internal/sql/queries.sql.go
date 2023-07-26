@@ -752,8 +752,8 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 
 const getRequestCalls = `-- name: GetRequestCalls :many
 SELECT DISTINCT r.key    AS runner_key,
-       conn.key AS controller_key,
-       c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
+                conn.key AS controller_key,
+                c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = c.controller_id

@@ -228,6 +228,12 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, req *connect.ClientS
 	panic("unimplemented")
 }
 
+func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
+	return s.watchModuleChanges(ctx, func(response *ftlv1.PullSchemaResponse) error {
+		return errors.WithStack(stream.Send(response))
+	})
+}
+
 func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.UpdateDeployRequest]) (response *connect.Response[ftlv1.UpdateDeployResponse], err error) {
 	deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
@@ -694,6 +700,73 @@ func (s *Service) heartbeatController(ctx context.Context, addr *url.URL) {
 			return
 
 		case <-time.After(s.heartbeatTimeout / 4):
+		}
+	}
+}
+
+func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
+	moduleSchemas := map[string]schema.Module{}
+
+	for {
+		dbDeployments := map[string]dal.Deployment{}
+		var changesToSend []*ftlv1.PullSchemaResponse
+
+		deployments, err := s.dal.GetActiveDeployments(ctx)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		for _, deployment := range deployments {
+			dbDeployments[deployment.Schema.Name] = deployment
+			if current, ok := moduleSchemas[deployment.Schema.Name]; ok {
+				if !proto.Equal(current.ToProto(), deployment.Schema.ToProto()) {
+					//nolint:forcetypeassert
+					changesToSend = append(changesToSend, &ftlv1.PullSchemaResponse{
+						DeploymentKey: deployment.Key.String(),
+						Schema:        deployment.Schema.ToProto().(*pschema.Module),
+						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED,
+					})
+				}
+			} else {
+				//nolint:forcetypeassert
+				changesToSend = append(changesToSend, &ftlv1.PullSchemaResponse{
+					DeploymentKey: deployment.Key.String(),
+					Schema:        deployment.Schema.ToProto().(*pschema.Module),
+					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+				})
+			}
+			moduleSchemas[deployment.Schema.Name] = *deployment.Schema
+		}
+
+		for name, moduleSchema := range moduleSchemas {
+			if dbDeployment, ok := dbDeployments[name]; !ok {
+				//nolint:forcetypeassert
+				changesToSend = append(changesToSend, &ftlv1.PullSchemaResponse{
+					DeploymentKey: dbDeployment.Key.String(),
+					Schema:        moduleSchema.ToProto().(*pschema.Module),
+					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
+				})
+				delete(moduleSchemas, name)
+			}
+		}
+
+		for i, change := range changesToSend {
+			err := sendChange(&ftlv1.PullSchemaResponse{
+				DeploymentKey: change.DeploymentKey,
+				Schema:        change.Schema,
+				More:          i < len(changesToSend)-1,
+				ChangeType:    change.ChangeType,
+			})
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+
+		case <-time.After(1 * time.Second):
 		}
 	}
 }
