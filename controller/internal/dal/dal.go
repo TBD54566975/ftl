@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/common/model"
@@ -23,6 +24,7 @@ import (
 	"github.com/TBD54566975/ftl/controller/internal/sqltypes"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
+	"github.com/TBD54566975/ftl/internal/pubsub"
 	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -87,6 +89,8 @@ type Runner struct {
 	// Assigned deployment key, if any.
 	Deployment types.Option[model.DeploymentKey]
 }
+
+func (r Runner) notification() {}
 
 type Reconciliation struct {
 	Deployment model.DeploymentKey
@@ -154,6 +158,8 @@ type Deployment struct {
 	CreatedAt   time.Time
 }
 
+func (d Deployment) notification() {}
+
 type Controller struct {
 	Key      model.ControllerKey
 	Endpoint string
@@ -189,12 +195,24 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return errors.WithStack(reservation.Commit(ctx))
 }
 
-func New(conn sql.DBI) *DAL {
-	return &DAL{db: sql.NewDB(conn)}
+func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to acquire PG PubSub connection")
+	}
+	dal := &DAL{
+		db:                sql.NewDB(pool),
+		DeploymentChanges: pubsub.New[DeploymentNotification](),
+	}
+	go dal.runListener(ctx, conn.Hijack())
+	return dal, nil
 }
 
 type DAL struct {
 	db *sql.DB
+
+	// DeploymentChanges is a Topic that receives changes to the deployments table.
+	DeploymentChanges *pubsub.Topic[DeploymentNotification]
 }
 
 func (d *DAL) GetStatus(
@@ -668,6 +686,25 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (Ru
 		return "", errors.WithStack(translatePGError(err))
 	}
 	return RunnerState(state), nil
+}
+
+func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {
+	row, err := d.db.GetRunner(ctx, sqltypes.Key(runnerKey))
+	if err != nil {
+		return Runner{}, errors.WithStack(translatePGError(err))
+	}
+	var deployment types.Option[model.DeploymentKey]
+	// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
+	if row.DeploymentKey != nil {
+		deployment = types.Some(row.DeploymentKey.(model.DeploymentKey)) //nolint:forcetypeassert
+	}
+	return Runner{
+		Key:        model.RunnerKey(row.RunnerKey),
+		Language:   row.Language,
+		Endpoint:   row.Endpoint,
+		State:      RunnerState(row.State),
+		Deployment: deployment,
+	}, nil
 }
 
 func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {

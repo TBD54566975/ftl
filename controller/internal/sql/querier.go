@@ -43,6 +43,7 @@ type Querier interface {
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetRequestCalls(ctx context.Context, key sqltypes.Key) ([]GetRequestCallsRow, error)
 	GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error)
+	GetRunner(ctx context.Context, key sqltypes.Key) (GetRunnerRow, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)
 	InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error

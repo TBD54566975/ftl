@@ -18,6 +18,7 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/sha256"
@@ -47,17 +48,22 @@ type Config struct {
 func Start(ctx context.Context, config Config) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting FTL controller")
-	conn, err := pgxpool.New(ctx, config.DSN)
-	if err != nil {
-		return nil
-	}
 
 	c, err := console.Server(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	dal := dal.New(conn)
+	// Bring up the DB connection and DAL.
+	conn, err := pgxpool.New(ctx, config.DSN)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	dal, err := dal.New(ctx, conn)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	svc, err := New(ctx, dal, config)
 	if err != nil {
 		return errors.WithStack(err)
@@ -708,68 +714,102 @@ func (s *Service) heartbeatController(ctx context.Context, addr *url.URL) {
 }
 
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
-	moduleSchemas := map[string]schema.Module{}
+	logger := log.FromContext(ctx)
+	type moduleStateEntry struct {
+		hash        sha256.SHA256
+		minReplicas int
+	}
+	moduleState := map[string]moduleStateEntry{}
+	moduleByDeploymentKey := map[model.DeploymentKey]string{}
+
+	// Seed the notification channel with the current deployments.
+	seedDeployments, err := s.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	initialCount := len(seedDeployments)
+	deploymentChanges := make(chan dal.DeploymentNotification, len(seedDeployments))
+	for _, deployment := range seedDeployments {
+		deploymentChanges <- dal.DeploymentNotification{Message: deployment}
+	}
+	logger.Infof("Seeded %d deployments", initialCount)
+
+	// Subscribe to deployment changes.
+	s.dal.DeploymentChanges.Subscribe(deploymentChanges)
+	defer s.dal.DeploymentChanges.Unsubscribe(deploymentChanges)
 
 	for {
-		dbDeployments := map[string]dal.Deployment{}
-		var changesToSend []*ftlv1.PullSchemaResponse
-
-		deployments, err := s.dal.GetActiveDeployments(ctx)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		for _, deployment := range deployments {
-			dbDeployments[deployment.Schema.Name] = deployment
-			if current, ok := moduleSchemas[deployment.Schema.Name]; ok {
-				if !proto.Equal(current.ToProto(), deployment.Schema.ToProto()) {
-					//nolint:forcetypeassert
-					changesToSend = append(changesToSend, &ftlv1.PullSchemaResponse{
-						DeploymentKey: deployment.Key.String(),
-						Schema:        deployment.Schema.ToProto().(*pschema.Module),
-						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED,
-					})
-				}
-			} else {
-				//nolint:forcetypeassert
-				changesToSend = append(changesToSend, &ftlv1.PullSchemaResponse{
-					DeploymentKey: deployment.Key.String(),
-					Schema:        deployment.Schema.ToProto().(*pschema.Module),
-					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
-				})
-			}
-			moduleSchemas[deployment.Schema.Name] = *deployment.Schema
-		}
-
-		for name, moduleSchema := range moduleSchemas {
-			if dbDeployment, ok := dbDeployments[name]; !ok {
-				//nolint:forcetypeassert
-				changesToSend = append(changesToSend, &ftlv1.PullSchemaResponse{
-					DeploymentKey: dbDeployment.Key.String(),
-					Schema:        moduleSchema.ToProto().(*pschema.Module),
-					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
-				})
-				delete(moduleSchemas, name)
-			}
-		}
-
-		for i, change := range changesToSend {
-			err := sendChange(&ftlv1.PullSchemaResponse{
-				DeploymentKey: change.DeploymentKey,
-				Schema:        change.Schema,
-				More:          i < len(changesToSend)-1,
-				ChangeType:    change.ChangeType,
-			})
-			if err != nil {
-				return errors.WithStack(err)
-			}
-		}
-
 		select {
 		case <-ctx.Done():
 			return nil
 
-		case <-time.After(1 * time.Second):
+		case notification := <-deploymentChanges:
+			var response *ftlv1.PullSchemaResponse
+			// Deleted key
+			if key, ok := notification.Deleted.Get(); ok {
+				name := moduleByDeploymentKey[key]
+				response = &ftlv1.PullSchemaResponse{
+					ModuleName:    name,
+					DeploymentKey: key.String(),
+					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
+				}
+				delete(moduleState, name)
+				delete(moduleByDeploymentKey, key)
+			} else {
+				moduleSchema := notification.Message.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
+				moduleSchema.Runtime = &pschema.ModuleRuntime{
+					Language:    notification.Message.Language,
+					CreateTime:  timestamppb.New(notification.Message.CreatedAt),
+					MinReplicas: int32(notification.Message.MinReplicas),
+				}
+				moduleSchemaBytes, err := proto.Marshal(moduleSchema)
+				if err != nil {
+					return errors.WithStack(err)
+				}
+				newState := moduleStateEntry{
+					hash:        sha256.FromBytes(moduleSchemaBytes),
+					minReplicas: notification.Message.MinReplicas,
+				}
+				if current, ok := moduleState[notification.Message.Schema.Name]; ok {
+					if current != newState {
+						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED
+						// A deployment is considered removed if its minReplicas is set to 0.
+						if current.minReplicas > 0 && notification.Message.MinReplicas == 0 {
+							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED
+						}
+						response = &ftlv1.PullSchemaResponse{
+							ModuleName:    moduleSchema.Name,
+							DeploymentKey: notification.Message.Key.String(),
+							Schema:        moduleSchema,
+							ChangeType:    changeType,
+						}
+					}
+				} else {
+					response = &ftlv1.PullSchemaResponse{
+						ModuleName:    moduleSchema.Name,
+						DeploymentKey: notification.Message.Key.String(),
+						Schema:        moduleSchema,
+						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+						More:          initialCount > 1,
+					}
+					if initialCount > 0 {
+						initialCount--
+					}
+				}
+				moduleState[notification.Message.Schema.Name] = newState
+				delete(moduleByDeploymentKey, notification.Message.Key) // The deployment may have changed.
+				moduleByDeploymentKey[notification.Message.Key] = notification.Message.Schema.Name
+			}
+
+			if response != nil {
+				logger.Tracef("Sending change %s", response.ChangeType)
+				err := sendChange(response)
+				if err != nil {
+					return errors.WithStack(err)
+				}
+			} else {
+				logger.Tracef("No change")
+			}
 		}
 	}
 }

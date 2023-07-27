@@ -60,11 +60,13 @@ enum DeploymentChangeType {
 message PullSchemaRequest {}
 message PullSchemaResponse {
   string deployment_key = 1;
-  schema.Module schema = 2;
-  // If true, there are more schema changes immediately following this one.
-  // If false, there still may be more schema changes in the future.
+  string module_name = 2;
+  // For deletes this will not be present.
+  optional schema.Module schema = 4;
+  // If true there are more schema changes immediately following this one as part of the initial batch.
+  // If false this is the last schema change in the initial batch, but others may follow later.
   bool more = 3;
-  DeploymentChangeType change_type = 4;
+  DeploymentChangeType change_type = 5;
 }
 
 message GetArtefactDiffsRequest {

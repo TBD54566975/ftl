@@ -849,6 +849,41 @@ func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutin
 	return items, nil
 }
 
+const getRunner = `-- name: GetRunner :one
+SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
+                           r.language,
+                           r.endpoint,
+                           r.state,
+                           r.last_seen,
+                           COALESCE(CASE WHEN r.deployment_id IS NOT NULL THEN d.key END, NULL) AS deployment_key
+FROM runners r
+         LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
+WHERE r.key = $1
+`
+
+type GetRunnerRow struct {
+	RunnerKey     sqltypes.Key
+	Language      string
+	Endpoint      string
+	State         RunnerState
+	LastSeen      pgtype.Timestamptz
+	DeploymentKey interface{}
+}
+
+func (q *Queries) GetRunner(ctx context.Context, key sqltypes.Key) (GetRunnerRow, error) {
+	row := q.db.QueryRow(ctx, getRunner, key)
+	var i GetRunnerRow
+	err := row.Scan(
+		&i.RunnerKey,
+		&i.Language,
+		&i.Endpoint,
+		&i.State,
+		&i.LastSeen,
+		&i.DeploymentKey,
+	)
+	return i, err
+}
+
 const getRunnerState = `-- name: GetRunnerState :one
 SELECT state
 FROM runners

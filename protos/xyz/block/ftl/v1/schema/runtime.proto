@@ -19,6 +19,7 @@ enum Status {
 message ModuleRuntime {
   google.protobuf.Timestamp create_time = 1;
   string language = 2;
+  int32 min_replicas = 3;
 }
 
 message VerbRuntime {

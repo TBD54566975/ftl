@@ -9,13 +9,14 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/gofrs/flock"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl/controller/internal/sql"
 )
 
 // OpenForTesting opens a database connection for testing, recreating the
 // database beforehand.
-func OpenForTesting(ctx context.Context, t testing.TB) sql.DBI {
+func OpenForTesting(ctx context.Context, t testing.TB) *pgxpool.Pool {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

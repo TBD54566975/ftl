@@ -27,3 +27,12 @@ func (u *Key) Scan(src interface{}) error {
 	*u = Key(id)
 	return nil
 }
+
+func (u *Key) UnmarshalText(text []byte) error {
+	id, err := uuid.ParseBytes(text)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	*u = Key(id)
+	return nil
+}
