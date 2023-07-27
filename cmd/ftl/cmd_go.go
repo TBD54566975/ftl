@@ -103,8 +103,9 @@ func (g *goDeployCmd) Run(ctx context.Context, client ftlv1connect.ControllerSer
 	}
 	module := deployment.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
 	module.Runtime = &pschema.ModuleRuntime{
-		Language:   deployment.Language,
-		CreateTime: timestamppb.Now(),
+		Language:    deployment.Language,
+		CreateTime:  timestamppb.Now(),
+		MinReplicas: g.MinReplicas,
 	}
 	cdResp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 		Schema: module,

@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
-	"github.com/golang/protobuf/jsonpb"
 
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -19,6 +19,14 @@ type psCmd struct {
 	JSON bool `help:"Output JSON."`
 }
 
+type process struct {
+	Deployment string `json:"deployment"`
+	State      string `json:"state"`
+	Language   string `json:"language"`
+	Module     string `json:"module"`
+	Runner     string `json:"runner"`
+}
+
 func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
 		AllRunners: s.All,
@@ -26,23 +34,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if s.JSON {
-		fmt.Print("[")
-		for i, runner := range status.Msg.Runners {
-			if i != 0 {
-				fmt.Print(",")
-			}
-			err = errors.WithStack((&jsonpb.Marshaler{}).Marshal(os.Stdout, runner))
-			if err != nil {
-				return errors.WithStack(err)
-			}
-		}
-		fmt.Print("]")
-		return nil
-	}
-	runnerFmt := "%-28s%-9s%-9s%-9s%-28s\n"
-	fmt.Printf(runnerFmt, "Deployment", "State", "Language", "Module", "Runner")
-	fmt.Printf(runnerFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 27))
+	var processes []process
 	for _, runner := range status.Msg.Runners {
 		if runner.State != ftlv1.RunnerState_RUNNER_ASSIGNED && !s.All {
 			continue
@@ -52,7 +44,31 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 		if deployment != nil {
 			module = deployment.Name
 		}
-		fmt.Printf(runnerFmt, runner.GetDeployment(), strings.TrimPrefix(runner.State.String(), "RUNNER_"), runner.Language, module, runner.Key)
+		processes = append(processes, process{
+			Deployment: runner.GetDeployment(),
+			State:      strings.TrimPrefix(runner.State.String(), "RUNNER_"),
+			Language:   runner.Language,
+			Module:     module,
+			Runner:     runner.Key,
+		})
+	}
+	if s.JSON {
+		for _, process := range processes {
+			err = json.NewEncoder(os.Stdout).Encode(process)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		return nil
+	}
+	runnerFmt := "%-28s%-9s%-9s%-9s%-28s\n"
+	fmt.Printf(runnerFmt, "Deployment", "State", "Language", "Module", "Runner")
+	fmt.Printf(runnerFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 27))
+	for _, process := range processes {
+		if process.State != "ASSIGNED" && !s.All {
+			continue
+		}
+		fmt.Printf(runnerFmt, process.Deployment, process.State, process.Language, process.Module, process.Runner)
 	}
 	return nil
 }

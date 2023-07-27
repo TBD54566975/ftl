@@ -198,6 +198,17 @@ SELECT state
 FROM runners
 WHERE key = $1;
 
+-- name: GetRunner :one
+SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
+                           r.language,
+                           r.endpoint,
+                           r.state,
+                           r.last_seen,
+                           COALESCE(CASE WHEN r.deployment_id IS NOT NULL THEN d.key END, NULL) AS deployment_key
+FROM runners r
+         LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
+WHERE r.key = $1;
+
 -- name: GetRoutingTable :many
 SELECT endpoint, r.key
 FROM runners r

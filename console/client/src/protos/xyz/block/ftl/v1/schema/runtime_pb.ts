@@ -64,6 +64,11 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
    */
   language = "";
 
+  /**
+   * @generated from field: int32 min_replicas = 3;
+   */
+  minReplicas = 0;
+
   constructor(data?: PartialMessage<ModuleRuntime>) {
     super();
     proto3.util.initPartial(data, this);
@@ -74,6 +79,7 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "create_time", kind: "message", T: Timestamp },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntime {

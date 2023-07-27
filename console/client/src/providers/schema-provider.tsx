@@ -15,7 +15,7 @@ const SchemaProvider = props => {
       console.log('fetching schema')
       const schemaMap = new Map<string, PullSchemaResponse>()
       for await (const response of client.pullSchema({})) {
-        const moduleName = response.schema?.name ?? ''
+        const moduleName = response.moduleName ?? ''
         switch (response.changeType) {
           case DeploymentChangeType.DEPLOYMENT_ADDED:
             schemaMap.set(moduleName, response)

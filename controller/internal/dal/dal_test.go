@@ -23,12 +23,11 @@ func TestDAL(t *testing.T) {
 	logger := log.Configure(os.Stderr, log.Config{Level: log.Debug})
 	ctx := log.ContextWithLogger(context.Background(), logger)
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal := New(conn)
+	dal, err := New(ctx, conn)
+	assert.NoError(t, err)
 	assert.NotZero(t, dal)
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
-
-	var err error
 
 	t.Run("UpsertModule", func(t *testing.T) {
 		err = dal.UpsertModule(ctx, "go", "test")

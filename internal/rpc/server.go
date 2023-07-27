@@ -85,7 +85,7 @@ func NewServer(ctx context.Context, listen *url.URL, options ...Option) (*Server
 
 	// TODO: Is this a good idea? Who knows!
 	crs := cors.New(cors.Options{
-		AllowedOrigins: []string{listen.String()},
+		AllowedOrigins: []string{listen.String(), "http://ftl.localtest.me"},
 		AllowedMethods: []string{
 			http.MethodHead,
 			http.MethodGet,

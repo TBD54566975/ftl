@@ -14,10 +14,13 @@ import kotlin.test.assertContentEquals
 data class VerbRequest(val text: String = "")
 data class VerbResponse(val text: String = "")
 
+data class RenamedVerbRequest(val text: String = "")
+data class RenamedVerbResponse(val text: String = "")
+
 class RenamedVerb {
   @Verb("something")
-  fun renamed(context: Context, req: VerbRequest): VerbResponse {
-    return VerbResponse("renamed")
+  fun renamed(context: Context, req: RenamedVerbRequest): RenamedVerbResponse {
+    return RenamedVerbResponse("renamed")
   }
 }
 

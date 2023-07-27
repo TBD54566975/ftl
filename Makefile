@@ -20,7 +20,8 @@ PROTO_IN = protos/buf.yaml \
 		   protos/buf.gen.yaml \
 		   protos/xyz/block/ftl/v1/ftl.proto \
 		   protos/xyz/block/ftl/v1/console/console.proto \
-		   protos/xyz/block/ftl/v1/schema/schema.proto
+		   protos/xyz/block/ftl/v1/schema/schema.proto \
+		   protos/xyz/block/ftl/v1/schema/runtime.proto
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			protos/xyz/block/ftl/v1/schema/schema.pb.go \
 			protos/xyz/block/ftl/v1/console/console.pb.go \

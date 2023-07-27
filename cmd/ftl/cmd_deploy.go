@@ -71,8 +71,9 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		Schema: &pschema.Module{
 			Name: config.Module,
 			Runtime: &pschema.ModuleRuntime{
-				CreateTime: timestamppb.Now(),
-				Language:   config.Language,
+				CreateTime:  timestamppb.Now(),
+				Language:    config.Language,
+				MinReplicas: d.Replicas,
 			},
 		},
 		Artefacts: slices.Map(maps.Values(filesByHash), func(a deploymentArtefact) *ftlv1.DeploymentArtefact {

@@ -423,20 +423,27 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   deploymentKey = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 2;
+   * @generated from field: string module_name = 2;
+   */
+  moduleName = "";
+
+  /**
+   * For deletes this will not be present.
+   *
+   * @generated from field: optional xyz.block.ftl.v1.schema.Module schema = 4;
    */
   schema?: Module;
 
   /**
-   * If true, there are more schema changes immediately following this one.
-   * If false, there still may be more schema changes in the future.
+   * If true there are more schema changes immediately following this one as part of the initial batch.
+   * If false this is the last schema change in the initial batch, but others may follow later.
    *
    * @generated from field: bool more = 3;
    */
   more = false;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.DeploymentChangeType change_type = 4;
+   * @generated from field: xyz.block.ftl.v1.DeploymentChangeType change_type = 5;
    */
   changeType = DeploymentChangeType.DEPLOYMENT_ADDED;
 
@@ -449,9 +456,10 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   static readonly typeName = "xyz.block.ftl.v1.PullSchemaResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "schema", kind: "message", T: Module },
+    { no: 2, name: "module_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "schema", kind: "message", T: Module, opt: true },
     { no: 3, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "change_type", kind: "enum", T: proto3.getEnumType(DeploymentChangeType) },
+    { no: 5, name: "change_type", kind: "enum", T: proto3.getEnumType(DeploymentChangeType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PullSchemaResponse {
