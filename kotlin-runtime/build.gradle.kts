@@ -38,7 +38,6 @@ dependencies {
   implementation("io.grpc:grpc-netty:1.56.1")
   implementation("io.grpc:grpc-protobuf:1.56.1")
   implementation("io.grpc:grpc-stub:1.56.1")
-
 }
 
 // Disable gradlew because we use a Hermit-provided gradle.
@@ -55,11 +54,28 @@ wire {
   }
 }
 
-
 tasks.named<Test>("test") {
   // Use JUnit Platform for unit tests.
   useJUnitPlatform()
   testLogging {
     events("passed", "skipped", "failed")
+  }
+}
+
+tasks.jar {
+  enabled = true
+  isZip64 = true
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+  archiveFileName.set("${project.name}.jar")
+
+  from(sourceSets.main.get().output)
+  dependsOn(configurations.compileClasspath)
+  from({
+    configurations.compileClasspath.get().filter {
+      it.name.endsWith("jar")
+    }.map { zipTree(it) }
+  }) {
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
   }
 }

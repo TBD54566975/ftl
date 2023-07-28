@@ -5,7 +5,6 @@ import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Verb
 import xyz.block.ftl.logging.Logging
-import xyz.block.ftl.module
 import xyz.block.ftl.v1.schema.VerbRef
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
@@ -45,7 +44,6 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
     ClassGraph()
       .enableAllInfo() // Scan classes, methods, fields, annotations
       .acceptPackages(jvmModuleName)
-      .disableJarScanning()
       .scan().use { scanResult ->
         // Use the ScanResult within the try block, e.g.
         for (clazz in scanResult.getClassesWithMethodAnnotation(Verb::class.java)) {
@@ -67,7 +65,8 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
     val verbAnnotation = function.findAnnotation<Verb>() ?: return
     val verbName = if (verbAnnotation.name == "") function.name else verbAnnotation.name
     val qualifiedName =
-      klass.qualifiedName?.removePrefix("$jvmModuleName.") ?: throw IllegalArgumentException("Class must have a qualified name")
+      klass.qualifiedName?.removePrefix("$jvmModuleName.")
+        ?: throw IllegalArgumentException("Class must have a qualified name")
     val parts = qualifiedName.split(".")
     val moduleName = parts[0]
     if (parts.size < 2) {

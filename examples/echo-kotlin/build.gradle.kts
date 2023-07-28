@@ -21,3 +21,25 @@ tasks.register<JavaExec>("run") {
 }
 
 tasks.findByName("wrapper")?.enabled = false
+
+tasks.jar {
+  enabled = true
+  isZip64 = true
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+  archiveFileName.set("${project.name}.jar")
+
+  manifest {
+    attributes["Main-Class"] = "xyz.block.ftl.main.MainKt"
+  }
+
+  from(sourceSets.main.get().output)
+  dependsOn(configurations.compileClasspath)
+  from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }) {
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+  }
+}
+
+tasks.named("jar") {
+  dependsOn(":ftl-runtime:jar")
+}
