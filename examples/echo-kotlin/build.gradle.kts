@@ -2,6 +2,7 @@ plugins {
   kotlin("jvm") version "1.9.0"
   // Apply the java-library plugin for API and implementation separation.
   `java-library`
+  id("xyz.block.ftl")
 }
 
 repositories {
@@ -11,6 +12,10 @@ repositories {
 
 dependencies {
   implementation(project(":ftl-runtime"))
+}
+
+ftl {
+  endpoint = "http://localhost:8892"
 }
 
 tasks.register<JavaExec>("run") {
@@ -43,3 +48,5 @@ tasks.jar {
 tasks.named("jar") {
   dependsOn(":ftl-runtime:jar")
 }
+
+
