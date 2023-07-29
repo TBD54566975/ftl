@@ -176,7 +176,7 @@ export const ControllerService = {
       kind: MethodKind.ClientStreaming,
     },
     /**
-     * Pull schema changes from the Control Plane.
+     * Pull schema changes from the Controller.
      *
      * @generated from rpc xyz.block.ftl.v1.ControllerService.PullSchema
      */

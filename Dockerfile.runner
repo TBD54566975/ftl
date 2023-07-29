@@ -1,0 +1,28 @@
+FROM ubuntu:22.04 AS builder
+RUN apt update
+RUN apt install -y curl git
+
+# Copy Hermit bin stubs and install all packages. This is done
+# separately so that Docker will cache the tools correctly.
+COPY ./bin /src/bin
+ENV PATH="/src/bin:$PATH"
+ENV HERMIT_STATE_DIR=/hermit
+RUN hermit uninstall jbr
+RUN hermit install openjre-18.0.2.1_1
+RUN hermit install
+
+# Build
+COPY . /src/
+WORKDIR /src
+RUN make build/ftl-runner
+
+
+# Finally create the runtime image.
+FROM ubuntu:22.04
+
+WORKDIR /root/
+
+ENV PATH="/root/jre/bin:$PATH"
+COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
+
+COPY --from=builder /src/build/ftl-runner .

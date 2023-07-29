@@ -126,7 +126,7 @@ enum ControllerState {
 enum RunnerState {
   // The Runner is waiting for a deployment.
   RUNNER_IDLE = 0;
-  // The Runner and Control Plane have agreed that the Runner is reserved.
+  // The Runner and Controller have agreed that the Runner is reserved.
   RUNNER_RESERVED = 1;
   // The Runner is assigned to a deployment.
   RUNNER_ASSIGNED = 2;
@@ -256,7 +256,7 @@ service ControllerService {
   // Stream logs from a deployment
   rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);
 
-  // Pull schema changes from the Control Plane.
+  // Pull schema changes from the Controller.
   rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
 }
 

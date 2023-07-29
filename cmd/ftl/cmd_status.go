@@ -17,8 +17,8 @@ import (
 )
 
 type statusCmd struct {
-	All              bool `help:"Show all control planes, deployments, and runners, even those that are not running."`
-	AllControllers   bool `help:"Show all control planes, even those that are not running."`
+	All              bool `help:"Show all controllers, deployments, and runners, even those that are not running."`
+	AllControllers   bool `help:"Show all controllers, even those that are not running."`
 	AllDeployments   bool `help:"Show all deployments, even those that are not running."`
 	AllRunners       bool `help:"Show all runners, even those that are not running."`
 	AllIngressRoutes bool `help:"Show all ingress routes, even those that are not running."`

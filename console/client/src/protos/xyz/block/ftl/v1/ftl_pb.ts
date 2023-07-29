@@ -65,7 +65,7 @@ export enum RunnerState {
   RUNNER_IDLE = 0,
 
   /**
-   * The Runner and Control Plane have agreed that the Runner is reserved.
+   * The Runner and Controller have agreed that the Runner is reserved.
    *
    * @generated from enum value: RUNNER_RESERVED = 1;
    */

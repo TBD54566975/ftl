@@ -29,6 +29,10 @@ version "17.0.6.b469.82" {
   platform "linux" "amd64" {
     source = "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-linux-x64-b469.82.tar.gz"
   }
+
+  platform "linux" "arm64" {
+    source = "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-17.0.6-linux-aarch64-b469.82.tar.gz"
+  }
 }
 
 sha256sums = {

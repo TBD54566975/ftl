@@ -17,7 +17,7 @@ gradlePlugin {
       id = "xyz.block.ftl"
       displayName = "FTL"
       implementationClass = "xyz.block.ftl.gradle.FTLPlugin"
-      description = "generate ftl stubs"
+      description = "Generate FTL stubs"
     }
   }
 }

@@ -4,6 +4,9 @@ buildscript {
   }
 }
 
+group = "xyz.block"
+version = "0.1.0-SNAPSHOT"
+
 plugins {
   id("com.squareup.wire") version "4.7.2"
   kotlin("jvm") version "1.9.0"
@@ -26,7 +29,7 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-  // This dependency is used internally, and not exposed to consumers on their own compile classpath.
+  // These dependencies are used internally, and not exposed to consumers on their own compile classpath.
   implementation("io.github.classgraph:classgraph:4.8.157")
   implementation("ch.qos.logback:logback-classic:1.4.5")
   implementation("ch.qos.logback:logback-core:1.4.5")
@@ -69,12 +72,14 @@ tasks.jar {
 
   archiveFileName.set("${project.name}.jar")
 
+  manifest {
+    attributes["Main-Class"] = "xyz.block.ftl.main.MainKt"
+  }
+
   from(sourceSets.main.get().output)
   dependsOn(configurations.compileClasspath)
   from({
-    configurations.compileClasspath.get().filter {
-      it.name.endsWith("jar")
-    }.map { zipTree(it) }
+    configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
   }) {
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
   }
