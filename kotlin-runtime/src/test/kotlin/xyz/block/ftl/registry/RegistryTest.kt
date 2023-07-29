@@ -8,7 +8,6 @@ import xyz.block.ftl.Ignore
 import xyz.block.ftl.Ingress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
-import xyz.block.ftl.v1.schema.VerbRef
 import kotlin.test.assertContentEquals
 
 data class VerbRequest(val text: String = "")

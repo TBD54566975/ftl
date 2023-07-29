@@ -3,14 +3,12 @@ package xyz.block.ftl.registry
 import com.google.gson.Gson
 import xyz.block.ftl.Context
 import xyz.block.ftl.logging.Logging
-import xyz.block.ftl.v1.schema.VerbRef
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.createInstance
 
 internal class VerbHandle<Resp>(
-  val verbRef: VerbRef,
   private val verbClass: KClass<*>,
   private val verbFunction: KFunction<Resp>
 ) {
