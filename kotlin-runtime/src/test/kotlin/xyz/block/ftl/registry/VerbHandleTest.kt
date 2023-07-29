@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import xyz.block.ftl.Context
-import xyz.block.ftl.v1.schema.VerbRef
 
 class VerbHandleTest {
   val gson = Gson()
@@ -13,7 +12,6 @@ class VerbHandleTest {
   fun testInvoke() {
     val requestJson = gson.toJson(VerbRequest("a"))
     val handle = VerbHandle(
-      verbRef = VerbRef(name = "verb"),
       verbClass = ExampleVerb::class,
       verbFunction = ExampleVerb::verb,
     )

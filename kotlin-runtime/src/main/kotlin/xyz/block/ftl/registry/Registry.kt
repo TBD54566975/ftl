@@ -5,7 +5,6 @@ import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Verb
 import xyz.block.ftl.logging.Logging
-import xyz.block.ftl.v1.schema.VerbRef
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -14,6 +13,12 @@ import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.jvm.kotlinFunction
 
 val defaultJvmModuleName = "ftl"
+
+data class VerbRef(val module: String, val name: String) {
+  override fun toString() = "$module.$name"
+}
+
+internal fun xyz.block.ftl.v1.schema.VerbRef.toModel() = VerbRef(module, name)
 
 /**
  * FTL module registry.
@@ -76,7 +81,7 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
 
     logger.info("      @Verb ${function.name}()")
     val verbRef = VerbRef(module = ftlModuleName!!, name = verbName)
-    val verbHandle = VerbHandle(verbRef, klass, function)
+    val verbHandle = VerbHandle(klass, function)
     if (verbs.containsKey(verbRef)) throw IllegalArgumentException("Duplicate Verb $verbRef")
     verbs[verbRef] = verbHandle
   }
