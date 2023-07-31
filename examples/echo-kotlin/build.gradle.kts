@@ -12,41 +12,11 @@ repositories {
 
 dependencies {
   implementation(project(":ftl-runtime"))
+  implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
 }
 
 ftl {
   endpoint = "http://localhost:8892"
 }
 
-tasks.register<JavaExec>("run") {
-  group = "Execution"
-  description = "Run the module."
-  classpath = sourceSets["main"].runtimeClasspath
-  mainClass.set("xyz.block.ftl.main.MainKt")
-}
-
 tasks.findByName("wrapper")?.enabled = false
-
-tasks.jar {
-  enabled = true
-  isZip64 = true
-  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-  archiveFileName.set("${project.name}.jar")
-
-  manifest {
-    attributes["Main-Class"] = "xyz.block.ftl.main.MainKt"
-  }
-
-  from(sourceSets.main.get().output)
-  dependsOn(configurations.compileClasspath)
-  from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }) {
-    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
-  }
-}
-
-tasks.named("jar") {
-  dependsOn(":ftl-runtime:jar")
-}
-
-

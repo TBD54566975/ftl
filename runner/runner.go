@@ -34,7 +34,7 @@ import (
 type Config struct {
 	Bind               *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
 	Key                model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" default:"R00000000000000000000000000"`
-	ControllerEndpoint *url.URL        `name:"ftl-endpoint" help:"Control Plane endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
+	ControllerEndpoint *url.URL        `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
 	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
 	Language           string          `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
 	HeartbeatPeriod    time.Duration   `help:"Minimum period between heartbeats." default:"3s"`

@@ -1,6 +1,6 @@
 VERSION = $(shell git describe --tags --always --dirty)
 
-BINARIES=ftl ftl-controller ftl-runner-go
+BINARIES=ftl ftl-controller ftl-runner
 
 COMMON_LOG_IN = internal/log/api.go
 COMMON_LOG_OUT = internal/log/log_level_string.go
@@ -39,19 +39,25 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 help: ## This help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-.PHONY:
-release:
-	cd console/client && npm run build
-	rm -rf build
-	mkdir -p build
-	for binary in $(BINARIES); do \
-		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/$$binary-linux-amd64 -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$$binary ; \
-		CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/$$binary-darwin-amd64 -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$$binary ; \
-		CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/$$binary-darwin-arm64 -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$$binary ; \
-	done
+build/ftl-controller: console/client/dist/index.html
+	go build -o build/ftl-controller -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl-controller
+
+build/ftl-runner:
+	go build -o build/ftl-runner -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl-runner
+
+build/ftl:
+	go build -o build/ftl -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl
+
+console/client/dist/index.html:
+	cd console/client && npm install && npm run build
 
 .PHONY: generate
 generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate source.
+
+.PHONY:
+docker: ## Build docker images.
+	docker build --tag ftl-runner --platform=linux/amd64 \
+		-f Dockerfile.runner .
 
 .PHONY: protosync
 protosync: ## Synchronise external protos into FTL repo.

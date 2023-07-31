@@ -206,7 +206,7 @@ type ControllerServiceClient interface {
 	ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
-	// Pull schema changes from the Control Plane.
+	// Pull schema changes from the Controller.
 	PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest]) (*connect_go.ServerStreamForClient[v1.PullSchemaResponse], error)
 }
 
@@ -392,7 +392,7 @@ type ControllerServiceHandler interface {
 	ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error)
-	// Pull schema changes from the Control Plane.
+	// Pull schema changes from the Controller.
 	PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest], *connect_go.ServerStream[v1.PullSchemaResponse]) error
 }
 

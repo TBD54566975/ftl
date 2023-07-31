@@ -121,7 +121,7 @@ type RunnerState int32
 const (
 	// The Runner is waiting for a deployment.
 	RunnerState_RUNNER_IDLE RunnerState = 0
-	// The Runner and Control Plane have agreed that the Runner is reserved.
+	// The Runner and Controller have agreed that the Runner is reserved.
 	RunnerState_RUNNER_RESERVED RunnerState = 1
 	// The Runner is assigned to a deployment.
 	RunnerState_RUNNER_ASSIGNED RunnerState = 2
