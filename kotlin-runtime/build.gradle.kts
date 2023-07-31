@@ -20,27 +20,27 @@ repositories {
 }
 
 dependencies {
-  compileOnly("org.hotswapagent:hotswap-agent-core:1.4.1")
+  compileOnly(libs.hotswapAgentCore)
 
   // Use the Kotlin JUnit 5 integration.
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+  testImplementation(libs.kotlinTestJunit5)
 
   // Use the JUnit 5 integration.
-  testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+  testImplementation(libs.junitJupiterEngine)
+  testRuntimeOnly(libs.junitPlatformLauncher)
 
   // These dependencies are used internally, and not exposed to consumers on their own compile classpath.
-  implementation("io.github.classgraph:classgraph:4.8.157")
-  implementation("ch.qos.logback:logback-classic:1.4.5")
-  implementation("ch.qos.logback:logback-core:1.4.5")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.22")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-  implementation("com.google.code.gson:gson:2.10.1")
-  implementation("com.squareup.wire:wire-runtime:4.7.2")
-  implementation("com.squareup.wire:wire-grpc-server:4.7.2")
-  implementation("io.grpc:grpc-netty:1.56.1")
-  implementation("io.grpc:grpc-protobuf:1.56.1")
-  implementation("io.grpc:grpc-stub:1.56.1")
+  implementation(libs.classgraph)
+  implementation(libs.logbackClassic)
+  implementation(libs.logbackCore)
+  implementation(libs.kotlinReflect)
+  implementation(libs.kotlinxCoroutinesCore)
+  implementation(libs.gson)
+  implementation(libs.wireRuntime)
+  implementation(libs.wireGrpcServer)
+  implementation(libs.grpcNetty)
+  implementation(libs.grpcProtobuf)
+  implementation(libs.grpcStub)
 }
 
 // Disable gradlew because we use a Hermit-provided gradle.

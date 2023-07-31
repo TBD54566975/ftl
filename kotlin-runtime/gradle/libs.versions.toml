@@ -1,0 +1,25 @@
+[versions]
+wire = "4.7.2"
+grpc = "1.56.1"
+logback = "1.4.5"
+
+[libraries]
+kotlinTestJunit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
+junitPlatformLauncher = { module = "org.junit.platform:junit-platform-launcher" }
+junitJupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version = "5.9.2" }
+
+hotswapAgentCore = { module = "org.hotswapagent:hotswap-agent-core", version = "1.4.1" }
+classgraph = { module = "io.github.classgraph:classgraph", version = "4.8.157" }
+logbackClassic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+logbackCore = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
+kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "1.8.22" }
+kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.6.4" }
+gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
+wireRuntime = { module = "com.squareup.wire:wire-runtime", version.ref = "wire" }
+wireGrpcServer = { module = "com.squareup.wire:wire-grpc-server", version.ref = "wire" }
+grpcNetty = { module = "io.grpc:grpc-netty", version.ref = "grpc" }
+grpcProtobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
+grpcStub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
+
+[plugins]
+wire = { id = "com.squareup.wire", version.ref = "wire" }
