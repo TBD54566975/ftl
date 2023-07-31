@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-  implementation(project(":ftl-runtime"))
+  implementation("xyz.block.ftl:ftl-runtime")
   implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
 }
 

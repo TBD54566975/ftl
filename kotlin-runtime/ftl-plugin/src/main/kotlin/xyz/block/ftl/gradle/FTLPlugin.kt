@@ -54,11 +54,11 @@ class FTLPlugin : Plugin<Project> {
         }
       }
 
-    val script = project.file("build/ftl/main")
+    val script = project.file("build/main")
     script.writeText(
       """
       #!/bin/bash
-      java -cp jars/${jarFiles.joinToString(":jars/")}:classes xyz.block.ftl.main.MainKt
+      java -cp ftl/jars/${jarFiles.joinToString(":ftl/jars/")}:classes xyz.block.ftl.main.MainKt
       """.trimIndent()
     )
     script.setExecutable(true)

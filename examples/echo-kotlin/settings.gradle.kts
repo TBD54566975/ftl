@@ -1,6 +1,9 @@
 plugins {}
 
 rootProject.name = "echo"
-include(":ftl-runtime")
-project(":ftl-runtime").projectDir = File("../../kotlin-runtime")
+includeBuild("../../kotlin-runtime") {
+  dependencySubstitution {
+    substitute(module("xyz.block.ftl:ftl-runtime")).using(project(":"))
+  }
+}
 includeBuild("../../kotlin-runtime/ftl-plugin")
