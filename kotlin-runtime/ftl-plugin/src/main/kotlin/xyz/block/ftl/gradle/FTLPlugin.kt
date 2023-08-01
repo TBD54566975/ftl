@@ -32,7 +32,9 @@ class FTLPlugin : Plugin<Project> {
         "FTL endpoint must be set"
       }
 
-      println("FTL endpoint: " + extension.endpoint)
+      extension.endpoint?.let {
+        println("FTL endpoint: $it")
+      }
     }
 
     project.tasks.getByName("classes").doLast { prepareFtlRoot(project) }

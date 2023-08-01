@@ -31,6 +31,8 @@ dependencies {
   // Use the JUnit 5 integration.
   testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+  implementation(project(":ftl-protos"))
 }
 
 tasks.findByName("wrapper")?.enabled = false

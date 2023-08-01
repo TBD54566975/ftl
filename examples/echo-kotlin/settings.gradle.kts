@@ -6,4 +6,5 @@ includeBuild("../../kotlin-runtime") {
     substitute(module("xyz.block.ftl:ftl-runtime")).using(project(":"))
   }
 }
+
 includeBuild("../../kotlin-runtime/ftl-plugin")
