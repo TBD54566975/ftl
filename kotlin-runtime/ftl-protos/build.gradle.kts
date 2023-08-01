@@ -39,15 +39,14 @@ wire {
       "xyz.block.ftl.v1.VerbService"
     )
     exclusive = false
-    out = "src/main/kotlin"
+    out = "src/main/kotlin/generated"
   }
   kotlin {
     rpcRole = "client"
     rpcCallStyle = "blocking"
-    out = "src/main/kotlin"
+    out = "src/main/kotlin/generated"
   }
   sourcePath {
     srcDir("../../protos")
-
   }
 }
