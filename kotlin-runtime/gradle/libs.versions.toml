@@ -17,6 +17,7 @@ kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-cor
 gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
 wireRuntime = { module = "com.squareup.wire:wire-runtime", version.ref = "wire" }
 wireGrpcServer = { module = "com.squareup.wire:wire-grpc-server", version.ref = "wire" }
+wireGrpcClient = { module = "com.squareup.wire:wire-grpc-client", version.ref = "wire" }
 grpcNetty = { module = "io.grpc:grpc-netty", version.ref = "grpc" }
 grpcProtobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 grpcStub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
