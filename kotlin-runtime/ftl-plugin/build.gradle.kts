@@ -1,6 +1,13 @@
+buildscript {
+  dependencies {
+    classpath("com.squareup.wire:wire-gradle-plugin:4.7.2")
+  }
+}
+
 plugins {
   kotlin("jvm") version "1.9.0"
   id("java-gradle-plugin")
+  id("com.squareup.wire") version "4.7.2"
 }
 
 repositories {
@@ -26,13 +33,27 @@ dependencies {
   compileOnly(gradleApi())
 
   // Use the Kotlin JUnit 5 integration.
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+  testImplementation(libs.kotlinTestJunit5)
 
   // Use the JUnit 5 integration.
-  testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+  testImplementation(libs.junitJupiterEngine)
+  testRuntimeOnly(libs.junitPlatformLauncher)
 
-  implementation(project(":ftl-protos"))
+  implementation(libs.kotlinPoet)
+  implementation(libs.kotlinReflect)
+  implementation(libs.kotlinxCoroutinesCore)
+  implementation(libs.wireRuntime)
+  implementation(libs.wireGrpcClient)
 }
 
 tasks.findByName("wrapper")?.enabled = false
+
+wire {
+  kotlin {
+    rpcRole = "client"
+    rpcCallStyle = "blocking"
+  }
+  sourcePath {
+    srcDir("../../protos")
+  }
+}

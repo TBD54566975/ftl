@@ -9,5 +9,3 @@ plugins {
 }
 
 rootProject.name = "ftl-runtime"
-include(":ftl-protos")
-project(":ftl-protos").projectDir = File("ftl-protos")

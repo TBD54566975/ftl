@@ -23,6 +23,9 @@ class FTLPlugin : Plugin<Project> {
 
       extension.endpoint?.let {
         println("FTL endpoint: $it")
+        println("running this thing")
+        val generator = SchemaGenerator(it)
+        generator.generate()
       }
     }
 

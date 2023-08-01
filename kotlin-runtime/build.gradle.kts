@@ -23,7 +23,6 @@ dependencies {
   testRuntimeOnly(libs.junitPlatformLauncher)
 
   // These dependencies are used internally, and not exposed to consumers on their own compile classpath.
-  implementation(project(":ftl-protos"))
   implementation(libs.classgraph)
   implementation(libs.logbackClassic)
   implementation(libs.logbackCore)
