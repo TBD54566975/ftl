@@ -131,7 +131,7 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 
 const getActiveRunners = `-- name: GetActiveRunners :many
 SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
-                           r.language,
+                           r.languages,
                            r.endpoint,
                            r.state,
                            r.last_seen,
@@ -145,7 +145,7 @@ ORDER BY r.key
 
 type GetActiveRunnersRow struct {
 	RunnerKey     sqltypes.Key
-	Language      string
+	Languages     sqltypes.Languages
 	Endpoint      string
 	State         RunnerState
 	LastSeen      pgtype.Timestamptz
@@ -163,7 +163,7 @@ func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRu
 		var i GetActiveRunnersRow
 		if err := rows.Scan(
 			&i.RunnerKey,
-			&i.Language,
+			&i.Languages,
 			&i.Endpoint,
 			&i.State,
 			&i.LastSeen,
@@ -577,15 +577,15 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 }
 
 const getIdleRunnersForLanguage = `-- name: GetIdleRunnersForLanguage :many
-SELECT id, key, created, last_seen, reservation_timeout, state, language, endpoint, deployment_id
+SELECT id, key, created, last_seen, reservation_timeout, state, languages, endpoint, deployment_id
 FROM runners
-WHERE language = $1
+WHERE languages LIKE '%:' || $1::text || ':%'
   AND state = 'idle'
 LIMIT $2
 `
 
-func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error) {
-	rows, err := q.db.Query(ctx, getIdleRunnersForLanguage, language, limit)
+func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, column1 string, limit int32) ([]Runner, error) {
+	rows, err := q.db.Query(ctx, getIdleRunnersForLanguage, column1, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -600,7 +600,7 @@ func (q *Queries) GetIdleRunnersForLanguage(ctx context.Context, language string
 			&i.LastSeen,
 			&i.ReservationTimeout,
 			&i.State,
-			&i.Language,
+			&i.Languages,
 			&i.Endpoint,
 			&i.DeploymentID,
 		); err != nil {
@@ -851,7 +851,7 @@ func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutin
 
 const getRunner = `-- name: GetRunner :one
 SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
-                           r.language,
+                           r.languages,
                            r.endpoint,
                            r.state,
                            r.last_seen,
@@ -863,7 +863,7 @@ WHERE r.key = $1
 
 type GetRunnerRow struct {
 	RunnerKey     sqltypes.Key
-	Language      string
+	Languages     sqltypes.Languages
 	Endpoint      string
 	State         RunnerState
 	LastSeen      pgtype.Timestamptz
@@ -875,7 +875,7 @@ func (q *Queries) GetRunner(ctx context.Context, key sqltypes.Key) (GetRunnerRow
 	var i GetRunnerRow
 	err := row.Scan(
 		&i.RunnerKey,
-		&i.Language,
+		&i.Languages,
 		&i.Endpoint,
 		&i.State,
 		&i.LastSeen,
@@ -898,7 +898,7 @@ func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerS
 }
 
 const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, r.key, r.created, r.last_seen, r.reservation_timeout, r.state, r.language, r.endpoint, r.deployment_id
+SELECT r.id, r.key, r.created, r.last_seen, r.reservation_timeout, r.state, r.languages, r.endpoint, r.deployment_id
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
@@ -921,7 +921,7 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key)
 			&i.LastSeen,
 			&i.ReservationTimeout,
 			&i.State,
-			&i.Language,
+			&i.Languages,
 			&i.Endpoint,
 			&i.DeploymentID,
 		); err != nil {
@@ -1068,15 +1068,15 @@ SET state               = 'reserved',
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
-            WHERE r.language = $1
+            WHERE r.languages LIKE '%:' || $1::text || ':%'
               AND r.state = 'idle'
             LIMIT 1 FOR UPDATE SKIP LOCKED)
-RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.reservation_timeout, runners.state, runners.language, runners.endpoint, runners.deployment_id
+RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.reservation_timeout, runners.state, runners.languages, runners.endpoint, runners.deployment_id
 `
 
 // Find an idle runner and reserve it for the given deployment.
-func (q *Queries) ReserveRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error) {
-	row := q.db.QueryRow(ctx, reserveRunner, language, reservationTimeout, deploymentKey)
+func (q *Queries) ReserveRunner(ctx context.Context, column1 string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error) {
+	row := q.db.QueryRow(ctx, reserveRunner, column1, reservationTimeout, deploymentKey)
 	var i Runner
 	err := row.Scan(
 		&i.ID,
@@ -1085,7 +1085,7 @@ func (q *Queries) ReserveRunner(ctx context.Context, language string, reservatio
 		&i.LastSeen,
 		&i.ReservationTimeout,
 		&i.State,
-		&i.Language,
+		&i.Languages,
 		&i.Endpoint,
 		&i.DeploymentID,
 	)
@@ -1143,9 +1143,9 @@ WITH deployment_rel AS (
                               WHERE d.key = $5
                               LIMIT 1), -1) END AS id)
 INSERT
-INTO runners (key, language, endpoint, state, deployment_id, last_seen)
+INTO runners (key, languages, endpoint, state, deployment_id, last_seen)
 VALUES ($1, $2, $3, $4, (SELECT id FROM deployment_rel), NOW() AT TIME ZONE 'utc')
-ON CONFLICT (key) DO UPDATE SET language      = $2,
+ON CONFLICT (key) DO UPDATE SET languages     = $2,
                                 endpoint      = $3,
                                 state         = $4,
                                 deployment_id = (SELECT id FROM deployment_rel),
@@ -1155,7 +1155,7 @@ RETURNING deployment_id
 
 type UpsertRunnerParams struct {
 	Key           sqltypes.Key
-	Language      string
+	Languages     sqltypes.Languages
 	Endpoint      string
 	State         RunnerState
 	DeploymentKey sqltypes.NullKey
@@ -1169,7 +1169,7 @@ type UpsertRunnerParams struct {
 func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (pgtype.Int8, error) {
 	row := q.db.QueryRow(ctx, upsertRunner,
 		arg.Key,
-		arg.Language,
+		arg.Languages,
 		arg.Endpoint,
 		arg.State,
 		arg.DeploymentKey,

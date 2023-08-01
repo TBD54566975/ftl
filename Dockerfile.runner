@@ -7,15 +7,18 @@ RUN apt install -y curl git
 COPY ./bin /src/bin
 ENV PATH="/src/bin:$PATH"
 ENV HERMIT_STATE_DIR=/hermit
+RUN hermit install
 RUN hermit uninstall jbr
 RUN hermit install openjre-18.0.2.1_1
-RUN hermit install
+# openjre and jbr conflict, but we want the JRE in the cache
+RUN hermit uninstall openjre
+RUN hermit install jbr
 
 # Build
 COPY . /src/
 WORKDIR /src
 RUN make build/ftl-runner
-
+RUN make kotlin-runtime/build/libs/ftl-runtime.jar
 
 # Finally create the runtime image.
 FROM ubuntu:22.04
@@ -24,5 +27,14 @@ WORKDIR /root/
 
 ENV PATH="/root/jre/bin:$PATH"
 COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
-
+COPY --from=builder /src/kotlin-runtime/build/libs/ftl-runtime.jar template/ftl/jars/
 COPY --from=builder /src/build/ftl-runner .
+RUN mkdir deployments
+
+EXPOSE 8894
+
+ENV FTL_ENDPOINT="http://host.docker.internal:8891"
+ENV FTL_RUNNER_BIND="http://0.0.0.0:8899"
+ENV FTL_RUNNER_ADVERTISE="http://127.0.0.1:8899"
+
+CMD ["/root/ftl-runner", "--language=kotlin", "--language=go", "--template-dir=template", "--deployment-dir=deployments"]

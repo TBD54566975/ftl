@@ -91,9 +91,9 @@ WITH deployment_rel AS (
                               WHERE d.key = sqlc.narg('deployment_key')
                               LIMIT 1), -1) END AS id)
 INSERT
-INTO runners (key, language, endpoint, state, deployment_id, last_seen)
+INTO runners (key, languages, endpoint, state, deployment_id, last_seen)
 VALUES ($1, $2, $3, $4, (SELECT id FROM deployment_rel), NOW() AT TIME ZONE 'utc')
-ON CONFLICT (key) DO UPDATE SET language      = $2,
+ON CONFLICT (key) DO UPDATE SET languages     = $2,
                                 endpoint      = $3,
                                 state         = $4,
                                 deployment_id = (SELECT id FROM deployment_rel),
@@ -121,7 +121,7 @@ FROM matches;
 
 -- name: GetActiveRunners :many
 SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
-                           r.language,
+                           r.languages,
                            r.endpoint,
                            r.state,
                            r.last_seen,
@@ -143,7 +143,7 @@ ORDER BY d.key;
 -- name: GetIdleRunnersForLanguage :many
 SELECT *
 FROM runners
-WHERE language = $1
+WHERE languages LIKE '%:' || $1::text || ':%'
   AND state = 'idle'
 LIMIT $2;
 
@@ -188,7 +188,7 @@ SET state               = 'reserved',
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
-            WHERE r.language = $1
+            WHERE r.languages LIKE '%:' || $1::text || ':%'
               AND r.state = 'idle'
             LIMIT 1 FOR UPDATE SKIP LOCKED)
 RETURNING runners.*;
@@ -200,7 +200,7 @@ WHERE key = $1;
 
 -- name: GetRunner :one
 SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
-                           r.language,
+                           r.languages,
                            r.endpoint,
                            r.state,
                            r.last_seen,

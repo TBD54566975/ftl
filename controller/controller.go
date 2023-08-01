@@ -202,7 +202,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 			}
 			return &ftlv1.StatusResponse_Runner{
 				Key:        r.Key.String(),
-				Language:   r.Language,
+				Languages:  r.Languages,
 				Endpoint:   r.Endpoint,
 				State:      r.State.ToProto(),
 				Deployment: deployment,
@@ -316,8 +316,8 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		}
 		err = s.dal.UpsertRunner(ctx, dal.Runner{
 			Key:        runnerKey,
-			Language:   msg.Language,
 			Endpoint:   msg.Endpoint,
+			Languages:  msg.Languages,
 			State:      dal.RunnerStateFromProto(msg.State),
 			Deployment: maybeDeployment,
 		})
@@ -640,10 +640,10 @@ func (s *Service) terminateRandomRunner(ctx context.Context, key model.Deploymen
 		return false, errors.WithStack(err)
 	}
 	err = s.dal.UpsertRunner(ctx, dal.Runner{
-		Key:      runner.Key,
-		Language: runner.Language,
-		Endpoint: runner.Endpoint,
-		State:    dal.RunnerStateFromProto(resp.Msg.State),
+		Key:       runner.Key,
+		Languages: runner.Languages,
+		Endpoint:  runner.Endpoint,
+		State:     dal.RunnerStateFromProto(resp.Msg.State),
 	})
 	return true, errors.WithStack(err)
 }

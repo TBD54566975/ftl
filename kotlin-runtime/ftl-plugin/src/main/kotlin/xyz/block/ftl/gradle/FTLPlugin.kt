@@ -15,17 +15,6 @@ class FTLPlugin : Plugin<Project> {
       it.group = "FTL"
       it.description = "Deploy FTL module"
     }
-    //
-    // project.afterEvaluate {
-    //   println("BEFORE")
-    //   println(project.configurations.getByName("runtimeClasspath").files)
-    //   project.tasks.register("run", JavaExec::class.java) {
-    //     it.group = "Execution"
-    //     it.description = "Run the FTL module locally."
-    //     it.classpath = project.configurations.getByName("runtimeClasspath")
-    //     it.mainClass.set("xyz.block.ftl.main.MainKt")
-    //   }
-    // }
 
     project.afterEvaluate {
       check(extension.endpoint != null && extension.endpoint?.isNotEmpty() == true) {
@@ -60,7 +49,7 @@ class FTLPlugin : Plugin<Project> {
     script.writeText(
       """
       #!/bin/bash
-      java -cp ftl/jars/${jarFiles.joinToString(":ftl/jars/")}:classes xyz.block.ftl.main.MainKt
+      java -cp ftl/jars/ftl-runtime.jar:ftl/jars/${jarFiles.joinToString(":ftl/jars/")}:classes xyz.block.ftl.main.MainKt
       """.trimIndent()
     )
     script.setExecutable(true)

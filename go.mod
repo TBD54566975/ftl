@@ -11,6 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/oklog/ulid/v2 v2.1.0
+	github.com/otiai10/copy v1.12.0
 	github.com/rs/cors v1.9.0
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/metric v1.16.0

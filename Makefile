@@ -48,6 +48,9 @@ build/ftl-runner:
 build/ftl:
 	go build -o build/ftl -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl
 
+kotlin-runtime/build/libs/ftl-runtime.jar:
+	cd kotlin-runtime && gradle jar
+
 console/client/dist/index.html:
 	cd console/client && npm install && npm run build
 
@@ -55,7 +58,7 @@ console/client/dist/index.html:
 generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate source.
 
 .PHONY:
-docker: ## Build docker images.
+docker-runner: ## Build ftl-runner docker images.
 	docker build --tag ftl-runner --platform=linux/amd64 \
 		-f Dockerfile.runner .
 

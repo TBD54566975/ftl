@@ -111,7 +111,9 @@ CREATE TABLE runners
     -- If the runner is reserved, this is the time at which the reservation expires.
     reservation_timeout TIMESTAMPTZ,
     state               runner_state NOT NULL DEFAULT 'idle',
-    language            VARCHAR      NOT NULL,
+    -- The languages this runner supports, sorted and surrounded by : eg. ":go:kotlin:"
+    -- Splitting this into a separate table complicates life quite a bit.
+    languages           VARCHAR      NOT NULL,
     endpoint            VARCHAR      NOT NULL,
     deployment_id       BIGINT       REFERENCES deployments (id) ON DELETE SET NULL
 );
@@ -119,7 +121,7 @@ CREATE TABLE runners
 CREATE UNIQUE INDEX runners_endpoint_not_dead_idx ON runners (endpoint) WHERE state <> 'dead';
 CREATE INDEX runners_state_idx ON runners (state);
 CREATE INDEX runners_deployment_id_idx ON runners (deployment_id);
-CREATE INDEX runners_language_idx ON runners (language);
+CREATE INDEX runners_language_idx ON runners (languages);
 
 CREATE TABLE ingress_routes
 (

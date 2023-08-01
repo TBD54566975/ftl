@@ -82,10 +82,10 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 }
 
 type Runner struct {
-	Key      model.RunnerKey
-	Language string
-	Endpoint string
-	State    RunnerState
+	Key       model.RunnerKey
+	Languages []string
+	Endpoint  string
+	State     RunnerState
 	// Assigned deployment key, if any.
 	Deployment types.Option[model.DeploymentKey]
 }
@@ -272,7 +272,7 @@ func (d *DAL) GetStatus(
 			}
 			return Runner{
 				Key:        model.RunnerKey(in.RunnerKey),
-				Language:   in.Language,
+				Languages:  in.Languages,
 				Endpoint:   in.Endpoint,
 				State:      RunnerState(in.State),
 				Deployment: deployment,
@@ -299,7 +299,7 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 	for _, row := range rows {
 		runners = append(runners, Runner{
 			Key:        model.RunnerKey(row.Key),
-			Language:   row.Language,
+			Languages:  row.Languages,
 			Endpoint:   row.Endpoint,
 			State:      RunnerState(row.State),
 			Deployment: types.Some(deployment),
@@ -446,7 +446,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 	}
 	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
 		Key:           sqltypes.Key(runner.Key),
-		Language:      runner.Language,
+		Languages:     runner.Languages,
 		Endpoint:      runner.Endpoint,
 		State:         sql.RunnerState(runner.State),
 		DeploymentKey: pgDeploymentKey,
@@ -516,7 +516,7 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, language string, d
 		tx:     tx,
 		runner: Runner{
 			Key:        model.RunnerKey(runner.Key),
-			Language:   runner.Language,
+			Languages:  runner.Languages,
 			Endpoint:   runner.Endpoint,
 			State:      RunnerState(runner.State),
 			Deployment: types.Some(deployment),
@@ -655,10 +655,10 @@ func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string, li
 	}
 	return slices.Map(runners, func(row sql.Runner) Runner {
 		return Runner{
-			Key:      model.RunnerKey(row.Key),
-			Language: row.Language,
-			Endpoint: row.Endpoint,
-			State:    RunnerState(row.State),
+			Key:       model.RunnerKey(row.Key),
+			Languages: row.Languages,
+			Endpoint:  row.Endpoint,
+			State:     RunnerState(row.State),
 		}
 	}), nil
 }
@@ -700,7 +700,7 @@ func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner,
 	}
 	return Runner{
 		Key:        model.RunnerKey(row.RunnerKey),
-		Language:   row.Language,
+		Languages:  row.Languages,
 		Endpoint:   row.Endpoint,
 		State:      RunnerState(row.State),
 		Deployment: deployment,

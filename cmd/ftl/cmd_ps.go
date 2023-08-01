@@ -20,11 +20,11 @@ type psCmd struct {
 }
 
 type process struct {
-	Deployment string `json:"deployment"`
-	State      string `json:"state"`
-	Language   string `json:"language"`
-	Module     string `json:"module"`
-	Runner     string `json:"runner"`
+	Deployment string   `json:"deployment"`
+	State      string   `json:"state"`
+	Languages  []string `json:"language"`
+	Module     string   `json:"module"`
+	Runner     string   `json:"runner"`
 }
 
 func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
@@ -47,7 +47,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 		processes = append(processes, process{
 			Deployment: runner.GetDeployment(),
 			State:      strings.TrimPrefix(runner.State.String(), "RUNNER_"),
-			Language:   runner.Language,
+			Languages:  runner.Languages,
 			Module:     module,
 			Runner:     runner.Key,
 		})
@@ -68,7 +68,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 		if process.State != "ASSIGNED" && !s.All {
 			continue
 		}
-		fmt.Printf(runnerFmt, process.Deployment, process.State, process.Language, process.Module, process.Runner)
+		fmt.Printf(runnerFmt, process.Deployment, process.State, strings.Join(process.Languages, ":"), process.Module, process.Runner)
 	}
 	return nil
 }

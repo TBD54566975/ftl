@@ -58,7 +58,7 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	fmt.Printf(runnerFmt, "Runner", "State", "Language", "Deployment", "Endpoint")
 	fmt.Printf(runnerFmt, strings.Repeat("-", 27), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 27), strings.Repeat("-", 8))
 	for _, runner := range status.Msg.Runners {
-		fmt.Printf(runnerFmt, runner.Key, strings.TrimPrefix(runner.State.String(), "RUNNER_"), runner.Language, runner.GetDeployment(), runner.Endpoint)
+		fmt.Printf(runnerFmt, runner.Key, strings.TrimPrefix(runner.State.String(), "RUNNER_"), strings.Join(runner.Languages, ":"), runner.GetDeployment(), runner.Endpoint)
 	}
 	fmt.Println()
 
