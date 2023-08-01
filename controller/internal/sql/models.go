@@ -185,7 +185,7 @@ type Runner struct {
 	LastSeen           pgtype.Timestamptz
 	ReservationTimeout pgtype.Timestamptz
 	State              RunnerState
-	Language           string
+	Languages          sqltypes.Languages
 	Endpoint           string
 	DeploymentID       pgtype.Int8
 }

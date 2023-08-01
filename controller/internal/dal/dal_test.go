@@ -89,20 +89,20 @@ func TestDAL(t *testing.T) {
 	runnerID := model.NewRunnerKey()
 	t.Run("RegisterRunner", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:      runnerID,
-			Language: "go",
-			Endpoint: "http://localhost:8080",
-			State:    RunnerStateIdle,
+			Key:       runnerID,
+			Languages: []string{"go"},
+			Endpoint:  "http://localhost:8080",
+			State:     RunnerStateIdle,
 		})
 		assert.NoError(t, err)
 	})
 
 	t.Run("RegisterRunnerFailsOnDuplicate", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:      model.NewRunnerKey(),
-			Language: "go",
-			Endpoint: "http://localhost:8080",
-			State:    RunnerStateIdle,
+			Key:       model.NewRunnerKey(),
+			Languages: []string{"go"},
+			Endpoint:  "http://localhost:8080",
+			State:     RunnerStateIdle,
 		})
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrConflict)
@@ -110,10 +110,10 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetIdleRunnersForLanguage", func(t *testing.T) {
 		expectedRunner := Runner{
-			Key:      runnerID,
-			Language: "go",
-			Endpoint: "http://localhost:8080",
-			State:    RunnerStateIdle,
+			Key:       runnerID,
+			Languages: []string{"go"},
+			Endpoint:  "http://localhost:8080",
+			State:     RunnerStateIdle,
 		}
 		runners, err := dal.GetIdleRunnersForLanguage(ctx, "go", 10)
 		assert.NoError(t, err)
@@ -122,7 +122,7 @@ func TestDAL(t *testing.T) {
 
 	expectedRunner := Runner{
 		Key:        runnerID,
-		Language:   "go",
+		Languages:  []string{"go"},
 		Endpoint:   "http://localhost:8080",
 		State:      RunnerStateReserved,
 		Deployment: types.Some(deploymentKey),
@@ -184,7 +184,7 @@ func TestDAL(t *testing.T) {
 	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
 		err := dal.UpsertRunner(ctx, Runner{
 			Key:        runnerID,
-			Language:   "go",
+			Languages:  []string{"go"},
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
 			Deployment: types.Some(deploymentKey),
@@ -203,7 +203,7 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, []Runner{{
 			Key:        runnerID,
-			Language:   "go",
+			Languages:  []string{"go"},
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
 			Deployment: types.Some(deploymentKey),
@@ -222,7 +222,7 @@ func TestDAL(t *testing.T) {
 	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
 		err := dal.UpsertRunner(ctx, Runner{
 			Key:        runnerID,
-			Language:   "go",
+			Languages:  []string{"go"},
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
 			Deployment: types.Some(model.NewDeploymentKey()),
@@ -233,10 +233,10 @@ func TestDAL(t *testing.T) {
 
 	t.Run("ReleaseRunnerReservation", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:      runnerID,
-			Language: "go",
-			Endpoint: "http://localhost:8080",
-			State:    RunnerStateIdle,
+			Key:       runnerID,
+			Languages: []string{"go"},
+			Endpoint:  "http://localhost:8080",
+			State:     RunnerStateIdle,
 		})
 		assert.NoError(t, err)
 	})

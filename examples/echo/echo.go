@@ -9,6 +9,7 @@ import (
 	"time"
 
 	timemodule "github.com/TBD54566975/ftl/examples/time"
+	"github.com/TBD54566975/ftl/internal/log"
 
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
 )
@@ -27,6 +28,10 @@ type EchoResponse struct {
 //ftl:verb
 //ftl:ingress GET /echo
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
+	logger := log.FromContext(ctx)
+
+	logger.Errorf(nil, "Received a request!")
+
 	tresp, err := ftl.Call(ctx, timemodule.Time, timemodule.TimeRequest{})
 	if err != nil {
 		return EchoResponse{}, err

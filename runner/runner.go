@@ -19,6 +19,7 @@ import (
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
+	"github.com/otiai10/copy"
 
 	"github.com/TBD54566975/ftl/common/model"
 	"github.com/TBD54566975/ftl/common/plugin"
@@ -32,16 +33,21 @@ import (
 )
 
 type Config struct {
-	Bind               *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893"`
+	Bind               *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893" env:"FTL_RUNNER_BIND"`
+	Advertise          *url.URL        `help:"Endpoint the Runner should advertise (use --bind if omitted)." default:"" env:"FTL_RUNNER_ADVERTISE"`
 	Key                model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" default:"R00000000000000000000000000"`
 	ControllerEndpoint *url.URL        `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
-	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
-	Language           string          `help:"Language to advertise for deployments." env:"FTL_LANGUAGE" required:""`
+	TemplateDir        string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
+	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}" type:"existingdir"`
+	Language           []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" required:""`
 	HeartbeatPeriod    time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter    time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
 }
 
 func Start(ctx context.Context, config Config) error {
+	if config.Advertise.String() == "" {
+		config.Advertise = config.Bind
+	}
 	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.ControllerEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, client)
 	logger := log.FromContext(ctx)
@@ -165,9 +171,16 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, errors.Wrap(err, "invalid module")
 	}
 	deploymentDir := filepath.Join(s.config.DeploymentDir, module.Name, id.String())
-	err = os.MkdirAll(deploymentDir, 0700)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create deployment directory")
+	if s.config.TemplateDir != "" {
+		err = copy.Copy(s.config.TemplateDir, deploymentDir)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to copy template directory")
+		}
+	} else {
+		err = os.MkdirAll(deploymentDir, 0700)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create deployment directory")
+		}
 	}
 	err = download.Artefacts(ctx, s.controllerClient, id, deploymentDir)
 	if err != nil {
@@ -181,7 +194,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars(
 			"FTL_ENDPOINT="+s.config.ControllerEndpoint.String(),
-			"FTL_OBSERVABILITY_ENDPOINT="+s.config.Bind.String(),
+			"FTL_OBSERVABILITY_ENDPOINT="+s.config.ControllerEndpoint.String(),
 		),
 	)
 	if err != nil {
@@ -226,10 +239,10 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	s.deployment.Store(types.None[*deployment]())
 	s.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 	return connect.NewResponse(&ftlv1.RunnerHeartbeat{
-		Key:      s.key.String(),
-		Language: s.config.Language,
-		Endpoint: s.config.Bind.String(),
-		State:    ftlv1.RunnerState_RUNNER_IDLE,
+		Key:       s.key.String(),
+		Languages: s.config.Language,
+		Endpoint:  s.config.Advertise.String(),
+		State:     ftlv1.RunnerState_RUNNER_IDLE,
 	}), nil
 }
 
@@ -271,8 +284,8 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	logger.Tracef("Registering with Controller as %s", state)
 	err := send(&ftlv1.RunnerHeartbeat{
 		Key:        s.key.String(),
-		Language:   s.config.Language,
-		Endpoint:   s.config.Bind.String(),
+		Languages:  s.config.Language,
+		Endpoint:   s.config.Advertise.String(),
 		Deployment: deploymentKey,
 		State:      state,
 		Error:      errPtr,

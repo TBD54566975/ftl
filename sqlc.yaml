@@ -16,3 +16,5 @@ sql:
           - db_type: "uuid"
             nullable: true
             go_type: "github.com/TBD54566975/ftl/controller/internal/sqltypes.NullKey"
+          - column: "runners.languages"
+            go_type: "github.com/TBD54566975/ftl/controller/internal/sqltypes.Languages"

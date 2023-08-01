@@ -36,7 +36,7 @@ type Querier interface {
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
 	GetExistingDeploymentForModule(ctx context.Context, name string) (Deployment, error)
-	GetIdleRunnersForLanguage(ctx context.Context, language string, limit int32) ([]Runner, error)
+	GetIdleRunnersForLanguage(ctx context.Context, column1 string, limit int32) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error)
 	GetModuleCalls(ctx context.Context, modules []string) ([]GetModuleCallsRow, error)
@@ -53,7 +53,7 @@ type Querier interface {
 	KillStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	ReplaceDeployment(ctx context.Context, oldDeployment sqltypes.Key, newDeployment sqltypes.Key, minReplicas int32) (int64, error)
 	// Find an idle runner and reserve it for the given deployment.
-	ReserveRunner(ctx context.Context, language string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error)
+	ReserveRunner(ctx context.Context, column1 string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error
 	UpsertController(ctx context.Context, key sqltypes.Key, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)

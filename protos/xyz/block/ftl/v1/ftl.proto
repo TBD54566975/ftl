@@ -137,8 +137,8 @@ enum RunnerState {
 message RunnerHeartbeat {
   // UUID representing the runner instance.
   string key = 1;
-  // Language the runner supports.
-  string language = 2;
+  // Languages the runner supports.
+  repeated string languages = 2;
   string endpoint = 3;
   optional string deployment = 4;
   RunnerState state = 5;
@@ -186,7 +186,7 @@ message StatusResponse {
 
   message Runner {
     string key = 1;
-    string language = 2;
+    repeated string languages = 2;
     string endpoint = 3;
     RunnerState state = 4;
     optional string deployment = 5;

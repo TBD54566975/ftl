@@ -950,11 +950,11 @@ export class RunnerHeartbeat extends Message<RunnerHeartbeat> {
   key = "";
 
   /**
-   * Language the runner supports.
+   * Languages the runner supports.
    *
-   * @generated from field: string language = 2;
+   * @generated from field: repeated string languages = 2;
    */
-  language = "";
+  languages: string[] = [];
 
   /**
    * @generated from field: string endpoint = 3;
@@ -987,7 +987,7 @@ export class RunnerHeartbeat extends Message<RunnerHeartbeat> {
   static readonly typeName = "xyz.block.ftl.v1.RunnerHeartbeat";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "languages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
@@ -1457,9 +1457,9 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
   key = "";
 
   /**
-   * @generated from field: string language = 2;
+   * @generated from field: repeated string languages = 2;
    */
-  language = "";
+  languages: string[] = [];
 
   /**
    * @generated from field: string endpoint = 3;
@@ -1485,7 +1485,7 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse.Runner";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "languages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
     { no: 5, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
