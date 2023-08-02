@@ -5,8 +5,6 @@ package runner
 import (
 	"context"
 	"math/rand"
-	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -78,18 +76,17 @@ func Start(ctx context.Context, config Config) error {
 	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
 
 	return rpc.Serve(ctx, config.Bind,
-		rpc.HTTP("/"+ftlv1connect.VerbServiceName+"/", svc), // The Runner proxies all verbs to the deployment.
+		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
 	)
 }
 
 var _ ftlv1connect.RunnerServiceHandler = (*Service)(nil)
-var _ http.Handler = (*Service)(nil)
+var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 
 type deployment struct {
 	key    model.DeploymentKey
 	plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]
-	proxy  *httputil.ReverseProxy
 	// Cancelled when plugin terminates
 	ctx context.Context
 }
@@ -107,6 +104,14 @@ type Service struct {
 	registrationFailure atomic.Value[types.Option[error]]
 }
 
+func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+	deployment, ok := s.deployment.Load().Get()
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("no deployment"))
+	}
+	return deployment.plugin.Client.Call(ctx, req)
+}
+
 func (s *Service) Reserve(ctx context.Context, c *connect.Request[ftlv1.ReserveRequest]) (*connect.Response[ftlv1.ReserveResponse], error) {
 	if !s.state.CompareAndSwap(ftlv1.RunnerState_RUNNER_IDLE, ftlv1.RunnerState_RUNNER_RESERVED) {
 		return nil, errors.Errorf("can only reserve from IDLE state, not %s", s.state.Load())
@@ -114,21 +119,7 @@ func (s *Service) Reserve(ctx context.Context, c *connect.Request[ftlv1.ReserveR
 	return connect.NewResponse(&ftlv1.ReserveResponse{}), nil
 }
 
-// ServeHTTP proxies through to the deployment.
-func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if deployment, ok := s.deployment.Load().Get(); ok {
-		deployment.proxy.ServeHTTP(w, r)
-	} else {
-		http.Error(w, "503 No deployment", http.StatusServiceUnavailable)
-	}
-}
-
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	// var notReady *string
-	// if err, ok := s.registrationFailure.Load().Get(); ok {
-	// 	msg := err.Error()
-	// 	notReady = &msg
-	// }
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
@@ -200,7 +191,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
-	s.deployment.Store(types.Some(s.makePluginProxy(cmdCtx, id, deployment)))
+	s.deployment.Store(types.Some(s.makeDeployment(cmdCtx, id, deployment)))
 	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
@@ -246,13 +237,8 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	}), nil
 }
 
-func (s *Service) makePluginProxy(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
-	return &deployment{
-		ctx:    ctx,
-		key:    key,
-		plugin: plugin,
-		proxy:  httputil.NewSingleHostReverseProxy(plugin.Endpoint),
-	}
+func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
+	return &deployment{ctx: ctx, key: key, plugin: plugin}
 }
 
 func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1.RunnerHeartbeat) error) error {

@@ -11,8 +11,9 @@ import (
 //
 // Module config files are currently TOML.
 type ModuleConfig struct {
-	Language string `toml:"language"`
-	Module   string `toml:"module"`
+	Language string   `toml:"language"`
+	Module   string   `toml:"module"`
+	Deploy   []string `toml:"deploy"`
 }
 
 // LoadConfig from a directory.

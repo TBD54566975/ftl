@@ -27,7 +27,7 @@ import (
 
 type serveCli struct {
 	LogConfig log.Config `prefix:"log-" embed:"" group:"Logging:"`
-	Bind      *url.URL   `help:"Socket to listen on." env:"FTL_PLUGIN_ENDPOINT" required:""`
+	Bind      *url.URL   `help:"URL to listen on." env:"FTL_BIND" required:""`
 	kong.Plugins
 }
 
@@ -78,7 +78,7 @@ func RegisterAdditionalHandler[Impl any](path string, handler http.Handler) Star
 type Constructor[Impl any, Config any] func(context.Context, Config) (context.Context, Impl, error)
 
 // Start a gRPC server plugin listening on the socket specified by the
-// environment variable FTL_PLUGIN_ENDPOINT.
+// environment variable FTL_BIND.
 //
 // This function does not return.
 //
