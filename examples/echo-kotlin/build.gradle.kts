@@ -17,7 +17,6 @@ dependencies {
 
 ftl {
   endpoint = "http://localhost:8892"
-  module = "echo"
 }
 
 tasks.findByName("wrapper")?.enabled = false
