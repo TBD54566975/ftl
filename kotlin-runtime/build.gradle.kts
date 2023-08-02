@@ -2,6 +2,7 @@ group = "xyz.block"
 version = "0.1.0-SNAPSHOT"
 
 plugins {
+  id("com.squareup.wire") version "4.7.2"
   kotlin("jvm") version "1.9.0"
   // Apply the java-library plugin for API and implementation separation.
   `java-library`
@@ -23,7 +24,6 @@ dependencies {
   testRuntimeOnly(libs.junitPlatformLauncher)
 
   // These dependencies are used internally, and not exposed to consumers on their own compile classpath.
-  implementation(project(":ftl-protos"))
   implementation(libs.classgraph)
   implementation(libs.logbackClassic)
   implementation(libs.logbackCore)
@@ -45,6 +45,17 @@ tasks.named<Test>("test") {
   useJUnitPlatform()
   testLogging {
     events("passed", "skipped", "failed")
+  }
+}
+
+wire {
+  kotlin {
+    rpcRole = "server"
+    rpcCallStyle = "blocking"
+    grpcServerCompatible = true
+  }
+  sourcePath {
+    srcDir("../protos")
   }
 }
 
