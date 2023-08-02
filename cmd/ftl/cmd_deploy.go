@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,26 +21,30 @@ import (
 )
 
 type deployCmd struct {
-	Replicas int32    `short:"n" help:"Number of replicas to deploy." default:"1"`
-	Base     string   `help:"Base directory relative to files to upload."`
-	Files    []string `arg:"" help:"Files to upload." type:"existingfile"`
+	Replicas int32  `short:"n" help:"Number of replicas to deploy." default:"1"`
+	Base     string `arg:"" help:"Directory containing ftl.toml" type:"existingdir" default:"."`
 }
 
 func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
-	base := d.Base
-	if base == "" {
-		base = longestCommonPathPrefix(d.Files)
-	}
 
 	// Load the TOML file.
-	config, err := findAndLoadConfig(base)
+	config, err := moduleconfig.LoadConfig(d.Base)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	logger.Infof("Creating deployment for module %s", config.Module)
 
-	filesByHash, err := hashFiles(base, d.Files)
+	if len(config.Deploy) == 0 {
+		return errors.Errorf("no deploy paths defined in config")
+	}
+
+	files, err := findFiles(d.Base, config.Deploy)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	filesByHash, err := hashFiles(d.Base, files)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -53,7 +56,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	logger.Infof("Uploading %d files", len(gadResp.Msg.MissingDigests))
 	for _, missing := range gadResp.Msg.MissingDigests {
 		file := filesByHash[missing]
-		content, err := ioutil.ReadFile(file.localPath)
+		content, err := os.ReadFile(file.localPath)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -143,16 +146,6 @@ func longestCommonPathPrefix(paths []string) string {
 	return strings.Join(parts, "/")
 }
 
-func findAndLoadConfig(root string) (moduleconfig.ModuleConfig, error) {
-	for dir := root; dir != "/"; dir = filepath.Dir(dir) {
-		config, err := moduleconfig.LoadConfig(dir)
-		if err == nil {
-			return config, nil
-		}
-	}
-	return moduleconfig.ModuleConfig{}, errors.Errorf("no ftl.toml found in %s or any parent directory", root)
-}
-
 func relToCWD(path string) string {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -163,4 +156,39 @@ func relToCWD(path string) string {
 		return path
 	}
 	return rel
+}
+
+func findFiles(base string, files []string) ([]string, error) {
+	var out []string
+	for _, file := range files {
+		file = filepath.Join(base, file)
+		info, err := os.Stat(file)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if info.IsDir() {
+			dirFiles, err := findFilesInDir(file)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			out = append(out, dirFiles...)
+		} else {
+			out = append(out, file)
+		}
+	}
+	return out, nil
+}
+
+func findFilesInDir(dir string) ([]string, error) {
+	var out []string
+	return out, errors.WithStack(filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		out = append(out, path)
+		return nil
+	}))
 }

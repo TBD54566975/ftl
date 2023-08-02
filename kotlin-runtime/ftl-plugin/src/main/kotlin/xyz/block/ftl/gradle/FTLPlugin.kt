@@ -60,11 +60,20 @@ class FTLPlugin : Plugin<Project> {
         }
       }
 
+    val config = project.file("build/ftl.toml")
+    config.writeText(
+      """
+      module = "${extension.module}"
+      language = "kotlin"
+      deploy = ["main", "classes/kotlin/main", "ftl"]
+      """.trimIndent()
+    )
+
     val script = project.file("build/main")
     script.writeText(
       """
       #!/bin/bash
-      java -cp ftl/jars/ftl-runtime.jar:ftl/jars/${jarFiles.joinToString(":ftl/jars/")}:classes xyz.block.ftl.main.MainKt
+      java -cp ftl/jars/ftl-runtime.jar:ftl/jars/${jarFiles.joinToString(":ftl/jars/")}:classes/kotlin/main xyz.block.ftl.main.MainKt
       """.trimIndent()
     )
     script.setExecutable(true)

@@ -4,10 +4,7 @@ set -euo pipefail
 tmux \
   set -g mouse on \; \
   set -g status off \; \
-  new-session 'caddy run || read' \; \
-  split-window 'watchexec -r -e go -i "examples/**" -- ftl-controller --key C01H5BRT09Y07547SETZ4HWRA09 --bind http://localhost:8892 || read' \; \
-  select-layout even-vertical \; \
-  split-window 'watchexec -r -e go -i "examples/**" -- ftl-controller --key C01H5P7W7T3375PDBAQY6VS2GM7 --bind http://localhost:8891 || read' \; \
+  new-session 'watchexec -r -e go -i "examples/**" -- ftl-controller --key C01H5BRT09Y07547SETZ4HWRA09 --bind http://localhost:8892 || read' \; \
   select-layout even-vertical \; \
   split-window 'watchexec -r -e go -i "examples/**" -- ftl-runner --key R01H5BTS6ABP1EHGZSAGJMBV50A --language go --bind http://localhost:8894 || read' \; \
   select-layout even-vertical \; \

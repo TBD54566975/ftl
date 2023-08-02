@@ -81,7 +81,7 @@ type Plugin[Client PingableClient] struct {
 //
 // The envars passed to the plugin are:
 //
-//	FTL_PLUGIN_ENDPOINT - the endpoint URI to listen on
+//	FTL_BIND - the endpoint URI to listen on
 //	FTL_WORKING_DIR - the path to a working directory that the plugin can write state to, if required.
 func Spawn[Client PingableClient](
 	ctx context.Context,
@@ -134,7 +134,7 @@ func Spawn[Client PingableClient](
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	cmd.Env = append(cmd.Env, "FTL_PLUGIN_ENDPOINT="+pluginEndpoint.String())
+	cmd.Env = append(cmd.Env, "FTL_BIND="+pluginEndpoint.String())
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
 	cmd.Env = append(cmd.Env, opts.envars...)
 	if err = cmd.Start(); err != nil {

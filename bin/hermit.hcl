@@ -1,5 +1,5 @@
 env = {
-  "FTL_ENDPOINT": "http://ftl.localtest.me",
+  "FTL_ENDPOINT": "http://localhost:8892",
   "FTL_SOURCE": "${HERMIT_ENV}",
   "GOOSE_DBSTRING": "postgres://postgres:secret@127.0.0.1:5432/ftl",
   "GOOSE_DRIVER": "postgres",
