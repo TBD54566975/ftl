@@ -22,6 +22,7 @@ wireGrpcClient = { module = "com.squareup.wire:wire-grpc-client", version.ref = 
 grpcNetty = { module = "io.grpc:grpc-netty", version.ref = "grpc" }
 grpcProtobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 grpcStub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
+pluginz-kotlin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin" }
 
 [plugins]
 wire = { id = "com.squareup.wire", version.ref = "wire" }

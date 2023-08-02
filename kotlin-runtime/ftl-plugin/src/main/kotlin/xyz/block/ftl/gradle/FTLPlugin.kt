@@ -2,12 +2,14 @@ package xyz.block.ftl.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 class FTLPlugin : Plugin<Project> {
   private lateinit var extension: FTLExtension
   private lateinit var project: Project
 
   override fun apply(project: Project) {
+    project.plugins.apply("org.jetbrains.kotlin.jvm")
     this.extension = project.extensions.create("ftl", FTLExtension::class.java, project)
     this.project = project
 
@@ -17,16 +19,26 @@ class FTLPlugin : Plugin<Project> {
     }
 
     project.afterEvaluate {
+      check(extension.module != null && extension.module?.isNotEmpty() == true) {
+        "FTL module must be set"
+      }
       check(extension.endpoint != null && extension.endpoint?.isNotEmpty() == true) {
         "FTL endpoint must be set"
       }
 
       extension.endpoint?.let {
-        println("FTL endpoint: $it")
-        println("running this thing")
-        val generator = SchemaGenerator(it)
-        generator.generate()
+        val client = FTLClient(it)
+        val schemas = client.pullSchemas()
+        val outputDirectory = project.file(extension.outputDirectory)
+        outputDirectory.mkdir()
+        extension.module?.let { module ->
+          ModuleGenerator().run(schemas, outputDirectory, module)
+        }
       }
+
+      // Add generated files to sourceSets
+      val kotlinExtension = project.extensions.getByType(KotlinJvmProjectExtension::class.java)
+      kotlinExtension.sourceSets.findByName("main")?.kotlin?.srcDir(extension.outputDirectory)
     }
 
     project.tasks.getByName("classes").doLast { prepareFtlRoot(project) }

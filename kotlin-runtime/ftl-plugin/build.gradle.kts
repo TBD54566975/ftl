@@ -39,6 +39,7 @@ dependencies {
   testImplementation(libs.junitJupiterEngine)
   testRuntimeOnly(libs.junitPlatformLauncher)
 
+  implementation(libs.pluginz.kotlin)
   implementation(libs.kotlinPoet)
   implementation(libs.kotlinReflect)
   implementation(libs.kotlinxCoroutinesCore)
