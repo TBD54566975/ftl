@@ -1,12 +1,29 @@
 package xyz.block.ftl
 
-class Context {
-  fun <Req, Resp> call(verb: (Context, Req) -> Resp, req: Req): Resp {
-    return verb(this, req)
-  }
+import com.google.gson.Gson
+import xyz.block.ftl.client.VerbServiceClient
+import xyz.block.ftl.registry.VerbRef
+import xyz.block.ftl.registry.ftlModuleFromJvmModule
+import java.security.InvalidParameterException
+import kotlin.jvm.internal.CallableReference
+import kotlin.reflect.KFunction
+import kotlin.reflect.full.hasAnnotation
 
-  inline fun <reified Cls, Req, Resp> call(verb: (Cls, Context, Req) -> Resp, req: Req): Resp {
-    val constructor = Cls::class.constructors.first()
-    return verb(constructor.call(), this, req)
+class Context(
+  val jvmModule: String,
+  val routingClient: VerbServiceClient
+) {
+  val gson = Gson()
+
+  /// Class method with Context.
+  inline fun <reified R> call(verb: KFunction<R>, request: Any): R {
+    if (!verb.hasAnnotation<Verb>()) throw InvalidParameterException("verb must be annotated with @Verb")
+    if (verb !is CallableReference) {
+      throw InvalidParameterException("could not determine module from verb name")
+    }
+    val ftlModule = ftlModuleFromJvmModule(jvmModule, verb.owner.toString().removePrefix("class "))
+    val requestJson = gson.toJson(request)
+    val responseJson = routingClient.call(this, VerbRef(ftlModule, verb.name), requestJson)
+    return gson.fromJson(responseJson, R::class.java)
   }
 }

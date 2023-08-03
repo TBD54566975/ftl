@@ -397,6 +397,12 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
+	if req.Msg.Verb == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("verb is required"))
+	}
+	if req.Msg.Body == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
+	}
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
 
 	routes, err := s.dal.GetRoutingTable(ctx, req.Msg.Verb.Module)

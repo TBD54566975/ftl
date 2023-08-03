@@ -31,6 +31,13 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
   private val verbs = ConcurrentHashMap<VerbRef, VerbHandle<*>>()
   private var ftlModuleName: String? = null
 
+  /** Return the FTL module name. This can only be called after one of the register* methods are called. */
+  val moduleName: String
+    get() {
+      if (ftlModuleName == null) throw IllegalStateException("FTL module name not set, call one of the register* methods first")
+      return ftlModuleName!!
+    }
+
   /** Register all Verbs in a class. */
   fun register(klass: KClass<out Any>) {
     var count = 0
@@ -69,15 +76,12 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
   private fun <C : Any> maybeRegisterVerb(klass: KClass<out C>, function: KFunction<*>) {
     val verbAnnotation = function.findAnnotation<Verb>() ?: return
     val verbName = if (verbAnnotation.name == "") function.name else verbAnnotation.name
-    val qualifiedName =
-      klass.qualifiedName?.removePrefix("$jvmModuleName.")
-        ?: throw IllegalArgumentException("Class must have a qualified name")
-    val parts = qualifiedName.split(".")
-    val moduleName = parts[0]
-    if (parts.size < 2) {
-      throw IllegalArgumentException("Class ${klass.qualifiedName} must be in the form $jvmModuleName.<module>.<class>")
+    if (ftlModuleName == null) {
+      val qualifiedName =
+        klass.qualifiedName ?: throw IllegalArgumentException("Class must have a qualified name")
+      val moduleName = ftlModuleFromJvmModule(jvmModuleName, qualifiedName)
+      ftlModuleName = moduleName
     }
-    ftlModuleName = moduleName
 
     logger.info("      @Verb ${function.name}()")
     val verbRef = VerbRef(module = ftlModuleName!!, name = verbName)
@@ -88,9 +92,27 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
 
   fun list(): Set<VerbRef> = verbs.keys
 
+  fun has(verbRef: VerbRef): Boolean = verbs.containsKey(verbRef)
+
   /** Invoke a Verb with JSON-encoded payload and return its JSON-encoded response. */
   fun invoke(context: Context, verbRef: VerbRef, request: String): String {
     val verb = verbs[verbRef] ?: throw IllegalArgumentException("Unknown verb: $verbRef")
     return verb.invokeVerbInternal(context, request)
   }
+}
+
+/**
+ * Return the FTL module name from a JVM module name and a qualified class name.
+ *
+ * For example, if the JVM module name is `xyz.block.ftl` and the qualified class name is
+ * `xyz.block.ftl.core.Foo`, then the FTL module name is `core`.
+ */
+fun ftlModuleFromJvmModule(jvmModuleName: String, qualifiedName: String): String {
+  val packageSuffix = qualifiedName.removePrefix("$jvmModuleName.")
+  val parts = packageSuffix.split(".")
+  val moduleName = parts[0]
+  if (parts.size < 2) {
+    throw IllegalArgumentException("Class ${qualifiedName} must be in the form $jvmModuleName.<module>.<class>")
+  }
+  return moduleName
 }

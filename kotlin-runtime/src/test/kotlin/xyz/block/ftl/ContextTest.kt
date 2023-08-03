@@ -1,36 +1,26 @@
 package xyz.block.ftl
 
 import org.junit.jupiter.api.Test
+import xyz.block.ftl.client.LoopbackVerbServiceClient
+import xyz.block.ftl.registry.Registry
+import kotlin.test.assertEquals
 
-data class Request(val name: String)
+data class Request(val who: String)
 data class Response(val message: String)
 
-@Ignore
-class TestVerb {
-  @Verb
-  fun test(context: Context, req: Request): Response {
-    return Response(message = "Hello, ${req.name}!")
+class Module {
+  @Verb fun verb(context: Context, req: Request): Response {
+    return Response("Hello, ${req.who}!")
   }
-}
-
-fun freeFunction(context: Context, req: Request): Response {
-  return Response(message = "Hello, ${req.name}!")
 }
 
 class ContextTest {
   @Test
-  fun callMethod() {
-    val context = Context()
-    // This is just to test that everything works.
-    val response = context.call(TestVerb::test, Request(name = "World"))
-    assert(response.message == "Hello, World!")
-  }
-
-  @Test
-  fun callFreeFunction() {
-    val context = Context()
-    // This is just to test that everything works.
-    val response = context.call(::freeFunction, Request(name = "World"))
-    assert(response.message == "Hello, World!")
+  fun call() {
+    val registry = Registry(jvmModuleName = "xyz.block")
+    registry.register(Module::class)
+    val context = Context("xyz.block", LoopbackVerbServiceClient(registry))
+    val response = context.call(Module::verb, Request("world"))
+    assertEquals(Response("Hello, world!"), response)
   }
 }
