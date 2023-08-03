@@ -9,8 +9,6 @@ plugins {
   id("org.gradle.toolchains.foojay-resolver-convention") version "0.5.0"
 }
 
-rootProject.name = "ftl-plugin"
-
 dependencyResolutionManagement {
   versionCatalogs {
     create("libs") {
@@ -18,3 +16,9 @@ dependencyResolutionManagement {
     }
   }
 }
+
+rootProject.name = "ftl-plugin"
+include(":kotlin-runtime")
+project(":kotlin-runtime").projectDir = File("../")
+
+
