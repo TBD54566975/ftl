@@ -19,9 +19,6 @@ class FTLPlugin : Plugin<Project> {
     }
 
     project.afterEvaluate {
-      check(extension.module != null && extension.module?.isNotEmpty() == true) {
-        "FTL module must be set"
-      }
       check(extension.endpoint != null && extension.endpoint?.isNotEmpty() == true) {
         "FTL endpoint must be set"
       }
@@ -31,7 +28,7 @@ class FTLPlugin : Plugin<Project> {
         val schemas = client.pullSchemas()
         val outputDirectory = project.file(extension.outputDirectory)
         outputDirectory.mkdir()
-        extension.module?.let { module ->
+        extension.module.let { module ->
           ModuleGenerator().run(schemas, outputDirectory, module)
         }
       }
