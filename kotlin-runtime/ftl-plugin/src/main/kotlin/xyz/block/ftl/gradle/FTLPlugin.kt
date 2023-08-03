@@ -27,6 +27,7 @@ class FTLPlugin : Plugin<Project> {
         val client = FTLClient(it)
         val schemas = client.pullSchemas()
         val outputDirectory = project.file(extension.outputDirectory)
+        outputDirectory.deleteRecursively()
         outputDirectory.mkdir()
         extension.module.let { module ->
           ModuleGenerator().run(schemas, outputDirectory, module)
