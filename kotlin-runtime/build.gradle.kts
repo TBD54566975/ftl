@@ -29,12 +29,13 @@ dependencies {
   implementation(libs.logbackCore)
   implementation(libs.kotlinReflect)
   implementation(libs.kotlinxCoroutinesCore)
-  implementation(libs.gson)
   implementation(libs.wireRuntime)
   implementation(libs.wireGrpcServer)
+  implementation(libs.wireGrpcClient)
   implementation(libs.grpcNetty)
   implementation(libs.grpcProtobuf)
   implementation(libs.grpcStub)
+  implementation(libs.gson)
 }
 
 // Disable gradlew because we use a Hermit-provided gradle.
@@ -53,6 +54,14 @@ wire {
     rpcRole = "server"
     rpcCallStyle = "blocking"
     grpcServerCompatible = true
+    includes = listOf(
+      "xyz.block.ftl.v1.VerbService"
+    )
+    exclusive = false
+  }
+  kotlin {
+    rpcRole = "client"
+    rpcCallStyle = "blocking"
   }
   sourcePath {
     srcDir("../protos")

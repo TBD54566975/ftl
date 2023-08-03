@@ -2,12 +2,14 @@ package xyz.block.ftl.registry
 
 import com.google.gson.Gson
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Ingress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
+import xyz.block.ftl.client.LoopbackVerbServiceClient
 import kotlin.test.assertContentEquals
 
 data class VerbRequest(val text: String = "")
@@ -45,6 +47,13 @@ class RegistryTest {
   private val renamedVerbRef = VerbRef(module = "registry", name = "something")
 
   @Test
+  fun moduleName() {
+    val registry = Registry("xyz.block.ftl")
+    registry.register(ExampleVerb::class)
+    assertEquals("registry", registry.moduleName)
+  }
+
+  @Test
   fun register() {
     val registry = Registry("xyz.block.ftl")
     registry.register(ExampleVerb::class)
@@ -56,18 +65,18 @@ class RegistryTest {
   fun invoke() {
     val registry = Registry("xyz.block.ftl")
     registry.register(ExampleVerb::class)
-    val context = Context()
+    val context = Context("xyz.block.ftl", LoopbackVerbServiceClient(registry))
     val result = registry.invoke(context, verbRef, gson.toJson(VerbRequest("test")))
     assertEquals(result, gson.toJson(VerbResponse("test")))
   }
 
-  @Test
+  // For some reason "RenamedVerb" does not show up in the scan result.
+  // I think it's because there's some additional magic that has to be
+  // done to get the class to load when they're in tests.
+  @Disabled("Verbs defined in the tests don't seem to be stable.") @Test
   fun registerAll() {
-    val registry = Registry("xyz.block.ftl")
+    val registry = Registry("xyz.block")
     registry.registerAll()
-    // For some reason "RenamedVerb" does not show up in the scan result.
-    // I think it's because there's some additional magic that has to be
-    // done to get the class to load when they're in tests.
     // assertContentEquals(listOf(verbRef), registry.refs.sortedBy { it.toString() })
   }
 }

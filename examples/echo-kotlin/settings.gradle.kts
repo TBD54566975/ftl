@@ -8,5 +8,3 @@ includeBuild("../../kotlin-runtime") {
 }
 
 includeBuild("../../kotlin-runtime/ftl-plugin")
-include(":ftl-protos")
-project(":ftl-protos").projectDir = File("../../kotlin-runtime/ftl-protos")
