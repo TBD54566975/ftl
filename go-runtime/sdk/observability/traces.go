@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/backend/common/rpc"
 )
 
 func TracerWithVerb(ctx context.Context) trace.Tracer {

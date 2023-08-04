@@ -12,7 +12,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 //go:embed external_module.go.tmpl

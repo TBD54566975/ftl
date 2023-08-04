@@ -10,15 +10,15 @@ import (
 	"github.com/bufbuild/connect-go"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/TBD54566975/ftl/common/model"
+	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/common/slices"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/go-runtime/compile/generate"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/schema"
 )
 
 type goCmd struct {

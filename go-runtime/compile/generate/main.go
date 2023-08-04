@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 //go:embed main.go.tmpl

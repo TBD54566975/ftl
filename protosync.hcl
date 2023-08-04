@@ -1,4 +1,4 @@
-dest = "internal/3rdparty/protos"
+dest = "backend/common/3rdparty/protos"
 sources = ["./protos"]
 
 repo "https://github.com/grpc/grpc.git" {

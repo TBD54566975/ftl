@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/controller"
+	"github.com/TBD54566975/ftl/backend/controller"
 )
 
 type initDBCmd struct {

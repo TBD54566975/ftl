@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestGenerateMain(t *testing.T) {
@@ -27,7 +27,7 @@ package main
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/backend/common/plugin"
 	"github.com/TBD54566975/ftl/examples/echo"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
