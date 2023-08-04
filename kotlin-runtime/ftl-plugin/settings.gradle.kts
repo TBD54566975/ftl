@@ -19,6 +19,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "ftl-plugin"
 include(":kotlin-runtime")
-project(":kotlin-runtime").projectDir = File("../")
+project(":kotlin-runtime").projectDir = File("../kotlin-runtime")
 
 
