@@ -1,2 +1,14 @@
 #!/bin/bash
+set -euo pipefail
+
+prepare_template() (
+  mkdir -p build/template/ftl/jars build/runner0 build/runner1
+  test -d build/libs/ftl-runtime.jar || return 0
+  cd kotlin-runtime
+  gradle jar
+  cp build/libs/ftl-runtime.jar ../build/template/ftl/jars
+)
+
+prepare_template
+
 overmind start

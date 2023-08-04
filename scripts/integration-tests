@@ -1,0 +1,73 @@
+#!/bin/bash
+set -euo pipefail
+
+info() {
+  echo -e "\033[1;32m$*\033[0m"
+}
+
+error() {
+  echo -e "\033[1;31m$*\033[0m"
+  exit 1
+}
+
+wipe_database() {
+  info "Initialising database"
+  ftl initdb --recreate
+}
+
+wait_for() {
+  info "Waiting for $1"
+  for _ in {1..60}; do
+    if eval "$2"; then
+      info "Success!"
+      return 0
+    fi
+  done
+  error "Timed out waiting for $1"
+}
+
+start_cluster() {
+  info "Starting cluster"
+  overmind start &
+  wait_for "cluster to become ready" "ftl status"
+  trap "overmind quit" EXIT INT TERM
+}
+
+prepare_runner() (
+  info "Preparing runner template directory"
+  mkdir -p build/template/ftl/jars build/runner0 build/runner1
+  test -r build/libs/ftl-runtime.jar && return 0
+  cd kotlin-runtime
+  gradle jar
+  cp build/libs/ftl-runtime.jar ../build/template/ftl/jars
+)
+
+deploy_echo_kotlin() (
+  info "Deploying echo-kotlin"
+  cd examples/echo-kotlin
+  gradle build
+  ftl deploy ./build
+)
+
+deploy_time_go() (
+  info "Deploying time"
+  ftl go deploy -S "$PWD" -d ./examples/time
+)
+
+wait_for_deploys() {
+  wait_for "deployments to come up" '[ "$(ftl ps --json | jq -r .module | sort | paste -sd " " -)" == "echo time" ]'
+}
+
+wipe_database
+prepare_runner
+start_cluster
+
+# Cluster is up, start interacting with it.
+deploy_time_go
+deploy_echo_kotlin
+
+wait_for_deploys
+
+info "Calling echo"
+message="$(ftl call echo.echo '{"name": "Alice"}' | jq -r .message)"
+[[ "$message" =~ "Hello, Alice! The time is " ]] || error "Unexpected response from echo: $message"

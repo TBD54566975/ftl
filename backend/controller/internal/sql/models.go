@@ -8,9 +8,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 
+	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/jackc/pgx/v5/pgtype"
-
-	sqltypes2 "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 )
 
 type ControllerState string
@@ -124,7 +123,7 @@ type Call struct {
 
 type Controller struct {
 	ID       int64
-	Key      sqltypes2.Key
+	Key      sqltypes.Key
 	Created  pgtype.Timestamptz
 	LastSeen pgtype.Timestamptz
 	State    ControllerState
@@ -134,9 +133,9 @@ type Controller struct {
 type Deployment struct {
 	ID          int64
 	CreatedAt   pgtype.Timestamptz
-	ModuleID int64
-	Key      sqltypes2.Key
-	Schema   []byte
+	ModuleID    int64
+	Key         sqltypes.Key
+	Schema      []byte
 	MinReplicas int32
 }
 
@@ -161,7 +160,7 @@ type DeploymentLog struct {
 
 type IngressRequest struct {
 	ID         int64
-	Key        sqltypes2.Key
+	Key        sqltypes.Key
 	SourceAddr string
 }
 
@@ -181,12 +180,12 @@ type Module struct {
 
 type Runner struct {
 	ID                 int64
-	Key                sqltypes2.Key
+	Key                sqltypes.Key
 	Created            pgtype.Timestamptz
 	LastSeen           pgtype.Timestamptz
 	ReservationTimeout pgtype.Timestamptz
 	State              RunnerState
-	Languages          sqltypes2.Languages
+	Languages          sqltypes.Languages
 	Endpoint           string
 	DeploymentID       pgtype.Int8
 }

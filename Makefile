@@ -78,7 +78,7 @@ $(SCHEMA_OUT) &: $(SCHEMA_IN)
 $(SQLC_OUT) &: $(SQLC_IN)
 	sqlc generate --experimental
 	# sqlc 1.18.0 generates a file with a missing import
-	gosimports -w backend/controller/common/sql/querier.go 
+	gosimports -w backend/controller/internal/sql/querier.go 
 
 $(COMMON_LOG_OUT) &: $(COMMON_LOG_IN)
 	go generate $<

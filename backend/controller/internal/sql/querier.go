@@ -7,9 +7,8 @@ package sql
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
