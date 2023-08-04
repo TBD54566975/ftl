@@ -11,9 +11,9 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/bufbuild/connect-go"
 
-	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	_ "github.com/TBD54566975/ftl/backend/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	log2 "github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/rpc"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
@@ -21,7 +21,7 @@ var version = "dev"
 
 type CLI struct {
 	Version   kong.VersionFlag `help:"Show version."`
-	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
+	LogConfig log2.Config      `embed:"" prefix:"log-" group:"Logging:"`
 	Endpoint  *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
@@ -61,8 +61,8 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	logger := log.Configure(os.Stderr, cli.LogConfig)
-	ctx = log.ContextWithLogger(ctx, logger)
+	logger := log2.Configure(os.Stderr, cli.LogConfig)
+	ctx = log2.ContextWithLogger(ctx, logger)
 
 	// Handle signals.
 	sigch := make(chan os.Signal, 1)
@@ -88,6 +88,6 @@ func main() {
 
 func makeDialer[Client rpc.Pingable](newClient func(connect.HTTPClient, string, ...connect.ClientOption) Client) func() (Client, error) {
 	return func() (Client, error) {
-		return rpc.Dial(newClient, cli.Endpoint.String(), log.Error), nil
+		return rpc.Dial(newClient, cli.Endpoint.String(), log2.Error), nil
 	}
 }

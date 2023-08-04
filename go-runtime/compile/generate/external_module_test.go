@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestCodegen(t *testing.T) {

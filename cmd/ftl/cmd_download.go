@@ -7,9 +7,9 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/common/model"
-	"github.com/TBD54566975/ftl/common/sha256"
-	"github.com/TBD54566975/ftl/internal/download"
+	"github.com/TBD54566975/ftl/backend/common/download"
+	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/common/sha256"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )

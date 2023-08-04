@@ -6,10 +6,10 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 
-	"github.com/TBD54566975/ftl/common/model"
+	model2 "github.com/TBD54566975/ftl/backend/common/model"
 )
 
-func ArtefactToProto(artefact *model.Artefact) *DeploymentArtefact {
+func ArtefactToProto(artefact *model2.Artefact) *DeploymentArtefact {
 	return &DeploymentArtefact{
 		Path:       artefact.Path,
 		Executable: artefact.Executable,
@@ -60,13 +60,13 @@ func (m *Metadata) Delete(key string) {
 	m.Values = out
 }
 
-func (r *RunnerHeartbeat) DeploymentAsOptional() (types.Option[model.DeploymentKey], error) {
+func (r *RunnerHeartbeat) DeploymentAsOptional() (types.Option[model2.DeploymentKey], error) {
 	if r.Deployment == nil {
-		return types.None[model.DeploymentKey](), nil
+		return types.None[model2.DeploymentKey](), nil
 	}
-	key, err := model.ParseDeploymentKey(*r.Deployment)
+	key, err := model2.ParseDeploymentKey(*r.Deployment)
 	if err != nil {
-		return types.None[model.DeploymentKey](), errors.Wrap(err, "invalid deployment key")
+		return types.None[model2.DeploymentKey](), errors.Wrap(err, "invalid deployment key")
 	}
 	return types.Some(key), nil
 }

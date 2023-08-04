@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/TBD54566975/ftl/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 type schemaCmd struct {

@@ -9,12 +9,12 @@ import (
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/common/model"
-	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/TBD54566975/ftl/backend/common/exec"
+	"github.com/TBD54566975/ftl/backend/common/log"
+	model2 "github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/common/sha256"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/compile/generate"
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/schema"
 )
 
 const ftlModuleSourceBase = "github.com/TBD54566975/ftl/examples"
@@ -28,7 +28,7 @@ type Config struct {
 }
 
 // Compile a Go FTL module into a deployable executable.
-func Compile(ctx context.Context, config Config) (*model.Deployment, error) {
+func Compile(ctx context.Context, config Config) (*model2.Deployment, error) {
 	logger := log.FromContext(ctx)
 	logger.Infof("Compiling %s", config.Dir)
 	buildDir, err := ensureBuildDir(config.Dir)
@@ -78,12 +78,12 @@ func Compile(ctx context.Context, config Config) (*model.Deployment, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &model.Deployment{
+	return &model2.Deployment{
 		Language: "go",
-		Key:      model.NewDeploymentKey(),
+		Key:      model2.NewDeploymentKey(),
 		Schema:   mainModuleSchema,
 		Module:   mainModuleSchema.Name,
-		Artefacts: []*model.Artefact{
+		Artefacts: []*model2.Artefact{
 			{Path: "main", Executable: true, Digest: digest, Content: r},
 		},
 	}, nil

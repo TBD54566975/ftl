@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/common/log"
 	timemodule "github.com/TBD54566975/ftl/examples/time"
-	"github.com/TBD54566975/ftl/internal/log"
 
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
 )

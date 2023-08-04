@@ -2,19 +2,19 @@ VERSION = $(shell git describe --tags --always --dirty)
 
 BINARIES=ftl ftl-controller ftl-runner
 
-COMMON_LOG_IN = internal/log/api.go
-COMMON_LOG_OUT = internal/log/log_level_string.go
+COMMON_LOG_IN = backend/common/log/api.go
+COMMON_LOG_OUT = backend/common/log/log_level_string.go
 
-SCHEMA_IN = schema/schema.go schema/protobuf.go cmd/ftl/cmd_schema.go
+SCHEMA_IN = backend/schema/schema.go backend/schema/protobuf.go cmd/ftl/cmd_schema.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
 SQLC_IN = sqlc.yaml \
-		  controller/internal/sql/schema/*.sql \
-		  controller/internal/sql/queries.sql
-SQLC_OUT = controller/internal/sql/db.go \
-		   $(shell grep -q copyfrom controller/internal/sql/queries.sql && echo controller/internal/sql/copyfrom.go) \
-		   controller/internal/sql/models.go \
-		   controller/internal/sql/queries.sql.go
+		  backend/controller/internal/sql/schema/*.sql \
+		  backend/controller/internal/sql/queries.sql
+SQLC_OUT = backend/controller/internal/sql/db.go \
+		   $(shell grep -q copyfrom backend/controller/internal/sql/queries.sql && echo backend/controller/internal/sql/copyfrom.go) \
+		   backend/controller/internal/sql/models.go \
+		   backend/controller/internal/sql/queries.sql.go
 
 PROTO_IN = protos/buf.yaml \
 		   protos/buf.gen.yaml \
@@ -70,7 +70,7 @@ $(PROTO_OUT) &: $(PROTO_IN)
 	buf format -w
 	buf lint
 	(cd protos && buf generate)
-	(cd internal/3rdparty/protos && buf generate)
+	(cd backend/common/3rdparty/protos && buf generate)
 
 $(SCHEMA_OUT) &: $(SCHEMA_IN)
 	ftl schema protobuf > $(SCHEMA_OUT)~ && mv $(SCHEMA_OUT)~ $(SCHEMA_OUT)
@@ -78,7 +78,7 @@ $(SCHEMA_OUT) &: $(SCHEMA_IN)
 $(SQLC_OUT) &: $(SQLC_IN)
 	sqlc generate --experimental
 	# sqlc 1.18.0 generates a file with a missing import
-	gosimports -w controller/internal/sql/querier.go 
+	gosimports -w backend/controller/common/sql/querier.go 
 
 $(COMMON_LOG_OUT) &: $(COMMON_LOG_IN)
 	go generate $<

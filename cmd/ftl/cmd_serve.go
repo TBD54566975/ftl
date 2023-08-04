@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/controller"
+	"github.com/TBD54566975/ftl/backend/controller"
 )
 
 type serveCmd struct {
