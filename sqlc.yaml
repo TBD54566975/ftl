@@ -1,20 +1,20 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "controller/internal/sql/queries.sql"
-    schema: "controller/internal/sql/schema"
+    queries: "backend/controller/internal/sql/queries.sql"
+    schema: "backend/controller/internal/sql/schema"
     gen:
       go:
         package: "sql"
         sql_package: "pgx/v5"
-        out: "controller/internal/sql"
+        out: "backend/controller/internal/sql"
         emit_interface: true
         query_parameter_limit: 3
         overrides:
           - db_type: "uuid"
-            go_type: "github.com/TBD54566975/ftl/controller/internal/sqltypes.Key"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.Key"
           - db_type: "uuid"
             nullable: true
-            go_type: "github.com/TBD54566975/ftl/controller/internal/sqltypes.NullKey"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.NullKey"
           - column: "runners.languages"
-            go_type: "github.com/TBD54566975/ftl/controller/internal/sqltypes.Languages"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.Languages"

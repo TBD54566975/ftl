@@ -8,9 +8,8 @@ package sql
 import (
 	"context"
 
+	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/jackc/pgx/v5/pgtype"
-
-	sqltypes2 "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 )
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
@@ -19,7 +18,7 @@ VALUES ((SELECT id FROM deployments WHERE key = $1), $2, $3, $4)
 `
 
 type AssociateArtefactWithDeploymentParams struct {
-	Key        sqltypes2.Key
+	Key        sqltypes.Key
 	ArtefactID int64
 	Executable bool
 	Path       string
@@ -54,7 +53,7 @@ INSERT INTO deployments (module_id, "schema", key)
 VALUES ((SELECT id FROM modules WHERE name = $2::TEXT LIMIT 1), $3::BYTEA, $1)
 `
 
-func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes2.Key, moduleName string, schema []byte) error {
+func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error {
 	_, err := q.db.Exec(ctx, createDeployment, key, moduleName, schema)
 	return err
 }
@@ -64,7 +63,7 @@ INSERT INTO ingress_requests (key, source_addr)
 VALUES ($1, $2)
 `
 
-func (q *Queries) CreateIngressRequest(ctx context.Context, key sqltypes2.Key, sourceAddr string) error {
+func (q *Queries) CreateIngressRequest(ctx context.Context, key sqltypes.Key, sourceAddr string) error {
 	_, err := q.db.Exec(ctx, createIngressRequest, key, sourceAddr)
 	return err
 }
@@ -75,7 +74,7 @@ VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5)
 `
 
 type CreateIngressRouteParams struct {
-	Key    sqltypes2.Key
+	Key    sqltypes.Key
 	Module string
 	Verb   string
 	Method string
@@ -103,7 +102,7 @@ SELECT COUNT(*)
 FROM matches
 `
 
-func (q *Queries) DeregisterRunner(ctx context.Context, key sqltypes2.Key) (int64, error) {
+func (q *Queries) DeregisterRunner(ctx context.Context, key sqltypes.Key) (int64, error) {
 	row := q.db.QueryRow(ctx, deregisterRunner, key)
 	var count int64
 	err := row.Scan(&count)
@@ -145,11 +144,11 @@ ORDER BY r.key
 `
 
 type GetActiveRunnersRow struct {
-	RunnerKey sqltypes2.Key
-	Languages sqltypes2.Languages
-	Endpoint  string
-	State     RunnerState
-	LastSeen  pgtype.Timestamptz
+	RunnerKey     sqltypes.Key
+	Languages     sqltypes.Languages
+	Endpoint      string
+	State         RunnerState
+	LastSeen      pgtype.Timestamptz
 	DeploymentKey interface{}
 }
 
@@ -189,7 +188,7 @@ WHERE $1::bool = true
 `
 
 type GetAllIngressRoutesRow struct {
-	DeploymentKey sqltypes2.Key
+	DeploymentKey sqltypes.Key
 	Module        string
 	Verb          string
 	Method        string
@@ -312,15 +311,15 @@ WHERE d.key = $1
 type GetDeploymentRow struct {
 	ID          int64
 	CreatedAt   pgtype.Timestamptz
-	ModuleID int64
-	Key      sqltypes2.Key
-	Schema   []byte
+	ModuleID    int64
+	Key         sqltypes.Key
+	Schema      []byte
 	MinReplicas int32
 	Language    string
 	ModuleName  string
 }
 
-func (q *Queries) GetDeployment(ctx context.Context, key sqltypes2.Key) (GetDeploymentRow, error) {
+func (q *Queries) GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error) {
 	row := q.db.QueryRow(ctx, getDeployment, key)
 	var i GetDeploymentRow
 	err := row.Scan(
@@ -391,7 +390,7 @@ ORDER BY d.key
 
 type GetDeploymentsRow struct {
 	ID          int64
-	Key         sqltypes2.Key
+	Key         sqltypes.Key
 	MinReplicas int32
 	CreatedAt   pgtype.Timestamptz
 	Schema      []byte
@@ -474,8 +473,8 @@ HAVING COUNT(r.id) <> d.min_replicas
 `
 
 type GetDeploymentsNeedingReconciliationRow struct {
-	Key        sqltypes2.Key
-	ModuleName string
+	Key                  sqltypes.Key
+	ModuleName           string
 	Language             string
 	AssignedRunnersCount int64
 	RequiredRunnersCount int64
@@ -524,7 +523,7 @@ WHERE EXISTS (SELECT 1
 type GetDeploymentsWithArtefactsRow struct {
 	ID        int64
 	CreatedAt pgtype.Timestamptz
-	Key       sqltypes2.Key
+	Key       sqltypes.Key
 	Name      string
 }
 
@@ -625,7 +624,7 @@ WHERE r.state = 'assigned'
 `
 
 type GetIngressRoutesRow struct {
-	RunnerKey sqltypes2.Key
+	RunnerKey sqltypes.Key
 	Endpoint  string
 	Module    string
 	Verb      string
@@ -670,9 +669,9 @@ WHERE dest_module = ANY ($1::text[])
 `
 
 type GetModuleCallsRow struct {
-	RunnerKey         sqltypes2.Key
-	ControllerKey     sqltypes2.Key
-	IngressRequestKey sqltypes2.Key
+	RunnerKey         sqltypes.Key
+	ControllerKey     sqltypes.Key
+	IngressRequestKey sqltypes.Key
 	ID                int64
 	RequestID         int64
 	RunnerID          int64
@@ -763,8 +762,8 @@ ORDER BY time DESC
 `
 
 type GetRequestCallsRow struct {
-	RunnerKey     sqltypes2.Key
-	ControllerKey sqltypes2.Key
+	RunnerKey     sqltypes.Key
+	ControllerKey sqltypes.Key
 	ID            int64
 	RequestID     int64
 	RunnerID      int64
@@ -780,7 +779,7 @@ type GetRequestCallsRow struct {
 	Error         pgtype.Text
 }
 
-func (q *Queries) GetRequestCalls(ctx context.Context, key sqltypes2.Key) ([]GetRequestCallsRow, error) {
+func (q *Queries) GetRequestCalls(ctx context.Context, key sqltypes.Key) ([]GetRequestCallsRow, error) {
 	rows, err := q.db.Query(ctx, getRequestCalls, key)
 	if err != nil {
 		return nil, err
@@ -827,7 +826,7 @@ WHERE state = 'assigned'
 
 type GetRoutingTableRow struct {
 	Endpoint string
-	Key      sqltypes2.Key
+	Key      sqltypes.Key
 }
 
 func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error) {
@@ -863,15 +862,15 @@ WHERE r.key = $1
 `
 
 type GetRunnerRow struct {
-	RunnerKey sqltypes2.Key
-	Languages sqltypes2.Languages
-	Endpoint  string
-	State     RunnerState
-	LastSeen  pgtype.Timestamptz
+	RunnerKey     sqltypes.Key
+	Languages     sqltypes.Languages
+	Endpoint      string
+	State         RunnerState
+	LastSeen      pgtype.Timestamptz
 	DeploymentKey interface{}
 }
 
-func (q *Queries) GetRunner(ctx context.Context, key sqltypes2.Key) (GetRunnerRow, error) {
+func (q *Queries) GetRunner(ctx context.Context, key sqltypes.Key) (GetRunnerRow, error) {
 	row := q.db.QueryRow(ctx, getRunner, key)
 	var i GetRunnerRow
 	err := row.Scan(
@@ -891,7 +890,7 @@ FROM runners
 WHERE key = $1
 `
 
-func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes2.Key) (RunnerState, error) {
+func (q *Queries) GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error) {
 	row := q.db.QueryRow(ctx, getRunnerState, key)
 	var state RunnerState
 	err := row.Scan(&state)
@@ -906,7 +905,7 @@ WHERE state = 'assigned'
   AND d.key = $1
 `
 
-func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes2.Key) ([]Runner, error) {
+func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error) {
 	rows, err := q.db.Query(ctx, getRunnersForDeployment, key)
 	if err != nil {
 		return nil, err
@@ -946,9 +945,9 @@ VALUES ((SELECT id FROM runners WHERE runners.key = $1),
 `
 
 type InsertCallEntryParams struct {
-	Key          sqltypes2.Key
-	Key_2        sqltypes2.Key
-	Key_3        sqltypes2.Key
+	Key          sqltypes.Key
+	Key_2        sqltypes.Key
+	Key_3        sqltypes.Key
 	SourceModule string
 	SourceVerb   string
 	DestModule   string
@@ -982,7 +981,7 @@ VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $
 `
 
 type InsertDeploymentLogEntryParams struct {
-	Key       sqltypes2.Key
+	Key       sqltypes.Key
 	TimeStamp pgtype.Timestamptz
 	Level     int32
 	Scope     string
@@ -1050,7 +1049,7 @@ SELECT COUNT(*)
 FROM update_container
 `
 
-func (q *Queries) ReplaceDeployment(ctx context.Context, oldDeployment sqltypes2.Key, newDeployment sqltypes2.Key, minReplicas int32) (int64, error) {
+func (q *Queries) ReplaceDeployment(ctx context.Context, oldDeployment sqltypes.Key, newDeployment sqltypes.Key, minReplicas int32) (int64, error) {
 	row := q.db.QueryRow(ctx, replaceDeployment, oldDeployment, newDeployment, minReplicas)
 	var count int64
 	err := row.Scan(&count)
@@ -1076,7 +1075,7 @@ RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.r
 `
 
 // Find an idle runner and reserve it for the given deployment.
-func (q *Queries) ReserveRunner(ctx context.Context, column1 string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes2.Key) (Runner, error) {
+func (q *Queries) ReserveRunner(ctx context.Context, column1 string, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key) (Runner, error) {
 	row := q.db.QueryRow(ctx, reserveRunner, column1, reservationTimeout, deploymentKey)
 	var i Runner
 	err := row.Scan(
@@ -1100,7 +1099,7 @@ WHERE key = $1
 RETURNING 1
 `
 
-func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes2.Key, minReplicas int32) error {
+func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error {
 	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
 	return err
 }
@@ -1114,7 +1113,7 @@ ON CONFLICT (key) DO UPDATE SET state     = 'live',
 RETURNING id
 `
 
-func (q *Queries) UpsertController(ctx context.Context, key sqltypes2.Key, endpoint string) (int64, error) {
+func (q *Queries) UpsertController(ctx context.Context, key sqltypes.Key, endpoint string) (int64, error) {
 	row := q.db.QueryRow(ctx, upsertController, key, endpoint)
 	var id int64
 	err := row.Scan(&id)
@@ -1155,11 +1154,11 @@ RETURNING deployment_id
 `
 
 type UpsertRunnerParams struct {
-	Key           sqltypes2.Key
-	Languages     sqltypes2.Languages
+	Key           sqltypes.Key
+	Languages     sqltypes.Languages
 	Endpoint      string
 	State         RunnerState
-	DeploymentKey sqltypes2.NullKey
+	DeploymentKey sqltypes.NullKey
 }
 
 // Upsert a runner and return the deployment ID that it is assigned to, if any.

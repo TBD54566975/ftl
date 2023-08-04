@@ -11,13 +11,12 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.block.ftl.Context
+import xyz.block.ftl.Ignore
+import xyz.block.ftl.Ingress
 import xyz.block.ftl.v1.PullSchemaResponse
 import xyz.block.ftl.v1.schema.Data
 import xyz.block.ftl.v1.schema.Type
 import xyz.block.ftl.v1.schema.Verb
-import xyz.block.ftl.Ignore
-import xyz.block.ftl.Ingress
-import xyz.block.ftl.Method
 import java.io.File
 
 class ModuleGenerator() {
@@ -110,7 +109,8 @@ class ModuleGenerator() {
       metadata.ingress?.let {
         verbFunBuilder.addAnnotation(
           AnnotationSpec.builder(Ingress::class)
-            .addMember("%T", Method::class)
+            .// TODO(wesb): This was codegenning just the class name, not the enum field.
+            addMember("%T", ClassName("xyz.block.ftl.Method", it.method))
             .addMember("%S", it.path)
             .build()
         )
