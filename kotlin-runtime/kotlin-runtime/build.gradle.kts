@@ -64,7 +64,7 @@ wire {
     rpcCallStyle = "blocking"
   }
   sourcePath {
-    srcDir("../protos")
+    srcDir("../../protos")
   }
 }
 

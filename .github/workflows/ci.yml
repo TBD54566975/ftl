@@ -6,16 +6,27 @@ on:
   merge_group:
 name: CI
 jobs:
-  kotlin:
-    name: Kotlin
+  kotlin-runtime:
+    name: Kotlin Runtime
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
-      - name: Kotlin Test
-        working-directory: kotlin-runtime
+      - name: Test
+        working-directory: kotlin-runtime/kotlin-runtime
+        run: gradle test
+  kotlin-ftl-plugin:
+    name: FTL Plugin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Test
+        working-directory: kotlin-runtime/ftl-plugin
         run: gradle test
   test:
     name: Test
