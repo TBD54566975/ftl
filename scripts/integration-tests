@@ -45,9 +45,9 @@ prepare_runner() (
   info "Preparing runner template directory"
   mkdir -p build/template/ftl/jars build/runner0 build/runner1
   test -r build/libs/ftl-runtime.jar && return 0
-  cd kotlin-runtime
+  cd kotlin-runtime/ftl-runtime
   gradle jar
-  cp build/libs/ftl-runtime.jar ../build/template/ftl/jars
+  cp build/libs/ftl-runtime.jar ../../build/template/ftl/jars
 )
 
 deploy_echo_kotlin() (
