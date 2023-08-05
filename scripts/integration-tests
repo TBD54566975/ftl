@@ -36,7 +36,7 @@ wait_for() {
 start_cluster() {
   info "Starting cluster"
   overmind start -D
-  vermind echo &
+  overmind echo &
   wait_for "cluster to become ready" "ftl status"
   trap "overmind quit" EXIT INT TERM
 }
