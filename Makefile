@@ -40,7 +40,7 @@ help: ## This help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: release
-release: build/release/ftl-controller build/release/ftl-runner build/release/ftl
+release: build/release/ftl-controller build/release/ftl-runner build/release/ftl ## Build release binaries.
 
 build/release/ftl-controller: console/client/dist/index.html
 	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$(shell basename $@)
@@ -61,6 +61,11 @@ generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate
 docker-runner: ## Build ftl-runner docker images.
 	docker build --tag ftl-runner --platform=linux/amd64 \
 		-f Dockerfile.runner .
+
+.PHONY:
+docker-controller: ## Build ftl-controller docker images.
+	docker build --tag ftl-controller --platform=linux/amd64 \
+		-f Dockerfile.controller .
 
 .PHONY: protosync
 protosync: ## Synchronise external protos into FTL repo.

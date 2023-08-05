@@ -36,9 +36,10 @@ import (
 )
 
 type Config struct {
-	Bind                         *url.URL             `help:"Socket to bind to." default:"http://localhost:8892"`
+	Bind                         *url.URL             `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
+	Advertise                    *url.URL             `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_RUNNER_ADVERTISE"`
 	Key                          model2.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
-	DSN                          string               `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
+	DSN                          string               `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	RunnerTimeout                time.Duration        `help:"Runner heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration        `help:"Deployment reservation timeout." default:"120s"`
 	ArtefactChunkSize            int                  `help:"Size of each chunk streamed to the client." default:"1048576"`
@@ -114,7 +115,10 @@ func New(ctx context.Context, dal *dal2.DAL, config Config) (*Service, error) {
 		clients:                      map[string]clients{},
 		key:                          key,
 	}
-	go svc.heartbeatController(ctx, config.Bind)
+	if config.Advertise.String() == "" {
+		config.Advertise = config.Bind
+	}
+	go svc.heartbeatController(ctx, config.Advertise)
 	go svc.reapStaleControllers(ctx)
 	go svc.reapStaleRunners(ctx)
 	go svc.releaseExpiredReservations(ctx)
@@ -703,10 +707,10 @@ func (s *Service) reapStaleControllers(ctx context.Context) {
 }
 
 // Periodically update the DB with the current state of the controller.
-func (s *Service) heartbeatController(ctx context.Context, addr *url.URL) {
+func (s *Service) heartbeatController(ctx context.Context, advertiseAddr *url.URL) {
 	logger := log.FromContext(ctx)
 	for {
-		_, err := s.dal.UpsertController(ctx, s.key, addr.String())
+		_, err := s.dal.UpsertController(ctx, s.key, advertiseAddr.String())
 		if err != nil {
 			logger.Errorf(err, "Failed to heartbeat controller")
 		}

@@ -11,6 +11,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Cache Gradle
+        id: cache-gradle
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: ${{ runner.os }}-gradle
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Test
@@ -22,6 +28,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Cache Gradle
+        id: cache-gradle
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: ${{ runner.os }}-gradle
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Test

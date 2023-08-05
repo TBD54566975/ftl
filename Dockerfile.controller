@@ -1,0 +1,36 @@
+FROM ubuntu:22.04 AS builder
+RUN apt update
+RUN apt install -y curl git
+
+# Copy Hermit bin stubs and install all packages. This is done
+# separately so that Docker will cache the tools correctly.
+COPY ./bin /src/bin
+ENV PATH="/src/bin:$PATH"
+WORKDIR /src
+
+# Install Hermit tools so Docker will cache them
+RUN hermit install
+
+# Download Go dependencies separately so Docker will cache them
+COPY go.mod go.sum ./
+RUN go mod download -x
+
+# Build
+COPY . /src/
+RUN make build/release/ftl-controller
+
+# Finally create the runtime image.
+FROM ubuntu:22.04
+
+WORKDIR /root/
+
+COPY --from=builder /src/build/release/ftl-controller .
+RUN mkdir deployments
+
+EXPOSE 8892
+
+ENV FTL_CONTROLLER_BIND="http://0.0.0.0:8899"
+ENV FTL_CONTROLLER_ADVERTISE="http://127.0.0.1:8899"
+ENV FTL_CONTROLLER_DSN="postgres://host.docker.internal/ftl?sslmode=disable&user=postgres&password=secret"
+
+CMD ["/root/ftl-controller"]
