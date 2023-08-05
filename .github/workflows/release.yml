@@ -5,7 +5,7 @@ on:
   pull_request:
 name: Build Docker Images
 jobs:
-  build:
+  build-runner:
     name: Build Runner Docker Image
     runs-on: ubuntu-latest
     steps:
@@ -14,7 +14,7 @@ jobs:
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Build
-        run: docker build -t $(git rev-parse --short HEAD) -t ghcr.io/tbd54566975/ftl:latest -f Dockerfile.runner .
+        run: docker build -t $(git rev-parse --short HEAD) -t ghcr.io/tbd54566975/ftl-runner:latest -f Dockerfile.runner .
       - name: Log in to the Container registry
         uses: docker/login-action@v1
         with:
@@ -23,4 +23,23 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push
         if: github.ref == 'refs/heads/main'
-        run: docker push ghcr.io/tbd54566975/ftl:latest
+        run: docker push ghcr.io/tbd54566975/ftl-runner:latest
+  build-controller:
+    name: Build Controller Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build
+        run: docker build -t $(git rev-parse --short HEAD) -t ghcr.io/tbd54566975/ftl-controller:latest -f Dockerfile.controller .
+      - name: Log in to the Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push
+        if: github.ref == 'refs/heads/main'
+        run: docker push ghcr.io/tbd54566975/ftl-controller:latest
