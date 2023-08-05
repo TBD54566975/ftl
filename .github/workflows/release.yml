@@ -1,0 +1,20 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+name: Build Docker Images
+jobs:
+  build:
+    name: Build Runner Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build
+        run: docker build -t $(git rev-parse --short HEAD) -t ghcr.io/tbd54566975/ftl:latest -f Dockerfile.runner .
+      - name: Push
+        if: github.ref == 'refs/heads/main'
+        run: docker push ghcr.io/tbd54566975/ftl:latest

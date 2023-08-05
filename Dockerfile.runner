@@ -22,8 +22,8 @@ RUN go mod download -x
 
 # Build
 COPY . /src/
-RUN make build/ftl-runner
-RUN make kotlin-runtime/build/libs/ftl-runtime.jar
+RUN make build/release/ftl-runner
+RUN make kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar
 
 # Finally create the runtime image.
 FROM ubuntu:22.04
@@ -32,8 +32,8 @@ WORKDIR /root/
 
 ENV PATH="/root/jre/bin:$PATH"
 COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
-COPY --from=builder /src/kotlin-runtime/build/libs/ftl-runtime.jar template/ftl/jars/
-COPY --from=builder /src/build/ftl-runner .
+COPY --from=builder /src/kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar template/ftl/jars/
+COPY --from=builder /src/build/release/ftl-runner .
 RUN mkdir deployments
 
 EXPOSE 8894

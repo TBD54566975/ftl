@@ -39,17 +39,17 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 help: ## This help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-build/ftl-controller: console/client/dist/index.html
-	go build -o build/ftl-controller -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl-controller
+.PHONY: release
+release: build/release/ftl-controller build/release/ftl-runner build/release/ftl
 
-build/ftl-runner:
-	go build -o build/ftl-runner -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl-runner
+build/release/ftl-controller: console/client/dist/index.html
+	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$(shell basename $@)
 
-build/ftl:
-	go build -o build/ftl -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/ftl
+build/release/%:
+	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$(shell basename $@)
 
-kotlin-runtime/build/libs/ftl-runtime.jar:
-	cd kotlin-runtime && gradle jar
+kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar:
+	cd kotlin-runtime/ftl-runtime && gradle jar
 
 console/client/dist/index.html:
 	cd console/client && npm install && npm run build
