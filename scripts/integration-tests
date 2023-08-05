@@ -10,6 +10,12 @@ error() {
   exit 1
 }
 
+build_release() {
+  info "Building release"
+  make release
+  export PATH="$PWD/build/release:$PATH"
+}
+
 wipe_database() {
   info "Initialising database"
   ftl initdb --recreate
@@ -22,13 +28,15 @@ wait_for() {
       info "Success!"
       return 0
     fi
+    sleep 1
   done
   error "Timed out waiting for $1"
 }
 
 start_cluster() {
   info "Starting cluster"
-  overmind start &
+  overmind start -D
+  vermind echo &
   wait_for "cluster to become ready" "ftl status"
   trap "overmind quit" EXIT INT TERM
 }
@@ -58,6 +66,7 @@ wait_for_deploys() {
   wait_for "deployments to come up" '[ "$(ftl ps --json | jq -r .module | sort | paste -sd " " -)" == "echo time" ]'
 }
 
+build_release
 wipe_database
 prepare_runner
 start_cluster
@@ -71,3 +80,4 @@ wait_for_deploys
 info "Calling echo"
 message="$(ftl call echo.echo '{"name": "Alice"}' | jq -r .message)"
 [[ "$message" =~ "Hello, Alice! The time is " ]] || error "Unexpected response from echo: $message"
+info "Success!"

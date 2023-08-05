@@ -31,7 +31,7 @@ gradlePlugin {
 
 dependencies {
   compileOnly(gradleApi())
-  implementation(project(":kotlin-runtime"))
+  implementation(project(":ftl-runtime"))
 
   // Use the Kotlin JUnit 5 integration.
   testImplementation(libs.kotlinTestJunit5)
