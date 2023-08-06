@@ -67,7 +67,7 @@ jobs:
         run: shellcheck -e SC2016 scripts/*
   integration:
     name: Integration tests
-    if: startsWith(github.ref, 'refs/heads/gh-readonly-queue/') || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

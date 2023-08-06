@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+export PATH="$PWD/build/release:$PATH"
 
 info() {
   echo -e "\033[1;32m$*\033[0m"
@@ -13,7 +14,6 @@ error() {
 build_release() {
   info "Building release"
   make release
-  export PATH="$PWD/build/release:$PATH"
 }
 
 wipe_database() {
@@ -35,8 +35,7 @@ wait_for() {
 
 start_cluster() {
   info "Starting cluster"
-  overmind start -D
-  overmind echo &
+  overmind start --procfile Procfile.integration &
   wait_for "cluster to become ready" "ftl status"
   trap "overmind quit" EXIT INT TERM
 }

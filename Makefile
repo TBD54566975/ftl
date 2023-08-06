@@ -1,7 +1,5 @@
 VERSION = $(shell git describe --tags --always --dirty)
 
-BINARIES=ftl ftl-controller ftl-runner
-
 COMMON_LOG_IN = backend/common/log/api.go
 COMMON_LOG_OUT = backend/common/log/log_level_string.go
 
@@ -25,19 +23,29 @@ PROTO_IN = protos/buf.yaml \
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			protos/xyz/block/ftl/v1/schema/schema.pb.go \
 			protos/xyz/block/ftl/v1/console/console.pb.go \
+			protos/xyz/block/ftl/v1/schema/runtime.pb.go \
 			protos/xyz/block/ftl/v1/ftl.pb.go \
 			console/client/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
 			console/client/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
 			console/client/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
 			console/client/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
 			console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts
-
+RELEASE_OUT = build/release/ftl build/release/ftl-controller build/release/ftl-runner
 
 .DEFAULT_GOAL := help
 
 .PHONY: help
 help: ## This help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: all
+all: generate release ## Generate source and build binaries.
+
+.PHONY: clean
+clean: ## Clean build artifacts.
+	rm -rf build $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) $(RELEASE_OUT)
+	cd kotlin-runtime/ftl-runtime && gradle clean
+	cd kotlin-runtime/ftl-plugin && gradle clean
 
 .PHONY: release
 release: build/release/ftl-controller build/release/ftl-runner build/release/ftl ## Build release binaries.
@@ -55,7 +63,7 @@ console/client/dist/index.html:
 	cd console/client && npm install && npm run build
 
 .PHONY: generate
-generate: $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) ## Regenerate source.
+generate: $(PROTO_OUT) $(COMMON_LOG_OUT) $(SQLC_OUT) $(SCHEMA_OUT) ## Regenerate source.
 
 .PHONY:
 docker-runner: ## Build ftl-runner docker images.
