@@ -1,0 +1,21 @@
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types:
+      - completed
+name: Integration
+jobs:
+  integration:
+    name: Integration tests
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Integration tests
+        run: integration-tests

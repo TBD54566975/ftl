@@ -59,19 +59,6 @@ jobs:
         run: go-check-sumtype ./...
       - name: shellcheck
         run: shellcheck -e SC2016 scripts/*
-  integration:
-    name: Integration tests
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
-      - name: Docker Compose
-        run: docker compose up -d --wait
-      - name: Integration tests
-        run: integration-tests
   console:
     name: Console
     runs-on: ubuntu-latest
@@ -86,3 +73,23 @@ jobs:
       - name: Console Lint
         working-directory: console/client
         run: npm run lint
+  docker-runner:
+    name: Build Runner Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build
+        run: docker build -f Dockerfile.runner .
+  docker-controller:
+    name: Build Controller Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build
+        run: docker build -f Dockerfile.controller .
