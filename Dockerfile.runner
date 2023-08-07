@@ -17,13 +17,18 @@ RUN hermit install jbr
 WORKDIR /src
 
 # Download Go dependencies separately so Docker will cache them
-COPY go.mod go.sum ./
+COPY go.mod go.sum /src/
 RUN go mod download -x
 
-# Build
+# Build runtime
+COPY kotlin-runtime /src/kotlin-runtime
+COPY protos /src/protos
+RUN cd kotlin-runtime/ftl-runtime && gradle --info jar
+
+
+# Build runner
 COPY . /src/
 RUN make build/release/ftl-runner
-RUN make kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar
 
 # Finally create the runtime image.
 FROM ubuntu:22.04

@@ -14,7 +14,7 @@ jobs:
         run: |
           docker build -t ghcr.io/tbd54566975/ftl-runner:$GITHUB_SHA -t ghcr.io/tbd54566975/ftl-runner:latest -f Dockerfile.runner .
           mkdir -p artifacts/ftl-runner
-          docker save -o artifacts/ftl-runner/ftl-runner.tar ghcr.io/tbd54566975/ftl-runner:$GITHUB_SHA
+          docker save -o artifacts/ftl-runner/ftl-runner.tar ghcr.io/tbd54566975/ftl-runner:latest
       - name: Temporarily save Docker image
         uses: actions/upload-artifact@v3
         with:
@@ -31,9 +31,9 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: |
-          docker build -t ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA  -t ghcr.io/tbd54566975/ftl-controller:latest -f Dockerfile.controller .
+          docker build -t ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA -t ghcr.io/tbd54566975/ftl-controller:latest -f Dockerfile.controller .
           mkdir -p artifacts/ftl-controller
-          docker save -o artifacts/ftl-controller/ftl-controller.tar ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA
+          docker save -o artifacts/ftl-controller/ftl-controller.tar ghcr.io/tbd54566975/ftl-controller:latest
       - name: Temporarily save Docker image
         uses: actions/upload-artifact@v3
         with:
