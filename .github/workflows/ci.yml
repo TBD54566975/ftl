@@ -4,6 +4,9 @@ on:
       - main
   pull_request:
 name: CI
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   kotlin-runtime:
     name: Kotlin Runtime
@@ -93,3 +96,20 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: docker build -f Dockerfile.controller .
+  integration:
+    name: Integration Tests
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/integration.yml
+  release:
+    name: Release
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - kotlin-runtime
+      - kotlin-ftl-plugin
+      - test
+      - lint
+      - console
+      - docker-runner
+      - docker-controller
+      - integration
+    uses: ./.github/workflows/release.yml

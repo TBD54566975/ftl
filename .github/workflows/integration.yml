@@ -1,20 +1,33 @@
 on:
-  workflow_run:
-    workflows: ["CI"]
-    branches: [main]
-    types:
-      - completed
+  workflow_call:
 name: Integration
 jobs:
   integration:
     name: Integration tests
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+      - name: Cache Go Modules
+        id: cache-go-modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go
+      - name: Build Kotlin Runtime
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build
+          build-root-directory: kotlin-runtime/ftl-runtime
+          gradle-executable: ${{ github.workspace }}/bin/gradle
+      - name: Build Kotlin Plugin
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build
+          build-root-directory: kotlin-runtime/ftl-plugin
+          gradle-executable: ${{ github.workspace }}/bin/gradle
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Integration tests
