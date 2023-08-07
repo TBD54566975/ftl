@@ -137,7 +137,7 @@ class ModuleGenerator() {
       type.float != null -> ClassName("kotlin", "Float")
       type.string != null -> ClassName("kotlin", "String")
       type.bool != null -> ClassName("kotlin", "Boolean")
-      type.time != null -> ClassName("kotlinx", "Instant")
+      type.time != null -> ClassName("kotlinx.datetime", "Instant")
       type.array != null -> {
         val element = type.array.element ?: throw IllegalArgumentException(
           "Missing element type in kotlin array generator"

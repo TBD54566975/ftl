@@ -10,10 +10,10 @@ import kotlin.reflect.full.createInstance
 
 internal class VerbHandle<Resp>(
   private val verbClass: KClass<*>,
-  private val verbFunction: KFunction<Resp>
+  private val verbFunction: KFunction<Resp>,
 ) {
-
   private val gson = Gson()
+
   private val logger = Logging.logger(VerbHandle::class)
   private val argumentType = findArgumentType(verbFunction.parameters)
   val returnType: KClass<*> = verbFunction.returnType.classifier as KClass<*>
