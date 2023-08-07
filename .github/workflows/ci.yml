@@ -11,34 +11,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Cache Gradle
-        id: cache-gradle
-        uses: actions/cache@v3
-        with:
-          path: ~/.gradle/caches/modules-2
-          key: ${{ runner.os }}-gradle
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Test
-        working-directory: kotlin-runtime/ftl-runtime
-        run: gradle test
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: test
+          build-root-directory: kotlin-runtime/ftl-runtime
+          gradle-executable: ${{ github.workspace }}/bin/gradle
   kotlin-ftl-plugin:
     name: FTL Plugin
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Cache Gradle
-        id: cache-gradle
-        uses: actions/cache@v3
-        with:
-          path: ~/.gradle/caches/modules-2
-          key: ${{ runner.os }}-gradle
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Test
-        working-directory: kotlin-runtime/ftl-plugin
-        run: gradle test
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: test
+          build-root-directory: kotlin-runtime/ftl-plugin
+          gradle-executable: ${{ github.workspace }}/bin/gradle
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -72,12 +66,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Cache Gradle
-        id: cache-gradle
-        uses: actions/cache@v3
-        with:
-          path: ~/.gradle/caches/modules-2
-          key: ${{ runner.os }}-gradle
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Docker Compose
