@@ -1,0 +1,11 @@
+name: Go Cache
+description: Cache Go builds
+runs:
+  using: "composite"
+  steps:
+    - name: Cache Go Modules
+      id: cache-go-modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-{{ hashFiles('**/go.sum') }}-go
