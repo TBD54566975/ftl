@@ -6,4 +6,5 @@
 **/.vscode
 **/*.sw*
 .git
+console/client/dist
 **/.DS_Store
