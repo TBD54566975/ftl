@@ -2,12 +2,10 @@ package xyz.block.ftl.gradle
 
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
-import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
@@ -22,8 +20,6 @@ import xyz.block.ftl.v1.schema.Data
 import xyz.block.ftl.v1.schema.Type
 import xyz.block.ftl.v1.schema.Verb
 import java.io.File
-import java.util.Date
-import kotlin.reflect.KClass
 
 class ModuleGenerator() {
   fun run(schemas: List<PullSchemaResponse>, outputDirectory: File, module: String) {
@@ -137,7 +133,7 @@ class ModuleGenerator() {
       type.float != null -> ClassName("kotlin", "Float")
       type.string != null -> ClassName("kotlin", "String")
       type.bool != null -> ClassName("kotlin", "Boolean")
-      type.time != null -> ClassName("kotlinx.datetime", "Instant")
+      type.time != null -> ClassName("java.time", "OffsetDateTime")
       type.array != null -> {
         val element = type.array.element ?: throw IllegalArgumentException(
           "Missing element type in kotlin array generator"

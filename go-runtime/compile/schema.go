@@ -28,6 +28,9 @@ var (
 	errorIFaceType = once(func() *types.Interface {
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
+	timeType = once(func() types.Type {
+		return mustLoadRef("time", "Time").Type()
+	})
 	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/sdk.Call"
 )
 
@@ -319,11 +322,6 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 }
 
 func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
-	if named, ok := tnode.(*types.Named); ok {
-		if named.Obj().Name() == "Time" && named.Obj().Pkg().Path() == "time" {
-			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
-		}
-	}
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		switch underlying.Kind() {
@@ -344,6 +342,10 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		}
 
 	case *types.Struct:
+		// Special check for time.Time
+		if tnode.String() == timeType().String() {
+			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
+		}
 		return parseStruct(pctx, node, underlying)
 
 	case *types.Map:

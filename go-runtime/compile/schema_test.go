@@ -5,9 +5,6 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"go/ast"
 	"go/types"
-	"golang.org/x/tools/go/packages"
-	"log"
-	"reflect"
 	"testing"
 )
 
@@ -45,21 +42,8 @@ func TestParseDirectives(t *testing.T) {
 }
 
 func TestParseTypesTime(t *testing.T) {
-	cfg := &packages.Config{
-		Mode: packages.NeedTypes | packages.NeedImports,
-	}
-	pkgs, err := packages.Load(cfg, "time")
-	if err != nil {
-		log.Fatal(err)
-	}
-	if packages.PrintErrors(pkgs) > 0 {
-		return
-	}
-
-	timePkg := pkgs[0]
-	timeTime := timePkg.Types.Scope().Lookup("Time").Type()
-
-	parsed, err := parseType(nil, &ast.Ident{}, timeTime)
+	timeRef := mustLoadRef("time", "Time").Type()
+	parsed, err := parseType(nil, &ast.Ident{}, timeRef)
 	assert.NoError(t, err)
 	_, ok := parsed.(*schema.Time)
 	assert.True(t, ok)
@@ -80,9 +64,7 @@ func TestParseBasicTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			parsed, err := parseType(nil, &ast.Ident{}, tt.input)
 			assert.NoError(t, err)
-			if !reflect.DeepEqual(reflect.TypeOf(parsed), reflect.TypeOf(tt.expected)) {
-				t.Errorf("Type mismatch: got %T, want %T", parsed, tt.expected)
-			}
+			assert.Equal(t, tt.expected, parsed)
 		})
 	}
 }
