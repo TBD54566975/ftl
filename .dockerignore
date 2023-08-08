@@ -1,3 +1,9 @@
 .hermit
 **/node_modules
 **/build
+**/.gradle
+**/.idea
+**/.vscode
+**/*.sw*
+.git
+**/.DS_Store
