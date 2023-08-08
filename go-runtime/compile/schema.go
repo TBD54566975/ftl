@@ -28,6 +28,9 @@ var (
 	errorIFaceType = once(func() *types.Interface {
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
+	timeType = once(func() types.Type {
+		return mustLoadRef("time", "Time").Type()
+	})
 	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/sdk.Call"
 )
 
@@ -319,9 +322,9 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 }
 
 func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
-	switch tnode := tnode.Underlying().(type) {
+	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
-		switch tnode.Kind() {
+		switch underlying.Kind() {
 		case types.String:
 			return &schema.String{Pos: goPosToSchemaPos(node.Pos())}, nil
 
@@ -335,17 +338,21 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 			return &schema.Float{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		default:
-			return nil, errors.Errorf("unsupported basic type %s", tnode)
+			return nil, errors.Errorf("unsupported basic type %s", underlying)
 		}
 
 	case *types.Struct:
-		return parseStruct(pctx, node, tnode)
+		// Special check for time.Time
+		if tnode.String() == timeType().String() {
+			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
+		}
+		return parseStruct(pctx, node, underlying)
 
 	case *types.Map:
-		return parseMap(pctx, node, tnode)
+		return parseMap(pctx, node, underlying)
 
 	case *types.Slice:
-		return parseSlice(pctx, node, tnode)
+		return parseSlice(pctx, node, underlying)
 
 	default:
 		return nil, errors.Errorf("unsupported type %s", node)

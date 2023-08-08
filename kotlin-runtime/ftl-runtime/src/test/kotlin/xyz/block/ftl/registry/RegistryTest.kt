@@ -1,6 +1,5 @@
 package xyz.block.ftl.registry
 
-import com.google.gson.Gson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -10,6 +9,7 @@ import xyz.block.ftl.Ingress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 import xyz.block.ftl.client.LoopbackVerbServiceClient
+import xyz.block.ftl.serializer.makeGson
 import kotlin.test.assertContentEquals
 
 data class VerbRequest(val text: String = "")
@@ -42,7 +42,7 @@ class IgnoredVerb {
 }
 
 class RegistryTest {
-  private val gson = Gson()
+  private val gson = makeGson()
   private val verbRef = VerbRef(module = "registry", name = "verb")
   private val renamedVerbRef = VerbRef(module = "registry", name = "something")
 

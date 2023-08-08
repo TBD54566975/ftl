@@ -1,8 +1,8 @@
 package xyz.block.ftl.registry
 
-import com.google.gson.Gson
 import xyz.block.ftl.Context
 import xyz.block.ftl.logging.Logging
+import xyz.block.ftl.serializer.makeGson
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
@@ -10,10 +10,10 @@ import kotlin.reflect.full.createInstance
 
 internal class VerbHandle<Resp>(
   private val verbClass: KClass<*>,
-  private val verbFunction: KFunction<Resp>
+  private val verbFunction: KFunction<Resp>,
 ) {
+  private val gson = makeGson()
 
-  private val gson = Gson()
   private val logger = Logging.logger(VerbHandle::class)
   private val argumentType = findArgumentType(verbFunction.parameters)
   val returnType: KClass<*> = verbFunction.returnType.classifier as KClass<*>

@@ -8,8 +8,7 @@ import (
 
 type TimeRequest struct{}
 type TimeResponse struct {
-	Time int `json:"time"`
-	Date int `json:"date"`
+	Time time.Time `json:"time"`
 }
 
 // Time returns the current time.
@@ -18,6 +17,6 @@ type TimeResponse struct {
 //ftl:ingress GET /time
 func Time(ctx context.Context, req TimeRequest) (TimeResponse, error) {
 	return TimeResponse{
-		Time: int(time.Now().Unix()),
+		Time: time.Now(),
 	}, nil
 }

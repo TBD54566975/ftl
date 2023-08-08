@@ -1,9 +1,11 @@
 package compile
 
 import (
-	"testing"
-
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/assert/v2"
+	"go/ast"
+	"go/types"
+	"testing"
 )
 
 func TestParseDirectives(t *testing.T) {
@@ -35,6 +37,34 @@ func TestParseDirectives(t *testing.T) {
 			got, err := directiveParser.ParseString("", tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, &tt.expected, got)
+		})
+	}
+}
+
+func TestParseTypesTime(t *testing.T) {
+	timeRef := mustLoadRef("time", "Time").Type()
+	parsed, err := parseType(nil, &ast.Ident{}, timeRef)
+	assert.NoError(t, err)
+	_, ok := parsed.(*schema.Time)
+	assert.True(t, ok)
+}
+
+func TestParseBasicTypes(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    types.Type
+		expected schema.Type
+	}{
+		{name: "String", input: types.Typ[types.String], expected: &schema.String{}},
+		{name: "Int", input: types.Typ[types.Int], expected: &schema.Int{}},
+		{name: "Bool", input: types.Typ[types.Bool], expected: &schema.Bool{}},
+		{name: "Float64", input: types.Typ[types.Float64], expected: &schema.Float{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := parseType(nil, &ast.Ident{}, tt.input)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, parsed)
 		})
 	}
 }

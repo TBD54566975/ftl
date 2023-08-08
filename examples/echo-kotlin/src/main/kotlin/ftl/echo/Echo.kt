@@ -14,7 +14,6 @@ class Echo {
   @Verb
   fun echo(context: Context, req: EchoRequest): EchoResponse {
     val response = context.call(Time::time, TimeRequest())
-    val time = Instant.fromEpochSeconds(response.time, 0)
-    return EchoResponse(message = "Hello, ${req.name}! The time is ${time}.")
+    return EchoResponse(message = "Hello, ${req.name}! The time is ${response.time}.")
   }
 }

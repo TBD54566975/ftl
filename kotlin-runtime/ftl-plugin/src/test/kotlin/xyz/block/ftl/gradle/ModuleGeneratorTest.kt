@@ -15,7 +15,6 @@ import xyz.block.ftl.v1.schema.Map
 import xyz.block.ftl.v1.schema.Metadata
 import xyz.block.ftl.v1.schema.MetadataIngress
 import xyz.block.ftl.v1.schema.Module
-import xyz.block.ftl.v1.schema.Schema
 import xyz.block.ftl.v1.schema.String
 import xyz.block.ftl.v1.schema.Time
 import xyz.block.ftl.v1.schema.Type
@@ -90,6 +89,7 @@ public class Test()
 // Module comments
 package ftl.test
 
+import java.time.OffsetDateTime
 import kotlin.Boolean
 import kotlin.Float
 import kotlin.Long
@@ -97,7 +97,6 @@ import kotlin.String
 import kotlin.Unit
 import kotlin.collections.ArrayList
 import kotlin.collections.Map
-import kotlinx.Instant
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.v1.schema.DataRef
 import xyz.block.ftl.v1.schema.VerbRef
@@ -117,7 +116,7 @@ public data class TestResponse(
   public val float: Float,
   public val string: String,
   public val bool: Boolean,
-  public val time: Instant,
+  public val time: OffsetDateTime,
   public val array: ArrayList<String>,
   public val nestedArray: ArrayList<ArrayList<String>>,
   public val map: Map<String, Long>,

@@ -1,10 +1,10 @@
 package xyz.block.ftl.registry
 
-import com.google.gson.Gson
 import org.junit.jupiter.api.Test
+import xyz.block.ftl.serializer.makeGson
 
 class VerbHandleTest {
-  val gson = Gson()
+  val gson = makeGson()
 
   @Test
   fun testInvoke() {
