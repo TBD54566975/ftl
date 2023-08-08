@@ -2,7 +2,6 @@ package ftl.echo
 
 import ftl.time.Time
 import ftl.time.TimeRequest
-import kotlinx.datetime.Instant
 import xyz.block.ftl.Context
 import xyz.block.ftl.Verb
 
