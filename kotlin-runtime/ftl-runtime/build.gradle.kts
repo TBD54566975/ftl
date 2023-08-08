@@ -21,6 +21,7 @@ dependencies {
 
   // Use the JUnit 5 integration.
   testImplementation(libs.junitJupiterEngine)
+  testImplementation(libs.junitJupiterParams)
   testRuntimeOnly(libs.junitPlatformLauncher)
 
   // These dependencies are used internally, and not exposed to consumers on their own compile classpath.
