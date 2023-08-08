@@ -10,7 +10,7 @@ import (
 
 type initDBCmd struct {
 	Recreate bool   `help:"Drop and recreate the database."`
-	DSN      string `help:"Postgres DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret"`
+	DSN      string `help:"Postgres DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_DSN"`
 }
 
 func (c *initDBCmd) Run(ctx context.Context) error {

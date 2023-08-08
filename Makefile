@@ -50,10 +50,7 @@ clean: ## Clean build artifacts.
 .PHONY: release
 release: build/release/ftl-controller build/release/ftl-runner build/release/ftl ## Build release binaries.
 
-build/release/ftl-controller: console/client/dist/index.html
-	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$(shell basename $@)
-
-build/release/%:
+build/release/%: console/client/dist/index.html
 	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$(shell basename $@)
 
 kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar:
@@ -67,12 +64,12 @@ generate: $(PROTO_OUT) $(COMMON_LOG_OUT) $(SQLC_OUT) $(SCHEMA_OUT) ## Regenerate
 
 .PHONY:
 docker-runner: ## Build ftl-runner docker images.
-	docker build --tag ftl-runner --platform=linux/amd64 \
+	docker build --tag ghcr.io/tbd54566975/ftl-runner:latest --platform=linux/amd64 \
 		-f Dockerfile.runner .
 
 .PHONY:
 docker-controller: ## Build ftl-controller docker images.
-	docker build --tag ftl-controller --platform=linux/amd64 \
+	docker build --tag ghcr.io/tbd54566975/ftl-controller:latest --platform=linux/amd64 \
 		-f Dockerfile.controller .
 
 .PHONY: protosync

@@ -29,6 +29,7 @@ RUN cd kotlin-runtime/ftl-runtime && gradle --info jar
 # Build runner
 COPY . /src/
 RUN make build/release/ftl-runner
+RUN make build/release/ftl
 
 # Finally create the runtime image.
 FROM ubuntu:22.04
@@ -39,6 +40,7 @@ ENV PATH="/root/jre/bin:$PATH"
 COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
 COPY --from=builder /src/kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar template/ftl/jars/
 COPY --from=builder /src/build/release/ftl-runner .
+COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments
 
 EXPOSE 8894

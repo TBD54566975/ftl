@@ -1,8 +1,0 @@
----
-apiVersion: k3d.io/v1alpha5
-kind: Simple
-metadata:
-  name: k3s-ftl
-servers: 1
-agents: 0
-image: docker.io/rancher/k3s:v1.26.4-k3s1

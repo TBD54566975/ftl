@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ftl-db-migrate
+spec:
+  template:
+    spec:
+      containers:
+      - name: ftl-db-migrate
+        image: ghcr.io/tbd54566975/ftl-controller:latest
+        command: ["./ftl", "initdb"]
+        env:
+          - name: FTL_DSN
+            value: "postgres://ftl-pg-cluster/ftl?sslmode=disable&user=postgres&password=secret"
+      restartPolicy: Never
+  backoffLimit: 4

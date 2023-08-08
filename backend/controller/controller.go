@@ -37,7 +37,7 @@ import (
 
 type Config struct {
 	Bind                         *url.URL             `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
-	Advertise                    *url.URL             `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_RUNNER_ADVERTISE"`
+	Advertise                    *url.URL             `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_CONTROLLER_ADVERTISE"`
 	Key                          model2.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
 	DSN                          string               `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	RunnerTimeout                time.Duration        `help:"Runner heartbeat timeout." default:"10s"`
