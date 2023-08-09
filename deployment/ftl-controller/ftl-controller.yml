@@ -5,6 +5,7 @@ metadata:
   labels:
     app: ftl-controller
 spec:
+  replicas: 2
   selector:
     matchLabels:
       app: ftl-controller
@@ -15,7 +16,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ftl-controller
+          image: ghcr.io/tbd54566975/ftl-controller
           env:
             - name: MY_POD_IP
               valueFrom:
@@ -26,7 +27,7 @@ spec:
             - name: FTL_CONTROLLER_BIND
               value: "http://$(MY_POD_IP):8892"
             - name: FTL_CONTROLLER_ADVERTISE
-              value: "http://ftl-controller:8892"
+              value: ""
           ports:
             - containerPort: 8892
           readinessProbe:
@@ -54,18 +55,18 @@ spec:
   selector:
     app: ftl-controller
   type: ClusterIP
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: ftl-controller
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ftl-controller
-  minReplicas: 1
-  maxReplicas: 10
+#---
+#apiVersion: autoscaling/v2
+#kind: HorizontalPodAutoscaler
+#metadata:
+#  name: ftl-controller
+#spec:
+#  scaleTargetRef:
+#    apiVersion: apps/v1
+#    kind: Deployment
+#    name: ftl-controller
+#  minReplicas: 1
+#  maxReplicas: 10
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

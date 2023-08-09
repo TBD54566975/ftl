@@ -5,7 +5,14 @@
 ```
 # 
 k3d registry create registry.localhost --port 5000
-k3d cluster create --api-port 6550 -p "8892:80@loadbalancer" --agents 2 --registry-use k3d-registry.localhost:5000
+k3d cluster create --api-port 6550 -p "8892:80@loadbalancer" --agents 2 \
+    --registry-use k3d-registry.localhost:5000 \
+    --registry-config <(cat <<EOF
+mirrors:
+  "localhost:5000":
+    endpoint:
+      - http://k3d-registry.localhost:5000
+EOF)
 ```
 
 ## Deploy ftl-controller and all dependencies
@@ -26,8 +33,7 @@ for the database to be ready, but it should eventually reconcile to a working st
 ## Check the ftl-controller is up
 
 ```
-$ ftl status
-...
+ftl status
 ```
 
 If the controller is not up, check the logs:
@@ -56,9 +62,6 @@ Push the image to the local registry:
 ```
 docker push localhost:5000/ftl-controller
 ```
-
-To use the image in the k3d cluster use the registry prefix `k3d-registry.localhost:5000`,
-eg. `k3d-registry.localhost:5000/ftl-controller`
 
 ## Debugging
 

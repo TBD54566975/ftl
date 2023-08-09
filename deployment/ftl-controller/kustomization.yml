@@ -1,8 +1,2 @@
 resources:
-  - db-create
-  - db-migrate
-  - ftl-controller
-images:
-  - name: ftl-controller
-    newName: ghcr.io/tbd54566975/ftl-controller
-    newTag: latest
+- ftl-controller.yml
