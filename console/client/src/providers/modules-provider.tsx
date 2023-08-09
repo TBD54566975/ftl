@@ -4,7 +4,6 @@ import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_conne
 import { GetModulesResponse } from '../protos/xyz/block/ftl/v1/console/console_pb'
 import { schemaContext } from './schema-provider'
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const modulesContext = createContext<GetModulesResponse>(new GetModulesResponse())
 
 const ModulesProvider = (props: PropsWithChildren) => {

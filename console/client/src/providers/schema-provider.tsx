@@ -3,16 +3,14 @@ import { DeploymentChangeType, PullSchemaResponse } from '../protos/xyz/block/ft
 import { useClient } from '../hooks/use-client'
 import { ControllerService } from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const schemaContext = createContext<PullSchemaResponse[]>([])
 
 const SchemaProvider = props => {
   const client = useClient(ControllerService)
-  const [schema, setSchema] = useState<PullSchemaResponse[]>([])
+  const [ schema, setSchema ] = useState<PullSchemaResponse[]>([])
 
   useEffect(() => {
     async function fetchSchema() {
-      console.log('fetching schema')
       const schemaMap = new Map<string, PullSchemaResponse>()
       for await (const response of client.pullSchema({})) {
         const moduleName = response.moduleName ?? ''
@@ -29,13 +27,13 @@ const SchemaProvider = props => {
 
         if (!response.more) {
           setSchema(
-            Array.from(schemaMap.values()).sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0),
+            Array.from(schemaMap.values()).sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0)
           )
         }
       }
     }
     fetchSchema()
-  }, [client])
+  }, [ client ])
 
   return <schemaContext.Provider value={schema}>{props.children}</schemaContext.Provider>
 }

@@ -1,0 +1,1 @@
+FROM  mcr.microsoft.com/playwright:v1.36.2-jammy

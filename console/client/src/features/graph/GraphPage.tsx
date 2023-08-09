@@ -10,14 +10,14 @@ const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode }
 
 export default function GraphPage() {
   const modules = useContext(modulesContext)
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [ nodes, setNodes, onNodesChange ] = useNodesState([])
+  const [ edges, setEdges, onEdgesChange ] = useEdgesState([])
 
   useEffect(() => {
     const { nodes, edges } = layoutNodes(modules.modules)
     setNodes(nodes)
     setEdges(edges)
-  }, [modules, setEdges, setNodes])
+  }, [ modules, setEdges, setNodes ])
 
   return (
     <div style={{ width: '100vw', height: '90vh' }}>

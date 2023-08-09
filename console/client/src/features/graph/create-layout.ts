@@ -51,7 +51,7 @@ export function layoutNodes(modules: Module[]) {
           })
           call.name
           call.module
-        }),
+        })
       )
 
       y += 50
