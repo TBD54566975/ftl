@@ -84,7 +84,7 @@ CREATE TABLE deployment_logs
     verb          VARCHAR,
     time_stamp    TIMESTAMPTZ NOT NULL,
     level         INT         NOT NULL, -- https://opentelemetry.io/docs/specs/otel/logs/data-model/#displaying-severity
-    scope         VARCHAR     NOT NULL,
+    attributes    JSONB       NOT NULL,
     message       TEXT        NOT NULL,
     error         TEXT
 );

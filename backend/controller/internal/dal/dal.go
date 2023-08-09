@@ -4,6 +4,7 @@ package dal
 import (
 	"context"
 	stdsql "database/sql"
+	"encoding/json"
 	"io"
 	"strings"
 	"time"
@@ -718,13 +719,17 @@ func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment model2.De
 		logError.String = logEntry.Error.Error()
 		logError.Valid = true
 	}
+	attributes, err := json.Marshal(logEntry.Attributes)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	return errors.WithStack(translatePGError(d.db.InsertDeploymentLogEntry(ctx, sql2.InsertDeploymentLogEntryParams{
-		Key:       sqltypes.Key(deployment),
-		TimeStamp: pgtype.Timestamptz{Time: logEntry.Time, Valid: true},
-		Level:     int32(logEntry.Level.Severity()),
-		Scope:     strings.Join(logEntry.Scope, ":"),
-		Message:   logEntry.Message,
-		Error:     logError,
+		Key:        sqltypes.Key(deployment),
+		TimeStamp:  pgtype.Timestamptz{Time: logEntry.Time, Valid: true},
+		Level:      int32(logEntry.Level.Severity()),
+		Attributes: attributes,
+		Message:    logEntry.Message,
+		Error:      logError,
 	})))
 }
 
