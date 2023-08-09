@@ -1,0 +1,6 @@
+resources:
+- db-migrate.yml
+configMapGenerator:
+- name: ftl-db-migrate-config
+  files:
+    - schema/001_init.sql
