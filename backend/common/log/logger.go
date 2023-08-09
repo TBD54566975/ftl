@@ -11,34 +11,37 @@ import (
 
 var _ Interface = (*Logger)(nil)
 
+const scopeKey = "scope"
+
 type Entry struct {
-	Time    time.Time `json:"-"`
-	Level   Level     `json:"level"`
-	Scope   []string  `json:"scope,omitempty"`
-	Message string    `json:"message"`
+	Time       time.Time         `json:"-"`
+	Level      Level             `json:"level"`
+	Attributes map[string]string `json:"attributes,omitempty"`
+	Message    string            `json:"message"`
 
 	Error error `json:"-"`
 }
 
 // Logger is the concrete logger.
 type Logger struct {
-	level Level
-	scope []string
-	sink  Sink
+	level      Level
+	attributes map[string]string
+	sink       Sink
 }
 
 // New returns a new logger.
 func New(level Level, sink Sink) *Logger {
 	return &Logger{
-		level: level,
-		sink:  sink,
+		level:      level,
+		attributes: map[string]string{},
+		sink:       sink,
 	}
 }
 
 // Sub creates a new logger with the given prefix.
 func (l Logger) Sub(scope string, level Level) *Logger {
 	if scope != "" {
-		l.scope = append(l.scope, scope)
+		l.attributes[scopeKey] = scope
 	}
 	if level != Default {
 		l.level = level
@@ -57,7 +60,7 @@ func (l *Logger) Log(entry Entry) {
 	if entry.Time.IsZero() {
 		entry.Time = time.Now()
 	}
-	entry.Scope = l.scope
+	entry.Attributes = l.attributes
 	if err := l.sink.Log(entry); err != nil {
 		fmt.Fprintf(os.Stderr, "ftl:log: failed to log entry: %v", err)
 	}

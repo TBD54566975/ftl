@@ -164,7 +164,7 @@ message StreamDeploymentLogsRequest {
   string deployment_key = 1;
   int64 time_stamp = 2;
   int32 log_level = 3;
-  string scope = 4;
+  map<string, string> attributes = 4;
   string message = 5;
   optional string error = 6;
 }

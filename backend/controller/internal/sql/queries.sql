@@ -238,7 +238,7 @@ FROM rows;
 
 
 -- name: InsertDeploymentLogEntry :exec
-INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, error)
+INSERT INTO deployment_logs (deployment_id, time_stamp, level, attributes, message, error)
 VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $5, $6);
 
 -- name: InsertCallEntry :exec

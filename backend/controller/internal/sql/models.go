@@ -153,7 +153,7 @@ type DeploymentLog struct {
 	Verb         pgtype.Text
 	TimeStamp    pgtype.Timestamptz
 	Level        int32
-	Scope        string
+	Attributes   []byte
 	Message      string
 	Error        pgtype.Text
 }

@@ -976,17 +976,17 @@ func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams
 }
 
 const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec
-INSERT INTO deployment_logs (deployment_id, time_stamp, level, scope, message, error)
+INSERT INTO deployment_logs (deployment_id, time_stamp, level, attributes, message, error)
 VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $5, $6)
 `
 
 type InsertDeploymentLogEntryParams struct {
-	Key       sqltypes.Key
-	TimeStamp pgtype.Timestamptz
-	Level     int32
-	Scope     string
-	Message   string
-	Error     pgtype.Text
+	Key        sqltypes.Key
+	TimeStamp  pgtype.Timestamptz
+	Level      int32
+	Attributes []byte
+	Message    string
+	Error      pgtype.Text
 }
 
 func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error {
@@ -994,7 +994,7 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 		arg.Key,
 		arg.TimeStamp,
 		arg.Level,
-		arg.Scope,
+		arg.Attributes,
 		arg.Message,
 		arg.Error,
 	)

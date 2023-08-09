@@ -1210,9 +1210,9 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
   logLevel = 0;
 
   /**
-   * @generated from field: string scope = 4;
+   * @generated from field: map<string, string> attributes = 4;
    */
-  scope = "";
+  attributes: { [key: string]: string } = {};
 
   /**
    * @generated from field: string message = 5;
@@ -1235,7 +1235,7 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 3, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "scope", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 5, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);

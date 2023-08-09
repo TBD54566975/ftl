@@ -17,7 +17,7 @@ type Config struct {
 }
 
 func Init(ctx context.Context, name string, config Config) error {
-	logger := log.FromContext(ctx).Sub("otel", config.LogLevel)
+	logger := log.FromContext(ctx)
 	if !config.ExportOTEL {
 		logger.Warnf("OTEL metrics export is disabled")
 		return nil

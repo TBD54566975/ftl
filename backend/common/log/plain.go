@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/alecthomas/errors"
 	"github.com/mattn/go-isatty"
@@ -39,8 +38,9 @@ type plainSink struct {
 // Log implements Sink
 func (t *plainSink) Log(entry Entry) error {
 	var prefix string
-	if len(entry.Scope) > 0 {
-		prefix = entry.Level.String() + ":" + strings.Join(entry.Scope, ":") + ": "
+	scope, exists := entry.Attributes[scopeKey]
+	if exists {
+		prefix = entry.Level.String() + ":" + scope + ": "
 	} else {
 		prefix = entry.Level.String() + ": "
 	}
