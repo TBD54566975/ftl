@@ -42,6 +42,8 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 					if n.Module != "" {
 						pkgs[n.Module] = true
 					}
+				case *schema.Time:
+					pkgs["time"] = true
 				default:
 				}
 				return next()
