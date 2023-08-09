@@ -2,17 +2,16 @@ FROM ubuntu:22.04 AS builder
 RUN apt update
 RUN apt install -y curl git
 
-# Copy Hermit bin stubs and install all packages. This is done
-# separately so that Docker will cache the tools correctly.
+# Seed some of the most common tools - this will be cached
 COPY ./bin /src/bin
 ENV PATH="/src/bin:$PATH"
 ENV HERMIT_STATE_DIR=/hermit
-RUN hermit install
 RUN hermit uninstall jbr
 RUN hermit install openjre-18.0.2.1_1
 # openjre and jbr conflict, but we want the JRE in the cache
 RUN hermit uninstall openjre
 RUN hermit install jbr
+RUN go version
 
 WORKDIR /src
 
