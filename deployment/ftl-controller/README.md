@@ -57,6 +57,9 @@ Push the image to the local registry:
 docker push localhost:5000/ftl-controller
 ```
 
+To use the image in the k3d cluster use the registry prefix `k3d-registry.localhost:5000`,
+eg. `k3d-registry.localhost:5000/ftl-controller`
+
 ## Debugging
 
 To exec into the k3d node:

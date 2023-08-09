@@ -72,7 +72,7 @@ jobs:
       - name: Push
         if: github.ref == 'refs/heads/main'
         run: |
-          docker tag ghcr.io/tbd54566975/ftl-runner:$GITHUB_SHA ghcr.io/tbd54566975/ftl-runner:latest
+          docker tag ghcr.io/tbd54566975/ftl-runner:latest ghcr.io/tbd54566975/ftl-runner:$GITHUB_SHA
           docker push -a ghcr.io/tbd54566975/ftl-runner
-          docker tag ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA ghcr.io/tbd54566975/ftl-controller:latest
+          docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA
           docker push -a ghcr.io/tbd54566975/ftl-controller
