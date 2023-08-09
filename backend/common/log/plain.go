@@ -2,10 +2,11 @@ package log
 
 import (
 	"fmt"
-	"github.com/alecthomas/errors"
-	"github.com/mattn/go-isatty"
 	"io"
 	"os"
+
+	"github.com/alecthomas/errors"
+	"github.com/mattn/go-isatty"
 )
 
 var colours = map[Level]string{
