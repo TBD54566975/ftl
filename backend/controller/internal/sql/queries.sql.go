@@ -379,6 +379,60 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 	return items, nil
 }
 
+const getDeploymentLogs = `-- name: GetDeploymentLogs :many
+SELECT DISTINCT r.key AS runner_key,
+                d.key AS deployment_key,
+                dl.id, dl.deployment_id, dl.runner_id, dl.time_stamp, dl.level, dl.attributes, dl.message, dl.error
+FROM deployment_logs dl
+         JOIN runners r ON dl.runner_id = r.id
+         JOIN deployments d ON dl.deployment_id = d.id
+WHERE dl.id = (SELECT id FROM deployments WHERE deployments.key = $1)
+`
+
+type GetDeploymentLogsRow struct {
+	RunnerKey     sqltypes.Key
+	DeploymentKey sqltypes.Key
+	ID            int64
+	DeploymentID  int64
+	RunnerID      int64
+	TimeStamp     pgtype.Timestamptz
+	Level         int32
+	Attributes    []byte
+	Message       string
+	Error         pgtype.Text
+}
+
+func (q *Queries) GetDeploymentLogs(ctx context.Context, key sqltypes.Key) ([]GetDeploymentLogsRow, error) {
+	rows, err := q.db.Query(ctx, getDeploymentLogs, key)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDeploymentLogsRow
+	for rows.Next() {
+		var i GetDeploymentLogsRow
+		if err := rows.Scan(
+			&i.RunnerKey,
+			&i.DeploymentKey,
+			&i.ID,
+			&i.DeploymentID,
+			&i.RunnerID,
+			&i.TimeStamp,
+			&i.Level,
+			&i.Attributes,
+			&i.Message,
+			&i.Error,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDeployments = `-- name: GetDeployments :many
 SELECT d.id, d.key, d.min_replicas, d.created_at, d.schema, m.name AS module_name, m.language
 FROM deployments d
@@ -976,12 +1030,14 @@ func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams
 }
 
 const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec
-INSERT INTO deployment_logs (deployment_id, time_stamp, level, attributes, message, error)
-VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1)::UUID, $2, $3, $4, $5, $6)
+INSERT INTO deployment_logs (deployment_id, runner_id, time_stamp, level, attributes, message, error)
+VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1)::UUID,
+        (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1)::UUID, $3, $4, $5, $6, $7)
 `
 
 type InsertDeploymentLogEntryParams struct {
 	Key        sqltypes.Key
+	Key_2      sqltypes.Key
 	TimeStamp  pgtype.Timestamptz
 	Level      int32
 	Attributes []byte
@@ -992,6 +1048,7 @@ type InsertDeploymentLogEntryParams struct {
 func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error {
 	_, err := q.db.Exec(ctx, insertDeploymentLogEntry,
 		arg.Key,
+		arg.Key_2,
 		arg.TimeStamp,
 		arg.Level,
 		arg.Attributes,

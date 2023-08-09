@@ -1200,27 +1200,32 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
   deploymentKey = "";
 
   /**
-   * @generated from field: int64 time_stamp = 2;
+   * @generated from field: string runner_key = 2;
+   */
+  runnerKey = "";
+
+  /**
+   * @generated from field: int64 time_stamp = 3;
    */
   timeStamp = protoInt64.zero;
 
   /**
-   * @generated from field: int32 log_level = 3;
+   * @generated from field: int32 log_level = 4;
    */
   logLevel = 0;
 
   /**
-   * @generated from field: map<string, string> attributes = 4;
+   * @generated from field: map<string, string> attributes = 5;
    */
   attributes: { [key: string]: string } = {};
 
   /**
-   * @generated from field: string message = 5;
+   * @generated from field: string message = 6;
    */
   message = "";
 
   /**
-   * @generated from field: optional string error = 6;
+   * @generated from field: optional string error = 7;
    */
   error?: string;
 
@@ -1233,11 +1238,12 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
   static readonly typeName = "xyz.block.ftl.v1.StreamDeploymentLogsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 5, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "runner_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamDeploymentLogsRequest {

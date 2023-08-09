@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/maps"
 	model2 "github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/pubsub"
@@ -157,6 +156,16 @@ type Deployment struct {
 	MinReplicas int
 	Schema      *schema.Module
 	CreatedAt   time.Time
+}
+
+type DeploymentLog struct {
+	DeploymentKey model2.DeploymentKey
+	RunnerKey     model2.RunnerKey
+	TimeStamp     time.Time
+	Level         int32
+	Attributes    map[string]string
+	Message       string
+	Error         *string
 }
 
 func (d Deployment) notification() {}
@@ -713,24 +722,62 @@ func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	return count, errors.WithStack(translatePGError(err))
 }
 
-func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, deployment model2.DeploymentKey, logEntry log.Entry) error {
+func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, log DeploymentLog) error {
 	logError := pgtype.Text{}
-	if logEntry.Error != nil {
-		logError.String = logEntry.Error.Error()
+	if log.Error != nil {
+		logError.String = *log.Error
 		logError.Valid = true
 	}
-	attributes, err := json.Marshal(logEntry.Attributes)
+	attributes, err := json.Marshal(log.Attributes)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	return errors.WithStack(translatePGError(d.db.InsertDeploymentLogEntry(ctx, sql2.InsertDeploymentLogEntryParams{
-		Key:        sqltypes.Key(deployment),
-		TimeStamp:  pgtype.Timestamptz{Time: logEntry.Time, Valid: true},
-		Level:      int32(logEntry.Level.Severity()),
+		Key:        sqltypes.Key(log.DeploymentKey),
+		Key_2:      sqltypes.Key(log.RunnerKey),
+		TimeStamp:  pgtype.Timestamptz{Time: log.TimeStamp, Valid: true},
+		Level:      log.Level,
 		Attributes: attributes,
-		Message:    logEntry.Message,
+		Message:    log.Message,
 		Error:      logError,
 	})))
+}
+
+// GetDeploymentLogs returns all logs for a given deployment.
+func (d *DAL) GetDeploymentLogs(ctx context.Context, deployment model2.DeploymentKey) ([]DeploymentLog, error) {
+	rows, err := d.db.GetDeploymentLogs(ctx, sqltypes.Key(deployment))
+	if err != nil {
+		if isNotFound(err) {
+			return nil, nil
+		}
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	logs, err := slices.MapErr(rows, func(in sql2.GetDeploymentLogsRow) (DeploymentLog, error) {
+		var attributes map[string]string
+		err := json.Unmarshal(in.Attributes, &attributes)
+		if err != nil {
+			return DeploymentLog{}, errors.Wrapf(err, "could not unmarshal attributes for row: %d", in.ID)
+		}
+		var errorString *string
+		if in.Error.Valid {
+			errorString = &in.Error.String
+		}
+		return DeploymentLog{
+			DeploymentKey: model2.DeploymentKey(in.DeploymentKey),
+			RunnerKey:     model2.RunnerKey(in.RunnerKey),
+			TimeStamp:     in.TimeStamp.Time,
+			Level:         in.Level,
+			Attributes:    attributes,
+			Message:       in.Message,
+			Error:         errorString,
+		}, nil
+	})
+
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return logs, nil
 }
 
 func (d *DAL) loadDeployment(ctx context.Context, deployment sql2.GetDeploymentRow) (*model2.Deployment, error) {
