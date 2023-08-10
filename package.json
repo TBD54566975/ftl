@@ -9,7 +9,7 @@
     "dev": "npm run dev --workspaces --if-present",
     "lint": "eslint console --ext .ts,.tsx,.js,.cjs",
     "lint:fix": "npm run lint -- --fix --quiet",
-    "prepare": "husky install",
+    "prepare": "git config --local core.hooksPath .githooks",
     "test": "npm run test --workspaces --if-present",
     "test:watch": "npm run test:watch --workspaces --if-present",
     "vite": "npm run vite --workspace=console"
@@ -32,7 +32,6 @@
     "eslint-plugin-compat": "4.1.4",
     "eslint-plugin-react": "7.33.1",
     "eslint-plugin-storybook": "0.6.13",
-    "format-package": "7.0.0",
-    "husky": "8.0.3"
+    "format-package": "7.0.0"
   }
 }
