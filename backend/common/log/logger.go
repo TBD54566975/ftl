@@ -3,6 +3,7 @@ package log
 import (
 	"bufio"
 	"fmt"
+	"golang.org/x/exp/maps"
 	"io"
 	"os"
 	"runtime"
@@ -41,7 +42,7 @@ func New(level Level, sink Sink) *Logger {
 // Sub creates a new logger with the given prefix.
 func (l Logger) Sub(scope string, level Level) *Logger {
 	if scope != "" {
-		l.attributes[scopeKey] = scope
+		maps.Copy(l.attributes, map[string]string{scopeKey: scope})
 	}
 	if level != Default {
 		l.level = level

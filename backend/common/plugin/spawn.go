@@ -85,16 +85,17 @@ type Plugin[Client PingableClient] struct {
 //	FTL_WORKING_DIR - the path to a working directory that the plugin can write state to, if required.
 func Spawn[Client PingableClient](
 	ctx context.Context,
+	logger *log2.Logger,
 	name, dir, exe string,
 	makeClient rpc.ClientFactory[Client],
 	options ...Option,
 ) (
 	plugin *Plugin[Client],
-	// "cmdCtx" will be cancelled when the plugin process stops.
+// "cmdCtx" will be cancelled when the plugin process stops.
 	cmdCtx context.Context,
 	err error,
 ) {
-	logger := log2.FromContext(ctx).Sub(name, log2.Default)
+	logger = logger.Sub(name, log2.Default)
 
 	opts := pluginOptions{
 		startTimeout: time.Second * 30,

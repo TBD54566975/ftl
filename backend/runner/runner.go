@@ -108,7 +108,8 @@ type deployment struct {
 	key    model.DeploymentKey
 	plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]
 	// Cancelled when plugin terminates
-	ctx context.Context
+	ctx    context.Context
+	logger *log.Logger
 }
 
 type Service struct {
@@ -149,10 +150,13 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to register runner"))
 	}
 
-	id, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
+	key, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
+
+	sink := newDeploymentLogsSink(ctx, key, s.key)
+	logger := log.New(log.Default, sink)
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -182,7 +186,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid module")
 	}
-	deploymentDir := filepath.Join(s.config.DeploymentDir, module.Name, id.String())
+	deploymentDir := filepath.Join(s.config.DeploymentDir, module.Name, key.String())
 	if s.config.TemplateDir != "" {
 		err = copy.Copy(s.config.TemplateDir, deploymentDir)
 		if err != nil {
@@ -194,12 +198,13 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 			return nil, errors.Wrap(err, "failed to create deployment directory")
 		}
 	}
-	err = download.Artefacts(ctx, s.controllerClient, id, deploymentDir)
+	err = download.Artefacts(ctx, s.controllerClient, key, deploymentDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to download artefacts")
 	}
 	deployment, cmdCtx, err := plugin.Spawn(
 		unstoppable.Context(ctx),
+		logger,
 		gdResp.Msg.Schema.Name,
 		deploymentDir,
 		"./main",
@@ -212,7 +217,11 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
-	s.deployment.Store(types.Some(s.makeDeployment(cmdCtx, id, deployment)))
+
+	dep := s.makeDeployment(cmdCtx, key, deployment)
+	dep.logger = logger
+	s.deployment.Store(types.Some(dep))
+
 	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
@@ -262,7 +271,7 @@ func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, p
 }
 
 func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1.RegisterRunnerRequest) error) error {
-	logger := log.FromContext(ctx)
+	logger := s.getLogger(ctx)
 
 	// Figure out the appropriate state.
 	state := s.state.Load()
@@ -317,4 +326,15 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	case <-time.After(delay):
 	}
 	return nil
+}
+
+func (s *Service) getLogger(ctx context.Context) *log.Logger {
+	deployment, ok := s.deployment.Load().Get()
+	if ok {
+		if deployment.logger == nil {
+			return deployment.logger
+		}
+	}
+
+	return log.FromContext(ctx)
 }

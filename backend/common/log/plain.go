@@ -37,6 +37,7 @@ type plainSink struct {
 
 // Log implements Sink
 func (t *plainSink) Log(entry Entry) error {
+	fmt.Println("entry2 is %m", entry.Attributes)
 	var prefix string
 	scope, exists := entry.Attributes[scopeKey]
 	if exists {
