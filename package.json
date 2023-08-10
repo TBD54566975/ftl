@@ -5,11 +5,11 @@
     "console/*"
   ],
   "scripts": {
+    "add:commit-hook": "git config --local core.hooksPath .githooks",
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
     "lint": "eslint console --ext .ts,.tsx,.js,.cjs",
     "lint:fix": "npm run lint -- --fix --quiet",
-    "prepare": "git config --local core.hooksPath .githooks",
     "test": "npm run test --workspaces --if-present",
     "test:watch": "npm run test:watch --workspaces --if-present",
     "vite": "npm run vite --workspace=console"
