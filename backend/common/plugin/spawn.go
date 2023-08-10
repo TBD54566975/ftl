@@ -91,7 +91,7 @@ func Spawn[Client PingableClient](
 	options ...Option,
 ) (
 	plugin *Plugin[Client],
-// "cmdCtx" will be cancelled when the plugin process stops.
+	// "cmdCtx" will be cancelled when the plugin process stops.
 	cmdCtx context.Context,
 	err error,
 ) {

@@ -3,11 +3,12 @@ package log
 import (
 	"bufio"
 	"fmt"
-	"golang.org/x/exp/maps"
 	"io"
 	"os"
 	"runtime"
 	"time"
+
+	"golang.org/x/exp/maps"
 )
 
 var _ Interface = (*Logger)(nil)
