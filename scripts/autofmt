@@ -25,6 +25,6 @@ find protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xargs -0 -r 
 (cd protos && buf generate)
 
 echo "Formatting TypeScript..."
-(npm install && npm lint:fix)
+(npm install && npm run lint:fix)
 
 git diff
