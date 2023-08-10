@@ -122,19 +122,29 @@ export default function LogsPage() {
         </colgroup>
         <thead className='border-b border-white/10 text-sm leading-6 dark:text-white'>
           <tr>
-            <th scope='col' className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'>
+            <th scope='col'
+              className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'
+            >
               User
             </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'>
+            <th scope='col'
+              className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'
+            >
               Commit
             </th>
-            <th scope='col' className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'>
+            <th scope='col'
+              className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'
+            >
               Status
             </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
+            <th scope='col'
+              className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'
+            >
               Duration
             </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
+            <th scope='col'
+              className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
+            >
               Deployed at
             </th>
           </tr>
@@ -144,21 +154,26 @@ export default function LogsPage() {
             <tr key={item.commit}>
               <td className='py-4 pl-4 pr-8 sm:pl-6 lg:pl-8'>
                 <div className='flex items-center gap-x-4'>
-                  <img src={item.user.imageUrl} alt='' className='h-8 w-8 rounded-full bg-gray-800' />
+                  <img src={item.user.imageUrl}
+                    alt=''
+                    className='h-8 w-8 rounded-full bg-gray-800'
+                  />
                   <div className='truncate text-sm font-medium leading-6 dark:text-white'>{item.user.name}</div>
                 </div>
               </td>
               <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                 <div className='flex gap-x-3'>
                   <div className='font-mono text-sm leading-6 text-gray-400'>{item.commit}</div>
-                  <div className='rounded-md bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-400 ring-1 ring-inset ring-white/10'>
+                  <div className={`rounded-md bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-400 ring-1 ring-inset ring-white/10`}>
                     {item.branch}
                   </div>
                 </div>
               </td>
               <td className='py-4 pl-0 pr-4 text-sm leading-6 sm:pr-8 lg:pr-20'>
                 <div className='flex items-center justify-end gap-x-2 sm:justify-start'>
-                  <time className='text-gray-400 sm:hidden' dateTime={item.dateTime}>
+                  <time className='text-gray-400 sm:hidden'
+                    dateTime={item.dateTime}
+                  >
                     {item.date}
                   </time>
                   <div className={classNames(statuses[item.status], 'flex-none rounded-full p-1')}>
@@ -170,7 +185,7 @@ export default function LogsPage() {
               <td className='hidden py-4 pl-0 pr-8 text-sm leading-6 text-gray-400 md:table-cell lg:pr-20'>
                 {item.duration}
               </td>
-              <td className='hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8'>
+              <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
                 <time dateTime={item.dateTime}>{item.date}</time>
               </td>
             </tr>

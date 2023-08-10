@@ -14,8 +14,12 @@ export default function ModulesPage() {
         {schema.map(module => (
           <Card key={module.schema?.name}>
             <div className='min-w-0 flex-1'>
-              <Link to={`${module.schema?.name}`} className='focus:outline-none'>
-                <span className='absolute inset-0' aria-hidden='true' />
+              <Link to={`${module.schema?.name}`}
+                className='focus:outline-none'
+              >
+                <span className='absolute inset-0'
+                  aria-hidden='true'
+                />
                 <div className='min-w-0 flex-auto'>
                   <div className='flex items-center gap-x-3'>
                     <div className={classNames(statuses['online'], 'flex-none rounded-full p-1')}>

@@ -80,6 +80,9 @@ jobs:
       - name: Console Lint
         working-directory: console/client
         run: npm run lint
+      - name: Console Test
+        working-directory: console/client
+        run: npm run test
   docker-runner:
     name: Build Runner Docker Image
     runs-on: ubuntu-latest

@@ -29,28 +29,44 @@ export default function RequestPage() {
       <table className='mt-6 w-full text-left'>
         <thead className='border-b border-white/10 text-sm leading-6 dark:text-white'>
           <tr>
-            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'>
+            <th scope='col'
+              className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'
+            >
               Request
             </th>
-            <th scope='col' className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'>
+            <th scope='col'
+              className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'
+            >
               Source
             </th>
-            <th scope='col' className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'>
+            <th scope='col'
+              className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'
+            >
               Destination
             </th>
-            <th scope='col' className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'>
+            <th scope='col'
+              className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'
+            >
               Time
             </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
+            <th scope='col'
+              className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'
+            >
               Duration(ms)
             </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
+            <th scope='col'
+              className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
+            >
               Request
             </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
+            <th scope='col'
+              className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
+            >
               Response
             </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
+            <th scope='col'
+              className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
+            >
               Error
             </th>
           </tr>
@@ -86,16 +102,16 @@ export default function RequestPage() {
                   </div>
                 </div>
               </td>
-              <td className='hidden py-4 pl-0 pr-8 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell lg:pr-20'>
+              <td className={`hidden py-4 pl-0 pr-8 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell lg:pr-20`}>
                 {call.durationMs.toString()}
               </td>
-              <td className='hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8'>
+              <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
                 <code>{call.request}</code>
               </td>
-              <td className='hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8'>
+              <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
                 <code>{call.response}</code>
               </td>
-              <td className='hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8'>
+              <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
                 {call.error}
               </td>
             </tr>

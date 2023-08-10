@@ -25,9 +25,13 @@ export const ModuleTimeline: React.FC<Props> = ({ module }) => {
 
   return (
     <>
-      <ul role='list' className='space-y-6'>
+      <ul role='list'
+        className='space-y-6'
+      >
         {entries.map((entry, activityItemIdx) => (
-          <li key={entry.toJsonString()} className='relative flex gap-x-4'>
+          <li key={entry.toJsonString()}
+            className='relative flex gap-x-4'
+          >
             <div
               className={classNames(
                 activityItemIdx === entries.length - 1 ? 'h-6' : '-bottom-6',
@@ -43,7 +47,9 @@ export const ModuleTimeline: React.FC<Props> = ({ module }) => {
                 </div>
                 <p className='flex-auto py-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400'>
                   <span className='text-indigo-700 dark:text-indigo-400 '>
-                    <Link to={`/requests/${entry.entry.value?.requestKey}`} className='focus:outline-none'>
+                    <Link to={`/requests/${entry.entry.value?.requestKey}`}
+                      className='focus:outline-none'
+                    >
                       Called{' '}
                     </Link>
                   </span>
@@ -71,10 +77,12 @@ export const ModuleTimeline: React.FC<Props> = ({ module }) => {
             ) : (
               <>
                 <div className='relative flex h-6 w-6 flex-none items-center justify-center bg-white dark:bg-slate-800'>
-                  <RocketLaunchIcon className='h-6 w-6 text-indigo-500' aria-hidden='true' />
+                  <RocketLaunchIcon className='h-6 w-6 text-indigo-500'
+                    aria-hidden='true'
+                  />
                 </div>
                 <p className='flex-auto py-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400'>
-                  Deployed <span className='font-medium text-gray-900 dark:text-white'>{entry.entry.value?.name}</span>{' '}
+                  Deployed <span className={`font-medium text-gray-900 dark:text-white`}>{entry.entry.value?.name}</span>{' '}
                   for language{' '}
                   <span className='font-medium text-gray-900 dark:text-white'>{entry.entry.value?.language}</span>.
                 </p>

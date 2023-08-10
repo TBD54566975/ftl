@@ -17,7 +17,9 @@ export const VerbCard: React.FC<Props> = ({ module, verb }) => {
   return (
     <Card>
       <div className='min-w-0 flex-1'>
-        <Link to={`/modules/${module?.name}/verbs/${verb?.verb?.name}`} className='focus:outline-none'>
+        <Link to={`/modules/${module?.name}/verbs/${verb?.verb?.name}`}
+          className='focus:outline-none'
+        >
           <p className='text-sm font-medium text-gray-900 dark:text-gray-300'>{verb?.verb?.name}</p>
           {(calls?.length ?? 0) > 0 && (
             <li className='flex items-center space-x-4 pt-2'>
