@@ -9,3 +9,4 @@ deploy/
 .DS_Store
 reflex.conf
 /logs/
+node_modules

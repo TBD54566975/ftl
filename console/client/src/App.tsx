@@ -14,16 +14,32 @@ export default function App() {
       <Navigation />
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/modules" replace />} />
-          <Route path="modules">
-            <Route index element={<ModulesPage />} />
-            <Route path={':id'} element={<ModulePage />} />
-            <Route path={':moduleId/verbs/:id'} element={<VerbPage />} />
+          <Route path='/'
+            element={<Navigate to='/modules'
+              replace
+            />}
+          />
+          <Route path='modules'>
+            <Route index
+              element={<ModulesPage />}
+            />
+            <Route path={':id'}
+              element={<ModulePage />}
+            />
+            <Route path={':moduleId/verbs/:id'}
+              element={<VerbPage />}
+            />
           </Route>
-          <Route path="logs" element={<LogsPage />} />
-          <Route path={'requests/:key'} element={<RequestPage />} />
+          <Route path='logs'
+            element={<LogsPage />}
+          />
+          <Route path={'requests/:key'}
+            element={<RequestPage />}
+          />
         </Route>
-        <Route path="graph" element={<GraphPage />} />
+        <Route path='graph'
+          element={<GraphPage />}
+        />
       </Routes>
     </>
   )
