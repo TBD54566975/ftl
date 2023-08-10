@@ -57,7 +57,8 @@ func Start(ctx context.Context, config Config) error {
 
 	client := rpc2.Dial(ftlv1connect.NewVerbServiceClient, config.ControllerEndpoint.String(), log.Error)
 	ctx = rpc2.ContextWithClient(ctx, client)
-	logger := log.FromContext(ctx)
+
+	logger := log.FromContext(ctx).Sub(map[string]string{"runner": config.Key.String()})
 	logger.Infof("Starting FTL Runner")
 	logger.Infof("Deployment directory: %s", config.DeploymentDir)
 	err = os.MkdirAll(config.DeploymentDir, 0700)
@@ -90,6 +91,7 @@ func Start(ctx context.Context, config Config) error {
 		controllerClient: controllerClient,
 		forceUpdate:      make(chan struct{}, 16),
 		labels:           labels,
+		logger:           logger,
 	}
 	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 
@@ -124,6 +126,7 @@ type Service struct {
 	// Failed to register with the Controller
 	registrationFailure atomic.Value[types.Option[error]]
 	labels              *structpb.Struct
+	logger              *log.Logger
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
@@ -155,8 +158,9 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
 
-	sink := newDeploymentLogsSink(ctx, key, s.key)
-	logger := log.New(log.Default, sink)
+	sink := newDeploymentLogsSink(key, s.key)
+	logger := s.logger.AddSink(sink)
+	ctx = log.ContextWithLogger(ctx, logger)
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -204,7 +208,6 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	}
 	deployment, cmdCtx, err := plugin.Spawn(
 		unstoppable.Context(ctx),
-		logger,
 		gdResp.Msg.Schema.Name,
 		deploymentDir,
 		"./main",
@@ -218,8 +221,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
 
-	dep := s.makeDeployment(cmdCtx, key, deployment)
-	dep.logger = logger
+	dep := s.makeDeployment(cmdCtx, key, logger, deployment)
 	s.deployment.Store(types.Some(dep))
 
 	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
@@ -266,8 +268,8 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	}), nil
 }
 
-func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
-	return &deployment{ctx: ctx, key: key, plugin: plugin}
+func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, logger *log.Logger, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
+	return &deployment{ctx: ctx, key: key, logger: logger, plugin: plugin}
 }
 
 func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1.RegisterRunnerRequest) error) error {
@@ -336,5 +338,5 @@ func (s *Service) getLogger(ctx context.Context) *log.Logger {
 		}
 	}
 
-	return log.FromContext(ctx)
+	return s.logger
 }

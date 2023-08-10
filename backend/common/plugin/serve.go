@@ -116,7 +116,7 @@ func Start[Impl any, Iface any, Config any](
 	logConfig.JSON = true
 	logger := log2.Configure(os.Stderr, logConfig)
 
-	logger = logger.Sub(name, log2.Default)
+	logger = logger.Sub(map[string]string{log2.ScopeKey: name})
 	ctx = log2.ContextWithLogger(ctx, logger)
 
 	logger.Debugf("Starting on %s", cli.Bind)

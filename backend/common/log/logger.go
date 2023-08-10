@@ -13,7 +13,7 @@ import (
 
 var _ Interface = (*Logger)(nil)
 
-const scopeKey = "scope"
+const ScopeKey = "scope"
 
 type Entry struct {
 	Time       time.Time         `json:"-"`
@@ -40,19 +40,23 @@ func New(level Level, sink Sink) *Logger {
 	}
 }
 
-// Sub creates a new logger with the given prefix.
-func (l Logger) Sub(scope string, level Level) *Logger {
-	if scope != "" {
-		maps.Copy(l.attributes, map[string]string{scopeKey: scope})
-	}
-	if level != Default {
-		l.level = level
-	}
+// Sub creates a new logger with the given attributes.
+func (l Logger) Sub(attributes map[string]string) *Logger {
+	attr := map[string]string{}
+	maps.Copy(attr, l.attributes)
+	maps.Copy(attr, attributes)
+	l.attributes = attr
 	return &l
 }
 
-func (l *Logger) Level() Level {
-	return l.level
+func (l Logger) AddSink(sink Sink) *Logger {
+	l.sink = Tee(l.sink, sink)
+	return &l
+}
+
+func (l Logger) Level(level Level) *Logger {
+	l.level = level
+	return &l
 }
 
 func (l *Logger) Log(entry Entry) {
