@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "source": "index.html",
   "scripts": {
-    "build": "tsc && vite build",
+    "build": "tsc && parcel build",
     "build:css-types": "tcm --c -e -p  'src/**/*.css' .",
     "copy:css": "node ./scripts/copy-css.cjs",
     "dev": "node scripts/dev.cjs",
@@ -18,7 +19,7 @@
     "test:playwright": "start-server-and-test 'yarn run storybook:ci' http://localhost:9000 'npx playwright test'",
     "test:playwright-update-snapshots": "start-server-and-test 'yarn run storybook:ci' http://localhost:9000 'npx playwright test --update-snapshots'",
     "test:watch": "jest ./src --watch --verbose",
-    "vite": "vite"
+    "parcel": "parcel --port 5173"
   },
   "lint-staged": {
     "*.(js|cjs|tsx|ts)": [
@@ -89,6 +90,7 @@
     "tailwindcss": "^3.3.2",
     "typed-css-modules": "0.7.2",
     "typescript": "5.1.6",
-    "vite": "4.4.9"
+    "vite": "4.4.9",
+    "parcel": "2.9.3"
   }
 }
