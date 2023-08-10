@@ -150,7 +150,7 @@ type DeploymentArtefact struct {
 type DeploymentLog struct {
 	ID           int64
 	DeploymentID int64
-	Verb         pgtype.Text
+	RunnerID     int64
 	TimeStamp    pgtype.Timestamptz
 	Level        int32
 	Attributes   []byte

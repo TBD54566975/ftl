@@ -234,8 +234,35 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	return connect.NewResponse(resp), nil
 }
 
-func (s *Service) StreamDeploymentLogs(ctx context.Context, req *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {
-	panic("unimplemented")
+func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {
+	for stream.Receive() {
+		msg := stream.Msg()
+		deploymentKey, err := model2.ParseDeploymentKey(msg.DeploymentKey)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
+		}
+		runnerKey, err := model2.ParseRunnerKey(msg.RunnerKey)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid runner key"))
+		}
+
+		err = s.dal.InsertDeploymentLogEntry(ctx, dal2.DeploymentLog{
+			DeploymentKey: deploymentKey,
+			RunnerKey:     runnerKey,
+			TimeStamp:     time.Unix(msg.TimeStamp, 0),
+			Level:         msg.LogLevel,
+			Attributes:    msg.Attributes,
+			Message:       msg.Message,
+			Error:         msg.Error,
+		})
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+	if stream.Err() != nil {
+		return nil, errors.WithStack(stream.Err())
+	}
+	return connect.NewResponse(&ftlv1.StreamDeploymentLogsResponse{}), nil
 }
 
 func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
