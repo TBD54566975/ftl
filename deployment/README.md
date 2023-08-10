@@ -12,7 +12,8 @@ mirrors:
   "localhost:5000":
     endpoint:
       - http://k3d-registry.localhost:5000
-EOF)
+EOF
+)
 ```
 
 ## Deploy ftl-controller and all dependencies
