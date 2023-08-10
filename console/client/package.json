@@ -8,6 +8,8 @@
     "build:css-types": "tcm --c -e -p  'src/**/*.css' .",
     "copy:css": "node ./scripts/copy-css.cjs",
     "dev": "node scripts/dev.cjs",
+    "lint": "eslint console --ext .ts,.tsx,.js,.cjs",
+    "lint:fix": "npm run lint -- --fix --quiet",
     "plop": "npx plop",
     "preview": "vite preview",
     "storybook": "storybook dev --no-open -p 6006",
@@ -18,6 +20,17 @@
     "test:watch": "jest ./src --watch --verbose",
     "vite": "vite"
   },
+  "lint-staged": {
+    "*.(js|cjs|tsx|ts)": [
+      "npm run lint:fix"
+    ],
+    "package.json": [
+      "format-package -w"
+    ]
+  },
+  "browserslist": [
+    "> 2%"
+  ],
   "dependencies": {
     "@buf/bufbuild_eliza.bufbuild_connect-es": "^0.8.6-20221224180530-f3801d450ef9.1",
     "@bufbuild/connect": "^0.8.6",
@@ -32,6 +45,13 @@
     "reactflow": "^11.7.0"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "6.3.0",
+    "@typescript-eslint/parser": "6.3.0",
+    "eslint": "8.46.0",
+    "eslint-plugin-compat": "4.1.4",
+    "eslint-plugin-react": "7.33.1",
+    "eslint-plugin-storybook": "0.6.13",
+    "format-package": "7.0.0",
     "@axe-core/playwright": "4.7.3",
     "@bufbuild/buf": "^1.15.0-1",
     "@bufbuild/protoc-gen-connect-es": "^0.8.6",
