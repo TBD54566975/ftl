@@ -196,7 +196,7 @@ type ControllerServiceClient interface {
 	//
 	// Each runner issue a RegisterRunnerRequest to the ControllerService
 	// every 10 seconds to maintain its heartbeat.
-	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RunnerHeartbeat, v1.RegisterRunnerResponse]
+	RegisterRunner(context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
 	// Update an existing deployment.
 	UpdateDeploy(context.Context, *connect_go.Request[v1.UpdateDeployRequest]) (*connect_go.Response[v1.UpdateDeployResponse], error)
 	// Gradually replace an existing deployment with a new one.
@@ -256,7 +256,7 @@ func NewControllerServiceClient(httpClient connect_go.HTTPClient, baseURL string
 			baseURL+ControllerServiceGetDeploymentArtefactsProcedure,
 			opts...,
 		),
-		registerRunner: connect_go.NewClient[v1.RunnerHeartbeat, v1.RegisterRunnerResponse](
+		registerRunner: connect_go.NewClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse](
 			httpClient,
 			baseURL+ControllerServiceRegisterRunnerProcedure,
 			opts...,
@@ -293,7 +293,7 @@ type controllerServiceClient struct {
 	createDeployment       *connect_go.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
 	getDeployment          *connect_go.Client[v1.GetDeploymentRequest, v1.GetDeploymentResponse]
 	getDeploymentArtefacts *connect_go.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
-	registerRunner         *connect_go.Client[v1.RunnerHeartbeat, v1.RegisterRunnerResponse]
+	registerRunner         *connect_go.Client[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
 	updateDeploy           *connect_go.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
 	replaceDeploy          *connect_go.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
 	streamDeploymentLogs   *connect_go.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
@@ -336,7 +336,7 @@ func (c *controllerServiceClient) GetDeploymentArtefacts(ctx context.Context, re
 }
 
 // RegisterRunner calls xyz.block.ftl.v1.ControllerService.RegisterRunner.
-func (c *controllerServiceClient) RegisterRunner(ctx context.Context) *connect_go.ClientStreamForClient[v1.RunnerHeartbeat, v1.RegisterRunnerResponse] {
+func (c *controllerServiceClient) RegisterRunner(ctx context.Context) *connect_go.ClientStreamForClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse] {
 	return c.registerRunner.CallClientStream(ctx)
 }
 
@@ -382,7 +382,7 @@ type ControllerServiceHandler interface {
 	//
 	// Each runner issue a RegisterRunnerRequest to the ControllerService
 	// every 10 seconds to maintain its heartbeat.
-	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RunnerHeartbeat]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
+	RegisterRunner(context.Context, *connect_go.ClientStream[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error)
 	// Update an existing deployment.
 	UpdateDeploy(context.Context, *connect_go.Request[v1.UpdateDeployRequest]) (*connect_go.Response[v1.UpdateDeployResponse], error)
 	// Gradually replace an existing deployment with a new one.
@@ -498,7 +498,7 @@ func (UnimplementedControllerServiceHandler) GetDeploymentArtefacts(context.Cont
 	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.GetDeploymentArtefacts is not implemented"))
 }
 
-func (UnimplementedControllerServiceHandler) RegisterRunner(context.Context, *connect_go.ClientStream[v1.RunnerHeartbeat]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
+func (UnimplementedControllerServiceHandler) RegisterRunner(context.Context, *connect_go.ClientStream[v1.RegisterRunnerRequest]) (*connect_go.Response[v1.RegisterRunnerResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.RegisterRunner is not implemented"))
 }
 
@@ -526,7 +526,7 @@ type RunnerServiceClient interface {
 	// Initiate a deployment on this Runner.
 	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
 	// Terminate the deployment on this Runner.
-	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RunnerHeartbeat], error)
+	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RegisterRunnerRequest], error)
 }
 
 // NewRunnerServiceClient constructs a client for the xyz.block.ftl.v1.RunnerService service. By
@@ -555,7 +555,7 @@ func NewRunnerServiceClient(httpClient connect_go.HTTPClient, baseURL string, op
 			baseURL+RunnerServiceDeployProcedure,
 			opts...,
 		),
-		terminate: connect_go.NewClient[v1.TerminateRequest, v1.RunnerHeartbeat](
+		terminate: connect_go.NewClient[v1.TerminateRequest, v1.RegisterRunnerRequest](
 			httpClient,
 			baseURL+RunnerServiceTerminateProcedure,
 			opts...,
@@ -568,7 +568,7 @@ type runnerServiceClient struct {
 	ping      *connect_go.Client[v1.PingRequest, v1.PingResponse]
 	reserve   *connect_go.Client[v1.ReserveRequest, v1.ReserveResponse]
 	deploy    *connect_go.Client[v1.DeployRequest, v1.DeployResponse]
-	terminate *connect_go.Client[v1.TerminateRequest, v1.RunnerHeartbeat]
+	terminate *connect_go.Client[v1.TerminateRequest, v1.RegisterRunnerRequest]
 }
 
 // Ping calls xyz.block.ftl.v1.RunnerService.Ping.
@@ -587,7 +587,7 @@ func (c *runnerServiceClient) Deploy(ctx context.Context, req *connect_go.Reques
 }
 
 // Terminate calls xyz.block.ftl.v1.RunnerService.Terminate.
-func (c *runnerServiceClient) Terminate(ctx context.Context, req *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RunnerHeartbeat], error) {
+func (c *runnerServiceClient) Terminate(ctx context.Context, req *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RegisterRunnerRequest], error) {
 	return c.terminate.CallUnary(ctx, req)
 }
 
@@ -599,7 +599,7 @@ type RunnerServiceHandler interface {
 	// Initiate a deployment on this Runner.
 	Deploy(context.Context, *connect_go.Request[v1.DeployRequest]) (*connect_go.Response[v1.DeployResponse], error)
 	// Terminate the deployment on this Runner.
-	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RunnerHeartbeat], error)
+	Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RegisterRunnerRequest], error)
 }
 
 // NewRunnerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -648,6 +648,6 @@ func (UnimplementedRunnerServiceHandler) Deploy(context.Context, *connect_go.Req
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Deploy is not implemented"))
 }
 
-func (UnimplementedRunnerServiceHandler) Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RunnerHeartbeat], error) {
+func (UnimplementedRunnerServiceHandler) Terminate(context.Context, *connect_go.Request[v1.TerminateRequest]) (*connect_go.Response[v1.RegisterRunnerRequest], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Terminate is not implemented"))
 }

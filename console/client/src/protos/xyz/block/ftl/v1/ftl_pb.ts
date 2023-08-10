@@ -939,9 +939,9 @@ export class GetDeploymentResponse extends Message<GetDeploymentResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.RunnerHeartbeat
+ * @generated from message xyz.block.ftl.v1.RegisterRunnerRequest
  */
-export class RunnerHeartbeat extends Message<RunnerHeartbeat> {
+export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
   /**
    * UUID representing the runner instance.
    *
@@ -978,13 +978,13 @@ export class RunnerHeartbeat extends Message<RunnerHeartbeat> {
    */
   error?: string;
 
-  constructor(data?: PartialMessage<RunnerHeartbeat>) {
+  constructor(data?: PartialMessage<RegisterRunnerRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.RunnerHeartbeat";
+  static readonly typeName = "xyz.block.ftl.v1.RegisterRunnerRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "languages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -994,20 +994,20 @@ export class RunnerHeartbeat extends Message<RunnerHeartbeat> {
     { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RunnerHeartbeat {
-    return new RunnerHeartbeat().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RegisterRunnerRequest {
+    return new RegisterRunnerRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RunnerHeartbeat {
-    return new RunnerHeartbeat().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RegisterRunnerRequest {
+    return new RegisterRunnerRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RunnerHeartbeat {
-    return new RunnerHeartbeat().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RegisterRunnerRequest {
+    return new RegisterRunnerRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RunnerHeartbeat | PlainMessage<RunnerHeartbeat> | undefined, b: RunnerHeartbeat | PlainMessage<RunnerHeartbeat> | undefined): boolean {
-    return proto3.util.equals(RunnerHeartbeat, a, b);
+  static equals(a: RegisterRunnerRequest | PlainMessage<RegisterRunnerRequest> | undefined, b: RegisterRunnerRequest | PlainMessage<RegisterRunnerRequest> | undefined): boolean {
+    return proto3.util.equals(RegisterRunnerRequest, a, b);
   }
 }
 

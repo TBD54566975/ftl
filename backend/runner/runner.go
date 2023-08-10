@@ -196,7 +196,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
 
-func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.TerminateRequest]) (*connect.Response[ftlv1.RunnerHeartbeat], error) {
+func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.TerminateRequest]) (*connect.Response[ftlv1.RegisterRunnerRequest], error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	depl, ok := s.deployment.Load().Get()
@@ -229,7 +229,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 
 	s.deployment.Store(types.None[*deployment]())
 	s.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
-	return connect.NewResponse(&ftlv1.RunnerHeartbeat{
+	return connect.NewResponse(&ftlv1.RegisterRunnerRequest{
 		Key:       s.key.String(),
 		Languages: s.config.Language,
 		Endpoint:  s.config.Advertise.String(),
@@ -241,7 +241,7 @@ func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, p
 	return &deployment{ctx: ctx, key: key, plugin: plugin}
 }
 
-func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1.RunnerHeartbeat) error) error {
+func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1.RegisterRunnerRequest) error) error {
 	logger := log.FromContext(ctx)
 
 	// Figure out the appropriate state.
@@ -268,7 +268,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	}
 
 	logger.Tracef("Registering with Controller as %s", state)
-	err := send(&ftlv1.RunnerHeartbeat{
+	err := send(&ftlv1.RegisterRunnerRequest{
 		Key:        s.key.String(),
 		Languages:  s.config.Language,
 		Endpoint:   s.config.Advertise.String(),

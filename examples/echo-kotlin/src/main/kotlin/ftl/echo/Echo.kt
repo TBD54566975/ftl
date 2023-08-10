@@ -8,7 +8,6 @@ import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 
 data class EchoRequest(val name: String)
-
 data class EchoResponse(val message: String)
 
 class Echo {

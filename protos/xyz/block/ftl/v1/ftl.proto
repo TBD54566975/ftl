@@ -134,7 +134,7 @@ enum RunnerState {
   RUNNER_DEAD = 3;
 }
 
-message RunnerHeartbeat {
+message RegisterRunnerRequest {
   // UUID representing the runner instance.
   string key = 1;
   // Languages the runner supports.
@@ -243,7 +243,7 @@ service ControllerService {
   //
   // Each runner issue a RegisterRunnerRequest to the ControllerService
   // every 10 seconds to maintain its heartbeat.
-  rpc RegisterRunner(stream RunnerHeartbeat) returns (RegisterRunnerResponse);
+  rpc RegisterRunner(stream RegisterRunnerRequest) returns (RegisterRunnerResponse);
 
   // Update an existing deployment.
   rpc UpdateDeploy(UpdateDeployRequest) returns (UpdateDeployResponse);
@@ -292,5 +292,5 @@ service RunnerService {
   rpc Deploy(DeployRequest) returns (DeployResponse);
 
   // Terminate the deployment on this Runner.
-  rpc Terminate(TerminateRequest) returns (RunnerHeartbeat);
+  rpc Terminate(TerminateRequest) returns (RegisterRunnerRequest);
 }
