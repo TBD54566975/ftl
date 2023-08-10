@@ -11,8 +11,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types"
 
-	log2 "github.com/TBD54566975/ftl/backend/common/log"
-	model2 "github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/controller/internal/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -20,8 +20,8 @@ import (
 )
 
 func TestDAL(t *testing.T) {
-	logger := log2.Configure(os.Stderr, log2.Config{Level: log2.Debug})
-	ctx := log2.ContextWithLogger(context.Background(), logger)
+	logger := log.Configure(os.Stderr, log.Config{Level: log.Debug})
+	ctx := log.ContextWithLogger(context.Background(), logger)
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal, err := New(ctx, conn)
 	assert.NoError(t, err)
@@ -42,7 +42,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	module := &schema.Module{Name: "test"}
-	var deploymentKey model2.DeploymentKey
+	var deploymentKey model.DeploymentKey
 	t.Run("CreateDeployment", func(t *testing.T) {
 		deploymentKey, err = dal.CreateDeployment(ctx, "go", module, []DeploymentArtefact{{
 			Digest:     testSha,
@@ -52,12 +52,12 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	deployment := &model2.Deployment{
+	deployment := &model.Deployment{
 		Module:   "test",
 		Language: "go",
 		Schema:   module,
 		Key:      deploymentKey,
-		Artefacts: []*model2.Artefact{
+		Artefacts: []*model.Artefact{
 			{Path: "dir/filename",
 				Executable: true,
 				Digest:     testSHA,
@@ -75,7 +75,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("GetMissingDeployment", func(t *testing.T) {
-		_, err := dal.GetDeployment(ctx, model2.NewDeploymentKey())
+		_, err := dal.GetDeployment(ctx, model.NewDeploymentKey())
 		assert.IsError(t, err, ErrNotFound)
 	})
 
@@ -86,23 +86,25 @@ func TestDAL(t *testing.T) {
 		assert.Equal(t, []sha256.SHA256{misshingSHA}, missing)
 	})
 
-	runnerID := model2.NewRunnerKey()
+	runnerID := model.NewRunnerKey()
+	labels := map[string]any{"languages": []any{"go"}}
+
 	t.Run("RegisterRunner", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:       runnerID,
-			Languages: []string{"go"},
-			Endpoint:  "http://localhost:8080",
-			State:     RunnerStateIdle,
+			Key:      runnerID,
+			Labels:   labels,
+			Endpoint: "http://localhost:8080",
+			State:    RunnerStateIdle,
 		})
 		assert.NoError(t, err)
 	})
 
 	t.Run("RegisterRunnerFailsOnDuplicate", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:       model2.NewRunnerKey(),
-			Languages: []string{"go"},
-			Endpoint:  "http://localhost:8080",
-			State:     RunnerStateIdle,
+			Key:      model.NewRunnerKey(),
+			Labels:   labels,
+			Endpoint: "http://localhost:8080",
+			State:    RunnerStateIdle,
 		})
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrConflict)
@@ -110,19 +112,19 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetIdleRunnersForLanguage", func(t *testing.T) {
 		expectedRunner := Runner{
-			Key:       runnerID,
-			Languages: []string{"go"},
-			Endpoint:  "http://localhost:8080",
-			State:     RunnerStateIdle,
+			Key:      runnerID,
+			Labels:   labels,
+			Endpoint: "http://localhost:8080",
+			State:    RunnerStateIdle,
 		}
-		runners, err := dal.GetIdleRunnersForLanguage(ctx, "go", 10)
+		runners, err := dal.GetIdleRunners(ctx, 10, labels)
 		assert.NoError(t, err)
 		assert.Equal(t, []Runner{expectedRunner}, runners)
 	})
 
 	expectedRunner := Runner{
 		Key:        runnerID,
-		Languages:  []string{"go"},
+		Labels:     labels,
 		Endpoint:   "http://localhost:8080",
 		State:      RunnerStateReserved,
 		Deployment: types.Some(deploymentKey),
@@ -152,14 +154,14 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
-		_, err := dal.ReserveRunnerForDeployment(ctx, "go", model2.NewDeploymentKey(), time.Second)
+		_, err := dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey(), time.Second, labels)
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrNotFound)
 		assert.EqualError(t, err, "deployment: not found")
 	})
 
 	t.Run("ReserveRunnerForDeployment", func(t *testing.T) {
-		claim, err := dal.ReserveRunnerForDeployment(ctx, "go", deploymentKey, time.Millisecond*100)
+		claim, err := dal.ReserveRunnerForDeployment(ctx, deploymentKey, time.Millisecond*100, labels)
 		assert.NoError(t, err)
 		err = claim.Commit(context.Background())
 		assert.NoError(t, err)
@@ -171,20 +173,20 @@ func TestDAL(t *testing.T) {
 		count, err := dal.ExpireRunnerClaims(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
-		runners, err := dal.GetIdleRunnersForLanguage(ctx, "go", 10)
+		runners, err := dal.GetIdleRunners(ctx, 10, labels)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(runners))
 	})
 
 	t.Run("ReserveRunnerForDeploymentFailsOnInvalidDeployment", func(t *testing.T) {
-		_, err = dal.ReserveRunnerForDeployment(ctx, "go", model2.NewDeploymentKey(), time.Second)
+		_, err = dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey(), time.Second, labels)
 		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
 		err := dal.UpsertRunner(ctx, Runner{
 			Key:        runnerID,
-			Languages:  []string{"go"},
+			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
 			Deployment: types.Some(deploymentKey),
@@ -203,7 +205,7 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, []Runner{{
 			Key:        runnerID,
-			Languages:  []string{"go"},
+			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
 			Deployment: types.Some(deploymentKey),
@@ -222,10 +224,10 @@ func TestDAL(t *testing.T) {
 	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
 		err := dal.UpsertRunner(ctx, Runner{
 			Key:        runnerID,
-			Languages:  []string{"go"},
+			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
-			Deployment: types.Some(model2.NewDeploymentKey()),
+			Deployment: types.Some(model.NewDeploymentKey()),
 		})
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrNotFound)
@@ -233,16 +235,16 @@ func TestDAL(t *testing.T) {
 
 	t.Run("ReleaseRunnerReservation", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:       runnerID,
-			Languages: []string{"go"},
-			Endpoint:  "http://localhost:8080",
-			State:     RunnerStateIdle,
+			Key:      runnerID,
+			Labels:   labels,
+			Endpoint: "http://localhost:8080",
+			State:    RunnerStateIdle,
 		})
 		assert.NoError(t, err)
 	})
 
 	t.Run("ReserveRunnerForDeploymentAfterRelease", func(t *testing.T) {
-		claim, err := dal.ReserveRunnerForDeployment(ctx, "go", deploymentKey, time.Second)
+		claim, err := dal.ReserveRunnerForDeployment(ctx, deploymentKey, time.Second, labels)
 		assert.NoError(t, err)
 		err = claim.Commit(context.Background())
 		assert.NoError(t, err)
@@ -260,12 +262,12 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
-		err = dal.DeregisterRunner(ctx, model2.NewRunnerKey())
+		err = dal.DeregisterRunner(ctx, model.NewRunnerKey())
 		assert.IsError(t, err, ErrNotFound)
 	})
 }
 
-func artefactContent(t testing.TB, artefacts []*model2.Artefact) [][]byte {
+func artefactContent(t testing.TB, artefacts []*model.Artefact) [][]byte {
 	t.Helper()
 	var result [][]byte
 	for _, a := range artefacts {

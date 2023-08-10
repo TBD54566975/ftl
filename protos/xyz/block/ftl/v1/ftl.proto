@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1;
 
+import "google/protobuf/struct.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1;ftlv1";
@@ -94,6 +95,8 @@ message DeploymentArtefact {
 message CreateDeploymentRequest {
   schema.Module schema = 1;
   repeated DeploymentArtefact artefacts = 2;
+  // Runner labels required to run this deployment.
+  optional google.protobuf.Struct labels = 3;
 }
 message CreateDeploymentResponse {
   string deployment_key = 1;
@@ -137,13 +140,13 @@ enum RunnerState {
 message RegisterRunnerRequest {
   // UUID representing the runner instance.
   string key = 1;
-  // Languages the runner supports.
-  repeated string languages = 2;
-  string endpoint = 3;
-  optional string deployment = 4;
-  RunnerState state = 5;
+  string endpoint = 2;
+  optional string deployment = 3;
+  RunnerState state = 4;
+  google.protobuf.Struct labels = 5;
+
   // If present, the reason the Runner is transitioning from ASSIGNED to IDLE.
-  optional string error = 6;
+  optional string error = 7;
 }
 
 message RegisterRunnerResponse {}
@@ -191,6 +194,7 @@ message StatusResponse {
     string endpoint = 3;
     RunnerState state = 4;
     optional string deployment = 5;
+    google.protobuf.Struct labels = 6;
   }
   repeated Runner runners = 2;
 
@@ -199,7 +203,8 @@ message StatusResponse {
     string language = 2;
     string name = 3;
     int32 min_replicas = 4;
-    schema.Module schema = 5;
+    google.protobuf.Struct labels = 5;
+    schema.Module schema = 6;
   }
   repeated Deployment deployments = 3;
 

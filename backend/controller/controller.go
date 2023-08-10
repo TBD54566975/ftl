@@ -18,15 +18,16 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
-	model2 "github.com/TBD54566975/ftl/backend/common/model"
-	rpc2 "github.com/TBD54566975/ftl/backend/common/rpc"
+	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/common/rpc"
 	"github.com/TBD54566975/ftl/backend/common/rpc/headers"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/common/slices"
-	dal2 "github.com/TBD54566975/ftl/backend/controller/internal/dal"
+	dal "github.com/TBD54566975/ftl/backend/controller/internal/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -36,13 +37,13 @@ import (
 )
 
 type Config struct {
-	Bind                         *url.URL             `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
-	Advertise                    *url.URL             `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_CONTROLLER_ADVERTISE"`
-	Key                          model2.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
-	DSN                          string               `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
-	RunnerTimeout                time.Duration        `help:"Runner heartbeat timeout." default:"10s"`
-	DeploymentReservationTimeout time.Duration        `help:"Deployment reservation timeout." default:"120s"`
-	ArtefactChunkSize            int                  `help:"Size of each chunk streamed to the client." default:"1048576"`
+	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
+	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_CONTROLLER_ADVERTISE"`
+	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
+	DSN                          string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
+	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
+	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
+	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 }
 
 // Start the Controller. Blocks until the context is cancelled.
@@ -60,7 +61,7 @@ func Start(ctx context.Context, config Config) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	dal, err := dal2.New(ctx, conn)
+	dal, err := dal.New(ctx, conn)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -73,12 +74,12 @@ func Start(ctx context.Context, config Config) error {
 
 	console := NewConsoleService(dal)
 
-	return rpc2.Serve(ctx, config.Bind,
-		rpc2.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
-		rpc2.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
-		rpc2.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
-		rpc2.HTTP("/ingress/", http.StripPrefix("/ingress", svc)),
-		rpc2.HTTP("/", c),
+	return rpc.Serve(ctx, config.Bind,
+		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
+		rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
+		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
+		rpc.HTTP("/ingress/", http.StripPrefix("/ingress", svc)),
+		rpc.HTTP("/", c),
 	)
 }
 
@@ -91,21 +92,21 @@ type clients struct {
 }
 
 type Service struct {
-	dal                          *dal2.DAL
+	dal                          *dal.DAL
 	heartbeatTimeout             time.Duration
 	deploymentReservationTimeout time.Duration
 	artefactChunkSize            int
-	key                          model2.ControllerKey
+	key                          model.ControllerKey
 
 	clientsMu sync.Mutex
 	// Map from endpoint to client.
 	clients map[string]clients
 }
 
-func New(ctx context.Context, dal *dal2.DAL, config Config) (*Service, error) {
+func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 	key := config.Key
 	if config.Key.ULID() == (ulid.ULID{}) {
-		key = model2.NewControllerKey()
+		key = model.NewControllerKey()
 	}
 	svc := &Service{
 		dal:                          dal,
@@ -132,7 +133,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger.Infof("%s %s", r.Method, r.URL.Path)
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method, r.URL.Path)
 	if err != nil {
-		if errors.Is(err, dal2.ErrNotFound) {
+		if errors.Is(err, dal.ErrNotFound) {
 			http.NotFound(w, r)
 			return
 		}
@@ -190,38 +191,55 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get status")
 	}
+	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
+		var deployment *string
+		if d, ok := r.Deployment.Get(); ok {
+			asString := d.String()
+			deployment = &asString
+		}
+		labels, err := structpb.NewStruct(r.Labels)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not marshal attributes for runner %s", r.Key)
+		}
+		return &ftlv1.StatusResponse_Runner{
+			Key:        r.Key.String(),
+			Endpoint:   r.Endpoint,
+			State:      r.State.ToProto(),
+			Deployment: deployment,
+			Labels:     labels,
+		}, nil
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	deployments, err := slices.MapErr(status.Deployments, func(d dal.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
+		labels, err := structpb.NewStruct(d.Labels)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not marshal attributes for deployment %s", d.Key)
+		}
+		return &ftlv1.StatusResponse_Deployment{
+			Key:         d.Key.String(),
+			Language:    d.Language,
+			Name:        d.Module,
+			MinReplicas: int32(d.MinReplicas),
+			Schema:      d.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
+			Labels:      labels,
+		}, nil
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	resp := &ftlv1.StatusResponse{
-		Controllers: slices.Map(status.Controllers, func(c dal2.Controller) *ftlv1.StatusResponse_Controller {
+		Controllers: slices.Map(status.Controllers, func(c dal.Controller) *ftlv1.StatusResponse_Controller {
 			return &ftlv1.StatusResponse_Controller{
 				Key:      c.Key.String(),
 				Endpoint: c.Endpoint,
 				State:    c.State.ToProto(),
 			}
 		}),
-		Runners: slices.Map(status.Runners, func(r dal2.Runner) *ftlv1.StatusResponse_Runner {
-			var deployment *string
-			if d, ok := r.Deployment.Get(); ok {
-				asString := d.String()
-				deployment = &asString
-			}
-			return &ftlv1.StatusResponse_Runner{
-				Key:        r.Key.String(),
-				Languages:  r.Languages,
-				Endpoint:   r.Endpoint,
-				State:      r.State.ToProto(),
-				Deployment: deployment,
-			}
-		}),
-		Deployments: slices.Map(status.Deployments, func(d dal2.Deployment) *ftlv1.StatusResponse_Deployment {
-			return &ftlv1.StatusResponse_Deployment{
-				Key:         d.Key.String(),
-				Language:    d.Language,
-				Name:        d.Module,
-				MinReplicas: int32(d.MinReplicas),
-				Schema:      d.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
-			}
-		}),
-		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal2.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
+		Runners:     protoRunners,
+		Deployments: deployments,
+		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
 			return &ftlv1.StatusResponse_IngressRoute{
 				DeploymentKey: r.Deployment.String(),
 				Module:        r.Module,
@@ -237,16 +255,16 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {
 	for stream.Receive() {
 		msg := stream.Msg()
-		deploymentKey, err := model2.ParseDeploymentKey(msg.DeploymentKey)
+		deploymentKey, err := model.ParseDeploymentKey(msg.DeploymentKey)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 		}
-		runnerKey, err := model2.ParseRunnerKey(msg.RunnerKey)
+		runnerKey, err := model.ParseRunnerKey(msg.RunnerKey)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid runner key"))
 		}
 
-		err = s.dal.InsertDeploymentLogEntry(ctx, dal2.DeploymentLog{
+		err = s.dal.InsertDeploymentLogEntry(ctx, dal.DeploymentLog{
 			DeploymentKey: deploymentKey,
 			RunnerKey:     runnerKey,
 			TimeStamp:     time.Unix(msg.TimeStamp, 0),
@@ -272,14 +290,14 @@ func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.Pul
 }
 
 func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.UpdateDeployRequest]) (response *connect.Response[ftlv1.UpdateDeployResponse], err error) {
-	deploymentKey, err := model2.ParseDeploymentKey(req.Msg.DeploymentKey)
+	deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
 
 	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, int(req.Msg.MinReplicas))
 	if err != nil {
-		if errors.Is(err, dal2.ErrNotFound) {
+		if errors.Is(err, dal.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		}
 		return nil, errors.Wrap(err, "could not set deployment replicas")
@@ -289,15 +307,15 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 }
 
 func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.ReplaceDeployRequest]) (*connect.Response[ftlv1.ReplaceDeployResponse], error) {
-	newDeploymentKey, err := model2.ParseDeploymentKey(c.Msg.DeploymentKey)
+	newDeploymentKey, err := model.ParseDeploymentKey(c.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
 	}
 	err = s.dal.ReplaceDeployment(ctx, newDeploymentKey, int(c.Msg.MinReplicas))
 	if err != nil {
-		if errors.Is(err, dal2.ErrNotFound) {
+		if errors.Is(err, dal.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
-		} else if errors.Is(err, dal2.ErrConflict) {
+		} else if errors.Is(err, dal.ErrConflict) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, errors.WithStack(err))
 		}
 		return nil, errors.Wrap(err, "could not replace deployment")
@@ -318,7 +336,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		if endpoint.Scheme != "http" && endpoint.Scheme != "https" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("invalid endpoint scheme %q", endpoint.Scheme))
 		}
-		runnerKey, err := model2.ParseRunnerKey(msg.Key)
+		runnerKey, err := model.ParseRunnerKey(msg.Key)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid key"))
 		}
@@ -345,14 +363,14 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
 		}
-		err = s.dal.UpsertRunner(ctx, dal2.Runner{
+		err = s.dal.UpsertRunner(ctx, dal.Runner{
 			Key:        runnerKey,
 			Endpoint:   msg.Endpoint,
-			Languages:  msg.Languages,
-			State:      dal2.RunnerStateFromProto(msg.State),
+			State:      dal.RunnerStateFromProto(msg.State),
 			Deployment: maybeDeployment,
+			Labels:     msg.Labels.AsMap(),
 		})
-		if errors.Is(err, dal2.ErrConflict) {
+		if errors.Is(err, dal.ErrConflict) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		} else if err != nil {
 			return nil, errors.WithStack(err)
@@ -366,11 +384,11 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 
 // Check if we can contact the runner.
 func (s *Service) pingRunner(ctx context.Context, endpoint *url.URL) error {
-	client := rpc2.Dial(ftlv1connect.NewRunnerServiceClient, endpoint.String(), log.Error)
+	client := rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint.String(), log.Error)
 	retry := backoff.Backoff{}
 	heartbeatCtx, cancel := context.WithTimeout(ctx, s.heartbeatTimeout)
 	defer cancel()
-	err := rpc2.Wait(heartbeatCtx, retry, client)
+	err := rpc.Wait(heartbeatCtx, retry, client)
 	if err != nil {
 		return connect.NewError(connect.CodeUnavailable, errors.Wrap(err, "failed to connect to runner"))
 	}
@@ -438,7 +456,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 
 	routes, err := s.dal.GetRoutingTable(ctx, req.Msg.Verb.Module)
 	if err != nil {
-		if errors.Is(err, dal2.ErrNotFound) {
+		if errors.Is(err, dal.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.Wrapf(err, "no runners for module %q", req.Msg.Verb.Module))
 		}
 		return nil, errors.Wrap(err, "failed to get runners for module")
@@ -451,7 +469,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, errors.WithStack(err)
 	}
 
-	var requestKey model2.IngressRequestKey
+	var requestKey model.IngressRequestKey
 	if len(callers) == 0 {
 		// Inject the request key if this is an ingress call.
 		requestKey, err = s.dal.CreateIngressRequest(ctx, req.Peer().Addr)
@@ -480,7 +498,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		request:       req.Msg,
 	}
 
-	ctx = rpc2.WithVerbs(ctx, append(callers, verbRef))
+	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
 
 	resp, err := client.verb.Call(ctx, req)
@@ -523,13 +541,13 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
 	logger := log.FromContext(ctx)
-	artefacts := make([]dal2.DeploymentArtefact, len(req.Msg.Artefacts))
+	artefacts := make([]dal.DeploymentArtefact, len(req.Msg.Artefacts))
 	for i, artefact := range req.Msg.Artefacts {
 		digest, err := sha256.ParseSHA256(artefact.Digest)
 		if err != nil {
 			return nil, errors.Wrap(err, "invalid digest")
 		}
-		artefacts[i] = dal2.DeploymentArtefact{
+		artefacts[i] = dal.DeploymentArtefact{
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 			Digest:     digest,
@@ -552,8 +570,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: key.String()}), nil
 }
 
-func (s *Service) getDeployment(ctx context.Context, key string) (*model2.Deployment, error) {
-	dkey, err := model2.ParseDeploymentKey(key)
+func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deployment, error) {
+	dkey, err := model.ParseDeploymentKey(key)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
@@ -575,8 +593,8 @@ func (s *Service) clientsForEndpoint(endpoint string) clients {
 		return client
 	}
 	client = clients{
-		runner: rpc2.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
-		verb:   rpc2.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
+		runner: rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
+		verb:   rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
 	}
 	s.clients[endpoint] = client
 	return client
@@ -626,7 +644,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 		} else {
 			for _, reconcile := range reconciliation {
 				logger.Infof("Reconciling %s", reconcile.Deployment)
-				deployment := model2.Deployment{
+				deployment := model.Deployment{
 					Module:   reconcile.Module,
 					Language: reconcile.Language,
 					Key:      reconcile.Deployment,
@@ -662,7 +680,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 	}
 }
 
-func (s *Service) terminateRandomRunner(ctx context.Context, key model2.DeploymentKey) (bool, error) {
+func (s *Service) terminateRandomRunner(ctx context.Context, key model.DeploymentKey) (bool, error) {
 	runners, err := s.dal.GetRunnersForDeployment(ctx, key)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get runner for %s", key)
@@ -676,16 +694,16 @@ func (s *Service) terminateRandomRunner(ctx context.Context, key model2.Deployme
 	if err != nil {
 		return false, errors.WithStack(err)
 	}
-	err = s.dal.UpsertRunner(ctx, dal2.Runner{
-		Key:       runner.Key,
-		Languages: runner.Languages,
-		Endpoint:  runner.Endpoint,
-		State:     dal2.RunnerStateFromProto(resp.Msg.State),
+	err = s.dal.UpsertRunner(ctx, dal.Runner{
+		Key:      runner.Key,
+		Endpoint: runner.Endpoint,
+		State:    dal.RunnerStateFromProto(resp.Msg.State),
+		Labels:   runner.Labels,
 	})
 	return true, errors.WithStack(err)
 }
 
-func (s *Service) deploy(ctx context.Context, reconcile model2.Deployment) error {
+func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error {
 	client, err := s.reserveRunner(ctx, reconcile)
 	if err != nil {
 		return errors.WithStack(err)
@@ -698,16 +716,18 @@ func (s *Service) deploy(ctx context.Context, reconcile model2.Deployment) error
 	return nil
 }
 
-func (s *Service) reserveRunner(ctx context.Context, reconcile model2.Deployment) (client clients, err error) {
+func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment) (client clients, err error) {
 	// A timeout context applied to the transaction and the Runner.Reserve() Call.
 	reservationCtx, cancel := context.WithTimeout(ctx, s.deploymentReservationTimeout)
 	defer cancel()
-	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Language, reconcile.Key, s.deploymentReservationTimeout)
+	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Key, s.deploymentReservationTimeout, model.Labels{
+		"languages": []string{reconcile.Language},
+	})
 	if err != nil {
 		return clients{}, errors.Wrapf(err, "failed to claim runners for %s", reconcile.Key)
 	}
 
-	err = errors.WithStack(dal2.WithReservation(reservationCtx, claim, func() error {
+	err = errors.WithStack(dal.WithReservation(reservationCtx, claim, func() error {
 		client = s.clientsForEndpoint(claim.Runner().Endpoint)
 		_, err = client.runner.Reserve(reservationCtx, connect.NewRequest(&ftlv1.ReserveRequest{DeploymentKey: reconcile.Key.String()}))
 		return errors.WithStack(err)
@@ -757,7 +777,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		minReplicas int
 	}
 	moduleState := map[string]moduleStateEntry{}
-	moduleByDeploymentKey := map[model2.DeploymentKey]string{}
+	moduleByDeploymentKey := map[model.DeploymentKey]string{}
 
 	// Seed the notification channel with the current deployments.
 	seedDeployments, err := s.dal.GetActiveDeployments(ctx)
@@ -765,9 +785,9 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		return errors.WithStack(err)
 	}
 	initialCount := len(seedDeployments)
-	deploymentChanges := make(chan dal2.DeploymentNotification, len(seedDeployments))
+	deploymentChanges := make(chan dal.DeploymentNotification, len(seedDeployments))
 	for _, deployment := range seedDeployments {
-		deploymentChanges <- dal2.DeploymentNotification{Message: deployment}
+		deploymentChanges <- dal.DeploymentNotification{Message: deployment}
 	}
 	logger.Infof("Seeded %d deployments", initialCount)
 
@@ -891,13 +911,13 @@ func connectCodeToHTTP(code connect.Code) int {
 	}
 }
 
-func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal2.IngressRoutingEntry {
-	var ingressRoutes []dal2.IngressRoutingEntry
+func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {
+	var ingressRoutes []dal.IngressRoutingEntry
 	for _, decl := range req.Schema.Decls {
 		if verb, ok := decl.Value.(*pschema.Decl_Verb); ok {
 			for _, metadata := range verb.Verb.Metadata {
 				if ingress, ok := metadata.Value.(*pschema.Metadata_Ingress); ok {
-					ingressRoutes = append(ingressRoutes, dal2.IngressRoutingEntry{
+					ingressRoutes = append(ingressRoutes, dal.IngressRoutingEntry{
 						Verb:   verb.Verb.Name,
 						Method: ingress.Ingress.Method,
 						Path:   ingress.Ingress.Path,

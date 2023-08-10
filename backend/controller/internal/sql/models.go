@@ -136,6 +136,7 @@ type Deployment struct {
 	ModuleID    int64
 	Key         sqltypes.Key
 	Schema      []byte
+	Labels      []byte
 	MinReplicas int32
 }
 
@@ -185,7 +186,7 @@ type Runner struct {
 	LastSeen           pgtype.Timestamptz
 	ReservationTimeout pgtype.Timestamptz
 	State              RunnerState
-	Languages          sqltypes.Languages
 	Endpoint           string
 	DeploymentID       pgtype.Int8
+	Labels             []byte
 }

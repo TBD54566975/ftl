@@ -20,11 +20,11 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backend/common/maps"
-	model2 "github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/pubsub"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/common/slices"
-	sql2 "github.com/TBD54566975/ftl/backend/controller/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -41,14 +41,14 @@ var (
 )
 
 type IngressRoute struct {
-	Runner   model2.RunnerKey
+	Runner   model.RunnerKey
 	Endpoint string
 	Module   string
 	Verb     string
 }
 
 type IngressRouteEntry struct {
-	Deployment model2.DeploymentKey
+	Deployment model.DeploymentKey
 	Module     string
 	Verb       string
 	Method     string
@@ -82,18 +82,18 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 }
 
 type Runner struct {
-	Key       model2.RunnerKey
-	Languages []string
-	Endpoint  string
-	State     RunnerState
+	Key      model.RunnerKey
+	Endpoint string
+	State    RunnerState
 	// Assigned deployment key, if any.
-	Deployment types.Option[model2.DeploymentKey]
+	Deployment types.Option[model.DeploymentKey]
+	Labels     model.Labels
 }
 
 func (r Runner) notification() {}
 
 type Reconciliation struct {
-	Deployment model2.DeploymentKey
+	Deployment model.DeploymentKey
 	Module     string
 	Language   string
 
@@ -105,10 +105,10 @@ type RunnerState string
 
 // Runner states.
 const (
-	RunnerStateIdle     = RunnerState(sql2.RunnerStateIdle)
-	RunnerStateReserved = RunnerState(sql2.RunnerStateReserved)
-	RunnerStateAssigned = RunnerState(sql2.RunnerStateAssigned)
-	RunnerStateDead     = RunnerState(sql2.RunnerStateDead)
+	RunnerStateIdle     = RunnerState(sql.RunnerStateIdle)
+	RunnerStateReserved = RunnerState(sql.RunnerStateReserved)
+	RunnerStateAssigned = RunnerState(sql.RunnerStateAssigned)
+	RunnerStateDead     = RunnerState(sql.RunnerStateDead)
 )
 
 func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
@@ -123,8 +123,8 @@ type ControllerState string
 
 // Controller states.
 const (
-	ControllerStateLive = ControllerState(sql2.ControllerStateLive)
-	ControllerStateDead = ControllerState(sql2.ControllerStateDead)
+	ControllerStateLive = ControllerState(sql.ControllerStateLive)
+	ControllerStateDead = ControllerState(sql.ControllerStateDead)
 )
 
 func ControllerStateFromProto(state ftlv1.ControllerState) ControllerState {
@@ -137,9 +137,9 @@ func (s ControllerState) ToProto() ftlv1.ControllerState {
 
 type CallEntry struct {
 	ID            int64
-	RequestKey    model2.IngressRequestKey
-	RunnerKey     model2.RunnerKey
-	ControllerKey model2.ControllerKey
+	RequestKey    model.IngressRequestKey
+	RunnerKey     model.RunnerKey
+	ControllerKey model.ControllerKey
 	Time          time.Time
 	SourceVerb    schema.VerbRef
 	DestVerb      schema.VerbRef
@@ -150,17 +150,18 @@ type CallEntry struct {
 }
 
 type Deployment struct {
-	Key         model2.DeploymentKey
+	Key         model.DeploymentKey
 	Language    string
 	Module      string
 	MinReplicas int
 	Schema      *schema.Module
 	CreatedAt   time.Time
+	Labels      model.Labels
 }
 
 type DeploymentLog struct {
-	DeploymentKey model2.DeploymentKey
-	RunnerKey     model2.RunnerKey
+	DeploymentKey model.DeploymentKey
+	RunnerKey     model.RunnerKey
 	TimeStamp     time.Time
 	Level         int32
 	Attributes    map[string]string
@@ -171,7 +172,7 @@ type DeploymentLog struct {
 func (d Deployment) notification() {}
 
 type Controller struct {
-	Key      model2.ControllerKey
+	Key      model.ControllerKey
 	Endpoint string
 	State    ControllerState
 }
@@ -191,7 +192,7 @@ type Reservation interface {
 }
 
 type Route struct {
-	Runner   model2.RunnerKey
+	Runner   model.RunnerKey
 	Endpoint string
 }
 
@@ -211,7 +212,7 @@ func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
 		return nil, errors.Wrap(err, "failed to acquire PG PubSub connection")
 	}
 	dal := &DAL{
-		db:                sql2.NewDB(pool),
+		db:                sql.NewDB(pool),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
 	}
 	go dal.runListener(ctx, conn.Hijack())
@@ -219,7 +220,7 @@ func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
 }
 
 type DAL struct {
-	db *sql2.DB
+	db *sql.DB
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
@@ -245,7 +246,7 @@ func (d *DAL) GetStatus(
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get ingress routes")
 	}
-	statusDeployments, err := slices.MapErr(deployments, func(in sql2.GetDeploymentsRow) (Deployment, error) {
+	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetDeploymentsRow) (Deployment, error) {
 		protoSchema := &pschema.Module{}
 		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
@@ -254,43 +255,57 @@ func (d *DAL) GetStatus(
 		if err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: invalid schema in database", in.ModuleName)
 		}
+		labels := model.Labels{}
+		err = json.Unmarshal(in.Labels, &labels)
+		if err != nil {
+			return Deployment{}, errors.Wrapf(err, "%q: invalid labels in database", in.ModuleName)
+		}
 		return Deployment{
-			Key:         model2.DeploymentKey(in.Key),
+			Key:         model.DeploymentKey(in.Key),
 			Module:      in.ModuleName,
 			Language:    in.Language,
 			MinReplicas: int(in.MinReplicas),
 			Schema:      modelSchema,
+			Labels:      labels,
+		}, nil
+	})
+	if err != nil {
+		return Status{}, errors.WithStack(err)
+	}
+	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
+		var deployment types.Option[model.DeploymentKey]
+		// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
+		if in.DeploymentKey != nil {
+			deployment = types.Some[model.DeploymentKey](in.DeploymentKey.([16]byte)) //nolint:forcetypeassert
+		}
+		attrs := model.Labels{}
+		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
+			return Runner{}, errors.Wrapf(err, "invalid attributes JSON for runner %s", in.RunnerKey)
+		}
+		return Runner{
+			Key:        model.RunnerKey(in.RunnerKey),
+			Endpoint:   in.Endpoint,
+			State:      RunnerState(in.State),
+			Deployment: deployment,
+			Labels:     attrs,
 		}, nil
 	})
 	if err != nil {
 		return Status{}, errors.WithStack(err)
 	}
 	return Status{
-		Controllers: slices.Map(controllers, func(in sql2.Controller) Controller {
+		Controllers: slices.Map(controllers, func(in sql.Controller) Controller {
 			return Controller{
-				Key:      model2.ControllerKey(in.Key),
+				Key:      model.ControllerKey(in.Key),
 				Endpoint: in.Endpoint,
 				State:    ControllerState(in.State),
 			}
 		}),
 		Deployments: statusDeployments,
-		Runners: slices.Map(runners, func(in sql2.GetActiveRunnersRow) Runner {
-			var deployment types.Option[model2.DeploymentKey]
-			// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
-			if in.DeploymentKey != nil {
-				deployment = types.Some[model2.DeploymentKey](in.DeploymentKey.([16]byte)) //nolint:forcetypeassert
-			}
-			return Runner{
-				Key:        model2.RunnerKey(in.RunnerKey),
-				Languages:  in.Languages,
-				Endpoint:   in.Endpoint,
-				State:      RunnerState(in.State),
-				Deployment: deployment,
-			}
-		}),
-		IngressRoutes: slices.Map(ingressRoutes, func(in sql2.GetAllIngressRoutesRow) IngressRouteEntry {
+		Runners:     domainRunners,
+		IngressRoutes: slices.Map(ingressRoutes, func(in sql.GetAllIngressRoutesRow) IngressRouteEntry {
 			return IngressRouteEntry{
-				Deployment: model2.DeploymentKey(in.DeploymentKey),
+				Deployment: model.DeploymentKey(in.DeploymentKey),
 				Module:     in.Module,
 				Verb:       in.Verb,
 				Method:     in.Method,
@@ -300,19 +315,23 @@ func (d *DAL) GetStatus(
 	}, nil
 }
 
-func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model2.DeploymentKey) ([]Runner, error) {
+func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error) {
 	runners := []Runner{}
 	rows, err := d.db.GetRunnersForDeployment(ctx, sqltypes.Key(deployment))
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
 	for _, row := range rows {
+		attrs := model.Labels{}
+		if err := json.Unmarshal(row.Labels, &attrs); err != nil {
+			return nil, errors.Wrapf(err, "invalid attributes JSON for runner %d", row.ID)
+		}
 		runners = append(runners, Runner{
-			Key:        model2.RunnerKey(row.Key),
-			Languages:  row.Languages,
+			Key:        model.RunnerKey(row.Key),
 			Endpoint:   row.Endpoint,
 			State:      RunnerState(row.State),
 			Deployment: types.Some(deployment),
+			Labels:     attrs,
 		})
 	}
 	return runners, nil
@@ -329,7 +348,7 @@ func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) 
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	haveStr := slices.Map(have, func(in sql2.GetArtefactDigestsRow) sha256.SHA256 {
+	haveStr := slices.Map(have, func(in sql.GetArtefactDigestsRow) sha256.SHA256 {
 		return sha256.FromBytes(in.Digest)
 	})
 	return sets.NewSet(digests...).Difference(sets.NewSet(haveStr...)).ToSlice(), nil
@@ -358,11 +377,11 @@ func (d *DAL) CreateDeployment(
 	schema *schema.Module,
 	artefacts []DeploymentArtefact,
 	ingressRoutes []IngressRoutingEntry,
-) (key model2.DeploymentKey, err error) {
+) (key model.DeploymentKey, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return model2.DeploymentKey{}, errors.WithStack(err)
+		return model.DeploymentKey{}, errors.WithStack(err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
@@ -372,10 +391,10 @@ func (d *DAL) CreateDeployment(
 		len(artefacts),
 	)
 	if err != nil {
-		return model2.DeploymentKey{}, errors.WithStack(err)
+		return model.DeploymentKey{}, errors.WithStack(err)
 	}
 	if len(existing) > 0 {
-		return model2.DeploymentKey(existing[0].Key), nil
+		return model.DeploymentKey(existing[0].Key), nil
 	}
 
 	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
@@ -384,45 +403,45 @@ func (d *DAL) CreateDeployment(
 
 	schemaBytes, err := proto.Marshal(schema.ToProto())
 	if err != nil {
-		return model2.DeploymentKey{}, errors.WithStack(err)
+		return model.DeploymentKey{}, errors.WithStack(err)
 	}
 
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, schema.Name)
 
-	deploymentKey := model2.NewDeploymentKey()
+	deploymentKey := model.NewDeploymentKey()
 	// Create the deployment
 	err = tx.CreateDeployment(ctx, sqltypes.Key(deploymentKey), schema.Name, schemaBytes)
 	if err != nil {
-		return model2.DeploymentKey{}, errors.WithStack(translatePGError(err))
+		return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
 	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
 	if err != nil {
-		return model2.DeploymentKey{}, errors.WithStack(err)
+		return model.DeploymentKey{}, errors.WithStack(err)
 	}
 	if len(artefactDigests) != len(artefacts) {
 		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return model2.DeploymentKey{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+		return model.DeploymentKey{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
 	}
 
 	// Associate the artefacts with the deployment
 	for _, row := range artefactDigests {
 		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
-		err = tx.AssociateArtefactWithDeployment(ctx, sql2.AssociateArtefactWithDeploymentParams{
+		err = tx.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
 			Key:        sqltypes.Key(deploymentKey),
 			ArtefactID: row.ID,
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return model2.DeploymentKey{}, errors.WithStack(translatePGError(err))
+			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
 		}
 	}
 
 	for _, ingressRoute := range ingressRoutes {
-		err = tx.CreateIngressRoute(ctx, sql2.CreateIngressRouteParams{
+		err = tx.CreateIngressRoute(ctx, sql.CreateIngressRouteParams{
 			Key:    sqltypes.Key(deploymentKey),
 			Method: ingressRoute.Method,
 			Path:   ingressRoute.Path,
@@ -430,14 +449,14 @@ func (d *DAL) CreateDeployment(
 			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
-			return model2.DeploymentKey{}, errors.WithStack(translatePGError(err))
+			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
 		}
 	}
 
 	return deploymentKey, nil
 }
 
-func (d *DAL) GetDeployment(ctx context.Context, id model2.DeploymentKey) (*model2.Deployment, error) {
+func (d *DAL) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {
 	deployment, err := d.db.GetDeployment(ctx, sqltypes.Key(id))
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
@@ -454,12 +473,16 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 	if dkey, ok := runner.Deployment.Get(); ok {
 		pgDeploymentKey = types.Some(sqltypes.Key(dkey))
 	}
-	deploymentID, err := d.db.UpsertRunner(ctx, sql2.UpsertRunnerParams{
+	attrBytes, err := json.Marshal(runner.Labels)
+	if err != nil {
+		return errors.Wrap(err, "failed to JSON encode runner labels")
+	}
+	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
 		Key:           sqltypes.Key(runner.Key),
-		Languages:     runner.Languages,
 		Endpoint:      runner.Endpoint,
-		State:         sql2.RunnerState(runner.State),
+		State:         sql.RunnerState(runner.State),
 		DeploymentKey: pgDeploymentKey,
+		Labels:        attrBytes,
 	})
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
@@ -492,7 +515,7 @@ func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int6
 }
 
 // DeregisterRunner deregisters the given runner.
-func (d *DAL) DeregisterRunner(ctx context.Context, key model2.RunnerKey) error {
+func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 	count, err := d.db.DeregisterRunner(ctx, sqltypes.Key(key))
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
@@ -503,33 +526,42 @@ func (d *DAL) DeregisterRunner(ctx context.Context, key model2.RunnerKey) error 
 	return nil
 }
 
-func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, language string, deployment model2.DeploymentKey, reservationTimeout time.Duration) (Reservation, error) {
+func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.DeploymentKey, reservationTimeout time.Duration, labels model.Labels) (Reservation, error) {
+	jsonLabels, err := json.Marshal(labels)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to JSON encode labels")
+	}
 	ctx, cancel := context.WithTimeout(ctx, reservationTimeout)
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
 		cancel()
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	runner, err := tx.ReserveRunner(ctx, language, pgtype.Timestamptz{Time: time.Now().Add(reservationTimeout), Valid: true}, sqltypes.Key(deployment))
+	runner, err := tx.ReserveRunner(ctx, pgtype.Timestamptz{Time: time.Now().Add(reservationTimeout), Valid: true}, sqltypes.Key(deployment), jsonLabels)
 	if err != nil {
 		if rerr := tx.Rollback(context.Background()); rerr != nil {
 			err = errors.Join(err, errors.WithStack(translatePGError(rerr)))
 		}
 		cancel()
 		if isNotFound(err) {
-			return nil, errors.Wrapf(ErrNotFound, "no idle runners for language %q", language)
+			return nil, errors.Wrapf(ErrNotFound, "no idle runners found matching labels %s", jsonLabels)
 		}
 		return nil, errors.WithStack(translatePGError(err))
+	}
+	runnerLabels := model.Labels{}
+	if err := json.Unmarshal(runner.Labels, &runnerLabels); err != nil {
+		cancel()
+		return nil, errors.Wrapf(err, "failed to JSON decode labels for runner %d", runner.ID)
 	}
 	return &postgresClaim{
 		cancel: cancel,
 		tx:     tx,
 		runner: Runner{
-			Key:        model2.RunnerKey(runner.Key),
-			Languages:  runner.Languages,
+			Key:        model.RunnerKey(runner.Key),
 			Endpoint:   runner.Endpoint,
 			State:      RunnerState(runner.State),
 			Deployment: types.Some(deployment),
+			Labels:     runnerLabels,
 		},
 	}, nil
 }
@@ -537,7 +569,7 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, language string, d
 var _ Reservation = (*postgresClaim)(nil)
 
 type postgresClaim struct {
-	tx     *sql2.Tx
+	tx     *sql.Tx
 	runner Runner
 	cancel context.CancelFunc
 }
@@ -555,7 +587,7 @@ func (p *postgresClaim) Rollback(ctx context.Context) error {
 func (p *postgresClaim) Runner() Runner { return p.runner }
 
 // SetDeploymentReplicas activates the given deployment.
-func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model2.DeploymentKey, minReplicas int) error {
+func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
 	err := d.db.SetDeploymentDesiredReplicas(ctx, sqltypes.Key(key), int32(minReplicas))
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
@@ -564,7 +596,7 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model2.DeploymentKe
 }
 
 // ReplaceDeployment replaces an old deployment of a module with a new deployment.
-func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model2.DeploymentKey, minReplicas int) (err error) {
+func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.DeploymentKey, minReplicas int) (err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -607,9 +639,9 @@ func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconc
 		}
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	return slices.Map(counts, func(t sql2.GetDeploymentsNeedingReconciliationRow) Reconciliation {
+	return slices.Map(counts, func(t sql.GetDeploymentsNeedingReconciliationRow) Reconciliation {
 		return Reconciliation{
-			Deployment:       model2.DeploymentKey(t.Key),
+			Deployment:       model.DeploymentKey(t.Key),
 			Module:           t.ModuleName,
 			Language:         t.Language,
 			AssignedReplicas: int(t.AssignedRunnersCount),
@@ -627,7 +659,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 		}
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	deployments, err := slices.MapErr(rows, func(in sql2.GetDeploymentsRow) (Deployment, error) {
+	deployments, err := slices.MapErr(rows, func(in sql.GetDeploymentsRow) (Deployment, error) {
 		protoSchema := &pschema.Module{}
 		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
@@ -637,7 +669,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 			return Deployment{}, errors.Wrapf(err, "%q: invalid schema in database", in.ModuleName)
 		}
 		return Deployment{
-			Key:         model2.DeploymentKey(in.Key),
+			Key:         model.DeploymentKey(in.Key),
 			Module:      in.ModuleName,
 			Language:    in.Language,
 			MinReplicas: int(in.MinReplicas),
@@ -653,24 +685,40 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 	return deployments, nil
 }
 
-// GetIdleRunnersForLanguage returns up to limit idle runners for the given language.
+// GetIdleRunners returns up to limit idle runners matching the given labels.
+//
+// "labels" is a single level map of key-value pairs. Values may be scalar or
+// lists of scalars. If a value is a list, it will match the labels if
+// all the values in the list match.
+//
+// e.g. {"languages": ["kotlin"], "arch": "arm64"}' will match a runner with the labels
+// '{"languages": ["go", "kotlin"], "os": "linux", "arch": "amd64", "pid": 1234}'
 //
 // If no runners are available, it will return an empty slice.
-func (d *DAL) GetIdleRunnersForLanguage(ctx context.Context, language string, limit int) ([]Runner, error) {
-	runners, err := d.db.GetIdleRunnersForLanguage(ctx, language, int32(limit))
+func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels) ([]Runner, error) {
+	jsonb, err := json.Marshal(labels)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal labels")
+	}
+	runners, err := d.db.GetIdleRunners(ctx, jsonb, int32(limit))
 	if isNotFound(err) {
 		return nil, nil
 	} else if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	return slices.Map(runners, func(row sql2.Runner) Runner {
-		return Runner{
-			Key:       model2.RunnerKey(row.Key),
-			Languages: row.Languages,
-			Endpoint:  row.Endpoint,
-			State:     RunnerState(row.State),
+	return slices.MapErr(runners, func(row sql.Runner) (Runner, error) {
+		rowLabels := model.Labels{}
+		err := json.Unmarshal(row.Labels, &rowLabels)
+		if err != nil {
+			return Runner{}, errors.Wrap(err, "could not unmarshal labels")
 		}
-	}), nil
+		return Runner{
+			Key:      model.RunnerKey(row.Key),
+			Endpoint: row.Endpoint,
+			State:    RunnerState(row.State),
+			Labels:   labels,
+		}, nil
+	})
 }
 
 // GetRoutingTable returns the endpoints for all runners for the given module.
@@ -682,15 +730,15 @@ func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]Route, erro
 	if len(routes) == 0 {
 		return nil, errors.WithStack(ErrNotFound)
 	}
-	return slices.Map(routes, func(row sql2.GetRoutingTableRow) Route {
+	return slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
 		return Route{
-			Runner:   model2.RunnerKey(row.Key),
+			Runner:   model.RunnerKey(row.Key),
 			Endpoint: row.Endpoint,
 		}
 	}), nil
 }
 
-func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model2.RunnerKey) (RunnerState, error) {
+func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
 	state, err := d.db.GetRunnerState(ctx, sqltypes.Key(runnerKey))
 	if err != nil {
 		return "", errors.WithStack(translatePGError(err))
@@ -698,22 +746,26 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model2.RunnerKey) (R
 	return RunnerState(state), nil
 }
 
-func (d *DAL) GetRunner(ctx context.Context, runnerKey model2.RunnerKey) (Runner, error) {
+func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {
 	row, err := d.db.GetRunner(ctx, sqltypes.Key(runnerKey))
 	if err != nil {
 		return Runner{}, errors.WithStack(translatePGError(err))
 	}
-	var deployment types.Option[model2.DeploymentKey]
+	var deployment types.Option[model.DeploymentKey]
 	// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
 	if row.DeploymentKey != nil {
-		deployment = types.Some(row.DeploymentKey.(model2.DeploymentKey)) //nolint:forcetypeassert
+		deployment = types.Some(row.DeploymentKey.(model.DeploymentKey)) //nolint:forcetypeassert
+	}
+	attrs := model.Labels{}
+	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
+		return Runner{}, errors.Wrapf(err, "could not unmarshal labels for runner %s", row.RunnerKey)
 	}
 	return Runner{
-		Key:        model2.RunnerKey(row.RunnerKey),
-		Languages:  row.Languages,
+		Key:        model.RunnerKey(row.RunnerKey),
 		Endpoint:   row.Endpoint,
 		State:      RunnerState(row.State),
 		Deployment: deployment,
+		Labels:     attrs,
 	}, nil
 }
 
@@ -732,7 +784,7 @@ func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, log DeploymentLog) e
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(translatePGError(d.db.InsertDeploymentLogEntry(ctx, sql2.InsertDeploymentLogEntryParams{
+	return errors.WithStack(translatePGError(d.db.InsertDeploymentLogEntry(ctx, sql.InsertDeploymentLogEntryParams{
 		Key:        sqltypes.Key(log.DeploymentKey),
 		Key_2:      sqltypes.Key(log.RunnerKey),
 		TimeStamp:  pgtype.Timestamptz{Time: log.TimeStamp, Valid: true},
@@ -744,7 +796,7 @@ func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, log DeploymentLog) e
 }
 
 // GetDeploymentLogs returns all logs for a given deployment.
-func (d *DAL) GetDeploymentLogs(ctx context.Context, deployment model2.DeploymentKey) ([]DeploymentLog, error) {
+func (d *DAL) GetDeploymentLogs(ctx context.Context, deployment model.DeploymentKey) ([]DeploymentLog, error) {
 	rows, err := d.db.GetDeploymentLogs(ctx, sqltypes.Key(deployment))
 	if err != nil {
 		if isNotFound(err) {
@@ -752,7 +804,7 @@ func (d *DAL) GetDeploymentLogs(ctx context.Context, deployment model2.Deploymen
 		}
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	logs, err := slices.MapErr(rows, func(in sql2.GetDeploymentLogsRow) (DeploymentLog, error) {
+	logs, err := slices.MapErr(rows, func(in sql.GetDeploymentLogsRow) (DeploymentLog, error) {
 		var attributes map[string]string
 		err := json.Unmarshal(in.Attributes, &attributes)
 		if err != nil {
@@ -763,8 +815,8 @@ func (d *DAL) GetDeploymentLogs(ctx context.Context, deployment model2.Deploymen
 			errorString = &in.Error.String
 		}
 		return DeploymentLog{
-			DeploymentKey: model2.DeploymentKey(in.DeploymentKey),
-			RunnerKey:     model2.RunnerKey(in.RunnerKey),
+			DeploymentKey: model.DeploymentKey(in.DeploymentKey),
+			RunnerKey:     model.RunnerKey(in.RunnerKey),
 			TimeStamp:     in.TimeStamp.Time,
 			Level:         in.Level,
 			Attributes:    attributes,
@@ -780,7 +832,7 @@ func (d *DAL) GetDeploymentLogs(ctx context.Context, deployment model2.Deploymen
 	return logs, nil
 }
 
-func (d *DAL) loadDeployment(ctx context.Context, deployment sql2.GetDeploymentRow) (*model2.Deployment, error) {
+func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRow) (*model.Deployment, error) {
 	pm := &pschema.Module{}
 	err := proto.Unmarshal(deployment.Schema, pm)
 	if err != nil {
@@ -790,18 +842,18 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql2.GetDeploymentR
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	out := &model2.Deployment{
+	out := &model.Deployment{
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
-		Key:      model2.DeploymentKey(deployment.Key),
+		Key:      model.DeploymentKey(deployment.Key),
 		Schema:   module,
 	}
 	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.ID)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	out.Artefacts = slices.Map(artefacts, func(row sql2.GetDeploymentArtefactsRow) *model2.Artefact {
-		return &model2.Artefact{
+	out.Artefacts = slices.Map(artefacts, func(row sql.GetDeploymentArtefactsRow) *model.Artefact {
+		return &model.Artefact{
 			Path:       row.Path,
 			Executable: row.Executable,
 			Content:    &artefactReader{id: row.ID, db: d.db},
@@ -811,8 +863,8 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql2.GetDeploymentR
 	return out, nil
 }
 
-func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (model2.IngressRequestKey, error) {
-	key := model2.NewIngressRequestKey()
+func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (model.IngressRequestKey, error) {
+	key := model.NewIngressRequestKey()
 	err := d.db.CreateIngressRequest(ctx, sqltypes.Key(key), addr)
 	return key, errors.WithStack(err)
 }
@@ -825,9 +877,9 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) 
 	if len(routes) == 0 {
 		return nil, errors.WithStack(ErrNotFound)
 	}
-	return slices.Map(routes, func(row sql2.GetIngressRoutesRow) IngressRoute {
+	return slices.Map(routes, func(row sql.GetIngressRoutesRow) IngressRoute {
 		return IngressRoute{
-			Runner:   model2.RunnerKey(row.RunnerKey),
+			Runner:   model.RunnerKey(row.RunnerKey),
 			Endpoint: row.Endpoint,
 			Module:   row.Module,
 			Verb:     row.Verb,
@@ -835,7 +887,7 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) 
 	}), nil
 }
 
-func (d *DAL) UpsertController(ctx context.Context, key model2.ControllerKey, addr string) (int64, error) {
+func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {
 	id, err := d.db.UpsertController(ctx, sqltypes.Key(key), addr)
 	return id, errors.WithStack(translatePGError(err))
 }
@@ -846,7 +898,7 @@ func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
 		callError.String = call.Error.Error()
 		callError.Valid = true
 	}
-	return errors.WithStack(translatePGError(d.db.InsertCallEntry(ctx, sql2.InsertCallEntryParams{
+	return errors.WithStack(translatePGError(d.db.InsertCallEntry(ctx, sql.InsertCallEntryParams{
 		Key:          sqltypes.Key(call.RunnerKey),
 		Key_2:        sqltypes.Key(call.RequestKey),
 		Key_3:        sqltypes.Key(call.ControllerKey),
@@ -879,9 +931,9 @@ func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.
 		}
 		out[key] = append(out[key], CallEntry{
 			ID:            call.ID,
-			RequestKey:    model2.IngressRequestKey(call.IngressRequestKey),
-			RunnerKey:     model2.RunnerKey(call.RunnerKey),
-			ControllerKey: model2.ControllerKey(call.ControllerKey),
+			RequestKey:    model.IngressRequestKey(call.IngressRequestKey),
+			RunnerKey:     model.RunnerKey(call.RunnerKey),
+			ControllerKey: model.ControllerKey(call.ControllerKey),
 			Time:          call.Time.Time,
 			SourceVerb: schema.VerbRef{
 				Module: call.SourceModule,
@@ -900,7 +952,7 @@ func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.
 	return out, nil
 }
 
-func (d *DAL) GetRequestCalls(ctx context.Context, requestKey model2.IngressRequestKey) ([]CallEntry, error) {
+func (d *DAL) GetRequestCalls(ctx context.Context, requestKey model.IngressRequestKey) ([]CallEntry, error) {
 	calls, err := d.db.GetRequestCalls(ctx, sqltypes.Key(requestKey))
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
@@ -914,8 +966,8 @@ func (d *DAL) GetRequestCalls(ctx context.Context, requestKey model2.IngressRequ
 		out = append(out, CallEntry{
 			ID:            call.ID,
 			RequestKey:    requestKey,
-			RunnerKey:     model2.RunnerKey(call.RunnerKey),
-			ControllerKey: model2.ControllerKey(call.ControllerKey),
+			RunnerKey:     model.RunnerKey(call.RunnerKey),
+			ControllerKey: model.ControllerKey(call.ControllerKey),
 			Time:          call.Time.Time,
 			SourceVerb: schema.VerbRef{
 				Module: call.SourceModule,
@@ -940,7 +992,7 @@ func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 
 type artefactReader struct {
 	id     int64
-	db     *sql2.DB
+	db     *sql.DB
 	offset int32
 }
 
