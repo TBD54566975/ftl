@@ -8,7 +8,7 @@
     "build:css-types": "tcm --c -e -p  'src/**/*.css' .",
     "copy:css": "node ./scripts/copy-css.cjs",
     "dev": "node scripts/dev.cjs",
-    "lint": "eslint console --ext .ts,.tsx,.js,.cjs",
+    "lint": "eslint . --ext .ts,.tsx,.js,.cjs",
     "lint-staged": "npx lint-staged",
     "lint:fix": "npm run lint -- --fix --quiet",
     "plop": "npx plop",
