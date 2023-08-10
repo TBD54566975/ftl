@@ -75,13 +75,10 @@ jobs:
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Console NPM Install
-        working-directory: console/client
         run: npm install
       - name: Console Lint
-        working-directory: console/client
         run: npm run lint
       - name: Console Test
-        working-directory: console/client
         run: npm run test
   docker-runner:
     name: Build Runner Docker Image

@@ -1,0 +1,9 @@
+FROM  mcr.microsoft.com/playwright:v1.36.2-jammy
+
+WORKDIR /console
+
+COPY package-lock.json .
+COPY package.json .
+COPY console/client/package.json console/client/package.json
+
+RUN npm install
