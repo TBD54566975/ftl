@@ -130,16 +130,18 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 }
 
 const getActiveRunners = `-- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key AS runner_key,
-    r.endpoint,
-    r.state,
-    r.labels,
-    r.last_seen,
-    COALESCE(CASE WHEN r.deployment_id IS NOT NULL
-                      THEN d.key END, NULL) AS deployment_key
+SELECT DISTINCT ON (r.key) r.key                                  AS runner_key,
+                           r.endpoint,
+                           r.state,
+                           r.labels,
+                           r.last_seen,
+                           COALESCE(CASE
+                                        WHEN r.deployment_id IS NOT NULL
+                                            THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
-WHERE $1::bool = true OR r.state <> 'dead'
+WHERE $1::bool = true
+   OR r.state <> 'dead'
 ORDER BY r.key
 `
 
@@ -183,7 +185,8 @@ const getAllIngressRoutes = `-- name: GetAllIngressRoutes :many
 SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
 FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
-WHERE $1::bool = true OR d.min_replicas > 0
+WHERE $1::bool = true
+   OR d.min_replicas > 0
 `
 
 type GetAllIngressRoutesRow struct {
@@ -268,7 +271,8 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 const getControllers = `-- name: GetControllers :many
 SELECT c.id, c.key, c.created, c.last_seen, c.state, c.endpoint
 FROM controller c
-WHERE $1::bool = true OR c.state <> 'dead'
+WHERE $1::bool = true
+   OR c.state <> 'dead'
 ORDER BY c.key
 `
 
@@ -381,8 +385,8 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 
 const getDeploymentLogs = `-- name: GetDeploymentLogs :many
 SELECT DISTINCT r.key AS runner_key,
-    d.key AS deployment_key,
-    dl.id, dl.deployment_id, dl.runner_id, dl.time_stamp, dl.level, dl.attributes, dl.message, dl.error
+                d.key AS deployment_key,
+                dl.id, dl.deployment_id, dl.runner_id, dl.time_stamp, dl.level, dl.attributes, dl.message, dl.error
 FROM deployment_logs dl
          JOIN runners r ON dl.runner_id = r.id
          JOIN deployments d ON dl.deployment_id = d.id
@@ -437,7 +441,8 @@ const getDeployments = `-- name: GetDeployments :many
 SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
-WHERE $1::bool = true OR min_replicas > 0
+WHERE $1::bool = true
+   OR min_replicas > 0
 ORDER BY d.key
 `
 
@@ -518,11 +523,11 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 }
 
 const getDeploymentsNeedingReconciliation = `-- name: GetDeploymentsNeedingReconciliation :many
-SELECT d.key AS key,
-    m.name AS module_name,
-    m.language AS language,
-    COUNT(r.id) AS assigned_runners_count,
-    d.min_replicas::BIGINT AS required_runners_count
+SELECT d.key                  AS key,
+       m.name                 AS module_name,
+       m.language             AS language,
+       COUNT(r.id)            AS assigned_runners_count,
+       d.min_replicas::BIGINT AS required_runners_count
 FROM deployments d
          LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
          JOIN modules m ON d.module_id = m.id
@@ -572,7 +577,8 @@ FROM deployments d
 WHERE EXISTS (SELECT 1
               FROM deployment_artefacts da
                        INNER JOIN artefacts a ON da.artefact_id = a.id
-              WHERE a.digest = ANY ($1::bytea[]) AND da.deployment_id = d.id
+              WHERE a.digest = ANY ($1::bytea[])
+                AND da.deployment_id = d.id
               HAVING COUNT(*) = $2 -- Number of unique digests provided
 )
 `
@@ -614,7 +620,8 @@ const getExistingDeploymentForModule = `-- name: GetExistingDeploymentForModule 
 SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
-WHERE m.name = $1 AND min_replicas > 0
+WHERE m.name = $1
+  AND min_replicas > 0
 LIMIT 1
 `
 
@@ -636,8 +643,8 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 const getIdleRunners = `-- name: GetIdleRunners :many
 SELECT id, key, created, last_seen, reservation_timeout, state, endpoint, deployment_id, labels
 FROM runners
-WHERE labels @> $1::jsonb AND
-    state = 'idle'
+WHERE labels @> $1::jsonb
+  AND state = 'idle'
 LIMIT $2
 `
 
@@ -675,7 +682,9 @@ const getIngressRoutes = `-- name: GetIngressRoutes :many
 SELECT r.key AS runner_key, endpoint, ir.module, ir.verb
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
-WHERE r.state = 'assigned' AND ir.method = $1 AND ir.path = $2
+WHERE r.state = 'assigned'
+  AND ir.method = $1
+  AND ir.path = $2
 `
 
 type GetIngressRoutesRow struct {
@@ -712,10 +721,10 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path stri
 }
 
 const getModuleCalls = `-- name: GetModuleCalls :many
-SELECT DISTINCT r.key AS runner_key,
-    conn.key AS controller_key,
-    ir.key AS ingress_request_key,
-    c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
+SELECT DISTINCT r.key    AS runner_key,
+                conn.key AS controller_key,
+                ir.key   AS ingress_request_key,
+                c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = c.controller_id
@@ -806,9 +815,9 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 }
 
 const getRequestCalls = `-- name: GetRequestCalls :many
-SELECT DISTINCT r.key AS runner_key,
-    conn.key AS controller_key,
-    c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
+SELECT DISTINCT r.key    AS runner_key,
+                conn.key AS controller_key,
+                c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = c.controller_id
@@ -875,7 +884,8 @@ SELECT endpoint, r.key
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
          INNER JOIN modules m on d.module_id = m.id
-WHERE state = 'assigned' AND m.name = $1
+WHERE state = 'assigned'
+  AND m.name = $1
 `
 
 type GetRoutingTableRow struct {
@@ -904,13 +914,14 @@ func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutin
 }
 
 const getRunner = `-- name: GetRunner :one
-SELECT DISTINCT ON (r.key) r.key AS runner_key,
-    r.endpoint,
-    r.state,
-    r.labels,
-    r.last_seen,
-    COALESCE(CASE WHEN r.deployment_id IS NOT NULL
-                      THEN d.key END, NULL) AS deployment_key
+SELECT DISTINCT ON (r.key) r.key                                  AS runner_key,
+                           r.endpoint,
+                           r.state,
+                           r.labels,
+                           r.last_seen,
+                           COALESCE(CASE
+                                        WHEN r.deployment_id IS NOT NULL
+                                            THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE r.key = $1
@@ -956,7 +967,8 @@ const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
 SELECT r.id, r.key, r.created, r.last_seen, r.reservation_timeout, r.state, r.endpoint, r.deployment_id, r.labels
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
-WHERE state = 'assigned' AND d.key = $1
+WHERE state = 'assigned'
+  AND d.key = $1
 `
 
 func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error) {
@@ -1033,8 +1045,8 @@ func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams
 const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec
 INSERT INTO deployment_logs (deployment_id, runner_id, time_stamp, level, attributes, message,
                              error)
-VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1)::UUID,
-        (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1)::UUID, $3, $4, $5, $6, $7)
+VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1),
+        (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1), $3, $4, $5, $6, $7)
 `
 
 type InsertDeploymentLogEntryParams struct {
@@ -1100,7 +1112,7 @@ WITH update_container AS (
     UPDATE deployments AS d
         SET min_replicas = update_deployments.min_replicas
         FROM (VALUES ($1::UUID, 0),
-                  ($2::UUID, $3::INT))
+                     ($2::UUID, $3::INT))
             AS update_deployments(key, min_replicas)
         WHERE d.key = update_deployments.key
         RETURNING 1)
@@ -1127,7 +1139,8 @@ SET state               = 'reserved',
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
-            WHERE r.state = 'idle' AND r.labels @> $3::jsonb
+            WHERE r.state = 'idle'
+              AND r.labels @> $3::jsonb
             LIMIT 1 FOR UPDATE SKIP LOCKED)
 RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.reservation_timeout, runners.state, runners.endpoint, runners.deployment_id, runners.labels
 `
@@ -1165,9 +1178,9 @@ func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes
 const upsertController = `-- name: UpsertController :one
 INSERT INTO controller (key, endpoint)
 VALUES ($1, $2)
-ON CONFLICT (key) DO UPDATE SET state = 'live',
-    endpoint                          = $2,
-    last_seen                         = NOW() AT TIME ZONE 'utc'
+ON CONFLICT (key) DO UPDATE SET state     = 'live',
+                                endpoint  = $2,
+                                last_seen = NOW() AT TIME ZONE 'utc'
 RETURNING id
 `
 
@@ -1195,20 +1208,20 @@ func (q *Queries) UpsertModule(ctx context.Context, language string, name string
 const upsertRunner = `-- name: UpsertRunner :one
 WITH deployment_rel AS (
     SELECT CASE
-        WHEN $5::UUID IS NULL
-            THEN NULL
-        ELSE COALESCE((SELECT id
-                       FROM deployments d
-                       WHERE d.key = $5
-                       LIMIT 1), -1) END AS id)
+               WHEN $5::UUID IS NULL
+                   THEN NULL
+               ELSE COALESCE((SELECT id
+                              FROM deployments d
+                              WHERE d.key = $5
+                              LIMIT 1), -1) END AS id)
 INSERT
 INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
 VALUES ($1, $2, $3, $4, (SELECT id FROM deployment_rel), NOW() AT TIME ZONE 'utc')
-ON CONFLICT (key) DO UPDATE SET endpoint = $2,
-    state                                = $3,
-    labels                               = $4,
-    deployment_id                        = (SELECT id FROM deployment_rel),
-    last_seen                            = NOW() AT TIME ZONE 'utc'
+ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
+                                state         = $3,
+                                labels        = $4,
+                                deployment_id = (SELECT id FROM deployment_rel),
+                                last_seen     = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id
 `
 

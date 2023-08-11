@@ -96,6 +96,7 @@ func Start(ctx context.Context, config Config) error {
 	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 
 	go rpc2.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
+	go rpc2.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
 
 	return rpc2.Serve(ctx, config.Bind,
 		rpc2.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
@@ -110,8 +111,9 @@ type deployment struct {
 	key    model.DeploymentKey
 	plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]
 	// Cancelled when plugin terminates
-	ctx    context.Context
-	logger *log.Logger
+	ctx      context.Context
+	logger   *log.Logger
+	logQueue chan log.Entry
 }
 
 type Service struct {
@@ -158,8 +160,9 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
 
-	sink := newDeploymentLogsSink(key, s.key)
-	logger := s.logger.AddSink(sink)
+	logQueue := make(chan log.Entry, 100)
+	sink := newDeploymentLogsSink(key, s.key, logQueue)
+	logger := s.logger.AddSink(sink).Level(log.Trace)
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	s.lock.Lock()
@@ -221,7 +224,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, errors.Wrap(err, "failed to spawn plugin")
 	}
 
-	dep := s.makeDeployment(cmdCtx, key, logger, deployment)
+	dep := s.makeDeployment(cmdCtx, key, logger, logQueue, deployment)
 	s.deployment.Store(types.Some(dep))
 
 	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
@@ -268,12 +271,12 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	}), nil
 }
 
-func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, logger *log.Logger, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
-	return &deployment{ctx: ctx, key: key, logger: logger, plugin: plugin}
+func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, logger *log.Logger, logQueue chan log.Entry, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
+	return &deployment{ctx: ctx, key: key, logger: logger, plugin: plugin, logQueue: logQueue}
 }
 
 func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1.RegisterRunnerRequest) error) error {
-	logger := s.getLogger(ctx)
+	logger := s.getLogger()
 
 	// Figure out the appropriate state.
 	state := s.state.Load()
@@ -330,7 +333,46 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	return nil
 }
 
-func (s *Service) getLogger(ctx context.Context) *log.Logger {
+func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.StreamDeploymentLogsRequest) error) error {
+	delay := time.Millisecond * 500
+
+	deployment, ok := s.deployment.Load().Get()
+	if !ok {
+		// No deployment, nothing to do.
+		select {
+		case <-ctx.Done():
+			err := context.Cause(ctx)
+			return errors.WithStack(err)
+		case <-time.After(delay):
+			return nil
+		}
+	}
+
+	select {
+	case entry := <-deployment.logQueue:
+		var errorString string
+		if entry.Error != nil {
+			errorString = entry.Error.Error()
+		}
+		err := send(&ftlv1.StreamDeploymentLogsRequest{
+			DeploymentKey: deployment.key.String(),
+			RunnerKey:     s.key.String(),
+			TimeStamp:     entry.Time.Unix(),
+			LogLevel:      int32(entry.Level.Severity()),
+			Attributes:    entry.Attributes,
+			Message:       entry.Message,
+			Error:         &errorString,
+		})
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	case <-time.After(delay):
+	}
+
+	return nil
+}
+
+func (s *Service) getLogger() *log.Logger {
 	deployment, ok := s.deployment.Load().Get()
 	if ok {
 		if deployment.logger == nil {

@@ -243,8 +243,8 @@ FROM rows;
 -- name: InsertDeploymentLogEntry :exec
 INSERT INTO deployment_logs (deployment_id, runner_id, time_stamp, level, attributes, message,
                              error)
-VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1)::UUID,
-        (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1)::UUID, $3, $4, $5, $6, $7);
+VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1),
+        (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1), $3, $4, $5, $6, $7);
 
 -- name: GetDeploymentLogs :many
 SELECT DISTINCT r.key AS runner_key,
