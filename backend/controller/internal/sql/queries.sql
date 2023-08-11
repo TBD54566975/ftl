@@ -46,7 +46,7 @@ WITH update_container AS (
     UPDATE deployments AS d
         SET min_replicas = update_deployments.min_replicas
         FROM (VALUES (sqlc.arg('old_deployment')::UUID, 0),
-                     (sqlc.arg('new_deployment')::UUID, sqlc.arg('min_replicas')::INT))
+                  (sqlc.arg('new_deployment')::UUID, sqlc.arg('min_replicas')::INT))
             AS update_deployments(key, min_replicas)
         WHERE d.key = update_deployments.key
         RETURNING 1)
@@ -67,8 +67,7 @@ FROM deployments d
 WHERE EXISTS (SELECT 1
               FROM deployment_artefacts da
                        INNER JOIN artefacts a ON da.artefact_id = a.id
-              WHERE a.digest = ANY (@digests::bytea[])
-                AND da.deployment_id = d.id
+              WHERE a.digest = ANY (@digests::bytea[]) AND da.deployment_id = d.id
               HAVING COUNT(*) = @count -- Number of unique digests provided
 );
 
@@ -85,19 +84,20 @@ WITH deployment_rel AS (
 -- there is no corresponding deployment, then the deployment ID is -1
 -- and the parent statement will fail due to a foreign key constraint.
     SELECT CASE
-               WHEN sqlc.narg('deployment_key')::UUID IS NULL THEN NULL
-               ELSE COALESCE((SELECT id
-                              FROM deployments d
-                              WHERE d.key = sqlc.narg('deployment_key')
-                              LIMIT 1), -1) END AS id)
+        WHEN sqlc.narg('deployment_key')::UUID IS NULL
+            THEN NULL
+        ELSE COALESCE((SELECT id
+                       FROM deployments d
+                       WHERE d.key = sqlc.narg('deployment_key')
+                       LIMIT 1), -1) END AS id)
 INSERT
-INTO runners (key, languages, endpoint, state, deployment_id, last_seen)
+INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
 VALUES ($1, $2, $3, $4, (SELECT id FROM deployment_rel), NOW() AT TIME ZONE 'utc')
-ON CONFLICT (key) DO UPDATE SET languages     = $2,
-                                endpoint      = $3,
-                                state         = $4,
-                                deployment_id = (SELECT id FROM deployment_rel),
-                                last_seen     = NOW() AT TIME ZONE 'utc'
+ON CONFLICT (key) DO UPDATE SET endpoint = $2,
+    state                                = $3,
+    labels                               = $4,
+    deployment_id                        = (SELECT id FROM deployment_rel),
+    last_seen                            = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id;
 
 -- name: KillStaleRunners :one
@@ -109,7 +109,6 @@ WITH matches AS (
 SELECT COUNT(*)
 FROM matches;
 
-
 -- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
@@ -120,32 +119,31 @@ SELECT COUNT(*)
 FROM matches;
 
 -- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
-                           r.languages,
-                           r.endpoint,
-                           r.state,
-                           r.last_seen,
-                           COALESCE(CASE WHEN r.deployment_id IS NOT NULL THEN d.key END, NULL) AS deployment_key
+SELECT DISTINCT ON (r.key) r.key AS runner_key,
+    r.endpoint,
+    r.state,
+    r.labels,
+    r.last_seen,
+    COALESCE(CASE WHEN r.deployment_id IS NOT NULL
+                      THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
-WHERE sqlc.arg('all')::bool = true
-   OR r.state <> 'dead'
+WHERE sqlc.arg('all')::bool = true OR r.state <> 'dead'
 ORDER BY r.key;
 
 -- name: GetDeployments :many
-SELECT d.id, d.key, d.min_replicas, d.created_at, d.schema, m.name AS module_name, m.language
+SELECT d.*, m.name AS module_name, m.language
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
-WHERE sqlc.arg('all')::bool = true
-   OR min_replicas > 0
+WHERE sqlc.arg('all')::bool = true OR min_replicas > 0
 ORDER BY d.key;
 
--- name: GetIdleRunnersForLanguage :many
+-- name: GetIdleRunners :many
 SELECT *
 FROM runners
-WHERE languages LIKE '%:' || $1::text || ':%'
-  AND state = 'idle'
-LIMIT $2;
+WHERE labels @> sqlc.arg('labels')::jsonb AND
+    state = 'idle'
+LIMIT sqlc.arg('limit');
 
 -- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
@@ -157,17 +155,16 @@ RETURNING 1;
 SELECT d.*
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
-WHERE m.name = $1
-  AND min_replicas > 0
+WHERE m.name = $1 AND min_replicas > 0
 LIMIT 1;
 
 -- name: GetDeploymentsNeedingReconciliation :many
 -- Get deployments that have a mismatch between the number of assigned and required replicas.
-SELECT d.key                  AS key,
-       m.name                 AS module_name,
-       m.language             AS language,
-       COUNT(r.id)            AS assigned_runners_count,
-       d.min_replicas::BIGINT AS required_runners_count
+SELECT d.key AS key,
+    m.name AS module_name,
+    m.language AS language,
+    COUNT(r.id) AS assigned_runners_count,
+    d.min_replicas::BIGINT AS required_runners_count
 FROM deployments d
          LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
          JOIN modules m ON d.module_id = m.id
@@ -179,17 +176,16 @@ HAVING COUNT(r.id) <> d.min_replicas;
 -- Find an idle runner and reserve it for the given deployment.
 UPDATE runners
 SET state               = 'reserved',
-    reservation_timeout = $2,
+    reservation_timeout = @reservation_timeout,
     -- If a deployment is not found, then the deployment ID is -1
     -- and the update will fail due to a FK constraint.
     deployment_id       = COALESCE((SELECT id
                                     FROM deployments d
-                                    WHERE d.key = @deployment_key
+                                    WHERE d.key = sqlc.arg('deployment_key')
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
-            WHERE r.languages LIKE '%:' || $1::text || ':%'
-              AND r.state = 'idle'
+            WHERE r.state = 'idle' AND r.labels @> sqlc.arg('labels')::jsonb
             LIMIT 1 FOR UPDATE SKIP LOCKED)
 RETURNING runners.*;
 
@@ -199,12 +195,13 @@ FROM runners
 WHERE key = $1;
 
 -- name: GetRunner :one
-SELECT DISTINCT ON (r.key) r.key                                                                AS runner_key,
-                           r.languages,
-                           r.endpoint,
-                           r.state,
-                           r.last_seen,
-                           COALESCE(CASE WHEN r.deployment_id IS NOT NULL THEN d.key END, NULL) AS deployment_key
+SELECT DISTINCT ON (r.key) r.key AS runner_key,
+    r.endpoint,
+    r.state,
+    r.labels,
+    r.last_seen,
+    COALESCE(CASE WHEN r.deployment_id IS NOT NULL
+                      THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE r.key = $1;
@@ -214,15 +211,13 @@ SELECT endpoint, r.key
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
          INNER JOIN modules m on d.module_id = m.id
-WHERE state = 'assigned'
-  AND m.name = $1;
+WHERE state = 'assigned' AND m.name = $1;
 
 -- name: GetRunnersForDeployment :many
 SELECT r.*
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
-WHERE state = 'assigned'
-  AND d.key = $1;
+WHERE state = 'assigned' AND d.key = $1;
 
 -- name: ExpireRunnerReservations :one
 WITH rows AS (
@@ -236,23 +231,24 @@ WITH rows AS (
 SELECT COUNT(*)
 FROM rows;
 
-
 -- name: InsertDeploymentLogEntry :exec
-INSERT INTO deployment_logs (deployment_id, runner_id, time_stamp, level, attributes, message, error)
+INSERT INTO deployment_logs (deployment_id, runner_id, time_stamp, level, attributes, message,
+                             error)
 VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1)::UUID,
         (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1)::UUID, $3, $4, $5, $6, $7);
 
 -- name: GetDeploymentLogs :many
 SELECT DISTINCT r.key AS runner_key,
-                d.key AS deployment_key,
-                dl.*
+    d.key AS deployment_key,
+    dl.*
 FROM deployment_logs dl
          JOIN runners r ON dl.runner_id = r.id
          JOIN deployments d ON dl.deployment_id = d.id
 WHERE dl.id = (SELECT id FROM deployments WHERE deployments.key = $1);
 
 -- name: InsertCallEntry :exec
-INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module, dest_verb,
+INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module,
+                   dest_verb,
                    duration_ms, request, response, error)
 VALUES ((SELECT id FROM runners WHERE runners.key = $1),
         (SELECT id FROM ingress_requests WHERE ingress_requests.key = $2),
@@ -260,10 +256,10 @@ VALUES ((SELECT id FROM runners WHERE runners.key = $1),
         $4, $5, $6, $7, $8, $9, $10, $11);
 
 -- name: GetModuleCalls :many
-SELECT DISTINCT r.key    AS runner_key,
-                conn.key AS controller_key,
-                ir.key   AS ingress_request_key,
-                c.*
+SELECT DISTINCT r.key AS runner_key,
+    conn.key AS controller_key,
+    ir.key AS ingress_request_key,
+    c.*
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = c.controller_id
@@ -271,9 +267,9 @@ FROM runners r
 WHERE dest_module = ANY (@modules::text[]);
 
 -- name: GetRequestCalls :many
-SELECT DISTINCT r.key    AS runner_key,
-                conn.key AS controller_key,
-                c.*
+SELECT DISTINCT r.key AS runner_key,
+    conn.key AS controller_key,
+    c.*
 FROM runners r
          JOIN calls c ON r.id = c.runner_id
          JOIN controller conn ON conn.id = c.controller_id
@@ -287,9 +283,9 @@ VALUES ($1, $2);
 -- name: UpsertController :one
 INSERT INTO controller (key, endpoint)
 VALUES ($1, $2)
-ON CONFLICT (key) DO UPDATE SET state     = 'live',
-                                endpoint  = $2,
-                                last_seen = NOW() AT TIME ZONE 'utc'
+ON CONFLICT (key) DO UPDATE SET state = 'live',
+    endpoint                          = $2,
+    last_seen                         = NOW() AT TIME ZONE 'utc'
 RETURNING id;
 
 -- name: KillStaleControllers :one
@@ -305,8 +301,7 @@ FROM matches;
 -- name: GetControllers :many
 SELECT c.*
 FROM controller c
-WHERE sqlc.arg('all')::bool = true
-   OR c.state <> 'dead'
+WHERE sqlc.arg('all')::bool = true OR c.state <> 'dead'
 ORDER BY c.key;
 
 -- name: CreateIngressRoute :exec
@@ -318,13 +313,10 @@ VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5);
 SELECT r.key AS runner_key, endpoint, ir.module, ir.verb
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
-WHERE r.state = 'assigned'
-  AND ir.method = $1
-  AND ir.path = $2;
+WHERE r.state = 'assigned' AND ir.method = $1 AND ir.path = $2;
 
 -- name: GetAllIngressRoutes :many
 SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
 FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
-WHERE sqlc.arg('all')::bool = true
-   OR d.min_replicas > 0;
+WHERE sqlc.arg('all')::bool = true OR d.min_replicas > 0;

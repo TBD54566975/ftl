@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -18,12 +19,14 @@ import (
 	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
 	"github.com/otiai10/copy"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/TBD54566975/ftl/backend/common/download"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/plugin"
 	rpc2 "github.com/TBD54566975/ftl/backend/common/rpc"
+	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/common/unstoppable"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -46,12 +49,18 @@ func Start(ctx context.Context, config Config) error {
 	if config.Advertise.String() == "" {
 		config.Advertise = config.Bind
 	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		return errors.Wrap(err, "failed to get hostname")
+	}
+	pid := os.Getpid()
+
 	client := rpc2.Dial(ftlv1connect.NewVerbServiceClient, config.ControllerEndpoint.String(), log.Error)
 	ctx = rpc2.ContextWithClient(ctx, client)
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting FTL Runner")
 	logger.Infof("Deployment directory: %s", config.DeploymentDir)
-	err := os.MkdirAll(config.DeploymentDir, 0700)
+	err = os.MkdirAll(config.DeploymentDir, 0700)
 	if err != nil {
 		return errors.Wrap(err, "failed to create deployment directory")
 	}
@@ -64,12 +73,23 @@ func Start(ctx context.Context, config Config) error {
 	if key == (model.RunnerKey{}) {
 		key = model.NewRunnerKey()
 	}
+	labels, err := structpb.NewStruct(map[string]any{
+		"hostname":  hostname,
+		"pid":       pid,
+		"os":        runtime.GOOS,
+		"arch":      runtime.GOARCH,
+		"languages": slices.Map(config.Language, func(t string) any { return t }),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal labels")
+	}
 
 	svc := &Service{
 		key:              key,
 		config:           config,
 		controllerClient: controllerClient,
 		forceUpdate:      make(chan struct{}, 16),
+		labels:           labels,
 	}
 	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 
@@ -102,6 +122,7 @@ type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
 	// Failed to register with the Controller
 	registrationFailure atomic.Value[types.Option[error]]
+	labels              *structpb.Struct
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
@@ -226,14 +247,13 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 			return nil, errors.Wrap(err, "failed to kill plugin")
 		}
 	}
-
 	s.deployment.Store(types.None[*deployment]())
 	s.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 	return connect.NewResponse(&ftlv1.RegisterRunnerRequest{
-		Key:       s.key.String(),
-		Languages: s.config.Language,
-		Endpoint:  s.config.Advertise.String(),
-		State:     ftlv1.RunnerState_RUNNER_IDLE,
+		Key:      s.key.String(),
+		Endpoint: s.config.Advertise.String(),
+		State:    ftlv1.RunnerState_RUNNER_IDLE,
+		Labels:   s.labels,
 	}), nil
 }
 
@@ -270,8 +290,8 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	logger.Tracef("Registering with Controller as %s", state)
 	err := send(&ftlv1.RegisterRunnerRequest{
 		Key:        s.key.String(),
-		Languages:  s.config.Language,
 		Endpoint:   s.config.Advertise.String(),
+		Labels:     s.labels,
 		Deployment: deploymentKey,
 		State:      state,
 		Error:      errPtr,

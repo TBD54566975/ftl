@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -107,8 +109,17 @@ func (g *goDeployCmd) Run(ctx context.Context, client ftlv1connect.ControllerSer
 		CreateTime:  timestamppb.Now(),
 		MinReplicas: g.MinReplicas,
 	}
+	labels, err := structpb.NewStruct(map[string]any{
+		"os":        runtime.GOOS,
+		"arch":      runtime.GOARCH,
+		"languages": []any{"go"},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create labels")
+	}
 	cdResp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 		Schema: module,
+		Labels: labels,
 		Artefacts: slices.Map(deployment.Artefacts, func(t *model.Artefact) *ftlv1.DeploymentArtefact {
 			return &ftlv1.DeploymentArtefact{
 				Digest:     t.Digest.String(),

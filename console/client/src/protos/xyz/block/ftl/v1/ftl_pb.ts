@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
+import { Message, proto3, protoInt64, Struct } from "@bufbuild/protobuf";
 import { Module, VerbRef } from "./schema/schema_pb.js";
 
 /**
@@ -698,6 +698,13 @@ export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
    */
   artefacts: DeploymentArtefact[] = [];
 
+  /**
+   * Runner labels required to run this deployment.
+   *
+   * @generated from field: optional google.protobuf.Struct labels = 3;
+   */
+  labels?: Struct;
+
   constructor(data?: PartialMessage<CreateDeploymentRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -708,6 +715,7 @@ export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "schema", kind: "message", T: Module },
     { no: 2, name: "artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
+    { no: 3, name: "labels", kind: "message", T: Struct, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateDeploymentRequest {
@@ -950,31 +958,29 @@ export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
   key = "";
 
   /**
-   * Languages the runner supports.
-   *
-   * @generated from field: repeated string languages = 2;
-   */
-  languages: string[] = [];
-
-  /**
-   * @generated from field: string endpoint = 3;
+   * @generated from field: string endpoint = 2;
    */
   endpoint = "";
 
   /**
-   * @generated from field: optional string deployment = 4;
+   * @generated from field: optional string deployment = 3;
    */
   deployment?: string;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.RunnerState state = 5;
+   * @generated from field: xyz.block.ftl.v1.RunnerState state = 4;
    */
   state = RunnerState.RUNNER_IDLE;
 
   /**
+   * @generated from field: google.protobuf.Struct labels = 5;
+   */
+  labels?: Struct;
+
+  /**
    * If present, the reason the Runner is transitioning from ASSIGNED to IDLE.
    *
-   * @generated from field: optional string error = 6;
+   * @generated from field: optional string error = 7;
    */
   error?: string;
 
@@ -987,11 +993,11 @@ export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
   static readonly typeName = "xyz.block.ftl.v1.RegisterRunnerRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "languages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
-    { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
+    { no: 5, name: "labels", kind: "message", T: Struct },
+    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RegisterRunnerRequest {
@@ -1482,6 +1488,11 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
    */
   deployment?: string;
 
+  /**
+   * @generated from field: google.protobuf.Struct labels = 6;
+   */
+  labels?: Struct;
+
   constructor(data?: PartialMessage<StatusResponse_Runner>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1495,6 +1506,7 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
     { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
     { no: 5, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "labels", kind: "message", T: Struct },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Runner {
@@ -1539,7 +1551,12 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
   minReplicas = 0;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 5;
+   * @generated from field: google.protobuf.Struct labels = 5;
+   */
+  labels?: Struct;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 6;
    */
   schema?: Module;
 
@@ -1555,7 +1572,8 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "schema", kind: "message", T: Module },
+    { no: 5, name: "labels", kind: "message", T: Struct },
+    { no: 6, name: "schema", kind: "message", T: Module },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Deployment {
