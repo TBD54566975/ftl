@@ -7,7 +7,7 @@ import (
 // Config for the logger.
 type Config struct {
 	Level Level `help:"Log level." default:"info" env:"LOG_LEVEL"`
-	JSON  bool  `help:"Log in JSON format."`
+	JSON  bool  `help:"Log in JSON format." env:"LOG_JSON"`
 }
 
 // Configure returns a new logger based on the config.

@@ -94,7 +94,7 @@ func Spawn[Client PingableClient](
 	cmdCtx context.Context,
 	err error,
 ) {
-	logger := log2.FromContext(ctx).Sub(name, log2.Default)
+	logger := log2.FromContext(ctx).Sub(map[string]string{log2.ScopeKey: name})
 
 	opts := pluginOptions{
 		startTimeout: time.Second * 30,
