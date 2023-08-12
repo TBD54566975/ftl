@@ -367,6 +367,9 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 			return errors.WithStack(err)
 		}
 	case <-time.After(delay):
+	case <-ctx.Done():
+		err := context.Cause(ctx)
+		return errors.WithStack(err)
 	}
 
 	return nil
