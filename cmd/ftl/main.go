@@ -34,7 +34,6 @@ type CLI struct {
 	Go       goCmd       `cmd:"" help:"Commands specific to Go modules."`
 	Deploy   deployCmd   `cmd:"" help:"Create a new deployment."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
-	InitDB   initDBCmd   `cmd:"" name:"initdb" help:"Initialise the FTL database."`
 }
 
 var cli CLI
