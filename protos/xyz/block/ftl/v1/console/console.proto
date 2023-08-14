@@ -51,6 +51,16 @@ message Module {
   repeated schema.Data data = 4;
 }
 
+message LogEntry {
+  string deployment_key = 1;
+  string runner_key = 2;
+  int64 time_stamp = 3;
+  int32 log_level = 4;
+  map<string, string> attributes = 5;
+  string message = 6;
+  optional string error = 7;
+}
+
 message GetModulesRequest {}
 message GetModulesResponse {
   repeated Module modules = 1;
@@ -81,6 +91,19 @@ message GetTimelineResponse {
   repeated TimelineEntry entries = 1;
 }
 
+message StreamLogsRequest {
+  int64 update_interval_ms = 1;
+  string deployment_key = 2;
+}
+
+message StreamLogsResponse {
+  LogEntry log = 1;
+
+  // If true there are more logs immediately following this one as part of the initial batch.
+  // If false this is the last log in the initial batch, but others may follow later.
+  bool more = 2;
+}
+
 service ConsoleService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -91,4 +114,5 @@ service ConsoleService {
   rpc GetCalls(GetCallsRequest) returns (GetCallsResponse);
   rpc GetRequestCalls(GetRequestCallsRequest) returns (GetRequestCallsResponse);
   rpc GetTimeline(GetTimelineRequest) returns (GetTimelineResponse);
+  rpc StreamLogs(StreamLogsRequest) returns (stream StreamLogsResponse);
 }

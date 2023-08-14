@@ -384,13 +384,13 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 }
 
 const getDeploymentLogs = `-- name: GetDeploymentLogs :many
-SELECT DISTINCT r.key AS runner_key,
-                d.key AS deployment_key,
-                dl.id, dl.deployment_id, dl.runner_id, dl.time_stamp, dl.level, dl.attributes, dl.message, dl.error
+SELECT r.key AS runner_key,
+       d.key AS deployment_key,
+       dl.id, dl.deployment_id, dl.runner_id, dl.time_stamp, dl.level, dl.attributes, dl.message, dl.error
 FROM deployment_logs dl
          JOIN runners r ON dl.runner_id = r.id
          JOIN deployments d ON dl.deployment_id = d.id
-WHERE dl.id = (SELECT id FROM deployments WHERE deployments.key = $1)
+WHERE dl.deployment_id = (SELECT id FROM deployments WHERE deployments.key = $1)
 `
 
 type GetDeploymentLogsRow struct {

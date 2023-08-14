@@ -320,6 +320,79 @@ export class Module extends Message<Module> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.console.LogEntry
+ */
+export class LogEntry extends Message<LogEntry> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: string runner_key = 2;
+   */
+  runnerKey = "";
+
+  /**
+   * @generated from field: int64 time_stamp = 3;
+   */
+  timeStamp = protoInt64.zero;
+
+  /**
+   * @generated from field: int32 log_level = 4;
+   */
+  logLevel = 0;
+
+  /**
+   * @generated from field: map<string, string> attributes = 5;
+   */
+  attributes: { [key: string]: string } = {};
+
+  /**
+   * @generated from field: string message = 6;
+   */
+  message = "";
+
+  /**
+   * @generated from field: optional string error = 7;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<LogEntry>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.LogEntry";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "runner_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogEntry {
+    return new LogEntry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LogEntry {
+    return new LogEntry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LogEntry {
+    return new LogEntry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LogEntry | PlainMessage<LogEntry> | undefined, b: LogEntry | PlainMessage<LogEntry> | undefined): boolean {
+    return proto3.util.equals(LogEntry, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.console.GetModulesRequest
  */
 export class GetModulesRequest extends Message<GetModulesRequest> {
@@ -612,6 +685,95 @@ export class GetTimelineResponse extends Message<GetTimelineResponse> {
 
   static equals(a: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined, b: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined): boolean {
     return proto3.util.equals(GetTimelineResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamLogsRequest
+ */
+export class StreamLogsRequest extends Message<StreamLogsRequest> {
+  /**
+   * @generated from field: int64 update_interval_ms = 1;
+   */
+  updateIntervalMs = protoInt64.zero;
+
+  /**
+   * @generated from field: string deployment_key = 2;
+   */
+  deploymentKey = "";
+
+  constructor(data?: PartialMessage<StreamLogsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamLogsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "update_interval_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamLogsRequest {
+    return new StreamLogsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamLogsRequest {
+    return new StreamLogsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamLogsRequest {
+    return new StreamLogsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamLogsRequest | PlainMessage<StreamLogsRequest> | undefined, b: StreamLogsRequest | PlainMessage<StreamLogsRequest> | undefined): boolean {
+    return proto3.util.equals(StreamLogsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamLogsResponse
+ */
+export class StreamLogsResponse extends Message<StreamLogsResponse> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.console.LogEntry log = 1;
+   */
+  log?: LogEntry;
+
+  /**
+   * If true there are more logs immediately following this one as part of the initial batch.
+   * If false this is the last log in the initial batch, but others may follow later.
+   *
+   * @generated from field: bool more = 2;
+   */
+  more = false;
+
+  constructor(data?: PartialMessage<StreamLogsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamLogsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "log", kind: "message", T: LogEntry },
+    { no: 2, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamLogsResponse {
+    return new StreamLogsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamLogsResponse {
+    return new StreamLogsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamLogsResponse {
+    return new StreamLogsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamLogsResponse | PlainMessage<StreamLogsResponse> | undefined, b: StreamLogsResponse | PlainMessage<StreamLogsResponse> | undefined): boolean {
+    return proto3.util.equals(StreamLogsResponse, a, b);
   }
 }
 
