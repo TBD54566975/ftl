@@ -247,13 +247,16 @@ VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1),
         (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1), $3, $4, $5, $6, $7);
 
 -- name: GetDeploymentLogs :many
-SELECT DISTINCT r.key AS runner_key,
-                d.key AS deployment_key,
-                dl.*
+SELECT r.key AS runner_key,
+       d.key AS deployment_key,
+       dl.*
 FROM deployment_logs dl
          JOIN runners r ON dl.runner_id = r.id
          JOIN deployments d ON dl.deployment_id = d.id
-WHERE dl.id = (SELECT id FROM deployments WHERE deployments.key = $1);
+WHERE (sqlc.narg('deployment_key')::UUID IS NULL OR
+       dl.deployment_id = (SELECT id FROM deployments WHERE deployments.key = sqlc.narg('deployment_key')::UUID))
+  AND (dl.time_stamp >= sqlc.arg('after_timestamp'))
+  AND (dl.id > sqlc.arg('after_id'));
 
 -- name: InsertCallEntry :exec
 INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module,

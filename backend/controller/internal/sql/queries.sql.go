@@ -384,13 +384,16 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 }
 
 const getDeploymentLogs = `-- name: GetDeploymentLogs :many
-SELECT DISTINCT r.key AS runner_key,
-                d.key AS deployment_key,
-                dl.id, dl.deployment_id, dl.runner_id, dl.time_stamp, dl.level, dl.attributes, dl.message, dl.error
+SELECT r.key AS runner_key,
+       d.key AS deployment_key,
+       dl.id, dl.deployment_id, dl.runner_id, dl.time_stamp, dl.level, dl.attributes, dl.message, dl.error
 FROM deployment_logs dl
          JOIN runners r ON dl.runner_id = r.id
          JOIN deployments d ON dl.deployment_id = d.id
-WHERE dl.id = (SELECT id FROM deployments WHERE deployments.key = $1)
+WHERE ($1::UUID IS NULL OR
+       dl.deployment_id = (SELECT id FROM deployments WHERE deployments.key = $1::UUID))
+  AND (dl.time_stamp >= $2)
+  AND (dl.id > $3)
 `
 
 type GetDeploymentLogsRow struct {
@@ -406,8 +409,8 @@ type GetDeploymentLogsRow struct {
 	Error         pgtype.Text
 }
 
-func (q *Queries) GetDeploymentLogs(ctx context.Context, key sqltypes.Key) ([]GetDeploymentLogsRow, error) {
-	rows, err := q.db.Query(ctx, getDeploymentLogs, key)
+func (q *Queries) GetDeploymentLogs(ctx context.Context, deploymentKey sqltypes.NullKey, afterTimestamp pgtype.Timestamptz, afterID int64) ([]GetDeploymentLogsRow, error) {
+	rows, err := q.db.Query(ctx, getDeploymentLogs, deploymentKey, afterTimestamp, afterID)
 	if err != nil {
 		return nil, err
 	}

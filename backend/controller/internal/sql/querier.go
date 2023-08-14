@@ -29,7 +29,7 @@ type Querier interface {
 	GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
-	GetDeploymentLogs(ctx context.Context, key sqltypes.Key) ([]GetDeploymentLogsRow, error)
+	GetDeploymentLogs(ctx context.Context, deploymentKey sqltypes.NullKey, afterTimestamp pgtype.Timestamptz, afterID int64) ([]GetDeploymentLogsRow, error)
 	GetDeployments(ctx context.Context, all bool) ([]GetDeploymentsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
 	// Get deployments that have a mismatch between the number of assigned and required replicas.

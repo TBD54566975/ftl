@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"sort"
+	"time"
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
@@ -151,6 +152,56 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[p
 	return connect.NewResponse(&pbconsole.GetTimelineResponse{
 		Entries: timelineEntries,
 	}), nil
+}
+
+func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pbconsole.StreamLogsRequest], stream *connect.ServerStream[pbconsole.StreamLogsResponse]) error {
+	// Default to 1 second interval if not specified.
+	updateInterval := 1 * time.Second
+	if req.Msg.UpdateIntervalMs != 0 {
+		updateInterval = time.Duration(req.Msg.UpdateIntervalMs) * time.Millisecond
+	}
+
+	var maybeDeploymentKey *model.DeploymentKey
+	if req.Msg.DeploymentKey != "" {
+		deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		maybeDeploymentKey = &deploymentKey
+	}
+
+	afterID := int64(0)
+
+	for {
+		logs, err := c.dal.GetDeploymentLogs(ctx, req.Msg.AfterTime, afterID, maybeDeploymentKey)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		for index, log := range logs {
+			err := stream.Send(&pbconsole.StreamLogsResponse{
+				Log: &pbconsole.LogEntry{
+					DeploymentKey: log.DeploymentKey.String(),
+					RunnerKey:     log.RunnerKey.String(),
+					TimeStamp:     log.TimeStamp.Unix(),
+					LogLevel:      log.Level,
+					Attributes:    log.Attributes,
+					Message:       log.Message,
+					Error:         log.Error,
+				},
+				More: len(logs) > index+1,
+			})
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			afterID = log.ID
+		}
+		select {
+		case <-time.After(updateInterval):
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 func convertModuleCalls(calls []dal.CallEntry) []*pbconsole.Call {

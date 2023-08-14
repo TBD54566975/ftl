@@ -160,6 +160,7 @@ type Deployment struct {
 }
 
 type DeploymentLog struct {
+	ID            int64
 	DeploymentKey model.DeploymentKey
 	RunnerKey     model.RunnerKey
 	TimeStamp     time.Time
@@ -795,9 +796,15 @@ func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, log DeploymentLog) e
 	})))
 }
 
-// GetDeploymentLogs returns all logs for a given deployment.
-func (d *DAL) GetDeploymentLogs(ctx context.Context, deployment model.DeploymentKey) ([]DeploymentLog, error) {
-	rows, err := d.db.GetDeploymentLogs(ctx, sqltypes.Key(deployment))
+// GetDeploymentLogs returns logs for all deployments if not specified.
+func (d *DAL) GetDeploymentLogs(ctx context.Context, afterTimestamp int64, afterID int64, deploymentKey *model.DeploymentKey) ([]DeploymentLog, error) {
+	var pgDeploymentKey sqltypes.NullKey
+	if deploymentKey != nil {
+		pgDeploymentKey = types.Some(sqltypes.Key(*deploymentKey))
+	}
+
+	afterTime := time.Unix(afterTimestamp, 0)
+	rows, err := d.db.GetDeploymentLogs(ctx, pgDeploymentKey, pgtype.Timestamptz{Time: afterTime, Valid: true}, afterID)
 	if err != nil {
 		if isNotFound(err) {
 			return nil, nil
@@ -815,6 +822,7 @@ func (d *DAL) GetDeploymentLogs(ctx context.Context, deployment model.Deployment
 			errorString = &in.Error.String
 		}
 		return DeploymentLog{
+			ID:            in.ID,
 			DeploymentKey: model.DeploymentKey(in.DeploymentKey),
 			RunnerKey:     model.RunnerKey(in.RunnerKey),
 			TimeStamp:     in.TimeStamp.Time,
