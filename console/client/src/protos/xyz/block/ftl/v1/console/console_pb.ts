@@ -698,7 +698,12 @@ export class StreamLogsRequest extends Message<StreamLogsRequest> {
   updateIntervalMs = protoInt64.zero;
 
   /**
-   * @generated from field: string deployment_key = 2;
+   * @generated from field: int64 after_time = 2;
+   */
+  afterTime = protoInt64.zero;
+
+  /**
+   * @generated from field: string deployment_key = 3;
    */
   deploymentKey = "";
 
@@ -711,7 +716,8 @@ export class StreamLogsRequest extends Message<StreamLogsRequest> {
   static readonly typeName = "xyz.block.ftl.v1.console.StreamLogsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "update_interval_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "after_time", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamLogsRequest {

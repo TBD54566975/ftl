@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
 import { LogEntry } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { dateFromTimestamp } from '../../utils/date.utils'
+import { dateFromTimestamp, timeStampFromDate } from '../../utils/date.utils'
 
 export default function LogsPage() {
   const client = useClient(ConsoleService)
@@ -12,8 +12,11 @@ export default function LogsPage() {
     const abortController = new AbortController()
     async function streamLogs() {
       const newLogs: LogEntry[] = []
+      const afterTime = new Date()
+      afterTime.setMinutes(afterTime.getMinutes() - 5)
+
       for await (const response of client.streamLogs(
-        { deploymentKey: 'D01H7JV0G0TTY4RZHMYASVGDXJ3' },
+        { afterTime: timeStampFromDate(afterTime) },
         { signal: abortController.signal })
       ) {
         if (response.log) {
@@ -24,6 +27,7 @@ export default function LogsPage() {
           setLogs(newLogs)
         }
       }
+
     }
     streamLogs()
     return () => {
@@ -89,8 +93,8 @@ export default function LogsPage() {
           </tr>
         </thead>
         <tbody className='divide-y divide-white/5'>
-          {logs.map(log => (
-            <tr key={log.timeStamp.toString()}>
+          {logs.map((log, index) => (
+            <tr key={index}>
               <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                 <div className='flex gap-x-3'>
                   <div className='font-mono text-sm leading-6 text-gray-400'>

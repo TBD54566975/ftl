@@ -161,39 +161,41 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 		updateInterval = time.Duration(req.Msg.UpdateIntervalMs) * time.Millisecond
 	}
 
-	if req.Msg.DeploymentKey == "" {
-		return errors.New("deployment key is required")
-	}
-
-	deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	logs, err := c.dal.GetDeploymentLogs(ctx, deploymentKey)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	for index, log := range logs {
-		err := stream.Send(&pbconsole.StreamLogsResponse{
-			Log: &pbconsole.LogEntry{
-				DeploymentKey: log.DeploymentKey.String(),
-				RunnerKey:     log.RunnerKey.String(),
-				TimeStamp:     log.TimeStamp.Unix(),
-				LogLevel:      log.Level,
-				Attributes:    log.Attributes,
-				Message:       log.Message,
-				Error:         log.Error,
-			},
-			More: len(logs) > index+1,
-		})
+	var maybeDeploymentKey *model.DeploymentKey
+	if req.Msg.DeploymentKey != "" {
+		deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		maybeDeploymentKey = &deploymentKey
 	}
 
+	afterID := int64(0)
+
 	for {
+		logs, err := c.dal.GetDeploymentLogs(ctx, req.Msg.AfterTime, afterID, maybeDeploymentKey)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		for index, log := range logs {
+			err := stream.Send(&pbconsole.StreamLogsResponse{
+				Log: &pbconsole.LogEntry{
+					DeploymentKey: log.DeploymentKey.String(),
+					RunnerKey:     log.RunnerKey.String(),
+					TimeStamp:     log.TimeStamp.Unix(),
+					LogLevel:      log.Level,
+					Attributes:    log.Attributes,
+					Message:       log.Message,
+					Error:         log.Error,
+				},
+				More: len(logs) > index+1,
+			})
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			afterID = log.ID
+		}
 		select {
 		case <-time.After(updateInterval):
 		case <-ctx.Done():

@@ -93,7 +93,8 @@ message GetTimelineResponse {
 
 message StreamLogsRequest {
   int64 update_interval_ms = 1;
-  string deployment_key = 2;
+  int64 after_time = 2;
+  string deployment_key = 3;
 }
 
 message StreamLogsResponse {
