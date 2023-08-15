@@ -110,7 +110,7 @@ func FilterTypes(types ...sql.EventType) EventFilter {
 
 type eventRow struct {
 	DeploymentKey sqltypes.Key
-	RequestKey    sqltypes.Key
+	RequestKey    *sqltypes.Key
 	TimeStamp     time.Time
 	CustomKey1    types.Option[string]
 	CustomKey2    types.Option[string]
@@ -147,7 +147,7 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 				   e.payload AS payload
 			FROM events e
 					 INNER JOIN deployments d on e.deployment_id = d.id
-					 INNER JOIN ingress_requests ir on e.request_id = ir.id
+					 LEFT JOIN ingress_requests ir on e.request_id = ir.id
 			WHERE time_stamp BETWEEN $1::TIMESTAMPTZ and $2::TIMESTAMPTZ
 		`
 
@@ -211,6 +211,12 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+
+		var requestKey types.Option[model.IngressRequestKey]
+		if row.RequestKey != nil {
+			requestKey = types.Some(model.IngressRequestKey(*row.RequestKey))
+		}
+
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
@@ -223,7 +229,7 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 			}
 			out = append(out, &LogEvent{
 				DeploymentKey: model.DeploymentKey(row.DeploymentKey),
-				RequestKey:    types.Some(model.IngressRequestKey(row.RequestKey)),
+				RequestKey:    requestKey,
 				Time:          row.TimeStamp,
 				Level:         int32(level),
 				Attributes:    jsonPayload.Attributes,
@@ -242,7 +248,7 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 			}
 			out = append(out, &CallEvent{
 				DeploymentKey: model.DeploymentKey(row.DeploymentKey),
-				RequestKey:    types.Some(model.IngressRequestKey(row.RequestKey)),
+				RequestKey:    requestKey,
 				Time:          row.TimeStamp,
 				SourceVerb:    schema.VerbRef{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
 				DestVerb:      schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
