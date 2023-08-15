@@ -44,9 +44,10 @@ message Verb {
 
 message Module {
   string name = 1;
-  string language = 2;
-  repeated Verb verbs = 3;
-  repeated schema.Data data = 4;
+  string deployment_key = 2;
+  string language = 3;
+  repeated Verb verbs = 4;
+  repeated schema.Data data = 5;
 }
 
 message LogEntry {
