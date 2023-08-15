@@ -262,17 +262,22 @@ export class Module extends Message<Module> {
   name = "";
 
   /**
-   * @generated from field: string language = 2;
+   * @generated from field: string deployment_key = 2;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: string language = 3;
    */
   language = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Verb verbs = 3;
+   * @generated from field: repeated xyz.block.ftl.v1.console.Verb verbs = 4;
    */
   verbs: Verb[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Data data = 4;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Data data = 5;
    */
   data: Data[] = [];
 
@@ -285,9 +290,10 @@ export class Module extends Message<Module> {
   static readonly typeName = "xyz.block.ftl.v1.console.Module";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "verbs", kind: "message", T: Verb, repeated: true },
-    { no: 4, name: "data", kind: "message", T: Data, repeated: true },
+    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "verbs", kind: "message", T: Verb, repeated: true },
+    { no: 5, name: "data", kind: "message", T: Data, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {

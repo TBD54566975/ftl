@@ -59,10 +59,11 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		}
 
 		modules = append(modules, &pbconsole.Module{
-			Name:     deployment.Module,
-			Language: deployment.Language,
-			Verbs:    verbs,
-			Data:     data,
+			Name:          deployment.Module,
+			DeploymentKey: deployment.Key.String(),
+			Language:      deployment.Language,
+			Verbs:         verbs,
+			Data:          data,
 		})
 	}
 

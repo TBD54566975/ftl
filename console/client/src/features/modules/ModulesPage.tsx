@@ -1,9 +1,9 @@
 import { useContext } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/Card'
+import { schemaContext } from '../../providers/schema-provider.tsx'
 import { classNames } from '../../utils/react.utils'
 import { statuses } from '../../utils/style.utils'
-import { schemaContext } from '../../providers/schema-provider.tsx'
 
 export default function ModulesPage() {
   const schema = useContext(schemaContext)
@@ -26,6 +26,11 @@ export default function ModulesPage() {
                       <div className='h-2 w-2 rounded-full bg-current' />
                     </div>
                     <p className='text-sm font-medium text-gray-900 dark:text-gray-300'>{module.schema?.name}</p>
+                  </div>
+                  <div className='pt-4'>
+                    <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
+                      {module.deploymentKey}
+                    </div>
                   </div>
                 </div>
 
