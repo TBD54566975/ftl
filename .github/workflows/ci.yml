@@ -83,40 +83,6 @@ jobs:
       - name: Console Test
         working-directory: console/client
         run: npm run test
-  docker-runner:
-    name: Build Runner Docker Image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
-      - name: Cache Docker Layers
-        uses: satackey/action-docker-layer-caching@v0.0.11
-        continue-on-error: true
-        with:
-          key: runner-docker-cache-{hash}
-          restore-keys: |
-            runner-docker-cache-
-      - name: Build
-        run: docker build -f Dockerfile.runner .
-  docker-controller:
-    name: Build Controller Docker Image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
-      - name: Cache Docker Layers
-        uses: satackey/action-docker-layer-caching@v0.0.11
-        continue-on-error: true
-        with:
-          key: controller-docker-cache-{hash}
-          restore-keys: |
-            controller-docker-cache-
-      - name: Build
-        run: docker build -f Dockerfile.controller .
   integration:
     name: Integration Tests
     if: github.ref == 'refs/heads/main'
@@ -130,7 +96,5 @@ jobs:
       - test
       - lint
       - console
-      - docker-runner
-      - docker-controller
       - integration
     uses: ./.github/workflows/release.yml
