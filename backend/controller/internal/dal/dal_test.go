@@ -19,6 +19,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
+//nolint:maintidx
 func TestDAL(t *testing.T) {
 	logger := log.Configure(os.Stderr, log.Config{Level: log.Debug})
 	ctx := log.ContextWithLogger(context.Background(), logger)
@@ -210,6 +211,64 @@ func TestDAL(t *testing.T) {
 			State:      RunnerStateAssigned,
 			Deployment: types.Some(deploymentKey),
 		}}, runners)
+	})
+
+	var requestKey model.IngressRequestKey
+	t.Run("CreateIngressRequest", func(t *testing.T) {
+		requestKey, err = dal.CreateIngressRequest(ctx, "127.0.0.1:1234")
+		assert.NoError(t, err)
+	})
+
+	callEvent := &CallEvent{
+		Time:          time.Now().Round(time.Millisecond),
+		DeploymentKey: deploymentKey,
+		RequestKey:    types.Some(requestKey),
+		Request:       []byte("{}"),
+		Response:      []byte(`{"time": "now"}`),
+		DestVerb:      schema.VerbRef{Module: "time", Name: "time"},
+	}
+	t.Run("InsertCallEvent", func(t *testing.T) {
+		err = dal.InsertCallEvent(ctx, callEvent)
+		assert.NoError(t, err)
+	})
+
+	logEvent := &LogEvent{
+		Time:          time.Now().Round(time.Millisecond),
+		DeploymentKey: deploymentKey,
+		RequestKey:    types.Some(requestKey),
+		Level:         int32(log.Warn),
+		Attributes:    map[string]string{"attr": "value"},
+		Message:       "A log entry",
+	}
+	t.Run("InsertLogEntry", func(t *testing.T) {
+		err = dal.InsertLogEvent(ctx, logEvent)
+		assert.NoError(t, err)
+	})
+
+	t.Run("QueryEvents", func(t *testing.T) {
+		t.Run("NoFilters", func(t *testing.T) {
+			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now())
+			assert.NoError(t, err)
+			assert.Equal(t, []Event{callEvent, logEvent}, events)
+		})
+
+		t.Run("ByDeployment", func(t *testing.T) {
+			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterDeployments(deploymentKey))
+			assert.NoError(t, err)
+			assert.Equal(t, []Event{callEvent, logEvent}, events)
+		})
+
+		t.Run("ByCall", func(t *testing.T) {
+			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterTypes(EventTypeCall), FilterCall("", "time"))
+			assert.NoError(t, err)
+			assert.Equal(t, []Event{callEvent}, events)
+		})
+
+		t.Run("ByLogLevel", func(t *testing.T) {
+			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterTypes(EventTypeLog), FilterLogs(log.Trace))
+			assert.NoError(t, err)
+			assert.Equal(t, []Event{logEvent}, events)
+		})
 	})
 
 	t.Run("GetRoutingTable", func(t *testing.T) {

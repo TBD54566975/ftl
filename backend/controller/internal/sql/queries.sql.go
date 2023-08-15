@@ -447,33 +447,47 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 }
 
 const getDeploymentLogs = `-- name: GetDeploymentLogs :many
-SELECT r.key AS runner_key,
-       d.key AS deployment_key,
-       dl.id, dl.deployment_id, dl.runner_id, dl.time_stamp, dl.level, dl.attributes, dl.message, dl.error
-FROM deployment_logs dl
-         JOIN runners r ON dl.runner_id = r.id
-         JOIN deployments d ON dl.deployment_id = d.id
-WHERE ($1::UUID IS NULL OR
-       dl.deployment_id = (SELECT id FROM deployments WHERE deployments.key = $1::UUID))
-  AND (dl.time_stamp >= $2)
-  AND (dl.id > $3)
+SELECT ir.key                              AS request_key,
+       ir.key                              AS deployment_key,
+       e.time_stamp                        AS time_stamp,
+       e.custom_key_1                      AS level,
+       (e.payload ->> 'message')::TEXT     AS message,
+       (e.payload ->> 'attributes')::JSONB AS attributes,
+       (e.payload ->> 'error')::TEXT       AS error
+FROM events e
+         INNER JOIN ingress_requests ir ON e.request_id = ir.id
+         INNER JOIN deployments d ON e.deployment_id = d.id
+WHERE e.type = 'log'
+  AND d.key = $1
+  AND ir.key = $2
+  AND e.time_stamp >= $3
+  AND e.time_stamp <= $4
 `
 
-type GetDeploymentLogsRow struct {
-	RunnerKey     sqltypes.Key
-	DeploymentKey sqltypes.Key
-	ID            int64
-	DeploymentID  int64
-	RunnerID      int64
-	TimeStamp     pgtype.Timestamptz
-	Level         int32
-	Attributes    []byte
-	Message       string
-	Error         pgtype.Text
+type GetDeploymentLogsParams struct {
+	DeploymentKey   sqltypes.Key
+	RequestKey      sqltypes.Key
+	AfterTimestamp  pgtype.Timestamptz
+	BeforeTimestamp pgtype.Timestamptz
 }
 
-func (q *Queries) GetDeploymentLogs(ctx context.Context, deploymentKey sqltypes.NullKey, afterTimestamp pgtype.Timestamptz, afterID int64) ([]GetDeploymentLogsRow, error) {
-	rows, err := q.db.Query(ctx, getDeploymentLogs, deploymentKey, afterTimestamp, afterID)
+type GetDeploymentLogsRow struct {
+	RequestKey    sqltypes.Key
+	DeploymentKey sqltypes.Key
+	TimeStamp     pgtype.Timestamptz
+	Level         pgtype.Text
+	Message       string
+	Attributes    []byte
+	Error         string
+}
+
+func (q *Queries) GetDeploymentLogs(ctx context.Context, arg GetDeploymentLogsParams) ([]GetDeploymentLogsRow, error) {
+	rows, err := q.db.Query(ctx, getDeploymentLogs,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.AfterTimestamp,
+		arg.BeforeTimestamp,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -482,15 +496,12 @@ func (q *Queries) GetDeploymentLogs(ctx context.Context, deploymentKey sqltypes.
 	for rows.Next() {
 		var i GetDeploymentLogsRow
 		if err := rows.Scan(
-			&i.RunnerKey,
+			&i.RequestKey,
 			&i.DeploymentKey,
-			&i.ID,
-			&i.DeploymentID,
-			&i.RunnerID,
 			&i.TimeStamp,
 			&i.Level,
-			&i.Attributes,
 			&i.Message,
+			&i.Attributes,
 			&i.Error,
 		); err != nil {
 			return nil, err
@@ -671,6 +682,70 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 			&i.CreatedAt,
 			&i.Key,
 			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEvents = `-- name: GetEvents :many
+SELECT d.key        AS deployment_key,
+       ir.key       AS request_key,
+       e.time_stamp AS time_stamp,
+       e.type       AS type,
+       e.payload    AS payload
+FROM events e
+         INNER JOIN deployments d on e.deployment_id = d.id
+         INNER JOIN ingress_requests ir on e.request_id = ir.id
+WHERE time_stamp >= $1
+  AND time_stamp <= COALESCE($2, NOW() AT TIME ZONE 'utc')
+  AND d.key = $3
+  AND ir.key = $4
+  AND e.type = ANY ($5::TEXT[])
+`
+
+type GetEventsParams struct {
+	AfterTimestamp  pgtype.Timestamptz
+	BeforeTimestamp pgtype.Timestamptz
+	DeploymentKey   sqltypes.Key
+	RequestKey      sqltypes.Key
+	Types           []string
+}
+
+type GetEventsRow struct {
+	DeploymentKey sqltypes.Key
+	RequestKey    sqltypes.Key
+	TimeStamp     pgtype.Timestamptz
+	Type          EventType
+	Payload       []byte
+}
+
+func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEventsRow, error) {
+	rows, err := q.db.Query(ctx, getEvents,
+		arg.AfterTimestamp,
+		arg.BeforeTimestamp,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.Types,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEventsRow
+	for rows.Next() {
+		var i GetEventsRow
+		if err := rows.Scan(
+			&i.DeploymentKey,
+			&i.RequestKey,
+			&i.TimeStamp,
+			&i.Type,
+			&i.Payload,
 		); err != nil {
 			return nil, err
 		}
@@ -935,27 +1010,32 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key)
 	return items, nil
 }
 
-const insertCallEntry = `-- name: InsertCallEntry :exec
-INSERT INTO events (deployment_id, request_id, type,
+const insertCallEvent = `-- name: InsertCallEvent :exec
+INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
 VALUES ((SELECT id FROM deployments WHERE deployments.key = $1::UUID),
-        (SELECT id FROM ingress_requests WHERE ingress_requests.key = $2::UUID),
+        (CASE
+             WHEN $2::UUID IS NULL THEN NULL
+             ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = $2::UUID)
+            END),
+        $3::TIMESTAMPTZ,
         'call',
-        $3::TEXT,
         $4::TEXT,
         $5::TEXT,
         $6::TEXT,
+        $7::TEXT,
         jsonb_build_object(
-                'duration_ms', $7::BIGINT,
-                'request', $8::JSONB,
-                'response', $9::JSONB,
-                'error', $10::TEXT
+                'duration_ms', $8::BIGINT,
+                'request', $9::JSONB,
+                'response', $10::JSONB,
+                'error', $11::TEXT
             ))
 `
 
-type InsertCallEntryParams struct {
+type InsertCallEventParams struct {
 	DeploymentKey sqltypes.Key
-	RequestKey    sqltypes.Key
+	RequestKey    sqltypes.NullKey
+	TimeStamp     pgtype.Timestamptz
 	SourceModule  string
 	SourceVerb    string
 	DestModule    string
@@ -966,10 +1046,11 @@ type InsertCallEntryParams struct {
 	Error         pgtype.Text
 }
 
-func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error {
-	_, err := q.db.Exec(ctx, insertCallEntry,
+func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
+	_, err := q.db.Exec(ctx, insertCallEvent,
 		arg.DeploymentKey,
 		arg.RequestKey,
+		arg.TimeStamp,
 		arg.SourceModule,
 		arg.SourceVerb,
 		arg.DestModule,
@@ -977,36 +1058,6 @@ func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams
 		arg.DurationMs,
 		arg.Request,
 		arg.Response,
-		arg.Error,
-	)
-	return err
-}
-
-const insertDeploymentLogEntry = `-- name: InsertDeploymentLogEntry :exec
-INSERT INTO deployment_logs (deployment_id, runner_id, time_stamp, level, attributes, message,
-                             error)
-VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1),
-        (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1), $3, $4, $5, $6, $7)
-`
-
-type InsertDeploymentLogEntryParams struct {
-	Key        sqltypes.Key
-	Key_2      sqltypes.Key
-	TimeStamp  pgtype.Timestamptz
-	Level      int32
-	Attributes []byte
-	Message    string
-	Error      pgtype.Text
-}
-
-func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error {
-	_, err := q.db.Exec(ctx, insertDeploymentLogEntry,
-		arg.Key,
-		arg.Key_2,
-		arg.TimeStamp,
-		arg.Level,
-		arg.Attributes,
-		arg.Message,
 		arg.Error,
 	)
 	return err
@@ -1021,7 +1072,7 @@ VALUES ($1, $2, $3, $4, $4, $5, $6, $7)
 
 type InsertEventParams struct {
 	DeploymentID int64
-	RequestID    int64
+	RequestID    pgtype.Int8
 	Type         EventType
 	CustomKey1   pgtype.Text
 	CustomKey3   pgtype.Text
@@ -1038,6 +1089,46 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 		arg.CustomKey3,
 		arg.CustomKey4,
 		arg.Payload,
+	)
+	return err
+}
+
+const insertLogEvent = `-- name: InsertLogEvent :exec
+INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
+VALUES ((SELECT id FROM deployments d WHERE d.key = $1 LIMIT 1),
+        (CASE
+             WHEN $2::UUID IS NULL THEN NULL
+             ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = $2::UUID LIMIT 1)
+            END),
+        $3::TIMESTAMPTZ,
+        $4::INT,
+        'log',
+        jsonb_build_object(
+                'message', $5::TEXT,
+                'attributes', $6::JSONB,
+                'error', $7::TEXT
+            ))
+`
+
+type InsertLogEventParams struct {
+	DeploymentKey sqltypes.Key
+	RequestKey    sqltypes.NullKey
+	TimeStamp     pgtype.Timestamptz
+	Level         int32
+	Message       string
+	Attributes    []byte
+	Error         pgtype.Text
+}
+
+func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
+	_, err := q.db.Exec(ctx, insertLogEvent,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.TimeStamp,
+		arg.Level,
+		arg.Message,
+		arg.Attributes,
+		arg.Error,
 	)
 	return err
 }

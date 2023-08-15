@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
@@ -42,9 +43,10 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 		sourceVerb = *call.callers[0]
 	}
 
-	err := s.dal.InsertCallEntry(ctx, &dal.CallEntry{
+	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{
+		Time:          time.Now(),
 		DeploymentKey: call.deploymentKey,
-		RequestKey:    call.requestKey,
+		RequestKey:    types.Some(call.requestKey),
 		Duration:      time.Since(call.startTime),
 		SourceVerb:    sourceVerb,
 		DestVerb:      *call.destVerb,

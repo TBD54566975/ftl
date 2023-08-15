@@ -30,13 +30,14 @@ type Querier interface {
 	GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
-	GetDeploymentLogs(ctx context.Context, deploymentKey sqltypes.NullKey, afterTimestamp pgtype.Timestamptz, afterID int64) ([]GetDeploymentLogsRow, error)
+	GetDeploymentLogs(ctx context.Context, arg GetDeploymentLogsParams) ([]GetDeploymentLogsRow, error)
 	GetDeployments(ctx context.Context, all bool) ([]GetDeploymentsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
 	// Get deployments that have a mismatch between the number of assigned and required replicas.
 	GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error)
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
+	GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEventsRow, error)
 	GetExistingDeploymentForModule(ctx context.Context, name string) (Deployment, error)
 	GetIdleRunners(ctx context.Context, labels []byte, limit int32) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
@@ -46,9 +47,9 @@ type Querier interface {
 	GetRunner(ctx context.Context, key sqltypes.Key) (GetRunnerRow, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)
-	InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error
-	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
+	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
+	InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	KillStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)

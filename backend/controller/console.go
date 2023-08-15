@@ -161,40 +161,41 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 		updateInterval = time.Duration(req.Msg.UpdateIntervalMs) * time.Millisecond
 	}
 
-	var maybeDeploymentKey *model.DeploymentKey
+	query := []dal.EventFilter{}
 	if req.Msg.DeploymentKey != "" {
 		deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		maybeDeploymentKey = &deploymentKey
+		query = append(query, dal.FilterDeployments(deploymentKey))
 	}
 
-	afterID := int64(0)
-
 	for {
-		logs, err := c.dal.GetDeploymentLogs(ctx, req.Msg.AfterTime, afterID, maybeDeploymentKey)
+		events, err := c.dal.QueryEvents(ctx, time.UnixMilli(req.Msg.AfterTime), time.Now(), query...)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 
-		for index, log := range logs {
+		for index, event := range events {
+			log, ok := event.(*dal.LogEvent)
+			if !ok { // Shouldn't happen, but...
+				continue
+			}
 			err := stream.Send(&pbconsole.StreamLogsResponse{
 				Log: &pbconsole.LogEntry{
 					DeploymentKey: log.DeploymentKey.String(),
-					RunnerKey:     log.RunnerKey.String(),
-					TimeStamp:     log.TimeStamp.Unix(),
+					RequestKey:    log.RequestKey.String(),
+					TimeStamp:     log.Time.Unix(),
 					LogLevel:      log.Level,
 					Attributes:    log.Attributes,
 					Message:       log.Message,
-					Error:         log.Error,
+					Error:         log.Error.Ptr(),
 				},
-				More: len(logs) > index+1,
+				More: len(events) > index+1,
 			})
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			afterID = log.ID
 		}
 		select {
 		case <-time.After(updateInterval):
@@ -204,8 +205,8 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 	}
 }
 
-func convertModuleCalls(calls []dal.CallEntry) []*pbconsole.Call {
-	return slices.Map(calls, func(call dal.CallEntry) *pbconsole.Call {
+func convertModuleCalls(calls []dal.CallEvent) []*pbconsole.Call {
+	return slices.Map(calls, func(call dal.CallEvent) *pbconsole.Call {
 		var errorMessage string
 		if call.Error != nil {
 			errorMessage = call.Error.Error()

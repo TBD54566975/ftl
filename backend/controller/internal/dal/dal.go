@@ -135,18 +135,6 @@ func (s ControllerState) ToProto() ftlv1.ControllerState {
 	return ftlv1.ControllerState(ftlv1.ControllerState_value["CONTROLLER_"+strings.ToUpper(string(s))])
 }
 
-type CallEntry struct {
-	DeploymentKey model.DeploymentKey
-	RequestKey    model.IngressRequestKey
-	Time          time.Time
-	SourceVerb    schema.VerbRef
-	DestVerb      schema.VerbRef
-	Duration      time.Duration
-	Request       []byte
-	Response      []byte
-	Error         error
-}
-
 type Deployment struct {
 	Key         model.DeploymentKey
 	Language    string
@@ -155,17 +143,6 @@ type Deployment struct {
 	Schema      *schema.Module
 	CreatedAt   time.Time
 	Labels      model.Labels
-}
-
-type DeploymentLog struct {
-	ID            int64
-	DeploymentKey model.DeploymentKey
-	RunnerKey     model.RunnerKey
-	TimeStamp     time.Time
-	Level         int32
-	Attributes    map[string]string
-	Message       string
-	Error         *string
 }
 
 func (d Deployment) notification() {}
@@ -775,71 +752,26 @@ func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	return count, errors.WithStack(translatePGError(err))
 }
 
-func (d *DAL) InsertDeploymentLogEntry(ctx context.Context, log DeploymentLog) error {
+func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	logError := pgtype.Text{}
-	if log.Error != nil {
-		logError.String = *log.Error
+	if e, ok := log.Error.Get(); ok {
+		logError.String = e
 		logError.Valid = true
 	}
 	attributes, err := json.Marshal(log.Attributes)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(translatePGError(d.db.InsertDeploymentLogEntry(ctx, sql.InsertDeploymentLogEntryParams{
-		Key:        sqltypes.Key(log.DeploymentKey),
-		Key_2:      sqltypes.Key(log.RunnerKey),
-		TimeStamp:  pgtype.Timestamptz{Time: log.TimeStamp, Valid: true},
-		Level:      log.Level,
-		Attributes: attributes,
-		Message:    log.Message,
-		Error:      logError,
+	return errors.WithStack(translatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
+		DeploymentKey: sqltypes.Key(log.DeploymentKey),
+		RequestKey:    sqltypes.FromOption(log.RequestKey),
+		TimeStamp:     pgtype.Timestamptz{Time: log.Time, Valid: true},
+		Level:         log.Level,
+		Attributes:    attributes,
+		Message:       log.Message,
+		Error:         logError,
 	})))
 }
-
-// GetDeploymentLogs returns logs for all deployments if not specified.
-func (d *DAL) GetDeploymentLogs(ctx context.Context, afterTimestamp int64, afterID int64, deploymentKey *model.DeploymentKey) ([]DeploymentLog, error) {
-	var pgDeploymentKey sqltypes.NullKey
-	if deploymentKey != nil {
-		pgDeploymentKey = types.Some(sqltypes.Key(*deploymentKey))
-	}
-
-	afterTime := time.Unix(afterTimestamp, 0)
-	rows, err := d.db.GetDeploymentLogs(ctx, pgDeploymentKey, pgtype.Timestamptz{Time: afterTime, Valid: true}, afterID)
-	if err != nil {
-		if isNotFound(err) {
-			return nil, nil
-		}
-		return nil, errors.WithStack(translatePGError(err))
-	}
-	logs, err := slices.MapErr(rows, func(in sql.GetDeploymentLogsRow) (DeploymentLog, error) {
-		var attributes map[string]string
-		err := json.Unmarshal(in.Attributes, &attributes)
-		if err != nil {
-			return DeploymentLog{}, errors.Wrapf(err, "could not unmarshal attributes for row: %d", in.ID)
-		}
-		var errorString *string
-		if in.Error.Valid {
-			errorString = &in.Error.String
-		}
-		return DeploymentLog{
-			ID:            in.ID,
-			DeploymentKey: model.DeploymentKey(in.DeploymentKey),
-			RunnerKey:     model.RunnerKey(in.RunnerKey),
-			TimeStamp:     in.TimeStamp.Time,
-			Level:         in.Level,
-			Attributes:    attributes,
-			Message:       in.Message,
-			Error:         errorString,
-		}, nil
-	})
-
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return logs, nil
-}
-
 func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRow) (*model.Deployment, error) {
 	pm := &pschema.Module{}
 	err := proto.Unmarshal(deployment.Schema, pm)
@@ -900,15 +832,16 @@ func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, add
 	return id, errors.WithStack(translatePGError(err))
 }
 
-func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
+func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	callError := pgtype.Text{}
 	if call.Error != nil {
 		callError.String = call.Error.Error()
 		callError.Valid = true
 	}
-	return errors.WithStack(translatePGError(d.db.InsertCallEntry(ctx, sql.InsertCallEntryParams{
+	return errors.WithStack(translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
 		DeploymentKey: sqltypes.Key(call.DeploymentKey),
-		RequestKey:    sqltypes.Key(call.RequestKey),
+		RequestKey:    sqltypes.FromOption(call.RequestKey),
+		TimeStamp:     pgtype.Timestamptz{Time: call.Time, Valid: true},
 		SourceModule:  call.SourceVerb.Module,
 		SourceVerb:    call.SourceVerb.Name,
 		DestModule:    call.DestVerb.Module,
@@ -920,13 +853,13 @@ func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
 	})))
 }
 
-func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.VerbRef][]CallEntry, error) {
+func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.VerbRef][]CallEvent, error) {
 	calls, err := d.db.GetCalls(ctx, sqltypes.NullKey{}, modules)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
 
-	out := map[schema.VerbRef][]CallEntry{}
+	out := map[schema.VerbRef][]CallEvent{}
 	for _, call := range calls {
 		entry, err := callRowToEntry(call)
 		if err != nil {
@@ -941,12 +874,12 @@ func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.
 	return out, nil
 }
 
-func (d *DAL) GetRequestCalls(ctx context.Context, requestKey model.IngressRequestKey) ([]CallEntry, error) {
+func (d *DAL) GetRequestCalls(ctx context.Context, requestKey model.IngressRequestKey) ([]CallEvent, error) {
 	calls, err := d.db.GetCalls(ctx, sqltypes.SomeKey(sqltypes.Key(requestKey)), nil)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	var out []CallEntry
+	var out []CallEvent
 	for _, call := range calls {
 		entry, err := callRowToEntry(call)
 		if err != nil {
@@ -1004,26 +937,19 @@ func translatePGError(err error) error {
 	return err
 }
 
-// The internal JSON payload of a call event.
-type eventCall struct {
-	DurationMS int64                `json:"duration_ms"`
-	Request    json.RawMessage      `json:"request"`
-	Response   json.RawMessage      `json:"response"`
-	Error      types.Option[string] `json:"error"`
-}
-
-func callRowToEntry(call sql.GetCallsRow) (CallEntry, error) {
-	var event eventCall
+func callRowToEntry(call sql.GetCallsRow) (CallEvent, error) {
+	var event eventCallJSON
 	if err := json.Unmarshal(call.Payload, &event); err != nil {
-		return CallEntry{}, errors.Wrap(err, "invalid call event payload")
+		return CallEvent{}, errors.Wrap(err, "invalid call event payload")
 	}
 	var callError error
 	if e, ok := event.Error.Get(); ok {
 		callError = errors.New(e)
 	}
-	entry := CallEntry{
-		RequestKey: model.IngressRequestKey(call.RequestKey),
-		Time:       call.TimeStamp.Time,
+	entry := CallEvent{
+		DeploymentKey: model.DeploymentKey(call.DeploymentKey),
+		RequestKey:    types.Some(model.IngressRequestKey(call.RequestKey)),
+		Time:          call.TimeStamp.Time,
 		SourceVerb: schema.VerbRef{
 			Module: call.SourceModule.String,
 			Name:   call.SourceVerb.String,

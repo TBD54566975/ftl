@@ -1,6 +1,8 @@
 package log
 
-import "github.com/alecthomas/errors"
+import (
+	"github.com/alecthomas/errors"
+)
 
 // Tee returns a sink that writes to all of the given sinks.
 func Tee(sinks ...Sink) Sink {

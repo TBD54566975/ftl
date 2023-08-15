@@ -11,6 +11,13 @@ import (
 
 type NullKey = types.Option[Key]
 
+// FromOption converts a types.Option[~ulid.ULID] to a NullKey.
+func FromOption[T ~[16]byte](o types.Option[T]) NullKey {
+	if v, ok := o.Get(); ok {
+		return SomeKey(Key(v))
+	}
+	return NoneKey()
+}
 func SomeKey(key Key) NullKey { return types.Some(key) }
 func NoneKey() NullKey        { return types.None[Key]() }
 
