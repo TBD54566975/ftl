@@ -181,10 +181,15 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 			if !ok { // Shouldn't happen, but...
 				continue
 			}
+			var requestKey *string
+			if r, ok := log.RequestKey.Get(); ok {
+				rstr := r.String()
+				requestKey = &rstr
+			}
 			err := stream.Send(&pbconsole.StreamLogsResponse{
 				Log: &pbconsole.LogEntry{
 					DeploymentKey: log.DeploymentKey.String(),
-					RequestKey:    log.RequestKey.String(),
+					RequestKey:    requestKey,
 					TimeStamp:     log.Time.Unix(),
 					LogLevel:      log.Level,
 					Attributes:    log.Attributes,
