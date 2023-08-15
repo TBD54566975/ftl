@@ -21,7 +21,7 @@ var _ log.Sink = (*deploymentLogsSink)(nil)
 func newDeploymentLogsSink(ctx context.Context, key model.DeploymentKey, dal *dal.DAL) *deploymentLogsSink {
 	sink := &deploymentLogsSink{
 		deploymentKey: key,
-		logQueue:      make(chan logEntry, 100),
+		logQueue:      make(chan logEntry, 10000),
 		dal:           dal,
 	}
 
