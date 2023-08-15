@@ -113,7 +113,7 @@ type deployment struct {
 	// Cancelled when plugin terminates
 	ctx      context.Context
 	logger   *log.Logger
-	logQueue chan log.Entry
+	logQueue chan logEntry
 }
 
 type Service struct {
@@ -160,7 +160,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
 
-	logQueue := make(chan log.Entry, 100)
+	logQueue := make(chan logEntry, 100)
 	sink := newDeploymentLogsSink(key, s.key, logQueue)
 	logger := s.logger.AddSink(sink).Level(log.Trace)
 	ctx = log.ContextWithLogger(ctx, logger)
@@ -271,8 +271,14 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	}), nil
 }
 
-func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, logger *log.Logger, logQueue chan log.Entry, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
-	return &deployment{ctx: ctx, key: key, logger: logger, plugin: plugin, logQueue: logQueue}
+func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, logger *log.Logger, logQueue chan logEntry, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
+	return &deployment{
+		ctx:      ctx,
+		key:      key,
+		logger:   logger,
+		plugin:   plugin,
+		logQueue: logQueue,
+	}
 }
 
 func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1.RegisterRunnerRequest) error) error {
@@ -354,9 +360,14 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 		if entry.Error != nil {
 			errorString = entry.Error.Error()
 		}
+		var requestKey *string
+		if r, ok := entry.request.Get(); ok {
+			rkey := r.String()
+			requestKey = &rkey
+		}
 		err := send(&ftlv1.StreamDeploymentLogsRequest{
+			RequestKey:    requestKey,
 			DeploymentKey: deployment.key.String(),
-			RunnerKey:     s.key.String(),
 			TimeStamp:     entry.Time.Unix(),
 			LogLevel:      int32(entry.Level.Severity()),
 			Attributes:    entry.Attributes,
@@ -384,4 +395,9 @@ func (s *Service) getLogger() *log.Logger {
 	}
 
 	return s.logger
+}
+
+type logEntry struct {
+	request types.Option[model.IngressRequestKey]
+	log.Entry
 }

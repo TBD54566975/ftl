@@ -58,6 +58,7 @@ type EventType string
 
 const (
 	EventTypeCall EventType = "call"
+	EventTypeLog  EventType = "log"
 )
 
 func (e *EventType) Scan(src interface{}) error {
@@ -173,21 +174,10 @@ type DeploymentArtefact struct {
 	Path         string
 }
 
-type DeploymentLog struct {
-	ID           int64
-	DeploymentID int64
-	RunnerID     int64
-	TimeStamp    pgtype.Timestamptz
-	Level        int32
-	Attributes   []byte
-	Message      string
-	Error        pgtype.Text
-}
-
 type Event struct {
 	TimeStamp    pgtype.Timestamptz
 	DeploymentID int64
-	RequestID    int64
+	RequestID    pgtype.Int8
 	Type         EventType
 	CustomKey1   pgtype.Text
 	CustomKey2   pgtype.Text

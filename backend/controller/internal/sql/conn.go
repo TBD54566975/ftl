@@ -21,6 +21,8 @@ func NewDB(conn DBI) *DB {
 	return &DB{conn: conn, Queries: New(conn)}
 }
 
+func (d *DB) Conn() DBI { return d.conn }
+
 func (d *DB) Begin(ctx context.Context) (*Tx, error) {
 	tx, err := d.conn.Begin(ctx)
 	if err != nil {

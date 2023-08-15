@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -259,19 +260,23 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 		}
-		runnerKey, err := model.ParseRunnerKey(msg.RunnerKey)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid runner key"))
+		var requestKey types.Option[model.IngressRequestKey]
+		if msg.RequestKey != nil {
+			rkey, err := model.ParseIngressRequestKey(*msg.RequestKey)
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid request key"))
+			}
+			requestKey = types.Some(rkey)
 		}
 
-		err = s.dal.InsertDeploymentLogEntry(ctx, dal.DeploymentLog{
+		err = s.dal.InsertLogEvent(ctx, &dal.LogEvent{
+			RequestKey:    requestKey,
 			DeploymentKey: deploymentKey,
-			RunnerKey:     runnerKey,
-			TimeStamp:     time.Unix(msg.TimeStamp, 0),
+			Time:          time.Unix(msg.TimeStamp, 0),
 			Level:         msg.LogLevel,
 			Attributes:    msg.Attributes,
 			Message:       msg.Message,
-			Error:         msg.Error,
+			Error:         types.Ptr(msg.Error),
 		})
 		if err != nil {
 			return nil, errors.WithStack(err)

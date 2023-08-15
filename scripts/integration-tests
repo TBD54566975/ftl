@@ -13,6 +13,7 @@ error() {
 
 build_release() {
   info "Building release"
+  rm -rf build
   make release
 }
 

@@ -165,7 +165,7 @@ message ReplaceDeployResponse {}
 
 message StreamDeploymentLogsRequest {
   string deployment_key = 1;
-  string runner_key = 2;
+  optional string request_key = 2;
   int64 time_stamp = 3;
   int32 log_level = 4;
   map<string, string> attributes = 5;

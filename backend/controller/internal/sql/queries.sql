@@ -240,29 +240,48 @@ WITH rows AS (
 SELECT COUNT(*)
 FROM rows;
 
--- name: InsertDeploymentLogEntry :exec
-INSERT INTO deployment_logs (deployment_id, runner_id, time_stamp, level, attributes, message,
-                             error)
-VALUES ((SELECT id FROM deployments WHERE deployments.key = $1 LIMIT 1),
-        (SELECT id FROM runners WHERE runners.key = $2 LIMIT 1), $3, $4, $5, $6, $7);
+-- name: InsertLogEvent :exec
+INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
+VALUES ((SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key') LIMIT 1),
+        (CASE
+             WHEN sqlc.narg('request_key')::UUID IS NULL THEN NULL
+             ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = sqlc.narg('request_key')::UUID LIMIT 1)
+            END),
+        sqlc.arg('time_stamp')::TIMESTAMPTZ,
+        sqlc.arg('level')::INT,
+        'log',
+        jsonb_build_object(
+                'message', sqlc.arg('message')::TEXT,
+                'attributes', sqlc.arg('attributes')::JSONB,
+                'error', sqlc.narg('error')::TEXT
+            ));
 
 -- name: GetDeploymentLogs :many
-SELECT r.key AS runner_key,
-       d.key AS deployment_key,
-       dl.*
-FROM deployment_logs dl
-         JOIN runners r ON dl.runner_id = r.id
-         JOIN deployments d ON dl.deployment_id = d.id
-WHERE (sqlc.narg('deployment_key')::UUID IS NULL OR
-       dl.deployment_id = (SELECT id FROM deployments WHERE deployments.key = sqlc.narg('deployment_key')::UUID))
-  AND (dl.time_stamp >= sqlc.arg('after_timestamp'))
-  AND (dl.id > sqlc.arg('after_id'));
+SELECT ir.key                              AS request_key,
+       ir.key                              AS deployment_key,
+       e.time_stamp                        AS time_stamp,
+       e.custom_key_1                      AS level,
+       (e.payload ->> 'message')::TEXT     AS message,
+       (e.payload ->> 'attributes')::JSONB AS attributes,
+       (e.payload ->> 'error')::TEXT       AS error
+FROM events e
+         INNER JOIN ingress_requests ir ON e.request_id = ir.id
+         INNER JOIN deployments d ON e.deployment_id = d.id
+WHERE e.type = 'log'
+  AND d.key = sqlc.arg('deployment_key')
+  AND ir.key = sqlc.arg('request_key')
+  AND e.time_stamp >= sqlc.arg('after_timestamp')
+  AND e.time_stamp <= sqlc.arg('before_timestamp');
 
--- name: InsertCallEntry :exec
-INSERT INTO events (deployment_id, request_id, type,
+-- name: InsertCallEvent :exec
+INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
 VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment_key')::UUID),
-        (SELECT id FROM ingress_requests WHERE ingress_requests.key = sqlc.arg('request_key')::UUID),
+        (CASE
+             WHEN sqlc.narg('request_key')::UUID IS NULL THEN NULL
+             ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = sqlc.arg('request_key')::UUID)
+            END),
+        sqlc.arg('time_stamp')::TIMESTAMPTZ,
         'call',
         sqlc.arg('source_module')::TEXT,
         sqlc.arg('source_verb')::TEXT,
@@ -352,3 +371,18 @@ INSERT INTO events (deployment_id, request_id, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4,
                     payload)
 VALUES ($1, $2, $3, $4, $4, $5, $6, $7);
+
+-- name: GetEvents :many
+SELECT d.key        AS deployment_key,
+       ir.key       AS request_key,
+       e.time_stamp AS time_stamp,
+       e.type       AS type,
+       e.payload    AS payload
+FROM events e
+         INNER JOIN deployments d on e.deployment_id = d.id
+         INNER JOIN ingress_requests ir on e.request_id = ir.id
+WHERE time_stamp >= sqlc.arg('after_timestamp')
+  AND time_stamp <= COALESCE(sqlc.narg('before_timestamp'), NOW() AT TIME ZONE 'utc')
+  AND d.key = sqlc.arg('deployment_key')
+  AND ir.key = sqlc.arg('request_key')
+  AND e.type = ANY (sqlc.arg('types')::TEXT[]);
