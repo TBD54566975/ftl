@@ -11,7 +11,7 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/TBD54566975/ftl/backend/controller/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/databasetesting"
 )
 
 // OpenForTesting opens a database connection for testing, recreating the
@@ -29,7 +29,7 @@ func OpenForTesting(ctx context.Context, t testing.TB) *pgxpool.Pool {
 	t.Cleanup(func() { _ = lock.Unlock() })
 
 	testDSN := "postgres://localhost/ftl-test?user=postgres&password=secret&sslmode=disable"
-	conn, err := sql.CreateForDevel(ctx, testDSN, true)
+	conn, err := databasetesting.CreateForDevel(ctx, testDSN, true)
 	assert.NoError(t, err)
 	return conn
 }

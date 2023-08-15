@@ -1,11 +1,9 @@
-package sql
+package databasetesting
 
 import (
 	"context"
 	"database/sql"
-	"embed"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/alecthomas/errors"
@@ -13,9 +11,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 )
-
-//go:embed schema/*.sql
-var migrations embed.FS
 
 // Migrate a database connection to the latest schema using Goose.
 func Migrate(ctx context.Context, dsn string) error {
@@ -28,8 +23,8 @@ func Migrate(ctx context.Context, dsn string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to find git root")
 	}
-	workingDir := filepath.Join(strings.TrimSpace(string(output)), "backend")
-	cmd := exec.Command(ctx, workingDir, "dbmate", "--url="+dsn, "--migrations-dir=controller/internal/sql/schema", "up")
+	workingDir := strings.TrimSpace(string(output))
+	cmd := exec.Command(ctx, workingDir, "dbmate", "--url="+dsn, "--migrations-dir=backend/controller/internal/sql/schema", "up")
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
