@@ -161,7 +161,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	}
 
 	logQueue := make(chan logEntry, 100)
-	sink := newDeploymentLogsSink(key, s.key, logQueue)
+	sink := newDeploymentLogsSink(logQueue)
 	logger := s.logger.AddSink(sink).Level(log.Trace)
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -368,7 +368,7 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 		err := send(&ftlv1.StreamDeploymentLogsRequest{
 			RequestKey:    requestKey,
 			DeploymentKey: deployment.key.String(),
-			TimeStamp:     entry.Time.Unix(),
+			TimeStamp:     entry.Time.UnixMilli(),
 			LogLevel:      int32(entry.Level.Severity()),
 			Attributes:    entry.Attributes,
 			Message:       entry.Message,

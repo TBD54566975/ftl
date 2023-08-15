@@ -10,18 +10,14 @@ import (
 
 var _ log.Sink = (*deploymentLogsSink)(nil)
 
-func newDeploymentLogsSink(deploymentKey model.DeploymentKey, runnerKey model.RunnerKey, queue chan logEntry) *deploymentLogsSink {
+func newDeploymentLogsSink(queue chan logEntry) *deploymentLogsSink {
 	return &deploymentLogsSink{
-		deploymentKey: deploymentKey,
-		runnerKey:     runnerKey,
-		logQueue:      queue,
+		logQueue: queue,
 	}
 }
 
 type deploymentLogsSink struct {
-	deploymentKey model.DeploymentKey
-	runnerKey     model.RunnerKey
-	logQueue      chan logEntry
+	logQueue chan logEntry
 }
 
 // Log implements Sink
