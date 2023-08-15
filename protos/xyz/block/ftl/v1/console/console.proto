@@ -9,20 +9,18 @@ option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console;
 option java_multiple_files = true;
 
 message Call {
-  int64 id = 1;
-  string runner_key = 2;
-  string request_key = 3;
-  string controller_key = 4;
-  int64 time_stamp = 5;
+  string request_key = 1;
+  string deployment_key = 2;
+  int64 time_stamp = 3;
 
-  string source_module = 6;
-  string source_verb = 7;
-  string dest_module = 8;
-  string dest_verb = 9;
-  int64 duration_ms = 10;
-  string request = 11;
-  string response = 12;
-  string error = 13;
+  string source_module = 4;
+  string source_verb = 5;
+  string dest_module = 6;
+  string dest_verb = 7;
+  int64 duration_ms = 8;
+  string request = 9;
+  string response = 10;
+  string error = 11;
 }
 
 message Deployment {

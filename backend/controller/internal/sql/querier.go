@@ -25,6 +25,7 @@ type Querier interface {
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
+	GetCalls(ctx context.Context, requestKey sqltypes.NullKey, destModule []string) ([]GetCallsRow, error)
 	GetControllers(ctx context.Context, all bool) ([]Controller, error)
 	GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
@@ -40,15 +41,14 @@ type Querier interface {
 	GetIdleRunners(ctx context.Context, labels []byte, limit int32) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error)
-	GetModuleCalls(ctx context.Context, modules []string) ([]GetModuleCallsRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
-	GetRequestCalls(ctx context.Context, key sqltypes.Key) ([]GetRequestCallsRow, error)
 	GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error)
 	GetRunner(ctx context.Context, key sqltypes.Key) (GetRunnerRow, error)
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error)
 	InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error
 	InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploymentLogEntryParams) error
+	InsertEvent(ctx context.Context, arg InsertEventParams) error
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)
 	KillStaleRunners(ctx context.Context, dollar_1 pgtype.Interval) (int64, error)

@@ -11,6 +11,9 @@ import (
 
 type NullKey = types.Option[Key]
 
+func SomeKey(key Key) NullKey { return types.Some(key) }
+func NoneKey() NullKey        { return types.None[Key]() }
+
 // Key is a ULID that can be used as a column in a database.
 type Key ulid.ULID
 

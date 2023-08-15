@@ -211,10 +211,8 @@ func convertModuleCalls(calls []dal.CallEntry) []*pbconsole.Call {
 			errorMessage = call.Error.Error()
 		}
 		return &pbconsole.Call{
-			Id:            call.ID,
-			RunnerKey:     call.RunnerKey.String(),
 			RequestKey:    call.RequestKey.String(),
-			ControllerKey: call.ControllerKey.String(),
+			DeploymentKey: call.DeploymentKey.String(),
 			TimeStamp:     call.Time.Unix(),
 			SourceModule:  call.SourceVerb.Module,
 			SourceVerb:    call.SourceVerb.Name,
