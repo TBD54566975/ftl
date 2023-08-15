@@ -11,18 +11,12 @@ import (
 	"time"
 )
 
-type logEntry struct {
-	request types.Option[model.IngressRequestKey]
-	log.Entry
-}
-
 var _ log.Sink = (*deploymentLogsSink)(nil)
 
-func newDeploymentLogsSink(ctx context.Context, key model.DeploymentKey, dal *dal.DAL) *deploymentLogsSink {
+func newDeploymentLogsSink(ctx context.Context, dal *dal.DAL) *deploymentLogsSink {
 	sink := &deploymentLogsSink{
-		deploymentKey: key,
-		logQueue:      make(chan logEntry, 10000),
-		dal:           dal,
+		logQueue: make(chan log.Entry, 10000),
+		dal:      dal,
 	}
 
 	// Process logs in background
@@ -32,23 +26,14 @@ func newDeploymentLogsSink(ctx context.Context, key model.DeploymentKey, dal *da
 }
 
 type deploymentLogsSink struct {
-	deploymentKey model.DeploymentKey
-	logQueue      chan logEntry
-	dal           *dal.DAL
+	logQueue chan log.Entry
+	dal      *dal.DAL
 }
 
 // Log implements Sink
 func (d *deploymentLogsSink) Log(entry log.Entry) error {
-	var request types.Option[model.IngressRequestKey]
-	if reqStr, ok := entry.Attributes["request"]; ok {
-		req, err := model.ParseIngressRequestKey(reqStr)
-		if err == nil {
-			request = types.Some(req)
-		}
-	}
-
 	select {
-	case d.logQueue <- logEntry{request: request, Entry: entry}:
+	case d.logQueue <- entry:
 	default:
 		// Drop log entry if queue is full
 		return errors.Errorf("log queue is full")
@@ -60,14 +45,34 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 	for {
 		select {
 		case entry := <-d.logQueue:
+			var deployment model.DeploymentKey
+			depStr, ok := entry.Attributes["deployment"]
+			if !ok {
+				continue
+			}
+
+			dep, err := model.ParseDeploymentKey(depStr)
+			if err != nil {
+				continue
+			}
+			deployment = dep
+
 			var errorStr types.Option[string]
 			if entry.Error != nil {
 				errorStr = types.Some(entry.Error.Error())
 			}
 
-			err := d.dal.InsertLogEvent(ctx, &dal.LogEvent{
-				RequestKey:    entry.request,
-				DeploymentKey: d.deploymentKey,
+			var request types.Option[model.IngressRequestKey]
+			if reqStr, ok := entry.Attributes["request"]; ok {
+				req, err := model.ParseIngressRequestKey(reqStr)
+				if err == nil {
+					request = types.Some(req)
+				}
+			}
+
+			err = d.dal.InsertLogEvent(ctx, &dal.LogEvent{
+				RequestKey:    request,
+				DeploymentKey: deployment,
 				Time:          entry.Time,
 				Level:         int32(entry.Level.Severity()),
 				Attributes:    entry.Attributes,

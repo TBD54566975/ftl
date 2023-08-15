@@ -91,7 +91,6 @@ func Start(ctx context.Context, config Config) error {
 		controllerClient:   controllerClient,
 		forceUpdate:        make(chan struct{}, 16),
 		labels:             labels,
-		logger:             logger,
 		deploymentLogQueue: make(chan log.Entry, 10000),
 	}
 	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
@@ -127,7 +126,6 @@ type Service struct {
 	// Failed to register with the Controller
 	registrationFailure atomic.Value[types.Option[error]]
 	labels              *structpb.Struct
-	logger              *log.Logger
 	deploymentLogQueue  chan log.Entry
 }
 
@@ -382,5 +380,5 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 	}
 
 	sink := newDeploymentLogsSink(s.deploymentLogQueue)
-	return s.logger.AddSink(sink).Sub(attrs)
+	return log.FromContext(ctx).AddSink(sink).Sub(attrs)
 }

@@ -98,14 +98,11 @@ type Service struct {
 	deploymentReservationTimeout time.Duration
 	artefactChunkSize            int
 	key                          model.ControllerKey
-	ctx                          context.Context
+	deploymentLogsSink           *deploymentLogsSink
 
 	clientsMu sync.Mutex
 	// Map from endpoint to client.
 	clients map[string]clients
-	logger  *log.Logger
-	// Map from deployment key to logger.
-	deploymentLoggers map[model.DeploymentKey]*log.Logger
 }
 
 func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
@@ -119,10 +116,8 @@ func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 		deploymentReservationTimeout: config.DeploymentReservationTimeout,
 		artefactChunkSize:            config.ArtefactChunkSize,
 		key:                          key,
-		ctx:                          ctx,
+		deploymentLogsSink:           newDeploymentLogsSink(ctx, dal),
 		clients:                      map[string]clients{},
-		logger:                       log.FromContext(ctx),
-		deploymentLoggers:            map[model.DeploymentKey]*log.Logger{},
 	}
 	if config.Advertise.String() == "" {
 		config.Advertise = config.Bind
@@ -137,7 +132,7 @@ func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 
 // ServeHTTP handles ingress routes.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	logger := s.getLogger(r.Context(), nil)
+	logger := log.FromContext(r.Context())
 	logger.Infof("%s %s", r.Method, r.URL.Path)
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method, r.URL.Path)
 	if err != nil {
@@ -307,7 +302,7 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
 
-	logger := s.getLogger(ctx, &deploymentKey)
+	logger := s.getDeploymentLogger(ctx, deploymentKey)
 	logger.Infof("Update deployment for: %s", deploymentKey)
 
 	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, int(req.Msg.MinReplicas))
@@ -329,7 +324,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
 	}
 
-	logger := s.getLogger(ctx, &newDeploymentKey)
+	logger := s.getDeploymentLogger(ctx, newDeploymentKey)
 	logger.Infof("Replace deployment for: %s", newDeploymentKey)
 
 	err = s.dal.ReplaceDeployment(ctx, newDeploymentKey, int(c.Msg.MinReplicas))
@@ -350,7 +345,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStream[ftlv1.RegisterRunnerRequest]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
 	initialised := false
 
-	logger := s.getLogger(ctx, nil)
+	logger := log.FromContext(ctx)
 	for stream.Receive() {
 		msg := stream.Msg()
 		endpoint, err := url.Parse(msg.Endpoint)
@@ -425,7 +420,7 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 		return nil, err
 	}
 
-	logger := s.getLogger(ctx, &deployment.Key)
+	logger := s.getDeploymentLogger(ctx, deployment.Key)
 	logger.Infof("Get deployment for: %s", deployment.Key)
 
 	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
@@ -441,7 +436,7 @@ func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Reque
 	}
 	defer deployment.Close()
 
-	logger := s.getLogger(ctx, &deployment.Key)
+	logger := s.getDeploymentLogger(ctx, deployment.Key)
 	logger.Infof("Get deployment artefacts for: %s", deployment.Key)
 
 	chunk := make([]byte, s.artefactChunkSize)
@@ -558,7 +553,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 }
 
 func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error) {
-	logger := s.getLogger(ctx, nil)
+	logger := log.FromContext(ctx)
 	digest, err := s.dal.CreateArtefact(ctx, req.Msg.Content)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -569,8 +564,7 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
 	deploymentKey := model.NewDeploymentKey()
-	logger := s.getLogger(ctx, &deploymentKey)
-	s.deploymentLoggers[deploymentKey] = logger
+	logger := s.getDeploymentLogger(ctx, deploymentKey)
 
 	artefacts := make([]dal.DeploymentArtefact, len(req.Msg.Artefacts))
 	for i, artefact := range req.Msg.Artefacts {
@@ -613,7 +607,7 @@ func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deploym
 	}
 	deployment, err := s.dal.GetDeployment(ctx, dkey)
 	if errors.Is(err, pgx.ErrNoRows) {
-		logger := s.getLogger(ctx, &dkey)
+		logger := s.getDeploymentLogger(ctx, dkey)
 		logger.Errorf(err, "Deployment not found")
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 	} else if err != nil {
@@ -639,7 +633,7 @@ func (s *Service) clientsForEndpoint(endpoint string) clients {
 }
 
 func (s *Service) reapStaleRunners(ctx context.Context) {
-	logger := s.getLogger(ctx, nil)
+	logger := log.FromContext(ctx)
 	for {
 		count, err := s.dal.KillStaleRunners(context.Background(), s.heartbeatTimeout)
 		if err != nil {
@@ -657,7 +651,7 @@ func (s *Service) reapStaleRunners(ctx context.Context) {
 }
 
 func (s *Service) releaseExpiredReservations(ctx context.Context) {
-	logger := s.getLogger(ctx, nil)
+	logger := log.FromContext(ctx)
 	for {
 		count, err := s.dal.ExpireRunnerClaims(ctx)
 		if err != nil {
@@ -674,14 +668,15 @@ func (s *Service) releaseExpiredReservations(ctx context.Context) {
 }
 
 func (s *Service) reconcileDeployments(ctx context.Context) {
-	logger := s.getLogger(ctx, nil)
+	logger := log.FromContext(ctx)
 	for {
 		reconciliation, err := s.dal.GetDeploymentsNeedingReconciliation(ctx)
 		if err != nil {
 			logger.Errorf(err, "Failed to get deployments needing reconciliation")
 		} else {
 			for _, reconcile := range reconciliation {
-				logger.Infof("Reconciling %s", reconcile.Deployment)
+				deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
+				deploymentLogger.Infof("Reconciling %s", reconcile.Deployment)
 				deployment := model.Deployment{
 					Module:   reconcile.Module,
 					Language: reconcile.Language,
@@ -689,21 +684,21 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 				}
 				require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
 				if require > 0 {
-					logger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
+					deploymentLogger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
 					if err := s.deploy(ctx, deployment); err != nil {
-						logger.Warnf("Failed to increase deployment replicas: %s", err)
+						deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
 					} else {
-						logger.Infof("Reconciled %s", reconcile.Deployment)
+						deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
 					}
 				} else if require < 0 {
-					logger.Infof("Need %d less runners for %s", -require, reconcile.Deployment)
+					deploymentLogger.Infof("Need %d less runners for %s", -require, reconcile.Deployment)
 					ok, err := s.terminateRandomRunner(ctx, deployment.Key)
 					if err != nil {
-						logger.Warnf("Failed to terminate runner: %s", err)
+						deploymentLogger.Warnf("Failed to terminate runner: %s", err)
 					} else if ok {
-						logger.Infof("Reconciled %s", reconcile.Deployment)
+						deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
 					} else {
-						logger.Warnf("Failed to terminate runner: no runners found")
+						deploymentLogger.Warnf("Failed to terminate runner: no runners found")
 					}
 				}
 			}
@@ -774,7 +769,7 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 }
 
 func (s *Service) reapStaleControllers(ctx context.Context) {
-	logger := s.getLogger(ctx, nil)
+	logger := log.FromContext(ctx)
 	for {
 		count, err := s.dal.KillStaleControllers(context.Background(), s.heartbeatTimeout)
 		if err != nil {
@@ -793,7 +788,7 @@ func (s *Service) reapStaleControllers(ctx context.Context) {
 
 // Periodically update the DB with the current state of the controller.
 func (s *Service) heartbeatController(ctx context.Context, advertiseAddr *url.URL) {
-	logger := s.getLogger(ctx, nil)
+	logger := log.FromContext(ctx)
 	for {
 		_, err := s.dal.UpsertController(ctx, s.key, advertiseAddr.String())
 		if err != nil {
@@ -809,7 +804,7 @@ func (s *Service) heartbeatController(ctx context.Context, advertiseAddr *url.UR
 }
 
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
-	logger := s.getLogger(ctx, nil)
+	logger := log.FromContext(ctx)
 	type moduleStateEntry struct {
 		hash        sha256.SHA256
 		minReplicas int
@@ -967,18 +962,11 @@ func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.Ingr
 	return ingressRoutes
 }
 
-func (s *Service) getLogger(ctx context.Context, deploymentKey *model.DeploymentKey) *log.Logger {
-	if deploymentKey == nil {
-		return s.logger
+func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.DeploymentKey) *log.Logger {
+	attrs := map[string]string{"deployment": deploymentKey.String()}
+	if requestKey, ok, _ := rpc.RequestKeyFromContext(ctx); ok {
+		attrs["request"] = requestKey.String()
 	}
 
-	deploymentLogger, ok := s.deploymentLoggers[*deploymentKey]
-	if ok {
-		return deploymentLogger
-	}
-
-	// create deployment logger if it doesn't exist
-	logger := log.FromContext(ctx).AddSink(newDeploymentLogsSink(s.ctx, *deploymentKey, s.dal))
-	s.deploymentLoggers[*deploymentKey] = logger
-	return logger
+	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Sub(attrs)
 }
