@@ -214,7 +214,7 @@ FROM runners r
 WHERE r.key = $1;
 
 -- name: GetRoutingTable :many
-SELECT endpoint, r.key
+SELECT endpoint, r.key AS runner_key, d.key deployment_key
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
          INNER JOIN modules m on d.module_id = m.id
@@ -259,34 +259,43 @@ WHERE (sqlc.narg('deployment_key')::UUID IS NULL OR
   AND (dl.id > sqlc.arg('after_id'));
 
 -- name: InsertCallEntry :exec
-INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module,
-                   dest_verb,
-                   duration_ms, request, response, error)
-VALUES ((SELECT id FROM runners WHERE runners.key = $1),
-        (SELECT id FROM ingress_requests WHERE ingress_requests.key = $2),
-        (SELECT id FROM controller WHERE controller.key = $3),
-        $4, $5, $6, $7, $8, $9, $10, $11);
+INSERT INTO events (deployment_id, request_id, type,
+                    custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
+VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment_key')::UUID),
+        (SELECT id FROM ingress_requests WHERE ingress_requests.key = sqlc.arg('request_key')::UUID),
+        'call',
+        sqlc.arg('source_module')::TEXT,
+        sqlc.arg('source_verb')::TEXT,
+        sqlc.arg('dest_module')::TEXT,
+        sqlc.arg('dest_verb')::TEXT,
+        jsonb_build_object(
+                'duration_ms', sqlc.arg('duration_ms')::BIGINT,
+                'request', sqlc.arg('request')::JSONB,
+                'response', sqlc.arg('response')::JSONB,
+                'error', sqlc.narg('error')::TEXT
+            ));
 
--- name: GetModuleCalls :many
-SELECT DISTINCT r.key    AS runner_key,
-                conn.key AS controller_key,
-                ir.key   AS ingress_request_key,
-                c.*
-FROM runners r
-         JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.id = c.controller_id
-         JOIN ingress_requests ir ON ir.id = c.request_id
-WHERE dest_module = ANY (@modules::text[]);
-
--- name: GetRequestCalls :many
-SELECT DISTINCT r.key    AS runner_key,
-                conn.key AS controller_key,
-                c.*
-FROM runners r
-         JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.id = c.controller_id
-WHERE request_id = (SELECT id FROM ingress_requests WHERE ingress_requests.key = $1)
-ORDER BY time DESC;
+-- name: GetCalls :many
+SELECT d.key          AS deployment_key,
+       ir.key         AS request_key,
+       e.custom_key_1 AS source_module,
+       e.custom_key_2 AS source_verb,
+       e.custom_key_3 AS dest_module,
+       e.custom_key_4 AS dest_verb,
+       e.payload      AS payload,
+       e.time_stamp   AS time_stamp
+FROM events e
+         INNER JOIN deployments d ON e.deployment_id = d.id
+         INNER JOIN ingress_requests ir ON e.request_id = ir.id
+WHERE CASE
+          WHEN sqlc.narg('request_key')::UUID IS NOT NULL
+              THEN ir.key = sqlc.narg('request_key')::UUID
+          WHEN sqlc.narg('dest_module')::TEXT[] IS NOT NULL
+              THEN e.custom_key_3 = ANY (sqlc.narg('dest_module')::TEXT[])
+          ELSE
+              TRUE
+    END
+  AND type = 'call';
 
 -- name: CreateIngressRequest :exec
 INSERT INTO ingress_requests (key, source_addr)
@@ -336,3 +345,10 @@ FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
 WHERE sqlc.arg('all')::bool = true
    OR d.min_replicas > 0;
+
+
+-- name: InsertEvent :exec
+INSERT INTO events (deployment_id, request_id, type,
+                    custom_key_1, custom_key_2, custom_key_3, custom_key_4,
+                    payload)
+VALUES ($1, $2, $3, $4, $4, $5, $6, $7);

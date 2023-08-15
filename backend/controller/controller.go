@@ -27,7 +27,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/rpc/headers"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/common/slices"
-	dal "github.com/TBD54566975/ftl/backend/controller/internal/dal"
+	"github.com/TBD54566975/ftl/backend/controller/internal/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -489,9 +489,8 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 
 	callRecord := &Call{
+		deploymentKey: route.Deployment,
 		requestKey:    requestKey,
-		controllerKey: s.key,
-		runnerKey:     route.Runner,
 		startTime:     start,
 		destVerb:      verbRef,
 		callers:       callers,
@@ -508,10 +507,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 
 	callRecord.response = resp.Msg
-	err = s.recordCall(ctx, callRecord)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
+	s.recordCall(ctx, callRecord)
 	return resp, nil
 }
 

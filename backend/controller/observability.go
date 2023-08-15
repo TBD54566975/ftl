@@ -14,9 +14,8 @@ import (
 )
 
 type Call struct {
+	deploymentKey model.DeploymentKey
 	requestKey    model.IngressRequestKey
-	runnerKey     model.RunnerKey
-	controllerKey model.ControllerKey
 	startTime     time.Time
 	destVerb      *schema.VerbRef
 	callers       []*schema.VerbRef
@@ -24,38 +23,18 @@ type Call struct {
 	response      *ftlv1.CallResponse
 }
 
-func (s *Service) recordCall(ctx context.Context, call *Call) error {
-	sourceVerb := schema.VerbRef{}
-	if len(call.callers) > 0 {
-		sourceVerb = *call.callers[0]
-	}
-
-	var responseError error
-	if call.response.GetError() != nil {
-		responseError = errors.New(call.response.GetError().GetMessage())
-	}
-	err := s.dal.InsertCallEntry(ctx, &dal.CallEntry{
-		RequestKey:    call.requestKey,
-		RunnerKey:     call.runnerKey,
-		ControllerKey: call.controllerKey,
-		Duration:      time.Since(call.startTime),
-		SourceVerb:    sourceVerb,
-		DestVerb:      *call.destVerb,
-		Request:       call.request.GetBody(),
-		Response:      call.response.GetBody(),
-		Error:         responseError,
-	})
-
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
-}
-
 // recordCallError records a call that failed to be made.
 //
 // This is used when a call fails, but we still want to record the error.
 // Because of that, we only log failures within this function vs. returning another error.
+func (s *Service) recordCall(ctx context.Context, call *Call) {
+	var responseError error
+	if e := call.response.GetError(); e != nil {
+		responseError = errors.New(e.GetMessage())
+	}
+	s.recordCallError(ctx, call, responseError)
+}
+
 func (s *Service) recordCallError(ctx context.Context, call *Call, callError error) {
 	logger := log.FromContext(ctx)
 	sourceVerb := schema.VerbRef{}
@@ -64,9 +43,8 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 	}
 
 	err := s.dal.InsertCallEntry(ctx, &dal.CallEntry{
+		DeploymentKey: call.deploymentKey,
 		RequestKey:    call.requestKey,
-		RunnerKey:     call.runnerKey,
-		ControllerKey: call.controllerKey,
 		Duration:      time.Since(call.startTime),
 		SourceVerb:    sourceVerb,
 		DestVerb:      *call.destVerb,
@@ -74,8 +52,7 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 		Response:      call.response.GetBody(),
 		Error:         callError,
 	})
-
 	if err != nil {
-		logger.Errorf(err, "failed to record call error")
+		logger.Errorf(err, "failed to record call")
 	}
 }

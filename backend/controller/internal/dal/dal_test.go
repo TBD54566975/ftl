@@ -216,8 +216,9 @@ func TestDAL(t *testing.T) {
 		routes, err := dal.GetRoutingTable(ctx, deployment.Module)
 		assert.NoError(t, err)
 		assert.Equal(t, []Route{{
-			Runner:   expectedRunner.Key,
-			Endpoint: expectedRunner.Endpoint,
+			Runner:     expectedRunner.Key,
+			Deployment: deploymentKey,
+			Endpoint:   expectedRunner.Endpoint,
 		}}, routes)
 	})
 

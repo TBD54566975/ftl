@@ -268,6 +268,69 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	return items, nil
 }
 
+const getCalls = `-- name: GetCalls :many
+SELECT d.key          AS deployment_key,
+       ir.key         AS request_key,
+       e.custom_key_1 AS source_module,
+       e.custom_key_2 AS source_verb,
+       e.custom_key_3 AS dest_module,
+       e.custom_key_4 AS dest_verb,
+       e.payload      AS payload,
+       e.time_stamp   AS time_stamp
+FROM events e
+         INNER JOIN deployments d ON e.deployment_id = d.id
+         INNER JOIN ingress_requests ir ON e.request_id = ir.id
+WHERE CASE
+          WHEN $1::UUID IS NOT NULL
+              THEN ir.key = $1::UUID
+          WHEN $2::TEXT[] IS NOT NULL
+              THEN e.custom_key_3 = ANY ($2::TEXT[])
+          ELSE
+              TRUE
+    END
+  AND type = 'call'
+`
+
+type GetCallsRow struct {
+	DeploymentKey sqltypes.Key
+	RequestKey    sqltypes.Key
+	SourceModule  pgtype.Text
+	SourceVerb    pgtype.Text
+	DestModule    pgtype.Text
+	DestVerb      pgtype.Text
+	Payload       []byte
+	TimeStamp     pgtype.Timestamptz
+}
+
+func (q *Queries) GetCalls(ctx context.Context, requestKey sqltypes.NullKey, destModule []string) ([]GetCallsRow, error) {
+	rows, err := q.db.Query(ctx, getCalls, requestKey, destModule)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCallsRow
+	for rows.Next() {
+		var i GetCallsRow
+		if err := rows.Scan(
+			&i.DeploymentKey,
+			&i.RequestKey,
+			&i.SourceModule,
+			&i.SourceVerb,
+			&i.DestModule,
+			&i.DestVerb,
+			&i.Payload,
+			&i.TimeStamp,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getControllers = `-- name: GetControllers :many
 SELECT c.id, c.key, c.created, c.last_seen, c.state, c.endpoint
 FROM controller c
@@ -723,74 +786,6 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path stri
 	return items, nil
 }
 
-const getModuleCalls = `-- name: GetModuleCalls :many
-SELECT DISTINCT r.key    AS runner_key,
-                conn.key AS controller_key,
-                ir.key   AS ingress_request_key,
-                c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
-FROM runners r
-         JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.id = c.controller_id
-         JOIN ingress_requests ir ON ir.id = c.request_id
-WHERE dest_module = ANY ($1::text[])
-`
-
-type GetModuleCallsRow struct {
-	RunnerKey         sqltypes.Key
-	ControllerKey     sqltypes.Key
-	IngressRequestKey sqltypes.Key
-	ID                int64
-	RequestID         int64
-	RunnerID          int64
-	ControllerID      int64
-	Time              pgtype.Timestamptz
-	DestModule        string
-	DestVerb          string
-	SourceModule      string
-	SourceVerb        string
-	DurationMs        int64
-	Request           []byte
-	Response          []byte
-	Error             pgtype.Text
-}
-
-func (q *Queries) GetModuleCalls(ctx context.Context, modules []string) ([]GetModuleCallsRow, error) {
-	rows, err := q.db.Query(ctx, getModuleCalls, modules)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetModuleCallsRow
-	for rows.Next() {
-		var i GetModuleCallsRow
-		if err := rows.Scan(
-			&i.RunnerKey,
-			&i.ControllerKey,
-			&i.IngressRequestKey,
-			&i.ID,
-			&i.RequestID,
-			&i.RunnerID,
-			&i.ControllerID,
-			&i.Time,
-			&i.DestModule,
-			&i.DestVerb,
-			&i.SourceModule,
-			&i.SourceVerb,
-			&i.DurationMs,
-			&i.Request,
-			&i.Response,
-			&i.Error,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getModulesByID = `-- name: GetModulesByID :many
 SELECT id, language, name
 FROM modules
@@ -817,73 +812,8 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 	return items, nil
 }
 
-const getRequestCalls = `-- name: GetRequestCalls :many
-SELECT DISTINCT r.key    AS runner_key,
-                conn.key AS controller_key,
-                c.id, c.request_id, c.runner_id, c.controller_id, c.time, c.dest_module, c.dest_verb, c.source_module, c.source_verb, c.duration_ms, c.request, c.response, c.error
-FROM runners r
-         JOIN calls c ON r.id = c.runner_id
-         JOIN controller conn ON conn.id = c.controller_id
-WHERE request_id = (SELECT id FROM ingress_requests WHERE ingress_requests.key = $1)
-ORDER BY time DESC
-`
-
-type GetRequestCallsRow struct {
-	RunnerKey     sqltypes.Key
-	ControllerKey sqltypes.Key
-	ID            int64
-	RequestID     int64
-	RunnerID      int64
-	ControllerID  int64
-	Time          pgtype.Timestamptz
-	DestModule    string
-	DestVerb      string
-	SourceModule  string
-	SourceVerb    string
-	DurationMs    int64
-	Request       []byte
-	Response      []byte
-	Error         pgtype.Text
-}
-
-func (q *Queries) GetRequestCalls(ctx context.Context, key sqltypes.Key) ([]GetRequestCallsRow, error) {
-	rows, err := q.db.Query(ctx, getRequestCalls, key)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetRequestCallsRow
-	for rows.Next() {
-		var i GetRequestCallsRow
-		if err := rows.Scan(
-			&i.RunnerKey,
-			&i.ControllerKey,
-			&i.ID,
-			&i.RequestID,
-			&i.RunnerID,
-			&i.ControllerID,
-			&i.Time,
-			&i.DestModule,
-			&i.DestVerb,
-			&i.SourceModule,
-			&i.SourceVerb,
-			&i.DurationMs,
-			&i.Request,
-			&i.Response,
-			&i.Error,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getRoutingTable = `-- name: GetRoutingTable :many
-SELECT endpoint, r.key
+SELECT endpoint, r.key AS runner_key, d.key deployment_key
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
          INNER JOIN modules m on d.module_id = m.id
@@ -892,8 +822,9 @@ WHERE state = 'assigned'
 `
 
 type GetRoutingTableRow struct {
-	Endpoint string
-	Key      sqltypes.Key
+	Endpoint      string
+	RunnerKey     sqltypes.Key
+	DeploymentKey sqltypes.Key
 }
 
 func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error) {
@@ -905,7 +836,7 @@ func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutin
 	var items []GetRoutingTableRow
 	for rows.Next() {
 		var i GetRoutingTableRow
-		if err := rows.Scan(&i.Endpoint, &i.Key); err != nil {
+		if err := rows.Scan(&i.Endpoint, &i.RunnerKey, &i.DeploymentKey); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1005,34 +936,40 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key)
 }
 
 const insertCallEntry = `-- name: InsertCallEntry :exec
-INSERT INTO calls (runner_id, request_id, controller_id, source_module, source_verb, dest_module,
-                   dest_verb,
-                   duration_ms, request, response, error)
-VALUES ((SELECT id FROM runners WHERE runners.key = $1),
-        (SELECT id FROM ingress_requests WHERE ingress_requests.key = $2),
-        (SELECT id FROM controller WHERE controller.key = $3),
-        $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO events (deployment_id, request_id, type,
+                    custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
+VALUES ((SELECT id FROM deployments WHERE deployments.key = $1::UUID),
+        (SELECT id FROM ingress_requests WHERE ingress_requests.key = $2::UUID),
+        'call',
+        $3::TEXT,
+        $4::TEXT,
+        $5::TEXT,
+        $6::TEXT,
+        jsonb_build_object(
+                'duration_ms', $7::BIGINT,
+                'request', $8::JSONB,
+                'response', $9::JSONB,
+                'error', $10::TEXT
+            ))
 `
 
 type InsertCallEntryParams struct {
-	Key          sqltypes.Key
-	Key_2        sqltypes.Key
-	Key_3        sqltypes.Key
-	SourceModule string
-	SourceVerb   string
-	DestModule   string
-	DestVerb     string
-	DurationMs   int64
-	Request      []byte
-	Response     []byte
-	Error        pgtype.Text
+	DeploymentKey sqltypes.Key
+	RequestKey    sqltypes.Key
+	SourceModule  string
+	SourceVerb    string
+	DestModule    string
+	DestVerb      string
+	DurationMs    int64
+	Request       []byte
+	Response      []byte
+	Error         pgtype.Text
 }
 
 func (q *Queries) InsertCallEntry(ctx context.Context, arg InsertCallEntryParams) error {
 	_, err := q.db.Exec(ctx, insertCallEntry,
-		arg.Key,
-		arg.Key_2,
-		arg.Key_3,
+		arg.DeploymentKey,
+		arg.RequestKey,
 		arg.SourceModule,
 		arg.SourceVerb,
 		arg.DestModule,
@@ -1071,6 +1008,36 @@ func (q *Queries) InsertDeploymentLogEntry(ctx context.Context, arg InsertDeploy
 		arg.Attributes,
 		arg.Message,
 		arg.Error,
+	)
+	return err
+}
+
+const insertEvent = `-- name: InsertEvent :exec
+INSERT INTO events (deployment_id, request_id, type,
+                    custom_key_1, custom_key_2, custom_key_3, custom_key_4,
+                    payload)
+VALUES ($1, $2, $3, $4, $4, $5, $6, $7)
+`
+
+type InsertEventParams struct {
+	DeploymentID int64
+	RequestID    int64
+	Type         EventType
+	CustomKey1   pgtype.Text
+	CustomKey3   pgtype.Text
+	CustomKey4   pgtype.Text
+	Payload      []byte
+}
+
+func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error {
+	_, err := q.db.Exec(ctx, insertEvent,
+		arg.DeploymentID,
+		arg.RequestID,
+		arg.Type,
+		arg.CustomKey1,
+		arg.CustomKey3,
+		arg.CustomKey4,
+		arg.Payload,
 	)
 	return err
 }

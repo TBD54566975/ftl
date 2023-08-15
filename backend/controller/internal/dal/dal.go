@@ -136,10 +136,8 @@ func (s ControllerState) ToProto() ftlv1.ControllerState {
 }
 
 type CallEntry struct {
-	ID            int64
+	DeploymentKey model.DeploymentKey
 	RequestKey    model.IngressRequestKey
-	RunnerKey     model.RunnerKey
-	ControllerKey model.ControllerKey
 	Time          time.Time
 	SourceVerb    schema.VerbRef
 	DestVerb      schema.VerbRef
@@ -193,8 +191,9 @@ type Reservation interface {
 }
 
 type Route struct {
-	Runner   model.RunnerKey
-	Endpoint string
+	Runner     model.RunnerKey
+	Deployment model.DeploymentKey
+	Endpoint   string
 }
 
 func WithReservation(ctx context.Context, reservation Reservation, fn func() error) error {
@@ -733,8 +732,9 @@ func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]Route, erro
 	}
 	return slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
 		return Route{
-			Runner:   model.RunnerKey(row.Key),
-			Endpoint: row.Endpoint,
+			Deployment: model.DeploymentKey(row.DeploymentKey),
+			Runner:     model.RunnerKey(row.RunnerKey),
+			Endpoint:   row.Endpoint,
 		}
 	}), nil
 }
@@ -907,89 +907,52 @@ func (d *DAL) InsertCallEntry(ctx context.Context, call *CallEntry) error {
 		callError.Valid = true
 	}
 	return errors.WithStack(translatePGError(d.db.InsertCallEntry(ctx, sql.InsertCallEntryParams{
-		Key:          sqltypes.Key(call.RunnerKey),
-		Key_2:        sqltypes.Key(call.RequestKey),
-		Key_3:        sqltypes.Key(call.ControllerKey),
-		SourceModule: call.SourceVerb.Module,
-		SourceVerb:   call.SourceVerb.Name,
-		DestModule:   call.DestVerb.Module,
-		DestVerb:     call.DestVerb.Name,
-		DurationMs:   call.Duration.Milliseconds(),
-		Request:      call.Request,
-		Response:     call.Response,
-		Error:        callError,
+		DeploymentKey: sqltypes.Key(call.DeploymentKey),
+		RequestKey:    sqltypes.Key(call.RequestKey),
+		SourceModule:  call.SourceVerb.Module,
+		SourceVerb:    call.SourceVerb.Name,
+		DestModule:    call.DestVerb.Module,
+		DestVerb:      call.DestVerb.Name,
+		DurationMs:    call.Duration.Milliseconds(),
+		Request:       call.Request,
+		Response:      call.Response,
+		Error:         callError,
 	})))
 }
 
 func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.VerbRef][]CallEntry, error) {
-	calls, err := d.db.GetModuleCalls(ctx, modules)
+	calls, err := d.db.GetCalls(ctx, sqltypes.NullKey{}, modules)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
 
 	out := map[schema.VerbRef][]CallEntry{}
 	for _, call := range calls {
+		entry, err := callRowToEntry(call)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 		key := schema.VerbRef{
-			Module: call.DestModule,
-			Name:   call.DestVerb,
+			Module: call.DestModule.String,
+			Name:   call.DestVerb.String,
 		}
-		var callError error
-		if call.Error.Valid {
-			callError = errors.New(call.Error.String)
-		}
-		out[key] = append(out[key], CallEntry{
-			ID:            call.ID,
-			RequestKey:    model.IngressRequestKey(call.IngressRequestKey),
-			RunnerKey:     model.RunnerKey(call.RunnerKey),
-			ControllerKey: model.ControllerKey(call.ControllerKey),
-			Time:          call.Time.Time,
-			SourceVerb: schema.VerbRef{
-				Module: call.SourceModule,
-				Name:   call.SourceVerb,
-			},
-			DestVerb: schema.VerbRef{
-				Module: call.DestModule,
-				Name:   call.DestVerb,
-			},
-			Duration: time.Duration(call.DurationMs) * time.Millisecond,
-			Request:  call.Request,
-			Response: call.Response,
-			Error:    callError,
-		})
+		out[key] = append(out[key], entry)
 	}
 	return out, nil
 }
 
 func (d *DAL) GetRequestCalls(ctx context.Context, requestKey model.IngressRequestKey) ([]CallEntry, error) {
-	calls, err := d.db.GetRequestCalls(ctx, sqltypes.Key(requestKey))
+	calls, err := d.db.GetCalls(ctx, sqltypes.SomeKey(sqltypes.Key(requestKey)), nil)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
 	var out []CallEntry
 	for _, call := range calls {
-		var callError error
-		if call.Error.Valid {
-			callError = errors.New(call.Error.String)
+		entry, err := callRowToEntry(call)
+		if err != nil {
+			return nil, errors.WithStack(err)
 		}
-		out = append(out, CallEntry{
-			ID:            call.ID,
-			RequestKey:    requestKey,
-			RunnerKey:     model.RunnerKey(call.RunnerKey),
-			ControllerKey: model.ControllerKey(call.ControllerKey),
-			Time:          call.Time.Time,
-			SourceVerb: schema.VerbRef{
-				Module: call.SourceModule,
-				Name:   call.SourceVerb,
-			},
-			DestVerb: schema.VerbRef{
-				Module: call.DestModule,
-				Name:   call.DestVerb,
-			},
-			Duration: time.Duration(call.DurationMs) * time.Millisecond,
-			Request:  call.Request,
-			Response: call.Response,
-			Error:    callError,
-		})
+		out = append(out, entry)
 	}
 	return out, nil
 }
@@ -1039,4 +1002,40 @@ func translatePGError(err error) error {
 		return ErrNotFound
 	}
 	return err
+}
+
+// The internal JSON payload of a call event.
+type eventCall struct {
+	DurationMS int64                `json:"duration_ms"`
+	Request    json.RawMessage      `json:"request"`
+	Response   json.RawMessage      `json:"response"`
+	Error      types.Option[string] `json:"error"`
+}
+
+func callRowToEntry(call sql.GetCallsRow) (CallEntry, error) {
+	var event eventCall
+	if err := json.Unmarshal(call.Payload, &event); err != nil {
+		return CallEntry{}, errors.Wrap(err, "invalid call event payload")
+	}
+	var callError error
+	if e, ok := event.Error.Get(); ok {
+		callError = errors.New(e)
+	}
+	entry := CallEntry{
+		RequestKey: model.IngressRequestKey(call.RequestKey),
+		Time:       call.TimeStamp.Time,
+		SourceVerb: schema.VerbRef{
+			Module: call.SourceModule.String,
+			Name:   call.SourceVerb.String,
+		},
+		DestVerb: schema.VerbRef{
+			Module: call.DestModule.String,
+			Name:   call.DestVerb.String,
+		},
+		Duration: time.Duration(event.DurationMS) * time.Millisecond,
+		Request:  event.Request,
+		Response: event.Response,
+		Error:    callError,
+	}
+	return entry, nil
 }

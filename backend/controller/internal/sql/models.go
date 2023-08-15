@@ -54,6 +54,47 @@ func (ns NullControllerState) Value() (driver.Value, error) {
 	return string(ns.ControllerState), nil
 }
 
+type EventType string
+
+const (
+	EventTypeCall EventType = "call"
+)
+
+func (e *EventType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EventType(s)
+	case string:
+		*e = EventType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EventType: %T", src)
+	}
+	return nil
+}
+
+type NullEventType struct {
+	EventType EventType
+	Valid     bool // Valid is true if EventType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEventType) Scan(value interface{}) error {
+	if value == nil {
+		ns.EventType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EventType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEventType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EventType), nil
+}
+
 type RunnerState string
 
 const (
@@ -105,22 +146,6 @@ type Artefact struct {
 	Content   []byte
 }
 
-type Call struct {
-	ID           int64
-	RequestID    int64
-	RunnerID     int64
-	ControllerID int64
-	Time         pgtype.Timestamptz
-	DestModule   string
-	DestVerb     string
-	SourceModule string
-	SourceVerb   string
-	DurationMs   int64
-	Request      []byte
-	Response     []byte
-	Error        pgtype.Text
-}
-
 type Controller struct {
 	ID       int64
 	Key      sqltypes.Key
@@ -157,6 +182,18 @@ type DeploymentLog struct {
 	Attributes   []byte
 	Message      string
 	Error        pgtype.Text
+}
+
+type Event struct {
+	TimeStamp    pgtype.Timestamptz
+	DeploymentID int64
+	RequestID    int64
+	Type         EventType
+	CustomKey1   pgtype.Text
+	CustomKey2   pgtype.Text
+	CustomKey3   pgtype.Text
+	CustomKey4   pgtype.Text
+	Payload      []byte
 }
 
 type IngressRequest struct {

@@ -12,67 +12,57 @@ import { Data, Verb as Verb$1 } from "../schema/schema_pb.js";
  */
 export class Call extends Message<Call> {
   /**
-   * @generated from field: int64 id = 1;
-   */
-  id = protoInt64.zero;
-
-  /**
-   * @generated from field: string runner_key = 2;
-   */
-  runnerKey = "";
-
-  /**
-   * @generated from field: string request_key = 3;
+   * @generated from field: string request_key = 1;
    */
   requestKey = "";
 
   /**
-   * @generated from field: string controller_key = 4;
+   * @generated from field: string deployment_key = 2;
    */
-  controllerKey = "";
+  deploymentKey = "";
 
   /**
-   * @generated from field: int64 time_stamp = 5;
+   * @generated from field: int64 time_stamp = 3;
    */
   timeStamp = protoInt64.zero;
 
   /**
-   * @generated from field: string source_module = 6;
+   * @generated from field: string source_module = 4;
    */
   sourceModule = "";
 
   /**
-   * @generated from field: string source_verb = 7;
+   * @generated from field: string source_verb = 5;
    */
   sourceVerb = "";
 
   /**
-   * @generated from field: string dest_module = 8;
+   * @generated from field: string dest_module = 6;
    */
   destModule = "";
 
   /**
-   * @generated from field: string dest_verb = 9;
+   * @generated from field: string dest_verb = 7;
    */
   destVerb = "";
 
   /**
-   * @generated from field: int64 duration_ms = 10;
+   * @generated from field: int64 duration_ms = 8;
    */
   durationMs = protoInt64.zero;
 
   /**
-   * @generated from field: string request = 11;
+   * @generated from field: string request = 9;
    */
   request = "";
 
   /**
-   * @generated from field: string response = 12;
+   * @generated from field: string response = 10;
    */
   response = "";
 
   /**
-   * @generated from field: string error = 13;
+   * @generated from field: string error = 11;
    */
   error = "";
 
@@ -84,19 +74,17 @@ export class Call extends Message<Call> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.Call";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 2, name: "runner_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "controller_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 6, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "source_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 9, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "duration_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 11, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 12, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 13, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "source_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "duration_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 9, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Call {
