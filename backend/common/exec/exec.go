@@ -22,14 +22,14 @@ func LookPath(exe string) (string, error) {
 }
 
 func Capture(ctx context.Context, dir, exe string, args ...string) ([]byte, error) {
-	cmd := Command(ctx, dir, exe, args...)
+	cmd := Command(ctx, log.Debug, dir, exe, args...)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	out, err := cmd.CombinedOutput()
 	return out, errors.WithStack(err)
 }
 
-func Command(ctx context.Context, dir, exe string, args ...string) *Cmd {
+func Command(ctx context.Context, level log.Level, dir, exe string, args ...string) *Cmd {
 	logger := log.FromContext(ctx)
 	pgid, err := syscall.Getpgid(0)
 	if err != nil {
@@ -42,7 +42,7 @@ func Command(ctx context.Context, dir, exe string, args ...string) *Cmd {
 		Setpgid: true,
 	}
 	cmd.Dir = dir
-	output := logger.WriterAt(log.Debug)
+	output := logger.WriterAt(level)
 	cmd.Stdout = output
 	cmd.Stderr = output
 	cmd.Env = os.Environ()

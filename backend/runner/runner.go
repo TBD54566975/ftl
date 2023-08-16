@@ -158,7 +158,8 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid deployment key"))
 	}
 
-	ctx = log.ContextWithLogger(ctx, s.getDeploymentLogger(ctx, key))
+	deploymentLogger := s.getDeploymentLogger(ctx, key)
+	ctx = log.ContextWithLogger(ctx, deploymentLogger)
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -204,8 +205,11 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to download artefacts")
 	}
+
+	verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Sub(map[string]string{"module": module.Name}))
 	deployment, cmdCtx, err := plugin.Spawn(
-		unstoppable.Context(ctx),
+		unstoppable.Context(verbCtx),
+		log.Info,
 		gdResp.Msg.Schema.Name,
 		deploymentDir,
 		"./main",
