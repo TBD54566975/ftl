@@ -274,7 +274,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 		err = s.dal.InsertLogEvent(ctx, &dal.LogEvent{
 			RequestKey:    requestKey,
 			DeploymentKey: deploymentKey,
-			Time:          time.UnixMilli(msg.TimeStamp),
+			Time:          msg.TimeStamp.AsTime(),
 			Level:         msg.LogLevel,
 			Attributes:    msg.Attributes,
 			Message:       msg.Message,

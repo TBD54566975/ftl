@@ -3,6 +3,7 @@ syntax = "proto3";
 package xyz.block.ftl.v1;
 
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1;ftlv1";
@@ -166,7 +167,7 @@ message ReplaceDeployResponse {}
 message StreamDeploymentLogsRequest {
   string deployment_key = 1;
   optional string request_key = 2;
-  int64 time_stamp = 3;
+  google.protobuf.Timestamp time_stamp = 3;
   int32 log_level = 4;
   map<string, string> attributes = 5;
   string message = 6;

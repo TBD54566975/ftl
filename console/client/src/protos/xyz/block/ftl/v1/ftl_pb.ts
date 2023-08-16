@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64, Struct } from "@bufbuild/protobuf";
+import { Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
 import { Module, VerbRef } from "./schema/schema_pb.js";
 
 /**
@@ -1211,9 +1211,9 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
   requestKey?: string;
 
   /**
-   * @generated from field: int64 time_stamp = 3;
+   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
    */
-  timeStamp = protoInt64.zero;
+  timeStamp?: Timestamp;
 
   /**
    * @generated from field: int32 log_level = 4;
@@ -1245,7 +1245,7 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },

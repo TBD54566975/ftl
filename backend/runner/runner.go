@@ -20,6 +20,7 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/otiai10/copy"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/common/download"
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -359,7 +360,7 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 		err := send(&ftlv1.StreamDeploymentLogsRequest{
 			RequestKey:    request,
 			DeploymentKey: deploymentKey,
-			TimeStamp:     entry.Time.UnixMilli(),
+			TimeStamp:     timestamppb.New(entry.Time),
 			LogLevel:      int32(entry.Level.Severity()),
 			Attributes:    entry.Attributes,
 			Message:       entry.Message,
