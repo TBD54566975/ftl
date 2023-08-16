@@ -3,6 +3,8 @@ package xyz.block.ftl.registry
 import xyz.block.ftl.Context
 import xyz.block.ftl.logging.Logging
 import xyz.block.ftl.serializer.makeGson
+import xyz.block.ftl.v1.schema.Module
+import xyz.block.ftl.v1.schema.Verb
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
@@ -34,6 +36,15 @@ internal class VerbHandle<Resp>(
 
     val result = verbFunction.callBy(arguments)
     return gson.toJson(result)
+  }
+
+  /**
+   * Returns the schema for this verb as a [Module].
+   *
+   * The Module will contain the Verb, request and response types as top-level declarations.
+   */
+  fun schema(): Module {
+    return reflectSchemaFromFunc(verbFunction)
   }
 
   private fun findArgumentType(parameters: List<KParameter>): KClass<*> {

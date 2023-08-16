@@ -5,6 +5,7 @@ import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Verb
 import xyz.block.ftl.logging.Logging
+import xyz.block.ftl.v1.schema.Module
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -98,6 +99,10 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
   fun invoke(context: Context, verbRef: VerbRef, request: String): String {
     val verb = verbs[verbRef] ?: throw IllegalArgumentException("Unknown verb: $verbRef")
     return verb.invokeVerbInternal(context, request)
+  }
+
+  fun schema(): Module {
+    error("not implemented")
   }
 }
 

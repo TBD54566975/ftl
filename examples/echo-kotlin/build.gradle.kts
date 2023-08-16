@@ -3,6 +3,7 @@ plugins {
   // Apply the java-library plugin for API and implementation separation.
   `java-library`
   id("xyz.block.ftl")
+  id("com.google.devtools.ksp") version "1.9.0-1.0.11"
 }
 
 repositories {
@@ -12,6 +13,8 @@ repositories {
 
 dependencies {
   implementation("xyz.block.ftl:ftl-runtime")
+  implementation("xyz.block.ftl:ftl-schema")
+  ksp("xyz.block.ftl:ftl-schema")
 }
 
 ftl {
