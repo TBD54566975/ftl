@@ -1,8 +1,9 @@
 package runner
 
 import (
-	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/alecthomas/errors"
+
+	"github.com/TBD54566975/ftl/backend/common/log"
 )
 
 var _ log.Sink = (*deploymentLogsSink)(nil)

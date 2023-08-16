@@ -3,12 +3,14 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
+
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/controller/internal/dal"
-	"github.com/alecthomas/errors"
-	"github.com/alecthomas/types"
-	"time"
 )
 
 var _ log.Sink = (*deploymentLogsSink)(nil)

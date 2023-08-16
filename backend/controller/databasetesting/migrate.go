@@ -3,7 +3,6 @@ package databasetesting
 import (
 	"context"
 	"database/sql"
-	"github.com/TBD54566975/ftl/backend/common/log"
 	"os"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
+	"github.com/TBD54566975/ftl/backend/common/log"
 )
 
 // Migrate a database connection to the latest schema using Goose.
