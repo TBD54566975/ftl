@@ -4,7 +4,6 @@ import path from 'path'
 import ts from 'typescript'
 import fg from 'fast-glob'
 import { expect, test } from '@jest/globals'
-import '../../.jest/no-interdependencies.js' // Custom assertion and message
 
 
 let cases: [dir: string, file: string][]

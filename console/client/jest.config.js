@@ -1,6 +1,6 @@
 export default {
   setupFilesAfterEnv: [
-    '@testing-library/jest-dom/extend-expect',
+    '<rootDir>/.jest/setup.js',
   ],
   testEnvironment: 'jest-environment-jsdom',
   transformIgnorePatterns: [],
@@ -13,4 +13,5 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '\\.css$': 'identity-obj-proxy',
   },
+  injectGlobals: false,
 }

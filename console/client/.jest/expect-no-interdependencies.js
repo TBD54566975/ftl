@@ -1,7 +1,7 @@
 import { expect } from '@jest/globals'
 
 expect.extend({
-  noInterdependencies(received?: { file: string, text: string, absolutePath: string }) {
+  noInterdependencies(received) {
     // This regexp checks for formatting
     if (received) {
       return {

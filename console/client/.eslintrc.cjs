@@ -20,7 +20,6 @@ module.exports = {
     'eslint:recommended',
     'plugin:compat/recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:storybook/recommended',
   ],
   ignorePatterns: [ '**/dist/*' ],
   rules: {
