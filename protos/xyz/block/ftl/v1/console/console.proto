@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1.console;
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
@@ -11,13 +13,13 @@ option java_multiple_files = true;
 message Call {
   string request_key = 1;
   string deployment_key = 2;
-  int64 time_stamp = 3;
+  google.protobuf.Timestamp time_stamp = 3;
 
   string source_module = 4;
   string source_verb = 5;
   string dest_module = 6;
   string dest_verb = 7;
-  int64 duration_ms = 8;
+  google.protobuf.Duration duration = 8;
   string request = 9;
   string response = 10;
   string error = 11;
@@ -31,7 +33,7 @@ message Deployment {
 }
 
 message TimelineEntry {
-  int64 time_stamp = 1;
+  google.protobuf.Timestamp time_stamp = 1;
   oneof entry {
     Call call = 2;
     Deployment deployment = 3;
@@ -53,7 +55,7 @@ message Module {
 message LogEntry {
   string deployment_key = 1;
   optional string request_key = 2;
-  int64 time_stamp = 3;
+  google.protobuf.Timestamp time_stamp = 3;
   int32 log_level = 4;
   map<string, string> attributes = 5;
   string message = 6;
@@ -91,8 +93,8 @@ message GetTimelineResponse {
 }
 
 message StreamLogsRequest {
-  int64 update_interval_ms = 1;
-  int64 after_time = 2;
+  optional google.protobuf.Duration update_interval = 1;
+  google.protobuf.Timestamp after_time = 2;
   string deployment_key = 3;
 }
 
