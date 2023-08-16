@@ -74,14 +74,14 @@ export default function LogsPage() {
         <tbody className='divide-y divide-white/5'>
           {logs.map((log, index) => (
             <tr key={index}>
-              <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
+              <td className='hidden py-1 pl-0 pr-4 sm:table-cell sm:pr-8'>
                 <div className='flex gap-x-3'>
                   <div className='font-mono text-sm leading-6 text-gray-400'>
                     {log.deploymentKey}
                   </div>
                 </div>
               </td>
-              <td className='py-4 pl-0 pr-4 text-sm leading-6'>
+              <td className='py-1 pl-0 pr-4 text-sm leading-6'>
                 <div className='flex items-center justify-end gap-x-2 sm:justify-start'>
                   <div
                     className={`rounded-md bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-400 ring-1 ring-inset ring-white/10`}
@@ -91,11 +91,11 @@ export default function LogsPage() {
                 </div>
               </td>
               <td
-                className={`hidden py-4 pl-0 pr-4 text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
+                className={`hidden py-1 pl-0 pr-4 text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
               >
                 <div className='truncate text-sm font-medium leading-6 dark:text-white'>{log.message}</div>
               </td>
-              <td className='hidden py-4 pl-0 pr-8 text-sm leading-6 text-gray-400 md:table-cell lg:pr-20'>
+              <td className='hidden py-1 pl-0 pr-8 text-sm leading-6 text-gray-400 md:table-cell lg:pr-20'>
                 <div className='flex gap-x-3'>
                   <div className='font-mono text-sm leading-6 text-gray-400'>
                     {JSON.stringify(log.attributes)}
@@ -103,7 +103,7 @@ export default function LogsPage() {
                 </div>
               </td>
               <td
-                className={`hidden py-4 pl-0 pr-4 text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
+                className={`hidden py-1 pl-0 pr-4 text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
               >
                 <div className='truncate text-sm font-medium leading-6 dark:text-white'>{log.error}</div>
               </td>

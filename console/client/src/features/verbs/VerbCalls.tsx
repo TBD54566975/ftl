@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Link } from 'react-router-dom'
-import { formatTimestamp } from '../../utils/date.utils.ts'
+import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 
 type Props = {
   module?: Module
@@ -94,7 +94,7 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
                   </div>
                 </td>
                 <td className={`hidden py-4 pl-0 pr-8 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell lg:pr-20`}>
-                  {call.durationMs.toString()}
+                  {formatDuration(call.duration)}
                 </td>
                 <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
                   <code>{call.request}</code>

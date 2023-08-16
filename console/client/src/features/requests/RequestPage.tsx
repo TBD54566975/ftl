@@ -3,6 +3,7 @@ import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { useEffect, useState } from 'react'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 
 export default function RequestPage() {
   const { key } = useParams()
@@ -98,12 +99,12 @@ export default function RequestPage() {
               <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                 <div className='flex gap-x-3'>
                   <div className='font-mono text-sm leading-6 text-gray-500 dark:text-gray-400'>
-                    {new Date(Number(call.timeStamp)).toLocaleString()}
+                    {formatTimestamp(call.timeStamp)}
                   </div>
                 </div>
               </td>
               <td className={`hidden py-4 pl-0 pr-8 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell lg:pr-20`}>
-                {call.durationMs.toString()}
+                {formatDuration(call.duration)}
               </td>
               <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
                 <code>{call.request}</code>

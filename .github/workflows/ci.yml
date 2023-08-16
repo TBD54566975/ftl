@@ -77,6 +77,9 @@ jobs:
       - name: Console NPM Install
         working-directory: console/client
         run: npm install
+      - name: Console Type Check
+        working-directory: console/client
+        run: tsc
       - name: Console Lint
         working-directory: console/client
         run: npm run lint
