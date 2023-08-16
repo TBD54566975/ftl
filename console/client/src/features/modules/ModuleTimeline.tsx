@@ -5,7 +5,7 @@ import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_co
 import { RocketLaunchIcon } from '@heroicons/react/24/solid'
 import { classNames } from '../../utils/react.utils.ts'
 import { Link } from 'react-router-dom'
-import { dateFromTimestamp } from '../../utils/date.utils.ts'
+import { formatTimestamp } from '../../utils/date.utils.ts'
 
 type Props = {
   module?: Module
@@ -65,13 +65,13 @@ export const ModuleTimeline: React.FC<Props> = ({ module }) => {
                       </span>
                     </>
                   )}{' '}
-                  ({entry.entry.value.durationMs.toString()} ms).
+                  ({entry.entry.value.duration.toString()} ms).
                 </p>
                 <time
-                  dateTime={dateFromTimestamp(entry.timeStamp)}
+                  dateTime={formatTimestamp(entry.timeStamp)}
                   className='flex-none py-0.5 text-xs leading-5 text-gray-500'
                 >
-                  {dateFromTimestamp(entry.timeStamp)}
+                  {formatTimestamp(entry.timeStamp)}
                 </time>
               </>
             ) : (
@@ -87,10 +87,10 @@ export const ModuleTimeline: React.FC<Props> = ({ module }) => {
                   <span className='font-medium text-gray-900 dark:text-white'>{entry.entry.value?.language}</span>.
                 </p>
                 <time
-                  dateTime={dateFromTimestamp(entry.timeStamp)}
+                  dateTime={formatTimestamp(entry.timeStamp)}
                   className='flex-none py-0.5 text-xs leading-5 text-gray-500'
                 >
-                  {dateFromTimestamp(entry.timeStamp)}
+                  {formatTimestamp(entry.timeStamp)}
                 </time>
               </>
             )}

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
 import { LogEntry } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { dateFromTimestamp, timeStampFromDate } from '../../utils/date.utils'
+import { formatTimestamp } from '../../utils/date.utils'
+import { Timestamp } from '@bufbuild/protobuf'
 
 export default function LogsPage() {
   const client = useClient(ConsoleService)
@@ -10,13 +11,14 @@ export default function LogsPage() {
 
   useEffect(() => {
     const abortController = new AbortController()
+
     async function streamLogs() {
       const newLogs: LogEntry[] = []
       const afterTime = new Date()
       afterTime.setMinutes(afterTime.getMinutes() - 5)
 
       for await (const response of client.streamLogs(
-        { afterTime: timeStampFromDate(afterTime) },
+        { afterTime: Timestamp.fromDate(afterTime) },
         { signal: abortController.signal })
       ) {
         if (response.log) {
@@ -29,6 +31,7 @@ export default function LogsPage() {
       }
 
     }
+
     streamLogs()
     return () => {
       abortController.abort()
@@ -48,41 +51,23 @@ export default function LogsPage() {
         </colgroup>
         <thead className='border-b border-white/10 text-sm leading-6 dark:text-white'>
           <tr>
-            <th
-              scope='col'
-              className='py-2 pl-0 pr-8 font-semibold'
-            >
-              Deployment
+            <th scope='col' className='py-2 pl-0 pr-8 font-semibold'>
+            Deployment
             </th>
-            <th
-              scope='col'
-              className='py-2 pl-0 pr-4 text-right font-semibold sm:text-left'
-            >
-              Level
+            <th scope='col' className='py-2 pl-0 pr-4 text-right font-semibold sm:text-left'>
+            Level
             </th>
-            <th
-              scope='col'
-              className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'
-            >
-              Message
+            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
+            Message
             </th>
-            <th
-              scope='col'
-              className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'
-            >
-              Attributes
+            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
+            Attributes
             </th>
-            <th
-              scope='col'
-              className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'
-            >
-              Error
+            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
+            Error
             </th>
-            <th
-              scope='col'
-              className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
-            >
-              TimeStamp
+            <th scope='col' className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
+            TimeStamp
             </th>
           </tr>
         </thead>
@@ -98,7 +83,9 @@ export default function LogsPage() {
               </td>
               <td className='py-4 pl-0 pr-4 text-sm leading-6'>
                 <div className='flex items-center justify-end gap-x-2 sm:justify-start'>
-                  <div className={`rounded-md bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-400 ring-1 ring-inset ring-white/10`}>
+                  <div
+                    className={`rounded-md bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-400 ring-1 ring-inset ring-white/10`}
+                  >
                     {log.logLevel}
                   </div>
                 </div>
@@ -122,10 +109,10 @@ export default function LogsPage() {
               </td>
               <td>
                 <time
-                  dateTime={dateFromTimestamp(log.timeStamp)}
+                  dateTime={formatTimestamp(log.timeStamp)}
                   className='flex-none py-0.5 text-xs leading-5 text-gray-500'
                 >
-                  {dateFromTimestamp(log.timeStamp)}
+                  {formatTimestamp(log.timeStamp)}
                 </time>
               </td>
             </tr>

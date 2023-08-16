@@ -7,6 +7,8 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/bufbuild/connect-go"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/slices"
@@ -101,12 +103,6 @@ func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Reque
 	}), nil
 }
 
-type ByTimeStamp []*pbconsole.TimelineEntry
-
-func (a ByTimeStamp) Len() int           { return len(a) }
-func (a ByTimeStamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByTimeStamp) Less(i, j int) bool { return a[i].TimeStamp < a[j].TimeStamp }
-
 func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[pbconsole.GetTimelineRequest]) (*connect.Response[pbconsole.GetTimelineResponse], error) {
 	var timelineEntries []*pbconsole.TimelineEntry
 
@@ -135,7 +131,7 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[p
 	for _, deployment := range deployments {
 		if deployment.Module == req.Msg.Module {
 			timelineEntries = append(timelineEntries, &pbconsole.TimelineEntry{
-				TimeStamp: deployment.CreatedAt.Unix(),
+				TimeStamp: timestamppb.New(deployment.CreatedAt),
 				Entry: &pbconsole.TimelineEntry_Deployment{
 					Deployment: &pbconsole.Deployment{
 						Key:         deployment.Key.String(),
@@ -148,7 +144,9 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[p
 		}
 	}
 
-	sort.Sort(ByTimeStamp(timelineEntries))
+	sort.Slice(timelineEntries, func(i, j int) bool {
+		return timelineEntries[i].TimeStamp.AsTime().Before(timelineEntries[j].TimeStamp.AsTime())
+	})
 
 	return connect.NewResponse(&pbconsole.GetTimelineResponse{
 		Entries: timelineEntries,
@@ -158,8 +156,8 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[p
 func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pbconsole.StreamLogsRequest], stream *connect.ServerStream[pbconsole.StreamLogsResponse]) error {
 	// Default to 1 second interval if not specified.
 	updateInterval := 1 * time.Second
-	if req.Msg.UpdateIntervalMs != 0 {
-		updateInterval = time.Duration(req.Msg.UpdateIntervalMs) * time.Millisecond
+	if req.Msg.UpdateInterval != nil && req.Msg.UpdateInterval.AsDuration() > time.Second { // Minimum 1s interval.
+		updateInterval = req.Msg.UpdateInterval.AsDuration()
 	}
 
 	query := []dal.EventFilter{}
@@ -172,7 +170,7 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 	}
 
 	for {
-		events, err := c.dal.QueryEvents(ctx, time.UnixMilli(req.Msg.AfterTime), time.Now(), query...)
+		events, err := c.dal.QueryEvents(ctx, req.Msg.AfterTime.AsTime(), time.Now(), query...)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -191,7 +189,7 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 				Log: &pbconsole.LogEntry{
 					DeploymentKey: log.DeploymentKey.String(),
 					RequestKey:    requestKey,
-					TimeStamp:     log.Time.Unix(),
+					TimeStamp:     timestamppb.New(log.Time),
 					LogLevel:      log.Level,
 					Attributes:    log.Attributes,
 					Message:       log.Message,
@@ -220,12 +218,12 @@ func convertModuleCalls(calls []dal.CallEvent) []*pbconsole.Call {
 		return &pbconsole.Call{
 			RequestKey:    call.RequestKey.String(),
 			DeploymentKey: call.DeploymentKey.String(),
-			TimeStamp:     call.Time.Unix(),
+			TimeStamp:     timestamppb.New(call.Time),
 			SourceModule:  call.SourceVerb.Module,
 			SourceVerb:    call.SourceVerb.Name,
 			DestModule:    call.DestVerb.Module,
 			DestVerb:      call.DestVerb.Name,
-			DurationMs:    call.Duration.Milliseconds(),
+			Duration:      durationpb.New(call.Duration),
 			Request:       string(call.Request),
 			Response:      string(call.Response),
 			Error:         errorMessage,

@@ -1,7 +1,5 @@
-export function dateFromTimestamp(timeStamp: bigint): string {
-  return new Date(Number(timeStamp) * 1000).toLocaleString()
-}
+import { Timestamp } from '@bufbuild/protobuf'
 
-export function timeStampFromDate(date: Date): bigint {
-  return BigInt(Math.floor(date.getTime() / 1000))
+export function formatTimestamp(timestamp?: Timestamp): string {
+  return timestamp?.toDate()?.toLocaleString() || '(no date)'
 }

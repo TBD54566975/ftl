@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
+import { Duration, Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Data, Verb as Verb$1 } from "../schema/schema_pb.js";
 
 /**
@@ -22,9 +22,9 @@ export class Call extends Message<Call> {
   deploymentKey = "";
 
   /**
-   * @generated from field: int64 time_stamp = 3;
+   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
    */
-  timeStamp = protoInt64.zero;
+  timeStamp?: Timestamp;
 
   /**
    * @generated from field: string source_module = 4;
@@ -47,9 +47,9 @@ export class Call extends Message<Call> {
   destVerb = "";
 
   /**
-   * @generated from field: int64 duration_ms = 8;
+   * @generated from field: google.protobuf.Duration duration = 8;
    */
-  durationMs = protoInt64.zero;
+  duration?: Duration;
 
   /**
    * @generated from field: string request = 9;
@@ -76,12 +76,12 @@ export class Call extends Message<Call> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "source_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "duration_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 8, name: "duration", kind: "message", T: Duration },
     { no: 9, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 10, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 11, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -164,9 +164,9 @@ export class Deployment extends Message<Deployment> {
  */
 export class TimelineEntry extends Message<TimelineEntry> {
   /**
-   * @generated from field: int64 time_stamp = 1;
+   * @generated from field: google.protobuf.Timestamp time_stamp = 1;
    */
-  timeStamp = protoInt64.zero;
+  timeStamp?: Timestamp;
 
   /**
    * @generated from oneof xyz.block.ftl.v1.console.TimelineEntry.entry
@@ -193,7 +193,7 @@ export class TimelineEntry extends Message<TimelineEntry> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.TimelineEntry";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 2, name: "call", kind: "message", T: Call, oneof: "entry" },
     { no: 3, name: "deployment", kind: "message", T: Deployment, oneof: "entry" },
   ]);
@@ -328,9 +328,9 @@ export class LogEntry extends Message<LogEntry> {
   requestKey?: string;
 
   /**
-   * @generated from field: int64 time_stamp = 3;
+   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
    */
-  timeStamp = protoInt64.zero;
+  timeStamp?: Timestamp;
 
   /**
    * @generated from field: int32 log_level = 4;
@@ -362,7 +362,7 @@ export class LogEntry extends Message<LogEntry> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "time_stamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -687,14 +687,14 @@ export class GetTimelineResponse extends Message<GetTimelineResponse> {
  */
 export class StreamLogsRequest extends Message<StreamLogsRequest> {
   /**
-   * @generated from field: int64 update_interval_ms = 1;
+   * @generated from field: optional google.protobuf.Duration update_interval = 1;
    */
-  updateIntervalMs = protoInt64.zero;
+  updateInterval?: Duration;
 
   /**
-   * @generated from field: int64 after_time = 2;
+   * @generated from field: google.protobuf.Timestamp after_time = 2;
    */
-  afterTime = protoInt64.zero;
+  afterTime?: Timestamp;
 
   /**
    * @generated from field: string deployment_key = 3;
@@ -709,8 +709,8 @@ export class StreamLogsRequest extends Message<StreamLogsRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.StreamLogsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "update_interval_ms", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 2, name: "after_time", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 1, name: "update_interval", kind: "message", T: Duration, opt: true },
+    { no: 2, name: "after_time", kind: "message", T: Timestamp },
     { no: 3, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
