@@ -169,22 +169,22 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 		query = append(query, dal.FilterDeployments(deploymentKey))
 	}
 
+	lastLogTime := req.Msg.AfterTime.AsTime()
 	for {
-		events, err := c.dal.QueryEvents(ctx, req.Msg.AfterTime.AsTime(), time.Now(), query...)
+		thisRequestTime := time.Now()
+		events, err := c.dal.QueryEvents(ctx, lastLogTime, thisRequestTime, query...)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 
-		for index, event := range events {
-			log, ok := event.(*dal.LogEvent)
-			if !ok { // Shouldn't happen, but...
-				continue
-			}
+		logEvents := filterLogEvents(events)
+		for index, log := range logEvents {
 			var requestKey *string
 			if r, ok := log.RequestKey.Get(); ok {
 				rstr := r.String()
 				requestKey = &rstr
 			}
+
 			err := stream.Send(&pbconsole.StreamLogsResponse{
 				Log: &pbconsole.LogEntry{
 					DeploymentKey: log.DeploymentKey.String(),
@@ -195,12 +195,13 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 					Message:       log.Message,
 					Error:         log.Error.Ptr(),
 				},
-				More: len(events) > index+1,
+				More: len(logEvents) > index+1,
 			})
 			if err != nil {
 				return errors.WithStack(err)
 			}
 		}
+		lastLogTime = thisRequestTime
 		select {
 		case <-time.After(updateInterval):
 		case <-ctx.Done():
@@ -229,4 +230,14 @@ func convertModuleCalls(calls []dal.CallEvent) []*pbconsole.Call {
 			Error:         errorMessage,
 		}
 	})
+}
+
+func filterLogEvents(events []dal.Event) []*dal.LogEvent {
+	var filtered []*dal.LogEvent
+	for _, event := range events {
+		if log, ok := event.(*dal.LogEvent); ok {
+			filtered = append(filtered, log)
+		}
+	}
+	return filtered
 }

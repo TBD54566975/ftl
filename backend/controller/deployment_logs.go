@@ -82,7 +82,7 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				Error:         errorStr,
 			})
 			if err != nil {
-				fmt.Printf("failed to insert log event: %v\n", err)
+				fmt.Printf("failed to insert log entry: %v :: error: %v\n", entry, err)
 			}
 		case <-ctx.Done():
 			return

@@ -348,11 +348,11 @@ type IngressRoutingEntry struct {
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, deploymentKey model.DeploymentKey, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentKey, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, deploymentKey model.DeploymentKey, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) error {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
@@ -362,10 +362,10 @@ func (d *DAL) CreateDeployment(ctx context.Context, deploymentKey model.Deployme
 		len(artefacts),
 	)
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if len(existing) > 0 {
-		return model.DeploymentKey(existing[0].Key), nil
+		return nil
 	}
 
 	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
@@ -374,7 +374,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, deploymentKey model.Deployme
 
 	schemaBytes, err := proto.Marshal(schema.ToProto())
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 
 	// TODO(aat): "schema" containing language?
@@ -383,17 +383,17 @@ func (d *DAL) CreateDeployment(ctx context.Context, deploymentKey model.Deployme
 	// Create the deployment
 	err = tx.CreateDeployment(ctx, sqltypes.Key(deploymentKey), schema.Name, schemaBytes)
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
+		return errors.WithStack(translatePGError(err))
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
 	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if len(artefactDigests) != len(artefacts) {
 		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return model.DeploymentKey{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+		return errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
 	}
 
 	// Associate the artefacts with the deployment
@@ -406,7 +406,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, deploymentKey model.Deployme
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
+			return errors.WithStack(translatePGError(err))
 		}
 	}
 
@@ -419,11 +419,11 @@ func (d *DAL) CreateDeployment(ctx context.Context, deploymentKey model.Deployme
 			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
+			return errors.WithStack(translatePGError(err))
 		}
 	}
 
-	return deploymentKey, nil
+	return nil
 }
 
 func (d *DAL) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {

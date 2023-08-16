@@ -30,7 +30,7 @@ module.exports = {
       ignoreComments: true,
       tabWidth: 2, // Prettier:Tab Width
       ignoreTemplateLiterals: true,
-      code: 120, // Prettier:Max length
+      code: 180, // Prettier:Max length
     } ],
     'no-tabs': [ 'error' ], // Prettier: Tabs
     semi: [ 'error', 'never' ], // Prettier: Semicolons

@@ -43,9 +43,9 @@ func TestDAL(t *testing.T) {
 	})
 
 	module := &schema.Module{Name: "test"}
-	var deploymentKey model.DeploymentKey
+	deploymentKey := model.NewDeploymentKey()
 	t.Run("CreateDeployment", func(t *testing.T) {
-		deploymentKey, err = dal.CreateDeployment(ctx, model.NewDeploymentKey(), "go", module, []DeploymentArtefact{{
+		err = dal.CreateDeployment(ctx, deploymentKey, "go", module, []DeploymentArtefact{{
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
