@@ -1,7 +1,7 @@
 const cp = require('child_process')
 const chokidar = require('chokidar')
 
-const run = scriptName => cp.spawn('npm', ['run', scriptName], { stdio: 'inherit' })
+const run = scriptName => cp.spawn('npm', [ 'run', scriptName ], { stdio: 'inherit' })
 
 run('build:css-types')
 run('copy:css')
