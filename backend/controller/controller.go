@@ -591,13 +591,13 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, errors.Wrap(err, "invalid module schema")
 	}
 	ingressRoutes := extractIngressRoutingEntries(req.Msg)
-	err = s.dal.CreateDeployment(ctx, deploymentKey, ms.Runtime.Language, module, artefacts, ingressRoutes)
+	key, err := s.dal.CreateDeployment(ctx, deploymentKey, ms.Runtime.Language, module, artefacts, ingressRoutes)
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment")
 		return nil, errors.Wrap(err, "could not create deployment")
 	}
-	logger.Infof("Created deployment %s", deploymentKey)
-	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: deploymentKey.String()}), nil
+	logger.Infof("Created deployment %s", key)
+	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: key.String()}), nil
 }
 
 func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deployment, error) {
