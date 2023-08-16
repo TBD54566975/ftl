@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Link } from 'react-router-dom'
-import {formatDuration, formatTimestamp} from '../../utils/date.utils.ts'
+import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 
 type Props = {
   module?: Module

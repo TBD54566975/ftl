@@ -1,4 +1,4 @@
-import {Duration, Timestamp} from '@bufbuild/protobuf'
+import { Duration, Timestamp } from '@bufbuild/protobuf'
 
 export function formatTimestamp(timestamp?: Timestamp): string {
   if (!timestamp) return '(no date)'

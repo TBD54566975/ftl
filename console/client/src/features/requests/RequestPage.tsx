@@ -3,7 +3,7 @@ import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { useEffect, useState } from 'react'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
-import {formatDuration, formatTimestamp} from "../../utils/date.utils.ts";
+import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 
 export default function RequestPage() {
   const { key } = useParams()
