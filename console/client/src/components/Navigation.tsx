@@ -25,10 +25,7 @@ export default function Navigation() {
               <div className='flex h-16 items-center justify-between'>
                 <div className='flex items-center'>
                   <div className='flex-shrink-0 flex items-baseline space-x-4'>
-                    <NavLink to='/'>
-                      <span className='text-indigo-200 text-xl font-medium'>FTL</span>
-                      <span className='px-2 text-rose-400 text-2xl font-medium'>∞</span>
-                    </NavLink>
+                  
                   </div>
                   <div className='hidden md:block'>
                     <div className='ml-10 flex items-baseline space-x-4'>
