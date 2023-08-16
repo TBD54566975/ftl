@@ -1,35 +1,49 @@
-import { useEffect, useState } from 'react'
+import { Timestamp } from '@bufbuild/protobuf'
+import React, { useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
 import { LogEntry } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { formatTimestamp } from '../../utils/date.utils'
-import { Timestamp } from '@bufbuild/protobuf'
+import { formatTimestampShort } from '../../utils/date.utils'
+import { classNames } from '../../utils/react.utils'
+
+export const levelText = {
+  0: 'Default',
+  1: 'Trace',
+  5: 'Debug',
+  9: 'Info',
+  13: 'Warn',
+  17: 'Error',
+}
+
+export const levelBadge = {
+  0: 'text-gray-400 bg-gray-400/10 dark:text-gray-300 dark:bg-gray-700/10',
+  1: 'text-blue-350 bg-blue-300/10 dark:text-blue-300 dark:bg-blue-700/10',
+  5: 'text-blue-350 bg-blue-400/10 dark:text-blue-300 dark:bg-blue-800/10',
+  9: 'text-green-400 bg-green-400/10 dark:text-green-300 dark:bg-green-700/10',
+  13: 'text-yellow-400 bg-yellow-400/10 dark:text-yellow-300 dark:bg-yellow-600/10',
+  17: 'text-red-500 bg-red-500/10 dark:text-red-400 dark:bg-red-700/10',
+}
 
 export default function LogsPage() {
   const client = useClient(ConsoleService)
+  const [ expandedLog, setExpandedLog ] = useState<number | null>(null)
   const [ logs, setLogs ] = useState<LogEntry[]>([])
 
   useEffect(() => {
     const abortController = new AbortController()
 
     async function streamLogs() {
-      const newLogs: LogEntry[] = []
       const afterTime = new Date()
-      afterTime.setMinutes(afterTime.getMinutes() - 5)
+      afterTime.setHours(afterTime.getHours() - 1)
 
       for await (const response of client.streamLogs(
         { afterTime: Timestamp.fromDate(afterTime) },
         { signal: abortController.signal })
       ) {
         if (response.log) {
-          newLogs.push(response.log)
-        }
-
-        if (!response.more) {
-          setLogs(newLogs)
+          setLogs(prevLogs => [ response.log!, ...prevLogs ])
         }
       }
-
     }
 
     streamLogs()
@@ -40,85 +54,92 @@ export default function LogsPage() {
 
   return (
     <>
-      <h2 className='text-base font-semibold dark:text-white'>Logs</h2>
-      <table className='mt-6 w-full whitespace-nowrap text-left'>
-        <colgroup>
-          <col className='w-full sm:w-4/12' />
-          <col className='lg:w-4/12' />
-          <col className='lg:w-2/12' />
-          <col className='lg:w-1/12' />
-          <col className='lg:w-1/12' />
-        </colgroup>
-        <thead className='border-b border-white/10 text-sm leading-6 dark:text-white'>
-          <tr>
-            <th scope='col' className='py-2 pl-0 pr-8 font-semibold'>
-            Deployment
-            </th>
-            <th scope='col' className='py-2 pl-0 pr-4 text-right font-semibold sm:text-left'>
-            Level
-            </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
-            Message
-            </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
-            Attributes
-            </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
-            Error
-            </th>
-            <th scope='col' className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
-            TimeStamp
-            </th>
-          </tr>
-        </thead>
-        <tbody className='divide-y divide-white/5'>
-          {logs.map((log, index) => (
-            <tr key={index}>
-              <td className='hidden py-1 pl-0 pr-4 sm:table-cell sm:pr-8'>
-                <div className='flex gap-x-3'>
-                  <div className='font-mono text-sm leading-6 text-gray-400'>
-                    {log.deploymentKey}
-                  </div>
-                </div>
-              </td>
-              <td className='py-1 pl-0 pr-4 text-sm leading-6'>
-                <div className='flex items-center justify-end gap-x-2 sm:justify-start'>
-                  <div
-                    className={`rounded-md bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-400 ring-1 ring-inset ring-white/10`}
+      <div className='flow-root'>
+        <div className='-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8'>
+          <div className='inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8'>
+            <table className='min-w-full divide-y divide-gray-300 dark:divide-gray-400'>
+              <thead>
+                <tr>
+                  <th
+                    scope='col'
+                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'
                   >
-                    {log.logLevel}
-                  </div>
-                </div>
-              </td>
-              <td
-                className={`hidden py-1 pl-0 pr-4 text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
-              >
-                <div className='truncate text-sm font-medium leading-6 dark:text-white'>{log.message}</div>
-              </td>
-              <td className='hidden py-1 pl-0 pr-8 text-sm leading-6 text-gray-400 md:table-cell lg:pr-20'>
-                <div className='flex gap-x-3'>
-                  <div className='font-mono text-sm leading-6 text-gray-400'>
-                    {JSON.stringify(log.attributes)}
-                  </div>
-                </div>
-              </td>
-              <td
-                className={`hidden py-1 pl-0 pr-4 text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
-              >
-                <div className='truncate text-sm font-medium leading-6 dark:text-white'>{log.error}</div>
-              </td>
-              <td>
-                <time
-                  dateTime={formatTimestamp(log.timeStamp)}
-                  className='flex-none py-0.5 text-xs leading-5 text-gray-500'
-                >
-                  {formatTimestamp(log.timeStamp)}
-                </time>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                    Level
+                  </th>
+                  <th
+                    scope='col'
+                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'
+                  >
+                    Date
+                  </th>
+                  <th
+                    scope='col'
+                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'
+                  >
+                    Message
+                  </th>
+                </tr>
+              </thead>
+              <tbody className='divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-slate-800'>
+                {logs.map((log, index) => (
+                  <React.Fragment key={index}>
+                    <tr onClick={() => setExpandedLog(expandedLog !== index ? index : null)}>
+                      <td className='whitespace-nowrap px-2 py-2'>
+                        <span className={classNames(levelBadge[log.logLevel], 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600')}>
+                          {levelText[log.logLevel]}
+                        </span>
+                      </td>
+                      <td className='whitespace-nowrap px-2 py-2 text-sm '>
+                        <time
+                          dateTime={formatTimestampShort(log.timeStamp)}
+                          className='flex-none py-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400'
+                        >
+                          {formatTimestampShort(log.timeStamp)}
+                        </time></td>
+                      <td className='whitespace-nowrap px-2 py-2 text-sm text-gray-500 dark:text-gray-300'>{log.message}</td>
+                    </tr>
+                    {expandedLog === index && (
+                      <tr>
+                        <td colSpan={4}>
+                          <div className='p-4 text-sm bg-white text-gray-600 dark:bg-slate-800 dark:text-gray-400'>
+                            <div className='mb-2'>
+                              <strong>Deployment Key:</strong> {log.deploymentKey}
+                            </div>
+
+                            {log.requestKey && (
+                              <div className='mb-2'>
+                                <strong>Request Key:</strong> {log.requestKey}
+                              </div>
+                            )}
+
+                            <div className='mb-2'>
+                              <strong>Attributes:</strong>
+                              <div className='ml-4'>
+                                {Object.entries(log.attributes).map(([ key, value ]) => (
+                                  <div key={key}>
+                                    {key}: {value}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {log.error && (
+                              <div className='mt-2 text-red-500'>
+                                <strong>Error:</strong> {log.error}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </>
   )
 }
+
