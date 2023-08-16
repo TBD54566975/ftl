@@ -348,13 +348,7 @@ type IngressRoutingEntry struct {
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(
-	ctx context.Context,
-	language string,
-	schema *schema.Module,
-	artefacts []DeploymentArtefact,
-	ingressRoutes []IngressRoutingEntry,
-) (key model.DeploymentKey, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, deploymentKey model.DeploymentKey, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentKey, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -386,7 +380,6 @@ func (d *DAL) CreateDeployment(
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, schema.Name)
 
-	deploymentKey := model.NewDeploymentKey()
 	// Create the deployment
 	err = tx.CreateDeployment(ctx, sqltypes.Key(deploymentKey), schema.Name, schemaBytes)
 	if err != nil {

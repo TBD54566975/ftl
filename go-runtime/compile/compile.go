@@ -51,7 +51,7 @@ func Compile(ctx context.Context, config Config) (*model2.Deployment, error) {
 	}
 
 	logger.Infof("Tidying up")
-	err = exec.Command(ctx, buildDir, "go", "mod", "tidy").Run()
+	err = exec.Command(ctx, log.Debug, buildDir, "go", "mod", "tidy").Run()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -59,7 +59,7 @@ func Compile(ctx context.Context, config Config) (*model2.Deployment, error) {
 	dest := filepath.Join(buildDir, "main")
 
 	logger.Infof("Compiling")
-	cmd := exec.Command(ctx, buildDir, "go", "build", "-trimpath", "-ldflags=-s -w -buildid=", "-o", dest)
+	cmd := exec.Command(ctx, log.Debug, buildDir, "go", "build", "-trimpath", "-ldflags=-s -w -buildid=", "-o", dest)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "CGO_ENABLED=0")
 	cmd.Env = append(cmd.Env, "GOOS="+config.OS)

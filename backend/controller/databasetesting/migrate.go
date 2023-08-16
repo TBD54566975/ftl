@@ -10,6 +10,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
+	"github.com/TBD54566975/ftl/backend/common/log"
 )
 
 // Migrate a database connection to the latest schema using Goose.
@@ -24,7 +25,7 @@ func Migrate(ctx context.Context, dsn string) error {
 		return errors.Wrap(err, "failed to find git root")
 	}
 	workingDir := strings.TrimSpace(string(output))
-	cmd := exec.Command(ctx, workingDir, "dbmate", "--url="+dsn, "--migrations-dir=backend/controller/internal/sql/schema", "up")
+	cmd := exec.Command(ctx, log.Debug, workingDir, "dbmate", "--url="+dsn, "--migrations-dir=backend/controller/internal/sql/schema", "up")
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()

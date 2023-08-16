@@ -15,7 +15,7 @@ import (
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
-	log2 "github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/rpc"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
@@ -58,7 +58,7 @@ func WithStartTimeout(timeout time.Duration) Option {
 func WithExtraClient[Client PingableClient](out *Client, makeClient rpc.ClientFactory[Client]) Option {
 	return func(po *pluginOptions) error {
 		po.additionalClients = append(po.additionalClients, func(baseURL string, opts ...connect.ClientOption) {
-			*out = rpc.Dial(makeClient, baseURL, log2.Trace, opts...)
+			*out = rpc.Dial(makeClient, baseURL, log.Trace, opts...)
 		})
 		return nil
 	}
@@ -85,16 +85,12 @@ type Plugin[Client PingableClient] struct {
 //	FTL_WORKING_DIR - the path to a working directory that the plugin can write state to, if required.
 func Spawn[Client PingableClient](
 	ctx context.Context,
+	defaultLevel log.Level,
 	name, dir, exe string,
 	makeClient rpc.ClientFactory[Client],
 	options ...Option,
-) (
-	plugin *Plugin[Client],
-	// "cmdCtx" will be cancelled when the plugin process stops.
-	cmdCtx context.Context,
-	err error,
-) {
-	logger := log2.FromContext(ctx).Sub(map[string]string{log2.ScopeKey: name})
+) (plugin *Plugin[Client], cmdCtx context.Context, err error) {
+	logger := log.FromContext(ctx).Sub(map[string]string{log.ScopeKey: name})
 
 	opts := pluginOptions{
 		startTimeout: time.Second * 30,
@@ -126,7 +122,7 @@ func Spawn[Client PingableClient](
 	// Start the plugin process.
 	pluginEndpoint := &url.URL{Scheme: "http", Host: addr.String()}
 	logger.Debugf("Spawning plugin on %s", pluginEndpoint)
-	cmd := exec.Command(ctx, dir, exe)
+	cmd := exec.Command(ctx, defaultLevel, dir, exe)
 
 	// Send the plugin's stderr to the logger.
 	cmd.Stderr = nil
@@ -146,7 +142,7 @@ func Spawn[Client PingableClient](
 	go func() { cancelWithCause(cmd.Wait()) }()
 
 	go func() {
-		err := log2.JSONStreamer(pipe, logger, log2.Info)
+		err := log.JSONStreamer(pipe, logger, log.Info)
 		if err != nil {
 			logger.Errorf(err, "Error streaming plugin logs.")
 		}
@@ -169,7 +165,7 @@ func Spawn[Client PingableClient](
 	defer cancel()
 
 	// Wait for the plugin to start.
-	client := rpc.Dial(makeClient, pluginEndpoint.String(), log2.Trace)
+	client := rpc.Dial(makeClient, pluginEndpoint.String(), log.Trace)
 	pingErr := make(chan error)
 	go func() {
 		retry := backoff.Backoff{Min: pluginRetryDelay, Max: pluginRetryDelay}

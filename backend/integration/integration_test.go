@@ -35,7 +35,7 @@ func TestIntegration(t *testing.T) {
 	ctx := log.ContextWithLogger(context.Background(), logger)
 	for _, binary := range binaries {
 		t.Logf("Building %s", binary)
-		err := exec.Command(ctx, "..", "go", "build", "-trimpath", "-ldflags=-s -w -buildid=", "-o", filepath.Join(binDir, binary), "./cmd/"+binary).Run()
+		err := exec.Command(ctx, log.Debug, "..", "go", "build", "-trimpath", "-ldflags=-s -w -buildid=", "-o", filepath.Join(binDir, binary), "./cmd/"+binary).Run()
 		assert.NoError(t, err)
 	}
 	tests := []struct {
@@ -70,7 +70,7 @@ func TestIntegration(t *testing.T) {
 func run(t testing.TB, ctx context.Context, args ...string) {
 	t.Helper()
 	binDir := t.TempDir()
-	cmd := exec.Command(ctx, "..", filepath.Join(binDir, args[0]), args...)
+	cmd := exec.Command(ctx, log.Debug, "..", filepath.Join(binDir, args[0]), args...)
 	err := cmd.Start()
 	assert.NoError(t, err)
 	t.Cleanup(func() {
