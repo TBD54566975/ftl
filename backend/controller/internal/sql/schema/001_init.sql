@@ -151,7 +151,8 @@ CREATE UNIQUE INDEX controller_endpoint_not_dead_idx ON controller (endpoint) WH
 
 CREATE TYPE event_type AS ENUM (
     'call',
-    'log'
+    'log',
+    'deployment'
     );
 
 CREATE TABLE events

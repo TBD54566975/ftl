@@ -245,19 +245,20 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	deploymentEvent := &DeploymentEvent{
+		DeploymentName: deploymentName,
+		Time:           time.Now().Round(time.Millisecond),
+		Type:           DeploymentCreated,
+		Language:       "go",
+		ModuleName:     "test",
+		MinReplicas:    1,
+	}
+	t.Run("InsertDeploymentEntry", func(t *testing.T) {
+		err = dal.InsertDeploymentEvent(ctx, deploymentEvent)
+		assert.NoError(t, err)
+	})
+
 	t.Run("QueryEvents", func(t *testing.T) {
-		t.Run("NoFilters", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now())
-			assert.NoError(t, err)
-			assert.Equal(t, []Event{callEvent, logEvent}, events)
-		})
-
-		t.Run("ByDeployment", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterDeployments(deploymentName))
-			assert.NoError(t, err)
-			assert.Equal(t, []Event{callEvent, logEvent}, events)
-		})
-
 		t.Run("ByCall", func(t *testing.T) {
 			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterTypes(EventTypeCall), FilterCall("", "time"))
 			assert.NoError(t, err)

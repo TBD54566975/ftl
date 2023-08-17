@@ -148,6 +148,14 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 					},
 					More: more,
 				})
+			case *dal.DeploymentEvent:
+				err = stream.Send(&pbconsole.StreamTimelineResponse{
+					TimeStamp: timestamppb.New(event.Time),
+					Entry: &pbconsole.StreamTimelineResponse_Deployment{
+						Deployment: deploymentEventToDeployment(*event),
+					},
+					More: more,
+				})
 			}
 
 			if err != nil {
@@ -266,6 +274,23 @@ func logEventToLogEntry(event dal.LogEvent) *pbconsole.LogEntry {
 	}
 }
 
+func deploymentEventToDeployment(event dal.DeploymentEvent) *pbconsole.Deployment {
+	var eventType pbconsole.DeploymentEventType
+	switch event.Type {
+	case dal.DeploymentCreated:
+		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_CREATED
+	case dal.DeploymentReplaced:
+		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_REPLACED
+	}
+	return &pbconsole.Deployment{
+		Name:        event.DeploymentName.String(),
+		Language:    event.Language,
+		ModuleName:  event.ModuleName,
+		MinReplicas: 0,
+		EventType:   eventType,
+	}
+}
+
 func filterLogEvents(events []dal.Event) []*dal.LogEvent {
 	var filtered []*dal.LogEvent
 	for _, event := range events {
@@ -283,6 +308,9 @@ func filterTimelineEvents(events []dal.Event) []dal.Event {
 			filtered = append(filtered, event)
 		}
 		if _, ok := event.(*dal.CallEvent); ok {
+			filtered = append(filtered, event)
+		}
+		if _, ok := event.(*dal.DeploymentEvent); ok {
 			filtered = append(filtered, event)
 		}
 	}

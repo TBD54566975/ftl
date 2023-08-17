@@ -58,8 +58,9 @@ func (ns NullControllerState) Value() (driver.Value, error) {
 type EventType string
 
 const (
-	EventTypeCall EventType = "call"
-	EventTypeLog  EventType = "log"
+	EventTypeCall       EventType = "call"
+	EventTypeLog        EventType = "log"
+	EventTypeDeployment EventType = "deployment"
 )
 
 func (e *EventType) Scan(src interface{}) error {

@@ -447,74 +447,6 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 	return items, nil
 }
 
-const getDeploymentLogs = `-- name: GetDeploymentLogs :many
-SELECT ir.key                              AS request_key,
-       ir.key                              AS deployment_name,
-       e.time_stamp                        AS time_stamp,
-       e.custom_key_1                      AS level,
-       (e.payload ->> 'message')::TEXT     AS message,
-       (e.payload ->> 'attributes')::JSONB AS attributes,
-       (e.payload ->> 'error')::TEXT       AS error
-FROM events e
-         INNER JOIN ingress_requests ir ON e.request_id = ir.id
-         INNER JOIN deployments d ON e.deployment_id = d.id
-WHERE e.type = 'log'
-  AND d.name = $1
-  AND ir.key = $2
-  AND e.time_stamp >= $3
-  AND e.time_stamp <= $4
-`
-
-type GetDeploymentLogsParams struct {
-	DeploymentName  model.DeploymentName
-	RequestKey      sqltypes.Key
-	AfterTimestamp  pgtype.Timestamptz
-	BeforeTimestamp pgtype.Timestamptz
-}
-
-type GetDeploymentLogsRow struct {
-	RequestKey     sqltypes.Key
-	DeploymentName sqltypes.Key
-	TimeStamp      pgtype.Timestamptz
-	Level          pgtype.Text
-	Message        string
-	Attributes     []byte
-	Error          string
-}
-
-func (q *Queries) GetDeploymentLogs(ctx context.Context, arg GetDeploymentLogsParams) ([]GetDeploymentLogsRow, error) {
-	rows, err := q.db.Query(ctx, getDeploymentLogs,
-		arg.DeploymentName,
-		arg.RequestKey,
-		arg.AfterTimestamp,
-		arg.BeforeTimestamp,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDeploymentLogsRow
-	for rows.Next() {
-		var i GetDeploymentLogsRow
-		if err := rows.Scan(
-			&i.RequestKey,
-			&i.DeploymentName,
-			&i.TimeStamp,
-			&i.Level,
-			&i.Message,
-			&i.Attributes,
-			&i.Error,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getDeployments = `-- name: GetDeployments :many
 SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
 FROM deployments d
@@ -1060,6 +992,39 @@ func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams
 		arg.Request,
 		arg.Response,
 		arg.Error,
+	)
+	return err
+}
+
+const insertDeploymentEvent = `-- name: InsertDeploymentEvent :exec
+INSERT INTO events (deployment_id, time_stamp, type, custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
+VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
+        $2::TIMESTAMPTZ,
+        'deployment',
+        $3::TEXT,
+        $4::TEXT,
+        $5::TEXT,
+        $6::INT,
+        jsonb_build_object())
+`
+
+type InsertDeploymentEventParams struct {
+	DeploymentName string
+	TimeStamp      pgtype.Timestamptz
+	Type           string
+	Language       string
+	ModuleName     string
+	MinReplicas    int32
+}
+
+func (q *Queries) InsertDeploymentEvent(ctx context.Context, arg InsertDeploymentEventParams) error {
+	_, err := q.db.Exec(ctx, insertDeploymentEvent,
+		arg.DeploymentName,
+		arg.TimeStamp,
+		arg.Type,
+		arg.Language,
+		arg.ModuleName,
+		arg.MinReplicas,
 	)
 	return err
 }

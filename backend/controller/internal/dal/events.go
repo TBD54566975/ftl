@@ -21,8 +21,16 @@ type EventType = sql.EventType
 
 // Supported event types.
 const (
-	EventTypeLog  = sql.EventTypeLog
-	EventTypeCall = sql.EventTypeCall
+	EventTypeLog        = sql.EventTypeLog
+	EventTypeCall       = sql.EventTypeCall
+	EventTypeDeployment = sql.EventTypeDeployment
+)
+
+type DeploymentEventType string
+
+const (
+	DeploymentCreated  DeploymentEventType = "created"  // DeploymentCreated event type
+	DeploymentReplaced DeploymentEventType = "replaced" // DeploymentReplaced event type
 )
 
 // Event types.
@@ -55,6 +63,17 @@ type CallEvent struct {
 }
 
 func (e *CallEvent) event() {}
+
+type DeploymentEvent struct {
+	DeploymentName model.DeploymentName
+	Time           time.Time
+	Type           DeploymentEventType
+	Language       string
+	ModuleName     string
+	MinReplicas    int
+}
+
+func (e *DeploymentEvent) event() {}
 
 type eventFilterCall struct {
 	sourceModule string
@@ -133,6 +152,8 @@ type eventLogJSON struct {
 	Attributes map[string]string    `json:"attributes"`
 	Error      types.Option[string] `json:"error"`
 }
+
+type eventDeploymentJSON struct{}
 
 func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters ...EventFilter) ([]Event, error) {
 	// Build query.
@@ -253,7 +274,18 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 				Response:       jsonPayload.Response,
 				Error:          jsonPayload.Error,
 			})
-
+		case sql.EventTypeDeployment:
+			var jsonPayload eventDeploymentJSON
+			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			out = append(out, &DeploymentEvent{
+				DeploymentName: row.DeploymentName,
+				Time:           row.TimeStamp,
+				Type:           DeploymentEventType(row.CustomKey1.MustGet()),
+				Language:       row.CustomKey2.MustGet(),
+				ModuleName:     row.CustomKey3.MustGet(),
+			})
 		default:
 			panic("unknown event type: " + row.Type)
 		}
