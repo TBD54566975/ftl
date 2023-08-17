@@ -61,11 +61,11 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		}
 
 		modules = append(modules, &pbconsole.Module{
-			Name:          deployment.Module,
-			DeploymentKey: deployment.Key.String(),
-			Language:      deployment.Language,
-			Verbs:         verbs,
-			Data:          data,
+			Name:           deployment.Module,
+			DeploymentName: deployment.Name.String(),
+			Language:       deployment.Language,
+			Verbs:          verbs,
+			Data:           data,
 		})
 	}
 
@@ -134,9 +134,9 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[p
 				TimeStamp: timestamppb.New(deployment.CreatedAt),
 				Entry: &pbconsole.TimelineEntry_Deployment{
 					Deployment: &pbconsole.Deployment{
-						Key:         deployment.Key.String(),
+						Name:        deployment.Name.String(),
 						Language:    deployment.Language,
-						Name:        deployment.Module,
+						ModuleName:  deployment.Module,
 						MinReplicas: int32(deployment.MinReplicas),
 					},
 				},
@@ -161,12 +161,12 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 	}
 
 	query := []dal.EventFilter{}
-	if req.Msg.DeploymentKey != "" {
-		deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
+	if req.Msg.DeploymentName != "" {
+		deploymentName, err := model.ParseDeploymentName(req.Msg.DeploymentName)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		query = append(query, dal.FilterDeployments(deploymentKey))
+		query = append(query, dal.FilterDeployments(deploymentName))
 	}
 
 	lastLogTime := req.Msg.AfterTime.AsTime()
@@ -187,13 +187,13 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 
 			err := stream.Send(&pbconsole.StreamLogsResponse{
 				Log: &pbconsole.LogEntry{
-					DeploymentKey: log.DeploymentKey.String(),
-					RequestKey:    requestKey,
-					TimeStamp:     timestamppb.New(log.Time),
-					LogLevel:      log.Level,
-					Attributes:    log.Attributes,
-					Message:       log.Message,
-					Error:         log.Error.Ptr(),
+					DeploymentName: log.DeploymentName.String(),
+					RequestKey:     requestKey,
+					TimeStamp:      timestamppb.New(log.Time),
+					LogLevel:       log.Level,
+					Attributes:     log.Attributes,
+					Message:        log.Message,
+					Error:          log.Error.Ptr(),
 				},
 				More: len(logEvents) > index+1,
 			})
@@ -217,17 +217,17 @@ func convertModuleCalls(calls []dal.CallEvent) []*pbconsole.Call {
 			errorMessage = call.Error.Error()
 		}
 		return &pbconsole.Call{
-			RequestKey:    call.RequestKey.String(),
-			DeploymentKey: call.DeploymentKey.String(),
-			TimeStamp:     timestamppb.New(call.Time),
-			SourceModule:  call.SourceVerb.Module,
-			SourceVerb:    call.SourceVerb.Name,
-			DestModule:    call.DestVerb.Module,
-			DestVerb:      call.DestVerb.Name,
-			Duration:      durationpb.New(call.Duration),
-			Request:       string(call.Request),
-			Response:      string(call.Response),
-			Error:         errorMessage,
+			RequestKey:     call.RequestKey.String(),
+			DeploymentName: call.DeploymentName.String(),
+			TimeStamp:      timestamppb.New(call.Time),
+			SourceModule:   call.SourceVerb.Module,
+			SourceVerb:     call.SourceVerb.Name,
+			DestModule:     call.DestVerb.Module,
+			DestVerb:       call.DestVerb.Name,
+			Duration:       durationpb.New(call.Duration),
+			Request:        string(call.Request),
+			Response:       string(call.Response),
+			Error:          errorMessage,
 		}
 	})
 }

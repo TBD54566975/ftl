@@ -48,7 +48,7 @@ type IngressRoute struct {
 }
 
 type IngressRouteEntry struct {
-	Deployment model.DeploymentKey
+	Deployment model.DeploymentName
 	Module     string
 	Verb       string
 	Method     string
@@ -86,14 +86,14 @@ type Runner struct {
 	Endpoint string
 	State    RunnerState
 	// Assigned deployment key, if any.
-	Deployment types.Option[model.DeploymentKey]
+	Deployment types.Option[model.DeploymentName]
 	Labels     model.Labels
 }
 
 func (r Runner) notification() {}
 
 type Reconciliation struct {
-	Deployment model.DeploymentKey
+	Deployment model.DeploymentName
 	Module     string
 	Language   string
 
@@ -136,7 +136,7 @@ func (s ControllerState) ToProto() ftlv1.ControllerState {
 }
 
 type Deployment struct {
-	Key         model.DeploymentKey
+	Name        model.DeploymentName
 	Language    string
 	Module      string
 	MinReplicas int
@@ -169,7 +169,7 @@ type Reservation interface {
 
 type Route struct {
 	Runner     model.RunnerKey
-	Deployment model.DeploymentKey
+	Deployment model.DeploymentName
 	Endpoint   string
 }
 
@@ -238,7 +238,7 @@ func (d *DAL) GetStatus(
 			return Deployment{}, errors.Wrapf(err, "%q: invalid labels in database", in.ModuleName)
 		}
 		return Deployment{
-			Key:         model.DeploymentKey(in.Key),
+			Name:        in.Name,
 			Module:      in.ModuleName,
 			Language:    in.Language,
 			MinReplicas: int(in.MinReplicas),
@@ -250,10 +250,10 @@ func (d *DAL) GetStatus(
 		return Status{}, errors.WithStack(err)
 	}
 	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
-		var deployment types.Option[model.DeploymentKey]
+		var deployment types.Option[model.DeploymentName]
 		// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
-		if in.DeploymentKey != nil {
-			deployment = types.Some[model.DeploymentKey](in.DeploymentKey.([16]byte)) //nolint:forcetypeassert
+		if in.DeploymentName != nil {
+			deployment = types.Some(model.DeploymentName(in.DeploymentName.(string))) //nolint:forcetypeassert
 		}
 		attrs := model.Labels{}
 		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
@@ -282,7 +282,7 @@ func (d *DAL) GetStatus(
 		Runners:     domainRunners,
 		IngressRoutes: slices.Map(ingressRoutes, func(in sql.GetAllIngressRoutesRow) IngressRouteEntry {
 			return IngressRouteEntry{
-				Deployment: model.DeploymentKey(in.DeploymentKey),
+				Deployment: in.DeploymentName,
 				Module:     in.Module,
 				Verb:       in.Verb,
 				Method:     in.Method,
@@ -292,9 +292,9 @@ func (d *DAL) GetStatus(
 	}, nil
 }
 
-func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]Runner, error) {
+func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentName) ([]Runner, error) {
 	runners := []Runner{}
-	rows, err := d.db.GetRunnersForDeployment(ctx, sqltypes.Key(deployment))
+	rows, err := d.db.GetRunnersForDeployment(ctx, deployment)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
@@ -348,11 +348,11 @@ type IngressRoutingEntry struct {
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentKey, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentName, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(err)
+		return "", errors.Wrap(err, "could not start transaction")
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
@@ -362,10 +362,10 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 		len(artefacts),
 	)
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(err)
+		return "", errors.Wrap(err, "couldn't check for existing deployment")
 	}
 	if len(existing) > 0 {
-		return model.DeploymentKey(existing[0].Key), nil
+		return existing[0].DeploymentName, nil
 	}
 
 	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
@@ -374,61 +374,64 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 
 	schemaBytes, err := proto.Marshal(schema.ToProto())
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(err)
+		return "", errors.Wrap(err, "failed to marshal schema")
 	}
 
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, schema.Name)
-
-	deploymentKey := model.NewDeploymentKey()
-	// Create the deployment
-	err = tx.CreateDeployment(ctx, sqltypes.Key(deploymentKey), schema.Name, schemaBytes)
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
+		return "", errors.Wrap(translatePGError(err), "failed to upsert module")
+	}
+
+	deploymentName := model.NewDeploymentName(schema.Name)
+	// Create the deployment
+	err = tx.CreateDeployment(ctx, deploymentName, schema.Name, schemaBytes)
+	if err != nil {
+		return "", errors.Wrap(translatePGError(err), "failed to create deployment")
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
 	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
 	if err != nil {
-		return model.DeploymentKey{}, errors.WithStack(err)
+		return "", errors.Wrap(err, "failed to get artefact digests")
 	}
 	if len(artefactDigests) != len(artefacts) {
 		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return model.DeploymentKey{}, errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+		return "", errors.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
 	}
 
 	// Associate the artefacts with the deployment
 	for _, row := range artefactDigests {
 		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
 		err = tx.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
-			Key:        sqltypes.Key(deploymentKey),
+			Name:       deploymentName,
 			ArtefactID: row.ID,
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
+			return "", errors.Wrap(translatePGError(err), "failed to associate artefact with deployment")
 		}
 	}
 
 	for _, ingressRoute := range ingressRoutes {
 		err = tx.CreateIngressRoute(ctx, sql.CreateIngressRouteParams{
-			Key:    sqltypes.Key(deploymentKey),
+			Name:   deploymentName,
 			Method: ingressRoute.Method,
 			Path:   ingressRoute.Path,
 			Module: schema.Name,
 			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
+			return "", errors.Wrap(translatePGError(err), "failed to create ingress route")
 		}
 	}
 
-	return deploymentKey, nil
+	return deploymentName, nil
 }
 
-func (d *DAL) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {
-	deployment, err := d.db.GetDeployment(ctx, sqltypes.Key(id))
+func (d *DAL) GetDeployment(ctx context.Context, name model.DeploymentName) (*model.Deployment, error) {
+	deployment, err := d.db.GetDeployment(ctx, name)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
@@ -440,20 +443,20 @@ func (d *DAL) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model
 // ErrConflict will be returned if a runner with the same endpoint and a
 // different key already exists.
 func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
-	var pgDeploymentKey types.Option[sqltypes.Key]
+	var pgDeploymentName pgtype.Text
 	if dkey, ok := runner.Deployment.Get(); ok {
-		pgDeploymentKey = types.Some(sqltypes.Key(dkey))
+		pgDeploymentName = pgtype.Text{String: dkey.String(), Valid: true}
 	}
 	attrBytes, err := json.Marshal(runner.Labels)
 	if err != nil {
 		return errors.Wrap(err, "failed to JSON encode runner labels")
 	}
 	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
-		Key:           sqltypes.Key(runner.Key),
-		Endpoint:      runner.Endpoint,
-		State:         sql.RunnerState(runner.State),
-		DeploymentKey: pgDeploymentKey,
-		Labels:        attrBytes,
+		Key:            sqltypes.Key(runner.Key),
+		Endpoint:       runner.Endpoint,
+		State:          sql.RunnerState(runner.State),
+		DeploymentName: pgDeploymentName,
+		Labels:         attrBytes,
 	})
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
@@ -497,7 +500,7 @@ func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 	return nil
 }
 
-func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.DeploymentKey, reservationTimeout time.Duration, labels model.Labels) (Reservation, error) {
+func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.DeploymentName, reservationTimeout time.Duration, labels model.Labels) (Reservation, error) {
 	jsonLabels, err := json.Marshal(labels)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to JSON encode labels")
@@ -508,7 +511,7 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.D
 		cancel()
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	runner, err := tx.ReserveRunner(ctx, pgtype.Timestamptz{Time: time.Now().Add(reservationTimeout), Valid: true}, sqltypes.Key(deployment), jsonLabels)
+	runner, err := tx.ReserveRunner(ctx, pgtype.Timestamptz{Time: time.Now().Add(reservationTimeout), Valid: true}, deployment, jsonLabels)
 	if err != nil {
 		if rerr := tx.Rollback(context.Background()); rerr != nil {
 			err = errors.Join(err, errors.WithStack(translatePGError(rerr)))
@@ -558,8 +561,8 @@ func (p *postgresClaim) Rollback(ctx context.Context) error {
 func (p *postgresClaim) Runner() Runner { return p.runner }
 
 // SetDeploymentReplicas activates the given deployment.
-func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
-	err := d.db.SetDeploymentDesiredReplicas(ctx, sqltypes.Key(key), int32(minReplicas))
+func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentName, minReplicas int) error {
+	err := d.db.SetDeploymentDesiredReplicas(ctx, key, int32(minReplicas))
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
 	}
@@ -567,21 +570,21 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 }
 
 // ReplaceDeployment replaces an old deployment of a module with a new deployment.
-func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.DeploymentKey, minReplicas int) (err error) {
+func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.DeploymentName, minReplicas int) (err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
 	}
 	defer tx.CommitOrRollback(ctx, &err)
-	newDeployment, err := tx.GetDeployment(ctx, sqltypes.Key(newDeploymentKey))
+	newDeployment, err := tx.GetDeployment(ctx, newDeploymentName)
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
 	}
 	// If there's an existing deployment, set its desired replicas to 0
 	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
 	if err == nil {
-		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Key, sqltypes.Key(newDeploymentKey), int32(minReplicas))
+		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Name.String(), newDeploymentName.String(), int32(minReplicas))
 		if err != nil {
 			return errors.WithStack(translatePGError(err))
 		}
@@ -592,7 +595,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		return errors.WithStack(translatePGError(err))
 	} else {
 		// Set the desired replicas for the new deployment
-		err = tx.SetDeploymentDesiredReplicas(ctx, sqltypes.Key(newDeploymentKey), int32(minReplicas))
+		err = tx.SetDeploymentDesiredReplicas(ctx, newDeploymentName, int32(minReplicas))
 		if err != nil {
 			return errors.WithStack(translatePGError(err))
 		}
@@ -612,7 +615,7 @@ func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconc
 	}
 	return slices.Map(counts, func(t sql.GetDeploymentsNeedingReconciliationRow) Reconciliation {
 		return Reconciliation{
-			Deployment:       model.DeploymentKey(t.Key),
+			Deployment:       t.DeploymentName,
 			Module:           t.ModuleName,
 			Language:         t.Language,
 			AssignedReplicas: int(t.AssignedRunnersCount),
@@ -640,7 +643,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 			return Deployment{}, errors.Wrapf(err, "%q: invalid schema in database", in.ModuleName)
 		}
 		return Deployment{
-			Key:         model.DeploymentKey(in.Key),
+			Name:        in.Name,
 			Module:      in.ModuleName,
 			Language:    in.Language,
 			MinReplicas: int(in.MinReplicas),
@@ -703,7 +706,7 @@ func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]Route, erro
 	}
 	return slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
 		return Route{
-			Deployment: model.DeploymentKey(row.DeploymentKey),
+			Deployment: row.DeploymentName,
 			Runner:     model.RunnerKey(row.RunnerKey),
 			Endpoint:   row.Endpoint,
 		}
@@ -723,10 +726,10 @@ func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner,
 	if err != nil {
 		return Runner{}, errors.WithStack(translatePGError(err))
 	}
-	var deployment types.Option[model.DeploymentKey]
+	var deployment types.Option[model.DeploymentName]
 	// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
-	if row.DeploymentKey != nil {
-		deployment = types.Some(row.DeploymentKey.(model.DeploymentKey)) //nolint:forcetypeassert
+	if row.DeploymentName != nil {
+		deployment = types.Some(row.DeploymentName.(model.DeploymentName)) //nolint:forcetypeassert
 	}
 	attrs := model.Labels{}
 	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
@@ -757,13 +760,13 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		return errors.WithStack(err)
 	}
 	return errors.WithStack(translatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
-		DeploymentKey: sqltypes.Key(log.DeploymentKey),
-		RequestKey:    sqltypes.FromOption(log.RequestKey),
-		TimeStamp:     pgtype.Timestamptz{Time: log.Time, Valid: true},
-		Level:         log.Level,
-		Attributes:    attributes,
-		Message:       log.Message,
-		Error:         logError,
+		DeploymentName: log.DeploymentName,
+		RequestKey:     sqltypes.FromOption(log.RequestKey),
+		TimeStamp:      pgtype.Timestamptz{Time: log.Time, Valid: true},
+		Level:          log.Level,
+		Attributes:     attributes,
+		Message:        log.Message,
+		Error:          logError,
 	})))
 }
 func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRow) (*model.Deployment, error) {
@@ -779,7 +782,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	out := &model.Deployment{
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
-		Key:      model.DeploymentKey(deployment.Key),
+		Name:     deployment.Name,
 		Schema:   module,
 	}
 	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.ID)
@@ -833,17 +836,17 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 		callError.Valid = true
 	}
 	return errors.WithStack(translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
-		DeploymentKey: sqltypes.Key(call.DeploymentKey),
-		RequestKey:    sqltypes.FromOption(call.RequestKey),
-		TimeStamp:     pgtype.Timestamptz{Time: call.Time, Valid: true},
-		SourceModule:  call.SourceVerb.Module,
-		SourceVerb:    call.SourceVerb.Name,
-		DestModule:    call.DestVerb.Module,
-		DestVerb:      call.DestVerb.Name,
-		DurationMs:    call.Duration.Milliseconds(),
-		Request:       call.Request,
-		Response:      call.Response,
-		Error:         callError,
+		DeploymentName: call.DeploymentName.String(),
+		RequestKey:     sqltypes.FromOption(call.RequestKey),
+		TimeStamp:      pgtype.Timestamptz{Time: call.Time, Valid: true},
+		SourceModule:   call.SourceVerb.Module,
+		SourceVerb:     call.SourceVerb.Name,
+		DestModule:     call.DestVerb.Module,
+		DestVerb:       call.DestVerb.Name,
+		DurationMs:     call.Duration.Milliseconds(),
+		Request:        call.Request,
+		Response:       call.Response,
+		Error:          callError,
 	})))
 }
 
@@ -941,9 +944,9 @@ func callRowToEntry(call sql.GetCallsRow) (CallEvent, error) {
 		callError = errors.New(e)
 	}
 	entry := CallEvent{
-		DeploymentKey: model.DeploymentKey(call.DeploymentKey),
-		RequestKey:    types.Some(model.IngressRequestKey(call.RequestKey)),
-		Time:          call.TimeStamp.Time,
+		DeploymentName: call.DeploymentName,
+		RequestKey:     types.Some(model.IngressRequestKey(call.RequestKey)),
+		Time:           call.TimeStamp.Time,
 		SourceVerb: schema.VerbRef{
 			Module: call.SourceModule.String,
 			Name:   call.SourceVerb.String,

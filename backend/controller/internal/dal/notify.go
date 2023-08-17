@@ -2,8 +2,10 @@ package dal
 
 import (
 	"context"
+	"encoding"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/errors"
@@ -11,9 +13,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jpillora/backoff"
 
-	log2 "github.com/TBD54566975/ftl/backend/common/log"
+	log "github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
@@ -23,23 +24,26 @@ import (
 type NotificationPayload interface{ notification() }
 
 // A Notification from the database.
-type Notification[T NotificationPayload, Key keyConstraint] struct {
+type Notification[T NotificationPayload, Key any, KeyP interface {
+	*Key
+	encoding.TextUnmarshaler
+}] struct {
 	Deleted types.Option[Key] // If present the object was deleted.
 	Message T
 }
 
-type DeploymentNotification = Notification[Deployment, model.DeploymentKey]
+type DeploymentNotification = Notification[Deployment, model.DeploymentName, *model.DeploymentName]
 
 // See JSON structure in SQL schema
 type event struct {
-	Table  string       `json:"table"`
-	Action string       `json:"action"`
-	New    sqltypes.Key `json:"new,omitempty"`
-	Old    sqltypes.Key `json:"old,omitempty"`
+	Table  string `json:"table"`
+	Action string `json:"action"`
+	New    string `json:"new,omitempty"`
+	Old    string `json:"old,omitempty"`
 }
 
 func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
-	logger := log2.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
 	logger.Infof("Starting DB listener")
 
@@ -77,11 +81,11 @@ func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
 	}
 }
 
-func (d *DAL) publishNotification(ctx context.Context, notification event, logger *log2.Logger) error {
+func (d *DAL) publishNotification(ctx context.Context, notification event, logger *log.Logger) error {
 	switch notification.Table {
 	case "deployments":
-		deployment, err := decodeNotification(notification, func(key model.DeploymentKey) (Deployment, error) {
-			row, err := d.db.GetDeployment(ctx, sqltypes.Key(key))
+		deployment, err := decodeNotification(notification, func(key model.DeploymentName) (Deployment, error) {
+			row, err := d.db.GetDeployment(ctx, key)
 			if err != nil {
 				return Deployment{}, errors.WithStack(err)
 			}
@@ -91,7 +95,7 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 			}
 			return Deployment{
 				CreatedAt:   row.CreatedAt.Time,
-				Key:         model.DeploymentKey(row.Key),
+				Name:        row.Name,
 				Module:      row.ModuleName,
 				Schema:      moduleSchema,
 				MinReplicas: int(row.MinReplicas),
@@ -101,7 +105,7 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		logger.Infof("Deployment notification: %v", deployment.Message.Key)
+		logger.Infof("Deployment notification: %v", deployment.Message.Name)
 		d.DeploymentChanges.Publish(deployment)
 
 	default:
@@ -110,24 +114,36 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 	return nil
 }
 
-type keyConstraint interface{ ~[16]byte }
-
-func decodeNotification[Key keyConstraint, T NotificationPayload](notification event, translate func(key Key) (T, error)) (Notification[T, Key], error) {
+func decodeNotification[Key any, T NotificationPayload, KeyP interface {
+	*Key
+	encoding.TextUnmarshaler
+}](notification event, translate func(key Key) (T, error)) (Notification[T, Key, KeyP], error) {
 	var (
 		deleted types.Option[Key]
 		message T
 		err     error
 	)
 	if notification.Action == "DELETE" {
-		deleted = types.Some(Key(notification.Old))
+		var deletedKey Key
+		var deletedKeyP KeyP = &deletedKey
+		err = deletedKeyP.UnmarshalText([]byte(notification.Old))
+		deleted = types.Some(deletedKey)
 	} else {
-		message, err = translate(Key(notification.New))
-		if err != nil {
-			return Notification[T, Key]{}, errors.Wrap(err, "failed to translate database event")
+		var newKey Key
+		var newKeyP KeyP = &newKey
+		err = newKeyP.UnmarshalText([]byte(notification.New))
+		if err == nil {
+			message, err = translate(newKey)
+			if err != nil {
+				return Notification[T, Key, KeyP]{}, errors.Wrap(err, "failed to translate database event")
+			}
 		}
 	}
+	if err != nil {
+		return Notification[T, Key, KeyP]{}, errors.WithStack(err)
+	}
 
-	return Notification[T, Key]{Deleted: deleted, Message: message}, nil
+	return Notification[T, Key, KeyP]{Deleted: deleted, Message: message}, nil
 }
 
 func waitForNotification(ctx context.Context, conn *pgx.Conn) (event, error) {
@@ -136,7 +152,9 @@ func waitForNotification(ctx context.Context, conn *pgx.Conn) (event, error) {
 		return event{}, errors.WithStack(err)
 	}
 	ev := event{}
-	err = json.Unmarshal([]byte(notification.Payload), &ev)
+	dec := json.NewDecoder(strings.NewReader(notification.Payload))
+	dec.DisallowUnknownFields()
+	err = dec.Decode(&ev)
 	if err != nil {
 		return event{}, errors.WithStack(err)
 	}

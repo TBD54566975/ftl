@@ -131,14 +131,14 @@ func (g *goDeployCmd) Run(ctx context.Context, client ftlv1connect.ControllerSer
 	if err != nil {
 		return errors.Wrap(err, "failed to create deployment")
 	}
-	logger.Infof("Created deployment %s", cdResp.Msg.DeploymentKey)
+	logger.Infof("Created deployment %s", cdResp.Msg.DeploymentName)
 
 	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{
-		DeploymentKey: cdResp.Msg.DeploymentKey,
-		MinReplicas:   g.MinReplicas,
+		DeploymentName: cdResp.Msg.DeploymentName,
+		MinReplicas:    g.MinReplicas,
 	}))
 	if err != nil {
-		return errors.Wrapf(err, "failed to deploy %q", cdResp.Msg.DeploymentKey)
+		return errors.Wrapf(err, "failed to deploy %q", cdResp.Msg.DeploymentName)
 	}
 	return nil
 }

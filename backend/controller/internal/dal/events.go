@@ -31,27 +31,27 @@ const (
 type Event interface{ event() }
 
 type LogEvent struct {
-	DeploymentKey model.DeploymentKey
-	RequestKey    types.Option[model.IngressRequestKey]
-	Time          time.Time
-	Level         int32
-	Attributes    map[string]string
-	Message       string
-	Error         types.Option[string]
+	DeploymentName model.DeploymentName
+	RequestKey     types.Option[model.IngressRequestKey]
+	Time           time.Time
+	Level          int32
+	Attributes     map[string]string
+	Message        string
+	Error          types.Option[string]
 }
 
 func (e *LogEvent) event() {}
 
 type CallEvent struct {
-	DeploymentKey model.DeploymentKey
-	RequestKey    types.Option[model.IngressRequestKey]
-	Time          time.Time
-	SourceVerb    schema.VerbRef
-	DestVerb      schema.VerbRef
-	Duration      time.Duration
-	Request       []byte
-	Response      []byte
-	Error         error
+	DeploymentName model.DeploymentName
+	RequestKey     types.Option[model.IngressRequestKey]
+	Time           time.Time
+	SourceVerb     schema.VerbRef
+	DestVerb       schema.VerbRef
+	Duration       time.Duration
+	Request        []byte
+	Response       []byte
+	Error          error
 }
 
 func (e *CallEvent) event() {}
@@ -65,7 +65,7 @@ type eventFilter struct {
 	level       *log.Level
 	calls       []*eventFilterCall
 	types       []EventType
-	deployments []sqltypes.Key
+	deployments []model.DeploymentName
 	requests    []sqltypes.Key
 }
 
@@ -86,10 +86,10 @@ func FilterCall(sourceModule, destModule string) EventFilter {
 	}
 }
 
-func FilterDeployments(deploymentKeys ...model.DeploymentKey) EventFilter {
+func FilterDeployments(deploymentNames ...model.DeploymentName) EventFilter {
 	return func(query *eventFilter) {
-		for _, key := range deploymentKeys {
-			query.deployments = append(query.deployments, sqltypes.Key(key))
+		for _, name := range deploymentNames {
+			query.deployments = append(query.deployments, name)
 		}
 	}
 }
@@ -109,15 +109,15 @@ func FilterTypes(types ...sql.EventType) EventFilter {
 }
 
 type eventRow struct {
-	DeploymentKey sqltypes.Key
-	RequestKey    *sqltypes.Key
-	TimeStamp     time.Time
-	CustomKey1    types.Option[string]
-	CustomKey2    types.Option[string]
-	CustomKey3    types.Option[string]
-	CustomKey4    types.Option[string]
-	Type          sql.EventType
-	Payload       []byte
+	DeploymentName model.DeploymentName
+	RequestKey     *sqltypes.Key
+	TimeStamp      time.Time
+	CustomKey1     types.Option[string]
+	CustomKey2     types.Option[string]
+	CustomKey3     types.Option[string]
+	CustomKey4     types.Option[string]
+	Type           sql.EventType
+	Payload        []byte
 }
 
 // The internal JSON payload of a call event.
@@ -136,7 +136,7 @@ type eventLogJSON struct {
 
 func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters ...EventFilter) ([]Event, error) {
 	// Build query.
-	q := `SELECT d.key AS deployment_key,
+	q := `SELECT d.name AS deployment_name,
 				   ir.key AS request_key,
 				   e.time_stamp AS time_stamp,
 				   e.custom_key_1 AS custom_key_1,
@@ -158,7 +158,7 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 	args := []any{after, before}
 	index := 3
 	if filter.deployments != nil {
-		q += fmt.Sprintf(` AND d.key = ANY($%d::UUID[])`, index)
+		q += fmt.Sprintf(` AND d.name = ANY($%d::TEXT[])`, index)
 		index++
 		args = append(args, filter.deployments)
 	}
@@ -204,7 +204,7 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 	for rows.Next() {
 		row := eventRow{}
 		err := rows.Scan(
-			&row.DeploymentKey, &row.RequestKey, &row.TimeStamp,
+			&row.DeploymentName, &row.RequestKey, &row.TimeStamp,
 			&row.CustomKey1, &row.CustomKey2, &row.CustomKey3, &row.CustomKey4,
 			&row.Type, &row.Payload,
 		)
@@ -228,13 +228,13 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 				return nil, errors.Wrapf(err, "invalid log level: %q", row.CustomKey1.MustGet())
 			}
 			out = append(out, &LogEvent{
-				DeploymentKey: model.DeploymentKey(row.DeploymentKey),
-				RequestKey:    requestKey,
-				Time:          row.TimeStamp,
-				Level:         int32(level),
-				Attributes:    jsonPayload.Attributes,
-				Message:       jsonPayload.Message,
-				Error:         jsonPayload.Error,
+				DeploymentName: row.DeploymentName,
+				RequestKey:     requestKey,
+				Time:           row.TimeStamp,
+				Level:          int32(level),
+				Attributes:     jsonPayload.Attributes,
+				Message:        jsonPayload.Message,
+				Error:          jsonPayload.Error,
 			})
 
 		case sql.EventTypeCall:
@@ -247,15 +247,15 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 				eventError = errors.New(e)
 			}
 			out = append(out, &CallEvent{
-				DeploymentKey: model.DeploymentKey(row.DeploymentKey),
-				RequestKey:    requestKey,
-				Time:          row.TimeStamp,
-				SourceVerb:    schema.VerbRef{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
-				DestVerb:      schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
-				Duration:      time.Duration(jsonPayload.DurationMS) * time.Millisecond,
-				Request:       jsonPayload.Request,
-				Response:      jsonPayload.Response,
-				Error:         eventError,
+				DeploymentName: row.DeploymentName,
+				RequestKey:     requestKey,
+				Time:           row.TimeStamp,
+				SourceVerb:     schema.VerbRef{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
+				DestVerb:       schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
+				Duration:       time.Duration(jsonPayload.DurationMS) * time.Millisecond,
+				Request:        jsonPayload.Request,
+				Response:       jsonPayload.Response,
+				Error:          eventError,
 			})
 
 		default:

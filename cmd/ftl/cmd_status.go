@@ -95,7 +95,7 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	fmt.Printf(ingressFmt, "Method", "Path", "Deployment", "Verb")
 	fmt.Printf(ingressFmt, strings.Repeat("-", 6), strings.Repeat("-", 37), strings.Repeat("-", 27), strings.Repeat("-", 4))
 	for _, ingress := range status.Msg.IngressRoutes {
-		fmt.Printf(ingressFmt, ingress.Method, ingress.Path, ingress.DeploymentKey, ingress.Verb)
+		fmt.Printf(ingressFmt, ingress.Method, ingress.Path, ingress.DeploymentName, ingress.Verb)
 	}
 	return nil
 }

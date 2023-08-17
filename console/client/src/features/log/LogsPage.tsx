@@ -103,7 +103,7 @@ export default function LogsPage() {
                         <td colSpan={4}>
                           <div className='p-4 text-sm bg-white text-gray-600 dark:bg-slate-800 dark:text-gray-400'>
                             <div className='mb-2'>
-                              <strong>Deployment Key:</strong> {log.deploymentKey}
+                              <strong>Deployment Key:</strong> {log.deploymentName}
                             </div>
 
                             {log.requestKey && (

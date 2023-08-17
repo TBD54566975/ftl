@@ -17,9 +17,9 @@ export class Call extends Message<Call> {
   requestKey = "";
 
   /**
-   * @generated from field: string deployment_key = 2;
+   * @generated from field: string deployment_name = 2;
    */
-  deploymentKey = "";
+  deploymentName = "";
 
   /**
    * @generated from field: google.protobuf.Timestamp time_stamp = 3;
@@ -75,7 +75,7 @@ export class Call extends Message<Call> {
   static readonly typeName = "xyz.block.ftl.v1.console.Call";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "source_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -109,9 +109,9 @@ export class Call extends Message<Call> {
  */
 export class Deployment extends Message<Deployment> {
   /**
-   * @generated from field: string key = 1;
+   * @generated from field: string name = 1;
    */
-  key = "";
+  name = "";
 
   /**
    * @generated from field: string language = 2;
@@ -119,9 +119,9 @@ export class Deployment extends Message<Deployment> {
   language = "";
 
   /**
-   * @generated from field: string name = 3;
+   * @generated from field: string module_name = 3;
    */
-  name = "";
+  moduleName = "";
 
   /**
    * @generated from field: int32 min_replicas = 4;
@@ -136,9 +136,9 @@ export class Deployment extends Message<Deployment> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.Deployment";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
@@ -262,9 +262,9 @@ export class Module extends Message<Module> {
   name = "";
 
   /**
-   * @generated from field: string deployment_key = 2;
+   * @generated from field: string deployment_name = 2;
    */
-  deploymentKey = "";
+  deploymentName = "";
 
   /**
    * @generated from field: string language = 3;
@@ -290,7 +290,7 @@ export class Module extends Message<Module> {
   static readonly typeName = "xyz.block.ftl.v1.console.Module";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "verbs", kind: "message", T: Verb, repeated: true },
     { no: 5, name: "data", kind: "message", T: Data, repeated: true },
@@ -318,9 +318,9 @@ export class Module extends Message<Module> {
  */
 export class LogEntry extends Message<LogEntry> {
   /**
-   * @generated from field: string deployment_key = 1;
+   * @generated from field: string deployment_name = 1;
    */
-  deploymentKey = "";
+  deploymentName = "";
 
   /**
    * @generated from field: optional string request_key = 2;
@@ -360,7 +360,7 @@ export class LogEntry extends Message<LogEntry> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.LogEntry";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
@@ -697,9 +697,9 @@ export class StreamLogsRequest extends Message<StreamLogsRequest> {
   afterTime?: Timestamp;
 
   /**
-   * @generated from field: string deployment_key = 3;
+   * @generated from field: string deployment_name = 3;
    */
-  deploymentKey = "";
+  deploymentName = "";
 
   constructor(data?: PartialMessage<StreamLogsRequest>) {
     super();
@@ -711,7 +711,7 @@ export class StreamLogsRequest extends Message<StreamLogsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "update_interval", kind: "message", T: Duration, opt: true },
     { no: 2, name: "after_time", kind: "message", T: Timestamp },
-    { no: 3, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamLogsRequest {

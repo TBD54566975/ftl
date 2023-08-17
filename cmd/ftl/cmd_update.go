@@ -12,14 +12,14 @@ import (
 )
 
 type updateCmd struct {
-	Replicas   int32               `short:"n" help:"Number of replicas to deploy." default:"1"`
-	Deployment model.DeploymentKey `arg:"" help:"Deployment to kill."`
+	Replicas   int32                `short:"n" help:"Number of replicas to deploy." default:"1"`
+	Deployment model.DeploymentName `arg:"" help:"Deployment to kill."`
 }
 
 func (u *updateCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	_, err := client.UpdateDeploy(ctx, connect.NewRequest(&ftlv1.UpdateDeployRequest{
-		DeploymentKey: u.Deployment.String(),
-		MinReplicas:   u.Replicas,
+		DeploymentName: u.Deployment.String(),
+		MinReplicas:    u.Replicas,
 	}))
 	if err != nil {
 		return errors.WithStack(err)

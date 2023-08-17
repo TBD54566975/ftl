@@ -9,12 +9,6 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
-func NewDeploymentKey() DeploymentKey                      { return DeploymentKey(ulid.Make()) }
-func ParseDeploymentKey(key string) (DeploymentKey, error) { return parseKey[DeploymentKey](key) }
-
-type deploymentKey struct{}
-type DeploymentKey = keyType[deploymentKey]
-
 func NewRunnerKey() RunnerKey                      { return RunnerKey(ulid.Make()) }
 func ParseRunnerKey(key string) (RunnerKey, error) { return parseKey[RunnerKey](key) }
 
