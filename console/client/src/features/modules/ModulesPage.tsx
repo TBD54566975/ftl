@@ -1,22 +1,38 @@
-import { useContext } from 'react'
-import { Link } from 'react-router-dom'
-import { Card } from '../../components/Card'
+import React from 'react'
 import { schemaContext } from '../../providers/schema-provider.tsx'
 import { classNames } from '../../utils/react.utils'
 import { statuses } from '../../utils/style.utils'
+import { useNavigate , useLocation } from 'react-router-dom'
+import { modulesContext } from '../../providers/modules-provider.tsx'
+import { ModuleTimeline } from './ModuleTimeline.tsx'
+import { VerbList } from '../verbs/VerbList.tsx'
 
 export default function ModulesPage() {
-  const schema = useContext(schemaContext)
-
+  const schema = React.useContext(schemaContext)
+  const modules = React.useContext(modulesContext)
+  const  [id, setId] = React.useState<string | undefined>(undefined)
+  const module = modules.modules.find(module => module?.name === id)
+  const navigate = useNavigate()
+  const location = useLocation()
+  
   return (
-    <>
+    <div>
       <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
-        {schema.map(module => (
-          <Card key={module.schema?.name}>
+        {schema.map(module => {
+          const name = module.schema?.name
+          return (
+          <button
+            className={`relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white dark:bg-slate-800 dark:border-indigo-400 px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 dark:focus-within:ring-2 dark:focus-within:ring-indigo-400 dark:focus-within:ring-offset-2 hover:border-gray-400 dark:hover:border-indigo-200`}
+            key={name}
+            onClick={() => {
+              if(!name) return
+              const searchParams = new URLSearchParams(location.search)
+              searchParams.set('module', name)
+              navigate({ ...location, search: searchParams.toString() })
+              setId(name)
+            }}
+          >
             <div className='min-w-0 flex-1'>
-              <Link to={`${module.schema?.name}`}
-                className='focus:outline-none'
-              >
                 <span className='absolute inset-0'
                   aria-hidden='true'
                 />
@@ -25,7 +41,7 @@ export default function ModulesPage() {
                     <div className={classNames(statuses['online'], 'flex-none rounded-full p-1')}>
                       <div className='h-2 w-2 rounded-full bg-current' />
                     </div>
-                    <p className='text-sm font-medium text-gray-900 dark:text-gray-300'>{module.schema?.name}</p>
+                    <p className='text-sm font-medium text-gray-900 dark:text-gray-300'>{name}</p>
                   </div>
                   <div className='pt-4'>
                     <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
@@ -41,11 +57,12 @@ export default function ModulesPage() {
                     </div>
                   </div>
                 )}
-              </Link>
             </div>
-          </Card>
-        ))}
+          </button>
+        )})}
       </div>
-    </>
+      <VerbList module={module} />
+      <ModuleTimeline module={module} />
+    </div>
   )
 }

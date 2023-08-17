@@ -1,19 +1,13 @@
-import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import { useContext } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { modulesContext } from '../../providers/modules-provider'
 import { getCodeBlock } from '../../utils/data.utils'
 import { classNames } from '../../utils/react.utils'
-import { getCalls, getVerbCode } from './verb.utils'
+import { getCalls } from './verb.utils'
 import { VerbCalls } from './VerbCalls.tsx'
+import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 
-export default function VerbPage() {
-  const { moduleId, id } = useParams()
-  const modules = useContext(modulesContext)
-
-  const module = modules.modules.find(m => m.name === moduleId)
+export const VerbPage: React.FC<{module: Module, id}> = ({ module, id }) =>{
   const verb = module?.verbs.find(v => v.verb?.name === id?.toLocaleLowerCase())
   const callData = module?.data.filter(data =>
     [ verb?.verb?.request?.name, verb?.verb?.response?.name ].includes(data.name)
@@ -25,44 +19,6 @@ export default function VerbPage() {
 
   return (
     <div className='min-w-0 flex-auto'>
-      <nav className='flex'
-        aria-label='Breadcrumb'
-      >
-        <ol role='list'
-          className='flex items-center space-x-4'
-        >
-          <li key='/modules'>
-            <div>
-              <Link to='/modules'
-                className='text-sm font-medium text-gray-400 hover:text-gray-500'
-              >
-                Modules
-              </Link>
-            </div>
-          </li>
-          <li key={module.name}>
-            <div className='flex items-center'>
-              <ChevronRightIcon className='h-5 w-5 flex-shrink-0 text-gray-400'
-                aria-hidden='true'
-              />
-              <Link
-                to={`/modules/${module.name}`}
-                className='ml-4 text-sm font-medium text-gray-400 hover:text-gray-500'
-                aria-current={'page'}
-              >
-                {module.name}
-              </Link>
-            </div>
-          </li>
-        </ol>
-      </nav>
-      <div className='text-sm pt-4'>
-        <SyntaxHighlighter language='go'
-          style={atomDark}
-        >
-          {getVerbCode(verb?.verb)}
-        </SyntaxHighlighter>
-      </div>
       <div className='pt-4'>
         {callData?.map(data => (
           <div key={data.name}
