@@ -5,16 +5,16 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Data, Verb as Verb$1 } from "../schema/schema_pb.js";
+import { Data, Verb as Verb$1, VerbRef } from "../schema/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.console.Call
  */
 export class Call extends Message<Call> {
   /**
-   * @generated from field: string request_key = 1;
+   * @generated from field: optional string request_key = 1;
    */
-  requestKey = "";
+  requestKey?: string;
 
   /**
    * @generated from field: string deployment_name = 2;
@@ -27,44 +27,34 @@ export class Call extends Message<Call> {
   timeStamp?: Timestamp;
 
   /**
-   * @generated from field: string source_module = 4;
+   * @generated from field: xyz.block.ftl.v1.schema.VerbRef source_verb_ref = 4;
    */
-  sourceModule = "";
+  sourceVerbRef?: VerbRef;
 
   /**
-   * @generated from field: string source_verb = 5;
+   * @generated from field: xyz.block.ftl.v1.schema.VerbRef destination_verb_ref = 5;
    */
-  sourceVerb = "";
+  destinationVerbRef?: VerbRef;
 
   /**
-   * @generated from field: string dest_module = 6;
-   */
-  destModule = "";
-
-  /**
-   * @generated from field: string dest_verb = 7;
-   */
-  destVerb = "";
-
-  /**
-   * @generated from field: google.protobuf.Duration duration = 8;
+   * @generated from field: google.protobuf.Duration duration = 6;
    */
   duration?: Duration;
 
   /**
-   * @generated from field: string request = 9;
+   * @generated from field: string request = 7;
    */
   request = "";
 
   /**
-   * @generated from field: string response = 10;
+   * @generated from field: string response = 8;
    */
   response = "";
 
   /**
-   * @generated from field: string error = 11;
+   * @generated from field: optional string error = 9;
    */
-  error = "";
+  error?: string;
 
   constructor(data?: PartialMessage<Call>) {
     super();
@@ -74,17 +64,15 @@ export class Call extends Message<Call> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.Call";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 4, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "source_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "duration", kind: "message", T: Duration },
-    { no: 9, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 11, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "source_verb_ref", kind: "message", T: VerbRef },
+    { no: 5, name: "destination_verb_ref", kind: "message", T: VerbRef },
+    { no: 6, name: "duration", kind: "message", T: Duration },
+    { no: 7, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Call {
@@ -160,58 +148,75 @@ export class Deployment extends Message<Deployment> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.TimelineEntry
+ * @generated from message xyz.block.ftl.v1.console.LogEntry
  */
-export class TimelineEntry extends Message<TimelineEntry> {
+export class LogEntry extends Message<LogEntry> {
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 1;
+   * @generated from field: string deployment_name = 1;
+   */
+  deploymentName = "";
+
+  /**
+   * @generated from field: optional string request_key = 2;
+   */
+  requestKey?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
    */
   timeStamp?: Timestamp;
 
   /**
-   * @generated from oneof xyz.block.ftl.v1.console.TimelineEntry.entry
+   * @generated from field: int32 log_level = 4;
    */
-  entry: {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.Call call = 2;
-     */
-    value: Call;
-    case: "call";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.Deployment deployment = 3;
-     */
-    value: Deployment;
-    case: "deployment";
-  } | { case: undefined; value?: undefined } = { case: undefined };
+  logLevel = 0;
 
-  constructor(data?: PartialMessage<TimelineEntry>) {
+  /**
+   * @generated from field: map<string, string> attributes = 5;
+   */
+  attributes: { [key: string]: string } = {};
+
+  /**
+   * @generated from field: string message = 6;
+   */
+  message = "";
+
+  /**
+   * @generated from field: optional string error = 7;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<LogEntry>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineEntry";
+  static readonly typeName = "xyz.block.ftl.v1.console.LogEntry";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 2, name: "call", kind: "message", T: Call, oneof: "entry" },
-    { no: 3, name: "deployment", kind: "message", T: Deployment, oneof: "entry" },
+    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineEntry {
-    return new TimelineEntry().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogEntry {
+    return new LogEntry().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineEntry {
-    return new TimelineEntry().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LogEntry {
+    return new LogEntry().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineEntry {
-    return new TimelineEntry().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LogEntry {
+    return new LogEntry().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineEntry | PlainMessage<TimelineEntry> | undefined, b: TimelineEntry | PlainMessage<TimelineEntry> | undefined): boolean {
-    return proto3.util.equals(TimelineEntry, a, b);
+  static equals(a: LogEntry | PlainMessage<LogEntry> | undefined, b: LogEntry | PlainMessage<LogEntry> | undefined): boolean {
+    return proto3.util.equals(LogEntry, a, b);
   }
 }
 
@@ -310,79 +315,6 @@ export class Module extends Message<Module> {
 
   static equals(a: Module | PlainMessage<Module> | undefined, b: Module | PlainMessage<Module> | undefined): boolean {
     return proto3.util.equals(Module, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.console.LogEntry
- */
-export class LogEntry extends Message<LogEntry> {
-  /**
-   * @generated from field: string deployment_name = 1;
-   */
-  deploymentName = "";
-
-  /**
-   * @generated from field: optional string request_key = 2;
-   */
-  requestKey?: string;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
-   */
-  timeStamp?: Timestamp;
-
-  /**
-   * @generated from field: int32 log_level = 4;
-   */
-  logLevel = 0;
-
-  /**
-   * @generated from field: map<string, string> attributes = 5;
-   */
-  attributes: { [key: string]: string } = {};
-
-  /**
-   * @generated from field: string message = 6;
-   */
-  message = "";
-
-  /**
-   * @generated from field: optional string error = 7;
-   */
-  error?: string;
-
-  constructor(data?: PartialMessage<LogEntry>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.LogEntry";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogEntry {
-    return new LogEntry().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LogEntry {
-    return new LogEntry().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LogEntry {
-    return new LogEntry().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: LogEntry | PlainMessage<LogEntry> | undefined, b: LogEntry | PlainMessage<LogEntry> | undefined): boolean {
-    return proto3.util.equals(LogEntry, a, b);
   }
 }
 
@@ -609,76 +541,123 @@ export class GetRequestCallsResponse extends Message<GetRequestCallsResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.GetTimelineRequest
+ * @generated from message xyz.block.ftl.v1.console.StreamTimelineRequest
  */
-export class GetTimelineRequest extends Message<GetTimelineRequest> {
+export class StreamTimelineRequest extends Message<StreamTimelineRequest> {
   /**
-   * @generated from field: string module = 1;
+   * @generated from field: optional google.protobuf.Duration update_interval = 1;
    */
-  module = "";
+  updateInterval?: Duration;
 
-  constructor(data?: PartialMessage<GetTimelineRequest>) {
+  /**
+   * @generated from field: google.protobuf.Timestamp after_time = 2;
+   */
+  afterTime?: Timestamp;
+
+  /**
+   * @generated from field: string deployment_name = 3;
+   */
+  deploymentName = "";
+
+  constructor(data?: PartialMessage<StreamTimelineRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.GetTimelineRequest";
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamTimelineRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "update_interval", kind: "message", T: Duration, opt: true },
+    { no: 2, name: "after_time", kind: "message", T: Timestamp },
+    { no: 3, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTimelineRequest {
-    return new GetTimelineRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamTimelineRequest {
+    return new StreamTimelineRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetTimelineRequest {
-    return new GetTimelineRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamTimelineRequest {
+    return new StreamTimelineRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetTimelineRequest {
-    return new GetTimelineRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamTimelineRequest {
+    return new StreamTimelineRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetTimelineRequest | PlainMessage<GetTimelineRequest> | undefined, b: GetTimelineRequest | PlainMessage<GetTimelineRequest> | undefined): boolean {
-    return proto3.util.equals(GetTimelineRequest, a, b);
+  static equals(a: StreamTimelineRequest | PlainMessage<StreamTimelineRequest> | undefined, b: StreamTimelineRequest | PlainMessage<StreamTimelineRequest> | undefined): boolean {
+    return proto3.util.equals(StreamTimelineRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.GetTimelineResponse
+ * @generated from message xyz.block.ftl.v1.console.StreamTimelineResponse
  */
-export class GetTimelineResponse extends Message<GetTimelineResponse> {
+export class StreamTimelineResponse extends Message<StreamTimelineResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.TimelineEntry entries = 1;
+   * @generated from field: google.protobuf.Timestamp time_stamp = 1;
    */
-  entries: TimelineEntry[] = [];
+  timeStamp?: Timestamp;
 
-  constructor(data?: PartialMessage<GetTimelineResponse>) {
+  /**
+   * @generated from oneof xyz.block.ftl.v1.console.StreamTimelineResponse.entry
+   */
+  entry: {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.Call call = 2;
+     */
+    value: Call;
+    case: "call";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.Deployment deployment = 3;
+     */
+    value: Deployment;
+    case: "deployment";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.LogEntry log = 4;
+     */
+    value: LogEntry;
+    case: "log";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  /**
+   * If true there are more logs immediately following this one as part of the initial batch.
+   * If false this is the last log in the initial batch, but others may follow later.
+   *
+   * @generated from field: bool more = 5;
+   */
+  more = false;
+
+  constructor(data?: PartialMessage<StreamTimelineResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.GetTimelineResponse";
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamTimelineResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "entries", kind: "message", T: TimelineEntry, repeated: true },
+    { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 2, name: "call", kind: "message", T: Call, oneof: "entry" },
+    { no: 3, name: "deployment", kind: "message", T: Deployment, oneof: "entry" },
+    { no: 4, name: "log", kind: "message", T: LogEntry, oneof: "entry" },
+    { no: 5, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTimelineResponse {
-    return new GetTimelineResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamTimelineResponse {
+    return new StreamTimelineResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetTimelineResponse {
-    return new GetTimelineResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamTimelineResponse {
+    return new StreamTimelineResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetTimelineResponse {
-    return new GetTimelineResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamTimelineResponse {
+    return new StreamTimelineResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined, b: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined): boolean {
-    return proto3.util.equals(GetTimelineResponse, a, b);
+  static equals(a: StreamTimelineResponse | PlainMessage<StreamTimelineResponse> | undefined, b: StreamTimelineResponse | PlainMessage<StreamTimelineResponse> | undefined): boolean {
+    return proto3.util.equals(StreamTimelineResponse, a, b);
   }
 }
 

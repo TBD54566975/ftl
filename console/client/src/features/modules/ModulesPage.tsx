@@ -4,6 +4,7 @@ import { Card } from '../../components/Card'
 import { schemaContext } from '../../providers/schema-provider.tsx'
 import { classNames } from '../../utils/react.utils'
 import { statuses } from '../../utils/style.utils'
+import { Timeline } from '../timeline/Timeline.tsx'
 
 export default function ModulesPage() {
   const schema = useContext(schemaContext)
@@ -46,6 +47,14 @@ export default function ModulesPage() {
           </Card>
         ))}
       </div>
+      <div className='pt-8'>
+        <h2 className='text-lg font-medium text-gray-900 dark:text-white'>Timeline</h2>
+        <div className='pt-4'>
+          <Timeline />
+        </div>
+
+      </div>
+
     </>
   )
 }

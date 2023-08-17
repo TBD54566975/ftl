@@ -5,24 +5,7 @@ import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_co
 import { LogEntry } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatTimestampShort } from '../../utils/date.utils'
 import { classNames } from '../../utils/react.utils'
-
-export const levelText = {
-  0: 'Default',
-  1: 'Trace',
-  5: 'Debug',
-  9: 'Info',
-  13: 'Warn',
-  17: 'Error',
-}
-
-export const levelBadge = {
-  0: 'text-gray-400 bg-gray-400/10 dark:text-gray-300 dark:bg-gray-700/10',
-  1: 'text-blue-350 bg-blue-300/10 dark:text-blue-300 dark:bg-blue-700/10',
-  5: 'text-blue-350 bg-blue-400/10 dark:text-blue-300 dark:bg-blue-800/10',
-  9: 'text-green-400 bg-green-400/10 dark:text-green-300 dark:bg-green-700/10',
-  13: 'text-yellow-400 bg-yellow-400/10 dark:text-yellow-300 dark:bg-yellow-600/10',
-  17: 'text-red-500 bg-red-500/10 dark:text-red-400 dark:bg-red-700/10',
-}
+import { logLevelBadge, logLevelText } from '../../utils/style.utils'
 
 export default function LogsPage() {
   const client = useClient(ConsoleService)
@@ -85,8 +68,8 @@ export default function LogsPage() {
                   <React.Fragment key={index}>
                     <tr onClick={() => setExpandedLog(expandedLog !== index ? index : null)}>
                       <td className='whitespace-nowrap px-2 py-2'>
-                        <span className={classNames(levelBadge[log.logLevel], 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600')}>
-                          {levelText[log.logLevel]}
+                        <span className={classNames(logLevelBadge[log.logLevel], 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600')}>
+                          {logLevelText[log.logLevel]}
                         </span>
                       </td>
                       <td className='whitespace-nowrap px-2 py-2 text-sm '>

@@ -3,8 +3,8 @@ import { useParams } from 'react-router-dom'
 import { modulesContext } from '../../providers/modules-provider'
 import { classNames } from '../../utils/react.utils'
 import { statuses } from '../../utils/style.utils'
+import { Timeline } from '../timeline/Timeline.tsx'
 import { VerbList } from '../verbs/VerbList'
-import { ModuleTimeline } from './ModuleTimeline.tsx'
 
 export default function ModulePage() {
   const { id } = useParams()
@@ -36,7 +36,7 @@ export default function ModulePage() {
         </div>
       </div>
       <VerbList module={module} />
-      <ModuleTimeline module={module} />
+      <Timeline module={module} />
     </>
   )
 }
