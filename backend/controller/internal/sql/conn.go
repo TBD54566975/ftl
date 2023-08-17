@@ -2,7 +2,6 @@ package sql
 
 import (
 	"context"
-
 	"github.com/alecthomas/errors"
 	"github.com/jackc/pgx/v5"
 )
