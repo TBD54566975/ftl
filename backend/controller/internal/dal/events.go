@@ -51,7 +51,7 @@ type CallEvent struct {
 	Duration       time.Duration
 	Request        []byte
 	Response       []byte
-	Error          error
+	Error          types.Option[string]
 }
 
 func (e *CallEvent) event() {}
@@ -242,10 +242,6 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
 				return nil, errors.WithStack(err)
 			}
-			var eventError error
-			if e, ok := jsonPayload.Error.Get(); ok {
-				eventError = errors.New(e)
-			}
 			out = append(out, &CallEvent{
 				DeploymentName: row.DeploymentName,
 				RequestKey:     requestKey,
@@ -255,7 +251,7 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 				Duration:       time.Duration(jsonPayload.DurationMS) * time.Millisecond,
 				Request:        jsonPayload.Request,
 				Response:       jsonPayload.Response,
-				Error:          eventError,
+				Error:          jsonPayload.Error,
 			})
 
 		default:

@@ -43,6 +43,11 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 		sourceVerb = *call.callers[0]
 	}
 
+	var errorStr types.Option[string]
+	if callError != nil {
+		errorStr = types.Some(callError.Error())
+	}
+
 	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{
 		Time:           time.Now(),
 		DeploymentName: call.deploymentName,
@@ -52,7 +57,7 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 		DestVerb:       *call.destVerb,
 		Request:        call.request.GetBody(),
 		Response:       call.response.GetBody(),
-		Error:          callError,
+		Error:          errorStr,
 	})
 	if err != nil {
 		logger.Errorf(err, "failed to record call")

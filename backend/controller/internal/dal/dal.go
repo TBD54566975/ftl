@@ -831,8 +831,8 @@ func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, add
 
 func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	callError := pgtype.Text{}
-	if call.Error != nil {
-		callError.String = call.Error.Error()
+	if e, ok := call.Error.Get(); ok {
+		callError.String = e
 		callError.Valid = true
 	}
 	return errors.WithStack(translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
@@ -939,10 +939,6 @@ func callRowToEntry(call sql.GetCallsRow) (CallEvent, error) {
 	if err := json.Unmarshal(call.Payload, &event); err != nil {
 		return CallEvent{}, errors.Wrap(err, "invalid call event payload")
 	}
-	var callError error
-	if e, ok := event.Error.Get(); ok {
-		callError = errors.New(e)
-	}
 	entry := CallEvent{
 		DeploymentName: call.DeploymentName,
 		RequestKey:     types.Some(model.IngressRequestKey(call.RequestKey)),
@@ -958,7 +954,7 @@ func callRowToEntry(call sql.GetCallsRow) (CallEvent, error) {
 		Duration: time.Duration(event.DurationMS) * time.Millisecond,
 		Request:  event.Request,
 		Response: event.Response,
-		Error:    callError,
+		Error:    event.Error,
 	}
 	return entry, nil
 }
