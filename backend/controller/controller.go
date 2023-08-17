@@ -563,8 +563,7 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 }
 
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
-	deploymentKey := model.NewDeploymentKey()
-	logger := s.getDeploymentLogger(ctx, deploymentKey)
+	logger := log.FromContext(ctx)
 
 	artefacts := make([]dal.DeploymentArtefact, len(req.Msg.Artefacts))
 	for i, artefact := range req.Msg.Artefacts {
@@ -591,13 +590,14 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, errors.Wrap(err, "invalid module schema")
 	}
 	ingressRoutes := extractIngressRoutingEntries(req.Msg)
-	err = s.dal.CreateDeployment(ctx, deploymentKey, ms.Runtime.Language, module, artefacts, ingressRoutes)
+	key, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes)
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment")
 		return nil, errors.Wrap(err, "could not create deployment")
 	}
-	logger.Infof("Created deployment %s", deploymentKey)
-	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: deploymentKey.String()}), nil
+	deploymentLogger := s.getDeploymentLogger(ctx, key)
+	deploymentLogger.Infof("Created deployment wes %s", key)
+	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: key.String()}), nil
 }
 
 func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deployment, error) {
