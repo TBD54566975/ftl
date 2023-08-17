@@ -348,7 +348,7 @@ type IngressRoutingEntry struct {
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, newDeploymentKey model.DeploymentKey, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentKey, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentKey, err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -380,8 +380,9 @@ func (d *DAL) CreateDeployment(ctx context.Context, newDeploymentKey model.Deplo
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, schema.Name)
 
+	deploymentKey := model.NewDeploymentKey()
 	// Create the deployment
-	err = tx.CreateDeployment(ctx, sqltypes.Key(newDeploymentKey), schema.Name, schemaBytes)
+	err = tx.CreateDeployment(ctx, sqltypes.Key(deploymentKey), schema.Name, schemaBytes)
 	if err != nil {
 		return model.DeploymentKey{}, errors.WithStack(translatePGError(err))
 	}
@@ -400,7 +401,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, newDeploymentKey model.Deplo
 	for _, row := range artefactDigests {
 		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
 		err = tx.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
-			Key:        sqltypes.Key(newDeploymentKey),
+			Key:        sqltypes.Key(deploymentKey),
 			ArtefactID: row.ID,
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
@@ -412,7 +413,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, newDeploymentKey model.Deplo
 
 	for _, ingressRoute := range ingressRoutes {
 		err = tx.CreateIngressRoute(ctx, sql.CreateIngressRouteParams{
-			Key:    sqltypes.Key(newDeploymentKey),
+			Key:    sqltypes.Key(deploymentKey),
 			Method: ingressRoute.Method,
 			Path:   ingressRoute.Path,
 			Module: schema.Name,
@@ -423,7 +424,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, newDeploymentKey model.Deplo
 		}
 	}
 
-	return newDeploymentKey, nil
+	return deploymentKey, nil
 }
 
 func (d *DAL) GetDeployment(ctx context.Context, id model.DeploymentKey) (*model.Deployment, error) {
