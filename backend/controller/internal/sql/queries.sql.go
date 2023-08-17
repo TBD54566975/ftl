@@ -8,17 +8,18 @@ package sql
 import (
 	"context"
 
+	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
-VALUES ((SELECT id FROM deployments WHERE key = $1), $2, $3, $4)
+VALUES ((SELECT id FROM deployments WHERE name = $1), $2, $3, $4)
 `
 
 type AssociateArtefactWithDeploymentParams struct {
-	Key        sqltypes.Key
+	Name       model.DeploymentName
 	ArtefactID int64
 	Executable bool
 	Path       string
@@ -26,7 +27,7 @@ type AssociateArtefactWithDeploymentParams struct {
 
 func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error {
 	_, err := q.db.Exec(ctx, associateArtefactWithDeployment,
-		arg.Key,
+		arg.Name,
 		arg.ArtefactID,
 		arg.Executable,
 		arg.Path,
@@ -49,12 +50,12 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 }
 
 const createDeployment = `-- name: CreateDeployment :exec
-INSERT INTO deployments (module_id, "schema", key)
+INSERT INTO deployments (module_id, "schema", name)
 VALUES ((SELECT id FROM modules WHERE name = $2::TEXT LIMIT 1), $3::BYTEA, $1)
 `
 
-func (q *Queries) CreateDeployment(ctx context.Context, key sqltypes.Key, moduleName string, schema []byte) error {
-	_, err := q.db.Exec(ctx, createDeployment, key, moduleName, schema)
+func (q *Queries) CreateDeployment(ctx context.Context, name model.DeploymentName, moduleName string, schema []byte) error {
+	_, err := q.db.Exec(ctx, createDeployment, name, moduleName, schema)
 	return err
 }
 
@@ -70,11 +71,11 @@ func (q *Queries) CreateIngressRequest(ctx context.Context, key sqltypes.Key, so
 
 const createIngressRoute = `-- name: CreateIngressRoute :exec
 INSERT INTO ingress_routes (deployment_id, module, verb, method, path)
-VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5)
+VALUES ((SELECT id FROM deployments WHERE name = $1 LIMIT 1), $2, $3, $4, $5)
 `
 
 type CreateIngressRouteParams struct {
-	Key    sqltypes.Key
+	Name   model.DeploymentName
 	Module string
 	Verb   string
 	Method string
@@ -83,7 +84,7 @@ type CreateIngressRouteParams struct {
 
 func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error {
 	_, err := q.db.Exec(ctx, createIngressRoute,
-		arg.Key,
+		arg.Name,
 		arg.Module,
 		arg.Verb,
 		arg.Method,
@@ -130,14 +131,14 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 }
 
 const getActiveRunners = `-- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key                                  AS runner_key,
+SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
                            r.endpoint,
                            r.state,
                            r.labels,
                            r.last_seen,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.key END, NULL) AS deployment_key
+                                            THEN d.name END, NULL) AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE $1::bool = true
@@ -146,12 +147,12 @@ ORDER BY r.key
 `
 
 type GetActiveRunnersRow struct {
-	RunnerKey     sqltypes.Key
-	Endpoint      string
-	State         RunnerState
-	Labels        []byte
-	LastSeen      pgtype.Timestamptz
-	DeploymentKey interface{}
+	RunnerKey      sqltypes.Key
+	Endpoint       string
+	State          RunnerState
+	Labels         []byte
+	LastSeen       pgtype.Timestamptz
+	DeploymentName interface{}
 }
 
 func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error) {
@@ -169,7 +170,7 @@ func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRu
 			&i.State,
 			&i.Labels,
 			&i.LastSeen,
-			&i.DeploymentKey,
+			&i.DeploymentName,
 		); err != nil {
 			return nil, err
 		}
@@ -182,7 +183,7 @@ func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRu
 }
 
 const getAllIngressRoutes = `-- name: GetAllIngressRoutes :many
-SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
+SELECT d.name AS deployment_name, ir.module, ir.verb, ir.method, ir.path
 FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
 WHERE $1::bool = true
@@ -190,11 +191,11 @@ WHERE $1::bool = true
 `
 
 type GetAllIngressRoutesRow struct {
-	DeploymentKey sqltypes.Key
-	Module        string
-	Verb          string
-	Method        string
-	Path          string
+	DeploymentName model.DeploymentName
+	Module         string
+	Verb           string
+	Method         string
+	Path           string
 }
 
 func (q *Queries) GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIngressRoutesRow, error) {
@@ -207,7 +208,7 @@ func (q *Queries) GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIn
 	for rows.Next() {
 		var i GetAllIngressRoutesRow
 		if err := rows.Scan(
-			&i.DeploymentKey,
+			&i.DeploymentName,
 			&i.Module,
 			&i.Verb,
 			&i.Method,
@@ -269,7 +270,7 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 }
 
 const getCalls = `-- name: GetCalls :many
-SELECT d.key          AS deployment_key,
+SELECT d.name         AS deployment_name,
        ir.key         AS request_key,
        e.custom_key_1 AS source_module,
        e.custom_key_2 AS source_verb,
@@ -292,14 +293,14 @@ WHERE CASE
 `
 
 type GetCallsRow struct {
-	DeploymentKey sqltypes.Key
-	RequestKey    sqltypes.Key
-	SourceModule  pgtype.Text
-	SourceVerb    pgtype.Text
-	DestModule    pgtype.Text
-	DestVerb      pgtype.Text
-	Payload       []byte
-	TimeStamp     pgtype.Timestamptz
+	DeploymentName model.DeploymentName
+	RequestKey     sqltypes.Key
+	SourceModule   pgtype.Text
+	SourceVerb     pgtype.Text
+	DestModule     pgtype.Text
+	DestVerb       pgtype.Text
+	Payload        []byte
+	TimeStamp      pgtype.Timestamptz
 }
 
 func (q *Queries) GetCalls(ctx context.Context, requestKey sqltypes.NullKey, destModule []string) ([]GetCallsRow, error) {
@@ -312,7 +313,7 @@ func (q *Queries) GetCalls(ctx context.Context, requestKey sqltypes.NullKey, des
 	for rows.Next() {
 		var i GetCallsRow
 		if err := rows.Scan(
-			&i.DeploymentKey,
+			&i.DeploymentName,
 			&i.RequestKey,
 			&i.SourceModule,
 			&i.SourceVerb,
@@ -367,17 +368,17 @@ func (q *Queries) GetControllers(ctx context.Context, all bool) ([]Controller, e
 }
 
 const getDeployment = `-- name: GetDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.language, m.name AS module_name
+SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.language, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
-WHERE d.key = $1
+WHERE d.name = $1
 `
 
 type GetDeploymentRow struct {
 	ID          int64
 	CreatedAt   pgtype.Timestamptz
 	ModuleID    int64
-	Key         sqltypes.Key
+	Name        model.DeploymentName
 	Schema      []byte
 	Labels      []byte
 	MinReplicas int32
@@ -385,14 +386,14 @@ type GetDeploymentRow struct {
 	ModuleName  string
 }
 
-func (q *Queries) GetDeployment(ctx context.Context, key sqltypes.Key) (GetDeploymentRow, error) {
-	row := q.db.QueryRow(ctx, getDeployment, key)
+func (q *Queries) GetDeployment(ctx context.Context, name model.DeploymentName) (GetDeploymentRow, error) {
+	row := q.db.QueryRow(ctx, getDeployment, name)
 	var i GetDeploymentRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.ModuleID,
-		&i.Key,
+		&i.Name,
 		&i.Schema,
 		&i.Labels,
 		&i.MinReplicas,
@@ -448,7 +449,7 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 
 const getDeploymentLogs = `-- name: GetDeploymentLogs :many
 SELECT ir.key                              AS request_key,
-       ir.key                              AS deployment_key,
+       ir.key                              AS deployment_name,
        e.time_stamp                        AS time_stamp,
        e.custom_key_1                      AS level,
        (e.payload ->> 'message')::TEXT     AS message,
@@ -458,32 +459,32 @@ FROM events e
          INNER JOIN ingress_requests ir ON e.request_id = ir.id
          INNER JOIN deployments d ON e.deployment_id = d.id
 WHERE e.type = 'log'
-  AND d.key = $1
+  AND d.name = $1
   AND ir.key = $2
   AND e.time_stamp >= $3
   AND e.time_stamp <= $4
 `
 
 type GetDeploymentLogsParams struct {
-	DeploymentKey   sqltypes.Key
+	DeploymentName  model.DeploymentName
 	RequestKey      sqltypes.Key
 	AfterTimestamp  pgtype.Timestamptz
 	BeforeTimestamp pgtype.Timestamptz
 }
 
 type GetDeploymentLogsRow struct {
-	RequestKey    sqltypes.Key
-	DeploymentKey sqltypes.Key
-	TimeStamp     pgtype.Timestamptz
-	Level         pgtype.Text
-	Message       string
-	Attributes    []byte
-	Error         string
+	RequestKey     sqltypes.Key
+	DeploymentName sqltypes.Key
+	TimeStamp      pgtype.Timestamptz
+	Level          pgtype.Text
+	Message        string
+	Attributes     []byte
+	Error          string
 }
 
 func (q *Queries) GetDeploymentLogs(ctx context.Context, arg GetDeploymentLogsParams) ([]GetDeploymentLogsRow, error) {
 	rows, err := q.db.Query(ctx, getDeploymentLogs,
-		arg.DeploymentKey,
+		arg.DeploymentName,
 		arg.RequestKey,
 		arg.AfterTimestamp,
 		arg.BeforeTimestamp,
@@ -497,7 +498,7 @@ func (q *Queries) GetDeploymentLogs(ctx context.Context, arg GetDeploymentLogsPa
 		var i GetDeploymentLogsRow
 		if err := rows.Scan(
 			&i.RequestKey,
-			&i.DeploymentKey,
+			&i.DeploymentName,
 			&i.TimeStamp,
 			&i.Level,
 			&i.Message,
@@ -515,19 +516,19 @@ func (q *Queries) GetDeploymentLogs(ctx context.Context, arg GetDeploymentLogsPa
 }
 
 const getDeployments = `-- name: GetDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
+SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE $1::bool = true
    OR min_replicas > 0
-ORDER BY d.key
+ORDER BY d.name
 `
 
 type GetDeploymentsRow struct {
 	ID          int64
 	CreatedAt   pgtype.Timestamptz
 	ModuleID    int64
-	Key         sqltypes.Key
+	Name        model.DeploymentName
 	Schema      []byte
 	Labels      []byte
 	MinReplicas int32
@@ -548,7 +549,7 @@ func (q *Queries) GetDeployments(ctx context.Context, all bool) ([]GetDeployment
 			&i.ID,
 			&i.CreatedAt,
 			&i.ModuleID,
-			&i.Key,
+			&i.Name,
 			&i.Schema,
 			&i.Labels,
 			&i.MinReplicas,
@@ -566,7 +567,7 @@ func (q *Queries) GetDeployments(ctx context.Context, all bool) ([]GetDeployment
 }
 
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many
-SELECT id, created_at, module_id, key, schema, labels, min_replicas
+SELECT id, created_at, module_id, name, schema, labels, min_replicas
 FROM deployments
 WHERE id = ANY ($1::BIGINT[])
 `
@@ -584,7 +585,7 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 			&i.ID,
 			&i.CreatedAt,
 			&i.ModuleID,
-			&i.Key,
+			&i.Name,
 			&i.Schema,
 			&i.Labels,
 			&i.MinReplicas,
@@ -600,7 +601,7 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 }
 
 const getDeploymentsNeedingReconciliation = `-- name: GetDeploymentsNeedingReconciliation :many
-SELECT d.key                  AS key,
+SELECT d.name                 AS deployment_name,
        m.name                 AS module_name,
        m.language             AS language,
        COUNT(r.id)            AS assigned_runners_count,
@@ -608,12 +609,12 @@ SELECT d.key                  AS key,
 FROM deployments d
          LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
          JOIN modules m ON d.module_id = m.id
-GROUP BY d.key, d.min_replicas, m.name, m.language
+GROUP BY d.name, d.min_replicas, m.name, m.language
 HAVING COUNT(r.id) <> d.min_replicas
 `
 
 type GetDeploymentsNeedingReconciliationRow struct {
-	Key                  sqltypes.Key
+	DeploymentName       model.DeploymentName
 	ModuleName           string
 	Language             string
 	AssignedRunnersCount int64
@@ -631,7 +632,7 @@ func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Ge
 	for rows.Next() {
 		var i GetDeploymentsNeedingReconciliationRow
 		if err := rows.Scan(
-			&i.Key,
+			&i.DeploymentName,
 			&i.ModuleName,
 			&i.Language,
 			&i.AssignedRunnersCount,
@@ -648,7 +649,7 @@ func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Ge
 }
 
 const getDeploymentsWithArtefacts = `-- name: GetDeploymentsWithArtefacts :many
-SELECT d.id, d.created_at, d.key, m.name
+SELECT d.id, d.created_at, d.name as deployment_name, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON d.module_id = m.id
 WHERE EXISTS (SELECT 1
@@ -661,10 +662,10 @@ WHERE EXISTS (SELECT 1
 `
 
 type GetDeploymentsWithArtefactsRow struct {
-	ID        int64
-	CreatedAt pgtype.Timestamptz
-	Key       sqltypes.Key
-	Name      string
+	ID             int64
+	CreatedAt      pgtype.Timestamptz
+	DeploymentName model.DeploymentName
+	ModuleName     string
 }
 
 // Get all deployments that have artefacts matching the given digests.
@@ -680,8 +681,8 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
-			&i.Key,
-			&i.Name,
+			&i.DeploymentName,
+			&i.ModuleName,
 		); err != nil {
 			return nil, err
 		}
@@ -694,7 +695,7 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 }
 
 const getEvents = `-- name: GetEvents :many
-SELECT d.key        AS deployment_key,
+SELECT d.name       AS deployment_name,
        ir.key       AS request_key,
        e.time_stamp AS time_stamp,
        e.type       AS type,
@@ -704,7 +705,7 @@ FROM events e
          INNER JOIN ingress_requests ir on e.request_id = ir.id
 WHERE time_stamp >= $1
   AND time_stamp <= COALESCE($2, NOW() AT TIME ZONE 'utc')
-  AND d.key = $3
+  AND d.name = $3
   AND ir.key = $4
   AND e.type = ANY ($5::TEXT[])
 `
@@ -712,24 +713,24 @@ WHERE time_stamp >= $1
 type GetEventsParams struct {
 	AfterTimestamp  pgtype.Timestamptz
 	BeforeTimestamp pgtype.Timestamptz
-	DeploymentKey   sqltypes.Key
+	DeploymentName  model.DeploymentName
 	RequestKey      sqltypes.Key
 	Types           []string
 }
 
 type GetEventsRow struct {
-	DeploymentKey sqltypes.Key
-	RequestKey    sqltypes.Key
-	TimeStamp     pgtype.Timestamptz
-	Type          EventType
-	Payload       []byte
+	DeploymentName model.DeploymentName
+	RequestKey     sqltypes.Key
+	TimeStamp      pgtype.Timestamptz
+	Type           EventType
+	Payload        []byte
 }
 
 func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEventsRow, error) {
 	rows, err := q.db.Query(ctx, getEvents,
 		arg.AfterTimestamp,
 		arg.BeforeTimestamp,
-		arg.DeploymentKey,
+		arg.DeploymentName,
 		arg.RequestKey,
 		arg.Types,
 	)
@@ -741,7 +742,7 @@ func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEven
 	for rows.Next() {
 		var i GetEventsRow
 		if err := rows.Scan(
-			&i.DeploymentKey,
+			&i.DeploymentName,
 			&i.RequestKey,
 			&i.TimeStamp,
 			&i.Type,
@@ -758,7 +759,7 @@ func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEven
 }
 
 const getExistingDeploymentForModule = `-- name: GetExistingDeploymentForModule :one
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE m.name = $1
@@ -773,7 +774,7 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 		&i.ID,
 		&i.CreatedAt,
 		&i.ModuleID,
-		&i.Key,
+		&i.Name,
 		&i.Schema,
 		&i.Labels,
 		&i.MinReplicas,
@@ -888,7 +889,7 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 }
 
 const getRoutingTable = `-- name: GetRoutingTable :many
-SELECT endpoint, r.key AS runner_key, d.key deployment_key
+SELECT endpoint, r.key AS runner_key, d.name deployment_name
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
          INNER JOIN modules m on d.module_id = m.id
@@ -897,9 +898,9 @@ WHERE state = 'assigned'
 `
 
 type GetRoutingTableRow struct {
-	Endpoint      string
-	RunnerKey     sqltypes.Key
-	DeploymentKey sqltypes.Key
+	Endpoint       string
+	RunnerKey      sqltypes.Key
+	DeploymentName model.DeploymentName
 }
 
 func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error) {
@@ -911,7 +912,7 @@ func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutin
 	var items []GetRoutingTableRow
 	for rows.Next() {
 		var i GetRoutingTableRow
-		if err := rows.Scan(&i.Endpoint, &i.RunnerKey, &i.DeploymentKey); err != nil {
+		if err := rows.Scan(&i.Endpoint, &i.RunnerKey, &i.DeploymentName); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -923,26 +924,26 @@ func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutin
 }
 
 const getRunner = `-- name: GetRunner :one
-SELECT DISTINCT ON (r.key) r.key                                  AS runner_key,
+SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
                            r.endpoint,
                            r.state,
                            r.labels,
                            r.last_seen,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.key END, NULL) AS deployment_key
+                                            THEN d.name END, NULL) AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE r.key = $1
 `
 
 type GetRunnerRow struct {
-	RunnerKey     sqltypes.Key
-	Endpoint      string
-	State         RunnerState
-	Labels        []byte
-	LastSeen      pgtype.Timestamptz
-	DeploymentKey interface{}
+	RunnerKey      sqltypes.Key
+	Endpoint       string
+	State          RunnerState
+	Labels         []byte
+	LastSeen       pgtype.Timestamptz
+	DeploymentName interface{}
 }
 
 func (q *Queries) GetRunner(ctx context.Context, key sqltypes.Key) (GetRunnerRow, error) {
@@ -954,7 +955,7 @@ func (q *Queries) GetRunner(ctx context.Context, key sqltypes.Key) (GetRunnerRow
 		&i.State,
 		&i.Labels,
 		&i.LastSeen,
-		&i.DeploymentKey,
+		&i.DeploymentName,
 	)
 	return i, err
 }
@@ -977,11 +978,11 @@ SELECT r.id, r.key, r.created, r.last_seen, r.reservation_timeout, r.state, r.en
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
-  AND d.key = $1
+  AND d.name = $1
 `
 
-func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key) ([]Runner, error) {
-	rows, err := q.db.Query(ctx, getRunnersForDeployment, key)
+func (q *Queries) GetRunnersForDeployment(ctx context.Context, name model.DeploymentName) ([]Runner, error) {
+	rows, err := q.db.Query(ctx, getRunnersForDeployment, name)
 	if err != nil {
 		return nil, err
 	}
@@ -1013,7 +1014,7 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key sqltypes.Key)
 const insertCallEvent = `-- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
-VALUES ((SELECT id FROM deployments WHERE deployments.key = $1::UUID),
+VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
         (CASE
              WHEN $2::UUID IS NULL THEN NULL
              ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = $2::UUID)
@@ -1033,22 +1034,22 @@ VALUES ((SELECT id FROM deployments WHERE deployments.key = $1::UUID),
 `
 
 type InsertCallEventParams struct {
-	DeploymentKey sqltypes.Key
-	RequestKey    sqltypes.NullKey
-	TimeStamp     pgtype.Timestamptz
-	SourceModule  string
-	SourceVerb    string
-	DestModule    string
-	DestVerb      string
-	DurationMs    int64
-	Request       []byte
-	Response      []byte
-	Error         pgtype.Text
+	DeploymentName string
+	RequestKey     sqltypes.NullKey
+	TimeStamp      pgtype.Timestamptz
+	SourceModule   string
+	SourceVerb     string
+	DestModule     string
+	DestVerb       string
+	DurationMs     int64
+	Request        []byte
+	Response       []byte
+	Error          pgtype.Text
 }
 
 func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
 	_, err := q.db.Exec(ctx, insertCallEvent,
-		arg.DeploymentKey,
+		arg.DeploymentName,
 		arg.RequestKey,
 		arg.TimeStamp,
 		arg.SourceModule,
@@ -1095,7 +1096,7 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 
 const insertLogEvent = `-- name: InsertLogEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
-VALUES ((SELECT id FROM deployments d WHERE d.key = $1 LIMIT 1),
+VALUES ((SELECT id FROM deployments d WHERE d.name = $1 LIMIT 1),
         (CASE
              WHEN $2::UUID IS NULL THEN NULL
              ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = $2::UUID LIMIT 1)
@@ -1111,18 +1112,18 @@ VALUES ((SELECT id FROM deployments d WHERE d.key = $1 LIMIT 1),
 `
 
 type InsertLogEventParams struct {
-	DeploymentKey sqltypes.Key
-	RequestKey    sqltypes.NullKey
-	TimeStamp     pgtype.Timestamptz
-	Level         int32
-	Message       string
-	Attributes    []byte
-	Error         pgtype.Text
+	DeploymentName model.DeploymentName
+	RequestKey     sqltypes.NullKey
+	TimeStamp      pgtype.Timestamptz
+	Level          int32
+	Message        string
+	Attributes     []byte
+	Error          pgtype.Text
 }
 
 func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
 	_, err := q.db.Exec(ctx, insertLogEvent,
-		arg.DeploymentKey,
+		arg.DeploymentName,
 		arg.RequestKey,
 		arg.TimeStamp,
 		arg.Level,
@@ -1172,16 +1173,16 @@ const replaceDeployment = `-- name: ReplaceDeployment :one
 WITH update_container AS (
     UPDATE deployments AS d
         SET min_replicas = update_deployments.min_replicas
-        FROM (VALUES ($1::UUID, 0),
-                     ($2::UUID, $3::INT))
-            AS update_deployments(key, min_replicas)
-        WHERE d.key = update_deployments.key
+        FROM (VALUES ($1::TEXT, 0),
+                     ($2::TEXT, $3::INT))
+            AS update_deployments(name, min_replicas)
+        WHERE d.name = update_deployments.name
         RETURNING 1)
 SELECT COUNT(*)
 FROM update_container
 `
 
-func (q *Queries) ReplaceDeployment(ctx context.Context, oldDeployment sqltypes.Key, newDeployment sqltypes.Key, minReplicas int32) (int64, error) {
+func (q *Queries) ReplaceDeployment(ctx context.Context, oldDeployment string, newDeployment string, minReplicas int32) (int64, error) {
 	row := q.db.QueryRow(ctx, replaceDeployment, oldDeployment, newDeployment, minReplicas)
 	var count int64
 	err := row.Scan(&count)
@@ -1196,7 +1197,7 @@ SET state               = 'reserved',
     -- and the update will fail due to a FK constraint.
     deployment_id       = COALESCE((SELECT id
                                     FROM deployments d
-                                    WHERE d.key = $2
+                                    WHERE d.name = $2
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
@@ -1207,8 +1208,8 @@ RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.r
 `
 
 // Find an idle runner and reserve it for the given deployment.
-func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout pgtype.Timestamptz, deploymentKey sqltypes.Key, labels []byte) (Runner, error) {
-	row := q.db.QueryRow(ctx, reserveRunner, reservationTimeout, deploymentKey, labels)
+func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout pgtype.Timestamptz, deploymentName model.DeploymentName, labels []byte) (Runner, error) {
+	row := q.db.QueryRow(ctx, reserveRunner, reservationTimeout, deploymentName, labels)
 	var i Runner
 	err := row.Scan(
 		&i.ID,
@@ -1227,12 +1228,12 @@ func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout pgtype.T
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2
-WHERE key = $1
+WHERE name = $1
 RETURNING 1
 `
 
-func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key sqltypes.Key, minReplicas int32) error {
-	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
+func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, name model.DeploymentName, minReplicas int32) error {
+	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, name, minReplicas)
 	return err
 }
 
@@ -1269,11 +1270,11 @@ func (q *Queries) UpsertModule(ctx context.Context, language string, name string
 const upsertRunner = `-- name: UpsertRunner :one
 WITH deployment_rel AS (
     SELECT CASE
-               WHEN $5::UUID IS NULL
+               WHEN $5::TEXT IS NULL
                    THEN NULL
                ELSE COALESCE((SELECT id
                               FROM deployments d
-                              WHERE d.key = $5
+                              WHERE d.name = $5
                               LIMIT 1), -1) END AS id)
 INSERT
 INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
@@ -1287,15 +1288,15 @@ RETURNING deployment_id
 `
 
 type UpsertRunnerParams struct {
-	Key           sqltypes.Key
-	Endpoint      string
-	State         RunnerState
-	Labels        []byte
-	DeploymentKey sqltypes.NullKey
+	Key            sqltypes.Key
+	Endpoint       string
+	State          RunnerState
+	Labels         []byte
+	DeploymentName pgtype.Text
 }
 
 // Upsert a runner and return the deployment ID that it is assigned to, if any.
-// If the deployment key is null, then deployment_rel.id will be null,
+// If the deployment name is null, then deployment_rel.id will be null,
 // otherwise we try to retrieve the deployments.id using the key. If
 // there is no corresponding deployment, then the deployment ID is -1
 // and the parent statement will fail due to a foreign key constraint.
@@ -1305,7 +1306,7 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (pgt
 		arg.Endpoint,
 		arg.State,
 		arg.Labels,
-		arg.DeploymentKey,
+		arg.DeploymentName,
 	)
 	var deployment_id pgtype.Int8
 	err := row.Scan(&deployment_id)

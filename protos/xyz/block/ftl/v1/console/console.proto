@@ -12,7 +12,7 @@ option java_multiple_files = true;
 
 message Call {
   string request_key = 1;
-  string deployment_key = 2;
+  string deployment_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
 
   string source_module = 4;
@@ -26,9 +26,9 @@ message Call {
 }
 
 message Deployment {
-  string key = 1;
+  string name = 1;
   string language = 2;
-  string name = 3;
+  string module_name = 3;
   int32 min_replicas = 4;
 }
 
@@ -46,14 +46,14 @@ message Verb {
 
 message Module {
   string name = 1;
-  string deployment_key = 2;
+  string deployment_name = 2;
   string language = 3;
   repeated Verb verbs = 4;
   repeated schema.Data data = 5;
 }
 
 message LogEntry {
-  string deployment_key = 1;
+  string deployment_name = 1;
   optional string request_key = 2;
   google.protobuf.Timestamp time_stamp = 3;
   int32 log_level = 4;
@@ -95,7 +95,7 @@ message GetTimelineResponse {
 message StreamLogsRequest {
   optional google.protobuf.Duration update_interval = 1;
   google.protobuf.Timestamp after_time = 2;
-  string deployment_key = 3;
+  string deployment_name = 3;
 }
 
 message StreamLogsResponse {

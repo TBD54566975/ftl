@@ -43,9 +43,9 @@ func TestDAL(t *testing.T) {
 	})
 
 	module := &schema.Module{Name: "test"}
-	var deploymentKey model.DeploymentKey
+	var deploymentName model.DeploymentName
 	t.Run("CreateDeployment", func(t *testing.T) {
-		deploymentKey, err = dal.CreateDeployment(ctx, "go", module, []DeploymentArtefact{{
+		deploymentName, err = dal.CreateDeployment(ctx, "go", module, []DeploymentArtefact{{
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
@@ -57,7 +57,7 @@ func TestDAL(t *testing.T) {
 		Module:   "test",
 		Language: "go",
 		Schema:   module,
-		Key:      deploymentKey,
+		Name:     deploymentName,
 		Artefacts: []*model.Artefact{
 			{Path: "dir/filename",
 				Executable: true,
@@ -68,7 +68,7 @@ func TestDAL(t *testing.T) {
 	expectedContent := artefactContent(t, deployment.Artefacts)
 
 	t.Run("GetDeployment", func(t *testing.T) {
-		actual, err := dal.GetDeployment(ctx, deploymentKey)
+		actual, err := dal.GetDeployment(ctx, deploymentName)
 		assert.NoError(t, err)
 		actualContent := artefactContent(t, actual.Artefacts)
 		assert.Equal(t, expectedContent, actualContent)
@@ -76,7 +76,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("GetMissingDeployment", func(t *testing.T) {
-		_, err := dal.GetDeployment(ctx, model.NewDeploymentKey())
+		_, err := dal.GetDeployment(ctx, model.NewDeploymentName("test"))
 		assert.IsError(t, err, ErrNotFound)
 	})
 
@@ -128,7 +128,7 @@ func TestDAL(t *testing.T) {
 		Labels:     labels,
 		Endpoint:   "http://localhost:8080",
 		State:      RunnerStateReserved,
-		Deployment: types.Some(deploymentKey),
+		Deployment: types.Some(deploymentName),
 	}
 
 	t.Run("GetDeploymentsNeedingReconciliation", func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("SetDeploymentReplicas", func(t *testing.T) {
-		err := dal.SetDeploymentReplicas(ctx, deploymentKey, 1)
+		err := dal.SetDeploymentReplicas(ctx, deploymentName, 1)
 		assert.NoError(t, err)
 	})
 
@@ -146,7 +146,7 @@ func TestDAL(t *testing.T) {
 		reconcile, err := dal.GetDeploymentsNeedingReconciliation(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, []Reconciliation{{
-			Deployment:       deploymentKey,
+			Deployment:       deploymentName,
 			Module:           deployment.Module,
 			Language:         deployment.Language,
 			AssignedReplicas: 0,
@@ -155,14 +155,14 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
-		_, err := dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey(), time.Second, labels)
+		_, err := dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentName("test"), time.Second, labels)
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrNotFound)
 		assert.EqualError(t, err, "deployment: not found")
 	})
 
 	t.Run("ReserveRunnerForDeployment", func(t *testing.T) {
-		claim, err := dal.ReserveRunnerForDeployment(ctx, deploymentKey, time.Millisecond*100, labels)
+		claim, err := dal.ReserveRunnerForDeployment(ctx, deploymentName, time.Millisecond*100, labels)
 		assert.NoError(t, err)
 		err = claim.Commit(context.Background())
 		assert.NoError(t, err)
@@ -180,7 +180,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("ReserveRunnerForDeploymentFailsOnInvalidDeployment", func(t *testing.T) {
-		_, err = dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey(), time.Second, labels)
+		_, err = dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentName("test"), time.Second, labels)
 		assert.IsError(t, err, ErrNotFound)
 	})
 
@@ -190,7 +190,7 @@ func TestDAL(t *testing.T) {
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
-			Deployment: types.Some(deploymentKey),
+			Deployment: types.Some(deploymentName),
 		})
 		assert.NoError(t, err)
 	})
@@ -202,14 +202,14 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("GetRunnersForDeployment", func(t *testing.T) {
-		runners, err := dal.GetRunnersForDeployment(ctx, deploymentKey)
+		runners, err := dal.GetRunnersForDeployment(ctx, deploymentName)
 		assert.NoError(t, err)
 		assert.Equal(t, []Runner{{
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
-			Deployment: types.Some(deploymentKey),
+			Deployment: types.Some(deploymentName),
 		}}, runners)
 	})
 
@@ -220,12 +220,12 @@ func TestDAL(t *testing.T) {
 	})
 
 	callEvent := &CallEvent{
-		Time:          time.Now().Round(time.Millisecond),
-		DeploymentKey: deploymentKey,
-		RequestKey:    types.Some(requestKey),
-		Request:       []byte("{}"),
-		Response:      []byte(`{"time": "now"}`),
-		DestVerb:      schema.VerbRef{Module: "time", Name: "time"},
+		Time:           time.Now().Round(time.Millisecond),
+		DeploymentName: deploymentName,
+		RequestKey:     types.Some(requestKey),
+		Request:        []byte("{}"),
+		Response:       []byte(`{"time": "now"}`),
+		DestVerb:       schema.VerbRef{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
 		err = dal.InsertCallEvent(ctx, callEvent)
@@ -233,12 +233,12 @@ func TestDAL(t *testing.T) {
 	})
 
 	logEvent := &LogEvent{
-		Time:          time.Now().Round(time.Millisecond),
-		DeploymentKey: deploymentKey,
-		RequestKey:    types.Some(requestKey),
-		Level:         int32(log.Warn),
-		Attributes:    map[string]string{"attr": "value"},
-		Message:       "A log entry",
+		Time:           time.Now().Round(time.Millisecond),
+		DeploymentName: deploymentName,
+		RequestKey:     types.Some(requestKey),
+		Level:          int32(log.Warn),
+		Attributes:     map[string]string{"attr": "value"},
+		Message:        "A log entry",
 	}
 	t.Run("InsertLogEntry", func(t *testing.T) {
 		err = dal.InsertLogEvent(ctx, logEvent)
@@ -253,7 +253,7 @@ func TestDAL(t *testing.T) {
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterDeployments(deploymentKey))
+			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterDeployments(deploymentName))
 			assert.NoError(t, err)
 			assert.Equal(t, []Event{callEvent, logEvent}, events)
 		})
@@ -276,7 +276,7 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, []Route{{
 			Runner:     expectedRunner.Key,
-			Deployment: deploymentKey,
+			Deployment: deploymentName,
 			Endpoint:   expectedRunner.Endpoint,
 		}}, routes)
 	})
@@ -287,7 +287,7 @@ func TestDAL(t *testing.T) {
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
-			Deployment: types.Some(model.NewDeploymentKey()),
+			Deployment: types.Some(model.NewDeploymentName("test")),
 		})
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrNotFound)
@@ -304,7 +304,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("ReserveRunnerForDeploymentAfterRelease", func(t *testing.T) {
-		claim, err := dal.ReserveRunnerForDeployment(ctx, deploymentKey, time.Second, labels)
+		claim, err := dal.ReserveRunnerForDeployment(ctx, deploymentName, time.Second, labels)
 		assert.NoError(t, err)
 		err = claim.Commit(context.Background())
 		assert.NoError(t, err)

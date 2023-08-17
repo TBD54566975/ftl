@@ -61,7 +61,7 @@ enum DeploymentChangeType {
 
 message PullSchemaRequest {}
 message PullSchemaResponse {
-  string deployment_key = 1;
+  string deployment_name = 1;
   string module_name = 2;
   // For deletes this will not be present.
   optional schema.Module schema = 4;
@@ -100,13 +100,13 @@ message CreateDeploymentRequest {
   optional google.protobuf.Struct labels = 3;
 }
 message CreateDeploymentResponse {
-  string deployment_key = 1;
+  string deployment_name = 1;
   // Currently active deployment for this module, if any.
-  optional string active_deployment_key = 2;
+  optional string active_deployment_name = 2;
 }
 
 message GetDeploymentArtefactsRequest {
-  string deployment_key = 1;
+  string deployment_name = 1;
   repeated DeploymentArtefact have_artefacts = 2;
 }
 message GetDeploymentArtefactsResponse {
@@ -115,7 +115,7 @@ message GetDeploymentArtefactsResponse {
 }
 
 message GetDeploymentRequest {
-  string deployment_key = 1;
+  string deployment_name = 1;
 }
 message GetDeploymentResponse {
   schema.Module schema = 1;
@@ -153,19 +153,19 @@ message RegisterRunnerRequest {
 message RegisterRunnerResponse {}
 
 message UpdateDeployRequest {
-  string deployment_key = 1;
+  string deployment_name = 1;
   int32 min_replicas = 2;
 }
 message UpdateDeployResponse {}
 
 message ReplaceDeployRequest {
-  string deployment_key = 1;
+  string deployment_name = 1;
   int32 min_replicas = 2;
 }
 message ReplaceDeployResponse {}
 
 message StreamDeploymentLogsRequest {
-  string deployment_key = 1;
+  string deployment_name = 1;
   optional string request_key = 2;
   google.protobuf.Timestamp time_stamp = 3;
   int32 log_level = 4;
@@ -210,7 +210,7 @@ message StatusResponse {
   repeated Deployment deployments = 3;
 
   message IngressRoute {
-    string deployment_key = 1;
+    string deployment_name = 1;
     string module = 2;
     string verb = 3;
     string method = 4;
@@ -268,16 +268,16 @@ service ControllerService {
 }
 
 message DeployRequest {
-  string deployment_key = 1;
+  string deployment_name = 1;
 }
 message DeployResponse {}
 
 message TerminateRequest {
-  string deployment_key = 1;
+  string deployment_name = 1;
 }
 
 message ReserveRequest {
-  string deployment_key = 1;
+  string deployment_name = 1;
 }
 message ReserveResponse {}
 

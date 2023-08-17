@@ -18,3 +18,5 @@ sql:
             go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.NullKey"
           - column: "runners.languages"
             go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.Languages"
+          - column: "deployments.name"
+            go_type: "github.com/TBD54566975/ftl/backend/common/model.DeploymentName"

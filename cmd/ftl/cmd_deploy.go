@@ -86,8 +86,8 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	logger.Infof("Created deployment %s", resp.Msg.DeploymentKey)
-	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{DeploymentKey: resp.Msg.GetDeploymentKey(), MinReplicas: d.Replicas}))
+	logger.Infof("Created deployment %s", resp.Msg.DeploymentName)
+	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{DeploymentName: resp.Msg.GetDeploymentName(), MinReplicas: d.Replicas}))
 	return errors.WithStack(err)
 }
 

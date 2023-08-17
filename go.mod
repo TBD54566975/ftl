@@ -49,7 +49,7 @@ require (
 	github.com/alecthomas/assert/v2 v2.3.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
-	github.com/alecthomas/errors v0.3.0
+	github.com/alecthomas/errors v0.4.0
 	github.com/alecthomas/participle/v2 v2.0.0
 	github.com/alecthomas/types v0.7.0
 	github.com/bufbuild/connect-grpcreflect-go v1.1.0

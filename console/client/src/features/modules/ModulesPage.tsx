@@ -29,7 +29,7 @@ export default function ModulesPage() {
                   </div>
                   <div className='pt-4'>
                     <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
-                      {module.deploymentKey}
+                      {module.deploymentName}
                     </div>
                   </div>
                 </div>

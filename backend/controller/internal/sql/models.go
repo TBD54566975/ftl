@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
+	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -160,7 +161,7 @@ type Deployment struct {
 	ID          int64
 	CreatedAt   pgtype.Timestamptz
 	ModuleID    int64
-	Key         sqltypes.Key
+	Name        model.DeploymentName
 	Schema      []byte
 	Labels      []byte
 	MinReplicas int32

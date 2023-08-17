@@ -15,10 +15,10 @@ import (
 )
 
 // Artefacts downloads artefacts for a deployment from the Controller.
-func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient, id model.DeploymentKey, dest string) error {
+func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient, name model.DeploymentName, dest string) error {
 	logger := log.FromContext(ctx)
 	stream, err := client.GetDeploymentArtefacts(ctx, connect.NewRequest(&ftlv1.GetDeploymentArtefactsRequest{
-		DeploymentKey: id.String(),
+		DeploymentName: name.String(),
 	}))
 	if err != nil {
 		return errors.WithStack(err)
