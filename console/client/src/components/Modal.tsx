@@ -3,11 +3,12 @@ import { Dialog, Transition } from '@headlessui/react'
 
 
 export const Modal: React.FC<{
-  trigger: React.ElementType
+  trigger?: React.ElementType
   title?: string
   children: React.ReactNode
-}> = ({ trigger: Trigger, title, children }) => {
-  const [isOpen, setIsOpen] = React.useState(false)
+  defaultOpen?: boolean
+}> = ({ trigger: Trigger, title, children, defaultOpen = false }) => {
+  const [ isOpen, setIsOpen ] = React.useState(defaultOpen)
 
   function closeModal() {
     setIsOpen(false)
@@ -19,7 +20,7 @@ export const Modal: React.FC<{
 
   return (
     <>
-      <Trigger onClick={openModal} />
+      {Trigger && <Trigger onClick={openModal} />}
       <Transition appear
         show={isOpen}
         as={React.Fragment}

@@ -5,7 +5,7 @@ import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import {  getVerbCode } from './verb.utils'
 import { EllipsisVerticalIcon } from '@heroicons/react/24/solid'
 import { Modal } from '../../components/modal'
-import { VerbPage } from './VerbPage'
+import { VerbPage } from './VerbModal'
 type Props = {
   module?: Module
 }

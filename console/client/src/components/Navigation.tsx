@@ -5,15 +5,10 @@ import { classNames } from '../utils/react.utils'
 import DarkModeSwitch from './DarkModeSwitch'
 
 const navigation = [
-  {
-    name: 'Modules',
-    href: '/modules',
-  },
-  { name: 'Logs', href: '/logs' },
   { name: 'Graph', href: '/graph' },
 ]
 
-export default function Navigation() {
+export function Navigation() {
   return (
     <>
       <Disclosure as='nav'

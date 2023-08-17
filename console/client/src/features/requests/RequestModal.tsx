@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 
-export default function RequestPage() {
+export function RequestModal() {
   const { key } = useParams()
   const client = useClient(ConsoleService)
   const [ calls, setCalls ] = useState<Call[]>([])

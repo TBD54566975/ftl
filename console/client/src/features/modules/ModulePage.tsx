@@ -6,7 +6,7 @@ import { statuses } from '../../utils/style.utils'
 import { VerbList } from '../verbs/VerbList'
 import { ModuleTimeline } from './ModuleTimeline.tsx'
 
-export default function ModulePage() {
+export function ModulePage() {
   const { id } = useParams()
   const modules = useContext(modulesContext)
   const module = modules.modules.find(module => module?.name === id)
@@ -16,7 +16,7 @@ export default function ModulePage() {
   }
 
   return (
-    <>
+    <div>
       <div className='relative flex items-center space-x-4'>
         <div className='min-w-0 flex-auto'>
           <div className='flex items-center gap-x-3'>
@@ -35,8 +35,8 @@ export default function ModulePage() {
           </div>
         </div>
       </div>
-      <VerbList module={module} />
       <ModuleTimeline module={module} />
-    </>
+      <VerbList module={module} />
+    </div>
   )
 }

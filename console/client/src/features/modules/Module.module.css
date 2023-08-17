@@ -1,0 +1,20 @@
+.grid {
+  display: grid;
+  grid-template: 
+    "filter timeline misc" auto / 336px 1fr 305px;
+  gap: 1rem;
+}
+.filter {
+  display: flex;
+  flex-direction: column;
+  row-gap: .5rem;
+  grid-area: filter;
+}
+
+.timeline {
+  grid-area: timeline;
+}
+
+.misc {
+  grid-area: misc;
+}

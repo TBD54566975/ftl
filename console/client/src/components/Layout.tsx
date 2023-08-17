@@ -1,13 +1,15 @@
 import { Outlet } from 'react-router-dom'
-const Layout = () => {
+import { Navigation } from './Navigation'
+import * as styles from './Layout.module.css'
+
+export const Layout = () => {
   return (
-    <div className='min-h-full'>
-      <main>
-        <div className='mx-auto max-w-7xl py-8 sm:px-6 lg:px-8'>
-          <Outlet />
-        </div>
+    <>
+      <Navigation />
+      <main className={styles.main}>
+        <Outlet />
       </main>
-    </div>
+    </>
+   
   )
 }
-export default Layout
