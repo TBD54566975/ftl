@@ -71,7 +71,7 @@ class FTLPlugin : Plugin<Project> {
     script.writeText(
       """
       #!/bin/bash
-      java -cp ftl/jars/ftl-runtime.jar:ftl/jars/${jarFiles.joinToString(":ftl/jars/")}:classes/kotlin/main xyz.block.ftl.main.MainKt
+      exec java -cp ftl/jars/ftl-runtime.jar:ftl/jars/${jarFiles.joinToString(":ftl/jars/")}:classes/kotlin/main xyz.block.ftl.main.MainKt
       """.trimIndent()
     )
     script.setExecutable(true)
