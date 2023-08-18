@@ -2,6 +2,7 @@ import { Timestamp } from '@bufbuild/protobuf'
 import { RocketLaunchIcon } from '@heroicons/react/24/solid'
 import { Deployment, DeploymentEventType } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatTimestamp } from '../../utils/date.utils'
+import { panelColor } from '../../utils/style.utils'
 
 type Props = {
   deployment: Deployment
@@ -20,7 +21,7 @@ function deploymentType(type: DeploymentEventType) {
 export const TimelineDeployment: React.FC<Props> = ({ deployment, timestamp }) => {
   return (
     <>
-      <div className='relative flex h-6 w-6 flex-none items-center justify-center bg-white dark:bg-slate-800'>
+      <div className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}>
         <RocketLaunchIcon className='h-6 w-6 text-indigo-500'
           aria-hidden='true'
         />

@@ -2,6 +2,7 @@ import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
 import { Link } from 'react-router-dom'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils'
+import { panelColor } from '../../utils/style.utils'
 
 type Props = {
   call: Call
@@ -10,7 +11,7 @@ type Props = {
 export const TimelineCall: React.FC<Props> = ({ call }) => {
   return (
     <>
-      <div className='relative flex h-6 w-6 flex-none items-center justify-center bg-white dark:bg-slate-800'>
+      <div className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}>
         <ArrowRightOnRectangleIcon className='h-6 w-6 text-indigo-500'
           aria-hidden='true'
         />
