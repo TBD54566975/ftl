@@ -17,14 +17,20 @@ export enum DeploymentEventType {
   DEPLOYMENT_CREATED = 0,
 
   /**
-   * @generated from enum value: DEPLOYMENT_REPLACED = 1;
+   * @generated from enum value: DEPLOYMENT_UPDATED = 1;
    */
-  DEPLOYMENT_REPLACED = 1,
+  DEPLOYMENT_UPDATED = 1,
+
+  /**
+   * @generated from enum value: DEPLOYMENT_REPLACED = 2;
+   */
+  DEPLOYMENT_REPLACED = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(DeploymentEventType)
 proto3.util.setEnumType(DeploymentEventType, "xyz.block.ftl.v1.console.DeploymentEventType", [
   { no: 0, name: "DEPLOYMENT_CREATED" },
-  { no: 1, name: "DEPLOYMENT_REPLACED" },
+  { no: 1, name: "DEPLOYMENT_UPDATED" },
+  { no: 2, name: "DEPLOYMENT_REPLACED" },
 ]);
 
 /**

@@ -11,6 +11,7 @@ type Props = {
 function deploymentType(type: DeploymentEventType) {
   switch (type) {
     case DeploymentEventType.DEPLOYMENT_CREATED: return 'Created'
+    case DeploymentEventType.DEPLOYMENT_UPDATED: return 'Updated'
     case DeploymentEventType.DEPLOYMENT_REPLACED: return 'Replaced'
     default: return 'Unknown'
   }

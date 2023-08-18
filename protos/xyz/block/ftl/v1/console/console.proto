@@ -24,7 +24,8 @@ message Call {
 
 enum DeploymentEventType {
   DEPLOYMENT_CREATED = 0;
-  DEPLOYMENT_REPLACED = 1;
+  DEPLOYMENT_UPDATED = 1;
+  DEPLOYMENT_REPLACED = 2;
 }
 
 message Deployment {

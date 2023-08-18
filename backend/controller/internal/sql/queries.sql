@@ -257,15 +257,16 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name')
             ));
 
 -- name: InsertDeploymentEvent :exec
-INSERT INTO events (deployment_id, time_stamp, type, custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
+INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, custom_key_3, payload)
 VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
-        sqlc.arg('time_stamp')::TIMESTAMPTZ,
         'deployment',
         sqlc.arg('type')::TEXT,
         sqlc.arg('language')::TEXT,
         sqlc.arg('module_name')::TEXT,
-        sqlc.arg('min_replicas')::INT,
-        jsonb_build_object());
+        jsonb_build_object(
+                'min_replicas', sqlc.arg('min_replicas')::INT,
+                'replaced', sqlc.narg('replaced')::TEXT
+            ));
 
 -- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,

@@ -279,6 +279,8 @@ func deploymentEventToDeployment(event dal.DeploymentEvent) *pbconsole.Deploymen
 	switch event.Type {
 	case dal.DeploymentCreated:
 		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_CREATED
+	case dal.DeploymentUpdated:
+		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_UPDATED
 	case dal.DeploymentReplaced:
 		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_REPLACED
 	}

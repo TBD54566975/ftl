@@ -997,34 +997,35 @@ func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams
 }
 
 const insertDeploymentEvent = `-- name: InsertDeploymentEvent :exec
-INSERT INTO events (deployment_id, time_stamp, type, custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
+INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, custom_key_3, payload)
 VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
-        $2::TIMESTAMPTZ,
         'deployment',
+        $2::TEXT,
         $3::TEXT,
         $4::TEXT,
-        $5::TEXT,
-        $6::INT,
-        jsonb_build_object())
+        jsonb_build_object(
+                'min_replicas', $5::INT,
+                'replaced', $6::TEXT
+            ))
 `
 
 type InsertDeploymentEventParams struct {
 	DeploymentName string
-	TimeStamp      pgtype.Timestamptz
 	Type           string
 	Language       string
 	ModuleName     string
 	MinReplicas    int32
+	Replaced       pgtype.Text
 }
 
 func (q *Queries) InsertDeploymentEvent(ctx context.Context, arg InsertDeploymentEventParams) error {
 	_, err := q.db.Exec(ctx, insertDeploymentEvent,
 		arg.DeploymentName,
-		arg.TimeStamp,
 		arg.Type,
 		arg.Language,
 		arg.ModuleName,
 		arg.MinReplicas,
+		arg.Replaced,
 	)
 	return err
 }
