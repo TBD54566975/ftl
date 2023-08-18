@@ -122,3 +122,4 @@ issues:
     - "package-comments"
     - "parameter testing.TB should have name tb"
     - "blank-imports"
+    - 'should have comment \(or a comment on this block\) or be unexported'

@@ -354,6 +354,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 	if err != nil {
 		return "", errors.Wrap(err, "could not start transaction")
 	}
+
 	defer tx.CommitOrRollback(ctx, &err)
 
 	// Check if the deployment already exists and if so, return it.
@@ -427,6 +428,15 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 		}
 	}
 
+	err = tx.InsertDeploymentEvent(ctx, sql.InsertDeploymentEventParams{
+		DeploymentName: deploymentName.String(),
+		Type:           string(DeploymentCreated),
+		Language:       language,
+		ModuleName:     schema.Name,
+	})
+	if err != nil {
+		return "", errors.Wrap(translatePGError(err), "failed to insert deployment event")
+	}
 	return deploymentName, nil
 }
 
@@ -576,11 +586,16 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
 	}
+
 	defer tx.CommitOrRollback(ctx, &err)
 	newDeployment, err := tx.GetDeployment(ctx, newDeploymentName)
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
 	}
+
+	var updateType DeploymentEventType
+	var replacedDeployment pgtype.Text
+
 	// If there's an existing deployment, set its desired replicas to 0
 	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
 	if err == nil {
@@ -591,6 +606,8 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 		if count == 1 {
 			return errors.Wrap(ErrConflict, "deployment already exists")
 		}
+		updateType = DeploymentReplaced
+		replacedDeployment = pgtype.Text{String: oldDeployment.Name.String(), Valid: true}
 	} else if !isNotFound(err) {
 		return errors.WithStack(translatePGError(err))
 	} else {
@@ -599,7 +616,21 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 		if err != nil {
 			return errors.WithStack(translatePGError(err))
 		}
+		updateType = DeploymentUpdated
 	}
+
+	err = tx.InsertDeploymentEvent(ctx, sql.InsertDeploymentEventParams{
+		DeploymentName: newDeploymentName.String(),
+		Type:           string(updateType),
+		Language:       newDeployment.Language,
+		ModuleName:     newDeployment.ModuleName,
+		MinReplicas:    int32(minReplicas),
+		Replaced:       replacedDeployment,
+	})
+	if err != nil {
+		return errors.WithStack(translatePGError(err))
+	}
+
 	return nil
 }
 
@@ -769,6 +800,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		Error:          logError,
 	})))
 }
+
 func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRow) (*model.Deployment, error) {
 	pm := &pschema.Module{}
 	err := proto.Unmarshal(deployment.Schema, pm)
@@ -847,6 +879,16 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 		Request:        call.Request,
 		Response:       call.Response,
 		Error:          callError,
+	})))
+}
+
+func (d *DAL) InsertDeploymentEvent(ctx context.Context, deployment *DeploymentEvent) error {
+	return errors.WithStack(translatePGError(d.db.InsertDeploymentEvent(ctx, sql.InsertDeploymentEventParams{
+		DeploymentName: deployment.DeploymentName.String(),
+		Type:           string(deployment.Type),
+		Language:       deployment.Language,
+		ModuleName:     deployment.ModuleName,
+		MinReplicas:    int32(deployment.MinReplicas),
 	})))
 }
 

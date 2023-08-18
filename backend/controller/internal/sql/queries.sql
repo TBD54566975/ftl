@@ -256,22 +256,17 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name')
                 'error', sqlc.narg('error')::TEXT
             ));
 
--- name: GetDeploymentLogs :many
-SELECT ir.key                              AS request_key,
-       ir.key                              AS deployment_name,
-       e.time_stamp                        AS time_stamp,
-       e.custom_key_1                      AS level,
-       (e.payload ->> 'message')::TEXT     AS message,
-       (e.payload ->> 'attributes')::JSONB AS attributes,
-       (e.payload ->> 'error')::TEXT       AS error
-FROM events e
-         INNER JOIN ingress_requests ir ON e.request_id = ir.id
-         INNER JOIN deployments d ON e.deployment_id = d.id
-WHERE e.type = 'log'
-  AND d.name = sqlc.arg('deployment_name')
-  AND ir.key = sqlc.arg('request_key')
-  AND e.time_stamp >= sqlc.arg('after_timestamp')
-  AND e.time_stamp <= sqlc.arg('before_timestamp');
+-- name: InsertDeploymentEvent :exec
+INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, custom_key_3, payload)
+VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
+        'deployment',
+        sqlc.arg('type')::TEXT,
+        sqlc.arg('language')::TEXT,
+        sqlc.arg('module_name')::TEXT,
+        jsonb_build_object(
+                'min_replicas', sqlc.arg('min_replicas')::INT,
+                'replaced', sqlc.narg('replaced')::TEXT
+            ));
 
 -- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,

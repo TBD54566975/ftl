@@ -31,7 +31,6 @@ type Querier interface {
 	GetDeployment(ctx context.Context, name model.DeploymentName) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
-	GetDeploymentLogs(ctx context.Context, arg GetDeploymentLogsParams) ([]GetDeploymentLogsRow, error)
 	GetDeployments(ctx context.Context, all bool) ([]GetDeploymentsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
 	// Get deployments that have a mismatch between the number of assigned and required replicas.
@@ -49,6 +48,7 @@ type Querier interface {
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, name model.DeploymentName) ([]Runner, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
+	InsertDeploymentEvent(ctx context.Context, arg InsertDeploymentEventParams) error
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
 	InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error
 	// Mark any controller entries that haven't been updated recently as dead.

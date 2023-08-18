@@ -245,17 +245,36 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	expectedDeploymentEvent := &DeploymentEvent{
+		DeploymentName: deploymentName,
+		Type:           DeploymentEventType("created"),
+		Language:       "go",
+		ModuleName:     "test",
+	}
+
 	t.Run("QueryEvents", func(t *testing.T) {
+		//nolint:forcetypeassert
 		t.Run("NoFilters", func(t *testing.T) {
 			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now())
 			assert.NoError(t, err)
-			assert.Equal(t, []Event{callEvent, logEvent}, events)
+			assert.Equal(t, 3, len(events))
+			deploymentEvent := events[0].(*DeploymentEvent)
+			deploymentEvent.Time = time.Time{}
+			assert.Equal(t, expectedDeploymentEvent, deploymentEvent)
+			assert.Equal(t, callEvent, events[1].(*CallEvent))
+			assert.Equal(t, logEvent, events[2].(*LogEvent))
 		})
 
+		//nolint:forcetypeassert
 		t.Run("ByDeployment", func(t *testing.T) {
 			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterDeployments(deploymentName))
 			assert.NoError(t, err)
-			assert.Equal(t, []Event{callEvent, logEvent}, events)
+			assert.Equal(t, 3, len(events))
+			deploymentEvent := events[0].(*DeploymentEvent)
+			deploymentEvent.Time = time.Time{}
+			assert.Equal(t, expectedDeploymentEvent, deploymentEvent)
+			assert.Equal(t, callEvent, events[1].(*CallEvent))
+			assert.Equal(t, logEvent, events[2].(*LogEvent))
 		})
 
 		t.Run("ByCall", func(t *testing.T) {

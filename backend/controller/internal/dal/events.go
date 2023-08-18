@@ -21,8 +21,17 @@ type EventType = sql.EventType
 
 // Supported event types.
 const (
-	EventTypeLog  = sql.EventTypeLog
-	EventTypeCall = sql.EventTypeCall
+	EventTypeLog        = sql.EventTypeLog
+	EventTypeCall       = sql.EventTypeCall
+	EventTypeDeployment = sql.EventTypeDeployment
+)
+
+type DeploymentEventType string
+
+const (
+	DeploymentCreated  DeploymentEventType = "created"
+	DeploymentUpdated  DeploymentEventType = "updated"
+	DeploymentReplaced DeploymentEventType = "replaced"
 )
 
 // Event types.
@@ -55,6 +64,18 @@ type CallEvent struct {
 }
 
 func (e *CallEvent) event() {}
+
+type DeploymentEvent struct {
+	DeploymentName     model.DeploymentName
+	Time               time.Time
+	Type               DeploymentEventType
+	Language           string
+	ModuleName         string
+	MinReplicas        int
+	ReplacedDeployment types.Option[model.DeploymentName]
+}
+
+func (e *DeploymentEvent) event() {}
 
 type eventFilterCall struct {
 	sourceModule string
@@ -125,13 +146,18 @@ type eventCallJSON struct {
 	DurationMS int64                `json:"duration_ms"`
 	Request    json.RawMessage      `json:"request"`
 	Response   json.RawMessage      `json:"response"`
-	Error      types.Option[string] `json:"error"`
+	Error      types.Option[string] `json:"error,omitempty"`
 }
 
 type eventLogJSON struct {
 	Message    string               `json:"message"`
 	Attributes map[string]string    `json:"attributes"`
-	Error      types.Option[string] `json:"error"`
+	Error      types.Option[string] `json:"error,omitempty"`
+}
+
+type eventDeploymentJSON struct {
+	MinReplicas        int                                `json:"min_replicas"`
+	ReplacedDeployment types.Option[model.DeploymentName] `json:"replaced_deployment,omitempty"`
 }
 
 func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters ...EventFilter) ([]Event, error) {
@@ -253,7 +279,20 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 				Response:       jsonPayload.Response,
 				Error:          jsonPayload.Error,
 			})
-
+		case sql.EventTypeDeployment:
+			var jsonPayload eventDeploymentJSON
+			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			out = append(out, &DeploymentEvent{
+				DeploymentName:     row.DeploymentName,
+				Time:               row.TimeStamp,
+				Type:               DeploymentEventType(row.CustomKey1.MustGet()),
+				Language:           row.CustomKey2.MustGet(),
+				ModuleName:         row.CustomKey3.MustGet(),
+				MinReplicas:        jsonPayload.MinReplicas,
+				ReplacedDeployment: jsonPayload.ReplacedDeployment,
+			})
 		default:
 			panic("unknown event type: " + row.Type)
 		}
