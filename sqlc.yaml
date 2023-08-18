@@ -13,19 +13,45 @@ sql:
         emit_interface: true
         query_parameter_limit: 3
         overrides:
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.interval"
+            go_type: "time.Duration"
+          - db_type: "pg_catalog.interval"
+            nullable: true
+            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.NullDuration"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.NullTime"
           - db_type: "uuid"
             go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.Key"
           - db_type: "uuid"
             nullable: true
             go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.NullKey"
-          - column: "runners.languages"
-            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.Languages"
+          - db_type: "pg_catalog.varchar"
+            nullable: true
+            go_type: "github.com/alecthomas/types.Option[string]"
+          - db_type: "text"
+            go_type: "string"
+          - db_type: "text"
+            nullable: true
+            go_type: "github.com/alecthomas/types.Option[string]"
+          - db_type: "pg_catalog.int8"
+            nullable: true
+            go_type: "github.com/alecthomas/types.Option[int64]"
+          - column: "ingress_requests.key"
+            go_type: "github.com/TBD54566975/ftl/backend/common/model.IngressRequestKey"
+          - column: "runners.key"
+            go_type: "github.com/TBD54566975/ftl/backend/common/model.RunnerKey"
+          - column: "controller.key"
+            go_type: "github.com/TBD54566975/ftl/backend/common/model.ControllerKey"
           - column: "deployments.name"
             go_type: "github.com/TBD54566975/ftl/backend/common/model.DeploymentName"
+          - column: "events.payload"
+            go_type: "encoding/json.RawMessage"
     rules:
       - sqlc/db-prepare
-#      - has-index
-#      - postgresql-query-too-costly
+      - postgresql-query-too-costly
       - postgresql-no-seq-scan
 rules:
 - name: postgresql-query-too-costly

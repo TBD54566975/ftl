@@ -6,11 +6,13 @@ package sql
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/alecthomas/types"
 )
 
 type ControllerState string
@@ -144,23 +146,23 @@ func (ns NullRunnerState) Value() (driver.Value, error) {
 
 type Artefact struct {
 	ID        int64
-	CreatedAt pgtype.Timestamptz
+	CreatedAt time.Time
 	Digest    []byte
 	Content   []byte
 }
 
 type Controller struct {
 	ID       int64
-	Key      sqltypes.Key
-	Created  pgtype.Timestamptz
-	LastSeen pgtype.Timestamptz
+	Key      model.ControllerKey
+	Created  time.Time
+	LastSeen time.Time
 	State    ControllerState
 	Endpoint string
 }
 
 type Deployment struct {
 	ID          int64
-	CreatedAt   pgtype.Timestamptz
+	CreatedAt   time.Time
 	ModuleID    int64
 	Name        model.DeploymentName
 	Schema      []byte
@@ -171,26 +173,26 @@ type Deployment struct {
 type DeploymentArtefact struct {
 	ArtefactID   int64
 	DeploymentID int64
-	CreatedAt    pgtype.Timestamptz
+	CreatedAt    time.Time
 	Executable   bool
 	Path         string
 }
 
 type Event struct {
-	TimeStamp    pgtype.Timestamptz
+	TimeStamp    time.Time
 	DeploymentID int64
-	RequestID    pgtype.Int8
+	RequestID    types.Option[int64]
 	Type         EventType
-	CustomKey1   pgtype.Text
-	CustomKey2   pgtype.Text
-	CustomKey3   pgtype.Text
-	CustomKey4   pgtype.Text
-	Payload      []byte
+	CustomKey1   types.Option[string]
+	CustomKey2   types.Option[string]
+	CustomKey3   types.Option[string]
+	CustomKey4   types.Option[string]
+	Payload      json.RawMessage
 }
 
 type IngressRequest struct {
 	ID         int64
-	Key        sqltypes.Key
+	Key        model.IngressRequestKey
 	SourceAddr string
 }
 
@@ -210,12 +212,12 @@ type Module struct {
 
 type Runner struct {
 	ID                 int64
-	Key                sqltypes.Key
-	Created            pgtype.Timestamptz
-	LastSeen           pgtype.Timestamptz
-	ReservationTimeout pgtype.Timestamptz
+	Key                model.RunnerKey
+	Created            time.Time
+	LastSeen           time.Time
+	ReservationTimeout sqltypes.NullTime
 	State              RunnerState
 	Endpoint           string
-	DeploymentID       pgtype.Int8
+	DeploymentID       types.Option[int64]
 	Labels             []byte
 }

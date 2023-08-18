@@ -38,9 +38,9 @@ func (s *Service) recordCall(ctx context.Context, call *Call) {
 
 func (s *Service) recordCallError(ctx context.Context, call *Call, callError error) {
 	logger := log.FromContext(ctx)
-	sourceVerb := schema.VerbRef{}
+	var sourceVerb types.Option[schema.VerbRef]
 	if len(call.callers) > 0 {
-		sourceVerb = *call.callers[0]
+		sourceVerb = types.Some(*call.callers[0])
 	}
 
 	var errorStr types.Option[string]
