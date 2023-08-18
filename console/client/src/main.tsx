@@ -5,6 +5,8 @@ import App from './App.tsx'
 import './index.css'
 import ModulesProvider from './providers/modules-provider.tsx'
 import SchemaProvider from './providers/schema-provider.tsx'
+import { SelectedModuleProvider } from './providers/selected-module-provider.tsx'
+import { SelectedTimelineEntryProvider } from './providers/selected-timeline-entry-provider.tsx'
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 
@@ -13,7 +15,11 @@ root.render(
     <BrowserRouter>
       <SchemaProvider>
         <ModulesProvider>
-          <App />
+          <SelectedModuleProvider>
+            <SelectedTimelineEntryProvider>
+              <App />
+            </SelectedTimelineEntryProvider>
+          </SelectedModuleProvider>
         </ModulesProvider>
       </SchemaProvider>
     </BrowserRouter>
