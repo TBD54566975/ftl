@@ -368,16 +368,14 @@ INSERT INTO events (deployment_id, request_id, type,
 VALUES ($1, $2, $3, $4, $4, $5, $6, $7);
 
 -- name: GetEvents :many
-SELECT d.name       AS deployment_name,
-       ir.key       AS request_key,
-       e.time_stamp AS time_stamp,
-       e.type       AS type,
-       e.payload    AS payload
+SELECT d.name AS deployment_name,
+       ir.key AS request_key,
+       sqlc.embed(e)
 FROM events e
          INNER JOIN deployments d on e.deployment_id = d.id
-         INNER JOIN ingress_requests ir on e.request_id = ir.id
+         LEFT JOIN ingress_requests ir on e.request_id = ir.id
 WHERE time_stamp >= sqlc.arg('after_timestamp')
   AND time_stamp <= COALESCE(sqlc.narg('before_timestamp'), NOW() AT TIME ZONE 'utc')
   AND d.name = sqlc.arg('deployment_name')
-  AND ir.key = sqlc.arg('request_key')
+  AND COALESCE(ir.key = sqlc.narg('request_key'), true)
   AND e.type = ANY (sqlc.arg('types')::event_type[]);

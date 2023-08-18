@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
@@ -31,6 +32,7 @@ func ParseIngressRequestKey(key string) (IngressRequestKey, error) {
 
 type ingressRequestKey struct{}
 type IngressRequestKey = keyType[ingressRequestKey]
+type NullIngressRequestKey = types.Option[IngressRequestKey]
 
 func parseKey[KT keyType[U], U any](key string) (KT, error) {
 	var zero KT
@@ -58,7 +60,11 @@ var _ driver.Valuer = (*keyType[int])(nil)
 
 // Scan from UUID DB representation.
 func (d *keyType[T]) Scan(src any) error {
-	id, err := uuid.Parse(src.(string))
+	input, ok := src.(string)
+	if !ok {
+		return errors.Errorf("expected UUID to be a string but it's a %T", src)
+	}
+	id, err := uuid.Parse(input)
 	if err != nil {
 		return errors.Wrap(err, "invalid UUID")
 	}

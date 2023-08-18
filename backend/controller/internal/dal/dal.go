@@ -822,7 +822,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 
 func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (model.IngressRequestKey, error) {
 	key := model.NewIngressRequestKey()
-	err := d.db.CreateIngressRequest(ctx, key, addr)
+	err := d.db.CreateIngressRequest(ctx, sqltypes.Key(key), addr)
 	return key, errors.WithStack(err)
 }
 
@@ -979,7 +979,7 @@ func callRowToEntry(call sql.GetCallsRow) (CallEvent, error) {
 	}
 	entry := CallEvent{
 		DeploymentName: call.DeploymentName,
-		RequestKey:     types.Some(call.RequestKey),
+		RequestKey:     types.Some(model.IngressRequestKey(call.RequestKey)),
 		Time:           call.TimeStamp,
 		SourceVerb:     sourceVerb,
 		DestVerb: schema.VerbRef{

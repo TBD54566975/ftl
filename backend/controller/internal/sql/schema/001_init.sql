@@ -160,7 +160,7 @@ CREATE TABLE events
     time_stamp    TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
 
     deployment_id BIGINT      NOT NULL REFERENCES deployments (id) ON DELETE CASCADE,
-    request_id    BIGINT REFERENCES ingress_requests (id) ON DELETE CASCADE,
+    request_id    BIGINT      NULL REFERENCES ingress_requests (id) ON DELETE CASCADE,
 
     type          event_type  NOT NULL,
 
