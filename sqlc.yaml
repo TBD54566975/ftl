@@ -3,6 +3,8 @@ sql:
   - engine: "postgresql"
     queries: "backend/controller/internal/sql/queries.sql"
     schema: "backend/controller/internal/sql/schema"
+    database:
+      uri: postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret
     gen:
       go:
         package: "sql"
@@ -20,3 +22,15 @@ sql:
             go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.Languages"
           - column: "deployments.name"
             go_type: "github.com/TBD54566975/ftl/backend/common/model.DeploymentName"
+    rules:
+      - sqlc/db-prepare
+#      - has-index
+#      - postgresql-query-too-costly
+      - postgresql-no-seq-scan
+rules:
+- name: postgresql-query-too-costly
+  message: "Query cost estimate is too high"
+  rule: "postgresql.explain.plan.total_cost > 100.0"
+- name: postgresql-no-seq-scan
+  message: "Query plan results in a sequential scan"
+  rule: "postgresql.explain.plan.node_type == 'Seq Scan'"
