@@ -380,4 +380,4 @@ WHERE time_stamp >= sqlc.arg('after_timestamp')
   AND time_stamp <= COALESCE(sqlc.narg('before_timestamp'), NOW() AT TIME ZONE 'utc')
   AND d.name = sqlc.arg('deployment_name')
   AND ir.key = sqlc.arg('request_key')
-  AND e.type = ANY (sqlc.arg('types')::TEXT[]);
+  AND e.type = ANY (sqlc.arg('types')::event_type[]);

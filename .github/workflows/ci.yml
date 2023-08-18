@@ -50,6 +50,20 @@ jobs:
         run: docker compose up -d --wait
       - name: Test
         run: go test ./...
+  sql:
+    name: SQL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Initialise database
+        run: ftl-initdb --recreate
+      - name: Vet SQL
+        run: sqlc vet
   lint:
     name: Lint
     runs-on: ubuntu-latest
