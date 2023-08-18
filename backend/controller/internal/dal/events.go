@@ -55,7 +55,7 @@ type CallEvent struct {
 	DeploymentName model.DeploymentName
 	RequestKey     types.Option[model.IngressRequestKey]
 	Time           time.Time
-	SourceVerb     schema.VerbRef
+	SourceVerb     types.Option[schema.VerbRef]
 	DestVerb       schema.VerbRef
 	Duration       time.Duration
 	Request        []byte
@@ -78,7 +78,7 @@ type DeploymentEvent struct {
 func (e *DeploymentEvent) event() {}
 
 type eventFilterCall struct {
-	sourceModule string
+	sourceModule types.Option[string]
 	destModule   string
 }
 
@@ -101,7 +101,7 @@ func FilterLogs(level log.Level) EventFilter {
 // FilterCall filters call events between the given modules.
 //
 // May be called multiple times.
-func FilterCall(sourceModule, destModule string) EventFilter {
+func FilterCall(sourceModule types.Option[string], destModule string) EventFilter {
 	return func(query *eventFilter) {
 		query.calls = append(query.calls, &eventFilterCall{sourceModule: sourceModule, destModule: destModule})
 	}
@@ -211,9 +211,15 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 			if i > 0 {
 				q += " OR "
 			}
-			q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_1 = $%d AND e.custom_key_3 = $%d))", index, index+1)
-			index += 2
-			args = append(args, call.sourceModule, call.destModule)
+			if sourceModule, ok := call.sourceModule.Get(); ok {
+				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_1 = $%d AND e.custom_key_3 = $%d))", index, index+1)
+				args = append(args, sourceModule, call.destModule)
+				index += 2
+			} else {
+				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_1 IS NULL AND e.custom_key_3 = $%d))", index)
+				args = append(args, call.destModule)
+				index++
+			}
 		}
 		q += ")\n"
 	}
@@ -268,11 +274,17 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
 				return nil, errors.WithStack(err)
 			}
+			var sourceVerb types.Option[schema.VerbRef]
+			sourceModule, smok := row.CustomKey1.Get()
+			sourceName, snok := row.CustomKey2.Get()
+			if smok && snok {
+				sourceVerb = types.Some(schema.VerbRef{Module: sourceModule, Name: sourceName})
+			}
 			out = append(out, &CallEvent{
 				DeploymentName: row.DeploymentName,
 				RequestKey:     requestKey,
 				Time:           row.TimeStamp,
-				SourceVerb:     schema.VerbRef{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
+				SourceVerb:     sourceVerb,
 				DestVerb:       schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
 				Duration:       time.Duration(jsonPayload.DurationMS) * time.Millisecond,
 				Request:        jsonPayload.Request,

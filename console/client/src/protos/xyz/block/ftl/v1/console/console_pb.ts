@@ -53,7 +53,7 @@ export class Call extends Message<Call> {
   timeStamp?: Timestamp;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.VerbRef source_verb_ref = 4;
+   * @generated from field: optional xyz.block.ftl.v1.schema.VerbRef source_verb_ref = 4;
    */
   sourceVerbRef?: VerbRef;
 
@@ -93,7 +93,7 @@ export class Call extends Message<Call> {
     { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 4, name: "source_verb_ref", kind: "message", T: VerbRef },
+    { no: 4, name: "source_verb_ref", kind: "message", T: VerbRef, opt: true },
     { no: 5, name: "destination_verb_ref", kind: "message", T: VerbRef },
     { no: 6, name: "duration", kind: "message", T: Duration },
     { no: 7, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },

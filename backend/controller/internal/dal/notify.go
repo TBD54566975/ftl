@@ -89,16 +89,16 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 			if err != nil {
 				return Deployment{}, errors.WithStack(err)
 			}
-			moduleSchema, err := schema.ModuleFromBytes(row.Schema)
+			moduleSchema, err := schema.ModuleFromBytes(row.Deployment.Schema)
 			if err != nil {
 				return Deployment{}, errors.WithStack(err)
 			}
 			return Deployment{
-				CreatedAt:   row.CreatedAt.Time,
-				Name:        row.Name,
+				CreatedAt:   row.Deployment.CreatedAt,
+				Name:        row.Deployment.Name,
 				Module:      row.ModuleName,
 				Schema:      moduleSchema,
-				MinReplicas: int(row.MinReplicas),
+				MinReplicas: int(row.Deployment.MinReplicas),
 				Language:    row.Language,
 			}, nil
 		})

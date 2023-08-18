@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/proto"
 
@@ -225,7 +224,7 @@ func (d *DAL) GetStatus(
 	}
 	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetDeploymentsRow) (Deployment, error) {
 		protoSchema := &pschema.Module{}
-		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
+		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
 		}
 		modelSchema, err := schema.ModuleFromProto(protoSchema)
@@ -233,15 +232,15 @@ func (d *DAL) GetStatus(
 			return Deployment{}, errors.Wrapf(err, "%q: invalid schema in database", in.ModuleName)
 		}
 		labels := model.Labels{}
-		err = json.Unmarshal(in.Labels, &labels)
+		err = json.Unmarshal(in.Deployment.Labels, &labels)
 		if err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: invalid labels in database", in.ModuleName)
 		}
 		return Deployment{
-			Name:        in.Name,
+			Name:        in.Deployment.Name,
 			Module:      in.ModuleName,
 			Language:    in.Language,
-			MinReplicas: int(in.MinReplicas),
+			MinReplicas: int(in.Deployment.MinReplicas),
 			Schema:      modelSchema,
 			Labels:      labels,
 		}, nil
@@ -260,7 +259,7 @@ func (d *DAL) GetStatus(
 			return Runner{}, errors.Wrapf(err, "invalid attributes JSON for runner %s", in.RunnerKey)
 		}
 		return Runner{
-			Key:        model.RunnerKey(in.RunnerKey),
+			Key:        in.RunnerKey,
 			Endpoint:   in.Endpoint,
 			State:      RunnerState(in.State),
 			Deployment: deployment,
@@ -273,7 +272,7 @@ func (d *DAL) GetStatus(
 	return Status{
 		Controllers: slices.Map(controllers, func(in sql.Controller) Controller {
 			return Controller{
-				Key:      model.ControllerKey(in.Key),
+				Key:      in.Key,
 				Endpoint: in.Endpoint,
 				State:    ControllerState(in.State),
 			}
@@ -304,7 +303,7 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 			return nil, errors.Wrapf(err, "invalid attributes JSON for runner %d", row.ID)
 		}
 		runners = append(runners, Runner{
-			Key:        model.RunnerKey(row.Key),
+			Key:        row.Key,
 			Endpoint:   row.Endpoint,
 			State:      RunnerState(row.State),
 			Deployment: types.Some(deployment),
@@ -453,16 +452,16 @@ func (d *DAL) GetDeployment(ctx context.Context, name model.DeploymentName) (*mo
 // ErrConflict will be returned if a runner with the same endpoint and a
 // different key already exists.
 func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
-	var pgDeploymentName pgtype.Text
+	var pgDeploymentName types.Option[string]
 	if dkey, ok := runner.Deployment.Get(); ok {
-		pgDeploymentName = pgtype.Text{String: dkey.String(), Valid: true}
+		pgDeploymentName = types.Some(dkey.String())
 	}
 	attrBytes, err := json.Marshal(runner.Labels)
 	if err != nil {
 		return errors.Wrap(err, "failed to JSON encode runner labels")
 	}
 	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
-		Key:            sqltypes.Key(runner.Key),
+		Key:            runner.Key,
 		Endpoint:       runner.Endpoint,
 		State:          sql.RunnerState(runner.State),
 		DeploymentName: pgDeploymentName,
@@ -474,7 +473,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
 	}
-	if runner.Deployment.Ok() && !deploymentID.Valid {
+	if runner.Deployment.Ok() && !deploymentID.Ok() {
 		return errors.Errorf("deployment %s not found", runner.Deployment)
 	}
 	return nil
@@ -482,25 +481,19 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 
 // KillStaleRunners deletes runners that have not had heartbeats for the given duration.
 func (d *DAL) KillStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleRunners(ctx, pgtype.Interval{
-		Microseconds: int64(age / time.Microsecond),
-		Valid:        true,
-	})
+	count, err := d.db.KillStaleRunners(ctx, age)
 	return count, errors.WithStack(err)
 }
 
 // KillStaleControllers deletes controllers that have not had heartbeats for the given duration.
 func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleControllers(ctx, pgtype.Interval{
-		Microseconds: int64(age / time.Microsecond),
-		Valid:        true,
-	})
+	count, err := d.db.KillStaleControllers(ctx, age)
 	return count, errors.WithStack(err)
 }
 
 // DeregisterRunner deregisters the given runner.
 func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
-	count, err := d.db.DeregisterRunner(ctx, sqltypes.Key(key))
+	count, err := d.db.DeregisterRunner(ctx, key)
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
 	}
@@ -521,7 +514,7 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.D
 		cancel()
 		return nil, errors.WithStack(translatePGError(err))
 	}
-	runner, err := tx.ReserveRunner(ctx, pgtype.Timestamptz{Time: time.Now().Add(reservationTimeout), Valid: true}, deployment, jsonLabels)
+	runner, err := tx.ReserveRunner(ctx, time.Now().Add(reservationTimeout), deployment, jsonLabels)
 	if err != nil {
 		if rerr := tx.Rollback(context.Background()); rerr != nil {
 			err = errors.Join(err, errors.WithStack(translatePGError(rerr)))
@@ -541,7 +534,7 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.D
 		cancel: cancel,
 		tx:     tx,
 		runner: Runner{
-			Key:        model.RunnerKey(runner.Key),
+			Key:        runner.Key,
 			Endpoint:   runner.Endpoint,
 			State:      RunnerState(runner.State),
 			Deployment: types.Some(deployment),
@@ -594,7 +587,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 	}
 
 	var updateType DeploymentEventType
-	var replacedDeployment pgtype.Text
+	var replacedDeployment types.Option[string]
 
 	// If there's an existing deployment, set its desired replicas to 0
 	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
@@ -607,7 +600,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 			return errors.Wrap(ErrConflict, "deployment already exists")
 		}
 		updateType = DeploymentReplaced
-		replacedDeployment = pgtype.Text{String: oldDeployment.Name.String(), Valid: true}
+		replacedDeployment = types.Some(oldDeployment.Name.String())
 	} else if !isNotFound(err) {
 		return errors.WithStack(translatePGError(err))
 	} else {
@@ -666,7 +659,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 	}
 	deployments, err := slices.MapErr(rows, func(in sql.GetDeploymentsRow) (Deployment, error) {
 		protoSchema := &pschema.Module{}
-		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
+		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
 		}
 		modelSchema, err := schema.ModuleFromProto(protoSchema)
@@ -674,12 +667,12 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 			return Deployment{}, errors.Wrapf(err, "%q: invalid schema in database", in.ModuleName)
 		}
 		return Deployment{
-			Name:        in.Name,
+			Name:        in.Deployment.Name,
 			Module:      in.ModuleName,
 			Language:    in.Language,
-			MinReplicas: int(in.MinReplicas),
+			MinReplicas: int(in.Deployment.MinReplicas),
 			Schema:      modelSchema,
-			CreatedAt:   in.CreatedAt.Time,
+			CreatedAt:   in.Deployment.CreatedAt,
 		}, nil
 	})
 
@@ -718,7 +711,7 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 			return Runner{}, errors.Wrap(err, "could not unmarshal labels")
 		}
 		return Runner{
-			Key:      model.RunnerKey(row.Key),
+			Key:      row.Key,
 			Endpoint: row.Endpoint,
 			State:    RunnerState(row.State),
 			Labels:   labels,
@@ -738,14 +731,14 @@ func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]Route, erro
 	return slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
 		return Route{
 			Deployment: row.DeploymentName,
-			Runner:     model.RunnerKey(row.RunnerKey),
+			Runner:     row.RunnerKey,
 			Endpoint:   row.Endpoint,
 		}
 	}), nil
 }
 
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
-	state, err := d.db.GetRunnerState(ctx, sqltypes.Key(runnerKey))
+	state, err := d.db.GetRunnerState(ctx, runnerKey)
 	if err != nil {
 		return "", errors.WithStack(translatePGError(err))
 	}
@@ -753,7 +746,7 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (Ru
 }
 
 func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {
-	row, err := d.db.GetRunner(ctx, sqltypes.Key(runnerKey))
+	row, err := d.db.GetRunner(ctx, runnerKey)
 	if err != nil {
 		return Runner{}, errors.WithStack(translatePGError(err))
 	}
@@ -767,7 +760,7 @@ func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner,
 		return Runner{}, errors.Wrapf(err, "could not unmarshal labels for runner %s", row.RunnerKey)
 	}
 	return Runner{
-		Key:        model.RunnerKey(row.RunnerKey),
+		Key:        row.RunnerKey,
 		Endpoint:   row.Endpoint,
 		State:      RunnerState(row.State),
 		Deployment: deployment,
@@ -781,11 +774,6 @@ func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 }
 
 func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
-	logError := pgtype.Text{}
-	if e, ok := log.Error.Get(); ok {
-		logError.String = e
-		logError.Valid = true
-	}
 	attributes, err := json.Marshal(log.Attributes)
 	if err != nil {
 		return errors.WithStack(err)
@@ -793,17 +781,17 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	return errors.WithStack(translatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
 		DeploymentName: log.DeploymentName,
 		RequestKey:     sqltypes.FromOption(log.RequestKey),
-		TimeStamp:      pgtype.Timestamptz{Time: log.Time, Valid: true},
+		TimeStamp:      log.Time,
 		Level:          log.Level,
 		Attributes:     attributes,
 		Message:        log.Message,
-		Error:          logError,
+		Error:          log.Error,
 	})))
 }
 
 func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRow) (*model.Deployment, error) {
 	pm := &pschema.Module{}
-	err := proto.Unmarshal(deployment.Schema, pm)
+	err := proto.Unmarshal(deployment.Deployment.Schema, pm)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -814,10 +802,10 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	out := &model.Deployment{
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
-		Name:     deployment.Name,
+		Name:     deployment.Deployment.Name,
 		Schema:   module,
 	}
-	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.ID)
+	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
@@ -834,7 +822,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 
 func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (model.IngressRequestKey, error) {
 	key := model.NewIngressRequestKey()
-	err := d.db.CreateIngressRequest(ctx, sqltypes.Key(key), addr)
+	err := d.db.CreateIngressRequest(ctx, key, addr)
 	return key, errors.WithStack(err)
 }
 
@@ -848,7 +836,7 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) 
 	}
 	return slices.Map(routes, func(row sql.GetIngressRoutesRow) IngressRoute {
 		return IngressRoute{
-			Runner:   model.RunnerKey(row.RunnerKey),
+			Runner:   row.RunnerKey,
 			Endpoint: row.Endpoint,
 			Module:   row.Module,
 			Verb:     row.Verb,
@@ -857,28 +845,27 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) 
 }
 
 func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {
-	id, err := d.db.UpsertController(ctx, sqltypes.Key(key), addr)
+	id, err := d.db.UpsertController(ctx, key, addr)
 	return id, errors.WithStack(translatePGError(err))
 }
 
 func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
-	callError := pgtype.Text{}
-	if e, ok := call.Error.Get(); ok {
-		callError.String = e
-		callError.Valid = true
+	var sourceModule, sourceVerb types.Option[string]
+	if sr, ok := call.SourceVerb.Get(); ok {
+		sourceModule, sourceVerb = types.Some(sr.Module), types.Some(sr.Name)
 	}
 	return errors.WithStack(translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
 		DeploymentName: call.DeploymentName.String(),
 		RequestKey:     sqltypes.FromOption(call.RequestKey),
-		TimeStamp:      pgtype.Timestamptz{Time: call.Time, Valid: true},
-		SourceModule:   call.SourceVerb.Module,
-		SourceVerb:     call.SourceVerb.Name,
+		TimeStamp:      call.Time,
+		SourceModule:   sourceModule,
+		SourceVerb:     sourceVerb,
 		DestModule:     call.DestVerb.Module,
 		DestVerb:       call.DestVerb.Name,
 		DurationMs:     call.Duration.Milliseconds(),
 		Request:        call.Request,
 		Response:       call.Response,
-		Error:          callError,
+		Error:          call.Error,
 	})))
 }
 
@@ -893,7 +880,7 @@ func (d *DAL) InsertDeploymentEvent(ctx context.Context, deployment *DeploymentE
 }
 
 func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.VerbRef][]CallEvent, error) {
-	calls, err := d.db.GetCalls(ctx, sqltypes.NullKey{}, modules)
+	calls, err := d.db.GetCalls(ctx, sqltypes.NoneKey(), modules)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
@@ -905,8 +892,8 @@ func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.
 			return nil, errors.WithStack(err)
 		}
 		key := schema.VerbRef{
-			Module: call.DestModule.String,
-			Name:   call.DestVerb.String,
+			Module: call.DestModule.MustGet(),
+			Name:   call.DestVerb.MustGet(),
 		}
 		out[key] = append(out[key], entry)
 	}
@@ -981,17 +968,23 @@ func callRowToEntry(call sql.GetCallsRow) (CallEvent, error) {
 	if err := json.Unmarshal(call.Payload, &event); err != nil {
 		return CallEvent{}, errors.Wrap(err, "invalid call event payload")
 	}
+	var sourceVerb types.Option[schema.VerbRef]
+	sourceModule, smok := call.SourceModule.Get()
+	sourceVerbName, svok := call.SourceVerb.Get()
+	if smok && svok {
+		sourceVerb = types.Some(schema.VerbRef{
+			Module: sourceModule,
+			Name:   sourceVerbName,
+		})
+	}
 	entry := CallEvent{
 		DeploymentName: call.DeploymentName,
-		RequestKey:     types.Some(model.IngressRequestKey(call.RequestKey)),
-		Time:           call.TimeStamp.Time,
-		SourceVerb: schema.VerbRef{
-			Module: call.SourceModule.String,
-			Name:   call.SourceVerb.String,
-		},
+		RequestKey:     types.Some(call.RequestKey),
+		Time:           call.TimeStamp,
+		SourceVerb:     sourceVerb,
 		DestVerb: schema.VerbRef{
-			Module: call.DestModule.String,
-			Name:   call.DestVerb.String,
+			Module: call.DestModule.MustGet(),
+			Name:   call.DestVerb.MustGet(),
 		},
 		Duration: time.Duration(event.DurationMS) * time.Millisecond,
 		Request:  event.Request,

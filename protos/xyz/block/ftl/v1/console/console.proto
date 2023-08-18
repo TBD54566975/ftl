@@ -14,7 +14,7 @@ message Call {
   optional string request_key = 1;
   string deployment_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
-  schema.VerbRef source_verb_ref = 4;
+  optional schema.VerbRef source_verb_ref = 4;
   schema.VerbRef destination_verb_ref = 5;
   google.protobuf.Duration duration = 6;
   string request = 7;

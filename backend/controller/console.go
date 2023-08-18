@@ -238,14 +238,15 @@ func callEventToCall(event dal.CallEvent) *pbconsole.Call {
 		rstr := r.String()
 		requestKey = &rstr
 	}
+	var sourceVerbRef *pschema.VerbRef
+	if sourceVerb, ok := event.SourceVerb.Get(); ok {
+		sourceVerbRef = sourceVerb.ToProto().(*pschema.VerbRef) //nolint:forcetypeassert
+	}
 	return &pbconsole.Call{
 		RequestKey:     requestKey,
 		DeploymentName: event.DeploymentName.String(),
 		TimeStamp:      timestamppb.New(event.Time),
-		SourceVerbRef: &pschema.VerbRef{
-			Module: event.SourceVerb.Module,
-			Name:   event.SourceVerb.Name,
-		},
+		SourceVerbRef:  sourceVerbRef,
 		DestinationVerbRef: &pschema.VerbRef{
 			Module: event.DestVerb.Module,
 			Name:   event.DestVerb.Name,

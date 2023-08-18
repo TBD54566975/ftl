@@ -2,6 +2,9 @@
 package model
 
 import (
+	"database/sql"
+	"database/sql/driver"
+	"github.com/google/uuid"
 	"reflect"
 	"strings"
 
@@ -45,6 +48,23 @@ func parseKey[KT keyType[U], U any](key string) (KT, error) {
 // Helper type to avoid having to write a bunch of boilerplate. It relies on T being a
 // named struct in the form <name>Key, eg. "runnerKey"
 type keyType[T any] ulid.ULID
+
+func (d keyType[T]) Value() (driver.Value, error) {
+	return uuid.UUID(d), nil
+}
+
+var _ sql.Scanner = (*keyType[int])(nil)
+var _ driver.Valuer = (*keyType[int])(nil)
+
+// Scan from UUID DB representation.
+func (d *keyType[T]) Scan(src any) error {
+	id, err := uuid.Parse(src.(string))
+	if err != nil {
+		return errors.Wrap(err, "invalid UUID")
+	}
+	*d = keyType[T](id)
+	return nil
+}
 
 func (d keyType[T]) Kind() string                 { return kindFromType[T]() }
 func (d keyType[T]) String() string               { return d.Kind() + ulid.ULID(d).String() }

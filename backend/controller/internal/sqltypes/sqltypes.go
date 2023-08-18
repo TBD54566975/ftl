@@ -2,6 +2,7 @@ package sqltypes
 
 import (
 	"database/sql/driver"
+	"time"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
@@ -46,3 +47,6 @@ func (u *Key) UnmarshalText(text []byte) error {
 	*u = Key(id)
 	return nil
 }
+
+type NullTime = types.Option[time.Time]
+type NullDuration = types.Option[time.Duration]
