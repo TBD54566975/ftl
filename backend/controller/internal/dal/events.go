@@ -129,18 +129,6 @@ func FilterTypes(types ...sql.EventType) EventFilter {
 	}
 }
 
-type eventRow struct {
-	DeploymentName model.DeploymentName
-	RequestKey     *sqltypes.Key
-	TimeStamp      time.Time
-	CustomKey1     types.Option[string]
-	CustomKey2     types.Option[string]
-	CustomKey3     types.Option[string]
-	CustomKey4     types.Option[string]
-	Type           sql.EventType
-	Payload        []byte
-}
-
 // The internal JSON payload of a call event.
 type eventCallJSON struct {
 	DurationMS int64                `json:"duration_ms"`
@@ -234,35 +222,34 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 	// Translate events to concrete Go types.
 	var out []Event
 	for rows.Next() {
-		row := eventRow{}
+		row := sql.GetEventsRow{}
 		err := rows.Scan(
-			&row.DeploymentName, &row.RequestKey, &row.TimeStamp,
-			&row.CustomKey1, &row.CustomKey2, &row.CustomKey3, &row.CustomKey4,
-			&row.Type, &row.Payload,
+			&row.DeploymentName, &row.RequestKey, &row.Event.TimeStamp,
+			&row.Event.CustomKey1, &row.Event.CustomKey2, &row.Event.CustomKey3, &row.Event.CustomKey4,
+			&row.Event.Type, &row.Event.Payload,
 		)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
 		var requestKey types.Option[model.IngressRequestKey]
-		if row.RequestKey != nil {
-			requestKey = types.Some(model.IngressRequestKey(*row.RequestKey))
+		if key, ok := row.RequestKey.Get(); ok {
+			requestKey = types.Some(model.IngressRequestKey(key))
 		}
-
-		switch row.Type {
+		switch row.Event.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+			if err := json.Unmarshal(row.Event.Payload, &jsonPayload); err != nil {
 				return nil, errors.WithStack(err)
 			}
-			level, err := strconv.ParseInt(row.CustomKey1.MustGet(), 10, 32)
+			level, err := strconv.ParseInt(row.Event.CustomKey1.MustGet(), 10, 32)
 			if err != nil {
-				return nil, errors.Wrapf(err, "invalid log level: %q", row.CustomKey1.MustGet())
+				return nil, errors.Wrapf(err, "invalid log level: %q", row.Event.CustomKey1.MustGet())
 			}
 			out = append(out, &LogEvent{
 				DeploymentName: row.DeploymentName,
 				RequestKey:     requestKey,
-				Time:           row.TimeStamp,
+				Time:           row.Event.TimeStamp,
 				Level:          int32(level),
 				Attributes:     jsonPayload.Attributes,
 				Message:        jsonPayload.Message,
@@ -271,21 +258,21 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+			if err := json.Unmarshal(row.Event.Payload, &jsonPayload); err != nil {
 				return nil, errors.WithStack(err)
 			}
 			var sourceVerb types.Option[schema.VerbRef]
-			sourceModule, smok := row.CustomKey1.Get()
-			sourceName, snok := row.CustomKey2.Get()
+			sourceModule, smok := row.Event.CustomKey1.Get()
+			sourceName, snok := row.Event.CustomKey2.Get()
 			if smok && snok {
 				sourceVerb = types.Some(schema.VerbRef{Module: sourceModule, Name: sourceName})
 			}
 			out = append(out, &CallEvent{
 				DeploymentName: row.DeploymentName,
 				RequestKey:     requestKey,
-				Time:           row.TimeStamp,
+				Time:           row.Event.TimeStamp,
 				SourceVerb:     sourceVerb,
-				DestVerb:       schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
+				DestVerb:       schema.VerbRef{Module: row.Event.CustomKey3.MustGet(), Name: row.Event.CustomKey4.MustGet()},
 				Duration:       time.Duration(jsonPayload.DurationMS) * time.Millisecond,
 				Request:        jsonPayload.Request,
 				Response:       jsonPayload.Response,
@@ -293,20 +280,20 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 			})
 		case sql.EventTypeDeployment:
 			var jsonPayload eventDeploymentJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+			if err := json.Unmarshal(row.Event.Payload, &jsonPayload); err != nil {
 				return nil, errors.WithStack(err)
 			}
 			out = append(out, &DeploymentEvent{
 				DeploymentName:     row.DeploymentName,
-				Time:               row.TimeStamp,
-				Type:               DeploymentEventType(row.CustomKey1.MustGet()),
-				Language:           row.CustomKey2.MustGet(),
-				ModuleName:         row.CustomKey3.MustGet(),
+				Time:               row.Event.TimeStamp,
+				Type:               DeploymentEventType(row.Event.CustomKey1.MustGet()),
+				Language:           row.Event.CustomKey2.MustGet(),
+				ModuleName:         row.Event.CustomKey3.MustGet(),
 				MinReplicas:        jsonPayload.MinReplicas,
 				ReplacedDeployment: jsonPayload.ReplacedDeployment,
 			})
 		default:
-			panic("unknown event type: " + row.Type)
+			panic("unknown event type: " + row.Event.Type)
 		}
 	}
 	return out, nil

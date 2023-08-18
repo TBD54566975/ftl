@@ -192,7 +192,7 @@ type Event struct {
 
 type IngressRequest struct {
 	ID         int64
-	Key        model.IngressRequestKey
+	Key        sqltypes.Key
 	SourceAddr string
 }
 

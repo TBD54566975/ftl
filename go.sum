@@ -50,8 +50,8 @@ github.com/alecthomas/participle/v2 v2.0.0 h1:Fgrq+MbuSsJwIkw3fEj9h75vDP0Er5Jzep
 github.com/alecthomas/participle/v2 v2.0.0/go.mod h1:rAKZdJldHu8084ojcWevWAL8KmEU+AT+Olodb+WoN2Y=
 github.com/alecthomas/repr v0.2.0 h1:HAzS41CIzNW5syS8Mf9UwXhNH1J9aix/BvDRf1Ml2Yk=
 github.com/alecthomas/repr v0.2.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
-github.com/alecthomas/types v0.7.0 h1:lt1QxANF73WXRKlBM209PW8xcRvobY55OLFjLmx13us=
-github.com/alecthomas/types v0.7.0/go.mod h1:t7PnU03TVweFpbPVKaeLtFykjJD8rqiBJ7gfkp6UvLQ=
+github.com/alecthomas/types v0.7.1 h1:zU49e5jp0MS4sVDq0yEX4uX/jX7aVpvwd+Rm632ZpEQ=
+github.com/alecthomas/types v0.7.1/go.mod h1:t7PnU03TVweFpbPVKaeLtFykjJD8rqiBJ7gfkp6UvLQ=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/bufbuild/connect-go v1.8.0 h1:srluNkFkZBfSfg9Qb6DrO+5nMaxix//h2ctrHZhMGKc=
 github.com/bufbuild/connect-go v1.8.0/go.mod h1:GmMJYR6orFqD0Y6ZgX8pwQ8j9baizDrIQMm1/a6LnHk=

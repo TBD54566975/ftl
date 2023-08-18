@@ -66,7 +66,7 @@ INSERT INTO ingress_requests (key, source_addr)
 VALUES ($1, $2)
 `
 
-func (q *Queries) CreateIngressRequest(ctx context.Context, key model.IngressRequestKey, sourceAddr string) error {
+func (q *Queries) CreateIngressRequest(ctx context.Context, key sqltypes.Key, sourceAddr string) error {
 	_, err := q.db.Exec(ctx, createIngressRequest, key, sourceAddr)
 	return err
 }
@@ -296,7 +296,7 @@ WHERE CASE
 
 type GetCallsRow struct {
 	DeploymentName model.DeploymentName
-	RequestKey     model.IngressRequestKey
+	RequestKey     sqltypes.Key
 	SourceModule   types.Option[string]
 	SourceVerb     types.Option[string]
 	DestModule     types.Option[string]
@@ -617,18 +617,16 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 }
 
 const getEvents = `-- name: GetEvents :many
-SELECT d.name       AS deployment_name,
-       ir.key       AS request_key,
-       e.time_stamp AS time_stamp,
-       e.type       AS type,
-       e.payload    AS payload
+SELECT e.time_stamp, e.deployment_id, e.request_id, e.type, e.custom_key_1, e.custom_key_2, e.custom_key_3, e.custom_key_4, e.payload,
+       d.name AS deployment_name,
+       ir.key AS request_key
 FROM events e
          INNER JOIN deployments d on e.deployment_id = d.id
-         INNER JOIN ingress_requests ir on e.request_id = ir.id
+         LEFT JOIN ingress_requests ir on e.request_id = ir.id
 WHERE time_stamp >= $1
   AND time_stamp <= COALESCE($2, NOW() AT TIME ZONE 'utc')
   AND d.name = $3
-  AND ir.key = $4
+  AND COALESCE(ir.key = $4, true)
   AND e.type = ANY ($5::event_type[])
 `
 
@@ -636,16 +634,14 @@ type GetEventsParams struct {
 	AfterTimestamp  time.Time
 	BeforeTimestamp sqltypes.NullTime
 	DeploymentName  model.DeploymentName
-	RequestKey      model.IngressRequestKey
+	RequestKey      sqltypes.NullKey
 	Types           []EventType
 }
 
 type GetEventsRow struct {
+	Event          Event
 	DeploymentName model.DeploymentName
-	RequestKey     model.IngressRequestKey
-	TimeStamp      time.Time
-	Type           EventType
-	Payload        json.RawMessage
+	RequestKey     sqltypes.NullKey
 }
 
 func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEventsRow, error) {
@@ -664,11 +660,17 @@ func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEven
 	for rows.Next() {
 		var i GetEventsRow
 		if err := rows.Scan(
+			&i.Event.TimeStamp,
+			&i.Event.DeploymentID,
+			&i.Event.RequestID,
+			&i.Event.Type,
+			&i.Event.CustomKey1,
+			&i.Event.CustomKey2,
+			&i.Event.CustomKey3,
+			&i.Event.CustomKey4,
+			&i.Event.Payload,
 			&i.DeploymentName,
 			&i.RequestKey,
-			&i.TimeStamp,
-			&i.Type,
-			&i.Payload,
 		); err != nil {
 			return nil, err
 		}
