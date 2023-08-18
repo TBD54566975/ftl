@@ -4,11 +4,11 @@ package model
 import (
 	"database/sql"
 	"database/sql/driver"
-	"github.com/google/uuid"
 	"reflect"
 	"strings"
 
 	"github.com/alecthomas/errors"
+	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
 
