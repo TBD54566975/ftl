@@ -17,20 +17,17 @@ export const TimelineCall: React.FC<Props> = ({ call }) => {
         />
       </div>
       <p className='flex-auto py-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400'>
-        {call.sourceVerbRef && (
-          <>
-            <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 mr-2 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
-              {call.destinationVerbRef?.module}
-            </div>
-            Verb <span className='font-medium text-gray-900 dark:text-white mr-1'>{call.destinationVerbRef?.name}</span>
-          </>
+        {call.destinationVerbRef && (
+          <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 mr-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
+            {call.destinationVerbRef?.module}:{call.destinationVerbRef?.name}
+          </div>
         )}
 
         <span className='text-indigo-700 dark:text-indigo-400 mr-1'>
           <Link to={`/requests/${call.requestKey}`}
             className='focus:outline-none'
           >
-            Called
+            called
           </Link>
         </span>
 
@@ -38,12 +35,12 @@ export const TimelineCall: React.FC<Props> = ({ call }) => {
         {call.sourceVerbRef?.module && (
           <>
             from
-            <span className='font-medium text-gray-900 dark:text-white mx-1'>
-              {call.sourceVerbRef.module}:{call.sourceVerbRef.name}
-            </span>
+            <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 ml-1 mr-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
+              {call.sourceVerbRef?.module}:{call.sourceVerbRef?.name}
+            </div>
           </>
         )}
-        Duration ({formatDuration(call.duration)}).
+        ({formatDuration(call.duration)}).
       </p>
       <time
         dateTime={formatTimestamp(call.timeStamp)}
