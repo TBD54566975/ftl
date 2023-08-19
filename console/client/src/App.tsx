@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { IDELayout } from './components/IDELayout.tsx'
 import Navigation from './components/Navigation.tsx'
 import GraphPage from './features/graph/GraphPage.tsx'
+import RequestPage from './features/requests/RequestPage.tsx'
 import { bgColor, textColor } from './utils/style.utils.ts'
 
 export default function App() {
@@ -15,6 +16,9 @@ export default function App() {
         </Route>
         <Route path='graph'
           element={<GraphPage />}
+        />
+        <Route path={'requests/:key'}
+          element={<RequestPage />}
         />
       </Routes>
     </div>
