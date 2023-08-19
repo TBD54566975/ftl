@@ -63,25 +63,12 @@ export const RequestGraph: React.FC<Props> = ({ calls }) => {
         <div key={index}
           className='flex'
         >
-          <div className='w-96 relative'>
+          <div className='w-full relative'>
             <CallBlock call={call}
               index={index}
               firstTimeStamp={firstTimeStamp}
               firstDuration={firstDuration}
             />
-          </div>
-
-          <div className='flex-1 text-sm ml-4'>
-            {!call.sourceVerbRef?.module && (
-              <>
-                Ingress → {call.destinationVerbRef?.module}:{call.destinationVerbRef?.name}
-              </>
-            )}
-            {call.sourceVerbRef?.module && (
-              <>
-                {call.sourceVerbRef?.module}:{call.sourceVerbRef?.name} → {call.destinationVerbRef?.module}:{call.destinationVerbRef?.name}
-              </>
-            )}
           </div>
         </div>
       ))}
