@@ -2,6 +2,7 @@ import { useContext } from 'react'
 import { SelectedTimelineEntryContext } from '../../providers/selected-timeline-entry-provider'
 import { formatTimestamp, formatTimestampShort } from '../../utils/date.utils'
 import { TimelineEventDetailCall } from './TimelineEventDetailCall'
+import { TimelineEventDetailLog } from './TimelineEventDetailLog'
 
 export function TimelineEventDetails() {
   const { selectedEntry } = useContext(SelectedTimelineEntryContext)
@@ -30,6 +31,7 @@ export function TimelineEventDetails() {
       {(() => {
         switch (selectedEntry.entry?.case) {
           case 'call': return <TimelineEventDetailCall call={selectedEntry.entry.value} />
+          case 'log': return <TimelineEventDetailLog log={selectedEntry.entry.value} />
           default: return <></>
         }
       })()}

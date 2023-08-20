@@ -1,7 +1,7 @@
 import { Duration, Timestamp } from '@bufbuild/protobuf'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
-const colors = [ 'bg-indigo-500/70', 'bg-green-500/70', 'bg-pink-500/70', 'bg-blue-500/70', 'bg-yello-500/70' ]
+const colors = [ 'bg-indigo-500', 'bg-green-500/70', 'bg-pink-500/70', 'bg-blue-500/70', 'bg-yello-500/70' ]
 
 interface CallBlockProps {
   call: Call;
@@ -33,7 +33,7 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, index, firstTimeStamp, firs
         title={`Duration: ${call.duration}`}
       />
       <div
-        className='absolute right-0 top-1/2 transform -translate-y-1/2 text-xs pr-1'
+        className='absolute text-gray-900 right-0 top-1/2 transform -translate-y-1/2 text-xs pr-1'
       >
         {durationInMillis}ms
       </div>
