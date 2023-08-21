@@ -1,5 +1,5 @@
 import React from 'react'
-import {  useParams , useSearchParams, useNavigate , useLocation } from 'react-router-dom'
+import {   useSearchParams, useNavigate , useLocation } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { modulesContext } from '../../providers/modules-provider.tsx'
@@ -8,21 +8,24 @@ import { classNames } from '../../utils/react.utils.ts'
 import { getCalls, getVerbCode } from './verb.utils.ts'
 import { VerbCalls } from './VerbCalls.tsx'
 import { Dialog, Transition } from '@headlessui/react'
+import { ChevronRightIcon } from '@heroicons/react/20/solid'
 export function VerbModal() {
-  const { moduleId, id } = useParams()
+  const [ searchParams ] = useSearchParams()
+  const verbName= searchParams.get('verb')
+  const moduleName = searchParams.get('module') 
   const modules = React.useContext(modulesContext)
   
-  const module = modules.modules.find(m => m.name === moduleId)
-  const verb = module?.verbs.find(v => v.verb?.name === id?.toLocaleLowerCase())
+  const module = modules.modules.find(m => m.name === moduleName)
+  const verb = module?.verbs.find(v => v.verb?.name === verbName?.toLocaleLowerCase())
+
   const callData = module?.data.filter(data =>
     [ verb?.verb?.request?.name, verb?.verb?.response?.name ].includes(data.name)
   )
 
   const navigate = useNavigate()
   const location = useLocation()
-  const [ searchParams ] = useSearchParams()
 
-  const isOpen = searchParams.has('verb')
+  
   const handleClose = () =>{
     searchParams.delete('verb')
     navigate({ ...location, search: searchParams.toString() })
@@ -30,7 +33,7 @@ export function VerbModal() {
 
   return (
     <Transition appear
-      show={isOpen}
+      show={!!verbName}
       as={React.Fragment}
     >
       <Dialog 
@@ -60,10 +63,37 @@ export function VerbModal() {
               leaveFrom='opacity-100 scale-100'
               leaveTo='opacity-0 scale-95'
             >
-              <Dialog.Panel className={`w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}>
+              <Dialog.Panel className={`w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}>
+                <Dialog.Title
+                  as='h3'
+                  className='text-lg font-medium leading-6 text-gray-900'
+                >
+                  <ol role='list'
+                    className='flex items-center space-x-4'
+                  >
+                    <li>
+                      <div className='flex items-center'>
+                        <button className='focus:outline-none'
+                          onClick={handleClose}
+                        >
+                          <span className='capitalize ml-4 text-sm font-medium text-gray-400 hover:text-gray-500'>{moduleName} (module)</span>
+                        </button>
+                      </div>
+                    </li>
+                    <li>
+                      <div className='flex items-center'>
+                        <ChevronRightIcon className='h-5 w-5 flex-shrink-0 text-gray-400'
+                          aria-hidden='true'
+                        />
+                        <span className='capitalize ml-4 text-sm font-medium text-gray-400 hover:text-gray-500'>{verbName} (verb)</span>
+                      </div>
+                    </li>
+                  </ol>
+                 
+                </Dialog.Title>
                 <div className='min-w-0 flex-auto'>
                   <div className='text-sm pt-4'>
-                    <SyntaxHighlighter language='go'
+                    <SyntaxHighlighter language={module?.language || 'go'}
                       style={atomDark}
                     >
                       {getVerbCode(verb?.verb)}

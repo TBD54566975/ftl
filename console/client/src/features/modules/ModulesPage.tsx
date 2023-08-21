@@ -5,7 +5,7 @@ import { modulesContext } from '../../providers/modules-provider.tsx'
 import * as styles from './Module.module.css'
 import { Timeline } from '../timeline/Timeline.tsx'
 import { VerbList } from '../verbs/VerbList.tsx'
-import { Disclosure, RadioGroup } from '@headlessui/react'
+import { Disclosure, RadioGroup, Transition } from '@headlessui/react'
 import { RequestModal } from '../requests/RequestsModal.tsx'
 import { VerbModal } from '../verbs/VerbModal.tsx'
 import { ChevronUpIcon, CheckIcon } from '@heroicons/react/20/solid'
@@ -168,23 +168,33 @@ export default function ModulesPage() {
           )}
         
         </Disclosure>
-        {module &&  <Disclosure defaultOpen={true}>
-          {({ open }) => (  <RadioGroup onChange={handleChange}>
-            <Disclosure.Button className={`flex w-full justify-between rounded-lg bg-indigo-600 px-4 py-2 text-left text-sm font-medium text-white hover:bg-indigo-400 focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75`}>
-              {module.name}: verbs  
-              <ChevronUpIcon
-                className={`${
+        <Transition
+          appear={true}
+          show={!!module}
+          enter='transition-opacity duration-75'
+          enterFrom='opacity-0'
+          enterTo='opacity-100'
+          leave='transition-opacity duration-150'
+          leaveFrom='opacity-100'
+          leaveTo='opacity-0'
+        >
+          <Disclosure defaultOpen={true}>
+            {({ open }) => (  <RadioGroup onChange={handleChange}>
+              <Disclosure.Button className={`capitalize flex w-full justify-between rounded-lg bg-indigo-600 px-4 py-2 text-left text-sm font-medium text-white hover:bg-indigo-400 focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75`}>
+                Verbs ({module && module.name}) 
+                <ChevronUpIcon
+                  className={`${
                     open ? 'rotate-180 transform' : ''
-                } h-5 w-5 text-white`}
-              />
-            </Disclosure.Button>
-            <Disclosure.Panel className={`px-4 pt-4 pb-2 text-sm text-gray-500`}>
-              <VerbList module={module} />
-            </Disclosure.Panel>
-          </RadioGroup>  
-          )}
-        
-        </Disclosure>}
+                  } h-5 w-5 text-white`}
+                />
+              </Disclosure.Button>
+              <Disclosure.Panel className={`px-4 pt-4 pb-2 text-sm text-gray-500`}>
+                <VerbList module={module} />
+              </Disclosure.Panel>
+            </RadioGroup>  
+            )}
+          </Disclosure>
+        </Transition>
       </div>
       <Timeline module={module} />
       <RequestModal />

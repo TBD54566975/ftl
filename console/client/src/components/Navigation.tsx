@@ -1,5 +1,4 @@
 import { Disclosure } from '@headlessui/react'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { NavLink } from 'react-router-dom'
 import { classNames } from '../utils/react.utils'
 import DarkModeSwitch from './DarkModeSwitch'
@@ -14,7 +13,7 @@ export function Navigation() {
       <Disclosure as='nav'
         className='bg-indigo-600'
       >
-        {({ open }) => (
+        {() => (
           <>
             <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
               <div className='flex h-16 items-center justify-between'>

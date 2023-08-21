@@ -3,14 +3,18 @@ import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
-import { useParams , useSearchParams, useNavigate , useLocation } from 'react-router-dom'
+import {  useSearchParams, useNavigate , useLocation } from 'react-router-dom'
 import { Dialog, Transition } from '@headlessui/react'
+import { ChevronRightIcon } from '@heroicons/react/20/solid'
 
 export function RequestModal() {
-  const { key } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [ searchParams ] = useSearchParams()
   const client = useClient(ConsoleService)
   const [ calls, setCalls ] = React.useState<Call[]>([])
-
+  const key = searchParams.get('requests')?? undefined
+  const moduleName = searchParams.get('module')
   React.useEffect(() => {
     const fetchRequestCalls = async () => {
       if (key === undefined) {
@@ -22,9 +26,6 @@ export function RequestModal() {
     fetchRequestCalls()
   }, [ client, key ])
 
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [ searchParams ] = useSearchParams()
   const isOpen = searchParams.has('requests')
 
   const handleClose = () =>{
@@ -64,7 +65,34 @@ export function RequestModal() {
               leaveFrom='opacity-100 scale-100'
               leaveTo='opacity-0 scale-95'
             >
-              <Dialog.Panel className={`w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}>
+              <Dialog.Panel className={`w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}>
+                <Dialog.Title
+                  as='h3'
+                  className='text-lg font-medium leading-6 text-gray-900'
+                >
+                  <ol role='list'
+                    className='flex items-center space-x-4'
+                  >
+                    <li>
+                      <div className='flex items-center'>
+                        <button className='focus:outline-none'
+                          onClick={handleClose}
+                        >
+                          <span className='capitalize ml-4 text-sm font-medium text-gray-400 hover:text-gray-500'>{moduleName} (module)</span>
+                        </button>
+                      </div>
+                    </li>
+                    <li>
+                      <div className='flex items-center'>
+                        <ChevronRightIcon className='h-5 w-5 flex-shrink-0 text-gray-400'
+                          aria-hidden='true'
+                        />
+                        <span className='capitalize ml-4 text-sm font-medium text-gray-400 hover:text-gray-500'>{key} (requests)</span>
+                      </div>
+                    </li>
+                  </ol>
+                 
+                </Dialog.Title>
                 <div className='min-w-0 flex-auto'>
                   <table className='mt-6 w-full text-left'>
                     <thead className='border-b border-white/10 text-sm leading-6 dark:text-white'>
