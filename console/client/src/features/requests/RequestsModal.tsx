@@ -64,7 +64,7 @@ export function RequestModal() {
               leaveFrom='opacity-100 scale-100'
               leaveTo='opacity-0 scale-95'
             >
-              <Dialog.Panel>
+              <Dialog.Panel className={`w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}>
                 <div className='min-w-0 flex-auto'>
                   <table className='mt-6 w-full text-left'>
                     <thead className='border-b border-white/10 text-sm leading-6 dark:text-white'>

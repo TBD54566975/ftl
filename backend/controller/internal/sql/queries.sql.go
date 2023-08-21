@@ -617,9 +617,9 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 }
 
 const getEvents = `-- name: GetEvents :many
-SELECT e.time_stamp, e.deployment_id, e.request_id, e.type, e.custom_key_1, e.custom_key_2, e.custom_key_3, e.custom_key_4, e.payload,
-       d.name AS deployment_name,
-       ir.key AS request_key
+SELECT d.name AS deployment_name,
+       ir.key AS request_key,
+       e.time_stamp, e.deployment_id, e.request_id, e.type, e.custom_key_1, e.custom_key_2, e.custom_key_3, e.custom_key_4, e.payload
 FROM events e
          INNER JOIN deployments d on e.deployment_id = d.id
          LEFT JOIN ingress_requests ir on e.request_id = ir.id
@@ -639,9 +639,9 @@ type GetEventsParams struct {
 }
 
 type GetEventsRow struct {
-	Event          Event
 	DeploymentName model.DeploymentName
 	RequestKey     sqltypes.NullKey
+	Event          Event
 }
 
 func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEventsRow, error) {
@@ -660,6 +660,8 @@ func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEven
 	for rows.Next() {
 		var i GetEventsRow
 		if err := rows.Scan(
+			&i.DeploymentName,
+			&i.RequestKey,
 			&i.Event.TimeStamp,
 			&i.Event.DeploymentID,
 			&i.Event.RequestID,
@@ -669,8 +671,6 @@ func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEven
 			&i.Event.CustomKey3,
 			&i.Event.CustomKey4,
 			&i.Event.Payload,
-			&i.DeploymentName,
-			&i.RequestKey,
 		); err != nil {
 			return nil, err
 		}

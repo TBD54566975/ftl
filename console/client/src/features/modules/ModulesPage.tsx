@@ -8,6 +8,7 @@ import { VerbList } from '../verbs/VerbList.tsx'
 import { Disclosure, RadioGroup } from '@headlessui/react'
 import { RequestModal } from '../requests/RequestsModal.tsx'
 import { VerbModal } from '../verbs/VerbModal.tsx'
+import { ChevronUpIcon, CheckIcon } from '@heroicons/react/20/solid'
 
 export default function ModulesPage() {
   const navigate = useNavigate()
@@ -16,78 +17,142 @@ export default function ModulesPage() {
   const modules = React.useContext(modulesContext)
   const [ searchParams ] = useSearchParams()
   const id = searchParams.get('module')
-  const [ name, setName ] = React.useState(id || undefined)
   const module = modules.modules.find(module => module?.name === id)
   const handleChange = (value: string) =>{
     if(value === '') {
-      setName(undefined) 
       searchParams.delete('module')
     } else {
       searchParams.set('module', value)
-      setName(value)
     } 
     navigate({ ...location, search: searchParams.toString() })
   }
+  if(schema.length === 0) return <></>
   return (
     <div className={styles.grid}>
       <div className={ styles.filter}>
         <Disclosure defaultOpen={true}>
-          <RadioGroup onChange={handleChange}>
-            <Disclosure.Button className='py-2'>
-              <RadioGroup.Label>Modules</RadioGroup.Label>
+          {({ open }) => (  <RadioGroup onChange={handleChange}>
+            <Disclosure.Button className={`flex w-full justify-between rounded-lg bg-purple-100 px-4 py-2 text-left text-sm font-medium text-purple-900 hover:bg-purple-200 focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75`}>
+              Modules
+              <ChevronUpIcon
+                className={`${
+                    open ? 'rotate-180 transform' : ''
+                } h-5 w-5 text-purple-500`}
+              />
             </Disclosure.Button>
-            <Disclosure.Panel className={styles.modules}>
-              <RadioGroup.Option value=''
-                defaultChecked
-              >
-                {({ checked }) => (
-                  <div
-                    className={styles.radio}
-                    key={name}
-                  >
-                    <div>
-                      All
-                    </div>
-                  </div>
-                )}
-              </RadioGroup.Option>
-              {schema.map(module => {
-                const name = module.schema?.name
-                return (
-                  <RadioGroup.Option value={name}
-                    key={name}
-                  >
-                    {({ checked }) => (
-                      <div
-                        className={styles.radio}
-                        key={name}
-                        onClick={() => {
-                    
-                        }}
-                      >
-                        <div>
-                          {module.deploymentName}
+            <Disclosure.Panel className={`px-4 pt-4 pb-2 text-sm text-gray-500`}>
+              <div className='space-y-2'>
+                <RadioGroup.Option
+                  value={''}
+                  className={({ active, checked }) =>
+                    `${
+                    active
+                      ? 'ring-2 ring-white ring-opacity-60 ring-offset-2 ring-offset-sky-300'
+                      : ''
+                    }
+                  ${
+                    checked ? 'bg-sky-900 bg-opacity-75 text-white' : 'bg-white'
+            }
+                    relative flex cursor-pointer rounded-lg px-5 py-4 shadow-md focus:outline-none`
+                  }
+                >
+                  {({  checked }) => (
+                    <>
+                      <div className='flex w-full items-center justify-between'>
+                        <div className='flex items-center'>
+                          <div className='text-sm'>
+                            <RadioGroup.Label
+                              as='p'
+                              className={`font-medium  ${
+                              checked ? 'text-white' : 'text-gray-900'
+                              }`}
+                            >
+                            all
+                            </RadioGroup.Label>
+                          </div>
                         </div>
-                        {(module.schema?.comments.length ?? 0) > 0 && (
-                          <div className={styles.radioComment}>{module.schema?.comments}</div>
+                        {checked && (
+                          <div className='shrink-0 text-white'>
+                            <CheckIcon className='h-6 w-6' />
+                          </div>
                         )}
                       </div>
-                    )}
-                  </RadioGroup.Option>
-                
-                )})}
+                    </>
+                  )}
+                </RadioGroup.Option>
+                {schema.map(module => {
+                  const name = module.schema?.name
+                  return (
+                    <RadioGroup.Option
+                      key={name}
+                      value={name}
+                      className={({ active, checked }) =>
+                        `${
+                      active
+                        ? 'ring-2 ring-white ring-opacity-60 ring-offset-2 ring-offset-sky-300'
+                        : ''
+                        }
+                    ${
+                      checked ? 'bg-sky-900 bg-opacity-75 text-white' : 'bg-white'
+                    }
+                      relative flex cursor-pointer rounded-lg px-5 py-4 shadow-md focus:outline-none`
+                      }
+                    >
+                      {({  checked }) => (
+                        <>
+                          <div className='flex w-full items-center justify-between'>
+                            <div className='flex items-center'>
+                              <div className='text-sm'>
+                                <RadioGroup.Label
+                                  as='p'
+                                  className={`font-medium  ${
+                                checked ? 'text-white' : 'text-gray-900'
+                                  }`}
+                                >
+                                  {module.deploymentName}
+                                </RadioGroup.Label>
+                                {(module.schema?.comments.length ?? 0) > 0 && (<RadioGroup.Description
+                                  as='span'
+                                  className={`inline ${
+                                checked ? 'text-sky-100' : 'text-gray-500'
+                                  }`}
+                                >
+                                  <span>{module.schema?.comments}</span>
+                                </RadioGroup.Description>)}
+                              </div>
+                            </div>
+                            {checked && (
+                              <div className='shrink-0 text-white'>
+                                <CheckIcon className='h-6 w-6' />
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </RadioGroup.Option>
+                  )})}
+              </div>
             </Disclosure.Panel>
           </RadioGroup>  
+          )}
+        
         </Disclosure>
-        {module && <Disclosure>
-          <Disclosure.Button className='py-2'>
-            Verbs: {module.name}            
-          </Disclosure.Button>
-          <Disclosure.Panel className={styles.modules}>
-            <div className={styles.misc}>
+        {module &&  <Disclosure defaultOpen={true}>
+          {({ open }) => (  <RadioGroup onChange={handleChange}>
+            <Disclosure.Button className={`flex w-full justify-between rounded-lg bg-purple-100 px-4 py-2 text-left text-sm font-medium text-purple-900 hover:bg-purple-200 focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75`}>
+              {module.name}: verbs  
+              <ChevronUpIcon
+                className={`${
+                    open ? 'rotate-180 transform' : ''
+                } h-5 w-5 text-purple-500`}
+              />
+            </Disclosure.Button>
+            <Disclosure.Panel className={`px-4 pt-4 pb-2 text-sm text-gray-500`}>
               <VerbList module={module} />
-            </div>
-          </Disclosure.Panel>
+            </Disclosure.Panel>
+          </RadioGroup>  
+          )}
+        
         </Disclosure>}
       </div>
       <Timeline module={module} />
