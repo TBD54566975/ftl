@@ -20,7 +20,7 @@ export default function GraphPage() {
   }, [ modules, setEdges, setNodes ])
 
   return (
-    <div style={{ width: '100vw', height: '90vh' }}>
+    <div style={{ width: '100vw', height: '100vh' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

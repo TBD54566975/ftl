@@ -2,12 +2,13 @@ import { ChevronRightIcon } from '@heroicons/react/20/solid'
 import { useContext } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { modulesContext } from '../../providers/modules-provider'
 import { getCodeBlock } from '../../utils/data.utils'
 import { classNames } from '../../utils/react.utils'
 import { getCalls, getVerbCode } from './verb.utils'
 import { VerbCalls } from './VerbCalls.tsx'
+import { VerbForm } from './VerbForm.tsx'
+import { syntaxTheme } from '../../utils/style.utils.ts'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
@@ -24,7 +25,7 @@ export default function VerbPage() {
   }
 
   return (
-    <div className='min-w-0 flex-auto'>
+    <div className='min-w-0 flex-auto p-4'>
       <nav className='flex'
         aria-label='Breadcrumb'
       >
@@ -58,24 +59,28 @@ export default function VerbPage() {
       </nav>
       <div className='text-sm pt-4'>
         <SyntaxHighlighter language='go'
-          style={atomDark}
+          style={syntaxTheme()}
         >
           {getVerbCode(verb?.verb)}
         </SyntaxHighlighter>
       </div>
       <div className='pt-4'>
-        {callData?.map(data => (
-          <div key={data.name}
+        {callData?.map((data, index) => (
+          <div key={index}
             className='text-sm'
           >
             <SyntaxHighlighter language='go'
-              style={atomDark}
+              style={syntaxTheme()}
             >
               {getCodeBlock(data)}
             </SyntaxHighlighter>
           </div>
         ))}
       </div>
+      <VerbForm
+        module={module}
+        verb={verb}
+      />
       <div className='flex items-center gap-x-3 pt-6'>
         <h2 className='min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white'>
           <div className='flex gap-x-2'>
@@ -100,9 +105,7 @@ export default function VerbPage() {
         ))
       )}
 
-      <VerbCalls module={module}
-        verb={verb}
-      />
+      <VerbCalls module={module} verb={verb} />
 
       <div className='flex items-center gap-x-3 pt-6'>
         <h2 className='min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white'>

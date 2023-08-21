@@ -4,6 +4,7 @@ import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
+import { RequestGraph } from './RequestGraph.tsx'
 
 export default function RequestPage() {
   const { key } = useParams()
@@ -26,7 +27,7 @@ export default function RequestPage() {
   }
 
   return (
-    <div className='min-w-0 flex-auto'>
+    <div className='min-w-0 flex-auto p-8'>
       <table className='mt-6 w-full text-left'>
         <thead className='border-b border-white/10 text-sm leading-6 dark:text-white'>
           <tr>
@@ -119,6 +120,10 @@ export default function RequestPage() {
           ))}
         </tbody>
       </table>
+      <div>Graph</div>
+      <div className='pt-4'>
+        <RequestGraph calls={calls} />
+      </div>
     </div>
   )
 }

@@ -1,19 +1,21 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Module, StreamTimelineResponse } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import { SelectedTimelineEntryContext } from '../../providers/selected-timeline-entry-provider.tsx'
 import { classNames } from '../../utils/react.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
 import { TimelineDeployment } from './TimelineDeployment.tsx'
 import { TimelineLog } from './TimelineLog.tsx'
 
 type Props = {
-  module?: Module
+  module?: Module | null
 }
 
 export const Timeline: React.FC<Props> = ({ module }) => {
   const client = useClient(ConsoleService)
+  const { setSelectedEntry } = useContext(SelectedTimelineEntryContext)
   const [ entries, setEntries ] = useState<StreamTimelineResponse[]>([])
 
   useEffect(() => {
@@ -42,11 +44,12 @@ export const Timeline: React.FC<Props> = ({ module }) => {
   return (
     <>
       <ul role='list'
-        className='space-y-6'
+        className='space-y-4'
       >
         {entries.map((entry, index) => (
           <li key={index}
             className='relative flex gap-x-4'
+            onClick={() => setSelectedEntry(prevEntry => prevEntry === entry ? null : entry)}
           >
             <div
               className={classNames(
@@ -56,6 +59,7 @@ export const Timeline: React.FC<Props> = ({ module }) => {
             >
               <div className='w-px bg-gray-200 dark:bg-gray-600' />
             </div>
+
             {(() => {
               switch (entry.entry?.case) {
                 case 'call': return <TimelineCall call={entry.entry.value} />
