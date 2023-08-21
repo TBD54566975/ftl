@@ -29,15 +29,27 @@ export default function ModulesPage() {
   if(schema.length === 0) return <></>
   return (
     <div className={styles.grid}>
-      <div className={ styles.filter}>
+      <div className={`
+        mx-auto
+        w-full
+        max-w-md
+        rounded-2xl
+        bg-indigo-50
+        dark:bg-slate-700
+        p-2
+        flex
+        flex-col
+        gap-3
+        `}
+      >
         <Disclosure defaultOpen={true}>
           {({ open }) => (  <RadioGroup onChange={handleChange}>
-            <Disclosure.Button className={`flex w-full justify-between rounded-lg bg-purple-100 px-4 py-2 text-left text-sm font-medium text-purple-900 hover:bg-purple-200 focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75`}>
+            <Disclosure.Button className={`flex w-full justify-between rounded-lg bg-indigo-600 px-4 py-2 text-left text-sm font-medium text-white hover:bg-indigo-400 focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75`}>
               Modules
               <ChevronUpIcon
                 className={`${
                     open ? 'rotate-180 transform' : ''
-                } h-5 w-5 text-purple-500`}
+                } h-5 w-5 text-white`}
               />
             </Disclosure.Button>
             <Disclosure.Panel className={`px-4 pt-4 pb-2 text-sm text-gray-500`}>
@@ -53,7 +65,17 @@ export default function ModulesPage() {
                   ${
                     checked ? 'bg-sky-900 bg-opacity-75 text-white' : 'bg-white'
             }
-                    relative flex cursor-pointer rounded-lg px-5 py-4 shadow-md focus:outline-none`
+                    relative
+                    flex
+                    cursor-pointer
+                    rounded-lg
+                    px-3
+                    py-2
+                    shadow-md
+                    focus:outline-none
+                    bg-white
+                    dark:bg-slate-800
+                    `
                   }
                 >
                   {({  checked }) => (
@@ -64,7 +86,7 @@ export default function ModulesPage() {
                             <RadioGroup.Label
                               as='p'
                               className={`font-medium  ${
-                              checked ? 'text-white' : 'text-gray-900'
+                              checked ? 'text-white' : 'text-gray-900 dark:text-white'
                               }`}
                             >
                             all
@@ -95,7 +117,16 @@ export default function ModulesPage() {
                     ${
                       checked ? 'bg-sky-900 bg-opacity-75 text-white' : 'bg-white'
                     }
-                      relative flex cursor-pointer rounded-lg px-5 py-4 shadow-md focus:outline-none`
+                      relative
+                      flex
+                      cursor-pointer
+                      rounded-lg
+                      px-3
+                      py-2
+                      shadow-md
+                      focus:outline-none
+                      dark:bg-slate-800
+                      `
                       }
                     >
                       {({  checked }) => (
@@ -106,7 +137,7 @@ export default function ModulesPage() {
                                 <RadioGroup.Label
                                   as='p'
                                   className={`font-medium  ${
-                                checked ? 'text-white' : 'text-gray-900'
+                                checked ? 'text-white' : 'text-gray-900 dark:text-white'
                                   }`}
                                 >
                                   {module.deploymentName}
@@ -114,7 +145,7 @@ export default function ModulesPage() {
                                 {(module.schema?.comments.length ?? 0) > 0 && (<RadioGroup.Description
                                   as='span'
                                   className={`inline ${
-                                checked ? 'text-sky-100' : 'text-gray-500'
+                                checked ? 'text-sky-100' : 'text-gray-500 dark:text-white'
                                   }`}
                                 >
                                   <span>{module.schema?.comments}</span>
@@ -139,12 +170,12 @@ export default function ModulesPage() {
         </Disclosure>
         {module &&  <Disclosure defaultOpen={true}>
           {({ open }) => (  <RadioGroup onChange={handleChange}>
-            <Disclosure.Button className={`flex w-full justify-between rounded-lg bg-purple-100 px-4 py-2 text-left text-sm font-medium text-purple-900 hover:bg-purple-200 focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75`}>
+            <Disclosure.Button className={`flex w-full justify-between rounded-lg bg-indigo-600 px-4 py-2 text-left text-sm font-medium text-white hover:bg-indigo-400 focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75`}>
               {module.name}: verbs  
               <ChevronUpIcon
                 className={`${
                     open ? 'rotate-180 transform' : ''
-                } h-5 w-5 text-purple-500`}
+                } h-5 w-5 text-white`}
               />
             </Disclosure.Button>
             <Disclosure.Panel className={`px-4 pt-4 pb-2 text-sm text-gray-500`}>
