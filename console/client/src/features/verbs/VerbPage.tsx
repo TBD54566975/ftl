@@ -2,13 +2,13 @@ import { ChevronRightIcon } from '@heroicons/react/20/solid'
 import { useContext } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { modulesContext } from '../../providers/modules-provider'
 import { getCodeBlock } from '../../utils/data.utils'
 import { classNames } from '../../utils/react.utils'
 import { getCalls, getVerbCode } from './verb.utils'
 import { VerbCalls } from './VerbCalls.tsx'
 import { VerbForm } from './VerbForm.tsx'
+import { syntaxTheme } from '../../utils/style.utils.ts'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
@@ -59,7 +59,7 @@ export default function VerbPage() {
       </nav>
       <div className='text-sm pt-4'>
         <SyntaxHighlighter language='go'
-          style={atomDark}
+          style={syntaxTheme}
         >
           {getVerbCode(verb?.verb)}
         </SyntaxHighlighter>
@@ -70,7 +70,7 @@ export default function VerbPage() {
             className='text-sm'
           >
             <SyntaxHighlighter language='go'
-              style={atomDark}
+              style={syntaxTheme}
             >
               {getCodeBlock(data)}
             </SyntaxHighlighter>
@@ -105,9 +105,7 @@ export default function VerbPage() {
         ))
       )}
 
-      <VerbCalls module={module}
-        verb={verb}
-      />
+      <VerbCalls module={module} verb={verb} />
 
       <div className='flex items-center gap-x-3 pt-6'>
         <h2 className='min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white'>

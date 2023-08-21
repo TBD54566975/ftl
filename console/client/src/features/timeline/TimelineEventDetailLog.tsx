@@ -1,8 +1,7 @@
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { LogEntry } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { classNames } from '../../utils/react.utils'
-import { logLevelBadge, logLevelText } from '../../utils/style.utils'
+import { logLevelBadge, logLevelText, syntaxTheme } from '../../utils/style.utils'
 
 type Props = {
   log: LogEntry
@@ -19,7 +18,7 @@ export const TimelineEventDetailLog: React.FC<Props> = ({ log }) => {
       </div>
       <div className='text-sm pt-2'>
         <SyntaxHighlighter language='json'
-          style={atomDark}
+          style={syntaxTheme}
           customStyle={{ fontSize: '12px' }}
         >
           {JSON.stringify(log.attributes, null, 2)}
