@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { GetCallsRequest, GetCallsResponse, GetModulesRequest, GetModulesResponse, GetRequestCallsRequest, GetRequestCallsResponse, GetTimelineRequest, GetTimelineResponse, StreamLogsRequest, StreamLogsResponse } from "./console_pb.js";
+import { GetCallsRequest, GetCallsResponse, GetModulesRequest, GetModulesResponse, GetRequestCallsRequest, GetRequestCallsResponse, StreamLogsRequest, StreamLogsResponse, StreamTimelineRequest, StreamTimelineResponse } from "./console_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.console.ConsoleService
@@ -53,13 +53,13 @@ export const ConsoleService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetTimeline
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.StreamTimeline
      */
-    getTimeline: {
-      name: "GetTimeline",
-      I: GetTimelineRequest,
-      O: GetTimelineResponse,
-      kind: MethodKind.Unary,
+    streamTimeline: {
+      name: "StreamTimeline",
+      I: StreamTimelineRequest,
+      O: StreamTimelineResponse,
+      kind: MethodKind.ServerStreaming,
     },
     /**
      * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.StreamLogs

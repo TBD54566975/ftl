@@ -1,7 +1,7 @@
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
-import { useEffect, useState } from 'react'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 
@@ -74,25 +74,25 @@ export function RequestModal() {
         </thead>
         <tbody className='divide-y divide-black/5 dark:divide-white/5'>
           {calls.map(call => (
-            <tr key={call.destModule}>
+            <tr key={call.destinationVerbRef?.module}>
               <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                 <div className='flex gap-x-3'>
                   <div className='font-mono text-sm leading-6 text-gray-500 dark:text-gray-400'>
-                    {call.requestKey.toString()}
+                    {call.requestKey?.toString()}
                   </div>
                 </div>
               </td>
               <td className='py-4 pl-4 pr-8 sm:pl-6 lg:pl-8'>
                 <div className='flex items-center gap-x-4'>
                   <div className='truncate text-sm font-medium leading-6 text-gray-700 dark:text-white'>
-                    {call.sourceModule.length > 0 && [ call.sourceModule, call.sourceVerb ].join(':')}
+                    {call.sourceVerbRef?.module && [ call.sourceVerbRef.module, call.sourceVerbRef.name ].join(':')}
                   </div>
                 </div>
               </td>
               <td className='py-4 pl-4 pr-8 sm:pl-6 lg:pl-8'>
                 <div className='flex items-center gap-x-4'>
                   <div className='truncate text-sm font-medium leading-6 text-gray-700 dark:text-white'>
-                    {call.destModule.length > 0 && [ call.destModule, call.destVerb ].join(':')}
+                    {call.destinationVerbRef?.module && [ call.destinationVerbRef.module, call.destinationVerbRef.name ].join(':')}
                   </div>
                 </div>
               </td>

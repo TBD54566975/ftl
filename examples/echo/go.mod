@@ -13,7 +13,7 @@ require (
 
 require (
 	github.com/alecthomas/concurrency v0.0.2 // indirect
-	github.com/alecthomas/errors v0.3.0 // indirect
+	github.com/alecthomas/errors v0.4.0 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0 // indirect
 	github.com/alecthomas/types v0.7.0 // indirect
 	github.com/bufbuild/connect-go v1.8.0 // indirect

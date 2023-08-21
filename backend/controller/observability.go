@@ -15,13 +15,13 @@ import (
 )
 
 type Call struct {
-	deploymentKey model.DeploymentKey
-	requestKey    model.IngressRequestKey
-	startTime     time.Time
-	destVerb      *schema.VerbRef
-	callers       []*schema.VerbRef
-	request       *ftlv1.CallRequest
-	response      *ftlv1.CallResponse
+	deploymentName model.DeploymentName
+	requestKey     model.IngressRequestKey
+	startTime      time.Time
+	destVerb       *schema.VerbRef
+	callers        []*schema.VerbRef
+	request        *ftlv1.CallRequest
+	response       *ftlv1.CallResponse
 }
 
 // recordCallError records a call that failed to be made.
@@ -43,16 +43,21 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 		sourceVerb = *call.callers[0]
 	}
 
+	var errorStr types.Option[string]
+	if callError != nil {
+		errorStr = types.Some(callError.Error())
+	}
+
 	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{
-		Time:          time.Now(),
-		DeploymentKey: call.deploymentKey,
-		RequestKey:    types.Some(call.requestKey),
-		Duration:      time.Since(call.startTime),
-		SourceVerb:    sourceVerb,
-		DestVerb:      *call.destVerb,
-		Request:       call.request.GetBody(),
-		Response:      call.response.GetBody(),
-		Error:         callError,
+		Time:           time.Now(),
+		DeploymentName: call.deploymentName,
+		RequestKey:     types.Some(call.requestKey),
+		Duration:       time.Since(call.startTime),
+		SourceVerb:     sourceVerb,
+		DestVerb:       *call.destVerb,
+		Request:        call.request.GetBody(),
+		Response:       call.response.GetBody(),
+		Error:          errorStr,
 	})
 	if err != nil {
 		logger.Errorf(err, "failed to record call")

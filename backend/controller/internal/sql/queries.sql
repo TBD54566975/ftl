@@ -15,7 +15,7 @@ FROM modules
 WHERE id = ANY (@ids::BIGINT[]);
 
 -- name: CreateDeployment :exec
-INSERT INTO deployments (module_id, "schema", key)
+INSERT INTO deployments (module_id, "schema", name)
 VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, $1);
 
 -- name: GetArtefactDigests :many
@@ -39,16 +39,16 @@ RETURNING id;
 
 -- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
-VALUES ((SELECT id FROM deployments WHERE key = $1), $2, $3, $4);
+VALUES ((SELECT id FROM deployments WHERE name = $1), $2, $3, $4);
 
 -- name: ReplaceDeployment :one
 WITH update_container AS (
     UPDATE deployments AS d
         SET min_replicas = update_deployments.min_replicas
-        FROM (VALUES (sqlc.arg('old_deployment')::UUID, 0),
-                     (sqlc.arg('new_deployment')::UUID, sqlc.arg('min_replicas')::INT))
-            AS update_deployments(key, min_replicas)
-        WHERE d.key = update_deployments.key
+        FROM (VALUES (sqlc.arg('old_deployment')::TEXT, 0),
+                     (sqlc.arg('new_deployment')::TEXT, sqlc.arg('min_replicas')::INT))
+            AS update_deployments(name, min_replicas)
+        WHERE d.name = update_deployments.name
         RETURNING 1)
 SELECT COUNT(*)
 FROM update_container;
@@ -57,11 +57,11 @@ FROM update_container;
 SELECT d.*, m.language, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
-WHERE d.key = $1;
+WHERE d.name = $1;
 
 -- name: GetDeploymentsWithArtefacts :many
 -- Get all deployments that have artefacts matching the given digests.
-SELECT d.id, d.created_at, d.key, m.name
+SELECT d.id, d.created_at, d.name as deployment_name, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON d.module_id = m.id
 WHERE EXISTS (SELECT 1
@@ -80,16 +80,16 @@ WHERE a.id = @id;
 -- name: UpsertRunner :one
 -- Upsert a runner and return the deployment ID that it is assigned to, if any.
 WITH deployment_rel AS (
--- If the deployment key is null, then deployment_rel.id will be null,
+-- If the deployment name is null, then deployment_rel.id will be null,
 -- otherwise we try to retrieve the deployments.id using the key. If
 -- there is no corresponding deployment, then the deployment ID is -1
 -- and the parent statement will fail due to a foreign key constraint.
     SELECT CASE
-               WHEN sqlc.narg('deployment_key')::UUID IS NULL
+               WHEN sqlc.narg('deployment_name')::TEXT IS NULL
                    THEN NULL
                ELSE COALESCE((SELECT id
                               FROM deployments d
-                              WHERE d.key = sqlc.narg('deployment_key')
+                              WHERE d.name = sqlc.narg('deployment_name')
                               LIMIT 1), -1) END AS id)
 INSERT
 INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
@@ -120,14 +120,14 @@ SELECT COUNT(*)
 FROM matches;
 
 -- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key                                  AS runner_key,
+SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
                            r.endpoint,
                            r.state,
                            r.labels,
                            r.last_seen,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.key END, NULL) AS deployment_key
+                                            THEN d.name END, NULL) AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE sqlc.arg('all')::bool = true
@@ -140,7 +140,7 @@ FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE sqlc.arg('all')::bool = true
    OR min_replicas > 0
-ORDER BY d.key;
+ORDER BY d.name;
 
 -- name: GetIdleRunners :many
 SELECT *
@@ -152,7 +152,7 @@ LIMIT sqlc.arg('limit');
 -- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2
-WHERE key = $1
+WHERE name = $1
 RETURNING 1;
 
 -- name: GetExistingDeploymentForModule :one
@@ -165,7 +165,7 @@ LIMIT 1;
 
 -- name: GetDeploymentsNeedingReconciliation :many
 -- Get deployments that have a mismatch between the number of assigned and required replicas.
-SELECT d.key                  AS key,
+SELECT d.name                 AS deployment_name,
        m.name                 AS module_name,
        m.language             AS language,
        COUNT(r.id)            AS assigned_runners_count,
@@ -173,7 +173,7 @@ SELECT d.key                  AS key,
 FROM deployments d
          LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
          JOIN modules m ON d.module_id = m.id
-GROUP BY d.key, d.min_replicas, m.name, m.language
+GROUP BY d.name, d.min_replicas, m.name, m.language
 HAVING COUNT(r.id) <> d.min_replicas;
 
 
@@ -186,7 +186,7 @@ SET state               = 'reserved',
     -- and the update will fail due to a FK constraint.
     deployment_id       = COALESCE((SELECT id
                                     FROM deployments d
-                                    WHERE d.key = sqlc.arg('deployment_key')
+                                    WHERE d.name = sqlc.arg('deployment_name')
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
@@ -201,20 +201,20 @@ FROM runners
 WHERE key = $1;
 
 -- name: GetRunner :one
-SELECT DISTINCT ON (r.key) r.key                                  AS runner_key,
+SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
                            r.endpoint,
                            r.state,
                            r.labels,
                            r.last_seen,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.key END, NULL) AS deployment_key
+                                            THEN d.name END, NULL) AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE r.key = $1;
 
 -- name: GetRoutingTable :many
-SELECT endpoint, r.key AS runner_key, d.key deployment_key
+SELECT endpoint, r.key AS runner_key, d.name deployment_name
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
          INNER JOIN modules m on d.module_id = m.id
@@ -226,7 +226,7 @@ SELECT r.*
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
-  AND d.key = $1;
+  AND d.name = $1;
 
 -- name: ExpireRunnerReservations :one
 WITH rows AS (
@@ -242,7 +242,7 @@ FROM rows;
 
 -- name: InsertLogEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
-VALUES ((SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key') LIMIT 1),
+VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name') LIMIT 1),
         (CASE
              WHEN sqlc.narg('request_key')::UUID IS NULL THEN NULL
              ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = sqlc.narg('request_key')::UUID LIMIT 1)
@@ -258,7 +258,7 @@ VALUES ((SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key') L
 
 -- name: GetDeploymentLogs :many
 SELECT ir.key                              AS request_key,
-       ir.key                              AS deployment_key,
+       ir.key                              AS deployment_name,
        e.time_stamp                        AS time_stamp,
        e.custom_key_1                      AS level,
        (e.payload ->> 'message')::TEXT     AS message,
@@ -268,7 +268,7 @@ FROM events e
          INNER JOIN ingress_requests ir ON e.request_id = ir.id
          INNER JOIN deployments d ON e.deployment_id = d.id
 WHERE e.type = 'log'
-  AND d.key = sqlc.arg('deployment_key')
+  AND d.name = sqlc.arg('deployment_name')
   AND ir.key = sqlc.arg('request_key')
   AND e.time_stamp >= sqlc.arg('after_timestamp')
   AND e.time_stamp <= sqlc.arg('before_timestamp');
@@ -276,7 +276,7 @@ WHERE e.type = 'log'
 -- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
-VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment_key')::UUID),
+VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
         (CASE
              WHEN sqlc.narg('request_key')::UUID IS NULL THEN NULL
              ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = sqlc.arg('request_key')::UUID)
@@ -295,7 +295,7 @@ VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment
             ));
 
 -- name: GetCalls :many
-SELECT d.key          AS deployment_key,
+SELECT d.name         AS deployment_name,
        ir.key         AS request_key,
        e.custom_key_1 AS source_module,
        e.custom_key_2 AS source_verb,
@@ -347,7 +347,7 @@ ORDER BY c.key;
 
 -- name: CreateIngressRoute :exec
 INSERT INTO ingress_routes (deployment_id, module, verb, method, path)
-VALUES ((SELECT id FROM deployments WHERE key = $1 LIMIT 1), $2, $3, $4, $5);
+VALUES ((SELECT id FROM deployments WHERE name = $1 LIMIT 1), $2, $3, $4, $5);
 
 -- name: GetIngressRoutes :many
 -- Get the runner endpoints corresponding to the given ingress route.
@@ -359,7 +359,7 @@ WHERE r.state = 'assigned'
   AND ir.path = $2;
 
 -- name: GetAllIngressRoutes :many
-SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
+SELECT d.name AS deployment_name, ir.module, ir.verb, ir.method, ir.path
 FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
 WHERE sqlc.arg('all')::bool = true
@@ -373,7 +373,7 @@ INSERT INTO events (deployment_id, request_id, type,
 VALUES ($1, $2, $3, $4, $4, $5, $6, $7);
 
 -- name: GetEvents :many
-SELECT d.key        AS deployment_key,
+SELECT d.name       AS deployment_name,
        ir.key       AS request_key,
        e.time_stamp AS time_stamp,
        e.type       AS type,
@@ -383,6 +383,6 @@ FROM events e
          INNER JOIN ingress_requests ir on e.request_id = ir.id
 WHERE time_stamp >= sqlc.arg('after_timestamp')
   AND time_stamp <= COALESCE(sqlc.narg('before_timestamp'), NOW() AT TIME ZONE 'utc')
-  AND d.key = sqlc.arg('deployment_key')
+  AND d.name = sqlc.arg('deployment_name')
   AND ir.key = sqlc.arg('request_key')
   AND e.type = ANY (sqlc.arg('types')::TEXT[]);

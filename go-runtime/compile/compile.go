@@ -11,7 +11,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
-	model2 "github.com/TBD54566975/ftl/backend/common/model"
+	model "github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/compile/generate"
@@ -28,7 +28,7 @@ type Config struct {
 }
 
 // Compile a Go FTL module into a deployable executable.
-func Compile(ctx context.Context, config Config) (*model2.Deployment, error) {
+func Compile(ctx context.Context, config Config) (*model.Deployment, error) {
 	logger := log.FromContext(ctx)
 	logger.Infof("Compiling %s", config.Dir)
 	buildDir, err := ensureBuildDir(config.Dir)
@@ -78,12 +78,12 @@ func Compile(ctx context.Context, config Config) (*model2.Deployment, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &model2.Deployment{
+	return &model.Deployment{
 		Language: "go",
-		Key:      model2.NewDeploymentKey(),
+		Name:     model.NewDeploymentName(mainModuleSchema.Name),
 		Schema:   mainModuleSchema,
 		Module:   mainModuleSchema.Name,
-		Artefacts: []*model2.Artefact{
+		Artefacts: []*model.Artefact{
 			{Path: "main", Executable: true, Digest: digest, Content: r},
 		},
 	}, nil
