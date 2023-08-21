@@ -36,4 +36,6 @@ export const logLevelBadge = {
   17: 'text-red-500 bg-red-500/10 dark:text-red-400 dark:bg-red-700/10',
 }
 
-export const syntaxTheme = document.documentElement.classList.contains('dark') ? atomDark : oneLight
+export function syntaxTheme() {
+  return document.documentElement.classList.contains('dark') ? atomDark : oneLight
+}

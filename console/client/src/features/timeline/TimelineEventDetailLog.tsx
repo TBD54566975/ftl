@@ -18,7 +18,7 @@ export const TimelineEventDetailLog: React.FC<Props> = ({ log }) => {
       </div>
       <div className='text-sm pt-2'>
         <SyntaxHighlighter language='json'
-          style={syntaxTheme}
+          style={syntaxTheme()}
           customStyle={{ fontSize: '12px' }}
         >
           {JSON.stringify(log.attributes, null, 2)}

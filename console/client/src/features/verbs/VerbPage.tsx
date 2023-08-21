@@ -59,7 +59,7 @@ export default function VerbPage() {
       </nav>
       <div className='text-sm pt-4'>
         <SyntaxHighlighter language='go'
-          style={syntaxTheme}
+          style={syntaxTheme()}
         >
           {getVerbCode(verb?.verb)}
         </SyntaxHighlighter>
@@ -70,7 +70,7 @@ export default function VerbPage() {
             className='text-sm'
           >
             <SyntaxHighlighter language='go'
-              style={syntaxTheme}
+              style={syntaxTheme()}
             >
               {getCodeBlock(data)}
             </SyntaxHighlighter>

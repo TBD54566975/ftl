@@ -25,7 +25,7 @@ export const VerbTab: React.FC<Props> = ({ module, verb }) => {
       <VerbForm module={module} verb={verb} />
       <div className='text-sm pt-4'>
         <SyntaxHighlighter language='go'
-          style={syntaxTheme}
+          style={syntaxTheme()}
         >
           {getVerbCode(verb?.verb)}
         </SyntaxHighlighter>
@@ -36,7 +36,7 @@ export const VerbTab: React.FC<Props> = ({ module, verb }) => {
             className='text-sm'
           >
             <SyntaxHighlighter language='go'
-              style={syntaxTheme}
+              style={syntaxTheme()}
             >
               {getCodeBlock(data)}
             </SyntaxHighlighter>

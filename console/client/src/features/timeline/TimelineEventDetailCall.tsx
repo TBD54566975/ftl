@@ -31,7 +31,7 @@ export const TimelineEventDetailCall: React.FC<Props> = ({ call }) => {
       <h3 className='pt-4'>Request</h3>
       <div className='text-sm'>
         <SyntaxHighlighter language='json'
-          style={syntaxTheme}
+          style={syntaxTheme()}
           customStyle={{ fontSize: '12px' }}
         >
           {JSON.stringify(JSON.parse(call.request), null, 2)}
@@ -40,7 +40,7 @@ export const TimelineEventDetailCall: React.FC<Props> = ({ call }) => {
       <h3 className='pt-4'>Response</h3>
       <div className='text-sm'>
         <SyntaxHighlighter language='json'
-          style={syntaxTheme}
+          style={syntaxTheme()}
           customStyle={{ fontSize: '12px' }}
         >
           {JSON.stringify(JSON.parse(call.response), null, 2)}
