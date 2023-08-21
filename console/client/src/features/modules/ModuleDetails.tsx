@@ -1,10 +1,11 @@
 import { useContext } from 'react'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
-import { Link } from 'react-router-dom'
 import { textColor } from '../../utils/style.utils'
+import { TabType, TabsContext } from '../../providers/tabs-provider'
 
 export function ModuleDetails() {
   const { selectedModule } = useContext(SelectedModuleContext)
+  const { tabs, setTabs, setActiveTab } = useContext(TabsContext)
 
   if (!selectedModule) {
     return (
@@ -12,6 +13,24 @@ export function ModuleDetails() {
         <span>No module selected</span>
       </div>
     )
+  }
+
+  const handleVerbClicked = verb => {
+    const tabId = [ selectedModule.name, verb.verb?.name ].join('.')
+    const existingTab = tabs.find(tab => tab.id === tabId)
+    if (existingTab) {
+      setActiveTab(existingTab)
+      return
+    }
+    const newTab = {
+      id: [ selectedModule.name, verb.verb?.name ].join('.'),
+      label: verb.verb?.name ?? 'Verb',
+      type: TabType.Verb,
+      module: selectedModule,
+      verb: verb,
+    }
+    setTabs(tabs => [ ...tabs, newTab ])
+    setActiveTab(newTab)
   }
 
   return (
@@ -33,14 +52,14 @@ export function ModuleDetails() {
         <dt>Verbs</dt>
         <dd className='text-white flex flex-col space-y-2'>
           {selectedModule.verbs.map((verb, index) => (
-            <Link
+            <div
               key={index}
-              to={`/modules/${selectedModule.name}/verbs/${verb.verb?.name}`}
+              onClick={() => handleVerbClicked(verb)}
               className='rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white text-center
             shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
             >
               {verb.verb?.name}
-            </Link>
+            </div>
           ))}
         </dd>
       </div>

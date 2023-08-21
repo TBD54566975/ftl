@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext } from 'react'
 import { ModuleDetails } from '../features/modules/ModuleDetails'
 import { ModulesList } from '../features/modules/ModulesList'
 import { Timeline } from '../features/timeline/Timeline'
@@ -7,6 +7,8 @@ import { SelectedModuleContext } from '../providers/selected-module-provider'
 import { headerColor, headerTextColor, panelColor, textColor } from '../utils/style.utils'
 import { SelectedTimelineEntryContext } from '../providers/selected-timeline-entry-provider'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { TabType, TabsContext } from '../providers/tabs-provider'
+import { VerbTab } from '../features/verbs/VerbTab'
 
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
@@ -14,7 +16,16 @@ const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 export function IDELayout() {
   const { selectedModule } = useContext(SelectedModuleContext)
   const { selectedEntry, setSelectedEntry } = useContext(SelectedTimelineEntryContext)
-  const [ activeTab, setActiveTab ] = useState('timeline')
+  const { tabs,activeTab, setActiveTab, setTabs } = useContext(TabsContext)
+
+  const handleCloseTab = id => {
+    if (activeTab === id && tabs.length > 1) {
+      // Set the next available tab as active, if the current active tab is being closed
+      const nextTab = tabs.find(tab => tab.id !== id) || tabs[0]
+      setActiveTab(nextTab)
+    }
+    setTabs(tabs.filter(tab => tab.id !== id))
+  }
 
   return (
     <>
@@ -40,28 +51,32 @@ export function IDELayout() {
           </div>
         </div>
 
-        <div className={`flex-1 flex flex-col  m-2 rounded`}>
+        <div className={`flex-1 flex flex-col m-2 rounded`}>
           <div className={`flex items-center rounded-t ${headerTextColor}`}>
-            <button
-              onClick={() => setActiveTab('timeline')}
-              className={`mr-2 px-4 py-2 rounded-t ${activeTab === 'timeline' ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
-            >
-              Timeline
-            </button>
-            <button
-              onClick={() => setActiveTab('verb')}
-              className={`mr-2 px-4 py-2 rounded-t ${activeTab === 'verb' ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
-            >
-              Verb
-            </button>
-
+            {tabs.map(tab => (
+              <div key={tab.id} className='flex items-center mr-2 relative'>
+                <button
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-t ${tab.id !== 'timeline' ? 'pr-8' : ''} ${activeTab === tab ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
+                >
+                  {tab.label}
+                </button>
+                {tab.id !== 'timeline' && (
+                  <button
+                    onClick={() => handleCloseTab(tab.id)}
+                    className='absolute right-0 mr-2 text-gray-400 hover:text-white'
+                  >
+                    <XMarkIcon className={`h-5 w-5`} />
+                  </button>
+                )}
+              </div>
+            ))}
             <div className='flex-grow'></div>
           </div>
 
-
           <div className={`flex-1 p-4 overflow-y-scroll ${panelColor}`}>
-            {activeTab === 'timeline' && <Timeline module={selectedModule} />}
-            {activeTab === 'verb' && <div>Content for the other tab.</div>}
+            {activeTab?.type === TabType.Timeline && <Timeline module={selectedModule} />}
+            {activeTab?.type === TabType.Verb && <VerbTab module={selectedModule} verb={activeTab.verb} />}
           </div>
         </div>
 

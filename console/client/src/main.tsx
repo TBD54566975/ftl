@@ -7,6 +7,7 @@ import ModulesProvider from './providers/modules-provider.tsx'
 import SchemaProvider from './providers/schema-provider.tsx'
 import { SelectedModuleProvider } from './providers/selected-module-provider.tsx'
 import { SelectedTimelineEntryProvider } from './providers/selected-timeline-entry-provider.tsx'
+import { TabsProvider } from './providers/tabs-provider.tsx'
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 
@@ -17,7 +18,9 @@ root.render(
         <ModulesProvider>
           <SelectedModuleProvider>
             <SelectedTimelineEntryProvider>
-              <App />
+              <TabsProvider>
+                <App />
+              </TabsProvider>
             </SelectedTimelineEntryProvider>
           </SelectedModuleProvider>
         </ModulesProvider>
