@@ -18,3 +18,34 @@
 .misc {
   grid-area: misc;
 }
+
+.modules {
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.5rem;
+}
+
+.radio {
+  display: flex;
+  border-radius: .5rem;
+  border-color: rgb(229, 231, 235);
+  border-width: 1px;
+  background-color: rgb(255 255 255/var(--tw-bg-opacity));
+  color: rgb(75 85 99);
+  flex-direction: column;
+  row-gap: .3rem;
+  padding: .8rem 1rem;
+  line-height: 1rem;
+  font-size: .75rem;
+  box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px;
+}
+
+.radioComment {
+  font-size: .7rem;
+  color: rgb(107, 114, 128 )
+}
+
+html:global(.dark) .radio{
+  background-color: rgb(30 41 59 / var(--tw-bg-opacity));
+  color: rgb(255 255 255 );
+}

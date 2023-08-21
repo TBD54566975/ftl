@@ -1,23 +1,31 @@
-import { Link } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/Card'
-import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { MetadataCalls } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils/react.utils'
 
 type Props = {
-  module?: Module
   verb?: Verb
 }
 
-export const VerbCard: React.FC<Props> = ({ module, verb }) => {
+export const VerbCard: React.FC<Props> = ({  verb }) => {
   const calls = verb?.verb?.metadata
     .filter(meta => meta.value.case === 'calls')
     .map(meta => meta.value.value as MetadataCalls)
-
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [ searchParams ] = useSearchParams()
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = evt =>{
+    const value = evt.currentTarget.value
+    searchParams.set('verb', value)
+    navigate({ ...location, search: searchParams.toString() })
+  }
   return (
     <Card>
       <div className='min-w-0 flex-1'>
-        <Link to={`/modules/${module?.name}/verbs/${verb?.verb?.name}`}
+        <button
+          value={verb?.verb?.name}
+          onClick={handleClick}
           className='focus:outline-none'
         >
           <p className='text-sm font-medium text-gray-900 dark:text-gray-300'>{verb?.verb?.name}</p>
@@ -35,7 +43,7 @@ export const VerbCard: React.FC<Props> = ({ module, verb }) => {
               </div>
             </li>
           )}
-        </Link>
+        </button>
       </div>
     </Card>
   )

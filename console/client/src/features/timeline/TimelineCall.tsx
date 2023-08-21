@@ -1,13 +1,20 @@
 import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
-import { Link } from 'react-router-dom'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils'
-
+import { useSearchParams, useNavigate , useLocation  } from 'react-router-dom'
 type Props = {
   call: Call
 }
 
 export const TimelineCall: React.FC<Props> = ({ call }) => {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [ searchParams ] = useSearchParams()
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = evt =>{
+    const value = evt.currentTarget.value
+    searchParams.set('requests', value)
+    navigate({ ...location, search: searchParams.toString() })
+  }
   return (
     <>
       <div className='relative flex h-6 w-6 flex-none items-center justify-center bg-white dark:bg-slate-800'>
@@ -26,11 +33,13 @@ export const TimelineCall: React.FC<Props> = ({ call }) => {
         )}
 
         <span className='text-indigo-700 dark:text-indigo-400 mr-1'>
-          <Link to={`/requests/${call.requestKey}`}
+          <button
+            value={call.requestKey}
+            onClick={handleClick}
             className='focus:outline-none'
           >
             Called
-          </Link>
+          </button>
         </span>
 
 

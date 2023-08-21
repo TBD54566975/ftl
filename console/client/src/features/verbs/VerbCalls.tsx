@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useSearchParams, useNavigate , useLocation } from 'react-router-dom'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Call, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
@@ -21,6 +21,15 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
     }
     fetchCalls()
   }, [ client, module, verb ])
+
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [ searchParams ] = useSearchParams()
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = evt =>{
+    const value = evt.currentTarget.value
+    searchParams.set('requests', value)
+    navigate({ ...location, search: searchParams.toString() })
+  }
 
   return (
     <>
@@ -71,11 +80,12 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
                 <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                   <div className='flex gap-x-3'>
                     <div className='font-mono text-sm leading-6 text-indigo-600 dark:text-indigo-400'>
-                      <Link to={`/requests/${call.requestKey?.toString()}`}
+                      <button value={call.requestKey?.toString()}
+                        onClick={handleClick}
                         className='focus:outline-none'
                       >
                         {call.requestKey?.toString()}
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </td>
