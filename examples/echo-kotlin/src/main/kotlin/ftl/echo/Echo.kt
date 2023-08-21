@@ -7,10 +7,13 @@ import xyz.block.ftl.Ingress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 
+class InvalidInput(val field: String) : Exception()
+
 data class EchoRequest(val name: String)
 data class EchoResponse(val message: String)
 
 class Echo {
+  @Throws(InvalidInput::class)
   @Verb
   @Ingress(Method.GET, "/echo")
   fun echo(context: Context, req: EchoRequest): EchoResponse {

@@ -8,6 +8,32 @@ import { Duration, Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Data, Verb as Verb$1, VerbRef } from "../schema/schema_pb.js";
 
 /**
+ * @generated from enum xyz.block.ftl.v1.console.DeploymentEventType
+ */
+export enum DeploymentEventType {
+  /**
+   * @generated from enum value: DEPLOYMENT_CREATED = 0;
+   */
+  DEPLOYMENT_CREATED = 0,
+
+  /**
+   * @generated from enum value: DEPLOYMENT_UPDATED = 1;
+   */
+  DEPLOYMENT_UPDATED = 1,
+
+  /**
+   * @generated from enum value: DEPLOYMENT_REPLACED = 2;
+   */
+  DEPLOYMENT_REPLACED = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(DeploymentEventType)
+proto3.util.setEnumType(DeploymentEventType, "xyz.block.ftl.v1.console.DeploymentEventType", [
+  { no: 0, name: "DEPLOYMENT_CREATED" },
+  { no: 1, name: "DEPLOYMENT_UPDATED" },
+  { no: 2, name: "DEPLOYMENT_REPLACED" },
+]);
+
+/**
  * @generated from message xyz.block.ftl.v1.console.Call
  */
 export class Call extends Message<Call> {
@@ -27,7 +53,7 @@ export class Call extends Message<Call> {
   timeStamp?: Timestamp;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.VerbRef source_verb_ref = 4;
+   * @generated from field: optional xyz.block.ftl.v1.schema.VerbRef source_verb_ref = 4;
    */
   sourceVerbRef?: VerbRef;
 
@@ -67,7 +93,7 @@ export class Call extends Message<Call> {
     { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 4, name: "source_verb_ref", kind: "message", T: VerbRef },
+    { no: 4, name: "source_verb_ref", kind: "message", T: VerbRef, opt: true },
     { no: 5, name: "destination_verb_ref", kind: "message", T: VerbRef },
     { no: 6, name: "duration", kind: "message", T: Duration },
     { no: 7, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -116,6 +142,11 @@ export class Deployment extends Message<Deployment> {
    */
   minReplicas = 0;
 
+  /**
+   * @generated from field: xyz.block.ftl.v1.console.DeploymentEventType event_type = 5;
+   */
+  eventType = DeploymentEventType.DEPLOYMENT_CREATED;
+
   constructor(data?: PartialMessage<Deployment>) {
     super();
     proto3.util.initPartial(data, this);
@@ -128,6 +159,7 @@ export class Deployment extends Message<Deployment> {
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "module_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "event_type", kind: "enum", T: proto3.getEnumType(DeploymentEventType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Deployment {

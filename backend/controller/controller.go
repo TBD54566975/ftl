@@ -596,7 +596,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, errors.Wrap(err, "could not create deployment")
 	}
 	deploymentLogger := s.getDeploymentLogger(ctx, dname)
-	deploymentLogger.Infof("Created deployment wes %s", dname)
+	deploymentLogger.Infof("Created deployment %s", dname)
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentName: dname.String()}), nil
 }
 

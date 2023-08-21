@@ -2,6 +2,7 @@ package sqltypes
 
 import (
 	"database/sql/driver"
+	"time"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
@@ -29,12 +30,21 @@ func (u Key) Value() (driver.Value, error) {
 	return bytes, nil
 }
 
-func (u *Key) Scan(src interface{}) error {
-	id, err := uuid.Parse(src.(string))
-	if err != nil {
-		return errors.WithStack(err)
+func (u *Key) Scan(src any) error {
+	switch src := src.(type) {
+	case string:
+		id, err := uuid.Parse(src)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		*u = Key(id)
+
+	case Key:
+		*u = src
+
+	default:
+		return errors.Errorf("invalid key type %T", src)
 	}
-	*u = Key(id)
 	return nil
 }
 
@@ -46,3 +56,6 @@ func (u *Key) UnmarshalText(text []byte) error {
 	*u = Key(id)
 	return nil
 }
+
+type NullTime = types.Option[time.Time]
+type NullDuration = types.Option[time.Duration]

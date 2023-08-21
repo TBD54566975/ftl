@@ -54,7 +54,7 @@ SELECT COUNT(*)
 FROM update_container;
 
 -- name: GetDeployment :one
-SELECT d.*, m.language, m.name AS module_name
+SELECT sqlc.embed(d), m.language, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
 WHERE d.name = $1;
@@ -105,7 +105,7 @@ RETURNING deployment_id;
 WITH matches AS (
     UPDATE runners
         SET state = 'dead'
-        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
 FROM matches;
@@ -129,13 +129,13 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                                         WHEN r.deployment_id IS NOT NULL
                                             THEN d.name END, NULL) AS deployment_name
 FROM runners r
-         LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
+         LEFT JOIN deployments d on d.id = r.deployment_id
 WHERE sqlc.arg('all')::bool = true
    OR r.state <> 'dead'
 ORDER BY r.key;
 
 -- name: GetDeployments :many
-SELECT d.*, m.name AS module_name, m.language
+SELECT sqlc.embed(d), m.name AS module_name, m.language
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE sqlc.arg('all')::bool = true
@@ -156,7 +156,7 @@ WHERE name = $1
 RETURNING 1;
 
 -- name: GetExistingDeploymentForModule :one
-SELECT d.*
+SELECT *
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE m.name = $1
@@ -181,7 +181,7 @@ HAVING COUNT(r.id) <> d.min_replicas;
 -- Find an idle runner and reserve it for the given deployment.
 UPDATE runners
 SET state               = 'reserved',
-    reservation_timeout = @reservation_timeout,
+    reservation_timeout = sqlc.arg('reservation_timeout')::timestamptz,
     -- If a deployment is not found, then the deployment ID is -1
     -- and the update will fail due to a FK constraint.
     deployment_id       = COALESCE((SELECT id
@@ -222,7 +222,7 @@ WHERE state = 'assigned'
   AND m.name = $1;
 
 -- name: GetRunnersForDeployment :many
-SELECT r.*
+SELECT *
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
@@ -256,22 +256,17 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name')
                 'error', sqlc.narg('error')::TEXT
             ));
 
--- name: GetDeploymentLogs :many
-SELECT ir.key                              AS request_key,
-       ir.key                              AS deployment_name,
-       e.time_stamp                        AS time_stamp,
-       e.custom_key_1                      AS level,
-       (e.payload ->> 'message')::TEXT     AS message,
-       (e.payload ->> 'attributes')::JSONB AS attributes,
-       (e.payload ->> 'error')::TEXT       AS error
-FROM events e
-         INNER JOIN ingress_requests ir ON e.request_id = ir.id
-         INNER JOIN deployments d ON e.deployment_id = d.id
-WHERE e.type = 'log'
-  AND d.name = sqlc.arg('deployment_name')
-  AND ir.key = sqlc.arg('request_key')
-  AND e.time_stamp >= sqlc.arg('after_timestamp')
-  AND e.time_stamp <= sqlc.arg('before_timestamp');
+-- name: InsertDeploymentEvent :exec
+INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, custom_key_3, payload)
+VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
+        'deployment',
+        sqlc.arg('type')::TEXT,
+        sqlc.arg('language')::TEXT,
+        sqlc.arg('module_name')::TEXT,
+        jsonb_build_object(
+                'min_replicas', sqlc.arg('min_replicas')::INT,
+                'replaced', sqlc.narg('replaced')::TEXT
+            ));
 
 -- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,
@@ -283,8 +278,8 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deploymen
             END),
         sqlc.arg('time_stamp')::TIMESTAMPTZ,
         'call',
-        sqlc.arg('source_module')::TEXT,
-        sqlc.arg('source_verb')::TEXT,
+        sqlc.narg('source_module')::TEXT,
+        sqlc.narg('source_verb')::TEXT,
         sqlc.arg('dest_module')::TEXT,
         sqlc.arg('dest_verb')::TEXT,
         jsonb_build_object(
@@ -333,13 +328,13 @@ RETURNING id;
 WITH matches AS (
     UPDATE controller
         SET state = 'dead'
-        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
 FROM matches;
 
 -- name: GetControllers :many
-SELECT c.*
+SELECT *
 FROM controller c
 WHERE sqlc.arg('all')::bool = true
    OR c.state <> 'dead'
@@ -373,16 +368,14 @@ INSERT INTO events (deployment_id, request_id, type,
 VALUES ($1, $2, $3, $4, $4, $5, $6, $7);
 
 -- name: GetEvents :many
-SELECT d.name       AS deployment_name,
-       ir.key       AS request_key,
-       e.time_stamp AS time_stamp,
-       e.type       AS type,
-       e.payload    AS payload
+SELECT d.name AS deployment_name,
+       ir.key AS request_key,
+       sqlc.embed(e)
 FROM events e
          INNER JOIN deployments d on e.deployment_id = d.id
-         INNER JOIN ingress_requests ir on e.request_id = ir.id
+         LEFT JOIN ingress_requests ir on e.request_id = ir.id
 WHERE time_stamp >= sqlc.arg('after_timestamp')
   AND time_stamp <= COALESCE(sqlc.narg('before_timestamp'), NOW() AT TIME ZONE 'utc')
   AND d.name = sqlc.arg('deployment_name')
-  AND ir.key = sqlc.arg('request_key')
-  AND e.type = ANY (sqlc.arg('types')::TEXT[]);
+  AND COALESCE(ir.key = sqlc.narg('request_key'), true)
+  AND e.type = ANY (sqlc.arg('types')::event_type[]);

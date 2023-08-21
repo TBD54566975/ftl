@@ -14,7 +14,7 @@ message Call {
   optional string request_key = 1;
   string deployment_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
-  schema.VerbRef source_verb_ref = 4;
+  optional schema.VerbRef source_verb_ref = 4;
   schema.VerbRef destination_verb_ref = 5;
   google.protobuf.Duration duration = 6;
   string request = 7;
@@ -22,11 +22,18 @@ message Call {
   optional string error = 9;
 }
 
+enum DeploymentEventType {
+  DEPLOYMENT_CREATED = 0;
+  DEPLOYMENT_UPDATED = 1;
+  DEPLOYMENT_REPLACED = 2;
+}
+
 message Deployment {
   string name = 1;
   string language = 2;
   string module_name = 3;
   int32 min_replicas = 4;
+  DeploymentEventType event_type = 5;
 }
 
 message LogEntry {

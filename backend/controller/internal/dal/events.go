@@ -21,8 +21,17 @@ type EventType = sql.EventType
 
 // Supported event types.
 const (
-	EventTypeLog  = sql.EventTypeLog
-	EventTypeCall = sql.EventTypeCall
+	EventTypeLog        = sql.EventTypeLog
+	EventTypeCall       = sql.EventTypeCall
+	EventTypeDeployment = sql.EventTypeDeployment
+)
+
+type DeploymentEventType string
+
+const (
+	DeploymentCreated  DeploymentEventType = "created"
+	DeploymentUpdated  DeploymentEventType = "updated"
+	DeploymentReplaced DeploymentEventType = "replaced"
 )
 
 // Event types.
@@ -46,7 +55,7 @@ type CallEvent struct {
 	DeploymentName model.DeploymentName
 	RequestKey     types.Option[model.IngressRequestKey]
 	Time           time.Time
-	SourceVerb     schema.VerbRef
+	SourceVerb     types.Option[schema.VerbRef]
 	DestVerb       schema.VerbRef
 	Duration       time.Duration
 	Request        []byte
@@ -56,8 +65,20 @@ type CallEvent struct {
 
 func (e *CallEvent) event() {}
 
+type DeploymentEvent struct {
+	DeploymentName     model.DeploymentName
+	Time               time.Time
+	Type               DeploymentEventType
+	Language           string
+	ModuleName         string
+	MinReplicas        int
+	ReplacedDeployment types.Option[model.DeploymentName]
+}
+
+func (e *DeploymentEvent) event() {}
+
 type eventFilterCall struct {
-	sourceModule string
+	sourceModule types.Option[string]
 	destModule   string
 }
 
@@ -80,7 +101,7 @@ func FilterLogs(level log.Level) EventFilter {
 // FilterCall filters call events between the given modules.
 //
 // May be called multiple times.
-func FilterCall(sourceModule, destModule string) EventFilter {
+func FilterCall(sourceModule types.Option[string], destModule string) EventFilter {
 	return func(query *eventFilter) {
 		query.calls = append(query.calls, &eventFilterCall{sourceModule: sourceModule, destModule: destModule})
 	}
@@ -108,30 +129,23 @@ func FilterTypes(types ...sql.EventType) EventFilter {
 	}
 }
 
-type eventRow struct {
-	DeploymentName model.DeploymentName
-	RequestKey     *sqltypes.Key
-	TimeStamp      time.Time
-	CustomKey1     types.Option[string]
-	CustomKey2     types.Option[string]
-	CustomKey3     types.Option[string]
-	CustomKey4     types.Option[string]
-	Type           sql.EventType
-	Payload        []byte
-}
-
 // The internal JSON payload of a call event.
 type eventCallJSON struct {
 	DurationMS int64                `json:"duration_ms"`
 	Request    json.RawMessage      `json:"request"`
 	Response   json.RawMessage      `json:"response"`
-	Error      types.Option[string] `json:"error"`
+	Error      types.Option[string] `json:"error,omitempty"`
 }
 
 type eventLogJSON struct {
 	Message    string               `json:"message"`
 	Attributes map[string]string    `json:"attributes"`
-	Error      types.Option[string] `json:"error"`
+	Error      types.Option[string] `json:"error,omitempty"`
+}
+
+type eventDeploymentJSON struct {
+	MinReplicas        int                                `json:"min_replicas"`
+	ReplacedDeployment types.Option[model.DeploymentName] `json:"replaced_deployment,omitempty"`
 }
 
 func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters ...EventFilter) ([]Event, error) {
@@ -185,9 +199,15 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 			if i > 0 {
 				q += " OR "
 			}
-			q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_1 = $%d AND e.custom_key_3 = $%d))", index, index+1)
-			index += 2
-			args = append(args, call.sourceModule, call.destModule)
+			if sourceModule, ok := call.sourceModule.Get(); ok {
+				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_1 = $%d AND e.custom_key_3 = $%d))", index, index+1)
+				args = append(args, sourceModule, call.destModule)
+				index += 2
+			} else {
+				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_1 IS NULL AND e.custom_key_3 = $%d))", index)
+				args = append(args, call.destModule)
+				index++
+			}
 		}
 		q += ")\n"
 	}
@@ -202,35 +222,34 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 	// Translate events to concrete Go types.
 	var out []Event
 	for rows.Next() {
-		row := eventRow{}
+		row := sql.GetEventsRow{}
 		err := rows.Scan(
-			&row.DeploymentName, &row.RequestKey, &row.TimeStamp,
-			&row.CustomKey1, &row.CustomKey2, &row.CustomKey3, &row.CustomKey4,
-			&row.Type, &row.Payload,
+			&row.DeploymentName, &row.RequestKey, &row.Event.TimeStamp,
+			&row.Event.CustomKey1, &row.Event.CustomKey2, &row.Event.CustomKey3, &row.Event.CustomKey4,
+			&row.Event.Type, &row.Event.Payload,
 		)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
 		var requestKey types.Option[model.IngressRequestKey]
-		if row.RequestKey != nil {
-			requestKey = types.Some(model.IngressRequestKey(*row.RequestKey))
+		if key, ok := row.RequestKey.Get(); ok {
+			requestKey = types.Some(model.IngressRequestKey(key))
 		}
-
-		switch row.Type {
+		switch row.Event.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+			if err := json.Unmarshal(row.Event.Payload, &jsonPayload); err != nil {
 				return nil, errors.WithStack(err)
 			}
-			level, err := strconv.ParseInt(row.CustomKey1.MustGet(), 10, 32)
+			level, err := strconv.ParseInt(row.Event.CustomKey1.MustGet(), 10, 32)
 			if err != nil {
-				return nil, errors.Wrapf(err, "invalid log level: %q", row.CustomKey1.MustGet())
+				return nil, errors.Wrapf(err, "invalid log level: %q", row.Event.CustomKey1.MustGet())
 			}
 			out = append(out, &LogEvent{
 				DeploymentName: row.DeploymentName,
 				RequestKey:     requestKey,
-				Time:           row.TimeStamp,
+				Time:           row.Event.TimeStamp,
 				Level:          int32(level),
 				Attributes:     jsonPayload.Attributes,
 				Message:        jsonPayload.Message,
@@ -239,23 +258,42 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+			if err := json.Unmarshal(row.Event.Payload, &jsonPayload); err != nil {
 				return nil, errors.WithStack(err)
+			}
+			var sourceVerb types.Option[schema.VerbRef]
+			sourceModule, smok := row.Event.CustomKey1.Get()
+			sourceName, snok := row.Event.CustomKey2.Get()
+			if smok && snok {
+				sourceVerb = types.Some(schema.VerbRef{Module: sourceModule, Name: sourceName})
 			}
 			out = append(out, &CallEvent{
 				DeploymentName: row.DeploymentName,
 				RequestKey:     requestKey,
-				Time:           row.TimeStamp,
-				SourceVerb:     schema.VerbRef{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
-				DestVerb:       schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
+				Time:           row.Event.TimeStamp,
+				SourceVerb:     sourceVerb,
+				DestVerb:       schema.VerbRef{Module: row.Event.CustomKey3.MustGet(), Name: row.Event.CustomKey4.MustGet()},
 				Duration:       time.Duration(jsonPayload.DurationMS) * time.Millisecond,
 				Request:        jsonPayload.Request,
 				Response:       jsonPayload.Response,
 				Error:          jsonPayload.Error,
 			})
-
+		case sql.EventTypeDeployment:
+			var jsonPayload eventDeploymentJSON
+			if err := json.Unmarshal(row.Event.Payload, &jsonPayload); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			out = append(out, &DeploymentEvent{
+				DeploymentName:     row.DeploymentName,
+				Time:               row.Event.TimeStamp,
+				Type:               DeploymentEventType(row.Event.CustomKey1.MustGet()),
+				Language:           row.Event.CustomKey2.MustGet(),
+				ModuleName:         row.Event.CustomKey3.MustGet(),
+				MinReplicas:        jsonPayload.MinReplicas,
+				ReplacedDeployment: jsonPayload.ReplacedDeployment,
+			})
 		default:
-			panic("unknown event type: " + row.Type)
+			panic("unknown event type: " + row.Event.Type)
 		}
 	}
 	return out, nil

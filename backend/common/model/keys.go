@@ -2,10 +2,14 @@
 package model
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"reflect"
 	"strings"
 
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
+	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -28,6 +32,7 @@ func ParseIngressRequestKey(key string) (IngressRequestKey, error) {
 
 type ingressRequestKey struct{}
 type IngressRequestKey = keyType[ingressRequestKey]
+type NullIngressRequestKey = types.Option[IngressRequestKey]
 
 func parseKey[KT keyType[U], U any](key string) (KT, error) {
 	var zero KT
@@ -45,6 +50,27 @@ func parseKey[KT keyType[U], U any](key string) (KT, error) {
 // Helper type to avoid having to write a bunch of boilerplate. It relies on T being a
 // named struct in the form <name>Key, eg. "runnerKey"
 type keyType[T any] ulid.ULID
+
+func (d keyType[T]) Value() (driver.Value, error) {
+	return uuid.UUID(d), nil
+}
+
+var _ sql.Scanner = (*keyType[int])(nil)
+var _ driver.Valuer = (*keyType[int])(nil)
+
+// Scan from UUID DB representation.
+func (d *keyType[T]) Scan(src any) error {
+	input, ok := src.(string)
+	if !ok {
+		return errors.Errorf("expected UUID to be a string but it's a %T", src)
+	}
+	id, err := uuid.Parse(input)
+	if err != nil {
+		return errors.Wrap(err, "invalid UUID")
+	}
+	*d = keyType[T](id)
+	return nil
+}
 
 func (d keyType[T]) Kind() string                 { return kindFromType[T]() }
 func (d keyType[T]) String() string               { return d.Kind() + ulid.ULID(d).String() }
