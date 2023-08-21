@@ -1,7 +1,7 @@
 import { Duration, Timestamp } from '@bufbuild/protobuf'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
-const colors = [ 'bg-indigo-500', 'bg-green-500/70', 'bg-pink-500/70', 'bg-blue-500/70', 'bg-yello-500/70' ]
+const colors = [ 'bg-indigo-500', 'bg-green-500/70', 'bg-pink-500/70', 'bg-blue-500/70', 'bg-yellow-500/70' ]
 
 interface CallBlockProps {
   call: Call;

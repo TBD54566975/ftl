@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 import { SelectedTimelineEntryContext } from '../../providers/selected-timeline-entry-provider'
-import { formatTimestamp, formatTimestampShort } from '../../utils/date.utils'
+import { formatTimestampShort } from '../../utils/date.utils'
 import { TimelineEventDetailCall } from './TimelineEventDetailCall'
 import { TimelineEventDetailLog } from './TimelineEventDetailLog'
 

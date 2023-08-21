@@ -66,8 +66,8 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
             </tr>
           </thead>
           <tbody className='divide-y divide-black/5 dark:divide-white/5'>
-            {calls.map(call => (
-              <tr key={call.destinationVerbRef?.module}>
+            {calls.map((call, index) => (
+              <tr key={index}>
                 <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                   <div className='flex gap-x-3'>
                     <div className='font-mono text-sm leading-6 text-indigo-600 dark:text-indigo-400'>

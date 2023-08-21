@@ -1,5 +1,6 @@
 import { useContext } from 'react'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
+import { Link } from 'react-router-dom'
 
 export function ModuleDetails() {
   const { selectedModule } = useContext(SelectedModuleContext)
@@ -35,7 +36,9 @@ export function ModuleDetails() {
           {selectedModule.verbs.map((verb, index) => (
             <li key={index}
               className='dark:text-white'
-            >{verb.verb?.name}</li>
+            >
+              <Link to={`/modules/${selectedModule.name}/verbs/${verb?.verb?.name}`}>{verb.verb?.name}</Link>
+            </li>
           ))}
         </ul>
       </div>

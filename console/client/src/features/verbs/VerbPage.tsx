@@ -8,6 +8,7 @@ import { getCodeBlock } from '../../utils/data.utils'
 import { classNames } from '../../utils/react.utils'
 import { getCalls, getVerbCode } from './verb.utils'
 import { VerbCalls } from './VerbCalls.tsx'
+import { VerbForm } from './VerbForm.tsx'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
@@ -24,7 +25,7 @@ export default function VerbPage() {
   }
 
   return (
-    <div className='min-w-0 flex-auto'>
+    <div className='min-w-0 flex-auto p-4'>
       <nav className='flex'
         aria-label='Breadcrumb'
       >
@@ -64,8 +65,8 @@ export default function VerbPage() {
         </SyntaxHighlighter>
       </div>
       <div className='pt-4'>
-        {callData?.map(data => (
-          <div key={data.name}
+        {callData?.map((data, index) => (
+          <div key={index}
             className='text-sm'
           >
             <SyntaxHighlighter language='go'
@@ -76,6 +77,10 @@ export default function VerbPage() {
           </div>
         ))}
       </div>
+      <VerbForm
+        module={module}
+        verb={verb}
+      />
       <div className='flex items-center gap-x-3 pt-6'>
         <h2 className='min-w-0 text-sm font-semibold leading-6 text-gray-900 dark:text-white'>
           <div className='flex gap-x-2'>
