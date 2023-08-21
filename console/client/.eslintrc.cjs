@@ -54,7 +54,6 @@ module.exports = {
     'react/jsx-tag-spacing': [ 'error' ], // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-tag-spacing.md
     'react/jsx-closing-bracket-location': [ 'error', 'line-aligned' ], // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-closing-bracket-location.md
     'react/jsx-indent-props': [ 2, 2 ], // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-indent-props.md
-    'react/jsx-max-props-per-line': [ 1 ], //https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-max-props-per-line.md
     /* END: Prettier equivalent  rules */
 
     /* Start: JS/TS quality rules */

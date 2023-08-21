@@ -18,8 +18,8 @@ export function ModulesList() {
           className={`relative flex gap-x-4 p-2 rounded cursor-pointer shadow-sm border border-transparent
           ${module === selectedModule
             ? 'bg-indigo-700 text-white dark:bg-indigo-700 dark:text-white'
-            : 'bg-slate-200 hover:bg-indigo-700 hover:text-white hover:border-indigo-600 dark:bg-slate-800 dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:border-indigo-600'}
-          dark:bg-slate-800 dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:border-indigo-600`}
+            : 'bg-slate-100 hover:bg-indigo-700 hover:text-white hover:border-indigo-600 dark:bg-slate-800 dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:border-indigo-600'}
+          dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:border-indigo-600`}
         >
           <div className='flex-1 truncate'>
             {module.name}

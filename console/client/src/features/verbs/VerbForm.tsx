@@ -28,7 +28,6 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
     }, {})
 
     try {
-      console.log(dataObject)
       const verbRef: VerbRef = {
         name: verb?.verb?.name,
         module: module?.name,
@@ -39,7 +38,6 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
       const uint8Array = new Uint8Array(buffer)
 
       const response = await client.call({ verb: verbRef , body: uint8Array })
-      console.log(response)
       if (response.response.case === 'body') {
         const jsonString = Buffer.from(response.response.value).toString('utf-8')
 

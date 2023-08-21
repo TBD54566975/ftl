@@ -3,6 +3,7 @@ import { SelectedTimelineEntryContext } from '../../providers/selected-timeline-
 import { formatTimestampShort } from '../../utils/date.utils'
 import { TimelineEventDetailCall } from './TimelineEventDetailCall'
 import { TimelineEventDetailLog } from './TimelineEventDetailLog'
+import { lightTextColor, textColor } from '../../utils/style.utils'
 
 export function TimelineEventDetails() {
   const { selectedEntry } = useContext(SelectedTimelineEntryContext)
@@ -10,9 +11,7 @@ export function TimelineEventDetails() {
 
   if (!selectedEntry) {
     return (
-      <div className='flex-1 p-4 overflow-auto flex items-center justify-center'>
-        <span>No event selected</span>
-      </div>
+      <> </>
     )
   }
 
@@ -20,11 +19,11 @@ export function TimelineEventDetails() {
     <>
       <time
         dateTime={formatTimestampShort(selectedEntry.timeStamp)}
-        className='flex-none py-0.5 text-xs leading-5 text-gray-500'
+        className={`flex-none py-0.5 text-xs leading-5 ${lightTextColor}`}
       >
         {formatTimestampShort(selectedEntry.timeStamp)}
       </time>
-      <div className='pb-4'>
+      <div className={`py-2 ${textColor}`}>
         Event type: {selectedEntry.entry?.case}
       </div>
 

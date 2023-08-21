@@ -26,7 +26,7 @@ export const TimelineEventDetailCall: React.FC<Props> = ({ call }) => {
   }, [ client, call ])
   return (
     <>
-      <RequestGraph calls={requestCalls} />
+      <RequestGraph calls={requestCalls} call={call} />
 
       <h3 className='pt-4'>Request</h3>
       <div className='text-sm'>

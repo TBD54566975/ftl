@@ -44,7 +44,7 @@ export const Timeline: React.FC<Props> = ({ module }) => {
   return (
     <>
       <ul role='list'
-        className='space-y-6'
+        className='space-y-4'
       >
         {entries.map((entry, index) => (
           <li key={index}

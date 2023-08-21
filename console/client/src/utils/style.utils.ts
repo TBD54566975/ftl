@@ -3,6 +3,7 @@ export const panelColor = 'dark:bg-slate-900 bg-white'
 export const headerColor = 'dark:bg-indigo-700 bg-indigo-700'
 export const headerTextColor = 'text-white'
 export const textColor = 'dark:text-white text-gray-800'
+export const lightTextColor = 'text-gray-500'
 export const navColor = 'dark:bg-indigo-700 bg-indigo-700'
 
 export const statuses = {

@@ -1,16 +1,20 @@
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import { ModuleDetails } from '../features/modules/ModuleDetails'
 import { ModulesList } from '../features/modules/ModulesList'
 import { Timeline } from '../features/timeline/Timeline'
 import { TimelineEventDetails } from '../features/timeline/TimelineEventDetails'
 import { SelectedModuleContext } from '../providers/selected-module-provider'
-import { headerColor, headerTextColor, panelColor } from '../utils/style.utils'
+import { headerColor, headerTextColor, panelColor, textColor } from '../utils/style.utils'
 import { SelectedTimelineEntryContext } from '../providers/selected-timeline-entry-provider'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+
+const selectedTabStyle = `${headerTextColor} ${headerColor}`
+const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
   const { selectedModule } = useContext(SelectedModuleContext)
   const { selectedEntry, setSelectedEntry } = useContext(SelectedTimelineEntryContext)
+  const [ activeTab, setActiveTab ] = useState('timeline')
 
   return (
     <>
@@ -36,29 +40,47 @@ export function IDELayout() {
           </div>
         </div>
 
-        {/* Center Column */}
-        <div className={`flex-1 flex flex-col ${panelColor} m-2 rounded`}>
-          <div className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}>Timeline</div>
-          <div className='flex-1 p-4 overflow-y-scroll'>
-            <Timeline module={selectedModule} />
+        <div className={`flex-1 flex flex-col  m-2 rounded`}>
+          <div className={`flex items-center rounded-t ${headerTextColor}`}>
+            <button
+              onClick={() => setActiveTab('timeline')}
+              className={`mr-2 px-4 py-2 rounded-t ${activeTab === 'timeline' ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
+            >
+              Timeline
+            </button>
+            <button
+              onClick={() => setActiveTab('verb')}
+              className={`mr-2 px-4 py-2 rounded-t ${activeTab === 'verb' ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
+            >
+              Verb
+            </button>
+
+            <div className='flex-grow'></div>
+          </div>
+
+
+          <div className={`flex-1 p-4 overflow-y-scroll ${panelColor}`}>
+            {activeTab === 'timeline' && <Timeline module={selectedModule} />}
+            {activeTab === 'verb' && <div>Content for the other tab.</div>}
           </div>
         </div>
 
         {/* Right Column */}
-        <div className={`w-1/3 flex flex-col ${panelColor}  rounded
+        <div className={`w-1/3 p-4 flex flex-col bg-white dark:bg-slate-800
                absolute top-0 right-0 h-full transform
-               ${selectedEntry != null ? 'translate-x-0 shadow-lg' : 'translate-x-full'}
+               ${selectedEntry != null ? 'translate-x-0 shadow-xl' : 'translate-x-full'}
                transition-transform duration-300`}
         >
-          <div className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor} flex justify-between items-center`}>
+          <div className={`rounded-t ${textColor} flex justify-between items-center`}>
             Event Details
             <button onClick={() => setSelectedEntry(null)}
-              className='p-1 hover:bg-indigo-500'
+              className='p-1 hover:bg-indigo-100 dark:hover:bg-indigo-500'
             >
               <XMarkIcon className={`h-5 w-5 hover:text-gray-600`} />
             </button>
           </div>
-          <div className='flex-1 p-4 overflow-auto'>
+          <div className='w-full h-px bg-gray-300 mt-2'></div>
+          <div className='flex-1 pt-2 overflow-auto'>
             <TimelineEventDetails />
           </div>
         </div>
