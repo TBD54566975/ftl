@@ -34,7 +34,14 @@ The Runner is the component of FTL that coordinates with the Controller to spawn
 and route to user code.
 	`), kong.Vars{
 		"version":       version,
-		"deploymentdir": filepath.Join(cacheDir, "ftl-runner", "deployments"),
+		"deploymentdir": filepath.Join(cacheDir, "ftl-runner", "${runner}", "deployments"),
+	})
+	// Substitute in the runner key into the deployment directory.
+	config.RunnerConfig.DeploymentDir = os.Expand(config.RunnerConfig.DeploymentDir, func(key string) string {
+		if key == "runner" {
+			return config.RunnerConfig.Key.String()
+		}
+		return key
 	})
 	logger := log.Configure(os.Stderr, config.LogConfig)
 	ctx := log.ContextWithLogger(context.Background(), logger)

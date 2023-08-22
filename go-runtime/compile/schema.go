@@ -346,7 +346,7 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		if tnode.String() == timeType().String() {
 			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
 		}
-		return parseStruct(pctx, node, underlying)
+		return parseStruct(pctx, node, tnode)
 
 	case *types.Map:
 		return parseMap(pctx, node, underlying)

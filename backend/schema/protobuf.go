@@ -73,15 +73,15 @@ func generateStruct(t reflect.Type, messages map[string]string) {
 	}
 	fields := reflect.VisibleFields(t)
 	// Sort by protobuf tag
-	slices.SortFunc(fields, func(a, b reflect.StructField) bool {
+	slices.SortFunc(fields, func(a, b reflect.StructField) int {
 		aid := strings.Split(a.Tag.Get("protobuf"), ",")[0]
 		bid := strings.Split(b.Tag.Get("protobuf"), ",")[0]
 		if aid == "-" || bid == "-" {
-			return aid < bid
+			return strings.Compare(aid, bid)
 		}
 		an, _ := strconv.Atoi(aid)
 		bn, _ := strconv.Atoi(bid)
-		return an < bn
+		return an - bn
 	})
 	// Filter out fields with protobuf tag "-"
 	filtered := []reflect.StructField{}

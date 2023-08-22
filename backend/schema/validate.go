@@ -77,7 +77,7 @@ func Validate(schema *Schema) error {
 	return errors.Join(merr...)
 }
 
-var validNameRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{2,}$`)
+var validNameRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 
 // ValidateModule performs the subset of semantic validation possible on a single module.
 func ValidateModule(module *Module) error {

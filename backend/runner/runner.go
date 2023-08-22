@@ -40,7 +40,7 @@ type Config struct {
 	Key                model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" default:"R00000000000000000000000000"`
 	ControllerEndpoint *url.URL        `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
 	TemplateDir        string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
-	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}" type:"existingdir"`
+	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
 	Language           []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" required:""`
 	HeartbeatPeriod    time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter    time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
