@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { useClient } from '../../hooks/use-client'
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
-import { useClient } from '../../hooks/use-client'
 import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 
 type Props = {
@@ -81,7 +81,7 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
           </div>
         ))}
         <button type='submit'
-          className='bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
+          className='bg-indigo-700 text-white px-4 py-2 rounded hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
         >Submit</button>
       </form>
       {response && (
