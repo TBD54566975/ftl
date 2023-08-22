@@ -19,6 +19,14 @@ var mainTmpl = template.Must(template.New("main.go.tmpl").
 	}).
 	Parse(mainTmplSource))
 
-func Main(w io.Writer, module *schema.Module) error {
-	return errors.WithStack(mainTmpl.Execute(w, module))
+type mainTmplCtx struct {
+	ImportRoot string
+	*schema.Module
+}
+
+func Main(w io.Writer, module *schema.Module, importRoot string) error {
+	return errors.WithStack(mainTmpl.Execute(w, &mainTmplCtx{
+		ImportRoot: importRoot,
+		Module:     module,
+	}))
 }

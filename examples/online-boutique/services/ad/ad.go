@@ -33,7 +33,7 @@ type AdResponse struct {
 }
 
 //ftl:verb
-func GetAds(ctx context.Context, req AdRequest) (AdResponse, error) {
+func Get(ctx context.Context, req AdRequest) (AdResponse, error) {
 	resp := AdResponse{}
 	if len(req.ContextKeys) > 0 {
 		resp.Ads = contextualAds(req.ContextKeys)

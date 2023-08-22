@@ -4,6 +4,7 @@ import (
 	_ "embed" // For embedding templates.
 	"fmt"
 	"io"
+	"path"
 	"reflect"
 	"strings"
 	"text/template"
@@ -14,6 +15,11 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 )
+
+type externalModuleCtx struct {
+	ImportRoot string
+	*schema.Module
+}
 
 //go:embed external_module.go.tmpl
 var moduleTmplSource string
@@ -30,17 +36,13 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 		"is": func(kind string, t schema.Node) bool {
 			return reflect.Indirect(reflect.ValueOf(t)).Type().Name() == kind
 		},
-		"imports": func(m *schema.Module) []string {
+		"imports": func(m *externalModuleCtx) []string {
 			pkgs := map[string]bool{}
 			_ = schema.Visit(m, func(n schema.Node, next func() error) error {
 				switch n := n.(type) {
-				case *schema.VerbRef:
-					if n.Module != "" {
-						pkgs[n.Module] = true
-					}
 				case *schema.DataRef:
 					if n.Module != "" {
-						pkgs[n.Module] = true
+						pkgs[path.Join(m.ImportRoot, n.Module)] = true
 					}
 				case *schema.Time:
 					pkgs["time"] = true
@@ -54,19 +56,28 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 	Parse(moduleTmplSource))
 
 // ExternalModule Go stubs for the given module.
-func ExternalModule(w io.Writer, module *schema.Module) error {
-	return errors.WithStack(moduleTmpl.Execute(w, module))
+func ExternalModule(w io.Writer, module *schema.Module, importRoot string) error {
+	return errors.WithStack(moduleTmpl.Execute(w, &externalModuleCtx{
+		ImportRoot: importRoot,
+		Module:     module,
+	}))
 }
 
 func genType(t schema.Type) string {
 	switch t := t.(type) {
+	case *schema.DataRef:
+		return t.Name
+
+	case *schema.VerbRef:
+		return t.Name
+
 	case *schema.Float:
 		return "float64"
 
 	case *schema.Time:
 		return "time.Time"
 
-	case *schema.Int, *schema.Bool, *schema.String, *schema.DataRef, *schema.VerbRef:
+	case *schema.Int, *schema.Bool, *schema.String:
 		return strings.ToLower(t.String())
 
 	case *schema.Array:
