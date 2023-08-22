@@ -285,12 +285,19 @@ func deploymentEventToDeployment(event dal.DeploymentEvent) *pbconsole.Deploymen
 	case dal.DeploymentReplaced:
 		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_REPLACED
 	}
+
+	var replaced *string
+	if r, ok := event.ReplacedDeployment.Get(); ok {
+		rstr := r.String()
+		replaced = &rstr
+	}
 	return &pbconsole.Deployment{
 		Name:        event.DeploymentName.String(),
 		Language:    event.Language,
 		ModuleName:  event.ModuleName,
 		MinReplicas: 0,
 		EventType:   eventType,
+		Replaced:    replaced,
 	}
 }
 

@@ -7,10 +7,10 @@ import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import { classNames } from '../../utils/react.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
 import { TimelineDeployment } from './TimelineDeployment.tsx'
-import { TimelineEventDetailCall } from './TimelineEventDetailCall.tsx'
-import { TimelineEventDetailDeployment } from './TimelineEventDetailDeployment.tsx'
-import { TimelineEventDetailLog } from './TimelineEventDetailLog.tsx'
 import { TimelineLog } from './TimelineLog.tsx'
+import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
+import { TimelineDeploymentDetails } from './details/TimelineDeploymentDetails.tsx'
+import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 
 type Props = {
   module?: Module | null
@@ -54,13 +54,13 @@ export const Timeline: React.FC<Props> = ({ module }) => {
 
     switch (entry.entry?.case) {
       case 'call':
-        openPanel(<TimelineEventDetailCall call={entry.entry.value} />)
+        openPanel(<TimelineCallDetails entry={entry} call={entry.entry.value} />)
         break
       case 'log':
-        openPanel(<TimelineEventDetailLog log={entry.entry.value} />)
+        openPanel(<TimelineLogDetails entry={entry} log={entry.entry.value} />)
         break
       case 'deployment':
-        openPanel(<TimelineEventDetailDeployment deployment={entry.entry.value} />)
+        openPanel(<TimelineDeploymentDetails entry={entry} deployment={entry.entry.value} />)
         break
       default: break
     }
