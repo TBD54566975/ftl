@@ -28,6 +28,7 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = evt =>{
     const value = evt.currentTarget.value
     searchParams.set('requests', value)
+    searchParams.delete('verb')
     navigate({ ...location, search: searchParams.toString() })
   }
 
