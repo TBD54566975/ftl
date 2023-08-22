@@ -1,7 +1,7 @@
 import { useContext } from 'react'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
-import { textColor } from '../../utils/style.utils'
 import { TabType, TabsContext } from '../../providers/tabs-provider'
+import { textColor } from '../../utils/style.utils'
 
 export function ModuleDetails() {
   const { selectedModule } = useContext(SelectedModuleContext)
@@ -34,7 +34,7 @@ export function ModuleDetails() {
   }
 
   return (
-    <div className='flex-1 overflow-auto text-sm font-medium text-gray-400'>
+    <div className='flex-1 overflow-auto text-sm font-medium text-gray-500 dark:text-gray-400'>
       <div className='flex justify-between'>
         <dt>Name</dt>
         <dd className={`${textColor}`}>{selectedModule.name}</dd>

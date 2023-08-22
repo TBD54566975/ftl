@@ -145,7 +145,7 @@ type eventLogJSON struct {
 
 type eventDeploymentJSON struct {
 	MinReplicas        int                                `json:"min_replicas"`
-	ReplacedDeployment types.Option[model.DeploymentName] `json:"replaced_deployment,omitempty"`
+	ReplacedDeployment types.Option[model.DeploymentName] `json:"replaced,omitempty"`
 }
 
 func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters ...EventFilter) ([]Event, error) {

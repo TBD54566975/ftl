@@ -147,6 +147,11 @@ export class Deployment extends Message<Deployment> {
    */
   eventType = DeploymentEventType.DEPLOYMENT_CREATED;
 
+  /**
+   * @generated from field: optional string replaced = 6;
+   */
+  replaced?: string;
+
   constructor(data?: PartialMessage<Deployment>) {
     super();
     proto3.util.initPartial(data, this);
@@ -160,6 +165,7 @@ export class Deployment extends Message<Deployment> {
     { no: 3, name: "module_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "event_type", kind: "enum", T: proto3.getEnumType(DeploymentEventType) },
+    { no: 6, name: "replaced", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Deployment {

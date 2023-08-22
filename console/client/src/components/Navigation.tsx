@@ -10,8 +10,8 @@ export default function Navigation() {
         <div className='flex items-center space-x-2'>
           <NavLink to='/'>
             <div className='pb-1'>
-              <span className='text-indigo-200 text-xl font-medium'>FTL</span>
-              <span className='px-2 text-rose-400 text-2xl font-medium'>∞</span>
+              <span className='text-xl font-medium'>FTL</span>
+              <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
             </div>
           </NavLink>
           <div className='hidden md:block'>

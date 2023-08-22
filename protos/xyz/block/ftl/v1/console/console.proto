@@ -34,6 +34,7 @@ message Deployment {
   string module_name = 3;
   int32 min_replicas = 4;
   DeploymentEventType event_type = 5;
+  optional string replaced = 6;
 }
 
 message LogEntry {
