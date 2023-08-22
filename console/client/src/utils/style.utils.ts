@@ -2,6 +2,7 @@ import { atomDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/pri
 
 export const bgColor = 'dark:bg-gray-800 bg-slate-200'
 export const panelColor = 'dark:bg-slate-900 bg-white'
+export const sidePanelColor = 'dark:bg-slate-800 bg-white'
 export const headerColor = 'dark:bg-indigo-700 bg-indigo-700'
 export const headerTextColor = 'text-white'
 export const textColor = 'dark:text-white text-gray-800'
