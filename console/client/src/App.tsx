@@ -12,9 +12,7 @@ export default function App() {
     <div className={`h-screen flex flex-col min-w-[1024px] min-h-[600px] ${bgColor} ${textColor}`}>
       <Navigation />
       <Routes>
-        <Route element={<IDELayout />}>
-          <Route path='/' />
-        </Route>
+        <Route path='/' element={<IDELayout />} />
         <Route path='graph'
           element={<GraphPage />}
         />

@@ -2,25 +2,24 @@ import { Timestamp } from '@bufbuild/protobuf'
 import React, { useContext, useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
-import { Module, StreamTimelineResponse } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import { StreamTimelineResponse } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import { classNames } from '../../utils/react.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
 import { TimelineDeployment } from './TimelineDeployment.tsx'
+import { TimelineFilterBar } from './TimelineFilterBar.tsx'
 import { TimelineLog } from './TimelineLog.tsx'
 import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineDeploymentDetails } from './details/TimelineDeploymentDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 
-type Props = {
-  module?: Module | null
-}
 
-export const Timeline: React.FC<Props> = ({ module }) => {
+export const Timeline: React.FC<Props> = () => {
   const client = useClient(ConsoleService)
   const { openPanel, closePanel } = useContext(SidePanelContext)
   const [ entries, setEntries ] = useState<StreamTimelineResponse[]>([])
   const [ selectedEntry, setSelectedEntry ] = useState<StreamTimelineResponse | null>(null)
+  const [ selectedFilters, setSelectedFilters ] = useState<string[]>([])
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -30,7 +29,7 @@ export const Timeline: React.FC<Props> = ({ module }) => {
       afterTime.setHours(afterTime.getHours() - 1)
 
       for await (const response of client.streamTimeline(
-        { afterTime: Timestamp.fromDate(afterTime), deploymentName: module?.deploymentName },
+        { afterTime: Timestamp.fromDate(afterTime) },
         { signal: abortController.signal })
       ) {
         if (response.entry) {
@@ -43,7 +42,7 @@ export const Timeline: React.FC<Props> = ({ module }) => {
     return () => {
       abortController.abort()
     }
-  }, [ client, module ])
+  }, [ client ])
 
   const handleEntryClicked = entry => {
     if (selectedEntry === entry) {
@@ -67,12 +66,32 @@ export const Timeline: React.FC<Props> = ({ module }) => {
     setSelectedEntry(entry)
   }
 
+  const handleFilterChange = (optionValue, checked) => {
+    if (checked) {
+      setSelectedFilters(prev => [ ...prev, optionValue ])
+    } else {
+      setSelectedFilters(prev => prev.filter(filter => filter !== optionValue))
+    }
+  }
+
+  const filteredEntries = entries.filter(entry => {
+    if (selectedFilters.length === 0) {
+      return true
+    }
+    return selectedFilters.includes(entry.entry?.case ?? '')
+  })
+
   return (
-    <>
-      <ul role='list' className='space-y-4'>
-        {entries.map((entry, index) => (
+    <div className='m-0'>
+      <TimelineFilterBar
+        selectedFilters={selectedFilters}
+        onFilterChange={handleFilterChange}
+      />
+
+      <ul role='list' className='space-y-4 p-4'>
+        {filteredEntries.map((entry, index) => (
           <li key={index} className='relative flex gap-x-4' onClick={() => handleEntryClicked(entry)}>
-            <div className={classNames(index === entries.length - 1 ? 'h-6' : '-bottom-6', 'absolute left-0 top-0 flex w-6 justify-center')}>
+            <div className={classNames(index === filteredEntries.length - 1 ? 'h-6' : '-bottom-6', 'absolute left-0 top-0 flex w-6 justify-center')}>
               <div className='w-px bg-gray-200 dark:bg-gray-600' />
             </div>
 
@@ -90,6 +109,6 @@ export const Timeline: React.FC<Props> = ({ module }) => {
           </li>
         ))}
       </ul>
-    </>
+    </div>
   )
 }

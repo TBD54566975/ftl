@@ -72,8 +72,8 @@ export function IDELayout() {
             <div className='flex-grow'></div>
           </div>
 
-          <div className={`flex-1 p-4 overflow-y-scroll ${panelColor}`}>
-            {activeTab?.type === TabType.Timeline && <Timeline module={selectedModule} />}
+          <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
+            {activeTab?.type === TabType.Timeline && <Timeline />}
             {activeTab?.type === TabType.Verb && <VerbTab module={selectedModule} verb={activeTab.verb} />}
           </div>
         </div>
