@@ -55,7 +55,7 @@ func marshalJSON(v any) any {
 			kind: strcase.ToLowerCamel(rv.Type().Name()),
 		}
 		fields := reflect.VisibleFields(rv.Type())
-		slices.SortFunc(fields, func(a, b reflect.StructField) bool { return a.Name < b.Name })
+		slices.SortFunc(fields, func(a, b reflect.StructField) int { return strings.Compare(a.Name, b.Name) })
 		for _, ft := range fields {
 			jsonTag := strings.Split(ft.Tag.Get("json"), ",")
 			if jsonTag[0] == "-" || !ft.IsExported() {
@@ -82,7 +82,7 @@ func marshalJSON(v any) any {
 	case reflect.Map:
 		out := map[string]any{}
 		keys := rv.MapKeys()
-		slices.SortFunc(keys, func(a, b reflect.Value) bool { return a.String() < b.String() })
+		slices.SortFunc(keys, func(a, b reflect.Value) int { return strings.Compare(a.String(), b.String()) })
 		for _, k := range keys {
 			out[k.String()] = marshalJSON(rv.MapIndex(k).Interface())
 		}
