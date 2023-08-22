@@ -1,5 +1,5 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { StreamTimelineResponse } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
@@ -14,7 +14,7 @@ import { TimelineDeploymentDetails } from './details/TimelineDeploymentDetails.t
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 
 
-export const Timeline: React.FC<Props> = () => {
+export const Timeline = () => {
   const client = useClient(ConsoleService)
   const { openPanel, closePanel } = useContext(SidePanelContext)
   const [ entries, setEntries ] = useState<StreamTimelineResponse[]>([])
