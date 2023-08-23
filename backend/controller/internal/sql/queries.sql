@@ -289,29 +289,6 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deploymen
                 'error', sqlc.narg('error')::TEXT
             ));
 
--- name: GetCalls :many
-SELECT d.name         AS deployment_name,
-       ir.key         AS request_key,
-       e.custom_key_1 AS source_module,
-       e.custom_key_2 AS source_verb,
-       e.custom_key_3 AS dest_module,
-       e.custom_key_4 AS dest_verb,
-       e.payload      AS payload,
-       e.time_stamp   AS time_stamp
-FROM events e
-         INNER JOIN deployments d ON e.deployment_id = d.id
-         INNER JOIN ingress_requests ir ON e.request_id = ir.id
-WHERE CASE
-          WHEN sqlc.narg('request_key')::UUID IS NOT NULL
-              THEN ir.key = sqlc.narg('request_key')::UUID
-          WHEN sqlc.narg('dest_module')::TEXT[] IS NOT NULL
-              THEN e.custom_key_3 = ANY (sqlc.narg('dest_module')::TEXT[])
-          ELSE
-              TRUE
-    END
-  AND type = 'call'
-ORDER BY e.time_stamp;
-
 -- name: CreateIngressRequest :exec
 INSERT INTO ingress_requests (key, source_addr)
 VALUES ($1, $2);

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/alecthomas/types"
 	"time"
 
 	"github.com/alecthomas/errors"
@@ -74,16 +75,21 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 }
 
 func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbconsole.GetCallsRequest]) (*connect.Response[pbconsole.GetCallsResponse], error) {
-	calls, err := c.dal.GetModuleCalls(ctx, []string{req.Msg.Module})
+	events, err := c.dal.QueryEvents(ctx, time.Time{}, time.Now(), dal.FilterCall(types.None[string](), req.Msg.Module))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
+	callEvents := filterCallEvents(events)
+	calls, err := slices.MapErr(callEvents, func(in *dal.CallEvent) (*pbconsole.Call, error) {
+		call := callEventToCall(*in)
+		return &call, nil
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	return connect.NewResponse(&pbconsole.GetCallsResponse{
-		Calls: convertModuleCalls(calls[schema.VerbRef{
-			Module: req.Msg.Module,
-			Name:   req.Msg.Verb,
-		}]),
+		Calls: calls,
 	}), nil
 }
 
@@ -92,13 +98,22 @@ func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	calls, err := c.dal.GetRequestCalls(ctx, requestKey)
+
+	events, err := c.dal.QueryEvents(ctx, time.Time{}, time.Now(), dal.FilterRequests(requestKey))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
+	callEvents := filterCallEvents(events)
+	calls, err := slices.MapErr(callEvents, func(in *dal.CallEvent) (*pbconsole.Call, error) {
+		call := callEventToCall(*in)
+		return &call, nil
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	return connect.NewResponse(&pbconsole.GetRequestCallsResponse{
-		Calls: convertModuleCalls(calls),
+		Calls: calls,
 	}), nil
 }
 
@@ -133,26 +148,29 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 
 			switch event := timelineEvent.(type) {
 			case *dal.CallEvent:
+				call := callEventToCall(*event)
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
 					Entry: &pbconsole.StreamTimelineResponse_Call{
-						Call: callEventToCall(*event),
+						Call: &call,
 					},
 					More: more,
 				})
 			case *dal.LogEvent:
+				log := logEventToLogEntry(*event)
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
 					Entry: &pbconsole.StreamTimelineResponse_Log{
-						Log: logEventToLogEntry(*event),
+						Log: &log,
 					},
 					More: more,
 				})
 			case *dal.DeploymentEvent:
+				deployment := deploymentEventToDeployment(*event)
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
 					Entry: &pbconsole.StreamTimelineResponse_Deployment{
-						Deployment: deploymentEventToDeployment(*event),
+						Deployment: &deployment,
 					},
 					More: more,
 				})
@@ -228,11 +246,11 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 	}
 }
 
-func convertModuleCalls(calls []dal.CallEvent) []*pbconsole.Call {
+func convertModuleCalls(calls []dal.CallEvent) []pbconsole.Call {
 	return slices.Map(calls, callEventToCall)
 }
 
-func callEventToCall(event dal.CallEvent) *pbconsole.Call {
+func callEventToCall(event dal.CallEvent) pbconsole.Call {
 	var requestKey *string
 	if r, ok := event.RequestKey.Get(); ok {
 		rstr := r.String()
@@ -242,7 +260,7 @@ func callEventToCall(event dal.CallEvent) *pbconsole.Call {
 	if sourceVerb, ok := event.SourceVerb.Get(); ok {
 		sourceVerbRef = sourceVerb.ToProto().(*pschema.VerbRef) //nolint:forcetypeassert
 	}
-	return &pbconsole.Call{
+	return pbconsole.Call{
 		RequestKey:     requestKey,
 		DeploymentName: event.DeploymentName.String(),
 		TimeStamp:      timestamppb.New(event.Time),
@@ -258,13 +276,13 @@ func callEventToCall(event dal.CallEvent) *pbconsole.Call {
 	}
 }
 
-func logEventToLogEntry(event dal.LogEvent) *pbconsole.LogEntry {
+func logEventToLogEntry(event dal.LogEvent) pbconsole.LogEntry {
 	var requestKey *string
 	if r, ok := event.RequestKey.Get(); ok {
 		rstr := r.String()
 		requestKey = &rstr
 	}
-	return &pbconsole.LogEntry{
+	return pbconsole.LogEntry{
 		DeploymentName: event.DeploymentName.String(),
 		RequestKey:     requestKey,
 		TimeStamp:      timestamppb.New(event.Time),
@@ -275,7 +293,7 @@ func logEventToLogEntry(event dal.LogEvent) *pbconsole.LogEntry {
 	}
 }
 
-func deploymentEventToDeployment(event dal.DeploymentEvent) *pbconsole.Deployment {
+func deploymentEventToDeployment(event dal.DeploymentEvent) pbconsole.Deployment {
 	var eventType pbconsole.DeploymentEventType
 	switch event.Type {
 	case dal.DeploymentCreated:
@@ -291,7 +309,7 @@ func deploymentEventToDeployment(event dal.DeploymentEvent) *pbconsole.Deploymen
 		rstr := r.String()
 		replaced = &rstr
 	}
-	return &pbconsole.Deployment{
+	return pbconsole.Deployment{
 		Name:        event.DeploymentName.String(),
 		Language:    event.Language,
 		ModuleName:  event.ModuleName,
@@ -299,6 +317,16 @@ func deploymentEventToDeployment(event dal.DeploymentEvent) *pbconsole.Deploymen
 		EventType:   eventType,
 		Replaced:    replaced,
 	}
+}
+
+func filterCallEvents(events []dal.Event) []*dal.CallEvent {
+	var filtered []*dal.CallEvent
+	for _, event := range events {
+		if call, ok := event.(*dal.CallEvent); ok {
+			filtered = append(filtered, call)
+		}
+	}
+	return filtered
 }
 
 func filterLogEvents(events []dal.Event) []*dal.LogEvent {
