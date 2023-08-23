@@ -2,10 +2,10 @@ package controller
 
 import (
 	"context"
-	"github.com/alecthomas/types"
 	"time"
 
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
