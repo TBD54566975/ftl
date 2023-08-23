@@ -23,8 +23,8 @@ export function ModuleDetails() {
 
   const handleVerbClicked = verb => {
     const tabId = [ selectedModule.name, verb.verb?.name ].join('.')
-    const existingTab = tabs.find(tab => tab.id === tabId)
-    if (existingTab) {
+    const existingTab = tabs.findIndex(tab => tab.id === tabId)
+    if (existingTab > 0) {
       setActiveTab(existingTab)
       return
     }
@@ -32,12 +32,11 @@ export function ModuleDetails() {
       id: [ selectedModule.name, verb.verb?.name ].join('.'),
       label: verb.verb?.name ?? 'Verb',
       type: TabType.Verb,
-      module: selectedModule,
-      verb: verb,
     }
-    setTabs(tabs => [ ...tabs, newTab ])
-    setActiveTab(newTab)
-    !searchParams.has(TabSearchParams.verb) && searchParams.set(TabSearchParams.verb, newTab.id)
+    const nextTabs = [ ...tabs, newTab ]
+    setTabs(nextTabs)
+    setActiveTab(nextTabs.length - 1)
+    !searchParams.has(TabSearchParams.active) && searchParams.set(TabSearchParams.active, newTab.id)
     navigate({ ...location, search: searchParams.toString() })
   }
   
@@ -64,7 +63,6 @@ export function ModuleDetails() {
               key={index}
               onClick={() =>{
                 handleVerbClicked(verb)
-                
               }}
               className='rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white text-center
             shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'

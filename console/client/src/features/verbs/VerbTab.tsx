@@ -1,17 +1,21 @@
+import React from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { syntaxTheme } from '../../utils/style.utils'
 import { getVerbCode } from './verb.utils'
 import { getCodeBlock } from '../../utils/data.utils'
 import { VerbForm } from './VerbForm'
 import { VerbCalls } from './VerbCalls'
-import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { modulesContext } from '../../providers/modules-provider'
 
 type Props = {
-  module?: Module | null
-  verb?: Verb | null
+  id: string
 }
 
-export const VerbTab: React.FC<Props> = ({ module, verb }) => {
+export const VerbTab: React.FC<Props> = ({ id }) => {
+  const [ moduleId, verbName ] = id.split('.')
+  const modules = React.useContext(modulesContext)
+  const module = modules.modules.find(module => module?.name === moduleId)
+  const verb = module?.verbs.find(v => v.verb?.name === verbName?.toLocaleLowerCase())
   const callData = module?.data.filter(data =>
     [ verb?.verb?.request?.name, verb?.verb?.response?.name ].includes(data.name)
   )

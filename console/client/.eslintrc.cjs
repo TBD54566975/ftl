@@ -77,6 +77,7 @@ module.exports = {
     '@typescript-eslint/ban-ts-comment': [ 2, {
       'ts-ignore': 'allow-with-description',
     } ],
+    '@typescript-eslint/no-unused-vars': [ 'warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' } ],
     /* End: JS/TS quality rules */
 
     /* START: Nested ternary specific rules*/
