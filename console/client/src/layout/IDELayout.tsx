@@ -1,20 +1,26 @@
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { useContext } from 'react'
+import React from 'react'
 import { ModuleDetails } from '../features/modules/ModuleDetails'
 import { ModulesList } from '../features/modules/ModulesList'
 import { Timeline } from '../features/timeline/Timeline'
 import { VerbTab } from '../features/verbs/VerbTab'
 import { SelectedModuleContext } from '../providers/selected-module-provider'
-import { TabType, TabsContext } from '../providers/tabs-provider'
+import { TabType, TabsContext, TabSearchParams } from '../providers/tabs-provider'
 import { headerColor, headerTextColor, panelColor } from '../utils/style.utils'
 import { SidePanel } from './SidePanel'
-
+import { RequestModal } from '../features/requests/RequestsModal'
+import { useSearchParams, useNavigate , useLocation } from 'react-router-dom'
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
-  const { selectedModule } = useContext(SelectedModuleContext)
-  const { tabs,activeTab, setActiveTab, setTabs } = useContext(TabsContext)
+  const { selectedModule } = React.useContext(SelectedModuleContext)
+  const { tabs,activeTab, setActiveTab, setTabs } = React.useContext(TabsContext)
+
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [ searchParams ] = useSearchParams()
+  
 
   const handleCloseTab = id => {
     if (activeTab === id && tabs.length > 1) {
@@ -54,14 +60,26 @@ export function IDELayout() {
             {tabs.map(tab => (
               <div key={tab.id} className='flex items-center mr-2 relative'>
                 <button
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() =>{
+                    setActiveTab(tab)
+                    if(tab.type === TabType.Timeline) {
+                      searchParams.delete(TabSearchParams.verb)
+                    } else {
+                      tab.id && searchParams.set(TabSearchParams.verb, tab.id)
+                    }
+                    navigate({ ...location, search: searchParams.toString() })
+                  }}
                   className={`px-4 py-2 rounded-t ${tab.id !== 'timeline' ? 'pr-8' : ''} ${activeTab === tab ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
                 >
                   {tab.label}
                 </button>
                 {tab.id !== 'timeline' && (
                   <button
-                    onClick={() => handleCloseTab(tab.id)}
+                    onClick={() => {
+                      handleCloseTab(tab.id)
+                      searchParams.get(TabSearchParams.verb) === tab.id && searchParams.delete(TabSearchParams.verb)
+                      navigate({ ...location, search: searchParams.toString() })
+                    }}
                     className='absolute right-0 mr-2 text-gray-400 hover:text-white'
                   >
                     <XMarkIcon className={`h-5 w-5`} />
@@ -79,6 +97,7 @@ export function IDELayout() {
         </div>
 
         <SidePanel />
+        <RequestModal />
       </div>
     </>
   )

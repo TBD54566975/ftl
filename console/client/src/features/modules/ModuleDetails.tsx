@@ -1,11 +1,15 @@
 import { useContext } from 'react'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
-import { TabType, TabsContext } from '../../providers/tabs-provider'
+import { TabType, TabsContext, TabSearchParams } from '../../providers/tabs-provider'
 import { textColor } from '../../utils/style.utils'
+import { useSearchParams, useNavigate , useLocation } from 'react-router-dom'
 
 export function ModuleDetails() {
   const { selectedModule } = useContext(SelectedModuleContext)
   const { tabs, setTabs, setActiveTab } = useContext(TabsContext)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [ searchParams ] = useSearchParams()
 
   if (!selectedModule) {
     return (
@@ -14,6 +18,8 @@ export function ModuleDetails() {
       </div>
     )
   }
+
+ 
 
   const handleVerbClicked = verb => {
     const tabId = [ selectedModule.name, verb.verb?.name ].join('.')
@@ -31,8 +37,10 @@ export function ModuleDetails() {
     }
     setTabs(tabs => [ ...tabs, newTab ])
     setActiveTab(newTab)
+    !searchParams.has(TabSearchParams.verb) && searchParams.set(TabSearchParams.verb, newTab.id)
+    navigate({ ...location, search: searchParams.toString() })
   }
-
+  
   return (
     <div className='flex-1 overflow-auto text-sm font-medium text-gray-500 dark:text-gray-400'>
       <div className='flex justify-between'>
@@ -54,7 +62,10 @@ export function ModuleDetails() {
           {selectedModule.verbs.map((verb, index) => (
             <div
               key={index}
-              onClick={() => handleVerbClicked(verb)}
+              onClick={() =>{
+                handleVerbClicked(verb)
+                
+              }}
               className='rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white text-center
             shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
             >
