@@ -1,14 +1,13 @@
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
 import { useContext } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { modulesContext } from '../../providers/modules-provider'
 import { getCodeBlock } from '../../utils/data.utils'
 import { classNames } from '../../utils/react.utils'
-import { getCalls, getVerbCode } from './verb.utils'
 import { VerbCalls } from './VerbCalls.tsx'
 import { VerbForm } from './VerbForm.tsx'
-import { syntaxTheme } from '../../utils/style.utils.ts'
+import { getCalls, getVerbCode } from './verb.utils'
 
 export default function VerbPage() {
   const { moduleId, id } = useParams()
@@ -57,24 +56,11 @@ export default function VerbPage() {
           </li>
         </ol>
       </nav>
-      <div className='text-sm pt-4'>
-        <SyntaxHighlighter language='go'
-          style={syntaxTheme()}
-        >
-          {getVerbCode(verb?.verb)}
-        </SyntaxHighlighter>
-      </div>
+      <CodeBlock code={getVerbCode(verb?.verb)} language='go' />
+
       <div className='pt-4'>
         {callData?.map((data, index) => (
-          <div key={index}
-            className='text-sm'
-          >
-            <SyntaxHighlighter language='go'
-              style={syntaxTheme()}
-            >
-              {getCodeBlock(data)}
-            </SyntaxHighlighter>
-          </div>
+          <CodeBlock key={index} code={getCodeBlock(data)} language='go' />
         ))}
       </div>
       <VerbForm

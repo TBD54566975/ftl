@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { CodeBlock } from '../../components/CodeBlock'
 import { useClient } from '../../hooks/use-client'
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { syntaxTheme } from '../../utils/style.utils'
 
 type Props = {
   module?: Module
@@ -94,13 +93,7 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
         </button>
       </form>
       {response && (
-        <div className='text-sm'>
-          <SyntaxHighlighter language='go'
-            style={syntaxTheme()}
-          >
-            {response}
-          </SyntaxHighlighter>
-        </div>
+        <CodeBlock code={response} language='go' />
       )}
       {error && (
         <div className='mt-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4' role='alert'>

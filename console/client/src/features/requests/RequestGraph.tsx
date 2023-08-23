@@ -21,17 +21,19 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStam
   const barColor = call.equals(selectedCall) ? 'bg-green-500' : 'bg-indigo-500'
 
   return (
-    <div className='relative my-1 h-4'>
-      <div
-        className={`absolute h-4 ${barColor} rounded-md`}
-        style={{
-          width: `${width}%`,
-          left: `${leftOffsetPercentage}%`,
-        }}
-        title={`Duration: ${call.duration}`}
-      />
-      <div className='absolute text-gray-900 dark:text-gray-300 right-0 top-1/2 transform -translate-y-1/2 text-xs pr-1'>
-        {durationInMillis}ms
+    <div className='relative my-1 h-4 flex' title={`${call.destinationVerbRef?.module} : ${call.destinationVerbRef?.name}`}>
+      <div className='flex-grow relative'>
+        <div
+          className={`absolute h-4 ${barColor} rounded-sm`}
+          style={{
+            width: `${width}%`,
+            left: `${leftOffsetPercentage}%`,
+          }}
+        />
+      </div>
+
+      <div className='text-gray-900 dark:text-gray-300 self-center text-xs pl-2'>
+        {`${durationInMillis}(ms)`}
       </div>
     </div>
   )

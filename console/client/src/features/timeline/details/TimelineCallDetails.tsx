@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { CodeBlock } from '../../../components/CodeBlock'
 import { useClient } from '../../../hooks/use-client'
 import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
 import { Call, StreamTimelineResponse } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration } from '../../../utils/date.utils'
-import { syntaxTheme, textColor } from '../../../utils/style.utils'
+import { textColor } from '../../../utils/style.utils'
 import { RequestGraph } from '../../requests/RequestGraph'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
@@ -36,34 +36,15 @@ export const TimelineCallDetails: React.FC<Props> = ({ entry, call }) => {
       </div>
 
       <h3 className='pt-4'>Request</h3>
-      <div className='text-sm'>
-        <SyntaxHighlighter language='json'
-          style={syntaxTheme()}
-          customStyle={{ fontSize: '12px' }}
-        >
-          {JSON.stringify(JSON.parse(call.request), null, 2)}
-        </SyntaxHighlighter>
-      </div>
+      <CodeBlock code={JSON.stringify(JSON.parse(call.request), null, 2)} language='json' />
+
       <h3 className='pt-4'>Response</h3>
-      <div className='text-sm'>
-        <SyntaxHighlighter language='json'
-          style={syntaxTheme()}
-          customStyle={{ fontSize: '12px' }}
-        >
-          {JSON.stringify(JSON.parse(call.response), null, 2)}
-        </SyntaxHighlighter>
-      </div>
+      <CodeBlock code={JSON.stringify(JSON.parse(call.response), null, 2)} language='json' />
+
       {call.error && (
         <>
           <h3 className='pt-4'>Error</h3>
-          <div className='text-sm'>
-            <SyntaxHighlighter language='json'
-              style={syntaxTheme()}
-              customStyle={{ fontSize: '12px' }}
-            >
-              {call.error}
-            </SyntaxHighlighter>
-          </div>
+          <CodeBlock code={call.error} language='json' />
         </>
       )}
 
