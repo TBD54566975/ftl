@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/errors"
 
 	"github.com/TBD54566975/ftl/examples/online-boutique/common"
+	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
 )
 
 var (
@@ -17,18 +18,12 @@ var (
 	database     = common.LoadDatabase[[]Product](databaseJSON)
 )
 
-type Money struct {
-	CurrencyCode string
-	Units        int
-	Nanos        int
-}
-
 type Product struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Picture     string `json:"picture"`
-	PriceUSD    Money  `json:"priceUsd"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Picture     string      `json:"picture"`
+	PriceUSD    money.Money `json:"priceUsd"`
 
 	// Categories such as "clothing" or "kitchen" that can be used to look up
 	// other related products.
