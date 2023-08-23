@@ -80,16 +80,8 @@ func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbco
 		return nil, errors.WithStack(err)
 	}
 
-	callEvents := filterCallEvents(events)
-	calls, err := slices.MapErr(callEvents, func(in *dal.CallEvent) (*pbconsole.Call, error) {
-		call := callEventToCall(*in)
-		return &call, nil
-	})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
 	return connect.NewResponse(&pbconsole.GetCallsResponse{
-		Calls: calls,
+		Calls: slices.Map(filterCallEvents(events), callEventToCall),
 	}), nil
 }
 
@@ -104,16 +96,8 @@ func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Reque
 		return nil, errors.WithStack(err)
 	}
 
-	callEvents := filterCallEvents(events)
-	calls, err := slices.MapErr(callEvents, func(in *dal.CallEvent) (*pbconsole.Call, error) {
-		call := callEventToCall(*in)
-		return &call, nil
-	})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
 	return connect.NewResponse(&pbconsole.GetRequestCallsResponse{
-		Calls: calls,
+		Calls: slices.Map(filterCallEvents(events), callEventToCall),
 	}), nil
 }
 
@@ -148,29 +132,26 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 
 			switch event := timelineEvent.(type) {
 			case *dal.CallEvent:
-				call := callEventToCall(*event)
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
 					Entry: &pbconsole.StreamTimelineResponse_Call{
-						Call: &call,
+						Call: callEventToCall(event),
 					},
 					More: more,
 				})
 			case *dal.LogEvent:
-				log := logEventToLogEntry(*event)
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
 					Entry: &pbconsole.StreamTimelineResponse_Log{
-						Log: &log,
+						Log: logEventToLogEntry(event),
 					},
 					More: more,
 				})
 			case *dal.DeploymentEvent:
-				deployment := deploymentEventToDeployment(*event)
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
 					Entry: &pbconsole.StreamTimelineResponse_Deployment{
-						Deployment: &deployment,
+						Deployment: deploymentEventToDeployment(event),
 					},
 					More: more,
 				})
@@ -246,11 +227,7 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 	}
 }
 
-func convertModuleCalls(calls []dal.CallEvent) []pbconsole.Call {
-	return slices.Map(calls, callEventToCall)
-}
-
-func callEventToCall(event dal.CallEvent) pbconsole.Call {
+func callEventToCall(event *dal.CallEvent) *pbconsole.Call {
 	var requestKey *string
 	if r, ok := event.RequestKey.Get(); ok {
 		rstr := r.String()
@@ -260,7 +237,7 @@ func callEventToCall(event dal.CallEvent) pbconsole.Call {
 	if sourceVerb, ok := event.SourceVerb.Get(); ok {
 		sourceVerbRef = sourceVerb.ToProto().(*pschema.VerbRef) //nolint:forcetypeassert
 	}
-	return pbconsole.Call{
+	return &pbconsole.Call{
 		RequestKey:     requestKey,
 		DeploymentName: event.DeploymentName.String(),
 		TimeStamp:      timestamppb.New(event.Time),
@@ -276,13 +253,13 @@ func callEventToCall(event dal.CallEvent) pbconsole.Call {
 	}
 }
 
-func logEventToLogEntry(event dal.LogEvent) pbconsole.LogEntry {
+func logEventToLogEntry(event *dal.LogEvent) *pbconsole.LogEntry {
 	var requestKey *string
 	if r, ok := event.RequestKey.Get(); ok {
 		rstr := r.String()
 		requestKey = &rstr
 	}
-	return pbconsole.LogEntry{
+	return &pbconsole.LogEntry{
 		DeploymentName: event.DeploymentName.String(),
 		RequestKey:     requestKey,
 		TimeStamp:      timestamppb.New(event.Time),
@@ -293,7 +270,7 @@ func logEventToLogEntry(event dal.LogEvent) pbconsole.LogEntry {
 	}
 }
 
-func deploymentEventToDeployment(event dal.DeploymentEvent) pbconsole.Deployment {
+func deploymentEventToDeployment(event *dal.DeploymentEvent) *pbconsole.Deployment {
 	var eventType pbconsole.DeploymentEventType
 	switch event.Type {
 	case dal.DeploymentCreated:
@@ -309,7 +286,7 @@ func deploymentEventToDeployment(event dal.DeploymentEvent) pbconsole.Deployment
 		rstr := r.String()
 		replaced = &rstr
 	}
-	return pbconsole.Deployment{
+	return &pbconsole.Deployment{
 		Name:        event.DeploymentName.String(),
 		Language:    event.Language,
 		ModuleName:  event.ModuleName,
