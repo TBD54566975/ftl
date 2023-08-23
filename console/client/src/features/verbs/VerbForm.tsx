@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { useClient } from '../../hooks/use-client'
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { syntaxTheme } from '../../utils/style.utils'
 
 type Props = {
   module?: Module
@@ -12,6 +14,7 @@ type Props = {
 export const VerbForm: React.FC<Props> = ({ module, verb }) => {
   const client = useClient(VerbService)
   const [ response, setResponse ] = useState<string | null>(null)
+  const [ error, setError ] = useState<string | null>(null)
 
   const callData = module?.data.filter(data =>
     [ verb?.verb?.request?.name, verb?.verb?.response?.name ].includes(data.name)
@@ -19,6 +22,9 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
 
   const handleSubmit = async event => {
     event.preventDefault()
+
+    setResponse(null)
+    setError(null)
 
     const formData = new FormData(event.target)
     // Convert the form data to a plain object (or however you want to send it)
@@ -33,28 +39,29 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
         module: module?.name,
       } as VerbRef
 
-      const obj = dataObject
-      const buffer = Buffer.from(JSON.stringify(obj))
+      const buffer = Buffer.from(JSON.stringify(dataObject))
       const uint8Array = new Uint8Array(buffer)
 
-      const response = await client.call({ verb: verbRef , body: uint8Array })
-      if (response.response.case === 'body') {
-        const jsonString = Buffer.from(response.response.value).toString('utf-8')
+      try {
+        const response = await client.call({ verb: verbRef, body: uint8Array })
+        if (response.response.case === 'body') {
+          const jsonString = Buffer.from(response.response.value).toString('utf-8')
 
-        setResponse(JSON.parse(jsonString))
+          setResponse(JSON.stringify(JSON.parse(jsonString), null, 2))
+        } else if (response.response.case === 'error') {
+          setError(response.response.value.message)
+        }
+      } catch (error) {
+        console.error('There was an error with the request:', error)
       }
-
     } catch (error) {
       console.error('There was an error with the request:', error)
     }
   }
 
-
   return (
     <>
-      <form onSubmit={handleSubmit}
-        className='rounded-lg'
-      >
+      <form onSubmit={handleSubmit} className='rounded-lg'>
         {callData?.filter(d => d.name === verb?.verb?.request?.name).map((data, dataIndex) => (
           <div key={dataIndex}
             className='mb-4'
@@ -82,11 +89,22 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
         ))}
         <button type='submit'
           className='bg-indigo-700 text-white px-4 py-2 rounded hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
-        >Submit</button>
+        >
+          Submit
+        </button>
       </form>
       {response && (
-        <div className='mt-4 p-4'>
-          <pre className='whitespace-pre-wrap'>{JSON.stringify(response, null, 2)}</pre>
+        <div className='text-sm'>
+          <SyntaxHighlighter language='go'
+            style={syntaxTheme()}
+          >
+            {response}
+          </SyntaxHighlighter>
+        </div>
+      )}
+      {error && (
+        <div className='mt-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4' role='alert'>
+          {error}
         </div>
       )}
     </>
