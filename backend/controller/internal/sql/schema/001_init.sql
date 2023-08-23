@@ -47,6 +47,7 @@ CREATE TABLE deployments
     min_replicas INT            NOT NULL DEFAULT 0
 );
 
+CREATE UNIQUE INDEX deployments_name_idx ON deployments (name);
 CREATE INDEX deployments_module_id_idx ON deployments (module_id);
 -- Only allow one deployment per module.
 CREATE UNIQUE INDEX deployments_unique_idx ON deployments (module_id)
@@ -66,6 +67,8 @@ CREATE TABLE artefacts
     digest     BYTEA UNIQUE NOT NULL,
     content    BYTEA        NOT NULL
 );
+
+CREATE UNIQUE INDEX artefacts_digest_idx ON artefacts (digest);
 
 CREATE TABLE deployment_artefacts
 (
@@ -106,6 +109,7 @@ CREATE TABLE runners
     labels              JSONB        NOT NULL DEFAULT '{}'
 );
 
+CREATE UNIQUE INDEX runners_key ON runners (key);
 CREATE UNIQUE INDEX runners_endpoint_not_dead_idx ON runners (endpoint) WHERE state <> 'dead';
 CREATE INDEX runners_state_idx ON runners (state);
 CREATE INDEX runners_deployment_id_idx ON runners (deployment_id);
@@ -131,6 +135,8 @@ CREATE TABLE ingress_requests
     key         UUID UNIQUE NOT NULL,
     source_addr VARCHAR     NOT NULL
 );
+
+CREATE UNIQUE INDEX ingress_requests_key_idx ON ingress_requests (key);
 
 CREATE TYPE controller_state AS ENUM (
     'live',

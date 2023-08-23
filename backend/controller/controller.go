@@ -8,13 +8,13 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
@@ -101,15 +101,18 @@ type Service struct {
 	key                          model.ControllerKey
 	deploymentLogsSink           *deploymentLogsSink
 
-	clientsMu sync.Mutex
 	// Map from endpoint to client.
-	clients map[string]clients
+	clients *lru.Cache[string, clients]
 }
 
 func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 	key := config.Key
 	if config.Key.ULID() == (ulid.ULID{}) {
 		key = model.NewControllerKey()
+	}
+	clientCache, err := lru.New[string, clients](1024)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create client cache")
 	}
 	svc := &Service{
 		dal:                          dal,
@@ -118,7 +121,7 @@ func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 		artefactChunkSize:            config.ArtefactChunkSize,
 		key:                          key,
 		deploymentLogsSink:           newDeploymentLogsSink(ctx, dal),
-		clients:                      map[string]clients{},
+		clients:                      clientCache,
 	}
 	if config.Advertise.String() == "" {
 		config.Advertise = config.Bind
@@ -619,9 +622,7 @@ func (s *Service) getDeployment(ctx context.Context, name string) (*model.Deploy
 
 // Return or create the RunnerService and VerbService clients for a Runner endpoint.
 func (s *Service) clientsForEndpoint(endpoint string) clients {
-	s.clientsMu.Lock()
-	defer s.clientsMu.Unlock()
-	client, ok := s.clients[endpoint]
+	client, ok := s.clients.Get(endpoint)
 	if ok {
 		return client
 	}
@@ -629,7 +630,7 @@ func (s *Service) clientsForEndpoint(endpoint string) clients {
 		runner: rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
 		verb:   rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
 	}
-	s.clients[endpoint] = client
+	s.clients.Add(endpoint, client)
 	return client
 }
 
