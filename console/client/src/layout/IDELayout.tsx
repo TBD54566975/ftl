@@ -130,7 +130,7 @@ export function IDELayout() {
                   const detail = searchParams.get('detail')
                   return i === 0
                     ? <Tab.Panel key={id}><Timeline detail={detail} /></Tab.Panel>
-                    :  <Tab.Panel key={id}><VerbTab id={id} /></Tab.Panel>
+                    : <Tab.Panel key={id}><VerbTab id={id} /></Tab.Panel>
                 })}
               </Tab.Panels>
             </div>
