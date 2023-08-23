@@ -33,7 +33,7 @@ export function IDELayout() {
         {/* Left Column */}
         <div className='flex flex-col w-1/4 h-full overflow-hidden'>
           {/* Upper Section */}
-          <div className={`flex-1 flex flex-col ${panelColor} ml-2 mt-2 rounded`}>
+          <div className={`flex-1 flex flex-col h-1/3 ${panelColor} ml-2 mt-2 rounded`}>
             <div className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}>Modules</div>
             <div className='flex-1 p-4 overflow-y-auto'>
               <ModulesList />
@@ -41,7 +41,7 @@ export function IDELayout() {
           </div>
 
           {/* Lower Section */}
-          <div className={`flex-1 flex flex-col max-h-80 ${panelColor} ml-2 mt-2 mb-2 rounded`}>
+          <div className={`flex-1 flex flex-col ${panelColor} ml-2 mt-2 mb-2 rounded`}>
             <div className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}>Details</div>
             <div className='flex-1 p-4 overflow-y-auto'>
               <ModuleDetails />
