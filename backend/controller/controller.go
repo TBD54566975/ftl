@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
@@ -674,7 +675,9 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 		if err != nil {
 			logger.Errorf(err, "Failed to get deployments needing reconciliation")
 		} else {
+			wg, ctx := concurrency.New(ctx, concurrency.WithConcurrencyLimit(4)) //nolint:govet
 			for _, reconcile := range reconciliation {
+				reconcile := reconcile
 				deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
 				deploymentLogger.Infof("Reconciling %s", reconcile.Deployment)
 				deployment := model.Deployment{
@@ -685,23 +688,30 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 				require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
 				if require > 0 {
 					deploymentLogger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
-					if err := s.deploy(ctx, deployment); err != nil {
-						deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
-					} else {
-						deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
-					}
+					wg.Go(func(ctx context.Context) error {
+						if err := s.deploy(ctx, deployment); err != nil {
+							deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
+						} else {
+							deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
+						}
+						return nil
+					})
 				} else if require < 0 {
 					deploymentLogger.Infof("Need %d less runners for %s", -require, reconcile.Deployment)
-					ok, err := s.terminateRandomRunner(ctx, deployment.Name)
-					if err != nil {
-						deploymentLogger.Warnf("Failed to terminate runner: %s", err)
-					} else if ok {
-						deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
-					} else {
-						deploymentLogger.Warnf("Failed to terminate runner: no runners found")
-					}
+					wg.Go(func(ctx context.Context) error {
+						ok, err := s.terminateRandomRunner(ctx, deployment.Name)
+						if err != nil {
+							deploymentLogger.Warnf("Failed to terminate runner: %s", err)
+						} else if ok {
+							deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
+						} else {
+							deploymentLogger.Warnf("Failed to terminate runner: no runners found")
+						}
+						return nil
+					})
 				}
 			}
+			_ = wg.Wait()
 		}
 
 		select {
