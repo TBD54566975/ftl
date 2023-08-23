@@ -61,7 +61,7 @@ export const TimelineCallDetails: React.FC<Props> = ({ entry, call }) => {
               style={syntaxTheme()}
               customStyle={{ fontSize: '12px' }}
             >
-              {JSON.stringify(JSON.parse(call.error), null, 2)}
+              {call.error}
             </SyntaxHighlighter>
           </div>
         </>

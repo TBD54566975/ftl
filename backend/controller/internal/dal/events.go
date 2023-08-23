@@ -212,6 +212,8 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 		q += ")\n"
 	}
 
+	q += " ORDER BY time_stamp ASC"
+
 	// Issue query.
 	rows, err := d.db.Conn().Query(ctx, q, args...)
 	if err != nil {

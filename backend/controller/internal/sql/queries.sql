@@ -309,7 +309,8 @@ WHERE CASE
           ELSE
               TRUE
     END
-  AND type = 'call';
+  AND type = 'call'
+ORDER BY e.time_stamp;
 
 -- name: CreateIngressRequest :exec
 INSERT INTO ingress_requests (key, source_addr)
