@@ -292,6 +292,7 @@ WHERE CASE
               TRUE
     END
   AND type = 'call'
+ORDER BY e.time_stamp
 `
 
 type GetCallsRow struct {

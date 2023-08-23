@@ -1,5 +1,5 @@
-import { Duration, Timestamp } from '@bufbuild/protobuf'
-import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Duration, Timestamp } from '@bufbuild/protobuf';
+import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb';
 
 interface CallBlockProps {
   call: Call;
@@ -15,7 +15,7 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStam
 
   const callTime = call.timeStamp?.toDate() ?? new Date()
   const initialTime = firstTimeStamp?.toDate() ?? new Date()
-  const offsetInMillis = initialTime.getTime() - callTime.getTime()
+  const offsetInMillis = callTime.getTime() - initialTime.getTime()
   const leftOffsetPercentage = (offsetInMillis / totalDurationMillis) * 100
 
   const barColor = call.equals(selectedCall) ? 'bg-green-500' : 'bg-indigo-500'
@@ -47,16 +47,15 @@ export const RequestGraph: React.FC<Props> = ({ calls, call }) => {
     return <></>
   }
 
-  const reversedCalls = calls.slice().reverse()
-  const firstTimeStamp = reversedCalls[0].timeStamp
-  const firstDuration = reversedCalls[0].duration
+  const firstTimeStamp = calls[0].timeStamp
+  const firstDuration = calls[0].duration
   if (firstTimeStamp === undefined || firstDuration === undefined) {
     return <></>
   }
 
   return (
     <div className='flex flex-col'>
-      {reversedCalls.map((c, index) => (
+      {calls.map((c, index) => (
         <div key={index}
           className='flex'
         >
