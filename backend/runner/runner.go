@@ -26,7 +26,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/plugin"
-	rpc2 "github.com/TBD54566975/ftl/backend/common/rpc"
+	"github.com/TBD54566975/ftl/backend/common/rpc"
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/common/unstoppable"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -56,8 +56,8 @@ func Start(ctx context.Context, config Config) error {
 	}
 	pid := os.Getpid()
 
-	client := rpc2.Dial(ftlv1connect.NewVerbServiceClient, config.ControllerEndpoint.String(), log.Error)
-	ctx = rpc2.ContextWithClient(ctx, client)
+	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.ControllerEndpoint.String(), log.Error)
+	ctx = rpc.ContextWithClient(ctx, client)
 
 	logger := log.FromContext(ctx).Sub(map[string]string{"runner": config.Key.String()})
 	logger.Infof("Starting FTL Runner")
@@ -69,7 +69,7 @@ func Start(ctx context.Context, config Config) error {
 	logger.Infof("Using FTL endpoint: %s", config.ControllerEndpoint)
 	logger.Infof("Listening on %s", config.Bind)
 
-	controllerClient := rpc2.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
+	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
 	key := config.Key
 	if key == (model.RunnerKey{}) {
@@ -96,12 +96,12 @@ func Start(ctx context.Context, config Config) error {
 	}
 	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 
-	go rpc2.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
-	go rpc2.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
+	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
+	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
 
-	return rpc2.Serve(ctx, config.Bind,
-		rpc2.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
-		rpc2.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
+	return rpc.Serve(ctx, config.Bind,
+		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
+		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
 	)
 }
 
@@ -380,7 +380,7 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 
 func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.DeploymentName) *log.Logger {
 	attrs := map[string]string{"deployment": deploymentName.String()}
-	if requestKey, ok, _ := rpc2.RequestKeyFromContext(ctx); ok {
+	if requestKey, ok, _ := rpc.RequestKeyFromContext(ctx); ok {
 		attrs["request"] = requestKey.String()
 	}
 
