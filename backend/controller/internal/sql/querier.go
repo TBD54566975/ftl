@@ -27,7 +27,6 @@ type Querier interface {
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
-	GetCalls(ctx context.Context, requestKey sqltypes.NullKey, destModule []string) ([]GetCallsRow, error)
 	GetControllers(ctx context.Context, all bool) ([]Controller, error)
 	GetDeployment(ctx context.Context, name model.DeploymentName) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.

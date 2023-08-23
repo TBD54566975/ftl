@@ -879,43 +879,6 @@ func (d *DAL) InsertDeploymentEvent(ctx context.Context, deployment *DeploymentE
 	})))
 }
 
-func (d *DAL) GetModuleCalls(ctx context.Context, modules []string) (map[schema.VerbRef][]CallEvent, error) {
-	calls, err := d.db.GetCalls(ctx, sqltypes.NoneKey(), modules)
-	if err != nil {
-		return nil, errors.WithStack(translatePGError(err))
-	}
-
-	out := map[schema.VerbRef][]CallEvent{}
-	for _, call := range calls {
-		entry, err := callRowToEntry(call)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		key := schema.VerbRef{
-			Module: call.DestModule.MustGet(),
-			Name:   call.DestVerb.MustGet(),
-		}
-		out[key] = append(out[key], entry)
-	}
-	return out, nil
-}
-
-func (d *DAL) GetRequestCalls(ctx context.Context, requestKey model.IngressRequestKey) ([]CallEvent, error) {
-	calls, err := d.db.GetCalls(ctx, sqltypes.SomeKey(sqltypes.Key(requestKey)), nil)
-	if err != nil {
-		return nil, errors.WithStack(translatePGError(err))
-	}
-	var out []CallEvent
-	for _, call := range calls {
-		entry, err := callRowToEntry(call)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		out = append(out, entry)
-	}
-	return out, nil
-}
-
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
 }
@@ -961,35 +924,4 @@ func translatePGError(err error) error {
 		return ErrNotFound
 	}
 	return err
-}
-
-func callRowToEntry(call sql.GetCallsRow) (CallEvent, error) {
-	var event eventCallJSON
-	if err := json.Unmarshal(call.Payload, &event); err != nil {
-		return CallEvent{}, errors.Wrap(err, "invalid call event payload")
-	}
-	var sourceVerb types.Option[schema.VerbRef]
-	sourceModule, smok := call.SourceModule.Get()
-	sourceVerbName, svok := call.SourceVerb.Get()
-	if smok && svok {
-		sourceVerb = types.Some(schema.VerbRef{
-			Module: sourceModule,
-			Name:   sourceVerbName,
-		})
-	}
-	entry := CallEvent{
-		DeploymentName: call.DeploymentName,
-		RequestKey:     types.Some(model.IngressRequestKey(call.RequestKey)),
-		Time:           call.TimeStamp,
-		SourceVerb:     sourceVerb,
-		DestVerb: schema.VerbRef{
-			Module: call.DestModule.MustGet(),
-			Name:   call.DestVerb.MustGet(),
-		},
-		Duration: time.Duration(event.DurationMS) * time.Millisecond,
-		Request:  event.Request,
-		Response: event.Response,
-		Error:    event.Error,
-	}
-	return entry, nil
 }
