@@ -10,7 +10,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/examples/online-boutique/common"
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/productcatalog"
+	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
 )
 
 var (
@@ -31,21 +31,21 @@ func GetSupportedCurrencies(ctx context.Context, req GetSupportedCurrenciesReque
 	return GetSupportedCurrenciesResponse{CurrencyCodes: maps.Keys(database)}, nil
 }
 
-type CurrencyConversionRequest struct {
-	From   productcatalog.Money
+type ConvertRequest struct {
+	From   money.Money
 	ToCode string
 }
 
 //ftl:verb
-func Convert(ctx context.Context, req CurrencyConversionRequest) (productcatalog.Money, error) {
+func Convert(ctx context.Context, req ConvertRequest) (money.Money, error) {
 	from := req.From
 	fromRate, ok := database[from.CurrencyCode]
 	if !ok {
-		return productcatalog.Money{}, fmt.Errorf("unknown origin currency %q", req.From.CurrencyCode)
+		return money.Money{}, fmt.Errorf("unknown origin currency %q", req.From.CurrencyCode)
 	}
 	toRate, ok := database[req.ToCode]
 	if !ok {
-		return productcatalog.Money{}, fmt.Errorf("unknown destination currency %q", req.ToCode)
+		return money.Money{}, fmt.Errorf("unknown destination currency %q", req.ToCode)
 	}
 	euros := carry(float64(from.Units)/fromRate, float64(from.Nanos)/fromRate)
 	to := carry(float64(euros.Units)*toRate, float64(euros.Nanos)*toRate)
@@ -54,12 +54,12 @@ func Convert(ctx context.Context, req CurrencyConversionRequest) (productcatalog
 }
 
 // carry is a helper function that handles decimal/fractional carrying.
-func carry(units float64, nanos float64) productcatalog.Money {
+func carry(units float64, nanos float64) money.Money {
 	const fractionSize = 1000000000 // 1B
 	nanos += math.Mod(units, 1.0) * fractionSize
 	units = math.Floor(units) + math.Floor(nanos/fractionSize)
 	nanos = math.Mod(nanos, fractionSize)
-	return productcatalog.Money{
+	return money.Money{
 		Units: int(units),
 		Nanos: int(nanos),
 	}
