@@ -1,12 +1,9 @@
 import React from 'react'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { syntaxTheme } from '../../utils/style.utils'
-import { getVerbCode } from './verb.utils'
-import { getCodeBlock } from '../../utils/data.utils'
-import { VerbForm } from './VerbForm'
+import { CodeBlock } from '../../components/CodeBlock'
 import { VerbCalls } from './VerbCalls'
+import { VerbForm } from './VerbForm'
+import { getVerbCode } from './verb.utils'
 import { modulesContext } from '../../providers/modules-provider'
-
 type Props = {
   id: string
 }
@@ -27,24 +24,11 @@ export const VerbTab: React.FC<Props> = ({ id }) => {
   return (
     <div className='min-w-0 flex-auto p-4'>
       <VerbForm module={module} verb={verb} />
-      <div className='text-sm pt-4'>
-        <SyntaxHighlighter language='go'
-          style={syntaxTheme()}
-        >
-          {getVerbCode(verb?.verb)}
-        </SyntaxHighlighter>
-      </div>
+      <CodeBlock code={getVerbCode(verb?.verb)} language='go' />
+
       <div className='pt-4'>
         {callData?.map((data, index) => (
-          <div key={index}
-            className='text-sm'
-          >
-            <SyntaxHighlighter language='go'
-              style={syntaxTheme()}
-            >
-              {getCodeBlock(data)}
-            </SyntaxHighlighter>
-          </div>
+          <CodeBlock key={index} code={getVerbCode(data)} language='go' />
         ))}
       </div>
 

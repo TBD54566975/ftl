@@ -271,69 +271,6 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	return items, nil
 }
 
-const getCalls = `-- name: GetCalls :many
-SELECT d.name         AS deployment_name,
-       ir.key         AS request_key,
-       e.custom_key_1 AS source_module,
-       e.custom_key_2 AS source_verb,
-       e.custom_key_3 AS dest_module,
-       e.custom_key_4 AS dest_verb,
-       e.payload      AS payload,
-       e.time_stamp   AS time_stamp
-FROM events e
-         INNER JOIN deployments d ON e.deployment_id = d.id
-         INNER JOIN ingress_requests ir ON e.request_id = ir.id
-WHERE CASE
-          WHEN $1::UUID IS NOT NULL
-              THEN ir.key = $1::UUID
-          WHEN $2::TEXT[] IS NOT NULL
-              THEN e.custom_key_3 = ANY ($2::TEXT[])
-          ELSE
-              TRUE
-    END
-  AND type = 'call'
-`
-
-type GetCallsRow struct {
-	DeploymentName model.DeploymentName
-	RequestKey     sqltypes.Key
-	SourceModule   types.Option[string]
-	SourceVerb     types.Option[string]
-	DestModule     types.Option[string]
-	DestVerb       types.Option[string]
-	Payload        json.RawMessage
-	TimeStamp      time.Time
-}
-
-func (q *Queries) GetCalls(ctx context.Context, requestKey sqltypes.NullKey, destModule []string) ([]GetCallsRow, error) {
-	rows, err := q.db.Query(ctx, getCalls, requestKey, destModule)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetCallsRow
-	for rows.Next() {
-		var i GetCallsRow
-		if err := rows.Scan(
-			&i.DeploymentName,
-			&i.RequestKey,
-			&i.SourceModule,
-			&i.SourceVerb,
-			&i.DestModule,
-			&i.DestVerb,
-			&i.Payload,
-			&i.TimeStamp,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getControllers = `-- name: GetControllers :many
 SELECT id, key, created, last_seen, state, endpoint
 FROM controller c

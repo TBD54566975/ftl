@@ -31,7 +31,6 @@ type CLI struct {
 	Update   updateCmd   `cmd:"" help:"Update a deployment."`
 	Kill     killCmd     `cmd:"" help:"Kill a deployment."`
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
-	Go       goCmd       `cmd:"" help:"Commands specific to Go modules."`
 	Deploy   deployCmd   `cmd:"" help:"Create a new deployment."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 }

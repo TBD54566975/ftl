@@ -1,5 +1,3 @@
-import { atomDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
-
 export const bgColor = 'dark:bg-gray-800 bg-slate-200'
 export const panelColor = 'dark:bg-slate-900 bg-white'
 export const sidePanelColor = 'dark:bg-slate-800 bg-white'
@@ -35,8 +33,4 @@ export const logLevelBadge = {
   9: 'text-green-600 bg-green-400/30 dark:text-green-300 dark:bg-green-700/10',
   13: 'text-yellow-400 bg-yellow-400/10 dark:text-yellow-300 dark:bg-yellow-600/10',
   17: 'text-red-500 bg-red-500/10 dark:text-red-400 dark:bg-red-700/10',
-}
-
-export function syntaxTheme() {
-  return document.documentElement.classList.contains('dark') ? atomDark : oneLight
 }

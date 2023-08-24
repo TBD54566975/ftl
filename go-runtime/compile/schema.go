@@ -306,7 +306,7 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 		f := s.Field(i)
 		ft, err := parseType(pctx, node, f.Type())
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, errors.Wrapf(err, "field %s", f.Name())
 		}
 		out.Fields = append(out.Fields, &schema.Field{
 			Pos:  goPosToSchemaPos(node.Pos()),
@@ -355,7 +355,7 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		return parseSlice(pctx, node, underlying)
 
 	default:
-		return nil, errors.Errorf("unsupported type %s", node)
+		return nil, errors.Errorf("%s: unsupported type %T", goPosToSchemaPos(node.Pos()), node)
 	}
 }
 

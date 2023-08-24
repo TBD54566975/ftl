@@ -49,7 +49,7 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 	}
 
 	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{
-		Time:           time.Now(),
+		Time:           call.startTime,
 		DeploymentName: call.deploymentName,
 		RequestKey:     types.Some(call.requestKey),
 		Duration:       time.Since(call.startTime),

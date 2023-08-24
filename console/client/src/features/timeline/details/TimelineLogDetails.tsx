@@ -1,7 +1,7 @@
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { CodeBlock } from '../../../components/CodeBlock'
 import { LogEntry, StreamTimelineResponse } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { classNames } from '../../../utils/react.utils'
-import { logLevelBadge, logLevelText, syntaxTheme, textColor } from '../../../utils/style.utils'
+import { logLevelBadge, logLevelText, textColor } from '../../../utils/style.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 type Props = {
@@ -20,12 +20,7 @@ export const TimelineLogDetails: React.FC<Props> = ({ entry, log }) => {
       </div>
 
       <h2 className='pt-4 text-sm'>Attributes</h2>
-      <SyntaxHighlighter language='json'
-        style={syntaxTheme()}
-        customStyle={{ fontSize: '12px' }}
-      >
-        {JSON.stringify(log.attributes, null, 2)}
-      </SyntaxHighlighter>
+      <CodeBlock code={JSON.stringify(log.attributes, null, 2)} language='json' />
 
       <div className='pt-2 text-gray-500 dark:text-gray-400'>
         <div className='flex pt-2 justify-between'>
