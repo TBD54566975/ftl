@@ -1447,6 +1447,11 @@ export class StatusResponse extends Message<StatusResponse> {
    */
   ingressRoutes: StatusResponse_IngressRoute[] = [];
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Route routes = 5;
+   */
+  routes: StatusResponse_Route[] = [];
+
   constructor(data?: PartialMessage<StatusResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1459,6 +1464,7 @@ export class StatusResponse extends Message<StatusResponse> {
     { no: 2, name: "runners", kind: "message", T: StatusResponse_Runner, repeated: true },
     { no: 3, name: "deployments", kind: "message", T: StatusResponse_Deployment, repeated: true },
     { no: 4, name: "ingress_routes", kind: "message", T: StatusResponse_IngressRoute, repeated: true },
+    { no: 5, name: "routes", kind: "message", T: StatusResponse_Route, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse {
@@ -1671,22 +1677,17 @@ export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressR
   deploymentName = "";
 
   /**
-   * @generated from field: string module = 2;
+   * @generated from field: xyz.block.ftl.v1.schema.VerbRef verb = 2;
    */
-  module = "";
+  verb?: VerbRef;
 
   /**
-   * @generated from field: string verb = 3;
-   */
-  verb = "";
-
-  /**
-   * @generated from field: string method = 4;
+   * @generated from field: string method = 3;
    */
   method = "";
 
   /**
-   * @generated from field: string path = 5;
+   * @generated from field: string path = 4;
    */
   path = "";
 
@@ -1699,10 +1700,9 @@ export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressR
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse.IngressRoute";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "verb", kind: "message", T: VerbRef },
+    { no: 3, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_IngressRoute {
@@ -1719,6 +1719,61 @@ export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressR
 
   static equals(a: StatusResponse_IngressRoute | PlainMessage<StatusResponse_IngressRoute> | undefined, b: StatusResponse_IngressRoute | PlainMessage<StatusResponse_IngressRoute> | undefined): boolean {
     return proto3.util.equals(StatusResponse_IngressRoute, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.StatusResponse.Route
+ */
+export class StatusResponse_Route extends Message<StatusResponse_Route> {
+  /**
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  /**
+   * @generated from field: string runner = 2;
+   */
+  runner = "";
+
+  /**
+   * @generated from field: string deployment = 3;
+   */
+  deployment = "";
+
+  /**
+   * @generated from field: string endpoint = 4;
+   */
+  endpoint = "";
+
+  constructor(data?: PartialMessage<StatusResponse_Route>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.Route";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "runner", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Route {
+    return new StatusResponse_Route().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_Route {
+    return new StatusResponse_Route().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_Route {
+    return new StatusResponse_Route().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse_Route | PlainMessage<StatusResponse_Route> | undefined, b: StatusResponse_Route | PlainMessage<StatusResponse_Route> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_Route, a, b);
   }
 }
 

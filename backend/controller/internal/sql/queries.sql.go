@@ -803,8 +803,8 @@ SELECT endpoint, r.key AS runner_key, r.module_name, d.name deployment_name
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
-    AND cardinality($1::TEXT[]) = 0
-   OR module_name = ANY ($1::TEXT[])
+  AND (COALESCE(cardinality($1::TEXT[]), 0) = 0
+    OR module_name = ANY ($1::TEXT[]))
 `
 
 type GetRoutingTableRow struct {
