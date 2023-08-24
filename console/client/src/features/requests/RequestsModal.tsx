@@ -1,12 +1,11 @@
+import { Dialog, Transition } from '@headlessui/react'
+import { ChevronRightIcon } from '@heroicons/react/20/solid'
 import React from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
-import {  useSearchParams, useNavigate , useLocation } from 'react-router-dom'
-import { Dialog, Transition } from '@headlessui/react'
-import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import { RequestGraph } from './RequestGraph.tsx'
 
 export function RequestModal() {
   const navigate = useNavigate()
@@ -39,7 +38,7 @@ export function RequestModal() {
       show={isOpen}
       as={React.Fragment}
     >
-      <Dialog 
+      <Dialog
         onClose={handleClose}
         as='div'
         className='relative z-10'
@@ -92,7 +91,7 @@ export function RequestModal() {
                       </div>
                     </li>
                   </ol>
-                 
+
                 </Dialog.Title>
                 <div className='min-w-0 flex-auto p-8'>
                   <table className='mt-6 w-full text-left'>
@@ -187,13 +186,9 @@ export function RequestModal() {
                       ))}
                     </tbody>
                   </table>
-                  <div>Graph</div>
-                  <div className='pt-4'>
-                    <RequestGraph calls={calls} />
-                  </div>
                 </div>
               </Dialog.Panel>
-      
+
             </Transition.Child>
           </div>
         </div>

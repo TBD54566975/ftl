@@ -1,8 +1,8 @@
 import { useContext } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
-import { TabType, TabsContext, TabSearchParams } from '../../providers/tabs-provider'
+import { TabSearchParams, TabType, TabsContext } from '../../providers/tabs-provider'
 import { textColor } from '../../utils/style.utils'
-import { useSearchParams, useNavigate , useLocation } from 'react-router-dom'
 
 export function ModuleDetails() {
   const { selectedModule } = useContext(SelectedModuleContext)
@@ -36,7 +36,7 @@ export function ModuleDetails() {
     searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id)
     navigate({ ...location, search: searchParams.toString() })
   }
-  
+
   return (
     <div className='flex-1 overflow-auto text-sm font-medium text-gray-500 dark:text-gray-400'>
       <div className='flex justify-between'>
@@ -76,7 +76,7 @@ export function ModuleDetails() {
           <ul className='list-none ml-4'>
             {selectedModule.data.map((data, index) => (
               <li key={index} className={`${textColor}`}>
-                <code>{data.name}</code>
+                <code>{data.data?.name}</code>
               </li>
             ))}
           </ul>

@@ -45,18 +45,24 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
 		var verbs []*pbconsole.Verb
-		var data []*pschema.Data
+		var data []*pbconsole.Data
 
 		for _, decl := range deployment.Schema.Decls {
 			switch decl := decl.(type) {
 			case *schema.Verb:
 				//nolint:forcetypeassert
+				v := decl.ToProto().(*pschema.Verb)
 				verbs = append(verbs, &pbconsole.Verb{
-					Verb: decl.ToProto().(*pschema.Verb),
+					Verb:   v,
+					Schema: schema.VerbToSchema(v).String(),
 				})
 			case *schema.Data:
 				//nolint:forcetypeassert
-				data = append(data, decl.ToProto().(*pschema.Data))
+				d := decl.ToProto().(*pschema.Data)
+				data = append(data, &pbconsole.Data{
+					Data:   d,
+					Schema: schema.DataToSchema(d).String(),
+				})
 			}
 		}
 
@@ -75,7 +81,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 }
 
 func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbconsole.GetCallsRequest]) (*connect.Response[pbconsole.GetCallsResponse], error) {
-	events, err := c.dal.QueryEvents(ctx, time.Time{}, time.Now(), dal.FilterCall(types.None[string](), req.Msg.Module))
+	events, err := c.dal.QueryEvents(ctx, time.Time{}, time.Now(), dal.FilterCall(types.None[string](), req.Msg.Module, types.Some(req.Msg.Verb)))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

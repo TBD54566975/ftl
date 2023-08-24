@@ -80,6 +80,7 @@ func (e *DeploymentEvent) event() {}
 type eventFilterCall struct {
 	sourceModule types.Option[string]
 	destModule   string
+	destVerb     types.Option[string]
 }
 
 type eventFilter struct {
@@ -101,9 +102,9 @@ func FilterLogs(level log.Level) EventFilter {
 // FilterCall filters call events between the given modules.
 //
 // May be called multiple times.
-func FilterCall(sourceModule types.Option[string], destModule string) EventFilter {
+func FilterCall(sourceModule types.Option[string], destModule string, destVerb types.Option[string]) EventFilter {
 	return func(query *eventFilter) {
-		query.calls = append(query.calls, &eventFilterCall{sourceModule: sourceModule, destModule: destModule})
+		query.calls = append(query.calls, &eventFilterCall{sourceModule: sourceModule, destModule: destModule, destVerb: destVerb})
 	}
 }
 
@@ -203,8 +204,12 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_1 = $%d AND e.custom_key_3 = $%d))", index, index+1)
 				args = append(args, sourceModule, call.destModule)
 				index += 2
+			} else if destVerb, ok := call.destVerb.Get(); ok {
+				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_3 = $%d AND e.custom_key_4 = $%d))", index, index+1)
+				args = append(args, call.destModule, destVerb)
+				index++
 			} else {
-				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_1 IS NULL AND e.custom_key_3 = $%d))", index)
+				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_3 = $%d))", index)
 				args = append(args, call.destModule)
 				index++
 			}
