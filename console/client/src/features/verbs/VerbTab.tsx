@@ -12,7 +12,7 @@ export const VerbTab: React.FC<Props> = ({ id }) => {
   const [ moduleId, verbName ] = id.split('.')
   const modules = React.useContext(modulesContext)
   const module = modules.modules.find(module => module?.name === moduleId)
-  const verb = module?.verbs.find(v => v.verb?.name === verbName?.toLocaleLowerCase())
+  const verb = module?.verbs.find(v => v.verb?.name === verbName)
   const callData = module?.data.filter(data =>
     [ verb?.verb?.request?.name, verb?.verb?.response?.name ].includes(data.name)
   )
