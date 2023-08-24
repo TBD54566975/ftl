@@ -1,29 +1,67 @@
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { useContext } from 'react'
+import React from 'react'
 import { ModuleDetails } from '../features/modules/ModuleDetails'
 import { ModulesList } from '../features/modules/ModulesList'
 import { Timeline } from '../features/timeline/Timeline'
 import { VerbTab } from '../features/verbs/VerbTab'
-import { SelectedModuleContext } from '../providers/selected-module-provider'
-import { TabType, TabsContext } from '../providers/tabs-provider'
+import { TabsContext, TabSearchParams, TabType } from '../providers/tabs-provider'
 import { headerColor, headerTextColor, panelColor } from '../utils/style.utils'
 import { SidePanel } from './SidePanel'
+import { RequestModal } from '../features/requests/RequestsModal'
+import { useSearchParams, useNavigate , useLocation } from 'react-router-dom'
+import { Tab } from '@headlessui/react'
 
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
-  const { selectedModule } = useContext(SelectedModuleContext)
-  const { tabs,activeTab, setActiveTab, setTabs } = useContext(TabsContext)
-
+  const { tabs,activeTab, setActiveTab, setTabs } = React.useContext(TabsContext)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [ searchParams ] = useSearchParams()
+  
+ 
   const handleCloseTab = id => {
     if (activeTab === id && tabs.length > 1) {
       // Set the next available tab as active, if the current active tab is being closed
-      const nextTab = tabs.find(tab => tab.id !== id) || tabs[0]
-      setActiveTab(nextTab)
+      const index = tabs.findIndex(tab => tab.id === id)
+      setActiveTab(index - 1 )
+      searchParams.delete(TabSearchParams.active)
     }
     setTabs(tabs.filter(tab => tab.id !== id))
+    navigate({ ...location, search: searchParams.toString() })
   }
+
+  const handleChangeTab = (index: number) => {
+    setActiveTab(index)
+    index > 0 && tabs.length > 1
+      ? searchParams.set(TabSearchParams.active, tabs[index].id)
+      : searchParams.delete(TabSearchParams.active)
+    navigate({ ...location, search: searchParams.toString() })
+  }
+
+  // Handle opening the correct tab on load
+  React.useEffect(() => {
+    const id = searchParams.get(TabSearchParams.active)
+    if(!id) {
+      setActiveTab(0)
+      return
+    }
+    const index = tabs.findIndex(tab => tab.id === id)
+    if(index >= 0) {
+      setActiveTab(activeTab  ?? index)
+      return
+    }
+    const [ _, label ] = id.split('.')
+    const newTab = {
+      id,
+      label,
+      type: TabType.Verb,
+    }
+    const nextTabs = [ ...tabs, newTab ]
+    setTabs(nextTabs)
+    setActiveTab(nextTabs.length - 1)
+  }, [ ])
 
   return (
     <>
@@ -50,35 +88,53 @@ export function IDELayout() {
         </div>
 
         <div className={`flex-1 flex flex-col m-2 rounded`}>
-          <div className={`flex items-center rounded-t ${headerTextColor}`}>
-            {tabs.map(tab => (
-              <div key={tab.id} className='flex items-center mr-2 relative'>
-                <button
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-t ${tab.id !== 'timeline' ? 'pr-8' : ''} ${activeTab === tab ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
-                >
-                  {tab.label}
-                </button>
-                {tab.id !== 'timeline' && (
-                  <button
-                    onClick={() => handleCloseTab(tab.id)}
-                    className='absolute right-0 mr-2 text-gray-400 hover:text-white'
+          <Tab.Group
+            selectedIndex={activeTab}
+            onChange={handleChangeTab}
+          >
+            <div >
+              <Tab.List className={`flex items-center rounded-t ${headerTextColor}`}>
+                {tabs.map(({ label, id }, i) => {
+                  return (<Tab
+                    key={id}
+                    className='flex items-center mr-2 relative'
+                    as='span'
                   >
-                    <XMarkIcon className={`h-5 w-5`} />
-                  </button>
-                )}
-              </div>
-            ))}
-            <div className='flex-grow'></div>
-          </div>
-
-          <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
-            {activeTab?.type === TabType.Timeline && <Timeline />}
-            {activeTab?.type === TabType.Verb && <VerbTab module={selectedModule} verb={activeTab.verb} />}
-          </div>
+                    <span
+                      className={`px-4 py-2 rounded-t ${id !== 'timeline' ? 'pr-8' : ''} ${activeTab === i ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
+                    >
+                      {label}
+                    </span>
+                    {i !== 0 && (<button
+                      onClick={e => {
+                        e.stopPropagation()
+                        handleCloseTab(id)
+                        searchParams.get(TabSearchParams.active) === id && searchParams.delete(TabSearchParams.active)
+                        navigate({ ...location, search: searchParams.toString() })
+                      }}
+                      className='absolute right-0 mr-2 text-gray-400 hover:text-white'
+                    >
+                      <XMarkIcon className={`h-5 w-5`} />
+                    </button>)}
+                  </Tab>
+                  )
+                })}
+              </Tab.List>
+              <div className='flex-grow'></div>
+            </div>
+            <div className={`flex-1 p-4 overflow-y-scroll ${panelColor}`}>
+              <Tab.Panels>
+                {tabs.map(({ id }, i) => {
+                  return i === 0
+                    ? <Tab.Panel key={id}><Timeline /></Tab.Panel>
+                    : <Tab.Panel key={id}><VerbTab id={id} /></Tab.Panel>
+                })}
+              </Tab.Panels>
+            </div>
+          </Tab.Group>
         </div>
-
         <SidePanel />
+        <RequestModal />
       </div>
     </>
   )
