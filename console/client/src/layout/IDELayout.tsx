@@ -51,10 +51,16 @@ export function IDELayout() {
       setActiveTab(activeTab  ?? index)
       return
     }
-    const [ _, label ] = id.split('.')
+
+    const idArr = id.split('.')
+    
+    if(idArr.length !== 2 ) {
+      throw new Error(`invalid reference ${id}`)
+    }
+    
     const newTab = {
       id,
-      label,
+      label:id[1],
       type: TabType.Verb,
     }
     const nextTabs = [ ...tabs, newTab ]
