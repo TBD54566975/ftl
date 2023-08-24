@@ -9,3 +9,4 @@ runner5: watchexec -r -e go -i "console/client" -i "examples/**" -- ftl-runner -
 runner6: watchexec -r -e go -i "console/client" -i "examples/**" -- ftl-runner --key R01H8DD15Y9SPGDQMXNJ0CF3C5M --language go --language kotlin --bind http://localhost:8900 --template-dir build/template
 runner7: watchexec -r -e go -i "console/client" -i "examples/**" -- ftl-runner --key R01H8DD18Z6CTY301G8GE8N52CP --language go --language kotlin --bind http://localhost:8901 --template-dir build/template
 runner8: watchexec -r -e go -i "console/client" -i "examples/**" -- ftl-runner --key R01H8DD1D1W3KJG7NY63DYCCJMY --language go --language kotlin --bind http://localhost:8902 --template-dir build/template
+runner9: watchexec -r -e go -i "console/client" -i "examples/**" -- ftl-runner --key R01H8J2BMH8VTNKAT8MB66Q2SHG --language go --language kotlin --bind http://localhost:8903 --template-dir build/template

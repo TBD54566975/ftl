@@ -59,7 +59,8 @@ deploy_echo_kotlin() (
 
 deploy_time_go() (
   info "Deploying time"
-  ftl go deploy -S "$PWD" -d ./examples/time
+  cd examples
+  ftl-go deploy time
 )
 
 wait_for_deploys() {

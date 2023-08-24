@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ReserveRequest, ReserveResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ReserveRequest, ReserveResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -176,7 +176,21 @@ export const ControllerService = {
       kind: MethodKind.ClientStreaming,
     },
     /**
+     * Get the full schema.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ControllerService.GetSchema
+     */
+    getSchema: {
+      name: "GetSchema",
+      I: GetSchemaRequest,
+      O: GetSchemaResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
      * Pull schema changes from the Controller.
+     *
+     * Note that if there are no deployments this will block indefinitely, making it unsuitable for
+     * just retrieving the schema. Use GetSchema for that.
      *
      * @generated from rpc xyz.block.ftl.v1.ControllerService.PullSchema
      */

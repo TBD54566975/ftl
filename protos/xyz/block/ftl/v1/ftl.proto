@@ -59,6 +59,11 @@ enum DeploymentChangeType {
   DEPLOYMENT_CHANGED = 2;
 }
 
+message GetSchemaRequest {}
+message GetSchemaResponse {
+  schema.Schema schema = 1;
+}
+
 message PullSchemaRequest {}
 message PullSchemaResponse {
   string deployment_name = 1;
@@ -263,7 +268,13 @@ service ControllerService {
   // Stream logs from a deployment
   rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);
 
+  // Get the full schema.
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+
   // Pull schema changes from the Controller.
+  //
+  // Note that if there are no deployments this will block indefinitely, making it unsuitable for
+  // just retrieving the schema. Use GetSchema for that.
   rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
 }
 
