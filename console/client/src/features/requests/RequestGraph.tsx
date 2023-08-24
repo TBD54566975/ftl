@@ -74,4 +74,3 @@ export const RequestGraph: React.FC<Props> = ({ calls, call }) => {
   )
 }
 
-
