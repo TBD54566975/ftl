@@ -20,11 +20,14 @@ export function IDELayout() {
   const location = useLocation()
   const [ searchParams ] = useSearchParams()
 
-  const handleCloseTab = id => {
-    if (activeTab === id && tabs.length > 1) {
+  const handleCloseTab = (id: string, index: number) => {
+    if (tabs.length > 1) {
       // Set the next available tab as active, if the current active tab is being closed
-      const index = tabs.findIndex(tab => tab.id === id)
+      const nextIndex = index - 1
       setActiveTab(index - 1 )
+      searchParams.set(TabSearchParams.active, tabs[nextIndex].id)
+    } else {
+      setActiveTab(0)
       searchParams.delete(TabSearchParams.active)
     }
     setTabs(tabs.filter(tab => tab.id !== id))
@@ -113,7 +116,7 @@ export function IDELayout() {
                     {i !== 0 && (<button
                       onClick={e => {
                         e.stopPropagation()
-                        handleCloseTab(id)
+                        handleCloseTab(id, i)
                         searchParams.get(TabSearchParams.active) === id && searchParams.delete(TabSearchParams.active)
                         navigate({ ...location, search: searchParams.toString() })
                       }}
