@@ -7,7 +7,7 @@ import { ModulesList } from '../features/modules/ModulesList'
 import { RequestModal } from '../features/requests/RequestsModal'
 import { Timeline } from '../features/timeline/Timeline'
 import { VerbTab } from '../features/verbs/VerbTab'
-import { TabSearchParams, TabType, TabsContext } from '../providers/tabs-provider'
+import { TabSearchParams, TabType, TabsContext, timelineTab } from '../providers/tabs-provider'
 import { headerColor, headerTextColor, panelColor } from '../utils/style.utils'
 import { SidePanel } from './SidePanel'
 
@@ -19,56 +19,58 @@ export function IDELayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [ searchParams ] = useSearchParams()
+  const [ activeIndex, setActiveIndex ] = React.useState(0)
+
+  // Set active tab index whenever our activeTab context changes
+  React.useEffect(() => {
+    const index = tabs.findIndex(tab => tab.id === activeTab)
+    setActiveIndex(index)
+   
+  }, [ activeTab ])
 
   const handleCloseTab = (id: string, index: number) => {
-    if (tabs.length > 1) {
-      // Set the next available tab as active, if the current active tab is being closed
-      const nextIndex = index - 1
-      setActiveTab(index - 1 )
-      searchParams.set(TabSearchParams.active, tabs[nextIndex].id)
-    } else {
-      setActiveTab(0)
-      searchParams.delete(TabSearchParams.active)
-    }
+    searchParams.set(TabSearchParams.active, tabs[index - 1].id)
+    setActiveTab(tabs[index - 1].id)
     setTabs(tabs.filter(tab => tab.id !== id))
     navigate({ ...location, search: searchParams.toString() })
   }
 
   const handleChangeTab = (index: number) => {
-    setActiveTab(index)
-    index > 0 && tabs.length > 1
-      ? searchParams.set(TabSearchParams.active, tabs[index].id)
-      : searchParams.delete(TabSearchParams.active)
+    const nextActiveTab = tabs[index]
+    setActiveTab(nextActiveTab.id)
+    nextActiveTab.type === TabType.Timeline
+      ? searchParams.delete(TabSearchParams.active)
+      : searchParams.set(TabSearchParams.active, nextActiveTab.id)
     navigate({ ...location, search: searchParams.toString() })
   }
 
-  // Handle opening the correct tab on load
+  // Handle opening the correct tab on mount
   React.useEffect(() => {
     const id = searchParams.get(TabSearchParams.active)
-    if(!id) {
-      setActiveTab(0)
-      return
-    }
-    const index = tabs.findIndex(tab => tab.id === id)
-    if(index >= 0) {
-      setActiveTab(activeTab  ?? index)
-      return
-    }
+    //P1 no ID
+    if(!id) return setActiveTab(timelineTab.id)
 
-    const idArr = id.split('.')
+    //P2 ID is timeline
+    if(id !== timelineTab.id) return setActiveTab(timelineTab.id)
     
-    if(idArr.length !== 2 ) {
+    //P3 tabs is already in tabs array
+    if(tabs.some(({ id: tabId }) => tabId === id )) return setActiveTab(id)
+
+    //P4 check if tab id passed is valid 
+    const idArr = id.split('.')
+    if(idArr.length !== 2) {
       throw new Error(`invalid reference ${id}`)
     }
     
+    //P4 new tab not in tabs array
     const newTab = {
       id,
-      label:id[1],
+      label:idArr[1],
       type: TabType.Verb,
     }
     const nextTabs = [ ...tabs, newTab ]
     setTabs(nextTabs)
-    setActiveTab(nextTabs.length - 1)
+    setActiveTab(newTab.id)
   }, [ ])
 
   return (
@@ -97,7 +99,7 @@ export function IDELayout() {
 
         <div className={`flex-1 flex flex-col m-2 rounded`}>
           <Tab.Group
-            selectedIndex={activeTab}
+            selectedIndex={activeIndex}
             onChange={handleChangeTab}
           >
             <div >
@@ -109,7 +111,7 @@ export function IDELayout() {
                     as='span'
                   >
                     <span
-                      className={`px-4 py-2 rounded-t ${id !== 'timeline' ? 'pr-8' : ''} ${activeTab === i ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
+                      className={`px-4 py-2 rounded-t ${id !== 'timeline' ? 'pr-8' : ''} ${activeIndex === i ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
                     >
                       {label}
                     </span>

@@ -24,6 +24,7 @@ export function ModuleDetails() {
     const index = tabs.findIndex(tab => tab.id === tabId)
     const existingTab = index !== -1
     let newTab
+    //P1 handle if tab is not in tab array
     if(!existingTab) {
       newTab = {
         id: [ selectedModule.name, verb.verb?.name ].join('.'),
@@ -32,7 +33,7 @@ export function ModuleDetails() {
       }
       setTabs([ ...tabs, newTab ])
     }
-    setActiveTab(existingTab ? index : tabs.length)
+    setActiveTab(tabId)
     searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id)
     navigate({ ...location, search: searchParams.toString() })
   }

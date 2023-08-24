@@ -19,9 +19,9 @@ export const timelineTab = { id: 'timeline', label: 'Timeline', type: TabType.Ti
 
 type TabsContextType = {
   tabs: Tab[];
-  activeTab?: number;
+  activeTab?: string;
   setTabs: React.Dispatch<React.SetStateAction<Tab[]>>;
-  setActiveTab: React.Dispatch<React.SetStateAction<number>>;
+  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export const TabsContext = React.createContext<TabsContextType>({ tabs: [], activeTab: 0, setTabs: () => { }, setActiveTab: () => { } })
