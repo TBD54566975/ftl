@@ -8,12 +8,13 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
+	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
@@ -100,15 +101,18 @@ type Service struct {
 	key                          model.ControllerKey
 	deploymentLogsSink           *deploymentLogsSink
 
-	clientsMu sync.Mutex
 	// Map from endpoint to client.
-	clients map[string]clients
+	clients *lru.Cache[string, clients]
 }
 
 func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 	key := config.Key
 	if config.Key.ULID() == (ulid.ULID{}) {
 		key = model.NewControllerKey()
+	}
+	clientCache, err := lru.New[string, clients](1024)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create client cache")
 	}
 	svc := &Service{
 		dal:                          dal,
@@ -117,7 +121,7 @@ func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
 		artefactChunkSize:            config.ArtefactChunkSize,
 		key:                          key,
 		deploymentLogsSink:           newDeploymentLogsSink(ctx, dal),
-		clients:                      map[string]clients{},
+		clients:                      clientCache,
 	}
 	if config.Advertise.String() == "" {
 		config.Advertise = config.Bind
@@ -288,6 +292,19 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 		return nil, errors.WithStack(stream.Err())
 	}
 	return connect.NewResponse(&ftlv1.StreamDeploymentLogsResponse{}), nil
+}
+
+func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
+	deployments, err := s.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	sch := &pschema.Schema{
+		Modules: slices.Map(deployments, func(d dal.Deployment) *pschema.Module {
+			return d.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
+		}),
+	}
+	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: sch}), nil
 }
 
 func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
@@ -618,9 +635,7 @@ func (s *Service) getDeployment(ctx context.Context, name string) (*model.Deploy
 
 // Return or create the RunnerService and VerbService clients for a Runner endpoint.
 func (s *Service) clientsForEndpoint(endpoint string) clients {
-	s.clientsMu.Lock()
-	defer s.clientsMu.Unlock()
-	client, ok := s.clients[endpoint]
+	client, ok := s.clients.Get(endpoint)
 	if ok {
 		return client
 	}
@@ -628,7 +643,7 @@ func (s *Service) clientsForEndpoint(endpoint string) clients {
 		runner: rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
 		verb:   rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
 	}
-	s.clients[endpoint] = client
+	s.clients.Add(endpoint, client)
 	return client
 }
 
@@ -674,7 +689,9 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 		if err != nil {
 			logger.Errorf(err, "Failed to get deployments needing reconciliation")
 		} else {
+			wg, ctx := concurrency.New(ctx, concurrency.WithConcurrencyLimit(4)) //nolint:govet
 			for _, reconcile := range reconciliation {
+				reconcile := reconcile
 				deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
 				deploymentLogger.Infof("Reconciling %s", reconcile.Deployment)
 				deployment := model.Deployment{
@@ -685,23 +702,30 @@ func (s *Service) reconcileDeployments(ctx context.Context) {
 				require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
 				if require > 0 {
 					deploymentLogger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
-					if err := s.deploy(ctx, deployment); err != nil {
-						deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
-					} else {
-						deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
-					}
+					wg.Go(func(ctx context.Context) error {
+						if err := s.deploy(ctx, deployment); err != nil {
+							deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
+						} else {
+							deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
+						}
+						return nil
+					})
 				} else if require < 0 {
 					deploymentLogger.Infof("Need %d less runners for %s", -require, reconcile.Deployment)
-					ok, err := s.terminateRandomRunner(ctx, deployment.Name)
-					if err != nil {
-						deploymentLogger.Warnf("Failed to terminate runner: %s", err)
-					} else if ok {
-						deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
-					} else {
-						deploymentLogger.Warnf("Failed to terminate runner: no runners found")
-					}
+					wg.Go(func(ctx context.Context) error {
+						ok, err := s.terminateRandomRunner(ctx, deployment.Name)
+						if err != nil {
+							deploymentLogger.Warnf("Failed to terminate runner: %s", err)
+						} else if ok {
+							deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
+						} else {
+							deploymentLogger.Warnf("Failed to terminate runner: no runners found")
+						}
+						return nil
+					})
 				}
 			}
+			_ = wg.Wait()
 		}
 
 		select {

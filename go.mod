@@ -9,6 +9,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
+	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/otiai10/copy v1.12.0
