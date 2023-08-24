@@ -73,6 +73,9 @@ const (
 	// ControllerServiceStreamDeploymentLogsProcedure is the fully-qualified name of the
 	// ControllerService's StreamDeploymentLogs RPC.
 	ControllerServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControllerService/StreamDeploymentLogs"
+	// ControllerServiceGetSchemaProcedure is the fully-qualified name of the ControllerService's
+	// GetSchema RPC.
+	ControllerServiceGetSchemaProcedure = "/xyz.block.ftl.v1.ControllerService/GetSchema"
 	// ControllerServicePullSchemaProcedure is the fully-qualified name of the ControllerService's
 	// PullSchema RPC.
 	ControllerServicePullSchemaProcedure = "/xyz.block.ftl.v1.ControllerService/PullSchema"
@@ -206,7 +209,12 @@ type ControllerServiceClient interface {
 	ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context) *connect_go.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
+	// Get the full schema.
+	GetSchema(context.Context, *connect_go.Request[v1.GetSchemaRequest]) (*connect_go.Response[v1.GetSchemaResponse], error)
 	// Pull schema changes from the Controller.
+	//
+	// Note that if there are no deployments this will block indefinitely, making it unsuitable for
+	// just retrieving the schema. Use GetSchema for that.
 	PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest]) (*connect_go.ServerStreamForClient[v1.PullSchemaResponse], error)
 }
 
@@ -276,6 +284,11 @@ func NewControllerServiceClient(httpClient connect_go.HTTPClient, baseURL string
 			baseURL+ControllerServiceStreamDeploymentLogsProcedure,
 			opts...,
 		),
+		getSchema: connect_go.NewClient[v1.GetSchemaRequest, v1.GetSchemaResponse](
+			httpClient,
+			baseURL+ControllerServiceGetSchemaProcedure,
+			opts...,
+		),
 		pullSchema: connect_go.NewClient[v1.PullSchemaRequest, v1.PullSchemaResponse](
 			httpClient,
 			baseURL+ControllerServicePullSchemaProcedure,
@@ -297,6 +310,7 @@ type controllerServiceClient struct {
 	updateDeploy           *connect_go.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
 	replaceDeploy          *connect_go.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
 	streamDeploymentLogs   *connect_go.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
+	getSchema              *connect_go.Client[v1.GetSchemaRequest, v1.GetSchemaResponse]
 	pullSchema             *connect_go.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
 }
 
@@ -355,6 +369,11 @@ func (c *controllerServiceClient) StreamDeploymentLogs(ctx context.Context) *con
 	return c.streamDeploymentLogs.CallClientStream(ctx)
 }
 
+// GetSchema calls xyz.block.ftl.v1.ControllerService.GetSchema.
+func (c *controllerServiceClient) GetSchema(ctx context.Context, req *connect_go.Request[v1.GetSchemaRequest]) (*connect_go.Response[v1.GetSchemaResponse], error) {
+	return c.getSchema.CallUnary(ctx, req)
+}
+
 // PullSchema calls xyz.block.ftl.v1.ControllerService.PullSchema.
 func (c *controllerServiceClient) PullSchema(ctx context.Context, req *connect_go.Request[v1.PullSchemaRequest]) (*connect_go.ServerStreamForClient[v1.PullSchemaResponse], error) {
 	return c.pullSchema.CallServerStream(ctx, req)
@@ -392,7 +411,12 @@ type ControllerServiceHandler interface {
 	ReplaceDeploy(context.Context, *connect_go.Request[v1.ReplaceDeployRequest]) (*connect_go.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error)
+	// Get the full schema.
+	GetSchema(context.Context, *connect_go.Request[v1.GetSchemaRequest]) (*connect_go.Response[v1.GetSchemaResponse], error)
 	// Pull schema changes from the Controller.
+	//
+	// Note that if there are no deployments this will block indefinitely, making it unsuitable for
+	// just retrieving the schema. Use GetSchema for that.
 	PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest], *connect_go.ServerStream[v1.PullSchemaResponse]) error
 }
 
@@ -459,6 +483,11 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect_g
 		svc.StreamDeploymentLogs,
 		opts...,
 	))
+	mux.Handle(ControllerServiceGetSchemaProcedure, connect_go.NewUnaryHandler(
+		ControllerServiceGetSchemaProcedure,
+		svc.GetSchema,
+		opts...,
+	))
 	mux.Handle(ControllerServicePullSchemaProcedure, connect_go.NewServerStreamHandler(
 		ControllerServicePullSchemaProcedure,
 		svc.PullSchema,
@@ -512,6 +541,10 @@ func (UnimplementedControllerServiceHandler) ReplaceDeploy(context.Context, *con
 
 func (UnimplementedControllerServiceHandler) StreamDeploymentLogs(context.Context, *connect_go.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect_go.Response[v1.StreamDeploymentLogsResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs is not implemented"))
+}
+
+func (UnimplementedControllerServiceHandler) GetSchema(context.Context, *connect_go.Request[v1.GetSchemaRequest]) (*connect_go.Response[v1.GetSchemaResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.GetSchema is not implemented"))
 }
 
 func (UnimplementedControllerServiceHandler) PullSchema(context.Context, *connect_go.Request[v1.PullSchemaRequest], *connect_go.ServerStream[v1.PullSchemaResponse]) error {

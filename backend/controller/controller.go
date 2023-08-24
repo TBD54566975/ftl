@@ -294,6 +294,19 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 	return connect.NewResponse(&ftlv1.StreamDeploymentLogsResponse{}), nil
 }
 
+func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
+	deployments, err := s.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	sch := &pschema.Schema{
+		Modules: slices.Map(deployments, func(d dal.Deployment) *pschema.Module {
+			return d.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
+		}),
+	}
+	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: sch}), nil
+}
+
 func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
 	return s.watchModuleChanges(ctx, func(response *ftlv1.PullSchemaResponse) error {
 		return errors.WithStack(stream.Send(response))

@@ -34,30 +34,58 @@ import (
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
-type cli struct {
-	LogConfig      log.Config    `embed:""`
-	FTL            string        `env:"FTL_ENDPOINT" help:"FTL endpoint to connect to." default:"http://localhost:8892"`
-	WatchFrequency time.Duration `short:"w" default:"500ms" help:"Frequency to watch for changes to local FTL modules."`
-	Root           string        `type:"existingdir" help:"Root directory to sync FTL modules into." default:"."`
-}
+type watchCmd struct{}
 
-func main() {
-	c := &cli{}
-	kctx := kong.Parse(c, kong.Vars{
-		"os":   runtime.GOOS,
-		"arch": runtime.GOARCH,
-	})
-	client := rpc.Dial(ftlv1connect.NewControllerServiceClient, c.FTL, log.Warn)
-	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, c.LogConfig))
-
-	importRoot, err := findImportRoot(c.Root)
-	kctx.FatalIfErrorf(err)
+func (w *watchCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, importRoot ImportRoot) error {
+	err := buildRemoteModules(ctx, client, c.Root, importRoot)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error { return pullModules(ctx, client, c.Root, importRoot) })
 	wg.Go(func() error { return pushModules(ctx, client, c.Root, c.WatchFrequency, importRoot) })
 
-	kctx.FatalIfErrorf(wg.Wait())
+	if err := wg.Wait(); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+type deployCmd struct {
+	Name string `arg:"" required:"" help:"Name of module to deploy."`
+}
+
+func (d *deployCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, importRoot ImportRoot) error {
+	return errors.WithStack(pushModule(ctx, client, filepath.Join(c.Root, d.Name), importRoot))
+}
+
+type cli struct {
+	LogConfig      log.Config    `embed:""`
+	FTL            string        `env:"FTL_ENDPOINT" help:"FTL endpoint to connect to." default:"http://localhost:8892"`
+	WatchFrequency time.Duration `short:"w" default:"500ms" help:"Frequency to watch for changes to local FTL modules."`
+	Root           string        `short:"r" type:"existingdir" help:"Root directory to sync FTL modules into." default:"."`
+
+	Watch  watchCmd  `cmd:"" default:"" help:"Watch for and rebuild local and remote FTL modules."`
+	Deploy deployCmd `cmd:"" help:"Deploy a local FTL module."`
+}
+
+func main() {
+	c := &cli{}
+	kctx := kong.Parse(c)
+	client := rpc.Dial(ftlv1connect.NewControllerServiceClient, c.FTL, log.Warn)
+	logger := log.Configure(os.Stderr, c.LogConfig)
+	ctx := log.ContextWithLogger(context.Background(), logger)
+
+	importRoot, err := findImportRoot(c.Root)
+	kctx.FatalIfErrorf(err)
+
+	kctx.Bind(importRoot)
+	kctx.BindTo(ctx, (*context.Context)(nil))
+	kctx.BindTo(client, (*ftlv1connect.ControllerServiceClient)(nil))
+	err = kctx.Run()
+	kctx.FatalIfErrorf(err)
+
 }
 
 type ImportRoot struct {
@@ -331,29 +359,49 @@ func hasVerbs(sch *schema.Module) bool {
 }
 
 func pullModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, root string, importRoot ImportRoot) error {
-	logger := log.FromContext(ctx)
 	resp, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 	if err != nil {
 		return errors.Wrap(err, "failed to pull schema")
 	}
 	for resp.Receive() {
 		msg := resp.Msg()
-		sch, err := schema.ModuleFromProto(msg.Schema)
+		err = generateModuleFromSchema(ctx, msg.Schema, root, importRoot)
 		if err != nil {
-			return errors.Wrap(err, "failed to parse schema")
-		}
-		dir := filepath.Join(root, sch.Name)
-		if _, err := os.Stat(dir); err == nil {
-			if _, err = os.Stat(filepath.Join(dir, "generated_ftl_module.go")); errors.Is(err, os.ErrNotExist) {
-				logger.Infof("Skipping local FTL module %q", sch.Name)
-				continue
-			}
-		}
-		if err := generateModule(ctx, dir, sch, importRoot); err != nil {
-			return errors.Wrap(err, "failed to generate module")
+			return errors.Wrap(err, "failed to sync module")
 		}
 	}
 	return errors.Wrap(resp.Err(), "failed to pull schema")
+}
+
+func buildRemoteModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, root string, importRoot ImportRoot) error {
+	fullSchema, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve schema")
+	}
+	for _, module := range fullSchema.Msg.Schema.Modules {
+		err := generateModuleFromSchema(ctx, module, root, importRoot)
+		if err != nil {
+			return errors.Wrap(err, "failed to generate module")
+		}
+	}
+	return err
+}
+
+func generateModuleFromSchema(ctx context.Context, msg *pschema.Module, root string, importRoot ImportRoot) error {
+	sch, err := schema.ModuleFromProto(msg)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse schema")
+	}
+	dir := filepath.Join(root, sch.Name)
+	if _, err := os.Stat(dir); err == nil {
+		if _, err = os.Stat(filepath.Join(dir, "generated_ftl_module.go")); errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+	}
+	if err := generateModule(ctx, dir, sch, importRoot); err != nil {
+		return errors.Wrap(err, "failed to generate module")
+	}
+	return nil
 }
 
 func generateModule(ctx context.Context, dir string, sch *schema.Module, importRoot ImportRoot) error {
