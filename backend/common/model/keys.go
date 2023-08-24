@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/alecthomas/errors"
@@ -34,17 +35,29 @@ type ingressRequestKey struct{}
 type IngressRequestKey = keyType[ingressRequestKey]
 type NullIngressRequestKey = types.Option[IngressRequestKey]
 
+var uuidRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
 func parseKey[KT keyType[U], U any](key string) (KT, error) {
 	var zero KT
 	kind := kindFromType[U]()
-	if !strings.HasPrefix(key, kind) {
+	switch {
+	case strings.HasPrefix(key, kind):
+		ulid, err := ulid.Parse(key[len(kind):])
+		if err != nil {
+			return zero, errors.Wrap(err, "invalid ULID key")
+		}
+		return KT(ulid), nil
+
+	case uuidRe.MatchString(key):
+		uuid, err := uuid.Parse(key)
+		if err != nil {
+			return zero, errors.Wrap(err, "invalid UUID key")
+		}
+		return KT(uuid), nil
+
+	default:
 		return zero, errors.Errorf("invalid %s key %q", kind, key)
 	}
-	ulid, err := ulid.Parse(key[len(kind):])
-	if err != nil {
-		return KT(ulid), err
-	}
-	return KT(ulid), nil
 }
 
 // Helper type to avoid having to write a bunch of boilerplate. It relies on T being a

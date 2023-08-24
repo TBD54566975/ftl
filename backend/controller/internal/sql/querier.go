@@ -43,7 +43,9 @@ type Querier interface {
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
-	GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error)
+	// Retrieve routing information for a runner.
+	GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error)
+	GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error)
 	GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error)
 	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, name model.DeploymentName) ([]GetRunnersForDeploymentRow, error)

@@ -218,6 +218,7 @@ type Runner struct {
 	ReservationTimeout sqltypes.NullTime
 	State              RunnerState
 	Endpoint           string
+	ModuleName         types.Option[string]
 	DeploymentID       types.Option[int64]
 	Labels             []byte
 }
