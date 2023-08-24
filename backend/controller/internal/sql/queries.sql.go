@@ -138,6 +138,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.state,
                            r.labels,
                            r.last_seen,
+                           r.module_name,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
                                             THEN d.name END, NULL) AS deployment_name
@@ -154,6 +155,7 @@ type GetActiveRunnersRow struct {
 	State          RunnerState
 	Labels         []byte
 	LastSeen       time.Time
+	ModuleName     types.Option[string]
 	DeploymentName interface{}
 }
 
@@ -172,6 +174,7 @@ func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRu
 			&i.State,
 			&i.Labels,
 			&i.LastSeen,
+			&i.ModuleName,
 			&i.DeploymentName,
 		); err != nil {
 			return nil, err
@@ -660,7 +663,7 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 }
 
 const getIdleRunners = `-- name: GetIdleRunners :many
-SELECT id, key, created, last_seen, reservation_timeout, state, endpoint, deployment_id, labels
+SELECT id, key, created, last_seen, reservation_timeout, state, endpoint, module_name, deployment_id, labels
 FROM runners
 WHERE labels @> $1::jsonb
   AND state = 'idle'
@@ -684,6 +687,7 @@ func (q *Queries) GetIdleRunners(ctx context.Context, labels []byte, limit int32
 			&i.ReservationTimeout,
 			&i.State,
 			&i.Endpoint,
+			&i.ModuleName,
 			&i.DeploymentID,
 			&i.Labels,
 		); err != nil {
@@ -765,23 +769,53 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 	return items, nil
 }
 
-const getRoutingTable = `-- name: GetRoutingTable :many
-SELECT endpoint, r.key AS runner_key, d.name deployment_name
+const getRouteForRunner = `-- name: GetRouteForRunner :one
+SELECT endpoint, r.key AS runner_key, r.module_name, d.name deployment_name, r.state
 FROM runners r
-         INNER JOIN deployments d on r.deployment_id = d.id
-         INNER JOIN modules m on d.module_id = m.id
+         LEFT JOIN deployments d on r.deployment_id = d.id
+WHERE r.key = $1
+`
+
+type GetRouteForRunnerRow struct {
+	Endpoint       string
+	RunnerKey      model.RunnerKey
+	ModuleName     types.Option[string]
+	DeploymentName model.DeploymentName
+	State          RunnerState
+}
+
+// Retrieve routing information for a runner.
+func (q *Queries) GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error) {
+	row := q.db.QueryRow(ctx, getRouteForRunner, key)
+	var i GetRouteForRunnerRow
+	err := row.Scan(
+		&i.Endpoint,
+		&i.RunnerKey,
+		&i.ModuleName,
+		&i.DeploymentName,
+		&i.State,
+	)
+	return i, err
+}
+
+const getRoutingTable = `-- name: GetRoutingTable :many
+SELECT endpoint, r.key AS runner_key, r.module_name, d.name deployment_name
+FROM runners r
+         LEFT JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
-  AND m.name = $1
+    AND cardinality($1::TEXT[]) = 0
+   OR module_name = ANY ($1::TEXT[])
 `
 
 type GetRoutingTableRow struct {
 	Endpoint       string
 	RunnerKey      model.RunnerKey
+	ModuleName     types.Option[string]
 	DeploymentName model.DeploymentName
 }
 
-func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutingTableRow, error) {
-	rows, err := q.db.Query(ctx, getRoutingTable, name)
+func (q *Queries) GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error) {
+	rows, err := q.db.Query(ctx, getRoutingTable, modules)
 	if err != nil {
 		return nil, err
 	}
@@ -789,7 +823,12 @@ func (q *Queries) GetRoutingTable(ctx context.Context, name string) ([]GetRoutin
 	var items []GetRoutingTableRow
 	for rows.Next() {
 		var i GetRoutingTableRow
-		if err := rows.Scan(&i.Endpoint, &i.RunnerKey, &i.DeploymentName); err != nil {
+		if err := rows.Scan(
+			&i.Endpoint,
+			&i.RunnerKey,
+			&i.ModuleName,
+			&i.DeploymentName,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -806,6 +845,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.state,
                            r.labels,
                            r.last_seen,
+                           r.module_name,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
                                             THEN d.name END, NULL) AS deployment_name
@@ -820,6 +860,7 @@ type GetRunnerRow struct {
 	State          RunnerState
 	Labels         []byte
 	LastSeen       time.Time
+	ModuleName     types.Option[string]
 	DeploymentName interface{}
 }
 
@@ -832,6 +873,7 @@ func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunner
 		&i.State,
 		&i.Labels,
 		&i.LastSeen,
+		&i.ModuleName,
 		&i.DeploymentName,
 	)
 	return i, err
@@ -851,7 +893,7 @@ func (q *Queries) GetRunnerState(ctx context.Context, key model.RunnerKey) (Runn
 }
 
 const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, key, created, last_seen, reservation_timeout, state, endpoint, deployment_id, r.labels, d.id, created_at, module_id, name, schema, d.labels, min_replicas
+SELECT r.id, key, created, last_seen, reservation_timeout, state, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, name, schema, d.labels, min_replicas
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
@@ -866,6 +908,7 @@ type GetRunnersForDeploymentRow struct {
 	ReservationTimeout sqltypes.NullTime
 	State              RunnerState
 	Endpoint           string
+	ModuleName         types.Option[string]
 	DeploymentID       types.Option[int64]
 	Labels             []byte
 	ID_2               int64
@@ -894,6 +937,7 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, name model.Deploy
 			&i.ReservationTimeout,
 			&i.State,
 			&i.Endpoint,
+			&i.ModuleName,
 			&i.DeploymentID,
 			&i.Labels,
 			&i.ID_2,
@@ -1141,7 +1185,7 @@ WHERE id = (SELECT id
             WHERE r.state = 'idle'
               AND r.labels @> $3::jsonb
             LIMIT 1 FOR UPDATE SKIP LOCKED)
-RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.reservation_timeout, runners.state, runners.endpoint, runners.deployment_id, runners.labels
+RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.reservation_timeout, runners.state, runners.endpoint, runners.module_name, runners.deployment_id, runners.labels
 `
 
 // Find an idle runner and reserve it for the given deployment.
@@ -1156,6 +1200,7 @@ func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Tim
 		&i.ReservationTimeout,
 		&i.State,
 		&i.Endpoint,
+		&i.ModuleName,
 		&i.DeploymentID,
 		&i.Labels,
 	)
@@ -1212,13 +1257,25 @@ WITH deployment_rel AS (
                ELSE COALESCE((SELECT id
                               FROM deployments d
                               WHERE d.name = $5
-                              LIMIT 1), -1) END AS id)
+                              LIMIT 1), -1) END AS id),
+     module_rel AS (SELECT m.name
+                    FROM modules m
+                             INNER JOIN deployments d ON m.id = d.module_id
+                    WHERE d.name = $5
+                    LIMIT 1)
 INSERT
-INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
-VALUES ($1, $2, $3, $4, (SELECT id FROM deployment_rel), NOW() AT TIME ZONE 'utc')
+INTO runners (key, endpoint, state, labels, module_name, deployment_id, last_seen)
+VALUES ($1,
+        $2,
+        $3,
+        $4,
+        (SELECT name FROM module_rel),
+        (SELECT id FROM deployment_rel),
+        NOW() AT TIME ZONE 'utc')
 ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
                                 state         = $3,
                                 labels        = $4,
+                                module_name   = (SELECT name FROM module_rel),
                                 deployment_id = (SELECT id FROM deployment_rel),
                                 last_seen     = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id

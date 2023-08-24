@@ -2,7 +2,8 @@
 CREATE
     EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE OR REPLACE FUNCTION notify_event() RETURNS TRIGGER AS
+-- Function for deployment notifications.
+CREATE OR REPLACE FUNCTION notify_deployment_event() RETURNS TRIGGER AS
 $$
 DECLARE
     payload JSONB;
@@ -19,6 +20,32 @@ BEGIN
                 'table', TG_TABLE_NAME,
                 'action', TG_OP,
                 'new', new.name
+            );
+    END IF;
+    PERFORM pg_notify('notify_events', payload::text);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function for runner notifications because we need the deleted row
+-- in order to find the module name, for deleting routing table events.
+CREATE OR REPLACE FUNCTION notify_routing_event() RETURNS TRIGGER AS
+$$
+DECLARE
+    payload JSONB;
+BEGIN
+    IF TG_OP = 'DELETE'
+    THEN
+        payload = jsonb_build_object(
+                'table', TG_TABLE_NAME,
+                'action', TG_OP,
+                'old', old.key
+            );
+    ELSE
+        payload = jsonb_build_object(
+                'table', TG_TABLE_NAME,
+                'action', TG_OP,
+                'new', new.key
             );
     END IF;
     PERFORM pg_notify('notify_events', payload::text);
@@ -57,7 +84,7 @@ CREATE TRIGGER deployments_notify_event
     AFTER INSERT OR UPDATE OR DELETE
     ON deployments
     FOR EACH ROW
-EXECUTE PROCEDURE notify_event();
+EXECUTE PROCEDURE notify_deployment_event();
 
 CREATE TABLE artefacts
 (
@@ -105,15 +132,34 @@ CREATE TABLE runners
     reservation_timeout TIMESTAMPTZ,
     state               runner_state NOT NULL DEFAULT 'idle',
     endpoint            VARCHAR      NOT NULL,
+    -- Some denormalisation for performance. Without this we need to do a two table join.
+    module_name         VARCHAR,
     deployment_id       BIGINT       REFERENCES deployments (id) ON DELETE SET NULL,
     labels              JSONB        NOT NULL DEFAULT '{}'
 );
 
 CREATE UNIQUE INDEX runners_key ON runners (key);
 CREATE UNIQUE INDEX runners_endpoint_not_dead_idx ON runners (endpoint) WHERE state <> 'dead';
+CREATE INDEX runners_module_name_idx ON runners (module_name);
 CREATE INDEX runners_state_idx ON runners (state);
 CREATE INDEX runners_deployment_id_idx ON runners (deployment_id);
 CREATE INDEX runners_labels_idx ON runners USING GIN (labels);
+
+CREATE TRIGGER runners_update_notify_event
+    AFTER UPDATE
+    ON runners
+    FOR EACH ROW
+    WHEN (OLD.state <> NEW.state OR
+          OLD.deployment_id <> NEW.deployment_id OR
+          OLD.labels <> NEW.labels OR
+          OLD.module_name <> NEW.module_name)
+EXECUTE PROCEDURE notify_routing_event();
+
+CREATE TRIGGER runners_notify_event
+    AFTER INSERT OR DELETE
+    ON runners
+    FOR EACH ROW
+EXECUTE PROCEDURE notify_routing_event();
 
 CREATE TABLE ingress_routes
 (

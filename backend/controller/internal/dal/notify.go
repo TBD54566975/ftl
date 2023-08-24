@@ -13,8 +13,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jpillora/backoff"
 
-	log "github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/controller/internal/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
@@ -29,10 +30,21 @@ type Notification[T NotificationPayload, Key any, KeyP interface {
 	encoding.TextUnmarshaler
 }] struct {
 	Deleted types.Option[Key] // If present the object was deleted.
-	Message T
+	Message types.Option[T]
 }
 
+func (n Notification[T, Key, KeyP]) String() string {
+	if key, ok := n.Deleted.Get(); ok {
+		return fmt.Sprintf("deleted %v", key)
+	}
+	return fmt.Sprintf("message %v", n.Message)
+}
+
+// DeploymentNotification is a notification from the database when a deployment changes.
 type DeploymentNotification = Notification[Deployment, model.DeploymentName, *model.DeploymentName]
+
+// RouteNotification is a notification from the database when a route changes.
+type RouteNotification = Notification[Route, model.RunnerKey, *model.RunnerKey]
 
 // See JSON structure in SQL schema
 type event struct {
@@ -40,6 +52,8 @@ type event struct {
 	Action string `json:"action"`
 	New    string `json:"new,omitempty"`
 	Old    string `json:"old,omitempty"`
+	// Optional field for conveying deletion metadata.
+	Deleted json.RawMessage `json:"deleted,omitempty"`
 }
 
 func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
@@ -84,14 +98,14 @@ func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
 func (d *DAL) publishNotification(ctx context.Context, notification event, logger *log.Logger) error {
 	switch notification.Table {
 	case "deployments":
-		deployment, err := decodeNotification(notification, func(key model.DeploymentName) (Deployment, error) {
+		deployment, err := decodeNotification(notification, func(key model.DeploymentName) (Deployment, types.Option[model.DeploymentName], error) {
 			row, err := d.db.GetDeployment(ctx, key)
 			if err != nil {
-				return Deployment{}, errors.WithStack(err)
+				return Deployment{}, types.None[model.DeploymentName](), errors.WithStack(translatePGError(err))
 			}
 			moduleSchema, err := schema.ModuleFromBytes(row.Deployment.Schema)
 			if err != nil {
-				return Deployment{}, errors.WithStack(err)
+				return Deployment{}, types.None[model.DeploymentName](), errors.WithStack(err)
 			}
 			return Deployment{
 				CreatedAt:   row.Deployment.CreatedAt,
@@ -100,13 +114,42 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 				Schema:      moduleSchema,
 				MinReplicas: int(row.Deployment.MinReplicas),
 				Language:    row.Language,
-			}, nil
+			}, types.None[model.DeploymentName](), nil
 		})
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		logger.Infof("Deployment notification: %v", deployment.Message.Name)
+		logger.Debugf("Deployment notification: %s", deployment)
 		d.DeploymentChanges.Publish(deployment)
+
+	case "runners":
+		route, err := decodeNotification(notification, func(key model.RunnerKey) (Route, types.Option[model.RunnerKey], error) {
+			row, err := d.db.GetRouteForRunner(ctx, key)
+			if err != nil {
+				return Route{}, types.None[model.RunnerKey](), errors.WithStack(translatePGError(err))
+			}
+			if row.State != sql.RunnerStateAssigned {
+				return Route{}, types.Some(key), nil
+			}
+			moduleName, ok := row.ModuleName.Get()
+			if !ok {
+				return Route{}, types.None[model.RunnerKey](), errors.WithStack(ErrNotFound)
+			}
+			return Route{
+				Runner:     row.RunnerKey,
+				Endpoint:   row.Endpoint,
+				Deployment: row.DeploymentName,
+				Module:     moduleName,
+			}, types.None[model.RunnerKey](), nil
+		})
+		if errors.Is(err, ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		logger.Debugf("Route notification: %s", route)
+		d.RouteChanges.Publish(route)
 
 	default:
 		panic(fmt.Sprintf("unknown table %q in DB notification", notification.Table))
@@ -114,36 +157,45 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 	return nil
 }
 
-func decodeNotification[Key any, T NotificationPayload, KeyP interface {
-	*Key
+// This function takes a notification from the database and translates it into
+// a concrete Notification value.
+//
+// The translate function is called to translate the key into a concrete value
+// OR a delete notification.
+func decodeNotification[K any, T NotificationPayload, KP interface {
+	*K
 	encoding.TextUnmarshaler
-}](notification event, translate func(key Key) (T, error)) (Notification[T, Key, KeyP], error) {
+}](notification event, translate func(key K) (T, types.Option[K], error)) (Notification[T, K, KP], error) {
 	var (
-		deleted types.Option[Key]
-		message T
-		err     error
+		deleted types.Option[K]
+		message types.Option[T]
 	)
 	if notification.Action == "DELETE" {
-		var deletedKey Key
-		var deletedKeyP KeyP = &deletedKey
-		err = deletedKeyP.UnmarshalText([]byte(notification.Old))
+		var deletedKey K
+		var deletedKeyP KP = &deletedKey
+		if err := deletedKeyP.UnmarshalText([]byte(notification.Old)); err != nil {
+			return Notification[T, K, KP]{}, errors.Wrap(err, "failed to unmarshal notification key")
+		}
 		deleted = types.Some(deletedKey)
 	} else {
-		var newKey Key
-		var newKeyP KeyP = &newKey
-		err = newKeyP.UnmarshalText([]byte(notification.New))
-		if err == nil {
-			message, err = translate(newKey)
-			if err != nil {
-				return Notification[T, Key, KeyP]{}, errors.Wrap(err, "failed to translate database event")
-			}
+		var newKey K
+		var newKeyP KP = &newKey
+		if err := newKeyP.UnmarshalText([]byte(notification.New)); err != nil {
+			return Notification[T, K, KP]{}, errors.Wrap(err, "failed to unmarshal notification key")
+		}
+		var msg T
+		var err error
+		msg, deleted, err = translate(newKey)
+		if err != nil {
+			return Notification[T, K, KP]{}, errors.Wrap(err, "failed to translate database notification")
+		}
+
+		if !deleted.Ok() {
+			message = types.Some(msg)
 		}
 	}
-	if err != nil {
-		return Notification[T, Key, KeyP]{}, errors.WithStack(err)
-	}
 
-	return Notification[T, Key, KeyP]{Deleted: deleted, Message: message}, nil
+	return Notification[T, K, KP]{Deleted: deleted, Message: message}, nil
 }
 
 func waitForNotification(ctx context.Context, conn *pgx.Conn) (event, error) {

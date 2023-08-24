@@ -5,6 +5,7 @@ import (
 	"context"
 	stdsql "database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -80,10 +81,30 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 	}, nil
 }
 
+func runnerFromDB(row sql.GetRunnerRow) Runner {
+	var deployment types.Option[model.DeploymentName]
+	// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
+	if row.DeploymentName != nil {
+		deployment = types.Some(row.DeploymentName.(model.DeploymentName)) //nolint:forcetypeassert
+	}
+	attrs := model.Labels{}
+	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
+		return Runner{}
+	}
+	return Runner{
+		Key:        row.RunnerKey,
+		Endpoint:   row.Endpoint,
+		State:      RunnerState(row.State),
+		Deployment: deployment,
+		Labels:     attrs,
+	}
+}
+
 type Runner struct {
 	Key      model.RunnerKey
 	Endpoint string
 	State    RunnerState
+	Module   types.Option[string]
 	// Assigned deployment key, if any.
 	Deployment types.Option[model.DeploymentName]
 	Labels     model.Labels
@@ -144,6 +165,8 @@ type Deployment struct {
 	Labels      model.Labels
 }
 
+func (d Deployment) String() string { return d.Name.String() }
+
 func (d Deployment) notification() {}
 
 type Controller struct {
@@ -167,10 +190,17 @@ type Reservation interface {
 }
 
 type Route struct {
+	Module     string
 	Runner     model.RunnerKey
 	Deployment model.DeploymentName
 	Endpoint   string
 }
+
+func (r Route) String() string {
+	return fmt.Sprintf("%s -> %s (%s)", r.Deployment, r.Runner, r.Endpoint)
+}
+
+func (r Route) notification() {}
 
 func WithReservation(ctx context.Context, reservation Reservation, fn func() error) error {
 	if err := fn(); err != nil {
@@ -190,6 +220,7 @@ func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
 	dal := &DAL{
 		db:                sql.NewDB(pool),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
+		RouteChanges:      pubsub.New[RouteNotification](),
 	}
 	go dal.runListener(ctx, conn.Hijack())
 	return dal, nil
@@ -200,6 +231,8 @@ type DAL struct {
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
+	// RouteChanges is a Topic that receives changes to the routing table.
+	RouteChanges *pubsub.Topic[RouteNotification]
 }
 
 func (d *DAL) GetStatus(
@@ -719,21 +752,28 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 	})
 }
 
-// GetRoutingTable returns the endpoints for all runners for the given module.
-func (d *DAL) GetRoutingTable(ctx context.Context, module string) ([]Route, error) {
-	routes, err := d.db.GetRoutingTable(ctx, module)
+// GetRoutingTable returns the endpoints for all runners for the given modules,
+// or all routes if modules is empty.
+//
+// Returns route map keyed by module.
+func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string][]Route, error) {
+	routes, err := d.db.GetRoutingTable(ctx, modules)
 	if err != nil {
 		return nil, errors.WithStack(translatePGError(err))
 	}
 	if len(routes) == 0 {
-		return nil, errors.WithStack(ErrNotFound)
+		return nil, errors.Wrap(ErrNotFound, "no routes found")
 	}
-	return slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
-		return Route{
+	return maps.FromSlice(routes, func(row sql.GetRoutingTableRow) (string, []Route) {
+		// This is guaranteed to be non-nil by the query, but sqlc doesn't quite understand that.
+		moduleName := row.ModuleName.MustGet()
+		return moduleName, []Route{{
+			Module:     moduleName,
 			Deployment: row.DeploymentName,
 			Runner:     row.RunnerKey,
 			Endpoint:   row.Endpoint,
-		}
+		}}
+
 	}), nil
 }
 
@@ -750,22 +790,7 @@ func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner,
 	if err != nil {
 		return Runner{}, errors.WithStack(translatePGError(err))
 	}
-	var deployment types.Option[model.DeploymentName]
-	// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
-	if row.DeploymentName != nil {
-		deployment = types.Some(row.DeploymentName.(model.DeploymentName)) //nolint:forcetypeassert
-	}
-	attrs := model.Labels{}
-	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
-		return Runner{}, errors.Wrapf(err, "could not unmarshal labels for runner %s", row.RunnerKey)
-	}
-	return Runner{
-		Key:        row.RunnerKey,
-		Endpoint:   row.Endpoint,
-		State:      RunnerState(row.State),
-		Deployment: deployment,
-		Labels:     attrs,
-	}, nil
+	return runnerFromDB(row), nil
 }
 
 func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
@@ -877,6 +902,16 @@ func (d *DAL) InsertDeploymentEvent(ctx context.Context, deployment *DeploymentE
 		ModuleName:     deployment.ModuleName,
 		MinReplicas:    int32(deployment.MinReplicas),
 	})))
+}
+
+func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
+	rows, err := d.db.GetActiveRunners(ctx, false)
+	if err != nil {
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	return slices.Map(rows, func(row sql.GetActiveRunnersRow) Runner {
+		return runnerFromDB(sql.GetRunnerRow(row))
+	}), nil
 }
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {

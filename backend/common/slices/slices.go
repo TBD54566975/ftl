@@ -47,3 +47,16 @@ func Reduce[T, U any](slice []T, initial U, fn func(U, T) U) U {
 	}
 	return result
 }
+
+// AppendOrReplace appends a value to a slice if the slice does not contain a
+// value for which the given function returns true. If the slice does contain
+// such a value, it is replaced.
+func AppendOrReplace[T any](slice []T, value T, fn func(T) bool) []T {
+	for i, v := range slice {
+		if fn(v) {
+			slice[i] = value
+			return slice
+		}
+	}
+	return append(slice, value)
+}

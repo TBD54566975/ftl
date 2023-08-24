@@ -8,15 +8,16 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/proto"
@@ -39,13 +40,14 @@ import (
 )
 
 type Config struct {
-	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
-	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_CONTROLLER_ADVERTISE"`
-	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
-	DSN                          string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
-	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
-	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
-	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
+	Bind                                *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
+	Advertise                           *url.URL            `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_CONTROLLER_ADVERTISE"`
+	Key                                 model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
+	DSN                                 string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
+	RunnerTimeout                       time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
+	DeploymentReservationTimeout        time.Duration       `help:"Deployment reservation timeout." default:"120s"`
+	ArtefactChunkSize                   int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
+	NoExperimentalDynamicRoutingUpdates bool                `help:"Disable experimental dynamic routing updates."`
 }
 
 // Start the Controller. Blocks until the context is cancelled.
@@ -94,37 +96,50 @@ type clients struct {
 }
 
 type Service struct {
-	dal                          *dal.DAL
-	heartbeatTimeout             time.Duration
-	deploymentReservationTimeout time.Duration
-	artefactChunkSize            int
-	key                          model.ControllerKey
-	deploymentLogsSink           *deploymentLogsSink
+	dal                *dal.DAL
+	key                model.ControllerKey
+	deploymentLogsSink *deploymentLogsSink
 
 	// Map from endpoint to client.
-	clients *lru.Cache[string, clients]
+	clients *ttlcache.Cache[string, clients]
+
+	routesMu          sync.Mutex
+	routes            map[string][]dal.Route
+	runnerRouteModule map[model.RunnerKey]string // The module that the runner is currently serving.
+	config            Config
 }
 
-func New(ctx context.Context, dal *dal.DAL, config Config) (*Service, error) {
+func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
 	key := config.Key
 	if config.Key.ULID() == (ulid.ULID{}) {
 		key = model.NewControllerKey()
 	}
-	clientCache, err := lru.New[string, clients](1024)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create client cache")
-	}
 	svc := &Service{
-		dal:                          dal,
-		heartbeatTimeout:             config.RunnerTimeout,
-		deploymentReservationTimeout: config.DeploymentReservationTimeout,
-		artefactChunkSize:            config.ArtefactChunkSize,
-		key:                          key,
-		deploymentLogsSink:           newDeploymentLogsSink(ctx, dal),
-		clients:                      clientCache,
+		dal:                db,
+		key:                key,
+		deploymentLogsSink: newDeploymentLogsSink(ctx, db),
+		clients:            ttlcache.New[string, clients](ttlcache.WithTTL[string, clients](time.Minute)),
+		routes:             map[string][]dal.Route{},
+		runnerRouteModule:  map[model.RunnerKey]string{},
+		config:             config,
 	}
 	if config.Advertise.String() == "" {
 		config.Advertise = config.Bind
+	}
+
+	if !config.NoExperimentalDynamicRoutingUpdates {
+		// Subscribe to route changes, then load the current routing table
+		// so we don't miss any notifications.
+		routeChanges := make(chan dal.RouteNotification, 128)
+		db.RouteChanges.Subscribe(routeChanges)
+		routes, err := db.GetRoutingTable(ctx, nil)
+		if err != nil {
+			if !errors.Is(err, dal.ErrNotFound) {
+				return nil, errors.WithStack(err)
+			}
+			routes = map[string][]dal.Route{}
+		}
+		go svc.updateRoutingTables(ctx, routes, routeChanges)
 	}
 	go svc.heartbeatController(ctx, config.Advertise)
 	go svc.reapStaleControllers(ctx)
@@ -422,7 +437,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 func (s *Service) pingRunner(ctx context.Context, endpoint *url.URL) error {
 	client := rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint.String(), log.Error)
 	retry := backoff.Backoff{}
-	heartbeatCtx, cancel := context.WithTimeout(ctx, s.heartbeatTimeout)
+	heartbeatCtx, cancel := context.WithTimeout(ctx, s.config.RunnerTimeout)
 	defer cancel()
 	err := rpc.Wait(heartbeatCtx, retry, client)
 	if err != nil {
@@ -456,7 +471,7 @@ func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Reque
 	logger := s.getDeploymentLogger(ctx, deployment.Name)
 	logger.Infof("Get deployment artefacts for: %s", deployment.Name)
 
-	chunk := make([]byte, s.artefactChunkSize)
+	chunk := make([]byte, s.config.ArtefactChunkSize)
 nextArtefact:
 	for _, artefact := range deployment.Artefacts {
 		for _, clientArtefact := range req.Msg.HaveArtefacts {
@@ -498,12 +513,10 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
 
-	routes, err := s.dal.GetRoutingTable(ctx, req.Msg.Verb.Module)
+	module := verbRef.Module
+	routes, err := s.getRoutesForModule(module)
 	if err != nil {
-		if errors.Is(err, dal.ErrNotFound) {
-			return nil, connect.NewError(connect.CodeNotFound, errors.Wrapf(err, "no runners for module %q", req.Msg.Verb.Module))
-		}
-		return nil, errors.Wrap(err, "failed to get runners for module")
+		return nil, errors.WithStack(err)
 	}
 	route := routes[rand.Intn(len(routes))] //nolint:gosec
 	client := s.clientsForEndpoint(route.Endpoint)
@@ -553,6 +566,26 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	callRecord.response = resp.Msg
 	s.recordCall(ctx, callRecord)
 	return resp, nil
+}
+
+func (s *Service) getRoutesForModule(module string) ([]dal.Route, error) {
+	var routes []dal.Route
+	var ok bool
+	if s.config.NoExperimentalDynamicRoutingUpdates {
+		allRoutes, err := s.dal.GetRoutingTable(context.Background(), []string{module})
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		routes, ok = allRoutes[module]
+	} else {
+		s.routesMu.Lock()
+		routes, ok = s.routes[module]
+		s.routesMu.Unlock()
+	}
+	if !ok {
+		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("no runners for module %q", module))
+	}
+	return routes, nil
 }
 
 func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftlv1.GetArtefactDiffsRequest]) (*connect.Response[ftlv1.GetArtefactDiffsResponse], error) {
@@ -635,22 +668,22 @@ func (s *Service) getDeployment(ctx context.Context, name string) (*model.Deploy
 
 // Return or create the RunnerService and VerbService clients for a Runner endpoint.
 func (s *Service) clientsForEndpoint(endpoint string) clients {
-	client, ok := s.clients.Get(endpoint)
-	if ok {
-		return client
+	clientItem := s.clients.Get(endpoint)
+	if clientItem != nil {
+		return clientItem.Value()
 	}
-	client = clients{
+	client := clients{
 		runner: rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
 		verb:   rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
 	}
-	s.clients.Add(endpoint, client)
+	s.clients.Set(endpoint, client, time.Minute)
 	return client
 }
 
 func (s *Service) reapStaleRunners(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
-		count, err := s.dal.KillStaleRunners(context.Background(), s.heartbeatTimeout)
+		count, err := s.dal.KillStaleRunners(context.Background(), s.config.RunnerTimeout)
 		if err != nil {
 			logger.Errorf(err, "Failed to delete stale runners")
 		} else if count > 0 {
@@ -660,7 +693,7 @@ func (s *Service) reapStaleRunners(ctx context.Context) {
 		case <-ctx.Done():
 			return
 
-		case <-time.After(s.heartbeatTimeout / 4):
+		case <-time.After(s.config.RunnerTimeout / 4):
 		}
 	}
 }
@@ -677,7 +710,7 @@ func (s *Service) releaseExpiredReservations(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(s.deploymentReservationTimeout):
+		case <-time.After(s.config.DeploymentReservationTimeout):
 		}
 	}
 }
@@ -775,9 +808,9 @@ func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error 
 
 func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment) (client clients, err error) {
 	// A timeout context applied to the transaction and the Runner.Reserve() Call.
-	reservationCtx, cancel := context.WithTimeout(ctx, s.deploymentReservationTimeout)
+	reservationCtx, cancel := context.WithTimeout(ctx, s.config.DeploymentReservationTimeout)
 	defer cancel()
-	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Name, s.deploymentReservationTimeout, model.Labels{
+	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Name, s.config.DeploymentReservationTimeout, model.Labels{
 		"languages": []string{reconcile.Language},
 	})
 	if err != nil {
@@ -795,7 +828,7 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 func (s *Service) reapStaleControllers(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	for {
-		count, err := s.dal.KillStaleControllers(context.Background(), s.heartbeatTimeout)
+		count, err := s.dal.KillStaleControllers(context.Background(), s.config.RunnerTimeout)
 		if err != nil {
 			logger.Errorf(err, "Failed to delete stale controllers")
 		} else if count > 0 {
@@ -805,7 +838,7 @@ func (s *Service) reapStaleControllers(ctx context.Context) {
 		case <-ctx.Done():
 			return
 
-		case <-time.After(s.heartbeatTimeout / 4):
+		case <-time.After(s.config.RunnerTimeout / 4):
 		}
 	}
 }
@@ -822,7 +855,7 @@ func (s *Service) heartbeatController(ctx context.Context, advertiseAddr *url.UR
 		case <-ctx.Done():
 			return
 
-		case <-time.After(s.heartbeatTimeout / 4):
+		case <-time.After(s.config.RunnerTimeout / 4):
 		}
 	}
 }
@@ -844,7 +877,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	initialCount := len(seedDeployments)
 	deploymentChanges := make(chan dal.DeploymentNotification, len(seedDeployments))
 	for _, deployment := range seedDeployments {
-		deploymentChanges <- dal.DeploymentNotification{Message: deployment}
+		deploymentChanges <- dal.DeploymentNotification{Message: types.Some(deployment)}
 	}
 	logger.Infof("Seeded %d deployments", initialCount)
 
@@ -860,21 +893,21 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		case notification := <-deploymentChanges:
 			var response *ftlv1.PullSchemaResponse
 			// Deleted key
-			if key, ok := notification.Deleted.Get(); ok {
-				name := moduleByDeploymentName[key]
+			if deletion, ok := notification.Deleted.Get(); ok {
+				name := moduleByDeploymentName[deletion]
 				response = &ftlv1.PullSchemaResponse{
 					ModuleName:     name,
-					DeploymentName: key.String(),
+					DeploymentName: deletion.String(),
 					ChangeType:     ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
 				}
 				delete(moduleState, name)
-				delete(moduleByDeploymentName, key)
-			} else {
-				moduleSchema := notification.Message.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
+				delete(moduleByDeploymentName, deletion)
+			} else if message, ok := notification.Message.Get(); ok {
+				moduleSchema := message.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
 				moduleSchema.Runtime = &pschema.ModuleRuntime{
-					Language:    notification.Message.Language,
-					CreateTime:  timestamppb.New(notification.Message.CreatedAt),
-					MinReplicas: int32(notification.Message.MinReplicas),
+					Language:    message.Language,
+					CreateTime:  timestamppb.New(message.CreatedAt),
+					MinReplicas: int32(message.MinReplicas),
 				}
 				moduleSchemaBytes, err := proto.Marshal(moduleSchema)
 				if err != nil {
@@ -882,18 +915,18 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				}
 				newState := moduleStateEntry{
 					hash:        sha256.FromBytes(moduleSchemaBytes),
-					minReplicas: notification.Message.MinReplicas,
+					minReplicas: message.MinReplicas,
 				}
-				if current, ok := moduleState[notification.Message.Schema.Name]; ok {
+				if current, ok := moduleState[message.Schema.Name]; ok {
 					if current != newState {
 						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED
 						// A deployment is considered removed if its minReplicas is set to 0.
-						if current.minReplicas > 0 && notification.Message.MinReplicas == 0 {
+						if current.minReplicas > 0 && message.MinReplicas == 0 {
 							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED
 						}
 						response = &ftlv1.PullSchemaResponse{
 							ModuleName:     moduleSchema.Name,
-							DeploymentName: notification.Message.Name.String(),
+							DeploymentName: message.Name.String(),
 							Schema:         moduleSchema,
 							ChangeType:     changeType,
 						}
@@ -901,7 +934,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				} else {
 					response = &ftlv1.PullSchemaResponse{
 						ModuleName:     moduleSchema.Name,
-						DeploymentName: notification.Message.Name.String(),
+						DeploymentName: message.Name.String(),
 						Schema:         moduleSchema,
 						ChangeType:     ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
 						More:           initialCount > 1,
@@ -910,9 +943,9 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 						initialCount--
 					}
 				}
-				moduleState[notification.Message.Schema.Name] = newState
-				delete(moduleByDeploymentName, notification.Message.Name) // The deployment may have changed.
-				moduleByDeploymentName[notification.Message.Name] = notification.Message.Schema.Name
+				moduleState[message.Schema.Name] = newState
+				delete(moduleByDeploymentName, message.Name) // The deployment may have changed.
+				moduleByDeploymentName[message.Name] = message.Schema.Name
 			}
 
 			if response != nil {
@@ -993,4 +1026,56 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.
 	}
 
 	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Sub(attrs)
+}
+
+func (s *Service) updateRoutingTables(ctx context.Context, routes map[string][]dal.Route, changes chan dal.RouteNotification) {
+	s.routesMu.Lock()
+	s.routes = routes
+	for module, routes := range routes {
+		for _, route := range routes {
+			s.runnerRouteModule[route.Runner] = module
+		}
+	}
+	s.routesMu.Unlock()
+
+	logger := log.FromContext(ctx)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case notification := <-changes:
+			s.routesMu.Lock()
+			if deletion, ok := notification.Deleted.Get(); ok {
+				module, ok := s.runnerRouteModule[deletion]
+				if ok {
+					s.routes[module] = slices.Filter(s.routes[module], func(route dal.Route) bool {
+						logger.Infof("Deleting route %s", route)
+						return route.Runner == deletion
+					})
+					delete(s.runnerRouteModule, deletion)
+				}
+			} else if route, ok := notification.Message.Get(); ok {
+				s.runnerRouteModule[route.Runner] = route.Module
+				updated := false
+				for i, r := range s.routes[route.Module] {
+					if r.Runner == route.Runner {
+						updated = true
+						if r.Runner == route.Runner {
+							break
+						}
+						logger.Infof("Updating route %s", route)
+						s.routes[route.Module][i] = route
+						break
+					}
+				}
+				if !updated {
+					logger.Infof("Adding route %s", route)
+					s.routes[route.Module] = append(s.routes[route.Module], route)
+				}
+			}
+			s.routesMu.Unlock()
+		}
+	}
 }
