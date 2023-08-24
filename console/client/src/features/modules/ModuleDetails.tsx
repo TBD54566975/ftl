@@ -58,7 +58,7 @@ export function ModuleDetails() {
           {selectedModule.verbs.map((verb, index) => (
             <div
               key={index}
-              onClick={() =>{
+              onClick={() => {
                 handleVerbClicked(verb)
               }}
               className='rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white text-center

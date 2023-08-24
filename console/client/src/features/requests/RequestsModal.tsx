@@ -29,7 +29,7 @@ export function RequestModal() {
 
   const isOpen = searchParams.has('requests')
 
-  const handleClose = () =>{
+  const handleClose = () => {
     searchParams.delete('requests')
     navigate({ ...location, search: searchParams.toString() })
   }

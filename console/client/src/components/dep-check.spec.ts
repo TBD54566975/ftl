@@ -5,7 +5,6 @@ import ts from 'typescript'
 import fg from 'fast-glob'
 import { expect, test } from '@jest/globals'
 
-
 let cases: [dir: string, file: string][]
 const srcPath = path.resolve(__dirname)
 beforeAll(async () => {
