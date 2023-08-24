@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Data, Verb as Verb$1, VerbRef } from "../schema/schema_pb.js";
+import { Data as Data$1, Verb as Verb$1, VerbRef } from "../schema/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.console.DeploymentEventType
@@ -267,6 +267,11 @@ export class Verb extends Message<Verb> {
    */
   verb?: Verb$1;
 
+  /**
+   * @generated from field: string schema = 2;
+   */
+  schema = "";
+
   constructor(data?: PartialMessage<Verb>) {
     super();
     proto3.util.initPartial(data, this);
@@ -276,6 +281,7 @@ export class Verb extends Message<Verb> {
   static readonly typeName = "xyz.block.ftl.v1.console.Verb";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "verb", kind: "message", T: Verb$1 },
+    { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {
@@ -292,6 +298,49 @@ export class Verb extends Message<Verb> {
 
   static equals(a: Verb | PlainMessage<Verb> | undefined, b: Verb | PlainMessage<Verb> | undefined): boolean {
     return proto3.util.equals(Verb, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.Data
+ */
+export class Data extends Message<Data> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Data data = 1;
+   */
+  data?: Data$1;
+
+  /**
+   * @generated from field: string schema = 2;
+   */
+  schema = "";
+
+  constructor(data?: PartialMessage<Data>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Data";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "data", kind: "message", T: Data$1 },
+    { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Data {
+    return new Data().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Data {
+    return new Data().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Data {
+    return new Data().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Data | PlainMessage<Data> | undefined, b: Data | PlainMessage<Data> | undefined): boolean {
+    return proto3.util.equals(Data, a, b);
   }
 }
 
@@ -315,12 +364,17 @@ export class Module extends Message<Module> {
   language = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Verb verbs = 4;
+   * @generated from field: string schema = 4;
+   */
+  schema = "";
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Verb verbs = 5;
    */
   verbs: Verb[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Data data = 5;
+   * @generated from field: repeated xyz.block.ftl.v1.console.Data data = 6;
    */
   data: Data[] = [];
 
@@ -335,8 +389,9 @@ export class Module extends Message<Module> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "verbs", kind: "message", T: Verb, repeated: true },
-    { no: 5, name: "data", kind: "message", T: Data, repeated: true },
+    { no: 4, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "verbs", kind: "message", T: Verb, repeated: true },
+    { no: 6, name: "data", kind: "message", T: Data, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {

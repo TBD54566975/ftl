@@ -1,18 +1,18 @@
-import { StreamTimelineResponse } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Timestamp } from '@bufbuild/protobuf'
 import { formatTimestampShort } from '../../../utils/date.utils'
 import { lightTextColor } from '../../../utils/style.utils'
 
 type Props = {
-  entry: StreamTimelineResponse
+  timestamp: Timestamp
 }
 
-export const TimelineTimestamp: React.FC<Props> = ({ entry }) => {
+export const TimelineTimestamp: React.FC<Props> = ({ timestamp }) => {
   return (
     <time
-      dateTime={formatTimestampShort(entry.timeStamp)}
+      dateTime={formatTimestampShort(timestamp)}
       className={`flex-none text-xs ${lightTextColor}`}
     >
-      {formatTimestampShort(entry.timeStamp)}
+      {formatTimestampShort(timestamp)}
     </time>
   )
 }

@@ -21,7 +21,7 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStam
   const barColor = call.equals(selectedCall) ? 'bg-green-500' : 'bg-indigo-500'
 
   return (
-    <div className='relative my-1 h-4 flex' title={`${call.destinationVerbRef?.module} : ${call.destinationVerbRef?.name}`}>
+    <div className='relative my-0.5 h-4 flex' title={`${call.destinationVerbRef?.module} : ${call.destinationVerbRef?.name}`}>
       <div className='flex-grow relative'>
         <div
           className={`absolute h-4 ${barColor} rounded-sm`}
@@ -42,9 +42,10 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStam
 type Props = {
   calls: Call[]
   call?: Call
+  setSelectedCall: React.Dispatch<React.SetStateAction<Call>>
 }
 
-export const RequestGraph: React.FC<Props> = ({ calls, call }) => {
+export const RequestGraph: React.FC<Props> = ({ calls, call, setSelectedCall }) => {
   if (calls.length === 0) {
     return <></>
   }
@@ -58,11 +59,10 @@ export const RequestGraph: React.FC<Props> = ({ calls, call }) => {
   return (
     <div className='flex flex-col'>
       {calls.map((c, index) => (
-        <div key={index}
-          className='flex'
-        >
+        <div key={index} className='flex hover:bg-indigo-500/10' onClick={() => setSelectedCall(c)}>
           <div className='w-full relative'>
-            <CallBlock call={c}
+            <CallBlock
+              call={c}
               selectedCall={call}
               firstTimeStamp={firstTimeStamp}
               firstDuration={firstDuration}
