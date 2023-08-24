@@ -78,6 +78,8 @@ module.exports = {
       'ts-ignore': 'allow-with-description',
     } ],
     '@typescript-eslint/no-unused-vars': [ 'warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' } ],
+    'no-multiple-empty-lines': [ 'error', { max: 1 } ],
+    'arrow-spacing': [ 'error', { before: true, after: true } ],
     /* End: JS/TS quality rules */
 
     /* START: Nested ternary specific rules*/
