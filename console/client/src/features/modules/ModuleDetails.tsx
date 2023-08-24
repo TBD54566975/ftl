@@ -19,24 +19,21 @@ export function ModuleDetails() {
     )
   }
 
- 
-
   const handleVerbClicked = verb => {
     const tabId = [ selectedModule.name, verb.verb?.name ].join('.')
-    const existingTab = tabs.findIndex(tab => tab.id === tabId)
-    if (existingTab > 0) {
-      setActiveTab(existingTab)
-      return
+    const index = tabs.findIndex(tab => tab.id === tabId)
+    const existingTab = index !== -1
+    let newTab
+    if(!existingTab) {
+      newTab = {
+        id: [ selectedModule.name, verb.verb?.name ].join('.'),
+        label: verb.verb?.name ?? 'Verb',
+        type: TabType.Verb,
+      }
+      setTabs([ ...tabs, newTab ])
     }
-    const newTab = {
-      id: [ selectedModule.name, verb.verb?.name ].join('.'),
-      label: verb.verb?.name ?? 'Verb',
-      type: TabType.Verb,
-    }
-    const nextTabs = [ ...tabs, newTab ]
-    setTabs(nextTabs)
-    setActiveTab(nextTabs.length - 1)
-    !searchParams.has(TabSearchParams.active) && searchParams.set(TabSearchParams.active, newTab.id)
+    setActiveTab(existingTab ? index : tabs.length)
+    searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id)
     navigate({ ...location, search: searchParams.toString() })
   }
   
