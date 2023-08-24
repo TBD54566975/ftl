@@ -1,15 +1,15 @@
+import { Tab } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import React from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ModuleDetails } from '../features/modules/ModuleDetails'
 import { ModulesList } from '../features/modules/ModulesList'
+import { RequestModal } from '../features/requests/RequestsModal'
 import { Timeline } from '../features/timeline/Timeline'
 import { VerbTab } from '../features/verbs/VerbTab'
-import { TabsContext, TabSearchParams, TabType } from '../providers/tabs-provider'
+import { TabSearchParams, TabType, TabsContext } from '../providers/tabs-provider'
 import { headerColor, headerTextColor, panelColor } from '../utils/style.utils'
 import { SidePanel } from './SidePanel'
-import { RequestModal } from '../features/requests/RequestsModal'
-import { useSearchParams, useNavigate , useLocation } from 'react-router-dom'
-import { Tab } from '@headlessui/react'
 
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
@@ -19,8 +19,7 @@ export function IDELayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [ searchParams ] = useSearchParams()
-  
- 
+
   const handleCloseTab = id => {
     if (activeTab === id && tabs.length > 1) {
       // Set the next available tab as active, if the current active tab is being closed
@@ -139,5 +138,4 @@ export function IDELayout() {
     </>
   )
 }
-
 

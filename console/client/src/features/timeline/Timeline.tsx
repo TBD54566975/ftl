@@ -13,7 +13,6 @@ import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineDeploymentDetails } from './details/TimelineDeploymentDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 
-
 export const Timeline = () => {
   const client = useClient(ConsoleService)
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
