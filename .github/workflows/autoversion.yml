@@ -1,5 +1,6 @@
 on:
   workflow_call:
+name: Auto-version
 jobs:
   semver-tag:
     name: Conventional Commits Auto-version
@@ -7,8 +8,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Auto-version
         id: autoversion
         run: scripts/autoversion
+        env:
+          GH_TOKEN: ${{ secrets.FTL_AUTOVERSION_TOKEN }}
