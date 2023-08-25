@@ -44,7 +44,7 @@ export const Timeline = () => {
   }, [ client ])
   
   useEffect(() => {
-    if(!isOpen) {
+    if (!isOpen) {
       setSelectedEntry(null)
     }
   }, [ isOpen ])

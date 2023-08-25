@@ -42,7 +42,7 @@ describe('dependency check', () => {
           ts.SyntaxKind[child.kind] === 'ImportDeclaration' || // check imports
           ts.SyntaxKind[child.kind] === 'ExportDeclaration' // check exports
         ) {
-          //@ts-ignore: not sure why this is missing from ImportDeclaration and ExportDeclaration
+          // @ts-ignore: not sure why this is missing from ImportDeclaration and ExportDeclaration
           const text: string = child.moduleSpecifier.text
           text.startsWith('.') &&  // If it starts with a '.' it's a local module
             modules.push({
@@ -55,7 +55,7 @@ describe('dependency check', () => {
 
       const pathStart = path.resolve(srcPath, dir)
       const results = modules.find(mod => !mod.absolutePath.startsWith(pathStart))
-      //@ts-ignore: custom assertion
+      // @ts-ignore: custom assertion
       expect(results).noInterdependencies()
     }))
   })

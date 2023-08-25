@@ -59,7 +59,7 @@ module.exports = {
     /* Start: JS/TS quality rules */
     'react/jsx-key': [ 'error',
       { checkFragmentShorthand: true, checkKeyMustBeforeSpread: false, warnOnDuplicates: true },
-    ], //https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-key.md
+    ], // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-key.md
     'no-prototype-builtins': 0,
     'func-names': [ 'error', 'always', {
       generators: 'never',
@@ -78,8 +78,6 @@ module.exports = {
       'ts-ignore': 'allow-with-description',
     } ],
     '@typescript-eslint/no-unused-vars': [ 'warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' } ],
-    'no-multiple-empty-lines': [ 'error', { max: 1 } ],
-    'arrow-spacing': [ 'error', { before: true, after: true } ],
     /* End: JS/TS quality rules */
 
     /* START: Nested ternary specific rules*/
@@ -95,6 +93,19 @@ module.exports = {
       },
     } ],
     /* END: Nested ternary specific rules*/
+
+    /* START: Spacing rules */
+    'no-multiple-empty-lines': [ 'error', { max: 1 } ],
+    'arrow-spacing': [ 'error', { before: true, after: true } ],
+    'no-irregular-whitespace': [ 'error', {
+      skipStrings: true,
+      skipComments: false,
+      skipRegExps: true,
+      skipTemplates: true,
+    } ],
+    'spaced-comment': [ 'error', 'always' ],
+    'keyword-spacing': [ 'error', { after: true } ],
+    /* END: Spacing rules */
   },
   overrides: [
     {

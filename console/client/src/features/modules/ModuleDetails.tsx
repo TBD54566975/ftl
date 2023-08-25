@@ -11,9 +11,9 @@ export function ModuleDetails() {
   const { tabs, setTabs, setActiveTab } = React.useContext(TabsContext)
   const [ searchParams, setSearchParams ] = useSearchParams()
   const moduleId = searchParams.get('module')
-  //When mounting with a valid module in query params set selected module
+  // When mounting with a valid module in query params set selected module
   React.useEffect(() => {
-    if(moduleId) {
+    if (moduleId) {
       const module = modules.modules.find(module => module?.name === moduleId)
       module && setSelectedModule(module)
     }
@@ -32,8 +32,8 @@ export function ModuleDetails() {
     const index = tabs.findIndex(tab => tab.id === tabId)
     const existingTab = index !== -1
     let newTab
-    //Handle if tab is not in tab array
-    if(!existingTab) {
+    // Handle if tab is not in tab array
+    if (!existingTab) {
       newTab = {
         id: [ selectedModule.name, verb.verb?.name ].join('.'),
         label: verb.verb?.name ?? 'Verb',

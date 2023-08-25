@@ -39,7 +39,7 @@ export const TabsContext = React.createContext<TabsContextType>({
 
 export const TabsProvider = (props: React.PropsWithChildren) => {
   const [ tabs, setTabs ] = React.useState<Tab[]>([ timelineTab ])
-  const [ activeTab, setActiveTab ] = React.useState<{id: string, type: string}| undefined>()
+  const [ activeTab, setActiveTab ] = React.useState<{id: string, type: string} | undefined>()
 
   return <TabsContext.Provider value={{ tabs, setTabs, activeTab, setActiveTab }}>{props.children}</TabsContext.Provider>
 }
