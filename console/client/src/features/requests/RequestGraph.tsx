@@ -1,5 +1,5 @@
-import { Duration, Timestamp } from '@bufbuild/protobuf';
-import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb';
+import { Duration, Timestamp } from '@bufbuild/protobuf'
+import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 interface CallBlockProps {
   call: Call;
