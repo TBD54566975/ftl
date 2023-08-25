@@ -20,6 +20,7 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
 	"github.com/oklog/ulid/v2"
+	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -213,6 +214,20 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get status")
 	}
+	s.routesMu.Lock()
+	routes := slices.FlatMap(maps.Values(s.routes), func(routes []dal.Route) (out []*ftlv1.StatusResponse_Route) {
+		out = make([]*ftlv1.StatusResponse_Route, len(routes))
+		for i, route := range routes {
+			out[i] = &ftlv1.StatusResponse_Route{
+				Module:     route.Module,
+				Runner:     route.Runner.String(),
+				Deployment: route.Deployment.String(),
+				Endpoint:   route.Endpoint,
+			}
+		}
+		return out
+	})
+	s.routesMu.Unlock()
 	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
 		var deployment *string
 		if d, ok := r.Deployment.Get(); ok {
@@ -264,12 +279,12 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
 			return &ftlv1.StatusResponse_IngressRoute{
 				DeploymentName: r.Deployment.String(),
-				Module:         r.Module,
-				Verb:           r.Verb,
+				Verb:           &pschema.VerbRef{Module: r.Module, Name: r.Verb},
 				Method:         r.Method,
 				Path:           r.Path,
 			}
 		}),
+		Routes: routes,
 	}
 	return connect.NewResponse(resp), nil
 }

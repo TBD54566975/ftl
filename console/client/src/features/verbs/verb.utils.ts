@@ -6,11 +6,6 @@ export function getCalls(verb?: Verb): MetadataCalls[] {
   )
 }
 
-export function getVerbCode(verb?: Verb): string {
-  if (!verb) return ''
-  let codeBlock = verb.comments.map(comment => `// ${comment}`).join('\n')
-  if (verb.comments.length > 0) codeBlock += '\n'
-  codeBlock += `${verb.name}(${verb.request?.name}) -> ${verb.response?.name}`
-
-  return codeBlock
+export function buildVerbSchema(verbSchema: string, dataScemas: string[]): string {
+  return dataScemas.join('\n\n') + '\n\n' + verbSchema
 }

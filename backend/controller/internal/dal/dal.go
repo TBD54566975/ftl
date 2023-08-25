@@ -180,6 +180,7 @@ type Status struct {
 	Runners       []Runner
 	Deployments   []Deployment
 	IngressRoutes []IngressRouteEntry
+	Routes        []Route
 }
 
 // A Reservation of a Runner.
@@ -255,6 +256,10 @@ func (d *DAL) GetStatus(
 	if err != nil {
 		return Status{}, errors.Wrap(translatePGError(err), "could not get ingress routes")
 	}
+	routes, err := d.db.GetRoutingTable(ctx, nil)
+	if err != nil {
+		return Status{}, errors.Wrap(translatePGError(err), "could not get routing table")
+	}
 	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetDeploymentsRow) (Deployment, error) {
 		protoSchema := &pschema.Module{}
 		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
@@ -319,6 +324,14 @@ func (d *DAL) GetStatus(
 				Verb:       in.Verb,
 				Method:     in.Method,
 				Path:       in.Path,
+			}
+		}),
+		Routes: slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
+			return Route{
+				Module:     row.ModuleName.MustGet(),
+				Runner:     row.RunnerKey,
+				Deployment: row.DeploymentName,
+				Endpoint:   row.Endpoint,
 			}
 		}),
 	}, nil

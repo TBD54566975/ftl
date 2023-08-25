@@ -58,7 +58,7 @@ export const Timeline = () => {
 
     switch (entry.entry?.case) {
       case 'call':
-        openPanel(<TimelineCallDetails entry={entry} call={entry.entry.value} />)
+        openPanel(<TimelineCallDetails timestamp={entry.timeStamp} call={entry.entry.value} />)
         break
       case 'log':
         openPanel(<TimelineLogDetails entry={entry} log={entry.entry.value} />)

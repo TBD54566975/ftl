@@ -64,15 +64,15 @@ func declListToSchema(s []*pschema.Decl) []Decl {
 	for _, n := range s {
 		switch n := n.Value.(type) {
 		case *pschema.Decl_Verb:
-			out = append(out, verbToSchema(n.Verb))
+			out = append(out, VerbToSchema(n.Verb))
 		case *pschema.Decl_Data:
-			out = append(out, dataToSchema(n.Data))
+			out = append(out, DataToSchema(n.Data))
 		}
 	}
 	return out
 }
 
-func verbToSchema(s *pschema.Verb) *Verb {
+func VerbToSchema(s *pschema.Verb) *Verb {
 	return &Verb{
 		Name:     s.Name,
 		Comments: s.Comments,
@@ -82,7 +82,7 @@ func verbToSchema(s *pschema.Verb) *Verb {
 	}
 }
 
-func dataToSchema(s *pschema.Data) *Data {
+func DataToSchema(s *pschema.Data) *Data {
 	return &Data{
 		Name:     s.Name,
 		Fields:   fieldListToSchema(s.Fields),

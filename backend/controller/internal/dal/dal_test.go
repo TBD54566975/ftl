@@ -278,7 +278,7 @@ func TestDAL(t *testing.T) {
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterTypes(EventTypeCall), FilterCall(types.None[string](), "time"))
+			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterTypes(EventTypeCall), FilterCall(types.None[string](), "time", types.None[string]()))
 			assert.NoError(t, err)
 			assert.Equal(t, []Event{callEvent}, events)
 		})

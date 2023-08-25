@@ -16,7 +16,7 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
   const [ error, setError ] = useState<string | null>(null)
 
   const callData = module?.data.filter(data =>
-    [ verb?.verb?.request?.name, verb?.verb?.response?.name ].includes(data.name)
+    [ verb?.verb?.request?.name, verb?.verb?.response?.name ].includes(data.data?.name)
   )
 
   const handleSubmit = async event => {
@@ -61,12 +61,12 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
   return (
     <>
       <form onSubmit={handleSubmit} className='rounded-lg'>
-        {callData?.filter(d => d.name === verb?.verb?.request?.name).map((data, dataIndex) => (
+        {callData?.filter(d => d.data?.name === verb?.verb?.request?.name).map((data, dataIndex) => (
           <div key={dataIndex}
             className='mb-4'
           >
-            <h2 className='text-lg font-semibold mb-2'>{data.name}</h2>
-            {data.fields.map((field, fieldIndex) => (
+            <h2 className='text-lg font-semibold mb-2'>{data.data?.name}</h2>
+            {data.data?.fields.map((field, fieldIndex) => (
               <div key={fieldIndex}
                 className='text-sm mb-3'
               >
