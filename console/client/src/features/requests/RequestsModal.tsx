@@ -13,7 +13,7 @@ export function RequestModal() {
   const [ searchParams ] = useSearchParams()
   const client = useClient(ConsoleService)
   const [ calls, setCalls ] = React.useState<Call[]>([])
-  const key = searchParams.get('requests')?? undefined
+  const key = searchParams.get('requests') ?? undefined
   const moduleName = searchParams.get('details')
   React.useEffect(() => {
     const fetchRequestCalls = async () => {
