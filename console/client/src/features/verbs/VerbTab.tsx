@@ -24,7 +24,7 @@ export const VerbTab: React.FC<Props> = ({ id }) => {
   }
 
   return (
-    <div className='min-w-0 flex-auto p4'>
+    <div className='min-w-0 flex-auto p-4'>
       <VerbForm module={module} verb={verb} />
 
       <div className='pt-4'>
