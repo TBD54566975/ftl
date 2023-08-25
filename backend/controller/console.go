@@ -140,6 +140,7 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 			case *dal.CallEvent:
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
+					Id:        event.ID,
 					Entry: &pbconsole.StreamTimelineResponse_Call{
 						Call: callEventToCall(event),
 					},
@@ -148,6 +149,7 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 			case *dal.LogEvent:
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
+					Id:        event.ID,
 					Entry: &pbconsole.StreamTimelineResponse_Log{
 						Log: logEventToLogEntry(event),
 					},
@@ -156,6 +158,7 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 			case *dal.DeploymentEvent:
 				err = stream.Send(&pbconsole.StreamTimelineResponse{
 					TimeStamp: timestamppb.New(event.Time),
+					Id:        event.ID,
 					Entry: &pbconsole.StreamTimelineResponse_Deployment{
 						Deployment: deploymentEventToDeployment(event),
 					},

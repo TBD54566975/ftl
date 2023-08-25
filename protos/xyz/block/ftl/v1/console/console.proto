@@ -96,15 +96,17 @@ message StreamTimelineRequest {
 
 message StreamTimelineResponse {
   google.protobuf.Timestamp time_stamp = 1;
+  // Unique ID for event.
+  int64 id = 2;
   oneof entry {
-    Call call = 2;
-    Deployment deployment = 3;
-    LogEntry log = 4;
+    Call call = 3;
+    Deployment deployment = 4;
+    LogEntry log = 5;
   }
 
   // If true there are more logs immediately following this one as part of the initial batch.
   // If false this is the last log in the initial batch, but others may follow later.
-  bool more = 5;
+  bool more = 6;
 }
 
 message StreamLogsRequest {
