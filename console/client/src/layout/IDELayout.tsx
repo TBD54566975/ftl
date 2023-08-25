@@ -53,8 +53,8 @@ export function IDELayout() {
   
   React.useEffect(() => {
     const msg = invalidTab({ id, type })
-    if(!msg) { // P1 is a valid tab ID and Type
-      // P1.1 id and type are not in tab list
+    if(!msg) { // Is a valid tab ID and Type
+      // ID and type are not in tab list
       if(!tabs.some(({ id: tabId, type: tabType }) => tabId === id &&  tabType === type)) {
         const verbIdArray = id.split('.')
         const newTab = {
@@ -67,7 +67,7 @@ export function IDELayout() {
       }
       // Set active tab id and type
       setActiveTab({ id, type })
-    } else { // P2 is an invalid tab ID and type fallback to timeline
+    } else { // IDs an invalid tab ID and type fallback to timeline
       setActiveTab({ id: timelineTab.id, type: timelineTab.type })
     }
     // On intial mount we have no query params set for tabs so we want to skip setting invalidTabMessage
