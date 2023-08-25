@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -253,40 +254,28 @@ func TestDAL(t *testing.T) {
 	}
 
 	t.Run("QueryEvents", func(t *testing.T) {
-		//nolint:forcetypeassert
 		t.Run("NoFilters", func(t *testing.T) {
 			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now())
 			assert.NoError(t, err)
-			assert.Equal(t, 3, len(events))
-			deploymentEvent := events[0].(*DeploymentEvent)
-			deploymentEvent.Time = time.Time{}
-			assert.Equal(t, expectedDeploymentEvent, deploymentEvent)
-			assert.Equal(t, callEvent, events[1].(*CallEvent))
-			assert.Equal(t, logEvent, events[2].(*LogEvent))
+			assertEventsEqual(t, []Event{expectedDeploymentEvent, callEvent, logEvent}, events)
 		})
 
-		//nolint:forcetypeassert
 		t.Run("ByDeployment", func(t *testing.T) {
 			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterDeployments(deploymentName))
 			assert.NoError(t, err)
-			assert.Equal(t, 3, len(events))
-			deploymentEvent := events[0].(*DeploymentEvent)
-			deploymentEvent.Time = time.Time{}
-			assert.Equal(t, expectedDeploymentEvent, deploymentEvent)
-			assert.Equal(t, callEvent, events[1].(*CallEvent))
-			assert.Equal(t, logEvent, events[2].(*LogEvent))
+			assertEventsEqual(t, []Event{expectedDeploymentEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
 			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterTypes(EventTypeCall), FilterCall(types.None[string](), "time", types.None[string]()))
 			assert.NoError(t, err)
-			assert.Equal(t, []Event{callEvent}, events)
+			assertEventsEqual(t, []Event{callEvent}, events)
 		})
 
 		t.Run("ByLogLevel", func(t *testing.T) {
 			events, err := dal.QueryEvents(ctx, time.Time{}, time.Now(), FilterTypes(EventTypeLog), FilterLogs(log.Trace))
 			assert.NoError(t, err)
-			assert.Equal(t, []Event{logEvent}, events)
+			assertEventsEqual(t, []Event{logEvent}, events)
 		})
 	})
 
@@ -367,4 +356,22 @@ func TestRunnerStateFromProto(t *testing.T) {
 func TestControllerStateFromProto(t *testing.T) {
 	state := ftlv1.ControllerState_CONTROLLER_LIVE
 	assert.Equal(t, ControllerStateLive, ControllerStateFromProto(state))
+}
+
+func normaliseEvents(events []Event) []Event {
+	for i := 0; i < len(events); i++ {
+		event := events[i]
+		re := reflect.Indirect(reflect.ValueOf(event))
+		f := re.FieldByName("Time")
+		f.Set(reflect.Zero(f.Type()))
+		f = re.FieldByName("ID")
+		f.Set(reflect.Zero(f.Type()))
+		events[i] = event
+	}
+	return events
+}
+
+func assertEventsEqual(t *testing.T, expected, actual []Event) {
+	t.Helper()
+	assert.Equal(t, normaliseEvents(expected), normaliseEvents(actual))
 }

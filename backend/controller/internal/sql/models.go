@@ -179,6 +179,7 @@ type DeploymentArtefact struct {
 }
 
 type Event struct {
+	ID           int64
 	TimeStamp    time.Time
 	DeploymentID int64
 	RequestID    types.Option[int64]

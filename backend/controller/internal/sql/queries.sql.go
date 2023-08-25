@@ -556,72 +556,6 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 	return items, nil
 }
 
-const getEvents = `-- name: GetEvents :many
-SELECT d.name AS deployment_name,
-       ir.key AS request_key,
-       e.time_stamp, e.deployment_id, e.request_id, e.type, e.custom_key_1, e.custom_key_2, e.custom_key_3, e.custom_key_4, e.payload
-FROM events e
-         INNER JOIN deployments d on e.deployment_id = d.id
-         LEFT JOIN ingress_requests ir on e.request_id = ir.id
-WHERE time_stamp >= $1
-  AND time_stamp <= COALESCE($2, NOW() AT TIME ZONE 'utc')
-  AND d.name = $3
-  AND COALESCE(ir.key = $4, true)
-  AND e.type = ANY ($5::event_type[])
-`
-
-type GetEventsParams struct {
-	AfterTimestamp  time.Time
-	BeforeTimestamp sqltypes.NullTime
-	DeploymentName  model.DeploymentName
-	RequestKey      sqltypes.NullKey
-	Types           []EventType
-}
-
-type GetEventsRow struct {
-	DeploymentName model.DeploymentName
-	RequestKey     sqltypes.NullKey
-	Event          Event
-}
-
-func (q *Queries) GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEventsRow, error) {
-	rows, err := q.db.Query(ctx, getEvents,
-		arg.AfterTimestamp,
-		arg.BeforeTimestamp,
-		arg.DeploymentName,
-		arg.RequestKey,
-		arg.Types,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetEventsRow
-	for rows.Next() {
-		var i GetEventsRow
-		if err := rows.Scan(
-			&i.DeploymentName,
-			&i.RequestKey,
-			&i.Event.TimeStamp,
-			&i.Event.DeploymentID,
-			&i.Event.RequestID,
-			&i.Event.Type,
-			&i.Event.CustomKey1,
-			&i.Event.CustomKey2,
-			&i.Event.CustomKey3,
-			&i.Event.CustomKey4,
-			&i.Event.Payload,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getExistingDeploymentForModule = `-- name: GetExistingDeploymentForModule :one
 SELECT d.id, created_at, module_id, d.name, schema, labels, min_replicas, m.id, language, m.name
 FROM deployments d
@@ -1050,6 +984,7 @@ INSERT INTO events (deployment_id, request_id, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4,
                     payload)
 VALUES ($1, $2, $3, $4, $4, $5, $6, $7)
+RETURNING id
 `
 
 type InsertEventParams struct {

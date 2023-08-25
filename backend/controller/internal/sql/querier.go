@@ -37,7 +37,6 @@ type Querier interface {
 	GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error)
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, count interface{}) ([]GetDeploymentsWithArtefactsRow, error)
-	GetEvents(ctx context.Context, arg GetEventsParams) ([]GetEventsRow, error)
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
 	GetIdleRunners(ctx context.Context, labels []byte, limit int32) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
