@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
   parserOptions: {
-    ecmaVersgition: 2022,
+    ecmaVersion: 2022,
     sourceType: 'module',
     allowImportExportEverywhere: true,
   },
