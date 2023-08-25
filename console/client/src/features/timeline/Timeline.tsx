@@ -49,7 +49,7 @@ export const Timeline = () => {
     }
   }, [isOpen])
 
-  const handleEntryClicked = (entry) => {
+  const handleEntryClicked = (entry: StreamTimelineResponse) => {
     if (selectedEntry === entry) {
       setSelectedEntry(null)
       closePanel()

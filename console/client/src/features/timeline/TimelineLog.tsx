@@ -8,7 +8,7 @@ interface Props {
   selected?: boolean
 }
 
-export const TimelineLog: React.FC<Props> = ({ log, selected }) => {
+export const TimelineLog = ({ log, selected }: Props) => {
   return (
     <>
       <div className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}>

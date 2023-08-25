@@ -5,7 +5,7 @@ interface Props {
   module?: Module
 }
 
-export const VerbList: React.FC<Props> = ({ module }: Props) => {
+export const VerbList = ({ module }: Props) => {
   const verbs = module?.verbs
 
   return (

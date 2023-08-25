@@ -19,18 +19,18 @@ export const VerbForm = ({ module, verb }: Props) => {
     [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(data.data?.name)
   )
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     setResponse(null)
     setError(null)
 
-    const formData = new FormData(event.target)
+    const formData = new FormData(event.target as HTMLFormElement)
     // Convert the form data to a plain object (or however you want to send it)
     const dataObject = Array.from(formData.entries()).reduce((obj, [key, value]) => {
       obj[key] = value
       return obj
-    }, {})
+    }, {} as Record<string, unknown>)
 
     try {
       const verbRef: VerbRef = {

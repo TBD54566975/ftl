@@ -10,7 +10,7 @@ import { RequestGraph } from '../../requests/RequestGraph'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 interface Props {
-  timestamp: Timestamp
+  timestamp?: Timestamp
   call: Call
 }
 

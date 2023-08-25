@@ -24,7 +24,7 @@ function deploymentType(type: DeploymentEventType) {
   }
 }
 
-export const TimelineDeployment: React.FC<Props> = ({ deployment, timestamp, selected }) => {
+export const TimelineDeployment = ({ deployment, timestamp, selected }: Props) => {
   return (
     <>
       <div className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}>

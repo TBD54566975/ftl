@@ -3,12 +3,12 @@ import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils'
 import { classNames } from '../../utils/react.utils'
 import { panelColor, textColor } from '../../utils/style.utils'
-type Props = {
+interface Props {
   call: Call
   selected?: boolean
 }
 
-export const TimelineCall: React.FC<Props> = ({ call, selected }) => {
+export const TimelineCall = ({ call, selected }: Props) => {
   return (
     <>
       <div className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}>

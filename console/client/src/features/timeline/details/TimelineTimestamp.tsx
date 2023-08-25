@@ -3,7 +3,7 @@ import { formatTimestampShort } from '../../../utils/date.utils'
 import { lightTextColor } from '../../../utils/style.utils'
 
 interface Props {
-  timestamp: Timestamp
+  timestamp?: Timestamp
 }
 
 export const TimelineTimestamp = ({ timestamp }: Props) => {

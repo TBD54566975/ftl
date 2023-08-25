@@ -1,5 +1,6 @@
 import { useContext } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
 import { TabSearchParams, TabType, TabsContext } from '../../providers/tabs-provider'
 import { textColor } from '../../utils/style.utils'
@@ -19,7 +20,7 @@ export function ModuleDetails() {
     )
   }
 
-  const handleVerbClicked = (verb) => {
+  const handleVerbClicked = (verb: Verb) => {
     const tabId = [selectedModule.name, verb.verb?.name].join('.')
     const index = tabs.findIndex((tab) => tab.id === tabId)
     const existingTab = index !== -1

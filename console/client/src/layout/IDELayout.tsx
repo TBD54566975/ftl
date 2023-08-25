@@ -20,8 +20,8 @@ export function IDELayout() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
 
-  const handleCloseTab = (id) => {
-    if (activeTab === id && tabs.length > 1) {
+  const handleCloseTab = (id: string) => {
+    if (activeTab?.toString() === id && tabs.length > 1) {
       // Set the next available tab as active, if the current active tab is being closed
       const index = tabs.findIndex((tab) => tab.id === id)
       setActiveTab(index - 1)

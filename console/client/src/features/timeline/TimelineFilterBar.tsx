@@ -21,7 +21,7 @@ interface Props {
 }
 
 export const TimelineFilterBar = ({ selectedFilters, onFilterChange }: Props) => {
-  const isOptionChecked = (optionValue) => {
+  const isOptionChecked = (optionValue: string) => {
     return selectedFilters.includes(optionValue)
   }
 
