@@ -2,7 +2,6 @@ import React from 'react'
 import { modulesContext } from '../../providers/modules-provider'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
 import { useSearchParams } from 'react-router-dom'
-import { urlSearchParamsToObject } from '../../utils'
 
 export function ModulesList() {
   const modules = React.useContext(modulesContext)
@@ -17,7 +16,7 @@ export function ModulesList() {
           onClick={() => {
             setSelectedModule(prevModule => prevModule === module ? null : module)
             setSearchParams({
-              ...urlSearchParamsToObject(searchParams),
+              ...Object. fromEntries(searchParams),
               module: module.name,
             })
           }}

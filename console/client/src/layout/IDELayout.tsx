@@ -1,16 +1,16 @@
+import React from 'react'
 import { Tab } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import { InformationCircleIcon } from '@heroicons/react/20/solid'
 import { useSearchParams } from 'react-router-dom'
 import { ModuleDetails } from '../features/modules/ModuleDetails'
 import { ModulesList } from '../features/modules/ModulesList'
 import { Timeline } from '../features/timeline/Timeline'
 import { VerbTab } from '../features/verbs/VerbTab'
-import { TabSearchParams, TabType, TabsContext, timelineTab, isValidTab } from '../providers/tabs-provider'
-import { headerColor, headerTextColor, panelColor } from '../utils/style.utils'
+import { TabSearchParams, TabType, TabsContext, timelineTab } from '../providers/tabs-provider'
+import { headerColor, headerTextColor, panelColor, invalidTab } from '../utils'
 import { SidePanel } from './SidePanel'
-import { urlSearchParamsToObject } from '../utils'
-
+import { Notification } from '../components/Notification'
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
@@ -18,6 +18,7 @@ export function IDELayout() {
   const { tabs,activeTab, setActiveTab, setTabs } = React.useContext(TabsContext)
   const [ searchParams, setSearchParams ] = useSearchParams()
   const [ activeIndex, setActiveIndex ] = React.useState(0)
+  const [ invalidTabMessage, setInvalidTabMessage ] = React.useState<string>()
   const id = searchParams.get(TabSearchParams.id) as string
   const type = searchParams.get(TabSearchParams.type) as string
   // Set active tab index whenever our activeTab context changes
@@ -32,7 +33,7 @@ export function IDELayout() {
       type: tabs[index - 1].type,
     }
     setSearchParams({
-      ...urlSearchParamsToObject(searchParams),
+      ...Object. fromEntries(searchParams),
       [TabSearchParams.id]:nextActiveTab.id,
       [TabSearchParams.type]: nextActiveTab.type,
     })
@@ -44,14 +45,15 @@ export function IDELayout() {
     const nextActiveTab = tabs[index]
     setActiveTab({ id: nextActiveTab.id, type: nextActiveTab.type })
     setSearchParams({
-      ...urlSearchParamsToObject(searchParams),
+      ...Object. fromEntries(searchParams),
       [TabSearchParams.id]:nextActiveTab.id,
       [TabSearchParams.type]: nextActiveTab.type,
     })
   }
   
   React.useEffect(() => {
-    if(isValidTab({ id, type })) { // P1 is a valid tab ID and Type
+    const msg = invalidTab({ id, type })
+    if(!msg) { // P1 is a valid tab ID and Type
       // P1.1 id and type are not in tab list
       if(!tabs.some(({ id: tabId, type: tabType }) => tabId === id &&  tabType === type)) {
         const verbIdArray = id.split('.')
@@ -68,6 +70,10 @@ export function IDELayout() {
     } else { // P2 is an invalid tab ID and type fallback to timeline
       setActiveTab({ id: timelineTab.id, type: timelineTab.type })
     }
+    // On intial mount we have no query params set for tabs so we want to skip setting invalidTabMessage
+    if(type  === null && id === null) return
+      
+    setInvalidTabMessage(msg)
   }, [ id, type ])
 
   return (
@@ -127,7 +133,7 @@ export function IDELayout() {
               </Tab.List>
               <div className='flex-grow'></div>
             </div>
-            <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
+            <div className={`flex-1 overflow-y-scroll ${panelColor} p-4`}>
               <Tab.Panels>
                 {tabs.map(({ id }, i) => {
                   return i === 0
@@ -140,6 +146,12 @@ export function IDELayout() {
         </div>
         <SidePanel />
       </div>
+      {invalidTabMessage && <Notification
+        color='text-red-400'
+        icon={<InformationCircleIcon className='flex-shrink-0 inline w-4 h-4 mr-3' />}
+        title='Info Alert!'
+        message={invalidTabMessage}
+      />}
     </>
   )
 }

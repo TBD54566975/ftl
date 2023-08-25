@@ -1,7 +1,7 @@
 import React from 'react'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
 import { TabType, TabsContext, TabSearchParams } from '../../providers/tabs-provider'
-import { textColor, urlSearchParamsToObject } from '../../utils'
+import { textColor } from '../../utils'
 import { useSearchParams } from 'react-router-dom'
 import { modulesContext } from '../../providers/modules-provider'
 
@@ -17,7 +17,7 @@ export function ModuleDetails() {
       const module = modules.modules.find(module => module?.name === moduleId)
       module && setSelectedModule(module)
     }
-  })
+  }, [])
   //P2 when query param module changes update selected module if valid
   React.useEffect(() => {
     if(moduleId) {
@@ -50,7 +50,7 @@ export function ModuleDetails() {
     }
     setActiveTab({ id: tabId, type: TabType.Verb })
     setSearchParams({
-      ...urlSearchParamsToObject(searchParams),
+      ...Object. fromEntries(searchParams),
       [TabSearchParams.id]: newTab?.id ?? tabs[index].id,
       [TabSearchParams.type]: TabType.Verb,
     })
