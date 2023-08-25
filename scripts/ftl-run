@@ -17,5 +17,6 @@ build() {
 }
 
 prepare_template
+build
 
 overmind start -f Procfile.nowatch

@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Duration, Message, proto3, Timestamp } from "@bufbuild/protobuf";
+import { Duration, Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
 import { Data as Data$1, Verb as Verb$1, VerbRef } from "../schema/schema_pb.js";
 
 /**
@@ -692,23 +692,30 @@ export class StreamTimelineResponse extends Message<StreamTimelineResponse> {
   timeStamp?: Timestamp;
 
   /**
+   * Unique ID for event.
+   *
+   * @generated from field: int64 id = 2;
+   */
+  id = protoInt64.zero;
+
+  /**
    * @generated from oneof xyz.block.ftl.v1.console.StreamTimelineResponse.entry
    */
   entry: {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.Call call = 2;
+     * @generated from field: xyz.block.ftl.v1.console.Call call = 3;
      */
     value: Call;
     case: "call";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.Deployment deployment = 3;
+     * @generated from field: xyz.block.ftl.v1.console.Deployment deployment = 4;
      */
     value: Deployment;
     case: "deployment";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.LogEntry log = 4;
+     * @generated from field: xyz.block.ftl.v1.console.LogEntry log = 5;
      */
     value: LogEntry;
     case: "log";
@@ -718,7 +725,7 @@ export class StreamTimelineResponse extends Message<StreamTimelineResponse> {
    * If true there are more logs immediately following this one as part of the initial batch.
    * If false this is the last log in the initial batch, but others may follow later.
    *
-   * @generated from field: bool more = 5;
+   * @generated from field: bool more = 6;
    */
   more = false;
 
@@ -731,10 +738,11 @@ export class StreamTimelineResponse extends Message<StreamTimelineResponse> {
   static readonly typeName = "xyz.block.ftl.v1.console.StreamTimelineResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 2, name: "call", kind: "message", T: Call, oneof: "entry" },
-    { no: 3, name: "deployment", kind: "message", T: Deployment, oneof: "entry" },
-    { no: 4, name: "log", kind: "message", T: LogEntry, oneof: "entry" },
-    { no: 5, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "call", kind: "message", T: Call, oneof: "entry" },
+    { no: 4, name: "deployment", kind: "message", T: Deployment, oneof: "entry" },
+    { no: 5, name: "log", kind: "message", T: LogEntry, oneof: "entry" },
+    { no: 6, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamTimelineResponse {
