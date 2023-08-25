@@ -43,7 +43,7 @@ export function ModuleDetails() {
     }
     setActiveTab({ id: tabId, type: TabType.Verb })
     setSearchParams({
-      ...Object. fromEntries(searchParams),
+      ...Object.fromEntries(searchParams),
       [TabSearchParams.id]: newTab?.id ?? tabs[index].id,
       [TabSearchParams.type]: TabType.Verb,
     })

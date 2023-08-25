@@ -33,7 +33,7 @@ export function IDELayout() {
       type: tabs[index - 1].type,
     }
     setSearchParams({
-      ...Object. fromEntries(searchParams),
+      ...Object.fromEntries(searchParams),
       [TabSearchParams.id]:nextActiveTab.id,
       [TabSearchParams.type]: nextActiveTab.type,
     })
@@ -45,7 +45,7 @@ export function IDELayout() {
     const nextActiveTab = tabs[index]
     setActiveTab({ id: nextActiveTab.id, type: nextActiveTab.type })
     setSearchParams({
-      ...Object. fromEntries(searchParams),
+      ...Object.fromEntries(searchParams),
       [TabSearchParams.id]:nextActiveTab.id,
       [TabSearchParams.type]: nextActiveTab.type,
     })
@@ -133,7 +133,7 @@ export function IDELayout() {
               </Tab.List>
               <div className='flex-grow'></div>
             </div>
-            <div className={`flex-1 overflow-y-scroll ${panelColor} p-4`}>
+            <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
               <Tab.Panels>
                 {tabs.map(({ id }, i) => {
                   return i === 0

@@ -16,7 +16,7 @@ export function ModulesList() {
           onClick={() => {
             setSelectedModule(prevModule => prevModule === module ? null : module)
             setSearchParams({
-              ...Object. fromEntries(searchParams),
+              ...Object.fromEntries(searchParams),
               module: module.name,
             })
           }}

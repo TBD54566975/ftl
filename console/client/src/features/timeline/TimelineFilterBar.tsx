@@ -24,7 +24,7 @@ export const TimelineFilterBar = ({ selectedFilters, onFilterChange }) => {
   return (
     <>
       <div className={`sticky top-0 z-10 ${panelColor} shadow`}>
-        <div className='flex items-center justify-between px-4'>
+        <div className='flex items-center justify-between p-4'>
           <Popover.Group className='hidden sm:flex sm:items-baseline sm:space-x-8'>
             {filters.map((section, sectionIdx) => (
               <Popover
