@@ -8,5 +8,5 @@ const transport = createConnectTransport({
 })
 
 export function useClient<T extends ServiceType>(service: T): PromiseClient<T> {
-  return useMemo(() => createPromiseClient(service, transport), [ service ])
+  return useMemo(() => createPromiseClient(service, transport), [service])
 }

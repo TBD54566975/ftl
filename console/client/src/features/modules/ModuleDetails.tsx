@@ -9,7 +9,7 @@ export function ModuleDetails() {
   const { tabs, setTabs, setActiveTab } = useContext(TabsContext)
   const navigate = useNavigate()
   const location = useLocation()
-  const [ searchParams ] = useSearchParams()
+  const [searchParams] = useSearchParams()
 
   if (!selectedModule) {
     return (
@@ -19,18 +19,18 @@ export function ModuleDetails() {
     )
   }
 
-  const handleVerbClicked = verb => {
-    const tabId = [ selectedModule.name, verb.verb?.name ].join('.')
-    const index = tabs.findIndex(tab => tab.id === tabId)
+  const handleVerbClicked = (verb) => {
+    const tabId = [selectedModule.name, verb.verb?.name].join('.')
+    const index = tabs.findIndex((tab) => tab.id === tabId)
     const existingTab = index !== -1
     let newTab
-    if(!existingTab) {
+    if (!existingTab) {
       newTab = {
-        id: [ selectedModule.name, verb.verb?.name ].join('.'),
+        id: [selectedModule.name, verb.verb?.name].join('.'),
         label: verb.verb?.name ?? 'Verb',
         type: TabType.Verb,
       }
-      setTabs([ ...tabs, newTab ])
+      setTabs([...tabs, newTab])
     }
     setActiveTab(existingTab ? index : tabs.length)
     searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id)

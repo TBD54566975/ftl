@@ -8,7 +8,7 @@ import { VerbList } from '../verbs/VerbList'
 export default function ModulePage() {
   const { id } = useParams()
   const modules = useContext(modulesContext)
-  const module = modules.modules.find(module => module?.name === id)
+  const module = modules.modules.find((module) => module?.name === id)
 
   if (module === undefined) {
     return <></>

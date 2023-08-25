@@ -15,19 +15,19 @@ const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
-  const { tabs,activeTab, setActiveTab, setTabs } = React.useContext(TabsContext)
+  const { tabs, activeTab, setActiveTab, setTabs } = React.useContext(TabsContext)
   const navigate = useNavigate()
   const location = useLocation()
-  const [ searchParams ] = useSearchParams()
+  const [searchParams] = useSearchParams()
 
-  const handleCloseTab = id => {
+  const handleCloseTab = (id) => {
     if (activeTab === id && tabs.length > 1) {
       // Set the next available tab as active, if the current active tab is being closed
-      const index = tabs.findIndex(tab => tab.id === id)
-      setActiveTab(index - 1 )
+      const index = tabs.findIndex((tab) => tab.id === id)
+      setActiveTab(index - 1)
       searchParams.delete(TabSearchParams.active)
     }
-    setTabs(tabs.filter(tab => tab.id !== id))
+    setTabs(tabs.filter((tab) => tab.id !== id))
     navigate({ ...location, search: searchParams.toString() })
   }
 
@@ -42,31 +42,30 @@ export function IDELayout() {
   // Handle opening the correct tab on load
   React.useEffect(() => {
     const id = searchParams.get(TabSearchParams.active)
-    if(!id) {
+    if (!id) {
       setActiveTab(0)
       return
     }
-    const index = tabs.findIndex(tab => tab.id === id)
-    if(index >= 0) {
-      setActiveTab(activeTab  ?? index)
+    const index = tabs.findIndex((tab) => tab.id === id)
+    if (index >= 0) {
+      setActiveTab(activeTab ?? index)
       return
     }
-    const [ _, label ] = id.split('.')
+    const [_, label] = id.split('.')
     const newTab = {
       id,
       label,
       type: TabType.Verb,
     }
-    const nextTabs = [ ...tabs, newTab ]
+    const nextTabs = [...tabs, newTab]
     setTabs(nextTabs)
     setActiveTab(nextTabs.length - 1)
-  }, [ ])
+  }, [])
 
   return (
     <>
       {/* Main Content */}
       <div className='flex flex-grow overflow-hidden'>
-
         {/* Left Column */}
         <div className='flex flex-col w-1/4 h-full overflow-hidden'>
           {/* Upper Section */}
@@ -87,35 +86,37 @@ export function IDELayout() {
         </div>
 
         <div className={`flex-1 flex flex-col m-2 rounded`}>
-          <Tab.Group
-            selectedIndex={activeTab}
-            onChange={handleChangeTab}
-          >
-            <div >
+          <Tab.Group selectedIndex={activeTab} onChange={handleChangeTab}>
+            <div>
               <Tab.List className={`flex items-center rounded-t ${headerTextColor}`}>
                 {tabs.map(({ label, id }, i) => {
-                  return (<Tab
-                    key={id}
-                    className='flex items-center mr-2 relative'
-                    as='span'
-                  >
-                    <span
-                      className={`px-4 py-2 rounded-t ${id !== 'timeline' ? 'pr-8' : ''} ${activeTab === i ? `${selectedTabStyle}` : `${unselectedTabStyle}`}`}
-                    >
-                      {label}
-                    </span>
-                    {i !== 0 && (<button
-                      onClick={e => {
-                        e.stopPropagation()
-                        handleCloseTab(id)
-                        searchParams.get(TabSearchParams.active) === id && searchParams.delete(TabSearchParams.active)
-                        navigate({ ...location, search: searchParams.toString() })
-                      }}
-                      className='absolute right-0 mr-2 text-gray-400 hover:text-white'
-                    >
-                      <XMarkIcon className={`h-5 w-5`} />
-                    </button>)}
-                  </Tab>
+                  return (
+                    <Tab key={id} className='flex items-center mr-2 relative' as='span'>
+                      <span
+                        className={`px-4 py-2 rounded-t ${id !== 'timeline' ? 'pr-8' : ''} ${
+                          activeTab === i ? `${selectedTabStyle}` : `${unselectedTabStyle}`
+                        }`}
+                      >
+                        {label}
+                      </span>
+                      {i !== 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCloseTab(id)
+                            searchParams.get(TabSearchParams.active) === id &&
+                              searchParams.delete(TabSearchParams.active)
+                            navigate({
+                              ...location,
+                              search: searchParams.toString(),
+                            })
+                          }}
+                          className='absolute right-0 mr-2 text-gray-400 hover:text-white'
+                        >
+                          <XMarkIcon className={`h-5 w-5`} />
+                        </button>
+                      )}
+                    </Tab>
                   )
                 })}
               </Tab.List>
@@ -124,9 +125,15 @@ export function IDELayout() {
             <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
               <Tab.Panels>
                 {tabs.map(({ id }, i) => {
-                  return i === 0
-                    ? <Tab.Panel key={id}><Timeline /></Tab.Panel>
-                    : <Tab.Panel key={id}><VerbTab id={id} /></Tab.Panel>
+                  return i === 0 ? (
+                    <Tab.Panel key={id}>
+                      <Timeline />
+                    </Tab.Panel>
+                  ) : (
+                    <Tab.Panel key={id}>
+                      <VerbTab id={id} />
+                    </Tab.Panel>
+                  )
                 })}
               </Tab.Panels>
             </div>
@@ -138,4 +145,3 @@ export function IDELayout() {
     </>
   )
 }
-

@@ -16,9 +16,9 @@ import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 export const Timeline = () => {
   const client = useClient(ConsoleService)
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
-  const [ entries, setEntries ] = useState<StreamTimelineResponse[]>([])
-  const [ selectedEntry, setSelectedEntry ] = useState<StreamTimelineResponse | null>(null)
-  const [ selectedFilters, setSelectedFilters ] = useState<string[]>([])
+  const [entries, setEntries] = useState<StreamTimelineResponse[]>([])
+  const [selectedEntry, setSelectedEntry] = useState<StreamTimelineResponse | null>(null)
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([])
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -29,10 +29,10 @@ export const Timeline = () => {
 
       for await (const response of client.streamTimeline(
         { afterTime: Timestamp.fromDate(afterTime) },
-        { signal: abortController.signal })
-      ) {
+        { signal: abortController.signal }
+      )) {
         if (response.entry) {
-          setEntries(prevEntries => [ response, ...prevEntries ])
+          setEntries((prevEntries) => [response, ...prevEntries])
         }
       }
     }
@@ -41,15 +41,15 @@ export const Timeline = () => {
     return () => {
       abortController.abort()
     }
-  }, [ client ])
-  
+  }, [client])
+
   useEffect(() => {
-    if(!isOpen) {
+    if (!isOpen) {
       setSelectedEntry(null)
     }
-  }, [ isOpen ])
+  }, [isOpen])
 
-  const handleEntryClicked = entry => {
+  const handleEntryClicked = (entry) => {
     if (selectedEntry === entry) {
       setSelectedEntry(null)
       closePanel()
@@ -66,20 +66,21 @@ export const Timeline = () => {
       case 'deployment':
         openPanel(<TimelineDeploymentDetails entry={entry} deployment={entry.entry.value} />)
         break
-      default: break
+      default:
+        break
     }
     setSelectedEntry(entry)
   }
 
-  const handleFilterChange = (optionValue, checked) => {
+  const handleFilterChange = (optionValue: string, checked: boolean) => {
     if (checked) {
-      setSelectedFilters(prev => [ ...prev, optionValue ])
+      setSelectedFilters((prev) => [...prev, optionValue])
     } else {
-      setSelectedFilters(prev => prev.filter(filter => filter !== optionValue))
+      setSelectedFilters((prev) => prev.filter((filter) => filter !== optionValue))
     }
   }
 
-  const filteredEntries = entries.filter(entry => {
+  const filteredEntries = entries.filter((entry) => {
     if (selectedFilters.length === 0) {
       return true
     }
@@ -88,28 +89,36 @@ export const Timeline = () => {
 
   return (
     <div className='m-0'>
-      <TimelineFilterBar
-        selectedFilters={selectedFilters}
-        onFilterChange={handleFilterChange}
-      />
+      <TimelineFilterBar selectedFilters={selectedFilters} onFilterChange={handleFilterChange} />
 
       <ul role='list' className='space-y-4 p-4'>
         {filteredEntries.map((entry, index) => (
           <li key={index} className='relative flex gap-x-4' onClick={() => handleEntryClicked(entry)}>
-            <div className={classNames(index === filteredEntries.length - 1 ? 'h-6' : '-bottom-6', 'absolute left-0 top-0 flex w-6 justify-center')}>
+            <div
+              className={classNames(
+                index === filteredEntries.length - 1 ? 'h-6' : '-bottom-6',
+                'absolute left-0 top-0 flex w-6 justify-center'
+              )}
+            >
               <div className='w-px bg-gray-200 dark:bg-gray-600' />
             </div>
 
             {(() => {
               switch (entry.entry?.case) {
-                case 'call': return <TimelineCall call={entry.entry.value} selected={selectedEntry === entry} />
-                case 'log': return <TimelineLog log={entry.entry.value} selected={selectedEntry === entry} />
-                case 'deployment': return <TimelineDeployment
-                  deployment={entry.entry.value}
-                  timestamp={entry.timeStamp}
-                  selected={selectedEntry === entry}
-                />
-                default: return <></>
+                case 'call':
+                  return <TimelineCall call={entry.entry.value} selected={selectedEntry === entry} />
+                case 'log':
+                  return <TimelineLog log={entry.entry.value} selected={selectedEntry === entry} />
+                case 'deployment':
+                  return (
+                    <TimelineDeployment
+                      deployment={entry.entry.value}
+                      timestamp={entry.timeStamp}
+                      selected={selectedEntry === entry}
+                    />
+                  )
+                default:
+                  return <></>
               }
             })()}
           </li>

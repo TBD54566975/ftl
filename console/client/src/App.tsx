@@ -6,14 +6,11 @@ import { bgColor, textColor } from './utils/style.utils.ts'
 
 export default function App() {
   return (
-
     <div className={`h-screen flex flex-col min-w-[1024px] min-h-[600px] ${bgColor} ${textColor}`}>
       <Navigation />
       <Routes>
         <Route index element={<IDELayout />} />
-        <Route path='graph'
-          element={<GraphPage />}
-        />
+        <Route path='graph' element={<GraphPage />} />
       </Routes>
     </div>
   )

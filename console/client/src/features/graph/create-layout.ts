@@ -8,7 +8,7 @@ export function layoutNodes(modules: Module[]) {
   let x = 0
   const nodes: Node[] = []
   const edges: Edge[] = []
-  modules.forEach(module => {
+  modules.forEach((module) => {
     const verbs = module.verbs
     nodes.push({
       id: module.name ?? '',
@@ -22,10 +22,10 @@ export function layoutNodes(modules: Module[]) {
       },
     })
     let y = 40
-    verbs.forEach(verb => {
+    verbs.forEach((verb) => {
       const calls = verb?.verb?.metadata
-        .filter(meta => meta.value.case === 'calls')
-        .map(meta => meta.value.value as MetadataCalls)
+        .filter((meta) => meta.value.case === 'calls')
+        .map((meta) => meta.value.value as MetadataCalls)
 
       nodes.push({
         id: `${module.name}-${verb.verb?.name}`,
@@ -40,8 +40,8 @@ export function layoutNodes(modules: Module[]) {
         },
       })
 
-      calls?.map(call =>
-        call.calls.forEach(call => {
+      calls?.map((call) =>
+        call.calls.forEach((call) => {
           edges.push({
             id: `${module.name}-${verb.verb?.name}-${call.module}-${call.name}`,
             source: `${module.name}-${verb.verb?.name}`,

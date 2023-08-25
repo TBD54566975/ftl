@@ -9,7 +9,7 @@ export const modulesContext = createContext<GetModulesResponse>(new GetModulesRe
 const ModulesProvider = (props: PropsWithChildren) => {
   const schema = useContext(schemaContext)
   const client = useClient(ConsoleService)
-  const [ modules, setModules ] = useState<GetModulesResponse>(new GetModulesResponse())
+  const [modules, setModules] = useState<GetModulesResponse>(new GetModulesResponse())
 
   useEffect(() => {
     async function fetchModules() {
@@ -19,7 +19,7 @@ const ModulesProvider = (props: PropsWithChildren) => {
       return
     }
     fetchModules()
-  }, [ client, schema ])
+  }, [client, schema])
 
   return <modulesContext.Provider value={modules}>{props.children}</modulesContext.Provider>
 }

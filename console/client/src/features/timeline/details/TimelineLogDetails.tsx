@@ -5,12 +5,12 @@ import { classNames } from '../../../utils/react.utils'
 import { logLevelBadge, logLevelText, textColor } from '../../../utils/style.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-type Props = {
+interface Props {
   entry: StreamTimelineResponse
   log: LogEntry
 }
 
-export const TimelineLogDetails: React.FC<Props> = ({ entry, log }) => {
+export const TimelineLogDetails = ({ entry, log }: Props) => {
   return (
     <>
       <div>
@@ -27,7 +27,12 @@ export const TimelineLogDetails: React.FC<Props> = ({ entry, log }) => {
         <div className='flex pt-2 justify-between'>
           <dt>Level</dt>
           <dd className={`${textColor}`}>
-            <span className={classNames(logLevelBadge[log.logLevel], 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600')}>
+            <span
+              className={classNames(
+                logLevelBadge[log.logLevel],
+                'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600'
+              )}
+            >
               {logLevelText[log.logLevel]}
             </span>
           </dd>

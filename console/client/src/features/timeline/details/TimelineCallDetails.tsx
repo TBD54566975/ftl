@@ -9,30 +9,32 @@ import { textColor } from '../../../utils/style.utils'
 import { RequestGraph } from '../../requests/RequestGraph'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-type Props = {
+interface Props {
   timestamp: Timestamp
   call: Call
 }
 
-export const TimelineCallDetails: React.FC<Props> = ({ timestamp, call }) => {
+export const TimelineCallDetails = ({ timestamp, call }: Props) => {
   const client = useClient(ConsoleService)
-  const [ requestCalls, setRequestCalls ] = useState<Call[]>([])
-  const [ selectedCall, setSelectedCall ] = useState(call)
+  const [requestCalls, setRequestCalls] = useState<Call[]>([])
+  const [selectedCall, setSelectedCall] = useState(call)
 
   useEffect(() => {
     setSelectedCall(call)
-  }, [ call ])
+  }, [call])
 
   useEffect(() => {
     const fetchRequestCalls = async () => {
       if (selectedCall.requestKey === undefined) {
         return
       }
-      const response = await client.getRequestCalls({ requestKey: selectedCall.requestKey })
+      const response = await client.getRequestCalls({
+        requestKey: selectedCall.requestKey,
+      })
       setRequestCalls(response.calls)
     }
     fetchRequestCalls()
-  }, [ client, selectedCall ])
+  }, [client, selectedCall])
 
   return (
     <>

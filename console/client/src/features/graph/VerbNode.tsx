@@ -1,6 +1,6 @@
-import { Handle, Position } from 'reactflow'
+import { Handle, NodeProps, Position } from 'reactflow'
 
-export function VerbNode({ data }) {
+export function VerbNode({ data }: NodeProps) {
   return (
     <>
       <Handle

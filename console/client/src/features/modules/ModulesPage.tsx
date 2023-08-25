@@ -12,15 +12,11 @@ export default function ModulesPage() {
   return (
     <>
       <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
-        {schema.map(module => (
+        {schema.map((module) => (
           <Card key={module.schema?.name}>
             <div className='min-w-0 flex-1'>
-              <Link to={`${module.schema?.name}`}
-                className='focus:outline-none'
-              >
-                <span className='absolute inset-0'
-                  aria-hidden='true'
-                />
+              <Link to={`${module.schema?.name}`} className='focus:outline-none'>
+                <span className='absolute inset-0' aria-hidden='true' />
                 <div className='min-w-0 flex-auto'>
                   <div className='flex items-center gap-x-3'>
                     <div className={classNames(statuses['online'], 'flex-none rounded-full p-1')}>
@@ -29,7 +25,9 @@ export default function ModulesPage() {
                     <p className='text-sm font-medium text-gray-900 dark:text-gray-300'>{module.schema?.name}</p>
                   </div>
                   <div className='pt-4'>
-                    <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
+                    <div
+                      className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}
+                    >
                       {module.deploymentName}
                     </div>
                   </div>
@@ -52,9 +50,7 @@ export default function ModulesPage() {
         <div className='pt-4'>
           <Timeline />
         </div>
-
       </div>
-
     </>
   )
 }

@@ -13,7 +13,7 @@ export default function DarkModeSwitch() {
     } else {
       document.documentElement.classList.remove('dark')
     }
-  }, [ isDarkMode ])
+  }, [isDarkMode])
 
   return (
     <Switch
@@ -32,6 +32,5 @@ export default function DarkModeSwitch() {
         {isDarkMode ? <MoonIcon className='text-white p-0.5' /> : <SunIcon className='text-indigo-600 p-0.5' />}
       </span>
     </Switch>
-
   )
 }

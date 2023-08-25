@@ -1,4 +1,6 @@
-export function GroupNode({ data }) {
+import { NodeProps } from 'reactflow'
+
+export function GroupNode({ data }: NodeProps) {
   return (
     <>
       <div className='h-full bg-indigo-800 rounded-md'>

@@ -9,8 +9,8 @@ import { logLevelBadge, logLevelText } from '../../utils/style.utils'
 
 export default function LogsPage() {
   const client = useClient(ConsoleService)
-  const [ expandedLog, setExpandedLog ] = useState<number | null>(null)
-  const [ logs, setLogs ] = useState<LogEntry[]>([])
+  const [expandedLog, setExpandedLog] = useState<number | null>(null)
+  const [logs, setLogs] = useState<LogEntry[]>([])
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -21,10 +21,10 @@ export default function LogsPage() {
 
       for await (const response of client.streamLogs(
         { afterTime: Timestamp.fromDate(afterTime) },
-        { signal: abortController.signal })
-      ) {
+        { signal: abortController.signal }
+      )) {
         if (response.log) {
-          setLogs(prevLogs => [ response.log!, ...prevLogs ])
+          setLogs((prevLogs) => [response.log!, ...prevLogs])
         }
       }
     }
@@ -33,7 +33,7 @@ export default function LogsPage() {
     return () => {
       abortController.abort()
     }
-  }, [ client ])
+  }, [client])
 
   return (
     <>
@@ -68,7 +68,12 @@ export default function LogsPage() {
                   <React.Fragment key={index}>
                     <tr onClick={() => setExpandedLog(expandedLog !== index ? index : null)}>
                       <td className='whitespace-nowrap px-2 py-2'>
-                        <span className={classNames(logLevelBadge[log.logLevel], 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600')}>
+                        <span
+                          className={classNames(
+                            logLevelBadge[log.logLevel],
+                            'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600'
+                          )}
+                        >
                           {logLevelText[log.logLevel]}
                         </span>
                       </td>
@@ -78,8 +83,11 @@ export default function LogsPage() {
                           className='flex-none py-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400'
                         >
                           {formatTimestampShort(log.timeStamp)}
-                        </time></td>
-                      <td className='whitespace-nowrap px-2 py-2 text-sm text-gray-500 dark:text-gray-300'>{log.message}</td>
+                        </time>
+                      </td>
+                      <td className='whitespace-nowrap px-2 py-2 text-sm text-gray-500 dark:text-gray-300'>
+                        {log.message}
+                      </td>
                     </tr>
                     {expandedLog === index && (
                       <tr>
@@ -98,7 +106,7 @@ export default function LogsPage() {
                             <div className='mb-2'>
                               <strong>Attributes:</strong>
                               <div className='ml-4'>
-                                {Object.entries(log.attributes).map(([ key, value ]) => (
+                                {Object.entries(log.attributes).map(([key, value]) => (
                                   <div key={key}>
                                     {key}: {value}
                                   </div>
@@ -125,4 +133,3 @@ export default function LogsPage() {
     </>
   )
 }
-

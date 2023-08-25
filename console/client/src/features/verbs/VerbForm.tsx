@@ -5,21 +5,21 @@ import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 
-type Props = {
+interface Props {
   module?: Module
   verb?: Verb
 }
 
-export const VerbForm: React.FC<Props> = ({ module, verb }) => {
+export const VerbForm = ({ module, verb }: Props) => {
   const client = useClient(VerbService)
-  const [ response, setResponse ] = useState<string | null>(null)
-  const [ error, setError ] = useState<string | null>(null)
+  const [response, setResponse] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const callData = module?.data.filter(data =>
-    [ verb?.verb?.request?.name, verb?.verb?.response?.name ].includes(data.data?.name)
+  const callData = module?.data.filter((data) =>
+    [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(data.data?.name)
   )
 
-  const handleSubmit = async event => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     setResponse(null)
@@ -27,7 +27,7 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
 
     const formData = new FormData(event.target)
     // Convert the form data to a plain object (or however you want to send it)
-    const dataObject = Array.from(formData.entries()).reduce((obj, [ key, value ]) => {
+    const dataObject = Array.from(formData.entries()).reduce((obj, [key, value]) => {
       obj[key] = value
       return obj
     }, {})
@@ -61,40 +61,35 @@ export const VerbForm: React.FC<Props> = ({ module, verb }) => {
   return (
     <>
       <form onSubmit={handleSubmit} className='rounded-lg'>
-        {callData?.filter(d => d.data?.name === verb?.verb?.request?.name).map((data, dataIndex) => (
-          <div key={dataIndex}
-            className='mb-4'
-          >
-            <h2 className='text-lg font-semibold mb-2'>{data.data?.name}</h2>
-            {data.data?.fields.map((field, fieldIndex) => (
-              <div key={fieldIndex}
-                className='text-sm mb-3'
-              >
-                <label htmlFor={`input-${dataIndex}-${fieldIndex}`}
-                  className='block text-sm font-medium mb-1'
-                >
-                  {field.name}:
-                </label>
-                <input
-                  id={`input-${dataIndex}-${fieldIndex}`}
-                  name={field.name}
-                  type='text'
-                  placeholder={`Enter ${field.name}`}
-                  className='w-full text-gray-900 px-3 py-2 border rounded shadow-sm focus:outline-none focus:border-blue-500'
-                />
-              </div>
-            ))}
-          </div>
-        ))}
-        <button type='submit'
+        {callData
+          ?.filter((d) => d.data?.name === verb?.verb?.request?.name)
+          .map((data, dataIndex) => (
+            <div key={dataIndex} className='mb-4'>
+              <h2 className='text-lg font-semibold mb-2'>{data.data?.name}</h2>
+              {data.data?.fields.map((field, fieldIndex) => (
+                <div key={fieldIndex} className='text-sm mb-3'>
+                  <label htmlFor={`input-${dataIndex}-${fieldIndex}`} className='block text-sm font-medium mb-1'>
+                    {field.name}:
+                  </label>
+                  <input
+                    id={`input-${dataIndex}-${fieldIndex}`}
+                    name={field.name}
+                    type='text'
+                    placeholder={`Enter ${field.name}`}
+                    className='w-full text-gray-900 px-3 py-2 border rounded shadow-sm focus:outline-none focus:border-blue-500'
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        <button
+          type='submit'
           className='bg-indigo-700 text-white px-4 py-2 rounded hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
         >
           Submit
         </button>
       </form>
-      {response && (
-        <CodeBlock code={response} language='go' />
-      )}
+      {response && <CodeBlock code={response} language='go' />}
       {error && (
         <div className='mt-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4' role='alert'>
           {error}

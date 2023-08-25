@@ -2,7 +2,7 @@ import { MetadataCalls, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema
 
 export function getCalls(verb?: Verb): MetadataCalls[] {
   return (
-    verb?.metadata?.filter(meta => meta.value.case === 'calls').map(meta => meta.value.value as MetadataCalls) ?? []
+    verb?.metadata?.filter((meta) => meta.value.case === 'calls').map((meta) => meta.value.value as MetadataCalls) ?? []
   )
 }
 

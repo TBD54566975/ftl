@@ -1,13 +1,17 @@
 import { createContext, useEffect, useState } from 'react'
-import { DeploymentChangeType, PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
 import { useClient } from '../hooks/use-client'
 import { ControllerService } from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
+import { DeploymentChangeType, PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
 
 export const schemaContext = createContext<PullSchemaResponse[]>([])
 
-const SchemaProvider = props => {
+interface Props {
+  children: React.ReactNode
+}
+
+const SchemaProvider = (props: Props) => {
   const client = useClient(ControllerService)
-  const [ schema, setSchema ] = useState<PullSchemaResponse[]>([])
+  const [schema, setSchema] = useState<PullSchemaResponse[]>([])
 
   useEffect(() => {
     async function fetchSchema() {
@@ -33,7 +37,7 @@ const SchemaProvider = props => {
       }
     }
     fetchSchema()
-  }, [ client ])
+  }, [client])
 
   return <schemaContext.Provider value={schema}>{props.children}</schemaContext.Provider>
 }
