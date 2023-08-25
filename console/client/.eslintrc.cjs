@@ -15,43 +15,64 @@ module.exports = {
   globals: {
     convertStoriesToJestCases: 'readonly',
   },
-  plugins: [ 'react' ],
+  plugins: ['react'],
   extends: [
     'eslint:recommended',
     'plugin:compat/recommended',
     'plugin:@typescript-eslint/recommended',
     'prettier',
   ],
-  ignorePatterns: [ '**/dist/*' ],
+  ignorePatterns: ['**/dist/*'],
   rules: {
     strict: 0,
     /* Start: JS/TS quality rules */
-    'react/jsx-key': [ 'error',
-      { checkFragmentShorthand: true, checkKeyMustBeforeSpread: false, warnOnDuplicates: true },
+    'react/jsx-key': [
+      'error',
+      {
+        checkFragmentShorthand: true,
+        checkKeyMustBeforeSpread: false,
+        warnOnDuplicates: true,
+      },
     ], // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-key.md
     'no-prototype-builtins': 0,
-    'func-names': [ 'error', 'always', {
-      generators: 'never',
-    } ],
-    'no-console': [ 'error', {
-      allow: [ 'warn', 'error' ],
-    } ],
-    'no-return-assign': [ 'error' ],
-    'class-methods-use-this': [ 'error', {
-      exceptMethods: [ 'render' ],
-    } ],
-    'no-use-before-define': [ 'error' ],
-    'no-unneeded-ternary': [ 'error' ],
-    '@typescript-eslint/no-use-before-define': [ 'error' ],
-    '@typescript-eslint/ban-ts-comment': [ 2, {
-      'ts-ignore': 'allow-with-description',
-    } ],
-    '@typescript-eslint/no-unused-vars': [ 'warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' } ],
+    'func-names': [
+      'error',
+      'always',
+      {
+        generators: 'never',
+      },
+    ],
+    'no-console': [
+      'error',
+      {
+        allow: ['warn', 'error'],
+      },
+    ],
+    'no-return-assign': ['error'],
+    'class-methods-use-this': [
+      'error',
+      {
+        exceptMethods: ['render'],
+      },
+    ],
+    'no-use-before-define': ['error'],
+    'no-unneeded-ternary': ['error'],
+    '@typescript-eslint/no-use-before-define': ['error'],
+    '@typescript-eslint/ban-ts-comment': [
+      2,
+      {
+        'ts-ignore': 'allow-with-description',
+      },
+    ],
+    '@typescript-eslint/no-unused-vars': [
+      'warn',
+      {argsIgnorePattern: '^_', varsIgnorePattern: '^_'},
+    ],
     /* End: JS/TS quality rules */
   },
   overrides: [
     {
-      files: [ '**/*.spec.*' ],
+      files: ['**/*.spec.*'],
       rules: {
         'func-names': 0,
         'no-console': 0,
@@ -62,15 +83,13 @@ module.exports = {
       },
     },
     {
-      files: [ '**/*.svg.tsx' ],
+      files: ['**/*.svg.tsx'],
       rules: {
         'max-len': 0,
       },
     },
     {
-      files: [
-        '**/*.cjs',
-      ],
+      files: ['**/*.cjs'],
       rules: {
         '@typescript-eslint/no-var-requires': 0,
         'no-undef': 0,
@@ -78,4 +97,4 @@ module.exports = {
       },
     },
   ],
-}
+};

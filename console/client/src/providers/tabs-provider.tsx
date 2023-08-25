@@ -1,34 +1,47 @@
-import React from 'react'
+import React from 'react';
 
-export const TabType  = {
+export const TabType = {
   Timeline: 'timeline',
   Verb: 'verb',
-} as const
+} as const;
 
 export type Tab = {
   id: string;
   label: string;
-  type: typeof TabType[keyof typeof TabType];
-}
+  type: (typeof TabType)[keyof typeof TabType];
+};
 
 export const TabSearchParams = {
   active: 'active-tab',
-} as const
+} as const;
 
-export const timelineTab = { id: 'timeline', label: 'Timeline', type: TabType.Timeline }
+export const timelineTab = {
+  id: 'timeline',
+  label: 'Timeline',
+  type: TabType.Timeline,
+};
 
 type TabsContextType = {
   tabs: Tab[];
   activeTab?: number;
   setTabs: React.Dispatch<React.SetStateAction<Tab[]>>;
   setActiveTab: React.Dispatch<React.SetStateAction<number>>;
-}
+};
 
-export const TabsContext = React.createContext<TabsContextType>({ tabs: [], activeTab: 0, setTabs: () => { }, setActiveTab: () => { } })
+export const TabsContext = React.createContext<TabsContextType>({
+  tabs: [],
+  activeTab: 0,
+  setTabs: () => {},
+  setActiveTab: () => {},
+});
 
 export const TabsProvider = (props: React.PropsWithChildren) => {
-  const [ tabs, setTabs ] = React.useState<Tab[]>([ timelineTab ])
-  const [ activeTab, setActiveTab ] = React.useState<number>(0)
+  const [tabs, setTabs] = React.useState<Tab[]>([timelineTab]);
+  const [activeTab, setActiveTab] = React.useState<number>(0);
 
-  return <TabsContext.Provider value={{ tabs, setTabs, activeTab, setActiveTab }}>{props.children}</TabsContext.Provider>
-}
+  return (
+    <TabsContext.Provider value={{tabs, setTabs, activeTab, setActiveTab}}>
+      {props.children}
+    </TabsContext.Provider>
+  );
+};

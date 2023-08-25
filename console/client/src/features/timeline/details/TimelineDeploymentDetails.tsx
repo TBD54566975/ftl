@@ -1,27 +1,33 @@
-import { Timestamp } from '@bufbuild/protobuf'
-import { Deployment, StreamTimelineResponse } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { classNames } from '../../../utils/react.utils'
-import { textColor } from '../../../utils/style.utils'
-import { TimelineTimestamp } from './TimelineTimestamp'
+import {Timestamp} from '@bufbuild/protobuf';
+import {
+  Deployment,
+  StreamTimelineResponse,
+} from '../../../protos/xyz/block/ftl/v1/console/console_pb';
+import {classNames} from '../../../utils/react.utils';
+import {textColor} from '../../../utils/style.utils';
+import {TimelineTimestamp} from './TimelineTimestamp';
 
 type Props = {
-  entry: StreamTimelineResponse
-  deployment: Deployment
-}
+  entry: StreamTimelineResponse;
+  deployment: Deployment;
+};
 
 export const deploymentTypeText = {
   0: 'Created',
   1: 'Updated',
   2: 'Replaced',
-}
+};
 
 export const deploymentTypeBadge = {
   0: 'text-green-600 bg-green-400/30 dark:text-green-300 dark:bg-green-700/10',
   1: 'text-blue-350 bg-blue-300/30 dark:text-blue-300 dark:bg-blue-700/30',
   2: 'text-indigo-600 bg-indigo-400/30 dark:text-indigo-300 dark:bg-indigo-700/10',
-}
+};
 
-export const TimelineDeploymentDetails: React.FC<Props> = ({ entry, deployment }) => {
+export const TimelineDeploymentDetails: React.FC<Props> = ({
+  entry,
+  deployment,
+}) => {
   return (
     <>
       <div>
@@ -29,7 +35,11 @@ export const TimelineDeploymentDetails: React.FC<Props> = ({ entry, deployment }
       </div>
 
       <div className='pt-4'>
-        <span className={classNames(deploymentTypeBadge[deployment.eventType], 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600')}>
+        <span
+          className={classNames(
+            deploymentTypeBadge[deployment.eventType],
+            'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600'
+          )}>
           {deploymentTypeText[deployment.eventType]}
         </span>
       </div>
@@ -59,5 +69,5 @@ export const TimelineDeploymentDetails: React.FC<Props> = ({ entry, deployment }
         )}
       </div>
     </>
-  )
-}
+  );
+};

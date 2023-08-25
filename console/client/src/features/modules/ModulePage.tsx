@@ -1,17 +1,17 @@
-import { useContext } from 'react'
-import { useParams } from 'react-router-dom'
-import { modulesContext } from '../../providers/modules-provider'
-import { classNames } from '../../utils/react.utils'
-import { statuses } from '../../utils/style.utils'
-import { VerbList } from '../verbs/VerbList'
+import {useContext} from 'react';
+import {useParams} from 'react-router-dom';
+import {modulesContext} from '../../providers/modules-provider';
+import {classNames} from '../../utils/react.utils';
+import {statuses} from '../../utils/style.utils';
+import {VerbList} from '../verbs/VerbList';
 
 export default function ModulePage() {
-  const { id } = useParams()
-  const modules = useContext(modulesContext)
-  const module = modules.modules.find(module => module?.name === id)
+  const {id} = useParams();
+  const modules = useContext(modulesContext);
+  const module = modules.modules.find(module => module?.name === id);
 
   if (module === undefined) {
-    return <></>
+    return <></>;
   }
 
   return (
@@ -19,7 +19,11 @@ export default function ModulePage() {
       <div className='relative flex items-center space-x-4'>
         <div className='min-w-0 flex-auto'>
           <div className='flex items-center gap-x-3'>
-            <div className={classNames(statuses['online'], 'flex-none rounded-full p-1')}>
+            <div
+              className={classNames(
+                statuses['online'],
+                'flex-none rounded-full p-1'
+              )}>
               <div className='h-2 w-2 rounded-full bg-current' />
             </div>
 
@@ -36,5 +40,5 @@ export default function ModulePage() {
       </div>
       <VerbList module={module} />
     </>
-  )
+  );
 }

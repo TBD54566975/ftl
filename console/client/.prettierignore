@@ -1,3 +1,7 @@
-**/dist/**
-**/src/proto/**
-**/.playwright/**
+dist/**
+src/proto
+.playwright
+
+src/protos/**/*
+dist/**/*
+.playwright/**/*

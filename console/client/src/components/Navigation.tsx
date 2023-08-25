@@ -1,11 +1,12 @@
-import { NavLink } from 'react-router-dom'
-import { classNames } from '../utils/react.utils'
-import { navColor } from '../utils/style.utils'
-import DarkModeSwitch from './DarkModeSwitch'
+import {NavLink} from 'react-router-dom';
+import {classNames} from '../utils/react.utils';
+import {navColor} from '../utils/style.utils';
+import DarkModeSwitch from './DarkModeSwitch';
 
 export function Navigation() {
   return (
-    <div className={`px-4 py-2 flex items-center justify-between ${navColor} text-white shadow-md`}>
+    <div
+      className={`px-4 py-2 flex items-center justify-between ${navColor} text-white shadow-md`}>
       <div className='flex items-center space-x-2'>
         <NavLink to='/'>
           <div className='pb-1'>
@@ -18,21 +19,20 @@ export function Navigation() {
             <NavLink
               to='/graph'
               key='graph'
-              className={({ isActive }) =>
+              className={({isActive}) =>
                 classNames(
-              isActive
-                ? 'bg-indigo-700 text-white'
-                : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
-              'rounded-md px-3 py-2 text-sm font-medium'
+                  isActive
+                    ? 'bg-indigo-700 text-white'
+                    : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
+                  'rounded-md px-3 py-2 text-sm font-medium'
                 )
-              }
-            >
-          Graph
+              }>
+              Graph
             </NavLink>
           </div>
         </div>
       </div>
       <DarkModeSwitch />
     </div>
-  )
+  );
 }

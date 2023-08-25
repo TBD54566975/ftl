@@ -7,5 +7,12 @@ export default {
   bracketSameLine: true,
   arrowParens: 'avoid',
   singleAttributePerLine: true,
-  parser: 'typescript'
-}
+  overrides: [
+    {
+      files: ['*.(t|j)sx?'],
+      options: {
+        parser: 'typescript',
+      },
+    },
+  ],
+};

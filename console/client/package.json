@@ -12,7 +12,7 @@
     "lint:fix": "npm run lint -- --fix --quiet",
     "parcel": "parcel --port 5173",
     "plop": "npx plop",
-    "preview": "vite preview",
+    "prettier": "prettier . --write",
     "storybook": "storybook dev --no-open -p 6006",
     "test": "jest ./src",
     "test:coverage": "jest ./src --coverage",
@@ -22,7 +22,8 @@
   },
   "lint-staged": {
     "*.(js|cjs|tsx|ts)": [
-      "npm run lint:fix"
+      "npm run lint:fix",
+      "npm run prettier"
     ],
     "package.json": [
       "format-package -w"
