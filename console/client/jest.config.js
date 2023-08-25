@@ -10,4 +10,4 @@ export default {
     '\\.css$': 'identity-obj-proxy',
   },
   injectGlobals: false,
-};
+}

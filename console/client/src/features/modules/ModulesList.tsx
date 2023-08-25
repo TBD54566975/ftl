@@ -1,21 +1,21 @@
-import React from 'react';
-import {modulesContext} from '../../providers/modules-provider';
-import {SelectedModuleContext} from '../../providers/selected-module-provider';
-import {useNavigate, useLocation, useSearchParams} from 'react-router-dom';
+import React from 'react'
+import {modulesContext} from '../../providers/modules-provider'
+import {SelectedModuleContext} from '../../providers/selected-module-provider'
+import {useNavigate, useLocation, useSearchParams} from 'react-router-dom'
 
 export function ModulesList() {
-  const modules = React.useContext(modulesContext);
+  const modules = React.useContext(modulesContext)
   const {selectedModule, setSelectedModule} = React.useContext(
     SelectedModuleContext
-  );
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
+  )
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   React.useEffect(() => {
-    const id = searchParams.get('details');
-    const module = modules.modules.find(module => module?.name === id);
-    module && setSelectedModule(module);
-  });
+    const id = searchParams.get('details')
+    const module = modules.modules.find(module => module?.name === id)
+    module && setSelectedModule(module)
+  })
   return (
     <ul
       role='list'
@@ -26,9 +26,9 @@ export function ModulesList() {
           onClick={() => {
             setSelectedModule(prevModule =>
               prevModule === module ? null : module
-            );
-            searchParams.set('details', module.name);
-            navigate({...location, search: searchParams.toString()});
+            )
+            searchParams.set('details', module.name)
+            navigate({...location, search: searchParams.toString()})
           }}
           className={`relative flex gap-x-4 p-2 rounded cursor-pointer shadow-sm border border-transparent
           ${
@@ -53,5 +53,5 @@ export function ModulesList() {
         </li>
       ))}
     </ul>
-  );
+  )
 }

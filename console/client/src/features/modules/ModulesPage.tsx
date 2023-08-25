@@ -1,13 +1,13 @@
-import {useContext} from 'react';
-import {Link} from 'react-router-dom';
-import {Card} from '../../components/Card';
-import {schemaContext} from '../../providers/schema-provider.tsx';
-import {classNames} from '../../utils/react.utils';
-import {statuses} from '../../utils/style.utils';
-import {Timeline} from '../timeline/Timeline.tsx';
+import {useContext} from 'react'
+import {Link} from 'react-router-dom'
+import {Card} from '../../components/Card'
+import {schemaContext} from '../../providers/schema-provider.tsx'
+import {classNames} from '../../utils/react.utils'
+import {statuses} from '../../utils/style.utils'
+import {Timeline} from '../timeline/Timeline.tsx'
 
 export default function ModulesPage() {
-  const schema = useContext(schemaContext);
+  const schema = useContext(schemaContext)
 
   return (
     <>
@@ -66,5 +66,5 @@ export default function ModulesPage() {
         </div>
       </div>
     </>
-  );
+  )
 }

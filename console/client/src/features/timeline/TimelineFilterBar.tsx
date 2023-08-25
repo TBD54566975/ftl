@@ -1,7 +1,7 @@
-import {Popover, Transition} from '@headlessui/react';
-import {ChevronDownIcon} from '@heroicons/react/20/solid';
-import {Fragment} from 'react';
-import {panelColor, textColor} from '../../utils/style.utils';
+import {Popover, Transition} from '@headlessui/react'
+import {ChevronDownIcon} from '@heroicons/react/20/solid'
+import {Fragment} from 'react'
+import {panelColor, textColor} from '../../utils/style.utils'
 
 const filters = [
   {
@@ -13,12 +13,12 @@ const filters = [
       {value: 'deployment', label: 'Deployments'},
     ],
   },
-];
+]
 
 export const TimelineFilterBar = ({selectedFilters, onFilterChange}) => {
   const isOptionChecked = optionValue => {
-    return selectedFilters.includes(optionValue);
-  };
+    return selectedFilters.includes(optionValue)
+  }
 
   return (
     <>
@@ -89,5 +89,5 @@ export const TimelineFilterBar = ({selectedFilters, onFilterChange}) => {
         </div>
       </div>
     </>
-  );
-};
+  )
+}

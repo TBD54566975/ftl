@@ -1,18 +1,18 @@
-import React from 'react';
-import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
+import React from 'react'
+import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter'
 import {
   atomDark,
   oneLight,
-} from 'react-syntax-highlighter/dist/esm/styles/prism';
-import {useDarkMode} from '../providers/dark-mode-provider';
+} from 'react-syntax-highlighter/dist/esm/styles/prism'
+import {useDarkMode} from '../providers/dark-mode-provider'
 
 type Props = {
-  code: string;
-  language: string;
-};
+  code: string
+  language: string
+}
 
 export const CodeBlock: React.FC<Props> = ({code, language}) => {
-  const {isDarkMode} = useDarkMode();
+  const {isDarkMode} = useDarkMode()
 
   return (
     <SyntaxHighlighter
@@ -21,5 +21,5 @@ export const CodeBlock: React.FC<Props> = ({code, language}) => {
       customStyle={{fontSize: '12px'}}>
       {code}
     </SyntaxHighlighter>
-  );
-};
+  )
+}

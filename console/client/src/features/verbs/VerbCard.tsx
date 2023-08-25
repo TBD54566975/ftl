@@ -1,18 +1,18 @@
-import {Link} from 'react-router-dom';
-import {Card} from '../../components/Card';
-import {Module, Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb';
-import {MetadataCalls} from '../../protos/xyz/block/ftl/v1/schema/schema_pb';
-import {classNames} from '../../utils/react.utils';
+import {Link} from 'react-router-dom'
+import {Card} from '../../components/Card'
+import {Module, Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {MetadataCalls} from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import {classNames} from '../../utils/react.utils'
 
 type Props = {
-  module?: Module;
-  verb?: Verb;
-};
+  module?: Module
+  verb?: Verb
+}
 
 export const VerbCard: React.FC<Props> = ({module, verb}) => {
   const calls = verb?.verb?.metadata
     .filter(meta => meta.value.case === 'calls')
-    .map(meta => meta.value.value as MetadataCalls);
+    .map(meta => meta.value.value as MetadataCalls)
 
   return (
     <Card>
@@ -41,5 +41,5 @@ export const VerbCard: React.FC<Props> = ({module, verb}) => {
         </Link>
       </div>
     </Card>
-  );
-};
+  )
+}

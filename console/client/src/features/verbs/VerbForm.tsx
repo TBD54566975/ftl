@@ -1,69 +1,69 @@
-import {useState} from 'react';
-import {CodeBlock} from '../../components/CodeBlock';
-import {useClient} from '../../hooks/use-client';
-import {Module, Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb';
-import {VerbService} from '../../protos/xyz/block/ftl/v1/ftl_connect';
-import {VerbRef} from '../../protos/xyz/block/ftl/v1/schema/schema_pb';
+import {useState} from 'react'
+import {CodeBlock} from '../../components/CodeBlock'
+import {useClient} from '../../hooks/use-client'
+import {Module, Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {VerbService} from '../../protos/xyz/block/ftl/v1/ftl_connect'
+import {VerbRef} from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 
 type Props = {
-  module?: Module;
-  verb?: Verb;
-};
+  module?: Module
+  verb?: Verb
+}
 
 export const VerbForm: React.FC<Props> = ({module, verb}) => {
-  const client = useClient(VerbService);
-  const [response, setResponse] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const client = useClient(VerbService)
+  const [response, setResponse] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const callData = module?.data.filter(data =>
     [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(
       data.data?.name
     )
-  );
+  )
 
   const handleSubmit = async event => {
-    event.preventDefault();
+    event.preventDefault()
 
-    setResponse(null);
-    setError(null);
+    setResponse(null)
+    setError(null)
 
-    const formData = new FormData(event.target);
+    const formData = new FormData(event.target)
     // Convert the form data to a plain object (or however you want to send it)
     const dataObject = Array.from(formData.entries()).reduce(
       (obj, [key, value]) => {
-        obj[key] = value;
-        return obj;
+        obj[key] = value
+        return obj
       },
       {}
-    );
+    )
 
     try {
       const verbRef: VerbRef = {
         name: verb?.verb?.name,
         module: module?.name,
-      } as VerbRef;
+      } as VerbRef
 
-      const buffer = Buffer.from(JSON.stringify(dataObject));
-      const uint8Array = new Uint8Array(buffer);
+      const buffer = Buffer.from(JSON.stringify(dataObject))
+      const uint8Array = new Uint8Array(buffer)
 
       try {
-        const response = await client.call({verb: verbRef, body: uint8Array});
+        const response = await client.call({verb: verbRef, body: uint8Array})
         if (response.response.case === 'body') {
           const jsonString = Buffer.from(response.response.value).toString(
             'utf-8'
-          );
+          )
 
-          setResponse(JSON.stringify(JSON.parse(jsonString), null, 2));
+          setResponse(JSON.stringify(JSON.parse(jsonString), null, 2))
         } else if (response.response.case === 'error') {
-          setError(response.response.value.message);
+          setError(response.response.value.message)
         }
       } catch (error) {
-        console.error('There was an error with the request:', error);
+        console.error('There was an error with the request:', error)
       }
     } catch (error) {
-      console.error('There was an error with the request:', error);
+      console.error('There was an error with the request:', error)
     }
-  };
+  }
 
   return (
     <>
@@ -117,5 +117,5 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
         </div>
       )}
     </>
-  );
-};
+  )
+}

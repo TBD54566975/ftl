@@ -1,4 +1,4 @@
-import {Outlet} from 'react-router-dom';
+import {Outlet} from 'react-router-dom'
 const Layout = () => {
   return (
     <div className='min-h-full'>
@@ -8,6 +8,6 @@ const Layout = () => {
         </div>
       </main>
     </div>
-  );
-};
-export default Layout;
+  )
+}
+export default Layout

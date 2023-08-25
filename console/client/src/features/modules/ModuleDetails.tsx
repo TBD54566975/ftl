@@ -1,45 +1,46 @@
-import {useContext} from 'react';
-import {useLocation, useNavigate, useSearchParams} from 'react-router-dom';
-import {SelectedModuleContext} from '../../providers/selected-module-provider';
+import {useContext} from 'react'
+import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
+import {SelectedModuleContext} from '../../providers/selected-module-provider'
 import {
   TabSearchParams,
   TabType,
   TabsContext,
-} from '../../providers/tabs-provider';
-import {textColor} from '../../utils/style.utils';
+} from '../../providers/tabs-provider'
+import {textColor} from '../../utils/style.utils'
 
 export function ModuleDetails() {
-  const {selectedModule} = useContext(SelectedModuleContext);
-  const {tabs, setTabs, setActiveTab} = useContext(TabsContext);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const {selectedModule} = useContext(SelectedModuleContext)
+  const {tabs, setTabs, setActiveTab} = useContext(TabsContext)
+
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
 
   if (!selectedModule) {
     return (
       <div className='flex-1 p-4 overflow-auto flex items-center justify-center'>
         <span>No module selected</span>
       </div>
-    );
+    )
   }
 
   const handleVerbClicked = verb => {
-    const tabId = [selectedModule.name, verb.verb?.name].join('.');
-    const index = tabs.findIndex(tab => tab.id === tabId);
-    const existingTab = index !== -1;
-    let newTab;
+    const tabId = [selectedModule.name, verb.verb?.name].join('.')
+    const index = tabs.findIndex(tab => tab.id === tabId)
+    const existingTab = index !== -1
+    let newTab
     if (!existingTab) {
       newTab = {
         id: [selectedModule.name, verb.verb?.name].join('.'),
         label: verb.verb?.name ?? 'Verb',
         type: TabType.Verb,
-      };
-      setTabs([...tabs, newTab]);
+      }
+      setTabs([...tabs, newTab])
     }
-    setActiveTab(existingTab ? index : tabs.length);
-    searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id);
-    navigate({...location, search: searchParams.toString()});
-  };
+    setActiveTab(existingTab ? index : tabs.length)
+    searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id)
+    navigate({...location, search: searchParams.toString()})
+  }
 
   return (
     <div className='flex-1 overflow-auto text-sm font-medium text-gray-500 dark:text-gray-400'>
@@ -63,7 +64,7 @@ export function ModuleDetails() {
             <div
               key={index}
               onClick={() => {
-                handleVerbClicked(verb);
+                handleVerbClicked(verb)
               }}
               className='rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white text-center
             shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'>
@@ -88,5 +89,5 @@ export function ModuleDetails() {
         </dd>
       </div>
     </div>
-  );
+  )
 }

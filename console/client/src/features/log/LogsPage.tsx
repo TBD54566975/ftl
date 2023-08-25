@@ -1,39 +1,39 @@
-import {Timestamp} from '@bufbuild/protobuf';
-import React, {useEffect, useState} from 'react';
-import {useClient} from '../../hooks/use-client';
-import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect';
-import {LogEntry} from '../../protos/xyz/block/ftl/v1/console/console_pb';
-import {formatTimestampShort} from '../../utils/date.utils';
-import {classNames} from '../../utils/react.utils';
-import {logLevelBadge, logLevelText} from '../../utils/style.utils';
+import {Timestamp} from '@bufbuild/protobuf'
+import React, {useEffect, useState} from 'react'
+import {useClient} from '../../hooks/use-client'
+import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect'
+import {LogEntry} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {formatTimestampShort} from '../../utils/date.utils'
+import {classNames} from '../../utils/react.utils'
+import {logLevelBadge, logLevelText} from '../../utils/style.utils'
 
 export default function LogsPage() {
-  const client = useClient(ConsoleService);
-  const [expandedLog, setExpandedLog] = useState<number | null>(null);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const client = useClient(ConsoleService)
+  const [expandedLog, setExpandedLog] = useState<number | null>(null)
+  const [logs, setLogs] = useState<LogEntry[]>([])
 
   useEffect(() => {
-    const abortController = new AbortController();
+    const abortController = new AbortController()
 
     async function streamLogs() {
-      const afterTime = new Date();
-      afterTime.setHours(afterTime.getHours() - 1);
+      const afterTime = new Date()
+      afterTime.setHours(afterTime.getHours() - 1)
 
       for await (const response of client.streamLogs(
         {afterTime: Timestamp.fromDate(afterTime)},
         {signal: abortController.signal}
       )) {
         if (response.log) {
-          setLogs(prevLogs => [response.log!, ...prevLogs]);
+          setLogs(prevLogs => [response.log!, ...prevLogs])
         }
       }
     }
 
-    streamLogs();
+    streamLogs()
     return () => {
-      abortController.abort();
-    };
-  }, [client]);
+      abortController.abort()
+    }
+  }, [client])
 
   return (
     <>
@@ -132,5 +132,5 @@ export default function LogsPage() {
         </div>
       </div>
     </>
-  );
+  )
 }

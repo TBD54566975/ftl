@@ -1,29 +1,29 @@
-import {Timestamp} from '@bufbuild/protobuf';
-import {RocketLaunchIcon} from '@heroicons/react/24/solid';
+import {Timestamp} from '@bufbuild/protobuf'
+import {RocketLaunchIcon} from '@heroicons/react/24/solid'
 import {
   Deployment,
   DeploymentEventType,
-} from '../../protos/xyz/block/ftl/v1/console/console_pb';
-import {formatTimestamp} from '../../utils/date.utils';
-import {panelColor, textColor} from '../../utils/style.utils';
-import {classNames} from '../../utils/react.utils';
+} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {formatTimestamp} from '../../utils/date.utils'
+import {panelColor, textColor} from '../../utils/style.utils'
+import {classNames} from '../../utils/react.utils'
 
 type Props = {
-  deployment: Deployment;
-  timestamp?: Timestamp;
-  selected?: boolean;
-};
+  deployment: Deployment
+  timestamp?: Timestamp
+  selected?: boolean
+}
 
 function deploymentType(type: DeploymentEventType) {
   switch (type) {
     case DeploymentEventType.DEPLOYMENT_CREATED:
-      return 'Created';
+      return 'Created'
     case DeploymentEventType.DEPLOYMENT_UPDATED:
-      return 'Updated';
+      return 'Updated'
     case DeploymentEventType.DEPLOYMENT_REPLACED:
-      return 'Replaced';
+      return 'Replaced'
     default:
-      return 'Unknown';
+      return 'Unknown'
   }
 }
 
@@ -63,5 +63,5 @@ export const TimelineDeployment: React.FC<Props> = ({
         </time>
       </div>
     </>
-  );
-};
+  )
+}

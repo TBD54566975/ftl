@@ -1,40 +1,40 @@
-import {Timestamp} from '@bufbuild/protobuf';
-import {useEffect, useState} from 'react';
-import {CodeBlock} from '../../../components/CodeBlock';
-import {useClient} from '../../../hooks/use-client';
-import {ConsoleService} from '../../../protos/xyz/block/ftl/v1/console/console_connect';
-import {Call} from '../../../protos/xyz/block/ftl/v1/console/console_pb';
-import {formatDuration} from '../../../utils/date.utils';
-import {textColor} from '../../../utils/style.utils';
-import {RequestGraph} from '../../requests/RequestGraph';
-import {TimelineTimestamp} from './TimelineTimestamp';
+import {Timestamp} from '@bufbuild/protobuf'
+import {useEffect, useState} from 'react'
+import {CodeBlock} from '../../../components/CodeBlock'
+import {useClient} from '../../../hooks/use-client'
+import {ConsoleService} from '../../../protos/xyz/block/ftl/v1/console/console_connect'
+import {Call} from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import {formatDuration} from '../../../utils/date.utils'
+import {textColor} from '../../../utils/style.utils'
+import {RequestGraph} from '../../requests/RequestGraph'
+import {TimelineTimestamp} from './TimelineTimestamp'
 
 type Props = {
-  timestamp: Timestamp;
-  call: Call;
-};
+  timestamp: Timestamp
+  call: Call
+}
 
 export const TimelineCallDetails: React.FC<Props> = ({timestamp, call}) => {
-  const client = useClient(ConsoleService);
-  const [requestCalls, setRequestCalls] = useState<Call[]>([]);
-  const [selectedCall, setSelectedCall] = useState(call);
+  const client = useClient(ConsoleService)
+  const [requestCalls, setRequestCalls] = useState<Call[]>([])
+  const [selectedCall, setSelectedCall] = useState(call)
 
   useEffect(() => {
-    setSelectedCall(call);
-  }, [call]);
+    setSelectedCall(call)
+  }, [call])
 
   useEffect(() => {
     const fetchRequestCalls = async () => {
       if (selectedCall.requestKey === undefined) {
-        return;
+        return
       }
       const response = await client.getRequestCalls({
         requestKey: selectedCall.requestKey,
-      });
-      setRequestCalls(response.calls);
-    };
-    fetchRequestCalls();
-  }, [client, selectedCall]);
+      })
+      setRequestCalls(response.calls)
+    }
+    fetchRequestCalls()
+  }, [client, selectedCall])
 
   return (
     <>
@@ -115,5 +115,5 @@ export const TimelineCallDetails: React.FC<Props> = ({timestamp, call}) => {
         )}
       </div>
     </>
-  );
-};
+  )
+}

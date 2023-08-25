@@ -1,8 +1,8 @@
-import {Route, Routes} from 'react-router-dom';
-import {Navigation} from './components/Navigation.tsx';
-import GraphPage from './features/graph/GraphPage.tsx';
-import {IDELayout} from './layout/IDELayout.tsx';
-import {bgColor, textColor} from './utils/style.utils.ts';
+import {Route, Routes} from 'react-router-dom'
+import {Navigation} from './components/Navigation.tsx'
+import GraphPage from './features/graph/GraphPage.tsx'
+import {IDELayout} from './layout/IDELayout.tsx'
+import {bgColor, textColor} from './utils/style.utils.ts'
 
 export default function App() {
   return (
@@ -20,5 +20,5 @@ export default function App() {
         />
       </Routes>
     </div>
-  );
+  )
 }

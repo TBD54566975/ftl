@@ -1,36 +1,36 @@
-import {Timestamp} from '@bufbuild/protobuf';
-import React, {useContext, useEffect, useState} from 'react';
-import {useClient} from '../../hooks/use-client.ts';
-import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts';
+import {Timestamp} from '@bufbuild/protobuf'
+import React, {useContext, useEffect, useState} from 'react'
+import {useClient} from '../../hooks/use-client.ts'
+import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import {
   Call,
   Module,
   Verb,
-} from '../../protos/xyz/block/ftl/v1/console/console_pb';
-import {SidePanelContext} from '../../providers/side-panel-provider.tsx';
-import {formatDuration, formatTimestamp} from '../../utils/date.utils.ts';
-import {TimelineCallDetails} from '../timeline/details/TimelineCallDetails.tsx';
+} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {SidePanelContext} from '../../providers/side-panel-provider.tsx'
+import {formatDuration, formatTimestamp} from '../../utils/date.utils.ts'
+import {TimelineCallDetails} from '../timeline/details/TimelineCallDetails.tsx'
 
 type Props = {
-  module?: Module;
-  verb?: Verb;
-};
+  module?: Module
+  verb?: Verb
+}
 
 export const VerbCalls: React.FC<Props> = ({module, verb}) => {
-  const client = useClient(ConsoleService);
-  const [calls, setCalls] = useState<Call[]>([]);
-  const {openPanel} = useContext(SidePanelContext);
+  const client = useClient(ConsoleService)
+  const [calls, setCalls] = useState<Call[]>([])
+  const {openPanel} = useContext(SidePanelContext)
 
   useEffect(() => {
     const fetchCalls = async () => {
       const response = await client.getCalls({
         module: module?.name,
         verb: verb?.verb?.name,
-      });
-      setCalls(response.calls);
-    };
-    fetchCalls();
-  }, [client, module, verb]);
+      })
+      setCalls(response.calls)
+    }
+    fetchCalls()
+  }, [client, module, verb])
 
   const handleClick = (call: Call) => {
     openPanel(
@@ -38,8 +38,8 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
         timestamp={call.timeStamp ?? new Timestamp()}
         call={call}
       />
-    );
-  };
+    )
+  }
 
   return (
     <>
@@ -109,5 +109,5 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
         </table>
       </div>
     </>
-  );
-};
+  )
+}

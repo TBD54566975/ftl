@@ -1,21 +1,21 @@
-import {Timestamp} from '@bufbuild/protobuf';
-import {CodeBlock} from '../../../components/CodeBlock';
+import {Timestamp} from '@bufbuild/protobuf'
+import {CodeBlock} from '../../../components/CodeBlock'
 import {
   LogEntry,
   StreamTimelineResponse,
-} from '../../../protos/xyz/block/ftl/v1/console/console_pb';
-import {classNames} from '../../../utils/react.utils';
+} from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import {classNames} from '../../../utils/react.utils'
 import {
   logLevelBadge,
   logLevelText,
   textColor,
-} from '../../../utils/style.utils';
-import {TimelineTimestamp} from './TimelineTimestamp';
+} from '../../../utils/style.utils'
+import {TimelineTimestamp} from './TimelineTimestamp'
 
 type Props = {
-  entry: StreamTimelineResponse;
-  log: LogEntry;
-};
+  entry: StreamTimelineResponse
+  log: LogEntry
+}
 
 export const TimelineLogDetails: React.FC<Props> = ({entry, log}) => {
   return (
@@ -64,5 +64,5 @@ export const TimelineLogDetails: React.FC<Props> = ({entry, log}) => {
         )}
       </div>
     </>
-  );
-};
+  )
+}

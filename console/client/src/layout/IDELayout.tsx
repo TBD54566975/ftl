@@ -1,71 +1,66 @@
-import {Tab} from '@headlessui/react';
-import {XMarkIcon} from '@heroicons/react/24/outline';
-import React from 'react';
-import {useLocation, useNavigate, useSearchParams} from 'react-router-dom';
-import {ModuleDetails} from '../features/modules/ModuleDetails';
-import {ModulesList} from '../features/modules/ModulesList';
-import {RequestModal} from '../features/requests/RequestsModal';
-import {Timeline} from '../features/timeline/Timeline';
-import {VerbTab} from '../features/verbs/VerbTab';
-import {
-  TabSearchParams,
-  TabType,
-  TabsContext,
-} from '../providers/tabs-provider';
-import {headerColor, headerTextColor, panelColor} from '../utils/style.utils';
-import {SidePanel} from './SidePanel';
+import {Tab} from '@headlessui/react'
+import {XMarkIcon} from '@heroicons/react/24/outline'
+import React from 'react'
+import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
+import {ModuleDetails} from '../features/modules/ModuleDetails'
+import {ModulesList} from '../features/modules/ModulesList'
+import {RequestModal} from '../features/requests/RequestsModal'
+import {Timeline} from '../features/timeline/Timeline'
+import {VerbTab} from '../features/verbs/VerbTab'
+import {TabSearchParams, TabType, TabsContext} from '../providers/tabs-provider'
+import {headerColor, headerTextColor, panelColor} from '../utils/style.utils'
+import {SidePanel} from './SidePanel'
 
-const selectedTabStyle = `${headerTextColor} ${headerColor}`;
-const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`;
+const selectedTabStyle = `${headerTextColor} ${headerColor}`
+const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
-  const {tabs, activeTab, setActiveTab, setTabs} =
-    React.useContext(TabsContext);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const {tabs, activeTab, setActiveTab, setTabs} = React.useContext(TabsContext)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
 
   const handleCloseTab = id => {
     if (activeTab === id && tabs.length > 1) {
       // Set the next available tab as active, if the current active tab is being closed
-      const index = tabs.findIndex(tab => tab.id === id);
-      setActiveTab(index - 1);
-      searchParams.delete(TabSearchParams.active);
+      const index = tabs.findIndex(tab => tab.id === id)
+      setActiveTab(index - 1)
+      searchParams.delete(TabSearchParams.active)
     }
-    setTabs(tabs.filter(tab => tab.id !== id));
-    navigate({...location, search: searchParams.toString()});
-  };
+    setTabs(tabs.filter(tab => tab.id !== id))
+    navigate({...location, search: searchParams.toString()})
+  }
 
   const handleChangeTab = (index: number) => {
-    setActiveTab(index);
+    setActiveTab(index)
     index > 0 && tabs.length > 1
       ? searchParams.set(TabSearchParams.active, tabs[index].id)
-      : searchParams.delete(TabSearchParams.active);
-    navigate({...location, search: searchParams.toString()});
-  };
+      : searchParams.delete(TabSearchParams.active)
+    navigate({...location, search: searchParams.toString()})
+  }
 
   // Handle opening the correct tab on load
   React.useEffect(() => {
-    const id = searchParams.get(TabSearchParams.active);
+    const id = searchParams.get(TabSearchParams.active)
     if (!id) {
-      setActiveTab(0);
-      return;
+      setActiveTab(0)
+      return
     }
-    const index = tabs.findIndex(tab => tab.id === id);
+    const index = tabs.findIndex(tab => tab.id === id)
     if (index >= 0) {
-      setActiveTab(activeTab ?? index);
-      return;
+      setActiveTab(activeTab ?? index)
+      return
     }
-    const [_, label] = id.split('.');
+    const [_, label] = id.split('.')
     const newTab = {
       id,
       label,
       type: TabType.Verb,
-    };
-    const nextTabs = [...tabs, newTab];
-    setTabs(nextTabs);
-    setActiveTab(nextTabs.length - 1);
-  }, []);
+    }
+    const nextTabs = [...tabs, newTab]
+    setTabs(nextTabs)
+    setActiveTab(nextTabs.length - 1)
+  }, [])
 
   return (
     <>
@@ -124,21 +119,21 @@ export function IDELayout() {
                       {i !== 0 && (
                         <button
                           onClick={e => {
-                            e.stopPropagation();
-                            handleCloseTab(id);
+                            e.stopPropagation()
+                            handleCloseTab(id)
                             searchParams.get(TabSearchParams.active) === id &&
-                              searchParams.delete(TabSearchParams.active);
+                              searchParams.delete(TabSearchParams.active)
                             navigate({
                               ...location,
                               search: searchParams.toString(),
-                            });
+                            })
                           }}
                           className='absolute right-0 mr-2 text-gray-400 hover:text-white'>
                           <XMarkIcon className={`h-5 w-5`} />
                         </button>
                       )}
                     </Tab>
-                  );
+                  )
                 })}
               </Tab.List>
               <div className='flex-grow'></div>
@@ -154,7 +149,7 @@ export function IDELayout() {
                     <Tab.Panel key={id}>
                       <VerbTab id={id} />
                     </Tab.Panel>
-                  );
+                  )
                 })}
               </Tab.Panels>
             </div>
@@ -164,5 +159,5 @@ export function IDELayout() {
         <RequestModal />
       </div>
     </>
-  );
+  )
 }

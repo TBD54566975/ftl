@@ -1,12 +1,12 @@
-import {Module} from '../../protos/xyz/block/ftl/v1/console/console_pb';
-import {VerbCard} from './VerbCard';
+import {Module} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {VerbCard} from './VerbCard'
 
 type Props = {
-  module?: Module;
-};
+  module?: Module
+}
 
 export const VerbList: React.FC<Props> = ({module}) => {
-  const verbs = module?.verbs;
+  const verbs = module?.verbs
 
   return (
     <>
@@ -20,5 +20,5 @@ export const VerbList: React.FC<Props> = ({module}) => {
         ))}
       </div>
     </>
-  );
-};
+  )
+}

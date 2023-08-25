@@ -1,12 +1,12 @@
-import {ArrowRightOnRectangleIcon} from '@heroicons/react/24/outline';
-import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb';
-import {formatDuration, formatTimestamp} from '../../utils/date.utils';
-import {panelColor, textColor} from '../../utils/style.utils';
-import {classNames} from '../../utils/react.utils';
+import {ArrowRightOnRectangleIcon} from '@heroicons/react/24/outline'
+import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {formatDuration, formatTimestamp} from '../../utils/date.utils'
+import {panelColor, textColor} from '../../utils/style.utils'
+import {classNames} from '../../utils/react.utils'
 type Props = {
-  call: Call;
-  selected?: boolean;
-};
+  call: Call
+  selected?: boolean
+}
 
 export const TimelineCall: React.FC<Props> = ({call, selected}) => {
   return (
@@ -58,5 +58,5 @@ export const TimelineCall: React.FC<Props> = ({call, selected}) => {
         </time>
       </div>
     </>
-  );
-};
+  )
+}

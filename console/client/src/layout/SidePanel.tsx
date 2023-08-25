@@ -1,15 +1,15 @@
-import {Transition} from '@headlessui/react';
-import {XMarkIcon} from '@heroicons/react/24/outline';
-import {Fragment, useContext} from 'react';
-import {SidePanelContext} from '../providers/side-panel-provider';
+import {Transition} from '@headlessui/react'
+import {XMarkIcon} from '@heroicons/react/24/outline'
+import {Fragment, useContext} from 'react'
+import {SidePanelContext} from '../providers/side-panel-provider'
 import {
   headerColor,
   headerTextColor,
   sidePanelColor,
-} from '../utils/style.utils';
+} from '../utils/style.utils'
 
 export function SidePanel() {
-  const {isOpen, closePanel, component} = useContext(SidePanelContext);
+  const {isOpen, closePanel, component} = useContext(SidePanelContext)
 
   return (
     <div className='relative z-20'>
@@ -41,5 +41,5 @@ export function SidePanel() {
         </div>
       </Transition>
     </div>
-  );
+  )
 }

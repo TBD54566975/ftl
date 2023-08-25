@@ -1,37 +1,37 @@
-import {Dialog, Transition} from '@headlessui/react';
-import {ChevronRightIcon} from '@heroicons/react/20/solid';
-import React from 'react';
-import {useLocation, useNavigate, useSearchParams} from 'react-router-dom';
-import {useClient} from '../../hooks/use-client.ts';
-import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts';
-import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb.ts';
-import {formatDuration, formatTimestamp} from '../../utils/date.utils.ts';
+import {Dialog, Transition} from '@headlessui/react'
+import {ChevronRightIcon} from '@heroicons/react/20/solid'
+import React from 'react'
+import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
+import {useClient} from '../../hooks/use-client.ts'
+import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
+import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import {formatDuration, formatTimestamp} from '../../utils/date.utils.ts'
 
 export function RequestModal() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const client = useClient(ConsoleService);
-  const [calls, setCalls] = React.useState<Call[]>([]);
-  const key = searchParams.get('requests') ?? undefined;
-  const moduleName = searchParams.get('details');
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const client = useClient(ConsoleService)
+  const [calls, setCalls] = React.useState<Call[]>([])
+  const key = searchParams.get('requests') ?? undefined
+  const moduleName = searchParams.get('details')
   React.useEffect(() => {
     const fetchRequestCalls = async () => {
       if (key === undefined) {
-        return;
+        return
       }
-      const response = await client.getRequestCalls({requestKey: key});
-      setCalls(response.calls);
-    };
-    fetchRequestCalls();
-  }, [client, key]);
+      const response = await client.getRequestCalls({requestKey: key})
+      setCalls(response.calls)
+    }
+    fetchRequestCalls()
+  }, [client, key])
 
-  const isOpen = searchParams.has('requests');
+  const isOpen = searchParams.has('requests')
 
   const handleClose = () => {
-    searchParams.delete('requests');
-    navigate({...location, search: searchParams.toString()});
-  };
+    searchParams.delete('requests')
+    navigate({...location, search: searchParams.toString()})
+  }
 
   return (
     <Transition
@@ -206,5 +206,5 @@ export function RequestModal() {
         </div>
       </Dialog>
     </Transition>
-  );
+  )
 }

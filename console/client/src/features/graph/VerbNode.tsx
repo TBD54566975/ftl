@@ -1,4 +1,4 @@
-import {Handle, Position} from 'reactflow';
+import {Handle, Position} from 'reactflow'
 
 export function VerbNode({data}) {
   return (
@@ -25,5 +25,5 @@ export function VerbNode({data}) {
         isConnectable={true}
       />
     </>
-  );
+  )
 }

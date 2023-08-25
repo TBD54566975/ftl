@@ -1,11 +1,11 @@
-import {Duration, Timestamp} from '@bufbuild/protobuf';
-import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb';
+import {Duration, Timestamp} from '@bufbuild/protobuf'
+import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 interface CallBlockProps {
-  call: Call;
-  selectedCall?: Call;
-  firstTimeStamp: Timestamp;
-  firstDuration: Duration;
+  call: Call
+  selectedCall?: Call
+  firstTimeStamp: Timestamp
+  firstDuration: Duration
 }
 
 const CallBlock: React.FC<CallBlockProps> = ({
@@ -14,16 +14,16 @@ const CallBlock: React.FC<CallBlockProps> = ({
   firstTimeStamp,
   firstDuration,
 }) => {
-  const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000;
-  const durationInMillis = (call.duration?.nanos ?? 0) / 1000000;
-  const width = (durationInMillis / totalDurationMillis) * 100;
+  const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000
+  const durationInMillis = (call.duration?.nanos ?? 0) / 1000000
+  const width = (durationInMillis / totalDurationMillis) * 100
 
-  const callTime = call.timeStamp?.toDate() ?? new Date();
-  const initialTime = firstTimeStamp?.toDate() ?? new Date();
-  const offsetInMillis = callTime.getTime() - initialTime.getTime();
-  const leftOffsetPercentage = (offsetInMillis / totalDurationMillis) * 100;
+  const callTime = call.timeStamp?.toDate() ?? new Date()
+  const initialTime = firstTimeStamp?.toDate() ?? new Date()
+  const offsetInMillis = callTime.getTime() - initialTime.getTime()
+  const leftOffsetPercentage = (offsetInMillis / totalDurationMillis) * 100
 
-  const barColor = call.equals(selectedCall) ? 'bg-green-500' : 'bg-indigo-500';
+  const barColor = call.equals(selectedCall) ? 'bg-green-500' : 'bg-indigo-500'
 
   return (
     <div className='cursor-pointer group relative my-0.5 h-4 flex'>
@@ -46,14 +46,14 @@ const CallBlock: React.FC<CallBlockProps> = ({
         {call.destinationVerbRef?.module}.{call.destinationVerbRef?.name}
       </span>
     </div>
-  );
-};
+  )
+}
 
 type Props = {
-  calls: Call[];
-  call?: Call;
-  setSelectedCall: React.Dispatch<React.SetStateAction<Call>>;
-};
+  calls: Call[]
+  call?: Call
+  setSelectedCall: React.Dispatch<React.SetStateAction<Call>>
+}
 
 export const RequestGraph: React.FC<Props> = ({
   calls,
@@ -61,13 +61,13 @@ export const RequestGraph: React.FC<Props> = ({
   setSelectedCall,
 }) => {
   if (calls.length === 0) {
-    return <></>;
+    return <></>
   }
 
-  const firstTimeStamp = calls[0].timeStamp;
-  const firstDuration = calls[0].duration;
+  const firstTimeStamp = calls[0].timeStamp
+  const firstDuration = calls[0].duration
   if (firstTimeStamp === undefined || firstDuration === undefined) {
-    return <></>;
+    return <></>
   }
 
   return (
@@ -88,5 +88,5 @@ export const RequestGraph: React.FC<Props> = ({
         </div>
       ))}
     </div>
-  );
-};
+  )
+}

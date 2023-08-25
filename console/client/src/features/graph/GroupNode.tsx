@@ -7,5 +7,5 @@ export function GroupNode({data}) {
         </div>
       </div>
     </>
-  );
+  )
 }

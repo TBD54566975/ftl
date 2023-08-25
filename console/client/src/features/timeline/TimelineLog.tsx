@@ -1,17 +1,17 @@
-import {LogEntry} from '../../protos/xyz/block/ftl/v1/console/console_pb';
-import {formatTimestamp} from '../../utils/date.utils';
-import {classNames} from '../../utils/react.utils';
+import {LogEntry} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {formatTimestamp} from '../../utils/date.utils'
+import {classNames} from '../../utils/react.utils'
 import {
   logLevelBadge,
   logLevelText,
   panelColor,
   textColor,
-} from '../../utils/style.utils';
+} from '../../utils/style.utils'
 
 type Props = {
-  log: LogEntry;
-  selected?: boolean;
-};
+  log: LogEntry
+  selected?: boolean
+}
 
 export const TimelineLog: React.FC<Props> = ({log, selected}) => {
   return (
@@ -47,5 +47,5 @@ export const TimelineLog: React.FC<Props> = ({log, selected}) => {
         </time>
       </div>
     </>
-  );
-};
+  )
+}
