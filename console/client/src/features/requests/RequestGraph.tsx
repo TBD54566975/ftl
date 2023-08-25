@@ -1,5 +1,5 @@
-import { Duration, Timestamp } from '@bufbuild/protobuf'
-import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Duration, Timestamp } from '@bufbuild/protobuf';
+import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb';
 
 interface CallBlockProps {
   call: Call;
@@ -21,7 +21,7 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStam
   const barColor = call.equals(selectedCall) ? 'bg-green-500' : 'bg-indigo-500'
 
   return (
-    <div className='relative my-0.5 h-4 flex' title={`${call.destinationVerbRef?.module} : ${call.destinationVerbRef?.name}`}>
+    <div className='cursor-pointer group relative my-0.5 h-4 flex'>
       <div className='flex-grow relative'>
         <div
           className={`absolute h-4 ${barColor} rounded-sm`}
@@ -33,8 +33,13 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStam
       </div>
 
       <div className='text-gray-900 dark:text-gray-300 self-center text-xs pl-2'>
-        {`${durationInMillis}(ms)`}
+        {`${durationInMillis}ms`}
       </div>
+      <span
+        className='pointer-events-none absolute pl-1 top-1/2 left-0 transform -translate-y-1/2 self-center text-xs w-max opacity-0 transition-opacity group-hover:opacity-100'
+      >
+        {call.destinationVerbRef?.module} : {call.destinationVerbRef?.name}
+      </span>
     </div>
   )
 }
