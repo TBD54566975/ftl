@@ -15,7 +15,7 @@ import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 
 export const Timeline = () => {
   const client = useClient(ConsoleService)
-  const { openPanel, closePanel } = useContext(SidePanelContext)
+  const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
   const [ entries, setEntries ] = useState<StreamTimelineResponse[]>([])
   const [ selectedEntry, setSelectedEntry ] = useState<StreamTimelineResponse | null>(null)
   const [ selectedFilters, setSelectedFilters ] = useState<string[]>([])
@@ -42,6 +42,12 @@ export const Timeline = () => {
       abortController.abort()
     }
   }, [ client ])
+  
+  useEffect(() => {
+    if(!isOpen) {
+      setSelectedEntry(null)
+    }
+  }, [ isOpen ])
 
   const handleEntryClicked = entry => {
     if (selectedEntry === entry) {
@@ -96,11 +102,12 @@ export const Timeline = () => {
 
             {(() => {
               switch (entry.entry?.case) {
-                case 'call': return <TimelineCall call={entry.entry.value} />
-                case 'log': return <TimelineLog log={entry.entry.value} />
+                case 'call': return <TimelineCall call={entry.entry.value} selected={selectedEntry === entry} />
+                case 'log': return <TimelineLog log={entry.entry.value} selected={selectedEntry === entry} />
                 case 'deployment': return <TimelineDeployment
                   deployment={entry.entry.value}
                   timestamp={entry.timeStamp}
+                  selected={selectedEntry === entry}
                 />
                 default: return <></>
               }
