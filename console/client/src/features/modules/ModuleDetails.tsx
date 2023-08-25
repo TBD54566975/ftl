@@ -1,15 +1,30 @@
-import { useContext } from 'react'
+import React from 'react'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
 import { TabType, TabsContext, TabSearchParams } from '../../providers/tabs-provider'
 import { textColor } from '../../utils/style.utils'
-import { useSearchParams, useNavigate , useLocation } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import { modulesContext } from '../../providers/modules-provider'
 
 export function ModuleDetails() {
-  const { selectedModule } = useContext(SelectedModuleContext)
-  const { tabs, setTabs, setActiveTab } = useContext(TabsContext)
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [ searchParams ] = useSearchParams()
+  const modules = React.useContext(modulesContext)
+  const { selectedModule, setSelectedModule } = React.useContext(SelectedModuleContext)
+  const { tabs, setTabs, setActiveTab } = React.useContext(TabsContext)
+  const [ searchParams, setSearchParams ] = useSearchParams()
+  const moduleId = searchParams.get('module')
+  //P1 when mounting with a valid module in query params set selected module
+  React.useEffect(() => {
+    if(moduleId) {
+      const module = modules.modules.find(module => module?.name === moduleId)
+      module && setSelectedModule(module)
+    }
+  })
+  //P2 when query param module changes update selected module if valid
+  React.useEffect(() => {
+    if(moduleId) {
+      const module = modules.modules.find(module => module?.name === moduleId)
+      module && setSelectedModule(module)
+    }
+  }, [ moduleId ])
 
   if (!selectedModule) {
     return (
@@ -33,9 +48,12 @@ export function ModuleDetails() {
       }
       setTabs([ ...tabs, newTab ])
     }
-    setActiveTab(tabId)
-    searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id)
-    navigate({ ...location, search: searchParams.toString() })
+    setActiveTab({ id: tabId, type: TabType.Verb })
+    setSearchParams({
+      ...searchParams,
+      [TabSearchParams.id]: newTab?.id ?? tabs[index].id,
+      [TabSearchParams.type]: TabType.Verb,
+    })
   }
   
   return (
