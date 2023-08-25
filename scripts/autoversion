@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+old_version="$(svu current)"
+new_version="$(svu next)"
+
+test "${old_version}" = "${new_version}" && { echo "No version change"; exit 0; }
+
+gh api -H "Accept: application/vnd.github.v3+json" \
+  "/repos/{owner}/{repo}/git/refs" \
+  -f ref="refs/tags/${new_version}" \
+  -f sha="$(git rev-parse HEAD)"

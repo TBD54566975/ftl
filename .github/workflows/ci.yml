@@ -104,8 +104,8 @@ jobs:
     name: Integration Tests
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/integration.yml
-  release:
-    name: Release
+  autoversion:
+    name: Auto Version
     if: github.ref == 'refs/heads/main'
     needs:
       - kotlin-runtime
@@ -114,4 +114,5 @@ jobs:
       - lint
       - console
       - integration
-    uses: ./.github/workflows/release.yml
+      - sql
+    uses: ./.github/workflows/autoversion.yml

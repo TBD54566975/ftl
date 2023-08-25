@@ -1,0 +1,14 @@
+on:
+  workflow_call:
+jobs:
+  semver-tag:
+    name: Conventional Commits Auto-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Auto-version
+        id: autoversion
+        run: scripts/autoversion
