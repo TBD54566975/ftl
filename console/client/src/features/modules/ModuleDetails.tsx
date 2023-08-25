@@ -17,14 +17,7 @@ export function ModuleDetails() {
       const module = modules.modules.find(module => module?.name === moduleId)
       module && setSelectedModule(module)
     }
-  }, [])
-  //When query param module changes update selected module if valid
-  React.useEffect(() => {
-    if(moduleId) {
-      const module = modules.modules.find(module => module?.name === moduleId)
-      module && setSelectedModule(module)
-    }
-  }, [ moduleId ])
+  })
 
   if (!selectedModule) {
     return (
