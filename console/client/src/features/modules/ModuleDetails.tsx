@@ -4,6 +4,7 @@ import { TabType, TabsContext, TabSearchParams } from '../../providers/tabs-prov
 import { textColor, urlSearchParamsToObject } from '../../utils'
 import { useSearchParams } from 'react-router-dom'
 import { modulesContext } from '../../providers/modules-provider'
+
 export function ModuleDetails() {
   const modules = React.useContext(modulesContext)
   const { selectedModule, setSelectedModule } = React.useContext(SelectedModuleContext)
@@ -54,7 +55,7 @@ export function ModuleDetails() {
       [TabSearchParams.type]: TabType.Verb,
     })
   }
-  
+
   return (
     <div className='flex-1 overflow-auto text-sm font-medium text-gray-500 dark:text-gray-400'>
       <div className='flex justify-between'>
@@ -94,7 +95,7 @@ export function ModuleDetails() {
           <ul className='list-none ml-4'>
             {selectedModule.data.map((data, index) => (
               <li key={index} className={`${textColor}`}>
-                <code>{data.name}</code>
+                <code>{data.data?.name}</code>
               </li>
             ))}
           </ul>

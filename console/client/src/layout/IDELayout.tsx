@@ -127,7 +127,7 @@ export function IDELayout() {
               </Tab.List>
               <div className='flex-grow'></div>
             </div>
-            <div className={`flex-1 p-4 overflow-y-scroll ${panelColor}`}>
+            <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
               <Tab.Panels>
                 {tabs.map(({ id }, i) => {
                   return i === 0

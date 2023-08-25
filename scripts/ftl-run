@@ -10,6 +10,12 @@ prepare_template() (
   cp "${top}/kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar" build/template/ftl/jars
 )
 
+build() {
+  make console/client/dist/index.html
+  go build -o build/release/ftl-controller -tags release ./cmd/ftl-controller
+  go build -o build/release/ftl-runner -tags release ./cmd/ftl-runner
+}
+
 prepare_template
 
 overmind start -f Procfile.nowatch

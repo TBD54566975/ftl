@@ -216,12 +216,19 @@ message StatusResponse {
 
   message IngressRoute {
     string deployment_name = 1;
-    string module = 2;
-    string verb = 3;
-    string method = 4;
-    string path = 5;
+    schema.VerbRef verb = 2;
+    string method = 3;
+    string path = 4;
   }
   repeated IngressRoute ingress_routes = 4;
+
+  message Route {
+    string module = 1;
+    string runner = 2;
+    string deployment = 3;
+    string endpoint = 4;
+  }
+  repeated Route routes = 5;
 }
 
 service ControllerService {

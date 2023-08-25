@@ -1,3 +1,4 @@
+import { Timestamp } from '@bufbuild/protobuf'
 import { CodeBlock } from '../../../components/CodeBlock'
 import { LogEntry, StreamTimelineResponse } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { classNames } from '../../../utils/react.utils'
@@ -13,7 +14,7 @@ export const TimelineLogDetails: React.FC<Props> = ({ entry, log }) => {
   return (
     <>
       <div>
-        <TimelineTimestamp entry={entry} />
+        <TimelineTimestamp timestamp={entry.timeStamp ?? new Timestamp()} />
       </div>
       <div className={`pt-4 text-xs ${textColor}`}>
         <p className='flex-wrap font-mono'>{log.message}</p>

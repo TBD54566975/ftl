@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import React from 'react'
+import { Timestamp } from '@bufbuild/protobuf'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Call, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { formatDuration, formatTimestamp, urlSearchParamsToObject } from '../../utils'
+import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
+import { formatDuration, formatTimestamp } from '../../utils'
+import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails.tsx'
 
 type Props = {
   module?: Module
@@ -12,9 +14,10 @@ type Props = {
 
 export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
   const client = useClient(ConsoleService)
-  const [ calls, setCalls ] = useState<Call[]>([])
+  const [ calls, setCalls ] = React.useState<Call[]>([])
+  const { openPanel } = React.useContext(SidePanelContext)
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchCalls = async () => {
       const response = await client.getCalls({ module: module?.name, verb: verb?.verb?.name })
       setCalls(response.calls)
@@ -22,13 +25,8 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
     fetchCalls()
   }, [ client, module, verb ])
 
-  const [ searchParams, setSearchParams ] = useSearchParams()
-  const handleClick: React.MouseEventHandler<HTMLButtonElement> = evt => {
-    const value = evt.currentTarget.value
-    setSearchParams({
-      ...urlSearchParamsToObject(searchParams),
-      requests: value,
-    })
+  const handleClick = (call: Call) => {
+    openPanel(<TimelineCallDetails timestamp={call.timeStamp ?? new Timestamp()} call={call} />)
   }
 
   return (
@@ -53,39 +51,19 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
                 Time
               </th>
               <th scope='col'
-                className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'
+                className='hidden py-2 pr-0 text-right font-semibold md:table-cell'
               >
                 Duration(ms)
-              </th>
-              <th scope='col'
-                className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
-              >
-                Request
-              </th>
-              <th scope='col'
-                className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
-              >
-                Response
-              </th>
-              <th scope='col'
-                className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
-              >
-                Error
               </th>
             </tr>
           </thead>
           <tbody className='divide-y divide-black/5 dark:divide-white/5'>
             {calls.map((call, index) => (
-              <tr key={index}>
+              <tr key={index} onClick={() => handleClick(call)}>
                 <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                   <div className='flex gap-x-3'>
-                    <div className='font-mono text-sm leading-6 text-indigo-600 dark:text-indigo-400'>
-                      <button value={call.requestKey?.toString()}
-                        onClick={handleClick}
-                        className='focus:outline-none'
-                      >
-                        {call.requestKey?.toString()}
-                      </button>
+                    <div className='font-mono text-sm leading-6'>
+                      {call.requestKey?.toString()}
                     </div>
                   </div>
                 </td>
@@ -103,17 +81,8 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
                     </div>
                   </div>
                 </td>
-                <td className={`hidden py-4 pl-0 pr-8 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell lg:pr-20`}>
+                <td className={`hidden py-4 pr-0 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell`}>
                   {formatDuration(call.duration)}
-                </td>
-                <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
-                  <code>{call.request}</code>
-                </td>
-                <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
-                  <code>{call.response}</code>
-                </td>
-                <td className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
-                  {call.error}
                 </td>
               </tr>
             ))}

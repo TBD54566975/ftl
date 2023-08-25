@@ -49,14 +49,21 @@ message LogEntry {
 
 message Verb {
   schema.Verb verb = 1;
+  string schema = 2;
+}
+
+message Data {
+  schema.Data data = 1;
+  string schema = 2;
 }
 
 message Module {
   string name = 1;
   string deployment_name = 2;
   string language = 3;
-  repeated Verb verbs = 4;
-  repeated schema.Data data = 5;
+  string schema = 4;
+  repeated Verb verbs = 5;
+  repeated Data data = 6;
 }
 
 message GetModulesRequest {}

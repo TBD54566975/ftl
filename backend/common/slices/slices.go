@@ -60,3 +60,11 @@ func AppendOrReplace[T any](slice []T, value T, fn func(T) bool) []T {
 	}
 	return append(slice, value)
 }
+
+func FlatMap[T, U any](slice []T, fn func(T) []U) []U {
+	result := make([]U, 0, len(slice))
+	for _, v := range slice {
+		result = append(result, fn(v)...)
+	}
+	return result
+}

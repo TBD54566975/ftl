@@ -1,3 +1,4 @@
+import { Timestamp } from '@bufbuild/protobuf'
 import { Deployment, StreamTimelineResponse } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { classNames } from '../../../utils/react.utils'
 import { textColor } from '../../../utils/style.utils'
@@ -24,7 +25,7 @@ export const TimelineDeploymentDetails: React.FC<Props> = ({ entry, deployment }
   return (
     <>
       <div>
-        <TimelineTimestamp entry={entry} />
+        <TimelineTimestamp timestamp={entry.timeStamp ?? new Timestamp()} />
       </div>
 
       <div className='pt-4'>
