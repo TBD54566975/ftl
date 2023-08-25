@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'react'
 import { Timestamp } from '@bufbuild/protobuf'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
