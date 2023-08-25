@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Call, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
+import { formatDuration, formatTimestamp, urlSearchParamsToObject } from '../../utils'
 
 type Props = {
   module?: Module
@@ -22,13 +22,13 @@ export const VerbCalls: React.FC<Props> = ({ module, verb }) => {
     fetchCalls()
   }, [ client, module, verb ])
 
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [ searchParams ] = useSearchParams()
+  const [ searchParams, setSearchParams ] = useSearchParams()
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = evt => {
     const value = evt.currentTarget.value
-    searchParams.set('requests', value)
-    navigate({ ...location, search: searchParams.toString() })
+    setSearchParams({
+      ...urlSearchParamsToObject(searchParams),
+      requests: value,
+    })
   }
 
   return (

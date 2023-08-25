@@ -1,10 +1,9 @@
 import React from 'react'
 import { SelectedModuleContext } from '../../providers/selected-module-provider'
 import { TabType, TabsContext, TabSearchParams } from '../../providers/tabs-provider'
-import { textColor } from '../../utils/style.utils'
+import { textColor, urlSearchParamsToObject } from '../../utils'
 import { useSearchParams } from 'react-router-dom'
 import { modulesContext } from '../../providers/modules-provider'
-
 export function ModuleDetails() {
   const modules = React.useContext(modulesContext)
   const { selectedModule, setSelectedModule } = React.useContext(SelectedModuleContext)
@@ -50,7 +49,7 @@ export function ModuleDetails() {
     }
     setActiveTab({ id: tabId, type: TabType.Verb })
     setSearchParams({
-      ...searchParams,
+      ...urlSearchParamsToObject(searchParams),
       [TabSearchParams.id]: newTab?.id ?? tabs[index].id,
       [TabSearchParams.type]: TabType.Verb,
     })

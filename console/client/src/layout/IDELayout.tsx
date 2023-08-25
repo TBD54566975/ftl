@@ -1,77 +1,74 @@
 import { Tab } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import React from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { ModuleDetails } from '../features/modules/ModuleDetails'
 import { ModulesList } from '../features/modules/ModulesList'
-import { RequestModal } from '../features/requests/RequestsModal'
 import { Timeline } from '../features/timeline/Timeline'
 import { VerbTab } from '../features/verbs/VerbTab'
-import { TabSearchParams, TabType, TabsContext, timelineTab } from '../providers/tabs-provider'
+import { TabSearchParams, TabType, TabsContext, timelineTab, isValidTab } from '../providers/tabs-provider'
 import { headerColor, headerTextColor, panelColor } from '../utils/style.utils'
 import { SidePanel } from './SidePanel'
+import { urlSearchParamsToObject } from '../utils'
 
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
   const { tabs,activeTab, setActiveTab, setTabs } = React.useContext(TabsContext)
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [ searchParams ] = useSearchParams()
+  const [ searchParams, setSearchParams ] = useSearchParams()
   const [ activeIndex, setActiveIndex ] = React.useState(0)
-
+  const id = searchParams.get(TabSearchParams.id) as string
+  const type = searchParams.get(TabSearchParams.type) as string
   // Set active tab index whenever our activeTab context changes
   React.useEffect(() => {
-    const index = tabs.findIndex(tab => tab.id === activeTab)
+    const index = tabs.findIndex(tab => tab.id === activeTab?.id)
     setActiveIndex(index)
-   
   }, [ activeTab ])
 
   const handleCloseTab = (id: string, index: number) => {
-    searchParams.set(TabSearchParams.active, tabs[index - 1].id)
-    setActiveTab(tabs[index - 1].id)
+    const nextActiveTab = {
+      id: tabs[index - 1].id,
+      type: tabs[index - 1].type,
+    }
+    setSearchParams({
+      ...urlSearchParamsToObject(searchParams),
+      [TabSearchParams.id]:nextActiveTab.id,
+      [TabSearchParams.type]: nextActiveTab.type,
+    })
+    setActiveTab(nextActiveTab)
     setTabs(tabs.filter(tab => tab.id !== id))
-    navigate({ ...location, search: searchParams.toString() })
   }
 
   const handleChangeTab = (index: number) => {
     const nextActiveTab = tabs[index]
-    setActiveTab(nextActiveTab.id)
-    nextActiveTab.type === TabType.Timeline
-      ? searchParams.delete(TabSearchParams.active)
-      : searchParams.set(TabSearchParams.active, nextActiveTab.id)
-    navigate({ ...location, search: searchParams.toString() })
+    setActiveTab({ id: nextActiveTab.id, type: nextActiveTab.type })
+    setSearchParams({
+      ...urlSearchParamsToObject(searchParams),
+      [TabSearchParams.id]:nextActiveTab.id,
+      [TabSearchParams.type]: nextActiveTab.type,
+    })
   }
-
-  // Handle opening the correct tab on mount
+  
   React.useEffect(() => {
-    const id = searchParams.get(TabSearchParams.active)
-    //P1 no ID
-    if(!id) return setActiveTab(timelineTab.id)
-
-    //P2 ID is timeline
-    if(id !== timelineTab.id) return setActiveTab(timelineTab.id)
-    
-    //P3 tabs is already in tabs array
-    if(tabs.some(({ id: tabId }) => tabId === id )) return setActiveTab(id)
-
-    //P4 check if tab id passed is valid 
-    const idArr = id.split('.')
-    if(idArr.length !== 2) {
-      throw new Error(`invalid reference ${id}`)
+    if(isValidTab({ id, type })) { // P1 is a valid tab ID and Type
+      // P1.1 id and type are not in tab list
+      if(!tabs.some(({ id: tabId, type: tabType }) => tabId === id &&  tabType === type)) {
+        const verbIdArray = id.split('.')
+        const newTab = {
+          id,
+          label:verbIdArray[1],
+          type: TabType.Verb,
+        }
+        const nextTabs = [ ...tabs, newTab ]
+        setTabs(nextTabs)
+      }
+      // Set active tab id and type
+      setActiveTab({ id, type })
+    } else { // P2 is an invalid tab ID and type fallback to timeline
+      setActiveTab({ id: timelineTab.id, type: timelineTab.type })
     }
-    
-    //P4 new tab not in tabs array
-    const newTab = {
-      id,
-      label:idArr[1],
-      type: TabType.Verb,
-    }
-    const nextTabs = [ ...tabs, newTab ]
-    setTabs(nextTabs)
-    setActiveTab(newTab.id)
-  }, [ ])
+  }, [ id, type ])
 
   return (
     <>
@@ -119,8 +116,6 @@ export function IDELayout() {
                       onClick={e => {
                         e.stopPropagation()
                         handleCloseTab(id, i)
-                        searchParams.get(TabSearchParams.active) === id && searchParams.delete(TabSearchParams.active)
-                        navigate({ ...location, search: searchParams.toString() })
                       }}
                       className='absolute right-0 mr-2 text-gray-400 hover:text-white'
                     >
@@ -144,7 +139,6 @@ export function IDELayout() {
           </Tab.Group>
         </div>
         <SidePanel />
-        <RequestModal />
       </div>
     </>
   )
