@@ -5,9 +5,10 @@ import { logLevelBadge, logLevelText, panelColor, textColor } from '../../utils/
 
 type Props = {
   log: LogEntry
+  selected?: boolean
 }
 
-export const TimelineLog: React.FC<Props> = ({ log }) => {
+export const TimelineLog: React.FC<Props> = ({ log, selected }) => {
   return (
     <>
       <div className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}>
@@ -15,19 +16,20 @@ export const TimelineLog: React.FC<Props> = ({ log }) => {
           {logLevelText[log.logLevel]}
         </span>
       </div>
+      <div className={classNames(`relative flex gap-x-4 flex-auto w-full max-w-full p-1.5 `, selected && 'bg-indigo-600 rounded-md')}>
+        <div className={`flex-auto text-xs leading-5 ${selected ? 'text-white' : textColor} overflow-hidden overflow-ellipsis w-full max-w-full`}>
+          <span>
+            {log.message}
+          </span>
+        </div>
 
-      <div className={`flex-auto py-0.5 text-xs leading-5 ${textColor} overflow-hidden overflow-ellipsis w-full max-w-full`}>
-        <span>
-          {log.message}
-        </span>
+        <time
+          dateTime={formatTimestamp(log.timeStamp)}
+          className={`flex-none  text-xs leading-5 ${selected ? 'text-gray-50' :'text-gray-500'}`}
+        >
+          {formatTimestamp(log.timeStamp)}
+        </time>
       </div>
-
-      <time
-        dateTime={formatTimestamp(log.timeStamp)}
-        className='flex-none py-0.5 text-xs leading-5 text-gray-500'
-      >
-        {formatTimestamp(log.timeStamp)}
-      </time>
     </>
   )
 }
