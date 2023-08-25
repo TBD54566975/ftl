@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "source": "index.html",
   "scripts": {
     "build": "tsc && parcel build",
     "build:css-types": "tcm --c -e -p  'src/**/*.css' .",
@@ -11,6 +10,7 @@
     "dev": "node scripts/dev.cjs",
     "lint": "eslint . --ext .ts,.tsx,.js,.cjs",
     "lint:fix": "npm run lint -- --fix --quiet",
+    "parcel": "parcel --port 5173",
     "plop": "npx plop",
     "preview": "vite preview",
     "storybook": "storybook dev --no-open -p 6006",
@@ -18,8 +18,7 @@
     "test:coverage": "jest ./src --coverage",
     "test:playwright": "start-server-and-test 'yarn run storybook:ci' http://localhost:9000 'npx playwright test'",
     "test:playwright-update-snapshots": "start-server-and-test 'yarn run storybook:ci' http://localhost:9000 'npx playwright test --update-snapshots'",
-    "test:watch": "jest ./src --watch --verbose",
-    "parcel": "parcel --port 5173"
+    "test:watch": "jest ./src --watch --verbose"
   },
   "lint-staged": {
     "*.(js|cjs|tsx|ts)": [
@@ -32,6 +31,7 @@
   "browserslist": [
     "> 2%"
   ],
+  "source": "index.html",
   "dependencies": {
     "@bufbuild/connect": "0.12.0",
     "@bufbuild/connect-web": "0.12.0",
@@ -60,6 +60,7 @@
     "@types/react-dom": "18.2.7",
     "@typescript-eslint/eslint-plugin": "6.4.0",
     "@typescript-eslint/parser": "6.4.0",
+    "@typescript-eslint/typescript-estree": "6.4.1",
     "autoprefixer": "10.4.15",
     "buffer": "^6.0.3",
     "chokidar": "3.5.3",
@@ -76,6 +77,8 @@
     "parcel": "2.9.3",
     "playwright": "1.37.0",
     "postcss": "8.4.28",
+    "eslint-config-prettier": "9.0.0",
+    "prettier": "3.0.2",
     "process": "^0.11.10",
     "start-server-and-test": "2.0.0",
     "tailwindcss": "3.3.3",
