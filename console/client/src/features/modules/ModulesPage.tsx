@@ -17,7 +17,8 @@ export default function ModulesPage() {
             <div className='min-w-0 flex-1'>
               <Link
                 to={`${module.schema?.name}`}
-                className='focus:outline-none'>
+                className='focus:outline-none'
+              >
                 <span
                   className='absolute inset-0'
                   aria-hidden='true'
@@ -28,7 +29,8 @@ export default function ModulesPage() {
                       className={classNames(
                         statuses['online'],
                         'flex-none rounded-full p-1'
-                      )}>
+                      )}
+                    >
                       <div className='h-2 w-2 rounded-full bg-current' />
                     </div>
                     <p className='text-sm font-medium text-gray-900 dark:text-gray-300'>
@@ -37,7 +39,8 @@ export default function ModulesPage() {
                   </div>
                   <div className='pt-4'>
                     <div
-                      className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
+                      className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}
+                    >
                       {module.deploymentName}
                     </div>
                   </div>

@@ -35,7 +35,8 @@ export const TimelineDeployment: React.FC<Props> = ({
   return (
     <>
       <div
-        className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}>
+        className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}
+      >
         <RocketLaunchIcon
           className='h-6 w-6 text-indigo-500'
           aria-hidden='true'
@@ -45,11 +46,13 @@ export const TimelineDeployment: React.FC<Props> = ({
         className={classNames(
           `relative flex gap-x-4 flex-auto w-full max-w-full p-1.5 `,
           selected && 'bg-indigo-600 rounded-md'
-        )}>
+        )}
+      >
         <p
           className={`flex-auto text-xs leading-5 ${
             selected ? 'text-white' : textColor
-          }`}>
+          }`}
+        >
           {deploymentType(deployment.eventType)} deployment{' '}
           <span>{deployment.name}</span> for language{' '}
           <span>{deployment.language}</span>.
@@ -58,7 +61,8 @@ export const TimelineDeployment: React.FC<Props> = ({
           dateTime={formatTimestamp(timestamp)}
           className={`flex-none text-xs leading-5 ${
             selected ? 'text-gray=50' : 'text-gray-500'
-          }`}>
+          }`}
+        >
           {formatTimestamp(timestamp)}
         </time>
       </div>

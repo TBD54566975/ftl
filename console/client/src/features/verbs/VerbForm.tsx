@@ -69,21 +69,25 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
     <>
       <form
         onSubmit={handleSubmit}
-        className='rounded-lg'>
+        className='rounded-lg'
+      >
         {callData
           ?.filter(d => d.data?.name === verb?.verb?.request?.name)
           .map((data, dataIndex) => (
             <div
               key={dataIndex}
-              className='mb-4'>
+              className='mb-4'
+            >
               <h2 className='text-lg font-semibold mb-2'>{data.data?.name}</h2>
               {data.data?.fields.map((field, fieldIndex) => (
                 <div
                   key={fieldIndex}
-                  className='text-sm mb-3'>
+                  className='text-sm mb-3'
+                >
                   <label
                     htmlFor={`input-${dataIndex}-${fieldIndex}`}
-                    className='block text-sm font-medium mb-1'>
+                    className='block text-sm font-medium mb-1'
+                  >
                     {field.name}:
                   </label>
                   <input
@@ -99,7 +103,8 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
           ))}
         <button
           type='submit'
-          className='bg-indigo-700 text-white px-4 py-2 rounded hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'>
+          className='bg-indigo-700 text-white px-4 py-2 rounded hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
+        >
           Submit
         </button>
       </form>
@@ -112,7 +117,8 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
       {error && (
         <div
           className='mt-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4'
-          role='alert'>
+          role='alert'
+        >
           {error}
         </div>
       )}

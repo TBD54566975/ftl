@@ -49,22 +49,26 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
             <tr>
               <th
                 scope='col'
-                className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'>
+                className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'
+              >
                 Request
               </th>
               <th
                 scope='col'
-                className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'>
+                className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'
+              >
                 Source
               </th>
               <th
                 scope='col'
-                className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'>
+                className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'
+              >
                 Time
               </th>
               <th
                 scope='col'
-                className='hidden py-2 pr-0 text-right font-semibold md:table-cell'>
+                className='hidden py-2 pr-0 text-right font-semibold md:table-cell'
+              >
                 Duration(ms)
               </th>
             </tr>
@@ -73,7 +77,8 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
             {calls.map((call, index) => (
               <tr
                 key={index}
-                onClick={() => handleClick(call)}>
+                onClick={() => handleClick(call)}
+              >
                 <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                   <div className='flex gap-x-3'>
                     <div className='font-mono text-sm leading-6'>
@@ -100,7 +105,8 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
                   </div>
                 </td>
                 <td
-                  className={`hidden py-4 pr-0 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell`}>
+                  className={`hidden py-4 pr-0 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell`}
+                >
                   {formatDuration(call.duration)}
                 </td>
               </tr>

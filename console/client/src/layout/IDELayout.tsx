@@ -70,9 +70,11 @@ export function IDELayout() {
         <div className='flex flex-col w-1/4 h-full overflow-hidden'>
           {/* Upper Section */}
           <div
-            className={`flex-1 flex flex-col h-1/3 ${panelColor} ml-2 mt-2 rounded`}>
+            className={`flex-1 flex flex-col h-1/3 ${panelColor} ml-2 mt-2 rounded`}
+          >
             <div
-              className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}>
+              className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}
+            >
               Modules
             </div>
             <div className='flex-1 p-4 overflow-y-auto'>
@@ -82,9 +84,11 @@ export function IDELayout() {
 
           {/* Lower Section */}
           <div
-            className={`flex-1 flex flex-col ${panelColor} ml-2 mt-2 mb-2 rounded`}>
+            className={`flex-1 flex flex-col ${panelColor} ml-2 mt-2 mb-2 rounded`}
+          >
             <div
-              className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}>
+              className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}
+            >
               Details
             </div>
             <div className='flex-1 p-4 overflow-y-auto'>
@@ -96,16 +100,19 @@ export function IDELayout() {
         <div className={`flex-1 flex flex-col m-2 rounded`}>
           <Tab.Group
             selectedIndex={activeTab}
-            onChange={handleChangeTab}>
+            onChange={handleChangeTab}
+          >
             <div>
               <Tab.List
-                className={`flex items-center rounded-t ${headerTextColor}`}>
+                className={`flex items-center rounded-t ${headerTextColor}`}
+              >
                 {tabs.map(({label, id}, i) => {
                   return (
                     <Tab
                       key={id}
                       className='flex items-center mr-2 relative'
-                      as='span'>
+                      as='span'
+                    >
                       <span
                         className={`px-4 py-2 rounded-t ${
                           id !== 'timeline' ? 'pr-8' : ''
@@ -113,7 +120,8 @@ export function IDELayout() {
                           activeTab === i
                             ? `${selectedTabStyle}`
                             : `${unselectedTabStyle}`
-                        }`}>
+                        }`}
+                      >
                         {label}
                       </span>
                       {i !== 0 && (
@@ -128,7 +136,8 @@ export function IDELayout() {
                               search: searchParams.toString(),
                             })
                           }}
-                          className='absolute right-0 mr-2 text-gray-400 hover:text-white'>
+                          className='absolute right-0 mr-2 text-gray-400 hover:text-white'
+                        >
                           <XMarkIcon className={`h-5 w-5`} />
                         </button>
                       )}

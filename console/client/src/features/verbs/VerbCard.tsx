@@ -19,7 +19,8 @@ export const VerbCard: React.FC<Props> = ({module, verb}) => {
       <div className='min-w-0 flex-1'>
         <Link
           to={`/modules/${module?.name}/verbs/${verb?.verb?.name}`}
-          className='focus:outline-none'>
+          className='focus:outline-none'
+        >
           <p className='text-sm font-medium text-gray-900 dark:text-gray-300'>
             {verb?.verb?.name}
           </p>
@@ -30,7 +31,8 @@ export const VerbCard: React.FC<Props> = ({module, verb}) => {
                   className={classNames(
                     'text-green-400 bg-green-400/10 ring-green-400/30',
                     'rounded-full flex-none py-1 px-2 text-xs font-medium ring-1 ring-inset'
-                  )}>
+                  )}
+                >
                   <code className='text-xs'>
                     {calls?.map(call => call.calls.map(call => call.name))}
                   </code>

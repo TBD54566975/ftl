@@ -30,10 +30,12 @@ export const TimelineFilterBar = ({selectedFilters, onFilterChange}) => {
                 as='div'
                 key={section.name}
                 id={`desktop-menu-${sectionIdx}`}
-                className='relative inline-block text-left'>
+                className='relative inline-block text-left'
+              >
                 <div>
                   <Popover.Button
-                    className={`group inline-flex items-center justify-center text-sm font-medium ${textColor} hover:text-gray-900`}>
+                    className={`group inline-flex items-center justify-center text-sm font-medium ${textColor} hover:text-gray-900`}
+                  >
                     <span>{section.name}</span>
                     {sectionIdx === 0 && selectedFilters.length > 0 ? (
                       <span className='ml-1.5 rounded bg-gray-200 dark:bg-indigo-600 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-gray-700 dark:text-white'>
@@ -54,14 +56,17 @@ export const TimelineFilterBar = ({selectedFilters, onFilterChange}) => {
                   enterTo='transform opacity-100 scale-100'
                   leave='transition ease-in duration-75'
                   leaveFrom='transform opacity-100 scale-100'
-                  leaveTo='transform opacity-0 scale-95'>
+                  leaveTo='transform opacity-0 scale-95'
+                >
                   <Popover.Panel
-                    className={`absolute left-0 z-10 mt-2 origin-top-right rounded-md bg-white p-4 shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none`}>
+                    className={`absolute left-0 z-10 mt-2 origin-top-right rounded-md bg-white p-4 shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none`}
+                  >
                     <form className='space-y-4'>
                       {section.options.map((option, optionIdx) => (
                         <div
                           key={option.value}
-                          className='flex items-center'>
+                          className='flex items-center'
+                        >
                           <input
                             id={`filter-${section.id}-${optionIdx}`}
                             name={`${section.id}[]`}
@@ -75,7 +80,8 @@ export const TimelineFilterBar = ({selectedFilters, onFilterChange}) => {
                           />
                           <label
                             htmlFor={`filter-${section.id}-${optionIdx}`}
-                            className='ml-3 whitespace-nowrap pr-6 text-sm font-medium text-gray-900'>
+                            className='ml-3 whitespace-nowrap pr-6 text-sm font-medium text-gray-900'
+                          >
                             {option.label}
                           </label>
                         </div>

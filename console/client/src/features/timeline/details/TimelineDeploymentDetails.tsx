@@ -39,7 +39,8 @@ export const TimelineDeploymentDetails: React.FC<Props> = ({
           className={classNames(
             deploymentTypeBadge[deployment.eventType],
             'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600'
-          )}>
+          )}
+        >
           {deploymentTypeText[deployment.eventType]}
         </span>
       </div>

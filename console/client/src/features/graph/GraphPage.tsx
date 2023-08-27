@@ -32,7 +32,8 @@ export default function GraphPage() {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        fitView>
+        fitView
+      >
         <Controls />
         <MiniMap />
       </ReactFlow>

@@ -37,11 +37,13 @@ export function RequestModal() {
     <Transition
       appear
       show={isOpen}
-      as={React.Fragment}>
+      as={React.Fragment}
+    >
       <Dialog
         onClose={handleClose}
         as='div'
-        className='relative z-10'>
+        className='relative z-10'
+      >
         <Transition.Child
           as={React.Fragment}
           enter='ease-out duration-300'
@@ -49,7 +51,8 @@ export function RequestModal() {
           enterTo='opacity-100'
           leave='ease-in duration-200'
           leaveFrom='opacity-100'
-          leaveTo='opacity-0'>
+          leaveTo='opacity-0'
+        >
           <div className='fixed inset-0 bg-black bg-opacity-25' />
         </Transition.Child>
         <div className='fixed inset-0 overflow-y-auto'>
@@ -61,20 +64,25 @@ export function RequestModal() {
               enterTo='opacity-100 scale-100'
               leave='ease-in duration-200'
               leaveFrom='opacity-100 scale-100'
-              leaveTo='opacity-0 scale-95'>
+              leaveTo='opacity-0 scale-95'
+            >
               <Dialog.Panel
-                className={`w-full max-w-7xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}>
+                className={`w-full max-w-7xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}
+              >
                 <Dialog.Title
                   as='h3'
-                  className='text-lg font-medium leading-6 text-gray-900'>
+                  className='text-lg font-medium leading-6 text-gray-900'
+                >
                   <ol
                     role='list'
-                    className='flex items-center space-x-4'>
+                    className='flex items-center space-x-4'
+                  >
                     <li>
                       <div className='flex items-center'>
                         <button
                           className='focus:outline-none'
-                          onClick={handleClose}>
+                          onClick={handleClose}
+                        >
                           <span className='capitalize ml-4 text-sm font-medium text-gray-400 hover:text-gray-500'>
                             {moduleName} (module)
                           </span>
@@ -100,42 +108,50 @@ export function RequestModal() {
                       <tr>
                         <th
                           scope='col'
-                          className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'>
+                          className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'
+                        >
                           Request
                         </th>
                         <th
                           scope='col'
-                          className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'>
+                          className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'
+                        >
                           Source
                         </th>
                         <th
                           scope='col'
-                          className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'>
+                          className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'
+                        >
                           Destination
                         </th>
                         <th
                           scope='col'
-                          className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'>
+                          className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'
+                        >
                           Time
                         </th>
                         <th
                           scope='col'
-                          className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'>
+                          className='hidden py-2 pl-0 pr-8 font-semibold md:table-cell lg:pr-20'
+                        >
                           Duration(ms)
                         </th>
                         <th
                           scope='col'
-                          className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
+                          className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
+                        >
                           Request
                         </th>
                         <th
                           scope='col'
-                          className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
+                          className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
+                        >
                           Response
                         </th>
                         <th
                           scope='col'
-                          className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'>
+                          className='hidden py-2 pl-0 pr-4 text-right font-semibold sm:table-cell sm:pr-6 lg:pr-8'
+                        >
                           Error
                         </th>
                       </tr>
@@ -180,19 +196,23 @@ export function RequestModal() {
                             </div>
                           </td>
                           <td
-                            className={`hidden py-4 pl-0 pr-8 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell lg:pr-20`}>
+                            className={`hidden py-4 pl-0 pr-8 text-right text-sm leading-6 text-gray-500 dark:text-gray-400 md:table-cell lg:pr-20`}
+                          >
                             {formatDuration(call.duration)}
                           </td>
                           <td
-                            className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
+                            className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
+                          >
                             <code>{call.request}</code>
                           </td>
                           <td
-                            className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
+                            className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
+                          >
                             <code>{call.response}</code>
                           </td>
                           <td
-                            className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}>
+                            className={`hidden py-4 pl-0 pr-4 text-right text-sm leading-6 text-gray-400 sm:table-cell sm:pr-6 lg:pr-8`}
+                          >
                             {call.error}
                           </td>
                         </tr>

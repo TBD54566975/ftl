@@ -25,6 +25,49 @@ module.exports = {
   ignorePatterns: ['**/dist/*'],
   rules: {
     strict: 0,
+    /* START: Prettier equivalent  rules */
+    'max-len': [
+      'error',
+      {
+        ignoreComments: true,
+        tabWidth: 2, // Prettier:Tab Width
+        ignoreTemplateLiterals: true,
+        code: 180, // Prettier:Max length
+      },
+    ],
+    'no-tabs': ['error'], // Prettier: Tabs
+    semi: ['error', 'never'], // Prettier: Semicolons
+    quotes: [
+      'error',
+      'single',
+      {
+        // Prettier: Quotes
+        avoidEscape: true,
+        allowTemplateLiterals: true,
+      },
+    ],
+    'quote-props': ['error', 'as-needed'], // Prettier: Quote Props
+    'comma-dangle': [
+      'error',
+      {
+        // Prettier: Trailing Commas
+        arrays: 'always-multiline',
+        objects: 'always-multiline',
+        imports: 'always-multiline',
+        exports: 'always-multiline',
+        functions: 'never',
+      },
+    ],
+    'array-bracket-spacing': ['error', 'never'], // Prettier: Bracket Spacing
+    'object-curly-spacing': ['error', 'never'], // Prettier: Bracket Spacing
+    'arrow-parens': ['error', 'as-needed'], // Prettier: Arrow Function Parentheses
+    'eol-last': ['error'], // Prettier: End of Line
+    // Prettier: JSX
+    'jsx-quotes': ['error', 'prefer-single'], // Prettier: JSX Quotes
+    'react/jsx-tag-spacing': ['error'], // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-tag-spacing.md
+    'react/jsx-closing-bracket-location': ['error', 'line-aligned'], // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-closing-bracket-location.md
+    'react/jsx-indent-props': [2, 2], // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/docs/rules/jsx-indent-props.md
+    /* END: Prettier equivalent  rules */
     /* Start: JS/TS quality rules */
     'react/jsx-key': [
       'error',

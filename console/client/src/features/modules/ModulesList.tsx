@@ -19,7 +19,8 @@ export function ModulesList() {
   return (
     <ul
       role='list'
-      className='space-y-2'>
+      className='space-y-2'
+    >
       {modules.modules?.map(module => (
         <li
           key={module.deploymentName}
@@ -34,9 +35,10 @@ export function ModulesList() {
           ${
             module === selectedModule
               ? 'bg-indigo-700 text-white dark:bg-indigo-700 dark:text-white'
-              : 'bg-slate-100 hover:bg-indigo-700 hover:text-white hover:border-indigo-600 dark:bg-slate-800 dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:border-indigo-600'
+              : `bg-slate-100 hover:bg-indigo-700 hover:text-white hover:border-indigo-600 dark:bg-slate-800 dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:border-indigo-600`
           }
-          dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:border-indigo-600`}>
+          dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:border-indigo-600`}
+        >
           <div className='flex-1 truncate'>{module.name}</div>
           <div>
             <div
@@ -46,7 +48,8 @@ export function ModulesList() {
                 ? 'text-gray-300'
                 : 'text-gray-500 dark:text-gray-400'
             }
-             ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
+             ring-1 ring-inset ring-black/10 dark:ring-white/10`}
+            >
               {module.deploymentName}
             </div>
           </div>

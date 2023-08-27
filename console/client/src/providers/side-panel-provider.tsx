@@ -33,7 +33,8 @@ export const SidePanelProvider = ({children}) => {
 
   return (
     <SidePanelContext.Provider
-      value={{isOpen, openPanel, closePanel, component}}>
+      value={{isOpen, openPanel, closePanel, component}}
+    >
       {children}
     </SidePanelContext.Provider>
   )

@@ -45,17 +45,20 @@ export default function LogsPage() {
                 <tr>
                   <th
                     scope='col'
-                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'
+                  >
                     Level
                   </th>
                   <th
                     scope='col'
-                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'
+                  >
                     Date
                   </th>
                   <th
                     scope='col'
-                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                    className='whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100'
+                  >
                     Message
                   </th>
                 </tr>
@@ -66,20 +69,23 @@ export default function LogsPage() {
                     <tr
                       onClick={() =>
                         setExpandedLog(expandedLog !== index ? index : null)
-                      }>
+                      }
+                    >
                       <td className='whitespace-nowrap px-2 py-2'>
                         <span
                           className={classNames(
                             logLevelBadge[log.logLevel],
                             'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600'
-                          )}>
+                          )}
+                        >
                           {logLevelText[log.logLevel]}
                         </span>
                       </td>
                       <td className='whitespace-nowrap px-2 py-2 text-sm '>
                         <time
                           dateTime={formatTimestampShort(log.timeStamp)}
-                          className='flex-none py-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400'>
+                          className='flex-none py-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400'
+                        >
                           {formatTimestampShort(log.timeStamp)}
                         </time>
                       </td>

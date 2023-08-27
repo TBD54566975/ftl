@@ -20,7 +20,8 @@ export const SelectedTimelineEntryProvider = (props: PropsWithChildren) => {
 
   return (
     <SelectedTimelineEntryContext.Provider
-      value={{selectedEntry, setSelectedEntry}}>
+      value={{selectedEntry, setSelectedEntry}}
+    >
       {props.children}
     </SelectedTimelineEntryContext.Provider>
   )

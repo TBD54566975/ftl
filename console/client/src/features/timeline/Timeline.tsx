@@ -112,17 +112,20 @@ export const Timeline = () => {
 
       <ul
         role='list'
-        className='space-y-4 p-4'>
+        className='space-y-4 p-4'
+      >
         {filteredEntries.map((entry, index) => (
           <li
             key={index}
             className='relative flex gap-x-4'
-            onClick={() => handleEntryClicked(entry)}>
+            onClick={() => handleEntryClicked(entry)}
+          >
             <div
               className={classNames(
                 index === filteredEntries.length - 1 ? 'h-6' : '-bottom-6',
                 'absolute left-0 top-0 flex w-6 justify-center'
-              )}>
+              )}
+            >
               <div className='w-px bg-gray-200 dark:bg-gray-600' />
             </div>
 

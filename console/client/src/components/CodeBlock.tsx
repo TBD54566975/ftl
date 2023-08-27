@@ -18,7 +18,8 @@ export const CodeBlock: React.FC<Props> = ({code, language}) => {
     <SyntaxHighlighter
       language={language}
       style={isDarkMode ? atomDark : oneLight}
-      customStyle={{fontSize: '12px'}}>
+      customStyle={{fontSize: '12px'}}
+    >
       {code}
     </SyntaxHighlighter>
   )

@@ -6,7 +6,8 @@ import DarkModeSwitch from './DarkModeSwitch'
 export function Navigation() {
   return (
     <div
-      className={`px-4 py-2 flex items-center justify-between ${navColor} text-white shadow-md`}>
+      className={`px-4 py-2 flex items-center justify-between ${navColor} text-white shadow-md`}
+    >
       <div className='flex items-center space-x-2'>
         <NavLink to='/'>
           <div className='pb-1'>
@@ -26,7 +27,8 @@ export function Navigation() {
                     : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
                   'rounded-md px-3 py-2 text-sm font-medium'
                 )
-              }>
+              }
+            >
               Graph
             </NavLink>
           </div>

@@ -67,7 +67,8 @@ export function ModuleDetails() {
                 handleVerbClicked(verb)
               }}
               className='rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white text-center
-            shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'>
+            shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
+            >
               {verb.verb?.name}
             </div>
           ))}
@@ -81,7 +82,8 @@ export function ModuleDetails() {
             {selectedModule.data.map((data, index) => (
               <li
                 key={index}
-                className={`${textColor}`}>
+                className={`${textColor}`}
+              >
                 <code>{data.data?.name}</code>
               </li>
             ))}

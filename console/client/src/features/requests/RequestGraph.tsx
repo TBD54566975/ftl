@@ -42,7 +42,8 @@ const CallBlock: React.FC<CallBlockProps> = ({
       </div>
       <span
         className='text-white pointer-events-none absolute pl-1 top-1/2 left-0 transform -translate-y-1/2
-        self-center text-xs w-max opacity-0 transition-opacity group-hover:opacity-100'>
+        self-center text-xs w-max opacity-0 transition-opacity group-hover:opacity-100'
+      >
         {call.destinationVerbRef?.module}.{call.destinationVerbRef?.name}
       </span>
     </div>
@@ -76,7 +77,8 @@ export const RequestGraph: React.FC<Props> = ({
         <div
           key={index}
           className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm'
-          onClick={() => setSelectedCall(c)}>
+          onClick={() => setSelectedCall(c)}
+        >
           <div className='w-full relative'>
             <CallBlock
               call={c}

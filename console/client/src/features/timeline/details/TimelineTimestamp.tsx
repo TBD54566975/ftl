@@ -10,7 +10,8 @@ export const TimelineTimestamp: React.FC<Props> = ({timestamp}) => {
   return (
     <time
       dateTime={formatTimestampShort(timestamp)}
-      className={`flex-none text-xs ${lightTextColor}`}>
+      className={`flex-none text-xs ${lightTextColor}`}
+    >
       {formatTimestampShort(timestamp)}
     </time>
   )
