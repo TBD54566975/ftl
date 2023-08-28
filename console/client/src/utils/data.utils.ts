@@ -1,4 +1,4 @@
-import { Data } from '../protos/xyz/block/ftl/v1/schema/schema_pb'
+import {Data} from '../protos/xyz/block/ftl/v1/schema/schema_pb'
 
 export function getCodeBlock(data: Data): string {
   let codeBlock = data.comments.map(comment => `// ${comment}`).join('\n')

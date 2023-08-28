@@ -1,15 +1,20 @@
-import { Duration, Timestamp } from '@bufbuild/protobuf'
-import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { verbRefString } from '../verbs/verb.utils'
+import {Duration, Timestamp} from '@bufbuild/protobuf'
+import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {verbRefString} from '../verbs/verb.utils'
 
 interface CallBlockProps {
-  call: Call;
-  selectedCall?: Call;
-  firstTimeStamp: Timestamp;
-  firstDuration: Duration;
+  call: Call
+  selectedCall?: Call
+  firstTimeStamp: Timestamp
+  firstDuration: Duration
 }
 
-const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStamp, firstDuration }) => {
+const CallBlock: React.FC<CallBlockProps> = ({
+  call,
+  selectedCall,
+  firstTimeStamp,
+  firstDuration,
+}) => {
   const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000
   const durationInMillis = (call.duration?.nanos ?? 0) / 1000000
   const width = (durationInMillis / totalDurationMillis) * 100
@@ -54,7 +59,11 @@ type Props = {
   setSelectedCall: React.Dispatch<React.SetStateAction<Call>>
 }
 
-export const RequestGraph: React.FC<Props> = ({ calls, call, setSelectedCall }) => {
+export const RequestGraph: React.FC<Props> = ({
+  calls,
+  call,
+  setSelectedCall,
+}) => {
   if (calls.length === 0) {
     return <></>
   }
@@ -68,7 +77,11 @@ export const RequestGraph: React.FC<Props> = ({ calls, call, setSelectedCall }) 
   return (
     <div className='flex flex-col'>
       {calls.map((c, index) => (
-        <div key={index} className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm' onClick={() => setSelectedCall(c)}>
+        <div
+          key={index}
+          className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm'
+          onClick={() => setSelectedCall(c)}
+        >
           <div className='w-full relative'>
             <CallBlock
               call={c}
@@ -82,4 +95,3 @@ export const RequestGraph: React.FC<Props> = ({ calls, call, setSelectedCall }) 
     </div>
   )
 }
-

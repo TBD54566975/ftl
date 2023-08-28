@@ -1,37 +1,40 @@
-import { createContext, useState } from 'react'
+import React from 'react'
 
 interface SidePanelContextType {
-  isOpen: boolean;
-  component: React.ReactNode;
-  openPanel: (component: React.ReactNode) => void;
-  closePanel: () => void;
+  isOpen: boolean
+  component: React.ReactNode
+  openPanel: (component: React.ReactNode) => void
+  closePanel: () => void
 }
 
 const defaultContextValue: SidePanelContextType = {
   isOpen: false,
   component: null,
-  openPanel: () => { },
-  closePanel: () => { },
+  openPanel: () => {},
+  closePanel: () => {},
 }
 
-export const SidePanelContext = createContext<SidePanelContextType>(defaultContextValue)
+export const SidePanelContext =
+  React.createContext<SidePanelContextType>(defaultContextValue)
 
-export const SidePanelProvider = ({ children }) => {
-  const [ isOpen, setIsOpen ] = useState(false)
-  const [ component, setComponent ] = useState(null)
+export const SidePanelProvider = ({children}) => {
+  const [isOpen, setIsOpen] = React.useState(false)
+  const [component, setComponent] = React.useState<React.ReactNode>()
 
-  const openPanel = comp => {
+  const openPanel = (comp: React.ReactNode) => {
     setIsOpen(true)
     setComponent(comp)
   }
 
   const closePanel = () => {
     setIsOpen(false)
-    setComponent(null)
+    setComponent(undefined)
   }
 
   return (
-    <SidePanelContext.Provider value={{ isOpen, openPanel, closePanel, component }}>
+    <SidePanelContext.Provider
+      value={{isOpen, openPanel, closePanel, component}}
+    >
       {children}
     </SidePanelContext.Provider>
   )

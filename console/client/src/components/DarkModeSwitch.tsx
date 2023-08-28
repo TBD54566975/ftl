@@ -1,11 +1,11 @@
-import { Switch } from '@headlessui/react'
-import { MoonIcon, SunIcon } from '@heroicons/react/20/solid'
-import { useEffect } from 'react'
-import { useDarkMode } from '../providers/dark-mode-provider'
-import { classNames } from '../utils/react.utils'
+import {Switch} from '@headlessui/react'
+import {MoonIcon, SunIcon} from '@heroicons/react/20/solid'
+import {useEffect} from 'react'
+import {useDarkMode} from '../providers/dark-mode-provider'
+import {classNames} from '../utils/react.utils'
 
 export default function DarkModeSwitch() {
-  const { isDarkMode, setDarkMode } = useDarkMode()
+  const {isDarkMode, setDarkMode} = useDarkMode()
 
   useEffect(() => {
     if (isDarkMode) {
@@ -13,7 +13,7 @@ export default function DarkModeSwitch() {
     } else {
       document.documentElement.classList.remove('dark')
     }
-  }, [ isDarkMode ])
+  }, [isDarkMode])
 
   return (
     <Switch
@@ -29,9 +29,12 @@ export default function DarkModeSwitch() {
           `pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-indigo-600 shadow ring-0 transition duration-200 ease-in-out`
         )}
       >
-        {isDarkMode ? <MoonIcon className='text-white p-0.5' /> : <SunIcon className='text-indigo-600 p-0.5' />}
+        {isDarkMode ? (
+          <MoonIcon className='text-white p-0.5' />
+        ) : (
+          <SunIcon className='text-indigo-600 p-0.5' />
+        )}
       </span>
     </Switch>
-
   )
 }

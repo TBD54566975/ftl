@@ -1,15 +1,22 @@
-import { useContext } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { SelectedModuleContext } from '../../providers/selected-module-provider'
-import { TabSearchParams, TabType, TabsContext } from '../../providers/tabs-provider'
-import { textColor } from '../../utils/style.utils'
+import React from 'react'
+import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
+import {SelectedModuleContext} from '../../providers/selected-module-provider'
+import {Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {
+  TabSearchParams,
+  TabType,
+  TabsContext,
+  Tab,
+} from '../../providers/tabs-provider'
+import {textColor} from '../../utils/style.utils'
 
 export function ModuleDetails() {
-  const { selectedModule } = useContext(SelectedModuleContext)
-  const { tabs, setTabs, setActiveTab } = useContext(TabsContext)
+  const {selectedModule} = React.useContext(SelectedModuleContext)
+  const {tabs, setTabs, setActiveTab} = React.useContext(TabsContext)
+
   const navigate = useNavigate()
   const location = useLocation()
-  const [ searchParams ] = useSearchParams()
+  const [searchParams] = useSearchParams()
 
   if (!selectedModule) {
     return (
@@ -19,22 +26,22 @@ export function ModuleDetails() {
     )
   }
 
-  const handleVerbClicked = verb => {
-    const tabId = [ selectedModule.name, verb.verb?.name ].join('.')
+  const handleVerbClicked = (verb: Verb) => {
+    const tabId = [selectedModule.name, verb.verb?.name].join('.')
     const index = tabs.findIndex(tab => tab.id === tabId)
     const existingTab = index !== -1
-    let newTab
-    if(!existingTab) {
+    let newTab: Tab | undefined
+    if (!existingTab) {
       newTab = {
-        id: [ selectedModule.name, verb.verb?.name ].join('.'),
+        id: [selectedModule.name, verb.verb?.name].join('.'),
         label: verb.verb?.name ?? 'Verb',
         type: TabType.Verb,
       }
-      setTabs([ ...tabs, newTab ])
+      setTabs([...tabs, newTab])
     }
     setActiveTab(existingTab ? index : tabs.length)
     searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id)
-    navigate({ ...location, search: searchParams.toString() })
+    navigate({...location, search: searchParams.toString()})
   }
 
   return (
@@ -75,7 +82,10 @@ export function ModuleDetails() {
         <dd className='text-white'>
           <ul className='list-none ml-4'>
             {selectedModule.data.map((data, index) => (
-              <li key={index} className={`${textColor}`}>
+              <li
+                key={index}
+                className={`${textColor}`}
+              >
                 <code>{data.data?.name}</code>
               </li>
             ))}

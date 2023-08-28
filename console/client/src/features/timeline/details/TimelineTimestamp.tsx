@@ -1,12 +1,12 @@
-import { Timestamp } from '@bufbuild/protobuf'
-import { formatTimestampShort } from '../../../utils/date.utils'
-import { lightTextColor } from '../../../utils/style.utils'
+import {Timestamp} from '@bufbuild/protobuf'
+import {formatTimestampShort} from '../../../utils/date.utils'
+import {lightTextColor} from '../../../utils/style.utils'
 
 type Props = {
   timestamp: Timestamp
 }
 
-export const TimelineTimestamp: React.FC<Props> = ({ timestamp }) => {
+export const TimelineTimestamp: React.FC<Props> = ({timestamp}) => {
   return (
     <time
       dateTime={formatTimestampShort(timestamp)}

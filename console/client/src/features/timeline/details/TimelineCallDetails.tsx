@@ -1,66 +1,84 @@
-import { Timestamp } from '@bufbuild/protobuf'
-import { useEffect, useState } from 'react'
-import { CodeBlock } from '../../../components/CodeBlock'
-import { useClient } from '../../../hooks/use-client'
-import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
-import { Call } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { formatDuration } from '../../../utils/date.utils'
-import { textColor } from '../../../utils/style.utils'
-import { RequestGraph } from '../../requests/RequestGraph'
-import { TimelineTimestamp } from './TimelineTimestamp'
-import { verbRefString } from '../../verbs/verb.utils'
+import {Timestamp} from '@bufbuild/protobuf'
+import {useEffect, useState} from 'react'
+import {CodeBlock} from '../../../components/CodeBlock'
+import {useClient} from '../../../hooks/use-client'
+import {ConsoleService} from '../../../protos/xyz/block/ftl/v1/console/console_connect'
+import {Call} from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import {formatDuration} from '../../../utils/date.utils'
+import {textColor} from '../../../utils/style.utils'
+import {RequestGraph} from '../../requests/RequestGraph'
+import {TimelineTimestamp} from './TimelineTimestamp'
+import {verbRefString} from '../../verbs/verb.utils'
 
 type Props = {
   timestamp: Timestamp
   call: Call
 }
 
-export const TimelineCallDetails: React.FC<Props> = ({ timestamp, call }) => {
+export const TimelineCallDetails: React.FC<Props> = ({timestamp, call}) => {
   const client = useClient(ConsoleService)
-  const [ requestCalls, setRequestCalls ] = useState<Call[]>([])
-  const [ selectedCall, setSelectedCall ] = useState(call)
+  const [requestCalls, setRequestCalls] = useState<Call[]>([])
+  const [selectedCall, setSelectedCall] = useState(call)
 
   useEffect(() => {
     setSelectedCall(call)
-  }, [ call ])
+  }, [call])
 
   useEffect(() => {
     const fetchRequestCalls = async () => {
       if (selectedCall.requestKey === undefined) {
         return
       }
-      const response = await client.getRequestCalls({ requestKey: selectedCall.requestKey })
+      const response = await client.getRequestCalls({
+        requestKey: selectedCall.requestKey,
+      })
       setRequestCalls(response.calls)
     }
-    fetchRequestCalls()
-  }, [ client, selectedCall ])
+
+    void fetchRequestCalls()
+  }, [client, selectedCall])
 
   return (
     <>
       <TimelineTimestamp timestamp={timestamp} />
 
       <div className='pt-2'>
-        <RequestGraph calls={requestCalls} call={selectedCall} setSelectedCall={setSelectedCall} />
+        <RequestGraph
+          calls={requestCalls}
+          call={selectedCall}
+          setSelectedCall={setSelectedCall}
+        />
       </div>
 
       <div className='pt-4'>
         {call.destinationVerbRef && (
-          <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 mr-1 text-xs font-medium 'text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
+          <div
+            className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 mr-1 text-xs font-medium 'text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}
+          >
             {verbRefString(call.destinationVerbRef)}
           </div>
         )}
       </div>
 
       <div className='text-sm pt-2'>Request</div>
-      <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.request), null, 2)} language='json' />
+      <CodeBlock
+        code={JSON.stringify(JSON.parse(selectedCall.request), null, 2)}
+        language='json'
+      />
 
       <div className='text-sm pt-2'>Response</div>
-      <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.response), null, 2)} language='json' />
+      <CodeBlock
+        code={JSON.stringify(JSON.parse(selectedCall.response), null, 2)}
+        language='json'
+      />
 
       {selectedCall.error && (
         <>
           <h3 className='pt-4'>Error</h3>
-          <CodeBlock code={selectedCall.error} language='json' />
+          <CodeBlock
+            code={selectedCall.error}
+            language='json'
+          />
         </>
       )}
 
@@ -75,25 +93,35 @@ export const TimelineCallDetails: React.FC<Props> = ({ timestamp, call }) => {
         </div>
         <div className='flex pt-2 justify-between'>
           <dt>Duration</dt>
-          <dd className={`${textColor}`}>{formatDuration(selectedCall.duration)}</dd>
+          <dd className={`${textColor}`}>
+            {formatDuration(selectedCall.duration)}
+          </dd>
         </div>
         <div className='flex pt-2 justify-between'>
           <dt>Module</dt>
-          <dd className={`${textColor}`}>{selectedCall.destinationVerbRef?.module}</dd>
+          <dd className={`${textColor}`}>
+            {selectedCall.destinationVerbRef?.module}
+          </dd>
         </div>
         <div className='flex pt-2 justify-between'>
           <dt>Verb</dt>
-          <dd className={`${textColor}`}>{selectedCall.destinationVerbRef?.name}</dd>
+          <dd className={`${textColor}`}>
+            {selectedCall.destinationVerbRef?.name}
+          </dd>
         </div>
         {selectedCall.sourceVerbRef?.module && (
           <>
             <div className='flex pt-2 justify-between'>
               <dt>Source module</dt>
-              <dd className={`${textColor}`}>{selectedCall.sourceVerbRef?.module}</dd>
+              <dd className={`${textColor}`}>
+                {selectedCall.sourceVerbRef?.module}
+              </dd>
             </div>
             <div className='flex pt-2 justify-between'>
               <dt>Source verb</dt>
-              <dd className={`${textColor}`}>{selectedCall.sourceVerbRef?.name}</dd>
+              <dd className={`${textColor}`}>
+                {selectedCall.sourceVerbRef?.name}
+              </dd>
             </div>
           </>
         )}
