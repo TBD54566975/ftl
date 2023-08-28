@@ -79,7 +79,7 @@ export function IDELayout() {
 
           {/* Lower Section */}
           <div className={`flex-1 flex flex-col ${panelColor} ml-2 mt-2 mb-2 rounded`}>
-            <div className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}>Details</div>
+            <div className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}>Module Details</div>
             <div className='flex-1 p-4 overflow-y-auto'>
               <ModuleDetails />
             </div>
