@@ -9,9 +9,14 @@ import {useDarkMode} from '../providers/dark-mode-provider'
 type Props = {
   code: string
   language: string
+  maxHeight?: number
 }
 
-export const CodeBlock: React.FC<Props> = ({code, language}) => {
+export const CodeBlock: React.FC<Props> = ({
+  code,
+  language,
+  maxHeight = 300,
+}) => {
   const {isDarkMode} = useDarkMode()
 
   return (
@@ -22,7 +27,7 @@ export const CodeBlock: React.FC<Props> = ({code, language}) => {
           ? (atomDark as React.CSSProperties)
           : (oneLight as React.CSSProperties)
       }
-      customStyle={{fontSize: '12px'}}
+      customStyle={{fontSize: '12px', maxHeight: `${maxHeight}px`}}
     >
       {code}
     </SyntaxHighlighter>
