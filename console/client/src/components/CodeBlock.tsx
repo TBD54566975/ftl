@@ -17,7 +17,11 @@ export const CodeBlock: React.FC<Props> = ({code, language}) => {
   return (
     <SyntaxHighlighter
       language={language}
-      style={isDarkMode ? atomDark : oneLight}
+      style={
+        isDarkMode
+          ? (atomDark as React.CSSProperties)
+          : (oneLight as React.CSSProperties)
+      }
       customStyle={{fontSize: '12px'}}
     >
       {code}

@@ -1,5 +1,5 @@
 import {Timestamp} from '@bufbuild/protobuf'
-import {useContext, useEffect, useState} from 'react'
+import React from 'react'
 import {useClient} from '../../hooks/use-client.ts'
 import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import {StreamTimelineResponse} from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
@@ -15,13 +15,13 @@ import {TimelineLogDetails} from './details/TimelineLogDetails.tsx'
 
 export const Timeline = () => {
   const client = useClient(ConsoleService)
-  const {openPanel, closePanel, isOpen} = useContext(SidePanelContext)
-  const [entries, setEntries] = useState<StreamTimelineResponse[]>([])
+  const {openPanel, closePanel, isOpen} = React.useContext(SidePanelContext)
+  const [entries, setEntries] = React.useState<StreamTimelineResponse[]>([])
   const [selectedEntry, setSelectedEntry] =
-    useState<StreamTimelineResponse | null>(null)
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([])
+    React.useState<StreamTimelineResponse | null>(null)
+  const [selectedFilters, setSelectedFilters] = React.useState<string[]>([])
 
-  useEffect(() => {
+  React.useEffect(() => {
     const abortController = new AbortController()
 
     async function streamTimeline() {
@@ -38,19 +38,20 @@ export const Timeline = () => {
       }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     streamTimeline()
     return () => {
       abortController.abort()
     }
   }, [client])
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!isOpen) {
       setSelectedEntry(null)
     }
   }, [isOpen])
 
-  const handleEntryClicked = entry => {
+  const handleEntryClicked = (entry: StreamTimelineResponse) => {
     if (selectedEntry === entry) {
       setSelectedEntry(null)
       closePanel()
@@ -61,7 +62,7 @@ export const Timeline = () => {
       case 'call':
         openPanel(
           <TimelineCallDetails
-            timestamp={entry.timeStamp}
+            timestamp={entry.timeStamp as Timestamp}
             call={entry.entry.value}
           />
         )
@@ -88,7 +89,7 @@ export const Timeline = () => {
     setSelectedEntry(entry)
   }
 
-  const handleFilterChange = (optionValue, checked) => {
+  const handleFilterChange = (optionValue: string, checked: boolean) => {
     if (checked) {
       setSelectedFilters(prev => [...prev, optionValue])
     } else {

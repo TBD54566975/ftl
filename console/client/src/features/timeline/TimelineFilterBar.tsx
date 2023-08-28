@@ -14,9 +14,16 @@ const filters = [
     ],
   },
 ]
+type Props = {
+  selectedFilters: string[]
+  onFilterChange: (filter: string, checked: boolean) => void
+}
 
-export const TimelineFilterBar = ({selectedFilters, onFilterChange}) => {
-  const isOptionChecked = optionValue => {
+export const TimelineFilterBar: React.FC<Props> = ({
+  selectedFilters,
+  onFilterChange,
+}) => {
+  const isOptionChecked = (optionValue: string) => {
     return selectedFilters.includes(optionValue)
   }
 

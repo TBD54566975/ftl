@@ -1,4 +1,4 @@
-import {createContext, useState} from 'react'
+import React from 'react'
 
 interface SidePanelContextType {
   isOpen: boolean
@@ -15,20 +15,20 @@ const defaultContextValue: SidePanelContextType = {
 }
 
 export const SidePanelContext =
-  createContext<SidePanelContextType>(defaultContextValue)
+  React.createContext<SidePanelContextType>(defaultContextValue)
 
 export const SidePanelProvider = ({children}) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const [component, setComponent] = useState(null)
+  const [isOpen, setIsOpen] = React.useState(false)
+  const [component, setComponent] = React.useState<React.ReactNode>()
 
-  const openPanel = comp => {
+  const openPanel = (comp: React.ReactNode) => {
     setIsOpen(true)
     setComponent(comp)
   }
 
   const closePanel = () => {
     setIsOpen(false)
-    setComponent(null)
+    setComponent(undefined)
   }
 
   return (

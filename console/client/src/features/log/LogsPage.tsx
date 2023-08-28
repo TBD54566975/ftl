@@ -29,6 +29,7 @@ export default function LogsPage() {
       }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     streamLogs()
     return () => {
       abortController.abort()
@@ -74,7 +75,7 @@ export default function LogsPage() {
                       <td className='whitespace-nowrap px-2 py-2'>
                         <span
                           className={classNames(
-                            logLevelBadge[log.logLevel],
+                            `${logLevelBadge[log.logLevel]}`,
                             'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600'
                           )}
                         >

@@ -23,6 +23,7 @@ export function RequestModal() {
       const response = await client.getRequestCalls({requestKey: key})
       setCalls(response.calls)
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     fetchRequestCalls()
   }, [client, key])
 

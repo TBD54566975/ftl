@@ -1,10 +1,8 @@
-import {beforeAll, describe} from '@jest/globals'
+import {beforeAll, describe, expect, test} from '@jest/globals'
 import fs from 'fs'
 import path from 'path'
 import ts from 'typescript'
 import fg from 'fast-glob'
-import {expect, test} from '@jest/globals'
-
 let cases: [dir: string, file: string][]
 const srcPath = path.resolve(__dirname)
 beforeAll(async () => {

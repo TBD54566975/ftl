@@ -4,6 +4,8 @@ module.exports = {
     ecmaVersion: 2022,
     sourceType: 'module',
     allowImportExportEverywhere: true,
+    project: true,
+    tsconfigRootDir: __dirname,
   },
   parser: '@typescript-eslint/parser',
   env: {
@@ -19,7 +21,7 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'plugin:compat/recommended',
-    'plugin:@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended-type-checked',
     'prettier',
   ],
   ignorePatterns: ['**/dist/*'],
@@ -116,6 +118,7 @@ module.exports = {
   overrides: [
     {
       files: ['**/*.spec.*'],
+      extends: ['plugin:@typescript-eslint/disable-type-checked'],
       rules: {
         'func-names': 0,
         'no-console': 0,
@@ -132,7 +135,8 @@ module.exports = {
       },
     },
     {
-      files: ['**/*.cjs'],
+      files: ['**/*.cjs', '**/*.js'],
+      extends: ['plugin:@typescript-eslint/disable-type-checked'],
       rules: {
         '@typescript-eslint/no-var-requires': 0,
         'no-undef': 0,

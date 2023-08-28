@@ -28,6 +28,7 @@ const ModulesProvider = (props: PropsWithChildren) => {
 
       return
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     fetchModules()
   }, [client, schema])
 

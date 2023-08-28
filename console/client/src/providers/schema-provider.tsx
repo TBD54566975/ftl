@@ -8,7 +8,11 @@ import {ControllerService} from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
 
 export const schemaContext = createContext<PullSchemaResponse[]>([])
 
-const SchemaProvider = props => {
+type Props = {
+  children: React.ReactNode
+}
+
+const SchemaProvider = (props: Props) => {
   const client = useClient(ControllerService)
   const [schema, setSchema] = useState<PullSchemaResponse[]>([])
 
@@ -37,6 +41,7 @@ const SchemaProvider = props => {
         }
       }
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     fetchSchema()
   }, [client])
 

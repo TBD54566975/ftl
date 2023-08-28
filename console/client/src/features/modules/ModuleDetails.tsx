@@ -1,16 +1,18 @@
-import {useContext} from 'react'
+import React from 'react'
 import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
 import {SelectedModuleContext} from '../../providers/selected-module-provider'
+import {Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import {
   TabSearchParams,
   TabType,
   TabsContext,
+  Tab,
 } from '../../providers/tabs-provider'
 import {textColor} from '../../utils/style.utils'
 
 export function ModuleDetails() {
-  const {selectedModule} = useContext(SelectedModuleContext)
-  const {tabs, setTabs, setActiveTab} = useContext(TabsContext)
+  const {selectedModule} = React.useContext(SelectedModuleContext)
+  const {tabs, setTabs, setActiveTab} = React.useContext(TabsContext)
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -24,11 +26,11 @@ export function ModuleDetails() {
     )
   }
 
-  const handleVerbClicked = verb => {
+  const handleVerbClicked = (verb: Verb) => {
     const tabId = [selectedModule.name, verb.verb?.name].join('.')
     const index = tabs.findIndex(tab => tab.id === tabId)
     const existingTab = index !== -1
-    let newTab
+    let newTab: Tab | undefined
     if (!existingTab) {
       newTab = {
         id: [selectedModule.name, verb.verb?.name].join('.'),

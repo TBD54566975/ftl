@@ -39,7 +39,7 @@ export const TimelineLogDetails: React.FC<Props> = ({entry, log}) => {
           <dd className={`${textColor}`}>
             <span
               className={classNames(
-                logLevelBadge[log.logLevel],
+                `${logLevelBadge[log.logLevel]}`,
                 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600'
               )}
             >

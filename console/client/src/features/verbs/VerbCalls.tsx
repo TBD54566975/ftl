@@ -1,5 +1,5 @@
 import {Timestamp} from '@bufbuild/protobuf'
-import React, {useContext, useEffect, useState} from 'react'
+import React from 'react'
 import {useClient} from '../../hooks/use-client.ts'
 import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import {
@@ -18,10 +18,10 @@ type Props = {
 
 export const VerbCalls: React.FC<Props> = ({module, verb}) => {
   const client = useClient(ConsoleService)
-  const [calls, setCalls] = useState<Call[]>([])
-  const {openPanel} = useContext(SidePanelContext)
+  const [calls, setCalls] = React.useState<Call[]>([])
+  const {openPanel} = React.useContext(SidePanelContext)
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchCalls = async () => {
       const response = await client.getCalls({
         module: module?.name,
@@ -29,6 +29,7 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
       })
       setCalls(response.calls)
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     fetchCalls()
   }, [client, module, verb])
 

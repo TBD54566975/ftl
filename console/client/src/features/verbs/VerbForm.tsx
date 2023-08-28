@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import React from 'react'
 import {CodeBlock} from '../../components/CodeBlock'
 import {useClient} from '../../hooks/use-client'
 import {Module, Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
@@ -12,8 +12,8 @@ type Props = {
 
 export const VerbForm: React.FC<Props> = ({module, verb}) => {
   const client = useClient(VerbService)
-  const [response, setResponse] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [response, setResponse] = React.useState<string | null>(null)
+  const [error, setError] = React.useState<string | null>(null)
 
   const callData = module?.data.filter(data =>
     [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(
@@ -21,13 +21,14 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
     )
   )
 
-  const handleSubmit = async event => {
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async event => {
     event.preventDefault()
 
     setResponse(null)
     setError(null)
 
-    const formData = new FormData(event.target)
+    const formData = new FormData(event.target as HTMLFormElement)
     // Convert the form data to a plain object (or however you want to send it)
     const dataObject = Array.from(formData.entries()).reduce(
       (obj, [key, value]) => {
