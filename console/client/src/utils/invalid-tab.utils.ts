@@ -1,8 +1,18 @@
-import { TabType, timelineTab, TabSearchParams } from '../providers/tabs-provider'
-export const invalidTab = ({ id, type }: {id?: string; type?: string}): string | undefined => {
+import {TabType, timelineTab, TabSearchParams} from '../providers/tabs-provider'
+export const invalidTab = ({
+  id,
+  type,
+}: {
+  id?: string
+  type?: string
+}): string | undefined => {
   // No ID or type
   if (!id || !type) {
-    return `Required tab field undefined: ${JSON.stringify({ [TabSearchParams.type]:type, [TabSearchParams.id]:id }, null, 2).replace(/":/g, '" :')}`
+    return `Required tab field undefined: ${JSON.stringify(
+      {[TabSearchParams.type]: type, [TabSearchParams.id]: id},
+      null,
+      2
+    ).replace(/":/g, '" :')}`
   }
   // Invalid type
   const invalidType = Object.values(TabType).some(v => v === type)

@@ -1,6 +1,6 @@
-import { Edge, Node } from 'reactflow'
-import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { MetadataCalls } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import {Edge, Node} from 'reactflow'
+import {Module} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {MetadataCalls} from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 
 const groupWidth = 200
 
@@ -12,8 +12,8 @@ export function layoutNodes(modules: Module[]) {
     const verbs = module.verbs
     nodes.push({
       id: module.name ?? '',
-      position: { x: x, y: 0 },
-      data: { title: module.name },
+      position: {x: x, y: 0},
+      data: {title: module.name},
       type: 'groupNode',
       style: {
         width: groupWidth,
@@ -29,9 +29,9 @@ export function layoutNodes(modules: Module[]) {
 
       nodes.push({
         id: `${module.name}-${verb.verb?.name}`,
-        position: { x: 20, y: y },
+        position: {x: 20, y: y},
         connectable: false,
-        data: { title: verb.verb?.name },
+        data: {title: verb.verb?.name},
         type: 'verbNode',
         parentNode: module.name,
         style: {
@@ -46,7 +46,7 @@ export function layoutNodes(modules: Module[]) {
             id: `${module.name}-${verb.verb?.name}-${call.module}-${call.name}`,
             source: `${module.name}-${verb.verb?.name}`,
             target: `${call.module}-${call.name}`,
-            style: { stroke: 'rgb(251 113 133)' },
+            style: {stroke: 'rgb(251 113 133)'},
             animated: true,
           })
           call.name
@@ -58,5 +58,5 @@ export function layoutNodes(modules: Module[]) {
     })
     x += 300
   })
-  return { nodes, edges }
+  return {nodes, edges}
 }

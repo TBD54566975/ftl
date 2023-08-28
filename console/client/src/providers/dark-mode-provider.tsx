@@ -1,17 +1,28 @@
-import { createContext, useContext } from 'react'
+import React from 'react'
 import useLocalStorage from '../hooks/use-local-storage'
 
-const DarkModeContext = createContext({ isDarkMode: false, setDarkMode: () => { } })
+const DarkModeContext = React.createContext({
+  isDarkMode: false,
+  setDarkMode: (_: boolean) => {},
+})
 
 export const useDarkMode = () => {
-  return useContext(DarkModeContext)
+  return React.useContext(DarkModeContext)
 }
 
-export const DarkModeProvider = ({ children }) => {
-  const [ isDarkMode, setDarkMode ] = useLocalStorage('dark-mode', false)
+type DarkModeProviderProps = {
+  children: React.ReactNode
+}
 
+export const DarkModeProvider = ({children}: DarkModeProviderProps) => {
+  const [isDarkMode, setDarkMode] = useLocalStorage('dark-mode', 'false')
+  const setMode = (val: boolean) => {
+    setDarkMode(`${val}`)
+  }
   return (
-    <DarkModeContext.Provider value={{ isDarkMode, setDarkMode }}>
+    <DarkModeContext.Provider
+      value={{isDarkMode: isDarkMode === 'true', setDarkMode: setMode}}
+    >
       {children}
     </DarkModeContext.Provider>
   )

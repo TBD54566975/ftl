@@ -1,14 +1,20 @@
-import { Duration, Timestamp } from '@bufbuild/protobuf'
-import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {Duration, Timestamp} from '@bufbuild/protobuf'
+import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {verbRefString} from '../verbs/verb.utils'
 
 interface CallBlockProps {
-  call: Call;
-  selectedCall?: Call;
-  firstTimeStamp: Timestamp;
-  firstDuration: Duration;
+  call: Call
+  selectedCall?: Call
+  firstTimeStamp: Timestamp
+  firstDuration: Duration
 }
 
-const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStamp, firstDuration }) => {
+const CallBlock: React.FC<CallBlockProps> = ({
+  call,
+  selectedCall,
+  firstTimeStamp,
+  firstDuration,
+}) => {
   const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000
   const durationInMillis = (call.duration?.nanos ?? 0) / 1000000
   const width = (durationInMillis / totalDurationMillis) * 100
@@ -35,12 +41,14 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStam
       <div className='text-gray-900 dark:text-gray-300 self-center text-xs p-1'>
         {`${durationInMillis}ms`}
       </div>
-      <span
-        className='text-white pointer-events-none absolute pl-1 top-1/2 left-0 transform -translate-y-1/2
+      {call.destinationVerbRef && (
+        <span
+          className='text-white pointer-events-none absolute pl-1 top-1/2 left-0 transform -translate-y-1/2
         self-center text-xs w-max opacity-0 transition-opacity group-hover:opacity-100'
-      >
-        {call.destinationVerbRef?.module}.{call.destinationVerbRef?.name}
-      </span>
+        >
+          {verbRefString(call.destinationVerbRef)}
+        </span>
+      )}
     </div>
   )
 }
@@ -51,7 +59,11 @@ type Props = {
   setSelectedCall: React.Dispatch<React.SetStateAction<Call>>
 }
 
-export const RequestGraph: React.FC<Props> = ({ calls, call, setSelectedCall }) => {
+export const RequestGraph: React.FC<Props> = ({
+  calls,
+  call,
+  setSelectedCall,
+}) => {
   if (calls.length === 0) {
     return <></>
   }
@@ -65,7 +77,11 @@ export const RequestGraph: React.FC<Props> = ({ calls, call, setSelectedCall }) 
   return (
     <div className='flex flex-col'>
       {calls.map((c, index) => (
-        <div key={index} className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm' onClick={() => setSelectedCall(c)}>
+        <div
+          key={index}
+          className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm'
+          onClick={() => setSelectedCall(c)}
+        >
           <div className='w-full relative'>
             <CallBlock
               call={c}
@@ -79,4 +95,3 @@ export const RequestGraph: React.FC<Props> = ({ calls, call, setSelectedCall }) 
     </div>
   )
 }
-
