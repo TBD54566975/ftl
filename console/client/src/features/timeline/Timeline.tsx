@@ -18,7 +18,8 @@ export const Timeline = () => {
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
   const [ entries, setEntries ] = useState<StreamTimelineResponse[]>([])
   const [ selectedEntry, setSelectedEntry ] = useState<StreamTimelineResponse | null>(null)
-  const [ selectedFilters, setSelectedFilters ] = useState<string[]>([])
+  const [ selectedEventTypes, setSelectedEventTypes ] = useState<string[]>([ 'log', 'call', 'deployment' ])
+  const [ selectedLogLevels, setSelectedLogLevels ] = useState<number[]>([ 0, 1, 5, 9, 13, 17 ])
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -71,26 +72,38 @@ export const Timeline = () => {
     setSelectedEntry(entry)
   }
 
-  const handleFilterChange = (optionValue, checked) => {
+  const handleEventTypesChanged = (eventType: string, checked: boolean) => {
     if (checked) {
-      setSelectedFilters(prev => [ ...prev, optionValue ])
+      setSelectedEventTypes(prev => [ ...prev, eventType ])
     } else {
-      setSelectedFilters(prev => prev.filter(filter => filter !== optionValue))
+      setSelectedEventTypes(prev => prev.filter(filter => filter !== eventType))
+    }
+  }
+
+  const handleLogLevelsChanged = (logLevel: number, checked: boolean) => {
+    if (checked) {
+      setSelectedLogLevels(prev => [ ...prev, logLevel ])
+    } else {
+      setSelectedLogLevels(prev => prev.filter(filter => filter !== logLevel))
     }
   }
 
   const filteredEntries = entries.filter(entry => {
-    if (selectedFilters.length === 0) {
-      return true
+    const isActive = selectedEventTypes.includes(entry.entry?.case ?? '')
+    if (entry.entry.case === 'log') {
+      return isActive && selectedLogLevels.includes(entry.entry.value.logLevel)
     }
-    return selectedFilters.includes(entry.entry?.case ?? '')
+
+    return isActive
   })
 
   return (
     <div className='m-0'>
       <TimelineFilterBar
-        selectedFilters={selectedFilters}
-        onFilterChange={handleFilterChange}
+        selectedEventTypes={selectedEventTypes}
+        onEventTypesChanged={handleEventTypesChanged}
+        selectedLogLevels={selectedLogLevels}
+        onLogLevelsChanged={handleLogLevelsChanged}
       />
 
       <ul role='list' className='space-y-4 p-4'>
