@@ -2,14 +2,11 @@ import React from 'react'
 
 export default function useLocalStorage(
   key: string,
-  initialValue: boolean
-): [boolean, React.Dispatch<React.SetStateAction<boolean>>] {
-  const [value, setValue] = React.useState<boolean>(() => {
+  initialValue: string
+): [string, React.Dispatch<React.SetStateAction<string>>] {
+  const [value, setValue] = React.useState<string>(() => {
     const jsonValue = localStorage.getItem(key)
-    if (jsonValue != null) {
-      const value = JSON.parse(jsonValue) as string
-      return value === 'true'
-    }
+    if (jsonValue != null) return JSON.parse(jsonValue) as string
     return initialValue
   })
 

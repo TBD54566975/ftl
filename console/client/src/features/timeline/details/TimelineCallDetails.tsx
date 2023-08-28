@@ -34,8 +34,8 @@ export const TimelineCallDetails: React.FC<Props> = ({timestamp, call}) => {
       })
       setRequestCalls(response.calls)
     }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    fetchRequestCalls()
+
+    void fetchRequestCalls()
   }, [client, selectedCall])
 
   return (

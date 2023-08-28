@@ -41,8 +41,8 @@ const SchemaProvider = (props: Props) => {
         }
       }
     }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    fetchSchema()
+
+    void fetchSchema()
   }, [client])
 
   return (

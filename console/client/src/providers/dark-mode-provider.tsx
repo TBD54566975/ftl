@@ -3,7 +3,7 @@ import useLocalStorage from '../hooks/use-local-storage'
 
 const DarkModeContext = React.createContext({
   isDarkMode: false,
-  setDarkMode: (() => {}) as React.Dispatch<React.SetStateAction<boolean>>,
+  setDarkMode: (val: boolean) => {},
 })
 
 export const useDarkMode = () => {
@@ -15,10 +15,14 @@ type DarkModeProviderProps = {
 }
 
 export const DarkModeProvider = ({children}: DarkModeProviderProps) => {
-  const [isDarkMode, setDarkMode] = useLocalStorage('dark-mode', false)
-
+  const [isDarkMode, setDarkMode] = useLocalStorage('dark-mode', 'false')
+  const setMode = (val: boolean) => {
+    setDarkMode(`${val}`)
+  }
   return (
-    <DarkModeContext.Provider value={{isDarkMode, setDarkMode}}>
+    <DarkModeContext.Provider
+      value={{isDarkMode: isDarkMode === 'true', setDarkMode: setMode}}
+    >
       {children}
     </DarkModeContext.Provider>
   )

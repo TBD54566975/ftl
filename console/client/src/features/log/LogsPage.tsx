@@ -29,8 +29,7 @@ export default function LogsPage() {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    streamLogs()
+    void streamLogs()
     return () => {
       abortController.abort()
     }

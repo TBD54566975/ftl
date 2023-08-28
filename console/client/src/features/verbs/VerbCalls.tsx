@@ -29,8 +29,8 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
       })
       setCalls(response.calls)
     }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    fetchCalls()
+
+    void fetchCalls()
   }, [client, module, verb])
 
   const handleClick = (call: Call) => {
