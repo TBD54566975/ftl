@@ -60,9 +60,11 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
         }
       } catch (error) {
         console.error('There was an error with the request:', error)
+        setError(String(error))
       }
     } catch (error) {
       console.error('There was an error with the request:', error)
+      setError(String(error))
     }
   }
 
@@ -110,10 +112,12 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
         </button>
       </form>
       {response && (
-        <CodeBlock
-          code={response}
-          language='go'
-        />
+        <div className='pt-4'>
+          <CodeBlock
+            code={response}
+            language='go'
+          />
+        </div>
       )}
       {error && (
         <div
