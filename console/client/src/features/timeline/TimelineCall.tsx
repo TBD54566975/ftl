@@ -3,6 +3,7 @@ import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils'
 import { panelColor, textColor } from '../../utils/style.utils'
 import { classNames } from '../../utils/react.utils'
+import { verbRefString } from '../verbs/verb.utils'
 type Props = {
   call: Call
   selected?: boolean
@@ -20,7 +21,7 @@ export const TimelineCall: React.FC<Props> = ({ call, selected }) => {
         <div className={`flex-auto text-xs leading-5 ${selected ? 'text-gray-50' : textColor}`}>
           {call.destinationVerbRef && (
             <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 mr-1 text-xs font-medium ${selected ? 'text-white': 'text-gray-500 dark:text-gray-400'} ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
-              {call.destinationVerbRef?.module}:{call.destinationVerbRef?.name}
+              {verbRefString(call.destinationVerbRef)}
             </div>
           )}
 
@@ -32,7 +33,7 @@ export const TimelineCall: React.FC<Props> = ({ call, selected }) => {
             <>
             from
               <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 ml-1 mr-1 text-xs font-medium ${selected ? 'text-white': 'text-gray-500 dark:text-gray-400'} ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
-                {call.sourceVerbRef?.module}:{call.sourceVerbRef?.name}
+                {verbRefString(call.sourceVerbRef)}
               </div>
             </>
           )}
@@ -45,7 +46,7 @@ export const TimelineCall: React.FC<Props> = ({ call, selected }) => {
           {formatTimestamp(call.timeStamp)}
         </time>
       </div>
-      
+
     </>
   )
 }

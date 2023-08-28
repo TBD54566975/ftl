@@ -1,5 +1,6 @@
 import { Duration, Timestamp } from '@bufbuild/protobuf'
 import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { verbRefString } from '../verbs/verb.utils'
 
 interface CallBlockProps {
   call: Call;
@@ -35,12 +36,14 @@ const CallBlock: React.FC<CallBlockProps> = ({ call, selectedCall, firstTimeStam
       <div className='text-gray-900 dark:text-gray-300 self-center text-xs p-1'>
         {`${durationInMillis}ms`}
       </div>
-      <span
-        className='text-white pointer-events-none absolute pl-1 top-1/2 left-0 transform -translate-y-1/2
+      {call.destinationVerbRef && (
+        <span
+          className='text-white pointer-events-none absolute pl-1 top-1/2 left-0 transform -translate-y-1/2
         self-center text-xs w-max opacity-0 transition-opacity group-hover:opacity-100'
-      >
-        {call.destinationVerbRef?.module}.{call.destinationVerbRef?.name}
-      </span>
+        >
+          {verbRefString(call.destinationVerbRef)}
+        </span>
+      )}
     </div>
   )
 }
