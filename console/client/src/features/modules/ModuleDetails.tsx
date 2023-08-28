@@ -1,22 +1,31 @@
 import React from 'react'
-import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
 import {SelectedModuleContext} from '../../providers/selected-module-provider'
-import {Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import {
   TabSearchParams,
   TabType,
   TabsContext,
   Tab,
 } from '../../providers/tabs-provider'
-import {textColor} from '../../utils/style.utils'
+import {textColor} from '../../utils'
+import {useSearchParams} from 'react-router-dom'
+import {modulesContext} from '../../providers/modules-provider'
+import {Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 export function ModuleDetails() {
-  const {selectedModule} = React.useContext(SelectedModuleContext)
+  const modules = React.useContext(modulesContext)
+  const {selectedModule, setSelectedModule} = React.useContext(
+    SelectedModuleContext
+  )
   const {tabs, setTabs, setActiveTab} = React.useContext(TabsContext)
-
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const moduleId = searchParams.get('module')
+  // When mounting with a valid module in query params set selected module
+  React.useEffect(() => {
+    if (moduleId) {
+      const module = modules.modules.find(module => module?.name === moduleId)
+      module && setSelectedModule(module)
+    }
+  })
 
   if (!selectedModule) {
     return (
@@ -39,9 +48,12 @@ export function ModuleDetails() {
       }
       setTabs([...tabs, newTab])
     }
-    setActiveTab(existingTab ? index : tabs.length)
-    searchParams.set(TabSearchParams.active, newTab?.id ?? tabs[index].id)
-    navigate({...location, search: searchParams.toString()})
+    setActiveTab({id: tabId, type: TabType.Verb})
+    setSearchParams({
+      ...Object.fromEntries(searchParams),
+      [TabSearchParams.id]: newTab?.id ?? tabs[index].id,
+      [TabSearchParams.type]: TabType.Verb,
+    })
   }
 
   return (

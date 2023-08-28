@@ -1,66 +1,110 @@
+import React from 'react'
 import {Tab} from '@headlessui/react'
 import {XMarkIcon} from '@heroicons/react/24/outline'
-import React from 'react'
-import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
+import {InformationCircleIcon} from '@heroicons/react/20/solid'
+import {useSearchParams} from 'react-router-dom'
 import {ModuleDetails} from '../features/modules/ModuleDetails'
 import {ModulesList} from '../features/modules/ModulesList'
-import {RequestModal} from '../features/requests/RequestsModal'
 import {Timeline} from '../features/timeline/Timeline'
 import {VerbTab} from '../features/verbs/VerbTab'
-import {TabSearchParams, TabType, TabsContext} from '../providers/tabs-provider'
-import {headerColor, headerTextColor, panelColor} from '../utils/style.utils'
+import {
+  TabSearchParams,
+  TabType,
+  TabsContext,
+  timelineTab,
+} from '../providers/tabs-provider'
+import {headerColor, headerTextColor, panelColor, invalidTab} from '../utils'
 import {SidePanel} from './SidePanel'
-
+import {Notification} from '../components/Notification'
+import {useClient} from '../hooks/use-client'
+import {ConsoleService} from '../protos/xyz/block/ftl/v1/console/console_connect'
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
+  const client = useClient(ConsoleService)
   const {tabs, activeTab, setActiveTab, setTabs} = React.useContext(TabsContext)
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [activeIndex, setActiveIndex] = React.useState(0)
+  const [invalidTabMessage, setInvalidTabMessage] = React.useState<string>()
+  const id = searchParams.get(TabSearchParams.id) as string
+  const type = searchParams.get(TabSearchParams.type) as string
+  // Set active tab index whenever our activeTab context changes
+  React.useEffect(() => {
+    const index = tabs.findIndex(tab => tab.id === activeTab?.id)
+    setActiveIndex(index)
+  }, [activeTab])
 
-  const handleCloseTab = id => {
-    if (activeTab === id && tabs.length > 1) {
-      // Set the next available tab as active, if the current active tab is being closed
-      const index = tabs.findIndex(tab => tab.id === id)
-      setActiveTab(index - 1)
-      searchParams.delete(TabSearchParams.active)
+  const handleCloseTab = (id: string, index: number) => {
+    const nextActiveTab = {
+      id: tabs[index - 1].id,
+      type: tabs[index - 1].type,
     }
+    setSearchParams({
+      ...Object.fromEntries(searchParams),
+      [TabSearchParams.id]: nextActiveTab.id,
+      [TabSearchParams.type]: nextActiveTab.type,
+    })
+    setActiveTab(nextActiveTab)
     setTabs(tabs.filter(tab => tab.id !== id))
-    navigate({...location, search: searchParams.toString()})
   }
 
   const handleChangeTab = (index: number) => {
-    setActiveTab(index)
-    index > 0 && tabs.length > 1
-      ? searchParams.set(TabSearchParams.active, tabs[index].id)
-      : searchParams.delete(TabSearchParams.active)
-    navigate({...location, search: searchParams.toString()})
+    const nextActiveTab = tabs[index]
+    setActiveTab({id: nextActiveTab.id, type: nextActiveTab.type})
+    setSearchParams({
+      ...Object.fromEntries(searchParams),
+      [TabSearchParams.id]: nextActiveTab.id,
+      [TabSearchParams.type]: nextActiveTab.type,
+    })
   }
 
-  // Handle opening the correct tab on load
   React.useEffect(() => {
-    const id = searchParams.get(TabSearchParams.active)
-    if (!id) {
-      setActiveTab(0)
-      return
+    const validateTabs = async () => {
+      const modules = await client.getModules({})
+      const msg = invalidTab({id, type})
+      if (msg) {
+        // IDs an invalid tab ID and type fallback to timeline
+        setActiveTab({id: timelineTab.id, type: timelineTab.type})
+        // On intial mount we have no query params set for tabs so we want to skip setting invalidTabMessage
+        if (type === null && id === null) return
+        return setInvalidTabMessage(msg)
+      }
+      const inTabsList = tabs.some(
+        ({id: tabId, type: tabType}) => tabId === id && tabType === type
+      )
+      // Tab is in tab list just set active tab
+      if (inTabsList) return setActiveTab({id, type})
+      // Get module and Verb ids
+      const [moduleId, verbId] = id.split('.')
+      // Check to see if they exist on controller
+      const moduleExist = modules.modules.find(
+        module => module?.name === moduleId
+      )
+      const verbExist = moduleExist?.verbs.some(
+        ({verb}) => verb?.name === verbId
+      )
+      // Set tab if they both exists
+      if (moduleExist && verbExist) {
+        const newTab = {
+          id: moduleId,
+          label: verbId,
+          type: TabType.Verb,
+        }
+        const nextTabs = [...tabs, newTab]
+        setActiveTab({id, type})
+        return setTabs(nextTabs)
+      }
+      if (moduleExist && !verbExist) {
+        setInvalidTabMessage(`Verb ${verbId} does not exist on ${moduleId}`)
+      }
+      if (!moduleExist) {
+        setInvalidTabMessage(`Module ${moduleId} does not exist`)
+      }
+      setActiveTab({id: timelineTab.id, type: timelineTab.type})
     }
-    const index = tabs.findIndex(tab => tab.id === id)
-    if (index >= 0) {
-      setActiveTab(activeTab ?? index)
-      return
-    }
-    const [_, label] = id.split('.')
-    const newTab = {
-      id,
-      label,
-      type: TabType.Verb,
-    }
-    const nextTabs = [...tabs, newTab]
-    setTabs(nextTabs)
-    setActiveTab(nextTabs.length - 1)
-  }, [])
+    void validateTabs()
+  }, [id, type])
 
   return (
     <>
@@ -99,7 +143,7 @@ export function IDELayout() {
 
         <div className={`flex-1 flex flex-col m-2 rounded`}>
           <Tab.Group
-            selectedIndex={activeTab}
+            selectedIndex={activeIndex}
             onChange={handleChangeTab}
           >
             <div>
@@ -117,7 +161,7 @@ export function IDELayout() {
                         className={`px-4 py-2 rounded-t ${
                           id !== 'timeline' ? 'pr-8' : ''
                         } ${
-                          activeTab === i
+                          activeIndex === i
                             ? `${selectedTabStyle}`
                             : `${unselectedTabStyle}`
                         }`}
@@ -128,13 +172,7 @@ export function IDELayout() {
                         <button
                           onClick={e => {
                             e.stopPropagation()
-                            handleCloseTab(id)
-                            searchParams.get(TabSearchParams.active) === id &&
-                              searchParams.delete(TabSearchParams.active)
-                            navigate({
-                              ...location,
-                              search: searchParams.toString(),
-                            })
+                            handleCloseTab(id, i)
                           }}
                           className='absolute right-0 mr-2 text-gray-400 hover:text-white'
                         >
@@ -165,8 +203,17 @@ export function IDELayout() {
           </Tab.Group>
         </div>
         <SidePanel />
-        <RequestModal />
       </div>
+      {invalidTabMessage && (
+        <Notification
+          color='text-red-400'
+          icon={
+            <InformationCircleIcon className='flex-shrink-0 inline w-4 h-4 mr-3' />
+          }
+          title='Alert!'
+          message={invalidTabMessage}
+        />
+      )}
     </>
   )
 }

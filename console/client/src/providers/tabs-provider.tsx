@@ -12,7 +12,8 @@ export type Tab = {
 }
 
 export const TabSearchParams = {
-  active: 'active-tab',
+  id: 'tab-id',
+  type: 'tab-type',
 } as const
 
 export const timelineTab = {
@@ -21,23 +22,32 @@ export const timelineTab = {
   type: TabType.Timeline,
 }
 
+export type ActiveTab =
+  | {
+      id: string
+      type: string
+    }
+  | undefined
+
 type TabsContextType = {
   tabs: Tab[]
-  activeTab?: number
+  activeTab?: ActiveTab
   setTabs: React.Dispatch<React.SetStateAction<Tab[]>>
-  setActiveTab: React.Dispatch<React.SetStateAction<number>>
+  setActiveTab: React.Dispatch<React.SetStateAction<ActiveTab>>
 }
 
 export const TabsContext = React.createContext<TabsContextType>({
   tabs: [],
-  activeTab: 0,
+  activeTab: undefined,
   setTabs: () => {},
   setActiveTab: () => {},
 })
 
 export const TabsProvider = (props: React.PropsWithChildren) => {
   const [tabs, setTabs] = React.useState<Tab[]>([timelineTab])
-  const [activeTab, setActiveTab] = React.useState<number>(0)
+  const [activeTab, setActiveTab] = React.useState<
+    {id: string; type: string} | undefined
+  >()
 
   return (
     <TabsContext.Provider value={{tabs, setTabs, activeTab, setActiveTab}}>
