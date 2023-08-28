@@ -16,11 +16,13 @@ import {
 import {headerColor, headerTextColor, panelColor, invalidTab} from '../utils'
 import {SidePanel} from './SidePanel'
 import {Notification} from '../components/Notification'
-
+import {useClient} from '../hooks/use-client'
+import {ConsoleService} from '../protos/xyz/block/ftl/v1/console/console_connect'
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
+  const client = useClient(ConsoleService)
   const {tabs, activeTab, setActiveTab, setTabs} = React.useContext(TabsContext)
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeIndex, setActiveIndex] = React.useState(0)
@@ -58,34 +60,49 @@ export function IDELayout() {
   }
 
   React.useEffect(() => {
-    const msg = invalidTab({id, type})
-    if (!msg) {
-      // Is a valid tab ID and Type
-      // ID and type are not in tab list
-      if (
-        !tabs.some(
-          ({id: tabId, type: tabType}) => tabId === id && tabType === type
-        )
-      ) {
-        const verbIdArray = id.split('.')
+    const validateTabs = async () => {
+      const modules = await client.getModules({})
+      const msg = invalidTab({id, type})
+      if (msg) {
+        // IDs an invalid tab ID and type fallback to timeline
+        setActiveTab({id: timelineTab.id, type: timelineTab.type})
+        // On intial mount we have no query params set for tabs so we want to skip setting invalidTabMessage
+        if (type === null && id === null) return
+        return setInvalidTabMessage(msg)
+      }
+      const inTabsList = tabs.some(
+        ({id: tabId, type: tabType}) => tabId === id && tabType === type
+      )
+      // Tab is in tab list just set active tab
+      if (inTabsList) return setActiveTab({id, type})
+      // Get module and Verb ids
+      const [moduleId, verbId] = id.split('.')
+      // Check to see if they exist on controller
+      const moduleExist = modules.modules.find(
+        module => module?.name === moduleId
+      )
+      const verbExist = moduleExist?.verbs.some(
+        ({verb}) => verb?.name === verbId
+      )
+      // Set tab if they both exists
+      if (moduleExist && verbExist) {
         const newTab = {
-          id,
-          label: verbIdArray[1],
+          id: moduleId,
+          label: verbId,
           type: TabType.Verb,
         }
         const nextTabs = [...tabs, newTab]
-        setTabs(nextTabs)
+        return setTabs(nextTabs)
       }
-      // Set active tab id and type
-      setActiveTab({id, type})
-    } else {
-      // IDs an invalid tab ID and type fallback to timeline
+      if (moduleExist && !verbExist) {
+        setInvalidTabMessage(`Verb ${verbId} does not exist on ${moduleId}`)
+      }
+      if (!moduleExist) {
+        setInvalidTabMessage(`Module ${moduleId} does not exist`)
+      }
       setActiveTab({id: timelineTab.id, type: timelineTab.type})
     }
-    // On intial mount we have no query params set for tabs so we want to skip setting invalidTabMessage
-    if (type === null && id === null) return
-
-    setInvalidTabMessage(msg)
+    void validateTabs()
   }, [id, type])
 
   return (
