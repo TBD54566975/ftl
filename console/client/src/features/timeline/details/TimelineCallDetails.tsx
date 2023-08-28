@@ -8,6 +8,7 @@ import { formatDuration } from '../../../utils/date.utils'
 import { textColor } from '../../../utils/style.utils'
 import { RequestGraph } from '../../requests/RequestGraph'
 import { TimelineTimestamp } from './TimelineTimestamp'
+import { verbRefString } from '../../verbs/verb.utils'
 
 type Props = {
   timestamp: Timestamp
@@ -42,10 +43,18 @@ export const TimelineCallDetails: React.FC<Props> = ({ timestamp, call }) => {
         <RequestGraph calls={requestCalls} call={selectedCall} setSelectedCall={setSelectedCall} />
       </div>
 
-      <h3 className='pt-4'>Request</h3>
+      <div className='pt-4'>
+        {call.destinationVerbRef && (
+          <div className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 mr-1 text-xs font-medium 'text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}>
+            {verbRefString(call.destinationVerbRef)}
+          </div>
+        )}
+      </div>
+
+      <div className='text-sm pt-2'>Request</div>
       <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.request), null, 2)} language='json' />
 
-      <h3 className='pt-4'>Response</h3>
+      <div className='text-sm pt-2'>Response</div>
       <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.response), null, 2)} language='json' />
 
       {selectedCall.error && (
