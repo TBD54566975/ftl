@@ -3,7 +3,7 @@ import useLocalStorage from '../hooks/use-local-storage'
 
 const DarkModeContext = React.createContext({
   isDarkMode: false,
-  setDarkMode: (val: boolean) => {},
+  setDarkMode: (_: boolean) => {},
 })
 
 export const useDarkMode = () => {
