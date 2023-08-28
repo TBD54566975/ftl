@@ -92,6 +92,7 @@ export function IDELayout() {
           type: TabType.Verb,
         }
         const nextTabs = [...tabs, newTab]
+        setActiveTab({id, type})
         return setTabs(nextTabs)
       }
       if (moduleExist && !verbExist) {
@@ -209,7 +210,7 @@ export function IDELayout() {
           icon={
             <InformationCircleIcon className='flex-shrink-0 inline w-4 h-4 mr-3' />
           }
-          title='Info Alert!'
+          title='Alert!'
           message={invalidTabMessage}
         />
       )}
