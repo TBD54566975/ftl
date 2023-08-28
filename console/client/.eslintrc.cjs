@@ -110,7 +110,7 @@ module.exports = {
       },
     ],
     '@typescript-eslint/no-unused-vars': [
-      'warn',
+      'error',
       {argsIgnorePattern: '^_', varsIgnorePattern: '^_'},
     ],
     /* End: JS/TS quality rules */
