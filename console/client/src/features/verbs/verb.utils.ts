@@ -1,6 +1,7 @@
 import {
   MetadataCalls,
   Verb,
+  VerbRef,
 } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 
 export function getCalls(verb?: Verb): MetadataCalls[] {
@@ -16,4 +17,8 @@ export function buildVerbSchema(
   dataScemas: string[]
 ): string {
   return dataScemas.join('\n\n') + '\n\n' + verbSchema
+}
+
+export function verbRefString(verb: VerbRef): string {
+  return `${verb.module}.${verb.name}`
 }

@@ -117,7 +117,7 @@ export const Timeline = () => {
       >
         {filteredEntries.map((entry, index) => (
           <li
-            key={index}
+            key={entry.id.toString()}
             className='relative flex gap-x-4'
             onClick={() => handleEntryClicked(entry)}
           >

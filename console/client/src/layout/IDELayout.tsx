@@ -89,7 +89,7 @@ export function IDELayout() {
             <div
               className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}
             >
-              Details
+              Module Details
             </div>
             <div className='flex-1 p-4 overflow-y-auto'>
               <ModuleDetails />
