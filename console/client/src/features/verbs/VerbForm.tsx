@@ -21,15 +21,17 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
   const [editorText, setEditorText] = React.useState<string>('')
   const [response, setResponse] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
-
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const [schema, setSchema] = React.useState<Schema>()
   useEffect(() => {
     if (verb?.jsonRequestSchema) {
       JSONSchemaFaker.option('maxItems', 2)
       JSONSchemaFaker.option('alwaysFakeOptionals', true)
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment
-      const schema = JSON.parse(verb.jsonRequestSchema) as Schema
-      setEditorText(JSON.stringify(JSONSchemaFaker.generate(schema), null, 2))
+      const verbSchema = JSON.parse(verb.jsonRequestSchema) as Schema
+      setSchema(verbSchema)
+      setEditorText(JSON.stringify(JSONSchemaFaker.generate(verbSchema), null, 2))
     }
   }, [])
 
@@ -67,6 +69,17 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
       setError(String(error))
     }
   }
+  const handleEditorWillMount = monaco => {
+    verb?.jsonRequestSchema &&  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+      validate: true,
+      schemas: [{
+          uri: 'http://myserver/json-schema',
+          fileMatch: ['*'],
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          schema,
+      }],
+    })
+  }
 
   return (
     <>
@@ -85,6 +98,7 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
               scrollBeyondLastLine: false,
             }}
             onChange={handleEditorChange}
+            beforeMount={handleEditorWillMount}
           />
         </div>
 
