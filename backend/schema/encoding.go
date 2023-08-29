@@ -65,7 +65,7 @@ var _ Type = (*DataRef)(nil)
 
 func (*DataRef) schemaChildren() []Node { return nil }
 func (*DataRef) schemaType()            {}
-func (s *DataRef) String() string       { return s.Name }
+func (s DataRef) String() string        { return makeRef(s.Module, s.Name) }
 
 var _ Decl = (*Data)(nil)
 
@@ -97,7 +97,7 @@ var _ Type = (*VerbRef)(nil)
 
 func (*VerbRef) schemaChildren() []Node { return nil }
 func (*VerbRef) schemaType()            {}
-func (v *VerbRef) String() string       { return makeRef(v.Module, v.Name) }
+func (v VerbRef) String() string        { return makeRef(v.Module, v.Name) }
 
 var _ Decl = (*Verb)(nil)
 
