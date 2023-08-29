@@ -38,7 +38,7 @@ type plainSink struct {
 // Log implements Sink
 func (t *plainSink) Log(entry Entry) error {
 	var prefix string
-	scope, exists := entry.Attributes[ScopeKey]
+	scope, exists := entry.Attributes[scopeKey]
 	if exists {
 		prefix = entry.Level.String() + ":" + scope + ": "
 	} else {

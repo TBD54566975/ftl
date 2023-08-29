@@ -8,6 +8,9 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"reflect"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,14 +44,13 @@ import (
 )
 
 type Config struct {
-	Bind                                *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
-	Advertise                           *url.URL            `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_CONTROLLER_ADVERTISE"`
-	Key                                 model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
-	DSN                                 string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
-	RunnerTimeout                       time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
-	DeploymentReservationTimeout        time.Duration       `help:"Deployment reservation timeout." default:"120s"`
-	ArtefactChunkSize                   int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	NoExperimentalDynamicRoutingUpdates bool                `help:"Disable experimental dynamic routing updates."`
+	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
+	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_CONTROLLER_ADVERTISE"`
+	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
+	DSN                          string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
+	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
+	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
+	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 }
 
 // Start the Controller. Blocks until the context is cancelled.
@@ -104,10 +106,9 @@ type Service struct {
 	// Map from endpoint to client.
 	clients *ttlcache.Cache[string, clients]
 
-	routesMu          sync.Mutex
-	routes            map[string][]dal.Route
-	runnerRouteModule map[model.RunnerKey]string // The module that the runner is currently serving.
-	config            Config
+	routesMu sync.RWMutex
+	routes   map[string][]dal.Route
+	config   Config
 }
 
 func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
@@ -121,32 +122,18 @@ func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
 		deploymentLogsSink: newDeploymentLogsSink(ctx, db),
 		clients:            ttlcache.New[string, clients](ttlcache.WithTTL[string, clients](time.Minute)),
 		routes:             map[string][]dal.Route{},
-		runnerRouteModule:  map[model.RunnerKey]string{},
 		config:             config,
 	}
 	if config.Advertise.String() == "" {
 		config.Advertise = config.Bind
 	}
 
-	if !config.NoExperimentalDynamicRoutingUpdates {
-		// Subscribe to route changes, then load the current routing table
-		// so we don't miss any notifications.
-		routeChanges := make(chan dal.RouteNotification, 128)
-		db.RouteChanges.Subscribe(routeChanges)
-		routes, err := db.GetRoutingTable(ctx, nil)
-		if err != nil {
-			if !errors.Is(err, dal.ErrNotFound) {
-				return nil, errors.WithStack(err)
-			}
-			routes = map[string][]dal.Route{}
-		}
-		go svc.updateRoutingTables(ctx, routes, routeChanges)
-	}
-	go svc.heartbeatController(ctx, config.Advertise)
-	go svc.reapStaleControllers(ctx)
-	go svc.reapStaleRunners(ctx)
-	go svc.releaseExpiredReservations(ctx)
-	go svc.reconcileDeployments(ctx)
+	go runWithRetries(ctx, time.Second*1, time.Second*2, svc.syncRoutes)
+	go runWithRetries(ctx, time.Second*3, time.Second*5, svc.heartbeatController)
+	go runWithRetries(ctx, time.Second*10, time.Second*20, svc.reapStaleControllers)
+	go runWithRetries(ctx, config.RunnerTimeout, time.Second*10, svc.reapStaleRunners)
+	go runWithRetries(ctx, config.DeploymentReservationTimeout, time.Second*20, svc.releaseExpiredReservations)
+	go runWithRetries(ctx, config.RunnerTimeout, time.Second*10, svc.reconcileDeployments)
 	return svc, nil
 }
 
@@ -214,7 +201,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get status")
 	}
-	s.routesMu.Lock()
+	s.routesMu.RLock()
 	routes := slices.FlatMap(maps.Values(s.routes), func(routes []dal.Route) (out []*ftlv1.StatusResponse_Route) {
 		out = make([]*ftlv1.StatusResponse_Route, len(routes))
 		for i, route := range routes {
@@ -227,7 +214,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		}
 		return out
 	})
-	s.routesMu.Unlock()
+	s.routesMu.RUnlock()
 	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
 		var deployment *string
 		if d, ok := r.Deployment.Get(); ok {
@@ -529,10 +516,12 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
 
 	module := verbRef.Module
-	routes, err := s.getRoutesForModule(module)
-	if err != nil {
-		return nil, errors.WithStack(err)
+	s.routesMu.RLock()
+	routes, ok := s.routes[module]
+	if !ok {
+		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("no routes for module %q", module))
 	}
+	s.routesMu.RUnlock()
 	route := routes[rand.Intn(len(routes))] //nolint:gosec
 	client := s.clientsForEndpoint(route.Endpoint)
 
@@ -586,17 +575,11 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 func (s *Service) getRoutesForModule(module string) ([]dal.Route, error) {
 	var routes []dal.Route
 	var ok bool
-	if s.config.NoExperimentalDynamicRoutingUpdates {
-		allRoutes, err := s.dal.GetRoutingTable(context.Background(), []string{module})
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		routes, ok = allRoutes[module]
-	} else {
-		s.routesMu.Lock()
-		routes, ok = s.routes[module]
-		s.routesMu.Unlock()
+	allRoutes, err := s.dal.GetRoutingTable(context.Background(), []string{module})
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
+	routes, ok = allRoutes[module]
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("no runners for module %q", module))
 	}
@@ -695,94 +678,71 @@ func (s *Service) clientsForEndpoint(endpoint string) clients {
 	return client
 }
 
-func (s *Service) reapStaleRunners(ctx context.Context) {
+func (s *Service) reapStaleRunners(ctx context.Context) error {
 	logger := log.FromContext(ctx)
-	for {
-		count, err := s.dal.KillStaleRunners(context.Background(), s.config.RunnerTimeout)
-		if err != nil {
-			logger.Errorf(err, "Failed to delete stale runners")
-		} else if count > 0 {
-			logger.Warnf("Reaped %d stale runners", count)
-		}
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-time.After(s.config.RunnerTimeout / 4):
-		}
+	count, err := s.dal.KillStaleRunners(context.Background(), s.config.RunnerTimeout)
+	if err != nil {
+		return errors.Wrap(err, "Failed to delete stale runners")
+	} else if count > 0 {
+		logger.Warnf("Reaped %d stale runners", count)
 	}
+	return nil
 }
 
-func (s *Service) releaseExpiredReservations(ctx context.Context) {
+func (s *Service) releaseExpiredReservations(ctx context.Context) error {
 	logger := log.FromContext(ctx)
-	for {
-		count, err := s.dal.ExpireRunnerClaims(ctx)
-		if err != nil {
-			logger.Errorf(err, "Failed to expire runner reservations")
-		} else if count > 0 {
-			logger.Warnf("Expired %d runner reservations", count)
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(s.config.DeploymentReservationTimeout):
-		}
+	count, err := s.dal.ExpireRunnerClaims(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to expire runner reservations")
+	} else if count > 0 {
+		logger.Warnf("Expired %d runner reservations", count)
 	}
+	return nil
 }
 
-func (s *Service) reconcileDeployments(ctx context.Context) {
-	logger := log.FromContext(ctx)
-	for {
-		reconciliation, err := s.dal.GetDeploymentsNeedingReconciliation(ctx)
-		if err != nil {
-			logger.Errorf(err, "Failed to get deployments needing reconciliation")
-		} else {
-			wg, ctx := concurrency.New(ctx, concurrency.WithConcurrencyLimit(4)) //nolint:govet
-			for _, reconcile := range reconciliation {
-				reconcile := reconcile
-				deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
-				deploymentLogger.Infof("Reconciling %s", reconcile.Deployment)
-				deployment := model.Deployment{
-					Module:   reconcile.Module,
-					Language: reconcile.Language,
-					Name:     reconcile.Deployment,
-				}
-				require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
-				if require > 0 {
-					deploymentLogger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
-					wg.Go(func(ctx context.Context) error {
-						if err := s.deploy(ctx, deployment); err != nil {
-							deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
-						} else {
-							deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
-						}
-						return nil
-					})
-				} else if require < 0 {
-					deploymentLogger.Infof("Need %d less runners for %s", -require, reconcile.Deployment)
-					wg.Go(func(ctx context.Context) error {
-						ok, err := s.terminateRandomRunner(ctx, deployment.Name)
-						if err != nil {
-							deploymentLogger.Warnf("Failed to terminate runner: %s", err)
-						} else if ok {
-							deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
-						} else {
-							deploymentLogger.Warnf("Failed to terminate runner: no runners found")
-						}
-						return nil
-					})
-				}
-			}
-			_ = wg.Wait()
+func (s *Service) reconcileDeployments(ctx context.Context) error {
+	reconciliation, err := s.dal.GetDeploymentsNeedingReconciliation(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to get deployments needing reconciliation")
+	}
+	wg, ctx := concurrency.New(ctx, concurrency.WithConcurrencyLimit(4))
+	for _, reconcile := range reconciliation {
+		reconcile := reconcile
+		deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
+		deploymentLogger.Infof("Reconciling %s", reconcile.Deployment)
+		deployment := model.Deployment{
+			Module:   reconcile.Module,
+			Language: reconcile.Language,
+			Name:     reconcile.Deployment,
 		}
-
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-time.After(time.Second):
+		require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
+		if require > 0 {
+			deploymentLogger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
+			wg.Go(func(ctx context.Context) error {
+				if err := s.deploy(ctx, deployment); err != nil {
+					deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
+				} else {
+					deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
+				}
+				return nil
+			})
+		} else if require < 0 {
+			deploymentLogger.Infof("Need %d less runners for %s", -require, reconcile.Deployment)
+			wg.Go(func(ctx context.Context) error {
+				ok, err := s.terminateRandomRunner(ctx, deployment.Name)
+				if err != nil {
+					deploymentLogger.Warnf("Failed to terminate runner: %s", err)
+				} else if ok {
+					deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
+				} else {
+					deploymentLogger.Warnf("Failed to terminate runner: no runners found")
+				}
+				return nil
+			})
 		}
 	}
+	_ = wg.Wait()
+	return nil
 }
 
 func (s *Service) terminateRandomRunner(ctx context.Context, key model.DeploymentName) (bool, error) {
@@ -840,39 +800,26 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 	return
 }
 
-func (s *Service) reapStaleControllers(ctx context.Context) {
+// Periodically remove stale (ie. have not heartbeat recently) controllers from the database.
+func (s *Service) reapStaleControllers(ctx context.Context) error {
 	logger := log.FromContext(ctx)
-	for {
-		count, err := s.dal.KillStaleControllers(context.Background(), s.config.RunnerTimeout)
-		if err != nil {
-			logger.Errorf(err, "Failed to delete stale controllers")
-		} else if count > 0 {
-			logger.Warnf("Reaped %d stale controllers", count)
-		}
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-time.After(s.config.RunnerTimeout / 4):
-		}
+	count, err := s.dal.KillStaleControllers(context.Background(), s.config.RunnerTimeout)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete stale controllers")
+	} else if count > 0 {
+		logger.Warnf("Reaped %d stale controllers", count)
 	}
+	return nil
 }
 
 // Periodically update the DB with the current state of the controller.
-func (s *Service) heartbeatController(ctx context.Context, advertiseAddr *url.URL) {
-	logger := log.FromContext(ctx)
-	for {
-		_, err := s.dal.UpsertController(ctx, s.key, advertiseAddr.String())
-		if err != nil {
-			logger.Errorf(err, "Failed to heartbeat controller")
-		}
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-time.After(s.config.RunnerTimeout / 4):
-		}
+func (s *Service) heartbeatController(ctx context.Context) error {
+	_, err := s.dal.UpsertController(ctx, s.key, s.config.Advertise.String())
+	if err != nil {
+		return errors.Wrap(err, "failed to heartbeat controller")
 	}
+	return nil
+
 }
 
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
@@ -976,6 +923,29 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	}
 }
 
+func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.DeploymentName) *log.Logger {
+	attrs := map[string]string{"deployment": deploymentName.String()}
+	if requestKey, ok, _ := rpc.RequestKeyFromContext(ctx); ok {
+		attrs["request"] = requestKey.String()
+	}
+
+	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Sub(attrs)
+}
+
+// Periodically sync the routing table from the DB.
+func (s *Service) syncRoutes(ctx context.Context) error {
+	routes, err := s.dal.GetRoutingTable(ctx, nil)
+	if errors.Is(err, dal.ErrNotFound) {
+		routes = map[string][]dal.Route{}
+	} else if err != nil {
+		return errors.WithStack(err)
+	}
+	s.routesMu.Lock()
+	s.routes = routes
+	s.routesMu.Unlock()
+	return nil
+}
+
 // Copied from the Apache-licensed connect-go source.
 func connectCodeToHTTP(code connect.Code) int {
 	switch code {
@@ -1016,6 +986,46 @@ func connectCodeToHTTP(code connect.Code) int {
 	}
 }
 
+func runWithRetries(ctx context.Context, success, failure time.Duration, fn func(ctx context.Context) error) {
+	name := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+	name = name[strings.LastIndex(name, ".")+1:]
+	name = strings.TrimSuffix(name, "-fm")
+
+	ctx = log.ContextWithLogger(ctx, log.FromContext(ctx).Scope(name))
+	failureRetry := backoff.Backoff{
+		Min:    failure,
+		Max:    failure * 2,
+		Jitter: true,
+		Factor: 2,
+	}
+	failed := false
+	logger := log.FromContext(ctx)
+	for {
+		err := fn(ctx)
+		if err != nil {
+			next := failureRetry.Duration()
+			logger.Errorf(err, "Failed, retrying in %s", next)
+			select {
+			case <-time.After(next):
+			case <-ctx.Done():
+				return
+			}
+		} else {
+			if failed {
+				logger.Infof("Recovered")
+				failed = false
+			}
+			failureRetry.Reset()
+			logger.Tracef("Success, next run in %s", success)
+			select {
+			case <-time.After(success):
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
+}
+
 func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {
 	var ingressRoutes []dal.IngressRoutingEntry
 	for _, decl := range req.Schema.Decls {
@@ -1032,65 +1042,4 @@ func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.Ingr
 		}
 	}
 	return ingressRoutes
-}
-
-func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.DeploymentName) *log.Logger {
-	attrs := map[string]string{"deployment": deploymentName.String()}
-	if requestKey, ok, _ := rpc.RequestKeyFromContext(ctx); ok {
-		attrs["request"] = requestKey.String()
-	}
-
-	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Sub(attrs)
-}
-
-func (s *Service) updateRoutingTables(ctx context.Context, routes map[string][]dal.Route, changes chan dal.RouteNotification) {
-	s.routesMu.Lock()
-	s.routes = routes
-	for module, routes := range routes {
-		for _, route := range routes {
-			s.runnerRouteModule[route.Runner] = module
-		}
-	}
-	s.routesMu.Unlock()
-
-	logger := log.FromContext(ctx)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case notification := <-changes:
-			s.routesMu.Lock()
-			if deletion, ok := notification.Deleted.Get(); ok {
-				module, ok := s.runnerRouteModule[deletion]
-				if ok {
-					s.routes[module] = slices.Filter(s.routes[module], func(route dal.Route) bool {
-						logger.Infof("Deleting route %s", route)
-						return route.Runner == deletion
-					})
-					delete(s.runnerRouteModule, deletion)
-				}
-			} else if route, ok := notification.Message.Get(); ok {
-				s.runnerRouteModule[route.Runner] = route.Module
-				updated := false
-				for i, r := range s.routes[route.Module] {
-					if r.Runner == route.Runner {
-						updated = true
-						if r.Runner == route.Runner {
-							break
-						}
-						logger.Infof("Updating route %s", route)
-						s.routes[route.Module][i] = route
-						break
-					}
-				}
-				if !updated {
-					logger.Infof("Adding route %s", route)
-					s.routes[route.Module] = append(s.routes[route.Module], route)
-				}
-			}
-			s.routesMu.Unlock()
-		}
-	}
 }

@@ -21,13 +21,13 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	_ "github.com/TBD54566975/ftl/backend/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	log2 "github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/rpc"
 )
 
 type serveCli struct {
-	LogConfig log2.Config `prefix:"log-" embed:"" group:"Logging:"`
-	Bind      *url.URL    `help:"URL to listen on." env:"FTL_BIND" required:""`
+	LogConfig log.Config `prefix:"log-" embed:"" group:"Logging:"`
+	Bind      *url.URL   `help:"URL to listen on." env:"FTL_BIND" required:""`
 	kong.Plugins
 }
 
@@ -114,10 +114,10 @@ func Start[Impl any, Iface any, Config any](
 	// Configure logging to JSON on stdout. This will be read by the parent process.
 	logConfig := cli.LogConfig
 	logConfig.JSON = true
-	logger := log2.Configure(os.Stderr, logConfig)
+	logger := log.Configure(os.Stderr, logConfig)
 
-	logger = logger.Sub(map[string]string{log2.ScopeKey: name})
-	ctx = log2.ContextWithLogger(ctx, logger)
+	logger = logger.Scope(name)
+	ctx = log.ContextWithLogger(ctx, logger)
 
 	logger.Debugf("Starting on %s", cli.Bind)
 
@@ -176,7 +176,7 @@ func allocatePort() (*net.TCPAddr, error) {
 	return l.Addr().(*net.TCPAddr), nil //nolint:forcetypeassert
 }
 
-func cleanup(logger *log2.Logger, pidFile string) error {
+func cleanup(logger *log.Logger, pidFile string) error {
 	pidb, err := os.ReadFile(pidFile)
 	if os.IsNotExist(err) {
 		return nil
