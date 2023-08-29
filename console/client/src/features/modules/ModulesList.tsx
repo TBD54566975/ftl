@@ -1,7 +1,7 @@
 import React from 'react'
+import {useSearchParams} from 'react-router-dom'
 import {modulesContext} from '../../providers/modules-provider'
 import {SelectedModuleContext} from '../../providers/selected-module-provider'
-import {useSearchParams} from 'react-router-dom'
 
 export function ModulesList() {
   const modules = React.useContext(modulesContext)
@@ -9,6 +9,7 @@ export function ModulesList() {
     SelectedModuleContext
   )
   const [searchParams, setSearchParams] = useSearchParams()
+
   return (
     <ul
       role='list'

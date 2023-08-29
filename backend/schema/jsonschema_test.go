@@ -10,20 +10,27 @@ import (
 func TestDataToJSONSchema(t *testing.T) {
 	schema, err := DataToJSONSchema(&Schema{
 		Modules: []*Module{
-			{Name: "foo", Decls: []Decl{&Data{
-				Name:     "Foo",
-				Comments: []string{"Data comment"},
-				Fields: []*Field{
-					{Name: "string", Type: &String{}, Comments: []string{"Field comment"}},
-					{Name: "int", Type: &Int{}},
-					{Name: "float", Type: &Float{}},
-					{Name: "bool", Type: &Bool{}},
-					{Name: "time", Type: &Time{}},
-					{Name: "array", Type: &Array{Element: &String{}}},
-					{Name: "arrayOfArray", Type: &Array{Element: &Array{Element: &String{}}}},
-					{Name: "map", Type: &Map{Key: &String{}, Value: &Int{}}},
-					{Name: "ref", Type: &DataRef{Module: "bar", Name: "Bar"}},
-				}}}},
+			{Name: "foo", Decls: []Decl{
+				&Data{
+					Name:     "Foo",
+					Comments: []string{"Data comment"},
+					Fields: []*Field{
+						{Name: "string", Type: &String{}, Comments: []string{"Field comment"}},
+						{Name: "int", Type: &Int{}},
+						{Name: "float", Type: &Float{}},
+						{Name: "bool", Type: &Bool{}},
+						{Name: "time", Type: &Time{}},
+						{Name: "array", Type: &Array{Element: &String{}}},
+						{Name: "arrayOfRefs", Type: &Array{Element: &DataRef{Name: "Item"}}},
+						{Name: "arrayOfArray", Type: &Array{Element: &Array{Element: &String{}}}},
+						{Name: "map", Type: &Map{Key: &String{}, Value: &Int{}}},
+						{Name: "ref", Type: &DataRef{Module: "bar", Name: "Bar"}},
+					},
+				},
+				&Data{
+					Name: "Item", Fields: []*Field{{Name: "name", Type: &String{}}},
+				},
+			}},
 			{Name: "bar", Decls: []Decl{
 				&Data{Name: "Bar", Fields: []*Field{{Name: "bar", Type: &String{}}}},
 			}},
@@ -44,6 +51,15 @@ func TestDataToJSONSchema(t *testing.T) {
         }
       },
       "type": "object"
+    },
+    "foo.Item": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
     }
   },
   "properties": {
@@ -59,6 +75,12 @@ func TestDataToJSONSchema(t *testing.T) {
           "type": "string"
         },
         "type": "array"
+      },
+      "type": "array"
+    },
+    "arrayOfRefs": {
+      "items": {
+        "$ref": "#/definitions/foo.Item"
       },
       "type": "array"
     },

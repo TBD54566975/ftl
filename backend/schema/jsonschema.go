@@ -30,7 +30,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*js.Schema, error) {
 
 	// Encode root, and collect all data types reachable from the root.
 	dataRefs := map[DataRef]bool{}
-	root := nodeToJSSchema(rootData, dataRefs)
+	root := nodeToJSSchema(rootData, dataRef, dataRefs)
 	if len(dataRefs) == 0 {
 		return root, nil
 	}
@@ -41,12 +41,12 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*js.Schema, error) {
 		if !ok {
 			return nil, errors.Errorf("unknown data type %s", dataRef)
 		}
-		root.Definitions[dataRef.String()] = js.SchemaOrBool{TypeObject: nodeToJSSchema(data, dataRefs)}
+		root.Definitions[dataRef.String()] = js.SchemaOrBool{TypeObject: nodeToJSSchema(data, dataRef, dataRefs)}
 	}
 	return root, nil
 }
 
-func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *js.Schema {
+func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *js.Schema {
 	switch node := node.(type) {
 	case *Data:
 		st := js.Object
@@ -57,7 +57,7 @@ func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *js.Schema {
 			AdditionalProperties: jsBool(false),
 		}
 		for _, field := range node.Fields {
-			jsField := nodeToJSSchema(field.Type, dataRefs)
+			jsField := nodeToJSSchema(field.Type, rootRef, dataRefs)
 			jsField.Description = jsComments(field.Comments)
 			schema.Properties[field.Name] = js.SchemaOrBool{TypeObject: jsField}
 		}
@@ -88,7 +88,7 @@ func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *js.Schema {
 		st := js.Array
 		return &js.Schema{
 			Type:  &js.Type{SimpleTypes: &st},
-			Items: &js.Items{SchemaOrBool: &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Element, dataRefs)}},
+			Items: &js.Items{SchemaOrBool: &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Element, rootRef, dataRefs)}},
 		}
 
 	case *Map:
@@ -96,13 +96,19 @@ func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *js.Schema {
 		// JSON schema generic map of key type to value type
 		return &js.Schema{
 			Type:                 &js.Type{SimpleTypes: &st},
-			AdditionalProperties: &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Value, dataRefs)},
-			PropertyNames:        &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Key, dataRefs)},
+			AdditionalProperties: &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Value, rootRef, dataRefs)},
+			PropertyNames:        &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Key, rootRef, dataRefs)},
 		}
 
 	case *DataRef:
-		ref := fmt.Sprintf("#/definitions/%s", node.String())
-		dataRefs[*node] = true
+		dataRef := *node
+		if dataRef.Module == "" {
+			// handle root data types
+			dataRef.Module = rootRef.Module
+		}
+
+		ref := fmt.Sprintf("#/definitions/%s", dataRef.String())
+		dataRefs[dataRef] = true
 		return &js.Schema{Ref: &ref}
 
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataIngress, *Module, *Schema, Type, *Verb, *VerbRef:
