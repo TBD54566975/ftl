@@ -13,7 +13,7 @@ import (
 
 var _ Interface = (*Logger)(nil)
 
-const ScopeKey = "scope"
+const scopeKey = "scope"
 
 type Entry struct {
 	Time       time.Time         `json:"-"`
@@ -38,6 +38,10 @@ func New(level Level, sink Sink) *Logger {
 		attributes: map[string]string{},
 		sink:       sink,
 	}
+}
+
+func (l Logger) Scope(scope string) *Logger {
+	return l.Sub(map[string]string{scopeKey: scope})
 }
 
 // Sub creates a new logger with the given attributes.

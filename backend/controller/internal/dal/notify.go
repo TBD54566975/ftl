@@ -15,7 +15,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/controller/internal/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
@@ -42,9 +41,6 @@ func (n Notification[T, Key, KeyP]) String() string {
 
 // DeploymentNotification is a notification from the database when a deployment changes.
 type DeploymentNotification = Notification[Deployment, model.DeploymentName, *model.DeploymentName]
-
-// RouteNotification is a notification from the database when a route changes.
-type RouteNotification = Notification[Route, model.RunnerKey, *model.RunnerKey]
 
 // See JSON structure in SQL schema
 type event struct {
@@ -121,35 +117,6 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 		}
 		logger.Debugf("Deployment notification: %s", deployment)
 		d.DeploymentChanges.Publish(deployment)
-
-	case "runners":
-		route, err := decodeNotification(notification, func(key model.RunnerKey) (Route, types.Option[model.RunnerKey], error) {
-			row, err := d.db.GetRouteForRunner(ctx, key)
-			if err != nil {
-				return Route{}, types.None[model.RunnerKey](), errors.WithStack(translatePGError(err))
-			}
-			if row.State != sql.RunnerStateAssigned {
-				return Route{}, types.Some(key), nil
-			}
-			moduleName, ok := row.ModuleName.Get()
-			if !ok {
-				return Route{}, types.None[model.RunnerKey](), errors.WithStack(ErrNotFound)
-			}
-			return Route{
-				Runner:     row.RunnerKey,
-				Endpoint:   row.Endpoint,
-				Deployment: row.DeploymentName,
-				Module:     moduleName,
-			}, types.None[model.RunnerKey](), nil
-		})
-		if errors.Is(err, ErrNotFound) {
-			return nil
-		}
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		logger.Debugf("Route notification: %s", route)
-		d.RouteChanges.Publish(route)
 
 	default:
 		panic(fmt.Sprintf("unknown table %q in DB notification", notification.Table))

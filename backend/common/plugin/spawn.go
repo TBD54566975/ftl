@@ -90,7 +90,7 @@ func Spawn[Client PingableClient](
 	makeClient rpc.ClientFactory[Client],
 	options ...Option,
 ) (plugin *Plugin[Client], cmdCtx context.Context, err error) {
-	logger := log.FromContext(ctx).Sub(map[string]string{log.ScopeKey: name})
+	logger := log.FromContext(ctx).Scope(name)
 
 	opts := pluginOptions{
 		startTimeout: time.Second * 30,

@@ -221,7 +221,6 @@ func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
 	dal := &DAL{
 		db:                sql.NewDB(pool),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
-		RouteChanges:      pubsub.New[RouteNotification](),
 	}
 	go dal.runListener(ctx, conn.Hijack())
 	return dal, nil
@@ -233,7 +232,6 @@ type DAL struct {
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
 	// RouteChanges is a Topic that receives changes to the routing table.
-	RouteChanges *pubsub.Topic[RouteNotification]
 }
 
 func (d *DAL) GetStatus(
