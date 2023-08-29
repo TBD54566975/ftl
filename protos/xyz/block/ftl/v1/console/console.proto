@@ -50,6 +50,7 @@ message LogEntry {
 message Verb {
   schema.Verb verb = 1;
   string schema = 2;
+  string json_request_schema = 3;
 }
 
 message Data {

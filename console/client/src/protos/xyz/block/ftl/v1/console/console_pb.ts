@@ -272,6 +272,11 @@ export class Verb extends Message<Verb> {
    */
   schema = "";
 
+  /**
+   * @generated from field: string json_request_schema = 3;
+   */
+  jsonRequestSchema = "";
+
   constructor(data?: PartialMessage<Verb>) {
     super();
     proto3.util.initPartial(data, this);
@@ -282,6 +287,7 @@ export class Verb extends Message<Verb> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "verb", kind: "message", T: Verb$1 },
     { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "json_request_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {

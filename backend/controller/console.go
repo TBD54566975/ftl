@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/alecthomas/errors"
@@ -42,6 +43,12 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		return nil, errors.WithStack(err)
 	}
 
+	sch := &schema.Schema{
+		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
+			return d.Schema
+		}),
+	}
+
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
 		var verbs []*pbconsole.Verb
@@ -52,9 +59,23 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			case *schema.Verb:
 				//nolint:forcetypeassert
 				v := decl.ToProto().(*pschema.Verb)
+				verbSchema := schema.VerbToSchema(v)
+				dataRef := schema.DataRef{
+					Module: deployment.Module,
+					Name:   verbSchema.Request.Name,
+				}
+				jsonRequestSchema, err := schema.DataToJSONSchema(sch, dataRef)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				jsonData, err := json.MarshalIndent(jsonRequestSchema, "", "  ")
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
 				verbs = append(verbs, &pbconsole.Verb{
-					Verb:   v,
-					Schema: schema.VerbToSchema(v).String(),
+					Verb:              v,
+					Schema:            verbSchema.String(),
+					JsonRequestSchema: string(jsonData),
 				})
 			case *schema.Data:
 				//nolint:forcetypeassert
