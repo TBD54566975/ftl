@@ -63,22 +63,27 @@ export function IDELayout() {
 
       return setInvalidTabMessage(msg)
     }
+    // Handle timeline tab id
+    if (id === timelineTab.id) {
+      return setActiveTab({id: timelineTab.id, type: timelineTab.type})
+    }
     if (modules.length) {
       const ids = id.split('.')
       // Handle edge case where the id contains and invalid module or verb
       if (modules.length) {
         const [moduleId, verbId] = ids
-        // Check to see if they exist on controller
+        // Handle Module does not exist
         const moduleExist = modules.find(module => module?.name === moduleId)
+        if (!moduleExist) {
+          setInvalidTabMessage(`Module ${moduleId} does not exist`)
+          return setActiveTab({id: timelineTab.id, type: timelineTab.type})
+        }
+        // Handle Verb does not exists
         const verbExist = moduleExist?.verbs.some(
           ({verb}) => verb?.name === verbId
         )
-        if (moduleExist && !verbExist) {
+        if (!verbExist) {
           setInvalidTabMessage(`Verb ${verbId} does not exist on ${moduleId}`)
-          return setActiveTab({id: timelineTab.id, type: timelineTab.type})
-        }
-        if (!moduleExist) {
-          setInvalidTabMessage(`Module ${moduleId} does not exist`)
           return setActiveTab({id: timelineTab.id, type: timelineTab.type})
         }
       }
