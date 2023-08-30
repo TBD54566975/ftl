@@ -1,16 +1,4 @@
-import {
-  MetadataCalls,
-  Verb,
-  VerbRef,
-} from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-
-export function getCalls(verb?: Verb): MetadataCalls[] {
-  return (
-    verb?.metadata
-      ?.filter(meta => meta.value.case === 'calls')
-      .map(meta => meta.value.value as MetadataCalls) ?? []
-  )
-}
+import {VerbRef} from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 
 export function buildVerbSchema(
   verbSchema: string,

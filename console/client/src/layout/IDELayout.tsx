@@ -1,12 +1,14 @@
-import React from 'react'
 import {Tab} from '@headlessui/react'
-import {XMarkIcon} from '@heroicons/react/24/outline'
 import {InformationCircleIcon} from '@heroicons/react/20/solid'
+import {XMarkIcon} from '@heroicons/react/24/outline'
+import React from 'react'
 import {useSearchParams} from 'react-router-dom'
 import {ModuleDetails} from '../features/modules/ModuleDetails'
 import {ModulesList} from '../features/modules/ModulesList'
 import {Timeline} from '../features/timeline/Timeline'
 import {VerbTab} from '../features/verbs/VerbTab'
+import {useClient} from '../hooks/use-client'
+import {ConsoleService} from '../protos/xyz/block/ftl/v1/console/console_connect'
 import {
   TabSearchParams,
   TabType,
@@ -14,18 +16,16 @@ import {
   timelineTab,
 } from '../providers/tabs-provider'
 import {
+  bgColor,
   headerColor,
   headerTextColor,
-  panelColor,
   invalidTab,
-  bgColor,
+  panelColor,
   textColor,
 } from '../utils'
+import {Navigation} from './Navigation'
+import {Notification} from './Notification'
 import {SidePanel} from './SidePanel'
-import {Notification} from '../components/Notification'
-import {useClient} from '../hooks/use-client'
-import {ConsoleService} from '../protos/xyz/block/ftl/v1/console/console_connect'
-import {Navigation} from '../components/Navigation'
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
@@ -163,7 +163,7 @@ export function IDELayout() {
                         return (
                           <Tab
                             key={id}
-                            className='flex items-center mr-2 relative'
+                            className='flex items-center mr-1 relative'
                             as='span'
                           >
                             <span

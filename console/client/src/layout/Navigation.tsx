@@ -1,7 +1,7 @@
 import {NavLink} from 'react-router-dom'
+import DarkModeSwitch from '../components/DarkModeSwitch'
 import {classNames} from '../utils/react.utils'
 import {navColor} from '../utils/style.utils'
-import DarkModeSwitch from './DarkModeSwitch'
 
 export function Navigation() {
   return (

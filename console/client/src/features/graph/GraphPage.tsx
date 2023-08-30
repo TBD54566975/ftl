@@ -6,11 +6,11 @@ import ReactFlow, {
   useNodesState,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
+import {Navigation} from '../../layout/Navigation'
 import {modulesContext} from '../../providers/modules-provider'
 import {GroupNode} from './GroupNode'
 import {VerbNode} from './VerbNode'
 import {layoutNodes} from './create-layout'
-import {Navigation} from '../../components/Navigation'
 
 const nodeTypes = {groupNode: GroupNode, verbNode: VerbNode}
 
