@@ -1,6 +1,7 @@
 import App from '../App'
 import {DarkModeProvider} from './dark-mode-provider'
 import ModulesProvider from './modules-provider'
+import {NotificationsProvider} from './notifications-provider'
 import SchemaProvider from './schema-provider'
 import {SelectedModuleProvider} from './selected-module-provider'
 import {SelectedTimelineEntryProvider} from './selected-timeline-entry-provider'
@@ -16,7 +17,9 @@ export function AppProviders() {
             <SelectedTimelineEntryProvider>
               <TabsProvider>
                 <SidePanelProvider>
-                  <App />
+                  <NotificationsProvider>
+                    <App />
+                  </NotificationsProvider>
                 </SidePanelProvider>
               </TabsProvider>
             </SelectedTimelineEntryProvider>

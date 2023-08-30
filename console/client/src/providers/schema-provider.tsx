@@ -1,10 +1,10 @@
 import {createContext, useEffect, useState} from 'react'
+import {useClient} from '../hooks/use-client'
+import {ControllerService} from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
 import {
   DeploymentChangeType,
   PullSchemaResponse,
 } from '../protos/xyz/block/ftl/v1/ftl_pb'
-import {useClient} from '../hooks/use-client'
-import {ControllerService} from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
 
 export const schemaContext = createContext<PullSchemaResponse[]>([])
 
@@ -17,9 +17,13 @@ const SchemaProvider = (props: Props) => {
   const [schema, setSchema] = useState<PullSchemaResponse[]>([])
 
   useEffect(() => {
+    const abortController = new AbortController()
+
     async function fetchSchema() {
       const schemaMap = new Map<string, PullSchemaResponse>()
-      for await (const response of client.pullSchema({})) {
+      for await (const response of client.pullSchema({
+        signal: abortController.signal,
+      })) {
         const moduleName = response.moduleName ?? ''
         switch (response.changeType) {
           case DeploymentChangeType.DEPLOYMENT_ADDED:
@@ -43,6 +47,9 @@ const SchemaProvider = (props: Props) => {
     }
 
     void fetchSchema()
+    return () => {
+      abortController.abort()
+    }
   }, [client])
 
   return (
