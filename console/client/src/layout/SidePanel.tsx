@@ -24,7 +24,7 @@ export function SidePanel() {
         leaveTo='translate-x-full'
       >
         <div
-          className={`fixed right-0 w-1/3 h-full mt-2 ${sidePanelColor} shadow-xl`}
+          className={`fixed right-0 w-1/3 h-full ${sidePanelColor} shadow-xl`}
         >
           <div
             className={`flex items-center justify-between pl-4 pr-2 py-2 rounded-tl ${headerTextColor} ${headerColor}`}
