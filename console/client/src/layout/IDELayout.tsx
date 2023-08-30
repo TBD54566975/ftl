@@ -1,21 +1,32 @@
-import React from 'react'
 import {Tab} from '@headlessui/react'
 import {XMarkIcon} from '@heroicons/react/24/outline'
-import {InformationCircleIcon} from '@heroicons/react/20/solid'
+import React from 'react'
 import {useSearchParams} from 'react-router-dom'
 import {ModuleDetails} from '../features/modules/ModuleDetails'
 import {ModulesList} from '../features/modules/ModulesList'
 import {Timeline} from '../features/timeline/Timeline'
 import {VerbTab} from '../features/verbs/VerbTab'
 import {
+  NotificationType,
+  NotificationsContext,
+} from '../providers/notifications-provider'
+import {
   TabSearchParams,
   TabType,
   TabsContext,
   timelineTab,
 } from '../providers/tabs-provider'
-import {headerColor, headerTextColor, panelColor, invalidTab} from '../utils'
+import {
+  bgColor,
+  headerColor,
+  headerTextColor,
+  invalidTab,
+  panelColor,
+  textColor,
+} from '../utils'
+import {Navigation} from './Navigation'
+import {Notification} from './Notification'
 import {SidePanel} from './SidePanel'
-import {Notification} from '../components/Notification'
 import {modulesContext} from '../providers/modules-provider'
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
@@ -23,9 +34,9 @@ const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 export function IDELayout() {
   const {modules} = React.useContext(modulesContext)
   const {tabs, activeTab, setActiveTab, setTabs} = React.useContext(TabsContext)
+  const {showNotification} = React.useContext(NotificationsContext)
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeIndex, setActiveIndex] = React.useState(0)
-  const [invalidTabMessage, setInvalidTabMessage] = React.useState<string>()
   const id = searchParams.get(TabSearchParams.id) as string
   const type = searchParams.get(TabSearchParams.type) as string
 
@@ -61,7 +72,11 @@ export function IDELayout() {
       setActiveTab({id: timelineTab.id, type: timelineTab.type})
       if (type === null && id === null) return
 
-      return setInvalidTabMessage(msg)
+      return showNotification({
+        title: 'Invalid Tab',
+        message: msg,
+        type: NotificationType.Error,
+      })
     }
     // Handle timeline tab id
     if (id === timelineTab.id) {
@@ -75,7 +90,11 @@ export function IDELayout() {
         // Handle Module does not exist
         const moduleExist = modules.find(module => module?.name === moduleId)
         if (!moduleExist) {
-          setInvalidTabMessage(`Module ${moduleId} does not exist`)
+          showNotification({
+            title: 'Module not found',
+            message: `Module '${moduleId}' does not exist`,
+            type: NotificationType.Error,
+          })
           return setActiveTab({id: timelineTab.id, type: timelineTab.type})
         }
         // Handle Verb does not exists
@@ -83,7 +102,11 @@ export function IDELayout() {
           ({verb}) => verb?.name === verbId
         )
         if (!verbExist) {
-          setInvalidTabMessage(`Verb ${verbId} does not exist on ${moduleId}`)
+          showNotification({
+            title: 'Verb not found',
+            message: `Verb '${verbId}' does not exist on module '${moduleId}'`,
+            type: NotificationType.Error,
+          })
           return setActiveTab({id: timelineTab.id, type: timelineTab.type})
         }
       }
@@ -115,112 +138,109 @@ export function IDELayout() {
 
   return (
     <>
-      {/* Main Content */}
-      <div className='flex flex-grow overflow-hidden'>
-        {/* Left Column */}
-        <div className='flex flex-col w-1/4 h-full overflow-hidden'>
-          {/* Upper Section */}
-          <div
-            className={`flex-1 flex flex-col h-1/3 ${panelColor} ml-2 mt-2 rounded`}
-          >
-            <div
-              className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}
-            >
-              Modules
-            </div>
-            <div className='flex-1 p-4 overflow-y-auto'>
-              <ModulesList />
-            </div>
-          </div>
+      <div className={`h-screen flex flex-col ${bgColor} ${textColor}`}>
+        <Navigation />
 
-          {/* Lower Section */}
-          <div
-            className={`flex-1 flex flex-col ${panelColor} ml-2 mt-2 mb-2 rounded`}
-          >
+        <div className='flex-grow flex overflow-hidden p-1'>
+          {/* Left Column */}
+          <aside className={`w-80 flex flex-col`}>
+            {/* Top Section */}
             <div
-              className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}
+              className={`flex flex-col h-1/2 overflow-hidden rounded-t ${panelColor}`}
             >
-              Module Details
+              <header className={`px-4 py-2 ${headerTextColor} ${headerColor}`}>
+                Modules
+              </header>
+              <section className={`${panelColor} p-4 overflow-y-auto`}>
+                <ModulesList />
+              </section>
             </div>
-            <div className='flex-1 p-4 overflow-y-auto'>
-              <ModuleDetails />
-            </div>
-          </div>
-        </div>
 
-        <div className={`flex-1 flex flex-col m-2 rounded`}>
-          <Tab.Group
-            selectedIndex={activeIndex}
-            onChange={handleChangeTab}
-          >
-            <div>
-              <Tab.List
-                className={`flex items-center rounded-t ${headerTextColor}`}
-              >
-                {tabs.map(({label, id}, i) => {
-                  return (
-                    <Tab
-                      key={id}
-                      className='flex items-center mr-2 relative'
-                      as='span'
-                    >
-                      <span
-                        className={`px-4 py-2 rounded-t ${
-                          id !== 'timeline' ? 'pr-8' : ''
-                        } ${
-                          activeIndex === i
-                            ? `${selectedTabStyle}`
-                            : `${unselectedTabStyle}`
-                        }`}
+            {/* Bottom Section */}
+            <div
+              className={`flex flex-col h-1/2 overflow-hidden mt-1 rounded-t ${panelColor}`}
+            >
+              <header className={`px-4 py-2 ${headerTextColor} ${headerColor}`}>
+                Module Details
+              </header>
+              <section className={`${panelColor} p-4 overflow-y-auto`}>
+                <ModuleDetails />
+              </section>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className='flex-grow flex flex-col overflow-hidden pl-1'>
+            <section className='flex-grow overflow-y-auto'>
+              <div className='flex flex-grow overflow-hidden h-full'>
+                <div className={`flex-1 flex flex-col rounded`}>
+                  <Tab.Group
+                    selectedIndex={activeIndex}
+                    onChange={handleChangeTab}
+                  >
+                    <div>
+                      <Tab.List
+                        className={`flex items-center rounded-t ${headerTextColor}`}
                       >
-                        {label}
-                      </span>
-                      {i !== 0 && (
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            handleCloseTab(id, i)
-                          }}
-                          className='absolute right-0 mr-2 text-gray-400 hover:text-white'
-                        >
-                          <XMarkIcon className={`h-5 w-5`} />
-                        </button>
-                      )}
-                    </Tab>
-                  )
-                })}
-              </Tab.List>
-              <div className='flex-grow'></div>
-            </div>
-            <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
-              <Tab.Panels>
-                {tabs.map(({id}, i) => {
-                  return i === 0 ? (
-                    <Tab.Panel key={id}>
-                      <Timeline />
-                    </Tab.Panel>
-                  ) : (
-                    <Tab.Panel key={id}>
-                      <VerbTab id={id} />
-                    </Tab.Panel>
-                  )
-                })}
-              </Tab.Panels>
-            </div>
-          </Tab.Group>
+                        {tabs.map(({label, id}, i) => {
+                          return (
+                            <Tab
+                              key={id}
+                              className='flex items-center mr-1 relative'
+                              as='span'
+                            >
+                              <span
+                                className={`px-4 py-2 rounded-t ${
+                                  id !== 'timeline' ? 'pr-8' : ''
+                                } ${
+                                  activeIndex === i
+                                    ? `${selectedTabStyle}`
+                                    : `${unselectedTabStyle}`
+                                }`}
+                              >
+                                {label}
+                              </span>
+                              {i !== 0 && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    handleCloseTab(id, i)
+                                  }}
+                                  className='absolute right-0 mr-2 text-gray-400 hover:text-white'
+                                >
+                                  <XMarkIcon className={`h-5 w-5`} />
+                                </button>
+                              )}
+                            </Tab>
+                          )
+                        })}
+                      </Tab.List>
+                      <div className='flex-grow'></div>
+                    </div>
+                    <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
+                      <Tab.Panels>
+                        {tabs.map(({id}, i) => {
+                          return i === 0 ? (
+                            <Tab.Panel key={id}>
+                              <Timeline />
+                            </Tab.Panel>
+                          ) : (
+                            <Tab.Panel key={id}>
+                              <VerbTab id={id} />
+                            </Tab.Panel>
+                          )
+                        })}
+                      </Tab.Panels>
+                    </div>
+                  </Tab.Group>
+                </div>
+                <SidePanel />
+              </div>
+            </section>
+          </main>
         </div>
-        <SidePanel />
       </div>
-      {invalidTabMessage && (
-        <Notification
-          color='text-red-400'
-          icon={
-            <InformationCircleIcon className='flex-shrink-0 inline w-4 h-4 mr-3' />
-          }
-          title='Alert!'
-          message={invalidTabMessage}
-        />
-      )}
+      <Notification />
     </>
   )
 }
