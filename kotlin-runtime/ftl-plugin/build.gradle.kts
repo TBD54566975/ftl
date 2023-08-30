@@ -1,5 +1,6 @@
 buildscript {
   dependencies {
+    classpath(kotlin("gradle-plugin", version = "1.9.0"))
     classpath("com.squareup.wire:wire-gradle-plugin:4.7.2")
   }
 }
@@ -8,6 +9,7 @@ plugins {
   kotlin("jvm") version "1.9.0"
   id("java-gradle-plugin")
   id("com.squareup.wire") version "4.7.2"
+  id("com.google.devtools.ksp") version "1.9.0-1.0.11"
 }
 
 repositories {
@@ -31,6 +33,7 @@ gradlePlugin {
 
 dependencies {
   compileOnly(gradleApi())
+  implementation(libs.kspApi)
   implementation(project(":ftl-runtime"))
 
   // Use the Kotlin JUnit 5 integration.

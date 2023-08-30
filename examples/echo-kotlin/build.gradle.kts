@@ -13,8 +13,8 @@ repositories {
 
 dependencies {
   implementation("xyz.block.ftl:ftl-runtime")
-  implementation("xyz.block.ftl:ftl-schema")
-  ksp("xyz.block.ftl:ftl-schema")
+  implementation("com.google.devtools.ksp:symbol-processing-api:1.9.0-1.0.11")
+  ksp(project("xyz.block.ftl:ftl-plugin"))
 }
 
 ftl {

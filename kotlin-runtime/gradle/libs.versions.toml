@@ -25,6 +25,7 @@ grpcNetty = { module = "io.grpc:grpc-netty", version.ref = "grpc" }
 grpcProtobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 grpcStub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin" }
+kspApi = { module = "com.google.devtools.ksp:symbol-processing-api", version = "1.9.0-1.0.11" }
 
 [plugins]
 wire = { id = "com.squareup.wire", version.ref = "wire" }

@@ -1,3 +1,6 @@
+.git/
+.idea/
+.gradle/
 .hermit/
 .vscode/
 .idea/
