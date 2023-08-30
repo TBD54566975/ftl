@@ -7,11 +7,7 @@ import xyz.block.ftl.client.VerbServiceClient
 import xyz.block.ftl.registry.Registry
 import xyz.block.ftl.registry.defaultJvmModuleName
 import xyz.block.ftl.registry.toModel
-import xyz.block.ftl.v1.CallRequest
-import xyz.block.ftl.v1.CallResponse
-import xyz.block.ftl.v1.PingRequest
-import xyz.block.ftl.v1.PingResponse
-import xyz.block.ftl.v1.VerbServiceWireGrpc
+import xyz.block.ftl.v1.*
 
 /**
  * FTL verb server.
@@ -33,6 +29,7 @@ class Server(
       response.onError(IllegalArgumentException("verb is required"))
       return
     }
+
     val out = registry.invoke(
       Context(jvmModule, routingClient),
       verbRef.toModel(),

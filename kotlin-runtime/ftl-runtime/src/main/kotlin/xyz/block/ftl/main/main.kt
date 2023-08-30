@@ -1,10 +1,13 @@
 package xyz.block.ftl.main
 
+import io.grpc.ServerInterceptors
 import io.grpc.netty.NettyServerBuilder
 import xyz.block.ftl.client.GrpcVerbServiceClient
 import xyz.block.ftl.client.makeGrpcClient
 import xyz.block.ftl.registry.Registry
 import xyz.block.ftl.server.Server
+import xyz.block.ftl.server.ServerInterceptor
+import xyz.block.ftl.v1.VerbServiceWireGrpc.VerbServiceBlockingStub
 import java.net.InetSocketAddress
 import java.net.URL
 
@@ -20,10 +23,11 @@ fun main() {
     println("Registered verb: ${verb.module}.${verb.name}")
   }
   val ftlEndpoint = System.getenv("FTL_ENDPOINT") ?: defaultFtlEndpoint
-  val verbRoutingClient = GrpcVerbServiceClient(makeGrpcClient(ftlEndpoint))
+  val grpcClient = VerbServiceBlockingStub(makeGrpcClient(ftlEndpoint))
+  val verbRoutingClient = GrpcVerbServiceClient(grpcClient)
   val server = Server(registry, verbRoutingClient)
   val grpcServer = NettyServerBuilder.forAddress(addr)
-    .addService(server)
+    .addService(ServerInterceptors.intercept(server, ServerInterceptor()))
     .build()
   grpcServer.start()
   grpcServer.awaitTermination()

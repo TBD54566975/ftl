@@ -4,17 +4,13 @@ set -euo pipefail
 top="$(git rev-parse --show-toplevel)"
 cd "${top}"
 
-prepare_template() (
-  make build/template/ftl/jars/ftl-runtime.jar
-)
 
 build() {
-  make console/client/dist/index.html
-  go build -o build/release/ftl-controller -tags release ./cmd/ftl-controller
-  go build -o build/release/ftl-runner -tags release ./cmd/ftl-runner
+  bit build/template/ftl/jars/ftl-runtime.jar \
+    build/release/ftl-controller \
+    build/release/ftl-runner 
 }
 
-prepare_template
 build
 
 overmind start -f Procfile.nowatch
