@@ -13,11 +13,19 @@ import {
   TabsContext,
   timelineTab,
 } from '../providers/tabs-provider'
-import {headerColor, headerTextColor, panelColor, invalidTab} from '../utils'
+import {
+  headerColor,
+  headerTextColor,
+  panelColor,
+  invalidTab,
+  bgColor,
+  textColor,
+} from '../utils'
 import {SidePanel} from './SidePanel'
 import {Notification} from '../components/Notification'
 import {useClient} from '../hooks/use-client'
 import {ConsoleService} from '../protos/xyz/block/ftl/v1/console/console_connect'
+import {Navigation} from '../components/Navigation'
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
@@ -107,102 +115,106 @@ export function IDELayout() {
   }, [id, type])
 
   return (
-    <>
-      {/* Main Content */}
-      <div className='flex flex-grow overflow-hidden'>
+    <div className={`h-screen flex flex-col ${bgColor} ${textColor}`}>
+      <Navigation />
+
+      <div className='flex-grow flex overflow-hidden p-1'>
         {/* Left Column */}
-        <div className='flex flex-col w-1/4 h-full overflow-hidden'>
-          {/* Upper Section */}
+        <aside className={`w-80 flex flex-col`}>
+          {/* Top Section */}
           <div
-            className={`flex-1 flex flex-col h-1/3 ${panelColor} ml-2 mt-2 rounded`}
+            className={`flex flex-col h-1/2 overflow-hidden rounded-t ${panelColor}`}
           >
-            <div
-              className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}
-            >
+            <header className={`px-4 py-2 ${headerTextColor} ${headerColor}`}>
               Modules
-            </div>
-            <div className='flex-1 p-4 overflow-y-auto'>
+            </header>
+            <section className={`${panelColor} p-4 overflow-y-auto`}>
               <ModulesList />
-            </div>
+            </section>
           </div>
 
-          {/* Lower Section */}
+          {/* Bottom Section */}
           <div
-            className={`flex-1 flex flex-col ${panelColor} ml-2 mt-2 mb-2 rounded`}
+            className={`flex flex-col h-1/2 overflow-hidden mt-1 rounded-t ${panelColor}`}
           >
-            <div
-              className={`px-4 py-2 rounded-t ${headerTextColor} ${headerColor}`}
-            >
+            <header className={`px-4 py-2 ${headerTextColor} ${headerColor}`}>
               Module Details
-            </div>
-            <div className='flex-1 p-4 overflow-y-auto'>
+            </header>
+            <section className={`${panelColor} p-4 overflow-y-auto`}>
               <ModuleDetails />
-            </div>
+            </section>
           </div>
-        </div>
+        </aside>
 
-        <div className={`flex-1 flex flex-col m-2 rounded`}>
-          <Tab.Group
-            selectedIndex={activeIndex}
-            onChange={handleChangeTab}
-          >
-            <div>
-              <Tab.List
-                className={`flex items-center rounded-t ${headerTextColor}`}
-              >
-                {tabs.map(({label, id}, i) => {
-                  return (
-                    <Tab
-                      key={id}
-                      className='flex items-center mr-2 relative'
-                      as='span'
+        {/* Main Content */}
+        <main className='flex-grow flex flex-col overflow-hidden pl-1'>
+          <section className='flex-grow overflow-y-auto'>
+            <div className='flex flex-grow overflow-hidden h-full'>
+              <div className={`flex-1 flex flex-col rounded`}>
+                <Tab.Group
+                  selectedIndex={activeIndex}
+                  onChange={handleChangeTab}
+                >
+                  <div>
+                    <Tab.List
+                      className={`flex items-center rounded-t ${headerTextColor}`}
                     >
-                      <span
-                        className={`px-4 py-2 rounded-t ${
-                          id !== 'timeline' ? 'pr-8' : ''
-                        } ${
-                          activeIndex === i
-                            ? `${selectedTabStyle}`
-                            : `${unselectedTabStyle}`
-                        }`}
-                      >
-                        {label}
-                      </span>
-                      {i !== 0 && (
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            handleCloseTab(id, i)
-                          }}
-                          className='absolute right-0 mr-2 text-gray-400 hover:text-white'
-                        >
-                          <XMarkIcon className={`h-5 w-5`} />
-                        </button>
-                      )}
-                    </Tab>
-                  )
-                })}
-              </Tab.List>
-              <div className='flex-grow'></div>
+                      {tabs.map(({label, id}, i) => {
+                        return (
+                          <Tab
+                            key={id}
+                            className='flex items-center mr-2 relative'
+                            as='span'
+                          >
+                            <span
+                              className={`px-4 py-2 rounded-t ${
+                                id !== 'timeline' ? 'pr-8' : ''
+                              } ${
+                                activeIndex === i
+                                  ? `${selectedTabStyle}`
+                                  : `${unselectedTabStyle}`
+                              }`}
+                            >
+                              {label}
+                            </span>
+                            {i !== 0 && (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  handleCloseTab(id, i)
+                                }}
+                                className='absolute right-0 mr-2 text-gray-400 hover:text-white'
+                              >
+                                <XMarkIcon className={`h-5 w-5`} />
+                              </button>
+                            )}
+                          </Tab>
+                        )
+                      })}
+                    </Tab.List>
+                    <div className='flex-grow'></div>
+                  </div>
+                  <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
+                    <Tab.Panels>
+                      {tabs.map(({id}, i) => {
+                        return i === 0 ? (
+                          <Tab.Panel key={id}>
+                            <Timeline />
+                          </Tab.Panel>
+                        ) : (
+                          <Tab.Panel key={id}>
+                            <VerbTab id={id} />
+                          </Tab.Panel>
+                        )
+                      })}
+                    </Tab.Panels>
+                  </div>
+                </Tab.Group>
+              </div>
+              <SidePanel />
             </div>
-            <div className={`flex-1 overflow-y-scroll ${panelColor}`}>
-              <Tab.Panels>
-                {tabs.map(({id}, i) => {
-                  return i === 0 ? (
-                    <Tab.Panel key={id}>
-                      <Timeline />
-                    </Tab.Panel>
-                  ) : (
-                    <Tab.Panel key={id}>
-                      <VerbTab id={id} />
-                    </Tab.Panel>
-                  )
-                })}
-              </Tab.Panels>
-            </div>
-          </Tab.Group>
-        </div>
-        <SidePanel />
+          </section>
+        </main>
       </div>
       {invalidTabMessage && (
         <Notification
@@ -214,6 +226,6 @@ export function IDELayout() {
           message={invalidTabMessage}
         />
       )}
-    </>
+    </div>
   )
 }

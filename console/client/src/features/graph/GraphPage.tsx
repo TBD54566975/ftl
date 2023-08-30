@@ -10,6 +10,7 @@ import {modulesContext} from '../../providers/modules-provider'
 import {GroupNode} from './GroupNode'
 import {VerbNode} from './VerbNode'
 import {layoutNodes} from './create-layout'
+import {Navigation} from '../../components/Navigation'
 
 const nodeTypes = {groupNode: GroupNode, verbNode: VerbNode}
 
@@ -25,18 +26,21 @@ export default function GraphPage() {
   }, [modules, setEdges, setNodes])
 
   return (
-    <div style={{width: '100vw', height: '100vh'}}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        fitView
-      >
-        <Controls />
-        <MiniMap />
-      </ReactFlow>
-    </div>
+    <>
+      <Navigation />
+      <div style={{width: '100vw', height: '100vh'}}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          fitView
+        >
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
+      </div>
+    </>
   )
 }
