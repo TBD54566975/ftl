@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import {JSONSchemaFaker, Schema} from 'json-schema-faker'
-import React, {useEffect} from 'react'
+import {JSONSchemaFaker} from 'json-schema-faker'
+import React from 'react'
 import {CodeBlock} from '../../components/CodeBlock'
 import {useClient} from '../../hooks/use-client'
 import {Module, Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import {VerbService} from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import {VerbRef} from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import Editor from '@monaco-editor/react'
+import Editor, {Monaco} from '@monaco-editor/react'
 import {useDarkMode} from '../../providers/dark-mode-provider'
+import type {JSONSchema4, JSONSchema6, JSONSchema7} from 'json-schema'
+
+export type Schema = JSONSchema4 | JSONSchema6 | JSONSchema7
 
 type Props = {
   module?: Module
@@ -21,18 +24,22 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
   const [editorText, setEditorText] = React.useState<string>('')
   const [response, setResponse] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
+  const [schema, setSchema] = React.useState<Schema>()
+  const [monaco, setMonaco] = React.useState<Monaco>()
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (verb?.jsonRequestSchema) {
       JSONSchemaFaker.option('maxItems', 2)
       JSONSchemaFaker.option('alwaysFakeOptionals', true)
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment
-      const schema = JSON.parse(verb.jsonRequestSchema) as Schema
-      setEditorText(JSON.stringify(JSONSchemaFaker.generate(schema), null, 2))
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const verbSchema = JSON.parse(verb.jsonRequestSchema) as Schema
+      setSchema(verbSchema)
+      setEditorText(
+        JSON.stringify(JSONSchemaFaker.generate(verbSchema), null, 2)
+      )
     }
   }, [])
-
   function handleEditorChange(value: string | undefined, _) {
     setEditorText(value ?? '')
   }
@@ -67,6 +74,19 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
       setError(String(error))
     }
   }
+  const handleEditorWillMount = (monaco: Monaco) => {
+    setMonaco(monaco)
+  }
+
+  React.useEffect(() => {
+    schema &&
+      monaco?.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: true,
+        schemas: [
+          {schema, uri: 'http://myserver/foo-schema.json', fileMatch: ['*']},
+        ],
+      })
+  }, [monaco, schema])
 
   return (
     <>
@@ -85,6 +105,7 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
               scrollBeyondLastLine: false,
             }}
             onChange={handleEditorChange}
+            beforeMount={handleEditorWillMount}
           />
         </div>
 

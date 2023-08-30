@@ -6,8 +6,6 @@ import {ModuleDetails} from '../features/modules/ModuleDetails'
 import {ModulesList} from '../features/modules/ModulesList'
 import {Timeline} from '../features/timeline/Timeline'
 import {VerbTab} from '../features/verbs/VerbTab'
-import {useClient} from '../hooks/use-client'
-import {ConsoleService} from '../protos/xyz/block/ftl/v1/console/console_connect'
 import {
   NotificationType,
   NotificationsContext,
@@ -29,22 +27,18 @@ import {
 import {Navigation} from './Navigation'
 import {Notification} from './Notification'
 import {SidePanel} from './SidePanel'
+import {modulesContext} from '../providers/modules-provider'
 const selectedTabStyle = `${headerTextColor} ${headerColor}`
 const unselectedTabStyle = `text-gray-300 bg-slate-100 dark:bg-slate-600`
 
 export function IDELayout() {
-  const client = useClient(ConsoleService)
+  const {modules} = React.useContext(modulesContext)
   const {tabs, activeTab, setActiveTab, setTabs} = React.useContext(TabsContext)
   const {showNotification} = React.useContext(NotificationsContext)
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeIndex, setActiveIndex] = React.useState(0)
   const id = searchParams.get(TabSearchParams.id) as string
   const type = searchParams.get(TabSearchParams.type) as string
-  // Set active tab index whenever our activeTab context changes
-  React.useEffect(() => {
-    const index = tabs.findIndex(tab => tab.id === activeTab?.id)
-    setActiveIndex(index)
-  }, [activeTab])
 
   const handleCloseTab = (id: string, index: number) => {
     const nextActiveTab = {
@@ -70,63 +64,77 @@ export function IDELayout() {
     })
   }
 
+  // Handle loading a page with the tab query parameters
   React.useEffect(() => {
-    const validateTabs = async () => {
-      const modules = await client.getModules({})
-      const msg = invalidTab({id, type})
-      if (msg) {
-        // IDs an invalid tab ID and type fallback to timeline
-        setActiveTab({id: timelineTab.id, type: timelineTab.type})
-        // On intial mount we have no query params set for tabs so we want to skip setting invalidTabMessage
-        if (type === null && id === null) return
-        return showNotification({
-          title: 'Invalid Tab',
-          message: msg,
-          type: NotificationType.Error,
-        })
+    const msg = invalidTab({id, type})
+    if (msg) {
+      // Default fallback to timeline
+      setActiveTab({id: timelineTab.id, type: timelineTab.type})
+      if (type === null && id === null) return
+
+      return showNotification({
+        title: 'Invalid Tab',
+        message: msg,
+        type: NotificationType.Error,
+      })
+    }
+    // Handle timeline tab id
+    if (id === timelineTab.id) {
+      return setActiveTab({id: timelineTab.id, type: timelineTab.type})
+    }
+    if (modules.length) {
+      const ids = id.split('.')
+      // Handle edge case where the id contains and invalid module or verb
+      if (modules.length) {
+        const [moduleId, verbId] = ids
+        // Handle Module does not exist
+        const moduleExist = modules.find(module => module?.name === moduleId)
+        if (!moduleExist) {
+          showNotification({
+            title: 'Module not found',
+            message: `Module '${moduleId}' does not exist`,
+            type: NotificationType.Error,
+          })
+          return setActiveTab({id: timelineTab.id, type: timelineTab.type})
+        }
+        // Handle Verb does not exists
+        const verbExist = moduleExist?.verbs.some(
+          ({verb}) => verb?.name === verbId
+        )
+        if (!verbExist) {
+          showNotification({
+            title: 'Verb not found',
+            message: `Verb '${verbId}' does not exist on module '${moduleId}'`,
+            type: NotificationType.Error,
+          })
+          return setActiveTab({id: timelineTab.id, type: timelineTab.type})
+        }
       }
-      const inTabsList = tabs.some(
-        ({id: tabId, type: tabType}) => tabId === id && tabType === type
-      )
-      // Tab is in tab list just set active tab
-      if (inTabsList) return setActiveTab({id, type})
-      // Get module and Verb ids
-      const [moduleId, verbId] = id.split('.')
-      // Check to see if they exist on controller
-      const moduleExist = modules.modules.find(
-        module => module?.name === moduleId
-      )
-      const verbExist = moduleExist?.verbs.some(
-        ({verb}) => verb?.name === verbId
-      )
-      // Set tab if they both exists
-      if (moduleExist && verbExist) {
+      // Handle if tab is not already in tab list
+      if (
+        !tabs.some(
+          ({id: tabId, type: tabType}) => tabId === id && tabType === type
+        )
+      ) {
         const newTab = {
-          id: moduleId,
-          label: verbId,
+          id,
+          label: ids[1],
           type: TabType.Verb,
         }
         const nextTabs = [...tabs, newTab]
-        setActiveTab({id, type})
-        return setTabs(nextTabs)
+        setTabs(nextTabs)
+        return setActiveTab({id: newTab.id, type: newTab.type})
       }
-      if (moduleExist && !verbExist) {
-        return showNotification({
-          title: 'Verb not found',
-          message: `Verb '${verbId}' does not exist on module '${moduleId}'`,
-          type: NotificationType.Error,
-        })
-      }
-      if (!moduleExist) {
-        return showNotification({
-          title: 'Module not found',
-          message: `Module '${moduleId}' does not exist`,
-          type: NotificationType.Error,
-        })
-      }
+      // Handle if tab is in tab list
+      return setActiveTab({id, type})
     }
-    void validateTabs()
-  }, [id, type])
+  }, [id, type, modules])
+
+  // Set active tab index whenever our activeTab context changes
+  React.useEffect(() => {
+    const index = tabs.findIndex(tab => tab.id === activeTab?.id)
+    setActiveIndex(index)
+  }, [activeTab])
 
   return (
     <>
