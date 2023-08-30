@@ -30,7 +30,7 @@ export const TimelineLog: React.FC<Props> = ({log, selected}) => {
       </div>
       <div
         className={classNames(
-          `relative flex gap-x-4 flex-auto w-full max-w-full p-1.5 `,
+          `relative flex gap-x-4 flex-auto w-full max-w-full px-1 py-0.5`,
           selected && 'bg-indigo-600 rounded-md'
         )}
       >
@@ -44,7 +44,7 @@ export const TimelineLog: React.FC<Props> = ({log, selected}) => {
 
         <time
           dateTime={formatTimestamp(log.timeStamp)}
-          className={`flex-none  text-xs leading-5 ${
+          className={`flex-none text-xs leading-5 ${
             selected ? 'text-gray-50' : 'text-gray-500'
           }`}
         >
