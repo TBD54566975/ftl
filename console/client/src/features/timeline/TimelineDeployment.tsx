@@ -5,8 +5,8 @@ import {
   DeploymentEventType,
 } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import {formatTimestamp} from '../../utils/date.utils'
-import {panelColor, textColor} from '../../utils/style.utils'
 import {classNames} from '../../utils/react.utils'
+import {panelColor, textColor} from '../../utils/style.utils'
 
 type Props = {
   deployment: Deployment
@@ -44,7 +44,7 @@ export const TimelineDeployment: React.FC<Props> = ({
       </div>
       <div
         className={classNames(
-          `relative flex gap-x-4 flex-auto w-full max-w-full p-1.5 `,
+          `relative flex gap-x-4 flex-auto w-full max-w-full px-1 py-0.5`,
           selected && 'bg-indigo-600 rounded-md'
         )}
       >
