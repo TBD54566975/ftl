@@ -21,13 +21,20 @@ export const CodeBlock: React.FC<Props> = ({
 
   return (
     <SyntaxHighlighter
+      wrapLongLines={true}
+      lineProps={{style: {flexWrap: 'wrap'}}}
       language={language}
       style={
         isDarkMode
           ? (atomDark as React.CSSProperties)
           : (oneLight as React.CSSProperties)
       }
-      customStyle={{fontSize: '12px', maxHeight: `${maxHeight}px`}}
+      customStyle={{
+        fontSize: '12px',
+        maxHeight: `${maxHeight}px`,
+        overflow: 'auto',
+        maxWidth: `100%`,
+      }}
     >
       {code}
     </SyntaxHighlighter>
