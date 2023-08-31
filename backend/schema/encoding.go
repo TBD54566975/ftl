@@ -124,11 +124,19 @@ var _ Metadata = (*MetadataCalls)(nil)
 func (m *MetadataCalls) String() string {
 	out := &strings.Builder{}
 	fmt.Fprint(out, "calls ")
+	w := 6
 	for i, call := range m.Calls {
 		if i > 0 {
 			fmt.Fprint(out, ", ")
+			w += 2
 		}
-		fmt.Fprint(out, call)
+		str := call.String()
+		if w+len(str) > 70 {
+			w = 6
+			fmt.Fprint(out, "\n      ")
+		}
+		w += len(str)
+		fmt.Fprint(out, str)
 	}
 	fmt.Fprintln(out)
 	return out.String()

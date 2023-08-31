@@ -10,3 +10,4 @@ deploy/
 reflex.conf
 /logs/
 node_modules
+*.tsbuildinfo
