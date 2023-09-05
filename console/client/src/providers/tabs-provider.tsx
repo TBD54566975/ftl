@@ -1,56 +1,73 @@
 import React from 'react'
-
-export const TabType = {
-  Timeline: 'timeline',
-  Verb: 'verb',
-} as const
+import {useSearchParams} from 'react-router-dom'
 
 export type Tab = {
   id: string
   label: string
-  type: (typeof TabType)[keyof typeof TabType]
+  isClosable: boolean
+  component: React.ReactNode
 }
-
-export const TabSearchParams = {
-  id: 'tab-id',
-  type: 'tab-type',
-} as const
-
-export const timelineTab = {
-  id: 'timeline',
-  label: 'Timeline',
-  type: TabType.Timeline,
-}
-
-export type ActiveTab =
-  | {
-      id: string
-      type: string
-    }
-  | undefined
 
 type TabsContextType = {
   tabs: Tab[]
-  activeTab?: ActiveTab
-  setTabs: React.Dispatch<React.SetStateAction<Tab[]>>
-  setActiveTab: React.Dispatch<React.SetStateAction<ActiveTab>>
+  activeTabId?: string
+  openTab: (tab: Tab) => void
+  closeTab: (tabId: string) => void
 }
 
 export const TabsContext = React.createContext<TabsContextType>({
   tabs: [],
-  activeTab: undefined,
-  setTabs: () => {},
-  setActiveTab: () => {},
+  activeTabId: undefined,
+  openTab: () => {},
+  closeTab: () => {},
 })
 
 export const TabsProvider = (props: React.PropsWithChildren) => {
-  const [tabs, setTabs] = React.useState<Tab[]>([timelineTab])
-  const [activeTab, setActiveTab] = React.useState<
-    {id: string; type: string} | undefined
-  >()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [tabs, setTabs] = React.useState<Tab[]>([])
+  const [activeTabId, setActiveTabId] = React.useState<string>()
+
+  const updateParams = (tab: Tab) => {
+    if (tab.id !== 'timeline') {
+      setSearchParams({
+        ...Object.fromEntries(searchParams),
+        verb: tab.id,
+      })
+    }
+  }
+
+  const openTab = (tab: Tab) => {
+    setTabs(prevTabs => {
+      // Add the tab if it doesn't exist
+      if (!prevTabs.some(existingTab => existingTab.id === tab.id)) {
+        return [...prevTabs, tab]
+      }
+      return prevTabs
+    })
+
+    setActiveTabId(tab.id)
+    updateParams(tab)
+  }
+
+  const closeTab = (tabId: string) => {
+    const newTabs = tabs.filter(tab => tab.id !== tabId)
+    const closedTabIndex = tabs.findIndex(tab => tab.id === tabId)
+
+    if (activeTabId === tabId) {
+      const activeTab = newTabs[closedTabIndex - 1]
+      setActiveTabId(activeTab?.id)
+      updateParams(activeTab)
+    }
+
+    if (newTabs.length === 1 && newTabs[0].id === 'timeline') {
+      searchParams.delete('verb')
+      setSearchParams(searchParams)
+    }
+    setTabs(newTabs)
+  }
 
   return (
-    <TabsContext.Provider value={{tabs, setTabs, activeTab, setActiveTab}}>
+    <TabsContext.Provider value={{tabs, activeTabId, openTab, closeTab}}>
       {props.children}
     </TabsContext.Provider>
   )

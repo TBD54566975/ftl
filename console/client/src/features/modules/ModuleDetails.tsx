@@ -1,23 +1,19 @@
 import React from 'react'
-import {SelectedModuleContext} from '../../providers/selected-module-provider'
-import {
-  TabSearchParams,
-  TabType,
-  TabsContext,
-  Tab,
-} from '../../providers/tabs-provider'
-import {textColor} from '../../utils'
 import {useSearchParams} from 'react-router-dom'
-import {modulesContext} from '../../providers/modules-provider'
 import {Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {modulesContext} from '../../providers/modules-provider'
+import {SelectedModuleContext} from '../../providers/selected-module-provider'
+import {TabsContext} from '../../providers/tabs-provider'
+import {textColor} from '../../utils'
+import {VerbTab} from '../verbs/VerbTab'
 
 export function ModuleDetails() {
   const modules = React.useContext(modulesContext)
   const {selectedModule, setSelectedModule} = React.useContext(
     SelectedModuleContext
   )
-  const {tabs, setTabs, setActiveTab} = React.useContext(TabsContext)
-  const [searchParams, setSearchParams] = useSearchParams()
+  const {openTab} = React.useContext(TabsContext)
+  const [searchParams] = useSearchParams()
   const moduleId = searchParams.get('module')
   // When mounting with a valid module in query params set selected module
   React.useEffect(() => {
@@ -36,23 +32,12 @@ export function ModuleDetails() {
   }
 
   const handleVerbClicked = (verb: Verb) => {
-    const tabId = [selectedModule.name, verb.verb?.name].join('.')
-    const index = tabs.findIndex(tab => tab.id === tabId)
-    const existingTab = index !== -1
-    let newTab: Tab | undefined
-    if (!existingTab) {
-      newTab = {
-        id: [selectedModule.name, verb.verb?.name].join('.'),
-        label: verb.verb?.name ?? 'Verb',
-        type: TabType.Verb,
-      }
-      setTabs([...tabs, newTab])
-    }
-    setActiveTab({id: tabId, type: TabType.Verb})
-    setSearchParams({
-      ...Object.fromEntries(searchParams),
-      [TabSearchParams.id]: newTab?.id ?? tabs[index].id,
-      [TabSearchParams.type]: TabType.Verb,
+    const verbId = [selectedModule.name, verb.verb?.name].join('.')
+    openTab({
+      id: verbId,
+      label: verb.verb?.name ?? 'Verb',
+      isClosable: true,
+      component: <VerbTab id={verbId} />,
     })
   }
 
