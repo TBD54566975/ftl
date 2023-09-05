@@ -79,6 +79,7 @@ deploy_echo_kotlin
 wait_for_deploys
 
 info "Calling echo"
+wait_for "echo to respond" 'ftl call echo.echo'
 message="$(ftl call echo.echo '{"name": "Alice"}' | jq -r .message)"
 [[ "$message" =~ "Hello, Alice! The time is " ]] || error "Unexpected response from echo: $message"
 info "Success!"
