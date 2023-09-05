@@ -1,6 +1,6 @@
 apiVersion: v2
 name: ftl
-description: A Helm chart for Kubernetes
+description: A Helm chart for FTL
 
 type: application
 
