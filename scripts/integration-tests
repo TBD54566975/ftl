@@ -60,11 +60,13 @@ deploy_echo_kotlin() (
 deploy_time_go() (
   info "Deploying time"
   cd examples
-  ftl-go deploy time
+  # Pull a supported platforms from the cluster.
+  platform="$(ftl status | jq -r '.runners[].labels | "\(.os)-\(.arch)"' | sort | uniq | head -1)"
+  ftl-go --os "${platform%-*}" --arch "${platform#*-}" deploy time
 )
 
 wait_for_deploys() {
-  wait_for "deployments to come up" '[ "$(ftl ps --json | jq -r .module | sort | paste -sd " " -)" == "echo time" ]'
+  wait_for "deployments to come up" 'ftl status | jq -r ".routes[].module" | sort | paste -sd " " - | grep -q "echo time"'
 }
 
 build_release
