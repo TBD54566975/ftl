@@ -42,7 +42,6 @@ class FTLClient(ftlEndpoint: String) {
   }
 
   fun getSchema(): Schema? {
-    val schemas = mutableListOf<PullSchemaResponse>()
     val client = grpcClient.create(ControllerServiceClient::class)
     return client.GetSchema().executeBlocking(GetSchemaRequest()).schema
   }
