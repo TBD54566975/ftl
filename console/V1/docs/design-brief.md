@@ -1,18 +1,23 @@
-## **FTL Console Design V1**
+# **FTL Console Design V1**
 
-### **Objective:**
+## **Use Cases:**
+
+1. Discoverability/learning - use case is that of a large multi-team multi-service deployment where you can't fit everything in your head - think Cash scale. Having a graph with all of the services, verbs, what they call, who calls them, what all the types are...invaluable.
+2. Day to day development/debugging - the timeline covers part of this use case. Digging into individual requests, scouring the logs, issuing test calls, and so on.
+
+## **Objective:**
 
 To design an intuitive graphical user interface, the FTL Console, that facilitates both the discoverability/learning and day-to-day development/debugging of large-scale systems developed using FTL.
 
-### **Overview:**
+## **Overview:**
 
 The Console is the central dashboard for users, structured hierarchically:
 
 1. **Controller:** The root interface of the dashboard.
 2. **Modules:** Sub-components within the controller, each with a unique name, representing specific functionalities or services.
-3. **Verbs:** Atomic units of code within each module, signifying specific actions or operations.
+3. **Verbs:** Atomic units of code within each module, signifying specific actions or operations. There are self-contained, horizontally scalable, automatically instrumented, deployable function that accepts a single value and returns a single value.
 
-### **Key Features:**
+## **Key Features:**
 
 1. **System Overview:**
 
@@ -45,7 +50,7 @@ The Console is the central dashboard for users, structured hierarchically:
    - **AI-driven Error Detection:** AI orchestrators can rollback, quarantine, or overscale misbehaving Verbs based on developer intent.
    - **Idempotency Tagging:** Endpoints can be tagged as idempotent if they are, ensuring that they can be safely retried without side effects.
 
-### **User Experience Goals:**
+## **User Experience Goals:**
 
 - **Intuitive Navigation:** Seamless navigation between controllers, modules, and verbs.
 - **Visual Feedback:** Graphical representations, such as flowcharts or graphs, to aid in understanding event flows and system architecture.
