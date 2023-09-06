@@ -25,12 +25,12 @@ class FTLPlugin : Plugin<Project> {
 
       extension.endpoint?.let {
         val client = FTLClient(it)
-        val schemas = client.pullSchemas()
+        val schema = client.getSchema() ?: throw RuntimeException("Failed to get schema")
         val outputDirectory = project.file(extension.outputDirectory)
         outputDirectory.deleteRecursively()
         outputDirectory.mkdir()
         extension.module.let { module ->
-          ModuleGenerator().run(schemas, outputDirectory, module)
+          ModuleGenerator().run(schema, outputDirectory, module)
         }
       }
 
