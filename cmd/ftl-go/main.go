@@ -36,15 +36,15 @@ import (
 
 type watchCmd struct{}
 
-func (w *watchCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, importRoot ImportRoot) error {
-	err := buildRemoteModules(ctx, client, c.Root, importRoot)
+func (w *watchCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
+	err := buildRemoteModules(ctx, client, bctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
-	wg.Go(func() error { return pullModules(ctx, client, c.Root, importRoot) })
-	wg.Go(func() error { return pushModules(ctx, client, c.Root, c.WatchFrequency, importRoot) })
+	wg.Go(func() error { return pullModules(ctx, client, bctx) })
+	wg.Go(func() error { return pushModules(ctx, client, c.WatchFrequency, bctx) })
 
 	if err := wg.Wait(); err != nil {
 		return errors.WithStack(err)
@@ -56,8 +56,8 @@ type deployCmd struct {
 	Name string `arg:"" required:"" help:"Name of module to deploy."`
 }
 
-func (d *deployCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, importRoot ImportRoot) error {
-	return errors.WithStack(pushModule(ctx, client, filepath.Join(c.Root, d.Name), importRoot))
+func (d *deployCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
+	return errors.WithStack(pushModule(ctx, client, filepath.Join(c.Root, d.Name), bctx))
 }
 
 type cli struct {
@@ -65,14 +65,24 @@ type cli struct {
 	FTL            string        `env:"FTL_ENDPOINT" help:"FTL endpoint to connect to." default:"http://localhost:8892"`
 	WatchFrequency time.Duration `short:"w" default:"500ms" help:"Frequency to watch for changes to local FTL modules."`
 	Root           string        `short:"r" type:"existingdir" help:"Root directory to sync FTL modules into." default:"."`
+	OS             string        `short:"o" help:"OS to build for." env:"GOOS"`
+	Arch           string        `short:"a" help:"Architecture to build for." env:"GOARCH"`
 
 	Watch  watchCmd  `cmd:"" default:"" help:"Watch for and rebuild local and remote FTL modules."`
 	Deploy deployCmd `cmd:"" help:"Deploy a local FTL module."`
 }
 
+type BuildContext struct {
+	OS   string
+	Arch string
+	Root string
+	ImportRoot
+}
+
 func main() {
 	c := &cli{}
 	kctx := kong.Parse(c)
+
 	client := rpc.Dial(ftlv1connect.NewControllerServiceClient, c.FTL, log.Warn)
 	logger := log.Configure(os.Stderr, c.LogConfig)
 	ctx := log.ContextWithLogger(context.Background(), logger)
@@ -80,7 +90,14 @@ func main() {
 	importRoot, err := findImportRoot(c.Root)
 	kctx.FatalIfErrorf(err)
 
-	kctx.Bind(importRoot)
+	bctx := BuildContext{
+		OS:         c.OS,
+		Arch:       c.Arch,
+		Root:       c.Root,
+		ImportRoot: importRoot,
+	}
+
+	kctx.Bind(bctx)
 	kctx.BindTo(ctx, (*context.Context)(nil))
 	kctx.BindTo(client, (*ftlv1connect.ControllerServiceClient)(nil))
 	err = kctx.Run()
@@ -124,9 +141,9 @@ func findImportRoot(root string) (importRoot ImportRoot, err error) {
 	}, nil
 }
 
-func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, root string, watchFrequency time.Duration, importRoot ImportRoot) error {
+func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, watchFrequency time.Duration, bctx BuildContext) error {
 	logger := log.FromContext(ctx)
-	entries, err := os.ReadDir(root)
+	entries, err := os.ReadDir(bctx.Root)
 	if err != nil {
 		return errors.Wrap(err, "failed to read root directory")
 	}
@@ -134,13 +151,13 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 		if !entry.IsDir() {
 			continue
 		}
-		dir := filepath.Join(root, entry.Name())
+		dir := filepath.Join(bctx.Root, entry.Name())
 		if _, err := os.Stat(filepath.Join(dir, "generated_ftl_module.go")); err == nil {
 			continue
 		}
 
 		logger.Infof("Pushing local FTL module %q", entry.Name())
-		err := pushModule(ctx, client, dir, importRoot)
+		err := pushModule(ctx, client, dir, bctx)
 		if err != nil {
 			if connect.CodeOf(err) == connect.CodeAlreadyExists {
 				logger.Infof("Module %q already exists, skipping", entry.Name())
@@ -150,7 +167,7 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 		}
 	}
 
-	logger.Infof("Watching %s for changes", root)
+	logger.Infof("Watching %s for changes", bctx.Root)
 	wg, ctx := errgroup.WithContext(ctx)
 	watch := watcher.New()
 	defer watch.Close()
@@ -164,15 +181,15 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 				if event.IsDir() ||
 					strings.Contains(event.Path, "/.") ||
 					strings.Contains(event.Path, "/generated_ftl_module.go") ||
-					!strings.HasPrefix(event.Path, root) ||
+					!strings.HasPrefix(event.Path, bctx.Root) ||
 					strings.Contains(event.Path, "/build/") {
 					continue
 				}
-				dir := strings.TrimPrefix(event.Path, root+"/")
-				dir = filepath.Join(root, strings.Split(dir, "/")[0])
+				dir := strings.TrimPrefix(event.Path, bctx.Root+"/")
+				dir = filepath.Join(bctx.Root, strings.Split(dir, "/")[0])
 				logger.Infof("Detected change to %s, pushing module", dir)
 
-				err := pushModule(ctx, client, dir, importRoot)
+				err := pushModule(ctx, client, dir, bctx)
 				if err != nil {
 					logger.Errorf(err, "failed to rebuild module")
 				}
@@ -182,7 +199,7 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 			}
 		}
 	})
-	err = watch.AddRecursive(root)
+	err = watch.AddRecursive(bctx.Root)
 	if err != nil {
 		return errors.Wrap(err, "failed to watch root directory")
 	}
@@ -190,7 +207,7 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 	return errors.WithStack(wg.Wait())
 }
 
-func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient, dir string, importRoot ImportRoot) error {
+func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient, dir string, bctx BuildContext) error {
 	logger := log.FromContext(ctx)
 
 	sch, err := compile.ExtractModuleSchema(dir)
@@ -203,13 +220,14 @@ func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient
 		return nil
 	}
 
-	tmpDir, err := generateBuildDir(dir, sch, importRoot)
+	tmpDir, err := generateBuildDir(dir, sch, bctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate build directory")
 	}
 
 	logger.Infof("Building module %s in %s", sch.Name, tmpDir)
 	cmd := exec.Command(ctx, log.Info, tmpDir, "go", "build", "-o", "main", "-trimpath", "-ldflags=-s -w -buildid=", ".")
+	cmd.Env = append(cmd.Environ(), "GOOS="+bctx.OS, "GOARCH="+bctx.Arch, "CGO_ENABLED=0")
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, "failed to build module")
 	}
@@ -317,7 +335,7 @@ func uploadArtefacts(ctx context.Context, client ftlv1connect.ControllerServiceC
 	return nil
 }
 
-func generateBuildDir(dir string, sch *schema.Module, importRoot ImportRoot) (string, error) {
+func generateBuildDir(dir string, sch *schema.Module, bctx BuildContext) (string, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get user cache directory")
@@ -328,20 +346,20 @@ func generateBuildDir(dir string, sch *schema.Module, importRoot ImportRoot) (st
 		return "", errors.Wrap(err, "failed to create build directory")
 	}
 	mainFile := filepath.Join(tmpDir, "main.go")
-	if err := generate.File(mainFile, importRoot.FTLBasePkg, generate.Main, sch); err != nil {
+	if err := generate.File(mainFile, bctx.FTLBasePkg, generate.Main, sch); err != nil {
 		return "", errors.Wrap(err, "failed to generate main.go")
 	}
 	goWorkFile := filepath.Join(tmpDir, "go.work")
-	if err := generate.File(goWorkFile, importRoot.FTLBasePkg, generate.GenerateGoWork, []string{
-		importRoot.GoModuleDir,
+	if err := generate.File(goWorkFile, bctx.FTLBasePkg, generate.GenerateGoWork, []string{
+		bctx.GoModuleDir,
 	}); err != nil {
 		return "", errors.Wrap(err, "failed to generate go.work")
 	}
 	goModFile := filepath.Join(tmpDir, "go.mod")
 	replace := map[string]string{
-		importRoot.Module.Module.Mod.Path: importRoot.GoModuleDir,
+		bctx.Module.Module.Mod.Path: bctx.GoModuleDir,
 	}
-	if err := generate.File(goModFile, importRoot.FTLBasePkg, generate.GenerateGoMod, generate.GoModConfig{
+	if err := generate.File(goModFile, bctx.FTLBasePkg, generate.GenerateGoMod, generate.GoModConfig{
 		Replace: replace,
 	}); err != nil {
 		return "", errors.Wrap(err, "failed to generate go.mod")
@@ -358,14 +376,14 @@ func hasVerbs(sch *schema.Module) bool {
 	return false
 }
 
-func pullModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, root string, importRoot ImportRoot) error {
+func pullModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
 	resp, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 	if err != nil {
 		return errors.Wrap(err, "failed to pull schema")
 	}
 	for resp.Receive() {
 		msg := resp.Msg()
-		err = generateModuleFromSchema(ctx, msg.Schema, root, importRoot)
+		err = generateModuleFromSchema(ctx, msg.Schema, bctx)
 		if err != nil {
 			return errors.Wrap(err, "failed to sync module")
 		}
@@ -373,13 +391,13 @@ func pullModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 	return errors.Wrap(resp.Err(), "failed to pull schema")
 }
 
-func buildRemoteModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, root string, importRoot ImportRoot) error {
+func buildRemoteModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
 	fullSchema, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve schema")
 	}
 	for _, module := range fullSchema.Msg.Schema.Modules {
-		err := generateModuleFromSchema(ctx, module, root, importRoot)
+		err := generateModuleFromSchema(ctx, module, bctx)
 		if err != nil {
 			return errors.Wrap(err, "failed to generate module")
 		}
@@ -387,24 +405,24 @@ func buildRemoteModules(ctx context.Context, client ftlv1connect.ControllerServi
 	return err
 }
 
-func generateModuleFromSchema(ctx context.Context, msg *pschema.Module, root string, importRoot ImportRoot) error {
+func generateModuleFromSchema(ctx context.Context, msg *pschema.Module, bctx BuildContext) error {
 	sch, err := schema.ModuleFromProto(msg)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse schema")
 	}
-	dir := filepath.Join(root, sch.Name)
+	dir := filepath.Join(bctx.Root, sch.Name)
 	if _, err := os.Stat(dir); err == nil {
 		if _, err = os.Stat(filepath.Join(dir, "generated_ftl_module.go")); errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 	}
-	if err := generateModule(ctx, dir, sch, importRoot); err != nil {
+	if err := generateModule(ctx, dir, sch, bctx); err != nil {
 		return errors.Wrap(err, "failed to generate module")
 	}
 	return nil
 }
 
-func generateModule(ctx context.Context, dir string, sch *schema.Module, importRoot ImportRoot) error {
+func generateModule(ctx context.Context, dir string, sch *schema.Module, bctx BuildContext) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Generating stubs for FTL module %s", sch.Name)
 	err := os.MkdirAll(dir, 0750)
@@ -417,7 +435,7 @@ func generateModule(ctx context.Context, dir string, sch *schema.Module, importR
 	}
 	defer w.Close() //nolint:gosec
 	defer os.Remove(w.Name())
-	err = generate.ExternalModule(w, sch, importRoot.FTLBasePkg)
+	err = generate.ExternalModule(w, sch, bctx.FTLBasePkg)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate stubs")
 	}

@@ -133,7 +133,7 @@ func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
 	go runWithRetries(ctx, time.Second*10, time.Second*20, svc.reapStaleControllers)
 	go runWithRetries(ctx, config.RunnerTimeout, time.Second*10, svc.reapStaleRunners)
 	go runWithRetries(ctx, config.DeploymentReservationTimeout, time.Second*20, svc.releaseExpiredReservations)
-	go runWithRetries(ctx, config.RunnerTimeout, time.Second*10, svc.reconcileDeployments)
+	go runWithRetries(ctx, time.Second*1, time.Second*5, svc.reconcileDeployments)
 	return svc, nil
 }
 
