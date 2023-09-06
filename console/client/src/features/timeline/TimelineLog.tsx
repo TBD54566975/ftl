@@ -1,4 +1,3 @@
-import {LogEntry} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import {formatTimestamp} from '../../utils/date.utils'
 import {classNames} from '../../utils/react.utils'
 import {
@@ -7,50 +6,60 @@ import {
   panelColor,
   textColor,
 } from '../../utils/style.utils'
+import {DocumentTextIcon} from '@heroicons/react/24/outline'
+import {AnnotatedTimelineResponse} from './Timeline.tsx'
 
 type Props = {
-  log: LogEntry
+  entry: AnnotatedTimelineResponse
   selected?: boolean
 }
 
-export const TimelineLog: React.FC<Props> = ({log, selected}) => {
+export const TimelineLog: React.FC<Props> = ({entry, selected}) => {
   return (
     <>
       <div
-        className={`relative flex h-6 w-6 flex-none items-center justify-center ${panelColor}`}
+        className={`relative flex w-6 flex-none items-top justify-center ${panelColor}`}
       >
-        <span
-          className={classNames(
-            `${logLevelBadge[log.logLevel]}`,
-            'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600'
-          )}
-        >
-          {logLevelText[log.logLevel]}
-        </span>
+        <DocumentTextIcon
+          className={`h-6 w-6 text-indigo-500`}
+          aria-hidden='true'
+        />
       </div>
-      <div
-        className={classNames(
-          `relative flex gap-x-4 flex-auto w-full max-w-full px-1 py-0.5`,
-          selected && 'bg-indigo-600 rounded-md'
-        )}
+      <ul
+        role='list'
+        className='space-y-1'
       >
-        <div
-          className={`flex-auto text-xs leading-5 ${
-            selected ? 'text-white' : textColor
-          } overflow-hidden overflow-ellipsis w-full max-w-full`}
-        >
-          <span>{log.message}</span>
-        </div>
-
-        <time
-          dateTime={formatTimestamp(log.timeStamp)}
-          className={`flex-none text-xs leading-5 ${
-            selected ? 'text-gray-50' : 'text-gray-500'
-          }`}
-        >
-          {formatTimestamp(log.timeStamp)}
-        </time>
-      </div>
+        {entry.logs.map(log => (
+          <li
+            key={entry.id.toString()}
+            className='relative flex gap-x-2'
+          >
+            <span
+              className={classNames(
+                `${logLevelBadge[log.logLevel]}`,
+                'inline-flex items-center justify-center rounded-md px-2 text-xs font-medium text-gray-600 w-12'
+              )}
+            >
+              {logLevelText[log.logLevel]}
+            </span>
+            <pre
+              className={`flex-auto text-xs leading-5 ${
+                selected ? 'text-white' : textColor
+              } overflow-clip overflow-ellipsis w-full max-w-full`}
+            >
+              {log.message}
+            </pre>
+            <time
+              dateTime={formatTimestamp(log.timeStamp)}
+              className={`flex-none text-xs leading-5 ${
+                selected ? 'text-gray-50' : 'text-gray-500'
+              }`}
+            >
+              {formatTimestamp(log.timeStamp)}
+            </time>
+          </li>
+        ))}
+      </ul>
     </>
   )
 }
