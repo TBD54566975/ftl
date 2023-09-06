@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+import Editor, {Monaco} from '@monaco-editor/react'
+import type {JSONSchema4, JSONSchema6, JSONSchema7} from 'json-schema'
 import {JSONSchemaFaker} from 'json-schema-faker'
 import React from 'react'
 import {CodeBlock} from '../../components/CodeBlock'
@@ -7,9 +9,8 @@ import {useClient} from '../../hooks/use-client'
 import {Module, Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import {VerbService} from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import {VerbRef} from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import Editor, {Monaco} from '@monaco-editor/react'
 import {useDarkMode} from '../../providers/dark-mode-provider'
-import type {JSONSchema4, JSONSchema6, JSONSchema7} from 'json-schema'
+import {TabsContext} from '../../providers/tabs-provider'
 
 export type Schema = JSONSchema4 | JSONSchema6 | JSONSchema7
 
@@ -18,9 +19,10 @@ type Props = {
   verb?: Verb
 }
 
-export const VerbForm: React.FC<Props> = ({module, verb}) => {
+export const VerbForm: React.FC<Props> = React.memo(({module, verb}) => {
   const client = useClient(VerbService)
   const {isDarkMode} = useDarkMode()
+  const {activeTabId} = React.useContext(TabsContext)
   const [editorText, setEditorText] = React.useState<string>('')
   const [response, setResponse] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
@@ -39,7 +41,8 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
         JSON.stringify(JSONSchemaFaker.generate(verbSchema), null, 2)
       )
     }
-  }, [])
+  }, [module, verb])
+
   function handleEditorChange(value: string | undefined, _) {
     setEditorText(value ?? '')
   }
@@ -86,7 +89,7 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
           {schema, uri: 'http://myserver/foo-schema.json', fileMatch: ['*']},
         ],
       })
-  }, [monaco, schema])
+  }, [monaco, schema, activeTabId])
 
   return (
     <>
@@ -96,10 +99,12 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
       >
         <div className='border border-gray-200 dark:border-slate-800 rounded-sm'>
           <Editor
+            key={[module?.name, verb?.verb?.name].join('.')}
             height='35vh'
             theme={`${isDarkMode ? 'vs-dark' : 'light'}`}
             defaultLanguage='json'
-            defaultValue={editorText}
+            path={[module?.name, verb?.verb?.name].join('.')}
+            value={editorText}
             options={{
               lineNumbers: 'off',
               scrollBeyondLastLine: false,
@@ -134,4 +139,4 @@ export const VerbForm: React.FC<Props> = ({module, verb}) => {
       )}
     </>
   )
-}
+})
