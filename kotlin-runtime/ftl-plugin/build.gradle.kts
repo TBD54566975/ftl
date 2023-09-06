@@ -1,18 +1,7 @@
-buildscript {
-  dependencies {
-    classpath("com.squareup.wire:wire-gradle-plugin:4.7.2")
-  }
-}
-
 plugins {
-  kotlin("jvm") version "1.9.0"
+  kotlin("jvm")
   id("java-gradle-plugin")
   id("com.squareup.wire") version "4.7.2"
-}
-
-repositories {
-  // Use Maven Central for resolving dependencies.
-  mavenCentral()
 }
 
 group = "xyz.block"

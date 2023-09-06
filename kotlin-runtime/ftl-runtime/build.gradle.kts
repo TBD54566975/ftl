@@ -3,7 +3,7 @@ version = "0.1.0-SNAPSHOT"
 
 plugins {
   id("com.squareup.wire") version "4.7.2"
-  kotlin("jvm") version "1.9.0"
+  kotlin("jvm")
   // Apply the java-library plugin for API and implementation separation.
   `java-library`
 }
