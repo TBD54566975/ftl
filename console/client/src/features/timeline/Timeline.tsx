@@ -130,7 +130,9 @@ export const Timeline = () => {
 
       return isActive
     })
-    .map(entry => [{...entry, logs: []} as unknown as AnnotatedTimelineResponse])
+    .map(entry => [
+      {...entry, logs: []} as unknown as AnnotatedTimelineResponse,
+    ])
 
   return (
     <div className='m-0'>
