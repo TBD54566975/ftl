@@ -7,11 +7,12 @@ import {SidePanelContext} from '../../providers/side-panel-provider.tsx'
 import {classNames} from '../../utils/react.utils.ts'
 import {TimelineCall} from './TimelineCall.tsx'
 import {TimelineDeployment} from './TimelineDeployment.tsx'
-import {TimelineFilterBar} from './TimelineFilterBar.tsx'
 import {TimelineLog} from './TimelineLog.tsx'
 import {TimelineCallDetails} from './details/TimelineCallDetails.tsx'
 import {TimelineDeploymentDetails} from './details/TimelineDeploymentDetails.tsx'
 import {TimelineLogDetails} from './details/TimelineLogDetails.tsx'
+import {TIME_RANGES} from './filters/TimeFilter.tsx'
+import {TimelineFilterBar} from './filters/TimelineFilterBar.tsx'
 
 export const Timeline = () => {
   const client = useClient(ConsoleService)
@@ -27,13 +28,16 @@ export const Timeline = () => {
   const [selectedLogLevels, setSelectedLogLevels] = React.useState<number[]>([
     1, 5, 9, 13, 17,
   ])
+  const [selectedTimeRange, setSelectedTimeRange] = React.useState('1h')
 
   React.useEffect(() => {
     const abortController = new AbortController()
 
     async function streamTimeline() {
-      const afterTime = new Date()
-      afterTime.setHours(afterTime.getHours() - 1)
+      setEntries(_ => [])
+      const afterTime = new Date(
+        Date.now() - TIME_RANGES[selectedTimeRange].value
+      )
 
       for await (const response of client.streamTimeline(
         {afterTime: Timestamp.fromDate(afterTime)},
@@ -49,7 +53,7 @@ export const Timeline = () => {
     return () => {
       abortController.abort()
     }
-  }, [client])
+  }, [client, selectedTimeRange])
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -111,6 +115,10 @@ export const Timeline = () => {
     }
   }
 
+  const handleTimeRangeChanged = (key: string) => {
+    setSelectedTimeRange(key)
+  }
+
   const filteredEntries = entries.filter(entry => {
     const isActive = selectedEventTypes.includes(entry.entry?.case ?? '')
     if (entry.entry.case === 'log') {
@@ -127,6 +135,8 @@ export const Timeline = () => {
         onEventTypesChanged={handleEventTypesChanged}
         selectedLogLevels={selectedLogLevels}
         onLogLevelsChanged={handleLogLevelsChanged}
+        selectedTimeRange={selectedTimeRange}
+        onSelectedTimeRangeChanged={handleTimeRangeChanged}
       />
 
       <ul
