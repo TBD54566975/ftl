@@ -21,9 +21,9 @@ RUN go mod download -x
 
 # Build runtime
 COPY kotlin-runtime /src/kotlin-runtime
+COPY pom.xml /src/pom.xml
 COPY protos /src/protos
-RUN cd kotlin-runtime/ftl-runtime && gradle --info jar
-
+RUN mvn -pl :ftl-runtime package
 
 # Build runner
 COPY . /src/
@@ -37,7 +37,7 @@ WORKDIR /root/
 
 ENV PATH="/root/jre/bin:$PATH"
 COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
-COPY --from=builder /src/kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar template/ftl/jars/
+COPY --from=builder /src/kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT-jar-with-dependencies.jar template/ftl/jars/ftl-runtime.jar
 COPY --from=builder /src/build/release/ftl-runner .
 COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments

@@ -32,6 +32,10 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts
 RELEASE_OUT = build/release/ftl build/release/ftl-controller build/release/ftl-runner
 
+KT_RUNTIME_IN = $(shell find kotlin-runtime/ftl-runtime/src -name '*.kt')
+KT_MVN_OUT = kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT-jar-with-dependencies.jar
+KT_RUNTIME_OUT = build/template/ftl/jars/ftl-runtime.jar
+
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -44,8 +48,7 @@ all: generate release ## Generate source and build binaries.
 .PHONY: clean
 clean: ## Clean build artifacts.
 	rm -rf build $(SQLC_OUT) $(SCHEMA_OUT) $(PROTO_OUT) $(COMMON_LOG_OUT) $(RELEASE_OUT)
-	cd kotlin-runtime/ftl-runtime && gradle clean
-	cd kotlin-runtime/ftl-plugin && gradle clean
+	mvn clean
 
 .PHONY: release
 release: build/release/ftl-controller build/release/ftl-runner build/release/ftl ## Build release binaries.
@@ -53,8 +56,14 @@ release: build/release/ftl-controller build/release/ftl-runner build/release/ftl
 build/release/%: console/client/dist/index.html
 	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$(shell basename $@)
 
-kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar:
-	cd kotlin-runtime/ftl-runtime && gradle jar
+$(KT_MVN_OUT): $(KT_RUNTIME_IN)
+	mvn -pl :ftl-runtime clean package
+
+$(KT_RUNTIME_OUT): $(KT_MVN_OUT)
+	mkdir -p build/template/ftl/jars
+	cp $< $@
+
+
 
 console/client/dist/index.html:
 	cd console/client && npm install && npm run build

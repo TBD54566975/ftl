@@ -5,9 +5,7 @@ top="$(git rev-parse --show-toplevel)"
 cd "${top}"
 
 prepare_template() (
-  mkdir -p build/template/ftl/jars
-  (cd "${top}/kotlin-runtime/ftl-runtime" && gradle jar)
-  cp "${top}/kotlin-runtime/ftl-runtime/build/libs/ftl-runtime.jar" build/template/ftl/jars
+  make build/template/ftl/jars/ftl-runtime.jar
 )
 
 prepare_template

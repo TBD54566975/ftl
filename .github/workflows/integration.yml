@@ -17,17 +17,9 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go
       - name: Build Kotlin Runtime
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build
-          build-root-directory: kotlin-runtime/ftl-runtime
-          gradle-executable: ${{ github.workspace }}/bin/gradle
-      - name: Build Kotlin Plugin
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build
-          build-root-directory: kotlin-runtime/ftl-plugin
-          gradle-executable: ${{ github.workspace }}/bin/gradle
+        run: mvn -pl :ftl-runtime package
+      - name: Build Kotlin Generator
+        run: mvn -pl :ftl-generator package
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Integration tests

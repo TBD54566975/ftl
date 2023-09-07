@@ -1,0 +1,23 @@
+package xyz.block.ftl.generator
+
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import java.io.File
+
+class Main : CliktCommand() {
+  val endpoint by option(help = "FTL endpoint.").required()
+  val dest by option(help = "Destination directory for generated code.").required()
+  val module by option(help = "The FTL module name we're working on.").required()
+
+  override fun run() {
+    val client = FTLClient(endpoint)
+    val schema = client.getSchema()!!
+    val outputDirectory = File(dest)
+    outputDirectory.deleteRecursively()
+    val gen = ModuleGenerator()
+    gen.run(schema, outputDirectory, module)
+  }
+}
+
+fun main(args: Array<String>) = Main().main(args)

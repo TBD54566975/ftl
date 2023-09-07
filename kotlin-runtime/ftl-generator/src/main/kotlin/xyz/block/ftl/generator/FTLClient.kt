@@ -1,4 +1,4 @@
-package xyz.block.ftl.gradle
+package xyz.block.ftl.generator
 
 import com.squareup.wire.GrpcClient
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -13,7 +13,7 @@ import xyz.block.ftl.v1.schema.Schema
 import java.net.ConnectException
 import java.time.Duration
 
-class FTLClient(ftlEndpoint: String) {
+internal class FTLClient(ftlEndpoint: String) {
   private var grpcClient: GrpcClient
   private lateinit var sendSchemaChannel: SendChannel<PullSchemaRequest>
   private lateinit var receiveSchemaChannel: ReceiveChannel<PullSchemaResponse>
