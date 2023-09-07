@@ -18,7 +18,6 @@ export const environments = {
 }
 
 export const logLevelText = {
-  0: 'Default',
   1: 'Trace',
   5: 'Debug',
   9: 'Info',
@@ -27,7 +26,6 @@ export const logLevelText = {
 }
 
 export const logLevelBadge = {
-  0: 'text-gray-400 bg-gray-400/10 dark:text-gray-300 dark:bg-gray-700/10',
   1: 'text-blue-350 bg-blue-300/10 dark:text-blue-300 dark:bg-blue-700/10',
   5: 'text-blue-350 bg-blue-400/10 dark:text-blue-300 dark:bg-blue-800/10',
   9: 'text-green-600 bg-green-400/30 dark:text-green-300 dark:bg-green-700/10',

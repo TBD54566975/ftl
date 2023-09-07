@@ -3,7 +3,7 @@ import {ChevronDownIcon} from '@heroicons/react/20/solid'
 import {Fragment} from 'react'
 import {logLevelText, panelColor, textColor} from '../../utils/style.utils'
 
-const logLevels = [0, 1, 5, 9, 13, 17]
+const logLevels = [1, 5, 9, 13, 17]
 
 type Props = {
   selectedEventTypes: string[]
@@ -108,7 +108,7 @@ export const TimelineFilterBar = ({
                           name={`log-level-${level}`}
                           defaultValue={level}
                           type='checkbox'
-                          className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600'
+                          className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
                           checked={selectedLogLevels.includes(level)}
                           onChange={e =>
                             onLogLevelsChanged(level, e.target.checked)

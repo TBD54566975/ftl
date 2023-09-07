@@ -65,7 +65,7 @@ export function ModuleDetails() {
               onClick={() => {
                 handleVerbClicked(verb)
               }}
-              className='rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white text-center
+              className='rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white text-center cursor-pointer
             shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
             >
               {verb.verb?.name}
