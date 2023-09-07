@@ -79,6 +79,7 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
               <tr
                 key={index}
                 onClick={() => handleClick(call)}
+                className='cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800'
               >
                 <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                   <div className='flex gap-x-3'>

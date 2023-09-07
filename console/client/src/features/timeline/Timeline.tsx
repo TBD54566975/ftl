@@ -25,7 +25,7 @@ export const Timeline = () => {
     'deployment',
   ])
   const [selectedLogLevels, setSelectedLogLevels] = React.useState<number[]>([
-    0, 1, 5, 9, 13, 17,
+    1, 5, 9, 13, 17,
   ])
 
   React.useEffect(() => {
@@ -136,7 +136,7 @@ export const Timeline = () => {
         {filteredEntries.map((entry, index) => (
           <li
             key={entry.id.toString()}
-            className='relative flex gap-x-4'
+            className='relative flex gap-x-4 cursor-pointer'
             onClick={() => handleEntryClicked(entry)}
           >
             <div

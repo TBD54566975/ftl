@@ -88,7 +88,7 @@ export const Tabs = () => {
               return (
                 <TabComponent
                   key={tab.id}
-                  className='flex items-center mr-1 relative'
+                  className='flex items-center mr-1 relative cursor-pointer'
                   as='span'
                 >
                   <span
