@@ -4,9 +4,11 @@ import {useClient} from '../../hooks/use-client.ts'
 import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import {StreamTimelineResponse} from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import {SidePanelContext} from '../../providers/side-panel-provider.tsx'
-import {classNames} from '../../utils/react.utils.ts'
+import {formatTimestampShort} from '../../utils/date.utils.ts'
+import {panelColor} from '../../utils/style.utils.ts'
 import {TimelineCall} from './TimelineCall.tsx'
 import {TimelineDeployment} from './TimelineDeployment.tsx'
+import {TimelineIcon} from './TimelineIcon.tsx'
 import {TimelineLog} from './TimelineLog.tsx'
 import {TimelineCallDetails} from './details/TimelineCallDetails.tsx'
 import {TimelineDeploymentDetails} from './details/TimelineDeploymentDetails.tsx'
@@ -138,57 +140,57 @@ export const Timeline = () => {
         selectedTimeRange={selectedTimeRange}
         onSelectedTimeRangeChanged={handleTimeRangeChanged}
       />
-
-      <ul
-        role='list'
-        className='space-y-4 p-4'
-      >
-        {filteredEntries.map((entry, index) => (
-          <li
-            key={entry.id.toString()}
-            className='relative flex gap-x-4 cursor-pointer'
-            onClick={() => handleEntryClicked(entry)}
-          >
-            <div
-              className={classNames(
-                index === filteredEntries.length - 1 ? 'h-6' : '-bottom-6',
-                'absolute left-0 top-0 flex w-6 justify-center'
-              )}
-            >
-              <div className='w-px bg-gray-200 dark:bg-gray-600' />
-            </div>
-
-            {(() => {
-              switch (entry.entry?.case) {
-                case 'call':
-                  return (
-                    <TimelineCall
-                      call={entry.entry.value}
-                      selected={selectedEntry === entry}
-                    />
-                  )
-                case 'log':
-                  return (
-                    <TimelineLog
-                      log={entry.entry.value}
-                      selected={selectedEntry === entry}
-                    />
-                  )
-                case 'deployment':
-                  return (
-                    <TimelineDeployment
-                      deployment={entry.entry.value}
-                      timestamp={entry.timeStamp}
-                      selected={selectedEntry === entry}
-                    />
-                  )
-                default:
-                  return <></>
-              }
-            })()}
-          </li>
-        ))}
-      </ul>
+      <div className='overflow-x-hidden'>
+        <table
+          className={`w-full table-fixed text-gray-800 dark:text-gray-300`}
+        >
+          <thead>
+            <tr className='flex  text-xs font-semibold'>
+              <th className='p-1 text-left border-b w-8 border-gray-100 dark:border-slate-700 flex-none'></th>
+              <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>
+                Date
+              </th>
+              <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-grow flex-shrink'>
+                Content
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredEntries.map(entry => (
+              <tr
+                key={entry.id.toString()}
+                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-mono ${
+                  selectedEntry?.id === entry.id
+                    ? 'bg-indigo-50 dark:bg-slate-800'
+                    : panelColor
+                } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-800`}
+                onClick={() => handleEntryClicked(entry)}
+              >
+                <td className='w-8 flex-none flex items-center justify-center'>
+                  <TimelineIcon entry={entry} />
+                </td>
+                <td className='p-1 w-40 items-center flex-none text-gray-500 dark:text-gray-400'>
+                  {formatTimestampShort(entry.timeStamp)}
+                </td>
+                <td className='p-1 flex-grow truncate'>
+                  {(() => {
+                    switch (entry.entry?.case) {
+                      case 'call':
+                        return <TimelineCall call={entry.entry.value} />
+                      case 'log':
+                        return <TimelineLog log={entry.entry.value} />
+                      case 'deployment':
+                        return (
+                          <TimelineDeployment deployment={entry.entry.value} />
+                        )
+                    }
+                  })()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

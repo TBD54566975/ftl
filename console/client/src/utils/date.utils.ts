@@ -20,13 +20,11 @@ export function formatTimestampShort(timestamp?: Timestamp): string {
   const month = date.toLocaleString('default', {month: 'short'})
 
   const formattedDate =
-    `${month} ${String(date.getDate()).padStart(2, '0')}, ` +
-    `${date.getHours() % 12 || 12}:${String(date.getMinutes()).padStart(
-      2,
-      '0'
-    )}:${String(date.getSeconds()).padStart(2, '0')}` +
-    `.${String(date.getMilliseconds()).padStart(3, '0')} ` +
-    `${date.getHours() < 12 ? 'AM' : 'PM'}`
+    `${month} ${String(date.getDate()).padStart(2, '0')} ` +
+    `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}:${String(
+      date.getSeconds()
+    ).padStart(2, '0')}` +
+    `.${String(date.getMilliseconds()).padStart(3, '0')}`
 
   return formattedDate
 }
