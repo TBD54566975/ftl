@@ -43,18 +43,17 @@ start_cluster() {
 
 prepare_runner() (
   info "Preparing runner template directory"
+  mvn -pl :ftl-generator install
   mkdir -p build/template/ftl/jars build/runner0 build/runner1
-  test -r build/libs/ftl-runtime.jar && return 0
-  cd kotlin-runtime/ftl-runtime
-  gradle jar
-  cp build/libs/ftl-runtime.jar ../../build/template/ftl/jars
+  test -r build/template/ftl/jars/ftl-runtime.jar && return 0
+  make build/template/ftl/jars/ftl-runtime.jar
 )
 
 deploy_echo_kotlin() (
   info "Deploying echo-kotlin"
   cd examples/echo-kotlin
-  gradle build
-  ftl deploy ./build
+  mvn compile
+  ftl deploy target
 )
 
 deploy_time_go() (

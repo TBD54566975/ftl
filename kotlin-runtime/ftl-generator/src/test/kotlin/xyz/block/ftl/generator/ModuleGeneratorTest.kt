@@ -1,8 +1,7 @@
-package xyz.block.ftl.gradle
+package xyz.block.ftl.generator
 
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import xyz.block.ftl.v1.PullSchemaResponse
 import xyz.block.ftl.v1.schema.Array
 import xyz.block.ftl.v1.schema.Bool
 import xyz.block.ftl.v1.schema.Data

@@ -11,3 +11,4 @@ reflex.conf
 /logs/
 node_modules
 *.tsbuildinfo
+generated_ftl_module.go

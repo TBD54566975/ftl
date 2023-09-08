@@ -80,3 +80,21 @@ jobs:
           docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA
           docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:$version
           docker push -a ghcr.io/tbd54566975/ftl-controller
+  publish:
+    name: Publish to Maven
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Set version
+        run: mvn --batch-mode versions:set -DnewVersion=$(git describe --tags --abbrev=0 | cut -c2-) -DprocessAllModules -DgenerateBackupPoms=false
+      - name: Publish packages
+        run: mvn --batch-mode deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
