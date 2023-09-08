@@ -2,57 +2,101 @@
 
 ## **Use Cases:**
 
-1. Discoverability/learning - use case is that of a large multi-team multi-service deployment where you can't fit everything in your head - think Cash scale. Having a graph with all of the services, verbs, what they call, who calls them, what all the types are...invaluable.
-2. Day to day development/debugging - the timeline covers part of this use case. Digging into individual requests, scouring the logs, issuing test calls, and so on.
+1. **Discoverability/learning:** Imagine a large multi-team multi-service deployment where you can't fit everything in your head - think Cash scale. What we need then is to have a visualization with all of the services, verbs, what they call, who calls them, what all the types are.
+2. **Day to day development/debugging:** - We also need to be able to dig into individual requests, scouring the logs, issuing test calls, and so on.
 
 ## **Objective:**
 
-To design an intuitive graphical user interface, the FTL Console, that facilitates both the discoverability/learning and day-to-day development/debugging of large-scale systems developed using FTL.
+We want to design an intuitive graphical user interface, the FTL Console, that facilitates both the discoverability/learning and day-to-day development/debugging of large-scale systems developed using FTL.
 
 ## **Overview:**
 
-The Console is the central dashboard for users, structured hierarchically:
+The Console is our central dashboard, structured hierarchically:
 
 1. **Controller:** The root interface of the dashboard.
 2. **Modules:** Sub-components within the controller, each with a unique name, representing specific functionalities or services.
-3. **Verbs:** Atomic units of code within each module, signifying specific actions or operations. There are self-contained, horizontally scalable, automatically instrumented, deployable function that accepts a single value and returns a single value.
-
-## **Key Features:**
-
-1. **System Overview:**
-
-   - **Architecture Map:** An interactive bird's-eye view of the entire system, allowing users to understand the overall structure and dive deeper into specific modules or verbs.
-   - **Interactive Elements:** Tooltips or info-bubbles providing brief descriptions or annotations when hovering over specific elements in the visual representation.
-
-2. **Test Call Management:**
-
-   - **Save & Manage Test Calls:** Users can save multiple test calls for future reference and switch between them easily.
-   - **Resend Test Calls:** In case of errors, users can quickly resend the call with the observed signature.
-
-3. **Log Management:**
-
-   - **Filter & Search Logs:** Advanced filtering options and a search functionality to quickly locate specific events or anomalies.
-   - **Trace Event Flow:** Visual representation of event flow through Verbs and modules, highlighting interactions and dependencies.
-   - **Surface Errors:** Prominent display of errors occurring within Verbs and modules.
-
-4. **Test Scenarios:**
-
-   - **Create & Save Scenarios:** Define specific test scenarios based on requirements and save them for future use.
-   - **Automatic Scenario Execution:** As users modify module code, associated test scenarios are automatically executed, providing real-time feedback.
-
-5. **Request Inspector:**
-
-   - **Detailed View:** Allows users to delve into individual requests, viewing headers, payloads, and responses in detail.
-   - **Real-time Debugging Console:** Provides live feedback as users issue test calls, highlighting any errors or discrepancies.
-
-6. **Fault Tolerance & Error Highlighting:**
-   - **Annotation-driven Recovery:** Recover from errors by adjusting the Verb's annotation, allowing for automated retries and backoffs.
-   - **AI-driven Error Detection:** AI orchestrators can rollback, quarantine, or overscale misbehaving Verbs based on developer intent.
-   - **Idempotency Tagging:** Endpoints can be tagged as idempotent if they are, ensuring that they can be safely retried without side effects.
+3. **Verbs:** Atomic units of code within each module, signifying specific actions or operations. There are self-contained, horizontally scalable, automatically instrumented, deployable function that accepts a single value and returns a single value. It is to these we issue our test calls.
 
 ## **User Experience Goals:**
 
-- **Intuitive Navigation:** Seamless navigation between controllers, modules, and verbs.
+- **Intuitive Navigation:** Seamless navigation between a controller's modules and verbs.
 - **Visual Feedback:** Graphical representations, such as flowcharts or graphs, to aid in understanding event flows and system architecture.
 - **Interactive Testing:** Modify test calls, apply different scenarios, and observe results in real-time.
 - **Error Highlighting:** Immediate and prominent display of any errors or issues for quick identification and resolution.
+
+## **Features:**
+
+1.  **Timescale Management:**
+
+    1. **Time Scrubbing:** We can move back and forth through time to see how events evolve in the console. This is particularly useful to track events across modules.
+    2. **Broadcast Selected Timescale**: When we scrub the timeline this feature sends messages to other **features** indicating the ranges of time to display information for.
+    3. **Surface Errors:** For search param based errors it broadcast the errors to subscribing features.
+
+2.  **Query Management:**
+
+    1. **Send Search:** We can submit a search query based on keywords, event IDs, module names, log & log levels, calls, deployments, or specific error messages.
+    2. **Chat Dialog:** When using this feature we can enter a chat dialog flow shifting from search mode. In this mode the dialog can answer questions and make subsequent queries.
+    3. **Broadcast Queries**: When we make queries this feature sends messages to other **features** indicating the query parameters.
+
+3.  **Test Call Management:**
+
+    1. **Send Test Call:** We can input or select the necessary parameters for a test call and send it. This interface also displays the expected schema for the selected test call.
+    2. **Save Test Call:** We can also save a test call with a unique name and do the following actions to it:
+       1. **Rename**
+       2. **Delete**
+       3. **Update**
+       4. **Copy as**
+       5. **Add pass or fail assertion:** When we do this this will generate a test case that will run whenever the module is modified or deployed.
+    3. **Surface Errors:** For calls without an fail assertion broadcast the nature of that error to subscribing features.
+    4. **Annotation adjustment:** When working on a fork we can change the annotation from the interface
+
+4.  **System Overview:**
+    1. **Architecture information:** An interactive bird's-eye view of the entire system, allowing developers to understand the overall structure and dive deeper into specific modules or verbs.
+    2. **Layer-Sequence Perspective (Middle-Out):**
+       1. **Layer Visualization:** Picture each module on its own layer, similar to tracks in a video editing software. On this layered visualization we draw lines or arrows to signify interactions between modules. These connections akin to those in a gantt chart represent what modules have verbs that call other modules.
+    3. **Display filtered/sorted modules:**
+       1. **Alphabetic ascending and descending order**
+       2. **Functional flow:** Allows us to understand which modules and verbs get triggered in the by a particular call. This includes highlighting errors resulting from a call.
+       3. **Fork View (Functional flow variant):** Functional flow view but visibly indicates to to us that we are working in a branch and not against a production production environment.
+       4. **Historical Evolution:** Displays which modules have had schema changes over the selected period of time.
+       5. **Time Range:** Displays only modules deployed and active for a given time scale
+    4. **Surface Errors:** The system overview interface uses bold, colors, or flashing icons to make errored verbs stand out prominently. For search param based errors it broadcast the errors to subscribing features.
+    5. **Idempotency Tagging:** Verbs can be tagged as idempotent if they are, ensuring that they can be safely retried without side effects.
+5.  **Log Management:**
+
+    1. **Display events:** We are presented a timeline interface of logged **events:**
+       1. **Deployments**
+       2. **Logs:** We have 5 log levels that are inclusive of the levels below them:
+          1. Trace
+          2. Debug
+          3. Info
+          4. Warn
+          5. Error
+       3. **Calls**
+    2. **Display filtered logs:** This interface can display to us events based on log levels and other event **parameters**
+    3. **Pagination:** We can easily navigate through large amounts of timeline entries via a paginated view and with the ability to adjust the pagination entry count.
+    4. **Surface Errors:** The interface uses bold, colors, or flashing icons to make error logs stand out prominently. For search param based errors it broadcast the errors to subscribing features.
+
+6.  **Error Management:**
+
+    1. **Subscribes to Error broadcasts:** Subscribes to features that broadcast errors.
+    2. **Display Notifications:**
+       1. **Improper URL:** When we input a improper URL we will receive a notification.
+       2. **Test Call:** When we send an improper test call we will receive a notification.
+
+7.  **Client Side Router:**
+
+    1. **Broadcast routes**: When we make a url change this feature sends messages to other **features** indicating the route changes and search parameters.
+
+8.  **Local Storage Management:**
+    1. **Broadcast Storage Updates:** When we make a storage change this feature sends messages to other **features** indicating the local storage has been updated.
+    2. **Receive Storage Updates:** This feature can receive message from other features to update values in local storage.
+
+## **Feature Synergies:**
+
+The following list lays out data being sent from one of the number features to another and the expected feedback
+
+- **1-4:** timescale range update leads to update of system overview displayed modules
+- **1-5:** timescale range range update leads to update of displayed log entries
+- **2-4:** sending module selection(s) leads to update of displayed modules
+- **2-5:** sending log level leads to update of displayed log entries
