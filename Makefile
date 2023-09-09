@@ -63,8 +63,6 @@ $(KT_RUNTIME_OUT): $(KT_MVN_OUT)
 	mkdir -p build/template/ftl/jars
 	cp $< $@
 
-
-
 console/client/dist/index.html:
 	cd console/client && npm install && npm run build
 
