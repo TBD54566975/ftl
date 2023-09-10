@@ -30,7 +30,8 @@ The Console is our central dashboard, structured hierarchically:
 
     1. **Time Scrubbing:** We can move back and forth through time to see how events evolve in the console. This is particularly useful to track events across modules.
     2. **Broadcast Selected Timescale**: When we scrub the timeline this feature sends messages to other **features** indicating the ranges of time to display information for.
-    3. **Surface Errors:** For search param based errors it broadcast the errors to subscribing features.
+    3. **Easy Time Range Selection:** Select between easy time ranges, 5 minutes, 15 minutes, 30 minutes, last hour, Last unit of time.
+    4. **Surface Errors:** For search param based errors it broadcast the errors to subscribing features.
 
 2.  **Query Management:**
 
@@ -51,20 +52,22 @@ The Console is our central dashboard, structured hierarchically:
     4. **Annotation adjustment:** When working on a fork we can change the annotation from the interface
 
 4.  **System Overview:**
+
     1. **Architecture information:** An interactive bird's-eye view of the entire system, allowing developers to understand the overall structure and dive deeper into specific modules or verbs.
-    2. **Layer-Sequence Perspective (Middle-Out):**
+    2. **Visualizations:**
        1. **Layer Visualization:** Picture each module on its own layer, similar to tracks in a video editing software. On this layered visualization we draw lines or arrows to signify interactions between modules. These connections akin to those in a gantt chart represent what modules have verbs that call other modules.
+       2. **Functional flow:** Allows us to understand which modules and verbs get triggered in the by a particular call. This includes highlighting errors resulting from a call.
+       3. **Fork:** Indicates to to us that we are working in a branch and not against a production production environment.
     3. **Display filtered/sorted modules:**
        1. **Alphabetic ascending and descending order**
-       2. **Functional flow:** Allows us to understand which modules and verbs get triggered in the by a particular call. This includes highlighting errors resulting from a call.
-       3. **Fork View (Functional flow variant):** Functional flow view but visibly indicates to to us that we are working in a branch and not against a production production environment.
-       4. **Historical Evolution:** Displays which modules have had schema changes over the selected period of time.
-       5. **Time Range:** Displays only modules deployed and active for a given time scale
+       2. **Historical Evolution:** Displays which modules have had schema changes over the selected period of time.
+       3. **Time Range:** Displays only modules deployed and active for a given time scale
     4. **Surface Errors:** The system overview interface uses bold, colors, or flashing icons to make errored verbs stand out prominently. For search param based errors it broadcast the errors to subscribing features.
     5. **Idempotency Tagging:** Verbs can be tagged as idempotent if they are, ensuring that they can be safely retried without side effects.
-5.  **Log Management:**
 
-    1. **Display events:** We are presented a timeline interface of logged **events:**
+5.  **Timeline:**
+
+    1. **Display Event Traces:** We are presented a timeline interface of traced **events:**
        1. **Deployments**
        2. **Logs:** We have 5 log levels that are inclusive of the levels below them:
           1. Trace
@@ -73,9 +76,11 @@ The Console is our central dashboard, structured hierarchically:
           4. Warn
           5. Error
        3. **Calls**
-    2. **Display filtered logs:** This interface can display to us events based on log levels and other event **parameters**
+    2. **Display Filtered Traces:** This interface can display to us events based on log levels and other event **parameters**
     3. **Pagination:** We can easily navigate through large amounts of timeline entries via a paginated view and with the ability to adjust the pagination entry count.
     4. **Surface Errors:** The interface uses bold, colors, or flashing icons to make error logs stand out prominently. For search param based errors it broadcast the errors to subscribing features.
+    5. **Nested Trace:** Event's originating from another event are nested such as calls
+    6. **Tabbed Traces:** Filtered traces can be be saved and tabbed to allow for quickly shifting from a view of all traces to one of the filtered parameters
 
 6.  **Error Management:**
 
@@ -91,12 +96,3 @@ The Console is our central dashboard, structured hierarchically:
 8.  **Local Storage Management:**
     1. **Broadcast Storage Updates:** When we make a storage change this feature sends messages to other **features** indicating the local storage has been updated.
     2. **Receive Storage Updates:** This feature can receive message from other features to update values in local storage.
-
-## **Feature Synergies:**
-
-The following list lays out data being sent from one of the number features to another and the expected feedback
-
-- **1-4:** timescale range update leads to update of system overview displayed modules
-- **1-5:** timescale range range update leads to update of displayed log entries
-- **2-4:** sending module selection(s) leads to update of displayed modules
-- **2-5:** sending log level leads to update of displayed log entries
