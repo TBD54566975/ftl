@@ -98,11 +98,12 @@ message GetRequestCallsResponse {
 }
 
 enum LogLevel {
-  LOG_LEVEL_TRACE = 0;
-  LOG_LEVEL_DEBUG = 1;
-  LOG_LEVEL_INFO = 2;
-  LOG_LEVEL_WARN = 3;
-  LOG_LEVEL_ERROR = 4;
+  LOG_LEVEL_UNKNOWN = 0;
+  LOG_LEVEL_TRACE = 1;
+  LOG_LEVEL_DEBUG = 5;
+  LOG_LEVEL_INFO = 9;
+  LOG_LEVEL_WARN = 13;
+  LOG_LEVEL_ERROR = 17;
 }
 
 // Query for timeline events.
@@ -151,6 +152,7 @@ message TimelineQuery {
   }
 
   repeated Filter filters = 1;
+  int32 limit = 2;
 }
 
 message StreamTimelineRequest {
@@ -194,6 +196,10 @@ message StreamLogsResponse {
 
 message GetTimelineResponse {
   repeated TimelineEvent events = 1;
+
+  // If true, there are more events past the limit of the query.
+  // This is useful for pagination of the the timeline
+  bool more = 2;
 }
 
 service ConsoleService {

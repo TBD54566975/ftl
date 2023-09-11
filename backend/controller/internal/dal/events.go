@@ -180,7 +180,7 @@ type eventRow struct {
 	RequestKey     types.Option[model.IngressRequestKey]
 }
 
-func (d *DAL) QueryEvents(ctx context.Context, filters ...EventFilter) ([]Event, error) {
+func (d *DAL) QueryEvents(ctx context.Context, limit *int, filters ...EventFilter) ([]Event, error) {
 	// Build query.
 	q := `SELECT e.id AS id,
 				d.name AS deployment_name,
@@ -253,6 +253,9 @@ func (d *DAL) QueryEvents(ctx context.Context, filters ...EventFilter) ([]Event,
 	}
 
 	q += " ORDER BY time_stamp ASC"
+	if limit != nil {
+		q += fmt.Sprintf(" LIMIT %d", *limit)
+	}
 
 	// Issue query.
 	rows, err := d.db.Conn().Query(ctx, q, args...)

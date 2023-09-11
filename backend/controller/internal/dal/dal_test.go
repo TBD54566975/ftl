@@ -255,25 +255,25 @@ func TestDAL(t *testing.T) {
 
 	t.Run("QueryEvents", func(t *testing.T) {
 		t.Run("NoFilters", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx)
+			events, err := dal.QueryEvents(ctx, nil)
 			assert.NoError(t, err)
 			assertEventsEqual(t, []Event{expectedDeploymentEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, FilterDeployments(deploymentName))
+			events, err := dal.QueryEvents(ctx, nil, FilterDeployments(deploymentName))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []Event{expectedDeploymentEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, FilterTypes(EventTypeCall), FilterCall(types.None[string](), "time", types.None[string]()))
+			events, err := dal.QueryEvents(ctx, nil, FilterTypes(EventTypeCall), FilterCall(types.None[string](), "time", types.None[string]()))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []Event{callEvent}, events)
 		})
 
 		t.Run("ByLogLevel", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
+			events, err := dal.QueryEvents(ctx, nil, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []Event{logEvent}, events)
 		})

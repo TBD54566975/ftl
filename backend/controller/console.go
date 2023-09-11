@@ -103,7 +103,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 }
 
 func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbconsole.GetCallsRequest]) (*connect.Response[pbconsole.GetCallsResponse], error) {
-	events, err := c.dal.QueryEvents(ctx, dal.FilterCall(types.None[string](), req.Msg.Module, types.Some(req.Msg.Verb)))
+	events, err := c.dal.QueryEvents(ctx, nil, dal.FilterCall(types.None[string](), req.Msg.Module, types.Some(req.Msg.Verb)))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -119,7 +119,7 @@ func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Reque
 		return nil, errors.WithStack(err)
 	}
 
-	events, err := c.dal.QueryEvents(ctx, dal.FilterRequests(requestKey))
+	events, err := c.dal.QueryEvents(ctx, nil, dal.FilterRequests(requestKey))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -134,12 +134,29 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[p
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	results, err := c.dal.QueryEvents(ctx, query...)
+
+	limit := 100 // Default to 100 events if not specified.
+	if req.Msg.Limit > 0 {
+		limit = int(req.Msg.Limit)
+	}
+
+	// Get 1 more than the requested limit to determine if there are more results.
+	limitPlusOne := limit + 1
+
+	results, err := c.dal.QueryEvents(ctx, &limitPlusOne, query...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	more := len(results) > limit
+	// Return only the requested number of results.
+	if len(results) > limit {
+		results = results[:limit]
+	}
+
 	response := &pbconsole.GetTimelineResponse{
 		Events: slices.Map(results, eventDALToProto),
+		More:   more,
 	}
 	return connect.NewResponse(response), nil
 }
@@ -168,7 +185,7 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 
 	for {
 		thisRequestTime := time.Now()
-		events, err := c.dal.QueryEvents(ctx, append(query, dal.FilterTimeRange(thisRequestTime, lastEventTime))...)
+		events, err := c.dal.QueryEvents(ctx, nil, append(query, dal.FilterTimeRange(thisRequestTime, lastEventTime))...)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -210,7 +227,7 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 	lastLogTime := req.Msg.AfterTime.AsTime()
 	for {
 		thisRequestTime := time.Now()
-		events, err := c.dal.QueryEvents(ctx, append(query, dal.FilterTimeRange(thisRequestTime, lastLogTime))...)
+		events, err := c.dal.QueryEvents(ctx, nil, append(query, dal.FilterTimeRange(thisRequestTime, lastLogTime))...)
 		if err != nil {
 			return errors.WithStack(err)
 		}

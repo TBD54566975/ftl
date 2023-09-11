@@ -76,37 +76,43 @@ proto3.util.setEnumType(DeploymentEventType, "xyz.block.ftl.v1.console.Deploymen
  */
 export enum LogLevel {
   /**
-   * @generated from enum value: LOG_LEVEL_TRACE = 0;
+   * @generated from enum value: LOG_LEVEL_UNKNOWN = 0;
    */
-  TRACE = 0,
+  UNKNOWN = 0,
 
   /**
-   * @generated from enum value: LOG_LEVEL_DEBUG = 1;
+   * @generated from enum value: LOG_LEVEL_TRACE = 1;
    */
-  DEBUG = 1,
+  TRACE = 1,
 
   /**
-   * @generated from enum value: LOG_LEVEL_INFO = 2;
+   * @generated from enum value: LOG_LEVEL_DEBUG = 5;
    */
-  INFO = 2,
+  DEBUG = 5,
 
   /**
-   * @generated from enum value: LOG_LEVEL_WARN = 3;
+   * @generated from enum value: LOG_LEVEL_INFO = 9;
    */
-  WARN = 3,
+  INFO = 9,
 
   /**
-   * @generated from enum value: LOG_LEVEL_ERROR = 4;
+   * @generated from enum value: LOG_LEVEL_WARN = 13;
    */
-  ERROR = 4,
+  WARN = 13,
+
+  /**
+   * @generated from enum value: LOG_LEVEL_ERROR = 17;
+   */
+  ERROR = 17,
 }
 // Retrieve enum metadata with: proto3.getEnumType(LogLevel)
 proto3.util.setEnumType(LogLevel, "xyz.block.ftl.v1.console.LogLevel", [
-  { no: 0, name: "LOG_LEVEL_TRACE" },
-  { no: 1, name: "LOG_LEVEL_DEBUG" },
-  { no: 2, name: "LOG_LEVEL_INFO" },
-  { no: 3, name: "LOG_LEVEL_WARN" },
-  { no: 4, name: "LOG_LEVEL_ERROR" },
+  { no: 0, name: "LOG_LEVEL_UNKNOWN" },
+  { no: 1, name: "LOG_LEVEL_TRACE" },
+  { no: 5, name: "LOG_LEVEL_DEBUG" },
+  { no: 9, name: "LOG_LEVEL_INFO" },
+  { no: 13, name: "LOG_LEVEL_WARN" },
+  { no: 17, name: "LOG_LEVEL_ERROR" },
 ]);
 
 /**
@@ -726,6 +732,11 @@ export class TimelineQuery extends Message<TimelineQuery> {
    */
   filters: TimelineQuery_Filter[] = [];
 
+  /**
+   * @generated from field: int32 limit = 2;
+   */
+  limit = 0;
+
   constructor(data?: PartialMessage<TimelineQuery>) {
     super();
     proto3.util.initPartial(data, this);
@@ -735,6 +746,7 @@ export class TimelineQuery extends Message<TimelineQuery> {
   static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "filters", kind: "message", T: TimelineQuery_Filter, repeated: true },
+    { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery {
@@ -763,7 +775,7 @@ export class TimelineQuery_LogLevelFilter extends Message<TimelineQuery_LogLevel
   /**
    * @generated from field: xyz.block.ftl.v1.console.LogLevel log_level = 1;
    */
-  logLevel = LogLevel.TRACE;
+  logLevel = LogLevel.UNKNOWN;
 
   constructor(data?: PartialMessage<TimelineQuery_LogLevelFilter>) {
     super();
@@ -1354,6 +1366,14 @@ export class GetTimelineResponse extends Message<GetTimelineResponse> {
    */
   events: TimelineEvent[] = [];
 
+  /**
+   * If true, there are more events past the limit of the query.
+   * This is useful for pagination of the the timeline
+   *
+   * @generated from field: bool more = 2;
+   */
+  more = false;
+
   constructor(data?: PartialMessage<GetTimelineResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1363,6 +1383,7 @@ export class GetTimelineResponse extends Message<GetTimelineResponse> {
   static readonly typeName = "xyz.block.ftl.v1.console.GetTimelineResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "events", kind: "message", T: TimelineEvent, repeated: true },
+    { no: 2, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTimelineResponse {
