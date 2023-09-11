@@ -1,10 +1,10 @@
 import {PropsWithChildren, createContext, useState} from 'react'
-import {StreamTimelineResponse} from '../protos/xyz/block/ftl/v1/console/console_pb'
+import {TimelineEvent} from '../protos/xyz/block/ftl/v1/console/console_pb'
 
 type SelectedTimelineEntryContextType = {
-  selectedEntry: StreamTimelineResponse | null
+  selectedEntry: TimelineEvent | null
   setSelectedEntry: React.Dispatch<
-    React.SetStateAction<StreamTimelineResponse | null>
+    React.SetStateAction<TimelineEvent | null>
   >
 }
 
@@ -16,7 +16,7 @@ export const SelectedTimelineEntryContext =
 
 export const SelectedTimelineEntryProvider = (props: PropsWithChildren) => {
   const [selectedEntry, setSelectedEntry] =
-    useState<StreamTimelineResponse | null>(null)
+    useState<TimelineEvent | null>(null)
 
   return (
     <SelectedTimelineEntryContext.Provider

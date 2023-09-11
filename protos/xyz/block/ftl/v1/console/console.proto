@@ -22,10 +22,18 @@ message Call {
   optional string error = 9;
 }
 
+enum EventType {
+  EVENT_TYPE_UNKNOWN = 0;
+  EVENT_TYPE_DEPLOYMENT = 1;
+  EVENT_TYPE_CALL = 2;
+  EVENT_TYPE_LOG = 3;
+}
+
 enum DeploymentEventType {
-  DEPLOYMENT_CREATED = 0;
-  DEPLOYMENT_UPDATED = 1;
-  DEPLOYMENT_REPLACED = 2;
+  DEPLOYMENT_UNKNOWN = 0;
+  DEPLOYMENT_CREATED = 1;
+  DEPLOYMENT_UPDATED = 2;
+  DEPLOYMENT_REPLACED = 3;
 }
 
 message Deployment {
@@ -89,6 +97,62 @@ message GetRequestCallsResponse {
   repeated Call calls = 1;
 }
 
+enum LogLevel {
+  LOG_LEVEL_TRACE = 0;
+  LOG_LEVEL_DEBUG = 1;
+  LOG_LEVEL_INFO = 2;
+  LOG_LEVEL_WARN = 3;
+  LOG_LEVEL_ERROR = 4;
+}
+
+// Query for timeline events.
+message TimelineQuery {
+  // Filters events by log level.
+  message LogLevelFilter {
+    LogLevel log_level = 1;
+  }
+  // Filters events by deployment name.
+  message DeploymentFilter {
+    repeated string deployments = 1;
+  }
+  // Filters events by request key.
+  message RequestFilter {
+    repeated string requests = 1;
+  }
+  // Filters events by event type.
+  message EventTypeFilter {
+    repeated EventType event_types = 1;
+  }
+  // Filters events by time.
+  //
+  // Either end of the time range can be omitted to indicate no bound.
+  message TimeFilter {
+    optional google.protobuf.Timestamp older_than = 1;
+    optional google.protobuf.Timestamp newer_than = 2;
+  }
+  // Filters events by ID.
+  //
+  // Either end of the ID range can be omitted to indicate no bound.
+  message IDFilter {
+    optional int64 lower_than = 1;
+    optional int64 higher_than = 2;
+  }
+
+  message Filter {
+    // These map 1:1 with filters in backend/controller/internal/dal/events.go
+    oneof filter {
+      LogLevelFilter log_level = 1;
+      DeploymentFilter deployments = 2;
+      RequestFilter requests = 3;
+      EventTypeFilter event_types = 4;
+      TimeFilter time = 5;
+      IDFilter id = 6;
+    }
+  }
+
+  repeated Filter filters = 1;
+}
+
 message StreamTimelineRequest {
   optional google.protobuf.Duration update_interval = 1;
   google.protobuf.Timestamp after_time = 2;
@@ -96,6 +160,14 @@ message StreamTimelineRequest {
 }
 
 message StreamTimelineResponse {
+  TimelineEvent event = 1;
+
+  // If true there are more logs immediately following this one as part of the initial batch.
+  // If false this is the last log in the initial batch, but others may follow later.
+  bool more = 2;
+}
+
+message TimelineEvent {
   google.protobuf.Timestamp time_stamp = 1;
   // Unique ID for event.
   int64 id = 2;
@@ -104,10 +176,6 @@ message StreamTimelineResponse {
     Deployment deployment = 4;
     LogEntry log = 5;
   }
-
-  // If true there are more logs immediately following this one as part of the initial batch.
-  // If false this is the last log in the initial batch, but others may follow later.
-  bool more = 6;
 }
 
 message StreamLogsRequest {
@@ -124,6 +192,10 @@ message StreamLogsResponse {
   bool more = 2;
 }
 
+message GetTimelineResponse {
+  repeated TimelineEvent events = 1;
+}
+
 service ConsoleService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -134,5 +206,6 @@ service ConsoleService {
   rpc GetCalls(GetCallsRequest) returns (GetCallsResponse);
   rpc GetRequestCalls(GetRequestCallsRequest) returns (GetRequestCallsResponse);
   rpc StreamTimeline(StreamTimelineRequest) returns (stream StreamTimelineResponse);
+  rpc GetTimeline(TimelineQuery) returns (GetTimelineResponse);
   rpc StreamLogs(StreamLogsRequest) returns (stream StreamLogsResponse);
 }

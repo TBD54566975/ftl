@@ -2,7 +2,7 @@ import {Timestamp} from '@bufbuild/protobuf'
 import {CodeBlock} from '../../../components/CodeBlock'
 import {
   LogEntry,
-  StreamTimelineResponse,
+  TimelineEvent,
 } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import {classNames} from '../../../utils/react.utils'
 import {
@@ -13,7 +13,7 @@ import {
 import {TimelineTimestamp} from './TimelineTimestamp'
 
 type Props = {
-  entry: StreamTimelineResponse
+  entry: TimelineEvent
   log: LogEntry
 }
 

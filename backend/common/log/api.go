@@ -40,6 +40,13 @@ func (l Level) Severity() int {
 	return int(l)
 }
 
+// ParseLevel parses a log level from text.
+func ParseLevel(input string) (Level, error) {
+	var level Level
+	err := level.UnmarshalText([]byte(input))
+	return level, err
+}
+
 type contextKey struct{}
 
 // FromContext retrieves the current logger from the context or panics
