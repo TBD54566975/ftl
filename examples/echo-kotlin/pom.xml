@@ -77,7 +77,7 @@
                         <configuration>
                             <artifactItems>
                                 <artifactItem>
-                                    <groupId>xyz.block.ftl</groupId>
+                                    <groupId>xyz.block</groupId>
                                     <artifactId>ftl-generator</artifactId>
                                     <version>${ftl.version}</version>
                                     <classifier>jar-with-dependencies</classifier>
