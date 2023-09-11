@@ -43,7 +43,7 @@ start_cluster() {
 
 prepare_runner() (
   info "Preparing runner template directory"
-  mvn -pl :ftl-generator install
+  mvn install
   mkdir -p build/template/ftl/jars build/runner0 build/runner1
   test -r build/template/ftl/jars/ftl-runtime.jar && return 0
   make build/template/ftl/jars/ftl-runtime.jar
