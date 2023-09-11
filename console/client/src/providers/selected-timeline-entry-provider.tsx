@@ -3,9 +3,7 @@ import {TimelineEvent} from '../protos/xyz/block/ftl/v1/console/console_pb'
 
 type SelectedTimelineEntryContextType = {
   selectedEntry: TimelineEvent | null
-  setSelectedEntry: React.Dispatch<
-    React.SetStateAction<TimelineEvent | null>
-  >
+  setSelectedEntry: React.Dispatch<React.SetStateAction<TimelineEvent | null>>
 }
 
 export const SelectedTimelineEntryContext =
@@ -15,8 +13,7 @@ export const SelectedTimelineEntryContext =
   })
 
 export const SelectedTimelineEntryProvider = (props: PropsWithChildren) => {
-  const [selectedEntry, setSelectedEntry] =
-    useState<TimelineEvent | null>(null)
+  const [selectedEntry, setSelectedEntry] = useState<TimelineEvent | null>(null)
 
   return (
     <SelectedTimelineEntryContext.Provider
