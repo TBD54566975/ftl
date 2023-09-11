@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   kotlin-runtime:
-    name: Kotlin Runtime
+    name: Test Kotlin
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,7 +19,7 @@ jobs:
       - name: Test
         run: mvn test
   test:
-    name: Test
+    name: Test Go
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

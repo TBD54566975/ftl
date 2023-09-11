@@ -16,10 +16,6 @@ jobs:
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go
-      - name: Build Kotlin Runtime
-        run: mvn -pl :ftl-runtime package
-      - name: Build Kotlin Generator
-        run: mvn -pl :ftl-generator package
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Integration tests
