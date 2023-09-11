@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller/internal/dal"
@@ -102,13 +103,13 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 }
 
 func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbconsole.GetCallsRequest]) (*connect.Response[pbconsole.GetCallsResponse], error) {
-	events, err := c.dal.QueryEvents(ctx, time.Time{}, time.Now(), dal.FilterCall(types.None[string](), req.Msg.Module, types.Some(req.Msg.Verb)))
+	events, err := c.dal.QueryEvents(ctx, dal.FilterCall(types.None[string](), req.Msg.Module, types.Some(req.Msg.Verb)))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return connect.NewResponse(&pbconsole.GetCallsResponse{
-		Calls: slices.Map(filterCallEvents(events), callEventToCall),
+		Calls: slices.Map(filterEvents[*dal.CallEvent](events), callEventToCall),
 	}), nil
 }
 
@@ -118,14 +119,29 @@ func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Reque
 		return nil, errors.WithStack(err)
 	}
 
-	events, err := c.dal.QueryEvents(ctx, time.Time{}, time.Now(), dal.FilterRequests(requestKey))
+	events, err := c.dal.QueryEvents(ctx, dal.FilterRequests(requestKey))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return connect.NewResponse(&pbconsole.GetRequestCallsResponse{
-		Calls: slices.Map(filterCallEvents(events), callEventToCall),
+		Calls: slices.Map(filterEvents[*dal.CallEvent](events), callEventToCall),
 	}), nil
+}
+
+func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[pbconsole.TimelineQuery]) (*connect.Response[pbconsole.GetTimelineResponse], error) {
+	query, err := timelineQueryProtoToDAL(req.Msg)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	results, err := c.dal.QueryEvents(ctx, query...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	response := &pbconsole.GetTimelineResponse{
+		Events: slices.Map(results, eventDALToProto),
+	}
+	return connect.NewResponse(response), nil
 }
 
 func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Request[pbconsole.StreamTimelineRequest], stream *connect.ServerStream[pbconsole.StreamTimelineResponse]) error {
@@ -143,50 +159,26 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 		}
 		query = append(query, dal.FilterDeployments(deploymentName))
 	}
+	var lastEventTime time.Time
+	if req.Msg.AfterTime != nil {
+		lastEventTime = req.Msg.AfterTime.AsTime()
+	} else {
+		lastEventTime = time.Now()
+	}
 
-	lastEventTime := req.Msg.AfterTime.AsTime()
 	for {
 		thisRequestTime := time.Now()
-		events, err := c.dal.QueryEvents(ctx, lastEventTime, thisRequestTime, query...)
+		events, err := c.dal.QueryEvents(ctx, append(query, dal.FilterTimeRange(thisRequestTime, lastEventTime))...)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 
-		timelineEvents := filterTimelineEvents(events)
-		for index, timelineEvent := range timelineEvents {
+		for index, timelineEvent := range events {
 			more := len(events) > index+1
-			var err error
-
-			switch event := timelineEvent.(type) {
-			case *dal.CallEvent:
-				err = stream.Send(&pbconsole.StreamTimelineResponse{
-					TimeStamp: timestamppb.New(event.Time),
-					Id:        event.ID,
-					Entry: &pbconsole.StreamTimelineResponse_Call{
-						Call: callEventToCall(event),
-					},
-					More: more,
-				})
-			case *dal.LogEvent:
-				err = stream.Send(&pbconsole.StreamTimelineResponse{
-					TimeStamp: timestamppb.New(event.Time),
-					Id:        event.ID,
-					Entry: &pbconsole.StreamTimelineResponse_Log{
-						Log: logEventToLogEntry(event),
-					},
-					More: more,
-				})
-			case *dal.DeploymentEvent:
-				err = stream.Send(&pbconsole.StreamTimelineResponse{
-					TimeStamp: timestamppb.New(event.Time),
-					Id:        event.ID,
-					Entry: &pbconsole.StreamTimelineResponse_Deployment{
-						Deployment: deploymentEventToDeployment(event),
-					},
-					More: more,
-				})
-			}
-
+			err := stream.Send(&pbconsole.StreamTimelineResponse{
+				Event: eventDALToProto(timelineEvent),
+				More:  more,
+			})
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -203,7 +195,7 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pbconsole.StreamLogsRequest], stream *connect.ServerStream[pbconsole.StreamLogsResponse]) error {
 	// Default to 1 second interval if not specified.
 	updateInterval := 1 * time.Second
-	if req.Msg.UpdateInterval != nil && req.Msg.UpdateInterval.AsDuration() > time.Second { // Minimum 1s interval.
+	if interval := req.Msg.UpdateInterval; interval != nil && interval.AsDuration() > time.Second { // Minimum 1s interval.
 		updateInterval = req.Msg.UpdateInterval.AsDuration()
 	}
 
@@ -215,16 +207,15 @@ func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pb
 		}
 		query = append(query, dal.FilterDeployments(deploymentName))
 	}
-
 	lastLogTime := req.Msg.AfterTime.AsTime()
 	for {
 		thisRequestTime := time.Now()
-		events, err := c.dal.QueryEvents(ctx, lastLogTime, thisRequestTime, query...)
+		events, err := c.dal.QueryEvents(ctx, append(query, dal.FilterTimeRange(thisRequestTime, lastLogTime))...)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 
-		logEvents := filterLogEvents(events)
+		logEvents := filterEvents[*dal.LogEvent](events)
 		for index, log := range logEvents {
 			var requestKey *string
 			if r, ok := log.RequestKey.Get(); ok {
@@ -309,6 +300,8 @@ func deploymentEventToDeployment(event *dal.DeploymentEvent) *pbconsole.Deployme
 		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_UPDATED
 	case dal.DeploymentReplaced:
 		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_REPLACED
+	default:
+		panic(errors.Errorf("unknown deployment event type %v", event.Type))
 	}
 
 	var replaced *string
@@ -326,38 +319,121 @@ func deploymentEventToDeployment(event *dal.DeploymentEvent) *pbconsole.Deployme
 	}
 }
 
-func filterCallEvents(events []dal.Event) []*dal.CallEvent {
-	var filtered []*dal.CallEvent
+func filterEvents[E dal.Event](events []dal.Event) []E {
+	var filtered []E
 	for _, event := range events {
-		if call, ok := event.(*dal.CallEvent); ok {
-			filtered = append(filtered, call)
+		if e, ok := event.(E); ok {
+			filtered = append(filtered, e)
 		}
 	}
 	return filtered
 }
 
-func filterLogEvents(events []dal.Event) []*dal.LogEvent {
-	var filtered []*dal.LogEvent
-	for _, event := range events {
-		if log, ok := event.(*dal.LogEvent); ok {
-			filtered = append(filtered, log)
+func timelineQueryProtoToDAL(pb *pbconsole.TimelineQuery) ([]dal.EventFilter, error) {
+	var query []dal.EventFilter
+	for _, filter := range pb.Filters {
+		switch filter := filter.Filter.(type) {
+		case *pbconsole.TimelineQuery_Filter_Deployments:
+			deploymentNames := make([]model.DeploymentName, 0, len(filter.Deployments.Deployments))
+			for _, deployment := range filter.Deployments.Deployments {
+				deploymentName, err := model.ParseDeploymentName(deployment)
+				if err != nil {
+					return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
+				}
+				deploymentNames = append(deploymentNames, deploymentName)
+			}
+			query = append(query, dal.FilterDeployments(deploymentNames...))
+
+		case *pbconsole.TimelineQuery_Filter_Requests:
+			requestKeys := make([]model.IngressRequestKey, 0, len(filter.Requests.Requests))
+			for _, request := range filter.Requests.Requests {
+				requestKey, err := model.ParseIngressRequestKey(request)
+				if err != nil {
+					return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
+				}
+				requestKeys = append(requestKeys, requestKey)
+			}
+			query = append(query, dal.FilterRequests(requestKeys...))
+
+		case *pbconsole.TimelineQuery_Filter_EventTypes:
+			eventTypes := make([]dal.EventType, 0, len(filter.EventTypes.EventTypes))
+			for _, eventType := range filter.EventTypes.EventTypes {
+				switch eventType {
+				case pbconsole.EventType_EVENT_TYPE_CALL:
+					eventTypes = append(eventTypes, dal.EventTypeCall)
+				case pbconsole.EventType_EVENT_TYPE_LOG:
+					eventTypes = append(eventTypes, dal.EventTypeLog)
+				case pbconsole.EventType_EVENT_TYPE_DEPLOYMENT:
+					eventTypes = append(eventTypes, dal.EventTypeDeployment)
+				default:
+					return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("unknown event type %v", eventType))
+				}
+			}
+
+		case *pbconsole.TimelineQuery_Filter_LogLevel:
+			level := log.Level(filter.LogLevel.LogLevel)
+			if level < log.Trace || level > log.Error {
+				return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("unknown log level %v", filter.LogLevel.LogLevel))
+			}
+			query = append(query, dal.FilterLogLevel(level))
+
+		case *pbconsole.TimelineQuery_Filter_Time:
+			var newerThan, olderThan time.Time
+			if filter.Time.NewerThan != nil {
+				newerThan = filter.Time.NewerThan.AsTime()
+			}
+			if filter.Time.OlderThan != nil {
+				olderThan = filter.Time.OlderThan.AsTime()
+			}
+			query = append(query, dal.FilterTimeRange(newerThan, olderThan))
+
+		case *pbconsole.TimelineQuery_Filter_Id:
+			var lowerThan, higherThan int64
+			if filter.Id.LowerThan != nil {
+				lowerThan = *filter.Id.LowerThan
+			}
+			if filter.Id.HigherThan != nil {
+				higherThan = *filter.Id.HigherThan
+			}
+			query = append(query, dal.FilterIDRange(lowerThan, higherThan))
+
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("unknown filter %T", filter))
 		}
 	}
-	return filtered
+	return query, nil
 }
 
-func filterTimelineEvents(events []dal.Event) []dal.Event {
-	var filtered []dal.Event
-	for _, event := range events {
-		if _, ok := event.(*dal.LogEvent); ok {
-			filtered = append(filtered, event)
+func eventDALToProto(event dal.Event) *pbconsole.TimelineEvent {
+	switch event := event.(type) {
+	case *dal.CallEvent:
+		return &pbconsole.TimelineEvent{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.TimelineEvent_Call{
+				Call: callEventToCall(event),
+			},
 		}
-		if _, ok := event.(*dal.CallEvent); ok {
-			filtered = append(filtered, event)
+
+	case *dal.LogEvent:
+		return &pbconsole.TimelineEvent{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.TimelineEvent_Log{
+				Log: logEventToLogEntry(event),
+			},
 		}
-		if _, ok := event.(*dal.DeploymentEvent); ok {
-			filtered = append(filtered, event)
+
+	case *dal.DeploymentEvent:
+		return &pbconsole.TimelineEvent{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.TimelineEvent_Deployment{
+				Deployment: deploymentEventToDeployment(event),
+			},
 		}
+
+	default:
+		panic(errors.Errorf("unknown event type %T", event))
 	}
-	return filtered
 }

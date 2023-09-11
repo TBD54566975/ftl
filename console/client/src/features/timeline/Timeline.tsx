@@ -2,7 +2,7 @@ import {Timestamp} from '@bufbuild/protobuf'
 import React from 'react'
 import {useClient} from '../../hooks/use-client.ts'
 import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
-import {StreamTimelineResponse} from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import {TimelineEvent} from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import {SidePanelContext} from '../../providers/side-panel-provider.tsx'
 import {formatTimestampShort} from '../../utils/date.utils.ts'
 import {panelColor} from '../../utils/style.utils.ts'
@@ -19,9 +19,9 @@ import {TimelineFilterBar} from './filters/TimelineFilterBar.tsx'
 export const Timeline = () => {
   const client = useClient(ConsoleService)
   const {openPanel, closePanel, isOpen} = React.useContext(SidePanelContext)
-  const [entries, setEntries] = React.useState<StreamTimelineResponse[]>([])
+  const [entries, setEntries] = React.useState<TimelineEvent[]>([])
   const [selectedEntry, setSelectedEntry] =
-    React.useState<StreamTimelineResponse | null>(null)
+    React.useState<TimelineEvent | null>(null)
   const [selectedEventTypes, setSelectedEventTypes] = React.useState<string[]>([
     'log',
     'call',
@@ -45,8 +45,8 @@ export const Timeline = () => {
         {afterTime: Timestamp.fromDate(afterTime)},
         {signal: abortController.signal}
       )) {
-        if (response.entry) {
-          setEntries(prevEntries => [response, ...prevEntries])
+        if (response.event != null) {
+          setEntries(prevEntries => [response.event!, ...prevEntries])
         }
       }
     }
@@ -63,7 +63,7 @@ export const Timeline = () => {
     }
   }, [isOpen])
 
-  const handleEntryClicked = (entry: StreamTimelineResponse) => {
+  const handleEntryClicked = (entry: TimelineEvent) => {
     if (selectedEntry === entry) {
       setSelectedEntry(null)
       closePanel()

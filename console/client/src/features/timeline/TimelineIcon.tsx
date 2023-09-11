@@ -5,10 +5,10 @@ import {
   PhoneCallback,
   RocketLaunch,
 } from '@mui/icons-material'
-import {StreamTimelineResponse} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import {TimelineEvent} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 type Props = {
-  entry: StreamTimelineResponse
+  entry: TimelineEvent
 }
 
 export const logLevelIconColor = {
@@ -20,7 +20,7 @@ export const logLevelIconColor = {
 }
 
 export const TimelineIcon: React.FC<Props> = ({entry}) => {
-  const iconColor = (entry: StreamTimelineResponse) => {
+  const iconColor = (entry: TimelineEvent) => {
     switch (entry.entry.case) {
       case 'call':
         return entry.entry.value.error ? 'text-red-600' : 'text-indigo-600'
@@ -31,7 +31,7 @@ export const TimelineIcon: React.FC<Props> = ({entry}) => {
     }
   }
 
-  const icon = (entry: StreamTimelineResponse) => {
+  const icon = (entry: TimelineEvent) => {
     const iconSize = 20
     switch (entry.entry.case) {
       case 'call':

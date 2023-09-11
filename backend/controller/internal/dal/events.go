@@ -87,16 +87,20 @@ type eventFilterCall struct {
 }
 
 type eventFilter struct {
-	level       *log.Level
-	calls       []*eventFilterCall
-	types       []EventType
-	deployments []model.DeploymentName
-	requests    []sqltypes.Key
+	level        *log.Level
+	calls        []*eventFilterCall
+	types        []EventType
+	deployments  []model.DeploymentName
+	requests     []sqltypes.Key
+	newerThan    time.Time
+	olderThan    time.Time
+	idHigherThan int64
+	idLowerThan  int64
 }
 
 type EventFilter func(query *eventFilter)
 
-func FilterLogs(level log.Level) EventFilter {
+func FilterLogLevel(level log.Level) EventFilter {
 	return func(query *eventFilter) {
 		query.level = &level
 	}
@@ -133,6 +137,24 @@ func FilterTypes(types ...sql.EventType) EventFilter {
 	}
 }
 
+// FilterTimeRange filters events between the given times, inclusive.
+//
+// Either maybe be zero to indicate no upper or lower bound.
+func FilterTimeRange(olderThan, newerThan time.Time) EventFilter {
+	return func(query *eventFilter) {
+		query.newerThan = newerThan
+		query.olderThan = olderThan
+	}
+}
+
+// FilterIDRange filters events between the given IDs, inclusive.
+func FilterIDRange(higherThan, lowerThan int64) EventFilter {
+	return func(query *eventFilter) {
+		query.idHigherThan = higherThan
+		query.idLowerThan = lowerThan
+	}
+}
+
 // The internal JSON payload of a call event.
 type eventCallJSON struct {
 	DurationMS int64                `json:"duration_ms"`
@@ -158,7 +180,7 @@ type eventRow struct {
 	RequestKey     types.Option[model.IngressRequestKey]
 }
 
-func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters ...EventFilter) ([]Event, error) {
+func (d *DAL) QueryEvents(ctx context.Context, filters ...EventFilter) ([]Event, error) {
 	// Build query.
 	q := `SELECT e.id AS id,
 				d.name AS deployment_name,
@@ -173,19 +195,31 @@ func (d *DAL) QueryEvents(ctx context.Context, after, before time.Time, filters 
 			FROM events e
 					 INNER JOIN deployments d on e.deployment_id = d.id
 					 LEFT JOIN ingress_requests ir on e.request_id = ir.id
-			WHERE time_stamp BETWEEN $1::TIMESTAMPTZ and $2::TIMESTAMPTZ
+			WHERE true -- The "true" is to simplify the ANDs below.
 		`
 
 	filter := eventFilter{}
 	for _, f := range filters {
 		f(&filter)
 	}
-	args := []any{after, before}
-	index := 3
+	var args []any
+	index := 1
 	param := func(v any) int {
 		args = append(args, v)
 		index++
 		return index - 1
+	}
+	if !filter.olderThan.IsZero() {
+		q += fmt.Sprintf(" AND time_stamp <= $%d::TIMESTAMPTZ", param(filter.olderThan))
+	}
+	if !filter.newerThan.IsZero() {
+		q += fmt.Sprintf(" AND time_stamp >= $%d::TIMESTAMPTZ", param(filter.newerThan))
+	}
+	if filter.idHigherThan != 0 {
+		q += fmt.Sprintf(" AND id >= $%d::BIGINT", param(filter.idHigherThan))
+	}
+	if filter.idLowerThan != 0 {
+		q += fmt.Sprintf(" AND id <= $%d::BIGINT", param(filter.idLowerThan))
 	}
 	if filter.deployments != nil {
 		q += fmt.Sprintf(` AND d.name = ANY($%d::TEXT[])`, param(filter.deployments))

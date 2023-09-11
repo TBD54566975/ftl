@@ -8,7 +8,7 @@ SCHEMA_IN = backend/schema/schema.go backend/schema/protobuf.go \
     cmd/ftl/cmd_schema.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
-PROTO_IN = **/*.proto **/buf.* protos/xyz/block/ftl/v1/schema/schema.proto
+PROTO_IN = **/*.proto **/buf.*
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
     protos/xyz/block/ftl/v1/schema/schema.pb.go \
     protos/xyz/block/ftl/v1/console/console.pb.go \
@@ -28,7 +28,9 @@ KT_MVN_OUT = kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT-jar-with
 KT_RUNTIME_OUT = build/template/ftl/jars/ftl-runtime.jar
 
 CLIENT_OUT = console/client/dist/index.html
-CLIENT_IN = console/client/**/*
+CLIENT_IN = console/client/src/**/*
+NODE_MODULES_OUT = console/client/node_modules
+NODE_MODULES_IN = console/client/package{,-lock}.json
 
 #virtual release:
 #  inputs: %{RELEASE}/ftl %{RELEASE}/ftl-controller %{RELEASE}/ftl-runner
@@ -38,10 +40,10 @@ CLIENT_IN = console/client/**/*
 
 # Build all binaries
 implicit %{RELEASE}/%{1}: cmd/*
-  inputs: %{RELEASE} %{GO_SOURCES}
+  inputs: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT}
   build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION}" ./cmd/%{1}
 
-#%{RELEASE}/ftl-controller: %{RELEASE} %{GO_SOURCES} #%{CLIENT_OUT}
+#%{RELEASE}/ftl-controller: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT}
 #  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION}" ./cmd/ftl-controller
 
 %{SCHEMA_OUT}: %{SCHEMA_IN}
@@ -70,8 +72,12 @@ implicit %{RELEASE}/%{1}: cmd/*
 %{COMMON_LOG_OUT}: %{COMMON_LOG_IN}
   build: go generate %{IN}
 
-#%{CLIENT_OUT}: %{CLIENT_IN}
-#  cd console/client
-#  build:
-#    npm install
-#    npm run build
+%{NODE_MODULES_OUT}: %{NODE_MODULES_IN}
+  cd console/client
+  build: npm --no-color --no-progress install
+  -clean # Don't clean node_modules
+
+%{CLIENT_OUT}: %{CLIENT_IN} %{NODE_MODULES_OUT}
+  cd console/client
+  build: npm --no-color run build
+  clean: rm -rf dist .parcel-cache

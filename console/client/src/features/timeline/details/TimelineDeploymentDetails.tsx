@@ -1,27 +1,33 @@
 import {Timestamp} from '@bufbuild/protobuf'
 import {
   Deployment,
-  StreamTimelineResponse,
+  TimelineEvent,
+  DeploymentEventType,
 } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import {classNames} from '../../../utils/react.utils'
 import {textColor} from '../../../utils/style.utils'
 import {TimelineTimestamp} from './TimelineTimestamp'
 
 type Props = {
-  entry: StreamTimelineResponse
+  entry: TimelineEvent
   deployment: Deployment
 }
 
-export const deploymentTypeText = {
-  0: 'Created',
-  1: 'Updated',
-  2: 'Replaced',
+export const deploymentTypeText: {[key in DeploymentEventType]: string} = {
+  [DeploymentEventType.DEPLOYMENT_UNKNOWN]: 'Unknown',
+  [DeploymentEventType.DEPLOYMENT_CREATED]: 'Created',
+  [DeploymentEventType.DEPLOYMENT_UPDATED]: 'Updated',
+  [DeploymentEventType.DEPLOYMENT_REPLACED]: 'Replaced',
 }
 
-export const deploymentTypeBadge = {
-  0: 'text-green-600 bg-green-400/30 dark:text-green-300 dark:bg-green-700/10',
-  1: 'text-blue-350 bg-blue-300/30 dark:text-blue-300 dark:bg-blue-700/30',
-  2: 'text-indigo-600 bg-indigo-400/30 dark:text-indigo-300 dark:bg-indigo-700/10',
+export const deploymentTypeBadge: {[key in DeploymentEventType]: string} = {
+  [DeploymentEventType.DEPLOYMENT_UNKNOWN]: '',
+  [DeploymentEventType.DEPLOYMENT_CREATED]:
+    'text-green-600 bg-green-400/30 dark:text-green-300 dark:bg-green-700/10',
+  [DeploymentEventType.DEPLOYMENT_UPDATED]:
+    'text-blue-350 bg-blue-300/30 dark:text-blue-300 dark:bg-blue-700/30',
+  [DeploymentEventType.DEPLOYMENT_REPLACED]:
+    'text-indigo-600 bg-indigo-400/30 dark:text-indigo-300 dark:bg-indigo-700/10',
 }
 
 export const TimelineDeploymentDetails: React.FC<Props> = ({
