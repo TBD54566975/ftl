@@ -1,25 +1,22 @@
-import {createContext, useEffect, useState} from 'react'
-import {useClient} from '../hooks/use-client'
-import {ControllerService} from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
-import {
-  DeploymentChangeType,
-  PullSchemaResponse,
-} from '../protos/xyz/block/ftl/v1/ftl_pb'
+import { createContext, useEffect, useState } from 'react'
+import { useClient } from '../hooks/use-client'
+import { ControllerService } from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
+import { DeploymentChangeType, PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
 
 export const schemaContext = createContext<PullSchemaResponse[]>([])
 
-type Props = {
+interface Props {
   children: React.ReactNode
 }
 
-const SchemaProvider = (props: Props) => {
+export const SchemaProvider = (props: Props) => {
   const client = useClient(ControllerService)
   const [schema, setSchema] = useState<PullSchemaResponse[]>([])
 
   useEffect(() => {
     const abortController = new AbortController()
 
-    async function fetchSchema() {
+    const fetchSchema = async () => {
       const schemaMap = new Map<string, PullSchemaResponse>()
       for await (const response of client.pullSchema({
         signal: abortController.signal,
@@ -38,25 +35,17 @@ const SchemaProvider = (props: Props) => {
 
         if (!response.more) {
           setSchema(
-            Array.from(schemaMap.values()).sort(
-              (a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0
-            )
+            Array.from(schemaMap.values()).sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0),
           )
         }
       }
     }
 
-    void fetchSchema()
+    fetchSchema()
     return () => {
       abortController.abort()
     }
   }, [client])
 
-  return (
-    <schemaContext.Provider value={schema}>
-      {props.children}
-    </schemaContext.Provider>
-  )
+  return <schemaContext.Provider value={schema}>{props.children}</schemaContext.Provider>
 }
-
-export default SchemaProvider

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { PropsWithChildren } from 'react'
 
 export enum NotificationType {
   Success,
@@ -16,10 +16,7 @@ interface Notification {
 interface NotificationContextType {
   isOpen: boolean
   notification?: Notification
-  showNotification: (
-    notification: Notification,
-    duration?: number | 'indefinite'
-  ) => void
+  showNotification: (notification: Notification, duration?: number | 'indefinite') => void
   closeNotification: () => void
 }
 
@@ -29,10 +26,9 @@ const defaultContextValue: NotificationContextType = {
   closeNotification: () => {},
 }
 
-export const NotificationsContext =
-  React.createContext<NotificationContextType>(defaultContextValue)
+export const NotificationsContext = React.createContext<NotificationContextType>(defaultContextValue)
 
-export const NotificationsProvider = ({children}) => {
+export const NotificationsProvider = ({ children }: PropsWithChildren) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [notification, setNotification] = React.useState<Notification>()
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null)
@@ -45,10 +41,7 @@ export const NotificationsProvider = ({children}) => {
     }
   }
 
-  const showNotification = (
-    notification: Notification,
-    duration: number | 'indefinite' = 4000
-  ) => {
+  const showNotification = (notification: Notification, duration: number | 'indefinite' = 4000) => {
     setIsOpen(true)
     setNotification(notification)
     if (timeoutRef.current) {
@@ -62,9 +55,7 @@ export const NotificationsProvider = ({children}) => {
   }
 
   return (
-    <NotificationsContext.Provider
-      value={{isOpen, showNotification, closeNotification, notification}}
-    >
+    <NotificationsContext.Provider value={{ isOpen, showNotification, closeNotification, notification }}>
       {children}
     </NotificationsContext.Provider>
   )

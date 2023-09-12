@@ -1,8 +1,8 @@
-import {panelColor} from '../../../utils/style.utils'
-import {LogLevelsFilter} from './LogLevelsFilter'
-import {TimeFilter} from './TimeFilter'
+import { panelColor } from '../../../utils/style.utils'
+import { LogLevelsFilter } from './LogLevelsFilter'
+import { TimeFilter } from './TimeFilter'
 
-type Props = {
+interface Props {
   selectedEventTypes: string[]
   onEventTypesChanged: (eventType: string, checked: boolean) => void
   selectedLogLevels: number[]
@@ -38,41 +38,29 @@ export const TimelineFilterBar = ({
           <span className='isolate inline-flex rounded-md shadow-sm'>
             <button
               type='button'
-              className={`${eventButtonStyles} ${eventSelectedStyles(
-                'log'
-              )} rounded-l-md`}
+              className={`${eventButtonStyles} ${eventSelectedStyles('log')} rounded-l-md`}
               onClick={() => toggleEventType('log')}
             >
               Logs
             </button>
             <button
               type='button'
-              className={`${eventButtonStyles} ${eventSelectedStyles(
-                'call'
-              )} -ml-px`}
+              className={`${eventButtonStyles} ${eventSelectedStyles('call')} -ml-px`}
               onClick={() => toggleEventType('call')}
             >
               Calls
             </button>
             <button
               type='button'
-              className={`${eventButtonStyles} ${eventSelectedStyles(
-                'deployment'
-              )} -ml-px rounded-r-md`}
+              className={`${eventButtonStyles} ${eventSelectedStyles('deployment')} -ml-px rounded-r-md`}
               onClick={() => toggleEventType('deployment')}
             >
               Deployments
             </button>
           </span>
           <div className='flex items-center space-x-4'>
-            <TimeFilter
-              selectedRange={selectedTimeRange}
-              onSelectedRangeChanged={onSelectedTimeRangeChanged}
-            />
-            <LogLevelsFilter
-              selectedLogLevels={selectedLogLevels}
-              onLogLevelsChanged={onLogLevelsChanged}
-            />
+            <TimeFilter selectedRange={selectedTimeRange} onSelectedRangeChanged={onSelectedTimeRangeChanged} />
+            <LogLevelsFilter selectedLogLevels={selectedLogLevels} onLogLevelsChanged={onLogLevelsChanged} />
           </div>
         </div>
       </div>

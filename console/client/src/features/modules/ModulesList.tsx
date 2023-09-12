@@ -1,27 +1,20 @@
 import React from 'react'
-import {useSearchParams} from 'react-router-dom'
-import {modulesContext} from '../../providers/modules-provider'
-import {SelectedModuleContext} from '../../providers/selected-module-provider'
+import { useSearchParams } from 'react-router-dom'
+import { modulesContext } from '../../providers/modules-provider'
+import { SelectedModuleContext } from '../../providers/selected-module-provider'
 
-export function ModulesList() {
+export const ModulesList = () => {
   const modules = React.useContext(modulesContext)
-  const {selectedModule, setSelectedModule} = React.useContext(
-    SelectedModuleContext
-  )
+  const { selectedModule, setSelectedModule } = React.useContext(SelectedModuleContext)
   const [searchParams, setSearchParams] = useSearchParams()
 
   return (
-    <ul
-      role='list'
-      className='space-y-2'
-    >
-      {modules.modules?.map(module => (
+    <ul role='list' className='space-y-2'>
+      {modules.modules?.map((module) => (
         <li
           key={module.deploymentName}
           onClick={() => {
-            setSelectedModule(prevModule =>
-              prevModule === module ? null : module
-            )
+            setSelectedModule((prevModule) => (prevModule === module ? null : module))
             setSearchParams({
               ...Object.fromEntries(searchParams),
               module: module.name,
@@ -39,11 +32,7 @@ export function ModulesList() {
           <div>
             <div
               className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 text-xs font-medium
-            ${
-              module === selectedModule
-                ? 'text-gray-300'
-                : 'text-gray-500 dark:text-gray-400'
-            }
+            ${module === selectedModule ? 'text-gray-300' : 'text-gray-500 dark:text-gray-400'}
              ring-1 ring-inset ring-black/10 dark:ring-white/10`}
             >
               {module.deploymentName}

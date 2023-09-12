@@ -1,14 +1,14 @@
 import React from 'react'
-import {useSearchParams} from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 
-export type Tab = {
+export interface Tab {
   id: string
   label: string
   isClosable: boolean
   component: React.ReactNode
 }
 
-type TabsContextType = {
+interface TabsContextType {
   tabs: Tab[]
   activeTabId?: string
   openTab: (tab: Tab) => void
@@ -37,9 +37,9 @@ export const TabsProvider = (props: React.PropsWithChildren) => {
   }
 
   const openTab = (tab: Tab) => {
-    setTabs(prevTabs => {
+    setTabs((prevTabs) => {
       // Add the tab if it doesn't exist
-      if (!prevTabs.some(existingTab => existingTab.id === tab.id)) {
+      if (!prevTabs.some((existingTab) => existingTab.id === tab.id)) {
         return [...prevTabs, tab]
       }
       return prevTabs
@@ -50,8 +50,8 @@ export const TabsProvider = (props: React.PropsWithChildren) => {
   }
 
   const closeTab = (tabId: string) => {
-    const newTabs = tabs.filter(tab => tab.id !== tabId)
-    const closedTabIndex = tabs.findIndex(tab => tab.id === tabId)
+    const newTabs = tabs.filter((tab) => tab.id !== tabId)
+    const closedTabIndex = tabs.findIndex((tab) => tab.id === tabId)
 
     if (activeTabId === tabId) {
       const activeTab = newTabs[closedTabIndex - 1]
@@ -66,9 +66,5 @@ export const TabsProvider = (props: React.PropsWithChildren) => {
     setTabs(newTabs)
   }
 
-  return (
-    <TabsContext.Provider value={{tabs, activeTabId, openTab, closeTab}}>
-      {props.children}
-    </TabsContext.Provider>
-  )
+  return <TabsContext.Provider value={{ tabs, activeTabId, openTab, closeTab }}>{props.children}</TabsContext.Provider>
 }

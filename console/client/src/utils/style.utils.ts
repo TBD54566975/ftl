@@ -17,7 +17,7 @@ export const environments = {
   Production: 'text-indigo-400 bg-indigo-400/10 ring-indigo-400/30',
 }
 
-export const logLevelText = {
+export const logLevelText: { [key: number]: string } = {
   1: 'Trace',
   5: 'Debug',
   9: 'Info',
@@ -25,7 +25,7 @@ export const logLevelText = {
   17: 'Error',
 }
 
-export const logLevelBadge = {
+export const logLevelBadge: { [key: number]: string } = {
   1: 'text-blue-350 bg-blue-300/10 dark:text-blue-300 dark:bg-blue-700/10',
   5: 'text-blue-350 bg-blue-400/10 dark:text-blue-300 dark:bg-blue-800/10',
   9: 'text-green-600 bg-green-400/30 dark:text-green-300 dark:bg-green-700/10',

@@ -8,9 +8,9 @@ const fs = require('fs/promises')
     dot: true,
   })
   const dist = path.resolve(__dirname, '../dist')
-  await fs.mkdir(dist, {recursive: true})
+  await fs.mkdir(dist, { recursive: true })
   await Promise.all(
-    files.map(async file => {
+    files.map(async (file) => {
       try {
         await fs.copyFile(file, file.replace(src, dist))
         // eslint-disable-next-line no-console
@@ -18,6 +18,6 @@ const fs = require('fs/promises')
       } catch {
         console.error(` ${file.replace(src, '')}could not be copied`)
       }
-    })
+    }),
   )
 })()

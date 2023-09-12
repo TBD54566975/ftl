@@ -1,17 +1,11 @@
-import {
-  Call,
-  ListAlt,
-  ListOutlined,
-  PhoneCallback,
-  RocketLaunch,
-} from '@mui/icons-material'
-import {TimelineEvent} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Call, ListAlt, ListOutlined, PhoneCallback, RocketLaunch } from '@mui/icons-material'
+import { TimelineEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
-type Props = {
+interface Props {
   entry: TimelineEvent
 }
 
-export const logLevelIconColor = {
+export const logLevelIconColor: { [key: number]: string } = {
   1: 'text-indigo-600 dark:text-indigo-600',
   5: 'text-indigo-600 dark:text-indigo-600',
   9: 'text-green-500 dark:text-green-400',
@@ -19,7 +13,7 @@ export const logLevelIconColor = {
   17: 'text-red-500 dark:text-red-400',
 }
 
-export const TimelineIcon: React.FC<Props> = ({entry}) => {
+export const TimelineIcon = ({ entry }: Props) => {
   const iconColor = (entry: TimelineEvent) => {
     switch (entry.entry.case) {
       case 'call':
@@ -36,16 +30,16 @@ export const TimelineIcon: React.FC<Props> = ({entry}) => {
     switch (entry.entry.case) {
       case 'call':
         return entry.entry.value.sourceVerbRef ? (
-          <PhoneCallback sx={{fontSize: iconSize}} />
+          <PhoneCallback sx={{ fontSize: iconSize }} />
         ) : (
-          <Call sx={{fontSize: iconSize}} />
+          <Call sx={{ fontSize: iconSize }} />
         )
       case 'deployment':
-        return <RocketLaunch sx={{fontSize: iconSize}} />
+        return <RocketLaunch sx={{ fontSize: iconSize }} />
       case 'log':
-        return <ListOutlined sx={{fontSize: iconSize}} />
+        return <ListOutlined sx={{ fontSize: iconSize }} />
       default:
-        return <ListAlt sx={{fontSize: iconSize}} />
+        return <ListAlt sx={{ fontSize: iconSize }} />
     }
   }
 
