@@ -2,7 +2,7 @@ import React from 'react'
 
 export default function useLocalStorage(
   key: string,
-  initialValue: string
+  initialValue: string,
 ): [string, React.Dispatch<React.SetStateAction<string>>] {
   const [value, setValue] = React.useState<string>(() => {
     const jsonValue = localStorage.getItem(key)

@@ -1,13 +1,10 @@
-import {
-  Deployment,
-  DeploymentEventType,
-} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Deployment, DeploymentEventType } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
-type Props = {
+interface Props {
   deployment: Deployment
 }
 
-function deploymentType(type: DeploymentEventType) {
+const deploymentType = (type: DeploymentEventType) => {
   switch (type) {
     case DeploymentEventType.DEPLOYMENT_CREATED:
       return 'Created'
@@ -20,17 +17,12 @@ function deploymentType(type: DeploymentEventType) {
   }
 }
 
-export const TimelineDeployment: React.FC<Props> = ({deployment}) => {
+export const TimelineDeployment = ({ deployment }: Props) => {
   return (
     <>
       <span>{deploymentType(deployment.eventType)}</span> deployment{' '}
-      <span className='text-indigo-500 dark:text-indigo-300'>
-        {deployment.name}
-      </span>{' '}
-      for language{' '}
-      <span className='text-indigo-500 dark:text-indigo-300'>
-        {deployment.language}
-      </span>
+      <span className='text-indigo-500 dark:text-indigo-300'>{deployment.name}</span> for language{' '}
+      <span className='text-indigo-500 dark:text-indigo-300'>{deployment.language}</span>
     </>
   )
 }

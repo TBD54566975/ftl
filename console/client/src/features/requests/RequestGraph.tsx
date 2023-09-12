@@ -1,6 +1,6 @@
-import {Duration, Timestamp} from '@bufbuild/protobuf'
-import {Call} from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import {verbRefString} from '../verbs/verb.utils'
+import { Duration, Timestamp } from '@bufbuild/protobuf'
+import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { verbRefString } from '../verbs/verb.utils'
 
 interface CallBlockProps {
   call: Call
@@ -9,12 +9,7 @@ interface CallBlockProps {
   firstDuration: Duration
 }
 
-const CallBlock: React.FC<CallBlockProps> = ({
-  call,
-  selectedCall,
-  firstTimeStamp,
-  firstDuration,
-}) => {
+const CallBlock = ({ call, selectedCall, firstTimeStamp, firstDuration }: CallBlockProps) => {
   const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000
   const durationInMillis = (call.duration?.nanos ?? 0) / 1000000
   const width = (durationInMillis / totalDurationMillis) * 100
@@ -38,9 +33,7 @@ const CallBlock: React.FC<CallBlockProps> = ({
         />
       </div>
 
-      <div className='text-gray-900 dark:text-gray-300 self-center text-xs p-1'>
-        {`${durationInMillis}ms`}
-      </div>
+      <div className='text-gray-900 dark:text-gray-300 self-center text-xs p-1'>{`${durationInMillis}ms`}</div>
       {call.destinationVerbRef && (
         <span
           className='text-white pointer-events-none absolute pl-1 top-1/2 left-0 transform -translate-y-1/2
@@ -53,17 +46,13 @@ const CallBlock: React.FC<CallBlockProps> = ({
   )
 }
 
-type Props = {
+interface Props {
   calls: Call[]
   call?: Call
   setSelectedCall: React.Dispatch<React.SetStateAction<Call>>
 }
 
-export const RequestGraph: React.FC<Props> = ({
-  calls,
-  call,
-  setSelectedCall,
-}) => {
+export const RequestGraph = ({ calls, call, setSelectedCall }: Props) => {
   if (calls.length === 0) {
     return <></>
   }
@@ -83,12 +72,7 @@ export const RequestGraph: React.FC<Props> = ({
           onClick={() => setSelectedCall(c)}
         >
           <div className='w-full relative'>
-            <CallBlock
-              call={c}
-              selectedCall={call}
-              firstTimeStamp={firstTimeStamp}
-              firstDuration={firstDuration}
-            />
+            <CallBlock call={c} selectedCall={call} firstTimeStamp={firstTimeStamp} firstDuration={firstDuration} />
           </div>
         </div>
       ))}

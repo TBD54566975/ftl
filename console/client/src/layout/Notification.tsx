@@ -1,20 +1,16 @@
-import {Transition} from '@headlessui/react'
-import {XMarkIcon} from '@heroicons/react/20/solid'
+import { Transition } from '@headlessui/react'
+import { XMarkIcon } from '@heroicons/react/20/solid'
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline'
-import React, {Fragment} from 'react'
-import {
-  NotificationType,
-  NotificationsContext,
-} from '../providers/notifications-provider'
+import React, { Fragment } from 'react'
+import { NotificationType, NotificationsContext } from '../providers/notifications-provider'
 
-export const Notification: React.FC = () => {
-  const {isOpen, notification, closeNotification} =
-    React.useContext(NotificationsContext)
+export const Notification = () => {
+  const { isOpen, notification, closeNotification } = React.useContext(NotificationsContext)
 
   const iconColor = () => {
     switch (notification?.type) {
@@ -34,33 +30,13 @@ export const Notification: React.FC = () => {
   const icon = () => {
     switch (notification?.type) {
       case NotificationType.Success:
-        return (
-          <CheckCircleIcon
-            className={`h-6 w-6 ${iconColor()}`}
-            aria-hidden='true'
-          />
-        )
+        return <CheckCircleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
       case NotificationType.Error:
-        return (
-          <ExclamationTriangleIcon
-            className={`h-6 w-6 ${iconColor()}`}
-            aria-hidden='true'
-          />
-        )
+        return <ExclamationTriangleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
       case NotificationType.Warning:
-        return (
-          <ExclamationCircleIcon
-            className={`h-6 w-6 ${iconColor()}`}
-            aria-hidden='true'
-          />
-        )
+        return <ExclamationCircleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
       case NotificationType.Info:
-        return (
-          <InformationCircleIcon
-            className={`h-6 w-6 ${iconColor()}`}
-            aria-hidden='true'
-          />
-        )
+        return <InformationCircleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
       default:
         return <></>
     }
@@ -87,12 +63,8 @@ export const Notification: React.FC = () => {
               <div className='flex items-start'>
                 <div className='flex-shrink-0'>{icon()}</div>
                 <div className='ml-3 w-0 flex-1 pt-0.5'>
-                  <p className='text-sm font-medium text-gray-900'>
-                    {notification?.title}
-                  </p>
-                  <p className='mt-1 text-sm text-gray-500'>
-                    {notification?.message}
-                  </p>
+                  <p className='text-sm font-medium text-gray-900'>{notification?.title}</p>
+                  <p className='mt-1 text-sm text-gray-500'>{notification?.message}</p>
                 </div>
                 <div className='ml-4 flex flex-shrink-0'>
                   <button
@@ -103,10 +75,7 @@ export const Notification: React.FC = () => {
                     }}
                   >
                     <span className='sr-only'>Close</span>
-                    <XMarkIcon
-                      className='h-5 w-5'
-                      aria-hidden='true'
-                    />
+                    <XMarkIcon className='h-5 w-5' aria-hidden='true' />
                   </button>
                 </div>
               </div>

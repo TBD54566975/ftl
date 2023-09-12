@@ -1,25 +1,21 @@
-import {Timestamp} from '@bufbuild/protobuf'
+import { Timestamp } from '@bufbuild/protobuf'
 import React from 'react'
-import {useClient} from '../../hooks/use-client.ts'
-import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
-import {
-  Call,
-  Module,
-  Verb,
-} from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import {SidePanelContext} from '../../providers/side-panel-provider.tsx'
-import {formatDuration, formatTimestamp} from '../../utils/date.utils.ts'
-import {TimelineCallDetails} from '../timeline/details/TimelineCallDetails.tsx'
+import { useClient } from '../../hooks/use-client.ts'
+import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
+import { Call, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
+import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
+import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails.tsx'
 
-type Props = {
+interface Props {
   module?: Module
   verb?: Verb
 }
 
-export const VerbCalls: React.FC<Props> = ({module, verb}) => {
+export const VerbCalls = ({ module, verb }: Props) => {
   const client = useClient(ConsoleService)
   const [calls, setCalls] = React.useState<Call[]>([])
-  const {openPanel} = React.useContext(SidePanelContext)
+  const { openPanel } = React.useContext(SidePanelContext)
 
   React.useEffect(() => {
     const fetchCalls = async () => {
@@ -30,16 +26,11 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
       setCalls(response.calls)
     }
 
-    void fetchCalls()
+    fetchCalls()
   }, [client, module, verb])
 
   const handleClick = (call: Call) => {
-    openPanel(
-      <TimelineCallDetails
-        timestamp={call.timeStamp ?? new Timestamp()}
-        call={call}
-      />
-    )
+    openPanel(<TimelineCallDetails timestamp={call.timeStamp ?? new Timestamp()} call={call} />)
   }
 
   return (
@@ -48,28 +39,16 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
         <table className='mt-6 w-full text-left'>
           <thead className='border-b border-white/10 text-sm leading-6 dark:text-white'>
             <tr>
-              <th
-                scope='col'
-                className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'
-              >
+              <th scope='col' className='hidden py-2 pl-0 pr-8 font-semibold sm:table-cell'>
                 Request
               </th>
-              <th
-                scope='col'
-                className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'
-              >
+              <th scope='col' className='py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8'>
                 Source
               </th>
-              <th
-                scope='col'
-                className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'
-              >
+              <th scope='col' className='py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20'>
                 Time
               </th>
-              <th
-                scope='col'
-                className='hidden py-2 pr-0 text-right font-semibold md:table-cell'
-              >
+              <th scope='col' className='hidden py-2 pr-0 text-right font-semibold md:table-cell'>
                 Duration(ms)
               </th>
             </tr>
@@ -83,19 +62,13 @@ export const VerbCalls: React.FC<Props> = ({module, verb}) => {
               >
                 <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                   <div className='flex gap-x-3'>
-                    <div className='font-mono text-sm leading-6'>
-                      {call.requestKey?.toString()}
-                    </div>
+                    <div className='font-mono text-sm leading-6'>{call.requestKey?.toString()}</div>
                   </div>
                 </td>
                 <td className='py-4 pl-4 pr-8 sm:pl-6 lg:pl-8'>
                   <div className='flex items-center gap-x-4'>
                     <div className='truncate text-sm font-medium leading-6 text-gray-700 dark:text-white'>
-                      {call.sourceVerbRef &&
-                        [
-                          call.sourceVerbRef.module,
-                          call.sourceVerbRef.name,
-                        ].join(':')}
+                      {call.sourceVerbRef && [call.sourceVerbRef.module, call.sourceVerbRef.name].join(':')}
                     </div>
                   </div>
                 </td>

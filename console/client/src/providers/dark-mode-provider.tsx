@@ -10,19 +10,17 @@ export const useDarkMode = () => {
   return React.useContext(DarkModeContext)
 }
 
-type DarkModeProviderProps = {
+interface Props {
   children: React.ReactNode
 }
 
-export const DarkModeProvider = ({children}: DarkModeProviderProps) => {
+export const DarkModeProvider = ({ children }: Props) => {
   const [isDarkMode, setDarkMode] = useLocalStorage('dark-mode', 'false')
   const setMode = (val: boolean) => {
     setDarkMode(`${val}`)
   }
   return (
-    <DarkModeContext.Provider
-      value={{isDarkMode: isDarkMode === 'true', setDarkMode: setMode}}
-    >
+    <DarkModeContext.Provider value={{ isDarkMode: isDarkMode === 'true', setDarkMode: setMode }}>
       {children}
     </DarkModeContext.Provider>
   )

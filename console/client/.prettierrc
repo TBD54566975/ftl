@@ -2,17 +2,5 @@
   "semi": false,
   "singleQuote": true,
   "jsxSingleQuote": true,
-  "trailingComma": "es5",
-  "bracketSpacing": false,
-  "bracketSameLine": false,
-  "arrowParens": "avoid",
-  "singleAttributePerLine": true,
-  "overrides": [
-    {
-      "files": ["*.(t|j)sx?"],
-      "options": {
-        "parser": "typescript"
-      }
-    }
-  ]
+  "printWidth": 120
 }

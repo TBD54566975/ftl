@@ -1,24 +1,22 @@
 import React from 'react'
-import {useSearchParams} from 'react-router-dom'
-import {Verb} from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import {modulesContext} from '../../providers/modules-provider'
-import {SelectedModuleContext} from '../../providers/selected-module-provider'
-import {TabsContext} from '../../providers/tabs-provider'
-import {textColor} from '../../utils'
-import {VerbTab} from '../verbs/VerbTab'
+import { useSearchParams } from 'react-router-dom'
+import { Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { modulesContext } from '../../providers/modules-provider'
+import { SelectedModuleContext } from '../../providers/selected-module-provider'
+import { TabsContext } from '../../providers/tabs-provider'
+import { textColor } from '../../utils'
+import { VerbTab } from '../verbs/VerbTab'
 
-export function ModuleDetails() {
+export const ModuleDetails = () => {
   const modules = React.useContext(modulesContext)
-  const {selectedModule, setSelectedModule} = React.useContext(
-    SelectedModuleContext
-  )
-  const {openTab} = React.useContext(TabsContext)
+  const { selectedModule, setSelectedModule } = React.useContext(SelectedModuleContext)
+  const { openTab } = React.useContext(TabsContext)
   const [searchParams] = useSearchParams()
   const moduleId = searchParams.get('module')
   // When mounting with a valid module in query params set selected module
   React.useEffect(() => {
     if (moduleId) {
-      const module = modules.modules.find(module => module?.name === moduleId)
+      const module = modules.modules.find((module) => module?.name === moduleId)
       module && setSelectedModule(module)
     }
   })
@@ -79,10 +77,7 @@ export function ModuleDetails() {
         <dd className='text-white'>
           <ul className='list-none ml-4'>
             {selectedModule.data.map((data, index) => (
-              <li
-                key={index}
-                className={`${textColor}`}
-              >
+              <li key={index} className={`${textColor}`}>
                 <code>{data.data?.name}</code>
               </li>
             ))}

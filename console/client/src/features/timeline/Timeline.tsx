@@ -1,57 +1,48 @@
-import {Timestamp} from '@bufbuild/protobuf'
+import { Timestamp } from '@bufbuild/protobuf'
 import React from 'react'
-import {useClient} from '../../hooks/use-client.ts'
-import {ConsoleService} from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
-import {TimelineEvent} from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
-import {SidePanelContext} from '../../providers/side-panel-provider.tsx'
-import {formatTimestampShort} from '../../utils/date.utils.ts'
-import {panelColor} from '../../utils/style.utils.ts'
-import {TimelineCall} from './TimelineCall.tsx'
-import {TimelineDeployment} from './TimelineDeployment.tsx'
-import {TimelineIcon} from './TimelineIcon.tsx'
-import {TimelineLog} from './TimelineLog.tsx'
-import {TimelineCallDetails} from './details/TimelineCallDetails.tsx'
-import {TimelineDeploymentDetails} from './details/TimelineDeploymentDetails.tsx'
-import {TimelineLogDetails} from './details/TimelineLogDetails.tsx'
-import {TIME_RANGES} from './filters/TimeFilter.tsx'
-import {TimelineFilterBar} from './filters/TimelineFilterBar.tsx'
+import { useClient } from '../../hooks/use-client.ts'
+import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
+import { TimelineEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
+import { formatTimestampShort } from '../../utils/date.utils.ts'
+import { panelColor } from '../../utils/style.utils.ts'
+import { TimelineCall } from './TimelineCall.tsx'
+import { TimelineDeployment } from './TimelineDeployment.tsx'
+import { TimelineIcon } from './TimelineIcon.tsx'
+import { TimelineLog } from './TimelineLog.tsx'
+import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
+import { TimelineDeploymentDetails } from './details/TimelineDeploymentDetails.tsx'
+import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
+import { TIME_RANGES } from './filters/TimeFilter.tsx'
+import { TimelineFilterBar } from './filters/TimelineFilterBar.tsx'
 
 export const Timeline = () => {
   const client = useClient(ConsoleService)
-  const {openPanel, closePanel, isOpen} = React.useContext(SidePanelContext)
+  const { openPanel, closePanel, isOpen } = React.useContext(SidePanelContext)
   const [entries, setEntries] = React.useState<TimelineEvent[]>([])
-  const [selectedEntry, setSelectedEntry] =
-    React.useState<TimelineEvent | null>(null)
-  const [selectedEventTypes, setSelectedEventTypes] = React.useState<string[]>([
-    'log',
-    'call',
-    'deployment',
-  ])
-  const [selectedLogLevels, setSelectedLogLevels] = React.useState<number[]>([
-    1, 5, 9, 13, 17,
-  ])
+  const [selectedEntry, setSelectedEntry] = React.useState<TimelineEvent | null>(null)
+  const [selectedEventTypes, setSelectedEventTypes] = React.useState<string[]>(['log', 'call', 'deployment'])
+  const [selectedLogLevels, setSelectedLogLevels] = React.useState<number[]>([1, 5, 9, 13, 17])
   const [selectedTimeRange, setSelectedTimeRange] = React.useState('1h')
 
   React.useEffect(() => {
     const abortController = new AbortController()
 
-    async function streamTimeline() {
-      setEntries(_ => [])
-      const afterTime = new Date(
-        Date.now() - TIME_RANGES[selectedTimeRange].value
-      )
+    const streamTimeline = async () => {
+      setEntries((_) => [])
+      const afterTime = new Date(Date.now() - TIME_RANGES[selectedTimeRange].value)
 
       for await (const response of client.streamTimeline(
-        {afterTime: Timestamp.fromDate(afterTime)},
-        {signal: abortController.signal}
+        { afterTime: Timestamp.fromDate(afterTime) },
+        { signal: abortController.signal },
       )) {
         if (response.event != null) {
-          setEntries(prevEntries => [response.event!, ...prevEntries])
+          setEntries((prevEntries) => [response.event!, ...prevEntries])
         }
       }
     }
 
-    void streamTimeline()
+    streamTimeline()
     return () => {
       abortController.abort()
     }
@@ -72,28 +63,13 @@ export const Timeline = () => {
 
     switch (entry.entry?.case) {
       case 'call':
-        openPanel(
-          <TimelineCallDetails
-            timestamp={entry.timeStamp as Timestamp}
-            call={entry.entry.value}
-          />
-        )
+        openPanel(<TimelineCallDetails timestamp={entry.timeStamp as Timestamp} call={entry.entry.value} />)
         break
       case 'log':
-        openPanel(
-          <TimelineLogDetails
-            entry={entry}
-            log={entry.entry.value}
-          />
-        )
+        openPanel(<TimelineLogDetails entry={entry} log={entry.entry.value} />)
         break
       case 'deployment':
-        openPanel(
-          <TimelineDeploymentDetails
-            entry={entry}
-            deployment={entry.entry.value}
-          />
-        )
+        openPanel(<TimelineDeploymentDetails entry={entry} deployment={entry.entry.value} />)
         break
       default:
         break
@@ -103,17 +79,17 @@ export const Timeline = () => {
 
   const handleEventTypesChanged = (eventType: string, checked: boolean) => {
     if (checked) {
-      setSelectedEventTypes(prev => [...prev, eventType])
+      setSelectedEventTypes((prev) => [...prev, eventType])
     } else {
-      setSelectedEventTypes(prev => prev.filter(filter => filter !== eventType))
+      setSelectedEventTypes((prev) => prev.filter((filter) => filter !== eventType))
     }
   }
 
   const handleLogLevelsChanged = (logLevel: number, checked: boolean) => {
     if (checked) {
-      setSelectedLogLevels(prev => [...prev, logLevel])
+      setSelectedLogLevels((prev) => [...prev, logLevel])
     } else {
-      setSelectedLogLevels(prev => prev.filter(filter => filter !== logLevel))
+      setSelectedLogLevels((prev) => prev.filter((filter) => filter !== logLevel))
     }
   }
 
@@ -121,7 +97,7 @@ export const Timeline = () => {
     setSelectedTimeRange(key)
   }
 
-  const filteredEntries = entries.filter(entry => {
+  const filteredEntries = entries.filter((entry) => {
     const isActive = selectedEventTypes.includes(entry.entry?.case ?? '')
     if (entry.entry.case === 'log') {
       return isActive && selectedLogLevels.includes(entry.entry.value.logLevel)
@@ -141,28 +117,22 @@ export const Timeline = () => {
         onSelectedTimeRangeChanged={handleTimeRangeChanged}
       />
       <div className='overflow-x-hidden'>
-        <table
-          className={`w-full table-fixed text-gray-800 dark:text-gray-300`}
-        >
+        <table className={`w-full table-fixed text-gray-800 dark:text-gray-300`}>
           <thead>
             <tr className='flex  text-xs font-semibold'>
               <th className='p-1 text-left border-b w-8 border-gray-100 dark:border-slate-700 flex-none'></th>
-              <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>
-                Date
-              </th>
+              <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>Date</th>
               <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-grow flex-shrink'>
                 Content
               </th>
             </tr>
           </thead>
           <tbody>
-            {filteredEntries.map(entry => (
+            {filteredEntries.map((entry) => (
               <tr
                 key={entry.id.toString()}
                 className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-mono ${
-                  selectedEntry?.id === entry.id
-                    ? 'bg-indigo-50 dark:bg-slate-800'
-                    : panelColor
+                  selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-800' : panelColor
                 } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-800`}
                 onClick={() => handleEntryClicked(entry)}
               >
@@ -180,9 +150,7 @@ export const Timeline = () => {
                       case 'log':
                         return <TimelineLog log={entry.entry.value} />
                       case 'deployment':
-                        return (
-                          <TimelineDeployment deployment={entry.entry.value} />
-                        )
+                        return <TimelineDeployment deployment={entry.entry.value} />
                     }
                   })()}
                 </td>

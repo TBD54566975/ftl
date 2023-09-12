@@ -1,4 +1,4 @@
 src/protos/**/*
 dist/**/*
-.playwright/**/*
-playwright.config.ts
+scripts/**/*
+tailwind.config.js
