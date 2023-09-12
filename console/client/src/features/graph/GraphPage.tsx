@@ -1,7 +1,6 @@
 import { useContext, useEffect } from 'react'
 import ReactFlow, { Controls, MiniMap, useEdgesState, useNodesState } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Navigation } from '../../layout/Navigation'
 import { modulesContext } from '../../providers/modules-provider'
 import { GroupNode } from './GroupNode'
 import { VerbNode } from './VerbNode'
@@ -22,7 +21,6 @@ export const GraphPage = () => {
 
   return (
     <>
-      <Navigation />
       <div style={{ width: '100vw', height: '100vh' }}>
         <ReactFlow
           nodes={nodes}
