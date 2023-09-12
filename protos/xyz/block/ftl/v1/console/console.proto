@@ -108,6 +108,10 @@ enum LogLevel {
 
 // Query for timeline events.
 message TimelineQuery {
+  // Limit the number of events returned.
+  message LimitFilter {
+    int32 limit = 1;
+  }
   // Filters events by log level.
   message LogLevelFilter {
     LogLevel log_level = 1;
@@ -139,20 +143,27 @@ message TimelineQuery {
     optional int64 higher_than = 2;
   }
 
+  enum Order {
+    ASC = 0;
+    DESC = 1;
+  }
+
   message Filter {
     // These map 1:1 with filters in backend/controller/internal/dal/events.go
     oneof filter {
-      LogLevelFilter log_level = 1;
-      DeploymentFilter deployments = 2;
-      RequestFilter requests = 3;
-      EventTypeFilter event_types = 4;
-      TimeFilter time = 5;
-      IDFilter id = 6;
+      LimitFilter limit = 1;
+      LogLevelFilter log_level = 2;
+      DeploymentFilter deployments = 3;
+      RequestFilter requests = 4;
+      EventTypeFilter event_types = 5;
+      TimeFilter time = 6;
+      IDFilter id = 7;
     }
   }
 
   repeated Filter filters = 1;
   int32 limit = 2;
+  Order order = 3;
 }
 
 message StreamTimelineRequest {
@@ -180,26 +191,11 @@ message TimelineEvent {
   }
 }
 
-message StreamLogsRequest {
-  optional google.protobuf.Duration update_interval = 1;
-  google.protobuf.Timestamp after_time = 2;
-  string deployment_name = 3;
-}
-
-message StreamLogsResponse {
-  LogEntry log = 1;
-
-  // If true there are more logs immediately following this one as part of the initial batch.
-  // If false this is the last log in the initial batch, but others may follow later.
-  bool more = 2;
-}
-
 message GetTimelineResponse {
   repeated TimelineEvent events = 1;
 
-  // If true, there are more events past the limit of the query.
-  // This is useful for pagination of the the timeline
-  bool more = 2;
+  // For pagination, this cursor is where we should start our next query
+  optional int64 cursor = 2;
 }
 
 service ConsoleService {
@@ -213,5 +209,4 @@ service ConsoleService {
   rpc GetRequestCalls(GetRequestCallsRequest) returns (GetRequestCallsResponse);
   rpc StreamTimeline(StreamTimelineRequest) returns (stream StreamTimelineResponse);
   rpc GetTimeline(TimelineQuery) returns (GetTimelineResponse);
-  rpc StreamLogs(StreamLogsRequest) returns (stream StreamLogsResponse);
 }

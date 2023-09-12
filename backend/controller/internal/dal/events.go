@@ -37,7 +37,10 @@ const (
 // Event types.
 //
 //sumtype:decl
-type Event interface{ event() }
+type Event interface {
+	GetID() int64
+	event()
+}
 
 type LogEvent struct {
 	ID             int64
@@ -50,7 +53,8 @@ type LogEvent struct {
 	Error          types.Option[string]
 }
 
-func (e *LogEvent) event() {}
+func (e *LogEvent) GetID() int64 { return e.ID }
+func (e *LogEvent) event()       {}
 
 type CallEvent struct {
 	ID             int64
@@ -65,7 +69,8 @@ type CallEvent struct {
 	Error          types.Option[string]
 }
 
-func (e *CallEvent) event() {}
+func (e *CallEvent) GetID() int64 { return e.ID }
+func (e *CallEvent) event()       {}
 
 type DeploymentEvent struct {
 	ID                 int64
@@ -78,7 +83,8 @@ type DeploymentEvent struct {
 	ReplacedDeployment types.Option[model.DeploymentName]
 }
 
-func (e *DeploymentEvent) event() {}
+func (e *DeploymentEvent) GetID() int64 { return e.ID }
+func (e *DeploymentEvent) event()       {}
 
 type eventFilterCall struct {
 	sourceModule types.Option[string]
@@ -96,6 +102,7 @@ type eventFilter struct {
 	olderThan    time.Time
 	idHigherThan int64
 	idLowerThan  int64
+	descending   bool
 }
 
 type EventFilter func(query *eventFilter)
@@ -155,6 +162,13 @@ func FilterIDRange(higherThan, lowerThan int64) EventFilter {
 	}
 }
 
+// FilterDescending returns events in descending order.
+func FilterDescending() EventFilter {
+	return func(query *eventFilter) {
+		query.descending = true
+	}
+}
+
 // The internal JSON payload of a call event.
 type eventCallJSON struct {
 	DurationMS int64                `json:"duration_ms"`
@@ -180,7 +194,11 @@ type eventRow struct {
 	RequestKey     types.Option[model.IngressRequestKey]
 }
 
-func (d *DAL) QueryEvents(ctx context.Context, limit *int, filters ...EventFilter) ([]Event, error) {
+func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter) ([]Event, error) {
+	if limit < 1 {
+		return nil, errors.Errorf("limit must be >= 1, got %d", limit)
+	}
+
 	// Build query.
 	q := `SELECT e.id AS id,
 				d.name AS deployment_name,
@@ -252,10 +270,13 @@ func (d *DAL) QueryEvents(ctx context.Context, limit *int, filters ...EventFilte
 		q += ")\n"
 	}
 
-	q += " ORDER BY time_stamp ASC"
-	if limit != nil {
-		q += fmt.Sprintf(" LIMIT %d", *limit)
+	if filter.descending {
+		q += " ORDER BY time_stamp DESC"
+	} else {
+		q += " ORDER BY time_stamp ASC"
 	}
+
+	q += fmt.Sprintf(" LIMIT %d", limit)
 
 	// Issue query.
 	rows, err := d.db.Conn().Query(ctx, q, args...)
