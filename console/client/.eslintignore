@@ -1,4 +1,2 @@
 src/protos/**/*
 dist/**/*
-.playwright/**/*
-playwright.config.ts
