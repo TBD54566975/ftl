@@ -5,6 +5,8 @@ import { App } from './App'
 
 describe('App', () => {
   it('renders the app', () => {
+    window.history.pushState({}, 'Modules', '/modules')
+
     render(
       <BrowserRouter>
         <App />

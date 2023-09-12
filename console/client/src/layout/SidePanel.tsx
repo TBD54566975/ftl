@@ -20,9 +20,7 @@ export const SidePanel = () => {
         leaveTo='translate-x-full'
       >
         <div className={`fixed right-0 w-1/3 h-full ${sidePanelColor} shadow-xl`}>
-          <div
-            className={`flex items-center justify-between pl-4 pr-2 py-2 rounded-tl ${headerTextColor} ${headerColor}`}
-          >
+          <div className={`flex items-center justify-between pl-4 pr-2 py-2 ${headerTextColor} ${headerColor}`}>
             Event Details
             <button onClick={() => closePanel()} className='hover:bg-indigo-800 dark:hover:bg-indigo-500'>
               <XMarkIcon className={`h-5 w-5`} />
