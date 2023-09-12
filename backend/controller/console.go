@@ -103,7 +103,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 }
 
 func (c *ConsoleService) GetCalls(ctx context.Context, req *connect.Request[pbconsole.GetCallsRequest]) (*connect.Response[pbconsole.GetCallsResponse], error) {
-	events, err := c.dal.QueryEvents(ctx, dal.FilterCall(types.None[string](), req.Msg.Module, types.Some(req.Msg.Verb)))
+	events, err := c.dal.QueryEvents(ctx, 100, dal.FilterCall(types.None[string](), req.Msg.Module, types.Some(req.Msg.Verb)))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -119,7 +119,7 @@ func (c *ConsoleService) GetRequestCalls(ctx context.Context, req *connect.Reque
 		return nil, errors.WithStack(err)
 	}
 
-	events, err := c.dal.QueryEvents(ctx, dal.FilterRequests(requestKey))
+	events, err := c.dal.QueryEvents(ctx, 100, dal.FilterRequests(requestKey))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -134,12 +134,31 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[p
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	results, err := c.dal.QueryEvents(ctx, query...)
+
+	if req.Msg.Limit == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("limit must be > 0"))
+	}
+	limit := int(req.Msg.Limit)
+
+	// Get 1 more than the requested limit to determine if there are more results.
+	limitPlusOne := limit + 1
+
+	results, err := c.dal.QueryEvents(ctx, limitPlusOne, query...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	var cursor *int64
+	// Return only the requested number of results.
+	if len(results) > limit {
+		results = results[:limit]
+		id := results[len(results)-1].GetID()
+		cursor = &id
+	}
+
 	response := &pbconsole.GetTimelineResponse{
 		Events: slices.Map(results, eventDALToProto),
+		Cursor: cursor,
 	}
 	return connect.NewResponse(response), nil
 }
@@ -168,7 +187,7 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 
 	for {
 		thisRequestTime := time.Now()
-		events, err := c.dal.QueryEvents(ctx, append(query, dal.FilterTimeRange(thisRequestTime, lastEventTime))...)
+		events, err := c.dal.QueryEvents(ctx, 1000, append(query, dal.FilterTimeRange(thisRequestTime, lastEventTime))...)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -184,62 +203,6 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 			}
 		}
 		lastEventTime = thisRequestTime
-		select {
-		case <-time.After(updateInterval):
-		case <-ctx.Done():
-			return nil
-		}
-	}
-}
-
-func (c *ConsoleService) StreamLogs(ctx context.Context, req *connect.Request[pbconsole.StreamLogsRequest], stream *connect.ServerStream[pbconsole.StreamLogsResponse]) error {
-	// Default to 1 second interval if not specified.
-	updateInterval := 1 * time.Second
-	if interval := req.Msg.UpdateInterval; interval != nil && interval.AsDuration() > time.Second { // Minimum 1s interval.
-		updateInterval = req.Msg.UpdateInterval.AsDuration()
-	}
-
-	var query []dal.EventFilter
-	if req.Msg.DeploymentName != "" {
-		deploymentName, err := model.ParseDeploymentName(req.Msg.DeploymentName)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		query = append(query, dal.FilterDeployments(deploymentName))
-	}
-	lastLogTime := req.Msg.AfterTime.AsTime()
-	for {
-		thisRequestTime := time.Now()
-		events, err := c.dal.QueryEvents(ctx, append(query, dal.FilterTimeRange(thisRequestTime, lastLogTime))...)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		logEvents := filterEvents[*dal.LogEvent](events)
-		for index, log := range logEvents {
-			var requestKey *string
-			if r, ok := log.RequestKey.Get(); ok {
-				rstr := r.String()
-				requestKey = &rstr
-			}
-
-			err := stream.Send(&pbconsole.StreamLogsResponse{
-				Log: &pbconsole.LogEntry{
-					DeploymentName: log.DeploymentName.String(),
-					RequestKey:     requestKey,
-					TimeStamp:      timestamppb.New(log.Time),
-					LogLevel:       log.Level,
-					Attributes:     log.Attributes,
-					Message:        log.Message,
-					Error:          log.Error.Ptr(),
-				},
-				More: len(logEvents) > index+1,
-			})
-			if err != nil {
-				return errors.WithStack(err)
-			}
-		}
-		lastLogTime = thisRequestTime
 		select {
 		case <-time.After(updateInterval):
 		case <-ctx.Done():
@@ -331,6 +294,11 @@ func filterEvents[E dal.Event](events []dal.Event) []E {
 
 func timelineQueryProtoToDAL(pb *pbconsole.TimelineQuery) ([]dal.EventFilter, error) {
 	var query []dal.EventFilter
+
+	if pb.Order == pbconsole.TimelineQuery_DESC {
+		query = append(query, dal.FilterDescending())
+	}
+
 	for _, filter := range pb.Filters {
 		switch filter := filter.Filter.(type) {
 		case *pbconsole.TimelineQuery_Filter_Deployments:

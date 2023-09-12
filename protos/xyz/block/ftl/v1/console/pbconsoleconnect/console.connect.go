@@ -50,9 +50,6 @@ const (
 	// ConsoleServiceGetTimelineProcedure is the fully-qualified name of the ConsoleService's
 	// GetTimeline RPC.
 	ConsoleServiceGetTimelineProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetTimeline"
-	// ConsoleServiceStreamLogsProcedure is the fully-qualified name of the ConsoleService's StreamLogs
-	// RPC.
-	ConsoleServiceStreamLogsProcedure = "/xyz.block.ftl.v1.console.ConsoleService/StreamLogs"
 )
 
 // ConsoleServiceClient is a client for the xyz.block.ftl.v1.console.ConsoleService service.
@@ -64,7 +61,6 @@ type ConsoleServiceClient interface {
 	GetRequestCalls(context.Context, *connect_go.Request[console.GetRequestCallsRequest]) (*connect_go.Response[console.GetRequestCallsResponse], error)
 	StreamTimeline(context.Context, *connect_go.Request[console.StreamTimelineRequest]) (*connect_go.ServerStreamForClient[console.StreamTimelineResponse], error)
 	GetTimeline(context.Context, *connect_go.Request[console.TimelineQuery]) (*connect_go.Response[console.GetTimelineResponse], error)
-	StreamLogs(context.Context, *connect_go.Request[console.StreamLogsRequest]) (*connect_go.ServerStreamForClient[console.StreamLogsResponse], error)
 }
 
 // NewConsoleServiceClient constructs a client for the xyz.block.ftl.v1.console.ConsoleService
@@ -108,11 +104,6 @@ func NewConsoleServiceClient(httpClient connect_go.HTTPClient, baseURL string, o
 			baseURL+ConsoleServiceGetTimelineProcedure,
 			opts...,
 		),
-		streamLogs: connect_go.NewClient[console.StreamLogsRequest, console.StreamLogsResponse](
-			httpClient,
-			baseURL+ConsoleServiceStreamLogsProcedure,
-			opts...,
-		),
 	}
 }
 
@@ -124,7 +115,6 @@ type consoleServiceClient struct {
 	getRequestCalls *connect_go.Client[console.GetRequestCallsRequest, console.GetRequestCallsResponse]
 	streamTimeline  *connect_go.Client[console.StreamTimelineRequest, console.StreamTimelineResponse]
 	getTimeline     *connect_go.Client[console.TimelineQuery, console.GetTimelineResponse]
-	streamLogs      *connect_go.Client[console.StreamLogsRequest, console.StreamLogsResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.console.ConsoleService.Ping.
@@ -157,11 +147,6 @@ func (c *consoleServiceClient) GetTimeline(ctx context.Context, req *connect_go.
 	return c.getTimeline.CallUnary(ctx, req)
 }
 
-// StreamLogs calls xyz.block.ftl.v1.console.ConsoleService.StreamLogs.
-func (c *consoleServiceClient) StreamLogs(ctx context.Context, req *connect_go.Request[console.StreamLogsRequest]) (*connect_go.ServerStreamForClient[console.StreamLogsResponse], error) {
-	return c.streamLogs.CallServerStream(ctx, req)
-}
-
 // ConsoleServiceHandler is an implementation of the xyz.block.ftl.v1.console.ConsoleService
 // service.
 type ConsoleServiceHandler interface {
@@ -172,7 +157,6 @@ type ConsoleServiceHandler interface {
 	GetRequestCalls(context.Context, *connect_go.Request[console.GetRequestCallsRequest]) (*connect_go.Response[console.GetRequestCallsResponse], error)
 	StreamTimeline(context.Context, *connect_go.Request[console.StreamTimelineRequest], *connect_go.ServerStream[console.StreamTimelineResponse]) error
 	GetTimeline(context.Context, *connect_go.Request[console.TimelineQuery]) (*connect_go.Response[console.GetTimelineResponse], error)
-	StreamLogs(context.Context, *connect_go.Request[console.StreamLogsRequest], *connect_go.ServerStream[console.StreamLogsResponse]) error
 }
 
 // NewConsoleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -213,11 +197,6 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect_go.Hand
 		svc.GetTimeline,
 		opts...,
 	))
-	mux.Handle(ConsoleServiceStreamLogsProcedure, connect_go.NewServerStreamHandler(
-		ConsoleServiceStreamLogsProcedure,
-		svc.StreamLogs,
-		opts...,
-	))
 	return "/xyz.block.ftl.v1.console.ConsoleService/", mux
 }
 
@@ -246,8 +225,4 @@ func (UnimplementedConsoleServiceHandler) StreamTimeline(context.Context, *conne
 
 func (UnimplementedConsoleServiceHandler) GetTimeline(context.Context, *connect_go.Request[console.TimelineQuery]) (*connect_go.Response[console.GetTimelineResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetTimeline is not implemented"))
-}
-
-func (UnimplementedConsoleServiceHandler) StreamLogs(context.Context, *connect_go.Request[console.StreamLogsRequest], *connect_go.ServerStream[console.StreamLogsResponse]) error {
-	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.StreamLogs is not implemented"))
 }
