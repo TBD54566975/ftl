@@ -1,10 +1,11 @@
 import { Outlet } from 'react-router-dom'
 import { Navigation } from './Navigation'
+import { Notification } from './Notification'
 import { SidePanel } from './SidePanel'
 
 export const Layout = () => {
   return (
-    <div className='flex  h-screen'>
+    <div className='flex h-screen'>
       <Navigation />
 
       <main className='overflow-hidden'>
@@ -14,6 +15,7 @@ export const Layout = () => {
       </main>
 
       <SidePanel />
+      <Notification />
     </div>
   )
 }

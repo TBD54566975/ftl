@@ -10,7 +10,6 @@ import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { useDarkMode } from '../../providers/dark-mode-provider'
-import { TabsContext } from '../../providers/tabs-provider'
 
 export type Schema = JSONSchema4 | JSONSchema6 | JSONSchema7
 
@@ -22,7 +21,6 @@ interface Props {
 export const VerbForm = ({ module, verb }: Props) => {
   const client = useClient(VerbService)
   const { isDarkMode } = useDarkMode()
-  const { activeTabId } = React.useContext(TabsContext)
   const [editorText, setEditorText] = React.useState<string>('')
   const [response, setResponse] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
@@ -82,7 +80,7 @@ export const VerbForm = ({ module, verb }: Props) => {
         validate: true,
         schemas: [{ schema, uri: 'http://myserver/foo-schema.json', fileMatch: ['*'] }],
       })
-  }, [monaco, schema, activeTabId])
+  }, [monaco, schema])
 
   return (
     <>

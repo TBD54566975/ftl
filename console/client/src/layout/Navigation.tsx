@@ -1,6 +1,8 @@
 import { Schema, Timeline, ViewModuleSharp } from '@mui/icons-material'
+import { useContext } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { DarkModeSwitch } from '../components/DarkModeSwitch'
+import { modulesContext } from '../providers/modules-provider'
 import { classNames } from '../utils'
 
 const navigation = [
@@ -10,6 +12,8 @@ const navigation = [
 ]
 
 export const Navigation = () => {
+  const modules = useContext(modulesContext)
+
   return (
     <div className='bg-gray-800 flex-shrink-0 w-52 h-full'>
       <aside className={`flex flex-col h-full`}>
@@ -50,61 +54,17 @@ export const Navigation = () => {
                                 aria-hidden='true'
                               />
                               {item.name}
+                              {item.href === '/modules' && (
+                                <span
+                                  className='ml-auto w-9 min-w-max whitespace-nowrap rounded-full bg-indigo-600 px-2.5 py-0.5 text-center text-xs font-medium leading-5 text-white ring-1 ring-inset ring-indigo-500'
+                                  aria-hidden='true'
+                                >
+                                  {modules.modules.length}
+                                </span>
+                              )}
                             </>
                           )}
                         </NavLink>
-
-                        {/* <NavLink
-  to={item.href}
->
-  {({ isActive }) => (
-    <>
-      <item.icon
-        className={classNames(
-          isActive ? 'text-white' : 'text-indigo-200 group-hover:text-white',
-          'h-6 w-6 shrink-0',
-        )}
-        aria-hidden='true'
-      />
-      <span className={
-        classNames(
-          isActive
-            ? 'bg-indigo-700 text-white'
-            : 'text-indigo-200 hover:text-white hover:bg-indigo-700',
-          'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold',
-        )
-      }>
-        {item.name}
-      </span>
-    </>
-  )}
-</NavLink> */}
-                        {/* <a
-                          href={item.href}
-                          className={classNames(
-                            item.current
-                              ? 'bg-indigo-700 text-white'
-                              : 'text-indigo-200 hover:text-white hover:bg-indigo-700',
-                            'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold',
-                          )}
-                        >
-                          <item.icon
-                            className={classNames(
-                              item.current ? 'text-white' : 'text-indigo-200 group-hover:text-white',
-                              'h-6 w-6 shrink-0',
-                            )}
-                            aria-hidden='true'
-                          />
-                          {item.name}
-                          {item.count ? (
-                            <span
-                              className='ml-auto w-9 min-w-max whitespace-nowrap rounded-full bg-indigo-600 px-2.5 py-0.5 text-center text-xs font-medium leading-5 text-white ring-1 ring-inset ring-indigo-500'
-                              aria-hidden='true'
-                            >
-                              {item.count}
-                            </span>
-                          ) : null}
-                        </a> */}
                       </li>
                     ))}
                   </ul>
