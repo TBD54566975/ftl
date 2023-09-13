@@ -1,6 +1,8 @@
+import { Schema } from '@mui/icons-material'
 import { useContext, useEffect } from 'react'
 import ReactFlow, { Controls, MiniMap, useEdgesState, useNodesState } from 'reactflow'
 import 'reactflow/dist/style.css'
+import { PageHeader } from '../../components/PageHeader'
 import { modulesContext } from '../../providers/modules-provider'
 import { GroupNode } from './GroupNode'
 import { VerbNode } from './VerbNode'
@@ -21,6 +23,7 @@ export const GraphPage = () => {
 
   return (
     <>
+      <PageHeader icon={<Schema />} title='Graph' />
       <div style={{ width: '100vw', height: '100vh' }}>
         <ReactFlow
           nodes={nodes}

@@ -17,7 +17,9 @@ export const formatTimestampShort = (timestamp?: Timestamp): string => {
 
   const formattedDate =
     `${month} ${String(date.getDate()).padStart(2, '0')} ` +
-    `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}` +
+    `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(
+      date.getSeconds(),
+    ).padStart(2, '0')}` +
     `.${String(date.getMilliseconds()).padStart(3, '0')}`
 
   return formattedDate

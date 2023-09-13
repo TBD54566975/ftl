@@ -3,7 +3,11 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        'roboto-mono': ['Roboto Mono', 'monospace'],
+      },
+    },
   },
   plugins: [require('@tailwindcss/forms')],
 }

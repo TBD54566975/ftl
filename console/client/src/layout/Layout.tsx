@@ -8,7 +8,7 @@ export const Layout = () => {
     <div className='flex h-screen'>
       <Navigation />
 
-      <main className='overflow-hidden'>
+      <main className='flex-1 overflow-hidden'>
         <section className='overflow-y-auto h-full'>
           <Outlet />
         </section>

@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { GraphPage } from './features/graph/GraphPage.tsx'
-import { ModulesList } from './features/modules/ModulesList.tsx'
-import { Timeline } from './features/timeline/Timeline.tsx'
+import { ModulesPage } from './features/modules/ModulesPage.tsx'
+import { TimelinePage } from './features/timeline/TimelinePage.tsx'
 import { Layout } from './layout/Layout.tsx'
 import { bgColor, textColor } from './utils/style.utils.ts'
 
@@ -11,8 +11,8 @@ export const App = () => {
       <Routes>
         <Route path='/' element={<Layout />}>
           <Route path='/' element={<Navigate to='events' replace />} />
-          <Route path='events' element={<Timeline />} />
-          <Route path='modules' element={<ModulesList />} />
+          <Route path='events' element={<TimelinePage />} />
+          <Route path='modules' element={<ModulesPage />} />
           <Route path='graph' element={<GraphPage />} />
         </Route>
       </Routes>
