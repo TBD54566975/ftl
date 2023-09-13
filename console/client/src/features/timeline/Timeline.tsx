@@ -14,16 +14,15 @@ import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineDeploymentDetails } from './details/TimelineDeploymentDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import { TIME_RANGES } from './filters/TimeFilter.tsx'
-import { TimelineFilterBar } from './filters/TimelineFilterBar.tsx'
 
 export const Timeline = () => {
   const client = useClient(ConsoleService)
   const { openPanel, closePanel, isOpen } = React.useContext(SidePanelContext)
   const [entries, setEntries] = React.useState<TimelineEvent[]>([])
   const [selectedEntry, setSelectedEntry] = React.useState<TimelineEvent | null>(null)
-  const [selectedEventTypes, setSelectedEventTypes] = React.useState<string[]>(['log', 'call', 'deployment'])
-  const [selectedLogLevels, setSelectedLogLevels] = React.useState<number[]>([1, 5, 9, 13, 17])
-  const [selectedTimeRange, setSelectedTimeRange] = React.useState('1h')
+  const [selectedEventTypes] = React.useState<string[]>(['log', 'call', 'deployment'])
+  const [selectedLogLevels] = React.useState<number[]>([1, 5, 9, 13, 17])
+  const [selectedTimeRange] = React.useState('24h')
 
   React.useEffect(() => {
     const abortController = new AbortController()
@@ -77,26 +76,6 @@ export const Timeline = () => {
     setSelectedEntry(entry)
   }
 
-  const handleEventTypesChanged = (eventType: string, checked: boolean) => {
-    if (checked) {
-      setSelectedEventTypes((prev) => [...prev, eventType])
-    } else {
-      setSelectedEventTypes((prev) => prev.filter((filter) => filter !== eventType))
-    }
-  }
-
-  const handleLogLevelsChanged = (logLevel: number, checked: boolean) => {
-    if (checked) {
-      setSelectedLogLevels((prev) => [...prev, logLevel])
-    } else {
-      setSelectedLogLevels((prev) => prev.filter((filter) => filter !== logLevel))
-    }
-  }
-
-  const handleTimeRangeChanged = (key: string) => {
-    setSelectedTimeRange(key)
-  }
-
   const filteredEntries = entries.filter((entry) => {
     const isActive = selectedEventTypes.includes(entry.entry?.case ?? '')
     if (entry.entry.case === 'log') {
@@ -107,19 +86,11 @@ export const Timeline = () => {
   })
 
   return (
-    <div className='m-0'>
-      <TimelineFilterBar
-        selectedEventTypes={selectedEventTypes}
-        onEventTypesChanged={handleEventTypesChanged}
-        selectedLogLevels={selectedLogLevels}
-        onLogLevelsChanged={handleLogLevelsChanged}
-        selectedTimeRange={selectedTimeRange}
-        onSelectedTimeRangeChanged={handleTimeRangeChanged}
-      />
+    <div className='border border-gray-100 dark:border-slate-700 rounded m-2'>
       <div className='overflow-x-hidden'>
-        <table className={`w-full table-fixed text-gray-800 dark:text-gray-300`}>
+        <table className={`w-full table-fixed text-gray-600 dark:text-gray-300`}>
           <thead>
-            <tr className='flex  text-xs font-semibold'>
+            <tr className='flex text-xs'>
               <th className='p-1 text-left border-b w-8 border-gray-100 dark:border-slate-700 flex-none'></th>
               <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>Date</th>
               <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-grow flex-shrink'>
@@ -131,7 +102,7 @@ export const Timeline = () => {
             {filteredEntries.map((entry) => (
               <tr
                 key={entry.id.toString()}
-                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-mono ${
+                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${
                   selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-800' : panelColor
                 } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-800`}
                 onClick={() => handleEntryClicked(entry)}
@@ -139,7 +110,7 @@ export const Timeline = () => {
                 <td className='w-8 flex-none flex items-center justify-center'>
                   <TimelineIcon entry={entry} />
                 </td>
-                <td className='p-1 w-40 items-center flex-none text-gray-500 dark:text-gray-400'>
+                <td className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>
                   {formatTimestampShort(entry.timeStamp)}
                 </td>
                 <td className='p-1 flex-grow truncate'>

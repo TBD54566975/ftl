@@ -1,4 +1,4 @@
-import { Schema, Timeline, ViewModuleSharp } from '@mui/icons-material'
+import { Schema, Timeline, ViewModuleRounded } from '@mui/icons-material'
 import { useContext } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { DarkModeSwitch } from '../components/DarkModeSwitch'
@@ -7,7 +7,7 @@ import { classNames } from '../utils'
 
 const navigation = [
   { name: 'Events', href: '/events', icon: Timeline },
-  { name: 'Modules', href: '/modules', icon: ViewModuleSharp },
+  { name: 'Modules', href: '/modules', icon: ViewModuleRounded },
   { name: 'Graph', href: '/graph', icon: Schema },
 ]
 
@@ -17,8 +17,8 @@ export const Navigation = () => {
   return (
     <div className='bg-gray-800 flex-shrink-0 w-52 h-full'>
       <aside className={`flex flex-col h-full`}>
-        <div className='flex flex-col h-full overflow-y-auto bg-indigo-600'>
-          <div className='flex grow flex-col overflow-y-auto bg-indigo-600 px-4'>
+        <div className='flex flex-col h-full overflow-y-auto bg-indigo-700'>
+          <div className='flex grow flex-col overflow-y-auto bg-indigo-700 px-4'>
             <Link to='/events'>
               <div className='-mx-2 space-y-1'>
                 <div className='flex shrink-0 items-center p-2 rounded-md hover:bg-indigo-700'>
@@ -38,8 +38,8 @@ export const Navigation = () => {
                           className={({ isActive }) =>
                             classNames(
                               isActive
-                                ? 'bg-indigo-700 text-white'
-                                : 'text-indigo-200 hover:text-white hover:bg-indigo-700',
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-indigo-200 hover:text-white hover:bg-indigo-600',
                               'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold',
                             )
                           }

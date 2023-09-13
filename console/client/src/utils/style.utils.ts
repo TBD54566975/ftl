@@ -1,11 +1,12 @@
-export const bgColor = 'dark:bg-gray-800 bg-slate-200'
-export const panelColor = 'dark:bg-slate-900 bg-white'
+export const bgColor = 'dark:bg-gray-800 bg-white'
+export const panelColor = 'dark:bg-slate-800 bg-white'
 export const sidePanelColor = 'dark:bg-slate-800 bg-white'
 export const headerColor = 'dark:bg-indigo-700 bg-indigo-700'
 export const headerTextColor = 'text-white'
 export const textColor = 'dark:text-white text-gray-800'
 export const lightTextColor = 'text-gray-500'
 export const navColor = 'dark:bg-indigo-700 bg-indigo-700'
+export const borderColor = 'dark:ring-gray-600 ring-gray-300'
 
 export const statuses = {
   offline: 'text-gray-500 bg-gray-100/10',
