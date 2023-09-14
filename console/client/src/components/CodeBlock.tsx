@@ -1,6 +1,9 @@
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { atomDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { useDarkMode } from '../providers/dark-mode-provider'
+import hljs from 'highlight.js/lib/core'
+import go from 'highlight.js/lib/languages/go'
+import graphql from 'highlight.js/lib/languages/graphql'
+import json from 'highlight.js/lib/languages/json'
+import 'highlight.js/styles/atom-one-dark.css'
+import { useEffect } from 'react'
 
 interface Props {
   code: string
@@ -8,23 +11,17 @@ interface Props {
   maxHeight?: number
 }
 
-export const CodeBlock = ({ code, language, maxHeight = 300 }: Props) => {
-  const { isDarkMode } = useDarkMode()
+export const CodeBlock = ({ code, language, maxHeight }: Props) => {
+  useEffect(() => {
+    hljs.registerLanguage('graphql', graphql)
+    hljs.registerLanguage('json', json)
+    hljs.registerLanguage('go', go)
+    hljs.highlightAll()
+  })
 
   return (
-    <SyntaxHighlighter
-      wrapLongLines={true}
-      lineProps={{ style: { flexWrap: 'wrap' } }}
-      language={language}
-      style={isDarkMode ? atomDark : oneLight}
-      customStyle={{
-        fontSize: '12px',
-        maxHeight: `${maxHeight}px`,
-        overflow: 'auto',
-        maxWidth: `100%`,
-      }}
-    >
-      {code}
-    </SyntaxHighlighter>
+    <pre>
+      <code className={`max-h-[${maxHeight}px] language-${language}`}>{code}</code>
+    </pre>
   )
 }
