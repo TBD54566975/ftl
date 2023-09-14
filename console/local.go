@@ -26,7 +26,7 @@ func Server(ctx context.Context) (http.Handler, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	err = exec.Command(ctx, log.Debug, "console/client", "npm", "run", "parcel").Start()
+	err = exec.Command(ctx, log.Debug, "console/client", "npm", "run", "dev").Start()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
