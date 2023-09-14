@@ -1,14 +1,11 @@
-import { Button, Container, Stack } from '@mui/material'
+import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
+import { PageHeader } from '../../components/PageHeader'
 
 export const ModulesPage = () => {
   return (
     <>
-      <Container maxWidth='sm' sx={{ m: 4 }}>
-        <Stack spacing={2}>
-          <Button variant='contained'>Sample MUI Button</Button>
-          <Button variant='contained'>Sample MUI Button</Button>
-        </Stack>
-      </Container>
+      <PageHeader icon={<Square3Stack3DIcon />} title='Modules' />
+      <div className='flex h-full'>Modules</div>
     </>
   )
 }

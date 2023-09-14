@@ -1,6 +1,5 @@
 import { Listbox, Transition } from '@headlessui/react'
-import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/24/outline'
-import { NavigateBefore, NavigateNext, PlayArrow } from '@mui/icons-material'
+import { BackwardIcon, CheckIcon, ChevronUpDownIcon, ForwardIcon, PlayIcon } from '@heroicons/react/24/outline'
 import React, { Fragment } from 'react'
 import { bgColor, borderColor, classNames, panelColor, textColor } from '../../../utils'
 
@@ -22,11 +21,11 @@ export const TimelineTimeControls = () => {
 
   return (
     <>
-      <div className='flex items-center'>
+      <div className='flex items-center h-6'>
         <Listbox value={selected} onChange={setSelected}>
           {({ open }) => (
             <>
-              <div className='relative w-40 mr-2 -mt-0.5 h-6 items-center'>
+              <div className='relative w-40 mr-2 -mt-0.5 items-center'>
                 <Listbox.Button
                   className={`relative w-full cursor-pointer rounded-md ${bgColor} ${textColor} py-1 pl-3 pr-10 text-xs text-left shadow-sm ring-1 ring-inset ${borderColor} focus:outline-none focus:ring-2 focus:ring-indigo-600`}
                 >
@@ -93,19 +92,19 @@ export const TimelineTimeControls = () => {
             type='button'
             className={`relative inline-flex items-center rounded-l-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-10`}
           >
-            <NavigateBefore sx={{ fontSize: 16 }} />
+            <BackwardIcon className='w-4 h-4' />
           </button>
           <button
             type='button'
             className={`relative -ml-px inline-flex items-center px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-10`}
           >
-            <PlayArrow sx={{ fontSize: 16 }} />
+            <PlayIcon className='w-4 h-4' />
           </button>
           <button
             type='button'
             className={`relative -ml-px inline-flex items-center rounded-r-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-10`}
           >
-            <NavigateNext sx={{ fontSize: 16 }} />
+            <ForwardIcon className='w-4 h-4' />
           </button>
         </span>
       </div>

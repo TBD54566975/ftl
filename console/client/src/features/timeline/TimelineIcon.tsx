@@ -1,4 +1,4 @@
-import { Call, ListAlt, ListOutlined, PhoneCallback, RocketLaunch } from '@mui/icons-material'
+import { ListBulletIcon, PhoneArrowDownLeftIcon, PhoneIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
 import { TimelineEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 interface Props {
@@ -26,20 +26,20 @@ export const TimelineIcon = ({ entry }: Props) => {
   }
 
   const icon = (entry: TimelineEvent) => {
-    const iconSize = 20
+    const style = 'h4 w-4'
     switch (entry.entry.case) {
       case 'call':
         return entry.entry.value.sourceVerbRef ? (
-          <PhoneCallback sx={{ fontSize: iconSize }} />
+          <PhoneIcon className={`${style}`} />
         ) : (
-          <Call sx={{ fontSize: iconSize }} />
+          <PhoneArrowDownLeftIcon className={`${style}`} />
         )
       case 'deployment':
-        return <RocketLaunch sx={{ fontSize: iconSize }} />
+        return <RocketLaunchIcon className={`${style}`} />
       case 'log':
-        return <ListOutlined sx={{ fontSize: iconSize }} />
+        return <ListBulletIcon className={`${style}`} />
       default:
-        return <ListAlt sx={{ fontSize: iconSize }} />
+        return <ListBulletIcon className={`${style}`} />
     }
   }
 

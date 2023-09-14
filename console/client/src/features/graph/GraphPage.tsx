@@ -1,4 +1,4 @@
-import { Schema } from '@mui/icons-material'
+import { CubeTransparentIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect } from 'react'
 import ReactFlow, { Controls, MiniMap, useEdgesState, useNodesState } from 'reactflow'
 import 'reactflow/dist/style.css'
@@ -23,8 +23,8 @@ export const GraphPage = () => {
 
   return (
     <>
-      <PageHeader icon={<Schema />} title='Graph' />
-      <div style={{ width: '100vw', height: '100vh' }}>
+      <PageHeader icon={<CubeTransparentIcon />} title='Graph' />
+      <div className='flex h-full'>
         <ReactFlow
           nodes={nodes}
           edges={edges}
