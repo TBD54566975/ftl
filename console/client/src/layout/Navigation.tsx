@@ -1,4 +1,4 @@
-import { Schema, Timeline, ViewModuleRounded } from '@mui/icons-material'
+import { CubeTransparentIcon, ListBulletIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { useContext } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { DarkModeSwitch } from '../components/DarkModeSwitch'
@@ -6,9 +6,9 @@ import { modulesContext } from '../providers/modules-provider'
 import { classNames } from '../utils'
 
 const navigation = [
-  { name: 'Events', href: '/events', icon: Timeline },
-  { name: 'Modules', href: '/modules', icon: ViewModuleRounded },
-  { name: 'Graph', href: '/graph', icon: Schema },
+  { name: 'Events', href: '/events', icon: ListBulletIcon },
+  { name: 'Modules', href: '/modules', icon: Square3Stack3DIcon },
+  { name: 'Graph', href: '/graph', icon: CubeTransparentIcon },
 ]
 
 export const Navigation = () => {
