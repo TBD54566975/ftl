@@ -74,10 +74,10 @@ implicit %{RELEASE}/%{1}: cmd/*
 
 %{NODE_MODULES_OUT}: %{NODE_MODULES_IN}
   cd console/client
-  build: npm --no-color --no-progress install
+  build: npm install
   -clean # Don't clean node_modules
 
 %{CLIENT_OUT}: %{CLIENT_IN} %{NODE_MODULES_OUT}
   cd console/client
-  build: npm --no-color run build
+  build: npm run build
   clean: rm -rf dist .parcel-cache
