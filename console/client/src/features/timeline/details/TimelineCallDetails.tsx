@@ -30,7 +30,7 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
       if (selectedCall.requestName === undefined) {
         return
       }
-      const calls = await getRequestCalls(selectedCall. requestName)
+      const calls = await getRequestCalls(selectedCall.requestName)
       setRequestCalls(calls)
     }
 
