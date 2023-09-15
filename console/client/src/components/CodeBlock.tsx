@@ -13,6 +13,7 @@ interface Props {
 
 export const CodeBlock = ({ code, language, maxHeight }: Props) => {
   useEffect(() => {
+    hljs.configure({ ignoreUnescapedHTML: true })
     hljs.registerLanguage('graphql', graphql)
     hljs.registerLanguage('json', json)
     hljs.registerLanguage('go', go)
@@ -21,7 +22,7 @@ export const CodeBlock = ({ code, language, maxHeight }: Props) => {
 
   return (
     <pre>
-      <code className={`max-h-[${maxHeight}px] language-${language}`}>{code}</code>
+      <code className={`max-h-[${maxHeight}px] language-${language} text-sm`}>{code}</code>
     </pre>
   )
 }
