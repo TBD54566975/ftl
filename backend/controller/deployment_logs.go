@@ -64,16 +64,16 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				errorStr = types.Some(entry.Error.Error())
 			}
 
-			var request types.Option[model.IngressRequestKey]
+			var request types.Option[model.RequestName]
 			if reqStr, ok := entry.Attributes["request"]; ok {
-				req, err := model.ParseIngressRequestKey(reqStr)
+				_, req, err := model.ParseRequestName(reqStr)
 				if err == nil {
 					request = types.Some(req)
 				}
 			}
 
 			err = d.dal.InsertLogEvent(ctx, &dal.LogEvent{
-				RequestKey:     request,
+				RequestName:    request,
 				DeploymentName: deployment,
 				Time:           entry.Time,
 				Level:          int32(entry.Level.Severity()),

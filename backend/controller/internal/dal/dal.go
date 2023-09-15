@@ -25,7 +25,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller/internal/sql"
-	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -154,6 +153,14 @@ func ControllerStateFromProto(state ftlv1.ControllerState) ControllerState {
 func (s ControllerState) ToProto() ftlv1.ControllerState {
 	return ftlv1.ControllerState(ftlv1.ControllerState_value["CONTROLLER_"+strings.ToUpper(string(s))])
 }
+
+type RequestOrigin string
+
+const (
+	RequestOriginIngress = RequestOrigin(sql.OriginIngress)
+	RequestOriginCron    = RequestOrigin(sql.OriginCron)
+	RequestOriginPubsub  = RequestOrigin(sql.OriginPubsub)
+)
 
 type Deployment struct {
 	Name        model.DeploymentName
@@ -814,9 +821,13 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	var requestName types.Option[string]
+	if name, ok := log.RequestName.Get(); ok {
+		requestName = types.Some(string(name))
+	}
 	return errors.WithStack(translatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
 		DeploymentName: log.DeploymentName,
-		RequestKey:     sqltypes.FromOption(log.RequestKey),
+		RequestName:    requestName,
 		TimeStamp:      log.Time,
 		Level:          log.Level,
 		Attributes:     attributes,
@@ -856,10 +867,10 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	return out, nil
 }
 
-func (d *DAL) CreateIngressRequest(ctx context.Context, addr string) (model.IngressRequestKey, error) {
-	key := model.NewIngressRequestKey()
-	err := d.db.CreateIngressRequest(ctx, sqltypes.Key(key), addr)
-	return key, errors.WithStack(err)
+func (d *DAL) CreateIngressRequest(ctx context.Context, route, addr string) (model.RequestName, error) {
+	name := model.NewRequestName(model.OriginIngress, route)
+	err := d.db.CreateIngressRequest(ctx, sql.OriginIngress, string(name), addr)
+	return name, errors.WithStack(err)
 }
 
 func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) ([]IngressRoute, error) {
@@ -890,9 +901,13 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if sr, ok := call.SourceVerb.Get(); ok {
 		sourceModule, sourceVerb = types.Some(sr.Module), types.Some(sr.Name)
 	}
+	var requestName types.Option[string]
+	if rn, ok := call.RequestName.Get(); ok {
+		requestName = types.Some(string(rn))
+	}
 	return errors.WithStack(translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
 		DeploymentName: call.DeploymentName.String(),
-		RequestKey:     sqltypes.FromOption(call.RequestKey),
+		RequestName:    requestName,
 		TimeStamp:      call.Time,
 		SourceModule:   sourceModule,
 		SourceVerb:     sourceVerb,

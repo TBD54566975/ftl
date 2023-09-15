@@ -265,8 +265,8 @@ FROM rows;
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
 VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name') LIMIT 1),
         (CASE
-             WHEN sqlc.narg('request_key')::UUID IS NULL THEN NULL
-             ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = sqlc.narg('request_key')::UUID LIMIT 1)
+             WHEN sqlc.narg('request_name')::TEXT IS NULL THEN NULL
+             ELSE (SELECT id FROM requests ir WHERE ir.name = sqlc.narg('request_name')::TEXT LIMIT 1)
             END),
         sqlc.arg('time_stamp')::TIMESTAMPTZ,
         sqlc.arg('level')::INT,
@@ -294,8 +294,8 @@ INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
 VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
         (CASE
-             WHEN sqlc.narg('request_key')::UUID IS NULL THEN NULL
-             ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = sqlc.arg('request_key')::UUID)
+             WHEN sqlc.narg('request_name')::TEXT IS NULL THEN NULL
+             ELSE (SELECT id FROM requests ir WHERE ir.name = sqlc.narg('request_name')::TEXT)
             END),
         sqlc.arg('time_stamp')::TIMESTAMPTZ,
         'call',
@@ -311,8 +311,8 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deploymen
             ));
 
 -- name: CreateIngressRequest :exec
-INSERT INTO ingress_requests (key, source_addr)
-VALUES ($1, $2);
+INSERT INTO requests (origin, name, source_addr)
+VALUES ($1, $2, $3);
 
 -- name: UpsertController :one
 INSERT INTO controller (key, endpoint)

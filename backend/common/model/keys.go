@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/errors"
-	"github.com/alecthomas/types"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
@@ -25,15 +24,6 @@ func ParseControllerKey(key string) (ControllerKey, error) { return parseKey[Con
 
 type controllerKey struct{}
 type ControllerKey = keyType[controllerKey]
-
-func NewIngressRequestKey() IngressRequestKey { return IngressRequestKey(ulid.Make()) }
-func ParseIngressRequestKey(key string) (IngressRequestKey, error) {
-	return parseKey[IngressRequestKey](key)
-}
-
-type ingressRequestKey struct{}
-type IngressRequestKey = keyType[ingressRequestKey]
-type NullIngressRequestKey = types.Option[IngressRequestKey]
 
 var uuidRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 

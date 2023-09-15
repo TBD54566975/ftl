@@ -62,12 +62,12 @@ func (q *Queries) CreateDeployment(ctx context.Context, name model.DeploymentNam
 }
 
 const createIngressRequest = `-- name: CreateIngressRequest :exec
-INSERT INTO ingress_requests (key, source_addr)
-VALUES ($1, $2)
+INSERT INTO requests (origin, name, source_addr)
+VALUES ($1, $2, $3)
 `
 
-func (q *Queries) CreateIngressRequest(ctx context.Context, key sqltypes.Key, sourceAddr string) error {
-	_, err := q.db.Exec(ctx, createIngressRequest, key, sourceAddr)
+func (q *Queries) CreateIngressRequest(ctx context.Context, origin Origin, name string, sourceAddr string) error {
+	_, err := q.db.Exec(ctx, createIngressRequest, origin, name, sourceAddr)
 	return err
 }
 
@@ -897,8 +897,8 @@ INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
 VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
         (CASE
-             WHEN $2::UUID IS NULL THEN NULL
-             ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = $2::UUID)
+             WHEN $2::TEXT IS NULL THEN NULL
+             ELSE (SELECT id FROM requests ir WHERE ir.name = $2::TEXT)
             END),
         $3::TIMESTAMPTZ,
         'call',
@@ -916,7 +916,7 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
 
 type InsertCallEventParams struct {
 	DeploymentName string
-	RequestKey     sqltypes.NullKey
+	RequestName    types.Option[string]
 	TimeStamp      time.Time
 	SourceModule   types.Option[string]
 	SourceVerb     types.Option[string]
@@ -931,7 +931,7 @@ type InsertCallEventParams struct {
 func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
 	_, err := q.db.Exec(ctx, insertCallEvent,
 		arg.DeploymentName,
-		arg.RequestKey,
+		arg.RequestName,
 		arg.TimeStamp,
 		arg.SourceModule,
 		arg.SourceVerb,
@@ -1014,8 +1014,8 @@ const insertLogEvent = `-- name: InsertLogEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
 VALUES ((SELECT id FROM deployments d WHERE d.name = $1 LIMIT 1),
         (CASE
-             WHEN $2::UUID IS NULL THEN NULL
-             ELSE (SELECT id FROM ingress_requests ir WHERE ir.key = $2::UUID LIMIT 1)
+             WHEN $2::TEXT IS NULL THEN NULL
+             ELSE (SELECT id FROM requests ir WHERE ir.name = $2::TEXT LIMIT 1)
             END),
         $3::TIMESTAMPTZ,
         $4::INT,
@@ -1029,7 +1029,7 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = $1 LIMIT 1),
 
 type InsertLogEventParams struct {
 	DeploymentName model.DeploymentName
-	RequestKey     sqltypes.NullKey
+	RequestName    types.Option[string]
 	TimeStamp      time.Time
 	Level          int32
 	Message        string
@@ -1040,7 +1040,7 @@ type InsertLogEventParams struct {
 func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
 	_, err := q.db.Exec(ctx, insertLogEvent,
 		arg.DeploymentName,
-		arg.RequestKey,
+		arg.RequestName,
 		arg.TimeStamp,
 		arg.Level,
 		arg.Message,

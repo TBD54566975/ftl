@@ -64,7 +64,7 @@ export const VerbCalls = ({ module, verb }: Props) => {
               >
                 <td className='hidden py-4 pl-0 pr-4 sm:table-cell sm:pr-8'>
                   <div className='flex gap-x-3'>
-                    <div className='font-mono text-sm leading-6'>{call.requestKey?.toString()}</div>
+                    <div className='font-mono text-sm leading-6'>{call.requestName?.toString()}</div>
                   </div>
                 </td>
                 <td className='py-4 pl-4 pr-8 sm:pl-6 lg:pl-8'>

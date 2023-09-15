@@ -11,7 +11,7 @@ option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console;
 option java_multiple_files = true;
 
 message Call {
-  optional string request_key = 1;
+  optional string request_name = 1;
   string deployment_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
   optional schema.VerbRef source_verb_ref = 4;
@@ -47,7 +47,7 @@ message Deployment {
 
 message LogEntry {
   string deployment_name = 1;
-  optional string request_key = 2;
+  optional string request_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
   int32 log_level = 4;
   map<string, string> attributes = 5;
