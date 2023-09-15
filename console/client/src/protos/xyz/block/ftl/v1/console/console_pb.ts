@@ -120,9 +120,9 @@ proto3.util.setEnumType(LogLevel, "xyz.block.ftl.v1.console.LogLevel", [
  */
 export class Call extends Message<Call> {
   /**
-   * @generated from field: optional string request_key = 1;
+   * @generated from field: optional string request_name = 1;
    */
-  requestKey?: string;
+  requestName?: string;
 
   /**
    * @generated from field: string deployment_name = 2;
@@ -172,7 +172,7 @@ export class Call extends Message<Call> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.Call";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "source_verb_ref", kind: "message", T: VerbRef, opt: true },
@@ -277,9 +277,9 @@ export class LogEntry extends Message<LogEntry> {
   deploymentName = "";
 
   /**
-   * @generated from field: optional string request_key = 2;
+   * @generated from field: optional string request_name = 2;
    */
-  requestKey?: string;
+  requestName?: string;
 
   /**
    * @generated from field: google.protobuf.Timestamp time_stamp = 3;
@@ -315,7 +315,7 @@ export class LogEntry extends Message<LogEntry> {
   static readonly typeName = "xyz.block.ftl.v1.console.LogEntry";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },

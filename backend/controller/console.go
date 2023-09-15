@@ -185,17 +185,17 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 }
 
 func callEventToCall(event *dal.CallEvent) *pbconsole.Call {
-	var requestKey *string
-	if r, ok := event.RequestKey.Get(); ok {
+	var requestName *string
+	if r, ok := event.RequestName.Get(); ok {
 		rstr := r.String()
-		requestKey = &rstr
+		requestName = &rstr
 	}
 	var sourceVerbRef *pschema.VerbRef
 	if sourceVerb, ok := event.SourceVerb.Get(); ok {
 		sourceVerbRef = sourceVerb.ToProto().(*pschema.VerbRef) //nolint:forcetypeassert
 	}
 	return &pbconsole.Call{
-		RequestKey:     requestKey,
+		RequestName:    requestName,
 		DeploymentName: event.DeploymentName.String(),
 		TimeStamp:      timestamppb.New(event.Time),
 		SourceVerbRef:  sourceVerbRef,
@@ -211,14 +211,14 @@ func callEventToCall(event *dal.CallEvent) *pbconsole.Call {
 }
 
 func logEventToLogEntry(event *dal.LogEvent) *pbconsole.LogEntry {
-	var requestKey *string
-	if r, ok := event.RequestKey.Get(); ok {
+	var requestName *string
+	if r, ok := event.RequestName.Get(); ok {
 		rstr := r.String()
-		requestKey = &rstr
+		requestName = &rstr
 	}
 	return &pbconsole.LogEntry{
 		DeploymentName: event.DeploymentName.String(),
-		RequestKey:     requestKey,
+		RequestName:    requestName,
 		TimeStamp:      timestamppb.New(event.Time),
 		LogLevel:       event.Level,
 		Attributes:     event.Attributes,
@@ -286,15 +286,15 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 			query = append(query, dal.FilterDeployments(deploymentNames...))
 
 		case *pbconsole.EventsQuery_Filter_Requests:
-			requestKeys := make([]model.IngressRequestKey, 0, len(filter.Requests.Requests))
+			requestNames := make([]model.RequestName, 0, len(filter.Requests.Requests))
 			for _, request := range filter.Requests.Requests {
-				requestKey, err := model.ParseIngressRequestKey(request)
+				_, requestName, err := model.ParseRequestName(request)
 				if err != nil {
 					return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
 				}
-				requestKeys = append(requestKeys, requestKey)
+				requestNames = append(requestNames, requestName)
 			}
-			query = append(query, dal.FilterRequests(requestKeys...))
+			query = append(query, dal.FilterRequests(requestNames...))
 
 		case *pbconsole.EventsQuery_Filter_EventTypes:
 			eventTypes := make([]dal.EventType, 0, len(filter.EventTypes.EventTypes))

@@ -13,7 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/controller/internal/sql"
-	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
@@ -45,7 +44,7 @@ type Event interface {
 type LogEvent struct {
 	ID             int64
 	DeploymentName model.DeploymentName
-	RequestKey     types.Option[model.IngressRequestKey]
+	RequestName    types.Option[model.RequestName]
 	Time           time.Time
 	Level          int32
 	Attributes     map[string]string
@@ -59,7 +58,7 @@ func (e *LogEvent) event()       {}
 type CallEvent struct {
 	ID             int64
 	DeploymentName model.DeploymentName
-	RequestKey     types.Option[model.IngressRequestKey]
+	RequestName    types.Option[model.RequestName]
 	Time           time.Time
 	SourceVerb     types.Option[schema.VerbRef]
 	DestVerb       schema.VerbRef
@@ -97,7 +96,7 @@ type eventFilter struct {
 	calls        []*eventFilterCall
 	types        []EventType
 	deployments  []model.DeploymentName
-	requests     []sqltypes.Key
+	requests     []string
 	newerThan    time.Time
 	olderThan    time.Time
 	idHigherThan int64
@@ -130,10 +129,10 @@ func FilterDeployments(deploymentNames ...model.DeploymentName) EventFilter {
 	}
 }
 
-func FilterRequests(requestKeys ...model.IngressRequestKey) EventFilter {
+func FilterRequests(requestNames ...model.RequestName) EventFilter {
 	return func(query *eventFilter) {
-		for _, request := range requestKeys {
-			query.requests = append(query.requests, sqltypes.Key(request))
+		for _, request := range requestNames {
+			query.requests = append(query.requests, request.String())
 		}
 	}
 }
@@ -191,7 +190,7 @@ type eventDeploymentJSON struct {
 type eventRow struct {
 	sql.Event
 	DeploymentName model.DeploymentName
-	RequestKey     types.Option[model.IngressRequestKey]
+	RequestName    types.Option[model.RequestName]
 }
 
 func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter) ([]Event, error) {
@@ -202,7 +201,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	// Build query.
 	q := `SELECT e.id AS id,
 				d.name AS deployment_name,
-				ir.key AS request_key,
+				ir.name AS request_name,
 				e.time_stamp AS time_stamp,
 				e.custom_key_1 AS custom_key_1,
 				e.custom_key_2 AS custom_key_2,
@@ -212,7 +211,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 				e.payload AS payload
 			FROM events e
 					 INNER JOIN deployments d on e.deployment_id = d.id
-					 LEFT JOIN ingress_requests ir on e.request_id = ir.id
+					 LEFT JOIN requests ir on e.request_id = ir.id
 			WHERE true -- The "true" is to simplify the ANDs below.
 		`
 
@@ -243,7 +242,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 		q += fmt.Sprintf(` AND d.name = ANY($%d::TEXT[])`, param(filter.deployments))
 	}
 	if filter.requests != nil {
-		q += fmt.Sprintf(` AND ir.key = ANY($%d::UUID[])`, param(filter.requests))
+		q += fmt.Sprintf(` AND ir.name = ANY($%d::TEXT[])`, param(filter.requests))
 	}
 	if filter.types != nil {
 		// Why are we double casting? Because I hit "cannot find encode plan" and
@@ -290,7 +289,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	for rows.Next() {
 		row := eventRow{}
 		err := rows.Scan(
-			&row.ID, &row.DeploymentName, &row.RequestKey, &row.TimeStamp,
+			&row.ID, &row.DeploymentName, &row.RequestName, &row.TimeStamp,
 			&row.CustomKey1, &row.CustomKey2, &row.CustomKey3, &row.CustomKey4,
 			&row.Type, &row.Payload,
 		)
@@ -298,9 +297,9 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 			return nil, errors.WithStack(err)
 		}
 
-		var requestKey types.Option[model.IngressRequestKey]
-		if key, ok := row.RequestKey.Get(); ok {
-			requestKey = types.Some(key)
+		var requestName types.Option[model.RequestName]
+		if key, ok := row.RequestName.Get(); ok {
+			requestName = types.Some(key)
 		}
 		switch row.Type {
 		case sql.EventTypeLog:
@@ -315,7 +314,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 			out = append(out, &LogEvent{
 				ID:             row.ID,
 				DeploymentName: row.DeploymentName,
-				RequestKey:     requestKey,
+				RequestName:    requestName,
 				Time:           row.TimeStamp,
 				Level:          int32(level),
 				Attributes:     jsonPayload.Attributes,
@@ -337,7 +336,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 			out = append(out, &CallEvent{
 				ID:             row.ID,
 				DeploymentName: row.DeploymentName,
-				RequestKey:     requestKey,
+				RequestName:    requestName,
 				Time:           row.TimeStamp,
 				SourceVerb:     sourceVerb,
 				DestVerb:       schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},

@@ -16,7 +16,7 @@ import (
 
 type Call struct {
 	deploymentName model.DeploymentName
-	requestKey     model.IngressRequestKey
+	requestName    model.RequestName
 	startTime      time.Time
 	destVerb       *schema.VerbRef
 	callers        []*schema.VerbRef
@@ -51,7 +51,7 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{
 		Time:           call.startTime,
 		DeploymentName: call.deploymentName,
-		RequestKey:     types.Some(call.requestKey),
+		RequestName:    types.Some(call.requestName),
 		Duration:       time.Since(call.startTime),
 		SourceVerb:     sourceVerb,
 		DestVerb:       *call.destVerb,

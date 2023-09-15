@@ -34,10 +34,10 @@ export const TimelineLogDetails = ({ event, log }: Props) => {
           <dt>Deployment</dt>
           <dd className={`${textColor}`}>{log.deploymentName}</dd>
         </div>
-        {log.requestKey && (
+        {log.requestName && (
           <div className='flex pt-2 justify-between'>
             <dt>Request</dt>
-            <dd className={`${textColor}`}>{log.requestKey}</dd>
+            <dd className={`${textColor}`}>{log.requestName}</dd>
           </div>
         )}
         {log.error && (

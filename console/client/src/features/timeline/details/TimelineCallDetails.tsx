@@ -27,10 +27,10 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
 
   useEffect(() => {
     const fetchRequestCalls = async () => {
-      if (selectedCall.requestKey === undefined) {
+      if (selectedCall.requestName === undefined) {
         return
       }
-      const calls = await getRequestCalls(selectedCall.requestKey)
+      const calls = await getRequestCalls(selectedCall. requestName)
       setRequestCalls(calls)
     }
 
@@ -75,7 +75,7 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
         </div>
         <div className='flex pt-2 justify-between'>
           <dt>Request</dt>
-          <dd className={`${textColor}`}>{selectedCall.requestKey}</dd>
+          <dd className={`${textColor}`}>{selectedCall.requestName}</dd>
         </div>
         <div className='flex pt-2 justify-between'>
           <dt>Duration</dt>

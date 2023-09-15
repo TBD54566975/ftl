@@ -29,22 +29,22 @@ func SetDirectRouted(header http.Header) {
 	header.Set(DirectRoutingHeader, "1")
 }
 
-func SetRequestKey(header http.Header, key model.IngressRequestKey) {
+func SetRequestName(header http.Header, key model.RequestName) {
 	header.Set(RequestIDHeader, key.String())
 }
 
-// GetRequestKey from an incoming request.
+// GetRequestName from an incoming request.
 //
-// Will return ("", nil) if no request key is present.
-func GetRequestKey(header http.Header) (model.IngressRequestKey, bool, error) {
+// Will return ("", false, nil) if no request key is present.
+func GetRequestName(header http.Header) (model.RequestName, bool, error) {
 	keyStr := header.Get(RequestIDHeader)
 	if keyStr == "" {
-		return model.IngressRequestKey{}, false, nil
+		return "", false, nil
 	}
 
-	var key, err = model.ParseIngressRequestKey(keyStr)
+	var _, key, err = model.ParseRequestName(keyStr)
 	if err != nil {
-		return model.IngressRequestKey{}, false, errors.WithStack(err)
+		return "", false, errors.WithStack(err)
 	}
 	return key, true, nil
 }

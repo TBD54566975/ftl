@@ -54,22 +54,22 @@ func IsDirectRouted(ctx context.Context) bool {
 	return ctx.Value(ftlDirectRoutingKey{}) != nil
 }
 
-// RequestKeyFromContext returns the request Key from the context, if any.
-func RequestKeyFromContext(ctx context.Context) (model.IngressRequestKey, bool, error) {
+// RequestNameFromContext returns the request Key from the context, if any.
+func RequestNameFromContext(ctx context.Context) (model.RequestName, bool, error) {
 	value := ctx.Value(requestIDKey{})
 	keyStr, ok := value.(string)
 	if !ok {
-		return model.IngressRequestKey{}, false, nil
+		return "", false, nil
 	}
-	key, err := model.ParseIngressRequestKey(keyStr)
+	_, key, err := model.ParseRequestName(keyStr)
 	if err != nil {
-		return model.IngressRequestKey{}, false, errors.Wrap(err, "invalid request Key")
+		return "", false, errors.Wrap(err, "invalid request Key")
 	}
 	return key, true, nil
 }
 
-// WithRequestKey adds the request Key to the context.
-func WithRequestKey(ctx context.Context, key model.IngressRequestKey) context.Context {
+// WithRequestName adds the request Key to the context.
+func WithRequestName(ctx context.Context, key model.RequestName) context.Context {
 	return context.WithValue(ctx, requestIDKey{}, key.String())
 }
 
@@ -166,12 +166,12 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if verbs, ok := VerbsFromContext(ctx); ok {
 			headers.SetCallers(header, verbs)
 		}
-		if key, ok, err := RequestKeyFromContext(ctx); ok {
+		if key, ok, err := RequestNameFromContext(ctx); ok {
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
 			if ok {
-				headers.SetRequestKey(header, key)
+				headers.SetRequestName(header, key)
 			}
 		}
 	} else {
@@ -183,10 +183,10 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		} else { //nolint:revive
 			ctx = WithVerbs(ctx, verbs)
 		}
-		if key, ok, err := headers.GetRequestKey(header); err != nil {
+		if key, ok, err := headers.GetRequestName(header); err != nil {
 			return nil, errors.WithStack(err)
 		} else if ok {
-			ctx = WithRequestKey(ctx, key)
+			ctx = WithRequestName(ctx, key)
 		}
 	}
 	return ctx, nil
