@@ -1,6 +1,0 @@
-ftlController:
-  image: ghcr.io/tbd54566975/ftl-controller
-  tag: latest
-ftlRunner:
-  image: ghcr.io/tbd54566975/ftl-runner
-  tag: latest
