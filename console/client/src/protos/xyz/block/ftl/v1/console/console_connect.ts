@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { GetCallsRequest, GetCallsResponse, GetModulesRequest, GetModulesResponse, GetRequestCallsRequest, GetRequestCallsResponse, GetTimelineResponse, StreamTimelineRequest, StreamTimelineResponse, TimelineQuery } from "./console_pb.js";
+import { EventsQuery, GetEventsResponse, GetModulesRequest, GetModulesResponse, StreamEventsRequest, StreamEventsResponse } from "./console_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.console.ConsoleService
@@ -35,39 +35,21 @@ export const ConsoleService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetCalls
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.StreamEvents
      */
-    getCalls: {
-      name: "GetCalls",
-      I: GetCallsRequest,
-      O: GetCallsResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetRequestCalls
-     */
-    getRequestCalls: {
-      name: "GetRequestCalls",
-      I: GetRequestCallsRequest,
-      O: GetRequestCallsResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.StreamTimeline
-     */
-    streamTimeline: {
-      name: "StreamTimeline",
-      I: StreamTimelineRequest,
-      O: StreamTimelineResponse,
+    streamEvents: {
+      name: "StreamEvents",
+      I: StreamEventsRequest,
+      O: StreamEventsResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**
-     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetTimeline
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetEvents
      */
-    getTimeline: {
-      name: "GetTimeline",
-      I: TimelineQuery,
-      O: GetTimelineResponse,
+    getEvents: {
+      name: "GetEvents",
+      I: EventsQuery,
+      O: GetEventsResponse,
       kind: MethodKind.Unary,
     },
   }

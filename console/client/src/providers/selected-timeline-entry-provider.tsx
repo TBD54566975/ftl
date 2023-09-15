@@ -1,22 +1,22 @@
 import { PropsWithChildren, createContext, useState } from 'react'
-import { TimelineEvent } from '../protos/xyz/block/ftl/v1/console/console_pb'
+import { Event } from '../protos/xyz/block/ftl/v1/console/console_pb'
 
-interface SelectedTimelineEntryContextType {
-  selectedEntry: TimelineEvent | null
-  setSelectedEntry: React.Dispatch<React.SetStateAction<TimelineEvent | null>>
+interface SelectedEventContextType {
+  selectedEntry: Event | null
+  setSelectedEntry: React.Dispatch<React.SetStateAction<Event | null>>
 }
 
-export const SelectedTimelineEntryContext = createContext<SelectedTimelineEntryContextType>({
+export const SelectedEventContext = createContext<SelectedEventContextType>({
   selectedEntry: null,
   setSelectedEntry: () => {},
 })
 
-export const SelectedTimelineEntryProvider = (props: PropsWithChildren) => {
-  const [selectedEntry, setSelectedEntry] = useState<TimelineEvent | null>(null)
+export const SelectedEventProvider = (props: PropsWithChildren) => {
+  const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
 
   return (
-    <SelectedTimelineEntryContext.Provider value={{ selectedEntry, setSelectedEntry }}>
+    <SelectedEventContext.Provider value={{ selectedEntry, setSelectedEntry }}>
       {props.children}
-    </SelectedTimelineEntryContext.Provider>
+    </SelectedEventContext.Provider>
   )
 }

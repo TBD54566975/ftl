@@ -4,6 +4,7 @@ import { CodeBlock } from '../../../components/CodeBlock'
 import { useClient } from '../../../hooks/use-client'
 import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
 import { Call } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { getRequestCalls } from '../../../services/console.service'
 import { formatDuration } from '../../../utils/date.utils'
 import { textColor } from '../../../utils/style.utils'
 import { RequestGraph } from '../../requests/RequestGraph'
@@ -29,10 +30,8 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
       if (selectedCall.requestKey === undefined) {
         return
       }
-      const response = await client.getRequestCalls({
-        requestKey: selectedCall.requestKey,
-      })
-      setRequestCalls(response.calls)
+      const calls = await getRequestCalls(selectedCall.requestKey)
+      setRequestCalls(calls)
     }
 
     fetchRequestCalls()
