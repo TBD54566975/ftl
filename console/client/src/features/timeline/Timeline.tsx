@@ -2,8 +2,9 @@ import { Timestamp } from '@bufbuild/protobuf'
 import React from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
-import { TimelineEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
+import { getEvents } from '../../services/console.service.ts'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
@@ -18,8 +19,8 @@ import { TIME_RANGES } from './filters/TimeFilter.tsx'
 export const Timeline = () => {
   const client = useClient(ConsoleService)
   const { openPanel, closePanel, isOpen } = React.useContext(SidePanelContext)
-  const [entries, setEntries] = React.useState<TimelineEvent[]>([])
-  const [selectedEntry, setSelectedEntry] = React.useState<TimelineEvent | null>(null)
+  const [entries, setEntries] = React.useState<Event[]>([])
+  const [selectedEntry, setSelectedEntry] = React.useState<Event | null>(null)
   const [selectedEventTypes] = React.useState<string[]>(['log', 'call', 'deployment'])
   const [selectedLogLevels] = React.useState<number[]>([1, 5, 9, 13, 17])
   const [selectedTimeRange] = React.useState('24h')
@@ -29,9 +30,11 @@ export const Timeline = () => {
 
     const streamTimeline = async () => {
       setEntries((_) => [])
+      const events = await getEvents()
+      console.log(events)
       const afterTime = new Date(Date.now() - TIME_RANGES[selectedTimeRange].value)
 
-      for await (const response of client.streamTimeline(
+      for await (const response of client.streamEvents(
         { afterTime: Timestamp.fromDate(afterTime) },
         { signal: abortController.signal },
       )) {
@@ -53,7 +56,7 @@ export const Timeline = () => {
     }
   }, [isOpen])
 
-  const handleEntryClicked = (entry: TimelineEvent) => {
+  const handleEntryClicked = (entry: Event) => {
     if (selectedEntry === entry) {
       setSelectedEntry(null)
       closePanel()
@@ -65,10 +68,10 @@ export const Timeline = () => {
         openPanel(<TimelineCallDetails timestamp={entry.timeStamp as Timestamp} call={entry.entry.value} />)
         break
       case 'log':
-        openPanel(<TimelineLogDetails entry={entry} log={entry.entry.value} />)
+        openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />)
         break
       case 'deployment':
-        openPanel(<TimelineDeploymentDetails entry={entry} deployment={entry.entry.value} />)
+        openPanel(<TimelineDeploymentDetails event={entry} deployment={entry.entry.value} />)
         break
       default:
         break
@@ -108,7 +111,7 @@ export const Timeline = () => {
                 onClick={() => handleEntryClicked(entry)}
               >
                 <td className='w-8 flex-none flex items-center justify-center'>
-                  <TimelineIcon entry={entry} />
+                  <TimelineIcon event={entry} />
                 </td>
                 <td className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>
                   {formatTimestampShort(entry.timeStamp)}

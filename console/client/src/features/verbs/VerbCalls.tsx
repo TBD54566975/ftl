@@ -4,6 +4,7 @@ import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { Call, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
+import { getCalls } from '../../services/console.service.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails.tsx'
 
@@ -19,11 +20,12 @@ export const VerbCalls = ({ module, verb }: Props) => {
 
   React.useEffect(() => {
     const fetchCalls = async () => {
-      const response = await client.getCalls({
-        module: module?.name,
-        verb: verb?.verb?.name,
-      })
-      setCalls(response.calls)
+      if (module === undefined) {
+        return
+      }
+
+      const calls = await getCalls(module.name, verb?.verb?.name)
+      setCalls(calls)
     }
 
     fetchCalls()

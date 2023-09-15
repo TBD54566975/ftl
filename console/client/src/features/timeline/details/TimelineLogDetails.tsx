@@ -1,20 +1,20 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import { CodeBlock } from '../../../components/CodeBlock'
-import { LogEntry, TimelineEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Event, LogEntry } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { textColor } from '../../../utils/style.utils'
 import { LogLevelBadge } from '../../logs/LogLevelBadge'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 interface Props {
-  entry: TimelineEvent
+  event: Event
   log: LogEntry
 }
 
-export const TimelineLogDetails = ({ entry, log }: Props) => {
+export const TimelineLogDetails = ({ event, log }: Props) => {
   return (
     <>
       <div>
-        <TimelineTimestamp timestamp={entry.timeStamp ?? new Timestamp()} />
+        <TimelineTimestamp timestamp={event.timeStamp ?? new Timestamp()} />
       </div>
       <div className={`pt-4 text-xs ${textColor}`}>
         <p className='flex-wrap font-mono'>{log.message}</p>

@@ -1,11 +1,11 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import { Deployment, DeploymentEventType, TimelineEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Deployment, DeploymentEventType, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { classNames } from '../../../utils/react.utils'
 import { textColor } from '../../../utils/style.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 interface Props {
-  entry: TimelineEvent
+  event: Event
   deployment: Deployment
 }
 
@@ -24,11 +24,11 @@ export const deploymentTypeBadge: { [key in DeploymentEventType]: string } = {
     'text-indigo-600 bg-indigo-400/30 dark:text-indigo-300 dark:bg-indigo-700/10',
 }
 
-export const TimelineDeploymentDetails = ({ entry, deployment }: Props) => {
+export const TimelineDeploymentDetails = ({ event, deployment }: Props) => {
   return (
     <>
       <div>
-        <TimelineTimestamp timestamp={entry.timeStamp ?? new Timestamp()} />
+        <TimelineTimestamp timestamp={event.timeStamp ?? new Timestamp()} />
       </div>
 
       <div className='pt-4'>

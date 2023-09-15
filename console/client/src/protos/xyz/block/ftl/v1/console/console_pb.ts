@@ -568,169 +568,15 @@ export class GetModulesResponse extends Message<GetModulesResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.GetCallsRequest
- */
-export class GetCallsRequest extends Message<GetCallsRequest> {
-  /**
-   * @generated from field: string module = 1;
-   */
-  module = "";
-
-  /**
-   * @generated from field: string verb = 2;
-   */
-  verb = "";
-
-  constructor(data?: PartialMessage<GetCallsRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.GetCallsRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "verb", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCallsRequest {
-    return new GetCallsRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCallsRequest {
-    return new GetCallsRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCallsRequest {
-    return new GetCallsRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetCallsRequest | PlainMessage<GetCallsRequest> | undefined, b: GetCallsRequest | PlainMessage<GetCallsRequest> | undefined): boolean {
-    return proto3.util.equals(GetCallsRequest, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.console.GetCallsResponse
- */
-export class GetCallsResponse extends Message<GetCallsResponse> {
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Call calls = 1;
-   */
-  calls: Call[] = [];
-
-  constructor(data?: PartialMessage<GetCallsResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.GetCallsResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "calls", kind: "message", T: Call, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCallsResponse {
-    return new GetCallsResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCallsResponse {
-    return new GetCallsResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCallsResponse {
-    return new GetCallsResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetCallsResponse | PlainMessage<GetCallsResponse> | undefined, b: GetCallsResponse | PlainMessage<GetCallsResponse> | undefined): boolean {
-    return proto3.util.equals(GetCallsResponse, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.console.GetRequestCallsRequest
- */
-export class GetRequestCallsRequest extends Message<GetRequestCallsRequest> {
-  /**
-   * @generated from field: string request_key = 1;
-   */
-  requestKey = "";
-
-  constructor(data?: PartialMessage<GetRequestCallsRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.GetRequestCallsRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRequestCallsRequest {
-    return new GetRequestCallsRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRequestCallsRequest {
-    return new GetRequestCallsRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRequestCallsRequest {
-    return new GetRequestCallsRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetRequestCallsRequest | PlainMessage<GetRequestCallsRequest> | undefined, b: GetRequestCallsRequest | PlainMessage<GetRequestCallsRequest> | undefined): boolean {
-    return proto3.util.equals(GetRequestCallsRequest, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.console.GetRequestCallsResponse
- */
-export class GetRequestCallsResponse extends Message<GetRequestCallsResponse> {
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Call calls = 1;
-   */
-  calls: Call[] = [];
-
-  constructor(data?: PartialMessage<GetRequestCallsResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.GetRequestCallsResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "calls", kind: "message", T: Call, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRequestCallsResponse {
-    return new GetRequestCallsResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRequestCallsResponse {
-    return new GetRequestCallsResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRequestCallsResponse {
-    return new GetRequestCallsResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetRequestCallsResponse | PlainMessage<GetRequestCallsResponse> | undefined, b: GetRequestCallsResponse | PlainMessage<GetRequestCallsResponse> | undefined): boolean {
-    return proto3.util.equals(GetRequestCallsResponse, a, b);
-  }
-}
-
-/**
- * Query for timeline events.
+ * Query for events.
  *
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery
  */
-export class TimelineQuery extends Message<TimelineQuery> {
+export class EventsQuery extends Message<EventsQuery> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.TimelineQuery.Filter filters = 1;
+   * @generated from field: repeated xyz.block.ftl.v1.console.EventsQuery.Filter filters = 1;
    */
-  filters: TimelineQuery_Filter[] = [];
+  filters: EventsQuery_Filter[] = [];
 
   /**
    * @generated from field: int32 limit = 2;
@@ -738,44 +584,44 @@ export class TimelineQuery extends Message<TimelineQuery> {
   limit = 0;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.console.TimelineQuery.Order order = 3;
+   * @generated from field: xyz.block.ftl.v1.console.EventsQuery.Order order = 3;
    */
-  order = TimelineQuery_Order.ASC;
+  order = EventsQuery_Order.ASC;
 
-  constructor(data?: PartialMessage<TimelineQuery>) {
+  constructor(data?: PartialMessage<EventsQuery>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "filters", kind: "message", T: TimelineQuery_Filter, repeated: true },
+    { no: 1, name: "filters", kind: "message", T: EventsQuery_Filter, repeated: true },
     { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "order", kind: "enum", T: proto3.getEnumType(TimelineQuery_Order) },
+    { no: 3, name: "order", kind: "enum", T: proto3.getEnumType(EventsQuery_Order) },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery {
-    return new TimelineQuery().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery {
+    return new EventsQuery().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery {
-    return new TimelineQuery().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery {
+    return new EventsQuery().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery {
-    return new TimelineQuery().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery {
+    return new EventsQuery().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery | PlainMessage<TimelineQuery> | undefined, b: TimelineQuery | PlainMessage<TimelineQuery> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery, a, b);
+  static equals(a: EventsQuery | PlainMessage<EventsQuery> | undefined, b: EventsQuery | PlainMessage<EventsQuery> | undefined): boolean {
+    return proto3.util.equals(EventsQuery, a, b);
   }
 }
 
 /**
- * @generated from enum xyz.block.ftl.v1.console.TimelineQuery.Order
+ * @generated from enum xyz.block.ftl.v1.console.EventsQuery.Order
  */
-export enum TimelineQuery_Order {
+export enum EventsQuery_Order {
   /**
    * @generated from enum value: ASC = 0;
    */
@@ -786,8 +632,8 @@ export enum TimelineQuery_Order {
    */
   DESC = 1,
 }
-// Retrieve enum metadata with: proto3.getEnumType(TimelineQuery_Order)
-proto3.util.setEnumType(TimelineQuery_Order, "xyz.block.ftl.v1.console.TimelineQuery.Order", [
+// Retrieve enum metadata with: proto3.getEnumType(EventsQuery_Order)
+proto3.util.setEnumType(EventsQuery_Order, "xyz.block.ftl.v1.console.EventsQuery.Order", [
   { no: 0, name: "ASC" },
   { no: 1, name: "DESC" },
 ]);
@@ -795,195 +641,195 @@ proto3.util.setEnumType(TimelineQuery_Order, "xyz.block.ftl.v1.console.TimelineQ
 /**
  * Limit the number of events returned.
  *
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery.LimitFilter
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.LimitFilter
  */
-export class TimelineQuery_LimitFilter extends Message<TimelineQuery_LimitFilter> {
+export class EventsQuery_LimitFilter extends Message<EventsQuery_LimitFilter> {
   /**
    * @generated from field: int32 limit = 1;
    */
   limit = 0;
 
-  constructor(data?: PartialMessage<TimelineQuery_LimitFilter>) {
+  constructor(data?: PartialMessage<EventsQuery_LimitFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery.LimitFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.LimitFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery_LimitFilter {
-    return new TimelineQuery_LimitFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_LimitFilter {
+    return new EventsQuery_LimitFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery_LimitFilter {
-    return new TimelineQuery_LimitFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_LimitFilter {
+    return new EventsQuery_LimitFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery_LimitFilter {
-    return new TimelineQuery_LimitFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_LimitFilter {
+    return new EventsQuery_LimitFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery_LimitFilter | PlainMessage<TimelineQuery_LimitFilter> | undefined, b: TimelineQuery_LimitFilter | PlainMessage<TimelineQuery_LimitFilter> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery_LimitFilter, a, b);
+  static equals(a: EventsQuery_LimitFilter | PlainMessage<EventsQuery_LimitFilter> | undefined, b: EventsQuery_LimitFilter | PlainMessage<EventsQuery_LimitFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_LimitFilter, a, b);
   }
 }
 
 /**
  * Filters events by log level.
  *
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery.LogLevelFilter
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.LogLevelFilter
  */
-export class TimelineQuery_LogLevelFilter extends Message<TimelineQuery_LogLevelFilter> {
+export class EventsQuery_LogLevelFilter extends Message<EventsQuery_LogLevelFilter> {
   /**
    * @generated from field: xyz.block.ftl.v1.console.LogLevel log_level = 1;
    */
   logLevel = LogLevel.UNKNOWN;
 
-  constructor(data?: PartialMessage<TimelineQuery_LogLevelFilter>) {
+  constructor(data?: PartialMessage<EventsQuery_LogLevelFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery.LogLevelFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.LogLevelFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "log_level", kind: "enum", T: proto3.getEnumType(LogLevel) },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery_LogLevelFilter {
-    return new TimelineQuery_LogLevelFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_LogLevelFilter {
+    return new EventsQuery_LogLevelFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery_LogLevelFilter {
-    return new TimelineQuery_LogLevelFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_LogLevelFilter {
+    return new EventsQuery_LogLevelFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery_LogLevelFilter {
-    return new TimelineQuery_LogLevelFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_LogLevelFilter {
+    return new EventsQuery_LogLevelFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery_LogLevelFilter | PlainMessage<TimelineQuery_LogLevelFilter> | undefined, b: TimelineQuery_LogLevelFilter | PlainMessage<TimelineQuery_LogLevelFilter> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery_LogLevelFilter, a, b);
+  static equals(a: EventsQuery_LogLevelFilter | PlainMessage<EventsQuery_LogLevelFilter> | undefined, b: EventsQuery_LogLevelFilter | PlainMessage<EventsQuery_LogLevelFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_LogLevelFilter, a, b);
   }
 }
 
 /**
  * Filters events by deployment name.
  *
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery.DeploymentFilter
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.DeploymentFilter
  */
-export class TimelineQuery_DeploymentFilter extends Message<TimelineQuery_DeploymentFilter> {
+export class EventsQuery_DeploymentFilter extends Message<EventsQuery_DeploymentFilter> {
   /**
    * @generated from field: repeated string deployments = 1;
    */
   deployments: string[] = [];
 
-  constructor(data?: PartialMessage<TimelineQuery_DeploymentFilter>) {
+  constructor(data?: PartialMessage<EventsQuery_DeploymentFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery.DeploymentFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.DeploymentFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery_DeploymentFilter {
-    return new TimelineQuery_DeploymentFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_DeploymentFilter {
+    return new EventsQuery_DeploymentFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery_DeploymentFilter {
-    return new TimelineQuery_DeploymentFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_DeploymentFilter {
+    return new EventsQuery_DeploymentFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery_DeploymentFilter {
-    return new TimelineQuery_DeploymentFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_DeploymentFilter {
+    return new EventsQuery_DeploymentFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery_DeploymentFilter | PlainMessage<TimelineQuery_DeploymentFilter> | undefined, b: TimelineQuery_DeploymentFilter | PlainMessage<TimelineQuery_DeploymentFilter> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery_DeploymentFilter, a, b);
+  static equals(a: EventsQuery_DeploymentFilter | PlainMessage<EventsQuery_DeploymentFilter> | undefined, b: EventsQuery_DeploymentFilter | PlainMessage<EventsQuery_DeploymentFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_DeploymentFilter, a, b);
   }
 }
 
 /**
  * Filters events by request key.
  *
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery.RequestFilter
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.RequestFilter
  */
-export class TimelineQuery_RequestFilter extends Message<TimelineQuery_RequestFilter> {
+export class EventsQuery_RequestFilter extends Message<EventsQuery_RequestFilter> {
   /**
    * @generated from field: repeated string requests = 1;
    */
   requests: string[] = [];
 
-  constructor(data?: PartialMessage<TimelineQuery_RequestFilter>) {
+  constructor(data?: PartialMessage<EventsQuery_RequestFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery.RequestFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.RequestFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "requests", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery_RequestFilter {
-    return new TimelineQuery_RequestFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_RequestFilter {
+    return new EventsQuery_RequestFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery_RequestFilter {
-    return new TimelineQuery_RequestFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_RequestFilter {
+    return new EventsQuery_RequestFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery_RequestFilter {
-    return new TimelineQuery_RequestFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_RequestFilter {
+    return new EventsQuery_RequestFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery_RequestFilter | PlainMessage<TimelineQuery_RequestFilter> | undefined, b: TimelineQuery_RequestFilter | PlainMessage<TimelineQuery_RequestFilter> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery_RequestFilter, a, b);
+  static equals(a: EventsQuery_RequestFilter | PlainMessage<EventsQuery_RequestFilter> | undefined, b: EventsQuery_RequestFilter | PlainMessage<EventsQuery_RequestFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_RequestFilter, a, b);
   }
 }
 
 /**
  * Filters events by event type.
  *
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery.EventTypeFilter
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.EventTypeFilter
  */
-export class TimelineQuery_EventTypeFilter extends Message<TimelineQuery_EventTypeFilter> {
+export class EventsQuery_EventTypeFilter extends Message<EventsQuery_EventTypeFilter> {
   /**
    * @generated from field: repeated xyz.block.ftl.v1.console.EventType event_types = 1;
    */
   eventTypes: EventType[] = [];
 
-  constructor(data?: PartialMessage<TimelineQuery_EventTypeFilter>) {
+  constructor(data?: PartialMessage<EventsQuery_EventTypeFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery.EventTypeFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.EventTypeFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "event_types", kind: "enum", T: proto3.getEnumType(EventType), repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery_EventTypeFilter {
-    return new TimelineQuery_EventTypeFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_EventTypeFilter {
+    return new EventsQuery_EventTypeFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery_EventTypeFilter {
-    return new TimelineQuery_EventTypeFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_EventTypeFilter {
+    return new EventsQuery_EventTypeFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery_EventTypeFilter {
-    return new TimelineQuery_EventTypeFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_EventTypeFilter {
+    return new EventsQuery_EventTypeFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery_EventTypeFilter | PlainMessage<TimelineQuery_EventTypeFilter> | undefined, b: TimelineQuery_EventTypeFilter | PlainMessage<TimelineQuery_EventTypeFilter> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery_EventTypeFilter, a, b);
+  static equals(a: EventsQuery_EventTypeFilter | PlainMessage<EventsQuery_EventTypeFilter> | undefined, b: EventsQuery_EventTypeFilter | PlainMessage<EventsQuery_EventTypeFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_EventTypeFilter, a, b);
   }
 }
 
@@ -992,9 +838,9 @@ export class TimelineQuery_EventTypeFilter extends Message<TimelineQuery_EventTy
  *
  * Either end of the time range can be omitted to indicate no bound.
  *
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery.TimeFilter
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.TimeFilter
  */
-export class TimelineQuery_TimeFilter extends Message<TimelineQuery_TimeFilter> {
+export class EventsQuery_TimeFilter extends Message<EventsQuery_TimeFilter> {
   /**
    * @generated from field: optional google.protobuf.Timestamp older_than = 1;
    */
@@ -1005,32 +851,32 @@ export class TimelineQuery_TimeFilter extends Message<TimelineQuery_TimeFilter> 
    */
   newerThan?: Timestamp;
 
-  constructor(data?: PartialMessage<TimelineQuery_TimeFilter>) {
+  constructor(data?: PartialMessage<EventsQuery_TimeFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery.TimeFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.TimeFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "older_than", kind: "message", T: Timestamp, opt: true },
     { no: 2, name: "newer_than", kind: "message", T: Timestamp, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery_TimeFilter {
-    return new TimelineQuery_TimeFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_TimeFilter {
+    return new EventsQuery_TimeFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery_TimeFilter {
-    return new TimelineQuery_TimeFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_TimeFilter {
+    return new EventsQuery_TimeFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery_TimeFilter {
-    return new TimelineQuery_TimeFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_TimeFilter {
+    return new EventsQuery_TimeFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery_TimeFilter | PlainMessage<TimelineQuery_TimeFilter> | undefined, b: TimelineQuery_TimeFilter | PlainMessage<TimelineQuery_TimeFilter> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery_TimeFilter, a, b);
+  static equals(a: EventsQuery_TimeFilter | PlainMessage<EventsQuery_TimeFilter> | undefined, b: EventsQuery_TimeFilter | PlainMessage<EventsQuery_TimeFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_TimeFilter, a, b);
   }
 }
 
@@ -1039,9 +885,9 @@ export class TimelineQuery_TimeFilter extends Message<TimelineQuery_TimeFilter> 
  *
  * Either end of the ID range can be omitted to indicate no bound.
  *
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery.IDFilter
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.IDFilter
  */
-export class TimelineQuery_IDFilter extends Message<TimelineQuery_IDFilter> {
+export class EventsQuery_IDFilter extends Message<EventsQuery_IDFilter> {
   /**
    * @generated from field: optional int64 lower_than = 1;
    */
@@ -1052,126 +898,184 @@ export class TimelineQuery_IDFilter extends Message<TimelineQuery_IDFilter> {
    */
   higherThan?: bigint;
 
-  constructor(data?: PartialMessage<TimelineQuery_IDFilter>) {
+  constructor(data?: PartialMessage<EventsQuery_IDFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery.IDFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.IDFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "lower_than", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 2, name: "higher_than", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery_IDFilter {
-    return new TimelineQuery_IDFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_IDFilter {
+    return new EventsQuery_IDFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery_IDFilter {
-    return new TimelineQuery_IDFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_IDFilter {
+    return new EventsQuery_IDFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery_IDFilter {
-    return new TimelineQuery_IDFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_IDFilter {
+    return new EventsQuery_IDFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery_IDFilter | PlainMessage<TimelineQuery_IDFilter> | undefined, b: TimelineQuery_IDFilter | PlainMessage<TimelineQuery_IDFilter> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery_IDFilter, a, b);
+  static equals(a: EventsQuery_IDFilter | PlainMessage<EventsQuery_IDFilter> | undefined, b: EventsQuery_IDFilter | PlainMessage<EventsQuery_IDFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_IDFilter, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.TimelineQuery.Filter
+ * Filters events by call.
+ *
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.CallFilter
  */
-export class TimelineQuery_Filter extends Message<TimelineQuery_Filter> {
+export class EventsQuery_CallFilter extends Message<EventsQuery_CallFilter> {
   /**
-   * These map 1:1 with filters in backend/controller/internal/dal/events.go
-   *
-   * @generated from oneof xyz.block.ftl.v1.console.TimelineQuery.Filter.filter
+   * @generated from field: string dest_module = 1;
    */
-  filter: {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.TimelineQuery.LimitFilter limit = 1;
-     */
-    value: TimelineQuery_LimitFilter;
-    case: "limit";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.TimelineQuery.LogLevelFilter log_level = 2;
-     */
-    value: TimelineQuery_LogLevelFilter;
-    case: "logLevel";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.TimelineQuery.DeploymentFilter deployments = 3;
-     */
-    value: TimelineQuery_DeploymentFilter;
-    case: "deployments";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.TimelineQuery.RequestFilter requests = 4;
-     */
-    value: TimelineQuery_RequestFilter;
-    case: "requests";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.TimelineQuery.EventTypeFilter event_types = 5;
-     */
-    value: TimelineQuery_EventTypeFilter;
-    case: "eventTypes";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.TimelineQuery.TimeFilter time = 6;
-     */
-    value: TimelineQuery_TimeFilter;
-    case: "time";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.TimelineQuery.IDFilter id = 7;
-     */
-    value: TimelineQuery_IDFilter;
-    case: "id";
-  } | { case: undefined; value?: undefined } = { case: undefined };
+  destModule = "";
 
-  constructor(data?: PartialMessage<TimelineQuery_Filter>) {
+  /**
+   * @generated from field: optional string dest_verb = 2;
+   */
+  destVerb?: string;
+
+  /**
+   * @generated from field: optional string source_module = 3;
+   */
+  sourceModule?: string;
+
+  constructor(data?: PartialMessage<EventsQuery_CallFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineQuery.Filter";
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.CallFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "limit", kind: "message", T: TimelineQuery_LimitFilter, oneof: "filter" },
-    { no: 2, name: "log_level", kind: "message", T: TimelineQuery_LogLevelFilter, oneof: "filter" },
-    { no: 3, name: "deployments", kind: "message", T: TimelineQuery_DeploymentFilter, oneof: "filter" },
-    { no: 4, name: "requests", kind: "message", T: TimelineQuery_RequestFilter, oneof: "filter" },
-    { no: 5, name: "event_types", kind: "message", T: TimelineQuery_EventTypeFilter, oneof: "filter" },
-    { no: 6, name: "time", kind: "message", T: TimelineQuery_TimeFilter, oneof: "filter" },
-    { no: 7, name: "id", kind: "message", T: TimelineQuery_IDFilter, oneof: "filter" },
+    { no: 1, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineQuery_Filter {
-    return new TimelineQuery_Filter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_CallFilter {
+    return new EventsQuery_CallFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineQuery_Filter {
-    return new TimelineQuery_Filter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_CallFilter {
+    return new EventsQuery_CallFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineQuery_Filter {
-    return new TimelineQuery_Filter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_CallFilter {
+    return new EventsQuery_CallFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineQuery_Filter | PlainMessage<TimelineQuery_Filter> | undefined, b: TimelineQuery_Filter | PlainMessage<TimelineQuery_Filter> | undefined): boolean {
-    return proto3.util.equals(TimelineQuery_Filter, a, b);
+  static equals(a: EventsQuery_CallFilter | PlainMessage<EventsQuery_CallFilter> | undefined, b: EventsQuery_CallFilter | PlainMessage<EventsQuery_CallFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_CallFilter, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.StreamTimelineRequest
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.Filter
  */
-export class StreamTimelineRequest extends Message<StreamTimelineRequest> {
+export class EventsQuery_Filter extends Message<EventsQuery_Filter> {
+  /**
+   * These map 1:1 with filters in backend/controller/internal/dal/events.go
+   *
+   * @generated from oneof xyz.block.ftl.v1.console.EventsQuery.Filter.filter
+   */
+  filter: {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.LimitFilter limit = 1;
+     */
+    value: EventsQuery_LimitFilter;
+    case: "limit";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.LogLevelFilter log_level = 2;
+     */
+    value: EventsQuery_LogLevelFilter;
+    case: "logLevel";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.DeploymentFilter deployments = 3;
+     */
+    value: EventsQuery_DeploymentFilter;
+    case: "deployments";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.RequestFilter requests = 4;
+     */
+    value: EventsQuery_RequestFilter;
+    case: "requests";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.EventTypeFilter event_types = 5;
+     */
+    value: EventsQuery_EventTypeFilter;
+    case: "eventTypes";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.TimeFilter time = 6;
+     */
+    value: EventsQuery_TimeFilter;
+    case: "time";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.IDFilter id = 7;
+     */
+    value: EventsQuery_IDFilter;
+    case: "id";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.CallFilter call = 8;
+     */
+    value: EventsQuery_CallFilter;
+    case: "call";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<EventsQuery_Filter>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.Filter";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "limit", kind: "message", T: EventsQuery_LimitFilter, oneof: "filter" },
+    { no: 2, name: "log_level", kind: "message", T: EventsQuery_LogLevelFilter, oneof: "filter" },
+    { no: 3, name: "deployments", kind: "message", T: EventsQuery_DeploymentFilter, oneof: "filter" },
+    { no: 4, name: "requests", kind: "message", T: EventsQuery_RequestFilter, oneof: "filter" },
+    { no: 5, name: "event_types", kind: "message", T: EventsQuery_EventTypeFilter, oneof: "filter" },
+    { no: 6, name: "time", kind: "message", T: EventsQuery_TimeFilter, oneof: "filter" },
+    { no: 7, name: "id", kind: "message", T: EventsQuery_IDFilter, oneof: "filter" },
+    { no: 8, name: "call", kind: "message", T: EventsQuery_CallFilter, oneof: "filter" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_Filter {
+    return new EventsQuery_Filter().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_Filter {
+    return new EventsQuery_Filter().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_Filter {
+    return new EventsQuery_Filter().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EventsQuery_Filter | PlainMessage<EventsQuery_Filter> | undefined, b: EventsQuery_Filter | PlainMessage<EventsQuery_Filter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_Filter, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamEventsRequest
+ */
+export class StreamEventsRequest extends Message<StreamEventsRequest> {
   /**
    * @generated from field: optional google.protobuf.Duration update_interval = 1;
    */
@@ -1187,44 +1091,44 @@ export class StreamTimelineRequest extends Message<StreamTimelineRequest> {
    */
   deploymentName = "";
 
-  constructor(data?: PartialMessage<StreamTimelineRequest>) {
+  constructor(data?: PartialMessage<StreamEventsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.StreamTimelineRequest";
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamEventsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "update_interval", kind: "message", T: Duration, opt: true },
     { no: 2, name: "after_time", kind: "message", T: Timestamp },
     { no: 3, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamTimelineRequest {
-    return new StreamTimelineRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamEventsRequest {
+    return new StreamEventsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamTimelineRequest {
-    return new StreamTimelineRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamEventsRequest {
+    return new StreamEventsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamTimelineRequest {
-    return new StreamTimelineRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamEventsRequest {
+    return new StreamEventsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StreamTimelineRequest | PlainMessage<StreamTimelineRequest> | undefined, b: StreamTimelineRequest | PlainMessage<StreamTimelineRequest> | undefined): boolean {
-    return proto3.util.equals(StreamTimelineRequest, a, b);
+  static equals(a: StreamEventsRequest | PlainMessage<StreamEventsRequest> | undefined, b: StreamEventsRequest | PlainMessage<StreamEventsRequest> | undefined): boolean {
+    return proto3.util.equals(StreamEventsRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.StreamTimelineResponse
+ * @generated from message xyz.block.ftl.v1.console.StreamEventsResponse
  */
-export class StreamTimelineResponse extends Message<StreamTimelineResponse> {
+export class StreamEventsResponse extends Message<StreamEventsResponse> {
   /**
-   * @generated from field: xyz.block.ftl.v1.console.TimelineEvent event = 1;
+   * @generated from field: xyz.block.ftl.v1.console.Event event = 1;
    */
-  event?: TimelineEvent;
+  event?: Event;
 
   /**
    * If true there are more logs immediately following this one as part of the initial batch.
@@ -1234,39 +1138,39 @@ export class StreamTimelineResponse extends Message<StreamTimelineResponse> {
    */
   more = false;
 
-  constructor(data?: PartialMessage<StreamTimelineResponse>) {
+  constructor(data?: PartialMessage<StreamEventsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.StreamTimelineResponse";
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamEventsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "event", kind: "message", T: TimelineEvent },
+    { no: 1, name: "event", kind: "message", T: Event },
     { no: 2, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamTimelineResponse {
-    return new StreamTimelineResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamEventsResponse {
+    return new StreamEventsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamTimelineResponse {
-    return new StreamTimelineResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamEventsResponse {
+    return new StreamEventsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamTimelineResponse {
-    return new StreamTimelineResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamEventsResponse {
+    return new StreamEventsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StreamTimelineResponse | PlainMessage<StreamTimelineResponse> | undefined, b: StreamTimelineResponse | PlainMessage<StreamTimelineResponse> | undefined): boolean {
-    return proto3.util.equals(StreamTimelineResponse, a, b);
+  static equals(a: StreamEventsResponse | PlainMessage<StreamEventsResponse> | undefined, b: StreamEventsResponse | PlainMessage<StreamEventsResponse> | undefined): boolean {
+    return proto3.util.equals(StreamEventsResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.TimelineEvent
+ * @generated from message xyz.block.ftl.v1.console.Event
  */
-export class TimelineEvent extends Message<TimelineEvent> {
+export class Event extends Message<Event> {
   /**
    * @generated from field: google.protobuf.Timestamp time_stamp = 1;
    */
@@ -1280,7 +1184,7 @@ export class TimelineEvent extends Message<TimelineEvent> {
   id = protoInt64.zero;
 
   /**
-   * @generated from oneof xyz.block.ftl.v1.console.TimelineEvent.entry
+   * @generated from oneof xyz.block.ftl.v1.console.Event.entry
    */
   entry: {
     /**
@@ -1302,13 +1206,13 @@ export class TimelineEvent extends Message<TimelineEvent> {
     case: "log";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
-  constructor(data?: PartialMessage<TimelineEvent>) {
+  constructor(data?: PartialMessage<Event>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.TimelineEvent";
+  static readonly typeName = "xyz.block.ftl.v1.console.Event";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 2, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
@@ -1317,31 +1221,31 @@ export class TimelineEvent extends Message<TimelineEvent> {
     { no: 5, name: "log", kind: "message", T: LogEntry, oneof: "entry" },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TimelineEvent {
-    return new TimelineEvent().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {
+    return new Event().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TimelineEvent {
-    return new TimelineEvent().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Event {
+    return new Event().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TimelineEvent {
-    return new TimelineEvent().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Event {
+    return new Event().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TimelineEvent | PlainMessage<TimelineEvent> | undefined, b: TimelineEvent | PlainMessage<TimelineEvent> | undefined): boolean {
-    return proto3.util.equals(TimelineEvent, a, b);
+  static equals(a: Event | PlainMessage<Event> | undefined, b: Event | PlainMessage<Event> | undefined): boolean {
+    return proto3.util.equals(Event, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.GetTimelineResponse
+ * @generated from message xyz.block.ftl.v1.console.GetEventsResponse
  */
-export class GetTimelineResponse extends Message<GetTimelineResponse> {
+export class GetEventsResponse extends Message<GetEventsResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.TimelineEvent events = 1;
+   * @generated from field: repeated xyz.block.ftl.v1.console.Event events = 1;
    */
-  events: TimelineEvent[] = [];
+  events: Event[] = [];
 
   /**
    * For pagination, this cursor is where we should start our next query
@@ -1350,32 +1254,32 @@ export class GetTimelineResponse extends Message<GetTimelineResponse> {
    */
   cursor?: bigint;
 
-  constructor(data?: PartialMessage<GetTimelineResponse>) {
+  constructor(data?: PartialMessage<GetEventsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.GetTimelineResponse";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "events", kind: "message", T: TimelineEvent, repeated: true },
+    { no: 1, name: "events", kind: "message", T: Event, repeated: true },
     { no: 2, name: "cursor", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTimelineResponse {
-    return new GetTimelineResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsResponse {
+    return new GetEventsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetTimelineResponse {
-    return new GetTimelineResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsResponse {
+    return new GetEventsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetTimelineResponse {
-    return new GetTimelineResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsResponse {
+    return new GetEventsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined, b: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined): boolean {
-    return proto3.util.equals(GetTimelineResponse, a, b);
+  static equals(a: GetEventsResponse | PlainMessage<GetEventsResponse> | undefined, b: GetEventsResponse | PlainMessage<GetEventsResponse> | undefined): boolean {
+    return proto3.util.equals(GetEventsResponse, a, b);
   }
 }
 

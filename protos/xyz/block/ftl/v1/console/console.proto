@@ -80,23 +80,6 @@ message GetModulesResponse {
   repeated Module modules = 1;
 }
 
-message GetCallsRequest {
-  string module = 1;
-  string verb = 2;
-}
-
-message GetCallsResponse {
-  repeated Call calls = 1;
-}
-
-message GetRequestCallsRequest {
-  string request_key = 1;
-}
-
-message GetRequestCallsResponse {
-  repeated Call calls = 1;
-}
-
 enum LogLevel {
   LOG_LEVEL_UNKNOWN = 0;
   LOG_LEVEL_TRACE = 1;
@@ -106,8 +89,8 @@ enum LogLevel {
   LOG_LEVEL_ERROR = 17;
 }
 
-// Query for timeline events.
-message TimelineQuery {
+// Query for events.
+message EventsQuery {
   // Limit the number of events returned.
   message LimitFilter {
     int32 limit = 1;
@@ -142,6 +125,12 @@ message TimelineQuery {
     optional int64 lower_than = 1;
     optional int64 higher_than = 2;
   }
+  // Filters events by call.
+  message CallFilter {
+    string dest_module = 1;
+    optional string dest_verb = 2;
+    optional string source_module = 3;
+  }
 
   enum Order {
     ASC = 0;
@@ -158,6 +147,7 @@ message TimelineQuery {
       EventTypeFilter event_types = 5;
       TimeFilter time = 6;
       IDFilter id = 7;
+      CallFilter call = 8;
     }
   }
 
@@ -166,21 +156,21 @@ message TimelineQuery {
   Order order = 3;
 }
 
-message StreamTimelineRequest {
+message StreamEventsRequest {
   optional google.protobuf.Duration update_interval = 1;
   google.protobuf.Timestamp after_time = 2;
   string deployment_name = 3;
 }
 
-message StreamTimelineResponse {
-  TimelineEvent event = 1;
+message StreamEventsResponse {
+  Event event = 1;
 
   // If true there are more logs immediately following this one as part of the initial batch.
   // If false this is the last log in the initial batch, but others may follow later.
   bool more = 2;
 }
 
-message TimelineEvent {
+message Event {
   google.protobuf.Timestamp time_stamp = 1;
   // Unique ID for event.
   int64 id = 2;
@@ -191,8 +181,8 @@ message TimelineEvent {
   }
 }
 
-message GetTimelineResponse {
-  repeated TimelineEvent events = 1;
+message GetEventsResponse {
+  repeated Event events = 1;
 
   // For pagination, this cursor is where we should start our next query
   optional int64 cursor = 2;
@@ -205,8 +195,6 @@ service ConsoleService {
   }
 
   rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
-  rpc GetCalls(GetCallsRequest) returns (GetCallsResponse);
-  rpc GetRequestCalls(GetRequestCallsRequest) returns (GetRequestCallsResponse);
-  rpc StreamTimeline(StreamTimelineRequest) returns (stream StreamTimelineResponse);
-  rpc GetTimeline(TimelineQuery) returns (GetTimelineResponse);
+  rpc StreamEvents(StreamEventsRequest) returns (stream StreamEventsResponse);
+  rpc GetEvents(EventsQuery) returns (GetEventsResponse);
 }
