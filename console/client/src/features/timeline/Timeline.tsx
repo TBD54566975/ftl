@@ -1,10 +1,8 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import React from 'react'
-import { useClient } from '../../hooks/use-client.ts'
-import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
-import { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
-import { getEvents } from '../../services/console.service.ts'
+import { getEvents, timeFilter } from '../../services/console.service.ts'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
@@ -14,41 +12,32 @@ import { TimelineLog } from './TimelineLog.tsx'
 import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineDeploymentDetails } from './details/TimelineDeploymentDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
-import { TIME_RANGES } from './filters/TimeFilter.tsx'
+import { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
-export const Timeline = () => {
-  const client = useClient(ConsoleService)
+interface Props {
+  timeSettings: TimeSettings
+  filters: EventsQuery_Filter[]
+}
+
+export const Timeline = ({ timeSettings, filters }: Props) => {
   const { openPanel, closePanel, isOpen } = React.useContext(SidePanelContext)
   const [entries, setEntries] = React.useState<Event[]>([])
   const [selectedEntry, setSelectedEntry] = React.useState<Event | null>(null)
   const [selectedEventTypes] = React.useState<string[]>(['log', 'call', 'deployment'])
   const [selectedLogLevels] = React.useState<number[]>([1, 5, 9, 13, 17])
-  const [selectedTimeRange] = React.useState('24h')
 
   React.useEffect(() => {
-    const abortController = new AbortController()
-
-    const streamTimeline = async () => {
-      setEntries((_) => [])
-      const events = await getEvents()
-      console.log(events)
-      const afterTime = new Date(Date.now() - TIME_RANGES[selectedTimeRange].value)
-
-      for await (const response of client.streamEvents(
-        { afterTime: Timestamp.fromDate(afterTime) },
-        { signal: abortController.signal },
-      )) {
-        if (response.event != null) {
-          setEntries((prevEntries) => [response.event!, ...prevEntries])
-        }
+    const fetchEvents = async () => {
+      let eventFilters = filters
+      if (timeSettings.newerThan || timeSettings.olderThan) {
+        eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
       }
+      const events = await getEvents(eventFilters)
+      setEntries(events)
     }
 
-    streamTimeline()
-    return () => {
-      abortController.abort()
-    }
-  }, [client, selectedTimeRange])
+    fetchEvents()
+  }, [filters, timeSettings])
 
   React.useEffect(() => {
     if (!isOpen) {

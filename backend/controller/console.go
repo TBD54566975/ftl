@@ -326,7 +326,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 			if filter.Time.OlderThan != nil {
 				olderThan = filter.Time.OlderThan.AsTime()
 			}
-			query = append(query, dal.FilterTimeRange(newerThan, olderThan))
+			query = append(query, dal.FilterTimeRange(olderThan, newerThan))
 
 		case *pbconsole.EventsQuery_Filter_Id:
 			var lowerThan, higherThan int64

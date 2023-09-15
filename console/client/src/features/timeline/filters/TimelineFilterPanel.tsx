@@ -1,6 +1,6 @@
 import { PhoneIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
 import React from 'react'
-import { LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { EventsQuery_Filter, LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../../providers/modules-provider'
 import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
@@ -27,7 +27,11 @@ const LOG_LEVELS: Record<number, string> = {
   17: 'Error',
 }
 
-export const TimelineFilterPanel = () => {
+interface Props {
+  onFiltersChanged: (filters: EventsQuery_Filter[]) => void
+}
+
+export const TimelineFilterPanel = ({ onFiltersChanged }: Props) => {
   const modules = React.useContext(modulesContext)
   const [selectedEventTypes, setSelectedEventTypes] = React.useState<string[]>(Object.keys(EVENT_TYPES))
   const [selectedModules, setSelectedModules] = React.useState<string[]>([])
@@ -38,6 +42,10 @@ export const TimelineFilterPanel = () => {
       setSelectedModules(modules.modules.map((module) => module.name))
     }
   }, [modules])
+
+  React.useEffect(() => {
+    onFiltersChanged([])
+  }, [selectedEventTypes, setSelectedLogLevel, selectedModules])
 
   const handleTypeChanged = (eventType: string, checked: boolean) => {
     if (checked) {

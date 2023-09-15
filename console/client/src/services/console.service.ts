@@ -1,3 +1,4 @@
+import { Timestamp } from '@bufbuild/protobuf'
 import { createClient } from '../hooks/use-client'
 import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
 import {
@@ -9,6 +10,7 @@ import {
   EventsQuery_Filter,
   EventsQuery_Order,
   EventsQuery_RequestFilter,
+  EventsQuery_TimeFilter,
 } from '../protos/xyz/block/ftl/v1/console/console_pb'
 
 const client = createClient(ConsoleService)
@@ -52,6 +54,18 @@ const callFilter = (
   return filter
 }
 
+export const timeFilter = (olderThan: Timestamp | undefined, newerThan: Timestamp | undefined): EventsQuery_Filter => {
+  const filter = new EventsQuery_Filter()
+  const timeFilter = new EventsQuery_TimeFilter()
+  timeFilter.olderThan = olderThan
+  timeFilter.newerThan = newerThan
+  filter.filter = {
+    case: 'time',
+    value: timeFilter,
+  }
+  return filter
+}
+
 export const getRequestCalls = async (requestKey: string): Promise<Call[]> => {
   const allEvents = await getEvents([requestKeysFilter([requestKey]), eventTypesFilter([EventType.CALL])])
   return allEvents.map((e) => e.entry.value) as Call[]
@@ -72,8 +86,9 @@ export const getCalls = async (
 export const getEvents = async (
   filters: EventsQuery_Filter[] = [],
   limit: number = 100,
-  order: EventsQuery_Order = EventsQuery_Order.ASC,
+  order: EventsQuery_Order = EventsQuery_Order.DESC,
 ): Promise<Event[]> => {
   const response = await client.getEvents({ filters, limit, order })
+
   return response.events
 }

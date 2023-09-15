@@ -1,7 +1,15 @@
+import { Timestamp } from '@bufbuild/protobuf'
 import { Listbox, Transition } from '@headlessui/react'
-import { BackwardIcon, CheckIcon, ChevronUpDownIcon, ForwardIcon, PlayIcon } from '@heroicons/react/24/outline'
+import {
+  BackwardIcon,
+  CheckIcon,
+  ChevronUpDownIcon,
+  ForwardIcon,
+  PauseIcon,
+  PlayIcon,
+} from '@heroicons/react/24/outline'
 import React, { Fragment } from 'react'
-import { bgColor, borderColor, classNames, panelColor, textColor } from '../../../utils'
+import { bgColor, borderColor, classNames, formatTimestampShort, panelColor, textColor } from '../../../utils'
 
 interface TimeRange {
   label: string
@@ -11,18 +19,93 @@ interface TimeRange {
 export const TIME_RANGES: Record<string, TimeRange> = {
   tail: { label: 'Live tail', value: 0 },
   '5m': { label: 'Past 5 minutes', value: 5 * 60 * 1000 },
+  '15m': { label: 'Past 15 minutes', value: 15 * 60 * 1000 },
   '30m': { label: 'Past 30 minutes', value: 30 * 60 * 1000 },
   '1h': { label: 'Past 1 hour', value: 60 * 60 * 1000 },
   '24h': { label: 'Past 24 hours', value: 24 * 60 * 60 * 1000 },
 }
 
-export const TimelineTimeControls = () => {
-  const [selected, setSelected] = React.useState(TIME_RANGES['tail'])
+export interface TimeSettings {
+  isTailing: boolean
+  isPaused: boolean
+  olderThan?: Timestamp
+  newerThan?: Timestamp
+}
 
+interface Props {
+  onTimeSettingsChange: (settings: TimeSettings) => void
+}
+
+export const TimelineTimeControls = ({ onTimeSettingsChange }: Props) => {
+  const [selected, setSelected] = React.useState(TIME_RANGES['tail'])
+  const [isPaused, setIsPaused] = React.useState(false)
+  const [newerThan, setNewerThan] = React.useState<Timestamp | undefined>()
+
+  const isTailing = selected.value === TIME_RANGES['tail'].value
+
+  React.useEffect(() => {
+    if (isTailing) {
+      onTimeSettingsChange({ isTailing, isPaused })
+      return
+    }
+
+    if (newerThan) {
+      const startTime = (newerThan.toDate() ?? new Date()).getTime()
+      const olderThanDate = new Date(startTime + selected.value)
+
+      onTimeSettingsChange({
+        isTailing,
+        isPaused,
+        olderThan: Timestamp.fromDate(olderThanDate),
+        newerThan: newerThan,
+      })
+    }
+  }, [selected, isPaused, newerThan])
+
+  const handleRangeChanged = (range: TimeRange) => {
+    setSelected(range)
+    if (!newerThan) {
+      const newerThanDate = new Date(new Date().getTime() - range.value)
+      setNewerThan(Timestamp.fromDate(newerThanDate))
+    }
+    if (range.value === TIME_RANGES['tail'].value) {
+      setNewerThan(undefined)
+    }
+  }
+
+  const handleTimeBackward = () => {
+    if (!newerThan) {
+      return
+    }
+    const newerThanDate = new Date(newerThan.toDate().getTime() - selected.value)
+    setNewerThan(Timestamp.fromDate(newerThanDate))
+  }
+
+  const handleTimeForward = () => {
+    if (!newerThan) {
+      return
+    }
+    const newerThanTime = newerThan.toDate().getTime()
+    const newerThanDate = new Date(newerThanTime + selected.value)
+    const maxNewTime = new Date().getTime() - selected.value
+    if (newerThanDate.getTime() > maxNewTime) {
+      setNewerThan(Timestamp.fromDate(new Date(maxNewTime)))
+    } else {
+      setNewerThan(Timestamp.fromDate(newerThanDate))
+    }
+  }
+
+  const olderThan = newerThan ? Timestamp.fromDate(new Date(newerThan.toDate().getTime() - selected.value)) : undefined
   return (
     <>
       <div className='flex items-center h-6'>
-        <Listbox value={selected} onChange={setSelected}>
+        {newerThan && (
+          <span className='text-xs font-roboto-mono mr-2 text-gray-400'>
+            {formatTimestampShort(olderThan)} - {formatTimestampShort(newerThan)}
+          </span>
+        )}
+
+        <Listbox value={selected} onChange={handleRangeChanged}>
           {({ open }) => (
             <>
               <div className='relative w-40 mr-2 -mt-0.5 items-center'>
@@ -87,26 +170,39 @@ export const TimelineTimeControls = () => {
             </>
           )}
         </Listbox>
-        <span className={`isolate inline-flex rounded-md shadow-sm h-6 ${textColor} ${bgColor}`}>
-          <button
-            type='button'
-            className={`relative inline-flex items-center rounded-l-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-10`}
+        {isTailing && (
+          <span
+            className={`isolate inline-flex rounded-md shadow-sm h-6 ${textColor} ${
+              isPaused ? bgColor : 'bg-indigo-600 text-white'
+            } `}
           >
-            <BackwardIcon className='w-4 h-4' />
-          </button>
-          <button
-            type='button'
-            className={`relative -ml-px inline-flex items-center px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-10`}
-          >
-            <PlayIcon className='w-4 h-4' />
-          </button>
-          <button
-            type='button'
-            className={`relative -ml-px inline-flex items-center rounded-r-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-10`}
-          >
-            <ForwardIcon className='w-4 h-4' />
-          </button>
-        </span>
+            <button
+              type='button'
+              onClick={() => setIsPaused(!isPaused)}
+              className={`relative inline-flex items-center rounded-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700 focus:z-10`}
+            >
+              {isPaused ? <PlayIcon className='w-4 h-4' /> : <PauseIcon className='w-4 h-4' />}
+            </button>
+          </span>
+        )}
+        {!isTailing && (
+          <span className={`isolate inline-flex rounded-md shadow-sm h-6 ${textColor} ${bgColor}`}>
+            <button
+              type='button'
+              onClick={handleTimeBackward}
+              className={`relative inline-flex items-center rounded-l-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700 focus:z-10`}
+            >
+              <BackwardIcon className='w-4 h-4' />
+            </button>
+            <button
+              type='button'
+              onClick={handleTimeForward}
+              className={`relative -ml-px inline-flex items-center rounded-r-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700 focus:z-10`}
+            >
+              <ForwardIcon className='w-4 h-4' />
+            </button>
+          </span>
+        )}
       </div>
     </>
   )
