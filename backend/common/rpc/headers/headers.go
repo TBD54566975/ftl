@@ -19,8 +19,6 @@ const (
 	VerbHeader = "FTL-Verb"
 	// RequestIDHeader is the header used to pass the inbound request ID.
 	RequestIDHeader = "FTL-Request-ID"
-	// RequestOriginHeader is the header used to pass the origin of the request.
-	RequestOriginHeader = "FTL-Request-Origin"
 )
 
 func IsDirectRouted(header http.Header) bool {

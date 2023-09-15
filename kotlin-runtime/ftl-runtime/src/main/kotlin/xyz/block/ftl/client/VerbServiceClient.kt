@@ -1,12 +1,11 @@
 package xyz.block.ftl.client
 
-import com.squareup.wire.GrpcClient
 import okio.ByteString.Companion.encodeUtf8
 import xyz.block.ftl.Context
 import xyz.block.ftl.registry.Registry
 import xyz.block.ftl.registry.VerbRef
 import xyz.block.ftl.v1.CallRequest
-import xyz.block.ftl.v1.VerbServiceClient as VerbServiceClientProto
+import xyz.block.ftl.v1.VerbServiceWireGrpc.VerbServiceBlockingStub
 
 /**
  * Client for calling verbs. Concrete implementations of this interface may call via gRPC or directly.
@@ -22,9 +21,7 @@ interface VerbServiceClient {
   fun call(context: Context, ref: VerbRef, req: String): String
 }
 
-class GrpcVerbServiceClient(grpcClient: GrpcClient) : VerbServiceClient {
-  val client = grpcClient.create(VerbServiceClientProto::class)
-
+class GrpcVerbServiceClient(val client: VerbServiceBlockingStub) : VerbServiceClient {
   override fun call(context: Context, ref: VerbRef, req: String): String {
     val request = CallRequest(
       verb = xyz.block.ftl.v1.schema.VerbRef(
@@ -33,7 +30,7 @@ class GrpcVerbServiceClient(grpcClient: GrpcClient) : VerbServiceClient {
       ),
       body = req.encodeUtf8(),
     )
-    val response = client.Call().executeBlocking(request)
+    val response = client.Call(request)
     return when {
       response.error != null -> throw RuntimeException(response.error.message)
       response.body != null -> response.body.utf8()
