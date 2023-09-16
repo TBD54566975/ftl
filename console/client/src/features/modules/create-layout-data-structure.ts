@@ -18,9 +18,53 @@ interface Item {
   verbs: VerbItem[]
 }
 
+type ModuleMap = Map<number, Set<Item>>
+interface Graph {
+  [key: string]: Set<string>
+}
+
+const flattenMap = (map: ModuleMap, graph: Graph): Item[] => {
+  const sortedKeys = Array.from(map.keys()).sort((a, b) => a - b)
+  const flattenedList: Item[] = []
+
+  for (const key of sortedKeys) {
+    for (const item of map.get(key)!) {
+      if (key === 0) {
+        // Items with key 0 have no ancestors, so we just add them directly to the list
+        flattenedList.push(item)
+      } else if (graph[item.name]) {
+        // Find the ancestor for the current item
+        const ancestorName = Array.from(graph[item.name])[0]
+
+        // Find the index of the ancestor in the flattenedList
+        let insertionIndex = flattenedList.findIndex((i) => i.name === ancestorName)
+
+        // If ancestor is found, find the position after the last dependent of the ancestor
+        if (insertionIndex !== -1) {
+          while (
+            insertionIndex + 1 < flattenedList.length &&
+            graph[flattenedList[insertionIndex + 1].name] &&
+            Array.from(graph[flattenedList[insertionIndex + 1].name])[0] === ancestorName
+          ) {
+            insertionIndex++
+          }
+          flattenedList.splice(insertionIndex + 1, 0, item)
+        } else {
+          // If ancestor is not found, this is a fallback, though ideally this shouldn't happen
+          flattenedList.push(item)
+        }
+      } else {
+        // If no ancestor is found in the graph, simply push the item to the list
+        flattenedList.push(item)
+      }
+    }
+  }
+
+  return flattenedList
+}
+
 export const createLayoutDataStructure = (data: GetModulesResponse): Item[] => {
   const graph: { [key: string]: Set<string> } = {}
-  const items: Item[] = []
 
   // Initialize graph with all module names
   data.modules.forEach((module) => {
@@ -35,7 +79,7 @@ export const createLayoutDataStructure = (data: GetModulesResponse): Item[] => {
         if (metadataEntry.value.case === 'calls') {
           metadataEntry.value.value.calls.forEach((call) => {
             if (call.module) {
-              graph[module.name].add(call.module)
+              graph[call.module].add(module.name)
             }
           })
         }
@@ -67,43 +111,43 @@ export const createLayoutDataStructure = (data: GetModulesResponse): Item[] => {
     return depth
   }
 
-  // Create the new structure
-  Object.keys(graph)
-    .sort()
-    .forEach((moduleName) => {
-      const moduleData = data.modules.find((mod) => mod.name === moduleName)
-      if (!moduleData) return
+  const sortedKeys = Object.keys(graph).sort(new Intl.Collator().compare)
+  const map: Map<number, Set<Item>> = new Map()
 
-      const depth = determineDepth(moduleName)
-      const item: Item = {
-        'data-id': moduleName,
-        name: moduleName,
-        style: { marginLeft: 20 * (depth + 1) },
-        verbs: [],
+  sortedKeys.forEach((moduleName) => {
+    const moduleData = data.modules.find((mod) => mod.name === moduleName)
+    if (!moduleData) return
+
+    const depth = determineDepth(moduleName)
+    const item: Item = {
+      'data-id': moduleName,
+      name: moduleName,
+      style: { marginLeft: 20 * (depth + 1) },
+      verbs: [],
+    }
+
+    moduleData.verbs.forEach((verbEntry) => {
+      const verb = verbEntry.verb
+      const verbItem: VerbItem = {
+        name: verb?.name,
+        'data-id': `${moduleName}.${verb?.name}`,
+        calls: [],
       }
-
-      moduleData.verbs.forEach((verbEntry) => {
-        const verb = verbEntry.verb
-        const verbItem: VerbItem = {
-          name: verb?.name,
-          'data-id': `${moduleName}.${verb?.name}`,
-          calls: [],
-        }
-        verb?.metadata.forEach((metadataEntry) => {
-          if (metadataEntry.value.case === 'calls') {
-            metadataEntry.value.value.calls.forEach((call) => {
-              verbItem.calls.push({
-                module: call.module,
-                name: call.name,
-              })
+      verb?.metadata.forEach((metadataEntry) => {
+        if (metadataEntry.value.case === 'calls') {
+          metadataEntry.value.value.calls.forEach((call) => {
+            verbItem.calls.push({
+              module: call.module,
+              name: call.name,
             })
-          }
-        })
-        item.verbs.push(verbItem)
+          })
+        }
       })
-
-      items.push(item)
+      item.verbs.push(verbItem)
     })
+    map.has(depth) ? map.get(depth)?.add(item) : map.set(depth, new Set([item]))
+  })
 
-  return items
+  console.log(flattenMap(map, graph))
+  return flattenMap(map, graph)
 }
