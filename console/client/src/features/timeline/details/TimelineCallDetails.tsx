@@ -4,6 +4,7 @@ import { CodeBlock } from '../../../components/CodeBlock'
 import { useClient } from '../../../hooks/use-client'
 import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
 import { Call } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { getRequestCalls } from '../../../services/console.service'
 import { formatDuration } from '../../../utils/date.utils'
 import { textColor } from '../../../utils/style.utils'
 import { RequestGraph } from '../../requests/RequestGraph'
@@ -26,13 +27,11 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
 
   useEffect(() => {
     const fetchRequestCalls = async () => {
-      if (selectedCall.requestKey === undefined) {
+      if (selectedCall.requestName === undefined) {
         return
       }
-      const response = await client.getRequestCalls({
-        requestKey: selectedCall.requestKey,
-      })
-      setRequestCalls(response.calls)
+      const calls = await getRequestCalls(selectedCall.requestName)
+      setRequestCalls(calls)
     }
 
     fetchRequestCalls()
@@ -76,7 +75,7 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
         </div>
         <div className='flex pt-2 justify-between'>
           <dt>Request</dt>
-          <dd className={`${textColor}`}>{selectedCall.requestKey}</dd>
+          <dd className={`${textColor}`}>{selectedCall.requestName}</dd>
         </div>
         <div className='flex pt-2 justify-between'>
           <dt>Duration</dt>

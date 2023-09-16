@@ -30,23 +30,23 @@ func NewDeploymentName(module string) DeploymentName {
 	if err != nil {
 		panic(err)
 	}
-	return DeploymentName(fmt.Sprintf("%s-%s", module, hex.EncodeToString(hash)))
+	return DeploymentName(fmt.Sprintf("%s-%010x", module, hash))
 }
 
 func ParseDeploymentName(name string) (DeploymentName, error) {
 	var zero DeploymentName
 	parts := strings.Split(name, "-")
 	if len(parts) < 2 {
-		return zero, errors.Errorf("invalid deployment name %q", name)
+		return zero, errors.Errorf("should be at least <deployment>-<hash>: invalid deployment name %q", name)
 	}
 	hash, err := hex.DecodeString(parts[len(parts)-1])
 	if err != nil {
 		return zero, errors.Wrapf(err, "invalid deployment name %q", name)
 	}
 	if len(hash) != 5 {
-		return zero, errors.Errorf("invalid deployment name %q", name)
+		return zero, errors.Errorf("hash should be 5 bytes: invalid deployment name %q", name)
 	}
-	return DeploymentName(fmt.Sprintf("%s-%s", strings.Join(parts[0:len(parts)-1], "-"), hex.EncodeToString(hash))), nil
+	return DeploymentName(fmt.Sprintf("%s-%010x", strings.Join(parts[0:len(parts)-1], "-"), hash)), nil
 }
 
 func (d *DeploymentName) String() string {

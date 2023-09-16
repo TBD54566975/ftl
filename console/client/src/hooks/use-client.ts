@@ -7,6 +7,10 @@ const transport = createConnectTransport({
   baseUrl: 'http://localhost:8892',
 })
 
+export const createClient = <T extends ServiceType>(service: T): PromiseClient<T> => {
+  return createPromiseClient(service, transport)
+}
+
 export const useClient = <T extends ServiceType>(service: T): PromiseClient<T> => {
-  return useMemo(() => createPromiseClient(service, transport), [service])
+  return useMemo(() => createClient(service), [service])
 }

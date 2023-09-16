@@ -358,7 +358,7 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 		}
 
 		err := send(&ftlv1.StreamDeploymentLogsRequest{
-			RequestKey:     request,
+			RequestName:    request,
 			DeploymentName: deploymentName,
 			TimeStamp:      timestamppb.New(entry.Time),
 			LogLevel:       int32(entry.Level.Severity()),
@@ -380,8 +380,8 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 
 func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.DeploymentName) *log.Logger {
 	attrs := map[string]string{"deployment": deploymentName.String()}
-	if requestKey, ok, _ := rpc.RequestKeyFromContext(ctx); ok {
-		attrs["request"] = requestKey.String()
+	if requestName, ok, _ := rpc.RequestNameFromContext(ctx); ok {
+		attrs["request"] = requestName.String()
 	}
 
 	sink := newDeploymentLogsSink(s.deploymentLogQueue)

@@ -1,7 +1,8 @@
 import { Popover, Transition } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { Fragment } from 'react'
-import { logLevelText, textColor } from '../../../utils'
+import { textColor } from '../../../utils'
+import { logLevelText } from '../../logs/log.utils'
 
 const logLevels = [1, 5, 9, 13, 17]
 

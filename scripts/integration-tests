@@ -13,8 +13,12 @@ error() {
 
 build_release() {
   info "Building release"
-  rm -rf build
-  make release
+  bit build/release/ftl-controller \
+    build/release/ftl-runner \
+    build/release/ftl \
+    kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT-jar-with-dependencies.jar \
+    kotlin-runtime/ftl-generator/target/ftl-generator-1.0-SNAPSHOT-jar-with-dependencies.jar \
+    build/template/ftl/jars/ftl-runtime.jar
 }
 
 wipe_database() {
@@ -41,14 +45,6 @@ start_cluster() {
   trap "overmind quit" EXIT INT TERM
 }
 
-prepare_runner() (
-  info "Preparing runner template directory"
-  mvn install
-  mkdir -p build/template/ftl/jars build/runner0 build/runner1
-  test -r build/template/ftl/jars/ftl-runtime.jar && return 0
-  make build/template/ftl/jars/ftl-runtime.jar
-)
-
 deploy_echo_kotlin() (
   info "Deploying echo-kotlin"
   cd examples/echo-kotlin
@@ -70,7 +66,6 @@ wait_for_deploys() {
 
 build_release
 wipe_database
-prepare_runner
 start_cluster
 
 # Cluster is up, start interacting with it.
