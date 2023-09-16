@@ -148,6 +148,5 @@ export const createLayoutDataStructure = (data: GetModulesResponse): Item[] => {
     map.has(depth) ? map.get(depth)?.add(item) : map.set(depth, new Set([item]))
   })
 
-  console.log(flattenMap(map, graph))
   return flattenMap(map, graph)
 }
