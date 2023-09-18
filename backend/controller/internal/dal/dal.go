@@ -554,6 +554,9 @@ func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 	return nil
 }
 
+// ReserveRunnerForDeployment reserves a runner for the given deployment.
+//
+// It returns a Reservation that must be committed or rolled back.
 func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.DeploymentName, reservationTimeout time.Duration, labels model.Labels) (Reservation, error) {
 	jsonLabels, err := json.Marshal(labels)
 	if err != nil {
