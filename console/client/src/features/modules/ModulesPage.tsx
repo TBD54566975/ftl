@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { modulesContext } from '../../providers/modules-provider'
 import { Disclosure } from '@headlessui/react'
 import { createLayoutDataStructure } from './create-layout-data-structure'
+import { P5Diagram } from './P5Diagram'
 
 export const ModulesPage = () => {
   const modules = React.useContext(modulesContext)
@@ -12,6 +13,7 @@ export const ModulesPage = () => {
   return (
     <>
       <PageHeader icon={<Square3Stack3DIcon />} title='Modules' />
+      <P5Diagram width={500} height={500} />
       <div role='list' className='flex flex-col space-y-3 p-2'>
         {data?.map(({ name, style, verbs, 'data-id': dataId }) => (
           <Disclosure
