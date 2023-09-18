@@ -1,3 +1,4 @@
+import { Code, ConnectError } from '@bufbuild/connect'
 import { Timestamp } from '@bufbuild/protobuf'
 import { createClient } from '../hooks/use-client'
 import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
@@ -6,16 +7,19 @@ import {
   Event,
   EventType,
   EventsQuery_CallFilter,
+  EventsQuery_DeploymentFilter,
   EventsQuery_EventTypeFilter,
   EventsQuery_Filter,
+  EventsQuery_LogLevelFilter,
   EventsQuery_Order,
   EventsQuery_RequestFilter,
   EventsQuery_TimeFilter,
+  LogLevel,
 } from '../protos/xyz/block/ftl/v1/console/console_pb'
 
 const client = createClient(ConsoleService)
 
-const requestKeysFilter = (requestKeys: string[]): EventsQuery_Filter => {
+export const requestKeysFilter = (requestKeys: string[]): EventsQuery_Filter => {
   const filter = new EventsQuery_Filter()
   const requestFilter = new EventsQuery_RequestFilter()
   requestFilter.requests = requestKeys
@@ -26,7 +30,7 @@ const requestKeysFilter = (requestKeys: string[]): EventsQuery_Filter => {
   return filter
 }
 
-const eventTypesFilter = (eventTypes: EventType[]): EventsQuery_Filter => {
+export const eventTypesFilter = (eventTypes: EventType[]): EventsQuery_Filter => {
   const filter = new EventsQuery_Filter()
   const typesFilter = new EventsQuery_EventTypeFilter()
   typesFilter.eventTypes = eventTypes
@@ -37,7 +41,29 @@ const eventTypesFilter = (eventTypes: EventType[]): EventsQuery_Filter => {
   return filter
 }
 
-const callFilter = (
+export const logLevelFilter = (logLevel: LogLevel): EventsQuery_Filter => {
+  const filter = new EventsQuery_Filter()
+  const logFilter = new EventsQuery_LogLevelFilter()
+  logFilter.logLevel = logLevel
+  filter.filter = {
+    case: 'logLevel',
+    value: logFilter,
+  }
+  return filter
+}
+
+export const modulesFilter = (modules: string[]): EventsQuery_Filter => {
+  const filter = new EventsQuery_Filter()
+  const deploymentsFilter = new EventsQuery_DeploymentFilter()
+  deploymentsFilter.deployments = modules
+  filter.filter = {
+    case: 'deployments',
+    value: deploymentsFilter,
+  }
+  return filter
+}
+
+export const callFilter = (
   destModule: string,
   destVerb: string | undefined = undefined,
   sourceModule: string | undefined = undefined,
@@ -102,7 +128,7 @@ export interface StreamEventsParams {
 export const streamEvents = async ({ abortControllerSignal, filters, onEventReceived }: StreamEventsParams) => {
   try {
     for await (const response of client.streamEvents(
-      { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, filters } },
+      { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, order: EventsQuery_Order.DESC, filters } },
       { signal: abortControllerSignal },
     )) {
       if (response.event != null) {
@@ -110,6 +136,10 @@ export const streamEvents = async ({ abortControllerSignal, filters, onEventRece
       }
     }
   } catch (error) {
-    console.error('Streaming error:', error)
+    if (error instanceof ConnectError) {
+      if (error.code !== Code.Canceled) {
+        console.error('Connect error:', error.code)
+      }
+    }
   }
 }
