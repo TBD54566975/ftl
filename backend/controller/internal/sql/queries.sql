@@ -90,25 +90,18 @@ WITH deployment_rel AS (
                ELSE COALESCE((SELECT id
                               FROM deployments d
                               WHERE d.name = sqlc.narg('deployment_name')
-                              LIMIT 1), -1) END AS id),
-     module_rel AS (SELECT m.name
-                    FROM modules m
-                             INNER JOIN deployments d ON m.id = d.module_id
-                    WHERE d.name = sqlc.narg('deployment_name')
-                    LIMIT 1)
+                              LIMIT 1), -1) END AS id)
 INSERT
-INTO runners (key, endpoint, state, labels, module_name, deployment_id, last_seen)
+INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
 VALUES ($1,
         $2,
         $3,
         $4,
-        (SELECT name FROM module_rel),
         (SELECT id FROM deployment_rel),
         NOW() AT TIME ZONE 'utc')
 ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
                                 state         = $3,
                                 labels        = $4,
-                                module_name   = (SELECT name FROM module_rel),
                                 deployment_id = (SELECT id FROM deployment_rel),
                                 last_seen     = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id;

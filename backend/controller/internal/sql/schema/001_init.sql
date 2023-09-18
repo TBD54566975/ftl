@@ -112,6 +112,48 @@ CREATE TABLE runners
     labels              JSONB        NOT NULL DEFAULT '{}'
 );
 
+-- Automatically update module_name when deployment_id is set or unset.
+CREATE OR REPLACE FUNCTION runners_update_module_name() RETURNS TRIGGER AS
+$$
+BEGIN
+    IF NEW.deployment_id IS NULL
+    THEN
+        NEW.module_name = NULL;
+    ELSE
+        SELECT m.name
+        INTO NEW.module_name
+        FROM modules m
+                 INNER JOIN deployments d on m.id = d.module_id
+        WHERE d.id = NEW.deployment_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER runners_update_module_name
+    BEFORE INSERT OR UPDATE
+    ON runners
+    FOR EACH ROW
+EXECUTE PROCEDURE runners_update_module_name();
+
+-- Set a default reservation_timeout when a runner is reserved.
+CREATE OR REPLACE FUNCTION runners_set_reservation_timeout() RETURNS TRIGGER AS
+$$
+BEGIN
+    IF OLD.state != 'reserved' AND NEW.state = 'reserved' AND NEW.reservation_timeout IS NULL
+    THEN
+        NEW.reservation_timeout = NOW() AT TIME ZONE 'utc' + INTERVAL '2 minutes';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER runners_set_reservation_timeout
+    BEFORE INSERT OR UPDATE
+    ON runners
+    FOR EACH ROW
+EXECUTE PROCEDURE runners_set_reservation_timeout();
+
 CREATE UNIQUE INDEX runners_key ON runners (key);
 CREATE UNIQUE INDEX runners_endpoint_not_dead_idx ON runners (endpoint) WHERE state <> 'dead';
 CREATE INDEX runners_module_name_idx ON runners (module_name);
@@ -150,7 +192,7 @@ CREATE TABLE requests
     -- ingress: ingress-<method>-<path>-<hash> (eg. ingress-GET-foo-bar-<hash>)
     -- cron: cron-<name>-<hash>                (eg. cron-poll-news-sources-<hash>)
     -- pubsub: pubsub-<subscription>-<hash>    (eg. pubsub-articles-<hash>)
-    name         VARCHAR UNIQUE NOT NULL,
+    name        VARCHAR UNIQUE NOT NULL,
     source_addr VARCHAR        NOT NULL
 );
 
