@@ -202,6 +202,41 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
+	processes, err := s.dal.GetProcessList(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	out, err := slices.MapErr(processes, func(p dal.Process) (*ftlv1.ProcessListResponse_Process, error) {
+		var runner *ftlv1.ProcessListResponse_ProcessRunner
+		if dbr, ok := p.Runner.Get(); ok {
+			labels, err := structpb.NewStruct(dbr.Labels)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not marshal labels for runner %s", dbr.Key)
+			}
+			runner = &ftlv1.ProcessListResponse_ProcessRunner{
+				Key:      dbr.Key.String(),
+				Endpoint: dbr.Endpoint,
+				Labels:   labels,
+			}
+		}
+		labels, err := structpb.NewStruct(p.Labels)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not marshal labels for deployment %s", p.Deployment)
+		}
+		return &ftlv1.ProcessListResponse_Process{
+			Deployment:  p.Deployment.String(),
+			MinReplicas: int32(p.MinReplicas),
+			Labels:      labels,
+			Runner:      runner,
+		}, nil
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return connect.NewResponse(&ftlv1.ProcessListResponse{Processes: out}), nil
+}
+
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
 	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers, req.Msg.AllRunners, req.Msg.AllDeployments, req.Msg.AllIngressRoutes)
 	if err != nil {

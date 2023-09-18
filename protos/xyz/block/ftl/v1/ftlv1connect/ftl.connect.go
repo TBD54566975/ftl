@@ -43,6 +43,9 @@ const (
 	VerbServiceCallProcedure = "/xyz.block.ftl.v1.VerbService/Call"
 	// ControllerServicePingProcedure is the fully-qualified name of the ControllerService's Ping RPC.
 	ControllerServicePingProcedure = "/xyz.block.ftl.v1.ControllerService/Ping"
+	// ControllerServiceProcessListProcedure is the fully-qualified name of the ControllerService's
+	// ProcessList RPC.
+	ControllerServiceProcessListProcedure = "/xyz.block.ftl.v1.ControllerService/ProcessList"
 	// ControllerServiceStatusProcedure is the fully-qualified name of the ControllerService's Status
 	// RPC.
 	ControllerServiceStatusProcedure = "/xyz.block.ftl.v1.ControllerService/Status"
@@ -181,6 +184,8 @@ func (UnimplementedVerbServiceHandler) Call(context.Context, *connect_go.Request
 type ControllerServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
+	// List "processes" running on the cluster.
+	ProcessList(context.Context, *connect_go.Request[v1.ProcessListRequest]) (*connect_go.Response[v1.ProcessListResponse], error)
 	Status(context.Context, *connect_go.Request[v1.StatusRequest]) (*connect_go.Response[v1.StatusResponse], error)
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error)
@@ -233,6 +238,11 @@ func NewControllerServiceClient(httpClient connect_go.HTTPClient, baseURL string
 			baseURL+ControllerServicePingProcedure,
 			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
 			connect_go.WithClientOptions(opts...),
+		),
+		processList: connect_go.NewClient[v1.ProcessListRequest, v1.ProcessListResponse](
+			httpClient,
+			baseURL+ControllerServiceProcessListProcedure,
+			opts...,
 		),
 		status: connect_go.NewClient[v1.StatusRequest, v1.StatusResponse](
 			httpClient,
@@ -300,6 +310,7 @@ func NewControllerServiceClient(httpClient connect_go.HTTPClient, baseURL string
 // controllerServiceClient implements ControllerServiceClient.
 type controllerServiceClient struct {
 	ping                   *connect_go.Client[v1.PingRequest, v1.PingResponse]
+	processList            *connect_go.Client[v1.ProcessListRequest, v1.ProcessListResponse]
 	status                 *connect_go.Client[v1.StatusRequest, v1.StatusResponse]
 	getArtefactDiffs       *connect_go.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
 	uploadArtefact         *connect_go.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
@@ -317,6 +328,11 @@ type controllerServiceClient struct {
 // Ping calls xyz.block.ftl.v1.ControllerService.Ping.
 func (c *controllerServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
+}
+
+// ProcessList calls xyz.block.ftl.v1.ControllerService.ProcessList.
+func (c *controllerServiceClient) ProcessList(ctx context.Context, req *connect_go.Request[v1.ProcessListRequest]) (*connect_go.Response[v1.ProcessListResponse], error) {
+	return c.processList.CallUnary(ctx, req)
 }
 
 // Status calls xyz.block.ftl.v1.ControllerService.Status.
@@ -383,6 +399,8 @@ func (c *controllerServiceClient) PullSchema(ctx context.Context, req *connect_g
 type ControllerServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
+	// List "processes" running on the cluster.
+	ProcessList(context.Context, *connect_go.Request[v1.ProcessListRequest]) (*connect_go.Response[v1.ProcessListResponse], error)
 	Status(context.Context, *connect_go.Request[v1.StatusRequest]) (*connect_go.Response[v1.StatusResponse], error)
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect_go.Request[v1.GetArtefactDiffsRequest]) (*connect_go.Response[v1.GetArtefactDiffsResponse], error)
@@ -432,6 +450,11 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect_g
 		svc.Ping,
 		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
 		connect_go.WithHandlerOptions(opts...),
+	))
+	mux.Handle(ControllerServiceProcessListProcedure, connect_go.NewUnaryHandler(
+		ControllerServiceProcessListProcedure,
+		svc.ProcessList,
+		opts...,
 	))
 	mux.Handle(ControllerServiceStatusProcedure, connect_go.NewUnaryHandler(
 		ControllerServiceStatusProcedure,
@@ -501,6 +524,10 @@ type UnimplementedControllerServiceHandler struct{}
 
 func (UnimplementedControllerServiceHandler) Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.Ping is not implemented"))
+}
+
+func (UnimplementedControllerServiceHandler) ProcessList(context.Context, *connect_go.Request[v1.ProcessListRequest]) (*connect_go.Response[v1.ProcessListResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.ProcessList is not implemented"))
 }
 
 func (UnimplementedControllerServiceHandler) Status(context.Context, *connect_go.Request[v1.StatusRequest]) (*connect_go.Response[v1.StatusResponse], error) {

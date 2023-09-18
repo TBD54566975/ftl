@@ -1778,6 +1778,178 @@ export class StatusResponse_Route extends Message<StatusResponse_Route> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.ProcessListRequest
+ */
+export class ProcessListRequest extends Message<ProcessListRequest> {
+  constructor(data?: PartialMessage<ProcessListRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.ProcessListRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProcessListRequest {
+    return new ProcessListRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProcessListRequest {
+    return new ProcessListRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProcessListRequest {
+    return new ProcessListRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ProcessListRequest | PlainMessage<ProcessListRequest> | undefined, b: ProcessListRequest | PlainMessage<ProcessListRequest> | undefined): boolean {
+    return proto3.util.equals(ProcessListRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.ProcessListResponse
+ */
+export class ProcessListResponse extends Message<ProcessListResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.ProcessListResponse.Process processes = 1;
+   */
+  processes: ProcessListResponse_Process[] = [];
+
+  constructor(data?: PartialMessage<ProcessListResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.ProcessListResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "processes", kind: "message", T: ProcessListResponse_Process, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProcessListResponse {
+    return new ProcessListResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProcessListResponse {
+    return new ProcessListResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProcessListResponse {
+    return new ProcessListResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ProcessListResponse | PlainMessage<ProcessListResponse> | undefined, b: ProcessListResponse | PlainMessage<ProcessListResponse> | undefined): boolean {
+    return proto3.util.equals(ProcessListResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.ProcessListResponse.ProcessRunner
+ */
+export class ProcessListResponse_ProcessRunner extends Message<ProcessListResponse_ProcessRunner> {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key = "";
+
+  /**
+   * @generated from field: string endpoint = 2;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: google.protobuf.Struct labels = 3;
+   */
+  labels?: Struct;
+
+  constructor(data?: PartialMessage<ProcessListResponse_ProcessRunner>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.ProcessListResponse.ProcessRunner";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "labels", kind: "message", T: Struct },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProcessListResponse_ProcessRunner {
+    return new ProcessListResponse_ProcessRunner().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProcessListResponse_ProcessRunner {
+    return new ProcessListResponse_ProcessRunner().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProcessListResponse_ProcessRunner {
+    return new ProcessListResponse_ProcessRunner().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ProcessListResponse_ProcessRunner | PlainMessage<ProcessListResponse_ProcessRunner> | undefined, b: ProcessListResponse_ProcessRunner | PlainMessage<ProcessListResponse_ProcessRunner> | undefined): boolean {
+    return proto3.util.equals(ProcessListResponse_ProcessRunner, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.ProcessListResponse.Process
+ */
+export class ProcessListResponse_Process extends Message<ProcessListResponse_Process> {
+  /**
+   * @generated from field: string deployment = 1;
+   */
+  deployment = "";
+
+  /**
+   * @generated from field: int32 min_replicas = 2;
+   */
+  minReplicas = 0;
+
+  /**
+   * @generated from field: google.protobuf.Struct labels = 3;
+   */
+  labels?: Struct;
+
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.ProcessListResponse.ProcessRunner runner = 4;
+   */
+  runner?: ProcessListResponse_ProcessRunner;
+
+  constructor(data?: PartialMessage<ProcessListResponse_Process>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.ProcessListResponse.Process";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "labels", kind: "message", T: Struct },
+    { no: 4, name: "runner", kind: "message", T: ProcessListResponse_ProcessRunner, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProcessListResponse_Process {
+    return new ProcessListResponse_Process().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProcessListResponse_Process {
+    return new ProcessListResponse_Process().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProcessListResponse_Process {
+    return new ProcessListResponse_Process().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ProcessListResponse_Process | PlainMessage<ProcessListResponse_Process> | undefined, b: ProcessListResponse_Process | PlainMessage<ProcessListResponse_Process> | undefined): boolean {
+    return proto3.util.equals(ProcessListResponse_Process, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.DeployRequest
  */
 export class DeployRequest extends Message<DeployRequest> {
