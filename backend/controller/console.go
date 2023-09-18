@@ -143,24 +143,26 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 		updateInterval = req.Msg.UpdateInterval.AsDuration()
 	}
 
-	var query []dal.EventFilter
-	if req.Msg.DeploymentName != "" {
-		deploymentName, err := model.ParseDeploymentName(req.Msg.DeploymentName)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		query = append(query, dal.FilterDeployments(deploymentName))
-	}
-	var lastEventTime time.Time
-	if req.Msg.AfterTime != nil {
-		lastEventTime = req.Msg.AfterTime.AsTime()
-	} else {
-		lastEventTime = time.Now()
+	if req.Msg.Query.Limit == 0 {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("limit must be > 0"))
 	}
 
+	query, err := eventsQueryProtoToDAL(req.Msg.Query)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Default to last 1 day of events
+	var lastEventTime time.Time
 	for {
 		thisRequestTime := time.Now()
-		events, err := c.dal.QueryEvents(ctx, 1000, append(query, dal.FilterTimeRange(thisRequestTime, lastEventTime))...)
+		newQuery := query
+
+		if !lastEventTime.IsZero() {
+			newQuery = append(newQuery, dal.FilterTimeRange(thisRequestTime, lastEventTime))
+		}
+
+		events, err := c.dal.QueryEvents(ctx, int(req.Msg.Query.Limit), newQuery...)
 		if err != nil {
 			return errors.WithStack(err)
 		}

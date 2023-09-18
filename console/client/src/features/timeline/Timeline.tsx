@@ -2,7 +2,7 @@ import { Timestamp } from '@bufbuild/protobuf'
 import React from 'react'
 import { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
-import { getEvents, timeFilter } from '../../services/console.service.ts'
+import { getEvents, streamEvents, timeFilter } from '../../services/console.service.ts'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
@@ -19,6 +19,8 @@ interface Props {
   filters: EventsQuery_Filter[]
 }
 
+const maxTimelineEntries = 1000
+
 export const Timeline = ({ timeSettings, filters }: Props) => {
   const { openPanel, closePanel, isOpen } = React.useContext(SidePanelContext)
   const [entries, setEntries] = React.useState<Event[]>([])
@@ -27,7 +29,10 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
   const [selectedLogLevels] = React.useState<number[]>([1, 5, 9, 13, 17])
 
   React.useEffect(() => {
+    const abortController = new AbortController()
+    abortController.signal
     const fetchEvents = async () => {
+      console.log('fetching events')
       let eventFilters = filters
       if (timeSettings.newerThan || timeSettings.olderThan) {
         eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
@@ -36,7 +41,24 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
       setEntries(events)
     }
 
-    fetchEvents()
+    if (timeSettings.isTailing && !timeSettings.isPaused) {
+      console.log('streaming events')
+      setEntries([])
+      streamEvents({
+        abortControllerSignal: abortController.signal,
+        filters,
+        onEventReceived: (event) => {
+          if (!timeSettings.isPaused) {
+            setEntries((prev) => [event, ...prev].slice(0, maxTimelineEntries))
+          }
+        },
+      })
+    } else {
+      fetchEvents()
+    }
+    return () => {
+      abortController.abort()
+    }
   }, [filters, timeSettings])
 
   React.useEffect(() => {
@@ -95,8 +117,8 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
               <tr
                 key={entry.id.toString()}
                 className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${
-                  selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-800' : panelColor
-                } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-800`}
+                  selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
+                } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
                 onClick={() => handleEntryClicked(entry)}
               >
                 <td className='w-8 flex-none flex items-center justify-center'>

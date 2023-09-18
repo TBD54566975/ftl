@@ -92,3 +92,24 @@ export const getEvents = async (
 
   return response.events
 }
+
+export interface StreamEventsParams {
+  abortControllerSignal: AbortSignal
+  filters: EventsQuery_Filter[]
+  onEventReceived: (event: Event) => void
+}
+
+export const streamEvents = async ({ abortControllerSignal, filters, onEventReceived }: StreamEventsParams) => {
+  try {
+    for await (const response of client.streamEvents(
+      { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, filters } },
+      { signal: abortControllerSignal },
+    )) {
+      if (response.event != null) {
+        onEventReceived(response.event)
+      }
+    }
+  } catch (error) {
+    console.error('Streaming error:', error)
+  }
+}

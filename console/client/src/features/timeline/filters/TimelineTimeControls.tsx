@@ -70,6 +70,7 @@ export const TimelineTimeControls = ({ onTimeSettingsChange }: Props) => {
     }
     if (range.value === TIME_RANGES['tail'].value) {
       setNewerThan(undefined)
+      setIsPaused(false)
     }
   }
 
