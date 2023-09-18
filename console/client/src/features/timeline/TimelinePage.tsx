@@ -23,9 +23,11 @@ export const TimelinePage = () => {
       <PageHeader icon={<ListBulletIcon />} title='Events'>
         <TimelineTimeControls onTimeSettingsChange={handleTimeSettingsChanged} />
       </PageHeader>
-      <div className='flex h-full'>
-        <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
-        <div className='flex-grow'>
+      <div className='flex' style={{ height: 'calc(100% - 44px)' }}>
+        <div className='sticky top-0 flex-none overflow-y-auto'>
+          <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
+        </div>
+        <div className='flex-grow overflow-y-scroll'>
           <Timeline timeSettings={timeSettings} filters={filters} />
         </div>
       </div>
