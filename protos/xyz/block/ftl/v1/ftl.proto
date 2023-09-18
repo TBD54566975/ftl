@@ -231,11 +231,30 @@ message StatusResponse {
   repeated Route routes = 5;
 }
 
+message ProcessListRequest {}
+message ProcessListResponse {
+  message ProcessRunner {
+    string key = 1;
+    string endpoint = 2;
+    google.protobuf.Struct labels = 3;
+  }
+  message Process {
+    string deployment = 1;
+    int32 min_replicas = 2;
+    google.protobuf.Struct labels = 3;
+    optional ProcessRunner runner = 4;
+  }
+  repeated Process processes = 1;
+}
+
 service ControllerService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  // List "processes" running on the cluster.
+  rpc ProcessList(ProcessListRequest) returns (ProcessListResponse);
 
   rpc Status(StatusRequest) returns (StatusResponse);
 

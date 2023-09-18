@@ -148,6 +148,18 @@ WHERE sqlc.arg('all')::bool = true
    OR min_replicas > 0
 ORDER BY d.name;
 
+-- name: GetProcessList :many
+SELECT d.min_replicas,
+       d.name   AS deployment_name,
+       d.labels    deployment_labels,
+       r.key    AS runner_key,
+       r.endpoint,
+       r.labels AS runner_labels
+FROM deployments d
+         LEFT JOIN runners r on d.id = r.deployment_id
+WHERE d.min_replicas > 0
+ORDER BY d.name;
+
 -- name: GetIdleRunners :many
 SELECT *
 FROM runners

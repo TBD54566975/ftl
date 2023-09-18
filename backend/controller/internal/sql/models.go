@@ -257,7 +257,7 @@ type Request struct {
 
 type Runner struct {
 	ID                 int64
-	Key                model.RunnerKey
+	Key                sqltypes.Key
 	Created            time.Time
 	LastSeen           time.Time
 	ReservationTimeout sqltypes.NullTime
