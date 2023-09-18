@@ -832,17 +832,18 @@ func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string
 	if len(routes) == 0 {
 		return nil, errors.Wrap(ErrNotFound, "no routes found")
 	}
-	return maps.FromSlice(routes, func(row sql.GetRoutingTableRow) (string, []Route) {
+	out := make(map[string][]Route, len(routes))
+	for _, route := range routes {
 		// This is guaranteed to be non-nil by the query, but sqlc doesn't quite understand that.
-		moduleName := row.ModuleName.MustGet()
-		return moduleName, []Route{{
+		moduleName := route.ModuleName.MustGet()
+		out[moduleName] = append(out[moduleName], Route{
 			Module:     moduleName,
-			Deployment: row.DeploymentName,
-			Runner:     model.RunnerKey(row.RunnerKey),
-			Endpoint:   row.Endpoint,
-		}}
-
-	}), nil
+			Deployment: route.DeploymentName,
+			Runner:     model.RunnerKey(route.RunnerKey),
+			Endpoint:   route.Endpoint,
+		})
+	}
+	return out, nil
 }
 
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
