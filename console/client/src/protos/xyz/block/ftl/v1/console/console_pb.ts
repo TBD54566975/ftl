@@ -1082,14 +1082,9 @@ export class StreamEventsRequest extends Message<StreamEventsRequest> {
   updateInterval?: Duration;
 
   /**
-   * @generated from field: google.protobuf.Timestamp after_time = 2;
+   * @generated from field: xyz.block.ftl.v1.console.EventsQuery query = 2;
    */
-  afterTime?: Timestamp;
-
-  /**
-   * @generated from field: string deployment_name = 3;
-   */
-  deploymentName = "";
+  query?: EventsQuery;
 
   constructor(data?: PartialMessage<StreamEventsRequest>) {
     super();
@@ -1100,8 +1095,7 @@ export class StreamEventsRequest extends Message<StreamEventsRequest> {
   static readonly typeName = "xyz.block.ftl.v1.console.StreamEventsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "update_interval", kind: "message", T: Duration, opt: true },
-    { no: 2, name: "after_time", kind: "message", T: Timestamp },
-    { no: 3, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "query", kind: "message", T: EventsQuery },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamEventsRequest {

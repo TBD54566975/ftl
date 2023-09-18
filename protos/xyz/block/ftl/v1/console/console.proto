@@ -158,8 +158,7 @@ message EventsQuery {
 
 message StreamEventsRequest {
   optional google.protobuf.Duration update_interval = 1;
-  google.protobuf.Timestamp after_time = 2;
-  string deployment_name = 3;
+  EventsQuery query = 2;
 }
 
 message StreamEventsResponse {
