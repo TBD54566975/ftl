@@ -312,6 +312,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 					return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("unknown event type %v", eventType))
 				}
 			}
+			query = append(query, dal.FilterTypes(eventTypes...))
 
 		case *pbconsole.EventsQuery_Filter_LogLevel:
 			level := log.Level(filter.LogLevel.LogLevel)

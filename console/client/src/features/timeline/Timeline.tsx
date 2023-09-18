@@ -32,7 +32,6 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
     const abortController = new AbortController()
     abortController.signal
     const fetchEvents = async () => {
-      console.log('fetching events')
       let eventFilters = filters
       if (timeSettings.newerThan || timeSettings.olderThan) {
         eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
@@ -42,14 +41,13 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
     }
 
     if (timeSettings.isTailing && !timeSettings.isPaused) {
-      console.log('streaming events')
       setEntries([])
       streamEvents({
         abortControllerSignal: abortController.signal,
         filters,
         onEventReceived: (event) => {
           if (!timeSettings.isPaused) {
-            setEntries((prev) => [event, ...prev].slice(0, maxTimelineEntries))
+            setEntries((prev) => [...prev, event].slice(0, maxTimelineEntries))
           }
         },
       })

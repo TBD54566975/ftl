@@ -64,13 +64,13 @@ export const TimelineTimeControls = ({ onTimeSettingsChange }: Props) => {
 
   const handleRangeChanged = (range: TimeRange) => {
     setSelected(range)
-    if (!newerThan) {
-      const newerThanDate = new Date(new Date().getTime() - range.value)
-      setNewerThan(Timestamp.fromDate(newerThanDate))
-    }
+
     if (range.value === TIME_RANGES['tail'].value) {
       setNewerThan(undefined)
       setIsPaused(false)
+    } else {
+      const newerThanDate = new Date(new Date().getTime() - range.value)
+      setNewerThan(Timestamp.fromDate(newerThanDate))
     }
   }
 
