@@ -18,12 +18,13 @@ import (
 //go:embed all:client/dist
 var build embed.FS
 
-func Server(ctx context.Context) (http.Handler, error) {
+func Server(ctx context.Context, allowOrigin string) (http.Handler, error) {
 	dir, err := fs.Sub(build, "client/dist")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeCORSHeaders(w, allowOrigin)
 		var f fs.File
 		var err error
 		filePath := strings.TrimPrefix(r.URL.Path, "/")

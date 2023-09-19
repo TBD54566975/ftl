@@ -45,7 +45,8 @@ import (
 
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
-	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (use --bind if omitted)." default:"" env:"FTL_CONTROLLER_ADVERTISE"`
+	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
+	AllowOrigin                  string              `help:"Allow CORS requests from this origin." default:"*" env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
 	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
 	DSN                          string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
@@ -53,12 +54,20 @@ type Config struct {
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 }
 
+func (c *Config) SetDefaults() {
+	if c.Advertise == nil {
+		c.Advertise = c.Bind
+	}
+}
+
 // Start the Controller. Blocks until the context is cancelled.
 func Start(ctx context.Context, config Config) error {
+	config.SetDefaults()
+
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting FTL controller")
 
-	c, err := console.Server(ctx)
+	c, err := console.Server(ctx, config.AllowOrigin)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -116,6 +125,7 @@ func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
 	if config.Key.ULID() == (ulid.ULID{}) {
 		key = model.NewControllerKey()
 	}
+	config.SetDefaults()
 	svc := &Service{
 		dal:                db,
 		key:                key,
@@ -123,9 +133,6 @@ func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
 		clients:            ttlcache.New[string, clients](ttlcache.WithTTL[string, clients](time.Minute)),
 		routes:             map[string][]dal.Route{},
 		config:             config,
-	}
-	if config.Advertise.String() == "" {
-		config.Advertise = config.Bind
 	}
 
 	go runWithRetries(ctx, time.Second*1, time.Second*2, svc.syncRoutes)
