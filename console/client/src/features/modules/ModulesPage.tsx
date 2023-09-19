@@ -11,15 +11,15 @@ export const ModulesPage = () => {
   const data = createLayoutDataStructure(modules)
   const [container, setContainer] = React.useState<HTMLDivElement>()
   const ref = React.useRef(null)
-  useP5Lines({ width: 500, height: 500, data, container })
+  useP5Lines({ data, container })
   React.useEffect(() => {
     const current = ref.current
     current && setContainer(current)
   }, [])
   return (
-    <>
+    <div className='h-full w-full flex flex-col'>
       <PageHeader icon={<Square3Stack3DIcon />} title='Modules' />
-      <div ref={ref}>
+      <div ref={ref} className='flex-1 relative p-8'>
         <div role='list' className='inline-flex flex-col space-y-3 p-2'>
           {data?.map(({ name, style, verbs, 'data-id': dataId }) => (
             <Disclosure
@@ -55,6 +55,6 @@ export const ModulesPage = () => {
           ))}
         </div>
       </div>
-    </>
+    </div>
   )
 }
