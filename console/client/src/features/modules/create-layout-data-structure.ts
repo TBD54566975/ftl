@@ -11,7 +11,7 @@ interface VerbItem {
   calls: Call[]
 }
 
-interface Item {
+export interface Item {
   'data-id': string
   name: string
   style: { marginLeft: number }
