@@ -24,3 +24,15 @@ export const formatTimestampShort = (timestamp?: Timestamp): string => {
 
   return formattedDate
 }
+
+export const formatTimestampTime = (timestamp?: Timestamp): string => {
+  if (!timestamp) return '(no date)'
+  const date = timestamp.toDate()
+
+  const formattedDate = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(
+    2,
+    '0',
+  )}:${String(date.getSeconds()).padStart(2, '0')}`
+
+  return formattedDate
+}
