@@ -4,7 +4,7 @@ import { ServiceType } from '@bufbuild/protobuf'
 import { useMemo } from 'react'
 
 const transport = createConnectTransport({
-  baseUrl: 'http://localhost:8892',
+  baseUrl: window.location.origin,
 })
 
 export const createClient = <T extends ServiceType>(service: T): PromiseClient<T> => {
