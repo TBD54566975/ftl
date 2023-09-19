@@ -9,7 +9,15 @@ import {
   PlayIcon,
 } from '@heroicons/react/24/outline'
 import React, { Fragment } from 'react'
-import { bgColor, borderColor, classNames, formatTimestampShort, panelColor, textColor } from '../../../utils'
+import {
+  bgColor,
+  borderColor,
+  classNames,
+  formatTimestampShort,
+  formatTimestampTime,
+  panelColor,
+  textColor,
+} from '../../../utils'
 
 interface TimeRange {
   label: string
@@ -101,8 +109,11 @@ export const TimelineTimeControls = ({ onTimeSettingsChange }: Props) => {
     <>
       <div className='flex items-center h-6'>
         {newerThan && (
-          <span className='text-xs font-roboto-mono mr-2 text-gray-400'>
-            {formatTimestampShort(olderThan)} - {formatTimestampShort(newerThan)}
+          <span
+            title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`}
+            className='text-xs font-roboto-mono mr-2 text-gray-400'
+          >
+            {formatTimestampTime(olderThan)} - {formatTimestampTime(newerThan)}
           </span>
         )}
 

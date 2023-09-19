@@ -128,7 +128,7 @@ export interface StreamEventsParams {
 export const streamEvents = async ({ abortControllerSignal, filters, onEventReceived }: StreamEventsParams) => {
   try {
     for await (const response of client.streamEvents(
-      { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, order: EventsQuery_Order.DESC, filters } },
+      { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, filters } },
       { signal: abortControllerSignal },
     )) {
       if (response.event != null) {

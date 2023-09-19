@@ -47,7 +47,7 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
         filters,
         onEventReceived: (event) => {
           if (!timeSettings.isPaused) {
-            setEntries((prev) => [...prev, event].slice(0, maxTimelineEntries))
+            setEntries((prev) => [event, ...prev].slice(0, maxTimelineEntries))
           }
         },
       })
