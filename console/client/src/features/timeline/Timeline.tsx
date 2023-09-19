@@ -36,7 +36,7 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
       if (timeSettings.newerThan || timeSettings.olderThan) {
         eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
       }
-      const events = await getEvents(eventFilters)
+      const events = await getEvents({ filters: eventFilters })
       setEntries(events)
     }
 

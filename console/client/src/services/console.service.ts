@@ -93,7 +93,9 @@ export const timeFilter = (olderThan: Timestamp | undefined, newerThan: Timestam
 }
 
 export const getRequestCalls = async (requestKey: string): Promise<Call[]> => {
-  const allEvents = await getEvents([requestKeysFilter([requestKey]), eventTypesFilter([EventType.CALL])])
+  const allEvents = await getEvents({
+    filters: [requestKeysFilter([requestKey]), eventTypesFilter([EventType.CALL])],
+  })
   return allEvents.map((e) => e.entry.value) as Call[]
 }
 
@@ -102,20 +104,24 @@ export const getCalls = async (
   destVerb: string | undefined = undefined,
   sourceModule: string | undefined = undefined,
 ): Promise<Call[]> => {
-  const allEvents = await getEvents([
-    callFilter(destModule, destVerb, sourceModule),
-    eventTypesFilter([EventType.CALL]),
-  ])
+  const allEvents = await getEvents({
+    filters: [callFilter(destModule, destVerb, sourceModule), eventTypesFilter([EventType.CALL])],
+  })
   return allEvents.map((e) => e.entry.value) as Call[]
 }
 
-export const getEvents = async (
-  filters: EventsQuery_Filter[] = [],
-  limit: number = 100,
-  order: EventsQuery_Order = EventsQuery_Order.DESC,
-): Promise<Event[]> => {
-  const response = await client.getEvents({ filters, limit, order })
+interface GetEventsParams {
+  limit?: number
+  order?: EventsQuery_Order
+  filters?: EventsQuery_Filter[]
+}
 
+export const getEvents = async ({
+  limit = 1000,
+  order = EventsQuery_Order.ASC,
+  filters = [],
+}: GetEventsParams): Promise<Event[]> => {
+  const response = await client.getEvents({ filters, limit, order })
   return response.events
 }
 
