@@ -22,7 +22,7 @@ export const CodeBlock = ({ code, language, maxHeight }: Props) => {
 
   return (
     <pre>
-      <code className={`max-h-[${maxHeight}px] language-${language} text-sm`}>{code}</code>
+      <code className={`max-h-[${maxHeight}px] language-${language} text-xs`}>{code}</code>
     </pre>
   )
 }
