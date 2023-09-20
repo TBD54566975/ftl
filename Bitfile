@@ -46,10 +46,10 @@ NODE_MODULES_IN = console/client/package{,-lock}.json
 # Build all binaries
 implicit %{RELEASE}/%{1}: cmd/*
   inputs: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT}
-  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION}" ./cmd/%{1}
+  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/%{1}
 
 #%{RELEASE}/ftl-controller: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT}
-#  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION}" ./cmd/ftl-controller
+#  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-controller
 
 %{SCHEMA_OUT}: %{SCHEMA_IN}
   build:

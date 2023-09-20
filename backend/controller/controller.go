@@ -47,6 +47,7 @@ type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
 	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
 	AllowOrigin                  string              `help:"Allow CORS requests from this origin." default:"*" env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
+	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=2006-01-02T15:04:05Z07:00}"`
 	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
 	DSN                          string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
@@ -67,7 +68,7 @@ func Start(ctx context.Context, config Config) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting FTL controller")
 
-	c, err := console.Server(ctx, config.AllowOrigin)
+	c, err := console.Server(ctx, config.ContentTime, config.AllowOrigin)
 	if err != nil {
 		return errors.WithStack(err)
 	}

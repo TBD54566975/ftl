@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/errors"
 )
@@ -18,7 +19,7 @@ import (
 //go:embed all:client/dist
 var build embed.FS
 
-func Server(ctx context.Context, allowOrigin string) (http.Handler, error) {
+func Server(ctx context.Context, timestamp time.Time, allowOrigin string) (http.Handler, error) {
 	dir, err := fs.Sub(build, "client/dist")
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -41,11 +42,6 @@ func Server(ctx context.Context, allowOrigin string) (http.Handler, error) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		info, err := f.Stat()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		http.ServeContent(w, r, filePath, info.ModTime(), f.(io.ReadSeeker))
+		http.ServeContent(w, r, filePath, timestamp, f.(io.ReadSeeker))
 	}), nil
 }
