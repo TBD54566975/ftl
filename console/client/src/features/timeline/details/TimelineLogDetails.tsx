@@ -1,8 +1,13 @@
 import { Timestamp } from '@bufbuild/protobuf'
+import React from 'react'
+import { AttributeBadge } from '../../../components/AttributeBadge'
+import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
 import { Event, LogEntry } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { textColor } from '../../../utils/style.utils'
 import { LogLevelBadge } from '../../logs/LogLevelBadge'
+import { logLevelBgColor } from '../../logs/log.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 interface Props {
@@ -11,41 +16,40 @@ interface Props {
 }
 
 export const TimelineLogDetails = ({ event, log }: Props) => {
+  const { closePanel } = React.useContext(SidePanelContext)
   return (
     <>
-      <div>
-        <TimelineTimestamp timestamp={event.timeStamp ?? new Timestamp()} />
-      </div>
-      <div className={`pt-4 text-xs ${textColor}`}>
-        <p className='flex-wrap font-mono'>{log.message}</p>
-      </div>
-
-      <h2 className='pt-4 text-sm'>Attributes</h2>
-      <CodeBlock code={JSON.stringify(log.attributes, null, 2)} language='json' />
-
-      <div className='pt-2 text-gray-500 dark:text-gray-400'>
-        <div className='flex pt-2 justify-between'>
-          <dt>Level</dt>
-          <dd className={`${textColor}`}>
+      <div className={`${logLevelBgColor[log.logLevel]} h-2 w-full`}></div>
+      <div className='p-4'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center space-x-2'>
             <LogLevelBadge logLevel={log.logLevel} />
-          </dd>
-        </div>
-        <div className='flex pt-2 justify-between'>
-          <dt>Deployment</dt>
-          <dd className={`${textColor}`}>{log.deploymentName}</dd>
-        </div>
-        {log.requestName && (
-          <div className='flex pt-2 justify-between'>
-            <dt>Request</dt>
-            <dd className={`${textColor}`}>{log.requestName}</dd>
+            <TimelineTimestamp timestamp={event.timeStamp ?? new Timestamp()} />
           </div>
-        )}
-        {log.error && (
-          <div className='flex pt-2 justify-between'>
-            <dt>Error</dt>
-            <dd className={`${textColor}`}>{log.error}</dd>
-          </div>
-        )}
+          <CloseButton onClick={closePanel} />
+        </div>
+        <div className={`mt-4 p-2 text-sm bg-gray-100 dark:bg-slate-700 rounded ${textColor}`}>
+          <p className='break-words whitespace-normal font-roboto-mono'>{log.message}</p>
+        </div>
+
+        <h2 className='pt-4 text-sm'>Attributes</h2>
+        <CodeBlock code={JSON.stringify(log.attributes, null, 2)} language='json' />
+
+        <ul className='pt-4 space-y-2'>
+          <li>
+            <AttributeBadge name='Deployment' value={log.deploymentName} />
+          </li>
+          {log.requestName && (
+            <li>
+              <AttributeBadge name='Request' value={log.requestName} />
+            </li>
+          )}
+          {log.error && (
+            <li>
+              <AttributeBadge name='Error' value={log.error} />
+            </li>
+          )}
+        </ul>
       </div>
     </>
   )
