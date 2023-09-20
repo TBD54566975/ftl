@@ -96,6 +96,17 @@ jobs:
           mvn --batch-mode deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [release-assets]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
       - name: Publish Go Binaries
         run: goreleaser release
         env:
