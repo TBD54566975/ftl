@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/alecthomas/errors"
 
@@ -17,7 +18,7 @@ import (
 var consoleURL, _ = url.Parse("http://localhost:5173")
 var proxy = httputil.NewSingleHostReverseProxy(consoleURL)
 
-func Server(ctx context.Context, allowOrigin string) (http.Handler, error) {
+func Server(ctx context.Context, timestamp time.Time, allowOrigin string) (http.Handler, error) {
 	logger := log.FromContext(ctx)
 	logger.Infof("Building console...")
 

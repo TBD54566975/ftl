@@ -54,7 +54,7 @@ clean: ## Clean build artifacts.
 release: build/release/ftl-controller build/release/ftl-runner build/release/ftl ## Build release binaries.
 
 build/release/%: console/client/dist/index.html
-	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION)" ./cmd/$(shell basename $@)
+	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION) -X main.timestamp=$(shell date +%s)" ./cmd/$(shell basename $@)
 
 $(KT_MVN_OUT): $(KT_RUNTIME_IN)
 	mvn -pl :ftl-runtime clean package
