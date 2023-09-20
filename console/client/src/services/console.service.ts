@@ -144,8 +144,10 @@ export const streamEvents = async ({ abortControllerSignal, filters, onEventRece
   } catch (error) {
     if (error instanceof ConnectError) {
       if (error.code !== Code.Canceled) {
-        console.error('Connect error:', error.code)
+        console.error('Console service - streamEvents - Connect error:', error)
       }
+    } else {
+      console.error('Console service - streamEvents:', error)
     }
   }
 }
