@@ -82,7 +82,17 @@ const nodePositionYDefault = 150
 const nodePositionXDefault = 250
 
 export const createLayoutDataStructure = (data: GetModulesResponse): [ModuleNode[], Edge[]] => {
-  const graph: { [key: string]: Set<string> } = {}
+  const graph: Map<
+    string,
+    {
+      targetModules: Set<string>
+      subgraph: [
+        {
+          id
+        },
+      ]
+    }
+  > = new Map()
 
   // Initialize graph with all module names
   data.modules.forEach((module) => {
