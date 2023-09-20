@@ -1,12 +1,14 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { AttributeBadge } from '../../../components/AttributeBadge'
+import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
 import { useClient } from '../../../hooks/use-client'
 import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
 import { Call } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { getRequestCalls } from '../../../services/console.service'
 import { formatDuration } from '../../../utils/date.utils'
-import { textColor } from '../../../utils/style.utils'
 import { RequestGraph } from '../../requests/RequestGraph'
 import { verbRefString } from '../../verbs/verb.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
@@ -18,6 +20,7 @@ interface Props {
 
 export const TimelineCallDetails = ({ timestamp, call }: Props) => {
   const client = useClient(ConsoleService)
+  const { closePanel } = React.useContext(SidePanelContext)
   const [requestCalls, setRequestCalls] = useState<Call[]>([])
   const [selectedCall, setSelectedCall] = useState(call)
 
@@ -38,21 +41,25 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
   }, [client, selectedCall])
 
   return (
-    <>
-      <TimelineTimestamp timestamp={timestamp} />
-
-      <div className='pt-2'>
-        <RequestGraph calls={requestCalls} call={selectedCall} setSelectedCall={setSelectedCall} />
+    <div className='p-4'>
+      <div className='flex items-center justify-between'>
+        <div className='flex items-center space-x-2'>
+          <div className=''>
+            {call.destinationVerbRef && (
+              <div
+                className={`inline-block rounded-md bg-indigo-200 dark:bg-indigo-700 px-2 py-1 mr-1 text-sm font-medium text-gray-700 dark:text-gray-100`}
+              >
+                {verbRefString(call.destinationVerbRef)}
+              </div>
+            )}
+          </div>
+          <TimelineTimestamp timestamp={timestamp} />
+        </div>
+        <CloseButton onClick={closePanel} />
       </div>
 
       <div className='pt-4'>
-        {call.destinationVerbRef && (
-          <div
-            className={`inline-block rounded-md dark:bg-gray-700/40 px-2 py-1 mr-1 text-xs font-medium 'text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-black/10 dark:ring-white/10`}
-          >
-            {verbRefString(call.destinationVerbRef)}
-          </div>
-        )}
+        <RequestGraph calls={requestCalls} call={selectedCall} setSelectedCall={setSelectedCall} />
       </div>
 
       <div className='text-sm pt-2'>Request</div>
@@ -68,40 +75,29 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
         </>
       )}
 
-      <div className='pt-2 text-gray-500 dark:text-gray-400'>
-        <div className='flex pt-2 justify-between'>
-          <dt>Deployment</dt>
-          <dd className={`${textColor}`}>{selectedCall.deploymentName}</dd>
-        </div>
-        <div className='flex pt-2 justify-between'>
-          <dt>Request</dt>
-          <dd className={`${textColor}`}>{selectedCall.requestName}</dd>
-        </div>
-        <div className='flex pt-2 justify-between'>
-          <dt>Duration</dt>
-          <dd className={`${textColor}`}>{formatDuration(selectedCall.duration)}</dd>
-        </div>
-        <div className='flex pt-2 justify-between'>
-          <dt>Module</dt>
-          <dd className={`${textColor}`}>{selectedCall.destinationVerbRef?.module}</dd>
-        </div>
-        <div className='flex pt-2 justify-between'>
-          <dt>Verb</dt>
-          <dd className={`${textColor}`}>{selectedCall.destinationVerbRef?.name}</dd>
-        </div>
-        {selectedCall.sourceVerbRef?.module && (
-          <>
-            <div className='flex pt-2 justify-between'>
-              <dt>Source module</dt>
-              <dd className={`${textColor}`}>{selectedCall.sourceVerbRef?.module}</dd>
-            </div>
-            <div className='flex pt-2 justify-between'>
-              <dt>Source verb</dt>
-              <dd className={`${textColor}`}>{selectedCall.sourceVerbRef?.name}</dd>
-            </div>
-          </>
+      <ul className='pt-4 space-y-2'>
+        <li>
+          <AttributeBadge name='Deployment' value={selectedCall.deploymentName} />
+        </li>
+        {selectedCall.requestName && (
+          <li>
+            <AttributeBadge name='Request' value={selectedCall.requestName} />
+          </li>
         )}
-      </div>
-    </>
+        <li>
+          <AttributeBadge name='Duration' value={formatDuration(selectedCall.duration)} />
+        </li>
+        {selectedCall.destinationVerbRef && (
+          <li>
+            <AttributeBadge name='Destination' value={verbRefString(selectedCall.destinationVerbRef)} />
+          </li>
+        )}
+        {selectedCall.sourceVerbRef && (
+          <li>
+            <AttributeBadge name='Source' value={verbRefString(selectedCall.sourceVerbRef)} />
+          </li>
+        )}
+      </ul>
+    </div>
   )
 }

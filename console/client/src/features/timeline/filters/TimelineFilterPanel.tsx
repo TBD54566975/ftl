@@ -87,7 +87,7 @@ export const TimelineFilterPanel = ({ onFiltersChanged }: Props) => {
   return (
     <div className='flex-shrink-0 w-52'>
       <div className='w-full'>
-        <div className='mx-auto w-full max-w-md p-2'>
+        <div className='mx-auto w-full max-w-md pt-2 pl-2 pb-2'>
           <FilterPanelSection title='Event types'>
             {Object.keys(EVENT_TYPES).map((key) => (
               <div key={key} className='relative flex items-start'>
