@@ -42,7 +42,7 @@ jobs:
           name: docker-controller-artifact
           path: artifacts/ftl-controller
           retention-days: 1
-  release-assets:
+  release-docker:
     name: Release Assets
     runs-on: ubuntu-latest
     permissions:
@@ -85,6 +85,19 @@ jobs:
           docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA
           docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:$version
           docker push -a ghcr.io/tbd54566975/ftl-controller
+  release-jars:
+    name: Release JARs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
       # Ideally we'd use Hermit's JDK, but this action creates the correct settings.xml for us.
       - uses: actions/setup-java@v3
         with:
@@ -97,9 +110,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   create-release:
-    name: Create GitHub Release
+    name: Release Go Binaries
     runs-on: ubuntu-latest
-    needs: [release-assets]
+    needs: [release-docker, release-jars]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -107,6 +120,8 @@ jobs:
           fetch-depth: 0
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+      - name: Build Console
+        run: bit console/client/dist/index.html
       - name: Publish Go Binaries
         run: goreleaser release
         env:
