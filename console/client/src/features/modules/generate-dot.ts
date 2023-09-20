@@ -1,6 +1,6 @@
 import { GetModulesResponse, Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
-const HtmlId = (id: string) => ` ID="${id}"`
+const HtmlId = (id: string) => `HREF="remove_me_url"  ID="${id}"`
 const TEXT = (str: string) => {
   if (str === '') return ''
   str = str.replace(/]/, '&#93;')
@@ -17,8 +17,8 @@ const generateRow = ({
 }): string => {
   const callsIcon = hasCalls ? TEXT('{R}') : ''
   return `   <TR>
-  <TD PORT="${verbName}" ${HtmlId(`${moduleName}.${verbName}`)}>
-    <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0">
+  <TD ${HtmlId(`${moduleName}.${verbName}`)} PORT="${verbName}">
+    <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="150">
       <TR>
         <TD ALIGN="LEFT">${verbName}<FONT>  </FONT></TD>
         <TD ALIGN="RIGHT">${callsIcon}</TD>
@@ -35,7 +35,7 @@ const generateModuleContent = (module: Module): { node: string; edges: string } 
     ${moduleName} [
     id=${moduleName}
     label=<
-      <TABLE ALIGN="LEFT" BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5" WIDTH="250">
+      <TABLE ALIGN="LEFT" BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
         <TR>
           <TD ${HtmlId(moduleName)}><FONT POINT-SIZE="18">${moduleName}</FONT></TD>
         </TR>
@@ -50,7 +50,10 @@ const generateModuleContent = (module: Module): { node: string; edges: string } 
                 }
                 calls.forEach((call) => {
                   if (call.module) {
-                    edges += `\n${moduleName}:${verb.name}  -> ${call.module}:${call.name};`
+                    edges += `\n"${moduleName}":"${verb.name}"  -> "${call.module}":"${call.name}"[
+                      id = "${moduleName}.${verb.name}=>${call.module}.${call.name}"
+                      style = "dashed"
+                    ]`
                   }
                 })
               }
@@ -64,7 +67,7 @@ const generateModuleContent = (module: Module): { node: string; edges: string } 
   return { edges, node }
 }
 
-export const generateDotFile = ({ modules }: GetModulesResponse): string => {
+export const generateDot = ({ modules }: GetModulesResponse): string => {
   let nodes = ''
   let allEdges = ''
   modules.reverse().forEach((module) => {
