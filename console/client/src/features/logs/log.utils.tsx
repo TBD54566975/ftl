@@ -22,6 +22,22 @@ export const logLevelColor: { [key: number]: string } = {
   17: 'text-red-400 dark:text-red-400',
 }
 
+export const logLevelBgColor: { [key: number]: string } = {
+  1: 'bg-gray-400 dark:bg-gray-400',
+  5: 'bg-blue-400 dark:bg-blue-400',
+  9: 'bg-green-500 dark:bg-green-300',
+  13: 'bg-yellow-400 dark:bg-yellow-300',
+  17: 'bg-red-400 dark:bg-red-400',
+}
+
+export const logLevelRingColor: { [key: number]: string } = {
+  1: 'ring-gray-400 dark:ring-gray-400',
+  5: 'ring-blue-400 dark:ring-blue-400',
+  9: 'ring-green-500 dark:ring-green-300',
+  13: 'ring-yellow-400 dark:ring-yellow-300',
+  17: 'ring-red-400 dark:ring-red-400',
+}
+
 export const logLevelBadge: { [key: number]: string } = {
   1: `${logLevelColor[1]} bg-blue-300/10 dark:bg-blue-700/30`,
   5: `${logLevelColor[5]} bg-blue-400/10 dark:bg-blue-800/30`,

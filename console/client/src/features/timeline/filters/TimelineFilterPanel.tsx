@@ -5,7 +5,7 @@ import { modulesContext } from '../../../providers/modules-provider'
 import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../services/console.service'
 import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
-import { logLevelColor } from '../../logs/log.utils'
+import { logLevelBgColor, logLevelColor, logLevelRingColor } from '../../logs/log.utils'
 import { FilterPanelSection } from './FilterPanelSection'
 
 interface EventFilter {
@@ -115,25 +115,28 @@ export const TimelineFilterPanel = ({ onFiltersChanged }: Props) => {
           </FilterPanelSection>
 
           <FilterPanelSection title='Log level'>
-            {Object.keys(LOG_LEVELS).map((key) => (
-              <div key={key} className='relative flex items-start'>
-                <div className='flex h-6 items-center'>
-                  <input
-                    id={`log-level-${key}`}
-                    name={`log-level-${key}`}
-                    type='checkbox'
-                    checked={selectedLogLevel <= Number(key)}
-                    onChange={() => handleLogLevelChanged(key)}
-                    className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
-                  />
-                </div>
-                <div className={`ml-2 text-sm leading-6 w-full`}>
-                  <label htmlFor={`log-level-${key}`} className={`${logLevelColor[Number(key)]} flex cursor-pointer`}>
-                    {LOG_LEVELS[Number(key)]}
-                  </label>
-                </div>
-              </div>
-            ))}
+            <ul role='list' className='space-y-1'>
+              {Object.keys(LOG_LEVELS).map((key) => (
+                <li
+                  key={key}
+                  onClick={() => handleLogLevelChanged(key)}
+                  className='relative flex gap-x-2 cursor-pointer'
+                >
+                  <div className='relative flex h-5 w-3 flex-none items-center justify-center'>
+                    <div
+                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${
+                        selectedLogLevel <= Number(key)
+                          ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}`
+                          : 'bg-gray-300 ring-gray-300'
+                      } rounded-full ring-1`}
+                    ></div>
+                  </div>
+                  <p className='flex-auto text-sm leading-5 text-gray-500'>
+                    <span className={`${logLevelColor[Number(key)]} flex`}>{LOG_LEVELS[Number(key)]}</span>
+                  </p>
+                </li>
+              ))}
+            </ul>
           </FilterPanelSection>
 
           <FilterPanelSection title='Modules'>
