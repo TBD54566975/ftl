@@ -14,7 +14,7 @@ export const GraphPage = () => {
   const modules = useContext(modulesContext)
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
-  console.log(nodes)
+
   useEffect(() => {
     const { nodes, edges } = layoutNodes(modules.modules)
     setNodes(nodes)
