@@ -18,8 +18,8 @@ RUN go mod download -x
 
 # Build
 COPY . /src/
-RUN bit build/release/ftl-controller
-RUN bit build/release/ftl
+RUN make build/release/ftl-controller
+RUN make build/release/ftl
 
 # Finally create the runtime image.
 FROM ubuntu:22.04
