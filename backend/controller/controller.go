@@ -16,6 +16,7 @@ import (
 
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
+	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types"
 	"github.com/bufbuild/connect-go"
 	"github.com/jackc/pgx/v5"
@@ -47,7 +48,7 @@ type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
 	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
 	AllowOrigin                  string              `help:"Allow CORS requests from this origin." default:"*" env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
-	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=2006-01-02T15:04:05Z07:00}"`
+	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
 	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
 	DSN                          string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
@@ -56,6 +57,9 @@ type Config struct {
 }
 
 func (c *Config) SetDefaults() {
+	if err := kong.ApplyDefaults(c); err != nil {
+		panic(err)
+	}
 	if c.Advertise == nil {
 		c.Advertise = c.Bind
 	}
