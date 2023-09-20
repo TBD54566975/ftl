@@ -1,26 +1,41 @@
 import { GetModulesResponse } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-
+import { Node, Position } from 'reactflow'
 interface Call {
   module: string
   name: string
 }
 
-interface VerbItem {
+type VerbID = `${string}.${string}`
+export interface VerbItem {
   name?: string
-  'data-id': string
+  id: VerbID
   calls: Call[]
 }
 
 export interface Item {
-  'data-id': string
   name: string
-  style: { marginLeft: number }
   verbs: VerbItem[]
+  depth: number
 }
 
 type ModuleMap = Map<number, Set<Item>>
 interface Graph {
   [key: string]: Set<string>
+}
+
+type SourceId = `${string}.${string}-source`
+type TargetId = `${string}.${string}-source`
+
+type ModuleNode = Node<Item>
+
+interface Edge {
+  id: string
+  source: string
+  target: string
+  sourceHandle: SourceId
+  targetHandle: TargetId
+  animated: true
+  type: 'smoothstep'
 }
 
 const flattenMap = (map: ModuleMap, graph: Graph): Item[] => {
@@ -63,7 +78,10 @@ const flattenMap = (map: ModuleMap, graph: Graph): Item[] => {
   return flattenedList
 }
 
-export const createLayoutDataStructure = (data: GetModulesResponse): Item[] => {
+const nodePositionYDefault = 150
+const nodePositionXDefault = 250
+
+export const createLayoutDataStructure = (data: GetModulesResponse): [ModuleNode[], Edge[]] => {
   const graph: { [key: string]: Set<string> } = {}
 
   // Initialize graph with all module names
@@ -112,25 +130,25 @@ export const createLayoutDataStructure = (data: GetModulesResponse): Item[] => {
   }
 
   const sortedKeys = Object.keys(graph).sort(new Intl.Collator().compare)
-  const map: Map<number, Set<Item>> = new Map()
+  const depthMap: Map<number, Set<Item>> = new Map()
 
   sortedKeys.forEach((moduleName) => {
     const moduleData = data.modules.find((mod) => mod.name === moduleName)
     if (!moduleData) return
 
     const depth = determineDepth(moduleName)
+
     const item: Item = {
-      'data-id': moduleName,
       name: moduleName,
-      style: { marginLeft: 20 * (depth + 1) },
       verbs: [],
+      depth,
     }
 
     moduleData.verbs.forEach((verbEntry) => {
       const verb = verbEntry.verb
       const verbItem: VerbItem = {
         name: verb?.name,
-        'data-id': `${moduleName}.${verb?.name}`,
+        id: `${moduleName}.${verb?.name}`,
         calls: [],
       }
       verb?.metadata.forEach((metadataEntry) => {
@@ -145,8 +163,43 @@ export const createLayoutDataStructure = (data: GetModulesResponse): Item[] => {
       })
       item.verbs.push(verbItem)
     })
-    map.has(depth) ? map.get(depth)?.add(item) : map.set(depth, new Set([item]))
+    depthMap.has(depth) ? depthMap.get(depth)?.add(item) : depthMap.set(depth, new Set([item]))
   })
+  // Sorted Modules
+  const sortedModules = flattenMap(depthMap, graph)
 
-  return flattenMap(map, graph)
+  const nodes: Node[] = []
+  const edges: Edge[] = []
+  let y = 0
+  for (const module of sortedModules) {
+    nodes.push({
+      type: 'moduleNode',
+      id: module.name,
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      position: { x: nodePositionXDefault * module.depth, y },
+      data: module,
+    })
+    y = nodePositionYDefault + y
+    module.verbs.forEach(({ id, calls }) => {
+      if (calls.length) {
+        edges.push(
+          ...calls.map<Edge>((call): Edge => {
+            const targetId = `${call.module}.${call.name}`
+            return {
+              id: `${id}-${targetId}`,
+              source: module.name,
+              target: call.module,
+              sourceHandle: `${id}-source` as SourceId,
+              targetHandle: `${targetId}-target` as TargetId,
+              animated: true,
+              type: 'smoothstep',
+            }
+          }),
+        )
+      }
+    })
+  }
+
+  return [nodes, edges]
 }
