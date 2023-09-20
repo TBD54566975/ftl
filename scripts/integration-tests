@@ -38,11 +38,16 @@ wait_for() {
   error "Timed out waiting for $1"
 }
 
+stop_cluster() {
+  kill %1
+  wait
+}
+
 start_cluster() {
   info "Starting cluster"
-  overmind start --procfile Procfile.integration &
+  goreman -logtime=false -f Procfile.integration start &
   wait_for "cluster to become ready" "ftl status"
-  trap "overmind quit" EXIT INT TERM
+  trap stop_cluster EXIT INT TERM
 }
 
 deploy_echo_kotlin() (

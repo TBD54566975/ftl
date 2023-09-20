@@ -13,4 +13,4 @@ build() {
 
 build
 
-overmind start -f Procfile.nowatch
+goreman -logtime=false -f Procfile.nowatch start

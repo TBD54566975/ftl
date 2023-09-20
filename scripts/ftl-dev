@@ -10,4 +10,4 @@ prepare_template() (
 
 prepare_template
 
-overmind start
+goreman -logtime=false start
