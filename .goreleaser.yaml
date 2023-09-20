@@ -1,0 +1,79 @@
+builds:
+  - id: ftl-controller
+    main: ./cmd/ftl-controller
+    binary: ftl-controller
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - linux
+      - darwin
+    flags: -trimpath
+    ldflags: -s -w -buildid= -X main.version={{.Version}} -X  main.timestamp={{ .CommitTimestamp }}
+    tags: [release]
+  - id: ftl-runner
+    main: ./cmd/ftl-runner
+    binary: ftl-runner
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - linux
+      - darwin
+    flags: -trimpath
+    ldflags: -s -w -buildid= -X main.version={{.Version}} -X  main.timestamp={{ .CommitTimestamp }}
+    tags: [release]
+  - id: ftl
+    main: ./cmd/ftl
+    binary: ftl
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - linux
+      - darwin
+    flags: -trimpath
+    ldflags: -s -w -buildid= -X main.version={{.Version}} -X  main.timestamp={{ .CommitTimestamp }}
+    tags: [release]
+  - id: ftl-initdb
+    main: ./cmd/ftl-initdb
+    binary: ftl-initdb
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - linux
+      - darwin
+    flags: -trimpath
+    ldflags: -s -w -buildid= -X main.version={{.Version}} -X  main.timestamp={{ .CommitTimestamp }}
+    tags: [release]
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}-{{ .Version }}.{{- .Os }}-{{ .Arch }}"
+    format_overrides:
+    - goos: windows
+      format: zip
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+# The lines beneath this are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj

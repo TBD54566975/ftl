@@ -19,6 +19,7 @@ RUN go mod download -x
 # Build
 COPY . /src/
 RUN make build/release/ftl-controller
+RUN make build/release/ftl-initdb
 RUN make build/release/ftl
 
 # Finally create the runtime image.
@@ -27,6 +28,7 @@ FROM ubuntu:22.04
 WORKDIR /root/
 
 COPY --from=builder /src/build/release/ftl-controller .
+COPY --from=builder /src/build/release/ftl-initdb .
 COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments
 
