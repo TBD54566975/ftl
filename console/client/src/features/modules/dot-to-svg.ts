@@ -1,7 +1,6 @@
 import { instance } from '@viz-js/viz'
 
-export const dot2Svg = async (dot: string) => {
-  console.log(dot)
+export const dotToSVG = async (dot: string) => {
   const viz = await instance()
   try {
     return viz.renderSVGElement(dot)

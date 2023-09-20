@@ -1,11 +1,7 @@
 import { GetModulesResponse, Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-
+import { moduleTitleCls, moduleVerbCls } from './constants'
 const HtmlId = (id: string) => `HREF="remove_me_url"  ID="${id}"`
-const TEXT = (str: string) => {
-  if (str === '') return ''
-  str = str.replace(/]/, '&#93;')
-  return '<FONT>' + str + '</FONT>'
-}
+
 const generateRow = ({
   moduleName,
   verbName = '',
@@ -15,13 +11,13 @@ const generateRow = ({
   verbName?: string
   hasCalls: boolean
 }): string => {
-  const callsIcon = hasCalls ? TEXT('{R}') : ''
+  const callsIcon = hasCalls ? '<FONT>{R}</FONT>' : ''
   return `   <TR>
-  <TD ${HtmlId(`${moduleName}.${verbName}`)} PORT="${verbName}">
-    <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="150">
+  <TD ${HtmlId(`${moduleVerbCls}::${moduleName}.${verbName}`)} PORT="${verbName}" CLASS="verb">
+    <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0">
       <TR>
-        <TD ALIGN="LEFT">${verbName}<FONT>  </FONT></TD>
-        <TD ALIGN="RIGHT">${callsIcon}</TD>
+        <TD ALIGN="LEFT">${verbName}<FONT> </FONT></TD>
+        <TD ALIGN="RIGHT">${' '.repeat(4)}${callsIcon}</TD>
       </TR>
     </TABLE>
   </TD>
@@ -37,7 +33,9 @@ const generateModuleContent = (module: Module): { node: string; edges: string } 
     label=<
       <TABLE ALIGN="LEFT" BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
         <TR>
-          <TD ${HtmlId(moduleName)}><FONT POINT-SIZE="18">${moduleName}</FONT></TD>
+          <TD ${HtmlId(`${moduleTitleCls}::${moduleName}`)}><FONT POINT-SIZE="18">${' '.repeat(
+            4,
+          )}${moduleName}${' '.repeat(4)}</FONT></TD>
         </TR>
         ${module.verbs
           .map(({ verb }) => {
@@ -52,7 +50,6 @@ const generateModuleContent = (module: Module): { node: string; edges: string } 
                   if (call.module) {
                     edges += `\n"${moduleName}":"${verb.name}"  -> "${call.module}":"${call.name}"[
                       id = "${moduleName}.${verb.name}=>${call.module}.${call.name}"
-                      style = "dashed"
                     ]`
                   }
                 })
