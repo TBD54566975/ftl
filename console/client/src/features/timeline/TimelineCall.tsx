@@ -1,8 +1,8 @@
-import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { verbRefString } from '../verbs/verb.utils'
 
 interface Props {
-  call: Call
+  call: CallEvent
 }
 
 export const TimelineCall = ({ call }: Props) => {

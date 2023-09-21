@@ -17,9 +17,14 @@ interface EventFilter {
 const EVENT_TYPES: Record<string, EventFilter> = {
   call: { label: 'Call', type: EventType.CALL, icon: <PhoneIcon className='w-4 h-4 text-indigo-600 ml-1' /> },
   log: { label: 'Log', type: EventType.LOG, icon: <LogLevelBadgeSmall logLevel={LogLevel.INFO} /> },
-  deployment: {
-    label: 'Deployment',
-    type: EventType.DEPLOYMENT,
+  deploymentCreated: {
+    label: 'Deployment Created',
+    type: EventType.DEPLOYMENT_CREATED,
+    icon: <RocketLaunchIcon className='w-4 h-4 text-green-500 ml-1' />,
+  },
+  deploymentUpdated: {
+    label: 'Deployment Updated',
+    type: EventType.DEPLOYMENT_UPDATED,
     icon: <RocketLaunchIcon className='w-4 h-4 text-indigo-600 ml-1' />,
   },
 }

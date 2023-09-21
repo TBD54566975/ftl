@@ -18,8 +18,10 @@ export const TimelineIcon = ({ event }: Props) => {
           <PhoneArrowDownLeftIcon className={`${style}`} />
         )
       }
-      case 'deployment':
-        return <RocketLaunchIcon className={`${style}`} />
+      case 'deploymentCreated':
+        return <RocketLaunchIcon className='h4 w-4 text-green-500' />
+      case 'deploymentUpdated':
+        return <RocketLaunchIcon className='h4 w-4 text-indigo-600' />
       case 'log':
         return <LogLevelBadgeSmall logLevel={event.entry.value.logLevel} />
       default:

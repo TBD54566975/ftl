@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"strconv"
 	"time"
 
@@ -20,17 +21,10 @@ type EventType = sql.EventType
 
 // Supported event types.
 const (
-	EventTypeLog        = sql.EventTypeLog
-	EventTypeCall       = sql.EventTypeCall
-	EventTypeDeployment = sql.EventTypeDeployment
-)
-
-type DeploymentEventType string
-
-const (
-	DeploymentCreated  DeploymentEventType = "created"
-	DeploymentUpdated  DeploymentEventType = "updated"
-	DeploymentReplaced DeploymentEventType = "replaced"
+	EventTypeLog               = sql.EventTypeLog
+	EventTypeCall              = sql.EventTypeCall
+	EventTypeDeploymentCreated = sql.EventTypeDeploymentCreated
+	EventTypeDeploymentUpdated = sql.EventTypeDeploymentUpdated
 )
 
 // Event types.
@@ -71,19 +65,29 @@ type CallEvent struct {
 func (e *CallEvent) GetID() int64 { return e.ID }
 func (e *CallEvent) event()       {}
 
-type DeploymentEvent struct {
+type DeploymentCreatedEvent struct {
 	ID                 int64
 	DeploymentName     model.DeploymentName
 	Time               time.Time
-	Type               DeploymentEventType
 	Language           string
 	ModuleName         string
 	MinReplicas        int
 	ReplacedDeployment types.Option[model.DeploymentName]
 }
 
-func (e *DeploymentEvent) GetID() int64 { return e.ID }
-func (e *DeploymentEvent) event()       {}
+func (e *DeploymentCreatedEvent) GetID() int64 { return e.ID }
+func (e *DeploymentCreatedEvent) event()       {}
+
+type DeploymentUpdatedEvent struct {
+	ID              int64
+	DeploymentName  model.DeploymentName
+	Time            time.Time
+	MinReplicas     int
+	PrevMinReplicas int
+}
+
+func (e *DeploymentUpdatedEvent) GetID() int64 { return e.ID }
+func (e *DeploymentUpdatedEvent) event()       {}
 
 type eventFilterCall struct {
 	sourceModule types.Option[string]
@@ -182,9 +186,14 @@ type eventLogJSON struct {
 	Error      types.Option[string] `json:"error,omitempty"`
 }
 
-type eventDeploymentJSON struct {
+type eventDeploymentCreatedJSON struct {
 	MinReplicas        int                                `json:"min_replicas"`
 	ReplacedDeployment types.Option[model.DeploymentName] `json:"replaced,omitempty"`
+}
+
+type eventDeploymentUpdatedJSON struct {
+	MinReplicas     int `json:"min_replicas"`
+	PrevMinReplicas int `json:"prev_min_replicas"`
 }
 
 type eventRow struct {
@@ -284,7 +293,14 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 	defer rows.Close()
 
-	// Translate events to concrete Go types.
+	events, err := transformRowsToEvents(rows)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return events, nil
+}
+
+func transformRowsToEvents(rows pgx.Rows) ([]Event, error) {
 	var out []Event
 	for rows.Next() {
 		row := eventRow{}
@@ -345,20 +361,31 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 				Response:       jsonPayload.Response,
 				Error:          jsonPayload.Error,
 			})
-		case sql.EventTypeDeployment:
-			var jsonPayload eventDeploymentJSON
+		case sql.EventTypeDeploymentCreated:
+			var jsonPayload eventDeploymentCreatedJSON
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
 				return nil, errors.WithStack(err)
 			}
-			out = append(out, &DeploymentEvent{
+			out = append(out, &DeploymentCreatedEvent{
 				ID:                 row.ID,
 				DeploymentName:     row.DeploymentName,
 				Time:               row.TimeStamp,
-				Type:               DeploymentEventType(row.CustomKey1.MustGet()),
-				Language:           row.CustomKey2.MustGet(),
-				ModuleName:         row.CustomKey3.MustGet(),
+				Language:           row.CustomKey1.MustGet(),
+				ModuleName:         row.CustomKey2.MustGet(),
 				MinReplicas:        jsonPayload.MinReplicas,
 				ReplacedDeployment: jsonPayload.ReplacedDeployment,
+			})
+		case sql.EventTypeDeploymentUpdated:
+			var jsonPayload eventDeploymentUpdatedJSON
+			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			out = append(out, &DeploymentUpdatedEvent{
+				ID:              row.ID,
+				DeploymentName:  row.DeploymentName,
+				Time:            row.TimeStamp,
+				MinReplicas:     jsonPayload.MinReplicas,
+				PrevMinReplicas: jsonPayload.PrevMinReplicas,
 			})
 		default:
 			panic("unknown event type: " + row.Type)

@@ -310,16 +310,17 @@ func (q *Queries) GetControllers(ctx context.Context, all bool) ([]Controller, e
 }
 
 const getDeployment = `-- name: GetDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.language, m.name AS module_name
+SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.language, m.name AS module_name, d.min_replicas
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
 WHERE d.name = $1
 `
 
 type GetDeploymentRow struct {
-	Deployment Deployment
-	Language   string
-	ModuleName string
+	Deployment  Deployment
+	Language    string
+	ModuleName  string
+	MinReplicas int32
 }
 
 func (q *Queries) GetDeployment(ctx context.Context, name model.DeploymentName) (GetDeploymentRow, error) {
@@ -335,6 +336,7 @@ func (q *Queries) GetDeployment(ctx context.Context, name model.DeploymentName) 
 		&i.Deployment.MinReplicas,
 		&i.Language,
 		&i.ModuleName,
+		&i.MinReplicas,
 	)
 	return i, err
 }
@@ -994,36 +996,68 @@ func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams
 	return err
 }
 
-const insertDeploymentEvent = `-- name: InsertDeploymentEvent :exec
-INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, custom_key_3, payload)
-VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
-        'deployment',
+const insertDeploymentCreatedEvent = `-- name: InsertDeploymentCreatedEvent :exec
+INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
+VALUES ((SELECT id
+         FROM deployments
+         WHERE deployments.name = $1::TEXT),
+        'deployment_created',
         $2::TEXT,
         $3::TEXT,
-        $4::TEXT,
         jsonb_build_object(
-                'min_replicas', $5::INT,
-                'replaced', $6::TEXT
+                'min_replicas', $4::INT,
+                'replaced', $5::TEXT
             ))
 `
 
-type InsertDeploymentEventParams struct {
+type InsertDeploymentCreatedEventParams struct {
 	DeploymentName string
-	Type           string
 	Language       string
 	ModuleName     string
 	MinReplicas    int32
 	Replaced       types.Option[string]
 }
 
-func (q *Queries) InsertDeploymentEvent(ctx context.Context, arg InsertDeploymentEventParams) error {
-	_, err := q.db.Exec(ctx, insertDeploymentEvent,
+func (q *Queries) InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error {
+	_, err := q.db.Exec(ctx, insertDeploymentCreatedEvent,
 		arg.DeploymentName,
-		arg.Type,
 		arg.Language,
 		arg.ModuleName,
 		arg.MinReplicas,
 		arg.Replaced,
+	)
+	return err
+}
+
+const insertDeploymentUpdatedEvent = `-- name: InsertDeploymentUpdatedEvent :exec
+INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
+VALUES ((SELECT id
+         FROM deployments
+         WHERE deployments.name = $1::TEXT),
+        'deployment_updated',
+        $2::TEXT,
+        $3::TEXT,
+        jsonb_build_object(
+                'prev_min_replicas', $4::INT,
+                'min_replicas', $5::INT
+            ))
+`
+
+type InsertDeploymentUpdatedEventParams struct {
+	DeploymentName  string
+	Language        string
+	ModuleName      string
+	PrevMinReplicas int32
+	MinReplicas     int32
+}
+
+func (q *Queries) InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error {
+	_, err := q.db.Exec(ctx, insertDeploymentUpdatedEvent,
+		arg.DeploymentName,
+		arg.Language,
+		arg.ModuleName,
+		arg.PrevMinReplicas,
+		arg.MinReplicas,
 	)
 	return err
 }

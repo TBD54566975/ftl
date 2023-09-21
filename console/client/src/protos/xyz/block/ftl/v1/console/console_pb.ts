@@ -17,9 +17,9 @@ export enum EventType {
   UNKNOWN = 0,
 
   /**
-   * @generated from enum value: EVENT_TYPE_DEPLOYMENT = 1;
+   * @generated from enum value: EVENT_TYPE_LOG = 1;
    */
-  DEPLOYMENT = 1,
+  LOG = 1,
 
   /**
    * @generated from enum value: EVENT_TYPE_CALL = 2;
@@ -27,48 +27,22 @@ export enum EventType {
   CALL = 2,
 
   /**
-   * @generated from enum value: EVENT_TYPE_LOG = 3;
+   * @generated from enum value: EVENT_TYPE_DEPLOYMENT_CREATED = 3;
    */
-  LOG = 3,
+  DEPLOYMENT_CREATED = 3,
+
+  /**
+   * @generated from enum value: EVENT_TYPE_DEPLOYMENT_UPDATED = 4;
+   */
+  DEPLOYMENT_UPDATED = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EventType)
 proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
   { no: 0, name: "EVENT_TYPE_UNKNOWN" },
-  { no: 1, name: "EVENT_TYPE_DEPLOYMENT" },
+  { no: 1, name: "EVENT_TYPE_LOG" },
   { no: 2, name: "EVENT_TYPE_CALL" },
-  { no: 3, name: "EVENT_TYPE_LOG" },
-]);
-
-/**
- * @generated from enum xyz.block.ftl.v1.console.DeploymentEventType
- */
-export enum DeploymentEventType {
-  /**
-   * @generated from enum value: DEPLOYMENT_UNKNOWN = 0;
-   */
-  DEPLOYMENT_UNKNOWN = 0,
-
-  /**
-   * @generated from enum value: DEPLOYMENT_CREATED = 1;
-   */
-  DEPLOYMENT_CREATED = 1,
-
-  /**
-   * @generated from enum value: DEPLOYMENT_UPDATED = 2;
-   */
-  DEPLOYMENT_UPDATED = 2,
-
-  /**
-   * @generated from enum value: DEPLOYMENT_REPLACED = 3;
-   */
-  DEPLOYMENT_REPLACED = 3,
-}
-// Retrieve enum metadata with: proto3.getEnumType(DeploymentEventType)
-proto3.util.setEnumType(DeploymentEventType, "xyz.block.ftl.v1.console.DeploymentEventType", [
-  { no: 0, name: "DEPLOYMENT_UNKNOWN" },
-  { no: 1, name: "DEPLOYMENT_CREATED" },
-  { no: 2, name: "DEPLOYMENT_UPDATED" },
-  { no: 3, name: "DEPLOYMENT_REPLACED" },
+  { no: 3, name: "EVENT_TYPE_DEPLOYMENT_CREATED" },
+  { no: 4, name: "EVENT_TYPE_DEPLOYMENT_UPDATED" },
 ]);
 
 /**
@@ -116,9 +90,82 @@ proto3.util.setEnumType(LogLevel, "xyz.block.ftl.v1.console.LogLevel", [
 ]);
 
 /**
- * @generated from message xyz.block.ftl.v1.console.Call
+ * @generated from message xyz.block.ftl.v1.console.LogEvent
  */
-export class Call extends Message<Call> {
+export class LogEvent extends Message<LogEvent> {
+  /**
+   * @generated from field: string deployment_name = 1;
+   */
+  deploymentName = "";
+
+  /**
+   * @generated from field: optional string request_name = 2;
+   */
+  requestName?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
+   */
+  timeStamp?: Timestamp;
+
+  /**
+   * @generated from field: int32 log_level = 4;
+   */
+  logLevel = 0;
+
+  /**
+   * @generated from field: map<string, string> attributes = 5;
+   */
+  attributes: { [key: string]: string } = {};
+
+  /**
+   * @generated from field: string message = 6;
+   */
+  message = "";
+
+  /**
+   * @generated from field: optional string error = 7;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<LogEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.LogEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogEvent {
+    return new LogEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LogEvent {
+    return new LogEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LogEvent {
+    return new LogEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LogEvent | PlainMessage<LogEvent> | undefined, b: LogEvent | PlainMessage<LogEvent> | undefined): boolean {
+    return proto3.util.equals(LogEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.CallEvent
+ */
+export class CallEvent extends Message<CallEvent> {
   /**
    * @generated from field: optional string request_name = 1;
    */
@@ -164,13 +211,13 @@ export class Call extends Message<Call> {
    */
   error?: string;
 
-  constructor(data?: PartialMessage<Call>) {
+  constructor(data?: PartialMessage<CallEvent>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.Call";
+  static readonly typeName = "xyz.block.ftl.v1.console.CallEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -183,27 +230,27 @@ export class Call extends Message<Call> {
     { no: 9, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Call {
-    return new Call().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CallEvent {
+    return new CallEvent().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Call {
-    return new Call().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CallEvent {
+    return new CallEvent().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Call {
-    return new Call().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CallEvent {
+    return new CallEvent().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Call | PlainMessage<Call> | undefined, b: Call | PlainMessage<Call> | undefined): boolean {
-    return proto3.util.equals(Call, a, b);
+  static equals(a: CallEvent | PlainMessage<CallEvent> | undefined, b: CallEvent | PlainMessage<CallEvent> | undefined): boolean {
+    return proto3.util.equals(CallEvent, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.Deployment
+ * @generated from message xyz.block.ftl.v1.console.DeploymentCreatedEvent
  */
-export class Deployment extends Message<Deployment> {
+export class DeploymentCreatedEvent extends Message<DeploymentCreatedEvent> {
   /**
    * @generated from field: string name = 1;
    */
@@ -225,118 +272,88 @@ export class Deployment extends Message<Deployment> {
   minReplicas = 0;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.console.DeploymentEventType event_type = 5;
-   */
-  eventType = DeploymentEventType.DEPLOYMENT_UNKNOWN;
-
-  /**
-   * @generated from field: optional string replaced = 6;
+   * @generated from field: optional string replaced = 5;
    */
   replaced?: string;
 
-  constructor(data?: PartialMessage<Deployment>) {
+  constructor(data?: PartialMessage<DeploymentCreatedEvent>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.Deployment";
+  static readonly typeName = "xyz.block.ftl.v1.console.DeploymentCreatedEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "module_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "event_type", kind: "enum", T: proto3.getEnumType(DeploymentEventType) },
-    { no: 6, name: "replaced", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "replaced", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Deployment {
-    return new Deployment().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeploymentCreatedEvent {
+    return new DeploymentCreatedEvent().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Deployment {
-    return new Deployment().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeploymentCreatedEvent {
+    return new DeploymentCreatedEvent().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Deployment {
-    return new Deployment().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeploymentCreatedEvent {
+    return new DeploymentCreatedEvent().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Deployment | PlainMessage<Deployment> | undefined, b: Deployment | PlainMessage<Deployment> | undefined): boolean {
-    return proto3.util.equals(Deployment, a, b);
+  static equals(a: DeploymentCreatedEvent | PlainMessage<DeploymentCreatedEvent> | undefined, b: DeploymentCreatedEvent | PlainMessage<DeploymentCreatedEvent> | undefined): boolean {
+    return proto3.util.equals(DeploymentCreatedEvent, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.LogEntry
+ * @generated from message xyz.block.ftl.v1.console.DeploymentUpdatedEvent
  */
-export class LogEntry extends Message<LogEntry> {
+export class DeploymentUpdatedEvent extends Message<DeploymentUpdatedEvent> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string name = 1;
    */
-  deploymentName = "";
+  name = "";
 
   /**
-   * @generated from field: optional string request_name = 2;
+   * @generated from field: int32 min_replicas = 2;
    */
-  requestName?: string;
+  minReplicas = 0;
 
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
+   * @generated from field: int32 prev_min_replicas = 3;
    */
-  timeStamp?: Timestamp;
+  prevMinReplicas = 0;
 
-  /**
-   * @generated from field: int32 log_level = 4;
-   */
-  logLevel = 0;
-
-  /**
-   * @generated from field: map<string, string> attributes = 5;
-   */
-  attributes: { [key: string]: string } = {};
-
-  /**
-   * @generated from field: string message = 6;
-   */
-  message = "";
-
-  /**
-   * @generated from field: optional string error = 7;
-   */
-  error?: string;
-
-  constructor(data?: PartialMessage<LogEntry>) {
+  constructor(data?: PartialMessage<DeploymentUpdatedEvent>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.LogEntry";
+  static readonly typeName = "xyz.block.ftl.v1.console.DeploymentUpdatedEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "prev_min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogEntry {
-    return new LogEntry().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeploymentUpdatedEvent {
+    return new DeploymentUpdatedEvent().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LogEntry {
-    return new LogEntry().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeploymentUpdatedEvent {
+    return new DeploymentUpdatedEvent().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LogEntry {
-    return new LogEntry().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeploymentUpdatedEvent {
+    return new DeploymentUpdatedEvent().fromJsonString(jsonString, options);
   }
 
-  static equals(a: LogEntry | PlainMessage<LogEntry> | undefined, b: LogEntry | PlainMessage<LogEntry> | undefined): boolean {
-    return proto3.util.equals(LogEntry, a, b);
+  static equals(a: DeploymentUpdatedEvent | PlainMessage<DeploymentUpdatedEvent> | undefined, b: DeploymentUpdatedEvent | PlainMessage<DeploymentUpdatedEvent> | undefined): boolean {
+    return proto3.util.equals(DeploymentUpdatedEvent, a, b);
   }
 }
 
@@ -1182,22 +1199,28 @@ export class Event extends Message<Event> {
    */
   entry: {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.Call call = 3;
+     * @generated from field: xyz.block.ftl.v1.console.LogEvent log = 3;
      */
-    value: Call;
+    value: LogEvent;
+    case: "log";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.CallEvent call = 4;
+     */
+    value: CallEvent;
     case: "call";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.Deployment deployment = 4;
+     * @generated from field: xyz.block.ftl.v1.console.DeploymentCreatedEvent deployment_created = 5;
      */
-    value: Deployment;
-    case: "deployment";
+    value: DeploymentCreatedEvent;
+    case: "deploymentCreated";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.LogEntry log = 5;
+     * @generated from field: xyz.block.ftl.v1.console.DeploymentUpdatedEvent deployment_updated = 6;
      */
-    value: LogEntry;
-    case: "log";
+    value: DeploymentUpdatedEvent;
+    case: "deploymentUpdated";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Event>) {
@@ -1210,9 +1233,10 @@ export class Event extends Message<Event> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 2, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "call", kind: "message", T: Call, oneof: "entry" },
-    { no: 4, name: "deployment", kind: "message", T: Deployment, oneof: "entry" },
-    { no: 5, name: "log", kind: "message", T: LogEntry, oneof: "entry" },
+    { no: 3, name: "log", kind: "message", T: LogEvent, oneof: "entry" },
+    { no: 4, name: "call", kind: "message", T: CallEvent, oneof: "entry" },
+    { no: 5, name: "deployment_created", kind: "message", T: DeploymentCreatedEvent, oneof: "entry" },
+    { no: 6, name: "deployment_updated", kind: "message", T: DeploymentUpdatedEvent, oneof: "entry" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {

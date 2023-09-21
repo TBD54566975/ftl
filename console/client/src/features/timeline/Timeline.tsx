@@ -6,11 +6,13 @@ import { getEvents, streamEvents, timeFilter } from '../../services/console.serv
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
-import { TimelineDeployment } from './TimelineDeployment.tsx'
+import { TimelineDeploymentCreated } from './TimelineDeploymentCreated.tsx'
+import { TimelineDeploymentUpdated } from './TimelineDeploymentUpdated.tsx'
 import { TimelineIcon } from './TimelineIcon.tsx'
 import { TimelineLog } from './TimelineLog.tsx'
 import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
-import { TimelineDeploymentDetails } from './details/TimelineDeploymentDetails.tsx'
+import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCreatedDetails.tsx'
+import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUpdatedDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
@@ -25,7 +27,7 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
   const { openPanel, closePanel, isOpen } = React.useContext(SidePanelContext)
   const [entries, setEntries] = React.useState<Event[]>([])
   const [selectedEntry, setSelectedEntry] = React.useState<Event | null>(null)
-  const [selectedEventTypes] = React.useState<string[]>(['log', 'call', 'deployment'])
+  const [selectedEventTypes] = React.useState<string[]>(['log', 'call', 'deploymentCreated', 'deploymentUpdated'])
   const [selectedLogLevels] = React.useState<number[]>([1, 5, 9, 13, 17])
 
   React.useEffect(() => {
@@ -79,8 +81,11 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
       case 'log':
         openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />)
         break
-      case 'deployment':
-        openPanel(<TimelineDeploymentDetails event={entry} deployment={entry.entry.value} />)
+      case 'deploymentCreated':
+        openPanel(<TimelineDeploymentCreatedDetails event={entry} deployment={entry.entry.value} />)
+        break
+      case 'deploymentUpdated':
+        openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />)
         break
       default:
         break
@@ -132,8 +137,10 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
                         return <TimelineCall call={entry.entry.value} />
                       case 'log':
                         return <TimelineLog log={entry.entry.value} />
-                      case 'deployment':
-                        return <TimelineDeployment deployment={entry.entry.value} />
+                      case 'deploymentCreated':
+                        return <TimelineDeploymentCreated deployment={entry.entry.value} />
+                      case 'deploymentUpdated':
+                        return <TimelineDeploymentUpdated deployment={entry.entry.value} />
                     }
                   })()}
                 </td>

@@ -54,7 +54,7 @@ SELECT COUNT(*)
 FROM update_container;
 
 -- name: GetDeployment :one
-SELECT sqlc.embed(d), m.language, m.name AS module_name
+SELECT sqlc.embed(d), m.language, m.name AS module_name, d.min_replicas
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
 WHERE d.name = $1;
@@ -282,16 +282,30 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name')
                 'error', sqlc.narg('error')::TEXT
             ));
 
--- name: InsertDeploymentEvent :exec
-INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, custom_key_3, payload)
-VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
-        'deployment',
-        sqlc.arg('type')::TEXT,
+-- name: InsertDeploymentCreatedEvent :exec
+INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
+VALUES ((SELECT id
+         FROM deployments
+         WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
+        'deployment_created',
         sqlc.arg('language')::TEXT,
         sqlc.arg('module_name')::TEXT,
         jsonb_build_object(
                 'min_replicas', sqlc.arg('min_replicas')::INT,
                 'replaced', sqlc.narg('replaced')::TEXT
+            ));
+
+-- name: InsertDeploymentUpdatedEvent :exec
+INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
+VALUES ((SELECT id
+         FROM deployments
+         WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
+        'deployment_updated',
+        sqlc.arg('language')::TEXT,
+        sqlc.arg('module_name')::TEXT,
+        jsonb_build_object(
+                'prev_min_replicas', sqlc.arg('prev_min_replicas')::INT,
+                'min_replicas', sqlc.arg('min_replicas')::INT
             ));
 
 -- name: InsertCallEvent :exec

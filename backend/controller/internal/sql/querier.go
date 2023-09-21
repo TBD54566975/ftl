@@ -50,7 +50,8 @@ type Querier interface {
 	GetRunnerState(ctx context.Context, key sqltypes.Key) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, name model.DeploymentName) ([]GetRunnersForDeploymentRow, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
-	InsertDeploymentEvent(ctx context.Context, arg InsertDeploymentEventParams) error
+	InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error
+	InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
 	InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error
 	// Mark any controller entries that haven't been updated recently as dead.

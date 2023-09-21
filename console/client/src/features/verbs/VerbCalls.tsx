@@ -2,7 +2,7 @@ import { Timestamp } from '@bufbuild/protobuf'
 import React from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
-import { Call, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import { getCalls } from '../../services/console.service.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
@@ -15,7 +15,7 @@ interface Props {
 
 export const VerbCalls = ({ module, verb }: Props) => {
   const client = useClient(ConsoleService)
-  const [calls, setCalls] = React.useState<Call[]>([])
+  const [calls, setCalls] = React.useState<CallEvent[]>([])
   const { openPanel } = React.useContext(SidePanelContext)
 
   React.useEffect(() => {
@@ -31,7 +31,7 @@ export const VerbCalls = ({ module, verb }: Props) => {
     fetchCalls()
   }, [client, module, verb])
 
-  const handleClick = (call: Call) => {
+  const handleClick = (call: CallEvent) => {
     openPanel(<TimelineCallDetails timestamp={call.timeStamp ?? new Timestamp()} call={call} />)
   }
 

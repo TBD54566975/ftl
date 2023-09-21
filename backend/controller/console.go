@@ -186,87 +186,6 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 	}
 }
 
-func callEventToCall(event *dal.CallEvent) *pbconsole.Call {
-	var requestName *string
-	if r, ok := event.RequestName.Get(); ok {
-		rstr := r.String()
-		requestName = &rstr
-	}
-	var sourceVerbRef *pschema.VerbRef
-	if sourceVerb, ok := event.SourceVerb.Get(); ok {
-		sourceVerbRef = sourceVerb.ToProto().(*pschema.VerbRef) //nolint:forcetypeassert
-	}
-	return &pbconsole.Call{
-		RequestName:    requestName,
-		DeploymentName: event.DeploymentName.String(),
-		TimeStamp:      timestamppb.New(event.Time),
-		SourceVerbRef:  sourceVerbRef,
-		DestinationVerbRef: &pschema.VerbRef{
-			Module: event.DestVerb.Module,
-			Name:   event.DestVerb.Name,
-		},
-		Duration: durationpb.New(event.Duration),
-		Request:  string(event.Request),
-		Response: string(event.Response),
-		Error:    event.Error.Ptr(),
-	}
-}
-
-func logEventToLogEntry(event *dal.LogEvent) *pbconsole.LogEntry {
-	var requestName *string
-	if r, ok := event.RequestName.Get(); ok {
-		rstr := r.String()
-		requestName = &rstr
-	}
-	return &pbconsole.LogEntry{
-		DeploymentName: event.DeploymentName.String(),
-		RequestName:    requestName,
-		TimeStamp:      timestamppb.New(event.Time),
-		LogLevel:       event.Level,
-		Attributes:     event.Attributes,
-		Message:        event.Message,
-		Error:          event.Error.Ptr(),
-	}
-}
-
-func deploymentEventToDeployment(event *dal.DeploymentEvent) *pbconsole.Deployment {
-	var eventType pbconsole.DeploymentEventType
-	switch event.Type {
-	case dal.DeploymentCreated:
-		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_CREATED
-	case dal.DeploymentUpdated:
-		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_UPDATED
-	case dal.DeploymentReplaced:
-		eventType = pbconsole.DeploymentEventType_DEPLOYMENT_REPLACED
-	default:
-		panic(errors.Errorf("unknown deployment event type %v", event.Type))
-	}
-
-	var replaced *string
-	if r, ok := event.ReplacedDeployment.Get(); ok {
-		rstr := r.String()
-		replaced = &rstr
-	}
-	return &pbconsole.Deployment{
-		Name:        event.DeploymentName.String(),
-		Language:    event.Language,
-		ModuleName:  event.ModuleName,
-		MinReplicas: 0,
-		EventType:   eventType,
-		Replaced:    replaced,
-	}
-}
-
-func filterEvents[E dal.Event](events []dal.Event) []E {
-	var filtered []E
-	for _, event := range events {
-		if e, ok := event.(E); ok {
-			filtered = append(filtered, e)
-		}
-	}
-	return filtered
-}
-
 func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error) {
 	var query []dal.EventFilter
 
@@ -306,8 +225,10 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 					eventTypes = append(eventTypes, dal.EventTypeCall)
 				case pbconsole.EventType_EVENT_TYPE_LOG:
 					eventTypes = append(eventTypes, dal.EventTypeLog)
-				case pbconsole.EventType_EVENT_TYPE_DEPLOYMENT:
-					eventTypes = append(eventTypes, dal.EventTypeDeployment)
+				case pbconsole.EventType_EVENT_TYPE_DEPLOYMENT_CREATED:
+					eventTypes = append(eventTypes, dal.EventTypeDeploymentCreated)
+				case pbconsole.EventType_EVENT_TYPE_DEPLOYMENT_UPDATED:
+					eventTypes = append(eventTypes, dal.EventTypeDeploymentUpdated)
 				default:
 					return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("unknown event type %v", eventType))
 				}
@@ -361,29 +282,87 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 func eventDALToProto(event dal.Event) *pbconsole.Event {
 	switch event := event.(type) {
 	case *dal.CallEvent:
+		var requestName *string
+		if r, ok := event.RequestName.Get(); ok {
+			rstr := r.String()
+			requestName = &rstr
+		}
+		var sourceVerbRef *pschema.VerbRef
+		if sourceVerb, ok := event.SourceVerb.Get(); ok {
+			sourceVerbRef = sourceVerb.ToProto().(*pschema.VerbRef) //nolint:forcetypeassert
+		}
 		return &pbconsole.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbconsole.Event_Call{
-				Call: callEventToCall(event),
+				Call: &pbconsole.CallEvent{
+					RequestName:    requestName,
+					DeploymentName: event.DeploymentName.String(),
+					TimeStamp:      timestamppb.New(event.Time),
+					SourceVerbRef:  sourceVerbRef,
+					DestinationVerbRef: &pschema.VerbRef{
+						Module: event.DestVerb.Module,
+						Name:   event.DestVerb.Name,
+					},
+					Duration: durationpb.New(event.Duration),
+					Request:  string(event.Request),
+					Response: string(event.Response),
+					Error:    event.Error.Ptr(),
+				},
 			},
 		}
 
 	case *dal.LogEvent:
+		var requestName *string
+		if r, ok := event.RequestName.Get(); ok {
+			rstr := r.String()
+			requestName = &rstr
+		}
 		return &pbconsole.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbconsole.Event_Log{
-				Log: logEventToLogEntry(event),
+				Log: &pbconsole.LogEvent{
+					DeploymentName: event.DeploymentName.String(),
+					RequestName:    requestName,
+					TimeStamp:      timestamppb.New(event.Time),
+					LogLevel:       event.Level,
+					Attributes:     event.Attributes,
+					Message:        event.Message,
+					Error:          event.Error.Ptr(),
+				},
 			},
 		}
 
-	case *dal.DeploymentEvent:
+	case *dal.DeploymentCreatedEvent:
+		var replaced *string
+		if r, ok := event.ReplacedDeployment.Get(); ok {
+			rstr := r.String()
+			replaced = &rstr
+		}
 		return &pbconsole.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_Deployment{
-				Deployment: deploymentEventToDeployment(event),
+			Entry: &pbconsole.Event_DeploymentCreated{
+				DeploymentCreated: &pbconsole.DeploymentCreatedEvent{
+					Name:        event.DeploymentName.String(),
+					Language:    event.Language,
+					ModuleName:  event.ModuleName,
+					MinReplicas: int32(event.MinReplicas),
+					Replaced:    replaced,
+				},
+			},
+		}
+	case *dal.DeploymentUpdatedEvent:
+		return &pbconsole.Event{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.Event_DeploymentUpdated{
+				DeploymentUpdated: &pbconsole.DeploymentUpdatedEvent{
+					Name:            event.DeploymentName.String(),
+					MinReplicas:     int32(event.MinReplicas),
+					PrevMinReplicas: int32(event.PrevMinReplicas),
+				},
 			},
 		}
 
