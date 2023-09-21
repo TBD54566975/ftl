@@ -13,7 +13,7 @@ import (
 
 type updateCmd struct {
 	Replicas   int32                `short:"n" help:"Number of replicas to deploy." default:"1"`
-	Deployment model.DeploymentName `arg:"" help:"Deployment to kill."`
+	Deployment model.DeploymentName `arg:"" help:"Deployment to update."`
 }
 
 func (u *updateCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {

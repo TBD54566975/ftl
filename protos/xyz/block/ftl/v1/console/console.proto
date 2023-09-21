@@ -10,7 +10,34 @@ import "xyz/block/ftl/v1/schema/schema.proto";
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console;pbconsole";
 option java_multiple_files = true;
 
-message Call {
+enum EventType {
+  EVENT_TYPE_UNKNOWN = 0;
+  EVENT_TYPE_LOG = 1;
+  EVENT_TYPE_CALL = 2;
+  EVENT_TYPE_DEPLOYMENT_CREATED = 3;
+  EVENT_TYPE_DEPLOYMENT_UPDATED = 4;
+}
+
+enum LogLevel {
+  LOG_LEVEL_UNKNOWN = 0;
+  LOG_LEVEL_TRACE = 1;
+  LOG_LEVEL_DEBUG = 5;
+  LOG_LEVEL_INFO = 9;
+  LOG_LEVEL_WARN = 13;
+  LOG_LEVEL_ERROR = 17;
+}
+
+message LogEvent {
+  string deployment_name = 1;
+  optional string request_name = 2;
+  google.protobuf.Timestamp time_stamp = 3;
+  int32 log_level = 4;
+  map<string, string> attributes = 5;
+  string message = 6;
+  optional string error = 7;
+}
+
+message CallEvent {
   optional string request_name = 1;
   string deployment_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
@@ -22,37 +49,18 @@ message Call {
   optional string error = 9;
 }
 
-enum EventType {
-  EVENT_TYPE_UNKNOWN = 0;
-  EVENT_TYPE_DEPLOYMENT = 1;
-  EVENT_TYPE_CALL = 2;
-  EVENT_TYPE_LOG = 3;
-}
-
-enum DeploymentEventType {
-  DEPLOYMENT_UNKNOWN = 0;
-  DEPLOYMENT_CREATED = 1;
-  DEPLOYMENT_UPDATED = 2;
-  DEPLOYMENT_REPLACED = 3;
-}
-
-message Deployment {
+message DeploymentCreatedEvent {
   string name = 1;
   string language = 2;
   string module_name = 3;
   int32 min_replicas = 4;
-  DeploymentEventType event_type = 5;
-  optional string replaced = 6;
+  optional string replaced = 5;
 }
 
-message LogEntry {
-  string deployment_name = 1;
-  optional string request_name = 2;
-  google.protobuf.Timestamp time_stamp = 3;
-  int32 log_level = 4;
-  map<string, string> attributes = 5;
-  string message = 6;
-  optional string error = 7;
+message DeploymentUpdatedEvent {
+  string name = 1;
+  int32 min_replicas = 2;
+  int32 prev_min_replicas = 3;
 }
 
 message Verb {
@@ -78,15 +86,6 @@ message Module {
 message GetModulesRequest {}
 message GetModulesResponse {
   repeated Module modules = 1;
-}
-
-enum LogLevel {
-  LOG_LEVEL_UNKNOWN = 0;
-  LOG_LEVEL_TRACE = 1;
-  LOG_LEVEL_DEBUG = 5;
-  LOG_LEVEL_INFO = 9;
-  LOG_LEVEL_WARN = 13;
-  LOG_LEVEL_ERROR = 17;
 }
 
 // Query for events.
@@ -174,9 +173,10 @@ message Event {
   // Unique ID for event.
   int64 id = 2;
   oneof entry {
-    Call call = 3;
-    Deployment deployment = 4;
-    LogEntry log = 5;
+    LogEvent log = 3;
+    CallEvent call = 4;
+    DeploymentCreatedEvent deployment_created = 5;
+    DeploymentUpdatedEvent deployment_updated = 6;
   }
 }
 

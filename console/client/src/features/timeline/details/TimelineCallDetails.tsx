@@ -5,7 +5,7 @@ import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
 import { useClient } from '../../../hooks/use-client'
 import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
-import { Call } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { CallEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { getRequestCalls } from '../../../services/console.service'
 import { formatDuration } from '../../../utils/date.utils'
@@ -15,13 +15,13 @@ import { TimelineTimestamp } from './TimelineTimestamp'
 
 interface Props {
   timestamp: Timestamp
-  call: Call
+  call: CallEvent
 }
 
 export const TimelineCallDetails = ({ timestamp, call }: Props) => {
   const client = useClient(ConsoleService)
   const { closePanel } = React.useContext(SidePanelContext)
-  const [requestCalls, setRequestCalls] = useState<Call[]>([])
+  const [requestCalls, setRequestCalls] = useState<CallEvent[]>([])
   const [selectedCall, setSelectedCall] = useState(call)
 
   useEffect(() => {

@@ -3,7 +3,7 @@ import React from 'react'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
-import { Event, LogEntry } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Event, LogEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { textColor } from '../../../utils/style.utils'
 import { LogLevelBadge } from '../../logs/LogLevelBadge'
@@ -12,7 +12,7 @@ import { TimelineTimestamp } from './TimelineTimestamp'
 
 interface Props {
   event: Event
-  log: LogEntry
+  log: LogEvent
 }
 
 export const TimelineLogDetails = ({ event, log }: Props) => {

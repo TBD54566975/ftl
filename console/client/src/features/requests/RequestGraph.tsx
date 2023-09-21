@@ -1,10 +1,10 @@
 import { Duration, Timestamp } from '@bufbuild/protobuf'
-import { Call } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { verbRefString } from '../verbs/verb.utils'
 
 interface CallBlockProps {
-  call: Call
-  selectedCall?: Call
+  call: CallEvent
+  selectedCall?: CallEvent
   firstTimeStamp: Timestamp
   firstDuration: Duration
 }
@@ -47,9 +47,9 @@ const CallBlock = ({ call, selectedCall, firstTimeStamp, firstDuration }: CallBl
 }
 
 interface Props {
-  calls: Call[]
-  call?: Call
-  setSelectedCall: React.Dispatch<React.SetStateAction<Call>>
+  calls: CallEvent[]
+  call?: CallEvent
+  setSelectedCall: React.Dispatch<React.SetStateAction<CallEvent>>
 }
 
 export const RequestGraph = ({ calls, call, setSelectedCall }: Props) => {

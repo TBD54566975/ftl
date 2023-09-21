@@ -1,7 +1,7 @@
-import { LogEntry } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { LogEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 interface Props {
-  log: LogEntry
+  log: LogEvent
 }
 
 export const TimelineLog = ({ log }: Props) => {

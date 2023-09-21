@@ -9,7 +9,7 @@ deploy/
 .DS_Store
 reflex.conf
 /logs/
-node_modules
+/node_modules
 *.tsbuildinfo
 generated_ftl_module.go
 

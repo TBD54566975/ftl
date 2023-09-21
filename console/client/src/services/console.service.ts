@@ -3,7 +3,7 @@ import { Timestamp } from '@bufbuild/protobuf'
 import { createClient } from '../hooks/use-client'
 import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
 import {
-  Call,
+  CallEvent,
   Event,
   EventType,
   EventsQuery_CallFilter,
@@ -92,22 +92,22 @@ export const timeFilter = (olderThan: Timestamp | undefined, newerThan: Timestam
   return filter
 }
 
-export const getRequestCalls = async (requestKey: string): Promise<Call[]> => {
+export const getRequestCalls = async (requestKey: string): Promise<CallEvent[]> => {
   const allEvents = await getEvents({
     filters: [requestKeysFilter([requestKey]), eventTypesFilter([EventType.CALL])],
   })
-  return allEvents.map((e) => e.entry.value) as Call[]
+  return allEvents.map((e) => e.entry.value) as CallEvent[]
 }
 
 export const getCalls = async (
   destModule: string,
   destVerb: string | undefined = undefined,
   sourceModule: string | undefined = undefined,
-): Promise<Call[]> => {
+): Promise<CallEvent[]> => {
   const allEvents = await getEvents({
     filters: [callFilter(destModule, destVerb, sourceModule), eventTypesFilter([EventType.CALL])],
   })
-  return allEvents.map((e) => e.entry.value) as Call[]
+  return allEvents.map((e) => e.entry.value) as CallEvent[]
 }
 
 interface GetEventsParams {
