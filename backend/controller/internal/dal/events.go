@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"strconv"
 	"time"
 
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
