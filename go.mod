@@ -3,8 +3,9 @@ module github.com/TBD54566975/ftl
 go 1.21
 
 require (
-	github.com/BurntSushi/toml v1.2.1
-	github.com/alecthomas/kong v0.7.1
+	github.com/BurntSushi/toml v1.3.2
+	github.com/alecthomas/kong v0.8.0
+	github.com/alecthomas/kong-toml v0.0.0-20230922031405-31cfb1264a3b
 	github.com/bufbuild/connect-go v1.8.0
 	github.com/go-logr/logr v1.2.4
 	github.com/golang/protobuf v1.5.3
@@ -17,6 +18,7 @@ require (
 	github.com/rs/cors v1.9.0
 	github.com/swaggest/jsonschema-go v0.3.59
 	github.com/titanous/json5 v1.0.0
+	github.com/zalando/go-keyring v0.2.1
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/metric v1.16.0
 	go.opentelemetry.io/otel/trace v1.16.0
@@ -30,13 +32,17 @@ require (
 
 require (
 	github.com/alecthomas/repr v0.2.0 // indirect
+	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/danieljoos/wincred v1.1.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.0 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/swaggest/refl v1.2.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0 // indirect
