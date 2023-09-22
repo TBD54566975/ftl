@@ -45,6 +45,10 @@ func InitialiseClients(authenticators map[string]string) {
 	}
 }
 
+func init() {
+	InitialiseClients(map[string]string{})
+}
+
 var (
 	dialer = &net.Dialer{
 		Timeout: time.Second * 10,

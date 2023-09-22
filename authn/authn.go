@@ -82,7 +82,7 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 		w := &strings.Builder{}
 		for name, values := range headers {
 			for _, value := range values {
-				fmt.Printf("%s: %s\r\n", name, value)
+				fmt.Fprintf(w, "%s: %s\r\n", name, value)
 			}
 		}
 		err = keyring.Set(keyringKey, usr.Name, w.String())
