@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/alecthomas/kong"
-	"github.com/alecthomas/kong-toml"
+	kongtoml "github.com/alecthomas/kong-toml"
 	"github.com/bufbuild/connect-go"
 
 	_ "github.com/TBD54566975/ftl/backend/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
