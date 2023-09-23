@@ -48,7 +48,7 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 	if errors.Is(err, keyring.ErrNotFound) {
 		logger.Tracef("No credentials found in keyring")
 	} else if err != nil {
-		return nil, errors.WithStack(err)
+		logger.Debugf("Failed to get credentials from keyring: %s", err)
 	} else {
 		logger.Tracef("Credentials found in keyring: %s", creds)
 		if headers, err := checkAuth(ctx, logger, endpoint, creds); err != nil {
@@ -75,24 +75,25 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 	}
 
 	creds = out.String()
-	if headers, err := checkAuth(ctx, logger, endpoint, creds); err != nil {
+	headers, err := checkAuth(ctx, logger, endpoint, creds)
+	if err != nil {
 		return nil, errors.WithStack(err)
-	} else if headers != nil {
-		logger.Debugf("Authenticator %s succeeded", authenticator)
-		w := &strings.Builder{}
-		for name, values := range headers {
-			for _, value := range values {
-				fmt.Fprintf(w, "%s: %s\r\n", name, value)
-			}
-		}
-		err = keyring.Set(keyringKey, usr.Name, w.String())
-		if err != nil {
-			logger.Warnf("Failed to save credentials to keyring: %s", err)
-		}
-		return headers, nil
+	} else if headers == nil {
+		return nil, nil
 	}
 
-	return nil, nil
+	logger.Debugf("Authenticator %s succeeded", authenticator)
+	w := &strings.Builder{}
+	for name, values := range headers {
+		for _, value := range values {
+			fmt.Fprintf(w, "%s: %s\r\n", name, value)
+		}
+	}
+	err = keyring.Set(keyringKey, usr.Name, w.String())
+	if err != nil {
+		logger.Debugf("Failed to save credentials to keyring: %s", err)
+	}
+	return headers, nil
 }
 
 // Check credentials and return authenticating headers if we're able to successfully authenticate.
