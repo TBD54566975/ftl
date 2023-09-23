@@ -1,11 +1,13 @@
 package compile
 
 import (
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/alecthomas/assert/v2"
 	"go/ast"
 	"go/types"
 	"testing"
+
+	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestParseDirectives(t *testing.T) {
@@ -33,6 +35,7 @@ func TestParseDirectives(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := directiveParser.ParseString("", tt.input)
 			assert.NoError(t, err)
