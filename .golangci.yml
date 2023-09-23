@@ -69,6 +69,8 @@ linters:
     - musttag
     - gofmt # autofmt
     - interfacebloat
+    - tagalign
+    - nolintlint
 
 linters-settings:
   exhaustive:
@@ -87,15 +89,15 @@ linters-settings:
     disabled-checks:
       - ifElseChain
   depguard:
-    list-type: blacklist
-    include-go-root: true
-    packages-with-error-message:
-      - errors: "use github.com/alecthomas/errors"
-      - github.com/pkg/errors: "use github.com/alecthomas/errors"
-      - github.com/stretchr/testify: "use alecthomas/assert"
-  forbidigo:
-    forbid:
-      - 'fmt\.Errorf'
+    rules:
+      main:
+        deny:
+          - pkg: errors
+            desc: "use github.com/alecthomas/errors"
+          - pkg: github.com/pkg/errors
+            desc: "use github.com/alecthomas/errors"
+          - pkg: github.com/stretchr/testify
+            desc: "use alecthomas/assert"
   wrapcheck:
     ignorePackageGlobs:
       - github.com/TBD54566975/ftl/*
@@ -124,3 +126,4 @@ issues:
     - "blank-imports"
     - 'should have comment \(or a comment on this block\) or be unexported'
     - caseOrder
+    - unused-parameter
