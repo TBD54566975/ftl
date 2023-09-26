@@ -1,7 +1,9 @@
 import { callIcon, moduleVerbCls, callIconID } from './constants'
 export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
   svg.insertAdjacentHTML('afterbegin', callIcon)
-
+  svg.removeAttribute('width')
+  svg.removeAttribute('height')
+  svg.classList.add('module-flow-chart')
   for (const $a of svg.querySelectorAll('a')) {
     const $g = $a.parentNode! as SVGSVGElement
 

@@ -18,10 +18,12 @@ html.dark:root {
   --edge-color: var(--white);
 }
 
-g.graph > polygon {
-  fill: transparent;
+.module-flow-chart {
+  width: fit-content;
+  & > .graph > polygon {
+    fill: transparent;
+  }
 }
-
 #svg-pan-zoom-controls {
   & path {
     fill-opacity: 0.75;

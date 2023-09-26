@@ -26,7 +26,7 @@ export const ModulesPage = () => {
   return (
     <div className='h-full w-full flex flex-col'>
       <PageHeader icon={<Square3Stack3DIcon />} title='Modules' />
-      <div ref={ref} className='viewport' />
+      <div ref={ref} className='viewport flex-1 overflow-hidden' />
     </div>
   )
 }
