@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { DeploymentPage } from './features/deployments/DeploymentPage.tsx'
+import { DeploymentsPage } from './features/deployments/DeploymentsPage.tsx'
 import { GraphPage } from './features/graph/GraphPage.tsx'
 import { ModulesPage } from './features/modules/ModulesPage.tsx'
 import { TimelinePage } from './features/timeline/TimelinePage.tsx'
@@ -13,6 +15,8 @@ export const App = () => {
           <Route path='/' element={<Navigate to='events' replace />} />
           <Route path='events' element={<TimelinePage />} />
           <Route path='modules' element={<ModulesPage />} />
+          <Route path='deployments' element={<DeploymentsPage />} />
+          <Route path='deployments/:deploymentName' element={<DeploymentPage />} />
           <Route path='graph' element={<GraphPage />} />
         </Route>
       </Routes>

@@ -1,4 +1,4 @@
-import { CubeTransparentIcon, ListBulletIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
+import { CubeTransparentIcon, ListBulletIcon, RocketLaunchIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { useContext } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { DarkModeSwitch } from '../components/DarkModeSwitch'
@@ -8,6 +8,7 @@ import { classNames } from '../utils'
 const navigation = [
   { name: 'Events', href: '/events', icon: ListBulletIcon },
   { name: 'Modules', href: '/modules', icon: Square3Stack3DIcon },
+  { name: 'Deployments', href: '/deployments', icon: RocketLaunchIcon },
   { name: 'Graph', href: '/graph', icon: CubeTransparentIcon },
 ]
 
@@ -54,7 +55,7 @@ export const Navigation = () => {
                                 aria-hidden='true'
                               />
                               {item.name}
-                              {item.href === '/modules' && (
+                              {['/modules', '/deployments'].includes(item.href) && (
                                 <span
                                   className='ml-auto w-9 min-w-max whitespace-nowrap rounded-full bg-indigo-600 px-2.5 py-0.5 text-center text-xs font-medium leading-5 text-white ring-1 ring-inset ring-indigo-500'
                                   aria-hidden='true'
