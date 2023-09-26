@@ -1,6 +1,19 @@
 interface Props {
+  topBarColor?: string
+  onClick?: () => void
   children: React.ReactNode
 }
-export const Card = ({ children }: Props) => {
-  return <div className='p-2 rounded-md border border-gray-500'>{children}</div>
+export const Card = ({ topBarColor, onClick, children }: Props) => {
+  return (
+    <div
+      onClick={onClick}
+      className={`relative rounded-md border border-gray-200 dark:border-gray-500 ${onClick ? 'cursor-pointer' : ''}`}
+    >
+      {topBarColor && (
+        <div className='absolute top-0 left-0 right-0 h-1 bg-green-400 rounded-t-md -mt-px -ml-px -mr-px'></div>
+      )}
+
+      <div className={`${topBarColor ? 'mt-1' : ''} p-2`}>{children}</div>
+    </div>
+  )
 }
