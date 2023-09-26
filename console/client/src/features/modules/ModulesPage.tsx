@@ -5,6 +5,7 @@ import { modulesContext } from '../../providers/modules-provider'
 import { generateDot } from './generate-dot'
 import { dotToSVG } from './dot-to-svg'
 import { formatSVG } from './format-svg'
+import './graph.css'
 export const ModulesPage = () => {
   const modules = React.useContext(modulesContext)
   const dot = generateDot(modules)

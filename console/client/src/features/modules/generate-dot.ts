@@ -50,6 +50,7 @@ const generateModuleContent = (module: Module): { node: string; edges: string } 
                   if (call.module) {
                     edges += `\n"${moduleName}":"${verb.name}"  -> "${call.module}":"${call.name}"[
                       id = "${moduleName}.${verb.name}=>${call.module}.${call.name}"
+                      label = "${moduleName}.${verb.name}=>${call.module}.${call.name}"
                     ]`
                   }
                 })
