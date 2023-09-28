@@ -9,6 +9,9 @@ class Main : CliktCommand() {
   val endpoint by option(help = "FTL endpoint.").required()
   val dest by option(help = "Destination directory for generated code.").required()
   val module by option(help = "The FTL module name we're working on.").required()
+  val moduleClientSuffix by option(
+    help = "The suffix appended to FTL-generated client classes for other modules in this cluster."
+  )
 
   override fun run() {
     val client = FTLClient(endpoint)
@@ -16,7 +19,7 @@ class Main : CliktCommand() {
     val outputDirectory = File(dest)
     outputDirectory.deleteRecursively()
     val gen = ModuleGenerator()
-    gen.run(schema, outputDirectory, module)
+    gen.run(schema, outputDirectory, module, moduleClientSuffix)
   }
 }
 
