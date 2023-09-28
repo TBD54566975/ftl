@@ -20,7 +20,7 @@ export const PageHeader = ({ icon, title, children, breadcrumbs }: Props) => {
         <span className='mt-1 text-indigo-500 mr-2 mb-1 h-5 w-5'>{icon}</span>
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className='flex pr-2' aria-label='Breadcrumb'>
-            <ol role='list' className='flex items-center space-x-4'>
+            <ol role='list' className='flex items-center space-x-2'>
               {breadcrumbs.map((crumb, index) => (
                 <li key={index}>
                   <div className='flex items-center'>
