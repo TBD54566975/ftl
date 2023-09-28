@@ -49,7 +49,11 @@ export const DeploymentPage = () => {
 
   return (
     <>
-      <PageHeader icon={<RocketLaunchIcon />} title={`Deployments - ${deploymentName}`} />
+      <PageHeader
+        icon={<RocketLaunchIcon />}
+        title={module?.deploymentName || 'Loading...'}
+        breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]}
+      />
 
       <div className='m-4'>
         <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
