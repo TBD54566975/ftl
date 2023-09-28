@@ -1,6 +1,6 @@
 import { RocketLaunchIcon } from '@heroicons/react/24/outline'
 import React from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ButtonSmall } from '../../components/ButtonSmall'
 import { Card } from '../../components/Card'
 import { PageHeader } from '../../components/PageHeader'
@@ -10,6 +10,7 @@ import { modulesContext } from '../../providers/modules-provider'
 import { verbRefString } from '../verbs/verb.utils'
 
 export const DeploymentPage = () => {
+  const navigate = useNavigate()
   const { deploymentName } = useParams()
   const modules = React.useContext(modulesContext)
   const [module, setModule] = React.useState<Module | undefined>()
@@ -58,7 +59,11 @@ export const DeploymentPage = () => {
       <div className='m-4'>
         <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
           {module?.verbs.map((verb) => (
-            <Card key={module.deploymentName} topBarColor='bg-green-500' onClick={() => console.log('click')}>
+            <Card
+              key={module.deploymentName}
+              topBarColor='bg-green-500'
+              onClick={() => navigate(`/modules/${module.name}/verbs/${verb.verb?.name}`)}
+            >
               {verb.verb?.name}
               <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
             </Card>
