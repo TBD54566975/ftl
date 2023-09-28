@@ -27,6 +27,12 @@ module.exports = {
     'func-style': ['error', 'expression'],
     '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    '@typescript-eslint/ban-ts-comment': [
+      2,
+      {
+        'ts-ignore': 'allow-with-description',
+      },
+    ],
   },
   settings: {
     react: {
