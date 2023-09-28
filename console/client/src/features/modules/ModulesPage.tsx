@@ -29,7 +29,7 @@ export const ModulesPage = () => {
     const renderSvg = async () => {
       const dot = generateDot(modules)
       const unformattedSVG = await dotToSVG(dot)
-      if(unformattedSVG) {
+      if (unformattedSVG) {
         const formattedSVG = formatSVG(unformattedSVG)
         viewport?.replaceChildren(formattedSVG)
         setSVG(formattedSVG)
@@ -37,15 +37,15 @@ export const ModulesPage = () => {
     }
     viewport && void renderSvg()
   }, [modules, viewport])
- 
+
   React.useEffect(() => {
-    if(controls && svg) {
-      const zoom = svgZoom();
-     const [buttons, removeListeners] = createControls(zoom)
-     controls.replaceChildren(...buttons.values())
-     return () => {
-      removeListeners()
-     }
+    if (controls && svg) {
+      const zoom = svgZoom()
+      const [buttons, removeListeners] = createControls(zoom)
+      controls.replaceChildren(...buttons.values())
+      return () => {
+        removeListeners()
+      }
     }
   }, [controls, svg])
   return (
