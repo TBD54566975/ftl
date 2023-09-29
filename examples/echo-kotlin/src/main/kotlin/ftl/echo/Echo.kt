@@ -1,6 +1,6 @@
 package ftl.echo
 
-import ftl.time.Time
+import ftl.time.TimeModuleClient
 import ftl.time.TimeRequest
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ingress
@@ -17,7 +17,7 @@ class Echo {
   @Verb
   @Ingress(Method.GET, "/echo")
   fun echo(context: Context, req: EchoRequest): EchoResponse {
-    val response = context.call(Time::time, TimeRequest())
+    val response = context.call(TimeModuleClient::time, TimeRequest())
     return EchoResponse(message = "Hello, ${req.name}! The time is ${response.time}.")
   }
 }

@@ -39,7 +39,7 @@ package ftl.test
 import xyz.block.ftl.Ignore
 
 @Ignore
-public class Test()
+public class TestModule()
 """
     assertEquals(expected, file.toString())
   }
@@ -124,7 +124,7 @@ public data class TestResponse(
 )
 
 @Ignore
-public class Test()
+public class TestModule()
 """
     assertEquals(expected, file.toString())
   }
@@ -182,13 +182,13 @@ public data class TestResponse(
 )
 
 @Ignore
-public class Test() {
+public class TestModule() {
   /**
    * TestVerb comments
    */
   @Verb
   public fun TestVerb(context: Context, req: TestRequest): TestResponse = throw
-      NotImplementedError("Verb stubs should not be called directly, instead use context.call(Test::TestVerb, ...)")
+      NotImplementedError("Verb stubs should not be called directly, instead use context.call(TestModule::TestVerb, ...)")
 
   /**
    * TestIngressVerb comments
@@ -199,7 +199,7 @@ public class Test() {
     "/test",
   )
   public fun TestIngressVerb(context: Context, req: TestRequest): TestResponse = throw
-      NotImplementedError("Verb stubs should not be called directly, instead use context.call(Test::TestIngressVerb, ...)")
+      NotImplementedError("Verb stubs should not be called directly, instead use context.call(TestModule::TestIngressVerb, ...)")
 }
 """
     assertEquals(expected, file.toString())
