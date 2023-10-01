@@ -1,5 +1,6 @@
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
 import React from 'react'
+import { classNames } from '../utils'
 
 interface Breadcrumb {
   label: string
@@ -11,11 +12,12 @@ interface Props {
   title: string
   children?: React.ReactNode
   breadcrumbs?: Breadcrumb[]
+  className?: string
 }
 
-export const PageHeader = ({ icon, title, children, breadcrumbs }: Props) => {
+export const PageHeader = ({ icon, title, children, breadcrumbs, className }: Props) => {
   return (
-    <div className={`sticky top-0 z-10 shadow dark:shadow-md flex justify-between items-center py-2 px-4 text-gray-70`}>
+    <div className={classNames(className, `sticky top-0 z-10 shadow dark:shadow-md flex justify-between items-center py-2 px-4 text-gray-70`)}>
       <div className='flex items-center'>
         <span className='mt-1 text-indigo-500 mr-2 mb-1 h-5 w-5'>{icon}</span>
         {breadcrumbs && breadcrumbs.length > 0 && (

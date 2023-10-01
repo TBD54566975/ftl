@@ -1,5 +1,5 @@
-import { GetModulesResponse, Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { moduleTitleCls, moduleVerbCls } from './constants'
+import { GetModulesResponse, Module } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { moduleTitleCls, moduleVerbCls } from '../constants'
 const HtmlId = (id: string) => `HREF="remove_me_url"  ID="${id}"`
 
 const generateRow = ({

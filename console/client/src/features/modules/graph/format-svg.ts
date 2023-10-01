@@ -1,4 +1,4 @@
-import { callIcon, moduleVerbCls, callIconID, vizID } from './constants'
+import { callIcon, moduleVerbCls, callIconID, vizID } from '../constants'
 export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
   svg.insertAdjacentHTML('afterbegin', callIcon)
   svg.removeAttribute('width')
@@ -63,6 +63,8 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
         $useIcon.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `#${callIconID}`)
         $useIcon.setAttribute('width', `${width}px`)
         $useIcon.setAttribute('height', `${height}px`)
+        $useIcon.classList.add('call-link')
+        $useIcon.dataset.verbId = $verb.id
 
         //FIXME: remove hardcoded offset
         const y = parseInt($iconPlaceholder.getAttribute('y')!) - 15

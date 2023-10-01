@@ -1,4 +1,4 @@
-import { svgZoom } from './svg-zoom'
+import { svgZoom } from './graph/svg-zoom'
 import { controlIcons } from './constants'
 
 export const createControls = (

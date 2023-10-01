@@ -1,6 +1,6 @@
 import { SVG } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.panzoom.js/dist/svg.panzoom.esm.js'
-import { vizID } from './constants'
+import { vizID } from '../constants'
 
 export const svgZoom = () => {
   // enables panZoom
