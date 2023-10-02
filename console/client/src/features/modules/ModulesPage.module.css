@@ -2,35 +2,25 @@
   width: 100%;
   height: 100vh;
   display: grid;
+}
+
+.template {
   grid-template:
   "header header"    auto
-  "sidebar content"   1fr
+  "sidebar graph"   1fr
   / 13rem 1fr;
+}
+
+.template-selected-verb {
+  grid-template:
+  "header header header header"    auto
+  "sidebar graph schema timeline"   1fr
+  "sidebar requests call timeline"   1fr
+  / 13rem 1fr 1fr 13rem;
 }
 
 .header {
   grid-area: header;
-}
-
-.ui {
-  grid-area: content;
-  display: grid;
-}
-
-.ui-without-sidebar {
-  grid-template:
-  ". . . . ." 1fr
-  ". control-bar . . ." 1.5rem
-  ". . . . ." 1.5rem
-  / 1.5rem 13rem 1fr 13rem 1.5rem;
-}
-
-.ui-with-sidebar {
-  grid-template:
-    ". . . . sidebar" 1fr
-    ". control-bar . . sidebar" 1.5rem
-    ". . . . sidebar" 1.5rem
-    / 1.5rem 13rem 1fr 13rem 26rem;
 }
 
 .sidebar {
@@ -38,17 +28,21 @@
 }
 
 .graph {
-  grid-area: content;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
+  grid-area: graph;
 }
 
-.control-bar {
-  grid-area: control-bar;
+.call {
+  grid-area: call;
 }
 
-.ui-sidebar {
-  grid-area: sidebar;
+.timeline {
+  grid-area: timeline;
+}
+
+.requests {
+  grid-area: requests;
+}
+
+.schema {
+  grid-area: schema;
 }

@@ -1,34 +1,58 @@
 import React from 'react'
+import { ModulesSidebar } from './ModulesSidebar'
+import { PageHeader } from '../../components'
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
-import { PageHeader } from '../../components/PageHeader'
-import { ModulesSidebar } from './sidebar/ModulesSidebar'
-import styles from  './ModulesPage.module.css'
-import { ModulesUI } from './ui'
 import { ModulesGraph } from './graph/ModulesGraph'
+import { ModulesRequests } from './ModulesRequests'
+import { ModulesTimeline } from './ModulesTimeline'
+import { ModulesSchema } from './ModulesSchema'
+import { ModulesTestCalls } from './ModulesTestCalls'
+import { modulesContext } from '../../providers/modules-provider'
+import { classNames } from '../../utils'
+import { VerbId } from './modules.constants'
+
+import styles from  './ModulesPage.module.css'
 
 export const ModulesPage = () => {
-  const [zoomID, setZoomID] = React.useState<`#${string}`>()
-  const [selectedVerb, setSelectedVerb] = React.useState<`${string}.${string}`>()
-  const [selectedModule, setSelectedModule] = React.useState<string>()
-  const [selectedEdges, setSelectedEdges] = React.useState<`#${string}`[]>()
+  const { modules } = React.useContext(modulesContext)
+  const [zoomId, setZoomId] = React.useState<string>()
+  const [selectedVerbs, setSelectedVerbs] = React.useState<VerbId[]>([])
+  const [selectedModules, setSelectedModules] = React.useState<string[]>([])
+  const [hoveredEdge, setHoveredEdge] = React.useState<string>()
   return (
-    <div className={styles.page}>
-      <PageHeader icon={<Square3Stack3DIcon />} title='Modules' className={styles.header}/>
+    <div className={classNames(
+      styles.page,
+      styles.template,
+      selectedVerbs && styles.templateSelectedVerb,
+    )}>
+      <PageHeader className={styles.header} icon={<Square3Stack3DIcon />} title='Modules'/>
       <ModulesSidebar
         className={styles.sidebar}
-        setZoomID={setZoomID}
-        setSelectedEdges={setSelectedEdges}
-        setSelectedVerb={setSelectedVerb}
-        setSelectedModule={setSelectedModule}
+        modules={modules}
+        setSelectedVerbs={setSelectedVerbs}
+        setSelectedModules={setSelectedModules}
+        setZoomId={setZoomId}
       />
       <ModulesGraph className={styles.graph}/>
-      <ModulesUI
-        className={styles.ui}
-        withSidebarCls={styles.uiWithSidebar}
-        withoutSidebarCls={styles.uiWithoutSidebar}
-        controlBarCls={styles.controlBar}
-        sidebarCls={styles.uiSidebar}
-      />
+      {selectedVerbs && <ModulesSchema
+        className={styles.schema}
+        modules={modules}
+        selectedModules={selectedModules}
+        selectedVerbs={selectedVerbs}
+        />}
+      {selectedVerbs && <ModulesRequests
+        className={styles.schema}
+        modules={modules}
+        selectedModules={selectedModules}
+        selectedVerbs={selectedVerbs}
+        />}
+      {selectedVerbs && <ModulesTestCalls
+        className={styles.call}
+        modules={modules}
+        selectedModules={selectedModules}
+        selectedVerbs={selectedVerbs}
+        />}
+      {selectedVerbs && <ModulesTimeline className={styles.timeline} />}
     </div>
   )
 }

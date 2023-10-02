@@ -35,3 +35,5 @@ export const moduleVerbCls = 'module-verb'
 export const moduleTitleCls = 'module-title'
 export const vizID = 'modules-flow-chart'
 export const controlsID = 'pan-zoom-controls'
+
+export type VerbId = `${string}.${string}`

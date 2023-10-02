@@ -1,4 +1,4 @@
-import { callIcon, moduleVerbCls, callIconID, vizID } from '../constants'
+import { callIcon, moduleVerbCls, callIconID, vizID } from '../modules.constants'
 export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
   svg.insertAdjacentHTML('afterbegin', callIcon)
   svg.removeAttribute('width')

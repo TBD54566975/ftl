@@ -1,5 +1,5 @@
-import { svgZoom } from './graph/svg-zoom'
-import { controlIcons } from './constants'
+import { svgZoom } from './svg-zoom'
+import { controlIcons } from '../modules.constants'
 
 export const createControls = (
   zoom: ReturnType<typeof svgZoom>,
