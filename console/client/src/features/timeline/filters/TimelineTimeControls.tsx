@@ -42,14 +42,21 @@ export interface TimeSettings {
 
 interface Props {
   onTimeSettingsChange: (settings: TimeSettings) => void
+  selectedTimeRange: TimeRange
+  isTimelinePaused: boolean
 }
 
-export const TimelineTimeControls = ({ onTimeSettingsChange }: Props) => {
-  const [selected, setSelected] = React.useState(TIME_RANGES['tail'])
-  const [isPaused, setIsPaused] = React.useState(false)
+export const TimelineTimeControls = ({ onTimeSettingsChange, selectedTimeRange, isTimelinePaused }: Props) => {
+  const [selected, setSelected] = React.useState(selectedTimeRange)
+  const [isPaused, setIsPaused] = React.useState(isTimelinePaused)
   const [newerThan, setNewerThan] = React.useState<Timestamp | undefined>()
 
   const isTailing = selected.value === TIME_RANGES['tail'].value
+
+  React.useEffect(() => {
+    setSelected(selectedTimeRange)
+    setIsPaused(isTimelinePaused)
+  }, [selectedTimeRange, isTimelinePaused])
 
   React.useEffect(() => {
     if (isTailing) {

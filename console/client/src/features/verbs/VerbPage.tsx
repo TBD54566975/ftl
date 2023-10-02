@@ -15,7 +15,6 @@ export const VerbPage = () => {
     if (modules) {
       const module = modules.modules.find((module) => module.name === moduleName?.toLocaleLowerCase())
       setModule(module)
-      console.log(module)
       const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === verbName?.toLocaleLowerCase())
       setVerb(verb)
     }
