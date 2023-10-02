@@ -4,7 +4,6 @@ import { PageHeader } from '../../components'
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { ModulesGraph } from './graph/ModulesGraph'
 import { ModulesRequests } from './ModulesRequests'
-import { ModulesTimeline } from './ModulesTimeline'
 import { ModulesSchema } from './ModulesSchema'
 import { ModulesTestCalls } from './ModulesTestCalls'
 import { modulesContext } from '../../providers/modules-provider'
@@ -17,7 +16,6 @@ export const ModulesPage = () => {
   const { modules } = React.useContext(modulesContext)
   const [zoomId, setZoomId] = React.useState<string>()
   const [selectedVerbs, setSelectedVerbs] = React.useState<VerbId[]>([])
-  console.log(selectedVerbs)
   return (
     <div className={classNames(
       styles.page,
@@ -43,11 +41,11 @@ export const ModulesPage = () => {
         modules={modules}
         selectedVerbs={selectedVerbs}
         />}
-      {selectedVerbs && <ModulesRequests
+      {/* {selectedVerbs && <ModulesRequests
         className={styles.requests}
         modules={modules}
         selectedVerbs={selectedVerbs}
-        />}
+        />} */}
       {selectedVerbs && <ModulesTestCalls
         className={styles.call}
         modules={modules}

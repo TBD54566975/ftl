@@ -2,13 +2,14 @@
   width: 100%;
   height: 100vh;
   display: grid;
+  overflow: hidden;
 }
 
 .template {
   grid-template:
   "header header"    auto
   "sidebar graph"   1fr
-  / 13rem 1fr;
+  / 18rem 1fr;
 }
 
 .template-selected-verb {
@@ -16,7 +17,7 @@
   "header header header"    auto
   "sidebar graph schema"   1fr
   "sidebar requests call"   1fr
-  / 13rem 1fr 1fr;
+  / 18rem 1fr 1fr;
 }
 
 .header {

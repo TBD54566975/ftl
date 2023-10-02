@@ -14,7 +14,7 @@ import { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/c
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
 import { getCalls, getRequestCalls } from '../../services/console.service'
 import { RequestGraph } from '../requests/RequestGraph'
-import { verbRefString, getNames } from './modules.utils'
+import { verbRefString, getNames, streamEvents } from './modules.utils'
 
 const RequestDetails: React.FC<{ timestamp: Timestamp, call: CallEvent}> = ({ call, timestamp }) => {
   const client = useClient(ConsoleService)
@@ -152,6 +152,7 @@ export const ModulesRequests: React.FC<{
         verb && verbs.push([moduleName, verb])
       }
       const calls = await Promise.all(verbs.map(async ([moduleName, verb]) => await getCalls(moduleName, verb?.verb?.name)))
+      console.log(calls)
       setCalls(calls.flatMap( call => call))
     }
 
