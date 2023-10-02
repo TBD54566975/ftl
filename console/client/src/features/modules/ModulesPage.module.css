@@ -13,10 +13,10 @@
 
 .template-selected-verb {
   grid-template:
-  "header header header header"    auto
-  "sidebar graph schema timeline"   1fr
-  "sidebar requests call timeline"   1fr
-  / 13rem 1fr 1fr 13rem;
+  "header header header"    auto
+  "sidebar graph schema"   1fr
+  "sidebar requests call"   1fr
+  / 13rem 1fr 1fr;
 }
 
 .header {

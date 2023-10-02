@@ -3,7 +3,7 @@ import { Combobox, Listbox, Disclosure} from '@headlessui/react'
 import { EyeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbId } from './modules.constants'
-import { getVerbName } from './modules.utils'
+import { getNames } from './modules.utils'
 import { classNames } from '../../utils'
 
 interface MapValue {
@@ -16,35 +16,30 @@ interface MapValue {
 const ModulesOption: React.FC<{
   id: string
   verbs: VerbId[]
-  setSelectedVerbs: React.Dispatch<React.SetStateAction<VerbId[]>>
-  selectedVerbs: VerbId[]
   setZoomId:  React.Dispatch<React.SetStateAction<string | undefined>>
   deploymentName: string
 }> = ({
   id,
-  setSelectedVerbs,
   setZoomId,
   verbs,
-  selectedVerbs
+  deploymentName
 }) => {
   return (
-    <Listbox.Option value={id}>
+    <li>
       <span>{id}</span>
       <button onClick={() => setZoomId(id)}><EyeIcon className='w-3 h-3'/></button>
-      <Listbox value={selectedVerbs} onChange={setSelectedVerbs} multiple>
-        <Listbox.Options static>
-          {verbs
-            .sort((a, b) => Intl.Collator('en').compare(a, b))
-            .map((verb) => (
-              <Listbox.Option key={verb} value={verb}>
-                {getVerbName(verb)}
-              </Listbox.Option>
-            ))
-          }
-        </Listbox.Options>
-      </Listbox>
-    </Listbox.Option>
-   
+      <span>{deploymentName}</span>
+      <ul>
+        {verbs
+          .sort((a, b) => Intl.Collator('en').compare(a, b))
+          .map((verb) => (
+            <Listbox.Option key={verb} value={verb}>
+              {getNames(verb)[1]}
+            </Listbox.Option>
+          ))
+        }
+      </ul>
+    </li>
   )
 }
 
@@ -52,16 +47,12 @@ export const ModulesSidebar: React.FC<{
   className: string
   modules: Module[]
   setSelectedVerbs:  React.Dispatch<React.SetStateAction<VerbId[]>>
-  setSelectedModules:  React.Dispatch<React.SetStateAction<string[]>>
-  selectedModules: string[],
   selectedVerbs: VerbId[]
   setZoomId: React.Dispatch<React.SetStateAction<string | undefined>>
 }> = ({
   className,
   modules,
   setSelectedVerbs,
-  setSelectedModules,
-  selectedModules,
   selectedVerbs,
   setZoomId
 }) => {
@@ -98,7 +89,6 @@ export const ModulesSidebar: React.FC<{
           return acc
         }, [])
   const handleChange: React.ChangeEventHandler<HTMLInputElement> = event => {
-    setSelectedModules([])
     setSelectedVerbs([])
     setQuery(event.target.value)
   }
@@ -109,8 +99,8 @@ export const ModulesSidebar: React.FC<{
         value={query}
         className='text-sm leading-5 text-gray-900 focus:ring-0'
       />
-       <Listbox value={selectedModules} onChange={setSelectedModules} multiple>
-        <Listbox.Options static className='flex-1 overflow-auto'>
+      <Listbox value={selectedVerbs} onChange={setSelectedVerbs} multiple>
+        <Listbox.Options static>
           {filteredOptions
             .sort((a, b) => Intl.Collator('en').compare(a.id, b.id))
             .map(({ deploymentName, id, queriedVerbs, verbs}) => {
@@ -123,14 +113,12 @@ export const ModulesSidebar: React.FC<{
                 verbs={[...displayedVerbs]}
                 id={id}
                 deploymentName={deploymentName}
-                setSelectedVerbs={setSelectedVerbs}
-                selectedVerbs={selectedVerbs}
                 setZoomId={setZoomId}
               />
             )
           })}
         </Listbox.Options>
-       </Listbox>
+      </Listbox>
     </div>
   )
 }

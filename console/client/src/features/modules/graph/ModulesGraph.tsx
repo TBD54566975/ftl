@@ -3,9 +3,18 @@ import { modulesContext } from '../../../providers/modules-provider'
 import { generateDot } from './generate-dot'
 import { dotToSVG } from './dot-to-svg'
 import { formatSVG } from './format-svg'
+import { VerbId } from '../modules.constants'
+
 import './graph.css'
 
-export const ModulesGraph: React.FC<{ className: string}> = ({className}) => {
+export const ModulesGraph: React.FC<{
+  className: string
+  zoomId?: string
+  setSelectedVerbs:  React.Dispatch<React.SetStateAction<VerbId[]>>
+  selectedVerbs: VerbId[]
+}> = ({
+  className
+}) => {
   const modules = React.useContext(modulesContext)
   const viewportRef = React.useRef<HTMLDivElement>(null)
   const [viewport, setViewPort] = React.useState<HTMLDivElement>()

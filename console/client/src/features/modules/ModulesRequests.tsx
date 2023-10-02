@@ -141,13 +141,13 @@ export const ModulesRequests: React.FC<{
   const [calls, setCalls] = React.useState<CallEvent[]>([])
   React.useEffect(() => {
     const fetchCalls = async () => {
-      if (module === undefined) {
-        return
-      }
       const verbs: [string, Verb][] = []
       for(const verbId of selectedVerbs) {
         const [moduleName, verbName] = getNames(verbId)
         const module = modules.find((module) => module?.name === moduleName)
+        if (module === undefined) {
+          continue
+        }
         const verb = module?.verbs.find((v) => v.verb?.name === verbName)
         verb && verbs.push([moduleName, verb])
       }

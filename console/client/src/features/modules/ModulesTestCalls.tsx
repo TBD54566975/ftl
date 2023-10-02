@@ -128,15 +128,13 @@ const VerbForm = ({ module, verb }: Props) => {
 export const ModulesTestCalls: React.FC<{
   className: string
   modules: Module[]
-  moduleId?: string
   selectedVerbs?: VerbId[]
 }> = ({
   className,
   modules,
-  moduleId,
   selectedVerbs,
 }) => {
-  if (!moduleId || !selectedVerbs) return <></>
+  if (!selectedVerbs?.length) return <></>
   const verbs: [Module, Verb][] = []
   for(const verbId of selectedVerbs) {
     const [moduleName, verbName] = getNames(verbId)
