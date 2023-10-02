@@ -11,7 +11,7 @@ import { useDarkMode } from '../../providers/dark-mode-provider'
 import { classNames } from '../../utils'
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbId } from './modules.constants'
-import { getVerbName } from './modules.utils'
+import { getNames } from './modules.utils'
 
 export type Schema = JSONSchema4 | JSONSchema6 | JSONSchema7
 
@@ -137,22 +137,23 @@ export const ModulesTestCalls: React.FC<{
   selectedVerbs,
 }) => {
   if (!moduleId || !selectedVerbs) return <></>
-  const module = modules.find((module) => module?.name === moduleId)
-  const verbs: Verb[] = []
+  const verbs: [Module, Verb][] = []
   for(const verbId of selectedVerbs) {
-    const verb = module?.verbs.find((v) => v.verb?.name === getVerbName(verbId))
-    verb && verbs.push(verb)
+    const [moduleName, verbName] = getNames(verbId)
+    const module = modules.find((module) => module?.name === moduleName)
+    const verb = module?.verbs.find((v) => v.verb?.name === verbName)
+    if(verb && module) verbs.push([module, verb])
   }
   return (
     <div className={classNames(className, 'flex flex-col')}>
       <ControlBar>
-        <ControlBar.Text><span>{moduleId}</span> Selected Verbs Test Call(s)</ControlBar.Text>
+        <ControlBar.Text>Selected Verbs Test Call(s)</ControlBar.Text>
       </ControlBar>
       <div className='flex-1 overflow-auto'>
         <Tab.Group>
           <Tab.List>
             {
-              verbs.map(verb => {
+              verbs.map(([_, verb]) => {
                 const name = verb.verb?.name
                 return (
                   <Tab key={name}>
@@ -163,7 +164,7 @@ export const ModulesTestCalls: React.FC<{
             }
           </Tab.List>
           <Tab.Panel>
-            {verbs.map(verb => <VerbForm module={module} verb={verb} key={verb.verb?.name}/>)}
+            {verbs.map(([module, verb]) => <VerbForm module={module} verb={verb} key={verb.verb?.name}/>)}
           </Tab.Panel>
       </Tab.Group>
       </div>

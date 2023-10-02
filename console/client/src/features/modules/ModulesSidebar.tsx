@@ -4,6 +4,7 @@ import { EyeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/sol
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbId } from './modules.constants'
 import { getVerbName } from './modules.utils'
+import { classNames } from '../../utils'
 
 interface MapValue {
   deploymentName: string;
@@ -24,113 +25,27 @@ const ModulesOption: React.FC<{
   setSelectedVerbs,
   setZoomId,
   verbs,
-  deploymentName,
   selectedVerbs
 }) => {
-  // const hasVerbs = verbs.size
-  // const [isChecked, setIsChecked] = React.useState(false);
-  // const [checkedVerbs, setCheckedVerbs] = React.useState<Set<VerbId>>(new Set())
-  // const handleChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
-  //   event.preventDefault()
-  //   const selected = event.target.checked
-  //   setIsChecked(selected);
-  //   setSelectedModules(modules => {
-  //     modules.has(id) && !selected
-  //       ? modules.delete(id)
-  //       : modules.add(id)
-  //     return modules
-  //   })
-  // }
-  // const handleSelectAll: React.MouseEventHandler<HTMLButtonElement> = (event) => {
-  //   event.preventDefault()
-  //   setSelectedVerbs(selectedVerbs => {
-  //     verbs.forEach(verb => selectedVerbs.add(verb))
-  //     return selectedVerbs
-  //   })
-  //   setCheckedVerbs(verbs)
-  // }
-  // const handleSelectNone: React.MouseEventHandler<HTMLButtonElement> = (event) => {
-  //   event.preventDefault()
-  //   setSelectedVerbs(selectedVerbs => {
-  //     verbs.forEach(verb => selectedVerbs.delete(verb))
-  //     return selectedVerbs
-  //   })
-  //   setCheckedVerbs(checkedVerbs => {
-  //     checkedVerbs.clear()
-  //     return checkedVerbs
-  //   })
-  // }
-  // const handleVerbChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
-  //   event.preventDefault()
-  //   const selected = event.target.checked
-  //   const value =  event.target.value as VerbId
-  //   if(selected) {
-  //     setSelectedVerbs(selectedVerbs => {
-  //       selectedVerbs.add(value)
-  //       return selectedVerbs
-  //     })
-  //     setCheckedVerbs(checkedVerbs => {
-  //       checkedVerbs.add(value)
-  //       return checkedVerbs
-  //     })
-  //   } else {
-  //     setSelectedVerbs(selectedVerbs => {
-  //       selectedVerbs.delete(value)
-  //       return selectedVerbs
-  //     })
-  //     setCheckedVerbs(checkedVerbs => {
-  //       checkedVerbs.delete(value)
-  //       return checkedVerbs
-  //     })
-  //   }
-  // }
   return (
     <Listbox.Option value={id}>
       <span>{id}</span>
       <button onClick={() => setZoomId(id)}><EyeIcon className='w-3 h-3'/></button>
       <Listbox value={selectedVerbs} onChange={setSelectedVerbs} multiple>
         <Listbox.Options static>
-          {verbs.map((verb) => (
-            <Listbox.Option key={verb} value={verb}>
-              {getVerbName(verb)}
-            </Listbox.Option>
-          ))}
+          {verbs
+            .sort((a, b) => Intl.Collator('en').compare(a, b))
+            .map((verb) => (
+              <Listbox.Option key={verb} value={verb}>
+                {getVerbName(verb)}
+              </Listbox.Option>
+            ))
+          }
         </Listbox.Options>
       </Listbox>
     </Listbox.Option>
    
   )
-  // return (
-  //   <div>
-  //     <label>
-  //       {id}
-  //       <input type="checkbox" onChange={handleChange} value={id} checked={isChecked}/>
-  //     </label>
-  //     <button type="button" onClick={handleZoom} value={id}><EyeIcon className='w-3 h-3'/></button>
-  //     <span>{deploymentName}</span>
-  //     {hasVerbs && (<>
-  //       <button type="button" onClick={handleSelectAll}>
-  //         All
-  //       </button>
-  //       <span> | </span>
-  //       <button type="button" onClick={handleSelectNone}>
-  //         None
-  //       </button>
-  //     </>)}
-  //     {isChecked && (
-  //       <ul>
-  //         {[...verbs].map(verb => (
-  //           <li key={verb}>
-  //             <label>
-  //               <input type="checkbox" value={verb} onChange={handleVerbChange} checked={checkedVerbs.has(verb)}/>
-  //               <span>{getVerbName(verb)}</span>
-  //             </label>
-  //           </li>
-  //         ))}
-  //       </ul>
-  //     )}
-  //   </div>
-  // )
 }
 
 export const ModulesSidebar: React.FC<{
@@ -188,15 +103,17 @@ export const ModulesSidebar: React.FC<{
     setQuery(event.target.value)
   }
   return (
-    <div className={className}>
+    <div className={classNames(className, 'flex flex-col')}>
       <input
         onChange={handleChange}
         value={query}
         className='text-sm leading-5 text-gray-900 focus:ring-0'
       />
        <Listbox value={selectedModules} onChange={setSelectedModules} multiple>
-        <Listbox.Options static>
-          {filteredOptions.map(({ deploymentName, id, queriedVerbs, verbs}) => {
+        <Listbox.Options static className='flex-1 overflow-auto'>
+          {filteredOptions
+            .sort((a, b) => Intl.Collator('en').compare(a.id, b.id))
+            .map(({ deploymentName, id, queriedVerbs, verbs}) => {
             const displayedVerbs = query === ''
               ? verbs
               : queriedVerbs

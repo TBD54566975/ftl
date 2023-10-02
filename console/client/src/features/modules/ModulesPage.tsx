@@ -19,37 +19,37 @@ export const ModulesPage = () => {
   const [selectedVerbs, setSelectedVerbs] = React.useState<VerbId[]>([])
   const [selectedModules, setSelectedModules] = React.useState<string[]>([])
   const [hoveredEdge, setHoveredEdge] = React.useState<string>()
+
   return (
     <div className={classNames(
       styles.page,
       styles.template,
-      selectedVerbs && styles.templateSelectedVerb,
+      selectedVerbs.length && styles.templateSelectedVerb,
     )}>
       <PageHeader className={styles.header} icon={<Square3Stack3DIcon />} title='Modules'/>
       <ModulesSidebar
         className={styles.sidebar}
         modules={modules}
         setSelectedVerbs={setSelectedVerbs}
+        selectedVerbs={selectedVerbs}
         setSelectedModules={setSelectedModules}
+        selectedModules={selectedModules}
         setZoomId={setZoomId}
       />
       <ModulesGraph className={styles.graph}/>
       {selectedVerbs && <ModulesSchema
         className={styles.schema}
         modules={modules}
-        selectedModules={selectedModules}
         selectedVerbs={selectedVerbs}
         />}
       {selectedVerbs && <ModulesRequests
         className={styles.schema}
         modules={modules}
-        selectedModules={selectedModules}
         selectedVerbs={selectedVerbs}
         />}
       {selectedVerbs && <ModulesTestCalls
         className={styles.call}
         modules={modules}
-        selectedModules={selectedModules}
         selectedVerbs={selectedVerbs}
         />}
       {selectedVerbs && <ModulesTimeline className={styles.timeline} />}

@@ -14,7 +14,7 @@ import { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/c
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
 import { getCalls, getRequestCalls } from '../../services/console.service'
 import { RequestGraph } from '../requests/RequestGraph'
-import { verbRefString, getVerbName } from './modules.utils'
+import { verbRefString, getNames } from './modules.utils'
 
 const RequestDetails: React.FC<{ timestamp: Timestamp, call: CallEvent}> = ({ call, timestamp }) => {
   const client = useClient(ConsoleService)
@@ -130,16 +130,13 @@ const RequestRow:React.FC<{ call: CallEvent }> = ({call}) => {
 export const ModulesRequests: React.FC<{
   className: string
   modules: Module[]
-  moduleId?: string
-  selectedVerbs?: VerbId[]
+  selectedVerbs: VerbId[]
 }> = ({
   className,
   modules,
-  moduleId,
   selectedVerbs,
 }) => {
-  if (!moduleId || !selectedVerbs) return <></>
-  const module = modules.find((module) => module?.name === moduleId)
+  if (!selectedVerbs.length) return <></>
   const client = useClient(ConsoleService)
   const [calls, setCalls] = React.useState<CallEvent[]>([])
   React.useEffect(() => {
@@ -147,12 +144,14 @@ export const ModulesRequests: React.FC<{
       if (module === undefined) {
         return
       }
-      const verbs: Verb[] = []
+      const verbs: [string, Verb][] = []
       for(const verbId of selectedVerbs) {
-        const verb = module?.verbs.find((v) => v.verb?.name === getVerbName(verbId))
-        verb && verbs.push(verb)
+        const [moduleName, verbName] = getNames(verbId)
+        const module = modules.find((module) => module?.name === moduleName)
+        const verb = module?.verbs.find((v) => v.verb?.name === verbName)
+        verb && verbs.push([moduleName, verb])
       }
-      const calls = await Promise.all(verbs.map(async verb => await getCalls(module.name, verb?.verb?.name)))
+      const calls = await Promise.all(verbs.map(async ([moduleName, verb]) => await getCalls(moduleName, verb?.verb?.name)))
       setCalls(calls.flatMap( call => call))
     }
 
@@ -161,7 +160,7 @@ export const ModulesRequests: React.FC<{
   return (
     <div className={classNames(className, 'flex flex-col')}>
       <ControlBar>
-        <ControlBar.Text><span>{moduleId}</span> Selected Verbs Request(s)</ControlBar.Text>
+        <ControlBar.Text>Selected Verbs Request(s)</ControlBar.Text>
       </ControlBar>
       <div className='flex-1 overflow-auto'>
         {
