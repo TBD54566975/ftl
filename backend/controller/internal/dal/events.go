@@ -242,10 +242,10 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 		q += fmt.Sprintf(" AND time_stamp >= $%d::TIMESTAMPTZ", param(filter.newerThan))
 	}
 	if filter.idHigherThan != 0 {
-		q += fmt.Sprintf(" AND id >= $%d::BIGINT", param(filter.idHigherThan))
+		q += fmt.Sprintf(" AND e.id >= $%d::BIGINT", param(filter.idHigherThan))
 	}
 	if filter.idLowerThan != 0 {
-		q += fmt.Sprintf(" AND id <= $%d::BIGINT", param(filter.idLowerThan))
+		q += fmt.Sprintf(" AND e.id <= $%d::BIGINT", param(filter.idLowerThan))
 	}
 	if filter.deployments != nil {
 		q += fmt.Sprintf(` AND d.name = ANY($%d::TEXT[])`, param(filter.deployments))

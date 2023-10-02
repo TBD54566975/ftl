@@ -10,6 +10,7 @@ import {
   EventsQuery_DeploymentFilter,
   EventsQuery_EventTypeFilter,
   EventsQuery_Filter,
+  EventsQuery_IDFilter,
   EventsQuery_LogLevelFilter,
   EventsQuery_Order,
   EventsQuery_RequestFilter,
@@ -92,6 +93,23 @@ export const timeFilter = (olderThan: Timestamp | undefined, newerThan: Timestam
   return filter
 }
 
+interface IDFilterParams {
+  lowerThan?: bigint
+  higherThan?: bigint
+}
+
+export const eventIdFilter = ({ lowerThan, higherThan }: IDFilterParams): EventsQuery_Filter => {
+  const filter = new EventsQuery_Filter()
+  const idFilter = new EventsQuery_IDFilter()
+  idFilter.lowerThan = lowerThan
+  idFilter.higherThan = higherThan
+  filter.filter = {
+    case: 'id',
+    value: idFilter,
+  }
+  return filter
+}
+
 export const getRequestCalls = async (requestKey: string): Promise<CallEvent[]> => {
   const allEvents = await getEvents({
     filters: [requestKeysFilter([requestKey]), eventTypesFilter([EventType.CALL])],
@@ -118,7 +136,7 @@ interface GetEventsParams {
 
 export const getEvents = async ({
   limit = 1000,
-  order = EventsQuery_Order.ASC,
+  order = EventsQuery_Order.DESC,
   filters = [],
 }: GetEventsParams): Promise<Event[]> => {
   const response = await client.getEvents({ filters, limit, order })
