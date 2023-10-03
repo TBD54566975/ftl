@@ -2,12 +2,13 @@ import { Transition } from '@headlessui/react'
 import { Fragment, useContext } from 'react'
 import { SidePanelContext } from '../providers/side-panel-provider'
 import { sidePanelColor } from '../utils/style.utils'
+import { bgColor, textColor } from '../utils'
 
 export const SidePanel = () => {
   const { isOpen, component } = useContext(SidePanelContext)
 
   return (
-    <div className='absolute z-20 top-0'>
+    <div className={`absolute z-20 top-0 ${bgColor} ${textColor}`}>
       <Transition
         show={isOpen}
         as={Fragment}

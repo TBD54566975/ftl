@@ -114,7 +114,7 @@ export const ModulesSidebar: React.FC<{
     setQuery(event.target.value)
   }
   return (
-    <div className={classNames(className, 'flex flex-col py-2 gap-2 ')}>
+    <div className={classNames(className, 'flex flex-col gap-2 ')}>
       <div className='px-2 shadow-sm dark:shadow-sm'>
         <input
           onChange={handleChange}

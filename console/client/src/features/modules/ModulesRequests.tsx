@@ -1,7 +1,7 @@
 import React from 'react'
 import { Timestamp } from '@bufbuild/protobuf'
 import { Disclosure } from '@headlessui/react'
-import { classNames, formatDuration, formatTimestamp } from '../../utils'
+import { formatDuration, formatTimestamp } from '../../utils'
 import {
   AttributeBadge,
   CodeBlock

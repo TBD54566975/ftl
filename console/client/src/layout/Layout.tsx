@@ -16,7 +16,7 @@ export const Layout = () => {
           <Outlet />
         </main>
       </div>
-      <SidePanel />
+      <SidePanel/>
       <Notification />
     </>
     

@@ -7,5 +7,5 @@ export default defineConfig({
     modules: {
       localsConvention: 'camelCaseOnly'
     }
-  }
+  },
 })
