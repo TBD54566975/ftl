@@ -114,15 +114,17 @@ export const ModulesSidebar: React.FC<{
     setQuery(event.target.value)
   }
   return (
-    <div className={classNames(className, 'flex flex-col px-2 gap-2')}>
-      <input
-        onChange={handleChange}
-        value={query}
-        className='text-sm leading-5 text-gray-900 focus:ring-0 focus:outline-none p-2 rounded'
-        placeholder='Search...'
-      />
+    <div className={classNames(className, 'flex flex-col py-2 gap-2 ')}>
+      <div className='px-2 shadow-sm dark:shadow-sm'>
+        <input
+          onChange={handleChange}
+          value={query}
+          className='text-sm leading-5 text-gray-900 focus:ring-0 focus:outline-none p-2 rounded w-full'
+          placeholder='Search...'
+        />
+      </div>
       <Listbox value={selectedVerbs} onChange={setSelectedVerbs} multiple>
-        <Listbox.Options static className='h-full overflow-auto flex flex-col gap-1.5'>
+        <Listbox.Options static className='h-full overflow-auto flex flex-col gap-1.5 px-2'>
           {filteredOptions
             .sort((a, b) => Intl.Collator('en').compare(a.id, b.id))
             .map(({ deploymentName, id, queriedVerbs, verbs}) => {

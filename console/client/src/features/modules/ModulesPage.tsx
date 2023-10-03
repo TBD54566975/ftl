@@ -33,12 +33,12 @@ export const ModulesPage = () => {
           selectedVerbs={selectedVerbs}
           setZoomId={setZoomId}
         />
-        {/* <ModulesGraph
+        <ModulesGraph
           className={classNames(styles.graph, styles.panel, hasVerbs && 'border border-gray-300 dark:border-slate-700')}
           zoomId={zoomId}
           setSelectedVerbs={setSelectedVerbs}
           selectedVerbs={selectedVerbs}
-        /> */}
+        />
         {hasVerbs && <ModulesSchema
           className={classNames(styles.schema, styles.panel, hasVerbs && 'border border-gray-300 dark:border-slate-700')}
           modules={modules}
