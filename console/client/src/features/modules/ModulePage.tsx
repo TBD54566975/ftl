@@ -2,7 +2,7 @@ import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/Card'
-import { PageHeader } from '../../components/PageHeader'
+import { Page } from '../../layout'
 import { CallEvent, Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
 import { getCalls } from '../../services/console.service'
@@ -33,14 +33,14 @@ export const ModulePage = () => {
   }, [module])
 
   return (
-    <>
-      <div className='flex flex-col h-full'>
+    <Page>
+      <Page.Header
+        icon={<Square3Stack3DIcon />}
+        title={module?.name || ''}
+        breadcrumbs={[{ label: 'Modules', link: '/modules' }]}
+      />
+      <Page.Body className='p-4'>
         <div className='flex-1 flex flex-col h-full'>
-          <PageHeader
-            icon={<Square3Stack3DIcon />}
-            title={module?.name || ''}
-            breadcrumbs={[{ label: 'Modules', link: '/modules' }]}
-          />
           <div className='flex-1 m-4'>
             <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
               {module?.verbs.map((verb) => (
@@ -59,7 +59,7 @@ export const ModulePage = () => {
             <CallList calls={calls} />
           </div>
         </div>
-      </div>
-    </>
+      </Page.Body>
+    </Page>
   )
 }

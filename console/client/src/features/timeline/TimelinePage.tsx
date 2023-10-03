@@ -1,7 +1,7 @@
 import { ListBulletIcon } from '@heroicons/react/24/outline'
 import React from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PageHeader } from '../../components/PageHeader'
+import { Page } from '../../layout'
 import { EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { Timeline } from './Timeline'
 import { TimelineFilterPanel } from './filters/TimelineFilterPanel'
@@ -31,22 +31,22 @@ export const TimelinePage = () => {
   }
 
   return (
-    <>
-      <PageHeader icon={<ListBulletIcon />} title='Events'>
+    <Page>
+      <Page.Header icon={<ListBulletIcon />} title='Events'>
         <TimelineTimeControls
           selectedTimeRange={selectedTimeRange}
           isTimelinePaused={isTimelinePaused}
           onTimeSettingsChange={handleTimeSettingsChanged}
         />
-      </PageHeader>
-      <div className='flex' style={{ height: 'calc(100% - 44px)' }}>
+      </Page.Header>
+      <Page.Body className='flex'>
         <div className='sticky top-0 flex-none overflow-y-auto'>
           <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
         </div>
         <div className='flex-grow overflow-y-scroll'>
           <Timeline timeSettings={timeSettings} filters={filters} />
         </div>
-      </div>
-    </>
+      </Page.Body>
+    </Page>
   )
 }

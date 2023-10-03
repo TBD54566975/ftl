@@ -2,7 +2,7 @@ import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import React from 'react'
 import { useParams } from 'react-router-dom'
 import { CodeBlock } from '../../components/CodeBlock'
-import { PageHeader } from '../../components/PageHeader'
+import { Page } from '../../layout'
 import { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
 import { getCalls } from '../../services/console.service'
@@ -40,17 +40,17 @@ export const VerbPage = () => {
   }, [module])
 
   return (
-    <>
-      <div className='flex flex-col h-full'>
+    <Page>
+      <Page.Header
+        icon={<Square3Stack3DIcon />}
+        title={verb?.verb?.name || ''}
+        breadcrumbs={[
+          { label: 'Modules', link: '/modules' },
+          { label: module?.name || '', link: `/modules/${module?.name}` },
+        ]}
+      />
+      <Page.Body className='p-4'>
         <div className='flex-1 flex flex-col h-full'>
-          <PageHeader
-            icon={<Square3Stack3DIcon />}
-            title={verb?.verb?.name || ''}
-            breadcrumbs={[
-              { label: 'Modules', link: '/modules' },
-              { label: module?.name || '', link: `/modules/${module?.name}` },
-            ]}
-          />
           <div className='flex-1 h-1/2 overflow-y-auto mx-4 mt-4'>
             {verb?.verb?.request?.toJsonString() && (
               <CodeBlock
@@ -62,12 +62,11 @@ export const VerbPage = () => {
               />
             )}
           </div>
-
           <div className='flex-1 h-1/2 m-4'>
             <CallList calls={calls} />
           </div>
         </div>
-      </div>
-    </>
+      </Page.Body>
+    </Page>
   )
 }

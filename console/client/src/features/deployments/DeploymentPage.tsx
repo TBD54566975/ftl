@@ -3,11 +3,11 @@ import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ButtonSmall } from '../../components/ButtonSmall'
 import { Card } from '../../components/Card'
-import { PageHeader } from '../../components/PageHeader'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { MetadataCalls, VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { modulesContext } from '../../providers/modules-provider'
 import { verbRefString } from '../verbs/verb.utils'
+import { Page } from '../../layout'
 
 export const DeploymentPage = () => {
   const navigate = useNavigate()
@@ -49,14 +49,14 @@ export const DeploymentPage = () => {
   }, [modules])
 
   return (
-    <>
-      <PageHeader
+    <Page>
+      <Page.Header
         icon={<RocketLaunchIcon />}
         title={module?.deploymentName || 'Loading...'}
         breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]}
       />
 
-      <div className='m-4'>
+      <Page.Body className='p-4'>
         <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
           {module?.verbs.map((verb) => (
             <Card
@@ -77,7 +77,7 @@ export const DeploymentPage = () => {
             </li>
           ))}
         </ul>
-      </div>
-    </>
+      </Page.Body>
+    </Page>
   )
 }

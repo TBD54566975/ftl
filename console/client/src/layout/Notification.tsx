@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import React, { Fragment } from 'react'
 import { NotificationType, NotificationsContext } from '../providers/notifications-provider'
+import { textColor } from '../utils'
 
 export const Notification = () => {
   const { isOpen, notification, closeNotification } = React.useContext(NotificationsContext)
@@ -45,7 +46,7 @@ export const Notification = () => {
   return (
     <div
       aria-live='assertive'
-      className='pointer-events-none z-30 fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6'
+      className={'pointer-events-none z-30 fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6'}
     >
       <div className='flex w-full flex-col items-center space-y-4 sm:items-end'>
         <Transition
@@ -58,7 +59,9 @@ export const Notification = () => {
           leaveFrom='opacity-100'
           leaveTo='opacity-0'
         >
-          <div className='pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5'>
+          <div
+            className={`${textColor} pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5`}
+          >
             <div className='p-4'>
               <div className='flex items-start'>
                 <div className='flex-shrink-0'>{icon()}</div>
