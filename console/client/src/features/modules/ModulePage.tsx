@@ -41,7 +41,7 @@ export const ModulePage = () => {
       />
       <Page.Body className='p-4'>
         <div className='flex-1 flex flex-col h-full'>
-          <div className='flex-1 m-4'>
+          <div className='flex-1'>
             <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
               {module?.verbs.map((verb) => (
                 <Card
@@ -55,7 +55,7 @@ export const ModulePage = () => {
               ))}
             </div>
           </div>
-          <div className='flex-1 h-1/2 m-4'>
+          <div className='flex-1 h-1/2'>
             <CallList calls={calls} />
           </div>
         </div>
