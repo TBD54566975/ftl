@@ -32,21 +32,21 @@ export const TimelinePage = () => {
 
   return (
     <Page>
-    <Page.Header icon={<ListBulletIcon />} title='Events'>
-      <TimelineTimeControls
-        selectedTimeRange={selectedTimeRange}
-        isTimelinePaused={isTimelinePaused}
-        onTimeSettingsChange={handleTimeSettingsChanged}
-      />
-    </Page.Header>
-    <Page.Body className='flex'>
-      <div className='sticky top-0 flex-none overflow-y-auto'>
-        <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
-      </div>
-      <div className='flex-grow overflow-y-scroll'>
-        <Timeline timeSettings={timeSettings} filters={filters} />
-      </div>
-    </Page.Body>
-  </Page>
+      <Page.Header icon={<ListBulletIcon />} title='Events'>
+        <TimelineTimeControls
+          selectedTimeRange={selectedTimeRange}
+          isTimelinePaused={isTimelinePaused}
+          onTimeSettingsChange={handleTimeSettingsChanged}
+        />
+      </Page.Header>
+      <Page.Body className='flex'>
+        <div className='sticky top-0 flex-none overflow-y-auto'>
+          <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
+        </div>
+        <div className='flex-grow overflow-y-scroll'>
+          <Timeline timeSettings={timeSettings} filters={filters} />
+        </div>
+      </Page.Body>
+    </Page>
   )
 }

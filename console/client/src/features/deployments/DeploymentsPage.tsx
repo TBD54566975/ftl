@@ -14,16 +14,16 @@ export const DeploymentsPage = () => {
       <Page.Header icon={<RocketLaunchIcon />} title='Deployments' />
       <Page.Body className='p-4'>
         <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
-        {modules.modules.map((module) => (
-          <Card
-            key={module.deploymentName}
-            topBarColor='bg-green-500'
-            onClick={() => navigate(`/deployments/${module.deploymentName}`)}
-          >
-            {module.name}
-            <p className='text-xs text-gray-400'>{module.deploymentName}</p>
-          </Card>
-        ))}
+          {modules.modules.map((module) => (
+            <Card
+              key={module.deploymentName}
+              topBarColor='bg-green-500'
+              onClick={() => navigate(`/deployments/${module.deploymentName}`)}
+            >
+              {module.name}
+              <p className='text-xs text-gray-400'>{module.deploymentName}</p>
+            </Card>
+          ))}
         </div>
       </Page.Body>
     </Page>

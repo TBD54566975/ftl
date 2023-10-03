@@ -12,20 +12,17 @@ export const ModulesSchema: React.FC<{
   modules: Module[]
   selectedModules?: string[]
   selectedVerbs: VerbId[]
-}> = ({
-  className,
-  modules,
-  selectedVerbs,
-}) => {
+}> = ({ className, modules, selectedVerbs }) => {
   if (!selectedVerbs.length) return <></>
   const verbs: [Verb, Data[]][] = []
-  for(const verbId of selectedVerbs) {
+  for (const verbId of selectedVerbs) {
     const [moduleName, verbName] = getNames(verbId)
     const module = modules.find((module) => module?.name === moduleName)
     const verb = module?.verbs.find((v) => v.verb?.name === verbName)
     const callData =
-    module?.data.filter((data) => [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(data.data?.name)) ??
-    []
+      module?.data.filter((data) =>
+        [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(data.data?.name),
+      ) ?? []
     verb && verbs.push([verb, callData])
   }
   return (
@@ -34,31 +31,27 @@ export const ModulesSchema: React.FC<{
       <Panel.Body>
         <Tab.Group>
           <Tab.List>
-            {
-              verbs.map(([verb]) => {
-                const name = verb.verb?.name
-                return <Tab key={name}>{name}</Tab>
-              })
-            }
+            {verbs.map(([verb]) => {
+              const name = verb.verb?.name
+              return <Tab key={name}>{name}</Tab>
+            })}
           </Tab.List>
-            <Tab.Panels>
-            {
-              verbs.map(([verb, callData]) => {
-                const name = verb.verb?.name
-                return (
-                  <Tab.Panel key={name}>
-                    <CodeBlock
-                      key={verb.verb?.name}
-                      code={buildVerbSchema(
-                        verb?.schema,
-                        callData.map((d) => d.schema),
-                      )}
-                      language='graphql'
-                    />
-                  </Tab.Panel>
-                )
-              })
-            }
+          <Tab.Panels>
+            {verbs.map(([verb, callData]) => {
+              const name = verb.verb?.name
+              return (
+                <Tab.Panel key={name}>
+                  <CodeBlock
+                    key={verb.verb?.name}
+                    code={buildVerbSchema(
+                      verb?.schema,
+                      callData.map((d) => d.schema),
+                    )}
+                    language='graphql'
+                  />
+                </Tab.Panel>
+              )
+            })}
           </Tab.Panels>
         </Tab.Group>
       </Panel.Body>

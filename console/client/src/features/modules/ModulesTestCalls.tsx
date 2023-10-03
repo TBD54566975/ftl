@@ -129,18 +129,14 @@ export const ModulesTestCalls: React.FC<{
   className: string
   modules: Module[]
   selectedVerbs?: VerbId[]
-}> = ({
-  className,
-  modules,
-  selectedVerbs,
-}) => {
+}> = ({ className, modules, selectedVerbs }) => {
   if (!selectedVerbs?.length) return <></>
   const verbs: [Module, Verb][] = []
-  for(const verbId of selectedVerbs) {
+  for (const verbId of selectedVerbs) {
     const [moduleName, verbName] = getNames(verbId)
     const module = modules.find((module) => module?.name === moduleName)
     const verb = module?.verbs.find((v) => v.verb?.name === verbName)
-    if(verb && module) verbs.push([module, verb])
+    if (verb && module) verbs.push([module, verb])
   }
   return (
     <Panel className={className}>
@@ -148,24 +144,16 @@ export const ModulesTestCalls: React.FC<{
       <Panel.Body>
         <Tab.Group>
           <Tab.List>
-            {
-              verbs.map(([_, verb]) => {
-                const name = verb.verb?.name
-                return (
-                  <Tab key={name}>
-                    {name}
-                  </Tab>
-                )
-              })
-            }
+            {verbs.map(([_, verb]) => {
+              const name = verb.verb?.name
+              return <Tab key={name}>{name}</Tab>
+            })}
           </Tab.List>
-          {
-            verbs.map(([module, verb]) => (
-              <Tab.Panel key={verb.verb?.name}>
-                <VerbForm module={module} verb={verb} />
-              </Tab.Panel>
-            ))
-          }
+          {verbs.map(([module, verb]) => (
+            <Tab.Panel key={verb.verb?.name}>
+              <VerbForm module={module} verb={verb} />
+            </Tab.Panel>
+          ))}
         </Tab.Group>
       </Panel.Body>
     </Panel>

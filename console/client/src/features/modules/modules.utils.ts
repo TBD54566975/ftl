@@ -1,4 +1,4 @@
-import { VerbId } from "./modules.constants"
+import { VerbId } from './modules.constants'
 import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 
 export const buildVerbSchema = (verbSchema: string, dataScemas: string[]): string => {

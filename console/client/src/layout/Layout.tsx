@@ -9,16 +9,15 @@ export const Layout = () => {
     <>
       <div
         className={`grid h-screen min-w-[1024px] min-h-[600px] ${bgColor} ${textColor}`}
-        style={{ gridTemplateColumns: '13rem 1fr', gridTemplateRows: '100vh'}}
+        style={{ gridTemplateColumns: '13rem 1fr', gridTemplateRows: '100vh' }}
       >
         <Navigation />
         <main className='overflow-hidden'>
           <Outlet />
         </main>
       </div>
-      <SidePanel/>
+      <SidePanel />
       <Notification />
     </>
-    
   )
 }

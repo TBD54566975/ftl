@@ -2,10 +2,7 @@ import React from 'react'
 import { Timestamp } from '@bufbuild/protobuf'
 import { Disclosure } from '@headlessui/react'
 import { formatDuration, formatTimestamp } from '../../utils'
-import {
-  AttributeBadge,
-  CodeBlock
-} from '../../components'
+import { AttributeBadge, CodeBlock } from '../../components'
 import { Panel } from './components'
 import { TimelineTimestamp } from '../timeline/details/TimelineTimestamp'
 import { VerbId } from './modules.constants'
@@ -16,7 +13,7 @@ import { getCalls, getRequestCalls } from '../../services/console.service'
 import { RequestGraph } from '../requests/RequestGraph'
 import { verbRefString, getNames } from './modules.utils'
 
-const RequestDetails: React.FC<{ timestamp: Timestamp, call: CallEvent}> = ({ call, timestamp }) => {
+const RequestDetails: React.FC<{ timestamp: Timestamp; call: CallEvent }> = ({ call, timestamp }) => {
   const client = useClient(ConsoleService)
   const [requestCalls, setRequestCalls] = React.useState<CallEvent[]>([])
   const [selectedCall, setSelectedCall] = React.useState(call)
@@ -98,8 +95,8 @@ const RequestDetails: React.FC<{ timestamp: Timestamp, call: CallEvent}> = ({ ca
   )
 }
 
-const RequestRow:React.FC<{ call: CallEvent }> = ({call}) => {
-  return(
+const RequestRow: React.FC<{ call: CallEvent }> = ({ call }) => {
+  return (
     <div className=''>
       <Disclosure>
         {({ open }) => (
@@ -111,9 +108,7 @@ const RequestRow:React.FC<{ call: CallEvent }> = ({call}) => {
               <div className='font-mono text-sm leading-6 text-gray-500 dark:text-gray-400'>
                 {formatTimestamp(call.timeStamp)}
               </div>
-              <div
-                className={`text-right text-sm leading-6 text-gray-500 dark:text-gray-400`}
-              >
+              <div className={`text-right text-sm leading-6 text-gray-500 dark:text-gray-400`}>
                 {formatDuration(call.duration)}
               </div>
             </Disclosure.Button>
@@ -131,18 +126,14 @@ export const ModulesRequests: React.FC<{
   className: string
   modules: Module[]
   selectedVerbs: VerbId[]
-}> = ({
-  className,
-  modules,
-  selectedVerbs,
-}) => {
+}> = ({ className, modules, selectedVerbs }) => {
   if (!selectedVerbs.length) return <></>
   const client = useClient(ConsoleService)
   const [calls, setCalls] = React.useState<CallEvent[]>([])
   React.useEffect(() => {
     const fetchCalls = async () => {
       const verbs: [string, Verb][] = []
-      for(const verbId of selectedVerbs) {
+      for (const verbId of selectedVerbs) {
         const [moduleName, verbName] = getNames(verbId)
         const module = modules.find((module) => module?.name === moduleName)
         if (module === undefined) {
@@ -151,9 +142,11 @@ export const ModulesRequests: React.FC<{
         const verb = module?.verbs.find((v) => v.verb?.name === verbName)
         verb && verbs.push([moduleName, verb])
       }
-      const calls = await Promise.all(verbs.map(async ([moduleName, verb]) => await getCalls(moduleName, verb?.verb?.name)))
+      const calls = await Promise.all(
+        verbs.map(async ([moduleName, verb]) => await getCalls(moduleName, verb?.verb?.name)),
+      )
       console.log(calls)
-      setCalls(calls.flatMap( call => call))
+      setCalls(calls.flatMap((call) => call))
     }
 
     fetchCalls()
@@ -162,9 +155,9 @@ export const ModulesRequests: React.FC<{
     <Panel className={className}>
       <Panel.Header>Verb Requests(s)</Panel.Header>
       <Panel.Body>
-        {
-          calls.map((call, index) => <RequestRow key={index} call={call} />)
-        }
+        {calls.map((call, index) => (
+          <RequestRow key={index} call={call} />
+        ))}
       </Panel.Body>
     </Panel>
   )

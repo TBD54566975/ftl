@@ -1,15 +1,15 @@
 .template {
   display: grid;
-  grid-template: "graph" 100% / 1fr;
+  grid-template: 'graph' 100% / 1fr;
 }
 
 .template-selected-verb {
   display: grid;
   overflow: hidden;
   grid-template:
-  "graph schema"   1fr
-  "requests call"   1fr
-  / 1fr 1fr;
+    'graph schema' 1fr
+    'requests call' 1fr
+    / 1fr 1fr;
 }
 
 .graph {

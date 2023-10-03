@@ -2,7 +2,7 @@ import { SVG } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.panzoom.js/dist/svg.panzoom.esm.js'
 import { vizID } from '../modules.constants'
 
-export const svgZoom = (arr: [number, number, number, number ]) => {
+export const svgZoom = (arr: [number, number, number, number]) => {
   const viewbox = arr.join(' ')
   // enables panZoom
   const canvas = SVG(`#${vizID}`)

@@ -8,7 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import React, { Fragment } from 'react'
 import { NotificationType, NotificationsContext } from '../providers/notifications-provider'
-import { textColor  } from '../utils'
+import { textColor } from '../utils'
 
 export const Notification = () => {
   const { isOpen, notification, closeNotification } = React.useContext(NotificationsContext)
@@ -59,7 +59,9 @@ export const Notification = () => {
           leaveFrom='opacity-100'
           leaveTo='opacity-0'
         >
-          <div className={`${textColor} pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5`}>
+          <div
+            className={`${textColor} pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5`}
+          >
             <div className='p-4'>
               <div className='flex items-start'>
                 <div className='flex-shrink-0'>{icon()}</div>

@@ -17,9 +17,12 @@ interface Props {
 
 const Header = ({ icon, title, children, breadcrumbs, className }: Props) => {
   return (
-    <div className={classNames(className, 
-      `flex-none w-full z-10 shadow dark:shadow-md flex justify-between items-center py-2 px-4 text-gray-70`
-    )}>
+    <div
+      className={classNames(
+        className,
+        `flex-none w-full z-10 shadow dark:shadow-md flex justify-between items-center py-2 px-4 text-gray-70`,
+      )}
+    >
       <div className='flex items-center'>
         <span className='mt-1 text-indigo-500 mr-2 mb-1 h-5 w-5'>{icon}</span>
         {breadcrumbs && breadcrumbs.length > 0 && (
@@ -49,13 +52,11 @@ const Body: React.FC<{
   className?: string
   style?: React.CSSProperties
   children?: React.ReactNode
-}> = ({
-  className,
-  style,
-  children
-}) => {
+}> = ({ className, style, children }) => {
   return (
-    <div className={classNames(className, 'flex-1')} style={{height: 'calc(100% - 44px)', ...style}}>{children}</div>
+    <div className={classNames(className, 'flex-1')} style={{ height: 'calc(100% - 44px)', ...style }}>
+      {children}
+    </div>
   )
 }
 
@@ -63,16 +64,14 @@ export const Page: React.FC<{
   className?: string
   style?: React.CSSProperties
   children?: React.ReactNode
-}>  & {
+}> & {
   Header: typeof Header
   Body: typeof Body
-} = ({
-  className,
-  style,
-  children
-}) => {
+} = ({ className, style, children }) => {
   return (
-    <div className={classNames(className, 'flex flex-col h-full')} style={style}>{children}</div>
+    <div className={classNames(className, 'flex flex-col h-full')} style={style}>
+      {children}
+    </div>
   )
 }
 
