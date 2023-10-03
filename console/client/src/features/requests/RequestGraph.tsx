@@ -12,7 +12,10 @@ interface CallBlockProps {
 const CallBlock = ({ call, selectedCall, firstTimeStamp, firstDuration }: CallBlockProps) => {
   const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000
   const durationInMillis = (call.duration?.nanos ?? 0) / 1000000
-  const width = (durationInMillis / totalDurationMillis) * 100
+  let width = (durationInMillis / totalDurationMillis) * 100
+  if (width < 1) {
+    width = 1
+  }
 
   const callTime = call.timeStamp?.toDate() ?? new Date()
   const initialTime = firstTimeStamp?.toDate() ?? new Date()
