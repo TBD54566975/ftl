@@ -13,9 +13,13 @@
   --edge-color: var(--black);
 }
 
-html.dark:root {
+html:global.dark:root {
   --module-text: var(--white);
   --edge-color: var(--white);
+}
+
+.graph > polygon {
+  fill: transparent;
 }
 
 #modules-flow-chart {
@@ -24,6 +28,7 @@ html.dark:root {
     fill: transparent;
   }
 }
+
 #pan-zoom-controls {
   & path {
     fill-opacity: 0.75;

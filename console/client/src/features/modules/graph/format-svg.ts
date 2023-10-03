@@ -1,9 +1,16 @@
 import { callIcon, moduleVerbCls, callIconID, vizID } from '../modules.constants'
+import styles from './graph.module.css'
+
 export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
   svg.insertAdjacentHTML('afterbegin', callIcon)
   svg.removeAttribute('width')
   svg.removeAttribute('height')
   svg.setAttribute('id', vizID)
+
+  const $graph = svg.querySelector('.graph')
+  $graph?.classList.remove('graph')
+  $graph?.classList.add(styles.graph)
+
   for (const $a of svg.querySelectorAll('a')) {
     const $g = $a.parentNode! as SVGSVGElement
 
@@ -17,13 +24,19 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
 
     $g.id = $g.id.replace(/^a_/, '')
   }
-
   for (const $el of svg.querySelectorAll('title')) {
     $el.remove()
   }
 
+  for (const $node of svg.querySelectorAll('.node')) {
+    $node.classList.remove('node')
+    $node.classList.add(styles.node)
+  }
+
   const edgesSources = new Set<string>()
   for (const $edge of svg.querySelectorAll('.edge')) {
+    $edge.classList.remove('edge')
+    $edge.classList.add(styles.edge)
     const [from, to] = $edge.id.split('=>')
     $edge.removeAttribute('id')
     $edge.setAttribute('data-from', from)
@@ -32,24 +45,25 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
   }
 
   for (const $el of svg.querySelectorAll('[id*=\\:\\:]')) {
+    console.log($el)
     const [tag, id] = $el.id.split('::')
     $el.id = id
-    $el.classList.add(tag)
+    $el.classList.add(styles[tag])
   }
 
-  for (const $path of svg.querySelectorAll('g.edge path')) {
+  for (const $path of svg.querySelectorAll(`g.${styles.edge} path`)) {
     const $newPath = $path.cloneNode() as HTMLElement
-    $newPath.classList.add('hover-path')
+    $newPath.classList.add(styles.hoverPath)
     $newPath.removeAttribute('stroke-dasharray')
     $path.parentNode?.appendChild($newPath)
   }
 
-  for (const $verb of svg.querySelectorAll(`.${moduleVerbCls}`)) {
+  for (const $verb of svg.querySelectorAll(styles[moduleVerbCls])) {
     const texts = $verb.querySelectorAll('text')
     texts[0].classList.add('verb-name')
 
     // Tag verb as a call source
-    if (edgesSources.has($verb.id)) $verb.classList.add('call-source')
+    if (edgesSources.has($verb.id)) $verb.classList.add(styles.callSource)
 
     // Replace icon
     const length = texts.length
@@ -63,7 +77,7 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
         $useIcon.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `#${callIconID}`)
         $useIcon.setAttribute('width', `${width}px`)
         $useIcon.setAttribute('height', `${height}px`)
-        $useIcon.classList.add('call-link')
+        $useIcon.classList.add(styles.callLink)
         $useIcon.dataset.verbId = $verb.id
 
         //FIXME: remove hardcoded offset

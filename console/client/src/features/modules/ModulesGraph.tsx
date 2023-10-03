@@ -1,14 +1,10 @@
 import React from 'react'
 import { PlusCircleIcon, MinusCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
-import { modulesContext } from '../../../providers/modules-provider'
-import { generateDot } from './generate-dot'
-import { dotToSVG } from './dot-to-svg'
-import { formatSVG } from './format-svg'
-import { VerbId } from '../modules.constants'
-import { Panel } from '../components'
-import { svgZoom } from './svg-zoom'
+import { modulesContext } from '../../providers/modules-provider'
+import { VerbId } from './modules.constants'
+import { Panel } from './components'
+import { svgZoom, formatSVG, dotToSVG, generateDot } from './graph'
 
-import './graph.css'
 export const ModulesGraph: React.FC<{
   className: string
   zoomId?: string

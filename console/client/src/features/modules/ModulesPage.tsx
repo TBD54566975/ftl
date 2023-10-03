@@ -1,7 +1,7 @@
 import React from 'react'
 import { ModulesSidebar } from './ModulesSidebar'
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
-import { ModulesGraph } from './graph/ModulesGraph'
+import { ModulesGraph } from './ModulesGraph'
 import { ModulesRequests } from './ModulesRequests'
 import { ModulesSchema } from './ModulesSchema'
 import { ModulesTestCalls } from './ModulesTestCalls'
