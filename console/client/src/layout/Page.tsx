@@ -15,12 +15,12 @@ interface Props {
   className?: string
 }
 
-export const PageHeader = ({ icon, title, children, breadcrumbs, className }: Props) => {
+const Header = ({ icon, title, children, breadcrumbs, className }: Props) => {
   return (
     <div
       className={classNames(
         className,
-        `sticky top-0 z-10 shadow dark:shadow-md flex justify-between items-center py-2 px-4 text-gray-70`,
+        `flex-none w-full z-10 shadow dark:shadow-md flex justify-between items-center py-2 px-4 text-gray-70`,
       )}
     >
       <div className='flex items-center'>
@@ -47,3 +47,33 @@ export const PageHeader = ({ icon, title, children, breadcrumbs, className }: Pr
     </div>
   )
 }
+
+const Body: React.FC<{
+  className?: string
+  style?: React.CSSProperties
+  children?: React.ReactNode
+}> = ({ className, style, children }) => {
+  return (
+    <div className={classNames(className, 'flex-1')} style={{ height: 'calc(100% - 44px)', ...style }}>
+      {children}
+    </div>
+  )
+}
+
+export const Page: React.FC<{
+  className?: string
+  style?: React.CSSProperties
+  children?: React.ReactNode
+}> & {
+  Header: typeof Header
+  Body: typeof Body
+} = ({ className, style, children }) => {
+  return (
+    <div className={classNames(className, 'flex flex-col h-full')} style={style}>
+      {children}
+    </div>
+  )
+}
+
+Page.Header = Header
+Page.Body = Body

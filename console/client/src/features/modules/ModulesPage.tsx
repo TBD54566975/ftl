@@ -1,12 +1,13 @@
 import React from 'react'
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
-import { PageHeader } from '../../components/PageHeader'
 import { modulesContext } from '../../providers/modules-provider'
 import { generateDot } from './generate-dot'
 import { dotToSVG } from './dot-to-svg'
 import { formatSVG } from './format-svg'
 import { svgZoom } from './svg-zoom'
 import { createControls } from './create-controls'
+import { Page } from '../../layout'
+
 import './Modules.css'
 
 export const ModulesPage = () => {
@@ -49,10 +50,12 @@ export const ModulesPage = () => {
     }
   }, [controls, svg])
   return (
-    <div className='h-full w-full flex flex-col'>
-      <PageHeader icon={<Square3Stack3DIcon />} title='Modules' />
-      <div ref={controlRef} className='zoom-pan-controls'></div>
-      <div ref={viewportRef} className='viewport flex-1 overflow-hidden' />
-    </div>
+    <Page className='h-full w-full flex flex-col'>
+      <Page.Header icon={<Square3Stack3DIcon />} title='Modules' />
+      <Page.Body>
+        <div ref={controlRef} className='zoom-pan-controls'></div>
+        <div ref={viewportRef} className='viewport flex-1 overflow-hidden' />
+      </Page.Body>
+    </Page>
   )
 }
