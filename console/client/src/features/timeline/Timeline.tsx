@@ -1,8 +1,9 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import React from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
-import { getEvents, streamEvents, timeFilter } from '../../services/console.service.ts'
+import { eventIdFilter, getEvents, streamEvents, timeFilter } from '../../services/console.service.ts'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
@@ -24,25 +25,38 @@ interface Props {
 const maxTimelineEntries = 1000
 
 export const Timeline = ({ timeSettings, filters }: Props) => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { openPanel, closePanel, isOpen } = React.useContext(SidePanelContext)
   const [entries, setEntries] = React.useState<Event[]>([])
   const [selectedEntry, setSelectedEntry] = React.useState<Event | null>(null)
-  const [selectedEventTypes] = React.useState<string[]>(['log', 'call', 'deploymentCreated', 'deploymentUpdated'])
-  const [selectedLogLevels] = React.useState<number[]>([1, 5, 9, 13, 17])
 
   React.useEffect(() => {
+    const eventId = searchParams.get('id')
     const abortController = new AbortController()
     abortController.signal
+
     const fetchEvents = async () => {
       let eventFilters = filters
       if (timeSettings.newerThan || timeSettings.olderThan) {
         eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
       }
+
+      if (eventId) {
+        const id = BigInt(eventId)
+        eventFilters = [eventIdFilter({ higherThan: id }), ...filters]
+      }
       const events = await getEvents({ filters: eventFilters })
       setEntries(events)
+
+      if (eventId) {
+        const entry = events.find((event) => event.id.toString() === eventId)
+        if (entry) {
+          handleEntryClicked(entry)
+        }
+      }
     }
 
-    if (timeSettings.isTailing && !timeSettings.isPaused) {
+    if (timeSettings.isTailing && !timeSettings.isPaused && !eventId) {
       setEntries([])
       streamEvents({
         abortControllerSignal: abortController.signal,
@@ -71,6 +85,9 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
     if (selectedEntry === entry) {
       setSelectedEntry(null)
       closePanel()
+      const newParams = new URLSearchParams(searchParams.toString())
+      newParams.delete('id')
+      setSearchParams(newParams)
       return
     }
 
@@ -91,16 +108,8 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
         break
     }
     setSelectedEntry(entry)
+    setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
   }
-
-  const filteredEntries = entries.filter((entry) => {
-    const isActive = selectedEventTypes.includes(entry.entry?.case ?? '')
-    if (entry.entry.case === 'log') {
-      return isActive && selectedLogLevels.includes(entry.entry.value.logLevel)
-    }
-
-    return isActive
-  })
 
   return (
     <div className='border border-gray-100 dark:border-slate-700 rounded m-2'>
@@ -116,7 +125,7 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
             </tr>
           </thead>
           <tbody>
-            {filteredEntries.map((entry) => (
+            {entries.map((entry) => (
               <tr
                 key={entry.id.toString()}
                 className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${

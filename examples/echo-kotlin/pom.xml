@@ -107,6 +107,7 @@
                                 <argument>--endpoint=http://127.0.0.1:8892</argument>
                                 <argument>--dest=${project.build.directory}</argument>
                                 <argument>--module=echo</argument>
+                                <argument>--module-client-suffix=ModuleClient</argument>
                             </arguments>
                         </configuration>
                     </execution>
