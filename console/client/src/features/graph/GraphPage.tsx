@@ -2,12 +2,11 @@ import { CubeTransparentIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect } from 'react'
 import ReactFlow, { Controls, MiniMap, useEdgesState, useNodesState } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { PageHeader } from '../../components/PageHeader'
 import { modulesContext } from '../../providers/modules-provider'
 import { GroupNode } from './GroupNode'
 import { VerbNode } from './VerbNode'
 import { layoutNodes } from './create-layout'
-
+import { Page } from '../../layout'
 const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode }
 
 export const GraphPage = () => {
@@ -22,9 +21,9 @@ export const GraphPage = () => {
   }, [modules, setEdges, setNodes])
 
   return (
-    <>
-      <PageHeader icon={<CubeTransparentIcon />} title='Graph' />
-      <div className='flex h-full'>
+    <Page>
+      <Page.Header icon={<CubeTransparentIcon />} title='Graph' />
+      <Page.Body className='flex h-full'>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -36,7 +35,7 @@ export const GraphPage = () => {
           <Controls />
           <MiniMap />
         </ReactFlow>
-      </div>
-    </>
+      </Page.Body>
+    </Page>
   )
 }

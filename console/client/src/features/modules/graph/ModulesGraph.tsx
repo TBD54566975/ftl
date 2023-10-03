@@ -4,9 +4,9 @@ import { generateDot } from './generate-dot'
 import { dotToSVG } from './dot-to-svg'
 import { formatSVG } from './format-svg'
 import { VerbId } from '../modules.constants'
-
+import { Panel } from '../components'
+import { classNames } from '../../../utils'
 import './graph.css'
-
 export const ModulesGraph: React.FC<{
   className: string
   zoomId?: string
@@ -37,5 +37,12 @@ export const ModulesGraph: React.FC<{
   }, [modules, viewport])
 
   
-  return <div ref={viewportRef} className={`viewport flex-1 overflow-hidden ${className}`} />
+  return (
+    <Panel className={className}>
+      <Panel.Header>Graph</Panel.Header>
+      <Panel.Body>
+        <div ref={viewportRef} className={`viewport flex-1 overflow-hidden`} />
+      </Panel.Body>
+    </Panel>
+  )
 }

@@ -3,10 +3,10 @@ import { Timestamp } from '@bufbuild/protobuf'
 import { Disclosure } from '@headlessui/react'
 import { classNames, formatDuration, formatTimestamp } from '../../utils'
 import {
-  ControlBar,
   AttributeBadge,
   CodeBlock
 } from '../../components'
+import { Panel } from './components'
 import { TimelineTimestamp } from '../timeline/details/TimelineTimestamp'
 import { VerbId } from './modules.constants'
 import { useClient } from '../../hooks/use-client'
@@ -14,7 +14,7 @@ import { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/c
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
 import { getCalls, getRequestCalls } from '../../services/console.service'
 import { RequestGraph } from '../requests/RequestGraph'
-import { verbRefString, getNames, streamEvents } from './modules.utils'
+import { verbRefString, getNames } from './modules.utils'
 
 const RequestDetails: React.FC<{ timestamp: Timestamp, call: CallEvent}> = ({ call, timestamp }) => {
   const client = useClient(ConsoleService)
@@ -159,15 +159,13 @@ export const ModulesRequests: React.FC<{
     fetchCalls()
   }, [client, modules])
   return (
-    <div className={classNames(className, 'flex flex-col')}>
-      <ControlBar>
-        <ControlBar.Text>Selected Verbs Request(s)</ControlBar.Text>
-      </ControlBar>
-      <div className='flex-1 overflow-auto'>
+    <Panel className={className}>
+      <Panel.Header>Verb Requests(s)</Panel.Header>
+      <Panel.Body>
         {
           calls.map((call, index) => <RequestRow key={index} call={call} />)
         }
-      </div>
-    </div>
+      </Panel.Body>
+    </Panel>
   )
 }

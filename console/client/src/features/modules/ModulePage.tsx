@@ -2,10 +2,9 @@ import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/Card'
-import { PageHeader } from '../../components/PageHeader'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
-
+import { Page } from '../../layout'
 export const ModulePage = () => {
   const navigate = useNavigate()
   const { moduleName } = useParams()
@@ -20,13 +19,13 @@ export const ModulePage = () => {
   }, [modules, moduleName])
 
   return (
-    <>
-      <PageHeader
+    <Page>
+      <Page.Header
         icon={<Square3Stack3DIcon />}
         title={module?.name || ''}
         breadcrumbs={[{ label: 'Modules', link: '/modules' }]}
       />
-      <div className='m-4'>
+      <Page.Body className='p-4'>
         <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
           {module?.verbs.map((verb) => (
             <Card
@@ -39,7 +38,7 @@ export const ModulePage = () => {
             </Card>
           ))}
         </div>
-      </div>
-    </>
+      </Page.Body>
+    </Page>
   )
 }

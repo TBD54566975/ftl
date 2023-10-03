@@ -25,22 +25,27 @@ const ModulesOption: React.FC<{
   deploymentName
 }) => {
   return (
-    <li className='flex flex-wrap justify-between items-center p-2 rounded gap-1 bg-gray-200 dark:bg-slate-900 bg-opacity-50'>
-      <span className="text-black dark:text-white text-base">{id}</span>
-      <button onClick={() => setZoomId(id)}>
-        <span className='sr-only'>Zoom to ${id} module</span>
-        <EyeIcon className='w-4 h-4 text-gray-700 dark:text-gray-300 hover:text-blue-800 dark:hover:text-blue-500'/>
-      </button>
-      <span className="w-full block mt-2 text-gray-500 dark:text-gray-400 text-xs flex gap-1">
-        <span className='dark:bg-opacity-50 bg-green-500 px-0.5 text-white'>Deployment</span>
-        <span className='truncate'>{deploymentName}</span>
-      </span>
-      <ul className="w-full flex flex-col gap-1">
+    <li className='flex flex-wrap rounded gap-1 border-gray-300 dark:border-slate-700 bg-gray-200 dark:bg-slate-900 bg-opacity-50'>
+      <div className='w-1 bg-green-400'></div>
+      <div className='flex flex-wrap flex-1 justify-between items-center p-2'>
+        <span className="text-black dark:text-white text-base px-1 ">{id}</span>
+        <button onClick={() => setZoomId(id)}>
+          <span className='sr-only'>Zoom to ${id} module</span>
+          <EyeIcon className='cursor-pointer w-4 h-4 text-gray-700 dark:text-gray-300 hover:text-blue-800 dark:hover:text-blue-500'/>
+        </button>
+        <span className="w-full block text-gray-500 dark:text-gray-400 text-xs border-b border-gray-300 dark:border-slate-700 font-bold px-1 pb-2">
+          <span className='truncate'>{deploymentName}</span>
+        </span>
+        <ul className="w-full flex flex-col gap-1 mt-2">
         {verbs
           .sort((a, b) => Intl.Collator('en').compare(a, b))
           .map((verb) => (
             <Listbox.Option key={verb} value={verb} >
-              {({ selected }) => <div className={classNames('w-full', !selected && 'hover:bg-gray-200 dark:hover:bg-gray-800')}>
+              {({ selected }) => <div className={classNames(
+                  'cursor-pointer inline-block',
+                  !selected && 'w-full',
+                  !selected && 'hover:bg-gray-200 dark:hover:bg-gray-800'
+                )}>
                 <span className={classNames(
                     "p-1 rounded text-sm",
                     !selected && 'text-slate-900 dark:text-slate-400',
@@ -54,6 +59,7 @@ const ModulesOption: React.FC<{
           ))
         }
       </ul>
+      </div>
     </li>
   )
 }
@@ -108,7 +114,7 @@ export const ModulesSidebar: React.FC<{
     setQuery(event.target.value)
   }
   return (
-    <div className={classNames(className, 'flex flex-col p-4 rounded gap-2')}>
+    <div className={classNames(className, 'flex flex-col px-2 gap-2')}>
       <input
         onChange={handleChange}
         value={query}
@@ -116,7 +122,7 @@ export const ModulesSidebar: React.FC<{
         placeholder='Search...'
       />
       <Listbox value={selectedVerbs} onChange={setSelectedVerbs} multiple>
-        <Listbox.Options static className='flex-1 overflow-auto flex flex-col gap-1'>
+        <Listbox.Options static className='h-full overflow-auto flex flex-col gap-1.5'>
           {filteredOptions
             .sort((a, b) => Intl.Collator('en').compare(a.id, b.id))
             .map(({ deploymentName, id, queriedVerbs, verbs}) => {

@@ -1,10 +1,9 @@
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import React from 'react'
 import { useParams } from 'react-router-dom'
-import { PageHeader } from '../../components/PageHeader'
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
-
+import { Page } from '../../layout'
 export const VerbPage = () => {
   const { moduleName, verbName } = useParams()
   const modules = React.useContext(modulesContext)
@@ -22,8 +21,8 @@ export const VerbPage = () => {
   }, [modules, moduleName])
 
   return (
-    <>
-      <PageHeader
+    <Page>
+      <Page.Header
         icon={<Square3Stack3DIcon />}
         title={verb?.verb?.name || ''}
         breadcrumbs={[
@@ -31,9 +30,9 @@ export const VerbPage = () => {
           { label: module?.name || '', link: `/modules/${module?.name}` },
         ]}
       />
-      <div className='m-4'>
+      <Page.Body className='p-4'>
         <h1>Verb: {verb?.verb?.name}</h1>
-      </div>
-    </>
+      </Page.Body>
+    </Page>
   )
 }

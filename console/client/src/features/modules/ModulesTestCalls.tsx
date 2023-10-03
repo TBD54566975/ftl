@@ -3,7 +3,8 @@ import { Tab } from '@headlessui/react'
 import Editor, { Monaco } from '@monaco-editor/react'
 import type { JSONSchema4, JSONSchema6, JSONSchema7 } from 'json-schema'
 import { JSONSchemaFaker } from 'json-schema-faker'
-import { CodeBlock, ControlBar } from '../../components'
+import { CodeBlock } from '../../components'
+import { Panel } from './components'
 import { useClient } from '../../hooks/use-client'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
@@ -143,11 +144,9 @@ export const ModulesTestCalls: React.FC<{
     if(verb && module) verbs.push([module, verb])
   }
   return (
-    <div className={classNames(className, 'flex flex-col')}>
-      <ControlBar>
-        <ControlBar.Text>Selected Verbs Test Call(s)</ControlBar.Text>
-      </ControlBar>
-      <div className='flex-1 overflow-auto'>
+    <Panel className={className}>
+      <Panel.Header>Verb Test Call(s)</Panel.Header>
+      <Panel.Body>
         <Tab.Group>
           <Tab.List>
             {
@@ -161,11 +160,15 @@ export const ModulesTestCalls: React.FC<{
               })
             }
           </Tab.List>
-          <Tab.Panel>
-            {verbs.map(([module, verb]) => <VerbForm module={module} verb={verb} key={verb.verb?.name}/>)}
-          </Tab.Panel>
-      </Tab.Group>
-      </div>
-    </div>
+          {
+            verbs.map(([module, verb]) => (
+              <Tab.Panel key={verb.verb?.name}>
+                <VerbForm module={module} verb={verb} />
+              </Tab.Panel>
+            ))
+          }
+        </Tab.Group>
+      </Panel.Body>
+    </Panel>
   )
 }

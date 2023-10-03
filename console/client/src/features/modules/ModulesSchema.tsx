@@ -5,8 +5,8 @@ import { buildVerbSchema } from './modules.utils'
 import { Module, Verb, Data } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbId } from './modules.constants'
 import { getNames } from './modules.utils'
-import { ControlBar, CodeBlock } from '../../components'
-
+import { CodeBlock } from '../../components'
+import { Panel } from './components'
 export const ModulesSchema: React.FC<{
   className: string
   modules: Module[]
@@ -29,11 +29,9 @@ export const ModulesSchema: React.FC<{
     verb && verbs.push([verb, callData])
   }
   return (
-    <div className={classNames(className, 'flex flex-col')}>
-      <ControlBar>
-        <ControlBar.Text>Selected Verb Schema(s)</ControlBar.Text>
-      </ControlBar>
-      <div className='flex-1 overflow-auto'>
+    <Panel className={className}>
+      <Panel.Header>Verb Schema(s)</Panel.Header>
+      <Panel.Body>
         <Tab.Group>
           <Tab.List>
             {
@@ -63,7 +61,7 @@ export const ModulesSchema: React.FC<{
             }
           </Tab.Panels>
         </Tab.Group>
-      </div>
-    </div>
+      </Panel.Body>
+    </Panel>
   )
 }
