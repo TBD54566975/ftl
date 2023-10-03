@@ -34,7 +34,7 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
         return
       }
       const calls = await getRequestCalls(selectedCall.requestName)
-      setRequestCalls(calls)
+      setRequestCalls(calls.reverse())
     }
 
     fetchRequestCalls()

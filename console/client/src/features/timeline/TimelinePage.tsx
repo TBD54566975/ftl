@@ -19,10 +19,6 @@ export const TimelinePage = () => {
       // if we're loading a specific event, we don't want to tail.
       setSelectedTimeRange(TIME_RANGES['5m'])
       setIsTimelinePaused(true)
-    } else {
-      // Reset to initial state if there's no 'id' query parameter
-      setSelectedTimeRange(TIME_RANGES['tail'])
-      setIsTimelinePaused(false)
     }
   }, [searchParams])
 
