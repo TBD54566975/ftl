@@ -46,7 +46,7 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
     if (moduleVerbCls === tag) {
       $el.id = id
     }
-    $el.classList.add(styles[tag])
+    $el.classList.add(styles[tag as keyof typeof styles])
   }
 
   for (const $path of svg.querySelectorAll(`g.${styles.edge} path`)) {

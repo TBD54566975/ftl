@@ -1,9 +1,12 @@
-export const __esModule: true
-export const edge: string
-export const edgePath: string
-export const hoverPath: string
-export const selected: string
-export const moduleTitle: string
-export const moduleVerb: string
-export const node: string
-export const callLink: string
+declare const styles: {
+  readonly edge: string
+  readonly edgePath: string
+  readonly hoverPath: string
+  readonly selected: string
+  readonly moduleTitle: string
+  readonly moduleVerb: string
+  readonly node: string
+  readonly callLink: string
+  readonly callSource: string
+}
+export = styles
