@@ -1,3 +1,4 @@
+import { Code, ConnectError } from '@bufbuild/connect'
 import { PropsWithChildren, createContext, useContext, useEffect, useState } from 'react'
 import { useClient } from '../hooks/use-client'
 import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
@@ -12,14 +13,28 @@ export const ModulesProvider = (props: PropsWithChildren) => {
   const [modules, setModules] = useState<GetModulesResponse>(new GetModulesResponse())
 
   useEffect(() => {
+    const abortController = new AbortController()
     const fetchModules = async () => {
-      const modules = await client.getModules({})
-      setModules(modules ?? [])
+      try {
+        const modules = await client.getModules({}, { signal: abortController.signal })
+        setModules(modules ?? [])
+      } catch (error) {
+        if (error instanceof ConnectError) {
+          if (error.code !== Code.Canceled) {
+            console.error('ModulesProvider - Connect error:', error)
+          }
+        } else {
+          console.error('ModulesProvider:', error)
+        }
+      }
 
       return
     }
 
     fetchModules()
+    return () => {
+      abortController.abort()
+    }
   }, [client, schema])
 
   return <modulesContext.Provider value={modules}>{props.children}</modulesContext.Provider>

@@ -93,12 +93,13 @@ export const timeFilter = (olderThan: Timestamp | undefined, newerThan: Timestam
   return filter
 }
 
-interface IDFilterParams {
+export const eventIdFilter = ({
+  lowerThan,
+  higherThan,
+}: {
   lowerThan?: bigint
   higherThan?: bigint
-}
-
-export const eventIdFilter = ({ lowerThan, higherThan }: IDFilterParams): EventsQuery_Filter => {
+}): EventsQuery_Filter => {
   const filter = new EventsQuery_Filter()
   const idFilter = new EventsQuery_IDFilter()
   idFilter.lowerThan = lowerThan
@@ -110,46 +111,62 @@ export const eventIdFilter = ({ lowerThan, higherThan }: IDFilterParams): Events
   return filter
 }
 
-export const getRequestCalls = async (requestKey: string): Promise<CallEvent[]> => {
+export const getRequestCalls = async ({
+  abortControllerSignal,
+  requestKey,
+}: {
+  abortControllerSignal: AbortSignal
+  requestKey: string
+}): Promise<CallEvent[]> => {
   const allEvents = await getEvents({
+    abortControllerSignal,
     filters: [requestKeysFilter([requestKey]), eventTypesFilter([EventType.CALL])],
   })
   return allEvents.map((e) => e.entry.value) as CallEvent[]
 }
 
-export const getCalls = async (
-  destModule: string,
-  destVerb: string | undefined = undefined,
-  sourceModule: string | undefined = undefined,
-): Promise<CallEvent[]> => {
+export const getCalls = async ({
+  abortControllerSignal,
+  destModule,
+  destVerb,
+  sourceModule,
+}: {
+  abortControllerSignal: AbortSignal
+  destModule: string
+  destVerb?: string
+  sourceModule?: string
+}): Promise<CallEvent[]> => {
   const allEvents = await getEvents({
+    abortControllerSignal,
     filters: [callFilter(destModule, destVerb, sourceModule), eventTypesFilter([EventType.CALL])],
   })
   return allEvents.map((e) => e.entry.value) as CallEvent[]
 }
 
-interface GetEventsParams {
-  limit?: number
-  order?: EventsQuery_Order
-  filters?: EventsQuery_Filter[]
-}
-
 export const getEvents = async ({
+  abortControllerSignal,
   limit = 1000,
   order = EventsQuery_Order.DESC,
   filters = [],
-}: GetEventsParams): Promise<Event[]> => {
-  const response = await client.getEvents({ filters, limit, order })
+}: {
+  abortControllerSignal: AbortSignal
+  limit?: number
+  order?: EventsQuery_Order
+  filters?: EventsQuery_Filter[]
+}): Promise<Event[]> => {
+  const response = await client.getEvents({ filters, limit, order }, { signal: abortControllerSignal })
   return response.events
 }
 
-export interface StreamEventsParams {
+export const streamEvents = async ({
+  abortControllerSignal,
+  filters,
+  onEventReceived,
+}: {
   abortControllerSignal: AbortSignal
   filters: EventsQuery_Filter[]
   onEventReceived: (event: Event) => void
-}
-
-export const streamEvents = async ({ abortControllerSignal, filters, onEventReceived }: StreamEventsParams) => {
+}) => {
   try {
     for await (const response of client.streamEvents(
       { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, filters } },

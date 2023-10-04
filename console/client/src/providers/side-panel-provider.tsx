@@ -3,7 +3,7 @@ import React, { PropsWithChildren } from 'react'
 interface SidePanelContextType {
   isOpen: boolean
   component: React.ReactNode
-  openPanel: (component: React.ReactNode) => void
+  openPanel: (component: React.ReactNode, onClose?: () => void) => void
   closePanel: () => void
 }
 
@@ -19,16 +19,24 @@ export const SidePanelContext = React.createContext<SidePanelContextType>(defaul
 export const SidePanelProvider = ({ children }: PropsWithChildren) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [component, setComponent] = React.useState<React.ReactNode>()
+  const [onCloseCallback, setOnCloseCallback] = React.useState<(() => void) | null>(null)
 
-  const openPanel = (comp: React.ReactNode) => {
+  const openPanel = React.useCallback((comp: React.ReactNode, onClose?: () => void) => {
     setIsOpen(true)
     setComponent(comp)
-  }
+    if (onClose) {
+      setOnCloseCallback(() => onClose)
+    }
+  }, [])
 
-  const closePanel = () => {
+  const closePanel = React.useCallback(() => {
     setIsOpen(false)
     setComponent(undefined)
-  }
+    if (onCloseCallback) {
+      onCloseCallback()
+    }
+    setOnCloseCallback(null)
+  }, [onCloseCallback])
 
   return (
     <SidePanelContext.Provider value={{ isOpen, openPanel, closePanel, component }}>
