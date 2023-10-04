@@ -1,9 +1,11 @@
 package xyz.block.ftl.main
 
+import ch.qos.logback.classic.Level
 import io.grpc.ServerInterceptors
 import io.grpc.netty.NettyServerBuilder
 import xyz.block.ftl.client.GrpcVerbServiceClient
 import xyz.block.ftl.client.makeGrpcClient
+import xyz.block.ftl.logging.Logging
 import xyz.block.ftl.registry.Registry
 import xyz.block.ftl.server.Server
 import xyz.block.ftl.server.ServerInterceptor
@@ -13,6 +15,7 @@ import java.net.URL
 
 val defaultBindAddress = "http://127.0.0.1:8896"
 val defaultFtlEndpoint = "http://127.0.0.1:8892"
+private const val grpcServerLoggerName = "io.netty"
 
 fun main() {
   val bind = URL(System.getenv("FTL_BIND") ?: defaultBindAddress)
@@ -26,6 +29,9 @@ fun main() {
   val grpcClient = VerbServiceBlockingStub(makeGrpcClient(ftlEndpoint))
   val verbRoutingClient = GrpcVerbServiceClient(grpcClient)
   val server = Server(registry, verbRoutingClient)
+
+  // suppress logs below INFO level on GRPC server
+  Logging.logger(grpcServerLoggerName).level = Level.INFO
   val grpcServer = NettyServerBuilder.forAddress(addr)
     .addService(ServerInterceptors.intercept(server, ServerInterceptor()))
     .build()
