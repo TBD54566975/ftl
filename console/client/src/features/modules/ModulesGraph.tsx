@@ -15,7 +15,7 @@ export const ModulesGraph: React.FC<{
 }> = ({ className, setZoomCallbacks, zoomCallbacks }) => {
   const modules = React.useContext(modulesContext)
   const canvasRef = React.useRef<HTMLDivElement>(null)
-  const [canvas, setCanvas] = React.useState<HTMLDivElement>()
+  const [resizeCount, setResizeCount] = React.useState<number>(0)
   const previousDimensions = React.useRef({ width: 0, height: 0 }) // Store previous dimensions
 
   React.useEffect(() => {
@@ -26,7 +26,7 @@ export const ModulesGraph: React.FC<{
           const { width, height } = entry.contentRect
           // Check if dimensions have changed
           if (width !== previousDimensions.current.width || height !== previousDimensions.current.height) {
-            setCanvas(entry.target as HTMLDivElement)
+            setResizeCount((n) => n + 1)
             // Update previous dimensions
             previousDimensions.current = { width, height }
           }
@@ -40,24 +40,32 @@ export const ModulesGraph: React.FC<{
   }, [canvasRef])
 
   React.useEffect(() => {
+    const canvas = canvasRef.current
+    const ready = canvas && Boolean(modules)
+    let animationFrameId: number
     const renderSvg = async () => {
       const dot = generateDot(modules)
       const data = await dotToSVG(dot)
-      if (data && canvas) {
-        const unformattedSVG = data
-        const formattedSVG = formatSVG(unformattedSVG)
-        canvas?.replaceChildren(formattedSVG)
-        const zoom = svgZoom(formattedSVG, canvas.clientWidth, canvas.clientHeight)
-        setZoomCallbacks(zoom)
+      if (data) {
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId)
+        }
+        animationFrameId = requestAnimationFrame(() => {
+          const unformattedSVG = data
+          const formattedSVG = formatSVG(unformattedSVG)
+          canvas?.replaceChildren(formattedSVG)
+          const zoom = svgZoom(formattedSVG, canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0)
+          setZoomCallbacks(zoom)
+        })
       }
     }
-    canvas && void renderSvg()
-  }, [modules, canvas])
+    ready && void renderSvg()
+  }, [modules, resizeCount])
 
   return (
     <Panel className={className}>
-      <Panel.Body className='overflow-hidden'>
-        <div ref={canvasRef} className={'w-full h-full'} />
+      <Panel.Body className='overflow-hidden flex'>
+        <div ref={canvasRef} className={'flex-1'} />
       </Panel.Body>
       <Panel.Header className='flex gap-0.5'>
         <button onClick={() => zoomCallbacks?.in()}>

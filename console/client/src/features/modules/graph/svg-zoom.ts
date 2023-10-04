@@ -13,7 +13,7 @@ const centerGroup = ({
   padding: number
   width: number
   height: number
-}) => {
+}): [number, number, number, number] => {
   // Find the modules group with the class the id
   const group = canvas.findOne(selector) as Element
 
@@ -37,8 +37,8 @@ const centerGroup = ({
   const newX = BBox.cx - newWidth / 2
   const newY = BBox.cy - newHeight / 2
 
-  // Set the new viewbox
-  canvas.animate().viewbox(newX, newY, newWidth, newHeight)
+  // new viewbox
+  return [newX, newY, newWidth, newHeight]
 }
 
 export const svgZoom = (svg: SVGSVGElement, width: number, height: number) => {
@@ -46,7 +46,7 @@ export const svgZoom = (svg: SVGSVGElement, width: number, height: number) => {
   const canvas = SVG(svg)
 
   // Center Graph
-  centerGroup({
+  const viewbox = centerGroup({
     canvas,
     height,
     width,
@@ -54,18 +54,21 @@ export const svgZoom = (svg: SVGSVGElement, width: number, height: number) => {
     padding: 0.3,
   })
 
+  canvas.viewbox(...viewbox)
+
   //@ts-ignore: lib types bad
   canvas.panZoom()
 
   return {
     to(id: string) {
-      centerGroup({
+      const viewbox = centerGroup({
         canvas,
         height,
         width,
         selector: `#${id}`,
         padding: 5.5,
       })
+      canvas.animate().viewbox(...viewbox)
     },
     in() {
       const zoomLevel = canvas.zoom()
@@ -76,13 +79,14 @@ export const svgZoom = (svg: SVGSVGElement, width: number, height: number) => {
       canvas.animate().zoom(zoomLevel - 0.1) // Decrease the zoom level by 0.1
     },
     reset() {
-      centerGroup({
+      const viewbox = centerGroup({
         canvas,
         height,
         width,
         selector: '.graph',
         padding: 0.3,
       })
+      canvas.animate().viewbox(...viewbox)
     },
   }
 }

@@ -16,6 +16,7 @@ import { TimelineLogDetails } from '../timeline/details/TimelineLogDetails.tsx'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
+import { Timestamp } from '@bufbuild/protobuf'
 
 const maxTimelineEntries = 1000
 

@@ -49,11 +49,6 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
     $el.classList.add(styles[tag])
   }
 
-  // for (const $el of svg.querySelectorAll(`.${styles[moduleTitleCls]} > polygon`)) {
-  //   $el.classList.add(styles.title)
-  //   console.log($el)
-  // }
-
   for (const $path of svg.querySelectorAll(`g.${styles.edge} path`)) {
     const $newPath = $path.cloneNode() as HTMLElement
     $newPath.classList.add(styles.hoverPath)
@@ -82,7 +77,7 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
         $useIcon.classList.add(styles.callLink)
         $useIcon.dataset.verbId = $verb.id
 
-        //FIXME: remove hardcoded offset
+        //hardcoded offset
         const y = parseInt($iconPlaceholder.getAttribute('y')!) - 15
         $useIcon.setAttribute('x', $iconPlaceholder.getAttribute('x')!)
         $useIcon.setAttribute('y', y.toString())
