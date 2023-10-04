@@ -1,7 +1,7 @@
 import React from 'react'
 import { PlusCircleIcon, MinusCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { modulesContext } from '../../providers/modules-provider'
-import { VerbId } from './modules.constants'
+import { VerbId, ZoomCallbacks } from './modules.constants'
 import { Panel } from './components'
 import { svgZoom, formatSVG, dotToSVG, generateDot } from './graph'
 
@@ -10,12 +10,14 @@ export const ModulesGraph: React.FC<{
   zoomId?: string
   setSelectedVerbs: React.Dispatch<React.SetStateAction<VerbId[]>>
   selectedVerbs: VerbId[]
-}> = ({ className }) => {
+  setZoomCallbacks: React.Dispatch<React.SetStateAction<ZoomCallbacks | undefined>>
+  zoomCallbacks?: ZoomCallbacks
+}> = ({ className, setZoomCallbacks, zoomCallbacks }) => {
   const modules = React.useContext(modulesContext)
   const canvasRef = React.useRef<HTMLDivElement>(null)
   const [canvas, setViewPort] = React.useState<HTMLDivElement>()
   const [svgRatioStyles, setSvgRatioStyles] = React.useState<React.CSSProperties>()
-  const [zoomCallbacks, setZoomCallback] = React.useState<ReturnType<typeof svgZoom>>()
+
   React.useEffect(() => {
     const viewCur = canvasRef.current
     viewCur && setViewPort(viewCur)
@@ -32,8 +34,8 @@ export const ModulesGraph: React.FC<{
         const formattedSVG = formatSVG(unformattedSVG)
         const { width, height } = canvas.getBoundingClientRect()
         canvas?.replaceChildren(formattedSVG)
-        const zoom = svgZoom([0, 0, width, height])
-        setZoomCallback(zoom)
+        const zoom = svgZoom(formattedSVG, canvas.clientWidth, canvas.clientHeight)
+        setZoomCallbacks(zoom)
       }
     }
     canvas && void renderSvg()

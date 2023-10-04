@@ -10,3 +10,10 @@ export const vizID = 'modules-flow-chart'
 export const controlsID = 'pan-zoom-controls'
 
 export type VerbId = `${string}.${string}`
+
+export interface ZoomCallbacks {
+  to(id: string): void
+  in(): void
+  out(): void
+  reset(): void
+}

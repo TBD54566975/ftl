@@ -9,9 +9,9 @@ import { useClient } from '../../hooks/use-client'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { useDarkMode } from '../../providers/dark-mode-provider'
-import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Module, Verb, Data } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbId } from './modules.constants'
-import { getNames } from './modules.utils'
+import { getNames, buildVerbSchema } from './modules.utils'
 
 export type Schema = JSONSchema4 | JSONSchema6 | JSONSchema7
 
@@ -125,32 +125,44 @@ const VerbForm = ({ module, verb }: Props) => {
   )
 }
 
-export const ModulesTestCalls: React.FC<{
+export const ModulesSelectedVerbs: React.FC<{
   className: string
   modules: Module[]
   selectedVerbs?: VerbId[]
 }> = ({ className, modules, selectedVerbs }) => {
   if (!selectedVerbs?.length) return <></>
-  const verbs: [Module, Verb][] = []
+  const verbs: { module: Module; verb: Verb; callData: Data[] }[] = []
   for (const verbId of selectedVerbs) {
     const [moduleName, verbName] = getNames(verbId)
     const module = modules.find((module) => module?.name === moduleName)
     const verb = module?.verbs.find((v) => v.verb?.name === verbName)
-    if (verb && module) verbs.push([module, verb])
+    const callData =
+      module?.data.filter((data) =>
+        [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(data.data?.name),
+      ) ?? []
+    if (verb && module) verbs.push({ module, verb, callData })
   }
   return (
     <Panel className={className}>
-      <Panel.Header>Verb Test Call(s)</Panel.Header>
-      <Panel.Body>
+      <Panel.Header>Selected Verb(s)</Panel.Header>
+      <Panel.Body className={`flex flex-col gap-4`}>
         <Tab.Group>
           <Tab.List>
-            {verbs.map(([_, verb]) => {
+            {verbs.map(({ verb }) => {
               const name = verb.verb?.name
               return <Tab key={name}>{name}</Tab>
             })}
           </Tab.List>
-          {verbs.map(([module, verb]) => (
-            <Tab.Panel key={verb.verb?.name}>
+          {verbs.map(({ module, verb, callData }) => (
+            <Tab.Panel key={verb.verb?.name} className={`flex flex-col gap-4`}>
+              <CodeBlock
+                key={verb.verb?.name}
+                code={buildVerbSchema(
+                  verb?.schema,
+                  callData.map((d) => d.schema),
+                )}
+                language='graphql'
+              />
               <VerbForm module={module} verb={verb} />
             </Tab.Panel>
           ))}

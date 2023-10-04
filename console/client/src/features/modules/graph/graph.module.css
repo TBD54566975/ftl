@@ -18,22 +18,8 @@ html:global.dark:root {
   --edge-color: var(--white);
 }
 
-.graph > polygon {
+:global .graph > polygon {
   fill: transparent;
-}
-
-#modules-flow-chart {
-  width: fit-content;
-  & > .graph > polygon {
-    fill: transparent;
-  }
-}
-
-#pan-zoom-controls {
-  & path {
-    fill-opacity: 0.75;
-    fill: var(--field-name-color);
-  }
 }
 
 /* Nodes Styling */

@@ -2,7 +2,7 @@ import React from 'react'
 import { Listbox } from '@headlessui/react'
 import { EyeIcon } from '@heroicons/react/20/solid'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { VerbId } from './modules.constants'
+import { VerbId, ZoomCallbacks } from './modules.constants'
 import { getNames } from './modules.utils'
 import { classNames } from '../../utils'
 
@@ -16,15 +16,15 @@ interface MapValue {
 const ModulesOption: React.FC<{
   id: string
   verbs: VerbId[]
-  setZoomId: React.Dispatch<React.SetStateAction<string | undefined>>
   deploymentName: string
-}> = ({ id, setZoomId, verbs, deploymentName }) => {
+  zoomCallbacks?: ZoomCallbacks
+}> = ({ id, zoomCallbacks, verbs, deploymentName }) => {
   return (
     <li className='flex flex-wrap rounded gap-1 border-gray-300 dark:border-slate-700 bg-gray-200 dark:bg-slate-900 bg-opacity-50'>
       <div className='w-1 bg-green-400'></div>
       <div className='flex flex-wrap flex-1 justify-between items-center p-2'>
         <span className='text-black dark:text-white text-base px-1 '>{id}</span>
-        <button onClick={() => setZoomId(id)}>
+        <button onClick={() => zoomCallbacks?.to(id)}>
           <span className='sr-only'>Zoom to ${id} module</span>
           <EyeIcon className='cursor-pointer w-4 h-4 text-gray-700 dark:text-gray-300 hover:text-blue-800 dark:hover:text-blue-500' />
         </button>
@@ -70,8 +70,8 @@ export const ModulesSidebar: React.FC<{
   modules: Module[]
   setSelectedVerbs: React.Dispatch<React.SetStateAction<VerbId[]>>
   selectedVerbs: VerbId[]
-  setZoomId: React.Dispatch<React.SetStateAction<string | undefined>>
-}> = ({ className, modules, setSelectedVerbs, selectedVerbs, setZoomId }) => {
+  zoomCallbacks?: ZoomCallbacks
+}> = ({ className, modules, setSelectedVerbs, selectedVerbs, zoomCallbacks }) => {
   /** Setup hooks */
   const [query, setQuery] = React.useState('')
 
@@ -133,7 +133,7 @@ export const ModulesSidebar: React.FC<{
                   verbs={[...displayedVerbs]}
                   id={id}
                   deploymentName={deploymentName}
-                  setZoomId={setZoomId}
+                  zoomCallbacks={zoomCallbacks}
                 />
               )
             })}

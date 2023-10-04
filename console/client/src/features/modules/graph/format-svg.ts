@@ -1,4 +1,4 @@
-import { callIcon, moduleVerbCls, callIconID, vizID } from '../modules.constants'
+import { callIcon, moduleVerbCls, callIconID, vizID, moduleTitleCls } from '../modules.constants'
 import styles from './graph.module.css'
 
 export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
@@ -6,10 +6,6 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
   svg.removeAttribute('width')
   svg.removeAttribute('height')
   svg.setAttribute('id', vizID)
-
-  const $graph = svg.querySelector('.graph')
-  $graph?.classList.remove('graph')
-  $graph?.classList.add(styles.graph)
 
   for (const $a of svg.querySelectorAll('a')) {
     const $g = $a.parentNode! as SVGSVGElement
@@ -45,9 +41,8 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
   }
 
   for (const $el of svg.querySelectorAll('[id*=\\:\\:]')) {
-    console.log($el)
     const [tag, id] = $el.id.split('::')
-    $el.id = id
+    $el.id = moduleVerbCls === tag ? id : `module_${id}`
     $el.classList.add(styles[tag])
   }
 
@@ -57,8 +52,7 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
     $newPath.removeAttribute('stroke-dasharray')
     $path.parentNode?.appendChild($newPath)
   }
-
-  for (const $verb of svg.querySelectorAll(styles[moduleVerbCls])) {
+  for (const $verb of svg.querySelectorAll(`.${styles[moduleVerbCls]}`)) {
     const texts = $verb.querySelectorAll('text')
     texts[0].classList.add('verb-name')
 

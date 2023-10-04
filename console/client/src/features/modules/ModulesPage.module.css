@@ -7,8 +7,8 @@
   display: grid;
   overflow: hidden;
   grid-template:
-    'graph schema' 1fr
-    'requests call' 1fr
+    'graph verbs' 1fr
+    'requests verbs' 1fr
     / 1fr 1fr;
 }
 
@@ -16,14 +16,10 @@
   grid-area: graph;
 }
 
-.call {
-  grid-area: call;
+.verbs {
+  grid-area: verbs;
 }
 
 .requests {
   grid-area: requests;
-}
-
-.schema {
-  grid-area: schema;
 }
