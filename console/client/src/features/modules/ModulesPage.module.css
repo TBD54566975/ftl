@@ -1,11 +1,17 @@
 .template {
   display: grid;
-  grid-template: 'graph' 100% / 1fr;
+  gap: 0.5rem;
+  grid-template:
+    'graph' 50%
+    'requests' 50%;
+  align-items: start;
+  justify-items: start;
 }
 
 .template-selected-verb {
   display: grid;
   overflow: hidden;
+  gap: 0.5rem;
   grid-template:
     'graph verbs' 1fr
     'requests verbs' 1fr

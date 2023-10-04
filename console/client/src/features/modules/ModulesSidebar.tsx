@@ -5,6 +5,7 @@ import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbId, ZoomCallbacks } from './modules.constants'
 import { getNames } from './modules.utils'
 import { classNames } from '../../utils'
+import { backgrounds, borders, colors } from './components'
 
 interface MapValue {
   deploymentName: string
@@ -20,8 +21,8 @@ const ModulesOption: React.FC<{
   zoomCallbacks?: ZoomCallbacks
 }> = ({ id, zoomCallbacks, verbs, deploymentName }) => {
   return (
-    <li className='flex flex-wrap rounded gap-1 border-gray-300 dark:border-slate-700 bg-gray-200 dark:bg-slate-900 bg-opacity-50'>
-      <div className='w-1 bg-green-400'></div>
+    <li className={`flex flex-wrap gap-1 ${backgrounds.level1} ${borders.level1}`}>
+      <div className={`w-1 bg-${colors.deployment}`}></div>
       <div className='flex flex-wrap flex-1 justify-between items-center p-2'>
         <span className='text-black dark:text-white text-base px-1 '>{id}</span>
         <button onClick={() => zoomCallbacks?.to(id)}>
@@ -66,7 +67,7 @@ const ModulesOption: React.FC<{
 }
 
 export const ModulesSidebar: React.FC<{
-  className: string
+  className?: string
   modules: Module[]
   setSelectedVerbs: React.Dispatch<React.SetStateAction<VerbId[]>>
   selectedVerbs: VerbId[]

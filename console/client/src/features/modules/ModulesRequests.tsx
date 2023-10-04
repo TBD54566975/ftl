@@ -1,162 +1,121 @@
 import React from 'react'
-import { Timestamp } from '@bufbuild/protobuf'
-import { Disclosure } from '@headlessui/react'
-import { formatDuration, formatTimestamp } from '../../utils'
-import { AttributeBadge, CodeBlock } from '../../components'
+import { useSearchParams } from 'react-router-dom'
 import { Panel } from './components'
-import { TimelineTimestamp } from '../timeline/details/TimelineTimestamp'
-import { VerbId } from './modules.constants'
-import { useClient } from '../../hooks/use-client'
-import { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
-import { getCalls, getRequestCalls } from '../../services/console.service'
-import { RequestGraph } from '../requests/RequestGraph'
-import { verbRefString, getNames } from './modules.utils'
+import { modulesFilter } from '../../services/console.service'
+import { streamEvents } from '../../services/console.service'
+import { Event, Module, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { TimelineCall } from '../timeline/TimelineCall.tsx'
+import { TimelineDeploymentCreated } from '../timeline/TimelineDeploymentCreated.tsx'
+import { TimelineDeploymentUpdated } from '../timeline/TimelineDeploymentUpdated.tsx'
+import { TimelineIcon } from '../timeline/TimelineIcon.tsx'
+import { TimelineLog } from '../timeline/TimelineLog.tsx'
+import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails.tsx'
+import { TimelineDeploymentCreatedDetails } from '../timeline/details/TimelineDeploymentCreatedDetails.tsx'
+import { TimelineDeploymentUpdatedDetails } from '../timeline/details/TimelineDeploymentUpdatedDetails.tsx'
+import { TimelineLogDetails } from '../timeline/details/TimelineLogDetails.tsx'
+import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
+import { formatTimestampShort } from '../../utils/date.utils.ts'
+import { panelColor } from '../../utils/style.utils.ts'
 
-const RequestDetails: React.FC<{ timestamp: Timestamp; call: CallEvent }> = ({ call, timestamp }) => {
-  const client = useClient(ConsoleService)
-  const [requestCalls, setRequestCalls] = React.useState<CallEvent[]>([])
-  const [selectedCall, setSelectedCall] = React.useState(call)
-
-  React.useEffect(() => {
-    setSelectedCall(call)
-  }, [call])
-
-  React.useEffect(() => {
-    const fetchRequestCalls = async () => {
-      if (selectedCall.requestName === undefined) {
-        return
-      }
-      const calls = await getRequestCalls(selectedCall.requestName)
-      setRequestCalls(calls)
-    }
-
-    fetchRequestCalls()
-  }, [client, selectedCall])
-
-  return (
-    <div className='p-4'>
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center space-x-2'>
-          <div className=''>
-            {call.destinationVerbRef && (
-              <div
-                className={`inline-block rounded-md bg-indigo-200 dark:bg-indigo-700 px-2 py-1 mr-1 text-sm font-medium text-gray-700 dark:text-gray-100`}
-              >
-                {verbRefString(call.destinationVerbRef)}
-              </div>
-            )}
-          </div>
-          <TimelineTimestamp timestamp={timestamp} />
-        </div>
-      </div>
-
-      <div className='pt-4'>
-        <RequestGraph calls={requestCalls} call={selectedCall} setSelectedCall={setSelectedCall} />
-      </div>
-
-      <div className='text-sm pt-2'>Request</div>
-      <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.request), null, 2)} language='json' />
-
-      <div className='text-sm pt-2'>Response</div>
-      <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.response), null, 2)} language='json' />
-
-      {selectedCall.error && (
-        <>
-          <h3 className='pt-4'>Error</h3>
-          <CodeBlock code={selectedCall.error} language='json' />
-        </>
-      )}
-
-      <ul className='pt-4 space-y-2'>
-        <li>
-          <AttributeBadge name='Deployment' value={selectedCall.deploymentName} />
-        </li>
-        {selectedCall.requestName && (
-          <li>
-            <AttributeBadge name='Request' value={selectedCall.requestName} />
-          </li>
-        )}
-        <li>
-          <AttributeBadge name='Duration' value={formatDuration(selectedCall.duration)} />
-        </li>
-        {selectedCall.destinationVerbRef && (
-          <li>
-            <AttributeBadge name='Destination' value={verbRefString(selectedCall.destinationVerbRef)} />
-          </li>
-        )}
-        {selectedCall.sourceVerbRef && (
-          <li>
-            <AttributeBadge name='Source' value={verbRefString(selectedCall.sourceVerbRef)} />
-          </li>
-        )}
-      </ul>
-    </div>
-  )
-}
-
-const RequestRow: React.FC<{ call: CallEvent }> = ({ call }) => {
-  return (
-    <div className=''>
-      <Disclosure>
-        {({ open }) => (
-          <>
-            <Disclosure.Button>
-              <div className='truncate text-sm font-medium leading-6 text-gray-700 dark:text-white'>
-                {call.sourceVerbRef && [call.sourceVerbRef.module, call.sourceVerbRef.name].join(':')}
-              </div>
-              <div className='font-mono text-sm leading-6 text-gray-500 dark:text-gray-400'>
-                {formatTimestamp(call.timeStamp)}
-              </div>
-              <div className={`text-right text-sm leading-6 text-gray-500 dark:text-gray-400`}>
-                {formatDuration(call.duration)}
-              </div>
-            </Disclosure.Button>
-            <Disclosure.Panel>
-              <RequestDetails call={call} timestamp={call.timeStamp ?? new Timestamp()} />
-            </Disclosure.Panel>
-          </>
-        )}
-      </Disclosure>
-    </div>
-  )
-}
+const maxTimelineEntries = 1000
 
 export const ModulesRequests: React.FC<{
-  className: string
+  className?: string
   modules: Module[]
-  selectedVerbs: VerbId[]
-}> = ({ className, modules, selectedVerbs }) => {
-  if (!selectedVerbs.length) return <></>
-  const client = useClient(ConsoleService)
-  const [calls, setCalls] = React.useState<CallEvent[]>([])
+}> = ({ className, modules }) => {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [entries, setEntries] = React.useState<Event[]>([])
+  const { openPanel, closePanel } = React.useContext(SidePanelContext)
+  const [selectedEntry, setSelectedEntry] = React.useState<Event | null>(null)
+  const deployments = modules.map(({ deploymentName }) => deploymentName)
+
+  const filters: EventsQuery_Filter[] = []
+  if (deployments.length) {
+    filters.push(modulesFilter(deployments))
+  }
+
   React.useEffect(() => {
-    const fetchCalls = async () => {
-      const verbs: [string, Verb][] = []
-      for (const verbId of selectedVerbs) {
-        const [moduleName, verbName] = getNames(verbId)
-        const module = modules.find((module) => module?.name === moduleName)
-        if (module === undefined) {
-          continue
-        }
-        const verb = module?.verbs.find((v) => v.verb?.name === verbName)
-        verb && verbs.push([moduleName, verb])
-      }
-      const calls = await Promise.all(
-        verbs.map(async ([moduleName, verb]) => await getCalls(moduleName, verb?.verb?.name)),
-      )
-      console.log(calls)
-      setCalls(calls.flatMap((call) => call))
+    setEntries([])
+    if (!filters.length) return
+    const abortController = new AbortController()
+    abortController.signal
+    streamEvents({
+      abortControllerSignal: abortController.signal,
+      filters,
+      onEventReceived: (event) => {
+        setEntries((prev) => [event, ...prev].slice(0, maxTimelineEntries))
+      },
+    })
+    return () => {
+      abortController.abort()
+    }
+  }, [modules])
+  const handleEntryClicked = (entry: Event) => {
+    if (selectedEntry === entry) {
+      setSelectedEntry(null)
+      closePanel()
+      const newParams = new URLSearchParams(searchParams.toString())
+      newParams.delete('id')
+      setSearchParams(newParams)
+      return
     }
 
-    fetchCalls()
-  }, [client, modules])
+    switch (entry.entry?.case) {
+      case 'call':
+        openPanel(<TimelineCallDetails timestamp={entry.timeStamp as Timestamp} call={entry.entry.value} />)
+        break
+      case 'log':
+        openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />)
+        break
+      case 'deploymentCreated':
+        openPanel(<TimelineDeploymentCreatedDetails event={entry} deployment={entry.entry.value} />)
+        break
+      case 'deploymentUpdated':
+        openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />)
+        break
+      default:
+        break
+    }
+    setSelectedEntry(entry)
+    setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
+  }
   return (
     <Panel className={className}>
-      <Panel.Header>Verb Requests(s)</Panel.Header>
+      <Panel.Header className='flex border-gray-100 dark:border-slate-700 '>
+        <span className='p-1 text-left border-b w-8 flex-none'></span>
+        <span className='p-1 text-left border-b w-40 flex-none'>Date</span>
+        <span className='p-1 text-left border-b flex-grow flex-shrink'>Content</span>
+      </Panel.Header>
       <Panel.Body>
-        {calls.map((call, index) => (
-          <RequestRow key={index} call={call} />
+        {entries.map((entry) => (
+          <div
+            key={entry.id.toString()}
+            className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${
+              selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
+            } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
+            onClick={() => handleEntryClicked(entry)}
+          >
+            <span className='w-8 flex-none flex items-center justify-center'>
+              <TimelineIcon event={entry} />
+            </span>
+            <span className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>
+              {formatTimestampShort(entry.timeStamp)}
+            </span>
+            <span className='p-1 flex-grow truncate'>
+              {(() => {
+                switch (entry.entry?.case) {
+                  case 'call':
+                    return <TimelineCall call={entry.entry.value} />
+                  case 'log':
+                    return <TimelineLog log={entry.entry.value} />
+                  case 'deploymentCreated':
+                    return <TimelineDeploymentCreated deployment={entry.entry.value} />
+                  case 'deploymentUpdated':
+                    return <TimelineDeploymentUpdated deployment={entry.entry.value} />
+                }
+              })()}
+            </span>
+          </div>
         ))}
       </Panel.Body>
     </Panel>

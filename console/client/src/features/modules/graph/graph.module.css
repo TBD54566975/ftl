@@ -1,142 +1,66 @@
-:root {
-  --opacity: 1;
-  --selected-opacity: 10%;
-  --purple: rgba(67, 56, 202, var(--opacity));
-  --white: rgba(255, 255, 255, var(--opacity));
-  --black: rgba(31, 41, 55, var(--opacity));
-  --module-stroke: var(--purple);
-  --module-fill: transparent;
-  --module-title-text: var(--white);
-  --module-title-fill: var(--purple);
-  --module-text: var(--black);
-  --highlight-color: rgba(251, 113, 133, var(--opacity));
-  --edge-color: var(--black);
-}
-
-html:global.dark:root {
-  --module-text: var(--white);
-  --edge-color: var(--white);
-}
-
 :global .graph > polygon {
   fill: transparent;
-}
-
-/* Nodes Styling */
-.node {
-  pointer-events: bounding-box;
-  cursor: pointer;
-
-  & polygon {
-    stroke: var(--module-stroke);
-    fill: var(--module-fill);
-  }
-
-  & .module-title {
-    & polygon {
-      fill: var(--module-title-fill);
-    }
-
-    & text {
-      fill: var(--module-title-text);
-    }
-  }
-
-  &.selected polygon {
-    stroke: var(--highlight);
-    stroke-width: 3;
-  }
-
-  &.selected .module-title polygon {
-    fill: var(--highlight-color);
-  }
-}
-
-/* verb */
-.module-verb {
-  & text {
-    fill: var(--module-text);
-  }
-}
-
-.module-verb.selected {
-  & > polygon {
-    stroke: var(--highlight-color);
-    stroke-width: 3;
-  }
 }
 
 /* Edges Styling */
 
 .edge {
   cursor: pointer;
-
-  & path {
-    stroke: var(--edge-color);
+  & .edge-path {
+    stroke: currentColor;
     stroke-width: 2;
-
-    &.hover-path {
-      stroke: transparent;
-      stroke-width: 15;
-    }
   }
 
-  &.highlighted,
-  &.hovered,
+  & .hover-path {
+    stroke: transparent;
+    stroke-width: 15;
+  }
+
+  .selected,
   &:hover {
-    & path:not(.hover-path) {
-      stroke: var(--highlight-color);
+    & .edge-path {
+      @apply stroke-pink-400;
       stroke-width: 3;
     }
 
     & polygon {
-      stroke: var(--highlight-color);
-      fill: var(--highlight-color);
+      @apply stroke-pink-400 fill-pink-400;
       opacity: 1;
     }
   }
 
   & polygon {
-    fill: var(--edge-color);
-    stroke: var(--edge-color);
-  }
-
-  & text {
-    fill: var(--module-text);
-
-    display: none;
-  }
-
-  &:hover,
-  &.highlighted,
-  &.hovered {
-    & text {
-      display: block;
-    }
-  }
-
-  &.selected {
-    & path:not(.hover-path) {
-      stroke: var(--highlight-color);
-    }
-
-    & polygon {
-      stroke: var(--highlight-color);
-      fill: var(--highlight-color);
-    }
+    fill: currentColor;
+    stroke: currentColor;
   }
 }
 
-/* selection fade */
-.selection-active {
-  & .edge,
-  & .node {
-    opacity: 0.2;
+/** module */
+.module-title {
+  & > polygon {
+    @apply fill-green-400 stroke-green-400;
   }
+  & > text {
+    @apply fill-white;
+  }
+}
 
-  & .node.selected-reachable,
-  & .node.selected,
-  & .edge.highlighted {
-    opacity: 1;
+/* verb */
+.module-verb {
+  & polygon {
+    @apply stroke-green-400 fill-gray-800;
   }
+  & text {
+    @apply fill-white;
+  }
+}
+
+/* Nodes Styling */
+.node {
+  pointer-events: bounding-box;
+  cursor: pointer;
+}
+
+.call-link {
+  @apply text-white;
 }

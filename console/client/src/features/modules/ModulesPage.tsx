@@ -10,8 +10,6 @@ import { VerbId } from './modules.constants'
 import { Page } from '../../layout'
 import type { ZoomCallbacks } from './modules.constants'
 
-import styles from './ModulesPage.module.css'
-
 export const ModulesPage = () => {
   const { modules } = React.useContext(modulesContext)
   const [selectedVerbs, setSelectedVerbs] = React.useState<VerbId[]>([])
@@ -21,7 +19,7 @@ export const ModulesPage = () => {
   return (
     <Page>
       <Page.Header icon={<Square3Stack3DIcon />} title='Modules' />
-      <Page.Body className='gap-2 py-2 flex'>
+      <Page.Body className='gap-2 p-2 flex'>
         <ModulesSidebar
           className={`flex-none w-72`}
           modules={modules}
@@ -29,32 +27,29 @@ export const ModulesPage = () => {
           selectedVerbs={selectedVerbs}
           zoomCallbacks={zoomCallbacks}
         />
-        <div className={classNames('flex-1', styles.page, styles.template, hasVerbs && styles.templateSelectedVerb)}>
+        <div
+          className={classNames(
+            'flex-grow grid gap-2',
+            !hasVerbs && 'grid grid-rows-2 grid-cols-fr',
+            hasVerbs && 'grid-cols-2 grid-rows-2',
+          )}
+        >
           <ModulesGraph
-            className={classNames(
-              styles.graph,
-              styles.panel,
-              hasVerbs && 'border border-gray-300 dark:border-slate-700',
-            )}
             setSelectedVerbs={setSelectedVerbs}
             selectedVerbs={selectedVerbs}
             setZoomCallbacks={setZoomCallbacks}
             zoomCallbacks={zoomCallbacks}
+            className={classNames(hasVerbs && 'row-start-1 row-span-1 col-start-1 col-span-1')}
           />
-          {/* {selectedVerbs && <ModulesRequests
-            className={styles.requests}
+          <ModulesRequests
             modules={modules}
-            selectedVerbs={selectedVerbs}
-            />} */}
+            className={classNames(hasVerbs && 'row-start-2 row-span-1 col-start-1 col-span-1')}
+          />
           {hasVerbs && (
             <ModulesSelectedVerbs
-              className={classNames(
-                styles.verbs,
-                styles.panel,
-                hasVerbs && 'border border-gray-300 dark:border-slate-700',
-              )}
               modules={modules}
               selectedVerbs={selectedVerbs}
+              className='row-start-1 row-span-2 col-start-2 col-span-1'
             />
           )}
         </div>

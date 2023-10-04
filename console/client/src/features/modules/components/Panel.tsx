@@ -1,5 +1,6 @@
 import React from 'react'
 import { classNames } from '../../../utils'
+import { backgrounds, borders } from './components.constants'
 
 const Header: React.FC<{
   className?: string
@@ -7,10 +8,7 @@ const Header: React.FC<{
   style?: React.CSSProperties
 }> = ({ className, children, style }) => {
   return (
-    <div
-      style={style}
-      className={classNames('p-1 text-xs border-b border-gray-300 dark:border-slate-700 font-bold', className)}
-    >
+    <div style={style} className={classNames('h-8 text-xs border-gray-300 dark:border-slate-700 font-bold', className)}>
       {children}
     </div>
   )
@@ -22,7 +20,7 @@ const Body: React.FC<{
   style?: React.CSSProperties
 }> = ({ className, children, style }) => {
   return (
-    <div style={style} className={classNames(className, 'flex-1 overflow-auto')}>
+    <div style={{ height: 'calc(100% - 2rem)', ...style }} className={classNames(className, 'overflow-auto')}>
       {children}
     </div>
   )
@@ -37,7 +35,7 @@ export const Panel: React.FC<{
   Body: typeof Body
 } = ({ className, children, style }) => {
   return (
-    <div style={style} className={classNames(className, 'flex flex-col p-2 rounded')}>
+    <div style={style} className={classNames(className, `p-2 overflow-hidden ${borders.level1} ${backgrounds.level1}`)}>
       {children}
     </div>
   )

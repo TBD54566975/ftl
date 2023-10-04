@@ -6,7 +6,7 @@ import { Panel } from './components'
 import { svgZoom, formatSVG, dotToSVG, generateDot } from './graph'
 
 export const ModulesGraph: React.FC<{
-  className: string
+  className?: string
   zoomId?: string
   setSelectedVerbs: React.Dispatch<React.SetStateAction<VerbId[]>>
   selectedVerbs: VerbId[]
@@ -56,26 +56,23 @@ export const ModulesGraph: React.FC<{
 
   return (
     <Panel className={className}>
-      <Panel.Header className='flex gap-2 justify-between'>
-        Graph
-        <div className='inline-flex gap-0.5'>
-          <button onClick={() => zoomCallbacks?.in()}>
-            <span className='sr-only'>zoom in</span>
-            <PlusCircleIcon className='w-6 h-6' />
-          </button>
-          <button onClick={() => zoomCallbacks?.out()}>
-            <span className='sr-only'>zoom out</span>
-            <MinusCircleIcon className='w-6 h-6' />
-          </button>
-          <button onClick={() => zoomCallbacks?.reset()}>
-            <span className='sr-only'>reset</span>
-            <ArrowPathIcon className='w-6 h-6' />
-          </button>
-        </div>
-      </Panel.Header>
-      <Panel.Body>
-        <div ref={canvasRef} className={`canvas flex-1 overflow-hidden h-full w-full`} />
+      <Panel.Body className='overflow-hidden'>
+        <div ref={canvasRef} className={'w-full h-full'} />
       </Panel.Body>
+      <Panel.Header className='flex gap-0.5'>
+        <button onClick={() => zoomCallbacks?.in()}>
+          <span className='sr-only'>zoom in</span>
+          <PlusCircleIcon className='w-6 h-6' />
+        </button>
+        <button onClick={() => zoomCallbacks?.out()}>
+          <span className='sr-only'>zoom out</span>
+          <MinusCircleIcon className='w-6 h-6' />
+        </button>
+        <button onClick={() => zoomCallbacks?.reset()}>
+          <span className='sr-only'>reset</span>
+          <ArrowPathIcon className='w-6 h-6' />
+        </button>
+      </Panel.Header>
     </Panel>
   )
 }

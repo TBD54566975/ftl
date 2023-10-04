@@ -1,4 +1,5 @@
-import { callIcon, moduleVerbCls, callIconID, vizID, moduleTitleCls } from '../modules.constants'
+import { callIcon, moduleVerbCls, callIconID, vizID } from '../modules.constants'
+
 import styles from './graph.module.css'
 
 export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
@@ -42,14 +43,21 @@ export const formatSVG = (svg: SVGSVGElement): SVGSVGElement => {
 
   for (const $el of svg.querySelectorAll('[id*=\\:\\:]')) {
     const [tag, id] = $el.id.split('::')
-    $el.id = moduleVerbCls === tag ? id : `module_${id}`
+    if (moduleVerbCls === tag) {
+      $el.id = id
+    }
     $el.classList.add(styles[tag])
   }
+
+  // for (const $el of svg.querySelectorAll(`.${styles[moduleTitleCls]} > polygon`)) {
+  //   $el.classList.add(styles.title)
+  //   console.log($el)
+  // }
 
   for (const $path of svg.querySelectorAll(`g.${styles.edge} path`)) {
     const $newPath = $path.cloneNode() as HTMLElement
     $newPath.classList.add(styles.hoverPath)
-    $newPath.removeAttribute('stroke-dasharray')
+    $path.classList.add(styles.edgePath)
     $path.parentNode?.appendChild($newPath)
   }
   for (const $verb of svg.querySelectorAll(`.${styles[moduleVerbCls]}`)) {
