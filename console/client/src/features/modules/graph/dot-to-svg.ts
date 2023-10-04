@@ -1,11 +1,9 @@
 import { instance } from '@viz-js/viz'
 
-export const dotToSVG = async (dot: string): Promise<[SVGSVGElement, number] | undefined> => {
+export const dotToSVG = async (dot: string): Promise<SVGSVGElement | undefined> => {
   const viz = await instance()
   try {
-    const svg = viz.renderSVGElement(dot)
-    const { width, height } = svg.viewBox.baseVal
-    return [svg, width / height]
+    return viz.renderSVGElement(dot)
   } catch (e) {
     console.error(e)
   }

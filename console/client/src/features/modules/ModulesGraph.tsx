@@ -15,24 +15,37 @@ export const ModulesGraph: React.FC<{
 }> = ({ className, setZoomCallbacks, zoomCallbacks }) => {
   const modules = React.useContext(modulesContext)
   const canvasRef = React.useRef<HTMLDivElement>(null)
-  const [canvas, setViewPort] = React.useState<HTMLDivElement>()
-  const [svgRatioStyles, setSvgRatioStyles] = React.useState<React.CSSProperties>()
+  const [canvas, setCanvas] = React.useState<HTMLDivElement>()
+  const previousDimensions = React.useRef({ width: 0, height: 0 }) // Store previous dimensions
 
   React.useEffect(() => {
-    const viewCur = canvasRef.current
-    viewCur && setViewPort(viewCur)
-  }, [])
+    const canvasCur = canvasRef.current
+    if (canvasCur) {
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect
+          // Check if dimensions have changed
+          if (width !== previousDimensions.current.width || height !== previousDimensions.current.height) {
+            setCanvas(entry.target as HTMLDivElement)
+            // Update previous dimensions
+            previousDimensions.current = { width, height }
+          }
+        }
+      })
+      observer.observe(canvasCur)
+      return () => {
+        observer.disconnect()
+      }
+    }
+  }, [canvasRef])
 
   React.useEffect(() => {
     const renderSvg = async () => {
       const dot = generateDot(modules)
       const data = await dotToSVG(dot)
       if (data && canvas) {
-        const [unformattedSVG, aspectRatio] = data
-        const svgRatioStyles = aspectRatio >= 1 ? { width: '100%', aspectRatio } : { height: '100%', aspectRatio }
-        setSvgRatioStyles(svgRatioStyles)
+        const unformattedSVG = data
         const formattedSVG = formatSVG(unformattedSVG)
-        const { width, height } = canvas.getBoundingClientRect()
         canvas?.replaceChildren(formattedSVG)
         const zoom = svgZoom(formattedSVG, canvas.clientWidth, canvas.clientHeight)
         setZoomCallbacks(zoom)

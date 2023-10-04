@@ -11,11 +11,13 @@ import { Page } from '../../layout'
 import type { ZoomCallbacks } from './modules.constants'
 
 import styles from './ModulesPage.module.css'
+
 export const ModulesPage = () => {
   const { modules } = React.useContext(modulesContext)
   const [selectedVerbs, setSelectedVerbs] = React.useState<VerbId[]>([])
   const hasVerbs = Boolean(selectedVerbs.length)
   const [zoomCallbacks, setZoomCallbacks] = React.useState<ZoomCallbacks>()
+
   return (
     <Page>
       <Page.Header icon={<Square3Stack3DIcon />} title='Modules' />
