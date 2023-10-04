@@ -19,16 +19,25 @@ export const VerbCalls = ({ module, verb }: Props) => {
   const { openPanel } = React.useContext(SidePanelContext)
 
   React.useEffect(() => {
+    const abortController = new AbortController()
     const fetchCalls = async () => {
       if (module === undefined) {
         return
       }
 
-      const calls = await getCalls(module.name, verb?.verb?.name)
+      const calls = await getCalls({
+        abortControllerSignal: abortController.signal,
+        destModule: module.name,
+        destVerb: verb?.verb?.name,
+      })
       setCalls(calls)
     }
 
     fetchCalls()
+
+    return () => {
+      abortController.abort()
+    }
   }, [client, module, verb])
 
   const handleClick = (call: CallEvent) => {

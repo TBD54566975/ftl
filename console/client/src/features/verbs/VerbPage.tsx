@@ -30,13 +30,22 @@ export const VerbPage = () => {
   }, [modules, moduleName])
 
   React.useEffect(() => {
+    const abortController = new AbortController()
     if (!module) return
 
     const fetchCalls = async () => {
-      const calls = await getCalls(module.name, verb?.verb?.name)
+      const calls = await getCalls({
+        abortControllerSignal: abortController.signal,
+        destModule: module.name,
+        destVerb: verb?.verb?.name,
+      })
       setCalls(calls)
     }
     fetchCalls()
+
+    return () => {
+      abortController.abort()
+    }
   }, [module])
 
   return (

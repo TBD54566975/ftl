@@ -54,7 +54,7 @@ export const TimelineTimeControls = ({ onTimeSettingsChange, selectedTimeRange, 
   const isTailing = selected.value === TIME_RANGES['tail'].value
 
   React.useEffect(() => {
-    setSelected(selectedTimeRange)
+    handleRangeChanged(selectedTimeRange)
     setIsPaused(isTimelinePaused)
   }, [selectedTimeRange, isTimelinePaused])
 

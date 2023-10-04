@@ -29,15 +29,23 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
   }, [call])
 
   useEffect(() => {
+    const abortController = new AbortController()
     const fetchRequestCalls = async () => {
       if (selectedCall.requestName === undefined) {
         return
       }
-      const calls = await getRequestCalls(selectedCall.requestName)
+      const calls = await getRequestCalls({
+        abortControllerSignal: abortController.signal,
+        requestKey: selectedCall.requestName,
+      })
       setRequestCalls(calls.reverse())
     }
 
     fetchRequestCalls()
+
+    return () => {
+      abortController.abort()
+    }
   }, [client, selectedCall])
 
   return (

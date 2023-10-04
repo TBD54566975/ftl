@@ -33,7 +33,6 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
   React.useEffect(() => {
     const eventId = searchParams.get('id')
     const abortController = new AbortController()
-    abortController.signal
 
     const fetchEvents = async () => {
       let eventFilters = filters
@@ -45,7 +44,7 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
         const id = BigInt(eventId)
         eventFilters = [eventIdFilter({ higherThan: id }), ...filters]
       }
-      const events = await getEvents({ filters: eventFilters })
+      const events = await getEvents({ abortControllerSignal: abortController.signal, filters: eventFilters })
       setEntries(events)
 
       if (eventId) {
@@ -81,28 +80,34 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
     }
   }, [isOpen])
 
+  const handlePanelClosed = () => {
+    const newParams = new URLSearchParams(searchParams.toString())
+    newParams.delete('id')
+    setSearchParams(newParams)
+    setSelectedEntry(null)
+  }
+
   const handleEntryClicked = (entry: Event) => {
     if (selectedEntry === entry) {
-      setSelectedEntry(null)
       closePanel()
-      const newParams = new URLSearchParams(searchParams.toString())
-      newParams.delete('id')
-      setSearchParams(newParams)
       return
     }
 
     switch (entry.entry?.case) {
       case 'call':
-        openPanel(<TimelineCallDetails timestamp={entry.timeStamp as Timestamp} call={entry.entry.value} />)
+        openPanel(
+          <TimelineCallDetails timestamp={entry.timeStamp as Timestamp} call={entry.entry.value} />,
+          handlePanelClosed,
+        )
         break
       case 'log':
-        openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />)
+        openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />, handlePanelClosed)
         break
       case 'deploymentCreated':
-        openPanel(<TimelineDeploymentCreatedDetails event={entry} deployment={entry.entry.value} />)
+        openPanel(<TimelineDeploymentCreatedDetails event={entry} deployment={entry.entry.value} />, handlePanelClosed)
         break
       case 'deploymentUpdated':
-        openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />)
+        openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />, handlePanelClosed)
         break
       default:
         break
