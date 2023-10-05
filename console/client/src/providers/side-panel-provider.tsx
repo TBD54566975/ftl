@@ -1,4 +1,5 @@
 import React, { PropsWithChildren } from 'react'
+import { SidePanel } from '../layout/SidePanel'
 
 interface SidePanelContextType {
   isOpen: boolean
@@ -41,6 +42,7 @@ export const SidePanelProvider = ({ children }: PropsWithChildren) => {
   return (
     <SidePanelContext.Provider value={{ isOpen, openPanel, closePanel, component }}>
       {children}
+      <SidePanel />
     </SidePanelContext.Provider>
   )
 }

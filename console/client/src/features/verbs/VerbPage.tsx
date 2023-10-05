@@ -5,6 +5,7 @@ import { CodeBlock } from '../../components/CodeBlock'
 import { Page } from '../../layout'
 import { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
+import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { getCalls } from '../../services/console.service'
 import { CallList } from '../calls/CallList'
 import { buildVerbSchema } from './verb.utils'
@@ -49,33 +50,35 @@ export const VerbPage = () => {
   }, [module])
 
   return (
-    <Page>
-      <Page.Header
-        icon={<Square3Stack3DIcon />}
-        title={verb?.verb?.name || ''}
-        breadcrumbs={[
-          { label: 'Modules', link: '/modules' },
-          { label: module?.name || '', link: `/modules/${module?.name}` },
-        ]}
-      />
-      <Page.Body className='p-4'>
-        <div className='flex-1 flex flex-col h-full'>
-          <div className='flex-1 h-1/2 overflow-y-auto'>
-            {verb?.verb?.request?.toJsonString() && (
-              <CodeBlock
-                code={buildVerbSchema(
-                  verb?.schema,
-                  callData.map((d) => d.schema),
-                )}
-                language='json'
-              />
-            )}
+    <SidePanelProvider>
+      <Page>
+        <Page.Header
+          icon={<Square3Stack3DIcon />}
+          title={verb?.verb?.name || ''}
+          breadcrumbs={[
+            { label: 'Modules', link: '/modules' },
+            { label: module?.name || '', link: `/modules/${module?.name}` },
+          ]}
+        />
+        <Page.Body className='p-4'>
+          <div className='flex-1 flex flex-col h-full'>
+            <div className='flex-1 h-1/2 overflow-y-auto'>
+              {verb?.verb?.request?.toJsonString() && (
+                <CodeBlock
+                  code={buildVerbSchema(
+                    verb?.schema,
+                    callData.map((d) => d.schema),
+                  )}
+                  language='json'
+                />
+              )}
+            </div>
+            <div className='flex-1 h-1/2'>
+              <CallList calls={calls} />
+            </div>
           </div>
-          <div className='flex-1 h-1/2'>
-            <CallList calls={calls} />
-          </div>
-        </div>
-      </Page.Body>
-    </Page>
+        </Page.Body>
+      </Page>
+    </SidePanelProvider>
   )
 }
