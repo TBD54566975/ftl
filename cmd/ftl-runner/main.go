@@ -15,10 +15,10 @@ import (
 
 var version = "dev"
 
-var config struct {
+var cli struct {
 	Version             kong.VersionFlag     `help:"Show version."`
 	LogConfig           log.Config           `prefix:"log-" embed:""`
-	ObservabilityConfig observability.Config `embed:"" prefix:"observability-"`
+	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	RunnerConfig        runner.Config        `embed:""`
 }
 
@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	kctx := kong.Parse(&config, kong.Description(`
+	kctx := kong.Parse(&cli, kong.Description(`
 FTL - Towards a 𝝺-calculus for large-scale systems
 
 The Runner is the component of FTL that coordinates with the Controller to spawn
@@ -37,16 +37,16 @@ and route to user code.
 		"deploymentdir": filepath.Join(cacheDir, "ftl-runner", "${runner}", "deployments"),
 	})
 	// Substitute in the runner key into the deployment directory.
-	config.RunnerConfig.DeploymentDir = os.Expand(config.RunnerConfig.DeploymentDir, func(key string) string {
+	cli.RunnerConfig.DeploymentDir = os.Expand(cli.RunnerConfig.DeploymentDir, func(key string) string {
 		if key == "runner" {
-			return config.RunnerConfig.Key.String()
+			return cli.RunnerConfig.Key.String()
 		}
 		return key
 	})
-	logger := log.Configure(os.Stderr, config.LogConfig)
+	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx := log.ContextWithLogger(context.Background(), logger)
-	err = observability.Init(ctx, "ftl-runner", config.ObservabilityConfig)
-	kctx.FatalIfErrorf(err)
-	err = runner.Start(ctx, config.RunnerConfig)
+	err = observability.Init(ctx, "ftl-runner", version, cli.ObservabilityConfig)
+	kctx.FatalIfErrorf(err, "failed to initialize observability")
+	err = runner.Start(ctx, cli.RunnerConfig)
 	kctx.FatalIfErrorf(err)
 }

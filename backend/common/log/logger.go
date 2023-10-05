@@ -63,6 +63,10 @@ func (l Logger) Level(level Level) *Logger {
 	return &l
 }
 
+func (l Logger) GetLevel() Level {
+	return l.level
+}
+
 func (l *Logger) Log(entry Entry) {
 	if entry.Level < l.level {
 		return

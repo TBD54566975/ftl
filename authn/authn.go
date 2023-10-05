@@ -48,7 +48,9 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 	if errors.Is(err, keyring.ErrNotFound) {
 		logger.Tracef("No credentials found in keyring")
 	} else if err != nil {
-		logger.Debugf("Failed to get credentials from keyring: %s", err)
+		if !strings.Contains(err.Error(), `exec: "dbus-launch": executable file not found in $PATH`) {
+			logger.Debugf("Failed to get credentials from keyring: %s", err)
+		}
 	} else {
 		logger.Tracef("Credentials found in keyring: %s", creds)
 		if headers, err := checkAuth(ctx, logger, endpoint, creds); err != nil {

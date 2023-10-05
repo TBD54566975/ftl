@@ -1,4 +1,4 @@
-version: '3.1'
+version: "3.1"
 
 services:
   db:
@@ -19,5 +19,13 @@ services:
       interval: 1s
       timeout: 60s
       retries: 60
-      start_period: 80s  
-
+      start_period: 80s
+  otel-collector:
+    profiles:
+      - infra
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./otel-local-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
