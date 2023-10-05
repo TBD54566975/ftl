@@ -76,15 +76,19 @@ func WithRequestName(ctx context.Context, key model.RequestName) context.Context
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
 	return []connect.ClientOption{
 		connect.WithGRPC(), // Use gRPC because some servers will not be using Connect.
-		connect.WithInterceptors(MetadataInterceptor(level), otelconnect.NewInterceptor()),
+		connect.WithInterceptors(MetadataInterceptor(level), otelInterceptor()),
 	}
 }
 
 func DefaultHandlerOptions() []connect.HandlerOption {
 	return []connect.HandlerOption{
 		connect.WithInterceptors(MetadataInterceptor(log.Error)),
-		connect.WithInterceptors(otelconnect.NewInterceptor()),
+		connect.WithInterceptors(otelInterceptor()),
 	}
+}
+
+func otelInterceptor() connect.Interceptor {
+	return otelconnect.NewInterceptor(otelconnect.WithTrustRemote(), otelconnect.WithoutServerPeerAttributes())
 }
 
 // MetadataInterceptor propagates FTL metadata through servers and clients.
