@@ -27,7 +27,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 		return errors.WithStack(err)
 	}
 	if s.JSON {
-		marshaller := jsonpb.Marshaler{}
+		marshaller := jsonpb.Marshaler{Indent: "  "}
 		for _, process := range status.Msg.Processes {
 			err = marshaller.Marshal(os.Stdout, process)
 			if err != nil {

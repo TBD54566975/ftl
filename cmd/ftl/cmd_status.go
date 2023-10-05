@@ -37,5 +37,7 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 			deployment.Schema = nil
 		}
 	}
-	return errors.WithStack((&jsonpb.Marshaler{}).Marshal(os.Stdout, status.Msg))
+	return errors.WithStack((&jsonpb.Marshaler{
+		Indent: "  ",
+	}).Marshal(os.Stdout, status.Msg))
 }
