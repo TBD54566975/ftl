@@ -7,7 +7,7 @@ import { getNames } from './modules.utils'
 import { classNames } from '../../utils'
 import { backgrounds, borders, colors } from './components'
 
-interface MapValue {
+interface DeploymentVerbs {
   deploymentName: string
   id: string
   verbs: Set<VerbId>
@@ -77,9 +77,9 @@ export const ModulesSidebar: React.FC<{
   const [query, setQuery] = React.useState('')
 
   /** Format data */
-  const map: Map<string, MapValue> = new Map()
+  const map: Map<string, DeploymentVerbs> = new Map()
   for (const { name: moduleName, verbs, deploymentName } of modules) {
-    const value: MapValue = {
+    const value: DeploymentVerbs = {
       id: moduleName,
       deploymentName,
       verbs: new Set(),
@@ -94,7 +94,7 @@ export const ModulesSidebar: React.FC<{
   const filteredOptions =
     query === ''
       ? options
-      : options.reduce<MapValue[]>((acc, option) => {
+      : options.reduce<DeploymentVerbs[]>((acc, option) => {
           option.queriedVerbs.clear()
           let found = option.id.toLowerCase().includes(query.toLowerCase())
           const queriedVerbs: Set<VerbId> = new Set(
