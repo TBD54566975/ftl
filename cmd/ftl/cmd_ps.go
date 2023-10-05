@@ -27,7 +27,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 		return errors.WithStack(err)
 	}
 	if s.JSON {
-		marshaller := jsonpb.Marshaler{}
+		marshaller := jsonpb.Marshaler{Indent: "  "}
 		for _, process := range status.Msg.Processes {
 			err = marshaller.Marshal(os.Stdout, process)
 			if err != nil {
@@ -66,7 +66,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 					key = fmt.Sprintf("%s-%s", key, strings.ToLower(runner.Key[len(runner.Key)-5:]))
 					runnerKey = runner.Key
 					endpoint = runner.Endpoint
-					labels, err := (&jsonpb.Marshaler{}).MarshalToString(runner.Labels)
+					labels, err := (&jsonpb.Marshaler{Indent: "  "}).MarshalToString(runner.Labels)
 					if err != nil {
 						return errors.WithStack(err)
 					}
@@ -74,7 +74,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 				}
 				args := []any{key, fmt.Sprintf("%d/%d", i+1, first.MinReplicas), "live", runnerKey, endpoint}
 				if s.Verbose > 1 {
-					labels, err := (&jsonpb.Marshaler{}).MarshalToString(first.Labels)
+					labels, err := (&jsonpb.Marshaler{Indent: "  "}).MarshalToString(first.Labels)
 					if err != nil {
 						return errors.WithStack(err)
 					}
