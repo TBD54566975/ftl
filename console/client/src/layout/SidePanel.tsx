@@ -1,14 +1,14 @@
 import { Transition } from '@headlessui/react'
 import { Fragment, useContext } from 'react'
 import { SidePanelContext } from '../providers/side-panel-provider'
-import { sidePanelColor } from '../utils/style.utils'
 import { bgColor, textColor } from '../utils'
+import { sidePanelColor } from '../utils/style.utils'
 
 export const SidePanel = () => {
   const { isOpen, component } = useContext(SidePanelContext)
 
   return (
-    <div className={`absolute z-20 top-0 ${bgColor} ${textColor}`}>
+    <div className={`absolute z-20 top-0 border border-red-500 ${bgColor} ${textColor}`}>
       <Transition
         show={isOpen}
         as={Fragment}
@@ -22,9 +22,7 @@ export const SidePanel = () => {
         <div
           className={`fixed right-0 w-1/3 h-full ${sidePanelColor} dark:bg-slate-800 dark:shadow-black-600 shadow-2xl`}
         >
-          <div className='overflow-y-auto' style={{ maxHeight: 'calc(100vh - 2rem)' }}>
-            {component}
-          </div>
+          <div className='overflow-y-auto h-full'>{component}</div>
         </div>
       </Transition>
     </div>
