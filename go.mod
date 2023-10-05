@@ -3,10 +3,10 @@ module github.com/TBD54566975/ftl
 go 1.21
 
 require (
+	connectrpc.com/connect v1.11.1
 	github.com/BurntSushi/toml v1.3.2
 	github.com/alecthomas/kong v0.8.0
 	github.com/alecthomas/kong-toml v0.0.0-20230922031405-31cfb1264a3b
-	github.com/bufbuild/connect-go v1.8.0
 	github.com/go-logr/logr v1.2.4
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
@@ -27,7 +27,7 @@ require (
 	golang.org/x/net v0.14.0
 	golang.org/x/sync v0.3.0
 	golang.org/x/tools v0.12.1-0.20230815132531-74c255bcf846
-	google.golang.org/protobuf v1.30.0
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
@@ -56,14 +56,14 @@ require (
 )
 
 require (
+	connectrpc.com/grpcreflect v1.2.0
+	connectrpc.com/otelconnect v0.5.0
 	github.com/alecthomas/assert/v2 v2.3.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/errors v0.4.0
 	github.com/alecthomas/participle/v2 v2.0.0
 	github.com/alecthomas/types v0.7.1
-	github.com/bufbuild/connect-grpcreflect-go v1.1.0
-	github.com/bufbuild/connect-opentelemetry-go v0.3.0
 	github.com/deckarep/golang-set/v2 v2.3.0
 	github.com/gofrs/flock v0.8.1
 	github.com/iancoleman/strcase v0.2.0

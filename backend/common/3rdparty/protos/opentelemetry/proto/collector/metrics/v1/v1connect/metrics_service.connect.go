@@ -19,9 +19,9 @@
 package v1connect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	connect_go "github.com/bufbuild/connect-go"
 	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	http "net/http"
 	strings "strings"
@@ -32,7 +32,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion0_1_0
 
 const (
 	// MetricsServiceName is the fully-qualified name of the MetricsService service.
@@ -56,7 +56,7 @@ const (
 type MetricsServiceClient interface {
 	// For performance reasons, it is recommended to keep this RPC
 	// alive for the entire life of the application.
-	Export(context.Context, *connect_go.Request[v1.ExportMetricsServiceRequest]) (*connect_go.Response[v1.ExportMetricsServiceResponse], error)
+	Export(context.Context, *connect.Request[v1.ExportMetricsServiceRequest]) (*connect.Response[v1.ExportMetricsServiceResponse], error)
 }
 
 // NewMetricsServiceClient constructs a client for the
@@ -67,10 +67,10 @@ type MetricsServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewMetricsServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) MetricsServiceClient {
+func NewMetricsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) MetricsServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &metricsServiceClient{
-		export: connect_go.NewClient[v1.ExportMetricsServiceRequest, v1.ExportMetricsServiceResponse](
+		export: connect.NewClient[v1.ExportMetricsServiceRequest, v1.ExportMetricsServiceResponse](
 			httpClient,
 			baseURL+MetricsServiceExportProcedure,
 			opts...,
@@ -80,11 +80,11 @@ func NewMetricsServiceClient(httpClient connect_go.HTTPClient, baseURL string, o
 
 // metricsServiceClient implements MetricsServiceClient.
 type metricsServiceClient struct {
-	export *connect_go.Client[v1.ExportMetricsServiceRequest, v1.ExportMetricsServiceResponse]
+	export *connect.Client[v1.ExportMetricsServiceRequest, v1.ExportMetricsServiceResponse]
 }
 
 // Export calls opentelemetry.proto.collector.metrics.v1.MetricsService.Export.
-func (c *metricsServiceClient) Export(ctx context.Context, req *connect_go.Request[v1.ExportMetricsServiceRequest]) (*connect_go.Response[v1.ExportMetricsServiceResponse], error) {
+func (c *metricsServiceClient) Export(ctx context.Context, req *connect.Request[v1.ExportMetricsServiceRequest]) (*connect.Response[v1.ExportMetricsServiceResponse], error) {
 	return c.export.CallUnary(ctx, req)
 }
 
@@ -93,7 +93,7 @@ func (c *metricsServiceClient) Export(ctx context.Context, req *connect_go.Reque
 type MetricsServiceHandler interface {
 	// For performance reasons, it is recommended to keep this RPC
 	// alive for the entire life of the application.
-	Export(context.Context, *connect_go.Request[v1.ExportMetricsServiceRequest]) (*connect_go.Response[v1.ExportMetricsServiceResponse], error)
+	Export(context.Context, *connect.Request[v1.ExportMetricsServiceRequest]) (*connect.Response[v1.ExportMetricsServiceResponse], error)
 }
 
 // NewMetricsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -101,19 +101,25 @@ type MetricsServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewMetricsServiceHandler(svc MetricsServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle(MetricsServiceExportProcedure, connect_go.NewUnaryHandler(
+func NewMetricsServiceHandler(svc MetricsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	metricsServiceExportHandler := connect.NewUnaryHandler(
 		MetricsServiceExportProcedure,
 		svc.Export,
 		opts...,
-	))
-	return "/opentelemetry.proto.collector.metrics.v1.MetricsService/", mux
+	)
+	return "/opentelemetry.proto.collector.metrics.v1.MetricsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case MetricsServiceExportProcedure:
+			metricsServiceExportHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedMetricsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMetricsServiceHandler struct{}
 
-func (UnimplementedMetricsServiceHandler) Export(context.Context, *connect_go.Request[v1.ExportMetricsServiceRequest]) (*connect_go.Response[v1.ExportMetricsServiceResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("opentelemetry.proto.collector.metrics.v1.MetricsService.Export is not implemented"))
+func (UnimplementedMetricsServiceHandler) Export(context.Context, *connect.Request[v1.ExportMetricsServiceRequest]) (*connect.Response[v1.ExportMetricsServiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("opentelemetry.proto.collector.metrics.v1.MetricsService.Export is not implemented"))
 }

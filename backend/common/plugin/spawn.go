@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"

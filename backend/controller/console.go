@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
-	"github.com/bufbuild/connect-go"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 

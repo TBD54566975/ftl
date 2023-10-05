@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
-	"github.com/bufbuild/connect-go"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
