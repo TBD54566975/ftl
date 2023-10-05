@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/errors"
@@ -37,6 +38,8 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 		logger.Tracef("OTEL export is disabled, set OTEL_EXPORTER_OTLP_ENDPOINT to enable")
 		return nil
 	}
+
+	logger.Infof("OTEL is enabled, exporting to %s", os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
 
 	otelLogger := NewOtelLogger(logger, config.LogLevel)
 	otel.SetLogger(otelLogger)
