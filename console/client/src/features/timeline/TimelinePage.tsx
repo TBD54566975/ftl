@@ -15,13 +15,14 @@ export const TimelinePage = () => {
   const [selectedTimeRange, setSelectedTimeRange] = React.useState(TIME_RANGES['tail'])
   const [isTimelinePaused, setIsTimelinePaused] = React.useState(false)
 
+  const initialEventId = searchParams.get('id')
   React.useEffect(() => {
-    if (searchParams.get('id')) {
+    if (initialEventId) {
       // if we're loading a specific event, we don't want to tail.
       setSelectedTimeRange(TIME_RANGES['5m'])
       setIsTimelinePaused(true)
     }
-  }, [searchParams])
+  }, [])
 
   const handleTimeSettingsChanged = (settings: TimeSettings) => {
     setTimeSettings(settings)

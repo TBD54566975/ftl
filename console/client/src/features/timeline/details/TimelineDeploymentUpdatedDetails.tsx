@@ -1,6 +1,8 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AttributeBadge } from '../../../components/AttributeBadge'
+import { Card } from '../../../components/Card'
 import { CloseButton } from '../../../components/CloseButton'
 import { DeploymentUpdatedEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
@@ -13,6 +15,8 @@ interface Props {
 
 export const TimelineDeploymentUpdatedDetails = ({ event, deployment }: Props) => {
   const { closePanel } = React.useContext(SidePanelContext)
+  const navigate = useNavigate()
+
   return (
     <>
       <div className={`bg-blue-500 dark:bg-blue-300 h-2 w-full`}></div>
@@ -30,6 +34,16 @@ export const TimelineDeploymentUpdatedDetails = ({ event, deployment }: Props) =
           </div>
           <CloseButton onClick={closePanel} />
         </div>
+
+        <Card
+          key={deployment.name}
+          topBarColor='bg-green-500'
+          className='mt-4'
+          onClick={() => navigate(`/deployments/${deployment.name}`)}
+        >
+          {deployment.name}
+          <p className='text-xs text-gray-400'>{deployment.name}</p>
+        </Card>
 
         <ul className='pt-4 space-y-2'>
           <li>
