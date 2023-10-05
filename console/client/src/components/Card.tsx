@@ -10,7 +10,7 @@ export const Card = ({ topBarColor, className, onClick, children }: Props) => {
     <div
       onClick={onClick}
       className={`relative rounded-md border border-gray-200 dark:border-gray-500 ${
-        onClick ? 'cursor-pointer' : ''
+        onClick ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700' : ''
       } ${className}`}
     >
       {topBarColor && (
