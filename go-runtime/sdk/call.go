@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
 	"github.com/iancoleman/strcase"
 
 	"github.com/TBD54566975/ftl/backend/common/rpc"

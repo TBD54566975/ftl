@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/http"
 
+	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
-	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"

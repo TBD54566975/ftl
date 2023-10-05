@@ -14,11 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types"
-	"github.com/bufbuild/connect-go"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"

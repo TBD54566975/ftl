@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
-	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
 	"github.com/otiai10/copy"
 	"google.golang.org/protobuf/types/known/structpb"

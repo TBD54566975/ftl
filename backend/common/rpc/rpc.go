@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
 	"github.com/jpillora/backoff"
 	"golang.org/x/net/http2"
 

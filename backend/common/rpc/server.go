@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
+	"connectrpc.com/grpcreflect"
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
-	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"

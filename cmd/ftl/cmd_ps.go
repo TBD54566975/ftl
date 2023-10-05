@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
 	"github.com/golang/protobuf/jsonpb"
 	"golang.org/x/exp/maps"
 

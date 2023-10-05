@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
-	"github.com/bufbuild/connect-go"
 	"github.com/titanous/json5"
 
 	"github.com/TBD54566975/ftl/go-runtime/sdk"

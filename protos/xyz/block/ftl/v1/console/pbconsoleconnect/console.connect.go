@@ -5,11 +5,11 @@
 package pbconsoleconnect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
 	v1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	console "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console"
-	connect_go "github.com/bufbuild/connect-go"
 	http "net/http"
 	strings "strings"
 )
@@ -19,7 +19,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion1_7_0
+const _ = connect.IsAtLeastVersion1_7_0
 
 const (
 	// ConsoleServiceName is the fully-qualified name of the ConsoleService service.
@@ -50,10 +50,10 @@ const (
 // ConsoleServiceClient is a client for the xyz.block.ftl.v1.console.ConsoleService service.
 type ConsoleServiceClient interface {
 	// Ping service for readiness.
-	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
-	GetModules(context.Context, *connect_go.Request[console.GetModulesRequest]) (*connect_go.Response[console.GetModulesResponse], error)
-	StreamEvents(context.Context, *connect_go.Request[console.StreamEventsRequest]) (*connect_go.ServerStreamForClient[console.StreamEventsResponse], error)
-	GetEvents(context.Context, *connect_go.Request[console.EventsQuery]) (*connect_go.Response[console.GetEventsResponse], error)
+	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error)
+	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest]) (*connect.ServerStreamForClient[console.StreamEventsResponse], error)
+	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
 }
 
 // NewConsoleServiceClient constructs a client for the xyz.block.ftl.v1.console.ConsoleService
@@ -63,26 +63,26 @@ type ConsoleServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewConsoleServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) ConsoleServiceClient {
+func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ConsoleServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &consoleServiceClient{
-		ping: connect_go.NewClient[v1.PingRequest, v1.PingResponse](
+		ping: connect.NewClient[v1.PingRequest, v1.PingResponse](
 			httpClient,
 			baseURL+ConsoleServicePingProcedure,
-			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
-			connect_go.WithClientOptions(opts...),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
 		),
-		getModules: connect_go.NewClient[console.GetModulesRequest, console.GetModulesResponse](
+		getModules: connect.NewClient[console.GetModulesRequest, console.GetModulesResponse](
 			httpClient,
 			baseURL+ConsoleServiceGetModulesProcedure,
 			opts...,
 		),
-		streamEvents: connect_go.NewClient[console.StreamEventsRequest, console.StreamEventsResponse](
+		streamEvents: connect.NewClient[console.StreamEventsRequest, console.StreamEventsResponse](
 			httpClient,
 			baseURL+ConsoleServiceStreamEventsProcedure,
 			opts...,
 		),
-		getEvents: connect_go.NewClient[console.EventsQuery, console.GetEventsResponse](
+		getEvents: connect.NewClient[console.EventsQuery, console.GetEventsResponse](
 			httpClient,
 			baseURL+ConsoleServiceGetEventsProcedure,
 			opts...,
@@ -92,29 +92,29 @@ func NewConsoleServiceClient(httpClient connect_go.HTTPClient, baseURL string, o
 
 // consoleServiceClient implements ConsoleServiceClient.
 type consoleServiceClient struct {
-	ping         *connect_go.Client[v1.PingRequest, v1.PingResponse]
-	getModules   *connect_go.Client[console.GetModulesRequest, console.GetModulesResponse]
-	streamEvents *connect_go.Client[console.StreamEventsRequest, console.StreamEventsResponse]
-	getEvents    *connect_go.Client[console.EventsQuery, console.GetEventsResponse]
+	ping         *connect.Client[v1.PingRequest, v1.PingResponse]
+	getModules   *connect.Client[console.GetModulesRequest, console.GetModulesResponse]
+	streamEvents *connect.Client[console.StreamEventsRequest, console.StreamEventsResponse]
+	getEvents    *connect.Client[console.EventsQuery, console.GetEventsResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.console.ConsoleService.Ping.
-func (c *consoleServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
+func (c *consoleServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
 }
 
 // GetModules calls xyz.block.ftl.v1.console.ConsoleService.GetModules.
-func (c *consoleServiceClient) GetModules(ctx context.Context, req *connect_go.Request[console.GetModulesRequest]) (*connect_go.Response[console.GetModulesResponse], error) {
+func (c *consoleServiceClient) GetModules(ctx context.Context, req *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error) {
 	return c.getModules.CallUnary(ctx, req)
 }
 
 // StreamEvents calls xyz.block.ftl.v1.console.ConsoleService.StreamEvents.
-func (c *consoleServiceClient) StreamEvents(ctx context.Context, req *connect_go.Request[console.StreamEventsRequest]) (*connect_go.ServerStreamForClient[console.StreamEventsResponse], error) {
+func (c *consoleServiceClient) StreamEvents(ctx context.Context, req *connect.Request[console.StreamEventsRequest]) (*connect.ServerStreamForClient[console.StreamEventsResponse], error) {
 	return c.streamEvents.CallServerStream(ctx, req)
 }
 
 // GetEvents calls xyz.block.ftl.v1.console.ConsoleService.GetEvents.
-func (c *consoleServiceClient) GetEvents(ctx context.Context, req *connect_go.Request[console.EventsQuery]) (*connect_go.Response[console.GetEventsResponse], error) {
+func (c *consoleServiceClient) GetEvents(ctx context.Context, req *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error) {
 	return c.getEvents.CallUnary(ctx, req)
 }
 
@@ -122,10 +122,10 @@ func (c *consoleServiceClient) GetEvents(ctx context.Context, req *connect_go.Re
 // service.
 type ConsoleServiceHandler interface {
 	// Ping service for readiness.
-	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
-	GetModules(context.Context, *connect_go.Request[console.GetModulesRequest]) (*connect_go.Response[console.GetModulesResponse], error)
-	StreamEvents(context.Context, *connect_go.Request[console.StreamEventsRequest], *connect_go.ServerStream[console.StreamEventsResponse]) error
-	GetEvents(context.Context, *connect_go.Request[console.EventsQuery]) (*connect_go.Response[console.GetEventsResponse], error)
+	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error)
+	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest], *connect.ServerStream[console.StreamEventsResponse]) error
+	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
 }
 
 // NewConsoleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -133,47 +133,59 @@ type ConsoleServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle(ConsoleServicePingProcedure, connect_go.NewUnaryHandler(
+func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	consoleServicePingHandler := connect.NewUnaryHandler(
 		ConsoleServicePingProcedure,
 		svc.Ping,
-		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
-		connect_go.WithHandlerOptions(opts...),
-	))
-	mux.Handle(ConsoleServiceGetModulesProcedure, connect_go.NewUnaryHandler(
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
+	consoleServiceGetModulesHandler := connect.NewUnaryHandler(
 		ConsoleServiceGetModulesProcedure,
 		svc.GetModules,
 		opts...,
-	))
-	mux.Handle(ConsoleServiceStreamEventsProcedure, connect_go.NewServerStreamHandler(
+	)
+	consoleServiceStreamEventsHandler := connect.NewServerStreamHandler(
 		ConsoleServiceStreamEventsProcedure,
 		svc.StreamEvents,
 		opts...,
-	))
-	mux.Handle(ConsoleServiceGetEventsProcedure, connect_go.NewUnaryHandler(
+	)
+	consoleServiceGetEventsHandler := connect.NewUnaryHandler(
 		ConsoleServiceGetEventsProcedure,
 		svc.GetEvents,
 		opts...,
-	))
-	return "/xyz.block.ftl.v1.console.ConsoleService/", mux
+	)
+	return "/xyz.block.ftl.v1.console.ConsoleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case ConsoleServicePingProcedure:
+			consoleServicePingHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetModulesProcedure:
+			consoleServiceGetModulesHandler.ServeHTTP(w, r)
+		case ConsoleServiceStreamEventsProcedure:
+			consoleServiceStreamEventsHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetEventsProcedure:
+			consoleServiceGetEventsHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedConsoleServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedConsoleServiceHandler struct{}
 
-func (UnimplementedConsoleServiceHandler) Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.Ping is not implemented"))
+func (UnimplementedConsoleServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.Ping is not implemented"))
 }
 
-func (UnimplementedConsoleServiceHandler) GetModules(context.Context, *connect_go.Request[console.GetModulesRequest]) (*connect_go.Response[console.GetModulesResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetModules is not implemented"))
+func (UnimplementedConsoleServiceHandler) GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetModules is not implemented"))
 }
 
-func (UnimplementedConsoleServiceHandler) StreamEvents(context.Context, *connect_go.Request[console.StreamEventsRequest], *connect_go.ServerStream[console.StreamEventsResponse]) error {
-	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.StreamEvents is not implemented"))
+func (UnimplementedConsoleServiceHandler) StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest], *connect.ServerStream[console.StreamEventsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.StreamEvents is not implemented"))
 }
 
-func (UnimplementedConsoleServiceHandler) GetEvents(context.Context, *connect_go.Request[console.EventsQuery]) (*connect_go.Response[console.GetEventsResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetEvents is not implemented"))
+func (UnimplementedConsoleServiceHandler) GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetEvents is not implemented"))
 }
