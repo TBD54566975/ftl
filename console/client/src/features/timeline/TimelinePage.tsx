@@ -3,6 +3,7 @@ import React from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Page } from '../../layout'
 import { EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { Timeline } from './Timeline'
 import { TimelineFilterPanel } from './filters/TimelineFilterPanel'
 import { TIME_RANGES, TimeSettings, TimelineTimeControls } from './filters/TimelineTimeControls'
@@ -31,22 +32,24 @@ export const TimelinePage = () => {
   }
 
   return (
-    <Page>
-      <Page.Header icon={<ListBulletIcon />} title='Events'>
-        <TimelineTimeControls
-          selectedTimeRange={selectedTimeRange}
-          isTimelinePaused={isTimelinePaused}
-          onTimeSettingsChange={handleTimeSettingsChanged}
-        />
-      </Page.Header>
-      <Page.Body className='flex'>
-        <div className='sticky top-0 flex-none overflow-y-auto'>
-          <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
-        </div>
-        <div className='flex-grow overflow-y-scroll'>
-          <Timeline timeSettings={timeSettings} filters={filters} />
-        </div>
-      </Page.Body>
-    </Page>
+    <SidePanelProvider>
+      <Page>
+        <Page.Header icon={<ListBulletIcon />} title='Events'>
+          <TimelineTimeControls
+            selectedTimeRange={selectedTimeRange}
+            isTimelinePaused={isTimelinePaused}
+            onTimeSettingsChange={handleTimeSettingsChanged}
+          />
+        </Page.Header>
+        <Page.Body className='flex'>
+          <div className='sticky top-0 flex-none overflow-y-auto'>
+            <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
+          </div>
+          <div className='flex-grow overflow-y-scroll'>
+            <Timeline timeSettings={timeSettings} filters={filters} />
+          </div>
+        </Page.Body>
+      </Page>
+    </SidePanelProvider>
   )
 }

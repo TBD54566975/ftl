@@ -5,6 +5,7 @@ import { Card } from '../../components/Card'
 import { Page } from '../../layout'
 import { CallEvent, Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
+import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { getCalls } from '../../services/console.service'
 import { CallList } from '../calls/CallList'
 
@@ -38,33 +39,35 @@ export const ModulePage = () => {
   }, [module])
 
   return (
-    <Page>
-      <Page.Header
-        icon={<Square3Stack3DIcon />}
-        title={module?.name || ''}
-        breadcrumbs={[{ label: 'Modules', link: '/modules' }]}
-      />
-      <Page.Body className='p-4'>
-        <div className='flex-1 flex flex-col h-full'>
-          <div className='flex-1'>
-            <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
-              {module?.verbs.map((verb) => (
-                <Card
-                  key={verb.verb?.name}
-                  topBarColor='bg-green-500'
-                  onClick={() => navigate(`/modules/${module.name}/verbs/${verb.verb?.name}`)}
-                >
-                  {verb.verb?.name}
-                  <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
-                </Card>
-              ))}
+    <SidePanelProvider>
+      <Page>
+        <Page.Header
+          icon={<Square3Stack3DIcon />}
+          title={module?.name || ''}
+          breadcrumbs={[{ label: 'Modules', link: '/modules' }]}
+        />
+        <Page.Body className='p-4'>
+          <div className='flex-1 flex flex-col h-full'>
+            <div className='flex-1'>
+              <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
+                {module?.verbs.map((verb) => (
+                  <Card
+                    key={verb.verb?.name}
+                    topBarColor='bg-green-500'
+                    onClick={() => navigate(`/modules/${module.name}/verbs/${verb.verb?.name}`)}
+                  >
+                    {verb.verb?.name}
+                    <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            <div className='flex-1 h-1/2'>
+              <CallList calls={calls} />
             </div>
           </div>
-          <div className='flex-1 h-1/2'>
-            <CallList calls={calls} />
-          </div>
-        </div>
-      </Page.Body>
-    </Page>
+        </Page.Body>
+      </Page>
+    </SidePanelProvider>
   )
 }
