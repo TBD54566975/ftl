@@ -1,60 +1,58 @@
 import React from 'react'
+import { ModulesSidebar } from './ModulesSidebar'
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
+import { ModulesGraph } from './ModulesGraph'
+import { ModulesRequests } from './ModulesRequests'
+import { ModulesSelectedVerbs } from './ModulesSelectedVerbs'
 import { modulesContext } from '../../providers/modules-provider'
-import { generateDot } from './generate-dot'
-import { dotToSVG } from './dot-to-svg'
-import { formatSVG } from './format-svg'
-import { svgZoom } from './svg-zoom'
-import { createControls } from './create-controls'
+import { classNames } from '../../utils'
+import { VerbId } from './modules.constants'
 import { Page } from '../../layout'
-
-import './Modules.css'
+import type { ZoomCallbacks } from './modules.constants'
 
 export const ModulesPage = () => {
-  const modules = React.useContext(modulesContext)
-  const viewportRef = React.useRef<HTMLDivElement>(null)
-  const controlRef = React.useRef<HTMLDivElement>(null)
-  const [viewport, setViewPort] = React.useState<HTMLDivElement>()
-  const [controls, setControls] = React.useState<HTMLDivElement>()
-  const [svg, setSVG] = React.useState<SVGSVGElement>()
+  const { modules } = React.useContext(modulesContext)
+  const [selectedVerbs, setSelectedVerbs] = React.useState<VerbId[]>([])
+  const hasVerbs = Boolean(selectedVerbs.length)
+  const [zoomCallbacks, setZoomCallbacks] = React.useState<ZoomCallbacks>()
 
-  React.useEffect(() => {
-    const viewCur = viewportRef.current
-    viewCur && setViewPort(viewCur)
-
-    const ctlCur = controlRef.current
-    ctlCur && setControls(ctlCur)
-  }, [])
-
-  React.useEffect(() => {
-    const renderSvg = async () => {
-      const dot = generateDot(modules)
-      const unformattedSVG = await dotToSVG(dot)
-      if (unformattedSVG) {
-        const formattedSVG = formatSVG(unformattedSVG)
-        viewport?.replaceChildren(formattedSVG)
-        setSVG(formattedSVG)
-      }
-    }
-    viewport && void renderSvg()
-  }, [modules, viewport])
-
-  React.useEffect(() => {
-    if (controls && svg) {
-      const zoom = svgZoom()
-      const [buttons, removeListeners] = createControls(zoom)
-      controls.replaceChildren(...buttons.values())
-      return () => {
-        removeListeners()
-      }
-    }
-  }, [controls, svg])
   return (
-    <Page className='h-full w-full flex flex-col'>
+    <Page>
       <Page.Header icon={<Square3Stack3DIcon />} title='Modules' />
-      <Page.Body>
-        <div ref={controlRef} className='zoom-pan-controls'></div>
-        <div ref={viewportRef} className='viewport flex-1 overflow-hidden' />
+      <Page.Body className='gap-2 p-2 flex'>
+        <ModulesSidebar
+          className={`flex-none w-72`}
+          modules={modules}
+          setSelectedVerbs={setSelectedVerbs}
+          selectedVerbs={selectedVerbs}
+          zoomCallbacks={zoomCallbacks}
+        />
+        <div
+          className={classNames(
+            'flex-grow grid gap-2',
+            !hasVerbs && 'grid grid-rows-2 grid-cols-fr',
+            hasVerbs && 'grid-cols-2 grid-rows-2',
+          )}
+        >
+          <ModulesGraph
+            setSelectedVerbs={setSelectedVerbs}
+            selectedVerbs={selectedVerbs}
+            setZoomCallbacks={setZoomCallbacks}
+            zoomCallbacks={zoomCallbacks}
+            className={classNames(hasVerbs && 'row-start-1 row-span-1 col-start-1 col-span-1')}
+          />
+          <ModulesRequests
+            modules={modules}
+            className={classNames(hasVerbs && 'row-start-2 row-span-1 col-start-1 col-span-1')}
+          />
+          {hasVerbs && (
+            <ModulesSelectedVerbs
+              modules={modules}
+              selectedVerbs={selectedVerbs}
+              className='row-start-1 row-span-2 col-start-2 col-span-1'
+            />
+          )}
+        </div>
       </Page.Body>
     </Page>
   )

@@ -1,5 +1,5 @@
-import { GetModulesResponse, Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { moduleTitleCls, moduleVerbCls } from './constants'
+import { GetModulesResponse, Module } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { moduleTitleCls, moduleVerbCls } from '../modules.constants'
 const HtmlId = (id: string) => `HREF="remove_me_url"  ID="${id}"`
 
 const generateRow = ({
@@ -50,7 +50,6 @@ const generateModuleContent = (module: Module): { node: string; edges: string } 
                   if (call.module) {
                     edges += `\n"${moduleName}":"${verb.name}"  -> "${call.module}":"${call.name}"[
                       id = "${moduleName}.${verb.name}=>${call.module}.${call.name}"
-                      label = "${moduleName}.${verb.name}=>${call.module}.${call.name}"
                     ]`
                   }
                 })

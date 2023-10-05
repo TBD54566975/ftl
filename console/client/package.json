@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",
-    "build:css-types": "tcm --c -e -p  'src/**/*.css' .",
+    "build:css-types": "tcm --c -p  'src/**/*.css' .",
     "copy:css": "node ./scripts/copy-css.cjs",
     "dev": "vite",
     "lint": "eslint . --ext .ts,.tsx,.js,.cjs",
