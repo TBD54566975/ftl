@@ -20,7 +20,7 @@ import (
 
 type UserVerbConfig struct {
 	FTLEndpoint         *url.URL             `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
-	ObservabilityConfig observability.Config `embed:"" prefix:"observability-"`
+	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 }
 
 // NewUserVerbServer starts a new code-generated drive for user Verbs.
@@ -31,7 +31,7 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
-		err := observability.Init(ctx, moduleName, uc.ObservabilityConfig)
+		err := observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
 			return nil, nil, errors.WithStack(err)
 		}

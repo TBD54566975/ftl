@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/TBD54566975/ftl/backend/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/observability"
 	"github.com/TBD54566975/ftl/backend/controller"
 )
 
@@ -18,9 +19,10 @@ var version = "dev"
 var timestamp = "0"
 
 var cli struct {
-	Version          kong.VersionFlag  `help:"Show version."`
-	LogConfig        log.Config        `embed:"" prefix:"log-"`
-	ControllerConfig controller.Config `embed:""`
+	Version             kong.VersionFlag     `help:"Show version."`
+	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
+	LogConfig           log.Config           `embed:"" prefix:"log-"`
+	ControllerConfig    controller.Config    `embed:""`
 }
 
 func main() {
@@ -34,6 +36,8 @@ func main() {
 		kong.Vars{"version": version, "timestamp": time.Unix(t, 0).Format(time.RFC3339)},
 	)
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
+	err = observability.Init(ctx, "ftl-controller", version, cli.ObservabilityConfig)
+	kctx.FatalIfErrorf(err, "failed to initialize observability")
 	err = controller.Start(ctx, cli.ControllerConfig)
 	kctx.FatalIfErrorf(err)
 }

@@ -76,7 +76,7 @@ func WithRequestName(ctx context.Context, key model.RequestName) context.Context
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
 	return []connect.ClientOption{
 		connect.WithGRPC(), // Use gRPC because some servers will not be using Connect.
-		connect.WithInterceptors(MetadataInterceptor(level)),
+		connect.WithInterceptors(MetadataInterceptor(level), otelconnect.NewInterceptor()),
 	}
 }
 

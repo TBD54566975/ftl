@@ -5,19 +5,17 @@ import (
 
 	"github.com/go-logr/logr"
 
-	log2 "github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/log"
 )
 
 type logSink struct {
-	name      string
 	keyValues map[string]interface{}
-	logger    *log2.Logger
+	logger    *log.Logger
 }
 
-func NewOtelLogger(logger *log2.Logger) logr.Logger {
+func NewOtelLogger(logger *log.Logger, level log.Level) logr.Logger {
 	sink := &logSink{
-		name:   "otel",
-		logger: logger,
+		logger: logger.Scope("otel").Level(level),
 	}
 	return logr.New(sink)
 }
@@ -28,30 +26,30 @@ func (l *logSink) Init(info logr.RuntimeInfo) {
 }
 
 func (l logSink) Enabled(level int) bool {
-	return true
+	return otelLevelToLevel(level) >= l.logger.GetLevel()
 }
 
 func (l logSink) Info(level int, msg string, kvs ...interface{}) {
 	// otel uses the following mapping for level to our log.Level
-	// 4 = Info
 	// 8 = Debug
+	// 4 = Info
 	// 1 = Warning
 	// 0 = Error
-	var logLevel log2.Level
+	var logLevel log.Level
 	switch level {
 	case 4:
-		logLevel = log2.Info
+		logLevel = log.Info
 	case 8:
-		logLevel = log2.Debug
+		logLevel = log.Debug
 	case 1:
-		logLevel = log2.Warn
+		logLevel = log.Warn
 	case 0:
-		logLevel = log2.Error
+		logLevel = log.Error
 	default:
-		logLevel = log2.Trace
+		logLevel = log.Trace
 	}
 
-	logMsg := fmt.Sprintf("%s: %s", l.name, msg)
+	logMsg := msg + " "
 	for k, v := range l.keyValues {
 		logMsg += fmt.Sprintf("%s: %+v  ", k, v)
 	}
@@ -68,9 +66,8 @@ func (l logSink) Error(err error, msg string, kvs ...interface{}) {
 
 func (l logSink) WithName(name string) logr.LogSink {
 	return &logSink{
-		name:      l.name + "." + name,
 		keyValues: l.keyValues,
-		logger:    l.logger,
+		logger:    l.logger.Scope(name),
 	}
 }
 
@@ -83,8 +80,22 @@ func (l logSink) WithValues(kvs ...interface{}) logr.LogSink {
 		newMap[kvs[i].(string)] = kvs[i+1] //nolint:forcetypeassert
 	}
 	return &logSink{
-		name:      l.name,
 		keyValues: newMap,
 		logger:    l.logger,
+	}
+}
+
+func otelLevelToLevel(level int) log.Level {
+	switch level {
+	case 4:
+		return log.Info
+	case 8:
+		return log.Debug
+	case 1:
+		return log.Warn
+	case 0:
+		return log.Error
+	default:
+		return log.Trace
 	}
 }
