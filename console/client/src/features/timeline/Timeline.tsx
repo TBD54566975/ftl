@@ -116,6 +116,21 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
     setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
   }
 
+  const deploymentName = (event: Event) => {
+    switch (event.entry?.case) {
+      case 'call':
+        return event.entry.value.deploymentName
+      case 'log':
+        return event.entry.value.deploymentName
+      case 'deploymentCreated':
+        return event.entry.value.name
+      case 'deploymentUpdated':
+        return event.entry.value.name
+      default:
+        return ''
+    }
+  }
+
   return (
     <div className='border border-gray-100 dark:border-slate-700 rounded m-2'>
       <div className='overflow-x-hidden'>
@@ -124,6 +139,9 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
             <tr className='flex text-xs'>
               <th className='p-1 text-left border-b w-8 border-gray-100 dark:border-slate-700 flex-none'></th>
               <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>Date</th>
+              <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>
+                Deployment
+              </th>
               <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-grow flex-shrink'>
                 Content
               </th>
@@ -143,6 +161,12 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
                 </td>
                 <td className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>
                   {formatTimestampShort(entry.timeStamp)}
+                </td>
+                <td
+                  title={deploymentName(entry)}
+                  className='p-1 pr-2 w-40 items-center flex-none truncate text-indigo-500 dark:text-indigo-300'
+                >
+                  {deploymentName(entry)}
                 </td>
                 <td className='p-1 flex-grow truncate'>
                   {(() => {

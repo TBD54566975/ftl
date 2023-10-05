@@ -1,5 +1,7 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Card } from '../../../components'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
@@ -20,6 +22,7 @@ interface Props {
 
 export const TimelineCallDetails = ({ timestamp, call }: Props) => {
   const client = useClient(ConsoleService)
+  const navigate = useNavigate()
   const { closePanel } = React.useContext(SidePanelContext)
   const [requestCalls, setRequestCalls] = useState<CallEvent[]>([])
   const [selectedCall, setSelectedCall] = useState(call)
@@ -83,10 +86,17 @@ export const TimelineCallDetails = ({ timestamp, call }: Props) => {
         </>
       )}
 
+      <Card
+        key={call.deploymentName}
+        topBarColor='bg-green-500'
+        className='mt-4'
+        onClick={() => navigate(`/deployments/${call.deploymentName}`)}
+      >
+        {call.deploymentName}
+        <p className='text-xs text-gray-400'>{call.deploymentName}</p>
+      </Card>
+
       <ul className='pt-4 space-y-2'>
-        <li>
-          <AttributeBadge name='Deployment' value={selectedCall.deploymentName} />
-        </li>
         {selectedCall.requestName && (
           <li>
             <AttributeBadge name='Request' value={selectedCall.requestName} />
