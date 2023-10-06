@@ -88,7 +88,7 @@ export const VerbForm = ({ module, verb }: Props) => {
         <div className='border border-gray-200 dark:border-slate-800 rounded-sm'>
           <Editor
             key={[module?.name, verb?.verb?.name].join('.')}
-            height='35vh'
+            height='20vh'
             theme={`${isDarkMode ? 'vs-dark' : 'light'}`}
             defaultLanguage='json'
             path={[module?.name, verb?.verb?.name].join('.')}
@@ -101,13 +101,14 @@ export const VerbForm = ({ module, verb }: Props) => {
             beforeMount={handleEditorWillMount}
           />
         </div>
-
-        <button
-          type='submit'
-          className='bg-indigo-700 text-white mt-4 px-4 py-2 rounded hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
-        >
-          Submit
-        </button>
+        <div className='text-right'>
+          <button
+            type='submit'
+            className='bg-indigo-700 text-white mt-4 px-4 py-2 rounded hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
+          >
+            Submit
+          </button>
+        </div>
       </form>
       {response && (
         <div className='pt-4'>
