@@ -82,7 +82,7 @@ export const CallList = ({ calls }: Props) => {
                   <td className='p-1 flex-1 flex-grow truncate' title={call.response}>
                     {call.response}
                   </td>
-                  <td className='p-1 flex-1 flex-grow truncate' title={call.error}>
+                  <td className='p-1 flex-1 flex-grow truncate text-red-500' title={call.error}>
                     {call.error}
                   </td>
                 </tr>
