@@ -15,7 +15,7 @@ export const TimelineIcon = ({ event }: Props) => {
         return event.entry.value.sourceVerbRef ? (
           <PhoneIcon className={`${style} ${textColor}`} />
         ) : (
-          <PhoneArrowDownLeftIcon className={`${style}`} />
+          <PhoneArrowDownLeftIcon className={`${style} ${textColor}`} />
         )
       }
       case 'deploymentCreated':
