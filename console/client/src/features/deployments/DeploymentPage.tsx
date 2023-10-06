@@ -3,11 +3,11 @@ import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ButtonSmall } from '../../components/ButtonSmall'
 import { Card } from '../../components/Card'
+import { Page } from '../../layout'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { MetadataCalls, VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { modulesContext } from '../../providers/modules-provider'
 import { verbRefString } from '../verbs/verb.utils'
-import { Page } from '../../layout'
 
 export const DeploymentPage = () => {
   const navigate = useNavigate()
@@ -46,7 +46,7 @@ export const DeploymentPage = () => {
     })
 
     setCalls(Array.from(verbCalls))
-  }, [modules])
+  }, [module])
 
   return (
     <Page>
@@ -69,11 +69,14 @@ export const DeploymentPage = () => {
             </Card>
           ))}
         </div>
-        <h2 className='py-2'>Calls</h2>
-        <ul className='space-y-2'>
+        <h2 className='pt-4'>Calls</h2>
+        {calls.length === 0 && <p className='pt-2 text-sm text-gray-400'>Does not call other verbs</p>}
+        <ul className='pt-2 flex space-x-2'>
           {calls?.map((verb) => (
             <li key={`${module?.name}-${verb.module}-${verb.name}`} className='text-xs'>
-              <ButtonSmall>{verbRefString(verb)}</ButtonSmall>
+              <ButtonSmall onClick={() => navigate(`/modules/${verb.module}/verbs/${verb.name}`)}>
+                {verbRefString(verb)}
+              </ButtonSmall>
             </li>
           ))}
         </ul>
