@@ -11,13 +11,18 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 internal fun makeGrpcClient(endpoint: String): ManagedChannel {
   val url = URL(endpoint)
-  // TODO: Check if URL is https and use SSL?
-  return NettyChannelBuilder
-    .forAddress(InetSocketAddress(url.host, url.port))
+  val port = if (url.port == -1) when (url.protocol) {
+    "http" -> 80
+    "https" -> 443
+    else -> throw IllegalArgumentException("Unsupported protocol: ${url.protocol}")
+  } else url.port
+  var builder = NettyChannelBuilder
+    .forAddress(InetSocketAddress(url.host, port))
     .keepAliveTime(5, SECONDS)
     .intercept(VerbServiceClientInterceptor())
-    .usePlaintext()
-    .build()
+  if (url.protocol == "http")
+    builder = builder.usePlaintext()
+  return builder.build()
 }
 
 private class VerbServiceClientInterceptor : ClientInterceptor {
