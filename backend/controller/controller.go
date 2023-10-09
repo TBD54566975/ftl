@@ -41,7 +41,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
-	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
 type Config struct {
@@ -190,7 +190,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	creq := connect.NewRequest(&ftlv1.CallRequest{
-		Verb: &pschema.VerbRef{Module: route.Module, Name: route.Verb},
+		Verb: &schemapb.VerbRef{Module: route.Module, Name: route.Verb},
 		Body: body,
 	})
 	headers.SetRequestName(creq.Header(), requestName)
@@ -299,7 +299,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 			Language:    d.Language,
 			Name:        d.Module,
 			MinReplicas: int32(d.MinReplicas),
-			Schema:      d.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
+			Schema:      d.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 			Labels:      labels,
 		}, nil
 	})
@@ -319,7 +319,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
 			return &ftlv1.StatusResponse_IngressRoute{
 				DeploymentName: r.Deployment.String(),
-				Verb:           &pschema.VerbRef{Module: r.Module, Name: r.Verb},
+				Verb:           &schemapb.VerbRef{Module: r.Module, Name: r.Verb},
 				Method:         r.Method,
 				Path:           r.Path,
 			}
@@ -369,9 +369,9 @@ func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSch
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	sch := &pschema.Schema{
-		Modules: slices.Map(deployments, func(d dal.Deployment) *pschema.Module {
-			return d.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
+	sch := &schemapb.Schema{
+		Modules: slices.Map(deployments, func(d dal.Deployment) *schemapb.Module {
+			return d.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 		}),
 	}
 	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: sch}), nil
@@ -511,7 +511,7 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 	logger.Infof("Get deployment for: %s", deployment.Name)
 
 	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
-		Schema:    deployment.Schema.ToProto().(*pschema.Module), //nolint:forcetypeassert
+		Schema:    deployment.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 		Artefacts: slices.Map(deployment.Artefacts, ftlv1.ArtefactToProto),
 	}), nil
 }
@@ -912,8 +912,8 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				delete(moduleState, name)
 				delete(moduleByDeploymentName, deletion)
 			} else if message, ok := notification.Message.Get(); ok {
-				moduleSchema := message.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
-				moduleSchema.Runtime = &pschema.ModuleRuntime{
+				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+				moduleSchema.Runtime = &schemapb.ModuleRuntime{
 					Language:    message.Language,
 					CreateTime:  timestamppb.New(message.CreatedAt),
 					MinReplicas: int32(message.MinReplicas),
@@ -1076,9 +1076,9 @@ func runWithRetries(ctx context.Context, success, failure time.Duration, fn func
 func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {
 	var ingressRoutes []dal.IngressRoutingEntry
 	for _, decl := range req.Schema.Decls {
-		if verb, ok := decl.Value.(*pschema.Decl_Verb); ok {
+		if verb, ok := decl.Value.(*schemapb.Decl_Verb); ok {
 			for _, metadata := range verb.Verb.Metadata {
-				if ingress, ok := metadata.Value.(*pschema.Metadata_Ingress); ok {
+				if ingress, ok := metadata.Value.(*schemapb.Metadata_Ingress); ok {
 					ingressRoutes = append(ingressRoutes, dal.IngressRoutingEntry{
 						Verb:   verb.Verb.Name,
 						Method: ingress.Ingress.Method,

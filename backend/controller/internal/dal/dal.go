@@ -28,7 +28,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
 var (
@@ -268,7 +268,7 @@ func (d *DAL) GetStatus(
 		return Status{}, errors.Wrap(translatePGError(err), "could not get routing table")
 	}
 	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetDeploymentsRow) (Deployment, error) {
-		protoSchema := &pschema.Module{}
+		protoSchema := &schemapb.Module{}
 		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
 		}
@@ -724,7 +724,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 		return nil, errors.WithStack(translatePGError(err))
 	}
 	deployments, err := slices.MapErr(rows, func(in sql.GetDeploymentsRow) (Deployment, error) {
-		protoSchema := &pschema.Module{}
+		protoSchema := &schemapb.Module{}
 		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
 			return Deployment{}, errors.Wrapf(err, "%q: could not unmarshal schema", in.ModuleName)
 		}
@@ -898,7 +898,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 }
 
 func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRow) (*model.Deployment, error) {
-	pm := &pschema.Module{}
+	pm := &schemapb.Module{}
 	err := proto.Unmarshal(deployment.Deployment.Schema, pm)
 	if err != nil {
 		return nil, errors.WithStack(err)

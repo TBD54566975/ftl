@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
 func nodeListToProto[T proto.Message, U Node](nodes []U) []T {
@@ -17,74 +17,74 @@ func nodeListToProto[T proto.Message, U Node](nodes []U) []T {
 	return out
 }
 
-func declListToProto(nodes []Decl) []*pschema.Decl {
-	out := []*pschema.Decl{}
+func declListToProto(nodes []Decl) []*schemapb.Decl {
+	out := []*schemapb.Decl{}
 	for _, n := range nodes {
-		var v pschema.IsDeclValue
+		var v schemapb.IsDeclValue
 		switch n := n.(type) {
 		case *Verb:
-			v = &pschema.Decl_Verb{Verb: n.ToProto().(*pschema.Verb)}
+			v = &schemapb.Decl_Verb{Verb: n.ToProto().(*schemapb.Verb)}
 		case *Data:
-			v = &pschema.Decl_Data{Data: n.ToProto().(*pschema.Data)}
+			v = &schemapb.Decl_Data{Data: n.ToProto().(*schemapb.Data)}
 		}
-		out = append(out, &pschema.Decl{Value: v})
+		out = append(out, &schemapb.Decl{Value: v})
 	}
 	return out
 }
 
-func metadataListToProto(nodes []Metadata) []*pschema.Metadata {
-	var out []*pschema.Metadata
+func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
+	var out []*schemapb.Metadata
 	for _, n := range nodes {
-		var v pschema.IsMetadataValue
+		var v schemapb.IsMetadataValue
 		switch n := n.(type) {
 		case *MetadataCalls:
-			v = &pschema.Metadata_Calls{Calls: n.ToProto().(*pschema.MetadataCalls)}
+			v = &schemapb.Metadata_Calls{Calls: n.ToProto().(*schemapb.MetadataCalls)}
 
 		case *MetadataIngress:
-			v = &pschema.Metadata_Ingress{Ingress: n.ToProto().(*pschema.MetadataIngress)}
+			v = &schemapb.Metadata_Ingress{Ingress: n.ToProto().(*schemapb.MetadataIngress)}
 
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}
-		out = append(out, &pschema.Metadata{Value: v})
+		out = append(out, &schemapb.Metadata{Value: v})
 	}
 	return out
 }
 
-func typeToProto(t Type) *pschema.Type {
+func typeToProto(t Type) *schemapb.Type {
 	switch t.(type) {
 	case *VerbRef:
-		return &pschema.Type{Value: &pschema.Type_VerbRef{VerbRef: t.ToProto().(*pschema.VerbRef)}}
+		return &schemapb.Type{Value: &schemapb.Type_VerbRef{VerbRef: t.ToProto().(*schemapb.VerbRef)}}
 
 	case *DataRef:
-		return &pschema.Type{Value: &pschema.Type_DataRef{DataRef: t.ToProto().(*pschema.DataRef)}}
+		return &schemapb.Type{Value: &schemapb.Type_DataRef{DataRef: t.ToProto().(*schemapb.DataRef)}}
 
 	case *Int:
-		return &pschema.Type{Value: &pschema.Type_Int{Int: t.ToProto().(*pschema.Int)}}
+		return &schemapb.Type{Value: &schemapb.Type_Int{Int: t.ToProto().(*schemapb.Int)}}
 
 	case *Float:
-		return &pschema.Type{Value: &pschema.Type_Float{Float: t.ToProto().(*pschema.Float)}}
+		return &schemapb.Type{Value: &schemapb.Type_Float{Float: t.ToProto().(*schemapb.Float)}}
 
 	case *String:
-		return &pschema.Type{Value: &pschema.Type_String_{String_: t.ToProto().(*pschema.String)}}
+		return &schemapb.Type{Value: &schemapb.Type_String_{String_: t.ToProto().(*schemapb.String)}}
 
 	case *Time:
-		return &pschema.Type{Value: &pschema.Type_Time{Time: t.ToProto().(*pschema.Time)}}
+		return &schemapb.Type{Value: &schemapb.Type_Time{Time: t.ToProto().(*schemapb.Time)}}
 
 	case *Bool:
-		return &pschema.Type{Value: &pschema.Type_Bool{Bool: t.ToProto().(*pschema.Bool)}}
+		return &schemapb.Type{Value: &schemapb.Type_Bool{Bool: t.ToProto().(*schemapb.Bool)}}
 
 	case *Array:
-		return &pschema.Type{Value: &pschema.Type_Array{Array: t.ToProto().(*pschema.Array)}}
+		return &schemapb.Type{Value: &schemapb.Type_Array{Array: t.ToProto().(*schemapb.Array)}}
 
 	case *Map:
-		return &pschema.Type{Value: &pschema.Type_Map{Map: t.ToProto().(*pschema.Map)}}
+		return &schemapb.Type{Value: &schemapb.Type_Map{Map: t.ToProto().(*schemapb.Map)}}
 	}
 	panic("unreachable")
 }
 
 func (p Position) ToProto() proto.Message {
-	return &pschema.Position{
+	return &schemapb.Position{
 		Line:     int64(p.Line),
 		Column:   int64(p.Column),
 		Filename: p.Filename,
@@ -92,15 +92,15 @@ func (p Position) ToProto() proto.Message {
 }
 
 func (s *Schema) ToProto() proto.Message {
-	return &pschema.Schema{
-		Pos:     s.Pos.ToProto().(*pschema.Position),
-		Modules: nodeListToProto[*pschema.Module](s.Modules),
+	return &schemapb.Schema{
+		Pos:     s.Pos.ToProto().(*schemapb.Position),
+		Modules: nodeListToProto[*schemapb.Module](s.Modules),
 	}
 }
 
 func (m *Module) ToProto() proto.Message {
-	return &pschema.Module{
-		Pos:      m.Pos.ToProto().(*pschema.Position),
+	return &schemapb.Module{
+		Pos:      m.Pos.ToProto().(*schemapb.Position),
 		Name:     m.Name,
 		Comments: m.Comments,
 		Decls:    declListToProto(m.Decls),
@@ -108,28 +108,28 @@ func (m *Module) ToProto() proto.Message {
 }
 
 func (v *Verb) ToProto() proto.Message {
-	return &pschema.Verb{
-		Pos:      v.Pos.ToProto().(*pschema.Position),
+	return &schemapb.Verb{
+		Pos:      v.Pos.ToProto().(*schemapb.Position),
 		Name:     v.Name,
 		Comments: v.Comments,
-		Request:  v.Request.ToProto().(*pschema.DataRef),
-		Response: v.Response.ToProto().(*pschema.DataRef),
+		Request:  v.Request.ToProto().(*schemapb.DataRef),
+		Response: v.Response.ToProto().(*schemapb.DataRef),
 		Metadata: metadataListToProto(v.Metadata),
 	}
 }
 
 func (d *Data) ToProto() proto.Message {
-	return &pschema.Data{
-		Pos:      d.Pos.ToProto().(*pschema.Position),
+	return &schemapb.Data{
+		Pos:      d.Pos.ToProto().(*schemapb.Position),
 		Name:     d.Name,
-		Fields:   nodeListToProto[*pschema.Field](d.Fields),
+		Fields:   nodeListToProto[*schemapb.Field](d.Fields),
 		Comments: d.Comments,
 	}
 }
 
 func (f *Field) ToProto() proto.Message {
-	return &pschema.Field{
-		Pos:      f.Pos.ToProto().(*pschema.Position),
+	return &schemapb.Field{
+		Pos:      f.Pos.ToProto().(*schemapb.Position),
 		Name:     f.Name,
 		Type:     typeToProto(f.Type),
 		Comments: f.Comments,
@@ -137,65 +137,65 @@ func (f *Field) ToProto() proto.Message {
 }
 
 func (v *VerbRef) ToProto() proto.Message {
-	return &pschema.VerbRef{
-		Pos:    v.Pos.ToProto().(*pschema.Position),
+	return &schemapb.VerbRef{
+		Pos:    v.Pos.ToProto().(*schemapb.Position),
 		Name:   v.Name,
 		Module: v.Module,
 	}
 }
 
 func (s *DataRef) ToProto() proto.Message {
-	return &pschema.DataRef{
-		Pos:    s.Pos.ToProto().(*pschema.Position),
+	return &schemapb.DataRef{
+		Pos:    s.Pos.ToProto().(*schemapb.Position),
 		Name:   s.Name,
 		Module: s.Module,
 	}
 }
 
 func (m *MetadataCalls) ToProto() proto.Message {
-	return &pschema.MetadataCalls{
-		Pos:   m.Pos.ToProto().(*pschema.Position),
-		Calls: nodeListToProto[*pschema.VerbRef](m.Calls),
+	return &schemapb.MetadataCalls{
+		Pos:   m.Pos.ToProto().(*schemapb.Position),
+		Calls: nodeListToProto[*schemapb.VerbRef](m.Calls),
 	}
 }
 
 func (m *MetadataIngress) ToProto() proto.Message {
-	return &pschema.MetadataIngress{
-		Pos:    m.Pos.ToProto().(*pschema.Position),
+	return &schemapb.MetadataIngress{
+		Pos:    m.Pos.ToProto().(*schemapb.Position),
 		Method: m.Method,
 		Path:   m.Path,
 	}
 }
 
 func (i *Int) ToProto() proto.Message {
-	return &pschema.Int{}
+	return &schemapb.Int{}
 }
 
 func (s *String) ToProto() proto.Message {
-	return &pschema.String{}
+	return &schemapb.String{}
 }
 
 func (b *Bool) ToProto() proto.Message {
-	return &pschema.Bool{}
+	return &schemapb.Bool{}
 }
 
 func (f *Float) ToProto() proto.Message {
-	return &pschema.Float{}
+	return &schemapb.Float{}
 }
 
 func (t *Time) ToProto() proto.Message {
-	return &pschema.Time{}
+	return &schemapb.Time{}
 }
 
 func (m *Map) ToProto() proto.Message {
-	return &pschema.Map{
+	return &schemapb.Map{
 		Key:   typeToProto(m.Key),
 		Value: typeToProto(m.Value),
 	}
 }
 
 func (a *Array) ToProto() proto.Message {
-	return &pschema.Array{
+	return &schemapb.Array{
 		Element: typeToProto(a.Element),
 	}
 }

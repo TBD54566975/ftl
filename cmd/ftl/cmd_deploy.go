@@ -17,7 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
-	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
 type deployCmd struct {
@@ -71,9 +71,9 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	}
 	resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 		// TODO(aat): Use real data for this.
-		Schema: &pschema.Module{
+		Schema: &schemapb.Module{
 			Name: config.Module,
-			Runtime: &pschema.ModuleRuntime{
+			Runtime: &schemapb.ModuleRuntime{
 				CreateTime:  timestamppb.Now(),
 				Language:    config.Language,
 				MinReplicas: d.Replicas,
