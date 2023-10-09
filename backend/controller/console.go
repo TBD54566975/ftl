@@ -19,7 +19,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pbconsole "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
-	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
 type ConsoleService struct {
@@ -59,7 +59,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			switch decl := decl.(type) {
 			case *schema.Verb:
 				//nolint:forcetypeassert
-				v := decl.ToProto().(*pschema.Verb)
+				v := decl.ToProto().(*schemapb.Verb)
 				verbSchema := schema.VerbToSchema(v)
 				dataRef := schema.DataRef{
 					Module: deployment.Module,
@@ -80,7 +80,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				})
 			case *schema.Data:
 				//nolint:forcetypeassert
-				d := decl.ToProto().(*pschema.Data)
+				d := decl.ToProto().(*schemapb.Data)
 				data = append(data, &pbconsole.Data{
 					Data:   d,
 					Schema: schema.DataToSchema(d).String(),
@@ -287,9 +287,9 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 			rstr := r.String()
 			requestName = &rstr
 		}
-		var sourceVerbRef *pschema.VerbRef
+		var sourceVerbRef *schemapb.VerbRef
 		if sourceVerb, ok := event.SourceVerb.Get(); ok {
-			sourceVerbRef = sourceVerb.ToProto().(*pschema.VerbRef) //nolint:forcetypeassert
+			sourceVerbRef = sourceVerb.ToProto().(*schemapb.VerbRef) //nolint:forcetypeassert
 		}
 		return &pbconsole.Event{
 			TimeStamp: timestamppb.New(event.Time),
@@ -300,7 +300,7 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 					DeploymentName: event.DeploymentName.String(),
 					TimeStamp:      timestamppb.New(event.Time),
 					SourceVerbRef:  sourceVerbRef,
-					DestinationVerbRef: &pschema.VerbRef{
+					DestinationVerbRef: &schemapb.VerbRef{
 						Module: event.DestVerb.Module,
 						Name:   event.DestVerb.Name,
 					},

@@ -31,7 +31,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/compile/generate"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
-	pschema "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
 type watchCmd struct{}
@@ -267,8 +267,8 @@ func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient
 
 func deploy(ctx context.Context, client ftlv1connect.ControllerServiceClient, deployment *model.Deployment) error {
 	logger := log.FromContext(ctx)
-	module := deployment.Schema.ToProto().(*pschema.Module) //nolint:forcetypeassert
-	module.Runtime = &pschema.ModuleRuntime{
+	module := deployment.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	module.Runtime = &schemapb.ModuleRuntime{
 		Language:    deployment.Language,
 		CreateTime:  timestamppb.Now(),
 		MinReplicas: 1,
@@ -405,7 +405,7 @@ func buildRemoteModules(ctx context.Context, client ftlv1connect.ControllerServi
 	return err
 }
 
-func generateModuleFromSchema(ctx context.Context, msg *pschema.Module, bctx BuildContext) error {
+func generateModuleFromSchema(ctx context.Context, msg *schemapb.Module, bctx BuildContext) error {
 	sch, err := schema.ModuleFromProto(msg)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse schema")
