@@ -1,17 +1,13 @@
-import React from 'react'
+import { useContext, useState } from 'react'
 import { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../providers/side-panel-provider'
 import { formatDuration, formatTimestampShort } from '../../utils'
 import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails'
 import { verbRefString } from '../verbs/verb.utils'
 
-interface Props {
-  calls: CallEvent[] | undefined
-}
-
-export const CallList = ({ calls }: Props) => {
-  const { openPanel, closePanel } = React.useContext(SidePanelContext)
-  const [selectedCall, setSelectedCall] = React.useState<CallEvent | undefined>()
+export const CallList = ({ calls }: { calls: CallEvent[] | undefined }) => {
+  const { openPanel, closePanel } = useContext(SidePanelContext)
+  const [selectedCall, setSelectedCall] = useState<CallEvent | undefined>()
 
   const handleCallClicked = (call: CallEvent) => {
     if (selectedCall?.equals(call)) {

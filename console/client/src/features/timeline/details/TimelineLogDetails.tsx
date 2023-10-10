@@ -1,5 +1,5 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React from 'react'
+import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { Card } from '../../../components/Card'
@@ -12,13 +12,8 @@ import { LogLevelBadge } from '../../logs/LogLevelBadge'
 import { logLevelBgColor } from '../../logs/log.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-interface Props {
-  event: Event
-  log: LogEvent
-}
-
-export const TimelineLogDetails = ({ event, log }: Props) => {
-  const { closePanel } = React.useContext(SidePanelContext)
+export const TimelineLogDetails = ({ event, log }: { event: Event; log: LogEvent }) => {
+  const { closePanel } = useContext(SidePanelContext)
   const navigate = useNavigate()
 
   return (

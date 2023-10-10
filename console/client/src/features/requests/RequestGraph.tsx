@@ -2,14 +2,17 @@ import { Duration, Timestamp } from '@bufbuild/protobuf'
 import { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { verbRefString } from '../verbs/verb.utils'
 
-interface CallBlockProps {
+const CallBlock = ({
+  call,
+  selectedCall,
+  firstTimeStamp,
+  firstDuration,
+}: {
   call: CallEvent
   selectedCall?: CallEvent
   firstTimeStamp: Timestamp
   firstDuration: Duration
-}
-
-const CallBlock = ({ call, selectedCall, firstTimeStamp, firstDuration }: CallBlockProps) => {
+}) => {
   const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000
   const durationInMillis = (call.duration?.nanos ?? 0) / 1000000
   let width = (durationInMillis / totalDurationMillis) * 100

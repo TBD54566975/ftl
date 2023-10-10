@@ -1,5 +1,5 @@
 import { PhoneIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { EventType, EventsQuery_Filter, LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../../providers/modules-provider'
 import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../services/console.service'
@@ -37,23 +37,23 @@ const LOG_LEVELS: Record<number, string> = {
   17: 'Error',
 }
 
-interface Props {
+export const TimelineFilterPanel = ({
+  onFiltersChanged,
+}: {
   onFiltersChanged: (filters: EventsQuery_Filter[]) => void
-}
+}) => {
+  const modules = useContext(modulesContext)
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(Object.keys(EVENT_TYPES))
+  const [selectedModules, setSelectedModules] = useState<string[]>([])
+  const [selectedLogLevel, setSelectedLogLevel] = useState<number>(1)
 
-export const TimelineFilterPanel = ({ onFiltersChanged }: Props) => {
-  const modules = React.useContext(modulesContext)
-  const [selectedEventTypes, setSelectedEventTypes] = React.useState<string[]>(Object.keys(EVENT_TYPES))
-  const [selectedModules, setSelectedModules] = React.useState<string[]>([])
-  const [selectedLogLevel, setSelectedLogLevel] = React.useState<number>(1)
-
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedModules.length === 0) {
       setSelectedModules(modules.modules.map((module) => module.deploymentName))
     }
   }, [modules])
 
-  React.useEffect(() => {
+  useEffect(() => {
     const filter: EventsQuery_Filter[] = []
     if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
       const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)

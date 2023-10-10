@@ -7,15 +7,19 @@ interface Breadcrumb {
   link?: string
 }
 
-interface Props {
+const Header = ({
+  icon,
+  title,
+  children,
+  breadcrumbs,
+  className,
+}: {
   icon?: React.ReactNode
   title: string
   children?: React.ReactNode
   breadcrumbs?: Breadcrumb[]
   className?: string
-}
-
-const Header = ({ icon, title, children, breadcrumbs, className }: Props) => {
+}) => {
   return (
     <div
       className={classNames(

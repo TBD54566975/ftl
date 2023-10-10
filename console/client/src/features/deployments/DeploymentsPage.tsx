@@ -1,12 +1,12 @@
 import { RocketLaunchIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '../../components/Card'
-import { modulesContext } from '../../providers/modules-provider'
 import { Page } from '../../layout'
+import { modulesContext } from '../../providers/modules-provider'
 
 export const DeploymentsPage = () => {
-  const modules = React.useContext(modulesContext)
+  const modules = useContext(modulesContext)
   const navigate = useNavigate()
 
   return (

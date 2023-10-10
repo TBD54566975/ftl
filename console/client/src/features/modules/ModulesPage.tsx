@@ -1,5 +1,5 @@
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import { useContext, useState } from 'react'
 import { Page } from '../../layout'
 import { modulesContext } from '../../providers/modules-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
@@ -12,10 +12,10 @@ import type { ZoomCallbacks } from './modules.constants'
 import { VerbId } from './modules.constants'
 
 export const ModulesPage = () => {
-  const { modules } = React.useContext(modulesContext)
-  const [selectedVerbs, setSelectedVerbs] = React.useState<VerbId[]>([])
+  const { modules } = useContext(modulesContext)
+  const [selectedVerbs, setSelectedVerbs] = useState<VerbId[]>([])
   const hasVerbs = Boolean(selectedVerbs.length)
-  const [zoomCallbacks, setZoomCallbacks] = React.useState<ZoomCallbacks>()
+  const [zoomCallbacks, setZoomCallbacks] = useState<ZoomCallbacks>()
 
   return (
     <SidePanelProvider>
@@ -37,8 +37,6 @@ export const ModulesPage = () => {
             )}
           >
             <ModulesGraph
-              setSelectedVerbs={setSelectedVerbs}
-              selectedVerbs={selectedVerbs}
               setZoomCallbacks={setZoomCallbacks}
               zoomCallbacks={zoomCallbacks}
               className={classNames(hasVerbs && 'row-start-1 row-span-1 col-start-1 col-span-1')}

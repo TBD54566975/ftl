@@ -1,24 +1,21 @@
-import React from 'react'
-import { PlusCircleIcon, MinusCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, MinusCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { modulesContext } from '../../providers/modules-provider'
-import { VerbId, ZoomCallbacks } from './modules.constants'
 import { Panel } from './components'
-import { svgZoom, formatSVG, dotToSVG, generateDot } from './graph'
+import { dotToSVG, formatSVG, generateDot, svgZoom } from './graph'
+import { ZoomCallbacks } from './modules.constants'
 
 export const ModulesGraph: React.FC<{
   className?: string
-  zoomId?: string
-  setSelectedVerbs: React.Dispatch<React.SetStateAction<VerbId[]>>
-  selectedVerbs: VerbId[]
   setZoomCallbacks: React.Dispatch<React.SetStateAction<ZoomCallbacks | undefined>>
   zoomCallbacks?: ZoomCallbacks
 }> = ({ className, setZoomCallbacks, zoomCallbacks }) => {
-  const modules = React.useContext(modulesContext)
-  const canvasRef = React.useRef<HTMLDivElement>(null)
-  const [resizeCount, setResizeCount] = React.useState<number>(0)
-  const previousDimensions = React.useRef({ width: 0, height: 0 }) // Store previous dimensions
+  const modules = useContext(modulesContext)
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const [resizeCount, setResizeCount] = useState<number>(0)
+  const previousDimensions = useRef({ width: 0, height: 0 }) // Store previous dimensions
 
-  React.useEffect(() => {
+  useEffect(() => {
     const canvasCur = canvasRef.current
     if (canvasCur) {
       const observer = new ResizeObserver((entries) => {
@@ -39,7 +36,7 @@ export const ModulesGraph: React.FC<{
     }
   }, [canvasRef])
 
-  React.useEffect(() => {
+  useEffect(() => {
     const canvas = canvasRef.current
     const ready = canvas && Boolean(modules)
     let animationFrameId: number

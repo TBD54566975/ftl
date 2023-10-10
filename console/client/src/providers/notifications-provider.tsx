@@ -1,4 +1,4 @@
-import React, { PropsWithChildren } from 'react'
+import React, { PropsWithChildren, useRef, useState } from 'react'
 
 export enum NotificationType {
   Success,
@@ -29,9 +29,9 @@ const defaultContextValue: NotificationContextType = {
 export const NotificationsContext = React.createContext<NotificationContextType>(defaultContextValue)
 
 export const NotificationsProvider = ({ children }: PropsWithChildren) => {
-  const [isOpen, setIsOpen] = React.useState(false)
-  const [notification, setNotification] = React.useState<Notification>()
-  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [notification, setNotification] = useState<Notification>()
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const closeNotification = () => {
     setIsOpen(false)

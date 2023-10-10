@@ -1,16 +1,13 @@
-import React from 'react'
+import { useContext } from 'react'
 import { CodeBlock } from '../../components/CodeBlock'
 import { modulesContext } from '../../providers/modules-provider'
 import { VerbCalls } from './VerbCalls'
 import { VerbForm } from './VerbForm'
 import { buildVerbSchema } from './verb.utils'
-interface Props {
-  id: string
-}
 
-export const VerbTab = ({ id }: Props) => {
+export const VerbTab = ({ id }: { id: string }) => {
   const [moduleId, verbName] = id.split('.')
-  const modules = React.useContext(modulesContext)
+  const modules = useContext(modulesContext)
   const module = modules.modules.find((module) => module?.name === moduleId)
   const verb = module?.verbs.find((v) => v.verb?.name === verbName)
 

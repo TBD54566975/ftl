@@ -1,5 +1,5 @@
 import { RocketLaunchIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ButtonSmall } from '../../components/ButtonSmall'
 import { Card } from '../../components/Card'
@@ -12,18 +12,18 @@ import { verbRefString } from '../verbs/verb.utils'
 export const DeploymentPage = () => {
   const navigate = useNavigate()
   const { deploymentName } = useParams()
-  const modules = React.useContext(modulesContext)
-  const [module, setModule] = React.useState<Module | undefined>()
-  const [calls, setCalls] = React.useState<VerbRef[]>([])
+  const modules = useContext(modulesContext)
+  const [module, setModule] = useState<Module | undefined>()
+  const [calls, setCalls] = useState<VerbRef[]>([])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (modules) {
       const module = modules.modules.find((module) => module.deploymentName === deploymentName)
       setModule(module)
     }
   }, [modules, deploymentName])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!module) return
 
     const verbCalls: VerbRef[] = []

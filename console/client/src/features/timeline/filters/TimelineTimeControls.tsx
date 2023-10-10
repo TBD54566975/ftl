@@ -8,7 +8,7 @@ import {
   PauseIcon,
   PlayIcon,
 } from '@heroicons/react/24/outline'
-import React, { Fragment } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
   bgColor,
   borderColor,
@@ -40,25 +40,27 @@ export interface TimeSettings {
   newerThan?: Timestamp
 }
 
-interface Props {
+export const TimelineTimeControls = ({
+  onTimeSettingsChange,
+  selectedTimeRange,
+  isTimelinePaused,
+}: {
   onTimeSettingsChange: (settings: TimeSettings) => void
   selectedTimeRange: TimeRange
   isTimelinePaused: boolean
-}
-
-export const TimelineTimeControls = ({ onTimeSettingsChange, selectedTimeRange, isTimelinePaused }: Props) => {
-  const [selected, setSelected] = React.useState(selectedTimeRange)
-  const [isPaused, setIsPaused] = React.useState(isTimelinePaused)
-  const [newerThan, setNewerThan] = React.useState<Timestamp | undefined>()
+}) => {
+  const [selected, setSelected] = useState(selectedTimeRange)
+  const [isPaused, setIsPaused] = useState(isTimelinePaused)
+  const [newerThan, setNewerThan] = useState<Timestamp | undefined>()
 
   const isTailing = selected.value === TIME_RANGES['tail'].value
 
-  React.useEffect(() => {
+  useEffect(() => {
     handleRangeChanged(selectedTimeRange)
     setIsPaused(isTimelinePaused)
   }, [selectedTimeRange, isTimelinePaused])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isTailing) {
       onTimeSettingsChange({ isTailing, isPaused })
       return

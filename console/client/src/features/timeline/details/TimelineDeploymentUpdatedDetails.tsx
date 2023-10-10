@@ -1,5 +1,5 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React from 'react'
+import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { Card } from '../../../components/Card'
@@ -8,13 +8,14 @@ import { DeploymentUpdatedEvent, Event } from '../../../protos/xyz/block/ftl/v1/
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-interface Props {
+export const TimelineDeploymentUpdatedDetails = ({
+  event,
+  deployment,
+}: {
   event: Event
   deployment: DeploymentUpdatedEvent
-}
-
-export const TimelineDeploymentUpdatedDetails = ({ event, deployment }: Props) => {
-  const { closePanel } = React.useContext(SidePanelContext)
+}) => {
+  const { closePanel } = useContext(SidePanelContext)
   const navigate = useNavigate()
 
   return (

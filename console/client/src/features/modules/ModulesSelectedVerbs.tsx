@@ -1,18 +1,22 @@
-import React from 'react'
 import { Tab } from '@headlessui/react'
+import React from 'react'
 import { CodeBlock } from '../../components'
-import { Panel } from './components'
-import { Module, Verb, Data } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { VerbId } from './modules.constants'
-import { getNames, buildVerbSchema } from './modules.utils'
+import { Data, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { classNames } from '../../utils'
 import { VerbForm } from '../verbs/VerbForm'
+import { Panel } from './components'
+import { VerbId } from './modules.constants'
+import { buildVerbSchema, getNames } from './modules.utils'
 
-export const ModulesSelectedVerbs: React.FC<{
+export const ModulesSelectedVerbs = ({
+  className,
+  modules,
+  selectedVerbs,
+}: {
   className?: string
   modules: Module[]
   selectedVerbs?: VerbId[]
-}> = ({ className, modules, selectedVerbs }) => {
+}) => {
   if (!selectedVerbs?.length) return <></>
   const verbs: { module: Module; verb: Verb; callData: Data[] }[] = []
   for (const verbId of selectedVerbs) {

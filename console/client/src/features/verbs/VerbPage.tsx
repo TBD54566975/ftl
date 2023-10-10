@@ -1,5 +1,5 @@
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { CodeBlock } from '../../components/CodeBlock'
 import { Page } from '../../layout'
@@ -13,16 +13,16 @@ import { buildVerbSchema } from './verb.utils'
 
 export const VerbPage = () => {
   const { moduleName, verbName } = useParams()
-  const modules = React.useContext(modulesContext)
-  const [module, setModule] = React.useState<Module | undefined>()
-  const [verb, setVerb] = React.useState<Verb | undefined>()
-  const [calls, setCalls] = React.useState<CallEvent[]>([])
+  const modules = useContext(modulesContext)
+  const [module, setModule] = useState<Module | undefined>()
+  const [verb, setVerb] = useState<Verb | undefined>()
+  const [calls, setCalls] = useState<CallEvent[]>([])
 
   const callData =
     module?.data.filter((data) => [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(data.data?.name)) ??
     []
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (modules) {
       const module = modules.modules.find((module) => module.name === moduleName?.toLocaleLowerCase())
       setModule(module)
@@ -31,7 +31,7 @@ export const VerbPage = () => {
     }
   }, [modules, moduleName])
 
-  React.useEffect(() => {
+  useEffect(() => {
     const abortController = new AbortController()
     if (!module) return
 

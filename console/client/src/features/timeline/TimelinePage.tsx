@@ -1,5 +1,5 @@
 import { ListBulletIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Page } from '../../layout'
 import { EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb'
@@ -10,13 +10,13 @@ import { TIME_RANGES, TimeSettings, TimelineTimeControls } from './filters/Timel
 
 export const TimelinePage = () => {
   const [searchParams] = useSearchParams()
-  const [timeSettings, setTimeSettings] = React.useState<TimeSettings>({ isTailing: true, isPaused: false })
-  const [filters, setFilters] = React.useState<EventsQuery_Filter[]>([])
-  const [selectedTimeRange, setSelectedTimeRange] = React.useState(TIME_RANGES['tail'])
-  const [isTimelinePaused, setIsTimelinePaused] = React.useState(false)
+  const [timeSettings, setTimeSettings] = useState<TimeSettings>({ isTailing: true, isPaused: false })
+  const [filters, setFilters] = useState<EventsQuery_Filter[]>([])
+  const [selectedTimeRange, setSelectedTimeRange] = useState(TIME_RANGES['tail'])
+  const [isTimelinePaused, setIsTimelinePaused] = useState(false)
 
   const initialEventId = searchParams.get('id')
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialEventId) {
       // if we're loading a specific event, we don't want to tail.
       setSelectedTimeRange(TIME_RANGES['5m'])

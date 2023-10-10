@@ -1,5 +1,5 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useClient } from '../../hooks/use-client.ts'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect.ts'
 import { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
@@ -8,17 +8,12 @@ import { getCalls } from '../../services/console.service.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails.tsx'
 
-interface Props {
-  module?: Module
-  verb?: Verb
-}
-
-export const VerbCalls = ({ module, verb }: Props) => {
+export const VerbCalls = ({ module, verb }: { module?: Module; verb?: Verb }) => {
   const client = useClient(ConsoleService)
-  const [calls, setCalls] = React.useState<CallEvent[]>([])
-  const { openPanel } = React.useContext(SidePanelContext)
+  const [calls, setCalls] = useState<CallEvent[]>([])
+  const { openPanel } = useContext(SidePanelContext)
 
-  React.useEffect(() => {
+  useEffect(() => {
     const abortController = new AbortController()
     const fetchCalls = async () => {
       if (module === undefined) {

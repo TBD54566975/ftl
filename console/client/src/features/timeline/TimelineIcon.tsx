@@ -2,11 +2,7 @@ import { ListBulletIcon, PhoneArrowDownLeftIcon, PhoneIcon, RocketLaunchIcon } f
 import { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { LogLevelBadgeSmall } from '../logs/LogLevelBadgeSmall'
 
-interface Props {
-  event: Event
-}
-
-export const TimelineIcon = ({ event }: Props) => {
+export const TimelineIcon = ({ event }: { event: Event }) => {
   const icon = (event: Event) => {
     const style = 'h4 w-4 text-indigo-600'
     switch (event.entry.case) {

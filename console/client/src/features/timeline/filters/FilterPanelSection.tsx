@@ -2,13 +2,15 @@ import { Disclosure } from '@headlessui/react'
 import { ChevronUpIcon } from '@heroicons/react/20/solid'
 import { textColor } from '../../../utils'
 
-interface Props {
+export const FilterPanelSection = ({
+  title,
+  children,
+  defaultOpen = true,
+}: {
   title: string
   children: React.ReactNode
   defaultOpen?: boolean
-}
-
-export const FilterPanelSection = ({ title, children, defaultOpen = true }: Props) => {
+}) => {
   return (
     <Disclosure defaultOpen={defaultOpen}>
       {({ open }) => (

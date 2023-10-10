@@ -1,4 +1,4 @@
-import { SVG, Element, Svg } from '@svgdotjs/svg.js'
+import { Element, SVG, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.panzoom.js/dist/svg.panzoom.esm.js'
 
 const centerGroup = ({
