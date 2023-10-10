@@ -13,12 +13,7 @@ import { useDarkMode } from '../../providers/dark-mode-provider'
 
 export type Schema = JSONSchema4 | JSONSchema6 | JSONSchema7
 
-interface Props {
-  module?: Module
-  verb?: Verb
-}
-
-export const VerbForm = ({ module, verb }: Props) => {
+export const VerbForm = ({ module, verb }: { module?: Module; verb?: Verb }) => {
   const client = useClient(VerbService)
   const { isDarkMode } = useDarkMode()
   const [editorText, setEditorText] = useState<string>('')

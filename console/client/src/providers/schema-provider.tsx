@@ -1,15 +1,11 @@
-import { createContext, useEffect, useState } from 'react'
+import { PropsWithChildren, createContext, useEffect, useState } from 'react'
 import { useClient } from '../hooks/use-client'
 import { ControllerService } from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
 import { DeploymentChangeType, PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
 
 export const schemaContext = createContext<PullSchemaResponse[]>([])
 
-interface Props {
-  children: React.ReactNode
-}
-
-export const SchemaProvider = (props: Props) => {
+export const SchemaProvider = ({ children }: PropsWithChildren) => {
   const client = useClient(ControllerService)
   const [schema, setSchema] = useState<PullSchemaResponse[]>([])
 
@@ -47,5 +43,5 @@ export const SchemaProvider = (props: Props) => {
     }
   }, [client])
 
-  return <schemaContext.Provider value={schema}>{props.children}</schemaContext.Provider>
+  return <schemaContext.Provider value={schema}>{children}</schemaContext.Provider>
 }

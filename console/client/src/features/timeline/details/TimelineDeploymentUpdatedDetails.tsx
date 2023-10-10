@@ -8,12 +8,13 @@ import { DeploymentUpdatedEvent, Event } from '../../../protos/xyz/block/ftl/v1/
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-interface Props {
+export const TimelineDeploymentUpdatedDetails = ({
+  event,
+  deployment,
+}: {
   event: Event
   deployment: DeploymentUpdatedEvent
-}
-
-export const TimelineDeploymentUpdatedDetails = ({ event, deployment }: Props) => {
+}) => {
   const { closePanel } = useContext(SidePanelContext)
   const navigate = useNavigate()
 

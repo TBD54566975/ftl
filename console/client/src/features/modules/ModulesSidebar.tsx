@@ -14,12 +14,17 @@ interface DeploymentVerbs {
   queriedVerbs: Set<VerbId>
 }
 
-const ModulesOption: React.FC<{
+const ModulesOption = ({
+  id,
+  zoomCallbacks,
+  verbs,
+  deploymentName,
+}: {
   id: string
   verbs: VerbId[]
   deploymentName: string
   zoomCallbacks?: ZoomCallbacks
-}> = ({ id, zoomCallbacks, verbs, deploymentName }) => {
+}) => {
   return (
     <li className={`flex flex-wrap gap-1 ${backgrounds.level1} ${borders.level1}`}>
       <div className={`w-1 bg-${colors.deployment}`}></div>

@@ -40,13 +40,15 @@ export interface TimeSettings {
   newerThan?: Timestamp
 }
 
-interface Props {
+export const TimelineTimeControls = ({
+  onTimeSettingsChange,
+  selectedTimeRange,
+  isTimelinePaused,
+}: {
   onTimeSettingsChange: (settings: TimeSettings) => void
   selectedTimeRange: TimeRange
   isTimelinePaused: boolean
-}
-
-export const TimelineTimeControls = ({ onTimeSettingsChange, selectedTimeRange, isTimelinePaused }: Props) => {
+}) => {
   const [selected, setSelected] = useState(selectedTimeRange)
   const [isPaused, setIsPaused] = useState(isTimelinePaused)
   const [newerThan, setNewerThan] = useState<Timestamp | undefined>()

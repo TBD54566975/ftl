@@ -6,12 +6,13 @@ import { logLevelText } from '../../logs/log.utils'
 
 const logLevels = [1, 5, 9, 13, 17]
 
-interface Props {
+export const LogLevelsFilter = ({
+  selectedLogLevels,
+  onLogLevelsChanged,
+}: {
   selectedLogLevels: number[]
   onLogLevelsChanged: (logLevel: number, checked: boolean) => void
-}
-
-export const LogLevelsFilter = ({ selectedLogLevels, onLogLevelsChanged }: Props) => {
+}) => {
   return (
     <Popover.Group className='hidden sm:flex sm:items-baseline sm:space-x-8'>
       <Popover as='div' key='log-levels' id={`desktop-menu-log-levels`} className='relative inline-block text-left'>

@@ -7,7 +7,7 @@ import { schemaContext } from './schema-provider'
 
 export const modulesContext = createContext<GetModulesResponse>(new GetModulesResponse())
 
-export const ModulesProvider = (props: PropsWithChildren) => {
+export const ModulesProvider = ({ children }: PropsWithChildren) => {
   const schema = useContext(schemaContext)
   const client = useClient(ConsoleService)
   const [modules, setModules] = useState<GetModulesResponse>(new GetModulesResponse())
@@ -37,5 +37,5 @@ export const ModulesProvider = (props: PropsWithChildren) => {
     }
   }, [client, schema])
 
-  return <modulesContext.Provider value={modules}>{props.children}</modulesContext.Provider>
+  return <modulesContext.Provider value={modules}>{children}</modulesContext.Provider>
 }

@@ -1,5 +1,5 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Event, EventsQuery_Filter, Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
@@ -19,10 +19,7 @@ import { Panel } from './components'
 
 const maxTimelineEntries = 1000
 
-export const ModulesRequests: React.FC<{
-  className?: string
-  modules: Module[]
-}> = ({ className, modules }) => {
+export const ModulesRequests = ({ className, modules }: { className?: string; modules: Module[] }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [entries, setEntries] = useState<Event[]>([])
   const { openPanel, closePanel } = useContext(SidePanelContext)

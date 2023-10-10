@@ -15,12 +15,7 @@ import { RequestGraph } from '../../requests/RequestGraph'
 import { verbRefString } from '../../verbs/verb.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-interface Props {
-  timestamp: Timestamp
-  call: CallEvent
-}
-
-export const TimelineCallDetails = ({ timestamp, call }: Props) => {
+export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp; call: CallEvent }) => {
   const client = useClient(ConsoleService)
   const navigate = useNavigate()
   const { closePanel } = useContext(SidePanelContext)

@@ -15,12 +15,13 @@ export const TIME_RANGES: Record<string, TimeRange> = {
   '24h': { label: 'Last 24 hours', value: 24 * 60 * 60 * 1000 },
 }
 
-interface Props {
+export const TimeFilter = ({
+  selectedRange,
+  onSelectedRangeChanged,
+}: {
   selectedRange: string
   onSelectedRangeChanged: (range: string) => void
-}
-
-export const TimeFilter = ({ selectedRange, onSelectedRangeChanged }: Props) => {
+}) => {
   return (
     <Popover.Group className='hidden sm:flex sm:items-baseline sm:space-x-8'>
       <Popover as='div' key='log-levels' id={`desktop-menu-log-levels`} className='relative inline-block text-left'>

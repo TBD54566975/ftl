@@ -18,14 +18,9 @@ import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUp
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
-interface Props {
-  timeSettings: TimeSettings
-  filters: EventsQuery_Filter[]
-}
-
 const maxTimelineEntries = 1000
 
-export const Timeline = ({ timeSettings, filters }: Props) => {
+export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings; filters: EventsQuery_Filter[] }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
   const [entries, setEntries] = useState<Event[]>([])

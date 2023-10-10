@@ -12,12 +12,7 @@ import { LogLevelBadge } from '../../logs/LogLevelBadge'
 import { logLevelBgColor } from '../../logs/log.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-interface Props {
-  event: Event
-  log: LogEvent
-}
-
-export const TimelineLogDetails = ({ event, log }: Props) => {
+export const TimelineLogDetails = ({ event, log }: { event: Event; log: LogEvent }) => {
   const { closePanel } = useContext(SidePanelContext)
   const navigate = useNavigate()
 

@@ -37,11 +37,11 @@ const LOG_LEVELS: Record<number, string> = {
   17: 'Error',
 }
 
-interface Props {
+export const TimelineFilterPanel = ({
+  onFiltersChanged,
+}: {
   onFiltersChanged: (filters: EventsQuery_Filter[]) => void
-}
-
-export const TimelineFilterPanel = ({ onFiltersChanged }: Props) => {
+}) => {
   const modules = useContext(modulesContext)
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(Object.keys(EVENT_TYPES))
   const [selectedModules, setSelectedModules] = useState<string[]>([])

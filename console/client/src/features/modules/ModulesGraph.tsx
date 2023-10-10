@@ -3,13 +3,10 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { modulesContext } from '../../providers/modules-provider'
 import { Panel } from './components'
 import { dotToSVG, formatSVG, generateDot, svgZoom } from './graph'
-import { VerbId, ZoomCallbacks } from './modules.constants'
+import { ZoomCallbacks } from './modules.constants'
 
 export const ModulesGraph: React.FC<{
   className?: string
-  zoomId?: string
-  setSelectedVerbs: React.Dispatch<React.SetStateAction<VerbId[]>>
-  selectedVerbs: VerbId[]
   setZoomCallbacks: React.Dispatch<React.SetStateAction<ZoomCallbacks | undefined>>
   zoomCallbacks?: ZoomCallbacks
 }> = ({ className, setZoomCallbacks, zoomCallbacks }) => {

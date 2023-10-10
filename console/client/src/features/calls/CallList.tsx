@@ -5,11 +5,7 @@ import { formatDuration, formatTimestampShort } from '../../utils'
 import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails'
 import { verbRefString } from '../verbs/verb.utils'
 
-interface Props {
-  calls: CallEvent[] | undefined
-}
-
-export const CallList = ({ calls }: Props) => {
+export const CallList = ({ calls }: { calls: CallEvent[] | undefined }) => {
   const { openPanel, closePanel } = useContext(SidePanelContext)
   const [selectedCall, setSelectedCall] = useState<CallEvent | undefined>()
 

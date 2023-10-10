@@ -8,12 +8,7 @@ import { getCalls } from '../../services/console.service.ts'
 import { formatDuration, formatTimestamp } from '../../utils/date.utils.ts'
 import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails.tsx'
 
-interface Props {
-  module?: Module
-  verb?: Verb
-}
-
-export const VerbCalls = ({ module, verb }: Props) => {
+export const VerbCalls = ({ module, verb }: { module?: Module; verb?: Verb }) => {
   const client = useClient(ConsoleService)
   const [calls, setCalls] = useState<CallEvent[]>([])
   const { openPanel } = useContext(SidePanelContext)

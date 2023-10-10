@@ -37,8 +37,6 @@ export const ModulesPage = () => {
             )}
           >
             <ModulesGraph
-              setSelectedVerbs={setSelectedVerbs}
-              selectedVerbs={selectedVerbs}
               setZoomCallbacks={setZoomCallbacks}
               zoomCallbacks={zoomCallbacks}
               className={classNames(hasVerbs && 'row-start-1 row-span-1 col-start-1 col-span-1')}
