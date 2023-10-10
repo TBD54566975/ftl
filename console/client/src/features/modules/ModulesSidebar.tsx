@@ -1,11 +1,11 @@
-import React from 'react'
 import { Listbox } from '@headlessui/react'
 import { EyeIcon } from '@heroicons/react/20/solid'
+import React, { useState } from 'react'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { VerbId, ZoomCallbacks } from './modules.constants'
-import { getNames } from './modules.utils'
 import { classNames } from '../../utils'
 import { backgrounds, borders, colors } from './components'
+import { VerbId, ZoomCallbacks } from './modules.constants'
+import { getNames } from './modules.utils'
 
 interface DeploymentVerbs {
   deploymentName: string
@@ -73,10 +73,8 @@ export const ModulesSidebar: React.FC<{
   selectedVerbs: VerbId[]
   zoomCallbacks?: ZoomCallbacks
 }> = ({ className, modules, setSelectedVerbs, selectedVerbs, zoomCallbacks }) => {
-  /** Setup hooks */
-  const [query, setQuery] = React.useState('')
+  const [query, setQuery] = useState('')
 
-  /** Format data */
   const map: Map<string, DeploymentVerbs> = new Map()
   for (const { name: moduleName, verbs, deploymentName } of modules) {
     const value: DeploymentVerbs = {

@@ -60,18 +60,14 @@ const Body: React.FC<{
   )
 }
 
-export const Page: React.FC & {
-  Header: typeof Header
-  Body: typeof Body
-} = ({
-  className,
-  style,
-  children,
-}: {
+export const Page: React.FC<{
   className?: string
   style?: React.CSSProperties
   children?: React.ReactNode
-}) => {
+}> & {
+  Header: typeof Header
+  Body: typeof Body
+} = ({ className, style, children }) => {
   return (
     <div className={classNames(className, 'flex flex-col h-full')} style={style}>
       {children}

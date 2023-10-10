@@ -6,12 +6,12 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline'
-import React, { Fragment } from 'react'
+import { Fragment, useContext } from 'react'
 import { NotificationType, NotificationsContext } from '../providers/notifications-provider'
 import { textColor } from '../utils'
 
 export const Notification = () => {
-  const { isOpen, notification, closeNotification } = React.useContext(NotificationsContext)
+  const { isOpen, notification, closeNotification } = useContext(NotificationsContext)
 
   const iconColor = () => {
     switch (notification?.type) {

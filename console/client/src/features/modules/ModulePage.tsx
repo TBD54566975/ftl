@@ -1,5 +1,5 @@
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/Card'
 import { Page } from '../../layout'
@@ -12,18 +12,18 @@ import { CallList } from '../calls/CallList'
 export const ModulePage = () => {
   const navigate = useNavigate()
   const { moduleName } = useParams()
-  const modules = React.useContext(modulesContext)
-  const [module, setModule] = React.useState<Module | undefined>()
-  const [calls, setCalls] = React.useState<CallEvent[] | undefined>()
+  const modules = useContext(modulesContext)
+  const [module, setModule] = useState<Module | undefined>()
+  const [calls, setCalls] = useState<CallEvent[] | undefined>()
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (modules) {
       const module = modules.modules.find((module) => module.name === moduleName?.toLocaleLowerCase())
       setModule(module)
     }
   }, [modules, moduleName])
 
-  React.useEffect(() => {
+  useEffect(() => {
     const abortController = new AbortController()
     if (!module) return
 

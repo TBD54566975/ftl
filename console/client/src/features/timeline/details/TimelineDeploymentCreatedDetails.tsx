@@ -1,5 +1,5 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React from 'react'
+import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { Card } from '../../../components/Card'
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export const TimelineDeploymentCreatedDetails = ({ event, deployment }: Props) => {
-  const { closePanel } = React.useContext(SidePanelContext)
+  const { closePanel } = useContext(SidePanelContext)
   const navigate = useNavigate()
 
   return (

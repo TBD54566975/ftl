@@ -1,5 +1,5 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React, { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '../../../components'
 import { AttributeBadge } from '../../../components/AttributeBadge'
@@ -23,7 +23,7 @@ interface Props {
 export const TimelineCallDetails = ({ timestamp, call }: Props) => {
   const client = useClient(ConsoleService)
   const navigate = useNavigate()
-  const { closePanel } = React.useContext(SidePanelContext)
+  const { closePanel } = useContext(SidePanelContext)
   const [requestCalls, setRequestCalls] = useState<CallEvent[]>([])
   const [selectedCall, setSelectedCall] = useState(call)
 

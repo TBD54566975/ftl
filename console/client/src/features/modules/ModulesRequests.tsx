@@ -1,9 +1,11 @@
-import React from 'react'
+import { Timestamp } from '@bufbuild/protobuf'
+import React, { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Panel } from './components'
-import { modulesFilter } from '../../services/console.service'
-import { streamEvents } from '../../services/console.service'
-import { Event, Module, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Event, EventsQuery_Filter, Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
+import { modulesFilter, streamEvents } from '../../services/console.service'
+import { formatTimestampShort } from '../../utils/date.utils.ts'
+import { panelColor } from '../../utils/style.utils.ts'
 import { TimelineCall } from '../timeline/TimelineCall.tsx'
 import { TimelineDeploymentCreated } from '../timeline/TimelineDeploymentCreated.tsx'
 import { TimelineDeploymentUpdated } from '../timeline/TimelineDeploymentUpdated.tsx'
@@ -13,10 +15,7 @@ import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails.tsx
 import { TimelineDeploymentCreatedDetails } from '../timeline/details/TimelineDeploymentCreatedDetails.tsx'
 import { TimelineDeploymentUpdatedDetails } from '../timeline/details/TimelineDeploymentUpdatedDetails.tsx'
 import { TimelineLogDetails } from '../timeline/details/TimelineLogDetails.tsx'
-import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
-import { formatTimestampShort } from '../../utils/date.utils.ts'
-import { panelColor } from '../../utils/style.utils.ts'
-import { Timestamp } from '@bufbuild/protobuf'
+import { Panel } from './components'
 
 const maxTimelineEntries = 1000
 
@@ -25,9 +24,9 @@ export const ModulesRequests: React.FC<{
   modules: Module[]
 }> = ({ className, modules }) => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [entries, setEntries] = React.useState<Event[]>([])
-  const { openPanel, closePanel } = React.useContext(SidePanelContext)
-  const [selectedEntry, setSelectedEntry] = React.useState<Event | null>(null)
+  const [entries, setEntries] = useState<Event[]>([])
+  const { openPanel, closePanel } = useContext(SidePanelContext)
+  const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
   const deployments = modules.map(({ deploymentName }) => deploymentName)
 
   const filters: EventsQuery_Filter[] = []
@@ -35,7 +34,7 @@ export const ModulesRequests: React.FC<{
     filters.push(modulesFilter(deployments))
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     setEntries([])
     if (!filters.length) return
     const abortController = new AbortController()

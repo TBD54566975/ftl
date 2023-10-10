@@ -1,4 +1,4 @@
-import React, { PropsWithChildren } from 'react'
+import React, { PropsWithChildren, useState } from 'react'
 import { SidePanel } from '../layout/SidePanel'
 
 interface SidePanelContextType {
@@ -18,9 +18,9 @@ const defaultContextValue: SidePanelContextType = {
 export const SidePanelContext = React.createContext<SidePanelContextType>(defaultContextValue)
 
 export const SidePanelProvider = ({ children }: PropsWithChildren) => {
-  const [isOpen, setIsOpen] = React.useState(false)
-  const [component, setComponent] = React.useState<React.ReactNode>()
-  const [onCloseCallback, setOnCloseCallback] = React.useState<(() => void) | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [component, setComponent] = useState<React.ReactNode>()
+  const [onCloseCallback, setOnCloseCallback] = useState<(() => void) | null>(null)
 
   const openPanel = React.useCallback((comp: React.ReactNode, onClose?: () => void) => {
     setIsOpen(true)

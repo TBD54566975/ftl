@@ -3,7 +3,7 @@
 import Editor, { Monaco } from '@monaco-editor/react'
 import type { JSONSchema4, JSONSchema6, JSONSchema7 } from 'json-schema'
 import { JSONSchemaFaker } from 'json-schema-faker'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { CodeBlock } from '../../components/CodeBlock'
 import { useClient } from '../../hooks/use-client'
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
@@ -21,13 +21,13 @@ interface Props {
 export const VerbForm = ({ module, verb }: Props) => {
   const client = useClient(VerbService)
   const { isDarkMode } = useDarkMode()
-  const [editorText, setEditorText] = React.useState<string>('')
-  const [response, setResponse] = React.useState<string | null>(null)
-  const [error, setError] = React.useState<string | null>(null)
-  const [schema, setSchema] = React.useState<Schema>()
-  const [monaco, setMonaco] = React.useState<Monaco>()
+  const [editorText, setEditorText] = useState<string>('')
+  const [response, setResponse] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [schema, setSchema] = useState<Schema>()
+  const [monaco, setMonaco] = useState<Monaco>()
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (verb?.jsonRequestSchema) {
       JSONSchemaFaker.option('maxItems', 2)
       JSONSchemaFaker.option('alwaysFakeOptionals', true)
@@ -74,7 +74,7 @@ export const VerbForm = ({ module, verb }: Props) => {
     setMonaco(monaco)
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     schema &&
       monaco?.languages.json.jsonDefaults.setDiagnosticsOptions({
         validate: true,

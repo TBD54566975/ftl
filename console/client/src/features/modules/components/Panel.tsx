@@ -26,18 +26,14 @@ const Body: React.FC<{
   )
 }
 
-export const Panel: React.FC & {
-  Header: typeof Header
-  Body: typeof Body
-} = ({
-  className,
-  children,
-  style,
-}: {
+export const Panel: React.FC<{
   className?: string
   children?: React.ReactNode
   style?: React.CSSProperties
-}) => {
+}> & {
+  Header: typeof Header
+  Body: typeof Body
+} = ({ className, children, style }) => {
   return (
     <div style={style} className={classNames(className, `p-2 overflow-hidden ${borders.level1} ${backgrounds.level1}`)}>
       {children}

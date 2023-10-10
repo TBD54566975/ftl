@@ -1,11 +1,12 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import React from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import { eventIdFilter, getEvents, streamEvents, timeFilter } from '../../services/console.service.ts'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
+import { DeploymentLabel } from './DeploymentLabel.tsx'
 import { TimelineCall } from './TimelineCall.tsx'
 import { TimelineDeploymentCreated } from './TimelineDeploymentCreated.tsx'
 import { TimelineDeploymentUpdated } from './TimelineDeploymentUpdated.tsx'
@@ -16,7 +17,6 @@ import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCr
 import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUpdatedDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import { TimeSettings } from './filters/TimelineTimeControls.tsx'
-import { DeploymentLabel } from './DeploymentLabel.tsx'
 
 interface Props {
   timeSettings: TimeSettings
@@ -27,11 +27,11 @@ const maxTimelineEntries = 1000
 
 export const Timeline = ({ timeSettings, filters }: Props) => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { openPanel, closePanel, isOpen } = React.useContext(SidePanelContext)
-  const [entries, setEntries] = React.useState<Event[]>([])
-  const [selectedEntry, setSelectedEntry] = React.useState<Event | null>(null)
+  const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
+  const [entries, setEntries] = useState<Event[]>([])
+  const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
 
-  React.useEffect(() => {
+  useEffect(() => {
     const eventId = searchParams.get('id')
     const abortController = new AbortController()
 
@@ -75,7 +75,7 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
     }
   }, [filters, timeSettings])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen) {
       setSelectedEntry(null)
     }

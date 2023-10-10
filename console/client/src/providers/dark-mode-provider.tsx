@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import useLocalStorage from '../hooks/use-local-storage'
 
 const DarkModeContext = React.createContext({
@@ -7,7 +7,7 @@ const DarkModeContext = React.createContext({
 })
 
 export const useDarkMode = () => {
-  return React.useContext(DarkModeContext)
+  return useContext(DarkModeContext)
 }
 
 interface Props {
