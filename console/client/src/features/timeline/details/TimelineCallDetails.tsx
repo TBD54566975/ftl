@@ -1,7 +1,5 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import { useContext, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Card } from '../../../components'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
@@ -11,13 +9,13 @@ import { CallEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { getRequestCalls } from '../../../services/console.service'
 import { formatDuration } from '../../../utils/date.utils'
+import { DeploymentCard } from '../../deployments/DeploymentCard'
 import { RequestGraph } from '../../requests/RequestGraph'
 import { verbRefString } from '../../verbs/verb.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp; call: CallEvent }) => {
   const client = useClient(ConsoleService)
-  const navigate = useNavigate()
   const { closePanel } = useContext(SidePanelContext)
   const [requestCalls, setRequestCalls] = useState<CallEvent[]>([])
   const [selectedCall, setSelectedCall] = useState(call)
@@ -81,15 +79,7 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp;
         </>
       )}
 
-      <Card
-        key={call.deploymentName}
-        topBarColor='bg-green-500'
-        className='mt-4'
-        onClick={() => navigate(`/deployments/${call.deploymentName}`)}
-      >
-        {call.deploymentName}
-        <p className='text-xs text-gray-400'>{call.deploymentName}</p>
-      </Card>
+      <DeploymentCard name={call.deploymentName} />
 
       <ul className='pt-4 space-y-2'>
         {selectedCall.requestName && (

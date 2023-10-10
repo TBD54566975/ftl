@@ -6,7 +6,7 @@ import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import { eventIdFilter, getEvents, streamEvents, timeFilter } from '../../services/console.service.ts'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
-import { DeploymentLabel } from './DeploymentLabel.tsx'
+import { deploymentTextColor } from '../deployments/deployment.utils.ts'
 import { TimelineCall } from './TimelineCall.tsx'
 import { TimelineDeploymentCreated } from './TimelineDeploymentCreated.tsx'
 import { TimelineDeploymentUpdated } from './TimelineDeploymentUpdated.tsx'
@@ -160,9 +160,11 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
                 </td>
                 <td
                   title={deploymentName(entry)}
-                  className='p-1 pr-2 w-40 items-center flex-none truncate text-indigo-500 dark:text-indigo-300'
+                  className={`p-1 pr-2 w-40 items-center flex-none truncate ${deploymentTextColor(
+                    deploymentName(entry),
+                  )}`}
                 >
-                  <DeploymentLabel name={deploymentName(entry)} />
+                  {deploymentName(entry)}
                 </td>
                 <td className='p-1 flex-grow truncate'>
                   {(() => {
