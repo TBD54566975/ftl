@@ -44,7 +44,7 @@ func (w *watchCmd) Run(ctx context.Context, c *cli, client ftlv1connect.Controll
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error { return pullModules(ctx, client, bctx) })
-	wg.Go(func() error { return pushModules(ctx, client, c.WatchFrequency, bctx) })
+	wg.Go(func() error { return pushModules(ctx, client, c.WatchFrequency, bctx, c.FTL) })
 
 	if err := wg.Wait(); err != nil {
 		return errors.WithStack(err)
@@ -57,7 +57,7 @@ type deployCmd struct {
 }
 
 func (d *deployCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
-	return errors.WithStack(pushModule(ctx, client, filepath.Join(c.Root, d.Name), bctx))
+	return errors.WithStack(pushModule(ctx, client, c.FTL, filepath.Join(c.Root, d.Name), bctx))
 }
 
 type cli struct {
@@ -141,7 +141,7 @@ func findImportRoot(root string) (importRoot ImportRoot, err error) {
 	}, nil
 }
 
-func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, watchFrequency time.Duration, bctx BuildContext) error {
+func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, watchFrequency time.Duration, bctx BuildContext, endpoint string) error {
 	logger := log.FromContext(ctx)
 	entries, err := os.ReadDir(bctx.Root)
 	if err != nil {
@@ -157,7 +157,7 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 		}
 
 		logger.Infof("Pushing local FTL module %q", entry.Name())
-		err := pushModule(ctx, client, dir, bctx)
+		err := pushModule(ctx, client, endpoint, dir, bctx)
 		if err != nil {
 			if connect.CodeOf(err) == connect.CodeAlreadyExists {
 				logger.Infof("Module %q already exists, skipping", entry.Name())
@@ -189,7 +189,7 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 				dir = filepath.Join(bctx.Root, strings.Split(dir, "/")[0])
 				logger.Infof("Detected change to %s, pushing module", dir)
 
-				err := pushModule(ctx, client, dir, bctx)
+				err := pushModule(ctx, client, endpoint, dir, bctx)
 				if err != nil {
 					logger.Errorf(err, "failed to rebuild module")
 				}
@@ -207,7 +207,7 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 	return errors.WithStack(wg.Wait())
 }
 
-func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient, dir string, bctx BuildContext) error {
+func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient, endpoint string, dir string, bctx BuildContext) error {
 	logger := log.FromContext(ctx)
 
 	sch, err := compile.ExtractModuleSchema(dir)
@@ -258,14 +258,14 @@ func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient
 		return errors.Wrap(err, "failed to upload artefacts")
 	}
 
-	err = deploy(ctx, client, deployment)
+	err = deploy(ctx, client, deployment, endpoint)
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy")
 	}
 	return nil
 }
 
-func deploy(ctx context.Context, client ftlv1connect.ControllerServiceClient, deployment *model.Deployment) error {
+func deploy(ctx context.Context, client ftlv1connect.ControllerServiceClient, deployment *model.Deployment, endpoint string) error {
 	logger := log.FromContext(ctx)
 	module := deployment.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	module.Runtime = &schemapb.ModuleRuntime{
@@ -295,7 +295,7 @@ func deploy(ctx context.Context, client ftlv1connect.ControllerServiceClient, de
 	if err != nil {
 		return errors.Wrap(err, "failed to create deployment")
 	}
-	logger.Infof("Created deployment %s", cdResp.Msg.DeploymentName)
+	logger.Infof("Created deployment %s (%s/deployments/%s)", cdResp.Msg.DeploymentName, endpoint, cdResp.Msg.DeploymentName)
 	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{
 		DeploymentName: cdResp.Msg.DeploymentName,
 		MinReplicas:    1,
