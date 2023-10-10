@@ -16,6 +16,7 @@ import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCr
 import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUpdatedDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import { TimeSettings } from './filters/TimelineTimeControls.tsx'
+import { DeploymentLabel } from './DeploymentLabel.tsx'
 
 interface Props {
   timeSettings: TimeSettings
@@ -166,7 +167,7 @@ export const Timeline = ({ timeSettings, filters }: Props) => {
                   title={deploymentName(entry)}
                   className='p-1 pr-2 w-40 items-center flex-none truncate text-indigo-500 dark:text-indigo-300'
                 >
-                  {deploymentName(entry)}
+                  <DeploymentLabel name={deploymentName(entry)} />
                 </td>
                 <td className='p-1 flex-grow truncate'>
                   {(() => {
