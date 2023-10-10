@@ -1,11 +1,10 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import { useContext } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { AttributeBadge } from '../../../components/AttributeBadge'
-import { Card } from '../../../components/Card'
 import { CloseButton } from '../../../components/CloseButton'
 import { DeploymentUpdatedEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
+import { DeploymentCard } from '../../deployments/DeploymentCard'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 export const TimelineDeploymentUpdatedDetails = ({
@@ -16,7 +15,6 @@ export const TimelineDeploymentUpdatedDetails = ({
   deployment: DeploymentUpdatedEvent
 }) => {
   const { closePanel } = useContext(SidePanelContext)
-  const navigate = useNavigate()
 
   return (
     <>
@@ -36,15 +34,7 @@ export const TimelineDeploymentUpdatedDetails = ({
           <CloseButton onClick={closePanel} />
         </div>
 
-        <Card
-          key={deployment.name}
-          topBarColor='bg-green-500'
-          className='mt-4'
-          onClick={() => navigate(`/deployments/${deployment.name}`)}
-        >
-          {deployment.name}
-          <p className='text-xs text-gray-400'>{deployment.name}</p>
-        </Card>
+        <DeploymentCard name={deployment.name} />
 
         <ul className='pt-4 space-y-2'>
           <li>

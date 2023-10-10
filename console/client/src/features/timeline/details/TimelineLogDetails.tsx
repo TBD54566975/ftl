@@ -1,20 +1,18 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import { useContext } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { AttributeBadge } from '../../../components/AttributeBadge'
-import { Card } from '../../../components/Card'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
 import { Event, LogEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { textColor } from '../../../utils/style.utils'
+import { DeploymentCard } from '../../deployments/DeploymentCard'
 import { LogLevelBadge } from '../../logs/LogLevelBadge'
 import { logLevelBgColor } from '../../logs/log.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 export const TimelineLogDetails = ({ event, log }: { event: Event; log: LogEvent }) => {
   const { closePanel } = useContext(SidePanelContext)
-  const navigate = useNavigate()
 
   return (
     <>
@@ -34,15 +32,8 @@ export const TimelineLogDetails = ({ event, log }: { event: Event; log: LogEvent
         <h2 className='pt-4 text-sm'>Attributes</h2>
         <CodeBlock code={JSON.stringify(log.attributes, null, 2)} language='json' />
 
-        <Card
-          key={log.deploymentName}
-          topBarColor='bg-green-500'
-          className='mt-4'
-          onClick={() => navigate(`/deployments/${log.deploymentName}`)}
-        >
-          {log.deploymentName}
-          <p className='text-xs text-gray-400'>{log.deploymentName}</p>
-        </Card>
+        <DeploymentCard name={log.deploymentName} />
+
         <ul className='pt-4 space-y-2'>
           {log.requestName && (
             <li>
