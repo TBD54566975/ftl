@@ -14,7 +14,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
-	"github.com/TBD54566975/ftl/backend/common/slices"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -54,6 +53,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	}
 
 	logger.Infof("Uploading %d files", len(gadResp.Msg.MissingDigests))
+	var uploadedArtefacts []*ftlv1.DeploymentArtefact
 	for _, missing := range gadResp.Msg.MissingDigests {
 		file := filesByHash[missing]
 		content, err := os.ReadFile(file.localPath)
@@ -62,7 +62,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		}
 		if content == nil || len(content) == 0 {
 			logger.Debugf("Skipping empty or nil content for %s", relToCWD(file.localPath))
-			continue // Skip this iteration and move on to the next one
+			continue
 		}
 		logger.Debugf("Uploading %s", relToCWD(file.localPath))
 		resp, err := client.UploadArtefact(ctx, connect.NewRequest(&ftlv1.UploadArtefactRequest{
@@ -72,6 +72,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 			return errors.WithStack(err)
 		}
 		logger.Infof("Uploaded %s as %s:%s", relToCWD(file.localPath), sha256.FromBytes(resp.Msg.Digest), file.Path)
+		uploadedArtefacts = append(uploadedArtefacts, file.DeploymentArtefact)
 	}
 	resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 		// TODO(aat): Use real data for this.
@@ -83,9 +84,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 				MinReplicas: d.Replicas,
 			},
 		},
-		Artefacts: slices.Map(maps.Values(filesByHash), func(a deploymentArtefact) *ftlv1.DeploymentArtefact {
-			return a.DeploymentArtefact
-		}),
+		Artefacts: uploadedArtefacts,
 	}))
 	if err != nil {
 		return errors.WithStack(err)
