@@ -25,6 +25,9 @@ RUN make build/release/ftl
 # Finally create the runtime image.
 FROM ubuntu:22.04
 
+RUN apt update
+RUN apt install -y curl postgresql-client iputils-ping vim
+
 WORKDIR /root/
 
 COPY --from=builder /src/build/release/ftl-controller .
@@ -34,8 +37,8 @@ RUN mkdir deployments
 
 EXPOSE 8892
 
-ENV FTL_CONTROLLER_BIND="http://0.0.0.0:8899"
-ENV FTL_CONTROLLER_ADVERTISE="http://127.0.0.1:8899"
+ENV FTL_CONTROLLER_BIND="http://0.0.0.0:8892"
+ENV FTL_CONTROLLER_ADVERTISE="http://127.0.0.1:8892"
 ENV FTL_CONTROLLER_ALLOW_ORIGIN="*"
 ENV FTL_CONTROLLER_DSN="postgres://host.docker.internal/ftl?sslmode=disable&user=postgres&password=secret"
 
