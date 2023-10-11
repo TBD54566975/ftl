@@ -34,7 +34,7 @@ export const TimelineDeploymentUpdatedDetails = ({
           <CloseButton onClick={closePanel} />
         </div>
 
-        <DeploymentCard name={deployment.name} />
+        <DeploymentCard className='mt-4' deploymentName={deployment.name} />
 
         <ul className='pt-4 space-y-2'>
           <li>

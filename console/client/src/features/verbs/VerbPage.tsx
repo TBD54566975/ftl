@@ -12,7 +12,7 @@ import { VerbForm } from './VerbForm'
 import { buildVerbSchema } from './verb.utils'
 
 export const VerbPage = () => {
-  const { moduleName, verbName } = useParams()
+  const { deploymentName, verbName } = useParams()
   const modules = useContext(modulesContext)
   const [module, setModule] = useState<Module | undefined>()
   const [verb, setVerb] = useState<Verb | undefined>()
@@ -24,12 +24,12 @@ export const VerbPage = () => {
 
   useEffect(() => {
     if (modules) {
-      const module = modules.modules.find((module) => module.name === moduleName?.toLocaleLowerCase())
+      const module = modules.modules.find((module) => module.deploymentName === deploymentName?.toLocaleLowerCase())
       setModule(module)
       const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === verbName?.toLocaleLowerCase())
       setVerb(verb)
     }
-  }, [modules, moduleName])
+  }, [modules, deploymentName])
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -59,8 +59,8 @@ export const VerbPage = () => {
           icon={<Square3Stack3DIcon />}
           title={verb?.verb?.name || ''}
           breadcrumbs={[
-            { label: 'Modules', link: '/modules' },
-            { label: module?.name || '', link: `/modules/${module?.name}` },
+            { label: 'Deployments', link: '/deployments' },
+            { label: module?.deploymentName || '', link: `/deployments/${module?.deploymentName}` },
           ]}
         />
         <Page.Body className='p-4'>
