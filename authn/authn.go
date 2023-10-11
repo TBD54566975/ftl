@@ -30,6 +30,14 @@ import (
 func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authenticators map[string]string) (http.Header, error) {
 	logger := log.FromContext(ctx).Scope(endpoint.Hostname())
 
+	// Next, try the authenticator.
+	logger.Debugf("Trying authenticator")
+	authenticator, ok := authenticators[endpoint.Hostname()]
+	if !ok {
+		logger.Tracef("No authenticator found for %s in %s", endpoint, authenticators)
+		return nil, nil
+	}
+
 	endpoint = &url.URL{
 		Scheme: endpoint.Scheme,
 		Host:   endpoint.Host,
@@ -58,14 +66,6 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 		} else if headers != nil {
 			return headers, nil
 		}
-	}
-
-	// Next, try the authenticator.
-	logger.Debugf("Trying authenticator")
-	authenticator, ok := authenticators[endpoint.Hostname()]
-	if !ok {
-		logger.Tracef("No authenticator found in %s", authenticators)
-		return nil, nil
 	}
 
 	cmd := exec.Command(ctx, log.Error, ".", authenticator, endpoint.String())
@@ -152,6 +152,9 @@ func checkAuth(ctx context.Context, logger *log.Logger, endpoint *url.URL, creds
 
 // Transport returns a transport that will authenticate requests to the given endpoints.
 func Transport(next http.RoundTripper, authenticators map[string]string) http.RoundTripper {
+	if len(authenticators) == 0 {
+		return next
+	}
 	return &authnTransport{
 		authenticators: authenticators,
 		credentials:    map[string]http.Header{},

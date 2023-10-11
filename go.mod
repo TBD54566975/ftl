@@ -5,7 +5,7 @@ go 1.21
 require (
 	connectrpc.com/connect v1.11.1
 	github.com/BurntSushi/toml v1.3.2
-	github.com/alecthomas/kong v0.8.0
+	github.com/alecthomas/kong v0.8.1
 	github.com/alecthomas/kong-toml v0.0.0-20230922031405-31cfb1264a3b
 	github.com/go-logr/logr v1.2.4
 	github.com/golang/protobuf v1.5.3
