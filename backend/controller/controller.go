@@ -571,10 +571,10 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	module := verbRef.Module
 	s.routesMu.RLock()
 	routes, ok := s.routes[module]
+	s.routesMu.RUnlock()
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("no routes for module %q", module))
 	}
-	s.routesMu.RUnlock()
 	route := routes[rand.Intn(len(routes))] //nolint:gosec
 	client := s.clientsForEndpoint(route.Endpoint)
 

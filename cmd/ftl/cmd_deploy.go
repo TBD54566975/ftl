@@ -53,7 +53,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return errors.WithStack(err)
 	}
 
-	logger.Infof("Uploading %d files", len(gadResp.Msg.MissingDigests))
+	logger.Infof("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))
 	for _, missing := range gadResp.Msg.MissingDigests {
 		file := filesByHash[missing]
 		content, err := os.ReadFile(file.localPath)
