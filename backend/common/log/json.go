@@ -53,6 +53,10 @@ func JSONStreamer(r io.Reader, log *Logger, defaultLevel Level) error {
 		line := scan.Bytes()
 		err := json.Unmarshal(line, &entry)
 		if err != nil {
+			if len(line) > 0 && line[0] == '{' {
+				log.Warnf("Invalid JSON log entry: %s", err)
+				log.Warnf("Entry: %s", line)
+			}
 			log.Log(Entry{Level: defaultLevel, Time: time.Now(), Message: string(line)})
 		} else {
 			if entry.Error != "" {

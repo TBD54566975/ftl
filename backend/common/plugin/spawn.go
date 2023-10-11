@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -156,7 +155,7 @@ func Spawn[Client PingableClient](
 	}()
 
 	// Write the PID file.
-	err = ioutil.WriteFile(pidFile, []byte(strconv.Itoa(cmd.Process.Pid)), 0600)
+	err = os.WriteFile(pidFile, []byte(strconv.Itoa(cmd.Process.Pid)), 0600)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
