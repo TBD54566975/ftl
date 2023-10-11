@@ -60,6 +60,10 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		if content == nil || len(content) == 0 {
+			logger.Debugf("Skipping empty or nil content for %s", relToCWD(file.localPath))
+			continue // Skip this iteration and move on to the next one
+		}
 		logger.Debugf("Uploading %s", relToCWD(file.localPath))
 		resp, err := client.UploadArtefact(ctx, connect.NewRequest(&ftlv1.UploadArtefactRequest{
 			Content: content,
