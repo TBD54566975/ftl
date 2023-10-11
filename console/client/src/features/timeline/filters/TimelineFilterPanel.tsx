@@ -45,12 +45,15 @@ export const TimelineFilterPanel = ({
   const modules = useContext(modulesContext)
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(Object.keys(EVENT_TYPES))
   const [selectedModules, setSelectedModules] = useState<string[]>([])
+  const [previousModules, setPreviousModules] = useState<string[]>([])
   const [selectedLogLevel, setSelectedLogLevel] = useState<number>(1)
 
   useEffect(() => {
-    if (selectedModules.length === 0) {
-      setSelectedModules(modules.modules.map((module) => module.deploymentName))
-    }
+    const newModules = modules.modules.map((module) => module.deploymentName)
+    const addedModules = newModules.filter((name) => !previousModules.includes(name))
+
+    setSelectedModules((prevSelected) => [...prevSelected, ...addedModules])
+    setPreviousModules(newModules)
   }, [modules])
 
   useEffect(() => {
