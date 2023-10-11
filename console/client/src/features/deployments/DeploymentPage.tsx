@@ -48,6 +48,13 @@ export const DeploymentPage = () => {
     setCalls(Array.from(verbCalls))
   }, [module])
 
+  const handleCallClick = (verb: VerbRef) => {
+    const module = modules?.modules.find((module) => module.name === verb.module)
+    if (module) {
+      navigate(`/deployments/${module.deploymentName}/verbs/${verb.name}`)
+    }
+  }
+
   return (
     <Page>
       <Page.Header
@@ -60,9 +67,9 @@ export const DeploymentPage = () => {
         <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
           {module?.verbs.map((verb) => (
             <Card
-              key={module.deploymentName}
+              key={verb.verb?.name}
               topBarColor='bg-green-500'
-              onClick={() => navigate(`/modules/${module.name}/verbs/${verb.verb?.name}`)}
+              onClick={() => navigate(`/deployments/${module.deploymentName}/verbs/${verb.verb?.name}`)}
             >
               {verb.verb?.name}
               <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
@@ -74,9 +81,7 @@ export const DeploymentPage = () => {
         <ul className='pt-2 flex space-x-2'>
           {calls?.map((verb) => (
             <li key={`${module?.name}-${verb.module}-${verb.name}`} className='text-xs'>
-              <ButtonSmall onClick={() => navigate(`/modules/${verb.module}/verbs/${verb.name}`)}>
-                {verbRefString(verb)}
-              </ButtonSmall>
+              <ButtonSmall onClick={() => handleCallClick(verb)}>{verbRefString(verb)}</ButtonSmall>
             </li>
           ))}
         </ul>

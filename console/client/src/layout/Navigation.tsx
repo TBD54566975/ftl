@@ -1,4 +1,4 @@
-import { CubeTransparentIcon, ListBulletIcon, RocketLaunchIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
+import { CubeTransparentIcon, ListBulletIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { useContext } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { DarkModeSwitch } from '../components/DarkModeSwitch'
@@ -7,8 +7,7 @@ import { classNames } from '../utils'
 
 const navigation = [
   { name: 'Events', href: '/events', icon: ListBulletIcon },
-  { name: 'Modules', href: '/modules', icon: Square3Stack3DIcon },
-  { name: 'Deployments', href: '/deployments', icon: RocketLaunchIcon },
+  { name: 'Deployments', href: '/deployments', icon: Square3Stack3DIcon },
   { name: 'Graph', href: '/graph', icon: CubeTransparentIcon },
 ]
 
