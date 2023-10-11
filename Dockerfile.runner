@@ -45,7 +45,7 @@ RUN mkdir deployments
 EXPOSE 8894
 
 ENV FTL_ENDPOINT="http://host.docker.internal:8892"
-ENV FTL_RUNNER_BIND="http://0.0.0.0:8899"
-ENV FTL_RUNNER_ADVERTISE="http://127.0.0.1:8899"
+ENV FTL_RUNNER_BIND="http://0.0.0.0:8893"
+ENV FTL_RUNNER_ADVERTISE="http://127.0.0.1:8893"
 
 CMD ["/root/ftl-runner", "--language=kotlin", "--language=go", "--template-dir=template", "--deployment-dir=deployments"]
