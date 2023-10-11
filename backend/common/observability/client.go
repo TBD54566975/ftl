@@ -8,6 +8,7 @@ import (
 	"github.com/alecthomas/errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -63,7 +64,11 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 	meterProvider := metric.NewMeterProvider(metric.WithReader(metric.NewPeriodicReader(otelMetricExporter)), metric.WithResource(res))
 	otel.SetMeterProvider(meterProvider)
 
-	traceProvider := trace.NewTracerProvider(trace.WithResource(res))
+	otelTraceExporter, err := otlptracegrpc.New(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to create OTEL trace exporter")
+	}
+	traceProvider := trace.NewTracerProvider(trace.WithBatcher(otelTraceExporter), trace.WithResource(res))
 	otel.SetTracerProvider(traceProvider)
 
 	return nil
