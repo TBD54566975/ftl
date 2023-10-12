@@ -3,9 +3,16 @@ package xyz.block.ftl.logging
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.LoggerContext
-import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.ConsoleAppender
+import ch.qos.logback.core.joran.spi.ConsoleTarget
+import com.fasterxml.jackson.core.JsonGenerator
+import net.logstash.logback.composite.JsonProviders
+import net.logstash.logback.composite.JsonWritingUtils
+import net.logstash.logback.composite.loggingevent.LogLevelJsonProvider
+import net.logstash.logback.composite.loggingevent.MessageJsonProvider
+import net.logstash.logback.composite.loggingevent.ThrowableMessageJsonProvider
+import net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder
 import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 
@@ -15,9 +22,10 @@ class Logging {
 
   companion object {
     private val logging = Logging()
+    private const val DEFAULT_LOG_LEVEL = "info"
 
     fun logger(name: String): Logger {
-      val logger = LoggerFactory.getLogger(name) as Logger
+      val logger = logging.lc.getLogger(name) as Logger
       logger.addAppender(logging.appender)
       logger.level = Level.DEBUG
       logger.isAdditive = false /* set to true if root should log too */
@@ -29,18 +37,36 @@ class Logging {
       return logger(kClass.qualifiedName!!)
     }
 
-    fun init() {
-      val ple = PatternLayoutEncoder()
+    init {
+      val je = LoggingEventCompositeJsonEncoder()
+      je.context = logging.lc
 
-      ple.pattern = "%date %level %logger{10} - %msg%n"
-      ple.context = logging.lc
-      ple.start()
+      val providers: JsonProviders<ILoggingEvent> = je.providers
+      providers.setContext(je.context)
+      // Custom LogLevelJsonProvider converts level value to lowercase
+      providers.addProvider(object : LogLevelJsonProvider() {
+        override fun writeTo(generator: JsonGenerator, event: ILoggingEvent) {
+          JsonWritingUtils.writeStringField(generator, fieldName, event.level.toString().lowercase())
+        }
+      })
+      providers.addProvider(MessageJsonProvider())
+      // Custom ThrowableMessageJsonProvider uses "error" as fieldname for throwable
+      providers.addProvider(object : ThrowableMessageJsonProvider() {
+        init {
+          this.fieldName = "error"
+        }
+      })
+      je.providers = providers
+      je.start()
 
-      logging.appender.encoder = ple
+      logging.appender.target = ConsoleTarget.SystemErr.toString()
       logging.appender.context = logging.lc
+      logging.appender.encoder = je
       logging.appender.start()
 
-      logger(Logger.ROOT_LOGGER_NAME).level = Level.INFO
+      val rootLogger = logger(Logger.ROOT_LOGGER_NAME)
+      val rootLevelCfg = Level.valueOf(System.getenv("LOG_LEVEL") ?: DEFAULT_LOG_LEVEL)
+      rootLogger.level = rootLevelCfg
     }
   }
 }
