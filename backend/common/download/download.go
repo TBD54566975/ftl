@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
@@ -23,6 +24,8 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	start := time.Now()
+	count := 0
 	var digest string
 	var w *os.File
 	for stream.Receive() {
@@ -32,6 +35,7 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 			if w != nil {
 				w.Close()
 			}
+			count++
 			if !filepath.IsLocal(artefact.Path) {
 				return errors.Errorf("path %q is not local", artefact.Path)
 			}
@@ -59,5 +63,6 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 	if w != nil {
 		w.Close()
 	}
+	logger.Infof("Downloaded %d artefacts in %s", count, time.Since(start))
 	return errors.WithStack(stream.Err())
 }
