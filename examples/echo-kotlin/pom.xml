@@ -97,6 +97,17 @@
                             <includeScope>runtime</includeScope>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>build-classpath</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>build-classpath</goal>
+                        </goals>
+                        <configuration>
+                            <outputFile>${project.build.directory}/classpath.txt</outputFile>
+                            <prefix>dependency</prefix>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <!-- Run the Wire compiler -->

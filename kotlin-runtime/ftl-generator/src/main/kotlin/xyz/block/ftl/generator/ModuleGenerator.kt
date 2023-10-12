@@ -175,7 +175,7 @@ class ModuleGenerator() {
       """
       module = "${module}"
       language = "kotlin"
-      deploy = ["main", "classes", "dependency"]
+      deploy = ["main", "classes", "dependency", "classpath.txt"]
       """.trimIndent()
     )
 
@@ -183,7 +183,7 @@ class ModuleGenerator() {
     mainFile.writeText(
       """
       #!/bin/bash
-      exec java -cp "classes:$(printf %s: dependency/*.jar)" xyz.block.ftl.main.MainKt
+      exec java -cp "classes:$(cat classpath.txt)" xyz.block.ftl.main.MainKt
       """.trimIndent(),
     )
     mainFile.setPosixFilePermissions(
