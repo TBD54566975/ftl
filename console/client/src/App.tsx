@@ -5,6 +5,7 @@ import { GraphPage } from './features/graph/GraphPage.tsx'
 import { TimelinePage } from './features/timeline/TimelinePage.tsx'
 import { VerbPage } from './features/verbs/VerbPage.tsx'
 import { Layout } from './layout/Layout.tsx'
+import { NotFoundPage } from './layout/NotFoundPage.tsx'
 
 export const App = () => {
   return (
@@ -19,6 +20,7 @@ export const App = () => {
 
         <Route path='graph' element={<GraphPage />} />
       </Route>
+      <Route path='*' element={<NotFoundPage />} />
     </Routes>
   )
 }
