@@ -21,8 +21,9 @@
         <kotlin.version>1.9.0</kotlin.version>
         <wire.version>4.8.1</wire.version>
         <grpc.version>1.56.1</grpc.version>
-        <logback.version>1.4.5</logback.version>
+        <logback.version>1.4.8</logback.version>
         <junit.version>5.10.0</junit.version>
+        <logstash.version>7.4</logstash.version>
     </properties>
 
     <dependencyManagement>
@@ -45,6 +46,11 @@
         </dependency>
 
         <!-- Logback dependencies -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>${logstash.version}</version>
+        </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
