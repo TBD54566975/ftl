@@ -29,6 +29,7 @@ type CLI struct {
 	Authenticators map[string]string `help:"Authenticators to use for FTL endpoints." mapsep:"," env:"FTL_AUTHENTICATORS" placeholder:"HOST=EXE,…"`
 
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
+	Init     initCmd     `cmd:"" help:"Initialize a new FTL module."`
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`

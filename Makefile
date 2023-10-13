@@ -56,6 +56,10 @@ release: build/release/ftl-controller build/release/ftl-runner build/release/ftl
 build/release/%: console/client/dist/index.html
 	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION) -X main.timestamp=$(shell date +%s)" ./cmd/$(shell basename $@)
 
+build/release/ftl:
+	cd go-runtime/scaffolding && zip -q --symlinks -r ../scaffolding.zip .
+	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION) -X main.timestamp=$(shell date +%s)" ./cmd/ftl
+
 $(KT_MVN_OUT): $(KT_RUNTIME_IN)
 	mvn -pl :ftl-runtime clean package
 
