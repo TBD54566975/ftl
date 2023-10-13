@@ -123,6 +123,8 @@ jobs:
       - name: Build Console
         run: bit console/client/dist/index.html
       - name: Publish Go Binaries
-        run: goreleaser release
+        run: |
+          bit go-runtime/scaffolding.zip
+          goreleaser release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
