@@ -44,12 +44,27 @@ NODE_MODULES_IN = console/client/package{,-lock}.json
   build: install -m 0700 -d %{OUT}
 
 # Build all binaries
-implicit %{RELEASE}/%{1}: cmd/*
-  inputs: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT}
-  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/%{1}
+# implicit %{RELEASE}/%{1}: cmd/*
+#   inputs: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT}
+#   build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/%{1}
 
-#%{RELEASE}/ftl-controller: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT}
-#  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-controller
+%{RELEASE}/ftl-controller: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT} cmd/ftl-controller/**/*.go
+  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-controller
+
+%{RELEASE}/ftl-runner: %{RELEASE} %{GO_SOURCES} cmd/ftl-runner/**/*.go
+  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-runner
+
+%{RELEASE}/ftl: %{RELEASE} %{GO_SOURCES} cmd/ftl/**/*.go go-runtime/scaffolding.zip
+  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl
+
+%{RELEASE}/ftl-initdb: %{RELEASE} %{GO_SOURCES} cmd/ftl-initdb/**/*.go
+  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-initdb
+
+# Release builds include zipped scaffolding becaused raw go:embed doesn't
+# preserve permissions or symlinks. Irritating.
+go-runtime/scaffolding.zip: go-runtime/scaffolding/*
+  cd go-runtime/scaffolding
+  build: zip -q --symlinks -r ../scaffolding.zip .
 
 %{SCHEMA_OUT}: %{SCHEMA_IN}
   build:

@@ -12,5 +12,5 @@ reflex.conf
 /node_modules
 *.tsbuildinfo
 generated_ftl_module.go
-
+scaffolding.zip
 dist/
