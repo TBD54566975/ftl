@@ -420,11 +420,11 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 			logger.Errorf(err, "Deployment not found: %s", newDeploymentName)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		} else if errors.Is(err, dal.ErrConflict) {
-			logger.Errorf(err, "Deployment already exists: %s", newDeploymentName)
-			return nil, connect.NewError(connect.CodeAlreadyExists, errors.WithStack(err))
+			logger.Infof("Deployment already exists: %s", newDeploymentName)
+		} else {
+			logger.Errorf(err, "Could not replace deployment: %s", newDeploymentName)
+			return nil, errors.Wrap(err, "could not replace deployment")
 		}
-		logger.Errorf(err, "Could not replace deployment: %s", newDeploymentName)
-		return nil, errors.Wrap(err, "could not replace deployment")
 	}
 	return connect.NewResponse(&ftlv1.ReplaceDeployResponse{}), nil
 }
