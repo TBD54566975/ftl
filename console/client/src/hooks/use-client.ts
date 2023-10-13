@@ -1,6 +1,6 @@
-import { PromiseClient, createPromiseClient } from '@bufbuild/connect'
-import { createConnectTransport } from '@bufbuild/connect-web'
 import { ServiceType } from '@bufbuild/protobuf'
+import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
+import { createConnectTransport } from '@connectrpc/connect-web'
 import { useMemo } from 'react'
 
 const transport = createConnectTransport({

@@ -49,10 +49,15 @@ export const TimelineFilterPanel = ({
   const [selectedLogLevel, setSelectedLogLevel] = useState<number>(1)
 
   useEffect(() => {
+    if (modules.modules.length === 0) {
+      return
+    }
     const newModules = modules.modules.map((module) => module.deploymentName)
     const addedModules = newModules.filter((name) => !previousModules.includes(name))
 
-    setSelectedModules((prevSelected) => [...prevSelected, ...addedModules])
+    if (addedModules.length > 0) {
+      setSelectedModules((prevSelected) => [...prevSelected, ...addedModules])
+    }
     setPreviousModules(newModules)
   }, [modules])
 

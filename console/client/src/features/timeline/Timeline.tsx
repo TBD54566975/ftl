@@ -1,6 +1,7 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useVisibility } from '../../hooks/use-visibility.ts'
 import { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import { eventIdFilter, getEvents, streamEvents, timeFilter } from '../../services/console.service.ts'
@@ -25,10 +26,15 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
   const [entries, setEntries] = useState<Event[]>([])
   const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
+  const isVisible = useVisibility()
 
   useEffect(() => {
     const eventId = searchParams.get('id')
     const abortController = new AbortController()
+    if (!isVisible) {
+      abortController.abort()
+      return
+    }
 
     const fetchEvents = async () => {
       let eventFilters = filters
@@ -56,9 +62,9 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
       streamEvents({
         abortControllerSignal: abortController.signal,
         filters,
-        onEventReceived: (event) => {
+        onEventsReceived: (events) => {
           if (!timeSettings.isPaused) {
-            setEntries((prev) => [event, ...prev].slice(0, maxTimelineEntries))
+            setEntries((prev) => [...events, ...prev].slice(0, maxTimelineEntries))
           }
         },
       })
@@ -68,7 +74,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
     return () => {
       abortController.abort()
     }
-  }, [filters, timeSettings])
+  }, [filters, timeSettings, isVisible])
 
   useEffect(() => {
     if (!isOpen) {

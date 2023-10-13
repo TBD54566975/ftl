@@ -1,20 +1,28 @@
-import { Code, ConnectError } from '@bufbuild/connect'
-import { PropsWithChildren, createContext, useContext, useEffect, useState } from 'react'
+import { Code, ConnectError } from '@connectrpc/connect'
+import { PropsWithChildren, createContext, useEffect, useState } from 'react'
 import { useClient } from '../hooks/use-client'
+import { useSchema } from '../hooks/use-schema'
+import { useVisibility } from '../hooks/use-visibility'
 import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
 import { GetModulesResponse } from '../protos/xyz/block/ftl/v1/console/console_pb'
-import { schemaContext } from './schema-provider'
 
 export const modulesContext = createContext<GetModulesResponse>(new GetModulesResponse())
 
 export const ModulesProvider = ({ children }: PropsWithChildren) => {
-  const schema = useContext(schemaContext)
+  const schema = useSchema()
   const client = useClient(ConsoleService)
   const [modules, setModules] = useState<GetModulesResponse>(new GetModulesResponse())
+  const isVisible = useVisibility()
 
   useEffect(() => {
     const abortController = new AbortController()
+
     const fetchModules = async () => {
+      if (!isVisible) {
+        abortController.abort()
+        return
+      }
+
       try {
         const modules = await client.getModules({}, { signal: abortController.signal })
         setModules(modules ?? [])
@@ -35,7 +43,7 @@ export const ModulesProvider = ({ children }: PropsWithChildren) => {
     return () => {
       abortController.abort()
     }
-  }, [client, schema])
+  }, [client, schema, isVisible])
 
   return <modulesContext.Provider value={modules}>{children}</modulesContext.Provider>
 }

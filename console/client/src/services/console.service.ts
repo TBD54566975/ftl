@@ -1,5 +1,5 @@
-import { Code, ConnectError } from '@bufbuild/connect'
 import { Timestamp } from '@bufbuild/protobuf'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { createClient } from '../hooks/use-client'
 import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
 import {
@@ -161,19 +161,24 @@ export const getEvents = async ({
 export const streamEvents = async ({
   abortControllerSignal,
   filters,
-  onEventReceived,
+  onEventsReceived,
 }: {
   abortControllerSignal: AbortSignal
   filters: EventsQuery_Filter[]
-  onEventReceived: (event: Event) => void
+  onEventsReceived: (events: Event[]) => void
 }) => {
   try {
+    let events: Event[] = []
     for await (const response of client.streamEvents(
       { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, filters } },
       { signal: abortControllerSignal },
     )) {
       if (response.event != null) {
-        onEventReceived(response.event)
+        events.push(response.event)
+      }
+      if (!response.more) {
+        onEventsReceived(events.reverse())
+        events = []
       }
     }
   } catch (error) {

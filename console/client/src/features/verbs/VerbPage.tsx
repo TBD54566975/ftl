@@ -40,8 +40,9 @@ export const VerbPage = () => {
       streamEvents({
         abortControllerSignal: abortController.signal,
         filters: [callFilter(module.name, verb?.verb?.name), eventTypesFilter([EventType.CALL])],
-        onEventReceived: (event) => {
-          setCalls((prev) => [event.entry.value as CallEvent, ...prev])
+        onEventsReceived: (events) => {
+          const callEvents = events.map((event) => event.entry.value as CallEvent)
+          setCalls((prev) => [...callEvents, ...prev])
         },
       })
     }
