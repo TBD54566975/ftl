@@ -1,6 +1,6 @@
 FROM ubuntu:22.04 AS builder
-RUN apt update
-RUN apt install -y curl git
+RUN apt-get update
+RUN apt-get install -y curl git zip
 
 # Copy Hermit bin stubs and install all packages. This is done
 # separately so that Docker will cache the tools correctly.
@@ -25,8 +25,8 @@ RUN make build/release/ftl
 # Finally create the runtime image.
 FROM ubuntu:22.04
 
-RUN apt update
-RUN apt install -y curl postgresql-client iputils-ping vim
+RUN apt-get update
+RUN apt-get install -y curl postgresql-client iputils-ping vim
 
 WORKDIR /root/
 
