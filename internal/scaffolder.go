@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"archive/zip"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/alecthomas/errors"
 	"github.com/iancoleman/strcase"
-	"github.com/otiai10/copy"
 )
 
 // Scaffold copies the scaffolding files from the given source to the given
@@ -19,8 +19,8 @@ import (
 //
 // The functions "snake", "camel", "lowerCamel", "kebab", "upper", and "lower"
 // are available.
-func Scaffold(source fs.FS, destination string, ctx any) error {
-	err := copy.Copy(".", destination, copy.Options{FS: source, PermissionControl: copy.AddPermission(0600)})
+func Scaffold(source *zip.Reader, destination string, ctx any) error {
+	err := UnzipDir(source, destination)
 	if err != nil {
 		return errors.WithStack(err)
 	}
