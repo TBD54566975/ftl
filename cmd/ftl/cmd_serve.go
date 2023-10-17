@@ -9,12 +9,13 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/runner"
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/runner"
 )
 
 type serveCmd struct {
