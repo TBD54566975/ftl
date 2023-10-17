@@ -7,6 +7,8 @@ import { Page } from '../../layout'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { MetadataCalls, VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { modulesContext } from '../../providers/modules-provider'
+import { modulesFilter } from '../../services/console.service'
+import { Timeline } from '../timeline/Timeline'
 import { verbRefString } from '../verbs/verb.utils'
 
 export const DeploymentPage = () => {
@@ -63,28 +65,40 @@ export const DeploymentPage = () => {
         breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]}
       />
 
-      <Page.Body className='p-4'>
-        <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
-          {module?.verbs.map((verb) => (
-            <Card
-              key={verb.verb?.name}
-              topBarColor='bg-green-500'
-              onClick={() => navigate(`/deployments/${module.deploymentName}/verbs/${verb.verb?.name}`)}
-            >
-              {verb.verb?.name}
-              <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
-            </Card>
-          ))}
+      <Page.Body>
+        <div className='flex-1 flex flex-col h-full'>
+          <div className='flex-1 h-1/2 mb-4 p-4'>
+            <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
+              {module?.verbs.map((verb) => (
+                <Card
+                  key={verb.verb?.name}
+                  topBarColor='bg-green-500'
+                  onClick={() => navigate(`/deployments/${module.deploymentName}/verbs/${verb.verb?.name}`)}
+                >
+                  {verb.verb?.name}
+                  <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
+                </Card>
+              ))}
+            </div>
+            <h2 className='pt-4'>Calls</h2>
+            {calls.length === 0 && <p className='pt-2 text-sm text-gray-400'>Does not call other verbs</p>}
+            <ul className='pt-2 flex space-x-2'>
+              {calls?.map((verb) => (
+                <li key={`${module?.name}-${verb.module}-${verb.name}`} className='text-xs'>
+                  <ButtonSmall onClick={() => handleCallClick(verb)}>{verbRefString(verb)}</ButtonSmall>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className='flex-1 h-1/2 overflow-y-auto'>
+            {module?.deploymentName && (
+              <Timeline
+                timeSettings={{ isTailing: true, isPaused: false }}
+                filters={[modulesFilter([module?.deploymentName])]}
+              />
+            )}
+          </div>
         </div>
-        <h2 className='pt-4'>Calls</h2>
-        {calls.length === 0 && <p className='pt-2 text-sm text-gray-400'>Does not call other verbs</p>}
-        <ul className='pt-2 flex space-x-2'>
-          {calls?.map((verb) => (
-            <li key={`${module?.name}-${verb.module}-${verb.name}`} className='text-xs'>
-              <ButtonSmall onClick={() => handleCallClick(verb)}>{verbRefString(verb)}</ButtonSmall>
-            </li>
-          ))}
-        </ul>
       </Page.Body>
     </Page>
   )
