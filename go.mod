@@ -16,7 +16,7 @@ require (
 	github.com/otiai10/copy v1.12.0
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.9.0
-	github.com/swaggest/jsonschema-go v0.3.59
+	github.com/swaggest/jsonschema-go v0.3.62
 	github.com/titanous/json5 v1.0.0
 	github.com/zalando/go-keyring v0.2.1
 	go.opentelemetry.io/otel v1.19.0
@@ -45,7 +45,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/swaggest/refl v1.2.0 // indirect
+	github.com/swaggest/refl v1.3.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.42.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
