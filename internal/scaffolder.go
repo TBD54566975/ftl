@@ -24,9 +24,9 @@ func Scaffold(source *zip.Reader, destination string, ctx any) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(filepath.WalkDir(destination, func(path string, d fs.DirEntry, err error) error {
+	return errors.WithStack(walkDir(destination, func(path string, d fs.DirEntry) error {
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		info, err := d.Info()
 		if err != nil {
@@ -34,12 +34,15 @@ func Scaffold(source *zip.Reader, destination string, ctx any) error {
 		}
 
 		// Evaluate path name templates.
-		newName, err := evaluate(path, ctx)
+		dir := filepath.Dir(path)
+		base := filepath.Base(path)
+		newName, err := evaluate(base, ctx)
 		if err != nil {
 			return errors.Wrapf(err, "%s", path)
 		}
 		// Rename if necessary.
-		if newName != path {
+		if newName != base {
+			newName = filepath.Join(dir, newName)
 			err = os.Rename(path, newName)
 			if err != nil {
 				return errors.Wrap(err, "failed to rename file")
@@ -66,6 +69,26 @@ func Scaffold(source *zip.Reader, destination string, ctx any) error {
 		}
 		return nil
 	}))
+}
+
+func walkDir(dir string, fn func(path string, d fs.DirEntry) error) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			err = walkDir(filepath.Join(dir, entry.Name()), fn)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		err = fn(filepath.Join(dir, entry.Name()), entry)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
 }
 
 func evaluate(tmpl string, ctx any) (string, error) {

@@ -1,0 +1,8 @@
+module = "{{ .Name | lower }}"
+language = "kotlin"
+deploy = [
+  "target/main",
+  "target/classes",
+  "target/dependency",
+  "target/classpath.txt",
+]

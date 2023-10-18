@@ -11,6 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/log"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
+	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
 )
 
 type initCmd struct {
@@ -21,8 +22,8 @@ type initCmd struct {
 
 type initGoCmd struct {
 	Dir      string `arg:"" default:"." type:"dir" help:"Directory to initialize the module in."`
-	Name     string `help:"Name of the FTL module (defaults to name of directory)."`
-	GoModule string `required:"" help:"Go module path."`
+	Name     string `short:"n" help:"Name of the FTL module (defaults to name of directory)."`
+	GoModule string `short:"G" required:"" help:"Go module import path."`
 }
 
 func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
@@ -44,9 +45,21 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 }
 
 type initKotlinCmd struct {
-	Dir string `arg:"" default:"." help:"Directory to initialize the module in."`
+	Dir  string `arg:"" default:"." help:"Directory to initialize the module in."`
+	Name string `short:"n" help:"Name of the FTL module (defaults to name of directory)."`
 }
 
-func (i *initKotlinCmd) Run() error {
-	panic("??")
+func (i *initKotlinCmd) Run(parent *initCmd) error {
+	if i.Name == "" {
+		i.Name = filepath.Base(i.Dir)
+	}
+	if err := internal.Scaffold(kotlinruntime.Files, i.Dir, i); err != nil {
+		return errors.WithStack(err)
+	}
+	if !parent.Hermit {
+		if err := os.RemoveAll(filepath.Join(i.Dir, "bin")); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
 }
