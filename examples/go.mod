@@ -26,8 +26,8 @@ require (
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/oklog/ulid/v2 v2.1.0 // indirect
 	github.com/rs/cors v1.9.0 // indirect
-	github.com/swaggest/jsonschema-go v0.3.59 // indirect
-	github.com/swaggest/refl v1.2.0 // indirect
+	github.com/swaggest/jsonschema-go v0.3.62 // indirect
+	github.com/swaggest/refl v1.3.0 // indirect
 	github.com/zalando/go-keyring v0.2.1 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect
 	go.opentelemetry.io/otel/metric v1.19.0 // indirect

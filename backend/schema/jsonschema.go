@@ -5,22 +5,15 @@ import (
 	"strings"
 
 	"github.com/alecthomas/errors"
-	js "github.com/swaggest/jsonschema-go"
+	"github.com/swaggest/jsonschema-go"
 )
 
 // DataToJSONSchema converts the schema for a Data object to a JSON Schema.
 //
 // It takes in the full schema in order to resolve and define references.
-func DataToJSONSchema(schema *Schema, dataRef DataRef) (*js.Schema, error) {
+func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, error) {
 	// Collect all data types.
-	dataTypes := map[DataRef]*Data{}
-	for _, module := range schema.Modules {
-		for _, decl := range module.Decls {
-			if data, ok := decl.(*Data); ok {
-				dataTypes[DataRef{Module: module.Name, Name: data.Name}] = data
-			}
-		}
-	}
+	dataTypes := schema.DataMap()
 
 	// Find the root data type.
 	rootData, ok := dataTypes[dataRef]
@@ -35,69 +28,69 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*js.Schema, error) {
 		return root, nil
 	}
 	// Resolve and encode all data types reachable from the root.
-	root.Definitions = map[string]js.SchemaOrBool{}
+	root.Definitions = map[string]jsonschema.SchemaOrBool{}
 	for dataRef := range dataRefs {
 		data, ok := dataTypes[dataRef]
 		if !ok {
 			return nil, errors.Errorf("unknown data type %s", dataRef)
 		}
-		root.Definitions[dataRef.String()] = js.SchemaOrBool{TypeObject: nodeToJSSchema(data, dataRef, dataRefs)}
+		root.Definitions[dataRef.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(data, dataRef, dataRefs)}
 	}
 	return root, nil
 }
 
-func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *js.Schema {
+func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *jsonschema.Schema {
 	switch node := node.(type) {
 	case *Data:
-		st := js.Object
-		schema := &js.Schema{
+		st := jsonschema.Object
+		schema := &jsonschema.Schema{
 			Description:          jsComments(node.Comments),
-			Type:                 &js.Type{SimpleTypes: &st},
-			Properties:           map[string]js.SchemaOrBool{},
+			Type:                 &jsonschema.Type{SimpleTypes: &st},
+			Properties:           map[string]jsonschema.SchemaOrBool{},
 			AdditionalProperties: jsBool(false),
 		}
 		for _, field := range node.Fields {
 			jsField := nodeToJSSchema(field.Type, rootRef, dataRefs)
 			jsField.Description = jsComments(field.Comments)
-			schema.Properties[field.Name] = js.SchemaOrBool{TypeObject: jsField}
+			schema.Properties[field.Name] = jsonschema.SchemaOrBool{TypeObject: jsField}
 		}
 		return schema
 
 	case *Int:
-		st := js.Integer
-		return &js.Schema{Type: &js.Type{SimpleTypes: &st}}
+		st := jsonschema.Integer
+		return &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}}
 
 	case *Float:
-		st := js.Number
-		return &js.Schema{Type: &js.Type{SimpleTypes: &st}}
+		st := jsonschema.Number
+		return &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}}
 
 	case *String:
-		st := js.String
-		return &js.Schema{Type: &js.Type{SimpleTypes: &st}}
+		st := jsonschema.String
+		return &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}}
 
 	case *Bool:
-		st := js.Boolean
-		return &js.Schema{Type: &js.Type{SimpleTypes: &st}}
+		st := jsonschema.Boolean
+		return &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}}
 
 	case *Time:
-		st := js.String
+		st := jsonschema.String
 		dt := "date-time"
-		return &js.Schema{Type: &js.Type{SimpleTypes: &st}, Format: &dt}
+		return &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}, Format: &dt}
 
 	case *Array:
-		st := js.Array
-		return &js.Schema{
-			Type:  &js.Type{SimpleTypes: &st},
-			Items: &js.Items{SchemaOrBool: &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Element, rootRef, dataRefs)}},
+		st := jsonschema.Array
+		return &jsonschema.Schema{
+			Type:  &jsonschema.Type{SimpleTypes: &st},
+			Items: &jsonschema.Items{SchemaOrBool: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Element, rootRef, dataRefs)}},
 		}
 
 	case *Map:
-		st := js.Object
+		st := jsonschema.Object
 		// JSON schema generic map of key type to value type
-		return &js.Schema{
-			Type:                 &js.Type{SimpleTypes: &st},
-			AdditionalProperties: &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Value, rootRef, dataRefs)},
-			PropertyNames:        &js.SchemaOrBool{TypeObject: nodeToJSSchema(node.Key, rootRef, dataRefs)},
+		return &jsonschema.Schema{
+			Type:                 &jsonschema.Type{SimpleTypes: &st},
+			AdditionalProperties: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Value, rootRef, dataRefs)},
+			PropertyNames:        &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Key, rootRef, dataRefs)},
 		}
 
 	case *DataRef:
@@ -109,7 +102,7 @@ func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *js.S
 
 		ref := fmt.Sprintf("#/definitions/%s", dataRef.String())
 		dataRefs[dataRef] = true
-		return &js.Schema{Ref: &ref}
+		return &jsonschema.Schema{Ref: &ref}
 
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataIngress, *Module, *Schema, Type, *Verb, *VerbRef:
 		panic(fmt.Sprintf("unsupported node type %T", node))
@@ -119,8 +112,8 @@ func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *js.S
 	}
 }
 
-func jsBool(ok bool) *js.SchemaOrBool {
-	return &js.SchemaOrBool{TypeBoolean: &ok}
+func jsBool(ok bool) *jsonschema.SchemaOrBool {
+	return &jsonschema.SchemaOrBool{TypeBoolean: &ok}
 }
 
 func jsComments(comments []string) *string {

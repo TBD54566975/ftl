@@ -173,7 +173,17 @@ type MetadataIngress struct {
 	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
 	Method string `parser:"'ingress' @('GET' | 'POST')" json:"method,omitempty" protobuf:"2"`
-	Path   string `parser:"@('/' @Ident)+" json:"path,omitempty" protobuf:"3"`
+	Path   string `parser:"@('/' @('{' | '}' | Ident)+)+" json:"path,omitempty" protobuf:"3"`
+}
+
+func (m *MetadataIngress) Parameters() []string {
+	var params []string
+	for _, part := range strings.Split(m.Path, "/") {
+		if len(part) > 0 && part[0] == '{' && part[len(part)-1] == '}' {
+			params = append(params, part[1:len(part)-1])
+		}
+	}
+	return params
 }
 
 type Module struct {
@@ -224,6 +234,18 @@ type Schema struct {
 	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
 
 	Modules []*Module `parser:"@@*" json:"modules,omitempty" protobuf:"2"`
+}
+
+func (s *Schema) DataMap() map[DataRef]*Data {
+	dataTypes := map[DataRef]*Data{}
+	for _, module := range s.Modules {
+		for _, decl := range module.Decls {
+			if data, ok := decl.(*Data); ok {
+				dataTypes[DataRef{Module: module.Name, Name: data.Name}] = data
+			}
+		}
+	}
+	return dataTypes
 }
 
 // Upsert inserts or replaces a module.

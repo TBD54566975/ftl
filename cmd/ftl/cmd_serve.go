@@ -34,6 +34,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	nextBind := s.Bind
 
 	for i := 0; i < s.Controllers; i++ {
+		i := i
 		controllerAddresses = append(controllerAddresses, nextBind)
 		config := controller.Config{
 			Bind: nextBind,
@@ -42,10 +43,12 @@ func (s *serveCmd) Run(ctx context.Context) error {
 			return errors.WithStack(err)
 		}
 
-		scope := fmt.Sprintf("controller-%d", i)
+		scope := fmt.Sprintf("controller%d", i)
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
-		wg.Go(func() error { return controller.Start(controllerCtx, config) })
+		wg.Go(func() error {
+			return errors.Wrapf(controller.Start(controllerCtx, config), "controller%d failed", i)
+		})
 
 		var err error
 		nextBind, err = incrementPort(nextBind)
@@ -60,8 +63,8 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	}
 
 	for i := 0; i < s.Runners; i++ {
+		i := i
 		controllerEndpoint := controllerAddresses[i%len(controllerAddresses)]
-		fmt.Printf("controllerEndpoint: %s runner: %s\n", controllerEndpoint, nextBind)
 		config := runner.Config{
 			Bind:               nextBind,
 			ControllerEndpoint: controllerEndpoint,
@@ -86,7 +89,9 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 		runnerCtx := log.ContextWithLogger(ctx, logger.Scope(name))
 
-		wg.Go(func() error { return runner.Start(runnerCtx, config) })
+		wg.Go(func() error {
+			return errors.Wrapf(runner.Start(runnerCtx, config), "runner%d failed", i)
+		})
 
 		nextBind, err = incrementPort(nextBind)
 		if err != nil {
