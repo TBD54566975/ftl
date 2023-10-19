@@ -32,11 +32,11 @@ var (
 // Money represents an amount of money along with the currency type.
 type Money struct {
 	// The 3-letter currency code defined in ISO 4217.
-	CurrencyCode string
+	CurrencyCode string `json:"currencyCode"`
 
 	// The whole units of the amount.
 	// For example if `currencyCode` is `"USD"`, then 1 unit is one US dollar.
-	Units int
+	Units int `json:"units"`
 
 	// Number of nano (10^-9) units of the amount.
 	// The value must be between -999,999,999 and +999,999,999 inclusive.
@@ -44,7 +44,7 @@ type Money struct {
 	// If `units` is zero, `nanos` can be positive, zero, or negative.
 	// If `units` is negative, `nanos` must be negative or zero.
 	// For example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000.
-	Nanos int
+	Nanos int `json:"nanos"`
 }
 
 // IsValid checks if specified value has a valid units/nanos signs and ranges.

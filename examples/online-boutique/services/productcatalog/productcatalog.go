@@ -23,7 +23,7 @@ type Product struct {
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
 	Picture     string      `json:"picture"`
-	PriceUSD    money.Money `json:"priceUsd"`
+	PriceUSD    money.Money `json:"priceUSD"`
 
 	// Categories such as "clothing" or "kitchen" that can be used to look up
 	// other related products.
