@@ -35,7 +35,7 @@ class Visitor(val logger: KSPLogger, val modules: MutableMap<String, ModuleData>
     val moduleName = function.qualifiedName!!.moduleName()
     val requestType = function.parameters.last().type.resolve().declaration
     val responseType = function.returnType!!.resolve().declaration
-    modules[moduleName] ?: {
+   if (modules[moduleName] == null) {
       modules[moduleName] = ModuleData(comments = function.closestClassDeclaration()?.comments() ?: emptyList())
     }
 
