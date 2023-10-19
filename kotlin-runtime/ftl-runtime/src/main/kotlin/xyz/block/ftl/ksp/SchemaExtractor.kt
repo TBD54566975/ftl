@@ -153,7 +153,7 @@ class Visitor(val logger: KSPLogger, val modules: MutableMap<String, ModuleData>
 class SchemaExtractor(val logger: KSPLogger, val options: Map<String, String>) : SymbolProcessor {
   override fun process(resolver: Resolver): List<KSAnnotated> {
     val dest = requireNotNull(options["dest"]) { "Must provide output directory for generated schemas" }
-    val outputDirectory = File(dest, "generated-sources/ksp").also { Path.of(it.absolutePath).createDirectories() }
+    val outputDirectory = File(dest).also { Path.of(it.absolutePath).createDirectories() }
     val modules = mutableMapOf<String, ModuleData>()
 
     val symbols = resolver.getSymbolsWithAnnotation("xyz.block.ftl.Verb")
