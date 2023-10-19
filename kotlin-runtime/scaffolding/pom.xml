@@ -62,6 +62,26 @@
                         </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <compilerPlugins>
+                        <compilerPlugin>ksp</compilerPlugin>
+                    </compilerPlugins>
+                    <pluginOptions>
+                        <option>ksp:apoption=dest=${project.build.directory}</option>
+                    </pluginOptions>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.dyescape</groupId>
+                        <artifactId>kotlin-maven-symbol-processing</artifactId>
+                        <version>1.6</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>${project.groupId}</groupId>
+                        <artifactId>ftl-runtime</artifactId>
+                        <version>${ftl.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
