@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/otiai10/copy"
+	"github.com/radovskyb/watcher"
+	"golang.org/x/exp/maps"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -78,49 +82,93 @@ func (g *getSchemaCmd) generateProto(resp *connect.ServerStreamForClient[ftlv1.P
 }
 
 type schemaGenerateCmd struct {
-	Template string `arg:"" help:"Template directory to use." type:"existingdir"`
-	Dest     string `arg:"" help:"Destination directory to write files to (will be erased)."`
+	Watch    time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
+	Template string        `arg:"" help:"Template directory to use." type:"existingdir"`
+	Dest     string        `arg:"" help:"Destination directory to write files to (will be erased)."`
 }
 
 func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+	watch := watcher.New()
+	defer watch.Close()
+
+	logger := log.FromContext(ctx)
+	logger.Infof("Watching %s", s.Template)
+
+	if err := watch.AddRecursive(s.Template); err != nil {
+		return errors.WithStack(err)
+	}
+
 	stream, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	logger := log.FromContext(ctx)
-	modules := map[string]*schema.Module{}
-	regenerate := false
-	for stream.Receive() {
-		msg := stream.Msg()
-		switch msg.ChangeType {
-		case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
-			module, err := schema.ModuleFromProto(msg.Schema)
-			if err != nil {
-				return errors.Wrap(err, "invalid module schema")
-			}
-			modules[module.Name] = module
+	wg, ctx := errgroup.WithContext(ctx)
 
-		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-			delete(modules, msg.ModuleName)
+	moduleChange := make(chan []*schema.Module)
+
+	wg.Go(func() error {
+		modules := map[string]*schema.Module{}
+		regenerate := false
+		for stream.Receive() {
+			msg := stream.Msg()
+			switch msg.ChangeType {
+			case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
+				module, err := schema.ModuleFromProto(msg.Schema)
+				if err != nil {
+					return errors.Wrap(err, "invalid module schema")
+				}
+				modules[module.Name] = module
+
+			case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
+				delete(modules, msg.ModuleName)
+			}
+			if !msg.More {
+				regenerate = true
+			}
+			if !regenerate {
+				continue
+			}
+
+			moduleChange <- maps.Values(modules)
 		}
-		if !msg.More {
-			regenerate = true
+		return nil
+	})
+
+	wg.Go(func() error { return errors.WithStack(watch.Start(s.Watch)) })
+
+	var previousModules []*schema.Module
+	for {
+		select {
+		case <-ctx.Done():
+			return errors.WithStack(wg.Wait())
+
+		case event := <-watch.Event:
+			logger.Infof("Template changed (%s), regenerating modules", event.Path)
+			if err := s.regenerateModules(logger, previousModules); err != nil {
+				return err
+			}
+
+		case modules := <-moduleChange:
+			previousModules = modules
+			if err := s.regenerateModules(logger, modules); err != nil {
+				return err
+			}
 		}
-		if !regenerate {
-			continue
-		}
-		if err := os.RemoveAll(s.Dest); err != nil {
+	}
+}
+
+func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*schema.Module) error {
+	if err := os.RemoveAll(s.Dest); err != nil {
+		return errors.WithStack(err)
+	}
+	for _, module := range modules {
+		if err := copy.Copy(s.Template, s.Dest); err != nil {
 			return errors.WithStack(err)
 		}
-		for _, module := range modules {
-			if err := copy.Copy(s.Template, s.Dest); err != nil {
-				return errors.WithStack(err)
-			}
-			if err := internal.Scaffold(s.Dest, module); err != nil {
-				return errors.WithStack(err)
-			}
+		if err := internal.Scaffold(s.Dest, module); err != nil {
+			return errors.WithStack(err)
 		}
-		logger.Infof("Generated %d modules in %s", len(modules), s.Dest)
 	}
+	logger.Infof("Generated %d modules in %s", len(modules), s.Dest)
 	return nil
 }
