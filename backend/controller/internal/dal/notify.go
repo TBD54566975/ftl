@@ -72,8 +72,10 @@ func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
 	// Main loop for listening to notifications.
 	for {
 		delay := time.Millisecond * 100
+		logger.Debugf("Waiting for notification")
 		notification, err := waitForNotification(ctx, conn)
 		if err == nil {
+			logger.Debugf("Publishing notification: %s", notification)
 			err = d.publishNotification(ctx, notification, logger)
 		}
 		if err != nil {

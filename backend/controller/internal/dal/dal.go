@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/maps"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/pubsub"
@@ -401,6 +402,8 @@ type IngressRoutingEntry struct {
 //
 // If an existing deployment with identical artefacts exists, it is returned.
 func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentName, err error) {
+	logger := log.FromContext(ctx)
+
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -418,6 +421,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 		return "", errors.Wrap(err, "couldn't check for existing deployment")
 	}
 	if len(existing) > 0 {
+		logger.Debugf("Returning existing deployment %s", existing[0].DeploymentName)
 		return existing[0].DeploymentName, nil
 	}
 

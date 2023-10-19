@@ -436,7 +436,7 @@ type directiveAttr struct {
 type directiveValue struct {
 	Bool  *dirBool `parser:"  @('true'|'false')"`
 	Ident *string  `parser:"| @Ident"`
-	Path  *string  `parser:"| @('/' Ident)+"`
+	Path  *string  `parser:"| @(('/' (('{' Ident '}') | Ident))+ '/'?)"`
 	Str   *string  `parser:"| @String"`
 	Int   *int64   `parser:"| @Int"`
 	Float *float64 `parser:"| @Float"`

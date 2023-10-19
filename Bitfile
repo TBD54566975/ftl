@@ -54,7 +54,7 @@ NODE_MODULES_IN = console/client/package{,-lock}.json
 %{RELEASE}/ftl-runner: %{RELEASE} %{GO_SOURCES} cmd/ftl-runner/**/*.go
   build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-runner
 
-%{RELEASE}/ftl: %{RELEASE} %{GO_SOURCES} cmd/ftl/**/*.go {go,kotlin}-runtime/scaffolding.zip
+%{RELEASE}/ftl: %{RELEASE} %{GO_SOURCES} cmd/ftl/**/*.go {go,kotlin}-runtime/scaffolding.zip %{CLIENT_OUT}
   build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl
 
 %{RELEASE}/ftl-initdb: %{RELEASE} %{GO_SOURCES} cmd/ftl-initdb/**/*.go
