@@ -33,6 +33,7 @@ type AdResponse struct {
 }
 
 //ftl:verb
+//ftl:ingress GET /ad
 func Get(ctx context.Context, req AdRequest) (AdResponse, error) {
 	resp := AdResponse{}
 	if len(req.ContextKeys) > 0 {

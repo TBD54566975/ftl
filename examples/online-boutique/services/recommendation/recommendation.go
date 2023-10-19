@@ -21,6 +21,7 @@ type ListResponse struct {
 }
 
 //ftl:verb
+//ftl:ingress GET /recommendation
 func List(ctx context.Context, req ListRequest) (ListResponse, error) {
 
 	catalog, err := ftl.Call(ctx, productcatalog.List, productcatalog.ListRequest{})

@@ -27,6 +27,7 @@ type GetSupportedCurrenciesResponse struct {
 }
 
 //ftl:verb
+//ftl:ingress GET /currency/supported
 func GetSupportedCurrencies(ctx context.Context, req GetSupportedCurrenciesRequest) (GetSupportedCurrenciesResponse, error) {
 	return GetSupportedCurrenciesResponse{CurrencyCodes: maps.Keys(database)}, nil
 }
@@ -37,6 +38,7 @@ type ConvertRequest struct {
 }
 
 //ftl:verb
+//ftl:ingress POST /currency/convert
 func Convert(ctx context.Context, req ConvertRequest) (money.Money, error) {
 	from := req.From
 	fromRate, ok := database[from.CurrencyCode]
