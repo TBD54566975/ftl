@@ -18,7 +18,7 @@ import java.time.OffsetDateTime
 import kotlin.io.path.createDirectories
 import kotlin.reflect.KClass
 
-data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl>)
+data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
 
 class Visitor(val logger: KSPLogger, val modules: MutableMap<String, ModuleData>) :
   KSVisitorVoid() {
@@ -35,6 +35,9 @@ class Visitor(val logger: KSPLogger, val modules: MutableMap<String, ModuleData>
     val moduleName = function.qualifiedName!!.moduleName()
     val requestType = function.parameters.last().type.resolve().declaration
     val responseType = function.returnType!!.resolve().declaration
+    modules[moduleName] ?: {
+      modules[moduleName] = ModuleData(comments = function.closestClassDeclaration()?.comments() ?: emptyList())
+    }
 
     function.getAnnotationsByType(Ingress::class).firstOrNull()?.apply {
       metadata += Metadata(
@@ -55,11 +58,7 @@ class Visitor(val logger: KSPLogger, val modules: MutableMap<String, ModuleData>
       val requestData = Decl(data_ = requestType.closestClassDeclaration()!!.toSchemaData())
       val responseData = Decl(data_ = responseType.closestClassDeclaration()!!.toSchemaData())
       val decls = mutableSetOf(Decl(verb = verb), requestData, responseData)
-      modules[moduleName]?.let { decls.addAll(it.decls) }
-      modules[moduleName] = ModuleData(
-        decls = decls,
-        comments = function.closestClassDeclaration()?.comments() ?: emptyList(),
-      )
+      modules[moduleName]!!.decls.addAll(decls)
     }
   }
 
@@ -128,7 +127,7 @@ class Visitor(val logger: KSPLogger, val modules: MutableMap<String, ModuleData>
           // Make sure any nested data classes are included in the module schema.
           val decl = Decl(data_ = it.toSchemaData())
           val moduleName = it.qualifiedName!!.moduleName()
-          modules[moduleName]?.decls?.add(decl) ?: { modules[moduleName] = ModuleData(decls = mutableSetOf(decl)) }
+          modules[moduleName]!!.decls.add(decl)
         }
         return Type(dataRef = DataRef(name = this.simpleName.asString()))
       }
