@@ -25,6 +25,7 @@ type Cart struct {
 }
 
 //ftl:verb
+//ftl:ingress POST /cart/add
 func AddItem(ctx context.Context, req AddItemRequest) (AddItemResponse, error) {
 	store.Add(req.UserID, req.Item)
 	return AddItemResponse{}, nil
@@ -35,6 +36,7 @@ type GetCartRequest struct {
 }
 
 //ftl:verb
+//ftl:ingress GET /cart
 func GetCart(ctx context.Context, req GetCartRequest) (Cart, error) {
 	return Cart{Items: store.Get(req.UserID)}, nil
 }
@@ -46,6 +48,7 @@ type EmptyCartRequest struct {
 type EmptyCartResponse struct{}
 
 //ftl:verb
+//ftl:ingress POST /cart/empty
 func EmptyCart(ctx context.Context, req EmptyCartRequest) (EmptyCartResponse, error) {
 	store.Empty(req.UserID)
 	return EmptyCartResponse{}, nil

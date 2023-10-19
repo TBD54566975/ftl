@@ -24,6 +24,7 @@ type ShippingRequest struct {
 }
 
 //ftl:verb
+//ftl:ingress POST /shipping/quote
 func GetQuote(ctx context.Context, req ShippingRequest) (money.Money, error) {
 	return moneyFromUSD(8.99), nil
 }
@@ -33,6 +34,7 @@ type ShipOrderResponse struct {
 }
 
 //ftl:verb
+//ftl:ingress POST /shipping/ship
 func ShipOrder(ctx context.Context, req ShippingRequest) (ShipOrderResponse, error) {
 	baseAddress := fmt.Sprintf("%s, %s, %s", req.Address.StreetAddress, req.Address.City, req.Address.State)
 	return ShipOrderResponse{ID: createTrackingID(baseAddress)}, nil

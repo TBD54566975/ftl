@@ -52,6 +52,7 @@ type ChargeResponse struct {
 }
 
 //ftl:verb
+//ftl:ingress POST /payment/charge
 func Charge(ctx context.Context, req ChargeRequest) (ChargeResponse, error) {
 	card := req.CreditCard
 	number := strings.ReplaceAll(card.Number, "-", "")

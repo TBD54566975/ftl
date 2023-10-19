@@ -37,6 +37,7 @@ type ListResponse struct {
 }
 
 //ftl:verb
+//ftl:ingress GET /productcatalog
 func List(ctx context.Context, req ListRequest) (ListResponse, error) {
 	return ListResponse{Products: database}, nil
 }
@@ -46,6 +47,7 @@ type GetRequest struct {
 }
 
 //ftl:verb
+//ftl:ingress GET /productcatalog/id
 func Get(ctx context.Context, req GetRequest) (Product, error) {
 	for _, p := range database {
 		if p.ID == req.ID {
