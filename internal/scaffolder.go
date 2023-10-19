@@ -1,10 +1,10 @@
 package internal
 
 import (
-	"archive/zip"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"text/template"
 
@@ -12,22 +12,15 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-// Scaffold copies the scaffolding files from the given source to the given
-// destination, evaluating any templates against ctx in the process.
+// Scaffold evaluates the scaffolding files at the given destination against
+// ctx.
 //
 // Both paths and file contents are evaluated.
 //
 // The functions "snake", "camel", "lowerCamel", "kebab", "upper", and "lower"
 // are available.
-func Scaffold(source *zip.Reader, destination string, ctx any) error {
-	err := UnzipDir(source, destination)
-	if err != nil {
-		return errors.WithStack(err)
-	}
+func Scaffold(destination string, ctx any) error {
 	return errors.WithStack(walkDir(destination, func(path string, d fs.DirEntry) error {
-		if err != nil {
-			return errors.WithStack(err)
-		}
 		info, err := d.Info()
 		if err != nil {
 			return errors.WithStack(err)
@@ -100,6 +93,9 @@ func evaluate(tmpl string, ctx any) (string, error) {
 			"kebab":      strcase.ToKebab,
 			"upper":      strings.ToUpper,
 			"lower":      strings.ToLower,
+			"typename": func(v any) string {
+				return reflect.Indirect(reflect.ValueOf(v)).Type().Name()
+			},
 		},
 	).Parse(tmpl)
 	if err != nil {

@@ -30,7 +30,11 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
-	if err := internal.Scaffold(goruntime.Files, i.Dir, i); err != nil {
+	err := internal.UnzipDir(goruntime.Files, i.Dir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if err := internal.Scaffold(i.Dir, i); err != nil {
 		return errors.WithStack(err)
 	}
 	if !parent.Hermit {
@@ -53,7 +57,11 @@ func (i *initKotlinCmd) Run(parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
-	if err := internal.Scaffold(kotlinruntime.Files, i.Dir, i); err != nil {
+	err := internal.UnzipDir(kotlinruntime.Files, i.Dir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if err := internal.Scaffold(i.Dir, i); err != nil {
 		return errors.WithStack(err)
 	}
 	if !parent.Hermit {
