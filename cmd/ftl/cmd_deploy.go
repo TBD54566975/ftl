@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
 	"golang.org/x/exp/maps"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -53,6 +54,31 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return errors.WithStack(err)
 	}
 
+	schema, err := findFiles(d.Base, []string{config.Module})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if len(schema) != 1 {
+		return errors.Errorf("cannot define multiple module schemas")
+	}
+
+	content, err := os.ReadFile(schema[0])
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	module := schemapb.Module{}
+	err = proto.Unmarshal(content, &module)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	module.Runtime = &schemapb.ModuleRuntime{
+		CreateTime:  timestamppb.Now(),
+		Language:    config.Language,
+		MinReplicas: d.Replicas,
+	}
+
 	logger.Infof("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))
 	for _, missing := range gadResp.Msg.MissingDigests {
 		file := filesByHash[missing]
@@ -71,14 +97,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	}
 	resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 		// TODO(aat): Use real data for this.
-		Schema: &schemapb.Module{
-			Name: config.Module,
-			Runtime: &schemapb.ModuleRuntime{
-				CreateTime:  timestamppb.Now(),
-				Language:    config.Language,
-				MinReplicas: d.Replicas,
-			},
-		},
+		Schema: &module,
 		Artefacts: slices.Map(maps.Values(filesByHash), func(a deploymentArtefact) *ftlv1.DeploymentArtefact {
 			return a.DeploymentArtefact
 		}),
