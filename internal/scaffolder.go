@@ -17,6 +17,8 @@ import (
 //
 // Both paths and file contents are evaluated.
 //
+// If a file name ends with ".tmpl", the ".tmpl" suffix is removed.
+//
 // The functions "snake", "camel", "lowerCamel", "kebab", "upper", and "lower"
 // are available.
 func Scaffold(destination string, ctx any) error {
@@ -26,7 +28,15 @@ func Scaffold(destination string, ctx any) error {
 			return errors.WithStack(err)
 		}
 
-		// Evaluate path name templates.
+		if strings.HasSuffix(path, ".tmpl") {
+			newPath := strings.TrimSuffix(path, ".tmpl")
+			if err = os.Rename(path, newPath); err != nil {
+				return errors.Wrap(err, "failed to rename file")
+			}
+			path = newPath
+		}
+
+		// Evaluate the last component of path name templates.
 		dir := filepath.Dir(path)
 		base := filepath.Base(path)
 		newName, err := evaluate(base, ctx)
@@ -64,6 +74,7 @@ func Scaffold(destination string, ctx any) error {
 	}))
 }
 
+// Walk dir executing fn after each entry.
 func walkDir(dir string, fn func(path string, d fs.DirEntry) error) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

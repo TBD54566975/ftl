@@ -3,7 +3,6 @@ package internal
 import (
 	"archive/zip"
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,11 +18,10 @@ func UnzipDir(zipReader *zip.Reader, destDir string) error {
 		return errors.WithStack(err)
 	}
 	for _, file := range zipReader.File {
-		destPath, err := sanitizeArchivePath(destDir, file.Name)
-		if err != nil {
-			return errors.WithStack(err)
+		destPath := filepath.Clean(filepath.Join(destDir, file.Name)) //nolint:gosec
+		if !strings.HasPrefix(destPath, destDir) {
+			return errors.Errorf("invalid file path: %q", destPath)
 		}
-
 		// Create directory if it doesn't exist
 		if file.FileInfo().IsDir() {
 			err := os.MkdirAll(destPath, file.Mode())
@@ -44,16 +42,7 @@ func UnzipDir(zipReader *zip.Reader, destDir string) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			// This is probably a little bit aggressive, in that the symlink can
-			// only be beneath its parent directory, rather than the root of the
-			// zip file. But it's good enough for now.
-			symlinkDir := filepath.Dir(destPath)
-			symlinkPath, err := sanitizeArchivePath(symlinkDir, buf.String())
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			symlinkPath = strings.TrimPrefix(symlinkPath, symlinkDir+"/")
-			err = os.Symlink(symlinkPath, destPath)
+			err = os.Symlink(buf.String(), destPath)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -148,14 +137,4 @@ func ZipDir(srcDir, destZipFile string) error {
 
 		return nil
 	}))
-}
-
-// Sanitize archive file pathing from "G305: Zip Slip vulnerability"
-func sanitizeArchivePath(d, t string) (v string, err error) {
-	v = filepath.Join(d, t)
-	if strings.HasPrefix(v, filepath.Clean(d)) {
-		return v, nil
-	}
-
-	return "", fmt.Errorf("%s: %s", "content filepath is tainted", t)
 }

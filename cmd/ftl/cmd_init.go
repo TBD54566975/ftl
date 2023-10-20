@@ -1,14 +1,11 @@
 package main
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 
 	"github.com/alecthomas/errors"
 
-	"github.com/TBD54566975/ftl/backend/common/exec"
-	"github.com/TBD54566975/ftl/backend/common/log"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
@@ -26,7 +23,7 @@ type initGoCmd struct {
 	GoModule string `short:"G" required:"" help:"Go module import path."`
 }
 
-func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
+func (i initGoCmd) Run(parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
@@ -41,9 +38,6 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 		if err := os.RemoveAll(filepath.Join(i.Dir, "bin")); err != nil {
 			return errors.WithStack(err)
 		}
-	}
-	if err := exec.Command(ctx, log.Info, i.Dir, "go", "mod", "tidy").Run(); err != nil {
-		return errors.WithStack(err)
 	}
 	return nil
 }
