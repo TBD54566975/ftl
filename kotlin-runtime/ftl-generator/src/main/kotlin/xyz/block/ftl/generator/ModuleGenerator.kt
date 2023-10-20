@@ -173,9 +173,10 @@ class ModuleGenerator() {
 
     Path.of(buildDir, "ftl.toml").writeText(
       """
-      module = "${module}"
+      module = "$module"
       language = "kotlin"
       deploy = ["main", "classes", "dependency", "classpath.txt"]
+      schema = "schema.pb"
       """.trimIndent()
     )
 

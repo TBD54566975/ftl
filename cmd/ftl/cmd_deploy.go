@@ -54,7 +54,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return errors.WithStack(err)
 	}
 
-	schema, err := findFiles(d.Base, []string{config.Module})
+	schema, err := findFiles(d.Base, []string{config.Schema})
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -164,7 +164,7 @@ class SchemaExtractor(val logger: KSPLogger, val options: Map<String, String>) :
     modules.map {
       Module(name = it.key, decls = it.value.decls.sortedBy { it.data_ == null }, comments = it.value.comments)
     }.forEach {
-      val file = File(outputDirectory.absolutePath, it.name)
+      val file = File(outputDirectory.absolutePath, "schema.pb")
       file.createNewFile()
       val os = FileOutputStream(file)
       os.write(it.encode())
