@@ -14,6 +14,7 @@ type ModuleConfig struct {
 	Language string   `toml:"language"`
 	Module   string   `toml:"module"`
 	Deploy   []string `toml:"deploy"`
+	Schema   string   `toml:"schema"`
 }
 
 // LoadConfig from a directory.
