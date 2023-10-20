@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>ftl</groupId>
-    <artifactId>ftl-module-{{ .Name | lower }}</artifactId>
+    <artifactId>ftl-module-{{ .Name | camel | lower }}</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -77,7 +77,7 @@
                         <version>1.6</version>
                     </dependency>
                     <dependency>
-                        <groupId>${project.groupId}</groupId>
+                        <groupId>xyz.block</groupId>
                         <artifactId>ftl-runtime</artifactId>
                         <version>${ftl.version}</version>
                     </dependency>
@@ -150,7 +150,7 @@
                                 <argument>target/dependency/ftl-generator.jar</argument>
                                 <argument>--endpoint=http://127.0.0.1:8892</argument>
                                 <argument>--dest=${project.build.directory}</argument>
-                                <argument>--module=echo</argument>
+                                <argument>--module={{ .Name | camel | lower }}</argument>
                                 <argument>--module-client-suffix=ModuleClient</argument>
                             </arguments>
                         </configuration>

@@ -1,4 +1,4 @@
-package ftl.{{ .Name | lower }}
+package ftl.{{ .Name | camel | lower }}
 
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ingress
@@ -10,8 +10,7 @@ data class {{ .Name | camel }}Response(val message: String)
 
 class {{ .Name | camel }} {
   @Verb
-  fun {{ .Name | lower }}(context: Context, req: {{ .Name | camel }}Request): {{ .Name | camel }}Response {
+  fun echo(context: Context, req: {{ .Name | camel }}Request): {{ .Name | camel }}Response {
     return {{ .Name | camel }}Response(message = "Hello, ${req.name}!")
   }
 }
-
