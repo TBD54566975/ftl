@@ -8,20 +8,20 @@ import (
 var store = NewStore()
 
 type Item struct {
-	ProductID string
-	Quantity  int
+	ProductID string `json:"productID"`
+	Quantity  int    `json:"quantity"`
 }
 
 type AddItemRequest struct {
-	UserID string
-	Item   Item
+	UserID string `json:"userID"`
+	Item   Item   `json:"item"`
 }
 
 type AddItemResponse struct{}
 
 type Cart struct {
-	UserID string
-	Items  []Item
+	UserID string `json:"userID"`
+	Items  []Item `json:"items"`
 }
 
 //ftl:verb
@@ -32,17 +32,17 @@ func AddItem(ctx context.Context, req AddItemRequest) (AddItemResponse, error) {
 }
 
 type GetCartRequest struct {
-	UserID string
+	UserID string `json:"userID"`
 }
 
 //ftl:verb
 //ftl:ingress GET /cart
 func GetCart(ctx context.Context, req GetCartRequest) (Cart, error) {
-	return Cart{Items: store.Get(req.UserID)}, nil
+	return Cart{Items: store.Get(req.UserID), UserID: req.UserID}, nil
 }
 
 type EmptyCartRequest struct {
-	UserID string
+	UserID string `json:"userID"`
 }
 
 type EmptyCartResponse struct{}

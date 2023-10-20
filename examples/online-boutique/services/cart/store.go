@@ -19,20 +19,28 @@ func NewStore() *Store {
 	return &Store{carts: cache}
 }
 
-func (s *Store) Add(userID string, item Item) {
+func (s *Store) Add(userID string, newItem Item) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	items, ok := s.carts.Get(userID)
-	if ok {
-		for i, item := range items {
-			if item.ProductID == item.ProductID {
-				items[i].Quantity += item.Quantity
-				break
-			}
-		}
-	} else {
-		items = []Item{item}
+	if !ok {
+		s.carts.Add(userID, []Item{newItem})
+		return
 	}
+
+	found := false
+	for i, existingItem := range items {
+		if existingItem.ProductID == newItem.ProductID {
+			items[i].Quantity += newItem.Quantity
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		items = append(items, newItem)
+	}
+
 	s.carts.Add(userID, items)
 }
 
