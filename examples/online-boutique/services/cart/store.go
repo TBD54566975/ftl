@@ -49,7 +49,7 @@ func (s *Store) Get(userID string) []Item {
 	defer s.lock.Unlock()
 	items, ok := s.carts.Get(userID)
 	if !ok {
-		return nil
+		return []Item{}
 	}
 	out := make([]Item, len(items))
 	copy(out, items)
