@@ -1,0 +1,21 @@
+package {{ .Name | camel | lower }}
+
+import (
+	"context"
+	"fmt"
+
+	_ "github.com/TBD54566975/ftl/go-runtime/sdk" // Import the FTL SDK.
+)
+
+type EchoRequest struct {
+	Name string `json:"name'`
+}
+
+type EchoResponse struct {
+	Message string `json:"message"`
+}
+
+//ftl:verb
+func echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
+	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name)}, nil
+}
