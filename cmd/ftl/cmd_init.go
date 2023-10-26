@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"os"
 	"path/filepath"
 
@@ -18,28 +19,15 @@ type initCmd struct {
 }
 
 type initGoCmd struct {
-	Dir      string `arg:"" default:"." type:"dir" help:"Directory to initialize the module in."`
-	Name     string `short:"n" help:"Name of the FTL module (defaults to name of directory)."`
-	GoModule string `short:"G" required:"" help:"Go module import path."`
+	Dir  string `arg:"" default:"." type:"dir" help:"Directory to initialize the module in."`
+	Name string `short:"n" help:"Name of the FTL module (defaults to name of directory)."`
 }
 
 func (i initGoCmd) Run(parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
-	err := internal.UnzipDir(goruntime.Files, i.Dir)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	if err := internal.Scaffold(i.Dir, i); err != nil {
-		return errors.WithStack(err)
-	}
-	if !parent.Hermit {
-		if err := os.RemoveAll(filepath.Join(i.Dir, "bin")); err != nil {
-			return errors.WithStack(err)
-		}
-	}
-	return nil
+	return errors.WithStack(scaffold(goruntime.Files, parent.Hermit, i.Dir, i))
 }
 
 type initKotlinCmd struct {
@@ -51,15 +39,22 @@ func (i *initKotlinCmd) Run(parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
-	err := internal.UnzipDir(kotlinruntime.Files, i.Dir)
+	return errors.WithStack(scaffold(kotlinruntime.Files, parent.Hermit, i.Dir, i))
+}
+
+func scaffold(reader *zip.Reader, hermit bool, dir string, ctx any) error {
+	err := internal.UnzipDir(reader, dir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if err := internal.Scaffold(i.Dir, i); err != nil {
+	if err := os.Remove(filepath.Join(dir, "go.mod")); err != nil {
 		return errors.WithStack(err)
 	}
-	if !parent.Hermit {
-		if err := os.RemoveAll(filepath.Join(i.Dir, "bin")); err != nil {
+	if err := internal.Scaffold(dir, ctx); err != nil {
+		return errors.WithStack(err)
+	}
+	if !hermit {
+		if err := os.RemoveAll(filepath.Join(dir, "bin")); err != nil {
 			return errors.WithStack(err)
 		}
 	}

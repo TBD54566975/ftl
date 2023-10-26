@@ -21,6 +21,10 @@ import (
 //
 // The functions "snake", "camel", "lowerCamel", "kebab", "upper", and "lower"
 // are available.
+//
+// This is inspired by [cookiecutter].
+//
+// [cookiecutter]: https://github.com/cookiecutter/cookiecutter
 func Scaffold(destination string, ctx any) error {
 	return errors.WithStack(walkDir(destination, func(path string, d fs.DirEntry) error {
 		info, err := d.Info()
@@ -98,12 +102,15 @@ func walkDir(dir string, fn func(path string, d fs.DirEntry) error) error {
 func evaluate(tmpl string, ctx any) (string, error) {
 	t, err := template.New("scaffolding").Funcs(
 		template.FuncMap{
-			"snake":      strcase.ToSnake,
-			"camel":      strcase.ToCamel,
-			"lowerCamel": strcase.ToLowerCamel,
-			"kebab":      strcase.ToKebab,
-			"upper":      strings.ToUpper,
-			"lower":      strings.ToLower,
+			"snake":          strcase.ToSnake,
+			"screamingSnake": strcase.ToScreamingSnake,
+			"camel":          strcase.ToCamel,
+			"lowerCamel":     strcase.ToLowerCamel,
+			"kebab":          strcase.ToKebab,
+			"screamingKebab": strcase.ToScreamingKebab,
+			"upper":          strings.ToUpper,
+			"lower":          strings.ToLower,
+			"title":          strings.Title,
 			"typename": func(v any) string {
 				return reflect.Indirect(reflect.ValueOf(v)).Type().Name()
 			},

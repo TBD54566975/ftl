@@ -1,4 +1,4 @@
-module ftl
+module ftl/{{ .Name | camel | lower }}
 
 go 1.21.0
 
