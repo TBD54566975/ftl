@@ -156,8 +156,10 @@ func RetryStreamingClientStream[Req, Resp any](
 				logger.Infof("Stream recovered")
 				errored = false
 			}
-			if _, ok := <-ctx.Done(); ok {
+			select {
+			case <-ctx.Done():
 				return
+			default:
 			}
 			retry.Reset()
 			logLevel = log.Warn
@@ -167,8 +169,12 @@ func RetryStreamingClientStream[Req, Resp any](
 		errored = true
 		delay := retry.Duration()
 		logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
-		if _, ok := <-ctx.Done(); ok {
+		select {
+		case <-ctx.Done():
 			return
+
+		case <-time.After(delay):
 		}
+
 	}
 }
