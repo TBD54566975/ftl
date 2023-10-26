@@ -8,7 +8,7 @@ SCHEMA_IN = backend/schema/schema.go backend/schema/protobuf.go \
     cmd/ftl/cmd_schema.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
-PROTO_IN = **/*.proto **/buf.*
+PROTO_IN = **/*.proto **/buf.* bin/protoc* bin/buf
 # There's no real way to mechanically generate the list of outputs, so we just
 # explicitly list them here.
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
@@ -20,7 +20,13 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
     console/client/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
     console/client/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
     console/client/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
-    console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts
+    console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts \
+    console/client/src/protos/google/protobuf/timestamp_pb.ts \
+    console/client/src/protos/opentelemetry/proto/collector/metrics/v1/metrics_service_pb.ts \
+    console/client/src/protos/opentelemetry/proto/common/v1/common_pb.ts \
+    console/client/src/protos/opentelemetry/proto/metrics/v1/metrics_pb.ts \
+    console/client/src/protos/opentelemetry/proto/resource/v1/resource_pb.ts \
+    console/client/src/protos/opentelemetry/proto/trace/v1/trace_pb.ts
 
 COMMON_LOG_IN = backend/common/log/api.go
 COMMON_LOG_OUT = backend/common/log/log_level_string.go
