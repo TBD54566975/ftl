@@ -141,6 +141,7 @@ func RetryStreamingClientStream[Req, Resp any](
 	rpc func(context.Context) *connect.ClientStreamForClient[Req, Resp],
 	handler func(ctx context.Context, send func(*Req) error) error,
 ) {
+	logLevel := log.Debug
 	errored := false
 	logger := log.FromContext(ctx)
 	for {
@@ -155,24 +156,19 @@ func RetryStreamingClientStream[Req, Resp any](
 				logger.Infof("Stream recovered")
 				errored = false
 			}
-			select {
-			case <-ctx.Done():
+			if _, ok := <-ctx.Done(); ok {
 				return
-			default:
 			}
 			retry.Reset()
+			logLevel = log.Warn
 		}
 		_, _ = stream.CloseAndReceive()
 
 		errored = true
 		delay := retry.Duration()
-		logger.Warnf("Stream handler failed, retrying in %s: %s", delay, err)
-		select {
-		case <-ctx.Done():
+		logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
+		if _, ok := <-ctx.Done(); ok {
 			return
-
-		case <-time.After(delay):
 		}
-
 	}
 }

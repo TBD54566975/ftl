@@ -315,9 +315,8 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		Error:      errPtr,
 	})
 	if err != nil {
-		logger.Errorf(err, "failed to register with Controller")
 		s.registrationFailure.Store(types.Some(err))
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to register with Controller")
 	}
 	s.registrationFailure.Store(types.None[error]())
 
