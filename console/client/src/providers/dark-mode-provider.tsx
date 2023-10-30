@@ -11,12 +11,10 @@ export const useDarkMode = () => {
 }
 
 export const DarkModeProvider = ({ children }: PropsWithChildren) => {
-  const [isDarkMode, setDarkMode] = useLocalStorage('dark-mode', 'false')
-  const setMode = (val: boolean) => {
-    setDarkMode(`${val}`)
-  }
+  const [isDarkMode, setDarkMode] = useLocalStorage('dark-mode', false)
+
   return (
-    <DarkModeContext.Provider value={{ isDarkMode: isDarkMode === 'true', setDarkMode: setMode }}>
+    <DarkModeContext.Provider value={{ isDarkMode: isDarkMode, setDarkMode: setDarkMode }}>
       {children}
     </DarkModeContext.Provider>
   )
