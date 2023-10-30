@@ -180,6 +180,15 @@ class ModuleGenerator() {
       """.trimIndent()
     )
 
+    Path.of(buildDir, "detekt.yml").writeText(
+      """
+      SchemaExtractorRuleSet:
+        ExtractSchemaRule:
+          active: true
+          output: ${buildDir}
+      """.trimIndent()
+    )
+
     val mainFile = Path.of(buildDir, "main")
     mainFile.writeText(
       """
