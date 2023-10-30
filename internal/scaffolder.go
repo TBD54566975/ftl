@@ -5,10 +5,9 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/errors"
 	"github.com/iancoleman/strcase"
-
-	"github.com/TBD54566975/scaffolder"
 )
 
 // Scaffold evaluates the scaffolding files at the given destination against
