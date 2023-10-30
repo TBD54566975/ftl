@@ -1,6 +1,6 @@
 module github.com/TBD54566975/ftl
 
-go 1.21
+go 1.21.3
 
 require (
 	connectrpc.com/connect v1.11.1
@@ -59,6 +59,7 @@ require (
 require (
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/otelconnect v0.5.0
+	github.com/TBD54566975/scaffolder v0.0.0-20231026011825-304b47f65b46
 	github.com/alecthomas/assert/v2 v2.3.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2

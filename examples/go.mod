@@ -1,6 +1,6 @@
 module github.com/TBD54566975/ftl/examples
 
-go 1.21.0
+go 1.21.3
 
 replace github.com/TBD54566975/ftl => ../
 
