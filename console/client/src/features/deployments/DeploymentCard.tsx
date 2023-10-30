@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '../../components/Badge'
 import { Card } from '../../components/Card'
+import { Chip } from '../../components/Chip'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
 import { deploymentTextColor } from './deployment.utils'
@@ -27,15 +28,12 @@ export const DeploymentCard = ({ deploymentName, className }: { deploymentName: 
     >
       <div className='flex flex-col'>
         <div className='flex items-center'>
-          <p className={` ${deploymentTextColor(deploymentName)}`}>{deploymentName}</p>
+          <p className={`truncate flex-grow min-w-0 ${deploymentTextColor(deploymentName)}`}>{deploymentName}</p>
           <Badge className='ml-auto' name={module?.language ?? ''} />
         </div>
-        <div className='mt-2 gap-1 flex flex-wrap'>
-          {module?.verbs.map((verb, index) => (
-            <span key={index} className='text-xs rounded mr-1 px-1 py-0.5 border border-indigo-500'>
-              {verb.verb?.name}
-            </span>
-          ))}
+
+        <div className='mt-4 gap-1 flex flex-wrap'>
+          {module?.verbs.map((verb, index) => <Chip key={index} className='mr-1 mb-1' name={verb.verb?.name ?? ''} />)}
         </div>
       </div>
     </Card>
