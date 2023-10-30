@@ -6,6 +6,8 @@ connectrpc.com/otelconnect v0.5.0 h1:K7xQKFbgeaHx563B+IIbd1EJe856AanueIYtGEtdnH8
 connectrpc.com/otelconnect v0.5.0/go.mod h1:cjBMmtJmTokg4/k/3iDjLOjfNVM4qSVfIWz/qWQ8FNw=
 github.com/BurntSushi/toml v1.3.2 h1:o7IhLm0Msx3BaB+n3Ag7L8EVlByGnpq14C4YWiu/gL8=
 github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
+github.com/TBD54566975/scaffolder v0.0.0-20231026011825-304b47f65b46 h1:dy1l8sMkoRjVzKvBvozujrL9VNYw3G8H+Tb+EB/p+qs=
+github.com/TBD54566975/scaffolder v0.0.0-20231026011825-304b47f65b46/go.mod h1:qQeIiuDDE901L32T7X/S36aIPdf4Qkxfm9qmF7+I2Wg=
 github.com/alecthomas/assert/v2 v2.3.0 h1:mAsH2wmvjsuvyBvAmCtm7zFsBlb8mIHx5ySLVdDZXL0=
 github.com/alecthomas/assert/v2 v2.3.0/go.mod h1:pXcQ2Asjp247dahGEmsZ6ru0UVwnkhktn7S0bBDLxvQ=
 github.com/alecthomas/atomic v0.1.0-alpha2 h1:dqwXmax66gXvHhsOS4pGPZKqYOlTkapELkLb3MNdlH8=
