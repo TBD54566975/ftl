@@ -1,6 +1,7 @@
 import { Bars3Icon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import useLocalStorage from '../hooks/use-local-storage'
 import { bgColor, textColor } from '../utils'
 import { Notification } from './Notification'
 import { SidePanel } from './SidePanel'
@@ -9,6 +10,7 @@ import { Navigation } from './navigation/Navigation'
 
 export const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useLocalStorage('isNavCollapsed', false)
 
   return (
     <>
@@ -17,9 +19,11 @@ export const Layout = () => {
       </div>
 
       <div
-        className={`grid h-screen ${bgColor} ${textColor} sm:grid-cols-[13rem,1fr] sm:grid-rows-[100vh] hidden sm:grid`}
+        className={`grid h-screen ${bgColor} ${textColor}
+              ${isCollapsed ? 'sm:grid-cols-[4rem,1fr]' : 'sm:grid-cols-[13rem,1fr]'}
+              sm:grid-rows-[100vh] hidden sm:grid`}
       >
-        <Navigation />
+        <Navigation isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
         <main className='overflow-hidden'>
           <Outlet />
         </main>
