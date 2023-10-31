@@ -46,20 +46,20 @@ class Visitor(val logger: KSPLogger, val modules: MutableMap<String, ModuleData>
           method = this.method.toString()
         )
       )
-
-      val verb = Verb(
-        name = function.simpleName.asString(),
-        request = requestType.toSchemaType().dataRef,
-        response = responseType.toSchemaType().dataRef,
-        metadata = metadata,
-        comments = function.comments(),
-      )
-
-      val requestData = Decl(data_ = requestType.closestClassDeclaration()!!.toSchemaData())
-      val responseData = Decl(data_ = responseType.closestClassDeclaration()!!.toSchemaData())
-      val decls = mutableSetOf(Decl(verb = verb), requestData, responseData)
-      modules[moduleName]!!.decls.addAll(decls)
     }
+
+    val verb = Verb(
+      name = function.simpleName.asString(),
+      request = requestType.toSchemaType().dataRef,
+      response = responseType.toSchemaType().dataRef,
+      metadata = metadata,
+      comments = function.comments(),
+    )
+
+    val requestData = Decl(data_ = requestType.closestClassDeclaration()!!.toSchemaData())
+    val responseData = Decl(data_ = responseType.closestClassDeclaration()!!.toSchemaData())
+    val decls = mutableSetOf(Decl(verb = verb), requestData, responseData)
+    modules[moduleName]!!.decls.addAll(decls)
   }
 
   private fun validateVerb(verb: KSFunctionDeclaration) {
