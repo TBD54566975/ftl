@@ -2,12 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"net/url"
-	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,16 +11,17 @@ import (
 	"github.com/alecthomas/kong"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/backend/common/bind"
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/runner"
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 )
 
 type serveCmd struct {
 	Bind        *url.URL `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
 	Controllers int      `short:"c" help:"Number of controllers to start." default:"1"`
-	Runners     int      `short:"r" help:"Number of runners to start." default:"10"`
+	Runners     int      `short:"r" help:"Number of runners to start." default:"0"`
 }
 
 const ftlContainerName = "ftl-db"
@@ -41,14 +38,25 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 	wg, ctx := errgroup.WithContext(ctx)
 
+	portAllocator, err := bind.NewBindAllocator(s.Bind)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	controllerAddresses := make([]*url.URL, 0, s.Controllers)
-	nextBind := s.Bind
+
+	for i := 0; i < s.Controllers; i++ {
+		controllerAddresses = append(controllerAddresses, portAllocator.Next())
+	}
+
+	runnerScaling, err := scaling.NewLocalScaling(portAllocator, controllerAddresses)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
 	for i := 0; i < s.Controllers; i++ {
 		i := i
-		controllerAddresses = append(controllerAddresses, nextBind)
 		config := controller.Config{
-			Bind: nextBind,
+			Bind: controllerAddresses[i],
 			DSN:  dsn,
 		}
 		if err := kong.ApplyDefaults(&config); err != nil {
@@ -59,56 +67,13 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		wg.Go(func() error {
-			return errors.Wrapf(controller.Start(controllerCtx, config), "controller%d failed", i)
+			return errors.Wrapf(controller.Start(controllerCtx, config, runnerScaling), "controller%d failed", i)
 		})
-
-		var err error
-		nextBind, err = incrementPort(nextBind)
-		if err != nil {
-			return errors.WithStack(err)
-		}
 	}
 
-	cacheDir, err := os.UserCacheDir()
+	err = runnerScaling.SetReplicas(ctx, s.Runners, nil)
 	if err != nil {
 		return errors.WithStack(err)
-	}
-
-	for i := 0; i < s.Runners; i++ {
-		i := i
-		controllerEndpoint := controllerAddresses[i%len(controllerAddresses)]
-		config := runner.Config{
-			Bind:               nextBind,
-			ControllerEndpoint: controllerEndpoint,
-		}
-
-		name := fmt.Sprintf("runner%d", i)
-		if err := kong.ApplyDefaults(&config, kong.Vars{
-			"deploymentdir": filepath.Join(cacheDir, "ftl-runner", name, "deployments"),
-			"language":      "go,kotlin",
-		}); err != nil {
-			return errors.WithStack(err)
-		}
-
-		// Create a readable ULID for the runner.
-		var ulid [16]byte
-		binary.BigEndian.PutUint32(ulid[10:], uint32(i))
-		ulidStr := fmt.Sprintf("%025X", ulid)
-		err := config.Key.Scan(ulidStr)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		runnerCtx := log.ContextWithLogger(ctx, logger.Scope(name))
-
-		wg.Go(func() error {
-			return errors.Wrapf(runner.Start(runnerCtx, config), "runner%d failed", i)
-		})
-
-		nextBind, err = incrementPort(nextBind)
-		if err != nil {
-			return errors.WithStack(err)
-		}
 	}
 
 	if err := wg.Wait(); err != nil {
@@ -180,18 +145,6 @@ func setupDB(ctx context.Context) (string, error) {
 	}
 
 	return dsn, nil
-}
-
-func incrementPort(baseURL *url.URL) (*url.URL, error) {
-	newURL := *baseURL
-
-	newPort, err := strconv.Atoi(newURL.Port())
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	newURL.Host = fmt.Sprintf("%s:%d", baseURL.Hostname(), newPort+1)
-	return &newURL, nil
 }
 
 func pollContainerHealth(ctx context.Context, containerName string, timeout time.Duration) error {

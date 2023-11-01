@@ -13,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/observability"
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 )
 
 var version = "dev"
@@ -38,6 +39,7 @@ func main() {
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
 	err = observability.Init(ctx, "ftl-controller", version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
-	err = controller.Start(ctx, cli.ControllerConfig)
+
+	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling())
 	kctx.FatalIfErrorf(err)
 }

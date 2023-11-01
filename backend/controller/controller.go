@@ -36,6 +36,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller/internal/dal"
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/console"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -66,7 +67,7 @@ func (c *Config) SetDefaults() {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config) error {
+func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -87,7 +88,7 @@ func Start(ctx context.Context, config Config) error {
 		return errors.WithStack(err)
 	}
 
-	svc, err := New(ctx, dal, config)
+	svc, err := New(ctx, dal, config, runnerScaling)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -120,12 +121,13 @@ type Service struct {
 	// Map from endpoint to client.
 	clients *ttlcache.Cache[string, clients]
 
-	routesMu sync.RWMutex
-	routes   map[string][]dal.Route
-	config   Config
+	routesMu      sync.RWMutex
+	routes        map[string][]dal.Route
+	config        Config
+	runnerScaling scaling.RunnerScaling
 }
 
-func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
+func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
 	key := config.Key
 	if config.Key.ULID() == (ulid.ULID{}) {
 		key = model.NewControllerKey()
@@ -138,6 +140,7 @@ func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
 		clients:            ttlcache.New[string, clients](ttlcache.WithTTL[string, clients](time.Minute)),
 		routes:             map[string][]dal.Route{},
 		config:             config,
+		runnerScaling:      runnerScaling,
 	}
 
 	go runWithRetries(ctx, time.Second*1, time.Second*2, svc.syncRoutes)
@@ -146,6 +149,7 @@ func New(ctx context.Context, db *dal.DAL, config Config) (*Service, error) {
 	go runWithRetries(ctx, config.RunnerTimeout, time.Second*10, svc.reapStaleRunners)
 	go runWithRetries(ctx, config.DeploymentReservationTimeout, time.Second*20, svc.releaseExpiredReservations)
 	go runWithRetries(ctx, time.Second*1, time.Second*5, svc.reconcileDeployments)
+	go runWithRetries(ctx, time.Second*1, time.Second*5, svc.reconcileRunners)
 	return svc, nil
 }
 
@@ -789,6 +793,34 @@ func (s *Service) reconcileDeployments(ctx context.Context) error {
 		}
 	}
 	_ = wg.Wait()
+	return nil
+}
+
+func (s *Service) reconcileRunners(ctx context.Context) error {
+	activeDeployments, err := s.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to get deployments needing reconciliation")
+	}
+
+	totalRunners := 0
+	for _, deployment := range activeDeployments {
+		totalRunners += deployment.MinReplicas
+	}
+
+	// It's possible that idles runners will get terminated here, but they will get recreated in the next
+	// reconciliation cycle.
+	idleRunners, err := s.dal.GetIdleRunners(ctx, 16, model.Labels{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	idleRunnerKeys := slices.Map(idleRunners, func(r dal.Runner) model.RunnerKey { return r.Key })
+
+	err = s.runnerScaling.SetReplicas(ctx, totalRunners, idleRunnerKeys)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	return nil
 }
 
