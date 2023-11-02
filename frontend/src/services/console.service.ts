@@ -170,14 +170,14 @@ export const streamEvents = async ({
   try {
     let events: Event[] = []
     for await (const response of client.streamEvents(
-      { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, filters } },
+      { updateInterval: { seconds: BigInt(1) }, query: { limit: 1000, filters, order: EventsQuery_Order.DESC } },
       { signal: abortControllerSignal },
     )) {
       if (response.event != null) {
         events.push(response.event)
       }
       if (!response.more) {
-        onEventsReceived(events.reverse())
+        onEventsReceived(events)
         events = []
       }
     }

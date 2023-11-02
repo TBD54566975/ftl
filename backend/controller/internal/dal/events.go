@@ -236,10 +236,10 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 		return index - 1
 	}
 	if !filter.olderThan.IsZero() {
-		q += fmt.Sprintf(" AND time_stamp <= $%d::TIMESTAMPTZ", param(filter.olderThan))
+		q += fmt.Sprintf(" AND e.time_stamp <= $%d::TIMESTAMPTZ", param(filter.olderThan))
 	}
 	if !filter.newerThan.IsZero() {
-		q += fmt.Sprintf(" AND time_stamp >= $%d::TIMESTAMPTZ", param(filter.newerThan))
+		q += fmt.Sprintf(" AND e.time_stamp >= $%d::TIMESTAMPTZ", param(filter.newerThan))
 	}
 	if filter.idHigherThan != 0 {
 		q += fmt.Sprintf(" AND e.id >= $%d::BIGINT", param(filter.idHigherThan))
@@ -279,9 +279,9 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 
 	if filter.descending {
-		q += " ORDER BY time_stamp DESC"
+		q += " ORDER BY e.time_stamp DESC, e.id DESC"
 	} else {
-		q += " ORDER BY time_stamp ASC"
+		q += " ORDER BY e.time_stamp ASC, e.id ASC"
 	}
 
 	q += fmt.Sprintf(" LIMIT %d", limit)
