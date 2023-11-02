@@ -9,12 +9,13 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/alecthomas/errors"
+	"github.com/alecthomas/kong"
+
 	"github.com/TBD54566975/ftl/backend/common/bind"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/runner"
-	"github.com/alecthomas/errors"
-	"github.com/alecthomas/kong"
 )
 
 var _ RunnerScaling = (*LocalScaling)(nil)
