@@ -19,7 +19,7 @@ func UnzipDir(zipReader *zip.Reader, destDir string) error {
 	}
 	for _, file := range zipReader.File {
 		destPath := filepath.Clean(filepath.Join(destDir, file.Name)) //nolint:gosec
-		if !strings.HasPrefix(destPath, destDir) {
+		if destDir != "." && !strings.HasPrefix(destPath, destDir) {
 			return errors.Errorf("invalid file path: %q", destPath)
 		}
 		// Create directory if it doesn't exist
