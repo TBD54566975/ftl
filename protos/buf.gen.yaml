@@ -7,8 +7,8 @@ plugins:
     out: .
     opt: paths=source_relative
   - plugin: buf.build/bufbuild/es:v1.4.0
-    out: ../console/client/src/protos
+    out: ../frontend/src/protos
     opt: target=ts
   - plugin: buf.build/connectrpc/es:v1.1.2
-    out: ../console/client/src/protos
+    out: ../frontend/src/protos
     opt: target=ts

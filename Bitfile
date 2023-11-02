@@ -16,17 +16,17 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
     protos/xyz/block/ftl/v1/console/console.pb.go \
     protos/xyz/block/ftl/v1/schema/runtime.pb.go \
     protos/xyz/block/ftl/v1/ftl.pb.go \
-    console/client/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
-    console/client/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
-    console/client/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
-    console/client/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
-    console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts \
-    console/client/src/protos/google/protobuf/timestamp_pb.ts \
-    console/client/src/protos/opentelemetry/proto/collector/metrics/v1/metrics_service_pb.ts \
-    console/client/src/protos/opentelemetry/proto/common/v1/common_pb.ts \
-    console/client/src/protos/opentelemetry/proto/metrics/v1/metrics_pb.ts \
-    console/client/src/protos/opentelemetry/proto/resource/v1/resource_pb.ts \
-    console/client/src/protos/opentelemetry/proto/trace/v1/trace_pb.ts
+    frontend/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
+    frontend/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
+    frontend/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
+    frontend/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
+    frontend/src/protos/xyz/block/ftl/v1/console/console_pb.ts \
+    frontend/src/protos/google/protobuf/timestamp_pb.ts \
+    frontend/src/protos/opentelemetry/proto/collector/metrics/v1/metrics_service_pb.ts \
+    frontend/src/protos/opentelemetry/proto/common/v1/common_pb.ts \
+    frontend/src/protos/opentelemetry/proto/metrics/v1/metrics_pb.ts \
+    frontend/src/protos/opentelemetry/proto/resource/v1/resource_pb.ts \
+    frontend/src/protos/opentelemetry/proto/trace/v1/trace_pb.ts
 
 COMMON_LOG_IN = backend/common/log/api.go
 COMMON_LOG_OUT = backend/common/log/log_level_string.go
@@ -38,10 +38,10 @@ KT_RUNTIME_RUNNER_TEMPLATE_OUT = build/template/ftl/jars/ftl-runtime.jar
 KT_GENERATOR_IN = kotlin-runtime/ftl-generator/**/*.{kt,kts} pom.xml kotlin-runtime/ftl-runtime/**/pom.xml %{KT_RUNTIME_OUT}
 KT_GENERATOR_OUT = kotlin-runtime/ftl-generator/target/ftl-generator-1.0-SNAPSHOT-jar-with-dependencies.jar
 
-CLIENT_OUT = console/client/dist/index.html
-CLIENT_IN = console/client/src/**/*
-NODE_MODULES_OUT = console/client/node_modules
-NODE_MODULES_IN = console/client/package{,-lock}.json
+CLIENT_OUT = frontend/dist/index.html
+CLIENT_IN = frontend/src/**/*
+NODE_MODULES_OUT = frontend/node_modules
+NODE_MODULES_IN = frontend/package{,-lock}.json
 
 #virtual release:
 #  inputs: %{RELEASE}/ftl %{RELEASE}/ftl-controller %{RELEASE}/ftl-runner
@@ -111,11 +111,11 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
   build: go generate %{IN}
 
 %{NODE_MODULES_OUT}: %{NODE_MODULES_IN}
-  cd console/client
+  cd frontend
   build: npm install
   -clean # Don't clean node_modules
 
 %{CLIENT_OUT}: %{CLIENT_IN} %{NODE_MODULES_OUT}
-  cd console/client
+  cd frontend
   build: npm run build
   clean: rm -rf dist .parcel-cache

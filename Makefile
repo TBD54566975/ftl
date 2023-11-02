@@ -25,11 +25,11 @@ PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 			protos/xyz/block/ftl/v1/console/console.pb.go \
 			protos/xyz/block/ftl/v1/schema/runtime.pb.go \
 			protos/xyz/block/ftl/v1/ftl.pb.go \
-			console/client/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
-			console/client/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
-			console/client/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
-			console/client/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
-			console/client/src/protos/xyz/block/ftl/v1/console/console_pb.ts
+			frontend/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
+			frontend/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
+			frontend/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
+			frontend/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
+			frontend/src/protos/xyz/block/ftl/v1/console/console_pb.ts
 RELEASE_OUT = build/release/ftl build/release/ftl-controller build/release/ftl-runner
 
 KT_RUNTIME_IN = $(shell find kotlin-runtime/ftl-runtime/src -name '*.kt')
@@ -53,7 +53,7 @@ clean: ## Clean build artifacts.
 .PHONY: release
 release: build/release/ftl-controller build/release/ftl-runner build/release/ftl ## Build release binaries.
 
-build/release/%: console/client/dist/index.html
+build/release/%: frontend/dist/index.html
 	go build -o $@ -tags release -ldflags "-X main.version=$(VERSION) -X main.timestamp=$(shell date +%s)" ./cmd/$(shell basename $@)
 
 build/release/ftl:
@@ -68,8 +68,8 @@ $(KT_RUNTIME_OUT): $(KT_MVN_OUT)
 	mkdir -p build/template/ftl/jars
 	cp $< $@
 
-console/client/dist/index.html:
-	cd console/client && npm install && npm run build
+frontend/dist/index.html:
+	cd frontend && npm install && npm run build
 
 .PHONY: generate
 generate: $(PROTO_OUT) $(COMMON_LOG_OUT) $(SQLC_OUT) $(SCHEMA_OUT) ## Regenerate source.

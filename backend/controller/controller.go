@@ -38,7 +38,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/internal/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/console"
+	frontend "github.com/TBD54566975/ftl/frontend"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -73,7 +73,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting FTL controller")
 
-	c, err := console.Server(ctx, config.ContentTime, config.AllowOrigin)
+	c, err := frontend.Server(ctx, config.ContentTime, config.AllowOrigin)
 	if err != nil {
 		return errors.WithStack(err)
 	}
