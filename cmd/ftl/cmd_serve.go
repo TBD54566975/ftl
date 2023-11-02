@@ -21,6 +21,7 @@ import (
 
 type serveCmd struct {
 	Bind        *url.URL `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
+	DBPort      int      `help:"Port to use for the database." default:"5433"`
 	Recreate    bool     `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers int      `short:"c" help:"Number of controllers to start." default:"1"`
 	Runners     int      `short:"r" help:"Number of runners to start." default:"0"`
@@ -40,17 +41,17 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 	wg, ctx := errgroup.WithContext(ctx)
 
-	portAllocator, err := bind.NewBindAllocator(s.Bind)
+	bindAllocator, err := bind.NewBindAllocator(s.Bind)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	controllerAddresses := make([]*url.URL, 0, s.Controllers)
 
+	controllerAddresses := make([]*url.URL, 0, s.Controllers)
 	for i := 0; i < s.Controllers; i++ {
-		controllerAddresses = append(controllerAddresses, portAllocator.Next())
+		controllerAddresses = append(controllerAddresses, bindAllocator.Next())
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(portAllocator, controllerAddresses)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -86,7 +87,6 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	logger := log.FromContext(ctx)
-	logger.Infof("Checking for FTL database")
 
 	nameFlag := fmt.Sprintf("name=^/%s$", ftlContainerName)
 	output, err := exec.Capture(ctx, ".", "docker", "ps", "-a", "--filter", nameFlag, "--format", "{{.Names}}")
@@ -96,9 +96,16 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	}
 
 	recreate := s.Recreate
+	port := ""
 
 	if len(output) == 0 {
-		logger.Infof("Creating FTL database")
+		logger.Infof("Creating docker container '%s' for postgres db", ftlContainerName)
+
+		// check if port s.DBPort is already in use
+		_, err := exec.Capture(ctx, ".", "sh", "-c", fmt.Sprintf("lsof -i:%d", s.DBPort))
+		if err == nil {
+			return "", errors.Errorf("port %d is already in use", s.DBPort)
+		}
 
 		err = exec.Command(ctx, logger.GetLevel(), "./", "docker", "run",
 			"-d", // run detached so we can follow with other commands
@@ -106,7 +113,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			"--user", "postgres",
 			"--restart", "always",
 			"-e", "POSTGRES_PASSWORD=secret",
-			"-p", "5432", // dynamically allocate port
+			"-p", fmt.Sprintf("%d:5432", s.DBPort),
 			"--health-cmd=pg_isready",
 			"--health-interval=1s",
 			"--health-timeout=60s",
@@ -125,15 +132,21 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		}
 
 		recreate = true
+	} else {
+		// Grab the port from the existing container
+		cmdStr := fmt.Sprintf("docker port %s 5432/tcp | grep -v '\\[::\\]' | awk -F: '{print $NF}'", ftlContainerName)
+		portOutput, err := exec.Capture(ctx, ".", "sh", "-c", cmdStr)
+		if err != nil {
+			logger.Errorf(err, "%s", portOutput)
+			return "", errors.WithStack(err)
+		}
+
+		port = strings.TrimSpace(string(portOutput))
+		logger.Infof("Using docker container '%s' for postgres db", ftlContainerName)
 	}
 
-	// grab the port from docker for this container
-	port, err := exec.Capture(ctx, ".", "docker", "inspect", "--format", "{{ (index (index .NetworkSettings.Ports \"5432/tcp\") 0).HostPort }}", ftlContainerName)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-
-	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%s/%s?sslmode=disable", strings.TrimSpace(string(port)), ftlContainerName)
+	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%s/%s?sslmode=disable", port, ftlContainerName)
+	logger.Infof("Postgres DSN: %s", dsn)
 
 	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
 	if err != nil {
