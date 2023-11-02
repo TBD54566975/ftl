@@ -105,8 +105,8 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		go func() {
 			logger.Infof("Starting runner: %s", config.Key)
 			err := runner.Start(runnerCtx, config)
-			if err != nil {
-				logger.Errorf(err, "Error starting runner: %s", err)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				logger.Errorf(err, "Runner failed: %s", err)
 			}
 		}()
 	}

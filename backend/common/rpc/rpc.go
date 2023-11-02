@@ -168,7 +168,9 @@ func RetryStreamingClientStream[Req, Resp any](
 
 		errored = true
 		delay := retry.Duration()
-		logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
+		if !errors.Is(err, context.Canceled) {
+			logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
+		}
 		select {
 		case <-ctx.Done():
 			return
