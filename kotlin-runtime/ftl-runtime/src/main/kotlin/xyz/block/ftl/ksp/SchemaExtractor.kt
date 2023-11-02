@@ -144,6 +144,9 @@ class Visitor(val logger: KSPLogger, val modules: MutableMap<String, ModuleData>
     }
 
     private fun KSName.moduleName(): String {
+      if (!this.asString().startsWith("ftl.")) {
+        throw IllegalArgumentException("Expected module name to be in the form ftl.<module>, but was ${this.asString()}")
+      }
       return this.asString().split(".")[1]
     }
   }
