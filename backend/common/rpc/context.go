@@ -121,6 +121,9 @@ func (m *metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerF
 		}
 		err = errors.WithStack(req(ctx, s))
 		if err != nil {
+			if connect.CodeOf(err) == connect.CodeCanceled {
+				return nil
+			}
 			logger.Logf(m.errorLevel, "Streaming RPC failed: %s: %s", err, s.Spec().Procedure)
 			return err
 		}
