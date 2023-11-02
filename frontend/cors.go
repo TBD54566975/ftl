@@ -1,4 +1,4 @@
-package console
+package frontend
 
 import (
 	"net/http"

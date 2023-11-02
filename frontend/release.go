@@ -1,6 +1,6 @@
 //go:build release
 
-package console
+package frontend
 
 import (
 	"context"
@@ -16,11 +16,11 @@ import (
 	"github.com/alecthomas/errors"
 )
 
-//go:embed all:client/dist
+//go:embed all:dist
 var build embed.FS
 
 func Server(ctx context.Context, timestamp time.Time, allowOrigin string) (http.Handler, error) {
-	dir, err := fs.Sub(build, "client/dist")
+	dir, err := fs.Sub(build, "dist")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

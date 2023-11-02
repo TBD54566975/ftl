@@ -1,6 +1,6 @@
 //go:build !release
 
-package console
+package frontend
 
 import (
 	"context"
@@ -22,12 +22,12 @@ func Server(ctx context.Context, timestamp time.Time, allowOrigin string) (http.
 	logger := log.FromContext(ctx)
 	logger.Infof("Building console...")
 
-	err := exec.Command(ctx, log.Debug, "console/client", "npm", "install").Run()
+	err := exec.Command(ctx, log.Debug, "frontend", "npm", "install").Run()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	err = exec.Command(ctx, log.Debug, "console/client", "npm", "run", "dev").Start()
+	err = exec.Command(ctx, log.Debug, "frontend", "npm", "run", "dev").Start()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

@@ -4,6 +4,6 @@ WORKDIR /console
 
 COPY package-lock.json .
 COPY package.json .
-COPY console/client/package.json console/client/package.json
+COPY frontend/package.json frontend/package.json
 
 RUN npm install
