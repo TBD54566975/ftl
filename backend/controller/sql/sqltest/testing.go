@@ -11,7 +11,7 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/TBD54566975/ftl/backend/controller/databasetesting"
+	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 )
 
 // OpenForTesting opens a database connection for testing, recreating the

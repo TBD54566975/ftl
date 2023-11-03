@@ -1,15 +1,15 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "backend/controller/internal/sql/queries.sql"
-    schema: "backend/controller/internal/sql/schema"
+    queries: "backend/controller/sql/queries.sql"
+    schema: "backend/controller/sql/schema"
     database:
       uri: postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret
     gen:
       go:
         package: "sql"
         sql_package: "pgx/v5"
-        out: "backend/controller/internal/sql"
+        out: "backend/controller/sql"
         emit_interface: true
         query_parameter_limit: 3
         overrides:
@@ -19,15 +19,19 @@ sql:
             go_type: "time.Duration"
           - db_type: "pg_catalog.interval"
             nullable: true
-            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.NullDuration"
+            go_type:
+              type: "NullDuration"
           - db_type: "timestamptz"
             nullable: true
-            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.NullTime"
+            go_type:
+              type:  "NullTime"
           - db_type: "uuid"
-            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.Key"
+            go_type:
+              type:  "Key"
           - db_type: "uuid"
             nullable: true
-            go_type: "github.com/TBD54566975/ftl/backend/controller/internal/sqltypes.NullKey"
+            go_type:
+              type:  "NullKey"
           - db_type: "pg_catalog.varchar"
             nullable: true
             go_type: "github.com/alecthomas/types.Option[string]"

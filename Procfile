@@ -1,5 +1,5 @@
 controller: watchexec -r -e go -i "frontend" -i "examples/**" -- ftl-controller --key C01H5BRT09Y07547SETZ4HWRA09 --bind http://localhost:8892
-regenerate: watchexec -e yaml -e sql -e proto -i "frontend" -i "examples/**" --debounce 1s -- bit protos/xyz/block/ftl/v1/schema/schema.proto protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go backend/controller/internal/sql/db.go
+regenerate: watchexec -e yaml -e sql -e proto -i "frontend" -i "examples/**" --debounce 1s -- bit protos/xyz/block/ftl/v1/schema/schema.proto protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go backend/controller/sql/db.go
 runner0: watchexec -r -e go -i "frontend" -i "examples/**" -- ftl-runner --key R01H5BTS6ABP1EHGZSAGJMBV50A --language go --language kotlin --bind http://localhost:8894 --template-dir build/template
 runner1: watchexec -r -e go -i "frontend" -i "examples/**" -- ftl-runner --key R01H5BTSGKQ8AZ9S22N9N1SM9HV --language go --language kotlin --bind http://localhost:8895 --template-dir build/template
 runner2: watchexec -r -e go -i "frontend" -i "examples/**" -- ftl-runner --key R01H8DD0H13WX636B70WV7D216G --language go --language kotlin --bind http://localhost:8896 --template-dir build/template
