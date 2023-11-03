@@ -7,7 +7,7 @@ replace github.com/TBD54566975/ftl => ../..
 require (
 	github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 	github.com/alecthomas/errors v0.4.0
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.4.0
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 )
