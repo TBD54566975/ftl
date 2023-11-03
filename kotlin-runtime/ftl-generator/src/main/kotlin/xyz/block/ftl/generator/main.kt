@@ -1,8 +1,10 @@
 package xyz.block.ftl.generator
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import xyz.block.ftl.generator.ModuleGenerator.Companion.DEFAULT_MODULE_CLIENT_SUFFIX
 import java.io.File
 
 class Main : CliktCommand() {
@@ -11,7 +13,7 @@ class Main : CliktCommand() {
   val module by option(help = "The FTL module name we're working on.").required()
   val moduleClientSuffix by option(
     help = "The suffix appended to FTL-generated client classes for other modules in this cluster."
-  )
+  ).default(DEFAULT_MODULE_CLIENT_SUFFIX)
 
   override fun run() {
     val client = FTLClient(endpoint)
