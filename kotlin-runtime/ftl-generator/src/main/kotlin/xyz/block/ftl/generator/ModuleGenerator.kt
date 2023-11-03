@@ -27,7 +27,7 @@ import kotlin.io.path.setPosixFilePermissions
 import kotlin.io.path.writeText
 
 class ModuleGenerator() {
-  fun run(schema: Schema, outputDirectory: File, module: String, moduleClientSuffix: String?) {
+  fun run(schema: Schema, outputDirectory: File, module: String, moduleClientSuffix: String) {
     val fqOutputDir = outputDirectory.absolutePath
     prepareFtlRoot(fqOutputDir, module)
     val sourcesDest = File(fqOutputDir, "generated-sources/ftl/ftl")
@@ -41,7 +41,7 @@ class ModuleGenerator() {
     }
   }
 
-  internal fun generateModule(module: Module, moduleClientSuffix: String? = defaultModuleClientSuffix): FileSpec {
+  internal fun generateModule(module: Module, moduleClientSuffix: String = DEFAULT_MODULE_CLIENT_SUFFIX): FileSpec {
     val namespace = "ftl.${module.name}"
     val className = module.name.replaceFirstChar(Char::titlecase) + moduleClientSuffix
     val file = FileSpec.builder(namespace, className)
@@ -197,6 +197,6 @@ class ModuleGenerator() {
   }
 
   companion object {
-    val defaultModuleClientSuffix = "Module"
+    const val DEFAULT_MODULE_CLIENT_SUFFIX = "Module"
   }
 }
