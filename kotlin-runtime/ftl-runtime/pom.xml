@@ -17,6 +17,7 @@
     <properties>
         <rootDir>${basedir}/../..</rootDir>
         <maven.deploy.skip>false</maven.deploy.skip>
+        <detekt.version>1.23.1</detekt.version>
     </properties>
 
     <dependencies>
@@ -38,6 +39,12 @@
             <version>1.9.20-RC-1.0.13</version>
         </dependency>
 
+        <dependency>
+            <groupId>io.gitlab.arturbosch.detekt</groupId>
+            <artifactId>detekt-api</artifactId>
+            <version>${detekt.version}</version>
+        </dependency>
+
         <!-- Classgraph -->
         <dependency>
             <groupId>io.github.classgraph</groupId>
@@ -51,6 +58,22 @@
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>io.gitlab.arturbosch.detekt</groupId>
+            <artifactId>detekt-test</artifactId>
+            <version>${detekt.version}</version>
+            <exclusions>
+                <!-- Exclude Kotlin Main KTS to fix SLF4J diamond dependency problem. -->
+                <exclusion>
+                    <groupId>org.jetbrains.kotlin</groupId>
+                    <artifactId>kotlin-main-kts</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

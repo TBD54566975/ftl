@@ -12,6 +12,8 @@
         <java.version>11</java.version>
         <kotlin.version>1.9.0</kotlin.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
     </properties>
 
     <dependencies>
@@ -62,26 +64,6 @@
                         </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <compilerPlugins>
-                        <compilerPlugin>ksp</compilerPlugin>
-                    </compilerPlugins>
-                    <pluginOptions>
-                        <option>ksp:apoption=dest=${project.build.directory}</option>
-                    </pluginOptions>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.dyescape</groupId>
-                        <artifactId>kotlin-maven-symbol-processing</artifactId>
-                        <version>1.6</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>${project.groupId}</groupId>
-                        <artifactId>ftl-runtime</artifactId>
-                        <version>${ftl.version}</version>
-                    </dependency>
-                </dependencies>
             </plugin>
             <!-- Download the Wire compiler. -->
             <plugin>
@@ -102,6 +84,13 @@
                                     <version>${ftl.version}</version>
                                     <classifier>jar-with-dependencies</classifier>
                                     <destFileName>ftl-generator.jar</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>xyz.block</groupId>
+                                    <artifactId>ftl-runtime</artifactId>
+                                    <version>${ftl.version}</version>
+                                    <classifier>jar-with-dependencies</classifier>
+                                    <destFileName>ftl-runtime.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
@@ -125,7 +114,8 @@
                         </goals>
                         <configuration>
                             <outputFile>${project.build.directory}/classpath.txt</outputFile>
-                            <prefix>dependency</prefix>
+                            <outputProperty>generated.classpath</outputProperty>
+                            <prefix>${project.build.directory}/dependency</prefix>
                         </configuration>
                     </execution>
                 </executions>
@@ -171,6 +161,37 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.github.ozsie</groupId>
+                <artifactId>detekt-maven-plugin</artifactId>
+                <version>1.23.3</version>
+                <configuration>
+                    <disableDefaultRuleSets>true</disableDefaultRuleSets>
+                    <classPath>${generated.classpath}</classPath>
+                    <jvmTarget>${java.version}</jvmTarget>
+                    <config>${project.build.directory}/detekt.yml</config>
+                    <plugins>
+                        <plugin>
+                            ${project.build.directory}/dependency/ftl-runtime-${ftl.version}.jar
+                        </plugin>
+                    </plugins>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>check-with-type-resolution</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>xyz.block</groupId>
+                        <artifactId>ftl-runtime</artifactId>
+                        <version>${ftl.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
