@@ -25,8 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/pubsub"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/common/slices"
-	"github.com/TBD54566975/ftl/backend/controller/internal/sql"
-	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
+	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -509,7 +508,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 		return errors.Wrap(err, "failed to JSON encode runner labels")
 	}
 	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
-		Key:            sqltypes.Key(runner.Key),
+		Key:            sql.Key(runner.Key),
 		Endpoint:       runner.Endpoint,
 		State:          sql.RunnerState(runner.State),
 		DeploymentName: pgDeploymentName,
@@ -541,7 +540,7 @@ func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int6
 
 // DeregisterRunner deregisters the given runner.
 func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
-	count, err := d.db.DeregisterRunner(ctx, sqltypes.Key(key))
+	count, err := d.db.DeregisterRunner(ctx, sql.Key(key))
 	if err != nil {
 		return errors.WithStack(translatePGError(err))
 	}
@@ -861,7 +860,7 @@ func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string
 }
 
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
-	state, err := d.db.GetRunnerState(ctx, sqltypes.Key(runnerKey))
+	state, err := d.db.GetRunnerState(ctx, sql.Key(runnerKey))
 	if err != nil {
 		return "", errors.WithStack(translatePGError(err))
 	}
@@ -869,7 +868,7 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (Ru
 }
 
 func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {
-	row, err := d.db.GetRunner(ctx, sqltypes.Key(runnerKey))
+	row, err := d.db.GetRunner(ctx, sql.Key(runnerKey))
 	if err != nil {
 		return Runner{}, errors.WithStack(translatePGError(err))
 	}

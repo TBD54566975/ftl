@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/controller/internal/sqltypes"
 	"github.com/alecthomas/types"
 )
 
@@ -258,10 +257,10 @@ type Request struct {
 
 type Runner struct {
 	ID                 int64
-	Key                sqltypes.Key
+	Key                Key
 	Created            time.Time
 	LastSeen           time.Time
-	ReservationTimeout sqltypes.NullTime
+	ReservationTimeout NullTime
 	State              RunnerState
 	Endpoint           string
 	ModuleName         types.Option[string]

@@ -120,7 +120,7 @@ func ValidateModule(module *Module) error {
 		case *Array, *Bool, *DataRef, *Field, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *VerbRef,
 			*MetadataCalls, *MetadataIngress:
-		case Type, Metadata, Decl: // Union sqltypes.
+		case Type, Metadata, Decl: // Union sql.
 		}
 		return next()
 	})

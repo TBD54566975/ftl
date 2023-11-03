@@ -7,6 +7,8 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/TBD54566975/ftl/backend/controller/sql"
 )
 
 // CreateForDevel creates and migrates a new database for development or testing.
@@ -46,7 +48,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Po
 	// PG doesn't support "IF NOT EXISTS" so instead we just ignore any error.
 	_, _ = conn.Exec(ctx, fmt.Sprintf("CREATE DATABASE %q", config.Database))
 
-	err = Migrate(ctx, dsn)
+	err = sql.Migrate(ctx, dsn)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

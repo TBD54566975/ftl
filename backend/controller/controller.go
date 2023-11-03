@@ -35,7 +35,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/rpc/headers"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/common/slices"
-	"github.com/TBD54566975/ftl/backend/controller/internal/dal"
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/schema"
 	frontend "github.com/TBD54566975/ftl/frontend"

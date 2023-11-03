@@ -43,10 +43,24 @@ CLIENT_IN = frontend/src/**/*
 NODE_MODULES_OUT = frontend/node_modules
 NODE_MODULES_IN = frontend/package{,-lock}.json
 
+SQLC_IN = sqlc.yaml \
+  backend/controller/sql/schema/*.sql \
+  backend/controller/sql/queries.sql
+SQLC_OUT = backend/controller/sql/db.go \
+  %(grep -q copyfrom backend/controller/sql/queries.sql && echo backend/controller/sql/copyfrom.go || true)% \
+  backend/controller/sql/models.go \
+  backend/controller/sql/queries.sql.go
+
 RUNNER_TEMPLATE_ZIP = backend/controller/scaling/localscaling/template.zip
 
 #virtual release:
 #  inputs: %{RELEASE}/ftl %{RELEASE}/ftl-controller %{RELEASE}/ftl-runner
+
+%{SQLC_OUT}: %{SQLC_IN}
+  build:
+    sqlc generate --experimental
+    # sqlc 1.18.0 generates a file with a missing import
+    gosimports -w backend/controller/sql/querier.go
 
 %{RELEASE}:
   build: install -m 0700 -d %{OUT}

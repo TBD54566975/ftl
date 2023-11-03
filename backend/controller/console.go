@@ -14,7 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/slices"
-	"github.com/TBD54566975/ftl/backend/controller/internal/dal"
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	pbconsole "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console"

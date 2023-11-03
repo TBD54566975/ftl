@@ -13,7 +13,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/controller/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 

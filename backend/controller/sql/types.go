@@ -1,4 +1,4 @@
-package sqltypes
+package sql
 
 import (
 	"database/sql/driver"

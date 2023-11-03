@@ -15,8 +15,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/controller/databasetesting"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
+	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 )
 
 type serveCmd struct {
