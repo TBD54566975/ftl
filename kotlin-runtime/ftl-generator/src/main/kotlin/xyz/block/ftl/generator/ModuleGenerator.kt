@@ -109,7 +109,7 @@ class ModuleGenerator() {
       metadata.ingress?.let {
         verbFunBuilder.addAnnotation(
           AnnotationSpec.builder(Ingress::class)
-            .addMember("%T", ClassName("xyz.block.ftl.Method", it.method))
+            .addMember("%T", ClassName("xyz.block.ftl.Method", it.method.replaceBefore(".", "")))
             .addMember("%S", it.path)
             .build()
         )
