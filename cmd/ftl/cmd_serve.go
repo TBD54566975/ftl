@@ -16,7 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/databasetesting"
-	"github.com/TBD54566975/ftl/backend/controller/scaling"
+	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 )
 
 type serveCmd struct {
@@ -50,7 +50,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		controllerAddresses = append(controllerAddresses, portAllocator.Next())
 	}
 
-	runnerScaling, err := scaling.NewLocalScaling(portAllocator, controllerAddresses)
+	runnerScaling, err := localscaling.NewLocalScaling(portAllocator, controllerAddresses)
 	if err != nil {
 		return errors.WithStack(err)
 	}

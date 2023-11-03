@@ -1,4 +1,4 @@
-package scaling
+package localscaling
 
 import (
 	"context"
@@ -15,10 +15,11 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/bind"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/runner"
 )
 
-var _ RunnerScaling = (*LocalScaling)(nil)
+var _ scaling.RunnerScaling = (*LocalScaling)(nil)
 
 type LocalScaling struct {
 	lock     sync.Mutex
@@ -78,6 +79,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		config := runner.Config{
 			Bind:               l.portAllocator.Next(),
 			ControllerEndpoint: controllerEndpoint,
+			TemplateDir:        templateDir(ctx),
 		}
 
 		name := fmt.Sprintf("runner%d", i)

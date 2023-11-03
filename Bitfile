@@ -43,6 +43,8 @@ CLIENT_IN = frontend/src/**/*
 NODE_MODULES_OUT = frontend/node_modules
 NODE_MODULES_IN = frontend/package{,-lock}.json
 
+RUNNER_TEMPLATE_ZIP = backend/controller/scaling/localscaling/template.zip
+
 #virtual release:
 #  inputs: %{RELEASE}/ftl %{RELEASE}/ftl-controller %{RELEASE}/ftl-runner
 
@@ -60,7 +62,7 @@ NODE_MODULES_IN = frontend/package{,-lock}.json
 %{RELEASE}/ftl-runner: %{RELEASE} %{GO_SOURCES} cmd/ftl-runner/**/*.go
   build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-runner
 
-%{RELEASE}/ftl: %{RELEASE} %{GO_SOURCES} cmd/ftl/**/*.go {go,kotlin}-runtime/scaffolding.zip %{CLIENT_OUT}
+%{RELEASE}/ftl: %{RELEASE} %{GO_SOURCES} cmd/ftl/**/*.go %{CLIENT_OUT} **/*.zip
   build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl
 
 %{RELEASE}/ftl-initdb: %{RELEASE} %{GO_SOURCES} cmd/ftl-initdb/**/*.go
@@ -106,6 +108,9 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
 
 %{KT_RUNTIME_RUNNER_TEMPLATE_OUT}: %{KT_RUNTIME_OUT} %(dirname %{KT_RUNTIME_RUNNER_TEMPLATE_OUT})%
   build: install -m 0600 %{KT_RUNTIME_OUT} %{OUT}
+
+%{RUNNER_TEMPLATE_ZIP}: %{KT_RUNTIME_RUNNER_TEMPLATE_OUT}
+  build: cd build/template && zip -q --symlinks -r ../../%{OUT} .
 
 %{COMMON_LOG_OUT}: %{COMMON_LOG_IN}
   build: go generate %{IN}
