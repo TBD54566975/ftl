@@ -12,6 +12,7 @@ RUN hermit install openjre-18.0.2.1_1
 RUN hermit uninstall openjre
 RUN hermit install jbr
 RUN go version
+RUN mvn --version
 
 WORKDIR /src
 
@@ -19,16 +20,14 @@ WORKDIR /src
 COPY go.mod go.sum /src/
 RUN go mod download -x
 
-# Build runtime
-COPY kotlin-runtime /src/kotlin-runtime
-COPY pom.xml /src/pom.xml
-COPY protos /src/protos
-RUN mvn -pl :ftl-runtime package
+COPY . /src/
+
+# Build runner template
+RUN bit build/template/ftl/jars/ftl-runtime.jar
 
 # Build runner
-COPY . /src/
-RUN make build/release/ftl-runner
-RUN make build/release/ftl
+RUN bit build/release/ftl-runner
+RUN bit build/release/ftl
 
 # Finally create the runtime image.
 FROM ubuntu:22.04
@@ -37,7 +36,7 @@ WORKDIR /root/
 
 ENV PATH="/root/jre/bin:$PATH"
 COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
-COPY --from=builder /src/kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT-jar-with-dependencies.jar template/ftl/jars/ftl-runtime.jar
+COPY --from=builder /src/build/template template
 COPY --from=builder /src/build/release/ftl-runner .
 COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments

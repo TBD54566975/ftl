@@ -124,8 +124,9 @@ jobs:
         run: bit frontend/dist/index.html
       - name: Publish Go Binaries
         run: |
-          bit go-runtime/scaffolding.zip
-          bit kotlin-runtime/scaffolding.zip
+          bit build/release/ftl
+          bit build/release/ftl-controller
+          bit build/release/ftl-runner
           goreleaser release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

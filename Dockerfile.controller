@@ -10,6 +10,7 @@ WORKDIR /src
 
 # Seed some of the most common tools - this will be cached
 RUN go version
+RUN mvn --version
 
 # Download Go dependencies separately so Docker will cache them
 COPY go.mod go.sum ./
@@ -18,9 +19,9 @@ RUN go mod download -x
 
 # Build
 COPY . /src/
-RUN make build/release/ftl-controller
-RUN make build/release/ftl-initdb
-RUN make build/release/ftl
+RUN bit build/release/ftl-controller
+RUN bit build/release/ftl-initdb
+RUN bit build/release/ftl
 
 # Finally create the runtime image.
 FROM ubuntu:22.04
