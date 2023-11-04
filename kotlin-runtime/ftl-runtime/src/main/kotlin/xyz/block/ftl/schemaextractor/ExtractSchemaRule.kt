@@ -98,7 +98,6 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
 
 class IgnoredModuleException : Exception()
 class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotationEntry) {
-  private val callMatcher: Regex
   private val verb: KtNamedFunction
   private val module: KtDeclaration
   private val decls: MutableSet<Decl> = mutableSetOf()
@@ -159,39 +158,57 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
   }
 
   private fun extractCalls(): MetadataCalls? {
-    val verbs = mutableListOf<VerbRef>()
+    val verbs = mutableSetOf<VerbRef>()
     extractCalls(verb, verbs)
-    return verbs.ifNotEmpty { MetadataCalls(calls = verbs) }
+    return verbs.ifNotEmpty { MetadataCalls(calls = verbs.toList()) }
   }
 
-  private fun extractCalls(func: KtNamedFunction, calls: MutableList<VerbRef>) {
-    val body = requireNotNull(func.bodyExpression) { "Verbs must have a body" }
-    val imports = func.containingKtFile.importList?.imports?.mapNotNull { it.importedFqName } ?: emptyList()
-
-    val refs = callMatcher.findAll(body.text).map {
-      val req = requireNotNull(it.groups["req"]?.value?.trim()) {
-        "Could not extract request type for outgoing verb call from ${verb.name}"
-      }
-      val verbCall = requireNotNull(it.groups["fn"]?.value?.trim()) {
-        "Could not extract module name for outgoing verb call from ${verb.name}"
-      }
-      // TODO(worstell): Figure out how to get module name when not imported from another Kt file
-      val moduleRefName = imports.filter { it.toString().contains(req) }.firstOrNull()?.moduleName()
-
-      VerbRef(
-        name = verbCall.split("::")[1].trim(),
-        module = moduleRefName ?: "",
-      )
-    }
-    calls.addAll(refs)
-
+  private fun extractCalls(element: KtElement, calls: MutableSet<VerbRef>) {
     // Step into function calls inside this expression body to look for transitive calls.
-    body.children.mapNotNull {
-      (it as? KtCallExpression)
-        ?.getResolvedCall(bindingContext)?.candidateDescriptor?.source?.getPsi() as? KtNamedFunction
-    }.forEach {
-      extractCalls(it, calls)
+    if (element is KtCallExpression) {
+      val resolvedCall = element.getResolvedCall(bindingContext)?.candidateDescriptor?.source?.getPsi() as? KtFunction
+      if (resolvedCall != null) {
+        extractCalls(resolvedCall, calls)
+      }
     }
+
+    val func = element as? KtNamedFunction
+    if (func != null) {
+      val body = requireNotNull(func.bodyExpression) { "Could not parse empty function body" }
+      val imports = func.containingKtFile.importList?.imports?.mapNotNull { it.importedFqName } ?: emptyList()
+
+      // Look for all params of type Context and extract a matcher for each based on its variable name.
+      // e.g. fun foo(ctx: Context) { ctx.call(...) } => "ctx.call(...)"
+      val callMatchers = func.valueParameters.filter {
+        it.typeReference?.resolveType()?.fqNameOrNull()?.asString() == Context::class.qualifiedName
+      }.map { ctxParam -> getCallMatcher(ctxParam.text.split(":")[0].trim()) }
+
+      val refs = callMatchers.flatMap { matcher ->
+        matcher.findAll(body.text).map {
+          val req = requireNotNull(it.groups["req"]?.value?.trim()) {
+            "Could not extract request type for outgoing verb call from ${verb.name}"
+          }
+          val verbCall = requireNotNull(it.groups["fn"]?.value?.trim()) {
+            "Could not extract module name for outgoing verb call from ${verb.name}"
+          }
+          // TODO(worstell): Figure out how to get module name when not imported from another Kt file
+          val moduleRefName = imports.filter { it.toString().contains(req) }.firstOrNull()?.moduleName()
+
+          VerbRef(
+            name = verbCall.split("::")[1].trim(),
+            module = moduleRefName ?: "",
+          )
+        }
+      }
+      calls.addAll(refs)
+    }
+
+    element.children
+      .filter { it is KtFunction || it is KtExpression }
+      .mapNotNull { it as? KtElement }
+      .forEach {
+        extractCalls(it, calls)
+      }
   }
 
   private fun KotlinType.toSchemaData(): Data {
@@ -236,7 +253,7 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
         require(
           this.toClassDescriptor().isData
             && (this.fqNameOrNull()?.asString()?.startsWith("ftl.") ?: false)
-        ) { "${this.fqNameOrNull()?.asString()} type is not supported in FTL schema" }
+        ) { "Expected module name to be in the form ftl.<module>, but was ${this.fqNameOrNull()?.asString()}" }
 
         // Make sure any nested data classes are included in the module schema.
         decls.add(Decl(data_ = this.toSchemaData()))
@@ -291,13 +308,14 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
       val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type?.toClassDescriptor()
         ?: throw IllegalStateException("Could not resolve verb return type")
       require(respClass.isData) { "Return type of verb must be a data class" }
-
-      val ctxVarName = ctxParam.text.split(":")[0].trim()
-      callMatcher = """${ctxVarName}.call\((?<fn>[^)]+),(?<req>[^)]+)\(\)\)""".toRegex(RegexOption.IGNORE_CASE)
     }
   }
 
   companion object {
+    private fun getCallMatcher(ctxVarName: String): Regex {
+      return """${ctxVarName}.call\((?<fn>[^)]+),(?<req>[^)]+)\(\)\)""".toRegex(RegexOption.IGNORE_CASE)
+    }
+
     private fun KotlinType.getTypeArguments(): List<TypeProjection> =
       this.memberScope.getDescriptorsFiltered(DescriptorKindFilter.VARIABLES)
         .flatMap { it.referencedProperty!!.type.arguments }
