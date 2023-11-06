@@ -96,7 +96,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	}
 
 	recreate := s.Recreate
-	port := ""
+	port := fmt.Sprintf("%d", s.DBPort)
 
 	if len(output) == 0 {
 		logger.Infof("Creating docker container '%s' for postgres db", ftlContainerName)
@@ -113,7 +113,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			"--user", "postgres",
 			"--restart", "always",
 			"-e", "POSTGRES_PASSWORD=secret",
-			"-p", fmt.Sprintf("%d:5432", s.DBPort),
+			"-p", fmt.Sprintf("%s:5432", port),
 			"--health-cmd=pg_isready",
 			"--health-interval=1s",
 			"--health-timeout=60s",
