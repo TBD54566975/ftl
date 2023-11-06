@@ -39,7 +39,8 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
 
         class InvalidInput(val field: String) : Exception()
 
-        data class EchoMessage(val message: String, val metadata: Map<String, String>? = null)
+        data class MapValue(val value: String)
+        data class EchoMessage(val message: String, val metadata: Map<String, MapValue>? = null)
 
         /**
          * Request to echo a message.
@@ -97,6 +98,17 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         ),
         Decl(
           data_ = Data(
+            name = "MapValue",
+            fields = listOf(
+              Field(
+                name = "value",
+                type = Type(string = xyz.block.ftl.v1.schema.String())
+              )
+            ),
+          ),
+        ),
+        Decl(
+          data_ = Data(
             name = "EchoMessage",
             fields = listOf(
               Field(
@@ -108,7 +120,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 type = Type(
                   map = Map(
                     key = xyz.block.ftl.v1.schema.Type(string = xyz.block.ftl.v1.schema.String()),
-                    value_ = xyz.block.ftl.v1.schema.Type(string = xyz.block.ftl.v1.schema.String())
+                    value_ = xyz.block.ftl.v1.schema.Type(dataRef = DataRef(name = "MapValue", module = "echo"))
                   )
                 )
               )

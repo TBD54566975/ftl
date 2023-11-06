@@ -218,16 +218,17 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
         val param = requireNotNull(property.referencedProperty?.type) { "Could not resolve data class property type" }
         Field(
           name = property.name.asString(),
-          type = param.toSchemaType(param.arguments)
+          type = param.toSchemaType()
         )
       }.toList(),
       comments = this.toClassDescriptor().findKDocString()?.trim()?.let { listOf(it) } ?: emptyList()
     )
   }
 
-  private fun KotlinType.toSchemaType(typeArguments: List<TypeProjection> = emptyList()): Type {
+  private fun KotlinType.toSchemaType(): Type {
     return when (this.fqNameOrNull()?.asString()) {
       String::class.qualifiedName -> Type(string = xyz.block.ftl.v1.schema.String())
+      Int::class.qualifiedName -> Type(int = xyz.block.ftl.v1.schema.Int())
       Long::class.qualifiedName -> Type(int = xyz.block.ftl.v1.schema.Int())
       Double::class.qualifiedName -> Type(float = xyz.block.ftl.v1.schema.Float())
       Boolean::class.qualifiedName -> Type(bool = xyz.block.ftl.v1.schema.Bool())
@@ -235,8 +236,8 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
       Map::class.qualifiedName -> {
         return Type(
           map = xyz.block.ftl.v1.schema.Map(
-            key = typeArguments.first().let { it.type.toSchemaType(it.type.getTypeArguments()) },
-            value_ = typeArguments.last().let { it.type.toSchemaType(it.type.getTypeArguments()) },
+            key = this.arguments.first().type.toSchemaType(),
+            value_ = this.arguments.last().type.toSchemaType(),
           )
         )
       }
@@ -244,7 +245,7 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
       List::class.qualifiedName -> {
         return Type(
           array = Array(
-            element = typeArguments.first().let { it.type.toSchemaType(it.type.getTypeArguments()) }
+            element = this.arguments.first().type.toSchemaType()
           )
         )
       }
