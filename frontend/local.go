@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/errors"
 
+	"github.com/TBD54566975/ftl/backend/common/cors"
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 )
@@ -18,7 +19,7 @@ import (
 var consoleURL, _ = url.Parse("http://localhost:5173")
 var proxy = httputil.NewSingleHostReverseProxy(consoleURL)
 
-func Server(ctx context.Context, timestamp time.Time, allowOrigin string) (http.Handler, error) {
+func Server(ctx context.Context, timestamp time.Time, allowOrigin *url.URL) (http.Handler, error) {
 	logger := log.FromContext(ctx)
 	logger.Infof("Building console...")
 
@@ -33,16 +34,9 @@ func Server(ctx context.Context, timestamp time.Time, allowOrigin string) (http.
 	}
 	logger.Infof("Console started")
 
-	return http.HandlerFunc(handler(allowOrigin)), nil
-}
-
-func handler(allowOrigin string) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		writeCORSHeaders(w, allowOrigin)
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		proxy.ServeHTTP(w, r)
+	if allowOrigin == nil {
+		return proxy, nil
 	}
+
+	return cors.Middleware([]string{allowOrigin.String()}, proxy), nil
 }

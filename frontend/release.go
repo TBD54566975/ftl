@@ -8,24 +8,26 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/errors"
+
+	"github.com/TBD54566975/ftl/backend/common/cors"
 )
 
 //go:embed all:dist
 var build embed.FS
 
-func Server(ctx context.Context, timestamp time.Time, allowOrigin string) (http.Handler, error) {
+func Server(ctx context.Context, timestamp time.Time, allowOrigin *url.URL) (http.Handler, error) {
 	dir, err := fs.Sub(build, "dist")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeCORSHeaders(w, allowOrigin)
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var f fs.File
 		var err error
 		filePath := strings.TrimPrefix(r.URL.Path, "/")
@@ -43,5 +45,9 @@ func Server(ctx context.Context, timestamp time.Time, allowOrigin string) (http.
 			return
 		}
 		http.ServeContent(w, r, filePath, timestamp, f.(io.ReadSeeker))
-	}), nil
+	})
+	if allowOrigin != nil {
+		handler = cors.Middleware([]string{allowOrigin.String()}, handler)
+	}
+	return handler, nil
 }

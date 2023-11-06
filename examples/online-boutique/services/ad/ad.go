@@ -29,7 +29,8 @@ type Ad struct {
 }
 
 type AdResponse struct {
-	Ads []Ad
+	Name string
+	Ads  []Ad
 }
 
 //ftl:verb
