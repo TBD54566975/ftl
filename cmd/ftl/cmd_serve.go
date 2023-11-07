@@ -133,6 +133,12 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 
 		recreate = true
 	} else {
+		// Start the existing container
+		_, err = exec.Capture(ctx, ".", "docker", "start", ftlContainerName)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+
 		// Grab the port from the existing container
 		cmdStr := fmt.Sprintf("docker port %s 5432/tcp | grep -v '\\[::\\]' | awk -F: '{print $NF}'", ftlContainerName)
 		portOutput, err := exec.Capture(ctx, ".", "sh", "-c", cmdStr)
@@ -142,6 +148,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		}
 
 		port = strings.TrimSpace(string(portOutput))
+
 		logger.Infof("Using docker container '%s' for postgres db", ftlContainerName)
 	}
 
