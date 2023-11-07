@@ -8,7 +8,9 @@ import xyz.block.ftl.logging.Logging
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.functions
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.jvm.kotlinFunction
 
@@ -56,18 +58,16 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
     ClassGraph()
       .enableAllInfo() // Scan classes, methods, fields, annotations
       .acceptPackages(jvmModuleName)
-      .scan().use { scanResult ->
-        // Use the ScanResult within the try block, e.g.
-        for (clazz in scanResult.getClassesWithMethodAnnotation(Verb::class.java)) {
-          val kClass = clazz.loadClass().kotlin
-          if (kClass.hasAnnotation<Ignore>()) return
-          clazz.methodInfo
-            .filter { info -> info.hasAnnotation(Verb::class.java) && !info.hasAnnotation(Ignore::class.java) }
-            .forEach { info ->
-              val function = info.loadClassAndGetMethod().kotlinFunction!!
-              maybeRegisterVerb(kClass, function)
-            }
+      .scan()
+      .getClassesWithMethodAnnotation(Verb::class.java)
+      .forEach {
+        val kClass = it.loadClass().kotlin
+        if (kClass.hasAnnotation<Ignore>()) {
+          return@forEach
         }
+        kClass.declaredFunctions
+          .filter { func -> func.hasAnnotation<Verb>() && !func.hasAnnotation<Ignore>() }
+          .forEach { verb -> maybeRegisterVerb(kClass, verb) }
       }
   }
 
