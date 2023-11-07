@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -90,6 +92,19 @@ type schemaGenerateCmd struct {
 func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	watch := watcher.New()
 	defer watch.Close()
+
+	absTemplatePath, err := filepath.Abs(s.Template)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	absDestPath, err := filepath.Abs(s.Dest)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if strings.HasPrefix(absDestPath, absTemplatePath) {
+		return fmt.Errorf("destination directory %s must not be inside the template directory %s", absDestPath, absTemplatePath)
+	}
 
 	logger := log.FromContext(ctx)
 	logger.Infof("Watching %s", s.Template)
