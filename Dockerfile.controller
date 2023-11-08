@@ -40,7 +40,7 @@ EXPOSE 8892
 
 ENV FTL_CONTROLLER_BIND="http://0.0.0.0:8892"
 ENV FTL_CONTROLLER_ADVERTISE="http://127.0.0.1:8892"
-ENV FTL_CONTROLLER_ALLOW_ORIGIN="*"
+ENV FTL_CONTROLLER_CONSOLE_URL="*"
 ENV FTL_CONTROLLER_DSN="postgres://host.docker.internal/ftl?sslmode=disable&user=postgres&password=secret"
 
 CMD ["/root/ftl-controller"]

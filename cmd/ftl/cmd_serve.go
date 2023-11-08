@@ -20,11 +20,12 @@ import (
 )
 
 type serveCmd struct {
-	Bind        *url.URL `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
-	DBPort      int      `help:"Port to use for the database." default:"5433"`
-	Recreate    bool     `help:"Recreate the database even if it already exists." default:"false"`
-	Controllers int      `short:"c" help:"Number of controllers to start." default:"1"`
-	Runners     int      `short:"r" help:"Number of runners to start." default:"0"`
+	Bind         *url.URL   `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
+	AllowOrigins []*url.URL `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
+	DBPort       int        `help:"Port to use for the database." default:"5433"`
+	Recreate     bool       `help:"Recreate the database even if it already exists." default:"false"`
+	Controllers  int        `short:"c" help:"Number of controllers to start." default:"1"`
+	Runners      int        `short:"r" help:"Number of runners to start." default:"0"`
 }
 
 const ftlContainerName = "ftl-db"
@@ -59,8 +60,9 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	for i := 0; i < s.Controllers; i++ {
 		i := i
 		config := controller.Config{
-			Bind: controllerAddresses[i],
-			DSN:  dsn,
+			Bind:         controllerAddresses[i],
+			DSN:          dsn,
+			AllowOrigins: s.AllowOrigins,
 		}
 		if err := kong.ApplyDefaults(&config); err != nil {
 			return errors.WithStack(err)

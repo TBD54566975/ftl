@@ -12,7 +12,6 @@ import (
 	"connectrpc.com/grpcreflect"
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/errors"
-	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -82,22 +81,7 @@ func NewServer(ctx context.Context, listen *url.URL, options ...Option) (*Server
 	reflector := grpcreflect.NewStaticReflector(opts.reflectionPaths...)
 	opts.mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	opts.mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
-
-	// TODO: Is this a good idea? Who knows!
-	crs := cors.New(cors.Options{
-		AllowedOrigins: []string{listen.String(), "http://ftl.localtest.me"},
-		AllowedMethods: []string{
-			http.MethodHead,
-			http.MethodGet,
-			http.MethodPost,
-			http.MethodPut,
-			http.MethodPatch,
-			http.MethodDelete,
-		},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: false,
-	})
-	root := crs.Handler(ContextValuesMiddleware(ctx, opts.mux))
+	root := ContextValuesMiddleware(ctx, opts.mux)
 
 	http1Server := &http.Server{
 		Handler:           h2c.NewHandler(root, &http2.Server{}),

@@ -29,6 +29,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/TBD54566975/ftl/backend/common/cors"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/rpc"
@@ -48,7 +49,8 @@ import (
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
 	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
-	AllowOrigin                  string              `help:"Allow CORS requests from this origin." default:"*" env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
+	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
+	AllowOrigins                 []*url.URL          `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
 	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
 	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
 	DSN                          string              `help:"DAL DSN." default:"postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
@@ -73,7 +75,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	logger := log.FromContext(ctx)
 	logger.Infof("Starting FTL controller")
 
-	c, err := frontend.Server(ctx, config.ContentTime, config.AllowOrigin)
+	c, err := frontend.Server(ctx, config.ContentTime, config.ConsoleURL)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -96,11 +98,16 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 
 	console := NewConsoleService(dal)
 
+	ingressHandler := http.StripPrefix("/ingress", svc)
+	if len(config.AllowOrigins) > 0 {
+		ingressHandler = cors.Middleware(slices.Map(config.AllowOrigins, func(u *url.URL) string { return u.String() }), ingressHandler)
+	}
+
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
 		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
-		rpc.HTTP("/ingress/", http.StripPrefix("/ingress", svc)),
+		rpc.HTTP("/ingress/", ingressHandler),
 		rpc.HTTP("/", c),
 	)
 }
