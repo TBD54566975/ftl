@@ -89,6 +89,14 @@ func ValidateModule(module *Module) error {
 	}
 	err := Visit(module, func(n Node, next func() error) error {
 		switch n := n.(type) {
+		case *VerbRef:
+			if n.Name == module.Name {
+				merr = append(merr, errors.Errorf("%s: references to Verbs in the same module cannot include a module name", n.Pos))
+			}
+		case *DataRef:
+			if n.Name == module.Name {
+				merr = append(merr, errors.Errorf("%s: references to Data in the same module cannot include a module name", n.Pos))
+			}
 		case *Verb:
 			if !validNameRe.MatchString(n.Name) {
 				merr = append(merr, errors.Errorf("%s: Verb name %q is invalid", n.Pos, n.Name))
@@ -117,8 +125,8 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
-		case *Array, *Bool, *DataRef, *Field, *Float, *Int,
-			*Time, *Map, *Module, *Schema, *String, *VerbRef,
+		case *Array, *Bool, *Field, *Float, *Int,
+			*Time, *Map, *Module, *Schema, *String,
 			*MetadataCalls, *MetadataIngress:
 		case Type, Metadata, Decl: // Union sql.
 		}
