@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -228,6 +229,28 @@ func (m *Module) Data() []*Data {
 		}
 	}
 	return data
+}
+
+// Imports returns the modules imported by this module.
+func (m *Module) Imports() []string {
+	imports := map[string]bool{}
+	_ = Visit(m, func(n Node, next func() error) error {
+		switch n := n.(type) {
+		case *DataRef:
+			if n.Module != "" && n.Module != m.Name {
+				imports[n.Module] = true
+			}
+
+		case *VerbRef:
+			if n.Module != "" && n.Module != m.Name {
+				imports[n.Module] = true
+			}
+
+		default:
+		}
+		return nil
+	})
+	return maps.Keys(imports)
 }
 
 type Schema struct {
