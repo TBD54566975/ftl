@@ -21,6 +21,8 @@ internal class ServerInterceptor : ServerInterceptor {
     headers: Metadata?,
     next: ServerCallHandler<ReqT, RespT>?
   ): ServerCall.Listener<ReqT> {
+    call?.setCompression("gzip")
+
     var context = Context.current()
 
     headers?.getAll(callersMetadata)?.apply {
