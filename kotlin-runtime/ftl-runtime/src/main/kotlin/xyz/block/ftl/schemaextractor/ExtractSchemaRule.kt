@@ -314,7 +314,7 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
 
   companion object {
     private fun getCallMatcher(ctxVarName: String): Regex {
-      return """${ctxVarName}.call\((?<fn>[^)]+),(?<req>[^)]+)\(\)\)""".toRegex(RegexOption.IGNORE_CASE)
+      return """${ctxVarName}.call\((?<fn>[^)]+),(?<req>[^)]+)\(.*\)\)""".toRegex(RegexOption.IGNORE_CASE)
     }
 
     private fun KotlinType.getTypeArguments(): List<TypeProjection> =
