@@ -25,6 +25,7 @@ import xyz.block.ftl.Ingress
 import xyz.block.ftl.Method
 import xyz.block.ftl.schemaextractor.SchemaExtractor.Companion.moduleName
 import xyz.block.ftl.v1.schema.*
+import xyz.block.ftl.v1.schema.Array
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
@@ -60,8 +61,8 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
     }
 
     runCatching {
-      val extractor = SchemaExtractor(this.bindingContext, annotationEntry)
       val moduleName = annotationEntry.containingKtFile.packageFqName.moduleName()
+      val extractor = SchemaExtractor(this.bindingContext, moduleName, annotationEntry)
       val moduleData = extractor.extract()
       modules[moduleName]?.let { it.decls += moduleData.decls }
         ?: run { modules[moduleName] = moduleData }
@@ -97,7 +98,11 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
 }
 
 class IgnoredModuleException : Exception()
-class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotationEntry) {
+class SchemaExtractor(
+  private val bindingContext: BindingContext,
+  private val moduleName: String,
+  annotation: KtAnnotationEntry
+) {
   private val verb: KtNamedFunction
   private val module: KtDeclaration
   private val decls: MutableSet<Decl> = mutableSetOf()
@@ -192,7 +197,8 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
             "Could not extract module name for outgoing verb call from ${verb.name}"
           }
           // TODO(worstell): Figure out how to get module name when not imported from another Kt file
-          val moduleRefName = imports.filter { it.toString().contains(req) }.firstOrNull()?.moduleName()
+          val moduleRefName = imports.firstOrNull { import -> import.toString().contains(req) }
+            ?.moduleName().takeIf { refModule -> refModule != moduleName }
 
           VerbRef(
             name = verbCall.split("::")[1].trim(),
@@ -261,7 +267,7 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
         return Type(
           dataRef = DataRef(
             name = this.toClassDescriptor().name.asString(),
-            module = this.fqNameOrNull()!!.moduleName()
+            module = this.fqNameOrNull()!!.moduleName().takeIf { it != moduleName } ?: "",
           )
         )
       }
@@ -273,7 +279,6 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
       ?: throw IllegalStateException("Could not resolve type ${this.text}")
 
   init {
-    val moduleName = annotation.containingKtFile.packageFqName.moduleName()
     requireNotNull(annotation.getElementParentDeclaration()) { "Could not extract $moduleName verb definition" }.let {
       require(it is KtNamedFunction) { "Verbs must be functions" }
       verb = it
