@@ -3,21 +3,17 @@ package xyz.block.ftl.schemaextractor
 import io.gitlab.arturbosch.detekt.api.*
 import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
-import org.jetbrains.kotlin.backend.common.serialization.metadata.findKDocString
 import org.jetbrains.kotlin.cfg.getElementParentDeclaration
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.impl.referencedProperty
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.psiUtil.getValueParameters
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.util.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.util.getType
-import org.jetbrains.kotlin.resolve.scopes.DescriptorKindFilter
-import org.jetbrains.kotlin.resolve.scopes.getDescriptorsFiltered
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
-import org.jetbrains.kotlin.types.TypeProjection
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
@@ -61,11 +57,9 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
     }
 
     runCatching {
-      val moduleName = annotationEntry.containingKtFile.packageFqName.moduleName()
-      val extractor = SchemaExtractor(this.bindingContext, moduleName, annotationEntry)
-      val moduleData = extractor.extract()
-      modules[moduleName]?.let { it.decls += moduleData.decls }
-        ?: run { modules[moduleName] = moduleData }
+      val currentModuleName = annotationEntry.containingKtFile.packageFqName.moduleName()
+      val extractor = SchemaExtractor(this.bindingContext, modules, currentModuleName, annotationEntry)
+      extractor.extract()
     }.onFailure {
       when (it) {
         is IgnoredModuleException -> return
@@ -100,13 +94,13 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
 class IgnoredModuleException : Exception()
 class SchemaExtractor(
   private val bindingContext: BindingContext,
-  private val moduleName: String,
+  private val modules: MutableMap<String, ModuleData>,
+  private val currentModuleName: String,
   annotation: KtAnnotationEntry
 ) {
   private val verb: KtNamedFunction
   private val module: KtDeclaration
-  private val decls: MutableSet<Decl> = mutableSetOf()
-  fun extract(): ModuleData {
+  fun extract() {
     val requestType = requireNotNull(verb.valueParameters.last().typeReference?.resolveType()) {
       "Could not resolve verb request type"
     }
@@ -126,15 +120,20 @@ class SchemaExtractor(
       comments = verb.comments(),
     )
 
-    decls.addAll(
-      listOf(
-        Decl(verb = verb),
-        Decl(data_ = requestType.toSchemaData()),
-        Decl(data_ = responseType.toSchemaData())
-      )
+    val moduleData = ModuleData(
+      decls = mutableSetOf(Decl(verb = verb), *extractDataDeclarations().toTypedArray()),
+      comments = module.comments()
     )
+    modules[currentModuleName]?.decls?.addAll(moduleData.decls) ?: run {
+      modules[currentModuleName] = moduleData
+    }
+  }
 
-    return ModuleData(decls = decls, comments = module.comments())
+  private fun extractDataDeclarations(): Set<Decl> {
+    return verb.containingKtFile.children
+      .filter { it is KtClass && it.isData() }
+      .map { Decl(data_ = (it as KtClass).toSchemaData()) }
+      .toSet()
   }
 
   private fun extractIngress(): MetadataIngress? {
@@ -198,7 +197,7 @@ class SchemaExtractor(
           }
           // TODO(worstell): Figure out how to get module name when not imported from another Kt file
           val moduleRefName = imports.firstOrNull { import -> import.toString().contains(req) }
-            ?.moduleName().takeIf { refModule -> refModule != moduleName }
+            ?.moduleName().takeIf { refModule -> refModule != currentModuleName }
 
           VerbRef(
             name = verbCall.split("::")[1].trim(),
@@ -217,17 +216,16 @@ class SchemaExtractor(
       }
   }
 
-  private fun KotlinType.toSchemaData(): Data {
+  private fun KtClass.toSchemaData(): Data {
     return Data(
-      name = this.toClassDescriptor().name.asString(),
-      fields = this.memberScope.getDescriptorsFiltered(DescriptorKindFilter.VARIABLES).map { property ->
-        val param = requireNotNull(property.referencedProperty?.type) { "Could not resolve data class property type" }
+      name = this.name!!,
+      fields = this.getValueParameters().map { param ->
         Field(
-          name = property.name.asString(),
-          type = param.toSchemaType()
+          name = param.name!!,
+          type = param.typeReference?.resolveType()?.toSchemaType()
         )
       }.toList(),
-      comments = this.toClassDescriptor().findKDocString()?.trim()?.let { listOf(it) } ?: emptyList()
+      comments = this.comments()
     )
   }
 
@@ -261,13 +259,10 @@ class SchemaExtractor(
           this.toClassDescriptor().isData
             && (this.fqNameOrNull()?.asString()?.startsWith("ftl.") ?: false)
         ) { "Expected module name to be in the form ftl.<module>, but was ${this.fqNameOrNull()?.asString()}" }
-
-        // Make sure any nested data classes are included in the module schema.
-        decls.add(Decl(data_ = this.toSchemaData()))
         return Type(
           dataRef = DataRef(
             name = this.toClassDescriptor().name.asString(),
-            module = this.fqNameOrNull()!!.moduleName().takeIf { it != moduleName } ?: "",
+            module = this.fqNameOrNull()!!.moduleName().takeIf { it != currentModuleName } ?: "",
           )
         )
       }
@@ -279,11 +274,11 @@ class SchemaExtractor(
       ?: throw IllegalStateException("Could not resolve type ${this.text}")
 
   init {
-    requireNotNull(annotation.getElementParentDeclaration()) { "Could not extract $moduleName verb definition" }.let {
+    requireNotNull(annotation.getElementParentDeclaration()) { "Could not extract $currentModuleName verb definition" }.let {
       require(it is KtNamedFunction) { "Verbs must be functions" }
       verb = it
     }
-    module = requireNotNull(verb.getElementParentDeclaration()) { "Could not extract $moduleName definition" }
+    module = requireNotNull(verb.getElementParentDeclaration()) { "Could not extract $currentModuleName definition" }
 
     // Skip ignored modules.
     if (module.annotationEntries.firstOrNull {
@@ -321,10 +316,6 @@ class SchemaExtractor(
     private fun getCallMatcher(ctxVarName: String): Regex {
       return """${ctxVarName}.call\((?<fn>[^)]+),(?<req>[^)]+)\(.*\)\)""".toRegex(RegexOption.IGNORE_CASE)
     }
-
-    private fun KotlinType.getTypeArguments(): List<TypeProjection> =
-      this.memberScope.getDescriptorsFiltered(DescriptorKindFilter.VARIABLES)
-        .flatMap { it.referencedProperty!!.type.arguments }
 
     private fun KotlinType.toClassDescriptor(): ClassDescriptor =
       this.unwrap().constructor.declarationDescriptor as? ClassDescriptor
