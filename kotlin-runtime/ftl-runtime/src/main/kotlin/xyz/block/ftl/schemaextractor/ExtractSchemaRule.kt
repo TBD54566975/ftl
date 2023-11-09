@@ -152,7 +152,7 @@ class SchemaExtractor(val bindingContext: BindingContext, annotation: KtAnnotati
       }
       MetadataIngress(
         path = pathArg,
-        method = methodArg,
+        method = methodArg.substringAfter("."),
       )
     }
   }
