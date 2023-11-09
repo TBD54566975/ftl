@@ -89,6 +89,19 @@ module todo {
 	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(schema.String()))
 }
 
+func TestImports(t *testing.T) {
+	input := `
+	module test {
+		data Data {
+			ref other.Data
+		}
+	}
+	`
+	schema, err := ParseModuleString("", input)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"other"}, schema.Imports())
+}
+
 func TestVisit(t *testing.T) {
 	expected := `
 Schema

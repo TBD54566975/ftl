@@ -248,7 +248,7 @@ func (m *Module) Imports() []string {
 
 		default:
 		}
-		return nil
+		return next()
 	})
 	return maps.Keys(imports)
 }
