@@ -177,6 +177,7 @@
                             ${project.build.directory}/dependency/ftl-runtime-${ftl.version}.jar
                         </plugin>
                     </plugins>
+                    <input>${project.basedir}</input>
                 </configuration>
                 <executions>
                     <execution>
