@@ -157,7 +157,7 @@ class SchemaExtractor(
       }
       MetadataIngress(
         path = pathArg,
-        method = methodArg,
+        method = methodArg.substringAfter("."),
       )
     }
   }
