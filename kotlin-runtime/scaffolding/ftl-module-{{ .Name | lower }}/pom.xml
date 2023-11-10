@@ -6,4 +6,37 @@
     <groupId>ftl</groupId>
     <artifactId>ftl-module-{{ .Name | camel | lower }}</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <parent>
+        <groupId>{{ .GroupID }}</groupId>
+        <artifactId>{{ .ArtifactID }}</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <groupId>org.jetbrains.kotlin</groupId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+            </plugin>
+            <!-- Run ftl-generator to generate stubs -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+            </plugin>
+            <!-- Add generated sources to the classpath -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+            </plugin>
+            <!-- Extract schema -->
+            <plugin>
+                <groupId>com.github.ozsie</groupId>
+                <artifactId>detekt-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
