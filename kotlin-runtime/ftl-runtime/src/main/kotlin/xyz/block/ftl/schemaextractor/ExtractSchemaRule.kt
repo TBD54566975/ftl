@@ -5,6 +5,7 @@ import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
 import org.jetbrains.kotlin.cfg.getElementParentDeclaration
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
+import org.jetbrains.kotlin.js.descriptorUtils.getKotlinTypeFqName
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getValueParameters
@@ -14,12 +15,13 @@ import org.jetbrains.kotlin.resolve.calls.util.getType
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.getAbbreviation
+import org.jetbrains.kotlin.types.typeUtil.requiresTypeAliasExpansion
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Ingress
 import xyz.block.ftl.Method
-import xyz.block.ftl.schemaextractor.SchemaExtractor.Companion.moduleName
 import xyz.block.ftl.v1.schema.*
 import xyz.block.ftl.v1.schema.Array
 import java.io.File
@@ -29,7 +31,6 @@ import java.time.OffsetDateTime
 import kotlin.Boolean
 import kotlin.String
 import kotlin.collections.Map
-import kotlin.collections.set
 import kotlin.io.path.createDirectories
 
 data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
@@ -57,8 +58,7 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
     }
 
     runCatching {
-      val currentModuleName = annotationEntry.containingKtFile.packageFqName.moduleName()
-      val extractor = SchemaExtractor(this.bindingContext, modules, currentModuleName, annotationEntry)
+      val extractor = SchemaExtractor(this.bindingContext, modules, annotationEntry)
       extractor.extract()
     }.onFailure {
       when (it) {
@@ -69,25 +69,28 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
   }
 
   override fun postVisit(root: KtFile) {
-    val outputDirectory = File(output).also { Path.of(it.absolutePath).createDirectories() }
-
-    modules.toModules().forEach {
+    modules.toModules().ifNotEmpty {
+      require(modules.size == 1) {
+        "Each FTL module must define its own pom.xml; cannot be shared across" +
+          " multiple modules"
+      }
+      val outputDirectory = File(output).also { Path.of(it.absolutePath).createDirectories() }
       val file = File(outputDirectory.absolutePath, OUTPUT_FILENAME)
       file.createNewFile()
       val os = FileOutputStream(file)
-      os.write(it.encode())
+      os.write(this.single().encode())
       os.close()
+    }
+  }
+
+  private fun Map<String, ModuleData>.toModules(): List<Module> {
+    return this.map {
+      Module(name = it.key, decls = it.value.decls.sortedBy { it.data_ == null }, comments = it.value.comments)
     }
   }
 
   companion object {
     const val OUTPUT_FILENAME = "schema.pb"
-
-    private fun Map<String, ModuleData>.toModules(): List<Module> {
-      return this.map {
-        Module(name = it.key, decls = it.value.decls.sortedBy { it.data_ == null }, comments = it.value.comments)
-      }
-    }
   }
 }
 
@@ -95,17 +98,62 @@ class IgnoredModuleException : Exception()
 class SchemaExtractor(
   private val bindingContext: BindingContext,
   private val modules: MutableMap<String, ModuleData>,
-  private val currentModuleName: String,
   annotation: KtAnnotationEntry
 ) {
   private val verb: KtNamedFunction
   private val module: KtDeclaration
+  private val currentModuleName: String
+
+  init {
+    currentModuleName = annotation.containingKtFile.packageFqName.extractModuleName()
+    requireNotNull(annotation.getElementParentDeclaration()) { "Could not extract $currentModuleName verb definition" }.let {
+      require(it is KtNamedFunction) { "Failure extracting ${it.name}; verbs must be functions" }
+      verb = it
+    }
+    module = requireNotNull(verb.getElementParentDeclaration()) { "Could not extract $currentModuleName definition" }
+
+    // Skip ignored modules.
+    if (module.annotationEntries.firstOrNull {
+        bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Ignore::class.qualifiedName
+      } != null) {
+      throw IgnoredModuleException()
+    }
+
+    requireNotNull(verb.fqName?.asString()) {
+      "Verbs must be defined in a package"
+    }.let { fqName ->
+      require(fqName.split(".").let { it.size >= 2 && it.first() == "ftl" }) {
+        "Expected @Verb to be in package ftl.<module>, but was $fqName"
+      }
+
+      // Validate parameters
+      require(verb.valueParameters.size == 2) { "Verbs must have exactly two arguments, ${verb.name} did not" }
+      val ctxParam = verb.valueParameters.first()
+      val reqParam = verb.valueParameters.last()
+      require(ctxParam.typeReference?.resolveType()?.fqNameOrNull()?.asString() == Context::class.qualifiedName) {
+        "First argument of verb must be Context"
+      }
+
+      require(reqParam.typeReference?.resolveType()
+        ?.let { it.toClassDescriptor().isData || it.isEmptyClassTypeAlias() }
+        ?: false
+      ) {
+        "Second argument of ${verb.name} must be a data class or typealias of Unit"
+      }
+
+      // Validate return type
+      val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type?.toClassDescriptor()
+        ?: throw IllegalStateException("Could not resolve ${verb.name} return type")
+      require(respClass.isData) { "Return type of ${verb.name} must be a data class" }
+    }
+  }
+
   fun extract() {
     val requestType = requireNotNull(verb.valueParameters.last().typeReference?.resolveType()) {
-      "Could not resolve verb request type"
+      "Could not resolve request type for ${verb.name}"
     }
     val responseType = requireNotNull(verb.createTypeBindingForReturnType(bindingContext)?.type) {
-      "Could not resolve verb response type"
+      "Could not resolve response type for ${verb.name}"
     }
 
     val metadata = mutableListOf<Metadata>()
@@ -131,8 +179,11 @@ class SchemaExtractor(
 
   private fun extractDataDeclarations(): Set<Decl> {
     return verb.containingKtFile.children
-      .filter { it is KtClass && it.isData() }
-      .map { Decl(data_ = (it as KtClass).toSchemaData()) }
+      .filter { (it is KtClass && it.isData()) || it is KtTypeAlias }
+      .mapNotNull {
+        val data = (it as? KtClass)?.toSchemaData() ?: (it as? KtTypeAlias)?.toSchemaData()
+        data?.let { Decl(data_ = data) }
+      }
       .toSet()
   }
 
@@ -178,7 +229,7 @@ class SchemaExtractor(
 
     val func = element as? KtNamedFunction
     if (func != null) {
-      val body = requireNotNull(func.bodyExpression) { "Could not parse empty function body" }
+      val body = requireNotNull(func.bodyExpression) { "Function body cannot be empty; was in ${func.name}" }
       val imports = func.containingKtFile.importList?.imports?.mapNotNull { it.importedFqName } ?: emptyList()
 
       // Look for all params of type Context and extract a matcher for each based on its variable name.
@@ -197,7 +248,7 @@ class SchemaExtractor(
           }
           // TODO(worstell): Figure out how to get module name when not imported from another Kt file
           val moduleRefName = imports.firstOrNull { import -> import.toString().contains(req) }
-            ?.moduleName().takeIf { refModule -> refModule != currentModuleName }
+            ?.extractModuleName().takeIf { refModule -> refModule != currentModuleName }
 
           VerbRef(
             name = verbCall.split("::")[1].trim(),
@@ -214,6 +265,13 @@ class SchemaExtractor(
       .forEach {
         extractCalls(it, calls)
       }
+  }
+
+  private fun KtTypeAlias.toSchemaData(): Data {
+    return Data(
+      name = this.name!!,
+      comments = this.comments()
+    )
   }
 
   private fun KtClass.toSchemaData(): Data {
@@ -255,14 +313,30 @@ class SchemaExtractor(
       }
 
       else -> {
-        require(
-          this.toClassDescriptor().isData
-            && (this.fqNameOrNull()?.asString()?.startsWith("ftl.") ?: false)
-        ) { "Expected module name to be in the form ftl.<module>, but was ${this.fqNameOrNull()?.asString()}" }
+        require(this.toClassDescriptor().isData || this.isEmptyClassTypeAlias()) {
+          "Expected type to be a data class or typealias of Unit, but was ${this.fqNameOrNull()?.asString()}"
+        }
+
+        var refName: String
+        var fqName: String
+        if (this.isEmptyClassTypeAlias()) {
+          this.unwrap().getAbbreviation()!!.run {
+            fqName = this.getKotlinTypeFqName(false)
+            refName = this.constructor.declarationDescriptor?.name?.asString()!!
+          }
+        } else {
+          fqName = this.fqNameOrNull()!!.asString()
+          refName = this.toClassDescriptor().name.asString()
+        }
+
+        require(fqName.startsWith("ftl.")) {
+          "Expected module name to be in the form ftl.<module>, but was ${this.fqNameOrNull()?.asString()}"
+        }
+
         return Type(
           dataRef = DataRef(
-            name = this.toClassDescriptor().name.asString(),
-            module = this.fqNameOrNull()!!.moduleName().takeIf { it != currentModuleName } ?: "",
+            name = refName,
+            module = fqName.extractModuleName().takeIf { it != currentModuleName } ?: "",
           )
         )
       }
@@ -273,45 +347,6 @@ class SchemaExtractor(
     bindingContext.get(BindingContext.TYPE, this)
       ?: throw IllegalStateException("Could not resolve type ${this.text}")
 
-  init {
-    requireNotNull(annotation.getElementParentDeclaration()) { "Could not extract $currentModuleName verb definition" }.let {
-      require(it is KtNamedFunction) { "Verbs must be functions" }
-      verb = it
-    }
-    module = requireNotNull(verb.getElementParentDeclaration()) { "Could not extract $currentModuleName definition" }
-
-    // Skip ignored modules.
-    if (module.annotationEntries.firstOrNull {
-        bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Ignore::class.qualifiedName
-      } != null) {
-      throw IgnoredModuleException()
-    }
-
-    requireNotNull(verb.fqName?.asString()) {
-      "Verbs must be defined in a package"
-    }.let { fqName ->
-      require(fqName.split(".").let { it.size >= 2 && it.first() == "ftl" }) {
-        "Expected @Verb to be in package ftl.<module>, but was $fqName"
-      }
-
-      // Validate parameters
-      require(verb.valueParameters.size == 2) { "Verbs must have exactly two arguments" }
-      val ctxParam = verb.valueParameters.first()
-      val reqParam = verb.valueParameters.last()
-      require(ctxParam.typeReference?.resolveType()?.fqNameOrNull()?.asString() == Context::class.qualifiedName) {
-        "First argument of verb must be Context"
-      }
-      require(reqParam.typeReference?.resolveType()?.toClassDescriptor()?.isData ?: false) {
-        "Second argument of verb must be a data class"
-      }
-
-      // Validate return type
-      val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type?.toClassDescriptor()
-        ?: throw IllegalStateException("Could not resolve verb return type")
-      require(respClass.isData) { "Return type of verb must be a data class" }
-    }
-  }
-
   companion object {
     private fun getCallMatcher(ctxVarName: String): Regex {
       return """${ctxVarName}.call\((?<fn>[^)]+),(?<req>[^)]+)\(.*\)\)""".toRegex(RegexOption.IGNORE_CASE)
@@ -321,12 +356,23 @@ class SchemaExtractor(
       this.unwrap().constructor.declarationDescriptor as? ClassDescriptor
         ?: throw IllegalStateException("Could not resolve KotlinType to class")
 
-    fun FqName.moduleName(): String {
-      return this.asString().split(".")[1]
+    fun FqName.extractModuleName(): String {
+      return this.asString().extractModuleName()
+    }
+
+    private fun String.extractModuleName(): String {
+      return this.split(".")[1]
     }
 
     private fun KtDeclaration.comments(): List<String> {
       return this.docComment?.text?.trim()?.let { listOf(it) } ?: emptyList()
+    }
+
+    // `typealias <name> = Unit` can be used in Kotlin to declare an empty FTL data type.
+    // This is a workaround to support empty objects in the FTL schema despite being unsupported by Kotlin data classes.
+    private fun KotlinType.isEmptyClassTypeAlias(): Boolean {
+      return this.fqNameOrNull()?.asString() == Unit::class.qualifiedName
+        && (this.unwrap().getAbbreviation()?.requiresTypeAliasExpansion() ?: false)
     }
   }
 }
