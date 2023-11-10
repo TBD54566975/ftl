@@ -16,7 +16,7 @@ build_release() {
   bit build/release/ftl-controller \
     build/release/ftl-runner \
     build/release/ftl \
-    kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT-jar-with-dependencies.jar \
+    kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT.jar \
     kotlin-runtime/ftl-generator/target/ftl-generator-1.0-SNAPSHOT-jar-with-dependencies.jar \
     build/template/ftl/jars/ftl-runtime.jar
 }

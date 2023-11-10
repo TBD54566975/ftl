@@ -89,7 +89,6 @@
                                     <groupId>xyz.block</groupId>
                                     <artifactId>ftl-runtime</artifactId>
                                     <version>${ftl.version}</version>
-                                    <classifier>jar-with-dependencies</classifier>
                                     <destFileName>ftl-runtime.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
