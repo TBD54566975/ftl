@@ -32,7 +32,7 @@ COMMON_LOG_IN = backend/common/log/api.go
 COMMON_LOG_OUT = backend/common/log/log_level_string.go
 
 KT_RUNTIME_IN = kotlin-runtime/ftl-runtime/**/*.{kt,kts} pom.xml kotlin-runtime/ftl-runtime/**/pom.xml
-KT_RUNTIME_OUT = kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT-jar-with-dependencies.jar
+KT_RUNTIME_OUT = kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT.jar
 KT_RUNTIME_RUNNER_TEMPLATE_OUT = build/template/ftl/jars/ftl-runtime.jar
 
 KT_GENERATOR_IN = kotlin-runtime/ftl-generator/**/*.{kt,kts} pom.xml kotlin-runtime/ftl-runtime/**/pom.xml %{KT_RUNTIME_OUT}
