@@ -31,8 +31,10 @@ func (i initGoCmd) Run(parent *initCmd) error {
 }
 
 type initKotlinCmd struct {
-	Dir  string `arg:"" default:"." help:"Directory to initialize the module in."`
-	Name string `short:"n" help:"Name of the FTL module (defaults to name of directory)."`
+	GroupID    string `short:"g" help:"Base Maven group ID (defaults to \"ftl\")." default:"ftl"`
+	ArtifactID string `short:"a" help:"Base Maven artifact ID (defaults to \"ftl\")." default:"ftl"`
+	Name       string `short:"n" help:"Name of the FTL module (defaults to name of directory)."`
+	Dir        string `arg:"" default:"." help:"Directory to initialize the module in."`
 }
 
 func (i *initKotlinCmd) Run(parent *initCmd) error {

@@ -57,6 +57,15 @@ deploy_echo_kotlin() (
   ftl deploy target
 )
 
+deploy_fresh_kotlin() (
+  info "Deploying newly initialised Kotlin module"
+  rm -rf build/echo2
+  ftl init kotlin -n echo2 build/echo2
+  cd build/echo2
+  mvn compile
+  ftl deploy target
+)
+
 deploy_time_go() (
   info "Deploying time"
   cd examples
@@ -66,7 +75,7 @@ deploy_time_go() (
 )
 
 wait_for_deploys() {
-  wait_for "deployments to come up" 'ftl status | jq -r ".routes[].module" | sort | paste -sd " " - | grep -q "echo time"'
+  wait_for "deployments to come up" 'ftl status | jq -r ".routes[].module" | sort | paste -sd " " - | grep -q "echo echo2 time"'
 }
 
 build_release
@@ -76,10 +85,14 @@ start_cluster
 # Cluster is up, start interacting with it.
 deploy_time_go
 deploy_echo_kotlin
+deploy_fresh_kotlin
 
 wait_for_deploys
 
 info "Calling echo"
 message="$(ftl call echo.echo '{"name": "Alice"}' | jq -r .message)"
 [[ "$message" =~ "Hello, Alice! The time is " ]] || error "Unexpected response from echo: $message"
+
+message="$(ftl call echo2.echo '{"name": "Alice"}' | jq -r .message)"
+[[ "$message" =~ "Hello, Alice!" ]] || error "Unexpected response from echo2: $message"
 info "Success!"
