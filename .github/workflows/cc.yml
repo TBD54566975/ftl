@@ -1,0 +1,24 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+name: Conventional Commits
+jobs:
+  cc:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: cashapp/activate-hermit@v1
+      - name: Update PR title
+        run: |
+          orig="${{ github.event.pull_request.title }}"
+          modified="$(gptcc "$orig")"
+          diff -u <(echo "$orig") <(echo "$modified") | tail +4 || true
+          gh pr edit --title "$modified"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
