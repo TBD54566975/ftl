@@ -12,7 +12,7 @@ jobs:
       - uses: cashapp/activate-hermit@v1
       - name: Update PR title
         run: |
-          orig="${{ github.event.pull_request.title }}"
+          orig='${{ github.event.pull_request.title }}'
           modified="$(gptcc "$orig")"
           diff -u <(echo "$orig") <(echo "$modified") | tail +4 || true
           gh pr edit --title "$modified"

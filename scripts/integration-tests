@@ -13,17 +13,10 @@ error() {
 
 build_release() {
   info "Building release"
-  bit build/release/ftl-controller \
-    build/release/ftl-runner \
-    build/release/ftl \
+  bit build/release/ftl \
     kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT.jar \
     kotlin-runtime/ftl-generator/target/ftl-generator-1.0-SNAPSHOT-jar-with-dependencies.jar \
     build/template/ftl/jars/ftl-runtime.jar
-}
-
-wipe_database() {
-  info "Initialising database"
-  ftl-initdb --recreate
 }
 
 wait_for() {
@@ -45,7 +38,7 @@ stop_cluster() {
 
 start_cluster() {
   info "Starting cluster"
-  goreman -logtime=false -f Procfile.integration start &
+  ftl serve --recreate &
   wait_for "cluster to become ready" "ftl status"
   trap stop_cluster EXIT INT TERM
 }
@@ -59,27 +52,29 @@ deploy_echo_kotlin() (
 
 deploy_fresh_kotlin() (
   info "Deploying newly initialised Kotlin module"
-  rm -rf build/echo2
-  ftl init kotlin build/modules echo2
-  cd build/modules/ftl-module-echo2
+  IT_MODULES=build/modules
+  rm -rf "${IT_MODULES}"
+  ftl init kotlin "${IT_MODULES}" echo2
+  ftl init kotlin "${IT_MODULES}" echo3
+  cd "${IT_MODULES}"
   mvn compile
-  ftl deploy target
+  ftl deploy ftl-module-echo2/target
+  ftl deploy ftl-module-echo3/target
 )
 
 deploy_time_go() (
   info "Deploying time"
   cd examples
   # Pull a supported platforms from the cluster.
-  platform="$(ftl status | jq -r '.runners[].labels | "\(.os)-\(.arch)"' | sort | uniq | head -1)"
+  platform="$(ftl status | jq -r '(.runners // [])[].labels | "\(.os)-\(.arch)"' | sort | uniq | head -1)"
   ftl-go --os "${platform%-*}" --arch "${platform#*-}" deploy time
 )
 
 wait_for_deploys() {
-  wait_for "deployments to come up" 'ftl status | jq -r ".routes[].module" | sort | paste -sd " " - | grep -q "echo echo2 time"'
+  wait_for "deployments to come up" 'ftl status | jq -r "(.routes // [])[].module" | sort | paste -sd " " - | grep -q "echo echo2 echo3 time"'
 }
 
 build_release
-wipe_database
 start_cluster
 
 # Cluster is up, start interacting with it.
@@ -95,4 +90,8 @@ message="$(ftl call echo.echo '{"name": "Alice"}' | jq -r .message)"
 
 message="$(ftl call echo2.echo '{"name": "Alice"}' | jq -r .message)"
 [[ "$message" =~ "Hello, Alice!" ]] || error "Unexpected response from echo2: $message"
+
+message="$(ftl call echo3.echo '{"name": "Alice"}' | jq -r .message)"
+[[ "$message" =~ "Hello, Alice!" ]] || error "Unexpected response from echo2: $message"
+
 info "Success!"

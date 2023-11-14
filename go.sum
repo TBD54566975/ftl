@@ -30,6 +30,8 @@ github.com/alessio/shellescape v1.4.1 h1:V7yhSDDn8LP4lc4jS8pFkt0zCnzVJlG5JXy9BVK
 github.com/alessio/shellescape v1.4.1/go.mod h1:PZAiSCk0LJaZkiCSkPv8qIobYglO3FPpyFjDCtHLS30=
 github.com/amacneil/dbmate/v2 v2.7.0 h1:aaTyfVPxf01KyIx5E0i/OATygrit2hjivyKSX0YSJxI=
 github.com/amacneil/dbmate/v2 v2.7.0/go.mod h1:I13evRylGros6OXuJij+oskvr+YMaPvSD9Z7PNucXWA=
+github.com/beevik/etree v1.2.0 h1:l7WETslUG/T+xOPs47dtd6jov2Ii/8/OjCldk5fYfQw=
+github.com/beevik/etree v1.2.0/go.mod h1:aiPf89g/1k3AShMVAzriilpcE4R/Vuor90y83zVZWFc=
 github.com/bool64/dev v0.2.31 h1:OS57EqYaYe2M/2bw9uhDCIFiZZwywKFS/4qMLN6JUmQ=
 github.com/bool64/dev v0.2.31/go.mod h1:iJbh1y/HkunEPhgebWRNcs8wfGq7sjvJ6W5iabL8ACg=
 github.com/bool64/shared v0.1.5 h1:fp3eUhBsrSjNCQPcSdQqZxxh9bBwrYiZ+zOKFkM0/2E=
