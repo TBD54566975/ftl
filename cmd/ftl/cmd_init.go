@@ -8,11 +8,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/errors"
+	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
 
-	goruntime "github.com/TBD54566975/ftl/go-runtime"
+	"github.com/TBD54566975/scaffolder"
+
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
 )
@@ -32,7 +33,13 @@ func (i initGoCmd) Run(parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
-	return errors.WithStack(scaffold(goruntime.Files, parent.Hermit, i.Dir, i))
+	tmpDir, err := unzipToTmpDir(kotlinruntime.Files)
+	if err != nil {
+		return errors.Wrap(err, "failed to unzip kotlin runtime")
+	}
+	defer os.RemoveAll(tmpDir)
+
+	return errors.WithStack(scaffold(parent.Hermit, tmpDir, i.Dir, i))
 }
 
 type initKotlinCmd struct {
@@ -42,28 +49,80 @@ type initKotlinCmd struct {
 	Name       string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
-func (i *initKotlinCmd) Run(parent *initCmd) error {
+func (i initKotlinCmd) Run(parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
-	return errors.WithStack(scaffold(kotlinruntime.Files, parent.Hermit, i.Dir, i))
-}
 
-func scaffold(reader *zip.Reader, hermit bool, dir string, ctx any) error {
-	tmpDir, err := os.MkdirTemp("", "ftl-init-*")
+	if _, err := os.Stat(filepath.Join(i.Dir, i.Name)); err == nil {
+		return errors.Errorf("module directory %s already exists", filepath.Join(i.Dir, i.Name))
+	}
+
+	options := []scaffolder.Option{}
+
+	// Update root POM if it already exists.
+	pomFile := filepath.Join(i.Dir, "pom.xml")
+	if _, err := os.Stat(pomFile); err == nil {
+		options = append(options, scaffolder.Exclude("pom.xml"))
+		if err := updatePom(pomFile, i.Name); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	tmpDir, err := unzipToTmpDir(kotlinruntime.Files)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to unzip kotlin runtime")
 	}
 	defer os.RemoveAll(tmpDir)
-	err = internal.UnzipDir(reader, tmpDir)
+
+	return errors.WithStack(scaffold(parent.Hermit, tmpDir, i.Dir, i, options...))
+}
+
+func updatePom(pomFile, name string) error {
+	tree := etree.NewDocument()
+	err := tree.ReadFromFile(pomFile)
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
+	// Add new module entry to root of XML file
+	root := tree.Root()
+	modules := root.SelectElement("modules")
+	if modules == nil {
+		modules = root.CreateElement("modules")
+	}
+	modules.CreateText("    ")
+	module := modules.CreateElement("module")
+	module.SetText("ftl-module-" + name)
+	modules.CreateText("\n    ")
+
+	// Write updated XML file back to disk
+	err = tree.WriteToFile(pomFile)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func unzipToTmpDir(reader *zip.Reader) (string, error) {
+	tmpDir, err := os.MkdirTemp("", "ftl-init-*")
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	err = internal.UnzipDir(reader, tmpDir)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	return tmpDir, nil
+}
+
+func scaffold(hermit bool, source string, destination string, ctx any, options ...scaffolder.Option) error {
 	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("go.mod")}
 	if !hermit {
 		opts = append(opts, scaffolder.Exclude("bin"))
 	}
-	if err := scaffolder.Scaffold(tmpDir, dir, ctx, opts...); err != nil {
+	opts = append(opts, options...)
+	if err := scaffolder.Scaffold(source, destination, ctx, opts...); err != nil {
 		return errors.Wrap(err, "failed to scaffold")
 	}
 	return nil
