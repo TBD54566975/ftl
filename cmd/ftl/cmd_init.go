@@ -53,7 +53,7 @@ func (i initKotlinCmd) Run(parent *initCmd) error {
 		i.Name = filepath.Base(i.Dir)
 	}
 
-	if _, err := os.Stat(filepath.Join(i.Dir, i.Name)); err == nil {
+	if _, err := os.Stat(filepath.Join(i.Dir, "ftl-module-"+i.Name)); err == nil {
 		return errors.Errorf("module directory %s already exists", filepath.Join(i.Dir, i.Name))
 	}
 
