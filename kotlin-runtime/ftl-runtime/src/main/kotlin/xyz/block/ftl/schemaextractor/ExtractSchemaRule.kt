@@ -142,9 +142,11 @@ class SchemaExtractor(
       }
 
       // Validate return type
-      val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type?.toClassDescriptor()
+      val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type
         ?: throw IllegalStateException("Could not resolve ${verb.name} return type")
-      require(respClass.isData) { "Return type of ${verb.name} must be a data class" }
+      require(respClass.toClassDescriptor().isData || respClass.isEmptyClassTypeAlias()) {
+        "Return type of ${verb.name} must be a data class or typealias of Unit"
+      }
     }
   }
 
