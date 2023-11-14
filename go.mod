@@ -33,7 +33,7 @@ require (
 )
 
 require (
-	github.com/alecthomas/repr v0.2.0 // indirect
+	github.com/alecthomas/repr v0.3.0 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/danieljoos/wincred v1.1.0 // indirect
@@ -61,8 +61,8 @@ require (
 require (
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/otelconnect v0.5.0
-	github.com/TBD54566975/scaffolder v0.0.0-20231026011825-304b47f65b46
-	github.com/alecthomas/assert/v2 v2.3.0
+	github.com/TBD54566975/scaffolder v0.3.0
+	github.com/alecthomas/assert/v2 v2.4.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/errors v0.4.0

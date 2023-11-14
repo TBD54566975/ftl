@@ -9,16 +9,15 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/errors"
 	"github.com/golang/protobuf/proto"
-	"github.com/otiai10/copy"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -177,10 +176,7 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 		return errors.WithStack(err)
 	}
 	for _, module := range modules {
-		if err := copy.Copy(s.Template, s.Dest); err != nil {
-			return errors.WithStack(err)
-		}
-		if err := internal.Scaffold(s.Dest, module); err != nil {
+		if err := scaffolder.Scaffold(s.Template, s.Dest, module, scaffolder.Functions(scaffoldFuncs)); err != nil {
 			return errors.WithStack(err)
 		}
 	}

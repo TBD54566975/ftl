@@ -60,8 +60,8 @@ deploy_echo_kotlin() (
 deploy_fresh_kotlin() (
   info "Deploying newly initialised Kotlin module"
   rm -rf build/echo2
-  ftl init kotlin -n echo2 build/echo2
-  cd build/echo2/ftl-module-echo2
+  ftl init kotlin build/modules echo2
+  cd build/modules/ftl-module-echo2
   mvn compile
   ftl deploy target
 )
