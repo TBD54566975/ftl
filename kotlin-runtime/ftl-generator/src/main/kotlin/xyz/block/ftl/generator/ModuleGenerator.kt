@@ -1,16 +1,7 @@
 package xyz.block.ftl.generator
 
-import com.squareup.kotlinpoet.AnnotationSpec
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.TypeVariableName
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Ingress
@@ -59,7 +50,7 @@ class ModuleGenerator() {
       )
 
     val types = module.decls.mapNotNull { it.data_ }
-    types.forEach { file.addType(buildDataClass(it)) }
+    types.forEach { file.addType(buildDataClass(it, namespace)) }
 
     val verbs = module.decls.mapNotNull { it.verb }
     verbs.forEach { moduleClass.addFunction(buildVerbFunction(className, it)) }
@@ -68,7 +59,7 @@ class ModuleGenerator() {
     return file.build()
   }
 
-  private fun buildDataClass(type: Data): TypeSpec {
+  private fun buildDataClass(type: Data, namespace: String): TypeSpec {
     val dataClassBuilder = TypeSpec.classBuilder(type.name)
       .addModifiers(KModifier.DATA)
       .addKdoc(type.comments.joinToString("\n"))
@@ -77,9 +68,9 @@ class ModuleGenerator() {
     type.fields.forEach { field ->
       dataClassBuilder.addKdoc(field.comments.joinToString("\n"))
       field.type?.let {
-        dataConstructorBuilder.addParameter(field.name, getTypeClass(it))
+        dataConstructorBuilder.addParameter(field.name, getTypeClass(it, namespace))
         dataClassBuilder.addProperty(
-          PropertySpec.builder(field.name, getTypeClass(it)).initializer(field.name).build()
+          PropertySpec.builder(field.name, getTypeClass(it, namespace)).initializer(field.name).build()
         )
       }
     }
@@ -135,7 +126,7 @@ class ModuleGenerator() {
     return verbFunBuilder.build()
   }
 
-  private fun getTypeClass(type: Type): TypeName {
+  private fun getTypeClass(type: Type, namespace: String): TypeName {
     return when {
       type.int != null -> ClassName("kotlin", "Long")
       type.float != null -> ClassName("kotlin", "Float")
@@ -146,7 +137,7 @@ class ModuleGenerator() {
         val element = type.array?.element ?: throw IllegalArgumentException(
           "Missing element type in kotlin array generator"
         )
-        val elementType = getTypeClass(element)
+        val elementType = getTypeClass(element, namespace)
         val arrayList = ClassName("kotlin.collections", "ArrayList")
         arrayList.parameterizedBy(elementType)
       }
@@ -158,11 +149,14 @@ class ModuleGenerator() {
         val value = type.map?.value_ ?: throw IllegalArgumentException(
           "Missing map value in kotlin map generator"
         )
-        map.parameterizedBy(getTypeClass(key), getTypeClass(value))
+        map.parameterizedBy(getTypeClass(key, namespace), getTypeClass(value, namespace))
       }
 
-      type.verbRef != null -> ClassName("xyz.block.ftl.v1.schema", "VerbRef")
-      type.dataRef != null -> ClassName("xyz.block.ftl.v1.schema", "DataRef")
+      type.dataRef != null -> {
+        var module = type.dataRef.module
+        type.dataRef.module.ifEmpty { module = namespace }
+        ClassName(module, type.dataRef.name)
+      }
 
       else -> throw IllegalArgumentException("Unknown type in kotlin generator")
     }

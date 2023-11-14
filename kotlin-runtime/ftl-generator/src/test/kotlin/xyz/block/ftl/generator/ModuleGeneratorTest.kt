@@ -51,32 +51,34 @@ public class TestModule()
       Decl(
         data_ = Data(
           comments = listOf("Response comments"), name = "TestResponse", fields = listOf(
-          Field(name = "int", type = Type(int = Int())),
-          Field(name = "float", type = Type(float = Float())),
-          Field(name = "string", type = Type(string = String())),
-          Field(name = "bool", type = Type(bool = Bool())),
-          Field(name = "time", type = Type(time = Time())),
-          Field(name = "array", type = Type(array = Array(element = Type(string = String())))),
-          Field(
-            name = "nestedArray", type = Type(
-            array = Array(element = Type(array = Array(element = Type(string = String()))))
+            Field(name = "int", type = Type(int = Int())),
+            Field(name = "float", type = Type(float = Float())),
+            Field(name = "string", type = Type(string = String())),
+            Field(name = "bool", type = Type(bool = Bool())),
+            Field(name = "time", type = Type(time = Time())),
+            Field(name = "array", type = Type(array = Array(element = Type(string = String())))),
+            Field(
+              name = "nestedArray", type = Type(
+                array = Array(element = Type(array = Array(element = Type(string = String()))))
+              )
+            ),
+            Field(name = "dataRefArray", type = Type(
+              array = Array(element = Type(dataRef = DataRef(name = "TestRequest", module = "ftl.test")))
+            )),
+            Field(
+              name = "map",
+              type = Type(map = Map(key = Type(string = String()), value_ = Type(int = Int())))
+            ),
+            Field(
+              name = "nestedMap", type = Type(
+                map = Map(
+                  key = Type(string = String()),
+                  value_ = Type(map = Map(key = Type(string = String()), value_ = Type(int = Int())))
+                )
+              )
+            ),
+            Field(name = "dataRef", type = Type(dataRef = DataRef(name = "TestRequest"))),
           )
-          ),
-          Field(
-            name = "map",
-            type = Type(map = Map(key = Type(string = String()), value_ = Type(int = Int())))
-          ),
-          Field(
-            name = "nestedMap", type = Type(
-            map = Map(
-              key = Type(string = String()),
-              value_ = Type(map = Map(key = Type(string = String()), value_ = Type(int = Int())))
-            )
-          )
-          ),
-          Field(name = "verbRef", type = Type(verbRef = VerbRef())),
-          Field(name = "dataRef", type = Type(dataRef = DataRef())),
-        )
         )
       ),
     )
@@ -96,8 +98,6 @@ import kotlin.Unit
 import kotlin.collections.ArrayList
 import kotlin.collections.Map
 import xyz.block.ftl.Ignore
-import xyz.block.ftl.v1.schema.DataRef
-import xyz.block.ftl.v1.schema.VerbRef
 
 /**
  * Request comments
@@ -117,10 +117,10 @@ public data class TestResponse(
   public val time: OffsetDateTime,
   public val array: ArrayList<String>,
   public val nestedArray: ArrayList<ArrayList<String>>,
+  public val dataRefArray: ArrayList<TestRequest>,
   public val map: Map<String, Long>,
   public val nestedMap: Map<String, Map<String, Long>>,
-  public val verbRef: VerbRef,
-  public val dataRef: DataRef,
+  public val dataRef: TestRequest,
 )
 
 @Ignore
