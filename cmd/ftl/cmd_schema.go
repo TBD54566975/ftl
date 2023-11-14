@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/radovskyb/watcher"
@@ -20,7 +21,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/scaffolder"
 )
 
 type schemaCmd struct {

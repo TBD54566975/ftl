@@ -8,13 +8,13 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/errors"
 	"github.com/iancoleman/strcase"
 
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
-	"github.com/TBD54566975/scaffolder"
 )
 
 type initCmd struct {
