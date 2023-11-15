@@ -106,7 +106,14 @@ jobs:
       - name: Publish JARs
         run: |
           mvn --batch-mode versions:set -DnewVersion=$(git describe --tags --abbrev=0 | cut -c2-) -DprocessAllModules -DgenerateBackupPoms=false
-          mvn --batch-mode deploy
+          mvn release:clean release:prepare release:perform \
+            --batch-mode \
+            -DreleaseVersion=$(git describe --tags --abbrev=0 | cut -c2-) \
+            -Dtag=$(git describe --tags --abbrev=0) \
+            -Dsonatype.username=${{ secrets.SONATYPE_USERNAME }} \
+            -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }} \
+            -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} \
+            -DserverId=ossrh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   create-release:
