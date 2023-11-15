@@ -122,7 +122,7 @@
     </dependencies>
 
     <scm>
-        <developerConnection>https://github.com/TBD54566975/ftl.git</developerConnection>
+        <developerConnection>scm:git:https://github.com/TBD54566975/ftl.git</developerConnection>
     </scm>
 
     <build>
