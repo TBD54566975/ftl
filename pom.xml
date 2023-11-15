@@ -121,6 +121,10 @@
         </dependency>
     </dependencies>
 
+    <scm>
+        <developerConnection>https://github.com/TBD54566975/ftl.git</developerConnection>
+    </scm>
+
     <build>
         <plugins>
             <plugin>
