@@ -105,7 +105,6 @@ jobs:
           distribution: "temurin"
       - name: Publish JARs
         run: |
-          mvn --batch-mode versions:set -DnewVersion=$(git describe --tags --abbrev=0 | cut -c2-) -DprocessAllModules -DgenerateBackupPoms=false
           mvn release:clean release:prepare release:perform \
             --batch-mode \
             -DreleaseVersion=$(git describe --tags --abbrev=0 | cut -c2-) \
