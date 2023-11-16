@@ -31,7 +31,7 @@ jobs:
       - name: Publish Snapshot JARs
         run: |
           mvn --batch-mode versions:set -DnewVersion=$(git describe --tags --abbrev=0 | cut -c2-)-SNAPSHOT -DprocessAllModules -DgenerateBackupPoms=false
-          mvn -U --batch-mode clean deploy -P snapshot
+          mvn -U --batch-mode clean deploy -P release
         env:
           SIGN_KEY_PASS: ${{ secrets.GPG_PASSPHRASE }}
           OSSRH_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
