@@ -36,6 +36,7 @@ type CLI struct {
 	Update   updateCmd   `cmd:"" help:"Update a deployment."`
 	Kill     killCmd     `cmd:"" help:"Kill a deployment."`
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
+	Build    buildCmd    `cmd:"" help:"Build an FTL module."`
 	Deploy   deployCmd   `cmd:"" help:"Create a new deployment."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 }
