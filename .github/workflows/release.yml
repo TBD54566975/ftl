@@ -89,7 +89,8 @@ jobs:
     name: Release JARs
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
       packages: write
     steps:
       - name: Checkout code
