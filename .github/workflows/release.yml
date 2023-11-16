@@ -107,6 +107,7 @@ jobs:
         run: |
           git config user.email "${{ github.actor }}@users.noreply.github.com"
           git config user.name "${{ github.actor }}"
+          git checkout main
       - name: Publish JARs
         run: |
           mvn release:clean release:prepare release:perform \
