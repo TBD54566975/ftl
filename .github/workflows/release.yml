@@ -97,9 +97,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-        run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       # Ideally we'd use Hermit's JDK, but this action creates the correct settings.xml for us.
@@ -112,6 +109,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
         run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
           mvn release:clean release:prepare release:perform \
             --batch-mode \
             -DreleaseVersion=$(git describe --tags --abbrev=0 | cut -c2-) \
