@@ -22,15 +22,15 @@ import (
 )
 
 type deployCmd struct {
-	Replicas int32  `short:"n" help:"Number of replicas to deploy." default:"1"`
-	Base     string `arg:"" help:"Directory containing ftl.toml" type:"existingdir" default:"."`
+	Replicas  int32  `short:"n" help:"Number of replicas to deploy." default:"1"`
+	ModuleDir string `arg:"" help:"Directory containing ftl.toml" type:"existingdir" default:"."`
 }
 
 func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
 
 	// Load the TOML file.
-	config, err := moduleconfig.LoadConfig(d.Base)
+	config, err := moduleconfig.LoadConfig(d.ModuleDir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -40,12 +40,12 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return errors.Errorf("no deploy paths defined in config")
 	}
 
-	files, err := findFiles(d.Base, config.Deploy)
+	files, err := findFiles(d.ModuleDir, config.Deploy)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	filesByHash, err := hashFiles(d.Base, files)
+	filesByHash, err := hashFiles(d.ModuleDir, files)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -54,7 +54,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return errors.WithStack(err)
 	}
 
-	schema, err := findFiles(d.Base, []string{config.Schema})
+	schema, err := findFiles(d.ModuleDir, []string{config.Schema})
 	if err != nil {
 		return errors.WithStack(err)
 	}

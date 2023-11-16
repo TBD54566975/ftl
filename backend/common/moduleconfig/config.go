@@ -13,6 +13,7 @@ import (
 type ModuleConfig struct {
 	Language string   `toml:"language"`
 	Module   string   `toml:"module"`
+	Build    string   `toml:"build"`
 	Deploy   []string `toml:"deploy"`
 	Schema   string   `toml:"schema"`
 }
