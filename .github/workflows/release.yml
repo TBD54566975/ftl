@@ -105,9 +105,6 @@ jobs:
           java-version: "11"
           distribution: "temurin"
       - name: Publish JARs
-        with:
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
