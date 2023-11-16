@@ -89,4 +89,27 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*.jar</exclude>
+                                <include>**/*-with-dependencies.jar</include>
+                                <include>**/*-sources.jar</include>
+                                <include>**/*-javadoc.jar</include>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
