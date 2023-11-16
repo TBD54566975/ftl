@@ -89,8 +89,7 @@ jobs:
     name: Release JARs
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
       packages: write
     steps:
       - name: Checkout code
@@ -104,19 +103,20 @@ jobs:
         with:
           java-version: "11"
           distribution: "temurin"
-      - name: Publish JARs
+          server-id: 'ossrh' # must match the serverId configured for the nexus-staging-maven-plugin
+          server-username: OSSRH_USERNAME
+          server-password: OSSRH_PASSWORD
+          gpg-passphrase: SIGN_KEY_PASS
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          cache: 'maven'
+      - name: Publish JARs # release JARs to central
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          mvn release:clean release:prepare release:perform \
-            --batch-mode \
-            -DreleaseVersion=$(git describe --tags --abbrev=0 | cut -c2-) \
-            -Dtag=$(git describe --tags --abbrev=0) \
-            -Dsonatype.username=${{ secrets.SONATYPE_USERNAME }} \
-            -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }} \
-            -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} \
-            -DserverId=ossrh
+          mvn --batch-mode versions:set -DnewVersion=$(git describe --tags --abbrev=0 | cut -c2-) -DprocessAllModules -DgenerateBackupPoms=false
+          mvn -U --batch-mode clean deploy -P release
         env:
+          SIGN_KEY_PASS: ${{ secrets.GPG_PASSPHRASE }}
+          OSSRH_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GITHUB_TOKEN: ${{ github.token }}
   create-release:
     name: Release Go Binaries
