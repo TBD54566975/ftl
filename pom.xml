@@ -1,6 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -9,6 +9,19 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com/TBD54566975/ftl.git</connection>
+        <developerConnection>scm:git:ssh://github.com/TBD54566975/ftl.git</developerConnection>
+        <url>https://github.com/TBD54566975/ftl/tree/main</url>
+    </scm>
+
     <modules>
         <module>kotlin-runtime/ftl-runtime</module>
         <module>kotlin-runtime/ftl-generator</module>
@@ -16,6 +29,7 @@
 
     <properties>
         <maven.deploy.skip>true</maven.deploy.skip>
+        <maven.javadoc.skip>${maven.deploy.skip}</maven.javadoc.skip>
         <rootDir>${basedir}</rootDir>
         <java.version>11</java.version>
         <kotlin.version>1.9.0</kotlin.version>
@@ -120,10 +134,6 @@
             <version>1.4.1</version>
         </dependency>
     </dependencies>
-
-    <scm>
-        <developerConnection>scm:git:https://github.com/TBD54566975/ftl.git</developerConnection>
-    </scm>
 
     <build>
         <plugins>
@@ -243,7 +253,8 @@
                                     <argument>target/dependency/wire-compiler.jar</argument>
                                     <argument>--proto_path=${rootDir}/protos</argument>
                                     <argument>
-                                        --kotlin_out=${project.build.directory}/generated-sources/wire</argument>
+                                        --kotlin_out=${project.build.directory}/generated-sources/wire
+                                    </argument>
                                     <argument>--kotlin_rpc_role=client</argument>
                                 </arguments>
                             </configuration>
@@ -270,37 +281,64 @@
                         </execution>
                     </executions>
                 </plugin>
-                <plugin>
-                    <groupId>org.sonatype.plugins</groupId>
-                    <artifactId>nexus-staging-maven-plugin</artifactId>
-                    <version>1.6.13</version>
-                    <extensions>true</extensions>
-                    <configuration>
-                        <serverId>ossrh</serverId>
-                        <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-                        <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-release-plugin</artifactId>
-                    <version>3.0.1</version>
-                    <configuration>
-                        <autoVersionSubmodules>true</autoVersionSubmodules>
-                        <useReleaseProfile>false</useReleaseProfile>
-                        <releaseProfiles>release</releaseProfiles>
-                        <goals>deploy</goals>
-                    </configuration>
-                </plugin>
             </plugins>
         </pluginManagement>
     </build>
 
     <profiles>
         <profile>
+            <!-- Release profile (required so these plugins are only used when releasing) -->
             <id>release</id>
+            <modules>
+                <module>kotlin-runtime/ftl-runtime</module>
+                <module>kotlin-runtime/ftl-generator</module>
+            </modules>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-release-plugin</artifactId>
+                        <version>3.0.1</version>
+                        <configuration>
+                            <autoVersionSubmodules>true</autoVersionSubmodules>
+                            <releaseProfiles>release,release-profile</releaseProfiles>
+                            <goals>deploy</goals>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.jetbrains.dokka</groupId>
+                        <artifactId>dokka-maven-plugin</artifactId>
+                        <version>1.9.10</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadoc</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>javadocJar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <sourceDirectories>
+                                <dir>${project.basedir}/src/main/kotlin</dir>
+                            </sourceDirectories>
+                            <outputDir>${project.build.directory}</outputDir>
+                        </configuration>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
@@ -313,14 +351,41 @@
                                     <goal>sign</goal>
                                 </goals>
                                 <configuration>
-                                    <keyname>0x088BCD86</keyname>
-                                    <passphraseServerId>gpg.passphrase</passphraseServerId>
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                        <arg>--keyserver</arg>
+                                        <arg>hkp://keys.openpgp.org/</arg>
+                                    </gpgArguments>
                                 </configuration>
                             </execution>
                         </executions>
                     </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.13</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <skipNexusStagingDeployMojo>${maven.deploy.skip}</skipNexusStagingDeployMojo>
+                            <serverId>ossrh</serverId>
+                            <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                        </configuration>
+                    </plugin>
                 </plugins>
             </build>
+            <distributionManagement>
+                <!-- Central Repository -->
+                <snapshotRepository>
+                    <id>ossrh</id>
+                    <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+                </snapshotRepository>
+                <repository>
+                    <id>ossrh</id>
+                    <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+                </repository>
+            </distributionManagement>
         </profile>
     </profiles>
 </project>

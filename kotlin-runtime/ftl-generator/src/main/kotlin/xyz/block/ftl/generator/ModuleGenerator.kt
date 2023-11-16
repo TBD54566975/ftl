@@ -17,7 +17,11 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.setPosixFilePermissions
 import kotlin.io.path.writeText
 
-class ModuleGenerator() {
+/**
+ * ModuleGenerator generates configuration files for the current module as well as Kotlin client stubs for all FTL
+ * modules present in the cluster.
+ */
+class ModuleGenerator {
   fun run(schema: Schema, outputDirectory: File, module: String, moduleClientSuffix: String) {
     val fqOutputDir = outputDirectory.absolutePath
     prepareFtlRoot(fqOutputDir, module)
