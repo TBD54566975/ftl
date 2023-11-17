@@ -54,29 +54,9 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return errors.WithStack(err)
 	}
 
-	schema, err := findFiles(d.ModuleDir, []string{config.Schema})
+	module, err := d.loadProtoSchema(config)
 	if err != nil {
 		return errors.WithStack(err)
-	}
-
-	if len(schema) != 1 {
-		return errors.Errorf("cannot define multiple module schemas")
-	}
-
-	content, err := os.ReadFile(schema[0])
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	module := schemapb.Module{}
-	err = proto.Unmarshal(content, &module)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	module.Runtime = &schemapb.ModuleRuntime{
-		CreateTime:  timestamppb.Now(),
-		Language:    config.Language,
-		MinReplicas: d.Replicas,
 	}
 
 	logger.Infof("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))
@@ -96,8 +76,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		logger.Infof("Uploaded %s as %s:%s", relToCWD(file.localPath), sha256.FromBytes(resp.Msg.Digest), file.Path)
 	}
 	resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
-		// TODO(aat): Use real data for this.
-		Schema: &module,
+		Schema: module,
 		Artefacts: slices.Map(maps.Values(filesByHash), func(a deploymentArtefact) *ftlv1.DeploymentArtefact {
 			return a.DeploymentArtefact
 		}),
@@ -108,6 +87,26 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	logger.Infof("Created deployment %s", resp.Msg.DeploymentName)
 	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{DeploymentName: resp.Msg.GetDeploymentName(), MinReplicas: d.Replicas}))
 	return errors.WithStack(err)
+}
+
+func (d *deployCmd) loadProtoSchema(config moduleconfig.ModuleConfig) (*schemapb.Module, error) {
+	schema := filepath.Join(d.ModuleDir, config.Schema)
+	content, err := os.ReadFile(schema)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	module := &schemapb.Module{}
+	err = proto.Unmarshal(content, module)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	module.Runtime = &schemapb.ModuleRuntime{
+		CreateTime:  timestamppb.Now(),
+		Language:    config.Language,
+		MinReplicas: d.Replicas,
+	}
+	return module, nil
 }
 
 type deploymentArtefact struct {
