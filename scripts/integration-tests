@@ -45,9 +45,7 @@ start_cluster() {
 
 deploy_echo_kotlin() (
   info "Deploying echo-kotlin"
-  cd examples/echo-kotlin
-  mvn compile
-  ftl deploy target
+  ftl deploy examples/kotlin/ftl-module-echo
 )
 
 deploy_fresh_kotlin() (
@@ -57,9 +55,8 @@ deploy_fresh_kotlin() (
   ftl init kotlin "${IT_MODULES}" echo2
   ftl init kotlin "${IT_MODULES}" echo3
   cd "${IT_MODULES}"
-  mvn compile
-  ftl deploy ftl-module-echo2/target
-  ftl deploy ftl-module-echo3/target
+  ftl deploy ftl-module-echo2
+  ftl deploy ftl-module-echo3
 )
 
 deploy_time_go() (
