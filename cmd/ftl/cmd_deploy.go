@@ -36,25 +36,35 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	}
 	logger.Infof("Creating deployment for module %s", config.Module)
 
+	setConfigDefaults(&config)
+
 	if len(config.Deploy) == 0 {
 		return errors.Errorf("no deploy paths defined in config")
 	}
 
-	files, err := findFiles(d.ModuleDir, config.Deploy)
+	build := buildCmd{ModuleDir: d.ModuleDir}
+	err = build.Run(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	filesByHash, err := hashFiles(d.ModuleDir, files)
+	deployDir := filepath.Join(d.ModuleDir, config.DeployDir)
+	files, err := findFiles(deployDir, config.Deploy)
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
+	filesByHash, err := hashFiles(deployDir, files)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	gadResp, err := client.GetArtefactDiffs(ctx, connect.NewRequest(&ftlv1.GetArtefactDiffsRequest{ClientDigests: maps.Keys(filesByHash)}))
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	module, err := d.loadProtoSchema(config)
+	module, err := d.loadProtoSchema(deployDir, config)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -89,13 +99,12 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	return errors.WithStack(err)
 }
 
-func (d *deployCmd) loadProtoSchema(config moduleconfig.ModuleConfig) (*schemapb.Module, error) {
-	schema := filepath.Join(d.ModuleDir, config.Schema)
+func (d *deployCmd) loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig) (*schemapb.Module, error) {
+	schema := filepath.Join(deployDir, config.Schema)
 	content, err := os.ReadFile(schema)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-
 	module := &schemapb.Module{}
 	err = proto.Unmarshal(content, module)
 	if err != nil {
@@ -209,4 +218,26 @@ func findFilesInDir(dir string) ([]string, error) {
 		out = append(out, path)
 		return nil
 	}))
+}
+
+func setConfigDefaults(config *moduleconfig.ModuleConfig) {
+	switch config.Language {
+	case "kotlin":
+		if config.DeployDir == "" {
+			config.DeployDir = "target"
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main", "classes", "dependency", "classpath.txt"}
+		}
+		if config.Schema == "" {
+			config.Schema = "schema.pb"
+		}
+	case "go":
+		if config.DeployDir == "" {
+			config.DeployDir = "build"
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main", "schema.pb"}
+		}
+	}
 }
