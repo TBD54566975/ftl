@@ -1,3 +1,2 @@
 module = "{{ .Name }}"
 language = "go"
-deploy = ["build/main", "build/schema.pb"]

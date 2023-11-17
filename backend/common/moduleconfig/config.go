@@ -11,11 +11,12 @@ import (
 //
 // Module config files are currently TOML.
 type ModuleConfig struct {
-	Language string   `toml:"language"`
-	Module   string   `toml:"module"`
-	Build    string   `toml:"build"`
-	Deploy   []string `toml:"deploy"`
-	Schema   string   `toml:"schema"`
+	Language  string   `toml:"language"`
+	Module    string   `toml:"module"`
+	Build     string   `toml:"build"`
+	Deploy    []string `toml:"deploy"`
+	DeployDir string   `toml:"deploy-dir"`
+	Schema    string   `toml:"schema"`
 }
 
 // LoadConfig from a directory.
