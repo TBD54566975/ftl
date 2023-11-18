@@ -8,10 +8,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/errors"
 	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
@@ -62,7 +63,7 @@ func (i initKotlinCmd) Run(parent *initCmd) error {
 	// Update root POM if it already exists.
 	pomFile := filepath.Join(i.Dir, "pom.xml")
 	if _, err := os.Stat(pomFile); err == nil {
-		options = append(options, scaffolder.Exclude("pom.xml"))
+		options = append(options, scaffolder.Exclude("^pom.xml$"))
 		if err := updatePom(pomFile, i.Name); err != nil {
 			return errors.WithStack(err)
 		}
@@ -116,9 +117,9 @@ func unzipToTmpDir(reader *zip.Reader) (string, error) {
 }
 
 func scaffold(hermit bool, source string, destination string, ctx any, options ...scaffolder.Option) error {
-	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("go.mod")}
+	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("^go.mod$")}
 	if !hermit {
-		opts = append(opts, scaffolder.Exclude("bin"))
+		opts = append(opts, scaffolder.Exclude("^bin"))
 	}
 	opts = append(opts, options...)
 	if err := scaffolder.Scaffold(source, destination, ctx, opts...); err != nil {
