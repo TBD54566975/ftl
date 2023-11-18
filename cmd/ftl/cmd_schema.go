@@ -12,6 +12,7 @@ import (
 	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/errors"
 	"github.com/golang/protobuf/proto"
+	"github.com/otiai10/copy"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
@@ -176,6 +177,9 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 		return errors.WithStack(err)
 	}
 	for _, module := range modules {
+		if err := copy.Copy(s.Template, s.Dest); err != nil {
+			return errors.WithStack(err)
+		}
 		if err := scaffolder.Scaffold(s.Template, s.Dest, module, scaffolder.Functions(scaffoldFuncs)); err != nil {
 			return errors.WithStack(err)
 		}
