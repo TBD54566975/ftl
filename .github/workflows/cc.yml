@@ -12,6 +12,7 @@ jobs:
       - uses: cashapp/activate-hermit@v1
       - name: Update PR title
         run: |
+          gh pr view --json title -q .title | grep -qE '^(\w+)[:(]' && exit 0
           modified="$(gptcc "$orig")"
           diff -u <(echo "$orig") <(echo "$modified") | tail +4 || true
           gh pr edit --title "$modified"
