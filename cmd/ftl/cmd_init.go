@@ -8,11 +8,10 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/errors"
 	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
-
-	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
