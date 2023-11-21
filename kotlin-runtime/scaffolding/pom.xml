@@ -112,6 +112,16 @@
                             </goals>
                             <configuration>
                                 <outputFile>${project.build.directory}/classpath.txt</outputFile>
+                                <prefix>dependency</prefix>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>build-classpath-property</id>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>build-classpath</goal>
+                            </goals>
+                            <configuration>
                                 <outputProperty>generated.classpath</outputProperty>
                                 <prefix>${project.build.directory}/dependency</prefix>
                             </configuration>
