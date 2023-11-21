@@ -113,7 +113,7 @@
                             <configuration>
                                 <outputFile>${project.build.directory}/classpath.txt</outputFile>
                                 <outputProperty>generated.classpath</outputProperty>
-                                <prefix>${project.build.directory}/dependency</prefix>
+                                <prefix>dependency</prefix>
                             </configuration>
                         </execution>
                     </executions>
