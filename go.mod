@@ -35,6 +35,7 @@ require (
 require (
 	github.com/alecthomas/repr v0.3.0 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/danieljoos/wincred v1.1.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
