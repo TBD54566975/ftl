@@ -10,11 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/errors"
+	"github.com/bmatcuk/doublestar/v4"
+
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/alecthomas/errors"
-	"github.com/bmatcuk/doublestar/v4"
 )
 
 type moduleFolderInfo struct {
