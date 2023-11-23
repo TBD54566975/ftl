@@ -30,6 +30,7 @@ type CLI struct {
 
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
 	Init     initCmd     `cmd:"" help:"Initialize a new FTL module."`
+	Dev      devCmd      `cmd:"" help:"Watch a directory for FTL modules and hot reload them."`
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`

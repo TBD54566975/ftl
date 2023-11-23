@@ -17,6 +17,7 @@ type ModuleConfig struct {
 	Deploy    []string `toml:"deploy"`
 	DeployDir string   `toml:"deploy-dir"`
 	Schema    string   `toml:"schema"`
+	Watch     []string `toml:"watch"`
 }
 
 // LoadConfig from a directory.
@@ -27,5 +28,34 @@ func LoadConfig(dir string) (ModuleConfig, error) {
 	if err != nil {
 		return ModuleConfig{}, errors.WithStack(err)
 	}
+	setConfigDefaults(&config)
 	return config, nil
+}
+
+func setConfigDefaults(config *ModuleConfig) {
+	switch config.Language {
+	case "kotlin":
+		if config.Build == "" {
+			config.Build = "mvn compile"
+		}
+		if config.DeployDir == "" {
+			config.DeployDir = "target"
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main", "classes", "dependency", "classpath.txt"}
+		}
+		if config.Schema == "" {
+			config.Schema = "schema.pb"
+		}
+		if len(config.Watch) == 0 {
+			config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
+		}
+	case "go":
+		if config.DeployDir == "" {
+			config.DeployDir = "build"
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main", "schema.pb"}
+		}
+	}
 }

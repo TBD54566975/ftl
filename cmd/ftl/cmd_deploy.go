@@ -36,8 +36,6 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	}
 	logger.Infof("Creating deployment for module %s", config.Module)
 
-	setConfigDefaults(&config)
-
 	if len(config.Deploy) == 0 {
 		return errors.Errorf("no deploy paths defined in config")
 	}
@@ -218,26 +216,4 @@ func findFilesInDir(dir string) ([]string, error) {
 		out = append(out, path)
 		return nil
 	}))
-}
-
-func setConfigDefaults(config *moduleconfig.ModuleConfig) {
-	switch config.Language {
-	case "kotlin":
-		if config.DeployDir == "" {
-			config.DeployDir = "target"
-		}
-		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"main", "classes", "dependency", "classpath.txt"}
-		}
-		if config.Schema == "" {
-			config.Schema = "schema.pb"
-		}
-	case "go":
-		if config.DeployDir == "" {
-			config.DeployDir = "build"
-		}
-		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"main", "schema.pb"}
-		}
-	}
 }
