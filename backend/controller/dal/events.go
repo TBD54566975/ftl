@@ -127,9 +127,7 @@ func FilterCall(sourceModule types.Option[string], destModule string, destVerb t
 
 func FilterDeployments(deploymentNames ...model.DeploymentName) EventFilter {
 	return func(query *eventFilter) {
-		for _, name := range deploymentNames {
-			query.deployments = append(query.deployments, name)
-		}
+		query.deployments = append(query.deployments, deploymentNames...)
 	}
 }
 
@@ -209,17 +207,16 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 
 	// Build query.
 	q := `SELECT e.id AS id,
-				d.name AS deployment_name,
+				e.deployment_id,
 				ir.name AS request_name,
-				e.time_stamp AS time_stamp,
-				e.custom_key_1 AS custom_key_1,
-				e.custom_key_2 AS custom_key_2,
-				e.custom_key_3 AS custom_key_3,
-				e.custom_key_4 AS custom_key_4,
-				e.type AS type,
-				e.payload AS payload
+				e.time_stamp,
+				e.custom_key_1,
+				e.custom_key_2,
+				e.custom_key_3,
+				e.custom_key_4,
+				e.type,
+				e.payload
 			FROM events e
-					 INNER JOIN deployments d on e.deployment_id = d.id
 					 LEFT JOIN requests ir on e.request_id = ir.id
 			WHERE true -- The "true" is to simplify the ANDs below.
 		`
@@ -247,9 +244,34 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	if filter.idLowerThan != 0 {
 		q += fmt.Sprintf(" AND e.id <= $%d::BIGINT", param(filter.idLowerThan))
 	}
-	if filter.deployments != nil {
-		q += fmt.Sprintf(` AND d.name = ANY($%d::TEXT[])`, param(filter.deployments))
+	deploymentNames := map[int64]model.DeploymentName{}
+	// TODO: We should probably make it mandatory to provide at least one deployment.
+	deploymentQuery := `SELECT id, name FROM deployments`
+	deploymentArgs := []any{}
+	if len(filter.deployments) != 0 {
+		// Unfortunately, if we use a join here, PG will do a sequential scan on
+		// events and deployments, making a 7ms query into a 700ms query.
+		// https://www.pgexplain.dev/plan/ecd44488-6060-4ad1-a9b4-49d092c3de81
+		deploymentQuery += ` WHERE name = ANY($1::TEXT[])`
+		deploymentArgs = append(deploymentArgs, filter.deployments)
 	}
+	rows, err := d.db.Conn().Query(ctx, deploymentQuery, deploymentArgs...)
+	if err != nil {
+		return nil, errors.WithStack(translatePGError(err))
+	}
+	deploymentIDs := []int64{}
+	for rows.Next() {
+		var id int64
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		deploymentIDs = append(deploymentIDs, id)
+		deploymentNames[id] = model.DeploymentName(name)
+	}
+
+	q += fmt.Sprintf(` AND e.deployment_id = ANY($%d::BIGINT[])`, param(deploymentIDs))
+
 	if filter.requests != nil {
 		q += fmt.Sprintf(` AND ir.name = ANY($%d::TEXT[])`, param(filter.requests))
 	}
@@ -287,31 +309,34 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	q += fmt.Sprintf(" LIMIT %d", limit)
 
 	// Issue query.
-	rows, err := d.db.Conn().Query(ctx, q, args...)
+	rows, err = d.db.Conn().Query(ctx, q, args...)
 	if err != nil {
-		return nil, errors.WithStack(translatePGError(err))
+		return nil, errors.Wrap(translatePGError(err), q)
 	}
 	defer rows.Close()
 
-	events, err := transformRowsToEvents(rows)
+	events, err := transformRowsToEvents(deploymentNames, rows)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return events, nil
 }
 
-func transformRowsToEvents(rows pgx.Rows) ([]Event, error) {
+func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows pgx.Rows) ([]Event, error) {
 	var out []Event
 	for rows.Next() {
 		row := eventRow{}
+		var deploymentID int64
 		err := rows.Scan(
-			&row.ID, &row.DeploymentName, &row.RequestName, &row.TimeStamp,
+			&row.ID, &deploymentID, &row.RequestName, &row.TimeStamp,
 			&row.CustomKey1, &row.CustomKey2, &row.CustomKey3, &row.CustomKey4,
 			&row.Type, &row.Payload,
 		)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+
+		row.DeploymentName = deploymentNames[deploymentID]
 
 		var requestName types.Option[model.RequestName]
 		if key, ok := row.RequestName.Get(); ok {
