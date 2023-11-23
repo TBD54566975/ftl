@@ -13,6 +13,11 @@
       "matchUpdateTypes": ["major"],
       "groupName": "devDependencies (major)",
       "groupSlug": "dev-deps-major"
+    },
+    {
+      "matchPackageNames": ["jbr"],
+      "matchManagers": ["hermit"],
+      "enabled": false
     }
   ]
 }
