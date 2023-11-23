@@ -161,11 +161,7 @@ message StreamEventsRequest {
 }
 
 message StreamEventsResponse {
-  Event event = 1;
-
-  // If true there are more logs immediately following this one as part of the initial batch.
-  // If false this is the last log in the initial batch, but others may follow later.
-  bool more = 2;
+  repeated Event events = 1;
 }
 
 message Event {
