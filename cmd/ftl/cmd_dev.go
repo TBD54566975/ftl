@@ -221,7 +221,7 @@ func walkDir(dir string, ignores []string, fn func(path string, d fs.DirEntry) e
 	// Then, recurse into subdirectories
 	for _, dirEntry := range dirs {
 		dirPath := filepath.Join(dir, dirEntry.Name())
-		ignores := loadGitIgnore(os.DirFS(dirPath), ".")
+		ignores = append(ignores, loadGitIgnore(os.DirFS(dirPath), ".")...)
 		if err := walkDir(dirPath, ignores, fn); err != nil {
 			if errors.Is(err, errSkip) {
 				return errSkip // Propagate errSkip upwards to stop this branch of recursion
