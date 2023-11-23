@@ -1137,17 +1137,9 @@ export class StreamEventsRequest extends Message<StreamEventsRequest> {
  */
 export class StreamEventsResponse extends Message<StreamEventsResponse> {
   /**
-   * @generated from field: xyz.block.ftl.v1.console.Event event = 1;
+   * @generated from field: repeated xyz.block.ftl.v1.console.Event events = 1;
    */
-  event?: Event;
-
-  /**
-   * If true there are more logs immediately following this one as part of the initial batch.
-   * If false this is the last log in the initial batch, but others may follow later.
-   *
-   * @generated from field: bool more = 2;
-   */
-  more = false;
+  events: Event[] = [];
 
   constructor(data?: PartialMessage<StreamEventsResponse>) {
     super();
@@ -1157,8 +1149,7 @@ export class StreamEventsResponse extends Message<StreamEventsResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.StreamEventsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "event", kind: "message", T: Event },
-    { no: 2, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 1, name: "events", kind: "message", T: Event, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamEventsResponse {

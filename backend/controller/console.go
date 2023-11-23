@@ -167,15 +167,11 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 			return errors.WithStack(err)
 		}
 
-		for index, timelineEvent := range events {
-			more := len(events) > index+1
-			err := stream.Send(&pbconsole.StreamEventsResponse{
-				Event: eventDALToProto(timelineEvent),
-				More:  more,
-			})
-			if err != nil {
-				return errors.WithStack(err)
-			}
+		err = stream.Send(&pbconsole.StreamEventsResponse{
+			Events: slices.Map(events, eventDALToProto),
+		})
+		if err != nil {
+			return errors.WithStack(err)
 		}
 		lastEventTime = thisRequestTime
 		select {
