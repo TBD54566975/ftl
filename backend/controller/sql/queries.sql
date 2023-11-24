@@ -69,7 +69,7 @@ WHERE EXISTS (SELECT 1
                        INNER JOIN artefacts a ON da.artefact_id = a.id
               WHERE a.digest = ANY (@digests::bytea[])
                 AND da.deployment_id = d.id
-              HAVING COUNT(*) = @count -- Number of unique digests provided
+              HAVING COUNT(*) = @count::BIGINT -- Number of unique digests provided
 );
 
 -- name: GetArtefactContentRange :one
@@ -383,5 +383,5 @@ WHERE sqlc.arg('all')::bool = true
 INSERT INTO events (deployment_id, request_id, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4,
                     payload)
-VALUES ($1, $2, $3, $4, $4, $5, $6, $7)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id;

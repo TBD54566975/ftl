@@ -5,7 +5,7 @@ on:
   pull_request:
 name: CI
 concurrency:
-  group: ${{ github.ref }}
+  group: ${{ github.ref }}-ci
   cancel-in-progress: true
 jobs:
   kotlin-runtime:
