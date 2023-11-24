@@ -3,7 +3,7 @@
   "extends": ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)", ":semanticCommitScope(deps)", "group:allNonMajor"],
   "packageRules": [
     {
-      "matchPackageNames": ["jbr"],
+      "matchPackageNames": ["jbr", "ktfmt"],
       "matchManagers": ["hermit"],
       "enabled": false
     }
