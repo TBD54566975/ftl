@@ -138,6 +138,7 @@ func (l *Logger) WriterAt(level Level) *io.PipeWriter {
 
 func (l *Logger) writerScanner(reader *io.PipeReader, printFunc func(format string, args ...interface{})) {
 	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(nil, 1024*1024) // 1MB buffer
 	for scanner.Scan() {
 		printFunc("%s", scanner.Text())
 	}
