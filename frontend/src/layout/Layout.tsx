@@ -14,23 +14,12 @@ export const Layout = () => {
 
   return (
     <>
-      <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden`}>
-        <MobileNavigation onClose={() => setIsMobileMenuOpen(false)} />
-      </div>
+      <div className={`h-screen ${bgColor} ${textColor}`}>
+        <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden`}>
+          <MobileNavigation onClose={() => setIsMobileMenuOpen(false)} />
+        </div>
 
-      <div
-        className={`grid h-screen ${bgColor} ${textColor}
-              ${isCollapsed ? 'sm:grid-cols-[4rem,1fr]' : 'sm:grid-cols-[13rem,1fr]'}
-              sm:grid-rows-[100vh] hidden sm:grid`}
-      >
-        <Navigation isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-        <main className='overflow-hidden'>
-          <Outlet />
-        </main>
-      </div>
-
-      <div className={`h-screen ${bgColor} ${textColor} grid sm:hidden`} style={{ gridTemplateRows: 'auto 1fr' }}>
-        <div className='flex justify-between items-center py-2 px-4 bg-indigo-600'>
+        <div className={`flex justify-between items-center py-2 px-4 bg-indigo-600 sm:hidden`}>
           <div className='flex shrink-0 items-center rounded-md hover:bg-indigo-700'>
             <span className='text-2xl font-medium text-white'>FTL</span>
             <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
@@ -39,9 +28,17 @@ export const Layout = () => {
             <Bars3Icon className='h-6 w-6 text-white hover:bg-indigo-700' />
           </button>
         </div>
-        <main className='overflow-hidden'>
-          <Outlet />
-        </main>
+
+        <div
+          className={`flex flex-col h-full sm:grid ${
+            isCollapsed ? 'sm:grid-cols-[4rem,1fr]' : 'sm:grid-cols-[13rem,1fr]'
+          }`}
+        >
+          <Navigation isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+          <main className='overflow-hidden flex-1'>
+            <Outlet />
+          </main>
+        </div>
       </div>
 
       <SidePanel />
