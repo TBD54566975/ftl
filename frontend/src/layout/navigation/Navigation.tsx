@@ -16,7 +16,7 @@ export const Navigation = ({
   const modules = useContext(modulesContext)
 
   return (
-    <div className={`bg-gray-800 flex-shrink-0 h-full ${isCollapsed ? '' : 'w-52'}`}>
+    <div className={`hidden sm:block bg-gray-800 flex-shrink-0 h-full ${isCollapsed ? '' : 'w-52'}`}>
       <aside className={`flex flex-col h-full`}>
         <div className='flex flex-col h-full overflow-y-auto bg-indigo-700'>
           <div className='flex grow flex-col overflow-y-auto bg-indigo-700 px-4'>
