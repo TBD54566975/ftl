@@ -83,9 +83,8 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 
 func runnerFromDB(row sql.GetRunnerRow) Runner {
 	var deployment types.Option[model.DeploymentName]
-	// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
-	if row.DeploymentName != nil {
-		deployment = types.Some(row.DeploymentName.(model.DeploymentName)) //nolint:forcetypeassert
+	if name, ok := row.DeploymentName.Get(); ok {
+		deployment = types.Some(model.DeploymentName(name))
 	}
 	attrs := model.Labels{}
 	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
@@ -295,9 +294,8 @@ func (d *DAL) GetStatus(
 	}
 	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
 		var deployment types.Option[model.DeploymentName]
-		// Need some hackery here because sqlc doesn't correctly handle the null column in this query.
-		if in.DeploymentName != nil {
-			deployment = types.Some(model.DeploymentName(in.DeploymentName.(string))) //nolint:forcetypeassert
+		if name, ok := in.DeploymentName.Get(); ok {
+			deployment = types.Some(model.DeploymentName(name))
 		}
 		attrs := model.Labels{}
 		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
@@ -414,7 +412,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 	// Check if the deployment already exists and if so, return it.
 	existing, err := tx.GetDeploymentsWithArtefacts(ctx,
 		sha256esToBytes(slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return in.Digest })),
-		len(artefacts),
+		int64(len(artefacts)),
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "couldn't check for existing deployment")
@@ -812,7 +810,7 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal labels")
 	}
-	runners, err := d.db.GetIdleRunners(ctx, jsonb, int32(limit))
+	runners, err := d.db.GetIdleRunners(ctx, jsonb, int64(limit))
 	if isNotFound(err) {
 		return nil, nil
 	} else if err != nil {

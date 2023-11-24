@@ -43,6 +43,15 @@ sql:
           - db_type: "pg_catalog.int8"
             nullable: true
             go_type: "github.com/alecthomas/types.Option[int64]"
+          - db_type: "bigint"
+            nullable: true
+            go_type: "github.com/alecthomas/types.Option[int64]"
+          - db_type: "int"
+            nullable: true
+            go_type: "github.com/alecthomas/types.Option[int32]"
+          - db_type: "bool"
+            nullable: true
+            go_type: "github.com/alecthomas/types.Option[bool]"
           # Can't use until https://github.com/sqlc-dev/sqlc/issues/2632 is fixed, if it ever is...
 #          - column: "ingress_requests.key"
 #            go_type: "github.com/TBD54566975/ftl/backend/common/model.RequestName"

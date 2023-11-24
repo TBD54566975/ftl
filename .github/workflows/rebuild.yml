@@ -1,0 +1,27 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+name: Rebuild All
+concurrency:
+  group: ${{ github.ref }}-rebuild-all
+  cancel-in-progress: true
+jobs:
+  build-all:
+    name: Rebuild All
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Docker Compose
+        # New version of "sqlc generate" needs the DB up for some unknown reason
+        run: docker compose up -d --wait
+      - name: Init DB
+        run: ftl-initdb
+      - name: Clean All
+        run: bit -c
+      - name: Rebuild All
+        run: bit
