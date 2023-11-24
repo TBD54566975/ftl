@@ -1,6 +1,6 @@
 module github.com/TBD54566975/ftl
 
-go 1.21.3
+go 1.21.4
 
 require (
 	connectrpc.com/connect v1.12.0

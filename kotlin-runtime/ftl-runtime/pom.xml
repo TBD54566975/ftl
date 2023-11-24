@@ -17,20 +17,20 @@
     <properties>
         <rootDir>${basedir}/../..</rootDir>
         <maven.deploy.skip>false</maven.deploy.skip>
-        <detekt.version>1.23.1</detekt.version>
+        <detekt.version>1.23.3</detekt.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
-            <version>1.8.22</version>
+            <version>1.9.21</version>
         </dependency>
 
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-coroutines-core</artifactId>
-            <version>1.6.4</version>
+            <version>1.7.3</version>
         </dependency>
 
         <dependency>
@@ -43,7 +43,7 @@
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.157</version>
+            <version>4.8.165</version>
         </dependency>
 
         <!-- Gson -->
