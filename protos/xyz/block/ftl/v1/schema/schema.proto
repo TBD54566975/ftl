@@ -119,9 +119,8 @@ message Type {
     Time time = 5;
     Array array = 6;
     Map map = 7;
-    VerbRef verbRef = 8;
-    DataRef dataRef = 9;
-    Optional optional = 10;
+    DataRef dataRef = 8;
+    Optional optional = 9;
   }
 }
 

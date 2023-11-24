@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -38,6 +37,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/schema"
 	frontend "github.com/TBD54566975/ftl/frontend"
@@ -165,7 +165,7 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := log.FromContext(r.Context())
 	logger.Infof("%s %s", r.Method, r.URL.Path)
-	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method, r.URL.Path)
+	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
 	if err != nil {
 		if errors.Is(err, dal.ErrNotFound) {
 			http.NotFound(w, r)
@@ -174,37 +174,44 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	route := routes[rand.Intn(len(routes))] //nolint:gosec
-	var body []byte
-	switch r.Method {
-	case http.MethodPost, http.MethodPut:
-		body, err = io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+	route, err := ingress.GetIngressRoute(routes, r.Method, r.URL.Path)
+	if err != nil {
+		if errors.Is(err, dal.ErrNotFound) {
+			http.NotFound(w, r)
 			return
 		}
-
-	default:
-		// TODO: Transcode query parameters into JSON.
-		payload := map[string]string{}
-		for key, value := range r.URL.Query() {
-			payload[key] = value[len(value)-1]
-		}
-		body, err = json.Marshal(payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	deployments, err := s.dal.GetActiveDeployments(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sch := &schema.Schema{
+		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
+			return d.Schema
+		}),
+	}
+
+	body, err := ingress.ValidateAndExtractBody(route, r, sch)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	creq := connect.NewRequest(&ftlv1.CallRequest{
+		Metadata: &ftlv1.Metadata{},
+		Verb:     &schemapb.VerbRef{Module: route.Module, Name: route.Verb},
+		Body:     body,
+	})
+
 	requestName, err := s.dal.CreateIngressRequest(r.Context(), fmt.Sprintf("%s %s", r.Method, r.URL.Path), r.RemoteAddr)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	creq := connect.NewRequest(&ftlv1.CallRequest{
-		Verb: &schemapb.VerbRef{Module: route.Module, Name: route.Verb},
-		Body: body,
-	})
 	headers.SetRequestName(creq.Header(), requestName)
 	resp, err := s.Call(r.Context(), creq)
 	if err != nil {

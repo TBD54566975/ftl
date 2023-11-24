@@ -200,7 +200,7 @@ func TestParsing(t *testing.T) {
 		{name: "InvalidDataRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
-				"1:32: reference to unknown Verb \"user.User\""}},
+				"1:32: reference to unknown data structure \"user.User\""}},
 		{name: "InvalidMetadataSyntax",
 			input: `module test { data Data {} calls }`,
 			errors: []string{

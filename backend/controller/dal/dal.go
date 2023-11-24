@@ -41,10 +41,12 @@ var (
 )
 
 type IngressRoute struct {
-	Runner   model.RunnerKey
-	Endpoint string
-	Module   string
-	Verb     string
+	Runner     model.RunnerKey
+	Deployment model.DeploymentName
+	Endpoint   string
+	Path       string
+	Module     string
+	Verb       string
 }
 
 type IngressRouteEntry struct {
@@ -948,8 +950,8 @@ func (d *DAL) CreateIngressRequest(ctx context.Context, route, addr string) (mod
 	return name, err
 }
 
-func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) ([]IngressRoute, error) {
-	routes, err := d.db.GetIngressRoutes(ctx, method, path)
+func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRoute, error) {
+	routes, err := d.db.GetIngressRoutes(ctx, method)
 	if err != nil {
 		return nil, translatePGError(err)
 	}
@@ -958,10 +960,12 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string, path string) 
 	}
 	return slices.Map(routes, func(row sql.GetIngressRoutesRow) IngressRoute {
 		return IngressRoute{
-			Runner:   model.RunnerKey(row.RunnerKey),
-			Endpoint: row.Endpoint,
-			Module:   row.Module,
-			Verb:     row.Verb,
+			Runner:     model.RunnerKey(row.RunnerKey),
+			Deployment: row.DeploymentName,
+			Endpoint:   row.Endpoint,
+			Path:       row.Path,
+			Module:     row.Module,
+			Verb:       row.Verb,
 		}
 	}), nil
 }

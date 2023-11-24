@@ -14,7 +14,7 @@ import (
 
 var (
 	declUnion            = []Decl{&Data{}, &Verb{}}
-	nonOptionalTypeUnion = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
+	nonOptionalTypeUnion = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{} /*&VerbRef{},*/, &DataRef{}}
 	typeUnion            = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion        = []Metadata{&MetadataCalls{}, &MetadataIngress{}}
 
@@ -236,6 +236,32 @@ func (m *Module) Data() []*Data {
 		}
 	}
 	return data
+}
+
+func (s *Schema) ResolveDataRef(ref *DataRef) *Data {
+	for _, module := range s.Modules {
+		if module.Name == ref.Module {
+			for _, decl := range module.Decls {
+				if data, ok := decl.(*Data); ok && data.Name == ref.Name {
+					return data
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Schema) ResolveVerbRef(ref *VerbRef) *Verb {
+	for _, module := range s.Modules {
+		if module.Name == ref.Module {
+			for _, decl := range module.Decls {
+				if verb, ok := decl.(*Verb); ok && verb.Name == ref.Name {
+					return verb
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // Imports returns the modules imported by this module.

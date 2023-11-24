@@ -40,7 +40,7 @@ type Order struct {
 }
 
 //ftl:verb
-//ftl:ingress POST /checkout
+//ftl:ingress POST /checkout/{userID}
 func PlaceOrder(ctx context.Context, req PlaceOrderRequest) (Order, error) {
 	cartItems, err := ftl.Call(ctx, cart.GetCart, cart.GetCartRequest{UserID: req.UserID})
 	if err != nil {

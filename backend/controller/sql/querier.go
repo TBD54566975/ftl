@@ -40,7 +40,7 @@ type Querier interface {
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
 	GetIdleRunners(ctx context.Context, labels []byte, limit int64) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
-	GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error)
+	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	// Retrieve routing information for a runner.
