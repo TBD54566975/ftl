@@ -164,7 +164,7 @@
             <plugin>
                 <groupId>com.github.ozsie</groupId>
                 <artifactId>detekt-maven-plugin</artifactId>
-                <version>1.23.3</version>
+                <version>1.23.3.1</version>
                 <configuration>
                     <disableDefaultRuleSets>true</disableDefaultRuleSets>
                     <classPath>${generated.classpath}</classPath>
@@ -175,7 +175,7 @@
                             ${project.build.directory}/dependency/ftl-runtime-${ftl.version}.jar
                         </plugin>
                     </plugins>
-                    <input>${project.basedir}</input>
+                    <input>${project.basedir}/src/main/kotlin,${project.build.directory}/generated-sources/ftl</input>
                 </configuration>
                 <executions>
                     <execution>
