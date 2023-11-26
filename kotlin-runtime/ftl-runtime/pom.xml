@@ -17,7 +17,7 @@
     <properties>
         <rootDir>${basedir}/../..</rootDir>
         <maven.deploy.skip>false</maven.deploy.skip>
-        <detekt.version>1.23.3</detekt.version>
+        <detekt.version>1.23.4</detekt.version>
     </properties>
 
     <dependencies>
