@@ -82,7 +82,6 @@
                                     <groupId>xyz.block</groupId>
                                     <artifactId>ftl-generator</artifactId>
                                     <version>${ftl.version}</version>
-                                    <classifier>jar-with-dependencies</classifier>
                                     <destFileName>ftl-generator.jar</destFileName>
                                 </artifactItem>
                                 <artifactItem>
