@@ -30,12 +30,18 @@ class Server(
       return
     }
 
-    val out = registry.invoke(
-      Context(jvmModule, routingClient),
-      verbRef.toModel(),
-      request.body.utf8()
-    )
-    response.onNext(CallResponse(body = out.encodeUtf8()))
+    try {
+      val out = registry.invoke(
+        Context(jvmModule, routingClient),
+        verbRef.toModel(),
+        request.body.utf8()
+      )
+      response.onNext(CallResponse(body = out.encodeUtf8()))
+    } catch (e: Throwable) {
+      response.onNext(CallResponse(error = CallResponse.Error(
+        message = (e.message ?: "internal error") + "\n" + e.stackTraceToString()))
+      )
+    }
     response.onCompleted()
   }
 }
