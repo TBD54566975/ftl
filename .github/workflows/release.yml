@@ -49,7 +49,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: [build-runner, build-controller]
+    needs: [ build-runner, build-controller ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -109,8 +109,8 @@ jobs:
           server-password: OSSRH_PASSWORD
           gpg-passphrase: SIGN_KEY_PASS
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          cache: "maven"
-      - name: Publish JARs # Snapshots are published first, then the tagged release
+          cache: 'maven'
+      - name: Publish JARs to Staging # Snapshots are published first, then the tagged release is published to staging.
         run: |
           mvn -U --batch-mode clean deploy -P release
           mvn --batch-mode versions:set -DnewVersion=$(git describe --tags --abbrev=0 | cut -c2-) -DprocessAllModules -DgenerateBackupPoms=false
@@ -121,10 +121,12 @@ jobs:
           OSSRH_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GITHUB_TOKEN: ${{ github.token }}
+      - name: Run Staging Tests
+        run: staging-tests $(git describe --tags --abbrev=0 | cut -c2-)
   create-release:
     name: Release Go Binaries
     runs-on: ubuntu-latest
-    needs: [release-docker, release-jars]
+    needs: [ release-docker, release-jars ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -144,3 +146,18 @@ jobs:
           goreleaser release
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      - name: Promote JARs to Release
+        if: ${{ success() }}
+        run: |
+          mvn nexus-staging:release -DserverId=ossrh -DnexusUrl=https://s01.oss.sonatype.org
+        env:
+          OSSRH_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Rollback Staging JARs
+        if: ${{ failure() }}
+        run: |
+          mvn nexus-staging:drop -DserverId=ossrh -DnexusUrl=https://s01.oss.sonatype.org
+        env:
+          OSSRH_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
