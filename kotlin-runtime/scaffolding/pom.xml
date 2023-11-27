@@ -15,7 +15,7 @@
     </modules>
 
     <properties>
-        <ftl.version>1.0-SNAPSHOT</ftl.version>
+        <ftl.version>0.74.4</ftl.version>
         <java.version>1.8</java.version>
         <kotlin.version>1.9.21</kotlin.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
@@ -185,7 +185,7 @@
                                 ${project.build.directory}/dependency/ftl-runtime-${ftl.version}.jar
                             </plugin>
                         </plugins>
-                        <input>${project.basedir}/src/main/kotlin,${project.build.directory}/generated-sources/ftl</input>
+                        <input>${project.basedir}/src/main/kotlin,${project.build.directory}/generated-sources</input>
                     </configuration>
                     <executions>
                         <execution>
