@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/bind"
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
@@ -22,13 +23,13 @@ import (
 type serveCmd struct {
 	Bind         *url.URL   `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
 	AllowOrigins []*url.URL `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
-	DBPort       int        `help:"Port to use for the database." default:"5433"`
+	DBPort       int        `help:"Port to use for the database." default:"5432"`
 	Recreate     bool       `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers  int        `short:"c" help:"Number of controllers to start." default:"1"`
 	Runners      int        `short:"r" help:"Number of runners to start." default:"0"`
 }
 
-const ftlContainerName = "ftl-db"
+const ftlContainerName = "ftl-db-1"
 
 func (s *serveCmd) Run(ctx context.Context) error {
 	logger := log.FromContext(ctx)
@@ -142,19 +143,22 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		}
 
 		// Grab the port from the existing container
-		cmdStr := fmt.Sprintf("docker port %s 5432/tcp | grep -v '\\[::\\]' | awk -F: '{print $NF}'", ftlContainerName)
-		portOutput, err := exec.Capture(ctx, ".", "sh", "-c", cmdStr)
+		portOutput, err := exec.Capture(ctx, ".", "docker", "port", ftlContainerName, "5432/tcp")
 		if err != nil {
 			logger.Errorf(err, "%s", portOutput)
 			return "", errors.WithStack(err)
 		}
+		port = slices.Reduce(strings.Split(string(portOutput), "\n"), "", func(port string, line string) string {
+			if parts := strings.Split(line, ":"); len(parts) == 2 {
+				return parts[1]
+			}
+			return port
+		})
 
-		port = strings.TrimSpace(string(portOutput))
-
-		logger.Infof("Using docker container '%s' for postgres db", ftlContainerName)
+		logger.Infof("Reusing existing docker container %q on port %q for postgres db", ftlContainerName, port)
 	}
 
-	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%s/%s?sslmode=disable", port, ftlContainerName)
+	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%s/ftl?sslmode=disable", port)
 	logger.Infof("Postgres DSN: %s", dsn)
 
 	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
