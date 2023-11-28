@@ -895,6 +895,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		Attributes:     attributes,
 		Message:        log.Message,
 		Error:          log.Error,
+		Stack:          log.Stack,
 	})))
 }
 
@@ -979,6 +980,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 		Request:        call.Request,
 		Response:       call.Response,
 		Error:          call.Error,
+		Stack:          call.Stack,
 	})))
 }
 

@@ -66,7 +66,7 @@ require (
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/errors v0.4.0
 	github.com/alecthomas/participle/v2 v2.1.0
-	github.com/alecthomas/types v0.7.1
+	github.com/alecthomas/types v0.9.0
 	github.com/beevik/etree v1.2.0
 	github.com/deckarep/golang-set/v2 v2.4.0
 	github.com/gofrs/flock v0.8.1

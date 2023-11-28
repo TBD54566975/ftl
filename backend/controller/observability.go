@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -21,22 +20,11 @@ type Call struct {
 	destVerb       *schema.VerbRef
 	callers        []*schema.VerbRef
 	request        *ftlv1.CallRequest
-	response       *ftlv1.CallResponse
+	response       types.Option[*ftlv1.CallResponse]
+	callError      types.Option[error]
 }
 
-// recordCallError records a call that failed to be made.
-//
-// This is used when a call fails, but we still want to record the error.
-// Because of that, we only log failures within this function vs. returning another error.
 func (s *Service) recordCall(ctx context.Context, call *Call) {
-	var responseError error
-	if e := call.response.GetError(); e != nil {
-		responseError = errors.New(e.GetMessage())
-	}
-	s.recordCallError(ctx, call, responseError)
-}
-
-func (s *Service) recordCallError(ctx context.Context, call *Call, callError error) {
 	logger := log.FromContext(ctx)
 	var sourceVerb types.Option[schema.VerbRef]
 	if len(call.callers) > 0 {
@@ -44,8 +32,17 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 	}
 
 	var errorStr types.Option[string]
-	if callError != nil {
+	var stack types.Option[string]
+	var responseBody []byte
+
+	if callError, ok := call.callError.Get(); ok {
 		errorStr = types.Some(callError.Error())
+	} else if response, ok := call.response.Get(); ok {
+		responseBody = response.GetBody()
+		if callError := response.GetError(); callError != nil {
+			errorStr = types.Some(callError.Message)
+			stack = types.Ptr(callError.Stack)
+		}
 	}
 
 	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{
@@ -56,8 +53,9 @@ func (s *Service) recordCallError(ctx context.Context, call *Call, callError err
 		SourceVerb:     sourceVerb,
 		DestVerb:       *call.destVerb,
 		Request:        call.request.GetBody(),
-		Response:       call.response.GetBody(),
+		Response:       responseBody,
 		Error:          errorStr,
+		Stack:          stack,
 	})
 	if err != nil {
 		logger.Errorf(err, "failed to record call")

@@ -33,6 +33,7 @@ message CallRequest {
 message CallResponse {
   message Error {
     string message = 1;
+    optional string stack = 2;
     // TODO: Richer error type.
   }
 

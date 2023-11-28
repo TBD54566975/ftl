@@ -128,6 +128,11 @@ export class LogEvent extends Message<LogEvent> {
    */
   error?: string;
 
+  /**
+   * @generated from field: optional string stack = 8;
+   */
+  stack?: string;
+
   constructor(data?: PartialMessage<LogEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -143,6 +148,7 @@ export class LogEvent extends Message<LogEvent> {
     { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "stack", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogEvent {
@@ -211,6 +217,11 @@ export class CallEvent extends Message<CallEvent> {
    */
   error?: string;
 
+  /**
+   * @generated from field: optional string stack = 10;
+   */
+  stack?: string;
+
   constructor(data?: PartialMessage<CallEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -228,6 +239,7 @@ export class CallEvent extends Message<CallEvent> {
     { no: 7, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "stack", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CallEvent {

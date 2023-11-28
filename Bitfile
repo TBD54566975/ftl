@@ -93,9 +93,7 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
   build: zip -q --symlinks -r ../scaffolding.zip .
 
 %{SCHEMA_OUT}: %{SCHEMA_IN}
-  build:
-    ftl-schema > %{OUT}
-    buf format -w
+  build: ftl-schema > %{OUT}
 
 %{PROTO_OUT}: %{PROTO_IN}
   build:
@@ -103,7 +101,8 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
     buf lint
     (cd protos && buf generate)
     (cd backend/common/3rdparty/protos && buf generate)
-  -clean
+  # There's a build cycle dependency here, so we can't clean: ftl-schema depends on generated .pb.go files
+  -clean 
 
 %{KT_RUNTIME_OUT}: %{KT_RUNTIME_IN} %{PROTO_IN}
   build:

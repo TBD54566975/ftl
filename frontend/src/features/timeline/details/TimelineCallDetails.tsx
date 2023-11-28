@@ -69,13 +69,23 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp;
       <div className='text-sm pt-2'>Request</div>
       <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.request), null, 2)} language='json' />
 
-      <div className='text-sm pt-2'>Response</div>
-      <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.response), null, 2)} language='json' />
+      {selectedCall.response != 'null' && (
+        <>
+          <div className='text-sm pt-2'>Response</div>
+          <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.response), null, 2)} language='json' />
+        </>
+      )}
 
       {selectedCall.error && (
         <>
           <h3 className='pt-4'>Error</h3>
-          <CodeBlock code={selectedCall.error} language='json' />
+          <CodeBlock code={selectedCall.error} language='text' />
+          {selectedCall.stack && (
+            <>
+              <h3 className='pt-4'>Stack</h3>
+              <CodeBlock code={selectedCall.stack} language='text' />
+            </>
+          )}
         </>
       )}
 

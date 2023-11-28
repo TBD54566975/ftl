@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"runtime/debug"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/errors"
@@ -81,7 +82,25 @@ type moduleServer struct {
 	handlers map[sdkgo.VerbRef]Handler
 }
 
-func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (response *connect.Response[ftlv1.CallResponse], err error) {
+	logger := log.FromContext(ctx)
+	// Recover from panics and return an error ftlv1.CallResponse.
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			if rerr, ok := r.(error); ok {
+				err = errors.WithStack(rerr)
+			} else {
+				err = errors.Errorf("%v", r)
+			}
+			stack := string(debug.Stack())
+			logger.Errorf(err, "panic in verb %s.%s", req.Msg.Verb.Module, req.Msg.Verb.Name)
+			response = connect.NewResponse(&ftlv1.CallResponse{Response: &ftlv1.CallResponse_Error_{Error: &ftlv1.CallResponse_Error{
+				Message: err.Error(),
+				Stack:   &stack,
+			}}})
+		}
+	}()
 	handler, ok := m.handlers[sdkgo.VerbRefFromProto(req.Msg.Verb)]
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("verb %q not found", req.Msg.Verb))

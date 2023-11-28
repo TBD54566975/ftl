@@ -304,6 +304,7 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 					Request:  string(event.Request),
 					Response: string(event.Response),
 					Error:    event.Error.Ptr(),
+					Stack:    event.Stack.Ptr(),
 				},
 			},
 		}
@@ -326,6 +327,7 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 					Attributes:     event.Attributes,
 					Message:        event.Message,
 					Error:          event.Error.Ptr(),
+					Stack:          event.Stack.Ptr(),
 				},
 			},
 		}

@@ -44,6 +44,7 @@ type LogEvent struct {
 	Attributes     map[string]string
 	Message        string
 	Error          types.Option[string]
+	Stack          types.Option[string]
 }
 
 func (e *LogEvent) GetID() int64 { return e.ID }
@@ -60,6 +61,7 @@ type CallEvent struct {
 	Request        []byte
 	Response       []byte
 	Error          types.Option[string]
+	Stack          types.Option[string]
 }
 
 func (e *CallEvent) GetID() int64 { return e.ID }
@@ -176,12 +178,14 @@ type eventCallJSON struct {
 	Request    json.RawMessage      `json:"request"`
 	Response   json.RawMessage      `json:"response"`
 	Error      types.Option[string] `json:"error,omitempty"`
+	Stack      types.Option[string] `json:"stack,omitempty"`
 }
 
 type eventLogJSON struct {
 	Message    string               `json:"message"`
 	Attributes map[string]string    `json:"attributes"`
 	Error      types.Option[string] `json:"error,omitempty"`
+	Stack      types.Option[string] `json:"stack,omitempty"`
 }
 
 type eventDeploymentCreatedJSON struct {
@@ -361,6 +365,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 				Attributes:     jsonPayload.Attributes,
 				Message:        jsonPayload.Message,
 				Error:          jsonPayload.Error,
+				Stack:          jsonPayload.Stack,
 			})
 
 		case sql.EventTypeCall:
@@ -385,7 +390,9 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 				Request:        jsonPayload.Request,
 				Response:       jsonPayload.Response,
 				Error:          jsonPayload.Error,
+				Stack:          jsonPayload.Stack,
 			})
+
 		case sql.EventTypeDeploymentCreated:
 			var jsonPayload eventDeploymentCreatedJSON
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
@@ -400,6 +407,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 				MinReplicas:        jsonPayload.MinReplicas,
 				ReplacedDeployment: jsonPayload.ReplacedDeployment,
 			})
+
 		case sql.EventTypeDeploymentUpdated:
 			var jsonPayload eventDeploymentUpdatedJSON
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
@@ -412,6 +420,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 				MinReplicas:     jsonPayload.MinReplicas,
 				PrevMinReplicas: jsonPayload.PrevMinReplicas,
 			})
+
 		default:
 			panic("unknown event type: " + row.Type)
 		}
