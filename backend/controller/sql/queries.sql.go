@@ -960,7 +960,8 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
                 'duration_ms', $8::BIGINT,
                 'request', $9::JSONB,
                 'response', $10::JSONB,
-                'error', $11::TEXT
+                'error', $11::TEXT,
+                'stack', $12::TEXT
             ))
 `
 
@@ -976,6 +977,7 @@ type InsertCallEventParams struct {
 	Request        []byte
 	Response       []byte
 	Error          types.Option[string]
+	Stack          types.Option[string]
 }
 
 func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
@@ -991,6 +993,7 @@ func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams
 		arg.Request,
 		arg.Response,
 		arg.Error,
+		arg.Stack,
 	)
 	return err
 }
@@ -1107,7 +1110,8 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = $1 LIMIT 1),
         jsonb_build_object(
                 'message', $5::TEXT,
                 'attributes', $6::JSONB,
-                'error', $7::TEXT
+                'error', $7::TEXT,
+                'stack', $8::TEXT
             ))
 `
 
@@ -1119,6 +1123,7 @@ type InsertLogEventParams struct {
 	Message        string
 	Attributes     []byte
 	Error          types.Option[string]
+	Stack          types.Option[string]
 }
 
 func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
@@ -1130,6 +1135,7 @@ func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) 
 		arg.Message,
 		arg.Attributes,
 		arg.Error,
+		arg.Stack,
 	)
 	return err
 }

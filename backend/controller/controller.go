@@ -607,41 +607,25 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		headers.SetRequestName(req.Header(), requestName)
 	}
 
-	callRecord := &Call{
+	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
+	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
+
+	resp, err := client.verb.Call(ctx, req)
+	var maybeResponse types.Option[*ftlv1.CallResponse]
+	if resp != nil {
+		maybeResponse = types.Some(resp.Msg)
+	}
+	s.recordCall(ctx, &Call{
 		deploymentName: route.Deployment,
 		requestName:    requestName,
 		startTime:      start,
 		destVerb:       verbRef,
 		callers:        callers,
+		callError:      types.Nil(err),
 		request:        req.Msg,
-	}
-
-	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
-	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
-
-	resp, err := client.verb.Call(ctx, req)
-	if err != nil {
-		s.recordCallError(ctx, callRecord, err)
-		return nil, errors.WithStack(err)
-	}
-
-	callRecord.response = resp.Msg
-	s.recordCall(ctx, callRecord)
-	return resp, nil
-}
-
-func (s *Service) getRoutesForModule(module string) ([]dal.Route, error) {
-	var routes []dal.Route
-	var ok bool
-	allRoutes, err := s.dal.GetRoutingTable(context.Background(), []string{module})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	routes, ok = allRoutes[module]
-	if !ok {
-		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("no runners for module %q", module))
-	}
-	return routes, nil
+		response:       maybeResponse,
+	})
+	return resp, errors.WithStack(err)
 }
 
 func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftlv1.GetArtefactDiffsRequest]) (*connect.Response[ftlv1.GetArtefactDiffsResponse], error) {

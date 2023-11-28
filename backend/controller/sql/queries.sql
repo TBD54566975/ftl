@@ -279,7 +279,8 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name')
         jsonb_build_object(
                 'message', sqlc.arg('message')::TEXT,
                 'attributes', sqlc.arg('attributes')::JSONB,
-                'error', sqlc.narg('error')::TEXT
+                'error', sqlc.narg('error')::TEXT,
+                'stack', sqlc.narg('stack')::TEXT
             ));
 
 -- name: InsertDeploymentCreatedEvent :exec
@@ -326,7 +327,8 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deploymen
                 'duration_ms', sqlc.arg('duration_ms')::BIGINT,
                 'request', sqlc.arg('request')::JSONB,
                 'response', sqlc.arg('response')::JSONB,
-                'error', sqlc.narg('error')::TEXT
+                'error', sqlc.narg('error')::TEXT,
+                'stack', sqlc.narg('stack')::TEXT
             ));
 
 -- name: CreateIngressRequest :exec

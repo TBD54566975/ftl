@@ -39,7 +39,8 @@ class Server(
       response.onNext(CallResponse(body = out.encodeUtf8()))
     } catch (e: Throwable) {
       response.onNext(CallResponse(error = CallResponse.Error(
-        message = (e.message ?: "internal error") + "\n" + e.stackTraceToString()))
+        message = (e.message ?: "internal error"),
+        stack = e.stackTraceToString())),
       )
     }
     response.onCompleted()

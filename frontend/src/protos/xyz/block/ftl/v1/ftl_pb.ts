@@ -348,11 +348,16 @@ export class CallResponse extends Message<CallResponse> {
  */
 export class CallResponse_Error extends Message<CallResponse_Error> {
   /**
-   * TODO: Richer error type.
-   *
    * @generated from field: string message = 1;
    */
   message = "";
+
+  /**
+   * TODO: Richer error type.
+   *
+   * @generated from field: optional string stack = 2;
+   */
+  stack?: string;
 
   constructor(data?: PartialMessage<CallResponse_Error>) {
     super();
@@ -363,6 +368,7 @@ export class CallResponse_Error extends Message<CallResponse_Error> {
   static readonly typeName = "xyz.block.ftl.v1.CallResponse.Error";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stack", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CallResponse_Error {

@@ -35,6 +35,7 @@ message LogEvent {
   map<string, string> attributes = 5;
   string message = 6;
   optional string error = 7;
+  optional string stack = 8;
 }
 
 message CallEvent {
@@ -47,6 +48,7 @@ message CallEvent {
   string request = 7;
   string response = 8;
   optional string error = 9;
+  optional string stack = 10;
 }
 
 message DeploymentCreatedEvent {

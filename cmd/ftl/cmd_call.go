@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/errors"
 	"github.com/titanous/json5"
 
+	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/go-runtime/sdk"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -20,6 +21,7 @@ type callCmd struct {
 }
 
 func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient) error {
+	logger := log.FromContext(ctx)
 	request := map[string]any{}
 	err := json5.Unmarshal([]byte(c.Request), &request)
 	if err != nil {
@@ -38,6 +40,9 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 	}
 	switch resp := resp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Error_:
+		if resp.Error.Stack != nil && logger.GetLevel() <= log.Debug {
+			fmt.Println(*resp.Error.Stack)
+		}
 		return errors.Errorf("Verb error: %s", resp.Error.Message)
 
 	case *ftlv1.CallResponse_Body:
