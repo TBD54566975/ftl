@@ -22,6 +22,7 @@ class ModuleGenerator() {
     val fqOutputDir = outputDirectory.absolutePath
     prepareFtlRoot(fqOutputDir, module)
     val sourcesDest = File(fqOutputDir, "generated-sources")
+    Path.of(sourcesDest.path).createDirectories()
     schema.modules.filter { it.name != module }.forEach {
       val file = generateModule(it, moduleClientSuffix)
       file.writeTo(sourcesDest)
