@@ -93,7 +93,9 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
   build: zip -q --symlinks -r ../scaffolding.zip .
 
 %{SCHEMA_OUT}: %{SCHEMA_IN}
-  build: ftl-schema > %{OUT}
+  build: 
+    ftl-schema > %{OUT}
+    buf format -w %{OUT}
 
 %{PROTO_OUT}: %{PROTO_IN}
   build:
