@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.12.0
 	github.com/BurntSushi/toml v1.3.2
 	github.com/alecthomas/kong v0.8.1
-	github.com/alecthomas/kong-toml v0.0.1
+	github.com/alecthomas/kong-toml v0.1.0
 	github.com/amacneil/dbmate/v2 v2.8.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/go-logr/logr v1.3.0

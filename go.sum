@@ -18,8 +18,8 @@ github.com/alecthomas/errors v0.4.0 h1:zDIapqdw7gVx2BrQpw3Ll5YRGFuaiB0ywcjesqT0R
 github.com/alecthomas/errors v0.4.0/go.mod h1:0DQf6/xQp3f9rv+k72g2NmeTW2lC74kXA6b/8dN9BwY=
 github.com/alecthomas/kong v0.8.1 h1:acZdn3m4lLRobeh3Zi2S2EpnXTd1mOL6U7xVml+vfkY=
 github.com/alecthomas/kong v0.8.1/go.mod h1:n1iCIO2xS46oE8ZfYCNDqdR0b0wZNrXAIAqro/2132U=
-github.com/alecthomas/kong-toml v0.0.1 h1:6E+1OdpSavFzA4IO/aczkaG9IK7fZ0Ce1yobHtZNfBE=
-github.com/alecthomas/kong-toml v0.0.1/go.mod h1:d0aHX/kbCSdgQSg7ZUQzSTbBCh02sjSu8RT3YF2TKzA=
+github.com/alecthomas/kong-toml v0.1.0 h1:jKrdGj/G0mkHGbOV5a+Cok3cTDZ+Qxa5CBq177gPKUA=
+github.com/alecthomas/kong-toml v0.1.0/go.mod h1:aDIxp+T6kJZY9zLThZX6qI9xxUlQgYlvqmw7PI//7/Y=
 github.com/alecthomas/participle/v2 v2.1.0 h1:z7dElHRrOEEq45F2TG5cbQihMtNTv8vwldytDj7Wrz4=
 github.com/alecthomas/participle/v2 v2.1.0/go.mod h1:Y1+hAs8DHPmc3YUFzqllV+eSQ9ljPTk0ZkPMtEdAx2c=
 github.com/alecthomas/repr v0.3.0 h1:NeYzUPfjjlqHY4KtzgKJiWd6sVq2eNUPTi34PiFGjY8=
