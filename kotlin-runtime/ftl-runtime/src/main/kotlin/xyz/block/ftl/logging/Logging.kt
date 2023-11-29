@@ -67,6 +67,9 @@ class Logging {
       val rootLogger = logger(Logger.ROOT_LOGGER_NAME)
       val rootLevelCfg = Level.valueOf(System.getenv("LOG_LEVEL") ?: DEFAULT_LOG_LEVEL)
       rootLogger.level = rootLevelCfg
+
+      // Explicitly set log level for grpc-netty
+      logger("io.grpc.netty").level = Level.WARN
     }
   }
 }
