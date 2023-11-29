@@ -20,12 +20,12 @@ import (
 
 const ShutdownGracePeriod = time.Second * 5
 
-type optionsBundle struct {
+type serverOptions struct {
 	mux             *http.ServeMux
 	reflectionPaths []string
 }
 
-type Option func(*optionsBundle)
+type Option func(*serverOptions)
 
 type GRPCServerConstructor[Iface Pingable] func(svc Iface, opts ...connect.HandlerOption) (string, http.Handler)
 type RawGRPCServerConstructor[Iface any] func(svc Iface, opts ...connect.HandlerOption) (string, http.Handler)
@@ -33,7 +33,7 @@ type RawGRPCServerConstructor[Iface any] func(svc Iface, opts ...connect.Handler
 // GRPC is a convenience function for registering a GRPC server with default options.
 // TODO(aat): Do we need pingable here?
 func GRPC[Iface, Impl Pingable](constructor GRPCServerConstructor[Iface], impl Impl, options ...connect.HandlerOption) Option {
-	return func(o *optionsBundle) {
+	return func(o *serverOptions) {
 		options = append(options, DefaultHandlerOptions()...)
 		path, handler := constructor(any(impl).(Iface), options...)
 		o.reflectionPaths = append(o.reflectionPaths, strings.Trim(path, "/"))
@@ -43,7 +43,7 @@ func GRPC[Iface, Impl Pingable](constructor GRPCServerConstructor[Iface], impl I
 
 // RawGRPC is a convenience function for registering a GRPC server with default options without Pingable.
 func RawGRPC[Iface, Impl any](constructor RawGRPCServerConstructor[Iface], impl Impl, options ...connect.HandlerOption) Option {
-	return func(o *optionsBundle) {
+	return func(o *serverOptions) {
 		options = append(options, DefaultHandlerOptions()...)
 		path, handler := constructor(any(impl).(Iface), options...)
 		o.reflectionPaths = append(o.reflectionPaths, strings.Trim(path, "/"))
@@ -53,7 +53,7 @@ func RawGRPC[Iface, Impl any](constructor RawGRPCServerConstructor[Iface], impl 
 
 // HTTP adds a HTTP route to the server.
 func HTTP(prefix string, handler http.Handler) Option {
-	return func(o *optionsBundle) {
+	return func(o *serverOptions) {
 		o.mux.Handle(prefix, handler)
 	}
 }
@@ -65,7 +65,7 @@ type Server struct {
 }
 
 func NewServer(ctx context.Context, listen *url.URL, options ...Option) (*Server, error) {
-	opts := &optionsBundle{
+	opts := &serverOptions{
 		mux: http.NewServeMux(),
 	}
 

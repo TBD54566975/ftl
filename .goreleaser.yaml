@@ -11,7 +11,7 @@ builds:
       - linux
       - darwin
     flags: -trimpath
-    ldflags: -s -w -buildid= -X main.version={{.Version}} -X  main.timestamp={{ .CommitTimestamp }}
+    ldflags: -s -w -buildid= -X github.com/TBD54566975/ftl.Version={{.Version}} -X  github.com/TBD54566975/ftl.Timestamp={{ .CommitTimestamp }}
     tags: [release]
   - id: ftl-runner
     main: ./cmd/ftl-runner
@@ -25,7 +25,7 @@ builds:
       - linux
       - darwin
     flags: -trimpath
-    ldflags: -s -w -buildid= -X main.version={{.Version}} -X  main.timestamp={{ .CommitTimestamp }}
+    ldflags: -s -w -buildid= -X github.com/TBD54566975/ftl.Version={{.Version}} -X  github.com/TBD54566975/ftl.Timestamp={{ .CommitTimestamp }}
     tags: [release]
   - id: ftl
     main: ./cmd/ftl
@@ -39,7 +39,7 @@ builds:
       - linux
       - darwin
     flags: -trimpath
-    ldflags: -s -w -buildid= -X main.version={{.Version}} -X  main.timestamp={{ .CommitTimestamp }}
+    ldflags: -s -w -buildid= -X github.com/TBD54566975/ftl.Version={{.Version}} -X  github.com/TBD54566975/ftl.Timestamp={{ .CommitTimestamp }}
     tags: [release]
   - id: ftl-initdb
     main: ./cmd/ftl-initdb
@@ -53,7 +53,7 @@ builds:
       - linux
       - darwin
     flags: -trimpath
-    ldflags: -s -w -buildid= -X main.version={{.Version}} -X  main.timestamp={{ .CommitTimestamp }}
+    ldflags: -s -w -buildid= -X github.com/TBD54566975/ftl.Version={{.Version}} -X  github.com/TBD54566975/ftl.Timestamp={{ .CommitTimestamp }}
     tags: [release]
 
 archives:

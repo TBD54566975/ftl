@@ -68,19 +68,19 @@ RUNNER_TEMPLATE_ZIP = backend/controller/scaling/localscaling/template.zip
 # Build all binaries
 # implicit %{RELEASE}/%{1}: cmd/*
 #   inputs: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT}
-#   build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/%{1}
+#   build: go build -o %{OUT} -tags release -ldflags "-X github.com/TBD54566975/ftl.Version=%{VERSION} -X github.com/TBD54566975/ftl.Timestamp=$(date +%s)" ./cmd/%{1}
 
 %{RELEASE}/ftl-controller: %{RELEASE} %{GO_SOURCES} %{CLIENT_OUT} cmd/ftl-controller/**/*.go
-  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-controller
+  build: go build -o %{OUT} -tags release -ldflags "-X github.com/TBD54566975/ftl.Version=%{VERSION} -X github.com/TBD54566975/ftl.Timestamp=$(date +%s)" ./cmd/ftl-controller
 
 %{RELEASE}/ftl-runner: %{RELEASE} %{GO_SOURCES} cmd/ftl-runner/**/*.go
-  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-runner
+  build: go build -o %{OUT} -tags release -ldflags "-X github.com/TBD54566975/ftl.Version=%{VERSION} -X github.com/TBD54566975/ftl.Timestamp=$(date +%s)" ./cmd/ftl-runner
 
 %{RELEASE}/ftl: %{RELEASE} %{GO_SOURCES} cmd/ftl/**/*.go %{CLIENT_OUT} **/*.zip
-  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl
+  build: go build -o %{OUT} -tags release -ldflags "-X github.com/TBD54566975/ftl.Version=%{VERSION} -X github.com/TBD54566975/ftl.Timestamp=$(date +%s)" ./cmd/ftl
 
 %{RELEASE}/ftl-initdb: %{RELEASE} %{GO_SOURCES} cmd/ftl-initdb/**/*.go
-  build: go build -o %{OUT} -tags release -ldflags "-X main.version=%{VERSION} -X main.timestamp=$(date +%s)" ./cmd/ftl-initdb
+  build: go build -o %{OUT} -tags release -ldflags "-X github.com/TBD54566975/ftl.Version=%{VERSION} -X github.com/TBD54566975/ftl.Timestamp=$(date +%s)" ./cmd/ftl-initdb
 
 # Release builds include zipped scaffolding becaused raw go:embed doesn't
 # preserve permissions or symlinks. Irritating.

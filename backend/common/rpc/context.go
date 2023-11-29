@@ -7,7 +7,9 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
 	"github.com/alecthomas/errors"
+	"golang.org/x/mod/semver"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/rpc/headers"
@@ -74,17 +76,22 @@ func WithRequestName(ctx context.Context, key model.RequestName) context.Context
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
+	interceptors := []connect.Interceptor{MetadataInterceptor(level), otelInterceptor()}
+	if ftl.Version != "dev" {
+		interceptors = append(interceptors, versionInterceptor{})
+	}
 	return []connect.ClientOption{
 		connect.WithGRPC(), // Use gRPC because some servers will not be using Connect.
-		connect.WithInterceptors(MetadataInterceptor(level), otelInterceptor()),
+		connect.WithInterceptors(interceptors...),
 	}
 }
 
 func DefaultHandlerOptions() []connect.HandlerOption {
-	return []connect.HandlerOption{
-		connect.WithInterceptors(MetadataInterceptor(log.Error)),
-		connect.WithInterceptors(otelInterceptor()),
+	interceptors := []connect.Interceptor{MetadataInterceptor(log.Error), otelInterceptor()}
+	if ftl.Version != "dev" {
+		interceptors = append(interceptors, versionInterceptor{})
 	}
+	return []connect.HandlerOption{connect.WithInterceptors(interceptors...)}
 }
 
 func otelInterceptor() connect.Interceptor {
@@ -197,4 +204,40 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		}
 	}
 	return ctx, nil
+}
+
+// versionInterceptor reports a warning to the client if the client is older than the server.
+type versionInterceptor struct{}
+
+func (v versionInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return next
+}
+
+func (v versionInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	return next
+}
+
+func (v versionInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, ar connect.AnyRequest) (connect.AnyResponse, error) {
+		resp, err := next(ctx, ar)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if ar.Spec().IsClient {
+			if err := v.checkVersion(resp.Header()); err != nil {
+				log.FromContext(ctx).Warnf("%s", err)
+			}
+		} else {
+			resp.Header().Set("X-FTL-Version", ftl.Version)
+		}
+		return resp, nil
+	}
+}
+
+func (v versionInterceptor) checkVersion(header http.Header) error {
+	version := header.Get("X-FTL-Version")
+	if semver.Compare(ftl.Version, version) < 0 {
+		return errors.Errorf("FTL client (%s) is older than server (%s), consider upgrading: https://github.com/TBD54566975/ftl/releases", ftl.Version, version)
+	}
+	return nil
 }
