@@ -1,5 +1,8 @@
 on:
   workflow_call:
+concurrency:
+  group: ${{ github.ref }}-integration
+  cancel-in-progress: true
 name: Integration
 jobs:
   integration:
@@ -16,7 +19,14 @@ jobs:
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go
+      - name: Cache Maven Repository
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven
       - name: Docker Compose
         run: docker compose up -d --wait
+      - name: Download Go Modules
+        run: go mod download
       - name: Integration tests
-        run: integration-tests
+        run: go test -v -tags integration ./integration
