@@ -1,6 +1,9 @@
 on:
   pull_request:
 name: Auto-format
+concurrency:
+  group: ${{ github.ref }}-autofmt
+  cancel-in-progress: true
 jobs:
   format:
     # Check if the PR is not from a fork
