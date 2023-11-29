@@ -37,10 +37,15 @@ class Server(
         request.body.utf8()
       )
       response.onNext(CallResponse(body = out.encodeUtf8()))
-    } catch (e: Throwable) {
-      response.onNext(CallResponse(error = CallResponse.Error(
-        message = (e.message ?: "internal error"),
-        stack = e.stackTraceToString())),
+    } catch (t: Throwable) {
+      val stackTrace = t.stackTraceToString()
+      response.onNext(
+        CallResponse(
+          error = CallResponse.Error(
+            message = (t.message ?: stackTrace.lineSequence().firstOrNull() ?: "internal error"),
+            stack = stackTrace
+          )
+        ),
       )
     }
     response.onCompleted()
