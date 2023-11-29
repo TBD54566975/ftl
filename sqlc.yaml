@@ -4,7 +4,7 @@ sql:
     queries: "backend/controller/sql/queries.sql"
     schema: "backend/controller/sql/schema"
     database:
-      uri: postgres://localhost/ftl?sslmode=disable&user=postgres&password=secret
+      uri: postgres://localhost:54320/ftl?sslmode=disable&user=postgres&password=secret
     gen:
       go:
         package: "sql"
