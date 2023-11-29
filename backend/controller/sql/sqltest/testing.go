@@ -28,7 +28,7 @@ func OpenForTesting(ctx context.Context, t testing.TB) *pgxpool.Pool {
 	assert.True(t, ok, "could not acquire lock on %s", lockPath)
 	t.Cleanup(func() { _ = lock.Unlock() })
 
-	testDSN := "postgres://localhost/ftl-test?user=postgres&password=secret&sslmode=disable"
+	testDSN := "postgres://localhost:54320/ftl-test?user=postgres&password=secret&sslmode=disable"
 	conn, err := databasetesting.CreateForDevel(ctx, testDSN, true)
 	assert.NoError(t, err)
 	return conn

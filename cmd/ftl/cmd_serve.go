@@ -23,7 +23,7 @@ import (
 type serveCmd struct {
 	Bind         *url.URL   `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
 	AllowOrigins []*url.URL `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
-	DBPort       int        `help:"Port to use for the database." default:"5432"`
+	DBPort       int        `help:"Port to use for the database." default:"54320"`
 	Recreate     bool       `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers  int        `short:"c" help:"Number of controllers to start." default:"1"`
 	Runners      int        `short:"r" help:"Number of runners to start." default:"0"`
