@@ -12,13 +12,12 @@ import (
 	"github.com/alecthomas/kong"
 	kongtoml "github.com/alecthomas/kong-toml"
 
+	"github.com/TBD54566975/ftl"
 	_ "github.com/TBD54566975/ftl/backend/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/rpc"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
-
-var version = "dev"
 
 type CLI struct {
 	Version   kong.VersionFlag `help:"Show version."`
@@ -56,7 +55,7 @@ func main() {
 			return &kong.Group{Key: node.Name, Title: "Command flags:"}
 		}),
 		kong.Vars{
-			"version": version,
+			"version": ftl.Version,
 			"os":      runtime.GOOS,
 			"arch":    runtime.GOARCH,
 		},

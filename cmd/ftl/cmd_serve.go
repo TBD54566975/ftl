@@ -180,6 +180,7 @@ func pollContainerHealth(ctx context.Context, containerName string, timeout time
 		select {
 		case <-pollCtx.Done():
 			return errors.New("timed out waiting for container to be healthy")
+
 		case <-time.After(1 * time.Millisecond):
 			output, err := exec.Capture(pollCtx, ".", "docker", "inspect", "--format", "{{.State.Health.Status}}", containerName)
 			if err != nil {

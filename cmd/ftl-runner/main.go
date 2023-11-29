@@ -7,13 +7,12 @@ import (
 
 	"github.com/alecthomas/kong"
 
+	"github.com/TBD54566975/ftl"
 	_ "github.com/TBD54566975/ftl/backend/common/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/observability"
 	"github.com/TBD54566975/ftl/backend/runner"
 )
-
-var version = "dev"
 
 var cli struct {
 	Version             kong.VersionFlag     `help:"Show version."`
@@ -33,7 +32,7 @@ FTL - Towards a 𝝺-calculus for large-scale systems
 The Runner is the component of FTL that coordinates with the Controller to spawn
 and route to user code.
 	`), kong.Vars{
-		"version":       version,
+		"version":       ftl.Version,
 		"deploymentdir": filepath.Join(cacheDir, "ftl-runner", "${runner}", "deployments"),
 	})
 	// Substitute in the runner key into the deployment directory.
@@ -45,7 +44,7 @@ and route to user code.
 	})
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx := log.ContextWithLogger(context.Background(), logger)
-	err = observability.Init(ctx, "ftl-runner", version, cli.ObservabilityConfig)
+	err = observability.Init(ctx, "ftl-runner", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 	err = runner.Start(ctx, cli.RunnerConfig)
 	kctx.FatalIfErrorf(err)

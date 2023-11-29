@@ -18,7 +18,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 )
 
-// InitialiseClients HTTP clients used by the RPC system.
+// InitialiseClients initialises global HTTP clients used by the RPC system.
 //
 // "authenticators" are authenticator executables to use for each endpoint. The key is the URL of the endpoint, the
 // value is the path to the authenticator executable.
