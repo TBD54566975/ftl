@@ -10,18 +10,35 @@ import { modulesContext } from '../../providers/modules-provider'
 import { modulesFilter } from '../../services/console.service'
 import { Timeline } from '../timeline/Timeline'
 import { verbRefString } from '../verbs/verb.utils'
+import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 
 export const DeploymentPage = () => {
   const navigate = useNavigate()
   const { deploymentName } = useParams()
   const modules = useContext(modulesContext)
+  const notification = useContext(NotificationsContext)
+  const navgation = useNavigate()
   const [module, setModule] = useState<Module | undefined>()
   const [calls, setCalls] = useState<VerbRef[]>([])
 
   useEffect(() => {
-    if (modules) {
-      const module = modules.modules.find((module) => module.deploymentName === deploymentName)
-      setModule(module)
+    if (modules.modules.length > 0 && deploymentName) {
+      let module = modules.modules.find((module) => module.deploymentName === deploymentName)
+      if (!module) {
+        const lastIndex = deploymentName.lastIndexOf('-')
+        if (lastIndex !== -1) {
+          module = modules.modules.find((module) => module.name === deploymentName.substring(0, lastIndex))
+          navgation(`/deployments/${module?.deploymentName}`)
+          notification.showNotification({
+            title: 'Showing latest deployment',
+            message: `The previous deployment of ${module?.deploymentName} was not found. Showing the latest deployment of ${module?.name} instead.`,
+            type: NotificationType.Info,
+          })
+          setModule(module)
+        }
+      } else {
+        setModule(module)
+      }
     }
   }, [modules, deploymentName])
 
