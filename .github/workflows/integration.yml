@@ -13,17 +13,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
-      - name: Cache Go Modules
-        id: cache-go-modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go
-      - name: Cache Maven Repository
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Download Go Modules

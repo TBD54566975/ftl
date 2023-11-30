@@ -104,12 +104,12 @@ jobs:
         with:
           java-version: "11"
           distribution: "temurin"
-          server-id: 'ossrh' # must match the serverId configured for the nexus-staging-maven-plugin
+          server-id: "ossrh" # must match the serverId configured for the nexus-staging-maven-plugin
           server-username: OSSRH_USERNAME
           server-password: OSSRH_PASSWORD
           gpg-passphrase: SIGN_KEY_PASS
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          cache: 'maven'
+          cache: "maven"
       - name: Publish JARs # Snapshots are published first, then the tagged release
         run: |
           mvn -U --batch-mode clean deploy -P release
@@ -132,6 +132,8 @@ jobs:
           fetch-depth: 0
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
       - name: Build Console
         run: bit frontend/dist/index.html
       - name: Publish Go Binaries
