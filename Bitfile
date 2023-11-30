@@ -4,8 +4,7 @@ RELEASE = %{DEST}/release
 
 GO_SOURCES = **/*.go
 
-SCHEMA_IN = backend/schema/schema.go backend/schema/protobuf.go \
-    cmd/ftl/cmd_schema.go
+SCHEMA_IN = backend/schema/**/*.go cmd/ftl-schema/**/*.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
 PROTO_IN = **/*.proto **/buf.* bin/protoc* bin/buf
@@ -92,8 +91,10 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
   cd kotlin-runtime/scaffolding
   build: zip -q --symlinks -r ../scaffolding.zip .
 
-%{SCHEMA_OUT}: %{SCHEMA_IN}
-  build: ftl-schema > %{OUT}
+%{SCHEMA_OUT}: %{SCHEMA_IN} 
+  build:
+    ftl-schema > %{OUT}
+    buf format -w %{OUT}
 
 %{PROTO_OUT}: %{PROTO_IN}
   build:
