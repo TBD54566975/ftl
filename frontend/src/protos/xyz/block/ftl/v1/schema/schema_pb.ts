@@ -601,6 +601,43 @@ export class Module extends Message<Module> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.Optional
+ */
+export class Optional extends Message<Optional> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type type = 1;
+   */
+  type?: Type;
+
+  constructor(data?: PartialMessage<Optional>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Optional";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "message", T: Type },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Optional {
+    return new Optional().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Optional {
+    return new Optional().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Optional {
+    return new Optional().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Optional | PlainMessage<Optional> | undefined, b: Optional | PlainMessage<Optional> | undefined): boolean {
+    return proto3.util.equals(Optional, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Position
  */
 export class Position extends Message<Position> {
@@ -815,6 +852,12 @@ export class Type extends Message<Type> {
      */
     value: DataRef;
     case: "dataRef";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 10;
+     */
+    value: Optional;
+    case: "optional";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Type>) {
@@ -834,6 +877,7 @@ export class Type extends Message<Type> {
     { no: 7, name: "map", kind: "message", T: Map, oneof: "value" },
     { no: 8, name: "verbRef", kind: "message", T: VerbRef, oneof: "value" },
     { no: 9, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
+    { no: 10, name: "optional", kind: "message", T: Optional, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Type {

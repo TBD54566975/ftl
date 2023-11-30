@@ -19,6 +19,7 @@ func TestCodegen(t *testing.T) {
 			}
 			data BasketSummary {
 				items Int
+				name String?
 			}
 			// Add an item to the basket.
 			verb Add(ItemRequest) BasketSummary
@@ -34,6 +35,7 @@ package basket
 
 import (
   "context"
+  "github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 
 type ItemRequest struct {
@@ -43,6 +45,7 @@ type ItemRequest struct {
 
 type BasketSummary struct {
   Items int ` + "`json:\"items\"`" + `
+  Name sdk.Option[string] ` + "`json:\"name\"`" + `
 }
 
 // Add an item to the basket.

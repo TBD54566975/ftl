@@ -9,6 +9,12 @@ import (
 // This file contains the unmarshalling logic as well as support methods for
 // visiting and type safety.
 
+var _ Type = (*Optional)(nil)
+
+func (o *Optional) String() string         { return o.Type.String() + "?" }
+func (*Optional) schemaType()              {}
+func (o *Optional) schemaChildren() []Node { return []Node{o.Type} }
+
 var _ Type = (*Int)(nil)
 
 func (*Int) schemaChildren() []Node { return nil }

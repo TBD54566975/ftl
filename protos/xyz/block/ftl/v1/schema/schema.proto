@@ -78,6 +78,10 @@ message Module {
   repeated Decl decls = 4;
 }
 
+message Optional {
+  Type type = 1;
+}
+
 message Position {
   string filename = 1;
   int64 line = 2;
@@ -104,6 +108,7 @@ message Type {
     Map map = 7;
     VerbRef verbRef = 8;
     DataRef dataRef = 9;
+    Optional optional = 10;
   }
 }
 

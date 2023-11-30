@@ -126,6 +126,8 @@ func typeToSchema(s *schemapb.Type) Type {
 		return arrayToSchema(s.Array)
 	case *schemapb.Type_Map:
 		return mapToSchema(s.Map)
+	case *schemapb.Type_Optional:
+		return &Optional{Type: typeToSchema(s.Optional.Type)}
 	}
 	panic("unreachable")
 }

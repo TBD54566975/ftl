@@ -44,8 +44,13 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 					if n.Module != "" {
 						pkgs[path.Join(m.ImportRoot, n.Module)] = true
 					}
+
 				case *schema.Time:
 					pkgs["time"] = true
+
+				case *schema.Optional:
+					pkgs["github.com/TBD54566975/ftl/go-runtime/sdk"] = true
+
 				default:
 				}
 				return next()
@@ -85,6 +90,9 @@ func genType(t schema.Type) string {
 
 	case *schema.Map:
 		return "map[" + genType(t.Key) + "]" + genType(t.Value)
+
+	case *schema.Optional:
+		return "sdk.Option[" + genType(t.Type) + "]"
 	}
 	panic(fmt.Sprintf("unsupported type %T", t))
 }

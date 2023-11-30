@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	declUnion     = []Decl{&Data{}, &Verb{}}
-	typeUnion     = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
-	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}}
+	declUnion            = []Decl{&Data{}, &Verb{}}
+	nonOptionalTypeUnion = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{}, &VerbRef{}, &DataRef{}}
+	typeUnion            = append(nonOptionalTypeUnion, &Optional{})
+	metadataUnion        = []Metadata{&MetadataCalls{}, &MetadataIngress{}}
 
 	// Used by protobuf generation.
 	unions = map[reflect.Type][]reflect.Type{
@@ -25,6 +26,20 @@ var (
 		reflect.TypeOf((*Decl)(nil)).Elem():     reflectUnion(declUnion...),
 	}
 )
+
+type Position struct {
+	Filename string `protobuf:"1"`
+	Offset   int    `parser:"" protobuf:"-"`
+	Line     int    `protobuf:"2"`
+	Column   int    `protobuf:"3"`
+}
+
+func (p Position) String() string {
+	if p.Filename == "" {
+		return fmt.Sprintf("%d:%d", p.Line, p.Column)
+	}
+	return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
+}
 
 // A Node in the schema grammar.
 //
@@ -45,77 +60,68 @@ type Type interface {
 	schemaType()
 }
 
-type Position struct {
-	Filename string `json:"filename,omitempty" protobuf:"1"`
-	Offset   int    `json:"-" parser:"" protobuf:"-"`
-	Line     int    `json:"line,omitempty" protobuf:"2"`
-	Column   int    `json:"column,omitempty" protobuf:"3"`
-}
-
-func (p Position) String() string {
-	if p.Filename == "" {
-		return fmt.Sprintf("%d:%d", p.Line, p.Column)
-	}
-	return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
+// Optional represents a Type whose value may be optional.
+type Optional struct {
+	Type Type `parser:"@@" protobuf:"1"`
 }
 
 type Int struct {
-	Pos Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"-"`
 
-	Int bool `parser:"@'Int'" json:"-" protobuf:"-"`
+	Int bool `parser:"@'Int'" protobuf:"-"`
 }
 
 type Float struct {
-	Pos Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"-"`
 
-	Float bool `parser:"@'Float'" json:"-" protobuf:"-"`
+	Float bool `parser:"@'Float'" protobuf:"-"`
 }
 
 type String struct {
-	Pos Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"-"`
 
-	Str bool `parser:"@'String'" json:"-" protobuf:"-"`
+	Str bool `parser:"@'String'" protobuf:"-"`
 }
 
 type Bool struct {
-	Pos Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"-"`
 
-	Bool bool `parser:"@'Bool'" json:"-" protobuf:"-"`
+	Bool bool `parser:"@'Bool'" protobuf:"-"`
 }
 
 type Time struct {
-	Pos Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"-"`
 
-	Time bool `parser:"@'Time'" json:"-" protobuf:"-"`
+	Time bool `parser:"@'Time'" protobuf:"-"`
 }
 
 type Array struct {
-	Pos Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"-"`
 
-	Element Type `parser:"'[' @@ ']'" json:"element,omitempty" protobuf:"1"`
+	Element Type `parser:"'[' @@ ']'" protobuf:"1"`
 }
 
 type Map struct {
-	Pos Position `json:"-" parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"-"`
 
-	Key   Type `parser:"'{' @@" json:"key,omitempty" protobuf:"1"`
-	Value Type `parser:"':' @@ '}'" json:"value,omitempty" protobuf:"2"`
+	Key   Type `parser:"'{' @@" protobuf:"1"`
+	Value Type `parser:"':' @@ '}'" protobuf:"2"`
 }
 
 type Field struct {
-	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" json:"comments,omitempty" protobuf:"3"`
-	Name     string   `parser:"@Ident" json:"name,omitempty" protobuf:"2"`
-	Type     Type     `parser:"@@" json:"type,omitempty" protobuf:"4"`
+	Comments []string `parser:"@Comment*" protobuf:"3"`
+	Name     string   `parser:"@Ident" protobuf:"2"`
+	Type     Type     `parser:"@@" protobuf:"4"`
 }
 
 // Ref is a reference to another symbol.
 type Ref struct {
-	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Module string `parser:"(@Ident '.')?" json:"module,omitempty" protobuf:"3"`
-	Name   string `parser:"@Ident" json:"name,omitempty" protobuf:"2"`
+	Module string `parser:"(@Ident '.')?" protobuf:"3"`
+	Name   string `parser:"@Ident" protobuf:"2"`
 }
 
 func (r *Ref) String() string {
@@ -127,25 +133,25 @@ type DataRef Ref
 
 // A Data structure.
 type Data struct {
-	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string   `parser:"@Comment*" json:"comments,omitempty" protobuf:"5"`
-	Name     string     `parser:"'data' @Ident '{'" json:"name,omitempty" protobuf:"2"`
-	Fields   []*Field   `parser:"@@* '}'" json:"fields,omitempty" protobuf:"3"`
-	Metadata []Metadata `parser:"@@*" json:"metadata,omitempty" protobuf:"4"`
+	Comments []string   `parser:"@Comment*" protobuf:"5"`
+	Name     string     `parser:"'data' @Ident '{'" protobuf:"2"`
+	Fields   []*Field   `parser:"@@* '}'" protobuf:"3"`
+	Metadata []Metadata `parser:"@@*" protobuf:"4"`
 }
 
 // VerbRef is a reference to a Verb.
 type VerbRef Ref
 
 type Verb struct {
-	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string   `parser:"@Comment*" json:"comments,omitempty" protobuf:"3"`
-	Name     string     `parser:"'verb' @Ident" json:"name,omitempty" protobuf:"2"`
-	Request  *DataRef   `parser:"'(' @@ ')'" json:"request,omitempty" protobuf:"4"`
-	Response *DataRef   `parser:"@@" json:"response,omitempty" protobuf:"5"`
-	Metadata []Metadata `parser:"@@*" json:"metadata,omitempty" protobuf:"6"`
+	Comments []string   `parser:"@Comment*" protobuf:"3"`
+	Name     string     `parser:"'verb' @Ident" protobuf:"2"`
+	Request  *DataRef   `parser:"'(' @@ ')'" protobuf:"4"`
+	Response *DataRef   `parser:"@@" protobuf:"5"`
+	Metadata []Metadata `parser:"@@*" protobuf:"6"`
 }
 
 // AddCall adds a call reference to the Verb.
@@ -165,16 +171,16 @@ type Metadata interface {
 }
 
 type MetadataCalls struct {
-	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Calls []*VerbRef `parser:"'calls' @@ (',' @@)*" json:"calls,omitempty" protobuf:"2"`
+	Calls []*VerbRef `parser:"'calls' @@ (',' @@)*" protobuf:"2"`
 }
 
 type MetadataIngress struct {
-	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Method string `parser:"'ingress' @('GET' | 'POST')" json:"method,omitempty" protobuf:"2"`
-	Path   string `parser:"@('/' @('{' | '}' | Ident)+)+" json:"path,omitempty" protobuf:"3"`
+	Method string `parser:"'ingress' @('GET' | 'POST')" protobuf:"2"`
+	Path   string `parser:"@('/' @('{' | '}' | Ident)+)+" protobuf:"3"`
 }
 
 func (m *MetadataIngress) Parameters() []string {
@@ -188,11 +194,11 @@ func (m *MetadataIngress) Parameters() []string {
 }
 
 type Module struct {
-	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" json:"comments,omitempty" protobuf:"3"`
-	Name     string   `parser:"'module' @Ident '{'" json:"name,omitempty" protobuf:"2"`
-	Decls    []Decl   `parser:"@@* '}'" json:"decls,omitempty" protobuf:"4"`
+	Comments []string `parser:"@Comment*" protobuf:"3"`
+	Name     string   `parser:"'module' @Ident '{'" protobuf:"2"`
+	Decls    []Decl   `parser:"@@* '}'" protobuf:"4"`
 }
 
 type Decl interface {
@@ -254,9 +260,9 @@ func (m *Module) Imports() []string {
 }
 
 type Schema struct {
-	Pos Position `json:"pos,omitempty" parser:"" protobuf:"1,optional"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Modules []*Module `parser:"@@*" json:"modules,omitempty" protobuf:"2"`
+	Modules []*Module `parser:"@@*" protobuf:"2"`
 }
 
 func (s *Schema) DataMap() map[DataRef]*Data {
@@ -292,7 +298,7 @@ var (
 		{Name: "Punct", Pattern: `[-:[\]{}<>()*+?.,\\^$|#]`},
 	})
 
-	parserOptions = []participle.Option{
+	commonParserOptions = []participle.Option{
 		participle.Lexer(lex),
 		participle.Elide("Whitespace"),
 		participle.Unquote(),
@@ -300,15 +306,34 @@ var (
 			token.Value = strings.TrimSpace(strings.TrimPrefix(token.Value, "//"))
 			return token, nil
 		}, "Comment"),
-		participle.Union(typeUnion...),
 		participle.Union(metadataUnion...),
 		participle.Union(declUnion...),
 	}
 
+	// Parser options for every parser _except_ the type parser.
+	parserOptions = append(commonParserOptions, participle.ParseTypeWith(parseType))
+
 	parser       = participle.MustBuild[Schema](parserOptions...)
 	moduleParser = participle.MustBuild[Module](parserOptions...)
 	refParser    = participle.MustBuild[Ref](parserOptions...)
+	typeParser   = participle.MustBuild[typeParserGrammar](append(commonParserOptions, participle.Union(nonOptionalTypeUnion...))...)
 )
+
+type typeParserGrammar struct {
+	Type     Type `parser:"@@"`
+	Optional bool `parser:"@'?'?"`
+}
+
+func parseType(pl *lexer.PeekingLexer) (Type, error) {
+	typ, err := typeParser.ParseFromLexer(pl, participle.AllowTrailing(true))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if typ.Optional {
+		return &Optional{Type: typ.Type}, nil
+	}
+	return typ.Type, nil
+}
 
 func ParseString(filename, input string) (*Schema, error) {
 	mod, err := parser.ParseString(filename, input)

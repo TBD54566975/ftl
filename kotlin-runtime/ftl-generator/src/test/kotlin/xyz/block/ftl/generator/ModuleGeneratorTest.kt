@@ -2,23 +2,12 @@ package xyz.block.ftl.generator
 
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import xyz.block.ftl.v1.schema.*
 import xyz.block.ftl.v1.schema.Array
-import xyz.block.ftl.v1.schema.Bool
-import xyz.block.ftl.v1.schema.Data
-import xyz.block.ftl.v1.schema.DataRef
-import xyz.block.ftl.v1.schema.Decl
-import xyz.block.ftl.v1.schema.Field
 import xyz.block.ftl.v1.schema.Float
 import xyz.block.ftl.v1.schema.Int
 import xyz.block.ftl.v1.schema.Map
-import xyz.block.ftl.v1.schema.Metadata
-import xyz.block.ftl.v1.schema.MetadataIngress
-import xyz.block.ftl.v1.schema.Module
 import xyz.block.ftl.v1.schema.String
-import xyz.block.ftl.v1.schema.Time
-import xyz.block.ftl.v1.schema.Type
-import xyz.block.ftl.v1.schema.Verb
-import xyz.block.ftl.v1.schema.VerbRef
 import kotlin.test.assertEquals
 
 class ModuleGeneratorTest {
@@ -56,15 +45,18 @@ public class TestModule()
             Field(name = "string", type = Type(string = String())),
             Field(name = "bool", type = Type(bool = Bool())),
             Field(name = "time", type = Type(time = Time())),
+            Field(name = "optional", type = Type(optional = Optional(type = Type(string = String())))),
             Field(name = "array", type = Type(array = Array(element = Type(string = String())))),
             Field(
               name = "nestedArray", type = Type(
                 array = Array(element = Type(array = Array(element = Type(string = String()))))
               )
             ),
-            Field(name = "dataRefArray", type = Type(
-              array = Array(element = Type(dataRef = DataRef(name = "TestRequest", module = "ftl.test")))
-            )),
+            Field(
+              name = "dataRefArray", type = Type(
+                array = Array(element = Type(dataRef = DataRef(name = "TestRequest", module = "ftl.test")))
+              )
+            ),
             Field(
               name = "map",
               type = Type(map = Map(key = Type(string = String()), value_ = Type(int = Int())))
@@ -115,6 +107,7 @@ public data class TestResponse(
   public val string: String,
   public val bool: Boolean,
   public val time: OffsetDateTime,
+  public val optional: String?,
   public val array: ArrayList<String>,
   public val nestedArray: ArrayList<ArrayList<String>>,
   public val dataRefArray: ArrayList<TestRequest>,
