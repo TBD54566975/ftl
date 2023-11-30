@@ -16,6 +16,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
       - name: Docker Compose
         # New version of "sqlc generate" needs the DB up for some unknown reason
         run: docker compose up -d --wait
