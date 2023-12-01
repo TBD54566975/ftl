@@ -54,7 +54,7 @@ public class TestModule()
             ),
             Field(
               name = "dataRefArray", type = Type(
-                array = Array(element = Type(dataRef = DataRef(name = "TestRequest", module = "ftl.test")))
+                array = Array(element = Type(dataRef = DataRef(name = "TestRequest", module = "test")))
               )
             ),
             Field(
@@ -70,6 +70,7 @@ public class TestModule()
               )
             ),
             Field(name = "dataRef", type = Type(dataRef = DataRef(name = "TestRequest"))),
+            Field(name = "externalDataRef", type = Type(dataRef = DataRef(module = "other", name = "TestRequest"))),
           )
         )
       ),
@@ -114,6 +115,7 @@ public data class TestResponse(
   public val map: Map<String, Long>,
   public val nestedMap: Map<String, Map<String, Long>>,
   public val dataRef: TestRequest,
+  public val externalDataRef: ftl.other.TestRequest,
 )
 
 @Ignore

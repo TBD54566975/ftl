@@ -28,7 +28,7 @@ class ModuleGenerator() {
       file.writeTo(sourcesDest)
 
       println(
-        "Generated module: ${fqOutputDir}/${it.name}/${file.name}.kt"
+        "Generated module: ${fqOutputDir}/generated-sources/ftl/${it.name}/${file.name}.kt"
       )
     }
   }
@@ -154,8 +154,7 @@ class ModuleGenerator() {
       }
 
       type.dataRef != null -> {
-        var module = type.dataRef.module
-        type.dataRef.module.ifEmpty { module = namespace }
+        val module = if (type.dataRef.module.isEmpty()) namespace else "ftl.${type.dataRef.module}"
         ClassName(module, type.dataRef.name)
       }
 
@@ -172,15 +171,6 @@ class ModuleGenerator() {
 
   private fun prepareFtlRoot(buildDir: String, module: String) {
     Path.of(buildDir).createDirectories()
-
-    Path.of(buildDir, "ftl.toml").writeText(
-      """
-      module = "$module"
-      language = "kotlin"
-      deploy = ["main", "classes", "dependency", "classpath.txt"]
-      schema = "schema.pb"
-      """.trimIndent()
-    )
 
     Path.of(buildDir, "detekt.yml").writeText(
       """
