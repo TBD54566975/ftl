@@ -10,6 +10,35 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
+func TestExtractModuleSchema(t *testing.T) {
+	actual, err := ExtractModuleSchema("testdata")
+	assert.NoError(t, err)
+	actual = schema.Normalise(actual)
+	expected := `module main {
+  data Nested {
+  }
+
+  data Req {
+    int Int
+    int64 Int
+    float Float
+    string String
+    slice [String]
+    map {String: String}
+    nested Nested
+    optional Nested?
+    time Time
+  }
+
+  data Resp {
+  }
+
+  verb verb(Req) Resp
+}
+`
+	assert.Equal(t, expected, actual.String())
+}
+
 func TestParseDirectives(t *testing.T) {
 	tests := []struct {
 		name     string

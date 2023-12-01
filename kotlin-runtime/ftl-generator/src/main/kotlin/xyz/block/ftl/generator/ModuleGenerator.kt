@@ -159,6 +159,13 @@ class ModuleGenerator() {
         ClassName(module, type.dataRef.name)
       }
 
+      type.optional != null -> {
+        val wrapped = type.optional.type ?: throw IllegalArgumentException(
+          "Missing wrapped type in kotlin optional generator"
+        )
+        return getTypeClass(wrapped, namespace).copy(nullable = true)
+      }
+
       else -> throw IllegalArgumentException("Unknown type in kotlin generator")
     }
   }

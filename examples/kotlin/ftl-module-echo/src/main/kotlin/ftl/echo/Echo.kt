@@ -9,7 +9,7 @@ import xyz.block.ftl.Verb
 
 class InvalidInput(val field: String) : Exception()
 
-data class EchoRequest(val name: String)
+data class EchoRequest(val name: String?)
 data class EchoResponse(val message: String)
 
 class Echo {
@@ -18,6 +18,6 @@ class Echo {
   @Ingress(Method.GET, "/echo")
   fun echo(context: Context, req: EchoRequest): EchoResponse {
     val response = context.call(TimeModuleClient::time, TimeRequest())
-    return EchoResponse(message = "Hello, ${req.name}! The time is ${response.time}.")
+    return EchoResponse(message = "Hello, ${req.name ?: "anonymous"}! The time is ${response.time}.")
   }
 }

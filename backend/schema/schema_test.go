@@ -18,7 +18,7 @@ var schema = Normalise(&Schema{
 				&Data{
 					Name: "CreateRequest",
 					Fields: []*Field{
-						{Name: "name", Type: &Map{Key: &String{}, Value: &String{}}},
+						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}},
 					},
 				},
 				&Data{
@@ -62,7 +62,7 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {String: String}
+    name {String: String}?
   }
 
   data CreateResponse {
@@ -108,9 +108,10 @@ Schema
   Module
     Data
       Field
-        Map
-          String
-          String
+        Optional
+          Map
+            String
+            String
     Data
       Field
         Array
@@ -143,7 +144,7 @@ Schema
 		return next()
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(actual.String()))
+	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(actual.String()), "%s", actual.String())
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -242,7 +243,7 @@ func TestParseModule(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {String: String}
+    name {String: String}?
   }
   data CreateResponse {
     name [String]

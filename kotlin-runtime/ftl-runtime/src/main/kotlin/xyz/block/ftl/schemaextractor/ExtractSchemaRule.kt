@@ -16,6 +16,8 @@ import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.getAbbreviation
+import org.jetbrains.kotlin.types.isNullable
+import org.jetbrains.kotlin.types.typeUtil.isAnyOrNullableAny
 import org.jetbrains.kotlin.types.typeUtil.requiresTypeAliasExpansion
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.Context
@@ -290,7 +292,7 @@ class SchemaExtractor(
   }
 
   private fun KotlinType.toSchemaType(): Type {
-    return when (this.fqNameOrNull()?.asString()) {
+    val type = when (this.fqNameOrNull()?.asString()) {
       String::class.qualifiedName -> Type(string = xyz.block.ftl.v1.schema.String())
       Int::class.qualifiedName -> Type(int = xyz.block.ftl.v1.schema.Int())
       Long::class.qualifiedName -> Type(int = xyz.block.ftl.v1.schema.Int())
@@ -343,6 +345,10 @@ class SchemaExtractor(
         )
       }
     }
+    if (this.isNullable()) {
+      return Type(optional = Optional(type = type))
+    }
+    return type
   }
 
   private fun KtTypeReference.resolveType(): KotlinType =

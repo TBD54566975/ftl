@@ -28,9 +28,6 @@ var (
 	errorIFaceType = once(func() *types.Interface {
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
-	timeType = once(func() types.Type {
-		return mustLoadRef("time", "Time").Type()
-	})
 	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/sdk.Call"
 )
 
@@ -328,7 +325,7 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		case types.String:
 			return &schema.String{Pos: goPosToSchemaPos(node.Pos())}, nil
 
-		case types.Int:
+		case types.Int, types.Int64:
 			return &schema.Int{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		case types.Bool:
@@ -342,11 +339,26 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		}
 
 	case *types.Struct:
-		// Special check for time.Time
-		if tnode.String() == timeType().String() {
-			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
+		named, ok := tnode.(*types.Named)
+		if !ok {
+			return parseStruct(pctx, node, tnode)
 		}
-		return parseStruct(pctx, node, tnode)
+
+		// Special-cased types.
+		switch named.Obj().Pkg().Path() + "." + named.Obj().Name() {
+		case "time.Time":
+			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
+
+		case "github.com/TBD54566975/ftl/go-runtime/sdk.Option":
+			underlying, err := parseType(pctx, node, named.TypeArgs().At(0))
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			return &schema.Optional{Type: underlying}, nil
+
+		default:
+			return parseStruct(pctx, node, tnode)
+		}
 
 	case *types.Map:
 		return parseMap(pctx, node, underlying)

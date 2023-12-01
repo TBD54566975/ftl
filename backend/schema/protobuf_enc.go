@@ -51,38 +51,6 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 	return out
 }
 
-func typeToProto(t Type) *schemapb.Type {
-	switch t.(type) {
-	case *VerbRef:
-		return &schemapb.Type{Value: &schemapb.Type_VerbRef{VerbRef: t.ToProto().(*schemapb.VerbRef)}}
-
-	case *DataRef:
-		return &schemapb.Type{Value: &schemapb.Type_DataRef{DataRef: t.ToProto().(*schemapb.DataRef)}}
-
-	case *Int:
-		return &schemapb.Type{Value: &schemapb.Type_Int{Int: t.ToProto().(*schemapb.Int)}}
-
-	case *Float:
-		return &schemapb.Type{Value: &schemapb.Type_Float{Float: t.ToProto().(*schemapb.Float)}}
-
-	case *String:
-		return &schemapb.Type{Value: &schemapb.Type_String_{String_: t.ToProto().(*schemapb.String)}}
-
-	case *Time:
-		return &schemapb.Type{Value: &schemapb.Type_Time{Time: t.ToProto().(*schemapb.Time)}}
-
-	case *Bool:
-		return &schemapb.Type{Value: &schemapb.Type_Bool{Bool: t.ToProto().(*schemapb.Bool)}}
-
-	case *Array:
-		return &schemapb.Type{Value: &schemapb.Type_Array{Array: t.ToProto().(*schemapb.Array)}}
-
-	case *Map:
-		return &schemapb.Type{Value: &schemapb.Type_Map{Map: t.ToProto().(*schemapb.Map)}}
-	}
-	panic("unreachable")
-}
-
 func (p Position) ToProto() proto.Message {
 	return &schemapb.Position{
 		Line:     int64(p.Line),
@@ -195,7 +163,44 @@ func (m *Map) ToProto() proto.Message {
 }
 
 func (a *Array) ToProto() proto.Message {
-	return &schemapb.Array{
-		Element: typeToProto(a.Element),
+	return &schemapb.Array{Element: typeToProto(a.Element)}
+}
+
+func (o *Optional) ToProto() proto.Message {
+	return &schemapb.Optional{Type: typeToProto(o.Type)}
+}
+
+func typeToProto(t Type) *schemapb.Type {
+	switch t := t.(type) {
+	case *VerbRef:
+		return &schemapb.Type{Value: &schemapb.Type_VerbRef{VerbRef: t.ToProto().(*schemapb.VerbRef)}}
+
+	case *DataRef:
+		return &schemapb.Type{Value: &schemapb.Type_DataRef{DataRef: t.ToProto().(*schemapb.DataRef)}}
+
+	case *Int:
+		return &schemapb.Type{Value: &schemapb.Type_Int{Int: t.ToProto().(*schemapb.Int)}}
+
+	case *Float:
+		return &schemapb.Type{Value: &schemapb.Type_Float{Float: t.ToProto().(*schemapb.Float)}}
+
+	case *String:
+		return &schemapb.Type{Value: &schemapb.Type_String_{String_: t.ToProto().(*schemapb.String)}}
+
+	case *Time:
+		return &schemapb.Type{Value: &schemapb.Type_Time{Time: t.ToProto().(*schemapb.Time)}}
+
+	case *Bool:
+		return &schemapb.Type{Value: &schemapb.Type_Bool{Bool: t.ToProto().(*schemapb.Bool)}}
+
+	case *Array:
+		return &schemapb.Type{Value: &schemapb.Type_Array{Array: t.ToProto().(*schemapb.Array)}}
+
+	case *Map:
+		return &schemapb.Type{Value: &schemapb.Type_Map{Map: t.ToProto().(*schemapb.Map)}}
+
+	case *Optional:
+		return &schemapb.Type{Value: &schemapb.Type_Optional{Optional: t.ToProto().(*schemapb.Optional)}}
 	}
+	panic("unreachable")
 }

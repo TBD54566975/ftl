@@ -52,6 +52,9 @@ func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *json
 		for _, field := range node.Fields {
 			jsField := nodeToJSSchema(field.Type, rootRef, dataRefs)
 			jsField.Description = jsComments(field.Comments)
+			if _, ok := field.Type.(*Optional); !ok {
+				schema.Required = append(schema.Required, field.Name)
+			}
 			schema.Properties[field.Name] = jsonschema.SchemaOrBool{TypeObject: jsField}
 		}
 		return schema
@@ -81,7 +84,7 @@ func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *json
 		st := jsonschema.Array
 		return &jsonschema.Schema{
 			Type:  &jsonschema.Type{SimpleTypes: &st},
-			Items: &jsonschema.Items{SchemaOrBool: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Element, rootRef, dataRefs)}},
+			Items: typeToItems(rootRef, dataRefs, node.Element),
 		}
 
 	case *Map:
@@ -89,8 +92,8 @@ func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *json
 		// JSON schema generic map of key type to value type
 		return &jsonschema.Schema{
 			Type:                 &jsonschema.Type{SimpleTypes: &st},
-			AdditionalProperties: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Value, rootRef, dataRefs)},
 			PropertyNames:        &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Key, rootRef, dataRefs)},
+			AdditionalProperties: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Value, rootRef, dataRefs)},
 		}
 
 	case *DataRef:
@@ -104,12 +107,36 @@ func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *json
 		dataRefs[dataRef] = true
 		return &jsonschema.Schema{Ref: &ref}
 
+	case *Optional:
+		null := jsonschema.Null
+		return &jsonschema.Schema{AnyOf: []jsonschema.SchemaOrBool{
+			{TypeObject: nodeToJSSchema(node.Type, rootRef, dataRefs)},
+			{TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &null}}},
+		}}
+
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataIngress, *Module, *Schema, Type, *Verb, *VerbRef:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 
 	default:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 	}
+}
+
+func typeToItems(rootRef DataRef, dataRefs map[DataRef]bool, node Type) *jsonschema.Items {
+	null := jsonschema.Null
+	if node, ok := node.(*Optional); ok {
+		return &jsonschema.Items{
+			SchemaOrBool: &jsonschema.SchemaOrBool{
+				TypeObject: &jsonschema.Schema{
+					AnyOf: []jsonschema.SchemaOrBool{
+						{TypeObject: nodeToJSSchema(node.Type, rootRef, dataRefs)},
+						{TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &null}}},
+					},
+				},
+			},
+		}
+	}
+	return &jsonschema.Items{SchemaOrBool: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node, rootRef, dataRefs)}}
 }
 
 func jsBool(ok bool) *jsonschema.SchemaOrBool {
