@@ -69,7 +69,12 @@ class ModuleGenerator() {
     type.fields.forEach { field ->
       dataClassBuilder.addKdoc(field.comments.joinToString("\n"))
       field.type?.let {
-        dataConstructorBuilder.addParameter(field.name, getTypeClass(it, namespace))
+        var parameter = ParameterSpec
+          .builder(field.name, getTypeClass(it, namespace))
+        if (it.optional != null) {
+          parameter = parameter.defaultValue("null")
+        }
+        dataConstructorBuilder.addParameter(parameter.build())
         dataClassBuilder.addProperty(
           PropertySpec.builder(field.name, getTypeClass(it, namespace)).initializer(field.name).build()
         )

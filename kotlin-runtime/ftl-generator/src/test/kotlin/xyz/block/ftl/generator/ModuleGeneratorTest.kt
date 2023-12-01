@@ -108,7 +108,7 @@ public data class TestResponse(
   public val string: String,
   public val bool: Boolean,
   public val time: OffsetDateTime,
-  public val optional: String?,
+  public val optional: String? = null,
   public val array: ArrayList<String>,
   public val nestedArray: ArrayList<ArrayList<String>>,
   public val dataRefArray: ArrayList<TestRequest>,
