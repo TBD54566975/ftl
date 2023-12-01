@@ -139,8 +139,6 @@ jobs:
       - name: Publish Go Binaries
         run: |
           bit build/release/ftl
-          bit build/release/ftl-controller
-          bit build/release/ftl-runner
           goreleaser release
         env:
           GITHUB_TOKEN: ${{ github.token }}
