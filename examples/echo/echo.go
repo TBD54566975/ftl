@@ -6,6 +6,7 @@ package echo
 import (
 	"context"
 	"fmt"
+
 	timemodule "github.com/TBD54566975/ftl/examples/time"
 
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
@@ -13,7 +14,7 @@ import (
 
 // An echo request.
 type EchoRequest struct {
-	Name string `json:"name"`
+	Name ftl.Option[string] `json:"name"`
 }
 
 type EchoResponse struct {
@@ -30,5 +31,5 @@ func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	if err != nil {
 		return EchoResponse{}, err
 	}
-	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name, tresp.Time)}, nil
+	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default("anonymous"), tresp.Time)}, nil
 }
