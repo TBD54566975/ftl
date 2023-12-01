@@ -83,8 +83,12 @@ func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *json
 	case *Array:
 		st := jsonschema.Array
 		return &jsonschema.Schema{
-			Type:  &jsonschema.Type{SimpleTypes: &st},
-			Items: typeToItems(rootRef, dataRefs, node.Element),
+			Type: &jsonschema.Type{SimpleTypes: &st},
+			Items: &jsonschema.Items{
+				SchemaOrBool: &jsonschema.SchemaOrBool{
+					TypeObject: nodeToJSSchema(node.Element, rootRef, dataRefs),
+				},
+			},
 		}
 
 	case *Map:
@@ -120,23 +124,6 @@ func nodeToJSSchema(node Node, rootRef DataRef, dataRefs map[DataRef]bool) *json
 	default:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 	}
-}
-
-func typeToItems(rootRef DataRef, dataRefs map[DataRef]bool, node Type) *jsonschema.Items {
-	null := jsonschema.Null
-	if node, ok := node.(*Optional); ok {
-		return &jsonschema.Items{
-			SchemaOrBool: &jsonschema.SchemaOrBool{
-				TypeObject: &jsonschema.Schema{
-					AnyOf: []jsonschema.SchemaOrBool{
-						{TypeObject: nodeToJSSchema(node.Type, rootRef, dataRefs)},
-						{TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &null}}},
-					},
-				},
-			},
-		}
-	}
-	return &jsonschema.Items{SchemaOrBool: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node, rootRef, dataRefs)}}
 }
 
 func jsBool(ok bool) *jsonschema.SchemaOrBool {

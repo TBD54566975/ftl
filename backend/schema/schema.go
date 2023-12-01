@@ -319,6 +319,8 @@ var (
 	typeParser   = participle.MustBuild[typeParserGrammar](append(commonParserOptions, participle.Union(nonOptionalTypeUnion...))...)
 )
 
+// We have a separate parser for types because Participle doesn't support left
+// recursion and "Type = Type ? | Int | String ..." is left recursive.
 type typeParserGrammar struct {
 	Type     Type `parser:"@@"`
 	Optional bool `parser:"@'?'?"`

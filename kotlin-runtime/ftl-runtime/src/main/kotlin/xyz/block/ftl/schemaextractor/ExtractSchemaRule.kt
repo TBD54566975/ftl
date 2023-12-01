@@ -17,7 +17,6 @@ import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.getAbbreviation
 import org.jetbrains.kotlin.types.isNullable
-import org.jetbrains.kotlin.types.typeUtil.isAnyOrNullableAny
 import org.jetbrains.kotlin.types.typeUtil.requiresTypeAliasExpansion
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.Context
