@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/jackc/pgx/v5"
 
@@ -206,7 +205,7 @@ type eventRow struct {
 
 func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter) ([]Event, error) {
 	if limit < 1 {
-		return nil, errors.Errorf("limit must be >= 1, got %d", limit)
+		return nil, fmt.Errorf("limit must be >= 1, got %d", limit)
 	}
 
 	// Build query.
@@ -261,14 +260,14 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 	rows, err := d.db.Conn().Query(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
-		return nil, errors.WithStack(translatePGError(err))
+		return nil, translatePGError(err)
 	}
 	deploymentIDs := []int64{}
 	for rows.Next() {
 		var id int64
 		var name string
 		if err := rows.Scan(&id, &name); err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 		deploymentIDs = append(deploymentIDs, id)
 		deploymentNames[id] = model.DeploymentName(name)
@@ -315,13 +314,13 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	// Issue query.
 	rows, err = d.db.Conn().Query(ctx, q, args...)
 	if err != nil {
-		return nil, errors.Wrap(translatePGError(err), q)
+		return nil, fmt.Errorf("%s: %w", q, translatePGError(err))
 	}
 	defer rows.Close()
 
 	events, err := transformRowsToEvents(deploymentNames, rows)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return events, nil
 }
@@ -337,7 +336,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 			&row.Type, &row.Payload,
 		)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 
 		row.DeploymentName = deploymentNames[deploymentID]
@@ -350,11 +349,11 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, errors.WithStack(err)
+				return nil, err
 			}
 			level, err := strconv.ParseInt(row.CustomKey1.MustGet(), 10, 32)
 			if err != nil {
-				return nil, errors.Wrapf(err, "invalid log level: %q", row.CustomKey1.MustGet())
+				return nil, fmt.Errorf("invalid log level: %q: %w", row.CustomKey1.MustGet(), err)
 			}
 			out = append(out, &LogEvent{
 				ID:             row.ID,
@@ -371,7 +370,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, errors.WithStack(err)
+				return nil, err
 			}
 			var sourceVerb types.Option[schema.VerbRef]
 			sourceModule, smok := row.CustomKey1.Get()
@@ -396,7 +395,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 		case sql.EventTypeDeploymentCreated:
 			var jsonPayload eventDeploymentCreatedJSON
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, errors.WithStack(err)
+				return nil, err
 			}
 			out = append(out, &DeploymentCreatedEvent{
 				ID:                 row.ID,
@@ -411,7 +410,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 		case sql.EventTypeDeploymentUpdated:
 			var jsonPayload eventDeploymentUpdatedJSON
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, errors.WithStack(err)
+				return nil, err
 			}
 			out = append(out, &DeploymentUpdatedEvent{
 				ID:              row.ID,

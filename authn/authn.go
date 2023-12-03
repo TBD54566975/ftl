@@ -3,6 +3,7 @@ package authn
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alecthomas/errors"
 	"github.com/zalando/go-keyring"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
@@ -46,7 +46,7 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 
 	usr, err := user.Current()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	// First, check if we have credentials in the keyring and that they work.
@@ -62,7 +62,7 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 	} else {
 		logger.Tracef("Credentials found in keyring: %s", creds)
 		if headers, err := checkAuth(ctx, logger, endpoint, creds); err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		} else if headers != nil {
 			return headers, nil
 		}
@@ -73,13 +73,13 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 	cmd.Stdout = out
 	err = cmd.Run()
 	if err != nil {
-		return nil, errors.Wrapf(err, "authenticator %s failed", authenticator)
+		return nil, fmt.Errorf("authenticator %s failed: %w", authenticator, err)
 	}
 
 	creds = out.String()
 	headers, err := checkAuth(ctx, logger, endpoint, creds)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	} else if headers == nil {
 		return nil, nil
 	}
@@ -108,12 +108,12 @@ func checkAuth(ctx context.Context, logger *log.Logger, endpoint *url.URL, creds
 		line := buf.Text()
 		name, value, ok := strings.Cut(line, ":")
 		if !ok {
-			return nil, errors.Errorf("invalid header %q", line)
+			return nil, fmt.Errorf("invalid header %q", line)
 		}
 		headers[name] = append(headers[name], strings.TrimSpace(value))
 	}
 	if buf.Err() != nil {
-		return nil, errors.WithStack(buf.Err())
+		return nil, buf.Err()
 	}
 
 	// Issue a HEAD request with the headers to verify we get a 200 back.
@@ -125,7 +125,7 @@ func checkAuth(ctx context.Context, logger *log.Logger, endpoint *url.URL, creds
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, endpoint.String(), nil)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	logger.Debugf("Authentication probe: %s %s", req.Method, req.URL)
 	for header, values := range headers {
@@ -136,7 +136,7 @@ func checkAuth(ctx context.Context, logger *log.Logger, endpoint *url.URL, creds
 	logger.Tracef("Authenticating with headers %s", headers)
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	defer resp.Body.Close() //nolint:gosec
 	if resp.StatusCode != http.StatusOK {
@@ -177,7 +177,7 @@ func (a *authnTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		var err error
 		creds, err = GetAuthenticationHeaders(r.Context(), r.URL, a.authenticators)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get authentication headers for %s", r.URL.Hostname())
+			return nil, fmt.Errorf("failed to get authentication headers for %s: %w", r.URL.Hostname(), err)
 		}
 		a.lock.Lock()
 		a.credentials[r.URL.Hostname()] = creds
@@ -189,5 +189,5 @@ func (a *authnTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 	resp, err := a.next.RoundTrip(r)
-	return resp, errors.WithStack(err)
+	return resp, err
 }

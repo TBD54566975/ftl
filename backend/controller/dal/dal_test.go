@@ -9,15 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types"
-
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types"
 )
 
 //nolint:maintidx

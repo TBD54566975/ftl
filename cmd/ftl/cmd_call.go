@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"github.com/titanous/json5"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -25,25 +24,25 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 	request := map[string]any{}
 	err := json5.Unmarshal([]byte(c.Request), &request)
 	if err != nil {
-		return errors.Wrap(err, "invalid request")
+		return fmt.Errorf("%s: %w", "invalid request", err)
 	}
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
-		return errors.Wrap(err, "invalid request")
+		return fmt.Errorf("%s: %w", "invalid request", err)
 	}
 	resp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{
 		Verb: c.Verb.ToProto(),
 		Body: requestJSON,
 	}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	switch resp := resp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Error_:
 		if resp.Error.Stack != nil && logger.GetLevel() <= log.Debug {
 			fmt.Println(*resp.Error.Stack)
 		}
-		return errors.Errorf("Verb error: %s", resp.Error.Message)
+		return fmt.Errorf("verb error: %s", resp.Error.Message)
 
 	case *ftlv1.CallResponse_Body:
 		fmt.Println(string(resp.Body))

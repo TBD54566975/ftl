@@ -4,11 +4,11 @@ package model
 import (
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
 
-	"github.com/alecthomas/errors"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
@@ -34,19 +34,19 @@ func parseKey[KT keyType[U], U any](key string) (KT, error) {
 	case strings.HasPrefix(key, kind):
 		ulid, err := ulid.Parse(key[len(kind):])
 		if err != nil {
-			return zero, errors.Wrap(err, "invalid ULID key")
+			return zero, fmt.Errorf("%s: %w", "invalid ULID key", err)
 		}
 		return KT(ulid), nil
 
 	case uuidRe.MatchString(key):
 		uuid, err := uuid.Parse(key)
 		if err != nil {
-			return zero, errors.Wrap(err, "invalid UUID key")
+			return zero, fmt.Errorf("%s: %w", "invalid UUID key", err)
 		}
 		return KT(uuid), nil
 
 	default:
-		return zero, errors.Errorf("invalid %s key %q", kind, key)
+		return zero, fmt.Errorf("invalid %s key %q", kind, key)
 	}
 }
 
@@ -65,11 +65,11 @@ var _ driver.Valuer = (*keyType[int])(nil)
 func (d *keyType[T]) Scan(src any) error {
 	input, ok := src.(string)
 	if !ok {
-		return errors.Errorf("expected UUID to be a string but it's a %T", src)
+		return fmt.Errorf("expected UUID to be a string but it's a %T", src)
 	}
 	id, err := uuid.Parse(input)
 	if err != nil {
-		return errors.Wrap(err, "invalid UUID")
+		return fmt.Errorf("%s: %w", "invalid UUID", err)
 	}
 	*d = keyType[T](id)
 	return nil

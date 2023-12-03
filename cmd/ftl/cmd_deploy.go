@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -32,39 +32,39 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	// Load the TOML file.
 	config, err := moduleconfig.LoadConfig(d.ModuleDir)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	logger.Infof("Creating deployment for module %s", config.Module)
 
 	if len(config.Deploy) == 0 {
-		return errors.Errorf("no deploy paths defined in config")
+		return fmt.Errorf("no deploy paths defined in config")
 	}
 
 	build := buildCmd{ModuleDir: d.ModuleDir}
 	err = build.Run(ctx)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	deployDir := filepath.Join(d.ModuleDir, config.DeployDir)
 	files, err := findFiles(deployDir, config.Deploy)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	filesByHash, err := hashFiles(deployDir, files)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	gadResp, err := client.GetArtefactDiffs(ctx, connect.NewRequest(&ftlv1.GetArtefactDiffsRequest{ClientDigests: maps.Keys(filesByHash)}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	module, err := d.loadProtoSchema(deployDir, config)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	logger.Infof("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))
@@ -72,14 +72,14 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		file := filesByHash[missing]
 		content, err := os.ReadFile(file.localPath)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		logger.Debugf("Uploading %s", relToCWD(file.localPath))
 		resp, err := client.UploadArtefact(ctx, connect.NewRequest(&ftlv1.UploadArtefactRequest{
 			Content: content,
 		}))
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		logger.Infof("Uploaded %s as %s:%s", relToCWD(file.localPath), sha256.FromBytes(resp.Msg.Digest), file.Path)
 	}
@@ -90,23 +90,23 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		}),
 	}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	logger.Infof("Created deployment %s", resp.Msg.DeploymentName)
 	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{DeploymentName: resp.Msg.GetDeploymentName(), MinReplicas: d.Replicas}))
-	return errors.WithStack(err)
+	return err
 }
 
 func (d *deployCmd) loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig) (*schemapb.Module, error) {
 	schema := filepath.Join(deployDir, config.Schema)
 	content, err := os.ReadFile(schema)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	module := &schemapb.Module{}
 	err = proto.Unmarshal(content, module)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	module.Runtime = &schemapb.ModuleRuntime{
 		CreateTime:  timestamppb.Now(),
@@ -126,21 +126,21 @@ func hashFiles(base string, files []string) (filesByHash map[string]deploymentAr
 	for _, file := range files {
 		r, err := os.Open(file)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 		defer r.Close() //nolint:gosec
 		hash, err := sha256.SumReader(r)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 		info, err := r.Stat()
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 		isExecutable := info.Mode()&0111 != 0
 		path, err := filepath.Rel(base, file)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 		filesByHash[hash.String()] = deploymentArtefact{
 			DeploymentArtefact: &ftlv1.DeploymentArtefact{
@@ -189,12 +189,12 @@ func findFiles(base string, files []string) ([]string, error) {
 		file = filepath.Join(base, file)
 		info, err := os.Stat(file)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 		if info.IsDir() {
 			dirFiles, err := findFilesInDir(file)
 			if err != nil {
-				return nil, errors.WithStack(err)
+				return nil, err
 			}
 			out = append(out, dirFiles...)
 		} else {
@@ -206,7 +206,7 @@ func findFiles(base string, files []string) ([]string, error) {
 
 func findFilesInDir(dir string) ([]string, error) {
 	var out []string
-	return out, errors.WithStack(filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	return out, filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -215,5 +215,5 @@ func findFilesInDir(dir string) ([]string, error) {
 		}
 		out = append(out, path)
 		return nil
-	}))
+	})
 }

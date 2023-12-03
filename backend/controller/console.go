@@ -3,10 +3,11 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -41,7 +42,7 @@ func (*ConsoleService) Ping(context.Context, *connect.Request[ftlv1.PingRequest]
 func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pbconsole.GetModulesRequest]) (*connect.Response[pbconsole.GetModulesResponse], error) {
 	deployments, err := c.dal.GetActiveDeployments(ctx)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	sch := &schema.Schema{
@@ -67,11 +68,11 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				}
 				jsonRequestSchema, err := schema.DataToJSONSchema(sch, dataRef)
 				if err != nil {
-					return nil, errors.WithStack(err)
+					return nil, err
 				}
 				jsonData, err := json.MarshalIndent(jsonRequestSchema, "", "  ")
 				if err != nil {
-					return nil, errors.WithStack(err)
+					return nil, err
 				}
 				verbs = append(verbs, &pbconsole.Verb{
 					Verb:              v,
@@ -105,7 +106,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbconsole.EventsQuery]) (*connect.Response[pbconsole.GetEventsResponse], error) {
 	query, err := eventsQueryProtoToDAL(req.Msg)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	if req.Msg.Limit == 0 {
@@ -118,7 +119,7 @@ func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbc
 
 	results, err := c.dal.QueryEvents(ctx, limitPlusOne, query...)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	var cursor *int64
@@ -149,7 +150,7 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 
 	query, err := eventsQueryProtoToDAL(req.Msg.Query)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	// Default to last 1 day of events
@@ -164,14 +165,14 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 
 		events, err := c.dal.QueryEvents(ctx, int(req.Msg.Query.Limit), newQuery...)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		err = stream.Send(&pbconsole.StreamEventsResponse{
 			Events: slices.Map(events, eventDALToProto),
 		})
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		lastEventTime = thisRequestTime
 		select {
@@ -196,7 +197,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 			for _, deployment := range filter.Deployments.Deployments {
 				deploymentName, err := model.ParseDeploymentName(deployment)
 				if err != nil {
-					return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
+					return nil, connect.NewError(connect.CodeInvalidArgument, err)
 				}
 				deploymentNames = append(deploymentNames, deploymentName)
 			}
@@ -207,7 +208,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 			for _, request := range filter.Requests.Requests {
 				_, requestName, err := model.ParseRequestName(request)
 				if err != nil {
-					return nil, connect.NewError(connect.CodeInvalidArgument, errors.WithStack(err))
+					return nil, connect.NewError(connect.CodeInvalidArgument, err)
 				}
 				requestNames = append(requestNames, requestName)
 			}
@@ -226,7 +227,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 				case pbconsole.EventType_EVENT_TYPE_DEPLOYMENT_UPDATED:
 					eventTypes = append(eventTypes, dal.EventTypeDeploymentUpdated)
 				default:
-					return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("unknown event type %v", eventType))
+					return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown event type %v", eventType))
 				}
 			}
 			query = append(query, dal.FilterTypes(eventTypes...))
@@ -234,7 +235,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 		case *pbconsole.EventsQuery_Filter_LogLevel:
 			level := log.Level(filter.LogLevel.LogLevel)
 			if level < log.Trace || level > log.Error {
-				return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("unknown log level %v", filter.LogLevel.LogLevel))
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown log level %v", filter.LogLevel.LogLevel))
 			}
 			query = append(query, dal.FilterLogLevel(level))
 
@@ -269,7 +270,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 			query = append(query, dal.FilterCall(sourceModule, filter.Call.DestModule, destVerb))
 
 		default:
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Errorf("unknown filter %T", filter))
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown filter %T", filter))
 		}
 	}
 	return query, nil
@@ -365,6 +366,6 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 		}
 
 	default:
-		panic(errors.Errorf("unknown event type %T", event))
+		panic(fmt.Errorf("unknown event type %T", event))
 	}
 }

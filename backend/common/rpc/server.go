@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/url"
@@ -11,7 +12,6 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"github.com/alecthomas/concurrency"
-	"github.com/alecthomas/errors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -100,7 +100,7 @@ func NewServer(ctx context.Context, listen *url.URL, options ...Option) (*Server
 func (s *Server) Serve(ctx context.Context) error {
 	listener, err := net.Listen("tcp", s.listen.Host)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	if s.listen.Port() == "0" {
 		s.listen.Host = listener.Addr().String()
@@ -120,9 +120,9 @@ func (s *Server) Serve(ctx context.Context) error {
 		}
 		if errors.Is(err, context.Canceled) {
 			_ = s.Server.Close()
-			return errors.WithStack(err)
+			return err
 		}
-		return errors.WithStack(err)
+		return err
 	})
 
 	// Start server.
@@ -131,10 +131,10 @@ func (s *Server) Serve(ctx context.Context) error {
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
-		return errors.WithStack(err)
+		return err
 	})
 
-	return errors.WithStack(tree.Wait())
+	return tree.Wait()
 }
 
 // Serve starts a HTTP and Connect gRPC server with sane defaults for FTL.
@@ -143,7 +143,7 @@ func (s *Server) Serve(ctx context.Context) error {
 func Serve(ctx context.Context, listen *url.URL, options ...Option) error {
 	server, err := NewServer(ctx, listen, options...)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	return server.Serve(ctx)
 }

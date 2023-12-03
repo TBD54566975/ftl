@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	timemodule "github.com/TBD54566975/ftl/examples/time"
-
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 

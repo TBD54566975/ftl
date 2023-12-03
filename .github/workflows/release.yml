@@ -138,7 +138,8 @@ jobs:
         run: bit frontend/dist/index.html
       - name: Publish Go Binaries
         run: |
+          git ls-files -- '*.go' | xargs errtrace -w && go mod tidy
           bit build/release/ftl
-          goreleaser release
+          goreleaser release --skip=validate
         env:
           GITHUB_TOKEN: ${{ github.token }}

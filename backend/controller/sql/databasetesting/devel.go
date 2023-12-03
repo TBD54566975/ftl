@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alecthomas/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -17,14 +16,14 @@ import (
 func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Pool, error) {
 	config, err := pgx.ParseConfig(dsn)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	noDBDSN := config.Copy()
 	noDBDSN.Database = ""
 	conn, err := pgx.ConnectConfig(ctx, noDBDSN)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	defer conn.Close(ctx)
 
@@ -36,12 +35,12 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Po
 		WHERE datname = $1 AND pid <> pg_backend_pid()`,
 			config.Database)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 
 		_, err = conn.Exec(ctx, fmt.Sprintf("DROP DATABASE IF EXISTS %q", config.Database))
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 	}
 
@@ -50,12 +49,12 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Po
 
 	err = sql.Migrate(ctx, dsn)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	realConn, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return realConn, nil
 }

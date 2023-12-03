@@ -2,9 +2,9 @@ package sql
 
 import (
 	"database/sql/driver"
+	"fmt"
 	"time"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
@@ -35,7 +35,7 @@ func (u *Key) Scan(src any) error {
 	case string:
 		id, err := uuid.Parse(src)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		*u = Key(id)
 
@@ -43,7 +43,7 @@ func (u *Key) Scan(src any) error {
 		*u = src
 
 	default:
-		return errors.Errorf("invalid key type %T", src)
+		return fmt.Errorf("invalid key type %T", src)
 	}
 	return nil
 }
@@ -51,7 +51,7 @@ func (u *Key) Scan(src any) error {
 func (u *Key) UnmarshalText(text []byte) error {
 	id, err := uuid.ParseBytes(text)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	*u = Key(id)
 	return nil

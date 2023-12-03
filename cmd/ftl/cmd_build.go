@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-
-	"github.com/alecthomas/errors"
+	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -18,14 +17,14 @@ func (b *buildCmd) Run(ctx context.Context) error {
 	// Load the TOML file.
 	config, err := moduleconfig.LoadConfig(b.ModuleDir)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	switch config.Language {
 	case "kotlin":
 		return b.buildKotlin(ctx, config)
 	default:
-		return errors.Errorf("unable to build. unknown language %q", config.Language)
+		return fmt.Errorf("unable to build. unknown language %q", config.Language)
 	}
 }
 
@@ -37,7 +36,7 @@ func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleCo
 
 	err := exec.Command(ctx, logger.GetLevel(), b.ModuleDir, "bash", "-c", config.Build).Run()
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	return nil

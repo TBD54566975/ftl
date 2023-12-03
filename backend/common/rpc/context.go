@@ -2,11 +2,11 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
-	"github.com/alecthomas/errors"
 	"golang.org/x/mod/semver"
 
 	"github.com/TBD54566975/ftl"
@@ -65,7 +65,7 @@ func RequestNameFromContext(ctx context.Context) (model.RequestName, bool, error
 	}
 	_, key, err := model.ParseRequestName(keyStr)
 	if err != nil {
-		return "", false, errors.Wrap(err, "invalid request Key")
+		return "", false, fmt.Errorf("%s: %w", "invalid request Key", err)
 	}
 	return key, true, nil
 }
@@ -126,7 +126,7 @@ func (m *metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerF
 		if err != nil {
 			return err
 		}
-		err = errors.WithStack(req(ctx, s))
+		err = req(ctx, s)
 		if err != nil {
 			if connect.CodeOf(err) == connect.CodeCanceled {
 				return nil
@@ -148,7 +148,6 @@ func (m *metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc 
 		}
 		resp, err := uf(ctx, req)
 		if err != nil {
-			err = errors.WithStack(err)
 			logger.Logf(m.errorLevel, "Unary RPC failed: %s: %s", err, req.Spec().Procedure)
 			return nil, err
 		}
@@ -182,7 +181,7 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		}
 		if key, ok, err := RequestNameFromContext(ctx); ok {
 			if err != nil {
-				return nil, errors.WithStack(err)
+				return nil, err
 			}
 			if ok {
 				headers.SetRequestName(header, key)
@@ -193,12 +192,12 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 			ctx = WithDirectRouting(ctx)
 		}
 		if verbs, err := headers.GetCallers(header); err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		} else { //nolint:revive
 			ctx = WithVerbs(ctx, verbs)
 		}
 		if key, ok, err := headers.GetRequestName(header); err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		} else if ok {
 			ctx = WithRequestName(ctx, key)
 		}
@@ -221,7 +220,7 @@ func (v versionInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 	return func(ctx context.Context, ar connect.AnyRequest) (connect.AnyResponse, error) {
 		resp, err := next(ctx, ar)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 		if ar.Spec().IsClient {
 			if err := v.checkVersion(resp.Header()); err != nil {
@@ -237,7 +236,7 @@ func (v versionInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 func (v versionInterceptor) checkVersion(header http.Header) error {
 	version := header.Get("X-FTL-Version")
 	if semver.Compare(ftl.Version, version) < 0 {
-		return errors.Errorf("FTL client (%s) is older than server (%s), consider upgrading: https://github.com/TBD54566975/ftl/releases", ftl.Version, version)
+		return fmt.Errorf("FTL client (%s) is older than server (%s), consider upgrading: https://github.com/TBD54566975/ftl/releases", ftl.Version, version)
 	}
 	return nil
 }

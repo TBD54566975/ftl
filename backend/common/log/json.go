@@ -3,10 +3,9 @@ package log
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"io"
 	"time"
-
-	"github.com/alecthomas/errors"
 )
 
 var _ Sink = (*jsonSink)(nil)
@@ -39,7 +38,7 @@ func (j *jsonSink) Log(entry Entry) error {
 		Error: errStr,
 		Entry: entry,
 	}
-	return errors.WithStack(j.enc.Encode(jentry))
+	return j.enc.Encode(jentry)
 }
 
 // JSONStreamer reads a stream of JSON log entries from r and logs them to log.
@@ -73,5 +72,5 @@ func JSONStreamer(r io.Reader, log *Logger, defaultLevel Level) error {
 	if errors.Is(err, io.EOF) {
 		return nil
 	}
-	return errors.WithStack(err)
+	return err
 }

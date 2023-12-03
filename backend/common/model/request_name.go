@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 )
 
@@ -43,7 +42,7 @@ func ParseOrigin(origin string) (Origin, error) {
 	case "pubsub":
 		return OriginPubsub, nil
 	default:
-		return "", errors.Errorf("unknown origin %q", origin)
+		return "", fmt.Errorf("unknown origin %q", origin)
 	}
 }
 
@@ -63,18 +62,18 @@ func NewRequestName(origin Origin, key string) RequestName {
 func ParseRequestName(name string) (Origin, RequestName, error) {
 	parts := strings.Split(name, "-")
 	if len(parts) < 3 {
-		return "", "", errors.Errorf("should be <origin>-<key>-<hash>: invalid request name %q", name)
+		return "", "", fmt.Errorf("should be <origin>-<key>-<hash>: invalid request name %q", name)
 	}
 	origin, err := ParseOrigin(parts[0])
 	if err != nil {
-		return "", "", errors.Wrapf(err, "invalid request name %q", name)
+		return "", "", fmt.Errorf("invalid request name %q: %w", name, err)
 	}
 	hash, err := hex.DecodeString(parts[len(parts)-1])
 	if err != nil {
-		return "", "", errors.Wrapf(err, "invalid request name %q", name)
+		return "", "", fmt.Errorf("invalid request name %q: %w", name, err)
 	}
 	if len(hash) != 5 {
-		return "", "", errors.Errorf("hash should be 5 bytes: invalid request name %q", name)
+		return "", "", fmt.Errorf("hash should be 5 bytes: invalid request name %q", name)
 	}
 	return origin, RequestName(fmt.Sprintf("%s-%010x", strings.Join(parts[0:len(parts)-1], "-"), hash)), nil
 }
@@ -102,7 +101,7 @@ func (d *RequestName) Scan(value any) error {
 	}
 	str, ok := value.(string)
 	if !ok {
-		return errors.Errorf("expected string, got %T", value)
+		return fmt.Errorf("expected string, got %T", value)
 	}
 	_, name, err := ParseRequestName(str)
 	if err != nil {

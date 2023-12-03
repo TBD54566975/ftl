@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"fmt"
 	"net/url"
 
-	"github.com/alecthomas/errors"
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
@@ -21,11 +21,11 @@ var schema embed.FS
 func Migrate(ctx context.Context, dsn string) error {
 	u, err := url.Parse(dsn)
 	if err != nil {
-		return errors.Wrap(err, "invalid DSN")
+		return fmt.Errorf("%s: %w", "invalid DSN", err)
 	}
 	conn, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return errors.Wrap(err, "failed to connect to database")
+		return fmt.Errorf("%s: %w", "failed to connect to database", err)
 	}
 	defer conn.Close()
 
@@ -35,7 +35,7 @@ func Migrate(ctx context.Context, dsn string) error {
 	db.MigrationsDir = []string{"schema"}
 	err = db.CreateAndMigrate()
 	if err != nil {
-		return errors.Wrap(err, "failed to create and migrate database")
+		return fmt.Errorf("%s: %w", "failed to create and migrate database", err)
 	}
 	return nil
 }

@@ -4,8 +4,6 @@ import (
 	_ "embed"
 	"io"
 	"text/template"
-
-	"github.com/alecthomas/errors"
 )
 
 //go:embed go.mod.tmpl
@@ -19,5 +17,5 @@ type GoModConfig struct {
 
 // GenerateGoMod generates a go.mod file.
 func GenerateGoMod(w io.Writer, config GoModConfig, importRoot string) error {
-	return errors.WithStack(goModTmpl.Execute(w, config))
+	return goModTmpl.Execute(w, config)
 }

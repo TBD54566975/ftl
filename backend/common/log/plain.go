@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/alecthomas/errors"
 	"github.com/mattn/go-isatty"
 )
 
@@ -51,7 +50,7 @@ func (t *plainSink) Log(entry Entry) error {
 		_, err = fmt.Fprintf(t.w, "%s%s\n", prefix, entry.Message)
 	}
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	return nil
 }
