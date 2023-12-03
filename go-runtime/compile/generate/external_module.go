@@ -31,7 +31,8 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 			}
 			return "// " + strings.Join(s, "\n// ")
 		},
-		"type": genType,
+		// Overridden in ExternalModule().
+		"type": func(schema.Type) string { panic("stub") },
 		"is": func(kind string, t schema.Node) bool {
 			return reflect.Indirect(reflect.ValueOf(t)).Type().Name() == kind
 		},
@@ -40,7 +41,7 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 			_ = schema.Visit(m, func(n schema.Node, next func() error) error {
 				switch n := n.(type) {
 				case *schema.DataRef:
-					if n.Module != "" {
+					if n.Module != m.Name {
 						pkgs[path.Join(m.ImportRoot, n.Module)] = true
 					}
 
@@ -61,19 +62,28 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 
 // ExternalModule Go stubs for the given module.
 func ExternalModule(w io.Writer, module *schema.Module, importRoot string) error {
-	return moduleTmpl.Execute(w, &externalModuleCtx{
+	tmpl := moduleTmpl.Funcs(template.FuncMap{"type": func(t schema.Type) string {
+		return genType(module, t)
+	}})
+	return tmpl.Execute(w, &externalModuleCtx{
 		ImportRoot: importRoot,
 		Module:     module,
 	})
 }
 
-func genType(t schema.Type) string {
+func genType(module *schema.Module, t schema.Type) string {
 	switch t := t.(type) {
 	case *schema.DataRef:
-		return t.Name
+		if t.Module == module.Name {
+			return t.Name
+		}
+		return t.String()
 
 	case *schema.VerbRef:
-		return t.Name
+		if t.Module == module.Name {
+			return t.Name
+		}
+		return t.String()
 
 	case *schema.Float:
 		return "float64"
@@ -85,13 +95,13 @@ func genType(t schema.Type) string {
 		return strings.ToLower(t.String())
 
 	case *schema.Array:
-		return "[]" + genType(t.Element)
+		return "[]" + genType(module, t.Element)
 
 	case *schema.Map:
-		return "map[" + genType(t.Key) + "]" + genType(t.Value)
+		return "map[" + genType(module, t.Key) + "]" + genType(module, t.Value)
 
 	case *schema.Optional:
-		return "sdk.Option[" + genType(t.Type) + "]"
+		return "sdk.Option[" + genType(module, t.Type) + "]"
 	}
 	panic(fmt.Sprintf("unsupported type %T", t))
 }

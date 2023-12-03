@@ -42,12 +42,12 @@ var schema = Normalise(&Schema{
 					},
 				},
 				&Verb{Name: "create",
-					Request:  &DataRef{Name: "CreateRequest"},
-					Response: &DataRef{Name: "CreateResponse"},
-					Metadata: []Metadata{&MetadataCalls{Calls: []*VerbRef{{Name: "destroy"}}}}},
+					Request:  &DataRef{Module: "todo", Name: "CreateRequest"},
+					Response: &DataRef{Module: "todo", Name: "CreateResponse"},
+					Metadata: []Metadata{&MetadataCalls{Calls: []*VerbRef{{Module: "todo", Name: "destroy"}}}}},
 				&Verb{Name: "destroy",
-					Request:  &DataRef{Name: "DestroyRequest"},
-					Response: &DataRef{Name: "DestroyResponse"},
+					Request:  &DataRef{Module: "todo", Name: "DestroyRequest"},
+					Response: &DataRef{Module: "todo", Name: "DestroyResponse"},
 				},
 			},
 		},
@@ -80,11 +80,11 @@ module todo {
     when Time
   }
 
-  verb create(CreateRequest) CreateResponse  
-      calls destroy
+  verb create(todo.CreateRequest) todo.CreateResponse  
+      calls todo.destroy
       
 
-  verb destroy(DestroyRequest) DestroyResponse
+  verb destroy(todo.DestroyRequest) todo.DestroyResponse
 }
 `
 	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(schema.String()))
@@ -183,9 +183,9 @@ func TestParsing(t *testing.T) {
 							&Verb{Name: "createList",
 								Comments: []string{"Create a new list"},
 								Request:  &DataRef{Module: "todo", Name: "CreateListRequest"},
-								Response: &DataRef{Name: "CreateListResponse"},
+								Response: &DataRef{Module: "todo", Name: "CreateListResponse"},
 								Metadata: []Metadata{
-									&MetadataCalls{Calls: []*VerbRef{{Name: "createList"}}},
+									&MetadataCalls{Calls: []*VerbRef{{Module: "todo", Name: "createList"}}},
 								},
 							},
 						},
@@ -195,8 +195,8 @@ func TestParsing(t *testing.T) {
 		{name: "InvalidRequestRef",
 			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
 			errors: []string{
-				"1:25: reference to unknown data structure \"InvalidRequest\"",
-				"1:41: reference to unknown data structure \"InvalidResponse\""}},
+				"1:25: reference to unknown data structure \"test.InvalidRequest\"",
+				"1:41: reference to unknown data structure \"test.InvalidResponse\""}},
 		{name: "InvalidDataRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
@@ -211,7 +211,7 @@ func TestParsing(t *testing.T) {
 			input: `module test { data Data {} calls verb }`,
 			errors: []string{
 				"1:28: metadata \"calls verb\" is not valid on data structures",
-				"1:34: reference to unknown Verb \"verb\"",
+				"1:34: reference to unknown Verb \"test.verb\"",
 			}},
 		{name: "KeywordAsName",
 			input:  `module int { data String { name String } verb verb(String) String }`,
@@ -257,9 +257,9 @@ module todo {
     name String
 	when Time
   }
-  verb create(CreateRequest) CreateResponse
-  	calls destroy
-  verb destroy(DestroyRequest) DestroyResponse
+  verb create(todo.CreateRequest) todo.CreateResponse
+  	calls todo.destroy
+  verb destroy(todo.DestroyRequest) todo.DestroyResponse
 }
 `
 	actual, err := ParseModuleString("", input)
