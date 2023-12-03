@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
 	"golang.org/x/sync/errgroup"
 
@@ -36,7 +36,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 	dsn, err := s.setupDB(ctx)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	logger.Infof("Starting %d controller(s) and %d runner(s)", s.Controllers, s.Runners)
@@ -45,7 +45,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 	bindAllocator, err := bind.NewBindAllocator(s.Bind)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	controllerAddresses := make([]*url.URL, 0, s.Controllers)
@@ -55,7 +55,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	for i := 0; i < s.Controllers; i++ {
@@ -66,24 +66,27 @@ func (s *serveCmd) Run(ctx context.Context) error {
 			AllowOrigins: s.AllowOrigins,
 		}
 		if err := kong.ApplyDefaults(&config); err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		scope := fmt.Sprintf("controller%d", i)
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		wg.Go(func() error {
-			return errors.Wrapf(controller.Start(controllerCtx, config, runnerScaling), "controller%d failed", i)
+			if err := controller.Start(controllerCtx, config, runnerScaling); err != nil {
+				return fmt.Errorf("controller%d failed: %w", i, err)
+			}
+			return nil
 		})
 	}
 
 	err = runnerScaling.SetReplicas(ctx, s.Runners, nil)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if err := wg.Wait(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	return nil
 }
@@ -95,7 +98,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	output, err := exec.Capture(ctx, ".", "docker", "ps", "-a", "--filter", nameFlag, "--format", "{{.Names}}")
 	if err != nil {
 		logger.Errorf(err, "%s", output)
-		return "", errors.WithStack(err)
+		return "", err
 	}
 
 	recreate := s.Recreate
@@ -107,7 +110,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		// check if port s.DBPort is already in use
 		_, err := exec.Capture(ctx, ".", "sh", "-c", fmt.Sprintf("lsof -i:%d", s.DBPort))
 		if err == nil {
-			return "", errors.Errorf("port %d is already in use", s.DBPort)
+			return "", fmt.Errorf("port %d is already in use", s.DBPort)
 		}
 
 		err = exec.Command(ctx, logger.GetLevel(), "./", "docker", "run",
@@ -126,7 +129,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		).Run()
 
 		if err != nil {
-			return "", errors.WithStack(err)
+			return "", err
 		}
 
 		err = pollContainerHealth(ctx, ftlContainerName, 10*time.Second)
@@ -139,14 +142,14 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		// Start the existing container
 		_, err = exec.Capture(ctx, ".", "docker", "start", ftlContainerName)
 		if err != nil {
-			return "", errors.WithStack(err)
+			return "", err
 		}
 
 		// Grab the port from the existing container
 		portOutput, err := exec.Capture(ctx, ".", "docker", "port", ftlContainerName, "5432/tcp")
 		if err != nil {
 			logger.Errorf(err, "%s", portOutput)
-			return "", errors.WithStack(err)
+			return "", err
 		}
 		port = slices.Reduce(strings.Split(string(portOutput), "\n"), "", func(port string, line string) string {
 			if parts := strings.Split(line, ":"); len(parts) == 2 {
@@ -163,7 +166,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 
 	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return "", err
 	}
 
 	return dsn, nil
@@ -184,7 +187,7 @@ func pollContainerHealth(ctx context.Context, containerName string, timeout time
 		case <-time.After(1 * time.Millisecond):
 			output, err := exec.Capture(pollCtx, ".", "docker", "inspect", "--format", "{{.State.Health.Status}}", containerName)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 
 			status := strings.TrimSpace(string(output))

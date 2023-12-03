@@ -19,12 +19,13 @@
 package v1connect
 
 import (
-	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	http "net/http"
 	strings "strings"
+
+	connect "connectrpc.com/connect"
+	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are

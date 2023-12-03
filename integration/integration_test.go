@@ -13,9 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"errors"
+
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/errors"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
@@ -109,7 +110,7 @@ func TestIntegration(t *testing.T) {
 
 	ic.assertWithRetry(t, func(t testing.TB, ic itContext) error {
 		_, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
-		return errors.WithStack(err)
+		return err
 	})
 
 	for _, tt := range tests {
@@ -154,7 +155,7 @@ func status(check func(t testing.TB, status *ftlv1.StatusResponse)) assertion {
 	return func(t testing.TB, ic itContext) error {
 		status, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		check(t, status.Msg)
 		return nil
@@ -173,7 +174,7 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 			Body: jreq,
 		}))
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		if cresp.Msg.GetError() != nil {

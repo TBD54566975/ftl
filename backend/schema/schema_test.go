@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/errors"
+
+	"github.com/TBD54566975/ftl/internal/errors"
 )
 
 var schema = Normalise(&Schema{

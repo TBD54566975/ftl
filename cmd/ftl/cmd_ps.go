@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"github.com/golang/protobuf/jsonpb"
 	"golang.org/x/exp/maps"
 
@@ -24,14 +23,14 @@ type psCmd struct {
 func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	status, err := client.ProcessList(ctx, connect.NewRequest(&ftlv1.ProcessListRequest{}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	if s.JSON {
 		marshaller := jsonpb.Marshaler{Indent: "  "}
 		for _, process := range status.Msg.Processes {
 			err = marshaller.Marshal(os.Stdout, process)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 			fmt.Println()
 		}
@@ -68,7 +67,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 					endpoint = runner.Endpoint
 					labels, err := (&jsonpb.Marshaler{}).MarshalToString(runner.Labels)
 					if err != nil {
-						return errors.WithStack(err)
+						return err
 					}
 					runnerLabels = labels
 				}
@@ -76,7 +75,7 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 				if s.Verbose > 1 {
 					labels, err := (&jsonpb.Marshaler{}).MarshalToString(first.Labels)
 					if err != nil {
-						return errors.WithStack(err)
+						return err
 					}
 					args = append(args, labels, runnerLabels)
 				}

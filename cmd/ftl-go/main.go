@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/mod/modfile"
@@ -39,7 +39,7 @@ type watchCmd struct{}
 func (w *watchCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
 	err := buildRemoteModules(ctx, client, bctx)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
@@ -47,7 +47,7 @@ func (w *watchCmd) Run(ctx context.Context, c *cli, client ftlv1connect.Controll
 	wg.Go(func() error { return pushModules(ctx, client, c.WatchFrequency, bctx, c.FTL) })
 
 	if err := wg.Wait(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	return nil
 }
@@ -57,7 +57,7 @@ type deployCmd struct {
 }
 
 func (d *deployCmd) Run(ctx context.Context, c *cli, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
-	return errors.WithStack(pushModule(ctx, client, c.FTL, filepath.Join(c.Root, d.Name), bctx))
+	return pushModule(ctx, client, c.FTL, filepath.Join(c.Root, d.Name), bctx)
 }
 
 type cli struct {
@@ -117,7 +117,7 @@ func findImportRoot(root string) (importRoot ImportRoot, err error) {
 	modDir := root
 	for {
 		if modDir == "/" {
-			return ImportRoot{}, errors.Errorf("no go.mod file found")
+			return ImportRoot{}, fmt.Errorf("no go.mod file found")
 		}
 		if _, err := os.Stat(filepath.Join(modDir, "go.mod")); err == nil {
 			break
@@ -127,11 +127,11 @@ func findImportRoot(root string) (importRoot ImportRoot, err error) {
 	modFile := filepath.Join(modDir, "go.mod")
 	data, err := os.ReadFile(modFile)
 	if err != nil {
-		return ImportRoot{}, errors.Wrap(err, "failed to read go.mod")
+		return ImportRoot{}, fmt.Errorf("%s: %w", "failed to read go.mod", err)
 	}
 	module, err := modfile.Parse(modFile, data, nil)
 	if err != nil {
-		return ImportRoot{}, errors.Wrap(err, "failed to parse go.mod")
+		return ImportRoot{}, fmt.Errorf("%s: %w", "failed to parse go.mod", err)
 	}
 	return ImportRoot{
 		Module:      module,
@@ -145,7 +145,7 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 	logger := log.FromContext(ctx)
 	entries, err := os.ReadDir(bctx.Root)
 	if err != nil {
-		return errors.Wrap(err, "failed to read root directory")
+		return fmt.Errorf("%s: %w", "failed to read root directory", err)
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -195,16 +195,16 @@ func pushModules(ctx context.Context, client ftlv1connect.ControllerServiceClien
 				}
 
 			case err := <-watch.Error:
-				return errors.Wrap(err, "watch error")
+				return fmt.Errorf("%s: %w", "watch error", err)
 			}
 		}
 	})
 	err = watch.AddRecursive(bctx.Root)
 	if err != nil {
-		return errors.Wrap(err, "failed to watch root directory")
+		return fmt.Errorf("%s: %w", "failed to watch root directory", err)
 	}
-	wg.Go(func() error { return errors.WithStack(watch.Start(watchFrequency)) })
-	return errors.WithStack(wg.Wait())
+	wg.Go(func() error { return watch.Start(watchFrequency) })
+	return wg.Wait()
 }
 
 func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient, endpoint string, dir string, bctx BuildContext) error {
@@ -212,7 +212,7 @@ func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient
 
 	sch, err := compile.ExtractModuleSchema(dir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to extract schema for module %q", dir)
+		return fmt.Errorf("failed to extract schema for module %q: %w", dir, err)
 	}
 
 	if !hasVerbs(sch) {
@@ -222,25 +222,25 @@ func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient
 
 	tmpDir, err := generateBuildDir(dir, sch, bctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to generate build directory")
+		return fmt.Errorf("%s: %w", "failed to generate build directory", err)
 	}
 
 	logger.Infof("Building module %s in %s", sch.Name, tmpDir)
 	cmd := exec.Command(ctx, log.Info, tmpDir, "go", "build", "-o", "main", "-trimpath", "-ldflags=-s -w -buildid=", ".")
 	cmd.Env = append(cmd.Environ(), "GOOS="+bctx.OS, "GOARCH="+bctx.Arch, "CGO_ENABLED=0")
 	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, "failed to build module")
+		return fmt.Errorf("%s: %w", "failed to build module", err)
 	}
 	dest := filepath.Join(tmpDir, "main")
 
 	logger.Infof("Preparing deployment")
 	digest, err := sha256.SumFile(dest)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	r, err := os.Open(dest)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	deployment := &model.Deployment{
 		Language: "go",
@@ -255,12 +255,12 @@ func pushModule(ctx context.Context, client ftlv1connect.ControllerServiceClient
 
 	err = uploadArtefacts(ctx, client, deployment)
 	if err != nil {
-		return errors.Wrap(err, "failed to upload artefacts")
+		return fmt.Errorf("%s: %w", "failed to upload artefacts", err)
 	}
 
 	err = deploy(ctx, client, deployment, endpoint)
 	if err != nil {
-		return errors.Wrap(err, "failed to deploy")
+		return fmt.Errorf("%s: %w", "failed to deploy", err)
 	}
 	return nil
 }
@@ -279,7 +279,7 @@ func deploy(ctx context.Context, client ftlv1connect.ControllerServiceClient, de
 		"languages": []any{"go"},
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create labels")
+		return fmt.Errorf("%s: %w", "failed to create labels", err)
 	}
 	cdResp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 		Schema: module,
@@ -293,7 +293,7 @@ func deploy(ctx context.Context, client ftlv1connect.ControllerServiceClient, de
 		}),
 	}))
 	if err != nil {
-		return errors.Wrap(err, "failed to create deployment")
+		return fmt.Errorf("%s: %w", "failed to create deployment", err)
 	}
 	logger.Infof("Created deployment %s (%s/deployments/%s)", cdResp.Msg.DeploymentName, endpoint, cdResp.Msg.DeploymentName)
 	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{
@@ -301,7 +301,7 @@ func deploy(ctx context.Context, client ftlv1connect.ControllerServiceClient, de
 		MinReplicas:    1,
 	}))
 	if err != nil {
-		return errors.Wrapf(err, "failed to deploy %q", cdResp.Msg.DeploymentName)
+		return fmt.Errorf("failed to deploy %q: %w", cdResp.Msg.DeploymentName, err)
 	}
 	return nil
 }
@@ -311,7 +311,7 @@ func uploadArtefacts(ctx context.Context, client ftlv1connect.ControllerServiceC
 	digests := slices.Map(deployment.Artefacts, func(t *model.Artefact) string { return t.Digest.String() })
 	gadResp, err := client.GetArtefactDiffs(ctx, connect.NewRequest(&ftlv1.GetArtefactDiffsRequest{ClientDigests: digests}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	artefactsToUpload := slices.Filter(deployment.Artefacts, func(t *model.Artefact) bool {
 		for _, missing := range gadResp.Msg.MissingDigests {
@@ -324,11 +324,11 @@ func uploadArtefacts(ctx context.Context, client ftlv1connect.ControllerServiceC
 	for _, artefact := range artefactsToUpload {
 		content, err := io.ReadAll(artefact.Content)
 		if err != nil {
-			return errors.Wrapf(err, "failed to read artefact %q", artefact.Path)
+			return fmt.Errorf("failed to read artefact %q: %w", artefact.Path, err)
 		}
 		_, err = client.UploadArtefact(ctx, connect.NewRequest(&ftlv1.UploadArtefactRequest{Content: content}))
 		if err != nil {
-			return errors.Wrapf(err, "failed to upload artefact %q", artefact.Path)
+			return fmt.Errorf("failed to upload artefact %q: %w", artefact.Path, err)
 		}
 		logger.Infof("Uploaded %s:%s", artefact.Digest, artefact.Path)
 	}
@@ -338,22 +338,22 @@ func uploadArtefacts(ctx context.Context, client ftlv1connect.ControllerServiceC
 func generateBuildDir(dir string, sch *schema.Module, bctx BuildContext) (string, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get user cache directory")
+		return "", fmt.Errorf("%s: %w", "failed to get user cache directory", err)
 	}
 	dirHash := sha256.Sum([]byte(dir))
 	tmpDir := filepath.Join(cacheDir, "ftl-go", "build", fmt.Sprintf("%s-%s", sch.Name, dirHash))
 	if err := os.MkdirAll(tmpDir, 0750); err != nil {
-		return "", errors.Wrap(err, "failed to create build directory")
+		return "", fmt.Errorf("%s: %w", "failed to create build directory", err)
 	}
 	mainFile := filepath.Join(tmpDir, "main.go")
 	if err := generate.File(mainFile, bctx.FTLBasePkg, generate.Main, sch); err != nil {
-		return "", errors.Wrap(err, "failed to generate main.go")
+		return "", fmt.Errorf("%s: %w", "failed to generate main.go", err)
 	}
 	goWorkFile := filepath.Join(tmpDir, "go.work")
 	if err := generate.File(goWorkFile, bctx.FTLBasePkg, generate.GenerateGoWork, []string{
 		bctx.GoModuleDir,
 	}); err != nil {
-		return "", errors.Wrap(err, "failed to generate go.work")
+		return "", fmt.Errorf("%s: %w", "failed to generate go.work", err)
 	}
 	goModFile := filepath.Join(tmpDir, "go.mod")
 	replace := map[string]string{
@@ -362,7 +362,7 @@ func generateBuildDir(dir string, sch *schema.Module, bctx BuildContext) (string
 	if err := generate.File(goModFile, bctx.FTLBasePkg, generate.GenerateGoMod, generate.GoModConfig{
 		Replace: replace,
 	}); err != nil {
-		return "", errors.Wrap(err, "failed to generate go.mod")
+		return "", fmt.Errorf("%s: %w", "failed to generate go.mod", err)
 	}
 	return tmpDir, nil
 }
@@ -379,27 +379,30 @@ func hasVerbs(sch *schema.Module) bool {
 func pullModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
 	resp, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 	if err != nil {
-		return errors.Wrap(err, "failed to pull schema")
+		return fmt.Errorf("%s: %w", "failed to pull schema", err)
 	}
 	for resp.Receive() {
 		msg := resp.Msg()
 		err = generateModuleFromSchema(ctx, msg.Schema, bctx)
 		if err != nil {
-			return errors.Wrap(err, "failed to sync module")
+			return fmt.Errorf("%s: %w", "failed to sync module", err)
 		}
 	}
-	return errors.Wrap(resp.Err(), "failed to pull schema")
+	if err := resp.Err(); err != nil {
+		return fmt.Errorf("%s: %w", "failed to pull schema", err)
+	}
+	return nil
 }
 
 func buildRemoteModules(ctx context.Context, client ftlv1connect.ControllerServiceClient, bctx BuildContext) error {
 	fullSchema, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 	if err != nil {
-		return errors.Wrap(err, "failed to retrieve schema")
+		return fmt.Errorf("%s: %w", "failed to retrieve schema", err)
 	}
 	for _, module := range fullSchema.Msg.Schema.Modules {
 		err := generateModuleFromSchema(ctx, module, bctx)
 		if err != nil {
-			return errors.Wrap(err, "failed to generate module")
+			return fmt.Errorf("%s: %w", "failed to generate module", err)
 		}
 	}
 	return err
@@ -408,7 +411,7 @@ func buildRemoteModules(ctx context.Context, client ftlv1connect.ControllerServi
 func generateModuleFromSchema(ctx context.Context, msg *schemapb.Module, bctx BuildContext) error {
 	sch, err := schema.ModuleFromProto(msg)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse schema")
+		return fmt.Errorf("%s: %w", "failed to parse schema", err)
 	}
 	dir := filepath.Join(bctx.Root, sch.Name)
 	if _, err := os.Stat(dir); err == nil {
@@ -417,7 +420,7 @@ func generateModuleFromSchema(ctx context.Context, msg *schemapb.Module, bctx Bu
 		}
 	}
 	if err := generateModule(ctx, dir, sch, bctx); err != nil {
-		return errors.Wrap(err, "failed to generate module")
+		return fmt.Errorf("%s: %w", "failed to generate module", err)
 	}
 	return nil
 }
@@ -425,19 +428,20 @@ func generateModuleFromSchema(ctx context.Context, msg *schemapb.Module, bctx Bu
 func generateModule(ctx context.Context, dir string, sch *schema.Module, bctx BuildContext) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Generating stubs for FTL module %s", sch.Name)
-	err := os.MkdirAll(dir, 0750)
-	if err != nil {
-		return errors.Wrap(err, "failed to create module directory")
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return fmt.Errorf("%s: %w", "failed to create module directory", err)
 	}
 	w, err := os.Create(filepath.Join(dir, "generated_ftl_module.go~"))
 	if err != nil {
-		return errors.Wrap(err, "failed to create stub file")
+		return fmt.Errorf("%s: %w", "failed to create stub file", err)
 	}
 	defer w.Close() //nolint:gosec
 	defer os.Remove(w.Name())
-	err = generate.ExternalModule(w, sch, bctx.FTLBasePkg)
-	if err != nil {
-		return errors.Wrap(err, "failed to generate stubs")
+	if err := generate.ExternalModule(w, sch, bctx.FTLBasePkg); err != nil {
+		return fmt.Errorf("%s: %w", "failed to generate stubs", err)
 	}
-	return errors.WithStack(os.Rename(w.Name(), strings.TrimRight(w.Name(), "~")))
+	if err := os.Rename(w.Name(), strings.TrimRight(w.Name(), "~")); err != nil {
+		return fmt.Errorf("%s: %w", "failed to rename stub file", err)
+	}
+	return nil
 }

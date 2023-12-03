@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -38,7 +37,7 @@ func (d *deploymentLogsSink) Log(entry log.Entry) error {
 	case d.logQueue <- entry:
 	default:
 		// Drop log entry if queue is full
-		return errors.Errorf("log queue is full")
+		return fmt.Errorf("log queue is full")
 	}
 	return nil
 }

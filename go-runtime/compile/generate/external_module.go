@@ -9,7 +9,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/alecthomas/errors"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/exp/maps"
 
@@ -62,10 +61,10 @@ var moduleTmpl = template.Must(template.New("external_module.go.tmpl").
 
 // ExternalModule Go stubs for the given module.
 func ExternalModule(w io.Writer, module *schema.Module, importRoot string) error {
-	return errors.WithStack(moduleTmpl.Execute(w, &externalModuleCtx{
+	return moduleTmpl.Execute(w, &externalModuleCtx{
 		ImportRoot: importRoot,
 		Module:     module,
-	}))
+	})
 }
 
 func genType(t schema.Type) string {

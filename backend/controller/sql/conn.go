@@ -3,7 +3,6 @@ package sql
 import (
 	"context"
 
-	"github.com/alecthomas/errors"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -26,7 +25,7 @@ func (d *DB) Conn() DBI { return d.conn }
 func (d *DB) Begin(ctx context.Context) (*Tx, error) {
 	tx, err := d.conn.Begin(ctx)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return &Tx{tx: tx, Queries: New(tx)}, nil
 }
@@ -37,11 +36,11 @@ type Tx struct {
 }
 
 func (t *Tx) Commit(ctx context.Context) error {
-	return errors.WithStack(t.tx.Commit(ctx))
+	return t.tx.Commit(ctx)
 }
 
 func (t *Tx) Rollback(ctx context.Context) error {
-	return errors.WithStack(t.tx.Rollback(ctx))
+	return t.tx.Rollback(ctx)
 }
 
 // CommitOrRollback can be used in a defer statement to commit or rollback a
@@ -57,6 +56,6 @@ func (t *Tx) CommitOrRollback(ctx context.Context, err *error) {
 	if *err != nil {
 		_ = t.Rollback(ctx)
 	} else {
-		*err = errors.WithStack(t.Commit(ctx))
+		*err = t.Commit(ctx)
 	}
 }

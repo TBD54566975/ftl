@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/alecthomas/errors"
-
 	"github.com/TBD54566975/ftl/backend/common/download"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
@@ -27,7 +25,7 @@ func (d *downloadCmd) getLocalArtefacts() ([]*ftlv1.DeploymentArtefact, error) {
 	haveArtefacts := []*ftlv1.DeploymentArtefact{}
 	dest, err := filepath.Abs(d.Dest)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	err = filepath.Walk(dest, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -38,12 +36,12 @@ func (d *downloadCmd) getLocalArtefacts() ([]*ftlv1.DeploymentArtefact, error) {
 		}
 		sum, err := sha256.SumFile(path)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		relPath, err := filepath.Rel(dest, path)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		haveArtefacts = append(haveArtefacts, &ftlv1.DeploymentArtefact{
 			Path:       relPath,
@@ -53,7 +51,7 @@ func (d *downloadCmd) getLocalArtefacts() ([]*ftlv1.DeploymentArtefact, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return haveArtefacts, nil
 }

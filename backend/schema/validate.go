@@ -1,10 +1,10 @@
 package schema
 
 import (
+	"errors"
+	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/alecthomas/errors"
 )
 
 var (
@@ -25,7 +25,7 @@ func Validate(schema *Schema) error {
 	ingress := map[string]*Verb{}
 	for _, module := range schema.Modules {
 		if _, seen := modules[module.Name]; seen {
-			merr = append(merr, errors.Errorf("%s: duplicate module %q", module.Pos, module.Name))
+			merr = append(merr, fmt.Errorf("%s: duplicate module %q", module.Pos, module.Name))
 		}
 		modules[module.Name] = true
 		if err := ValidateModule(module); err != nil {
@@ -44,7 +44,7 @@ func Validate(schema *Schema) error {
 				for _, md := range n.Metadata {
 					if md, ok := md.(*MetadataIngress); ok {
 						if existing, ok := ingress[md.String()]; ok {
-							return errors.Errorf("duplicate %q for %s:%q and %s:%q", md.String(), existing.Pos, existing.Name, n.Pos, n.Name)
+							return fmt.Errorf("duplicate %q for %s:%q and %s:%q", md.String(), existing.Pos, existing.Name, n.Pos, n.Name)
 						}
 						ingress[md.String()] = n
 					}
@@ -66,12 +66,12 @@ func Validate(schema *Schema) error {
 	}
 	for _, ref := range verbRefs {
 		if !verbs[ref.String()] {
-			merr = append(merr, errors.Errorf("%s: reference to unknown Verb %q", ref.Pos, ref))
+			merr = append(merr, fmt.Errorf("%s: reference to unknown Verb %q", ref.Pos, ref))
 		}
 	}
 	for _, ref := range dataRefs {
 		if !data[ref.String()] {
-			merr = append(merr, errors.Errorf("%s: reference to unknown data structure %q", ref.Pos, ref))
+			merr = append(merr, fmt.Errorf("%s: reference to unknown data structure %q", ref.Pos, ref))
 		}
 	}
 	return errors.Join(merr...)
@@ -85,35 +85,35 @@ func ValidateModule(module *Module) error {
 	data := map[string]bool{}
 	merr := []error{}
 	if !validNameRe.MatchString(module.Name) {
-		merr = append(merr, errors.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
+		merr = append(merr, fmt.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
 	}
 	err := Visit(module, func(n Node, next func() error) error {
 		switch n := n.(type) {
 		case *Verb:
 			if !validNameRe.MatchString(n.Name) {
-				merr = append(merr, errors.Errorf("%s: Verb name %q is invalid", n.Pos, n.Name))
+				merr = append(merr, fmt.Errorf("%s: Verb name %q is invalid", n.Pos, n.Name))
 			}
 			if _, ok := reservedIdentNames[n.Name]; ok {
-				merr = append(merr, errors.Errorf("%s: Verb name %q is a reserved word", n.Pos, n.Name))
+				merr = append(merr, fmt.Errorf("%s: Verb name %q is a reserved word", n.Pos, n.Name))
 			}
 			if _, ok := verbs[n.Name]; ok {
-				merr = append(merr, errors.Errorf("%s: duplicate Verb %q", n.Pos, n.Name))
+				merr = append(merr, fmt.Errorf("%s: duplicate Verb %q", n.Pos, n.Name))
 			}
 			verbs[n.Name] = true
 
 		case *Data:
 			if !validNameRe.MatchString(n.Name) {
-				merr = append(merr, errors.Errorf("%s: data structure name %q is invalid", n.Pos, n.Name))
+				merr = append(merr, fmt.Errorf("%s: data structure name %q is invalid", n.Pos, n.Name))
 			}
 			if _, ok := reservedIdentNames[n.Name]; ok {
-				merr = append(merr, errors.Errorf("%s: data structure name %q is a reserved word", n.Pos, n.Name))
+				merr = append(merr, fmt.Errorf("%s: data structure name %q is a reserved word", n.Pos, n.Name))
 			}
 			if _, ok := data[n.Name]; ok {
-				merr = append(merr, errors.Errorf("%s: duplicate data structure %q", n.Pos, n.Name))
+				merr = append(merr, fmt.Errorf("%s: duplicate data structure %q", n.Pos, n.Name))
 			}
 			for _, md := range n.Metadata {
 				if md, ok := md.(*MetadataCalls); ok {
-					merr = append(merr, errors.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
+					merr = append(merr, fmt.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
 				}
 			}
 

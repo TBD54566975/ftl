@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 	"golang.org/x/exp/maps"
@@ -329,7 +328,7 @@ type typeParserGrammar struct {
 func parseType(pl *lexer.PeekingLexer) (Type, error) {
 	typ, err := typeParser.ParseFromLexer(pl, participle.AllowTrailing(true))
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	if typ.Optional {
 		return &Optional{Type: typ.Type}, nil
@@ -340,7 +339,7 @@ func parseType(pl *lexer.PeekingLexer) (Type, error) {
 func ParseString(filename, input string) (*Schema, error) {
 	mod, err := parser.ParseString(filename, input)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return mod, Validate(mod)
 }
@@ -348,20 +347,20 @@ func ParseString(filename, input string) (*Schema, error) {
 func ParseModuleString(filename, input string) (*Module, error) {
 	mod, err := moduleParser.ParseString(filename, input)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return mod, ValidateModule(mod)
 }
 
 func ParseRef(ref string) (*Ref, error) {
 	r, err := refParser.ParseString("", ref)
-	return r, errors.WithStack(err)
+	return r, err
 }
 
 func Parse(filename string, r io.Reader) (*Schema, error) {
 	mod, err := parser.Parse(filename, r)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return mod, Validate(mod)
 }
@@ -369,7 +368,7 @@ func Parse(filename string, r io.Reader) (*Schema, error) {
 func ParseModule(filename string, r io.Reader) (*Module, error) {
 	mod, err := moduleParser.Parse(filename, r)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return mod, ValidateModule(mod)
 }

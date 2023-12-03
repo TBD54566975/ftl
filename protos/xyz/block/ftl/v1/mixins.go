@@ -1,9 +1,9 @@
 package ftlv1
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 
 	model "github.com/TBD54566975/ftl/backend/common/model"
@@ -66,7 +66,7 @@ func (r *RegisterRunnerRequest) DeploymentAsOptional() (types.Option[model.Deplo
 	}
 	key, err := model.ParseDeploymentName(*r.Deployment)
 	if err != nil {
-		return types.None[model.DeploymentName](), errors.Wrap(err, "invalid deployment key")
+		return types.None[model.DeploymentName](), fmt.Errorf("%s: %w", "invalid deployment key", err)
 	}
 	return types.Some(key), nil
 }

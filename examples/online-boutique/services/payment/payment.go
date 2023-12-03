@@ -7,9 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
+	"github.com/google/uuid"
 )
 
 type InvalidCreditCardErr struct{}

@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/alecthomas/atomic"
-	"github.com/alecthomas/errors"
 )
 
 type BindAllocator struct {
@@ -18,12 +17,12 @@ type BindAllocator struct {
 func NewBindAllocator(url *url.URL) (*BindAllocator, error) {
 	_, portStr, err := net.SplitHostPort(url.Host)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return &BindAllocator{

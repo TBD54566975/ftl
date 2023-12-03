@@ -6,8 +6,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/alecthomas/errors"
-
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
@@ -25,8 +23,8 @@ type mainTmplCtx struct {
 }
 
 func Main(w io.Writer, module *schema.Module, importRoot string) error {
-	return errors.WithStack(mainTmpl.Execute(w, &mainTmplCtx{
+	return mainTmpl.Execute(w, &mainTmplCtx{
 		ImportRoot: importRoot,
 		Module:     module,
-	}))
+	})
 }

@@ -2,9 +2,8 @@ package sdk
 
 import (
 	"context"
+	"fmt"
 	"strings"
-
-	"github.com/alecthomas/errors"
 
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
@@ -33,7 +32,7 @@ type VerbRef struct {
 func (v *VerbRef) UnmarshalText(text []byte) error {
 	parts := strings.Split(string(text), ".")
 	if len(parts) != 2 {
-		return errors.Errorf("invalid reference %q", string(text))
+		return fmt.Errorf("invalid reference %q", string(text))
 	}
 	v.Module = parts[0]
 	v.Name = parts[1]
@@ -63,7 +62,7 @@ type DataRef struct {
 func (v *DataRef) UnmarshalText(text []byte) error {
 	parts := strings.Split(string(text), ".")
 	if len(parts) != 2 {
-		return errors.Errorf("invalid reference %q", string(text))
+		return fmt.Errorf("invalid reference %q", string(text))
 	}
 	v.Module = parts[0]
 	v.Name = parts[1]
@@ -78,7 +77,7 @@ func (v DataRef) ToProto() *schemapb.DataRef {
 func parseRef(s string) (string, string, error) {
 	parts := strings.Split(s, ".")
 	if len(parts) != 2 {
-		return "", "", errors.Errorf("invalid reference %q", s)
+		return "", "", fmt.Errorf("invalid reference %q", s)
 	}
 	return parts[0], parts[1], nil
 }

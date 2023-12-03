@@ -92,12 +92,12 @@ linters-settings:
     rules:
       main:
         deny:
-          - pkg: errors
-            desc: "use github.com/alecthomas/errors"
           - pkg: github.com/pkg/errors
-            desc: "use github.com/alecthomas/errors"
+            desc: "use bracesdev/errtrace"
           - pkg: github.com/stretchr/testify
-            desc: "use alecthomas/assert"
+            desc: "use bracesdev/errtrace"
+          - pkg: github.com/alecthomas/errors
+            desc: "use bracesdev/errtrace"
   wrapcheck:
     ignorePackageGlobs:
       - github.com/TBD54566975/ftl/*

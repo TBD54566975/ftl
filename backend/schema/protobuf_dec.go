@@ -3,7 +3,6 @@ package schema
 import (
 	"fmt"
 
-	"github.com/alecthomas/errors"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -13,7 +12,7 @@ import (
 func FromProto(s *schemapb.Schema) (*Schema, error) {
 	modules, err := moduleListToSchema(s.Modules)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	schema := &Schema{
 		Modules: modules,
@@ -26,7 +25,7 @@ func moduleListToSchema(s []*schemapb.Module) ([]*Module, error) {
 	for _, n := range s {
 		module, err := ModuleFromProto(n)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 		out = append(out, module)
 	}
@@ -46,7 +45,7 @@ func ModuleFromProto(s *schemapb.Module) (*Module, error) {
 func ModuleFromBytes(b []byte) (*Module, error) {
 	s := &schemapb.Module{}
 	if err := proto.Unmarshal(b, s); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return ModuleFromProto(s)
 }

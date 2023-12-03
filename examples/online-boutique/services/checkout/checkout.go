@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
-
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
 	"github.com/TBD54566975/ftl/examples/online-boutique/services/cart"
@@ -15,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/examples/online-boutique/services/productcatalog"
 	"github.com/TBD54566975/ftl/examples/online-boutique/services/shipping"
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
+	"github.com/google/uuid"
 )
 
 type PlaceOrderRequest struct {

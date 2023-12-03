@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io/fs"
 	"os"
 	"path"
@@ -10,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/errors"
 	"github.com/bmatcuk/doublestar/v4"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -43,7 +43,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 		tomls, err := d.getTomls()
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		d.addOrRemoveModules(tomls)
@@ -52,7 +52,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 			currentModule := d.modules[dir]
 			err := d.updateFileInfo(dir)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 
 			if currentModule.NumFiles != d.modules[dir].NumFiles || d.modules[dir].LastModTime.After(lastScanTime) {
@@ -90,7 +90,7 @@ func (d *devCmd) getTomls() ([]string, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return tomls, nil
@@ -123,7 +123,7 @@ func (d *devCmd) addOrRemoveModules(tomls []string) {
 func (d *devCmd) updateFileInfo(dir string) error {
 	config, err := moduleconfig.LoadConfig(dir)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	ignores := loadGitIgnore(os.DirFS(dir), ".")
@@ -133,18 +133,18 @@ func (d *devCmd) updateFileInfo(dir string) error {
 		for _, pattern := range config.Watch {
 			relativePath, err := filepath.Rel(dir, srcPath)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 
 			match, err := doublestar.PathMatch(pattern, relativePath)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 
 			if match && !entry.IsDir() {
 				fileInfo, err := entry.Info()
 				if err != nil {
-					return errors.WithStack(err)
+					return err
 				}
 
 				module := d.modules[dir]
@@ -169,17 +169,17 @@ var errSkip = errors.New("skip directory")
 func walkDir(dir string, ignores []string, fn func(path string, d fs.DirEntry) error) error {
 	dirInfo, err := os.Stat(dir)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	if err = fn(dir, fs.FileInfoToDirEntry(dirInfo)); err != nil {
 		if errors.Is(err, errSkip) {
 			return nil
 		}
-		return errors.WithStack(err)
+		return err
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	var dirs []os.DirEntry
@@ -193,7 +193,7 @@ func walkDir(dir string, ignores []string, fn func(path string, d fs.DirEntry) e
 		for _, pattern := range ignores {
 			match, err := doublestar.PathMatch(pattern, fullPath)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 			if match {
 				shouldIgnore = true
@@ -213,7 +213,7 @@ func walkDir(dir string, ignores []string, fn func(path string, d fs.DirEntry) e
 					// If errSkip is found in a file, skip the remaining files in this directory
 					return nil
 				}
-				return errors.WithStack(err)
+				return err
 			}
 		}
 	}
@@ -226,7 +226,7 @@ func walkDir(dir string, ignores []string, fn func(path string, d fs.DirEntry) e
 			if errors.Is(err, errSkip) {
 				return errSkip // Propagate errSkip upwards to stop this branch of recursion
 			}
-			return errors.WithStack(err)
+			return err
 		}
 	}
 	return nil

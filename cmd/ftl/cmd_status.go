@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"github.com/golang/protobuf/jsonpb"
 
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
@@ -29,7 +28,7 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		AllIngressRoutes: s.All || s.AllIngressRoutes,
 	}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	msg := status.Msg
 	if !s.Schema {
@@ -37,7 +36,7 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 			deployment.Schema = nil
 		}
 	}
-	return errors.WithStack((&jsonpb.Marshaler{
+	return (&jsonpb.Marshaler{
 		Indent: "  ",
-	}).Marshal(os.Stdout, status.Msg))
+	}).Marshal(os.Stdout, status.Msg)
 }

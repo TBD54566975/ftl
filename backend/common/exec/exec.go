@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/alecthomas/errors"
 	"github.com/kballard/go-shellquote"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -18,7 +17,7 @@ type Cmd struct {
 
 func LookPath(exe string) (string, error) {
 	path, err := exec.LookPath(exe)
-	return path, errors.WithStack(err)
+	return path, err
 }
 
 func Capture(ctx context.Context, dir, exe string, args ...string) ([]byte, error) {
@@ -26,7 +25,7 @@ func Capture(ctx context.Context, dir, exe string, args ...string) ([]byte, erro
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	out, err := cmd.CombinedOutput()
-	return out, errors.WithStack(err)
+	return out, err
 }
 
 func Command(ctx context.Context, level log.Level, dir, exe string, args ...string) *Cmd {
@@ -54,5 +53,5 @@ func (c *Cmd) Kill(signal syscall.Signal) error {
 	if c.Process == nil {
 		return nil
 	}
-	return errors.WithStack(syscall.Kill(c.Process.Pid, signal))
+	return syscall.Kill(c.Process.Pid, signal)
 }

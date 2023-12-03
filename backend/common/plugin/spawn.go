@@ -2,6 +2,8 @@ package plugin
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -10,7 +12,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
@@ -96,26 +97,26 @@ func Spawn[Client PingableClient](
 	}
 	for _, opt := range options {
 		if err = opt(&opts); err != nil {
-			return nil, nil, errors.WithStack(err)
+			return nil, nil, err
 		}
 	}
 	workingDir := filepath.Join(dir, ".ftl")
 	err = os.Mkdir(workingDir, 0700)
 	if err != nil && !errors.Is(err, os.ErrExist) {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 
 	// Clean up previous process.
 	pidFile := filepath.Join(workingDir, filepath.Base(exe)+".pid")
 	err = cleanup(logger, pidFile)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 
 	// Find a free port.
 	addr, err := allocatePort()
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 
 	// Start the plugin process.
@@ -127,13 +128,13 @@ func Spawn[Client PingableClient](
 	cmd.Stderr = nil
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 	cmd.Env = append(cmd.Env, "FTL_BIND="+pluginEndpoint.String())
 	cmd.Env = append(cmd.Env, "FTL_WORKING_DIR="+workingDir)
 	cmd.Env = append(cmd.Env, opts.envars...)
 	if err = cmd.Start(); err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 	// Cancel the context if the command exits - this will terminate the Dial immediately.
 	var cancelWithCause context.CancelCauseFunc
@@ -157,7 +158,7 @@ func Spawn[Client PingableClient](
 	// Write the PID file.
 	err = os.WriteFile(pidFile, []byte(strconv.Itoa(cmd.Process.Pid)), 0600)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, err
 	}
 
 	dialCtx, cancel := context.WithTimeout(ctx, opts.startTimeout)
@@ -180,14 +181,14 @@ func Spawn[Client PingableClient](
 
 	select {
 	case <-dialCtx.Done():
-		return nil, nil, errors.Wrap(dialCtx.Err(), "plugin timed out while starting")
+		return nil, nil, fmt.Errorf("%s: %w", "plugin timed out while starting", dialCtx.Err())
 
 	case <-cmdCtx.Done():
-		return nil, nil, errors.Wrap(cmdCtx.Err(), "plugin process died")
+		return nil, nil, fmt.Errorf("%s: %w", "plugin process died", cmdCtx.Err())
 
 	case err := <-pingErr:
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "plugin failed to respond to ping")
+			return nil, nil, fmt.Errorf("%s: %w", "plugin failed to respond to ping", err)
 		}
 	}
 

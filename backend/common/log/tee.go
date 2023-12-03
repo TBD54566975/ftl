@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/alecthomas/errors"
+	"errors"
 )
 
 // Tee returns a sink that writes to all of the given sinks.
