@@ -1,9 +1,9 @@
 package headers
 
 import (
+	"fmt"
 	"net/http"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
@@ -44,7 +44,7 @@ func GetRequestName(header http.Header) (model.RequestName, bool, error) {
 
 	var _, key, err = model.ParseRequestName(keyStr)
 	if err != nil {
-		return "", false, errors.WithStack(err)
+		return "", false, err
 	}
 	return key, true, nil
 }
@@ -59,7 +59,7 @@ func GetCallers(header http.Header) ([]*schema.VerbRef, error) {
 	for i, header := range headers {
 		ref, err := schema.ParseRef(header)
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid %s header %q", VerbHeader, header)
+			return nil, fmt.Errorf("invalid %s header %q: %w", VerbHeader, header, err)
 		}
 		refs[i] = (*schema.VerbRef)(ref)
 	}
@@ -76,7 +76,7 @@ func GetCaller(header http.Header) (types.Option[*schema.VerbRef], error) {
 	}
 	ref, err := schema.ParseRef(headers[len(headers)-1])
 	if err != nil {
-		return types.None[*schema.VerbRef](), errors.WithStack(err)
+		return types.None[*schema.VerbRef](), err
 	}
 	return types.Some((*schema.VerbRef)(ref)), nil
 }

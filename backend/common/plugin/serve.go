@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -170,7 +170,7 @@ func Start[Impl any, Iface any, Config any](
 func allocatePort() (*net.TCPAddr, error) {
 	l, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1)})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to allocate port")
+		return nil, fmt.Errorf("%s: %w", "failed to allocate port", err)
 	}
 	_ = l.Close()
 	return l.Addr().(*net.TCPAddr), nil //nolint:forcetypeassert
@@ -181,11 +181,11 @@ func cleanup(logger *log.Logger, pidFile string) error {
 	if os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	pid, err := strconv.Atoi(string(pidb))
 	if err != nil && !os.IsNotExist(err) {
-		return errors.WithStack(err)
+		return err
 	}
 	err = syscall.Kill(pid, syscall.SIGKILL)
 	if err != nil && !errors.Is(err, syscall.ESRCH) {

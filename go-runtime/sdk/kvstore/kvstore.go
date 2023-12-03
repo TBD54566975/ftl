@@ -3,8 +3,6 @@ package kvstore
 
 import (
 	"sync"
-
-	"github.com/alecthomas/errors"
 )
 
 type Interface[V any] interface {
@@ -52,7 +50,7 @@ func (k *KV[V]) Upsert(key string, upsert func(v V, created bool) (V, error)) (V
 	v, ok := k.store[key]
 	newValue, err := upsert(v, !ok)
 	if err != nil {
-		return v, errors.WithStack(err)
+		return v, err
 	}
 	k.store[key] = newValue
 	return newValue, nil

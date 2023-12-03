@@ -9,8 +9,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/alecthomas/errors"
-
 	"github.com/TBD54566975/ftl/backend/common/cors"
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -25,12 +23,12 @@ func Server(ctx context.Context, timestamp time.Time, allowOrigin *url.URL) (htt
 
 	err := exec.Command(ctx, log.Debug, "frontend", "npm", "install").Run()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	err = exec.Command(ctx, log.Debug, "frontend", "npm", "run", "dev").Start()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	logger.Infof("Console started")
 

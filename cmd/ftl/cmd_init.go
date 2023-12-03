@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"fmt"
 	"html/template"
 	"os"
 	"path/filepath"
@@ -9,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
-	"github.com/alecthomas/errors"
 	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
 
@@ -34,11 +34,11 @@ func (i initGoCmd) Run(parent *initCmd) error {
 	}
 	tmpDir, err := unzipToTmpDir(kotlinruntime.Files)
 	if err != nil {
-		return errors.Wrap(err, "failed to unzip kotlin runtime")
+		return fmt.Errorf("%s: %w", "failed to unzip kotlin runtime", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	return errors.WithStack(scaffold(parent.Hermit, tmpDir, i.Dir, i))
+	return scaffold(parent.Hermit, tmpDir, i.Dir, i)
 }
 
 type initKotlinCmd struct {
@@ -54,7 +54,7 @@ func (i initKotlinCmd) Run(parent *initCmd) error {
 	}
 
 	if _, err := os.Stat(filepath.Join(i.Dir, "ftl-module-"+i.Name)); err == nil {
-		return errors.Errorf("module directory %s already exists", filepath.Join(i.Dir, i.Name))
+		return fmt.Errorf("module directory %s already exists", filepath.Join(i.Dir, i.Name))
 	}
 
 	options := []scaffolder.Option{}
@@ -64,24 +64,24 @@ func (i initKotlinCmd) Run(parent *initCmd) error {
 	if _, err := os.Stat(pomFile); err == nil {
 		options = append(options, scaffolder.Exclude("^pom.xml$"))
 		if err := updatePom(pomFile, i.Name); err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 	}
 
 	tmpDir, err := unzipToTmpDir(kotlinruntime.Files)
 	if err != nil {
-		return errors.Wrap(err, "failed to unzip kotlin runtime")
+		return fmt.Errorf("%s: %w", "failed to unzip kotlin runtime", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	return errors.WithStack(scaffold(parent.Hermit, tmpDir, i.Dir, i, options...))
+	return scaffold(parent.Hermit, tmpDir, i.Dir, i, options...)
 }
 
 func updatePom(pomFile, name string) error {
 	tree := etree.NewDocument()
 	err := tree.ReadFromFile(pomFile)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	// Add new module entry to root of XML file
@@ -98,7 +98,7 @@ func updatePom(pomFile, name string) error {
 	// Write updated XML file back to disk
 	err = tree.WriteToFile(pomFile)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	return nil
 }
@@ -106,11 +106,11 @@ func updatePom(pomFile, name string) error {
 func unzipToTmpDir(reader *zip.Reader) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "ftl-init-*")
 	if err != nil {
-		return "", errors.WithStack(err)
+		return "", err
 	}
 	err = internal.UnzipDir(reader, tmpDir)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return "", err
 	}
 	return tmpDir, nil
 }
@@ -122,7 +122,7 @@ func scaffold(hermit bool, source string, destination string, ctx any, options .
 	}
 	opts = append(opts, options...)
 	if err := scaffolder.Scaffold(source, destination, ctx, opts...); err != nil {
-		return errors.Wrap(err, "failed to scaffold")
+		return fmt.Errorf("%s: %w", "failed to scaffold", err)
 	}
 	return nil
 }

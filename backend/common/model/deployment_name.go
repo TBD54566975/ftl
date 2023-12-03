@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 )
 
@@ -37,14 +36,14 @@ func ParseDeploymentName(name string) (DeploymentName, error) {
 	var zero DeploymentName
 	parts := strings.Split(name, "-")
 	if len(parts) < 2 {
-		return zero, errors.Errorf("should be at least <deployment>-<hash>: invalid deployment name %q", name)
+		return zero, fmt.Errorf("should be at least <deployment>-<hash>: invalid deployment name %q", name)
 	}
 	hash, err := hex.DecodeString(parts[len(parts)-1])
 	if err != nil {
-		return zero, errors.Wrapf(err, "invalid deployment name %q", name)
+		return zero, fmt.Errorf("invalid deployment name %q: %w", name, err)
 	}
 	if len(hash) != 5 {
-		return zero, errors.Errorf("hash should be 5 bytes: invalid deployment name %q", name)
+		return zero, fmt.Errorf("hash should be 5 bytes: invalid deployment name %q", name)
 	}
 	return DeploymentName(fmt.Sprintf("%s-%010x", strings.Join(parts[0:len(parts)-1], "-"), hash)), nil
 }

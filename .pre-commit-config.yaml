@@ -1,8 +1,0 @@
-repos:
--   repo: local
-    hooks:
-    -   id: lint-staged
-        name: lint-staged
-        entry: .githooks/pre-commit
-        language: script
-        pass_filenames: false  # Use this if your script does not expect file arguments. Adjust as necessary.

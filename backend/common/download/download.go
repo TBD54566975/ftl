@@ -2,12 +2,12 @@ package download
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
@@ -22,7 +22,7 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 		DeploymentName: name.String(),
 	}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	start := time.Now()
 	count := 0
@@ -37,12 +37,12 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 			}
 			count++
 			if !filepath.IsLocal(artefact.Path) {
-				return errors.Errorf("path %q is not local", artefact.Path)
+				return fmt.Errorf("path %q is not local", artefact.Path)
 			}
 			logger.Infof("Downloading %s", filepath.Join(dest, artefact.Path))
 			err = os.MkdirAll(filepath.Join(dest, filepath.Dir(artefact.Path)), 0700)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 			var mode os.FileMode = 0600
 			if artefact.Executable {
@@ -50,19 +50,19 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 			}
 			w, err = os.OpenFile(filepath.Join(dest, artefact.Path), os.O_CREATE|os.O_WRONLY, mode)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 			digest = artefact.Digest
 		}
 
 		if _, err := w.Write(msg.Chunk); err != nil {
 			_ = w.Close()
-			return errors.WithStack(err)
+			return err
 		}
 	}
 	if w != nil {
 		w.Close()
 	}
 	logger.Infof("Downloaded %d artefacts in %s", count, time.Since(start))
-	return errors.WithStack(stream.Err())
+	return stream.Err()
 }

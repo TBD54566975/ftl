@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/errors"
+	"errors"
 
 	"github.com/TBD54566975/ftl/backend/common/cors"
 )
@@ -25,7 +25,7 @@ var build embed.FS
 func Server(ctx context.Context, timestamp time.Time, allowOrigin *url.URL) (http.Handler, error) {
 	dir, err := fs.Sub(build, "dist")
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var f fs.File

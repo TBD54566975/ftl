@@ -26,6 +26,7 @@ COPY . /src/
 RUN bit build/template/ftl/jars/ftl-runtime.jar
 
 # Build runner
+RUN git ls-files -- '*.go' | xargs errtrace -w && go mod tidy
 RUN bit build/release/ftl-runner
 RUN bit build/release/ftl
 

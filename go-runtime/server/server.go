@@ -3,11 +3,11 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"runtime/debug"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/maps"
@@ -34,7 +34,7 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 
 		err := observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
-			return nil, nil, errors.WithStack(err)
+			return nil, nil, err
 		}
 		hmap := maps.FromSlice(handlers, func(h Handler) (sdkgo.VerbRef, Handler) { return h.ref, h })
 		return ctx, &moduleServer{handlers: hmap}, nil
@@ -57,18 +57,18 @@ func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)
 			var req Req
 			err := json.Unmarshal(reqdata, &req)
 			if err != nil {
-				return nil, errors.Wrapf(err, "invalid request to verb %s", ref)
+				return nil, fmt.Errorf("invalid request to verb %s: %w", ref, err)
 			}
 
 			// Call Verb.
 			resp, err := verb(ctx, req)
 			if err != nil {
-				return nil, errors.Wrapf(err, "call to verb %s failed", ref)
+				return nil, fmt.Errorf("call to verb %s failed: %w", ref, err)
 			}
 
 			respdata, err := json.Marshal(resp)
 			if err != nil {
-				return nil, errors.WithStack(err)
+				return nil, err
 			}
 			return respdata, nil
 		},
@@ -89,9 +89,9 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 		if r := recover(); r != nil {
 			var err error
 			if rerr, ok := r.(error); ok {
-				err = errors.WithStack(rerr)
+				err = rerr
 			} else {
-				err = errors.Errorf("%v", r)
+				err = fmt.Errorf("%v", r)
 			}
 			stack := string(debug.Stack())
 			logger.Errorf(err, "panic in verb %s.%s", req.Msg.Verb.Module, req.Msg.Verb.Name)
@@ -103,7 +103,7 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	}()
 	handler, ok := m.handlers[sdkgo.VerbRefFromProto(req.Msg.Verb)]
 	if !ok {
-		return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("verb %q not found", req.Msg.Verb))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %q not found", req.Msg.Verb))
 	}
 
 	respdata, err := handler.fn(ctx, req.Msg.Body)

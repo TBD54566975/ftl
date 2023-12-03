@@ -71,6 +71,7 @@ linters:
     - interfacebloat
     - tagalign
     - nolintlint
+    - wrapcheck # We might want to re-enable this if we manually wrap all the existing errors with fmt.Errorf
 
 linters-settings:
   exhaustive:
@@ -92,15 +93,17 @@ linters-settings:
     rules:
       main:
         deny:
-          - pkg: errors
-            desc: "use github.com/alecthomas/errors"
           - pkg: github.com/pkg/errors
-            desc: "use github.com/alecthomas/errors"
+            desc: "use fmt.Errorf or errors.New"
           - pkg: github.com/stretchr/testify
-            desc: "use alecthomas/assert"
-  wrapcheck:
-    ignorePackageGlobs:
-      - github.com/TBD54566975/ftl/*
+            desc: "use fmt.Errorf or errors.New"
+          - pkg: github.com/alecthomas/errors
+            desc: "use fmt.Errorf or errors.New"
+          - pkg: braces.dev/errtrace
+            desc: "use fmt.Errorf or errors.New"
+  # wrapcheck:
+  #   ignorePackageGlobs:
+  #     - github.com/TBD54566975/ftl/*
 
 issues:
   max-same-issues: 0

@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
-	"github.com/alecthomas/errors"
 )
 
 // ModuleConfig is the configuration for an FTL module.
@@ -26,7 +25,7 @@ func LoadConfig(dir string) (ModuleConfig, error) {
 	config := ModuleConfig{}
 	_, err := toml.DecodeFile(path, &config)
 	if err != nil {
-		return ModuleConfig{}, errors.WithStack(err)
+		return ModuleConfig{}, err
 	}
 	setConfigDefaults(&config)
 	return config, nil

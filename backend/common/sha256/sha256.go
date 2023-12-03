@@ -6,8 +6,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-
-	"github.com/alecthomas/errors"
 )
 
 // SHA256 is a type-safe wrapper around a SHA256 hash.
@@ -22,13 +20,13 @@ func SumReader(r io.Reader) (SHA256, error) {
 	_, err := io.Copy(h, r)
 	var out SHA256
 	copy(out[:], h.Sum(nil))
-	return out, errors.WithStack(err)
+	return out, err
 }
 
 func SumFile(path string) (SHA256, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return SHA256{}, errors.WithStack(err)
+		return SHA256{}, err
 	}
 	defer f.Close() //nolint:gosec
 	return SumReader(f)
@@ -59,7 +57,7 @@ func MustParseSHA256(s string) SHA256 {
 
 func (s *SHA256) UnmarshalText(text []byte) error {
 	_, err := hex.Decode(s[:], text)
-	return errors.WithStack(err)
+	return err
 }
 func (s SHA256) MarshalText() ([]byte, error) { return []byte(hex.EncodeToString(s[:])), nil }
 func (s SHA256) String() string               { return hex.EncodeToString(s[:]) }

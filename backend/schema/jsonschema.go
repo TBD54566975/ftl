@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alecthomas/errors"
 	"github.com/swaggest/jsonschema-go"
 )
 
@@ -18,7 +17,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	// Find the root data type.
 	rootData, ok := dataTypes[dataRef]
 	if !ok {
-		return nil, errors.Errorf("unknown data type %s", dataRef)
+		return nil, fmt.Errorf("unknown data type %s", dataRef)
 	}
 
 	// Encode root, and collect all data types reachable from the root.
@@ -32,7 +31,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	for dataRef := range dataRefs {
 		data, ok := dataTypes[dataRef]
 		if !ok {
-			return nil, errors.Errorf("unknown data type %s", dataRef)
+			return nil, fmt.Errorf("unknown data type %s", dataRef)
 		}
 		root.Definitions[dataRef.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(data, dataRef, dataRefs)}
 	}

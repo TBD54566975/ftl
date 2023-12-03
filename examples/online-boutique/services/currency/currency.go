@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"math"
 
-	"golang.org/x/exp/maps"
-
 	"github.com/TBD54566975/ftl/examples/online-boutique/common"
 	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
+	"golang.org/x/exp/maps"
 )
 
 var (

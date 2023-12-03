@@ -10,7 +10,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/TBD54566975/scaffolder"
-	"github.com/alecthomas/errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
@@ -43,7 +42,7 @@ type getSchemaCmd struct {
 func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	resp, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	if g.Protobuf {
 		return g.generateProto(resp)
@@ -52,14 +51,14 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerSe
 		msg := resp.Msg()
 		module, err := schema.ModuleFromProto(msg.Schema)
 		if err != nil {
-			return errors.Wrap(err, "invalid module schema")
+			return fmt.Errorf("%s: %w", "invalid module schema", err)
 		}
 		fmt.Println(module)
 		if !msg.More {
 			break
 		}
 	}
-	return errors.WithStack(resp.Err())
+	return resp.Err()
 }
 
 func (g *getSchemaCmd) generateProto(resp *connect.ServerStreamForClient[ftlv1.PullSchemaResponse]) error {
@@ -72,14 +71,14 @@ func (g *getSchemaCmd) generateProto(resp *connect.ServerStreamForClient[ftlv1.P
 		}
 	}
 	if err := resp.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	pb, err := proto.Marshal(schema)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	_, err = os.Stdout.Write(pb)
-	return errors.WithStack(err)
+	return err
 }
 
 type schemaGenerateCmd struct {
@@ -94,11 +93,11 @@ func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.Control
 
 	absTemplatePath, err := filepath.Abs(s.Template)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	absDestPath, err := filepath.Abs(s.Dest)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if strings.HasPrefix(absDestPath, absTemplatePath) {
@@ -109,12 +108,12 @@ func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.Control
 	logger.Infof("Watching %s", s.Template)
 
 	if err := watch.AddRecursive(s.Template); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	stream, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	wg, ctx := errgroup.WithContext(ctx)
 
@@ -129,7 +128,7 @@ func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.Control
 			case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
 				module, err := schema.ModuleFromProto(msg.Schema)
 				if err != nil {
-					return errors.Wrap(err, "invalid module schema")
+					return fmt.Errorf("%s: %w", "invalid module schema", err)
 				}
 				modules[module.Name] = module
 
@@ -148,13 +147,13 @@ func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.Control
 		return nil
 	})
 
-	wg.Go(func() error { return errors.WithStack(watch.Start(s.Watch)) })
+	wg.Go(func() error { return watch.Start(s.Watch) })
 
 	var previousModules []*schema.Module
 	for {
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(wg.Wait())
+			return wg.Wait()
 
 		case event := <-watch.Event:
 			logger.Infof("Template changed (%s), regenerating modules", event.Path)
@@ -173,11 +172,11 @@ func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.Control
 
 func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*schema.Module) error {
 	if err := os.RemoveAll(s.Dest); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	for _, module := range modules {
 		if err := scaffolder.Scaffold(s.Template, s.Dest, module, scaffolder.Functions(scaffoldFuncs)); err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 	}
 	logger.Infof("Generated %d modules in %s", len(modules), s.Dest)

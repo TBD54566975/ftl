@@ -3,13 +3,14 @@ package rpc
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"github.com/jpillora/backoff"
 	"golang.org/x/net/http2"
 
@@ -30,7 +31,7 @@ func InitialiseClients(authenticators map[string]string) {
 			AllowHTTP: true,
 			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
 				conn, err := dialer.Dial(network, addr)
-				return conn, errors.WithStack(err)
+				return conn, err
 			},
 		}, authenticators),
 	}
@@ -39,7 +40,7 @@ func InitialiseClients(authenticators map[string]string) {
 			DialTLSContext: func(ctx context.Context, network, addr string, config *tls.Config) (net.Conn, error) {
 				tlsDialer := tls.Dialer{Config: config, NetDialer: dialer}
 				conn, err := tlsDialer.DialContext(ctx, network, addr)
-				return conn, errors.WithStack(err)
+				return conn, err
 			},
 		}, authenticators),
 	}
@@ -115,7 +116,7 @@ func Wait(ctx context.Context, retry backoff.Backoff, client Pingable) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return ctx.Err()
 		default:
 		}
 		resp, err := client.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
@@ -123,7 +124,7 @@ func Wait(ctx context.Context, retry backoff.Backoff, client Pingable) error {
 			if resp.Msg.NotReady == nil {
 				return nil
 			}
-			err = errors.Errorf("service is not ready: %s", *resp.Msg.NotReady)
+			err = fmt.Errorf("service is not ready: %s", *resp.Msg.NotReady)
 		}
 		delay := retry.Duration()
 		logger.Tracef("Ping failed waiting %s for client: %+v", delay, err)

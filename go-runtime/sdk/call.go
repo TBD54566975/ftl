@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/errors"
 	"github.com/iancoleman/strcase"
 
 	"github.com/TBD54566975/ftl/backend/common/rpc"
@@ -23,20 +22,20 @@ func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (re
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	reqData, err := json.Marshal(req)
 	if err != nil {
-		return resp, errors.Wrapf(err, "%s: failed to marshal request", callee)
+		return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
 	}
 	cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData}))
 	if err != nil {
-		return resp, errors.Wrapf(err, "%s: failed to call Verb", callee)
+		return resp, fmt.Errorf("%s: failed to call Verb: %w", callee, err)
 	}
 	switch cresp := cresp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Error_:
-		return resp, errors.Errorf("%s: %s", callee, cresp.Error.Message)
+		return resp, fmt.Errorf("%s: %s", callee, cresp.Error.Message)
 
 	case *ftlv1.CallResponse_Body:
 		err = json.Unmarshal(cresp.Body, &resp)
 		if err != nil {
-			return resp, errors.Wrapf(err, "%s: failed to decode response", callee)
+			return resp, fmt.Errorf("%s: failed to decode response: %w", callee, err)
 		}
 		return resp, nil
 

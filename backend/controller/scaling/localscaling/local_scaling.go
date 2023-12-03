@@ -3,13 +3,13 @@ package localscaling
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/kong"
 
 	"github.com/TBD54566975/ftl/backend/common/bind"
@@ -33,7 +33,7 @@ type LocalScaling struct {
 func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL) (*LocalScaling, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return &LocalScaling{
 		lock:                sync.Mutex{},
@@ -64,7 +64,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 
 			err := l.remove(ctx, runnerToRemove)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 		}
 
@@ -87,7 +87,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 			"deploymentdir": filepath.Join(l.cacheDir, "ftl-runner", name, "deployments"),
 			"language":      "go,kotlin",
 		}); err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		// Create a readable ULID for the runner.
@@ -96,7 +96,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		ulidStr := fmt.Sprintf("%025X", ulid)
 		err := config.Key.Scan(ulidStr)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		runnerCtx := log.ContextWithLogger(ctx, logger.Scope(name))
@@ -122,7 +122,7 @@ func (l *LocalScaling) remove(ctx context.Context, runner model.RunnerKey) error
 
 	cancel, ok := l.runners[runner]
 	if !ok {
-		return errors.Errorf("runner %s not found", runner)
+		return fmt.Errorf("runner %s not found", runner)
 	}
 
 	cancel()

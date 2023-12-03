@@ -4,9 +4,8 @@ package productcatalog
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"strings"
-
-	"github.com/alecthomas/errors"
 
 	"github.com/TBD54566975/ftl/examples/online-boutique/common"
 	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
@@ -54,7 +53,7 @@ func Get(ctx context.Context, req GetRequest) (Product, error) {
 			return p, nil
 		}
 	}
-	return Product{}, errors.Errorf("product not found: %q", req.ID)
+	return Product{}, fmt.Errorf("product not found: %q", req.ID)
 }
 
 type SearchRequest struct {

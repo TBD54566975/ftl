@@ -1,11 +1,10 @@
 package model
 
 import (
+	"errors"
 	"io"
 	"strconv"
 	"strings"
-
-	"github.com/alecthomas/errors"
 
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/schema"

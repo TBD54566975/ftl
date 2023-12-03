@@ -4,9 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alecthomas/assert/v2"
-
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestCodegen(t *testing.T) {

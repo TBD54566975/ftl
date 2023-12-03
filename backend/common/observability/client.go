@@ -2,10 +2,10 @@ package observability
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
-	"github.com/alecthomas/errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -53,12 +53,12 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 			semconv.ServiceVersion(serviceVersion),
 		))
 	if err != nil {
-		return errors.Wrap(err, "failed to create OTEL resource")
+		return fmt.Errorf("%s: %w", "failed to create OTEL resource", err)
 	}
 
 	otelMetricExporter, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to create OTEL metric exporter")
+		return fmt.Errorf("%s: %w", "failed to create OTEL metric exporter", err)
 	}
 
 	meterProvider := metric.NewMeterProvider(metric.WithReader(metric.NewPeriodicReader(otelMetricExporter)), metric.WithResource(res))
@@ -66,7 +66,7 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 
 	otelTraceExporter, err := otlptracegrpc.New(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to create OTEL trace exporter")
+		return fmt.Errorf("%s: %w", "failed to create OTEL trace exporter", err)
 	}
 	traceProvider := trace.NewTracerProvider(trace.WithBatcher(otelTraceExporter), trace.WithResource(res))
 	otel.SetTracerProvider(traceProvider)

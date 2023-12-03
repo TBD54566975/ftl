@@ -1,7 +1,7 @@
 package compile
 
 import (
-	stderrors "errors" //nolint:depguard
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/participle/v2"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/tools/go/ast/astutil"
@@ -39,10 +38,10 @@ func ExtractModuleSchema(dir string) (*schema.Module, error) {
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
 	}, "./...")
 	if err != nil {
-		return &schema.Module{}, errors.WithStack(err)
+		return &schema.Module{}, err
 	}
 	if len(pkgs) == 0 {
-		return &schema.Module{}, errors.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
+		return &schema.Module{}, fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
 	}
 	module := &schema.Module{}
 	for _, pkg := range pkgs {
@@ -52,7 +51,7 @@ func ExtractModuleSchema(dir string) (*schema.Module, error) {
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				defer func() {
 					if err != nil {
-						err = errors.Wrap(err, fset.Position(node.Pos()).String())
+						err = fmt.Errorf("%s: %w", fset.Position(node.Pos()).String(), err)
 					}
 				}()
 				switch node := node.(type) {
@@ -92,7 +91,7 @@ func ExtractModuleSchema(dir string) (*schema.Module, error) {
 		}
 	}
 	if module.Name == "" {
-		return module, errors.Errorf("//ftl:module directive is required")
+		return module, fmt.Errorf("//ftl:module directive is required")
 	}
 	return module, schema.ValidateModule(module)
 }
@@ -106,11 +105,11 @@ func visitCallExpr(pctx *parseContext, verb *schema.Verb, node *ast.CallExpr) er
 		return nil
 	}
 	if len(node.Args) != 3 {
-		return errors.New("Call must have exactly three arguments")
+		return errors.New("call must have exactly three arguments")
 	}
 	_, verbFn := deref[*types.Func](pctx.pkg, node.Args[1])
 	if verbFn == nil {
-		return errors.Errorf("Call first argument must be a function but is %s", node.Args[1])
+		return fmt.Errorf("call first argument must be a function but is %s", node.Args[1])
 	}
 	moduleName := verbFn.Pkg().Name()
 	if moduleName == pctx.pkg.Name {
@@ -131,7 +130,7 @@ func visitFile(pctx *parseContext, node *ast.File) error {
 	}
 	directives, err := parseDirectives(fset, node.Doc)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	pctx.module.Comments = parseComments(node.Doc)
 	for _, dir := range directives {
@@ -139,16 +138,16 @@ func visitFile(pctx *parseContext, node *ast.File) error {
 		case "module":
 			moduleAttr := dir.getPositional(0)
 			if moduleAttr == nil {
-				return errors.Errorf("%s: module not specified", dir)
+				return fmt.Errorf("%s: module not specified", dir)
 			}
 			moduleName := moduleAttr.Value.Text()
 			if moduleAttr.Value.Text() != pctx.pkg.Name {
-				return errors.Errorf("%s: FTL module name %q does not match Go package name %q", dir, moduleName, pctx.pkg.Name)
+				return fmt.Errorf("%s: FTL module name %q does not match Go package name %q", dir, moduleName, pctx.pkg.Name)
 			}
 			pctx.module.Name = moduleName
 
 		default:
-			return errors.Errorf("%s: invalid directive", dir)
+			return fmt.Errorf("%s: invalid directive", dir)
 		}
 	}
 	return nil
@@ -166,22 +165,22 @@ func checkSignature(sig *types.Signature) error {
 	params := sig.Params()
 	results := sig.Results()
 	if params.Len() != 2 {
-		return errors.Errorf("must have exactly two parameters in the form (context.Context, struct) but has %d", params.Len())
+		return fmt.Errorf("must have exactly two parameters in the form (context.Context, struct) but has %d", params.Len())
 	}
 	if results.Len() != 2 {
-		return errors.Errorf("must have exactly two result values in the form (error, struct) but has %d", results.Len())
+		return fmt.Errorf("must have exactly two result values in the form (error, struct) but has %d", results.Len())
 	}
 	if !types.AssertableTo(contextIfaceType(), params.At(0).Type()) {
-		return errors.Errorf("first parameter must be of type context.Context but is %s", params.At(0).Type())
+		return fmt.Errorf("first parameter must be of type context.Context but is %s", params.At(0).Type())
 	}
 	if !isType[*types.Struct](params.At(1).Type()) {
-		return errors.Errorf("second parameter must be a struct but is %s", params.At(1).Type())
+		return fmt.Errorf("second parameter must be a struct but is %s", params.At(1).Type())
 	}
 	if !types.AssertableTo(errorIFaceType(), results.At(1).Type()) {
-		return errors.Errorf("first result must be an error but is %s", results.At(0).Type())
+		return fmt.Errorf("first result must be an error but is %s", results.At(0).Type())
 	}
 	if !isType[*types.Struct](results.At(0).Type()) {
-		return errors.Errorf("first result must be a struct but is %s", results.At(0).Type())
+		return fmt.Errorf("first result must be a struct but is %s", results.At(0).Type())
 	}
 	return nil
 }
@@ -197,7 +196,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	directives, err := parseDirectives(fset, node.Doc)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	var metadata []schema.Metadata
 	isVerb := false
@@ -208,11 +207,11 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 		case "ingress":
 			methodAttr := dir.getPositional(0)
 			if methodAttr == nil {
-				return nil, errors.Errorf("%s: ingress method not specified", dir.pos)
+				return nil, fmt.Errorf("%s: ingress method not specified", dir.pos)
 			}
 			pathAttr := dir.getPositional(1)
 			if pathAttr == nil {
-				return nil, errors.Errorf("%s: ingress path not specified", dir.pos)
+				return nil, fmt.Errorf("%s: ingress path not specified", dir.pos)
 			}
 			metadata = append(metadata, &schema.MetadataIngress{
 				Pos:    dir.pos,
@@ -220,7 +219,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 				Path:   pathAttr.Value.Text(),
 			})
 		default:
-			return nil, errors.Errorf("invalid directive: %s", dir)
+			return nil, fmt.Errorf("invalid directive: %s", dir)
 		}
 	}
 	if !isVerb {
@@ -229,7 +228,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		return nil, errors.Errorf("ftl:verb cannot be a method")
+		return nil, fmt.Errorf("ftl:verb cannot be a method")
 	}
 	params := sig.Params()
 	results := sig.Results()
@@ -267,7 +266,7 @@ func parseComments(doc *ast.CommentGroup) []string {
 func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.DataRef, error) {
 	named, ok := tnode.(*types.Named)
 	if !ok {
-		return nil, errors.Errorf("expected named type but got %s", tnode)
+		return nil, fmt.Errorf("expected named type but got %s", tnode)
 	}
 	out := &schema.Data{
 		Pos:  goPosToSchemaPos(node.Pos()),
@@ -297,13 +296,13 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 
 	s, ok := tnode.Underlying().(*types.Struct)
 	if !ok {
-		return nil, errors.Errorf("expected struct but got %s", tnode)
+		return nil, fmt.Errorf("expected struct but got %s", tnode)
 	}
 	for i := 0; i < s.NumFields(); i++ {
 		f := s.Field(i)
 		ft, err := parseType(pctx, node, f.Type())
 		if err != nil {
-			return nil, errors.Wrapf(err, "field %s", f.Name())
+			return nil, fmt.Errorf("field %s: %w", f.Name(), err)
 		}
 		out.Fields = append(out.Fields, &schema.Field{
 			Pos:  goPosToSchemaPos(node.Pos()),
@@ -335,7 +334,7 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 			return &schema.Float{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		default:
-			return nil, errors.Errorf("unsupported basic type %s", underlying)
+			return nil, fmt.Errorf("unsupported basic type %s", underlying)
 		}
 
 	case *types.Struct:
@@ -352,7 +351,7 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		case "github.com/TBD54566975/ftl/go-runtime/sdk.Option":
 			underlying, err := parseType(pctx, node, named.TypeArgs().At(0))
 			if err != nil {
-				return nil, errors.WithStack(err)
+				return nil, err
 			}
 			return &schema.Optional{Type: underlying}, nil
 
@@ -367,18 +366,18 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		return parseSlice(pctx, node, underlying)
 
 	default:
-		return nil, errors.Errorf("%s: unsupported type %T", goPosToSchemaPos(node.Pos()), node)
+		return nil, fmt.Errorf("%s: unsupported type %T", goPosToSchemaPos(node.Pos()), node)
 	}
 }
 
 func parseMap(pctx *parseContext, node ast.Node, tnode *types.Map) (*schema.Map, error) {
 	key, err := parseType(pctx, node, tnode.Key())
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	value, err := parseType(pctx, node, tnode.Elem())
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return &schema.Map{
 		Pos:   goPosToSchemaPos(node.Pos()),
@@ -390,7 +389,7 @@ func parseMap(pctx *parseContext, node ast.Node, tnode *types.Map) (*schema.Map,
 func parseSlice(pctx *parseContext, node ast.Node, tnode *types.Slice) (*schema.Array, error) {
 	value, err := parseType(pctx, node, tnode.Elem())
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return &schema.Array{
 		Pos:     goPosToSchemaPos(node.Pos()),
@@ -516,16 +515,16 @@ func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]ftlDirectiv
 			// Adjust the Participle-reported position relative to the AST node.
 			pos := fset.Position(line.Pos())
 			var perr participle.Error
-			if stderrors.As(err, &perr) {
+			if errors.As(err, &perr) {
 				ppos := perr.Position()
 				ppos.Filename = pos.Filename
 				ppos.Column += pos.Column
 				ppos.Line += pos.Line - 1
 				err = participle.Errorf(ppos, "%s", perr.Message())
 			} else {
-				err = errors.Errorf("%s: %s", pos, err)
+				err = fmt.Errorf("%s: %w", pos, err)
 			}
-			return nil, errors.Wrap(err, "invalid directive")
+			return nil, fmt.Errorf("%s: %w", "invalid directive", err)
 		}
 		directives = append(directives, ftlDirective{
 			kind:  ast.Kind,

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/errors"
 	"github.com/alecthomas/types"
 	"github.com/jackc/pgx/v5"
 	"github.com/jpillora/backoff"
@@ -99,11 +98,11 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 		deployment, err := decodeNotification(notification, func(key model.DeploymentName) (Deployment, types.Option[model.DeploymentName], error) {
 			row, err := d.db.GetDeployment(ctx, key)
 			if err != nil {
-				return Deployment{}, types.None[model.DeploymentName](), errors.WithStack(translatePGError(err))
+				return Deployment{}, types.None[model.DeploymentName](), translatePGError(err)
 			}
 			moduleSchema, err := schema.ModuleFromBytes(row.Deployment.Schema)
 			if err != nil {
-				return Deployment{}, types.None[model.DeploymentName](), errors.WithStack(err)
+				return Deployment{}, types.None[model.DeploymentName](), err
 			}
 			return Deployment{
 				CreatedAt:   row.Deployment.CreatedAt,
@@ -115,7 +114,7 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 			}, types.None[model.DeploymentName](), nil
 		})
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 		logger.Debugf("Deployment notification: %s", deployment)
 		d.DeploymentChanges.Publish(deployment)
@@ -143,20 +142,20 @@ func decodeNotification[K any, T NotificationPayload, KP interface {
 		var deletedKey K
 		var deletedKeyP KP = &deletedKey
 		if err := deletedKeyP.UnmarshalText([]byte(notification.Old)); err != nil {
-			return Notification[T, K, KP]{}, errors.Wrap(err, "failed to unmarshal notification key")
+			return Notification[T, K, KP]{}, fmt.Errorf("%s: %w", "failed to unmarshal notification key", err)
 		}
 		deleted = types.Some(deletedKey)
 	} else {
 		var newKey K
 		var newKeyP KP = &newKey
 		if err := newKeyP.UnmarshalText([]byte(notification.New)); err != nil {
-			return Notification[T, K, KP]{}, errors.Wrap(err, "failed to unmarshal notification key")
+			return Notification[T, K, KP]{}, fmt.Errorf("%s: %w", "failed to unmarshal notification key", err)
 		}
 		var msg T
 		var err error
 		msg, deleted, err = translate(newKey)
 		if err != nil {
-			return Notification[T, K, KP]{}, errors.Wrap(err, "failed to translate database notification")
+			return Notification[T, K, KP]{}, fmt.Errorf("%s: %w", "failed to translate database notification", err)
 		}
 
 		if !deleted.Ok() {
@@ -170,14 +169,14 @@ func decodeNotification[K any, T NotificationPayload, KP interface {
 func waitForNotification(ctx context.Context, conn *pgx.Conn) (event, error) {
 	notification, err := conn.WaitForNotification(ctx)
 	if err != nil {
-		return event{}, errors.WithStack(err)
+		return event{}, err
 	}
 	ev := event{}
 	dec := json.NewDecoder(strings.NewReader(notification.Payload))
 	dec.DisallowUnknownFields()
 	err = dec.Decode(&ev)
 	if err != nil {
-		return event{}, errors.WithStack(err)
+		return event{}, err
 	}
 	return ev, nil
 }
