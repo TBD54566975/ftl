@@ -19,7 +19,7 @@ type {{.Name|title}} struct {
 {{if .Comments}}//
 {{end -}}
 //ftl:verb
-func {{.Name|title}}(context.Context, {{.Request}}) ({{.Response}}, error) {
+func {{.Name|title}}(context.Context, {{.Request|type}}) ({{.Response|type}}, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/sdk.Call()")
 }
 {{- end}}

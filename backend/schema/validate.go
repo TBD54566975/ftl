@@ -37,9 +37,17 @@ func Validate(schema *Schema) error {
 		err := Visit(module, func(n Node, next func() error) error {
 			switch n := n.(type) {
 			case *VerbRef:
+				if n.Module == "" {
+					n.Module = module.Name
+				}
 				verbRefs = append(verbRefs, n)
+
 			case *DataRef:
+				if n.Module == "" {
+					n.Module = module.Name
+				}
 				dataRefs = append(dataRefs, n)
+
 			case *Verb:
 				for _, md := range n.Metadata {
 					if md, ok := md.(*MetadataIngress); ok {
@@ -52,10 +60,12 @@ func Validate(schema *Schema) error {
 				ref := makeRef(module.Name, n.Name)
 				verbs[ref] = true
 				verbs[n.Name] = true
+
 			case *Data:
 				ref := makeRef(module.Name, n.Name)
 				data[ref] = true
 				data[n.Name] = true
+
 			default:
 			}
 			return next()
