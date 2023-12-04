@@ -4,7 +4,10 @@ import io.gitlab.arturbosch.detekt.api.*
 import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
 import org.jetbrains.kotlin.cfg.getElementParentDeclaration
+import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
+import org.jetbrains.kotlin.diagnostics.DiagnosticUtils.getLineAndColumnInPsiFile
+import org.jetbrains.kotlin.diagnostics.PsiDiagnosticUtils.LineAndColumn
 import org.jetbrains.kotlin.js.descriptorUtils.getKotlinTypeFqName
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.*
@@ -108,10 +111,11 @@ class SchemaExtractor(
   init {
     currentModuleName = annotation.containingKtFile.packageFqName.extractModuleName()
     requireNotNull(annotation.getElementParentDeclaration()) { "Could not extract $currentModuleName verb definition" }.let {
-      require(it is KtNamedFunction) { "Failure extracting ${it.name}; verbs must be functions" }
+      require(it is KtNamedFunction) { "${it.getLineAndColumn()} Failure extracting ${it.name}; verbs must be functions" }
       verb = it
     }
-    module = requireNotNull(verb.getElementParentDeclaration()) { "Could not extract $currentModuleName definition" }
+    val verbSourcePos = verb.getLineAndColumn()
+    module = requireNotNull(verb.getElementParentDeclaration()) { "$verbSourcePos Could not extract $currentModuleName definition" }
 
     // Skip ignored modules.
     if (module.annotationEntries.firstOrNull {
@@ -124,27 +128,28 @@ class SchemaExtractor(
       "Verbs must be defined in a package"
     }.let { fqName ->
       require(fqName.split(".").let { it.size >= 2 && it.first() == "ftl" }) {
-        "Expected @Verb to be in package ftl.<module>, but was $fqName"
+        "$verbSourcePos Expected @Verb to be in package ftl.<module>, but was $fqName"
       }
 
       // Validate parameters
-      require(verb.valueParameters.size == 2) { "Verbs must have exactly two arguments, ${verb.name} did not" }
+      require(verb.valueParameters.size == 2) { "$verbSourcePos Verbs must have exactly two arguments, ${verb.name} did not" }
       val ctxParam = verb.valueParameters.first()
       val reqParam = verb.valueParameters.last()
       require(ctxParam.typeReference?.resolveType()?.fqNameOrNull()?.asString() == Context::class.qualifiedName) {
-        "First argument of verb must be Context"
+        "${verb.valueParameters.first().getLineAndColumn()} First argument of verb must be Context"
       }
 
       require(reqParam.typeReference?.resolveType()
         ?.let { it.toClassDescriptor().isData || it.isEmptyClassTypeAlias() }
         ?: false
       ) {
-        "Second argument of ${verb.name} must be a data class or typealias of Unit"
+        "${verb.valueParameters.last().getLineAndColumn()} Second argument of ${verb.name} must be a data class or " +
+          "typealias of Unit"
       }
 
       // Validate return type
       val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type
-        ?: throw IllegalStateException("Could not resolve ${verb.name} return type")
+        ?: throw IllegalStateException("$verbSourcePos Could not resolve ${verb.name} return type")
       require(respClass.toClassDescriptor().isData || respClass.isEmptyClassTypeAlias()) {
         "Return type of ${verb.name} must be a data class or typealias of Unit"
       }
@@ -152,21 +157,27 @@ class SchemaExtractor(
   }
 
   fun extract() {
-    val requestType = requireNotNull(verb.valueParameters.last().typeReference?.resolveType()) {
-      "Could not resolve request type for ${verb.name}"
+    val filename = verb.containingKtFile.name
+    val verbSourcePos = verb.getLineAndColumn()
+    val requestRef = verb.valueParameters.last()?.let {
+      val position = it.getLineAndColumn().toPosition(filename)
+      return@let it.typeReference?.resolveType()?.toSchemaType(position)?.dataRef
     }
-    val responseType = requireNotNull(verb.createTypeBindingForReturnType(bindingContext)?.type) {
-      "Could not resolve response type for ${verb.name}"
+    requireNotNull(requestRef) { "$verbSourcePos Could not resolve request type for ${verb.name}" }
+    val returnRef = verb.createTypeBindingForReturnType(bindingContext)?.let {
+      val position = it.psiElement.getLineAndColumn().toPosition(filename)
+      return@let it.type.toSchemaType(position).dataRef
     }
+    requireNotNull(returnRef) { "$verbSourcePos Could not resolve response type for ${verb.name}" }
 
     val metadata = mutableListOf<Metadata>()
     extractIngress()?.apply { metadata.add(Metadata(ingress = this)) }
     extractCalls()?.apply { metadata.add(Metadata(calls = this)) }
 
     val verb = Verb(
-      name = requireNotNull(verb.name) { "Verbs must be named" },
-      request = requestType.toSchemaType().dataRef,
-      response = responseType.toSchemaType().dataRef,
+      name = requireNotNull(verb.name) { "$verbSourcePos Verbs must be named" },
+      request = requestRef,
+      response = returnRef,
       metadata = metadata,
       comments = verb.comments(),
     )
@@ -194,6 +205,7 @@ class SchemaExtractor(
     return verb.annotationEntries.firstOrNull {
       bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Ingress::class.qualifiedName
     }?.let {
+      val sourcePos = it.getLineAndColumn()
       val argumentLists = it.valueArguments.partition { arg ->
         // Method arg is named "method" or is of type xyz.block.ftl.Method (in the case where args are
         // positional rather than named).
@@ -202,11 +214,11 @@ class SchemaExtractor(
           ?.asString() == Method::class.qualifiedName
       }
       val methodArg = requireNotNull(argumentLists.first.single().getArgumentExpression()?.text) {
-        "Could not extract method from ${verb.name} @Ingress annotation"
+        "$sourcePos Could not extract method from ${verb.name} @Ingress annotation"
       }
       // NB: trim leading/trailing double quotes because KtStringTemplateExpression.text includes them
       val pathArg = requireNotNull(argumentLists.second.single().getArgumentExpression()?.text?.trim { it == '\"' }) {
-        "Could not extract path from ${verb.name} @Ingress annotation"
+        "$sourcePos Could not extract path from ${verb.name} @Ingress annotation"
       }
       MetadataIngress(
         path = pathArg,
@@ -232,7 +244,9 @@ class SchemaExtractor(
 
     val func = element as? KtNamedFunction
     if (func != null) {
-      val body = requireNotNull(func.bodyExpression) { "Function body cannot be empty; was in ${func.name}" }
+      val funcSourcePos = func.getLineAndColumn()
+      val body =
+        requireNotNull(func.bodyExpression) { "$funcSourcePos Function body cannot be empty; was in ${func.name}" }
       val imports = func.containingKtFile.importList?.imports?.mapNotNull { it.importedFqName } ?: emptyList()
 
       // Look for all params of type Context and extract a matcher for each based on its variable name.
@@ -244,10 +258,10 @@ class SchemaExtractor(
       val refs = callMatchers.flatMap { matcher ->
         matcher.findAll(body.text).map {
           val req = requireNotNull(it.groups["req"]?.value?.trim()) {
-            "Could not extract request type for outgoing verb call from ${verb.name}"
+            "Error processing function defined at $funcSourcePos: Could not extract request type for outgoing verb call"
           }
           val verbCall = requireNotNull(it.groups["fn"]?.value?.trim()) {
-            "Could not extract module name for outgoing verb call from ${verb.name}"
+            "Error processing function defined at $funcSourcePos: Could not extract module name for outgoing verb call"
           }
           // TODO(worstell): Figure out how to get module name when not imported from another Kt file
           val moduleRefName = imports.firstOrNull { import -> import.toString().contains(req) }
@@ -273,7 +287,8 @@ class SchemaExtractor(
   private fun KtTypeAlias.toSchemaData(): Data {
     return Data(
       name = this.name!!,
-      comments = this.comments()
+      comments = this.comments(),
+      pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(this.containingKtFile.name),
     )
   }
 
@@ -283,14 +298,19 @@ class SchemaExtractor(
       fields = this.getValueParameters().map { param ->
         Field(
           name = param.name!!,
-          type = param.typeReference?.resolveType()?.toSchemaType()
+          type = param.typeReference?.let {
+            return@let it.resolveType().toSchemaType(
+              getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition(it.containingKtFile.name)
+            )
+          }
         )
       }.toList(),
-      comments = this.comments()
+      comments = this.comments(),
+      pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(this.containingKtFile.name),
     )
   }
 
-  private fun KotlinType.toSchemaType(): Type {
+  private fun KotlinType.toSchemaType(position: Position): Type {
     val type = when (this.fqNameOrNull()?.asString()) {
       String::class.qualifiedName -> Type(string = xyz.block.ftl.v1.schema.String())
       Int::class.qualifiedName -> Type(int = xyz.block.ftl.v1.schema.Int())
@@ -301,8 +321,8 @@ class SchemaExtractor(
       Map::class.qualifiedName -> {
         return Type(
           map = xyz.block.ftl.v1.schema.Map(
-            key = this.arguments.first().type.toSchemaType(),
-            value_ = this.arguments.last().type.toSchemaType(),
+            key = this.arguments.first().type.toSchemaType(position),
+            value_ = this.arguments.last().type.toSchemaType(position),
           )
         )
       }
@@ -310,14 +330,16 @@ class SchemaExtractor(
       List::class.qualifiedName -> {
         return Type(
           array = Array(
-            element = this.arguments.first().type.toSchemaType()
+            element = this.arguments.first().type.toSchemaType(position)
           )
         )
       }
 
       else -> {
         require(this.toClassDescriptor().isData || this.isEmptyClassTypeAlias()) {
-          "Expected type to be a data class or typealias of Unit, but was ${this.fqNameOrNull()?.asString()}"
+          "(${position.line},${position.column}) Expected type to be a data class or typealias of Unit, but was ${
+            this.fqNameOrNull()?.asString()
+          }"
         }
 
         var refName: String
@@ -333,13 +355,15 @@ class SchemaExtractor(
         }
 
         require(fqName.startsWith("ftl.")) {
-          "Expected module name to be in the form ftl.<module>, but was ${this.fqNameOrNull()?.asString()}"
+          "(${position.line},${position.column}) Expected module name to be in the form ftl.<module>, " +
+            "but was ${this.fqNameOrNull()?.asString()}"
         }
 
         return Type(
           dataRef = DataRef(
             name = refName,
             module = fqName.extractModuleName().takeIf { it != currentModuleName } ?: "",
+            pos = position,
           )
         )
       }
@@ -352,9 +376,19 @@ class SchemaExtractor(
 
   private fun KtTypeReference.resolveType(): KotlinType =
     bindingContext.get(BindingContext.TYPE, this)
-      ?: throw IllegalStateException("Could not resolve type ${this.text}")
+      ?: throw IllegalStateException("${this.getLineAndColumn()} Could not resolve type ${this.text}")
 
   companion object {
+    private fun PsiElement.getLineAndColumn(): LineAndColumn =
+      getLineAndColumnInPsiFile(this.containingFile, this.textRange)
+
+    private fun LineAndColumn.toPosition(filename: String) =
+      Position(
+        filename = filename,
+        line = this.line.toLong(),
+        column = this.column.toLong(),
+      )
+
     private fun getCallMatcher(ctxVarName: String): Regex {
       return """${ctxVarName}.call\((?<fn>[^)]+),(?<req>[^)]+)\(.*\)\)""".toRegex(RegexOption.IGNORE_CASE)
     }
