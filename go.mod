@@ -18,7 +18,7 @@ require (
 	github.com/otiai10/copy v1.14.0
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.10.1
-	github.com/swaggest/jsonschema-go v0.3.62
+	github.com/swaggest/jsonschema-go v0.3.64
 	github.com/titanous/json5 v1.0.0
 	github.com/zalando/go-keyring v0.2.3
 	go.opentelemetry.io/otel v1.21.0
@@ -31,7 +31,7 @@ require (
 	golang.org/x/sync v0.5.0
 	golang.org/x/tools v0.16.0
 	google.golang.org/protobuf v1.31.0
-	modernc.org/sqlite v1.23.1
+	modernc.org/sqlite v1.27.0
 )
 
 require (
@@ -60,9 +60,9 @@ require (
 	lukechampine.com/uint128 v1.2.0 // indirect
 	modernc.org/cc/v3 v3.40.0 // indirect
 	modernc.org/ccgo/v3 v3.16.13 // indirect
-	modernc.org/libc v1.22.5 // indirect
-	modernc.org/mathutil v1.5.0 // indirect
-	modernc.org/memory v1.5.0 // indirect
+	modernc.org/libc v1.29.0 // indirect
+	modernc.org/mathutil v1.6.0 // indirect
+	modernc.org/memory v1.7.2 // indirect
 	modernc.org/opt v0.1.3 // indirect
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.1.0 // indirect
@@ -78,7 +78,7 @@ require (
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.9.0
 	github.com/beevik/etree v1.2.0
-	github.com/deckarep/golang-set/v2 v2.4.0
+	github.com/deckarep/golang-set/v2 v2.5.0
 	github.com/gofrs/flock v0.8.1
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
