@@ -140,13 +140,16 @@ WHERE sqlc.arg('all')::bool = true
    OR r.state <> 'dead'
 ORDER BY r.key;
 
--- name: GetDeployments :many
+-- name: GetActiveDeployments :many
 SELECT sqlc.embed(d), m.name AS module_name, m.language
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE sqlc.arg('all')::bool = true
    OR min_replicas > 0
 ORDER BY d.name;
+
+-- name: GetActiveDeploymentSchemas :many
+SELECT name, schema FROM deployments WHERE min_replicas > 0;
 
 -- name: GetProcessList :many
 SELECT d.min_replicas,

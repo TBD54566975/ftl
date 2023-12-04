@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/ftl/examples/online-boutique/common"
-	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
+	"github.com/TBD54566975/ftl/examples/online-boutique/services/currency"
 )
 
 var (
@@ -18,11 +18,11 @@ var (
 )
 
 type Product struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Picture     string      `json:"picture"`
-	PriceUSD    money.Money `json:"priceUSD"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Picture     string         `json:"picture"`
+	PriceUSD    currency.Money `json:"priceUSD"`
 
 	// Categories such as "clothing" or "kitchen" that can be used to look up
 	// other related products.
