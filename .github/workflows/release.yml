@@ -100,7 +100,7 @@ jobs:
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       # Ideally we'd use Hermit's JDK, but this action creates the correct settings.xml for us.
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           java-version: "11"
           distribution: "temurin"
