@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -267,6 +268,12 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 	named, ok := tnode.(*types.Named)
 	if !ok {
 		return nil, fmt.Errorf("expected named type but got %s", tnode)
+	}
+	nodePath := named.Obj().Pkg().Path()
+	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
+		base := path.Dir(pctx.pkg.PkgPath)
+		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
+		return &schema.DataRef{Module: destModule, Name: named.Obj().Name()}, nil
 	}
 	out := &schema.Data{
 		Pos:  goPosToSchemaPos(node.Pos()),

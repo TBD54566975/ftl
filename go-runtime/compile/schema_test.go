@@ -5,15 +5,16 @@ import (
 	"go/types"
 	"testing"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestExtractModuleSchema(t *testing.T) {
-	actual, err := ExtractModuleSchema("testdata")
+	actual, err := ExtractModuleSchema("testdata/one")
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
-	expected := `module main {
+	expected := `module one {
   data Nested {
   }
 
@@ -27,6 +28,7 @@ func TestExtractModuleSchema(t *testing.T) {
     nested Nested
     optional Nested?
     time Time
+    user two.User
   }
 
   data Resp {

@@ -1,10 +1,11 @@
-//ftl:module main
-package main
+//ftl:module one
+package one
 
 import (
 	"context"
 	"time"
 
+	"github.com/TBD54566975/ftl/go-runtime/compile/testdata/two"
 	"github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 
@@ -21,6 +22,7 @@ type Req struct {
 	Nested   Nested
 	Optional sdk.Option[Nested]
 	Time     time.Time
+	User     two.User
 }
 type Resp struct{}
 
