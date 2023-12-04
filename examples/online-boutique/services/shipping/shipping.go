@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
 	"github.com/TBD54566975/ftl/examples/online-boutique/services/cart"
+	"github.com/TBD54566975/ftl/examples/online-boutique/services/currency"
 )
 
 type Address struct {
@@ -25,7 +25,7 @@ type ShippingRequest struct {
 
 //ftl:verb
 //ftl:ingress POST /shipping/quote
-func GetQuote(ctx context.Context, req ShippingRequest) (money.Money, error) {
+func GetQuote(ctx context.Context, req ShippingRequest) (currency.Money, error) {
 	return moneyFromUSD(8.99), nil
 }
 
@@ -40,9 +40,9 @@ func ShipOrder(ctx context.Context, req ShippingRequest) (ShipOrderResponse, err
 	return ShipOrderResponse{ID: createTrackingID(baseAddress)}, nil
 }
 
-func moneyFromUSD(value float64) money.Money {
+func moneyFromUSD(value float64) currency.Money {
 	units, fraction := math.Modf(value)
-	return money.Money{
+	return currency.Money{
 		CurrencyCode: "USD",
 		Units:        int(units),
 		Nanos:        int(math.Trunc(fraction * 10000000)),

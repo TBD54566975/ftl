@@ -21,6 +21,8 @@ type Querier interface {
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	DeregisterRunner(ctx context.Context, key Key) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
+	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
+	GetActiveDeployments(ctx context.Context, all bool) ([]GetActiveDeploymentsRow, error)
 	GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error)
 	GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIngressRoutesRow, error)
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
@@ -30,7 +32,6 @@ type Querier interface {
 	GetDeployment(ctx context.Context, name model.DeploymentName) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
-	GetDeployments(ctx context.Context, all bool) ([]GetDeploymentsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
 	// Get deployments that have a mismatch between the number of assigned and required replicas.
 	GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error)

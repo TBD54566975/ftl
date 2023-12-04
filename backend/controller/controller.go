@@ -31,6 +31,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/cors"
 	"github.com/TBD54566975/ftl/backend/common/log"
+	ftlmaps "github.com/TBD54566975/ftl/backend/common/maps"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/rpc"
 	"github.com/TBD54566975/ftl/backend/common/rpc/headers"
@@ -376,13 +377,13 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 }
 
 func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
-	deployments, err := s.dal.GetActiveDeployments(ctx)
+	schemas, err := s.dal.GetActiveDeploymentSchemas(ctx)
 	if err != nil {
 		return nil, err
 	}
 	sch := &schemapb.Schema{
-		Modules: slices.Map(deployments, func(d dal.Deployment) *schemapb.Module {
-			return d.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+		Modules: slices.Map(schemas, func(d *schema.Module) *schemapb.Module {
+			return d.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 		}),
 	}
 	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: sch}), nil
@@ -674,11 +675,17 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		logger.Errorf(err, "Missing runtime metadata")
 		return nil, err
 	}
+
 	module, err := schema.ModuleFromProto(ms)
 	if err != nil {
 		logger.Errorf(err, "Invalid module schema")
 		return nil, fmt.Errorf("%s: %w", "invalid module schema", err)
 	}
+	if err := s.validateWholeSchema(ctx, module); err != nil {
+		logger.Errorf(err, "Invalid module schema")
+		return nil, fmt.Errorf("%s: %w", "invalid module schema", err)
+	}
+
 	ingressRoutes := extractIngressRoutingEntries(req.Msg)
 	dname, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes)
 	if err != nil {
@@ -688,6 +695,18 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	deploymentLogger := s.getDeploymentLogger(ctx, dname)
 	deploymentLogger.Infof("Created deployment %s", dname)
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentName: dname.String()}), nil
+}
+
+// Load schemas for existing modules, combine with our new one, and validate as a whole.
+func (s *Service) validateWholeSchema(ctx context.Context, module *schema.Module) error {
+	existingModules, err := s.dal.GetActiveDeploymentSchemas(ctx)
+	if err != nil {
+		return fmt.Errorf("%s: %w", "could not get existing schemas", err)
+	}
+	schemaMap := ftlmaps.FromSlice(existingModules, func(el *schema.Module) (string, *schema.Module) { return el.Name, el })
+	schemaMap[module.Name] = module
+	fullSchema := &schema.Schema{Modules: maps.Values(schemaMap)}
+	return schema.Validate(fullSchema)
 }
 
 func (s *Service) getDeployment(ctx context.Context, name string) (*model.Deployment, error) {

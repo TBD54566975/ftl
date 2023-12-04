@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
 	"github.com/TBD54566975/ftl/examples/online-boutique/services/cart"
@@ -13,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/examples/online-boutique/services/productcatalog"
 	"github.com/TBD54566975/ftl/examples/online-boutique/services/shipping"
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
-	"github.com/google/uuid"
 )
 
 type PlaceOrderRequest struct {
@@ -27,13 +28,13 @@ type PlaceOrderRequest struct {
 
 type OrderItem struct {
 	Item cart.Item
-	Cost money.Money
+	Cost currency.Money
 }
 
 type Order struct {
 	ID                 string
 	ShippingTrackingID string
-	ShippingCost       money.Money
+	ShippingCost       currency.Money
 	ShippingAddress    shipping.Address
 	Items              []OrderItem
 }
@@ -80,7 +81,7 @@ func PlaceOrder(ctx context.Context, req PlaceOrderRequest) (Order, error) {
 		return Order{}, fmt.Errorf("failed to convert shipping cost to currency: %w", err)
 	}
 
-	total := money.Money{CurrencyCode: req.UserCurrency}
+	total := currency.Money{CurrencyCode: req.UserCurrency}
 	total = money.Must(money.Sum(total, shippingPrice))
 	for _, it := range orders {
 		multPrice := money.MultiplySlow(it.Cost, uint32(it.Item.Quantity))

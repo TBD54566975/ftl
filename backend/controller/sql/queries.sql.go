@@ -131,6 +131,80 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getActiveDeploymentSchemas = `-- name: GetActiveDeploymentSchemas :many
+SELECT name, schema FROM deployments WHERE min_replicas > 0
+`
+
+type GetActiveDeploymentSchemasRow struct {
+	Name   model.DeploymentName
+	Schema []byte
+}
+
+func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error) {
+	rows, err := q.db.Query(ctx, getActiveDeploymentSchemas)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveDeploymentSchemasRow
+	for rows.Next() {
+		var i GetActiveDeploymentSchemasRow
+		if err := rows.Scan(&i.Name, &i.Schema); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getActiveDeployments = `-- name: GetActiveDeployments :many
+SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
+FROM deployments d
+         INNER JOIN modules m on d.module_id = m.id
+WHERE $1::bool = true
+   OR min_replicas > 0
+ORDER BY d.name
+`
+
+type GetActiveDeploymentsRow struct {
+	Deployment Deployment
+	ModuleName string
+	Language   string
+}
+
+func (q *Queries) GetActiveDeployments(ctx context.Context, all bool) ([]GetActiveDeploymentsRow, error) {
+	rows, err := q.db.Query(ctx, getActiveDeployments, all)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveDeploymentsRow
+	for rows.Next() {
+		var i GetActiveDeploymentsRow
+		if err := rows.Scan(
+			&i.Deployment.ID,
+			&i.Deployment.CreatedAt,
+			&i.Deployment.ModuleID,
+			&i.Deployment.Name,
+			&i.Deployment.Schema,
+			&i.Deployment.Labels,
+			&i.Deployment.MinReplicas,
+			&i.ModuleName,
+			&i.Language,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getActiveRunners = `-- name: GetActiveRunners :many
 SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
                            r.endpoint,
@@ -373,51 +447,6 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 			&i.Path,
 			&i.Digest,
 			&i.Executable_2,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getDeployments = `-- name: GetDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
-FROM deployments d
-         INNER JOIN modules m on d.module_id = m.id
-WHERE $1::bool = true
-   OR min_replicas > 0
-ORDER BY d.name
-`
-
-type GetDeploymentsRow struct {
-	Deployment Deployment
-	ModuleName string
-	Language   string
-}
-
-func (q *Queries) GetDeployments(ctx context.Context, all bool) ([]GetDeploymentsRow, error) {
-	rows, err := q.db.Query(ctx, getDeployments, all)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDeploymentsRow
-	for rows.Next() {
-		var i GetDeploymentsRow
-		if err := rows.Scan(
-			&i.Deployment.ID,
-			&i.Deployment.CreatedAt,
-			&i.Deployment.ModuleID,
-			&i.Deployment.Name,
-			&i.Deployment.Schema,
-			&i.Deployment.Labels,
-			&i.Deployment.MinReplicas,
-			&i.ModuleName,
-			&i.Language,
 		); err != nil {
 			return nil, err
 		}

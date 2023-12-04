@@ -254,7 +254,7 @@ func (d *DAL) GetStatus(
 	if err != nil {
 		return Status{}, fmt.Errorf("%s: %w", "could not get active runners", translatePGError(err))
 	}
-	deployments, err := d.db.GetDeployments(ctx, allDeployments)
+	deployments, err := d.db.GetActiveDeployments(ctx, allDeployments)
 	if err != nil {
 		return Status{}, fmt.Errorf("%s: %w", "could not get active deployments", translatePGError(err))
 	}
@@ -266,7 +266,7 @@ func (d *DAL) GetStatus(
 	if err != nil {
 		return Status{}, fmt.Errorf("%s: %w", "could not get routing table", translatePGError(err))
 	}
-	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetDeploymentsRow) (Deployment, error) {
+	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
 		protoSchema := &schemapb.Module{}
 		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
 			return Deployment{}, fmt.Errorf("%q: could not unmarshal schema: %w", in.ModuleName, err)
@@ -717,14 +717,14 @@ func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconc
 
 // GetActiveDeployments returns all active deployments.
 func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
-	rows, err := d.db.GetDeployments(ctx, false)
+	rows, err := d.db.GetActiveDeployments(ctx, false)
 	if err != nil {
 		if isNotFound(err) {
 			return nil, nil
 		}
 		return nil, translatePGError(err)
 	}
-	deployments, err := slices.MapErr(rows, func(in sql.GetDeploymentsRow) (Deployment, error) {
+	return slices.MapErr(rows, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
 		protoSchema := &schemapb.Module{}
 		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
 			return Deployment{}, fmt.Errorf("%q: could not unmarshal schema: %w", in.ModuleName, err)
@@ -742,12 +742,24 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 			CreatedAt:   in.Deployment.CreatedAt,
 		}, nil
 	})
+}
 
+func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module, error) {
+	rows, err := d.db.GetActiveDeploymentSchemas(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", "could not get active deployments", translatePGError(err))
 	}
-
-	return deployments, nil
+	return slices.MapErr(rows, func(in sql.GetActiveDeploymentSchemasRow) (*schema.Module, error) {
+		protoSchema := &schemapb.Module{}
+		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
+			return nil, fmt.Errorf("%q: could not unmarshal schema: %w", in.Name, err)
+		}
+		modelSchema, err := schema.ModuleFromProto(protoSchema)
+		if err != nil {
+			return nil, fmt.Errorf("%q: invalid schema in database: %w", in.Name, err)
+		}
+		return modelSchema, nil
+	})
 }
 
 type ProcessRunner struct {
