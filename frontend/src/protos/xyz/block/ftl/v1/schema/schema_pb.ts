@@ -14,7 +14,12 @@ import { ModuleRuntime, VerbRuntime } from "./runtime_pb.js";
  */
 export class Array extends Message<Array> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type element = 1;
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type element = 2;
    */
   element?: Type;
 
@@ -26,7 +31,8 @@ export class Array extends Message<Array> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Array";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "element", kind: "message", T: Type },
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "element", kind: "message", T: Type },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Array {
@@ -50,6 +56,11 @@ export class Array extends Message<Array> {
  * @generated from message xyz.block.ftl.v1.schema.Bool
  */
 export class Bool extends Message<Bool> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
   constructor(data?: PartialMessage<Bool>) {
     super();
     proto3.util.initPartial(data, this);
@@ -58,6 +69,7 @@ export class Bool extends Message<Bool> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Bool";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Bool {
@@ -296,6 +308,11 @@ export class Field extends Message<Field> {
  * @generated from message xyz.block.ftl.v1.schema.Float
  */
 export class Float extends Message<Float> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
   constructor(data?: PartialMessage<Float>) {
     super();
     proto3.util.initPartial(data, this);
@@ -304,6 +321,7 @@ export class Float extends Message<Float> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Float";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Float {
@@ -327,6 +345,11 @@ export class Float extends Message<Float> {
  * @generated from message xyz.block.ftl.v1.schema.Int
  */
 export class Int extends Message<Int> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
   constructor(data?: PartialMessage<Int>) {
     super();
     proto3.util.initPartial(data, this);
@@ -335,6 +358,7 @@ export class Int extends Message<Int> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Int";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Int {
@@ -359,12 +383,17 @@ export class Int extends Message<Int> {
  */
 export class Map extends Message<Map> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type key = 1;
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type key = 2;
    */
   key?: Type;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type value = 2;
+   * @generated from field: xyz.block.ftl.v1.schema.Type value = 3;
    */
   value?: Type;
 
@@ -376,8 +405,9 @@ export class Map extends Message<Map> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Map";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "key", kind: "message", T: Type },
-    { no: 2, name: "value", kind: "message", T: Type },
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "key", kind: "message", T: Type },
+    { no: 3, name: "value", kind: "message", T: Type },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Map {
@@ -605,7 +635,12 @@ export class Module extends Message<Module> {
  */
 export class Optional extends Message<Optional> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type type = 1;
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Type type = 2;
    */
   type?: Type;
 
@@ -617,7 +652,8 @@ export class Optional extends Message<Optional> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Optional";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "type", kind: "message", T: Type },
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "type", kind: "message", T: Type, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Optional {
@@ -733,6 +769,11 @@ export class Schema extends Message<Schema> {
  * @generated from message xyz.block.ftl.v1.schema.String
  */
 export class String extends Message<String> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
   constructor(data?: PartialMessage<String>) {
     super();
     proto3.util.initPartial(data, this);
@@ -741,6 +782,7 @@ export class String extends Message<String> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.String";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): String {
@@ -764,6 +806,11 @@ export class String extends Message<String> {
  * @generated from message xyz.block.ftl.v1.schema.Time
  */
 export class Time extends Message<Time> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
   constructor(data?: PartialMessage<Time>) {
     super();
     proto3.util.initPartial(data, this);
@@ -772,6 +819,7 @@ export class Time extends Message<Time> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Time";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Time {

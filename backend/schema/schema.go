@@ -61,50 +61,52 @@ type Type interface {
 
 // Optional represents a Type whose value may be optional.
 type Optional struct {
-	Type Type `parser:"@@" protobuf:"1"`
+	Pos Position `parser:"" protobuf:"1,optional"`
+
+	Type Type `parser:"@@" protobuf:"2,optional"`
 }
 
 type Int struct {
-	Pos Position `parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Int bool `parser:"@'Int'" protobuf:"-"`
 }
 
 type Float struct {
-	Pos Position `parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Float bool `parser:"@'Float'" protobuf:"-"`
 }
 
 type String struct {
-	Pos Position `parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Str bool `parser:"@'String'" protobuf:"-"`
 }
 
 type Bool struct {
-	Pos Position `parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Bool bool `parser:"@'Bool'" protobuf:"-"`
 }
 
 type Time struct {
-	Pos Position `parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Time bool `parser:"@'Time'" protobuf:"-"`
 }
 
 type Array struct {
-	Pos Position `parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Element Type `parser:"'[' @@ ']'" protobuf:"1"`
+	Element Type `parser:"'[' @@ ']'" protobuf:"2"`
 }
 
 type Map struct {
-	Pos Position `parser:"" protobuf:"-"`
+	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Key   Type `parser:"'{' @@" protobuf:"1"`
-	Value Type `parser:"':' @@ '}'" protobuf:"2"`
+	Key   Type `parser:"'{' @@" protobuf:"2"`
+	Value Type `parser:"':' @@ '}'" protobuf:"3"`
 }
 
 type Field struct {

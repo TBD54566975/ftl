@@ -9,10 +9,13 @@ option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema;s
 option java_multiple_files = true;
 
 message Array {
-  Type element = 1;
+  optional Position pos = 1;
+  Type element = 2;
 }
 
-message Bool {}
+message Bool {
+  optional Position pos = 1;
+}
 
 message Data {
   optional Position pos = 1;
@@ -42,13 +45,18 @@ message Field {
   Type type = 4;
 }
 
-message Float {}
+message Float {
+  optional Position pos = 1;
+}
 
-message Int {}
+message Int {
+  optional Position pos = 1;
+}
 
 message Map {
-  Type key = 1;
-  Type value = 2;
+  optional Position pos = 1;
+  Type key = 2;
+  Type value = 3;
 }
 
 message Metadata {
@@ -79,7 +87,8 @@ message Module {
 }
 
 message Optional {
-  Type type = 1;
+  optional Position pos = 1;
+  optional Type type = 2;
 }
 
 message Position {
@@ -93,9 +102,13 @@ message Schema {
   repeated Module modules = 2;
 }
 
-message String {}
+message String {
+  optional Position pos = 1;
+}
 
-message Time {}
+message Time {
+  optional Position pos = 1;
+}
 
 message Type {
   oneof value {

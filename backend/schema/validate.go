@@ -14,7 +14,7 @@ var (
 	}
 )
 
-// Validate performs semantic validation of a schema.
+// Validate normalises and performs semantic validation of a schema.
 func Validate(schema *Schema) error {
 	modules := map[string]bool{}
 	verbs := map[string]bool{}

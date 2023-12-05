@@ -18,7 +18,7 @@ var jsonSchemaSample = &Schema{
 					{Name: "string", Type: &String{}, Comments: []string{"Field comment"}},
 					{Name: "int", Type: &Int{}},
 					{Name: "float", Type: &Float{}},
-					{Name: "optional", Type: &Optional{&String{}}},
+					{Name: "optional", Type: &Optional{Type: &String{}}},
 					{Name: "bool", Type: &Bool{}},
 					{Name: "time", Type: &Time{}},
 					{Name: "array", Type: &Array{Element: &String{}}},
