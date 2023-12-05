@@ -124,7 +124,6 @@ jobs:
   create-release:
     name: Release Go Binaries
     runs-on: ubuntu-latest
-    needs: [release-docker, release-jars]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -144,3 +143,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           FTL_HOMEBREW_TOKEN: ${{ secrets.FTL_HOMEBREW_TOKEN }}
+  hermit-release:
+    name: Release Hermit
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: TBD54566975/hermit-ftl
+          ref: "main"
+          token: ${{ secrets.FTL_HERMIT_AUTOVERSION }}
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Setup Git Config
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+      - name: Auto-version
+        run: |
+          hermit manifest auto-version ftl.hcl --update-digests
+      - name: Commit and Push
+        run: |
+          git add ftl.hcl
+          git commit -m "Auto-versioned"
+          git push origin main
