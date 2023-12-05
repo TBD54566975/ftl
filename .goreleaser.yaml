@@ -37,7 +37,7 @@ brews:
     description: "FTL - Towards a 𝝺-calculus for large-scale systems"
     repository:
       owner: TBD54566975
-      name: ftl
+      name: ftl-homebrew-tap
       token: "{{ .Env.FTL_HOMEBREW_TOKEN }}"
 
 # The lines beneath this are called `modelines`. See `:help modeline`
