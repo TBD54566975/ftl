@@ -31,6 +31,15 @@ changelog:
       - '^docs:'
       - '^test:'
 
+brews:
+  - name: ftl
+    homepage: https://github.com/TBD54566975/ftl
+    description: "FTL - Towards a 𝝺-calculus for large-scale systems"
+    repository:
+      owner: TBD54566975
+      name: ftl
+      token: "{{ .Env.FTL_HOMEBREW_TOKEN }}"
+
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
