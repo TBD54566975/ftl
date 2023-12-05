@@ -1,6 +1,7 @@
 package ingress
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -71,5 +72,56 @@ func TestValidation(t *testing.T) {
 			err = validateRequestMap(&schema.DataRef{Module: "test", Name: "Test"}, nil, test.request, sch)
 			assert.NoError(t, err, "%v", test.name)
 		})
+	}
+}
+
+func TestParseQueryParams(t *testing.T) {
+	tests := []struct {
+		query   string
+		request obj
+		err     string
+	}{
+		{query: "", request: obj{}},
+		{query: "a=10", request: obj{"a": "10"}},
+		{query: "a=10&a=11", request: obj{"a": []string{"10", "11"}}},
+		{query: "a=10&b=11&b=12", request: obj{"a": "10", "b": []string{"11", "12"}}},
+		{query: "[a,b]=c", request: nil, err: "complex key '[a,b]' is not supported, use '@json=' instead"},
+		{query: "a=[1,2]", request: nil, err: "complex value '[1,2]' is not supported, use '@json=' instead"},
+	}
+
+	for _, test := range tests {
+		parsedQuery, err := url.ParseQuery(test.query)
+		assert.NoError(t, err)
+		actual, err := parseQueryParams(parsedQuery)
+		assert.EqualError(t, err, test.err)
+		assert.Equal(t, test.request, actual, test.query)
+	}
+}
+
+func TestParseQueryJson(t *testing.T) {
+	tests := []struct {
+		query   string
+		request obj
+		err     string
+	}{
+		{query: "@json=", request: nil, err: "failed to parse '@json' query parameter: unexpected end of JSON input"},
+		{query: "@json=10", request: nil, err: "failed to parse '@json' query parameter: json: cannot unmarshal number into Go value of type map[string]interface {}"},
+		{query: "@json=10&a=b", request: nil, err: "only '@json' parameter is allowed, but other parameters were found"},
+		{query: "@json=%7B%7D", request: obj{}},
+		{query: `@json=%7B%22a%22%3A%2010%7D`, request: obj{"a": 10.0}},
+		{query: `@json=%7B%22a%22%3A%2010%2C%20%22b%22%3A%2011%7D`, request: obj{"a": 10.0, "b": 11.0}},
+		{query: `@json=%7B%22a%22%3A%20%7B%22b%22%3A%2010%7D%7D`, request: obj{"a": obj{"b": 10.0}}},
+		{query: `@json=%7B%22a%22%3A%20%7B%22b%22%3A%2010%7D%2C%20%22c%22%3A%2011%7D`, request: obj{"a": obj{"b": 10.0}, "c": 11.0}},
+
+		// also works with non-urlencoded json
+		{query: `@json={"a": {"b": 10}, "c": 11}`, request: obj{"a": obj{"b": 10.0}, "c": 11.0}},
+	}
+
+	for _, test := range tests {
+		parsedQuery, err := url.ParseQuery(test.query)
+		assert.NoError(t, err)
+		actual, err := parseQueryParams(parsedQuery)
+		assert.EqualError(t, err, test.err)
+		assert.Equal(t, test.request, actual, test.query)
 	}
 }

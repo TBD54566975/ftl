@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -124,9 +125,13 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request) (map[string]any, 
 			requestMap[k] = v
 		}
 	default:
-		// TODO: Support query params correctly for map and array
-		for key, value := range r.URL.Query() {
-			requestMap[key] = value[len(value)-1]
+		queryMap, err := parseQueryParams(r.URL.Query())
+		if err != nil {
+			return nil, fmt.Errorf("HTTP query params are not valid: %w", err)
+		}
+
+		for key, value := range queryMap {
+			requestMap[key] = value
 		}
 	}
 
@@ -248,4 +253,60 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		return fmt.Errorf("%s has wrong type, expected %s found %T", path, fieldType, value)
 	}
 	return nil
+}
+
+func parseQueryParams(values url.Values) (map[string]any, error) {
+	if jsonStr, ok := values["@json"]; ok {
+		if len(values) > 1 {
+			return nil, fmt.Errorf("only '@json' parameter is allowed, but other parameters were found")
+		}
+		if len(jsonStr) > 1 {
+			return nil, fmt.Errorf("'@json' parameter must be provided exactly once")
+		}
+
+		return decodeQueryJSON(jsonStr[0])
+	}
+
+	queryMap := make(map[string]any)
+	for key, value := range values {
+		if hasInvalidQueryChars(key) {
+			return nil, fmt.Errorf("complex key '%s' is not supported, use '@json=' instead", key)
+		}
+		if len(value) == 1 {
+			if hasInvalidQueryChars(value[0]) {
+				return nil, fmt.Errorf("complex value '%s' is not supported, use '@json=' instead", value[0])
+			}
+			queryMap[key] = value[0]
+		} else {
+			for _, v := range value {
+				if hasInvalidQueryChars(v) {
+					return nil, fmt.Errorf("complex value '%s' is not supported, use '@json=' instead", v)
+				}
+			}
+			// Assign as an array of strings if there are multiple values for the key
+			queryMap[key] = value
+		}
+	}
+
+	return queryMap, nil
+}
+
+func decodeQueryJSON(query string) (map[string]any, error) {
+	decodedJSONStr, err := url.QueryUnescape(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode '@json' query parameter: %w", err)
+	}
+
+	// Unmarshal the JSON string into a map
+	var resultMap map[string]any
+	err = json.Unmarshal([]byte(decodedJSONStr), &resultMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse '@json' query parameter: %w", err)
+	}
+
+	return resultMap, nil
+}
+
+func hasInvalidQueryChars(s string) bool {
+	return strings.ContainsAny(s, "{}[]|\\^`")
 }
