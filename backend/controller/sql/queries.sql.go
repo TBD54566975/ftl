@@ -666,24 +666,26 @@ func (q *Queries) GetIdleRunners(ctx context.Context, labels []byte, limit int64
 }
 
 const getIngressRoutes = `-- name: GetIngressRoutes :many
-SELECT r.key AS runner_key, endpoint, ir.module, ir.verb
+SELECT r.key AS runner_key, d.name AS deployment_name, endpoint, ir.path, ir.module, ir.verb
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
+         INNER JOIN deployments d ON ir.deployment_id = d.id
 WHERE r.state = 'assigned'
   AND ir.method = $1
-  AND ir.path = $2
 `
 
 type GetIngressRoutesRow struct {
-	RunnerKey Key
-	Endpoint  string
-	Module    string
-	Verb      string
+	RunnerKey      Key
+	DeploymentName model.DeploymentName
+	Endpoint       string
+	Path           string
+	Module         string
+	Verb           string
 }
 
 // Get the runner endpoints corresponding to the given ingress route.
-func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path string) ([]GetIngressRoutesRow, error) {
-	rows, err := q.db.Query(ctx, getIngressRoutes, method, path)
+func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error) {
+	rows, err := q.db.Query(ctx, getIngressRoutes, method)
 	if err != nil {
 		return nil, err
 	}
@@ -693,7 +695,9 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string, path stri
 		var i GetIngressRoutesRow
 		if err := rows.Scan(
 			&i.RunnerKey,
+			&i.DeploymentName,
 			&i.Endpoint,
+			&i.Path,
 			&i.Module,
 			&i.Verb,
 		); err != nil {

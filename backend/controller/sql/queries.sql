@@ -369,12 +369,12 @@ VALUES ((SELECT id FROM deployments WHERE name = $1 LIMIT 1), $2, $3, $4, $5);
 
 -- name: GetIngressRoutes :many
 -- Get the runner endpoints corresponding to the given ingress route.
-SELECT r.key AS runner_key, endpoint, ir.module, ir.verb
+SELECT r.key AS runner_key, d.name AS deployment_name, endpoint, ir.path, ir.module, ir.verb
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
+         INNER JOIN deployments d ON ir.deployment_id = d.id
 WHERE r.state = 'assigned'
-  AND ir.method = $1
-  AND ir.path = $2;
+  AND ir.method = $1;
 
 -- name: GetAllIngressRoutes :many
 SELECT d.name AS deployment_name, ir.module, ir.verb, ir.method, ir.path

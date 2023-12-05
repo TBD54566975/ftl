@@ -890,19 +890,13 @@ export class Type extends Message<Type> {
     case: "map";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.VerbRef verbRef = 8;
-     */
-    value: VerbRef;
-    case: "verbRef";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.schema.DataRef dataRef = 9;
+     * @generated from field: xyz.block.ftl.v1.schema.DataRef dataRef = 8;
      */
     value: DataRef;
     case: "dataRef";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 10;
+     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 9;
      */
     value: Optional;
     case: "optional";
@@ -923,9 +917,8 @@ export class Type extends Message<Type> {
     { no: 5, name: "time", kind: "message", T: Time, oneof: "value" },
     { no: 6, name: "array", kind: "message", T: Array, oneof: "value" },
     { no: 7, name: "map", kind: "message", T: Map, oneof: "value" },
-    { no: 8, name: "verbRef", kind: "message", T: VerbRef, oneof: "value" },
-    { no: 9, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
-    { no: 10, name: "optional", kind: "message", T: Optional, oneof: "value" },
+    { no: 8, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
+    { no: 9, name: "optional", kind: "message", T: Optional, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Type {

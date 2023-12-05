@@ -30,6 +30,7 @@ message CallRequest {
   schema.VerbRef verb = 2;
   bytes body = 3;
 }
+
 message CallResponse {
   message Error {
     string message = 1;
