@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
+	"github.com/beevik/etree"
+
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
@@ -32,12 +36,44 @@ func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleCo
 	logger := log.FromContext(ctx)
 
 	logger.Infof("Building kotlin module '%s'", config.Module)
-	logger.Infof("Using build command '%s'", config.Build)
 
+	if err := b.setPomVersion(logger); err != nil {
+		return fmt.Errorf("unable to update ftl.version in %s: %w", b.ModuleDir, err)
+	}
+
+	logger.Infof("Using build command '%s'", config.Build)
 	err := exec.Command(ctx, logger.GetLevel(), b.ModuleDir, "bash", "-c", config.Build).Run()
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (b *buildCmd) setPomVersion(logger *log.Logger) error {
+	ftlVersion := ftl.Version
+	if ftlVersion == "dev" {
+		ftlVersion = "1.0-SNAPSHOT"
+	}
+
+	pomFile := filepath.Clean(filepath.Join(b.ModuleDir, "..", "pom.xml"))
+
+	logger.Infof("Setting ftl.version in %s to %s", pomFile, ftlVersion)
+
+	tree := etree.NewDocument()
+	if err := tree.ReadFromFile(pomFile); err != nil {
+		return fmt.Errorf("unable to read %s: %w", pomFile, err)
+	}
+	root := tree.Root()
+	properties := root.SelectElement("properties")
+	if properties == nil {
+		return fmt.Errorf("unable to find <properties> in %s", pomFile)
+	}
+	version := properties.SelectElement("ftl.version")
+	if version == nil {
+		return fmt.Errorf("unable to find <properties>/<ftl.version> in %s", pomFile)
+	}
+	version.SetText(ftlVersion)
+
+	return tree.WriteToFile(pomFile)
 }
