@@ -173,7 +173,7 @@ func (o *Optional) ToProto() proto.Message {
 func typeToProto(t Type) *schemapb.Type {
 	switch t := t.(type) {
 	case *VerbRef:
-		return &schemapb.Type{Value: &schemapb.Type_VerbRef{VerbRef: t.ToProto().(*schemapb.VerbRef)}}
+		panic("unreachable")
 
 	case *DataRef:
 		return &schemapb.Type{Value: &schemapb.Type_DataRef{DataRef: t.ToProto().(*schemapb.DataRef)}}

@@ -122,8 +122,8 @@ func fieldToSchema(s *schemapb.Field) *Field {
 
 func typeToSchema(s *schemapb.Type) Type {
 	switch s := s.Value.(type) {
-	case *schemapb.Type_VerbRef:
-		return verbRefToSchema(s.VerbRef)
+	// case *schemapb.Type_VerbRef:
+	// 	return verbRefToSchema(s.VerbRef)
 	case *schemapb.Type_DataRef:
 		return dataRefToSchema(s.DataRef)
 	case *schemapb.Type_Int:
