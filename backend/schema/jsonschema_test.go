@@ -22,7 +22,7 @@ var jsonSchemaSample = &Schema{
 					{Name: "bool", Type: &Bool{}},
 					{Name: "time", Type: &Time{}},
 					{Name: "array", Type: &Array{Element: &String{}}},
-					{Name: "arrayOfRefs", Type: &Array{Element: &DataRef{Name: "Item"}}},
+					{Name: "arrayOfRefs", Type: &Array{Element: &DataRef{Module: "foo", Name: "Item"}}},
 					{Name: "arrayOfArray", Type: &Array{Element: &Array{Element: &String{}}}},
 					{Name: "optionalArray", Type: &Array{Element: &Optional{Type: &String{}}}},
 					{Name: "map", Type: &Map{Key: &String{}, Value: &Int{}}},
