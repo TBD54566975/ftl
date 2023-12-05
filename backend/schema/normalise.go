@@ -1,6 +1,6 @@
 package schema
 
-// Normalise a Node.
+// Normalise normalises (zeroes) positional information in schema Nodes.
 func Normalise[T Node](n T) T {
 	var zero Position
 	var ni Node = n

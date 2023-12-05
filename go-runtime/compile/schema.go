@@ -273,7 +273,11 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
 		base := path.Dir(pctx.pkg.PkgPath)
 		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
-		return &schema.DataRef{Module: destModule, Name: named.Obj().Name()}, nil
+		return &schema.DataRef{
+			Pos:    goPosToSchemaPos(node.Pos()),
+			Module: destModule,
+			Name:   named.Obj().Name(),
+		}, nil
 	}
 	out := &schema.Data{
 		Pos:  goPosToSchemaPos(node.Pos()),
