@@ -1,8 +1,47 @@
 # FTL README [![CI](https://github.com/TBD54566975/ftl/actions/workflows/ci.yml/badge.svg)](https://github.com/TBD54566975/ftl/actions/workflows/ci.yml)
 
-## Introduction
+## Getting started
 
-TBD...
+### Install hermit, for example on macos:
+```sh
+brew install hermit
+```
+
+### Create a sample project (kotlin)
+```sh
+mkdir myproject
+cd myproject
+git init .
+hermit init .
+. ./bin/activate-hermit
+./bin/hermit install ftl
+```
+
+### Create a kotlin module
+```sh
+ftl init kotlin . alice
+```
+
+### Serve FTL in a seperate terminal
+`ftl serve`
+
+### Deploy and test the module
+```sh
+ftl deploy ftl-module-alice
+ftl call alice.echo '{"name": "Mic"}'
+```
+
+
+
+### Remember to activate hermit any time you are in the project
+```sh
+. ./bin/activate-hermit
+```
+
+![ftl hacking faster than light](https://github.com/TBD54566975/ftl/assets/14976/37b65b44-021b-4da1-abc2-a5dbcc126c47)
+
+
+
 
 ## Project Resources
 
