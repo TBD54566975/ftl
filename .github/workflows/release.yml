@@ -143,3 +143,4 @@ jobs:
           goreleaser release --skip=validate
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          FTL_HOMEBREW_TOKEN: ${{ secrets.FTL_HOMEBREW_TOKEN }}
