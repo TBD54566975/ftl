@@ -12,6 +12,7 @@ import (
 	"github.com/iancoleman/strcase"
 
 	"github.com/TBD54566975/ftl/backend/common/rpc"
+	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
@@ -20,7 +21,7 @@ import (
 func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (resp Resp, err error) {
 	callee := ToVerbRef(verb)
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
-	reqData, err := json.Marshal(req)
+	reqData, err := encoding.Marshal(req)
 	if err != nil {
 		return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
 	}
