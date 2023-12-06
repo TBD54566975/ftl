@@ -7,7 +7,10 @@ GO_SOURCES = **/*.go
 SCHEMA_IN = backend/schema/**/*.go cmd/ftl-schema/**/*.go
 SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
 
-PROTO_IN = **/*.proto **/buf.* bin/protoc* bin/buf
+NODE_PROTOC_PLUGINS = frontend/node_modules/.bin/protoc-gen-connect-es \
+  frontend/node_modules/.bin/protoc-gen-es
+
+PROTO_IN = **/*.proto **/buf.* bin/protoc* bin/buf %{NODE_PROTOC_PLUGINS}
 # There's no real way to mechanically generate the list of outputs, so we just
 # explicitly list them here.
 PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
@@ -37,10 +40,10 @@ KT_RUNTIME_RUNNER_TEMPLATE_OUT = build/template/ftl/jars/ftl-runtime.jar
 KT_GENERATOR_IN = kotlin-runtime/ftl-generator/**/*.{kt,kts} pom.xml kotlin-runtime/ftl-runtime/**/pom.xml %{KT_RUNTIME_OUT}
 KT_GENERATOR_OUT = kotlin-runtime/ftl-generator/target/ftl-generator-1.0-SNAPSHOT.jar
 
-CLIENT_OUT = frontend/dist/index.html
 CLIENT_IN = frontend/src/**/*
-NODE_MODULES_OUT = frontend/node_modules
-NODE_MODULES_IN = frontend/package{,-lock}.json
+CLIENT_OUT = frontend/dist/index.html
+NPM_IN = frontend/package{,-lock}.json
+NPM_OUT = frontend/node_modules %{NODE_PROTOC_PLUGINS}
 
 SQLC_IN = sqlc.yaml \
   backend/controller/sql/schema/*.sql \
@@ -129,12 +132,12 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
 %{COMMON_LOG_OUT}: %{COMMON_LOG_IN}
   build: go generate %{IN}
 
-%{NODE_MODULES_OUT}: %{NODE_MODULES_IN}
+%{NPM_OUT}: %{NPM_IN}
   cd frontend
   build: npm install
   -clean # Don't clean node_modules
 
-%{CLIENT_OUT}: %{CLIENT_IN} %{NODE_MODULES_OUT}
+%{CLIENT_OUT}: %{CLIENT_IN} %{NPM_OUT}
   cd frontend
   build: npm run build
   clean: rm -rf dist .parcel-cache
