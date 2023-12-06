@@ -72,8 +72,6 @@ func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) 
 
 	dataRef := verb.Request
 
-	fmt.Printf("dataRef: %v\n", dataRef)
-	fmt.Printf("requestMap: %v\n", requestMap)
 	return validateRequestMap(dataRef, []string{dataRef.String()}, requestMap, sch)
 }
 
