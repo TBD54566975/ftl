@@ -72,7 +72,7 @@ require (
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/otelconnect v0.6.0
 	github.com/TBD54566975/scaffolder v0.5.1
-	github.com/alecthomas/assert/v2 v2.4.0
+	github.com/alecthomas/assert/v2 v2.4.1
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/participle/v2 v2.1.1
