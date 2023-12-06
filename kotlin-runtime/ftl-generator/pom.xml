@@ -25,7 +25,7 @@
         <dependency>
             <groupId>com.squareup</groupId>
             <artifactId>kotlinpoet-jvm</artifactId>
-            <version>1.15.2</version>
+            <version>1.15.3</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
