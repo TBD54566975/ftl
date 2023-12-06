@@ -58,6 +58,25 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 	return true
 }
 
+func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) error {
+	var requestMap map[string]any
+	err := json.Unmarshal(body, &requestMap)
+	if err != nil {
+		return fmt.Errorf("HTTP request body is not valid JSON: %w", err)
+	}
+
+	verb := sch.ResolveVerbRef(verbRef)
+	if verb == nil {
+		return fmt.Errorf("unknown verb %s", verbRef)
+	}
+
+	dataRef := verb.Request
+
+	fmt.Printf("dataRef: %v\n", dataRef)
+	fmt.Printf("requestMap: %v\n", requestMap)
+	return validateRequestMap(dataRef, []string{dataRef.String()}, requestMap, sch)
+}
+
 // ValidateAndExtractBody validates the request body against the schema and extracts the request body as a JSON blob.
 func ValidateAndExtractBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
 	requestMap, err := buildRequestMap(route, r)

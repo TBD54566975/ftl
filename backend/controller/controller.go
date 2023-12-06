@@ -184,15 +184,10 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deployments, err := s.dal.GetActiveDeployments(r.Context())
+	sch, err := s.getActiveSchema(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	sch := &schema.Schema{
-		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
-			return d.Schema
-		}),
 	}
 
 	body, err := ingress.ValidateAndExtractBody(route, r, sch)
@@ -586,6 +581,16 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
 	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
+
+	sch, err := s.getActiveSchema(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ingress.ValidateCallBody(req.Msg.Body, verbRef, sch)
+	if err != nil {
+		return nil, err
+	}
 
 	module := verbRef.Module
 	s.routesMu.RLock()
@@ -1040,6 +1045,18 @@ func (s *Service) syncRoutes(ctx context.Context) error {
 	s.routes = routes
 	s.routesMu.Unlock()
 	return nil
+}
+
+func (s *Service) getActiveSchema(ctx context.Context) (*schema.Schema, error) {
+	deployments, err := s.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &schema.Schema{
+		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
+			return d.Schema
+		}),
+	}, nil
 }
 
 // Copied from the Apache-licensed connect-go source.
