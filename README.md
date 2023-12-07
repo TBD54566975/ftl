@@ -25,12 +25,6 @@ ftl call alice.echo '{"name": "Mic"}'
 ```
 
 
-
-### Remember to activate hermit any time you are in the project
-```sh
-. ./bin/activate-hermit
-```
-
 ![ftl hacking faster than light](https://github.com/TBD54566975/ftl/assets/14976/37b65b44-021b-4da1-abc2-a5dbcc126c47)
 
 
