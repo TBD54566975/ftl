@@ -390,7 +390,7 @@ class SchemaExtractor(
       )
 
     private fun getCallMatcher(ctxVarName: String): Regex {
-      return """${ctxVarName}.call\((?<fn>[^)]+),(?<req>[^)]+)\(.*\)\)""".toRegex(RegexOption.IGNORE_CASE)
+      return """${ctxVarName}\.call\((?<fn>[^,]+),\s*(?<req>[^,]+?)\s*\(""".toRegex(RegexOption.IGNORE_CASE)
     }
 
     private fun KotlinType.toClassDescriptor(): ClassDescriptor =
