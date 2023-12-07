@@ -76,23 +76,38 @@ func TestValidation(t *testing.T) {
 }
 
 func TestParseQueryParams(t *testing.T) {
+	data := &schema.Data{
+		Fields: []*schema.Field{
+			{Name: "int", Type: &schema.Int{}},
+			{Name: "float", Type: &schema.Float{}},
+			{Name: "string", Type: &schema.String{}},
+			{Name: "bool", Type: &schema.Bool{}},
+			{Name: "array", Type: &schema.Array{Element: &schema.Int{}}},
+		},
+	}
 	tests := []struct {
 		query   string
 		request obj
 		err     string
 	}{
 		{query: "", request: obj{}},
-		{query: "a=10", request: obj{"a": "10"}},
-		{query: "a=10&a=11", request: obj{"a": []string{"10", "11"}}},
-		{query: "a=10&b=11&b=12", request: obj{"a": "10", "b": []string{"11", "12"}}},
-		{query: "[a,b]=c", request: nil, err: "complex key '[a,b]' is not supported, use '@json=' instead"},
-		{query: "a=[1,2]", request: nil, err: "complex value '[1,2]' is not supported, use '@json=' instead"},
+		{query: "int=1", request: obj{"int": "1"}},
+		{query: "float=2.2", request: obj{"float": "2.2"}},
+		{query: "string=test", request: obj{"string": "test"}},
+		{query: "bool=true", request: obj{"bool": "true"}},
+		{query: "array=2", request: obj{"array": []string{"2"}}},
+		{query: "array=10&array=11", request: obj{"array": []string{"10", "11"}}},
+		{query: "int=10&array=11&array=12", request: obj{"int": "10", "array": []string{"11", "12"}}},
+		{query: "int=1&int=2", request: nil, err: "multiple values for \"int\" are not supported"},
+		{query: "a=bogus", request: nil, err: "unknown query parameter \"a\""},
+		{query: "[a,b]=c", request: nil, err: "complex key \"[a,b]\" is not supported, use '@json=' instead"},
+		{query: "array=[1,2]", request: nil, err: "complex value \"[1,2]\" is not supported, use '@json=' instead"},
 	}
 
 	for _, test := range tests {
 		parsedQuery, err := url.ParseQuery(test.query)
 		assert.NoError(t, err)
-		actual, err := parseQueryParams(parsedQuery)
+		actual, err := parseQueryParams(parsedQuery, data)
 		assert.EqualError(t, err, test.err)
 		assert.Equal(t, test.request, actual, test.query)
 	}
@@ -120,7 +135,7 @@ func TestParseQueryJson(t *testing.T) {
 	for _, test := range tests {
 		parsedQuery, err := url.ParseQuery(test.query)
 		assert.NoError(t, err)
-		actual, err := parseQueryParams(parsedQuery)
+		actual, err := parseQueryParams(parsedQuery, &schema.Data{})
 		assert.EqualError(t, err, test.err)
 		assert.Equal(t, test.request, actual, test.query)
 	}
