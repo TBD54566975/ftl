@@ -2,9 +2,9 @@
 
 ## Getting started
 
-### Install hermit, for example on macos:
+### Install ftl, for example on macos:
 ```sh
-brew install hermit
+brew tap TBD54566975/ftl && brew install ftl
 ```
 
 ### Create a sample project (kotlin)
@@ -12,13 +12,6 @@ brew install hermit
 mkdir myproject
 cd myproject
 git init .
-hermit init .
-. ./bin/activate-hermit
-./bin/hermit install ftl
-```
-
-### Create a kotlin module
-```sh
 ftl init kotlin . alice
 ```
 
