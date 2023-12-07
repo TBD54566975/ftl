@@ -60,40 +60,33 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 }
 
 func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) error {
+	verb := sch.ResolveVerbRef(verbRef)
+	if verb == nil {
+		return fmt.Errorf("unknown verb %s", verbRef)
+	}
+
 	var requestMap map[string]any
 	err := json.Unmarshal(body, &requestMap)
 	if err != nil {
 		return fmt.Errorf("HTTP request body is not valid JSON: %w", err)
 	}
 
-	verb := sch.ResolveVerbRef(verbRef)
-	if verb == nil {
-		return fmt.Errorf("unknown verb %s", verbRef)
-	}
-
-	dataRef := verb.Request
-
-	return validateRequestMap(dataRef, []string{dataRef.String()}, requestMap, sch)
+	return validateRequestMap(verb.Request, []string{verb.Request.String()}, requestMap, sch)
 }
 
 // ValidateAndExtractBody validates the request body against the schema and extracts the request body as a JSON blob.
 func ValidateAndExtractBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
-	requestMap, err := buildRequestMap(route, r)
-	if err != nil {
-		return nil, err
-	}
-
 	verb := sch.ResolveVerbRef(&schema.VerbRef{Name: route.Verb, Module: route.Module})
 	if verb == nil {
 		return nil, fmt.Errorf("unknown verb %s", route.Verb)
 	}
 
-	dataRef := verb.Request
-	if dataRef.Module == "" {
-		dataRef.Module = route.Module
+	requestMap, err := buildRequestMap(route, r, verb.Request, sch)
+	if err != nil {
+		return nil, err
 	}
 
-	err = validateRequestMap(dataRef, []string{dataRef.String()}, requestMap, sch)
+	err = validateRequestMap(verb.Request, []string{verb.Request.String()}, requestMap, sch)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +99,7 @@ func ValidateAndExtractBody(route *dal.IngressRoute, r *http.Request, sch *schem
 	return body, nil
 }
 
-func buildRequestMap(route *dal.IngressRoute, r *http.Request) (map[string]any, error) {
+func buildRequestMap(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (map[string]any, error) {
 	requestMap := map[string]any{}
 	matchSegments(route.Path, r.URL.Path, func(segment, value string) {
 		requestMap[segment] = value
@@ -125,7 +118,12 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request) (map[string]any, 
 			requestMap[k] = v
 		}
 	default:
-		queryMap, err := parseQueryParams(r.URL.Query())
+		data := sch.ResolveDataRef(dataRef)
+		if data == nil {
+			return nil, fmt.Errorf("unknown data %v", dataRef)
+		}
+
+		queryMap, err := parseQueryParams(r.URL.Query(), data)
 		if err != nil {
 			return nil, fmt.Errorf("HTTP query params are not valid: %w", err)
 		}
@@ -255,7 +253,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 	return nil
 }
 
-func parseQueryParams(values url.Values) (map[string]any, error) {
+func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, error) {
 	if jsonStr, ok := values["@json"]; ok {
 		if len(values) > 1 {
 			return nil, fmt.Errorf("only '@json' parameter is allowed, but other parameters were found")
@@ -270,21 +268,37 @@ func parseQueryParams(values url.Values) (map[string]any, error) {
 	queryMap := make(map[string]any)
 	for key, value := range values {
 		if hasInvalidQueryChars(key) {
-			return nil, fmt.Errorf("complex key '%s' is not supported, use '@json=' instead", key)
+			return nil, fmt.Errorf("complex key %q is not supported, use '@json=' instead", key)
 		}
-		if len(value) == 1 {
+
+		var field *schema.Field
+		for _, f := range data.Fields {
+			if f.Name == key {
+				field = f
+			}
+		}
+		if field == nil {
+			return nil, fmt.Errorf("unknown query parameter %q", key)
+		}
+
+		switch field.Type.(type) {
+		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
+			if len(value) > 1 {
+				return nil, fmt.Errorf("multiple values for %q are not supported", key)
+			}
 			if hasInvalidQueryChars(value[0]) {
-				return nil, fmt.Errorf("complex value '%s' is not supported, use '@json=' instead", value[0])
+				return nil, fmt.Errorf("complex value %q is not supported, use '@json=' instead", value[0])
 			}
 			queryMap[key] = value[0]
-		} else {
+		case *schema.Array:
 			for _, v := range value {
 				if hasInvalidQueryChars(v) {
-					return nil, fmt.Errorf("complex value '%s' is not supported, use '@json=' instead", v)
+					return nil, fmt.Errorf("complex value %q is not supported, use '@json=' instead", v)
 				}
 			}
-			// Assign as an array of strings if there are multiple values for the key
 			queryMap[key] = value
+		default:
+			return nil, fmt.Errorf("unsupported type %T for field %q", field.Type, key)
 		}
 	}
 
