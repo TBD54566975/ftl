@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/repr"
 	"github.com/dop251/goja"
 	"github.com/iancoleman/strcase"
@@ -23,7 +24,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/scaffolder"
 )
 
 type schemaGenerateCmd struct {
