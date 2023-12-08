@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/repr"
 	"github.com/dop251/goja"
 	"github.com/iancoleman/strcase"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/slices"
@@ -121,11 +122,11 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 	}
 
 	for _, module := range modules {
-		funcs, _, err := s.createJSVM(logger)
+		funcs, _, err := s.createJSVM(logger, module)
 		if err != nil {
 			return fmt.Errorf("failed to create JS VM: %w", err)
 		}
-		if err := scaffolder.Scaffold(s.Template, s.Dest, module, scaffolder.Functions(funcs)); err != nil {
+		if err := scaffolder.Scaffold(s.Template, s.Dest, module, scaffolder.Functions(funcs), scaffolder.Exclude("^template.js$")); err != nil {
 			return err
 		}
 	}
@@ -134,10 +135,13 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 }
 
 // Create JS VM and populate it with functions that can be used in templates.
-func (s *schemaGenerateCmd) createJSVM(logger *log.Logger) (funcs template.FuncMap, vm *goja.Runtime, err error) {
+func (s *schemaGenerateCmd) createJSVM(logger *log.Logger, module *schema.Module) (funcs template.FuncMap, vm *goja.Runtime, err error) {
 	vm = goja.New()
 	vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
 	if err := initConsole(vm, logger); err != nil {
+		return nil, nil, err
+	}
+	if err := vm.Set("context", module); err != nil {
 		return nil, nil, err
 	}
 	if err := vm.Set("repr", repr.String); err != nil {
@@ -170,8 +174,15 @@ func (s *schemaGenerateCmd) createJSVM(logger *log.Logger) (funcs template.FuncM
 	if err := vm.Set("title", strings.Title); err != nil {
 		return nil, nil, err
 	}
-	if err := vm.Set("typename", func(v any) string {
-		return reflect.Indirect(reflect.ValueOf(v)).Type().Name()
+	if err := vm.Set("typeName", func(v any) string {
+		if v == nil {
+			return "null"
+		}
+		rv := reflect.ValueOf(v)
+		if rv == (reflect.Value{}) {
+			return "<nil>"
+		}
+		return reflect.Indirect(rv).Type().Name()
 	}); err != nil {
 		return nil, nil, err
 	}
