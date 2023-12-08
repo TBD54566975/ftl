@@ -7,6 +7,7 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/alecthomas/kong v0.8.1
 	github.com/alecthomas/kong-toml v0.1.0
+	github.com/alecthomas/repr v0.3.0
 	github.com/amacneil/dbmate/v2 v2.8.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/go-logr/logr v1.3.0
@@ -35,13 +36,15 @@ require (
 )
 
 require (
-	github.com/alecthomas/repr v0.3.0 // indirect
 	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
+	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -79,6 +82,7 @@ require (
 	github.com/alecthomas/types v0.9.0
 	github.com/beevik/etree v1.2.0
 	github.com/deckarep/golang-set/v2 v2.5.0
+	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d
 	github.com/gofrs/flock v0.8.1
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
