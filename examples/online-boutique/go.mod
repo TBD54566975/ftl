@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	connectrpc.com/connect v1.12.0 // indirect
+	connectrpc.com/connect v1.13.0 // indirect
 	connectrpc.com/grpcreflect v1.2.0 // indirect
 	connectrpc.com/otelconnect v0.6.0 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
