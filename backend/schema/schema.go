@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
@@ -283,7 +284,10 @@ func (m *Module) Imports() []string {
 		}
 		return next()
 	})
-	return maps.Keys(imports)
+
+	importStrs := maps.Keys(imports)
+	sort.Strings(importStrs)
+	return importStrs
 }
 
 type Schema struct {

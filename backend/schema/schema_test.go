@@ -95,12 +95,13 @@ func TestImports(t *testing.T) {
 	module test {
 		data Data {
 			ref other.Data
+			ref another.Data
 		}
 	}
 	`
 	schema, err := ParseModuleString("", input)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"other"}, schema.Imports())
+	assert.Equal(t, []string{"another", "other"}, schema.Imports())
 }
 
 func TestVisit(t *testing.T) {
