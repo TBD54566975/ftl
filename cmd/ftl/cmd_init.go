@@ -13,6 +13,7 @@ import (
 	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
 
+	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
 )
@@ -24,15 +25,15 @@ type initCmd struct {
 }
 
 type initGoCmd struct {
-	Dir  string `arg:"" default:"." type:"dir" help:"Directory to initialize the module in."`
-	Name string `short:"n" help:"Name of the FTL module (defaults to name of directory)."`
+	Dir  string `arg:"" help:"Directory to initialize the module in."`
+	Name string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
 func (i initGoCmd) Run(parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
-	tmpDir, err := unzipToTmpDir(kotlinruntime.Files)
+	tmpDir, err := unzipToTmpDir(goruntime.Files)
 	if err != nil {
 		return fmt.Errorf("%s: %w", "failed to unzip kotlin runtime", err)
 	}
