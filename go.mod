@@ -3,7 +3,7 @@ module github.com/TBD54566975/ftl
 go 1.21.5
 
 require (
-	connectrpc.com/connect v1.12.0
+	connectrpc.com/connect v1.13.0
 	github.com/BurntSushi/toml v1.3.2
 	github.com/alecthomas/kong v0.8.1
 	github.com/alecthomas/kong-toml v0.1.0
@@ -13,7 +13,7 @@ require (
 	github.com/go-logr/logr v1.3.0
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.4.0
-	github.com/jackc/pgx/v5 v5.5.0
+	github.com/jackc/pgx/v5 v5.5.1
 	github.com/jellydator/ttlcache/v3 v3.1.0
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/otiai10/copy v1.14.0
