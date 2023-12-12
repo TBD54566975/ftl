@@ -342,6 +342,142 @@ export class Float extends Message<Float> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.IngressPathComponent
+ */
+export class IngressPathComponent extends Message<IngressPathComponent> {
+  /**
+   * @generated from oneof xyz.block.ftl.v1.schema.IngressPathComponent.value
+   */
+  value: {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.IngressPathLiteral ingressPathLiteral = 1;
+     */
+    value: IngressPathLiteral;
+    case: "ingressPathLiteral";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.IngressPathParameter ingressPathParameter = 2;
+     */
+    value: IngressPathParameter;
+    case: "ingressPathParameter";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<IngressPathComponent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.IngressPathComponent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ingressPathLiteral", kind: "message", T: IngressPathLiteral, oneof: "value" },
+    { no: 2, name: "ingressPathParameter", kind: "message", T: IngressPathParameter, oneof: "value" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IngressPathComponent {
+    return new IngressPathComponent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IngressPathComponent {
+    return new IngressPathComponent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IngressPathComponent {
+    return new IngressPathComponent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IngressPathComponent | PlainMessage<IngressPathComponent> | undefined, b: IngressPathComponent | PlainMessage<IngressPathComponent> | undefined): boolean {
+    return proto3.util.equals(IngressPathComponent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.IngressPathLiteral
+ */
+export class IngressPathLiteral extends Message<IngressPathLiteral> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string text = 2;
+   */
+  text = "";
+
+  constructor(data?: PartialMessage<IngressPathLiteral>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.IngressPathLiteral";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "text", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IngressPathLiteral {
+    return new IngressPathLiteral().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IngressPathLiteral {
+    return new IngressPathLiteral().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IngressPathLiteral {
+    return new IngressPathLiteral().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IngressPathLiteral | PlainMessage<IngressPathLiteral> | undefined, b: IngressPathLiteral | PlainMessage<IngressPathLiteral> | undefined): boolean {
+    return proto3.util.equals(IngressPathLiteral, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.IngressPathParameter
+ */
+export class IngressPathParameter extends Message<IngressPathParameter> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<IngressPathParameter>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.IngressPathParameter";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IngressPathParameter {
+    return new IngressPathParameter().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IngressPathParameter {
+    return new IngressPathParameter().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IngressPathParameter {
+    return new IngressPathParameter().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IngressPathParameter | PlainMessage<IngressPathParameter> | undefined, b: IngressPathParameter | PlainMessage<IngressPathParameter> | undefined): boolean {
+    return proto3.util.equals(IngressPathParameter, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Int
  */
 export class Int extends Message<Int> {
@@ -535,9 +671,9 @@ export class MetadataIngress extends Message<MetadataIngress> {
   method = "";
 
   /**
-   * @generated from field: string path = 3;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.IngressPathComponent path = 3;
    */
-  path = "";
+  path: IngressPathComponent[] = [];
 
   constructor(data?: PartialMessage<MetadataIngress>) {
     super();
@@ -549,7 +685,7 @@ export class MetadataIngress extends Message<MetadataIngress> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "path", kind: "message", T: IngressPathComponent, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataIngress {

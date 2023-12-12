@@ -5,11 +5,7 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Ingress
-import xyz.block.ftl.v1.schema.Data
-import xyz.block.ftl.v1.schema.Module
-import xyz.block.ftl.v1.schema.Schema
-import xyz.block.ftl.v1.schema.Type
-import xyz.block.ftl.v1.schema.Verb
+import xyz.block.ftl.v1.schema.*
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
@@ -107,7 +103,7 @@ class ModuleGenerator() {
         verbFunBuilder.addAnnotation(
           AnnotationSpec.builder(Ingress::class)
             .addMember("%T", ClassName("xyz.block.ftl.Method", it.method.replaceBefore(".", "")))
-            .addMember("%S", it.path)
+            .addMember("%S", ingressPathString(it.path))
             .build()
         )
       }
@@ -130,6 +126,16 @@ class ModuleGenerator() {
     verbFunBuilder.addCode("""throw NotImplementedError(%S)""", message)
 
     return verbFunBuilder.build()
+  }
+
+  private fun ingressPathString(components: List<IngressPathComponent>): String {
+    return "/" + components.joinToString("/") { component ->
+      when {
+        component.ingressPathLiteral != null -> component.ingressPathLiteral.text
+        component.ingressPathParameter != null -> "{${component.ingressPathParameter.name}}"
+        else -> throw IllegalArgumentException("Unknown ingress path component")
+      }
+    }
   }
 
   private fun getTypeClass(type: Type, namespace: String): TypeName {

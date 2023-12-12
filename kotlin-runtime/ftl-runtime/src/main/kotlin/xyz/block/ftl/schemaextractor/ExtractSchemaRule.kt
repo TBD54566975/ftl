@@ -220,10 +220,21 @@ class SchemaExtractor(
       val pathArg = requireNotNull(argumentLists.second.single().getArgumentExpression()?.text?.trim { it == '\"' }) {
         "$sourcePos Could not extract path from ${verb.name} @Ingress annotation"
       }
+
       MetadataIngress(
-        path = pathArg,
+        path = extractPathComponents(pathArg),
         method = methodArg.substringAfter("."),
       )
+    }
+  }
+
+  private fun extractPathComponents(path: String): List<IngressPathComponent> {
+    return path.split("/").filter { it.isNotEmpty() }.map { part ->
+      if (part.startsWith("{") && part.endsWith("}")) {
+        IngressPathComponent(ingressPathParameter =  IngressPathParameter(name = part.substring(1, part.length - 1)))
+      } else {
+        IngressPathComponent(ingressPathLiteral =  IngressPathLiteral(text = part))
+      }
     }
   }
 

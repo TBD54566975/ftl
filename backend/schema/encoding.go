@@ -160,11 +160,39 @@ func (*MetadataCalls) schemaMetadata() {}
 var _ Metadata = (*MetadataIngress)(nil)
 
 func (m *MetadataIngress) String() string {
-	return fmt.Sprintf("ingress %s %s", strings.ToUpper(m.Method), m.Path)
+	path := make([]string, len(m.Path))
+	for i, p := range m.Path {
+		switch v := p.(type) {
+		case *IngressPathLiteral:
+			path[i] = v.Text
+		case *IngressPathParameter:
+			path[i] = fmt.Sprintf("{%s}", v.Name)
+		}
+	}
+	return fmt.Sprintf("ingress %s /%s", strings.ToUpper(m.Method), strings.Join(path, "/"))
 }
 
-func (m *MetadataIngress) schemaChildren() []Node { return nil }
-func (*MetadataIngress) schemaMetadata()          {}
+func (m *MetadataIngress) schemaChildren() []Node {
+	out := make([]Node, 0, len(m.Path))
+	for _, ref := range m.Path {
+		out = append(out, ref)
+	}
+	return out
+}
+
+func (*MetadataIngress) schemaMetadata() {}
+
+var _ IngressPathComponent = (*IngressPathLiteral)(nil)
+
+func (l *IngressPathLiteral) String() string            { return l.Text }
+func (*IngressPathLiteral) schemaChildren() []Node      { return nil }
+func (*IngressPathLiteral) schemaIngressPathComponent() {}
+
+var _ IngressPathComponent = (*IngressPathParameter)(nil)
+
+func (l *IngressPathParameter) String() string            { return l.Name }
+func (*IngressPathParameter) schemaChildren() []Node      { return nil }
+func (*IngressPathParameter) schemaIngressPathComponent() {}
 
 var _ Node = (*Module)(nil)
 

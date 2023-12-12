@@ -48,11 +48,22 @@ var schema = Normalise(&Schema{
 				&Verb{Name: "destroy",
 					Request:  &DataRef{Module: "todo", Name: "DestroyRequest"},
 					Response: &DataRef{Module: "todo", Name: "DestroyResponse"},
+					Metadata: []Metadata{
+						&MetadataIngress{
+							Method: "GET",
+							Path: []IngressPathComponent{
+								&IngressPathLiteral{Text: "todo"},
+								&IngressPathLiteral{Text: "destroy"},
+								&IngressPathParameter{Name: "id"},
+							},
+						},
+					},
 				},
 			},
 		},
 	},
-})
+},
+)
 
 func TestIndent(t *testing.T) {
 	assert.Equal(t, "  a\n  b\n  c", indent("a\nb\nc"))
@@ -84,7 +95,8 @@ module todo {
       calls todo.destroy
       
 
-  verb destroy(todo.DestroyRequest) todo.DestroyResponse
+  verb destroy(todo.DestroyRequest) todo.DestroyResponse  
+      ingress GET /todo/destroy/{id}
 }
 `
 	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(schema.String()))
@@ -134,6 +146,10 @@ Schema
     Verb
       DataRef
       DataRef
+      MetadataIngress
+        IngressPathLiteral
+        IngressPathLiteral
+        IngressPathParameter
 `
 	actual := &strings.Builder{}
 	i := 0
@@ -261,6 +277,7 @@ module todo {
   verb create(todo.CreateRequest) todo.CreateResponse
   	calls todo.destroy
   verb destroy(todo.DestroyRequest) todo.DestroyResponse
+  	ingress GET /todo/destroy/{id}
 }
 `
 	actual, err := ParseModuleString("", input)

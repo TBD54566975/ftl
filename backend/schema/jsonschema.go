@@ -112,7 +112,7 @@ func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *jsonschema.Schema {
 			{TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &null}}},
 		}}
 
-	case Decl, *Field, Metadata, *MetadataCalls, *MetadataIngress, *Module, *Schema, Type, *Verb, *VerbRef:
+	case Decl, *Field, Metadata, *MetadataCalls, *MetadataIngress, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module, *Schema, Type, *Verb, *VerbRef:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 
 	default:

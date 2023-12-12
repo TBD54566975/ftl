@@ -144,7 +144,10 @@ public class TestModule()
           request = DataRef(name = "TestRequest"),
           response = DataRef(name = "TestResponse"),
           metadata = listOf(
-            Metadata(ingress = MetadataIngress(path = "/test", method = "GET")),
+            Metadata(ingress = MetadataIngress(
+              path = listOf(IngressPathComponent(ingressPathLiteral = IngressPathLiteral(text = "test"))),
+              method = "GET")
+            ),
           )
         )
       ),

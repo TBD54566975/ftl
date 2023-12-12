@@ -51,6 +51,22 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 	return out
 }
 
+func ingressListToProto(nodes []IngressPathComponent) []*schemapb.IngressPathComponent {
+	var out []*schemapb.IngressPathComponent
+	for _, n := range nodes {
+		switch n := n.(type) {
+		case *IngressPathLiteral:
+			out = append(out, &schemapb.IngressPathComponent{Value: &schemapb.IngressPathComponent_IngressPathLiteral{IngressPathLiteral: n.ToProto().(*schemapb.IngressPathLiteral)}})
+		case *IngressPathParameter:
+			out = append(out, &schemapb.IngressPathComponent{Value: &schemapb.IngressPathComponent_IngressPathParameter{IngressPathParameter: n.ToProto().(*schemapb.IngressPathParameter)}})
+
+		default:
+			panic(fmt.Sprintf("unhandled ingress path component type %T", n))
+		}
+	}
+	return out
+}
+
 func (p Position) ToProto() proto.Message {
 	return &schemapb.Position{
 		Line:     int64(p.Line),
@@ -131,8 +147,16 @@ func (m *MetadataIngress) ToProto() proto.Message {
 	return &schemapb.MetadataIngress{
 		Pos:    m.Pos.ToProto().(*schemapb.Position),
 		Method: m.Method,
-		Path:   m.Path,
+		Path:   ingressListToProto(m.Path),
 	}
+}
+
+func (l *IngressPathLiteral) ToProto() proto.Message {
+	return &schemapb.IngressPathLiteral{Text: l.Text}
+}
+
+func (l *IngressPathParameter) ToProto() proto.Message {
+	return &schemapb.IngressPathParameter{Name: l.Name}
 }
 
 func (i *Int) ToProto() proto.Message {

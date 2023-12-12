@@ -49,6 +49,23 @@ message Float {
   optional Position pos = 1;
 }
 
+message IngressPathComponent {
+  oneof value {
+    IngressPathLiteral ingressPathLiteral = 1;
+    IngressPathParameter ingressPathParameter = 2;
+  }
+}
+
+message IngressPathLiteral {
+  optional Position pos = 1;
+  string text = 2;
+}
+
+message IngressPathParameter {
+  optional Position pos = 1;
+  string name = 2;
+}
+
 message Int {
   optional Position pos = 1;
 }
@@ -74,7 +91,7 @@ message MetadataCalls {
 message MetadataIngress {
   optional Position pos = 1;
   string method = 2;
-  string path = 3;
+  repeated IngressPathComponent path = 3;
 }
 
 message Module {
