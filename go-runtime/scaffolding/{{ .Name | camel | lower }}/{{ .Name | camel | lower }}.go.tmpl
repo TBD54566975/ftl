@@ -1,14 +1,15 @@
+//ftl:module {{ .Name | camel | lower }}
 package {{ .Name | camel | lower }}
 
 import (
 	"context"
 	"fmt"
 
-	_ "github.com/TBD54566975/ftl/go-runtime/sdk" // Import the FTL SDK.
+	ftl "github.com/TBD54566975/ftl/go-runtime/sdk" // Import the FTL SDK.
 )
 
 type EchoRequest struct {
-	Name string `json:"name'`
+	Name ftl.Option[string] `json:"name"`
 }
 
 type EchoResponse struct {
@@ -16,6 +17,6 @@ type EchoResponse struct {
 }
 
 //ftl:verb
-func echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
+func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name)}, nil
 }
