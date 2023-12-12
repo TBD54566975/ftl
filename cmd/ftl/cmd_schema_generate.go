@@ -3,17 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/TBD54566975/scaffolder"
-	"github.com/alecthomas/repr"
-	"github.com/dop251/goja"
+	"github.com/TBD54566975/scaffolder/extensions/javascript"
 	"github.com/iancoleman/strcase"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
@@ -27,12 +24,31 @@ import (
 )
 
 type schemaGenerateCmd struct {
-	Watch    time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
+	Watch    time.Duration `short:"w" help:"Watch template directory at this frequency and regenerate on change."`
 	Template string        `arg:"" help:"Template directory to use." type:"existingdir"`
 	Dest     string        `arg:"" help:"Destination directory to write files to (will be erased)."`
 }
 
 func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+	if s.Watch == 0 {
+		return s.oneOffGenerate(ctx, client)
+	}
+	return s.hotReload(ctx, client)
+}
+
+func (s *schemaGenerateCmd) oneOffGenerate(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+	response, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	if err != nil {
+		return fmt.Errorf("failed to get schema: %w", err)
+	}
+	modules, err := slices.MapErr(response.Msg.Schema.Modules, schema.ModuleFromProto)
+	if err != nil {
+		return fmt.Errorf("invalid module schema: %w", err)
+	}
+	return s.regenerateModules(log.FromContext(ctx), modules)
+}
+
+func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	watch := watcher.New()
 	defer watch.Close()
 
@@ -121,11 +137,20 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 	}
 
 	for _, module := range modules {
-		funcs, _, err := s.createJSVM(logger, module)
-		if err != nil {
-			return fmt.Errorf("failed to create JS VM: %w", err)
-		}
-		if err := scaffolder.Scaffold(s.Template, s.Dest, module, scaffolder.Functions(funcs), scaffolder.Exclude("^template.js$")); err != nil {
+		if err := scaffolder.Scaffold(s.Template, s.Dest, module,
+			scaffolder.Functions(scaffolder.FuncMap{
+				"snake":          strcase.ToSnake,
+				"screamingSnake": strcase.ToScreamingSnake,
+				"camel":          strcase.ToCamel,
+				"lowerCamel":     strcase.ToLowerCamel,
+				"kebab":          strcase.ToKebab,
+				"screamingKebab": strcase.ToScreamingKebab,
+				"upper":          strings.ToUpper,
+				"lower":          strings.ToLower,
+				"title":          strings.Title,
+			}),
+			scaffolder.Extend(javascript.Extension("template.js", javascript.WithLogger(makeJSLoggerAdapter(logger)))),
+		); err != nil {
 			return err
 		}
 	}
@@ -133,125 +158,25 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 	return nil
 }
 
-// Create JS VM and populate it with functions that can be used in templates.
-func (s *schemaGenerateCmd) createJSVM(logger *log.Logger, module *schema.Module) (funcs template.FuncMap, vm *goja.Runtime, err error) {
-	vm = goja.New()
-	vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
-	if err := initConsole(vm, logger); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("context", module); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("repr", repr.String); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("snake", strcase.ToSnake); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("screamingSnake", strcase.ToScreamingSnake); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("camel", strcase.ToCamel); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("lowerCamel", strcase.ToLowerCamel); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("kebab", strcase.ToKebab); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("screamingKebab", strcase.ToScreamingKebab); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("upper", strings.ToUpper); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("lower", strings.ToLower); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("title", strings.Title); err != nil {
-		return nil, nil, err
-	}
-	if err := vm.Set("typeName", func(v any) string {
-		if v == nil {
-			return "null"
+func makeJSLoggerAdapter(logger *log.Logger) func(args ...any) {
+	return func(args ...any) {
+		strs := slices.Map(args, func(v any) string { return fmt.Sprintf("%v", v) })
+		level := log.Info
+		if prefix, ok := args[0].(string); ok {
+			switch prefix {
+			case "log:":
+				level = log.Info
+			case "debug:":
+				level = log.Debug
+			case "error:":
+				level = log.Error
+			case "warn:":
+				level = log.Warn
+			}
 		}
-		rv := reflect.ValueOf(v)
-		if rv == (reflect.Value{}) {
-			return "<nil>"
-		}
-		return reflect.Indirect(rv).Type().Name()
-	}); err != nil {
-		return nil, nil, err
+		logger.Log(log.Entry{
+			Level:   level,
+			Message: strings.Join(strs[1:], " "),
+		})
 	}
-
-	scriptPath := filepath.Join(s.Template, "template.js")
-	if script, err := os.ReadFile(scriptPath); err == nil {
-		if _, err := vm.RunScript(scriptPath, string(script)); err != nil {
-			return nil, nil, fmt.Errorf("failed to run %s: %w", scriptPath, err)
-		}
-	}
-
-	funcs = template.FuncMap{}
-	global := vm.GlobalObject()
-	for _, key := range global.Keys() {
-		attr := global.Get(key)
-		value := attr.Export()
-		typ := reflect.TypeOf(value)
-		if typ.Kind() != reflect.Func {
-			continue
-		}
-
-		// Go functions are exported as is, JS functions are wrapped in a go function that calls them.
-		isJsFunc := typ.NumIn() == 1 && typ.In(0) == reflect.TypeOf(goja.FunctionCall{})
-		if !isJsFunc {
-			funcs[key] = value
-			continue
-		}
-
-		fn, ok := goja.AssertFunction(attr)
-		if !ok {
-			continue
-		}
-		funcs[key] = func(args ...any) (any, error) {
-			vmArgs := slices.Map(args, vm.ToValue)
-			return fn(global, vmArgs...)
-		}
-	}
-	return funcs, vm, nil
-}
-
-// TODO: change from values...string to values...any
-func initConsole(vm *goja.Runtime, logger *log.Logger) error {
-	console := vm.NewObject()
-	if err := console.Set("log", func(values ...any) {
-		strs := slices.Map(values, func(v any) string { return fmt.Sprintf("%v", v) })
-		logger.Infof("%s", strings.Join(strs, " "))
-	}); err != nil {
-		return err
-	}
-	if err := console.Set("debug", func(values ...any) {
-		strs := slices.Map(values, func(v any) string { return fmt.Sprintf("%v", v) })
-		logger.Debugf("%s", strings.Join(strs, " "))
-	}); err != nil {
-		return err
-	}
-	if err := console.Set("error", func(values ...any) {
-		strs := slices.Map(values, func(v any) string { return fmt.Sprintf("%v", v) })
-		logger.Logf(log.Error, "%s", strings.Join(strs, " "))
-	}); err != nil {
-		return err
-	}
-	if err := console.Set("warn", func(values ...any) {
-		strs := slices.Map(values, func(v any) string { return fmt.Sprintf("%v", v) })
-		logger.Warnf("%s", strings.Join(strs, " "))
-	}); err != nil {
-		return err
-	}
-	err := vm.Set("console", console)
-	if err != nil {
-		return err
-	}
-	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,27 +33,30 @@ const integrationTestTimeout = time.Second * 60
 func TestIntegration(t *testing.T) {
 	tmpDir := t.TempDir()
 
+	cwd, err := os.Getwd()
+	assert.NoError(t, err)
+
+	rootDir := filepath.Join(cwd, "..")
+
 	modulesDir := filepath.Join(tmpDir, "modules")
 
 	tests := []struct {
 		name       string
 		assertions assertions
 	}{
-		{name: "DeployTime",
-			assertions: assertions{
-				run("examples", "ftl-go", "deploy", "time"),
-				deploymentExists("time"),
-			}},
+		{name: "DeployTime", assertions: assertions{
+			run("examples", "ftl-go", "deploy", "time"),
+			deploymentExists("time"),
+		}},
 		{name: "CallTime", assertions: assertions{
 			call("time", "time", obj{}, func(t testing.TB, resp obj) {
 				assert.Equal(t, maps.Keys(resp), []string{"time"})
 			}),
 		}},
-		{name: "DeployEchoKotlin",
-			assertions: assertions{
-				run(".", "ftl", "deploy", "examples/kotlin/ftl-module-echo"),
-				deploymentExists("echo"),
-			}},
+		{name: "DeployEchoKotlin", assertions: assertions{
+			run(".", "ftl", "deploy", "examples/kotlin/ftl-module-echo"),
+			deploymentExists("echo"),
+		}},
 		{name: "CallEchoKotlin", assertions: assertions{
 			call("echo", "echo", obj{"name": "Alice"}, func(t testing.TB, resp obj) {
 				message, ok := resp["message"].(string)
@@ -86,12 +90,11 @@ func TestIntegration(t *testing.T) {
 				assert.True(t, regexp.MustCompile(`^Hello, Alice!`).MatchString(message), "%q does not match %q", message, `^Hello, Alice!`)
 			}),
 		}},
+		{name: "SchemaGenerateJS", assertions: assertions{
+			run(".", "ftl", "schema", "generate", "integration/testdata/schema-generate", "build/schema-generate"),
+			filesExist(file{"build/schema-generate/test.txt", "olleh"}),
+		}},
 	}
-
-	cwd, err := os.Getwd()
-	assert.NoError(t, err)
-
-	rootDir := filepath.Join(cwd, "..")
 
 	// Build FTL binary
 	logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
@@ -106,7 +109,14 @@ func TestIntegration(t *testing.T) {
 
 	ctx = startProcess(t, ctx, filepath.Join(binDir, "ftl"), "serve", "--recreate")
 
-	ic := itContext{Context: ctx, rootDir: rootDir, binDir: binDir, controller: controller, verbs: verbs}
+	ic := itContext{
+		Context:    ctx,
+		tmpDir:     tmpDir,
+		rootDir:    rootDir,
+		binDir:     binDir,
+		controller: controller,
+		verbs:      verbs,
+	}
 
 	ic.assertWithRetry(t, func(t testing.TB, ic itContext) error {
 		_, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
@@ -162,6 +172,27 @@ func status(check func(t testing.TB, status *ftlv1.StatusResponse)) assertion {
 	}
 }
 
+type file struct {
+	path    string
+	content string
+}
+
+// Assert that files exist in the temp dir.
+func filesExist(files ...file) assertion {
+	return func(t testing.TB, ic itContext) error {
+		for _, file := range files {
+			content, err := os.ReadFile(filepath.Join(ic.rootDir, file.path))
+			if err != nil {
+				return err
+			}
+			if string(content) != file.content {
+				return fmt.Errorf("%s:\nExpected: %s\n  Actual: %s", file.path, file.content, string(content))
+			}
+		}
+		return nil
+	}
+}
+
 type obj map[string]any
 
 func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, resp Resp)) assertion {
@@ -192,6 +223,7 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 
 type itContext struct {
 	context.Context
+	tmpDir     string
 	rootDir    string
 	binDir     string // Where "ftl" binary is located.
 	controller ftlv1connect.ControllerServiceClient
