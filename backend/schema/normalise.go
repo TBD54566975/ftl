@@ -69,11 +69,18 @@ func Normalise[T Node](n T) T {
 
 	case *MetadataIngress:
 		c.Pos = zero
+		c.Path = normaliseSlice(c.Path)
 
 	case *Optional:
 		c.Type = Normalise(c.Type)
 
-	case Decl, Metadata, Type: // Can never occur in reality, but here to satisfy the sum-type check.
+	case *IngressPathLiteral:
+		c.Pos = zero
+
+	case *IngressPathParameter:
+		c.Pos = zero
+
+	case Decl, Metadata, IngressPathComponent, Type: // Can never occur in reality, but here to satisfy the sum-type check.
 		panic("??")
 	}
 	return ni.(T) //nolint:forcetypeassert

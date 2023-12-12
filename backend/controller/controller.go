@@ -1148,11 +1148,24 @@ func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.Ingr
 					ingressRoutes = append(ingressRoutes, dal.IngressRoutingEntry{
 						Verb:   verb.Verb.Name,
 						Method: ingress.Ingress.Method,
-						Path:   ingress.Ingress.Path,
+						Path:   ingressPathString(ingress.Ingress.Path),
 					})
 				}
 			}
 		}
 	}
 	return ingressRoutes
+}
+
+func ingressPathString(path []*schemapb.IngressPathComponent) string {
+	pathString := make([]string, len(path))
+	for i, p := range path {
+		switch p.Value.(type) {
+		case *schemapb.IngressPathComponent_IngressPathLiteral:
+			pathString[i] = p.GetIngressPathLiteral().Text
+		case *schemapb.IngressPathComponent_IngressPathParameter:
+			pathString[i] = fmt.Sprintf("{%s}", p.GetIngressPathParameter().Name)
+		}
+	}
+	return "/" + strings.Join(pathString, "/")
 }

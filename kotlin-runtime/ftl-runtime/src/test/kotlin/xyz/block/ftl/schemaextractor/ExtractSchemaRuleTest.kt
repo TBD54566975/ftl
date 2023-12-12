@@ -164,7 +164,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               Metadata(
                 ingress = MetadataIngress(
                   method = "GET",
-                  path = "/echo"
+                  path = listOf(
+                    IngressPathComponent(
+                      ingressPathLiteral = IngressPathLiteral(text = "echo")
+                    )
+                  )
                 )
               ),
               Metadata(

@@ -217,7 +217,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 			metadata = append(metadata, &schema.MetadataIngress{
 				Pos:    dir.pos,
 				Method: methodAttr.Value.Text(),
-				Path:   pathAttr.Value.Text(),
+				Path:   parsePathComponents(pathAttr.Value.Text(), dir.pos),
 			})
 		default:
 			return nil, fmt.Errorf("invalid directive: %s", dir)
@@ -254,6 +254,21 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	pctx.module.Decls = append(pctx.module.Decls, verb)
 	return verb, nil
+}
+
+func parsePathComponents(path string, pos schema.Position) []schema.IngressPathComponent {
+	var out []schema.IngressPathComponent
+	for _, part := range strings.Split(path, "/") {
+		if part == "" {
+			continue
+		}
+		if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") {
+			out = append(out, &schema.IngressPathParameter{Pos: pos, Name: part[1 : len(part)-1]})
+		} else {
+			out = append(out, &schema.IngressPathLiteral{Pos: pos, Text: part})
+		}
+	}
+	return out
 }
 
 func parseComments(doc *ast.CommentGroup) []string {

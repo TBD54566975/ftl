@@ -18,12 +18,14 @@ var (
 	nonOptionalTypeUnion = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{} /*&VerbRef{},*/, &DataRef{}}
 	typeUnion            = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion        = []Metadata{&MetadataCalls{}, &MetadataIngress{}}
+	ingressUnion         = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
 
 	// Used by protobuf generation.
 	unions = map[reflect.Type][]reflect.Type{
-		reflect.TypeOf((*Type)(nil)).Elem():     reflectUnion(typeUnion...),
-		reflect.TypeOf((*Metadata)(nil)).Elem(): reflectUnion(metadataUnion...),
-		reflect.TypeOf((*Decl)(nil)).Elem():     reflectUnion(declUnion...),
+		reflect.TypeOf((*Type)(nil)).Elem():                 reflectUnion(typeUnion...),
+		reflect.TypeOf((*Metadata)(nil)).Elem():             reflectUnion(metadataUnion...),
+		reflect.TypeOf((*IngressPathComponent)(nil)).Elem(): reflectUnion(ingressUnion...),
+		reflect.TypeOf((*Decl)(nil)).Elem():                 reflectUnion(declUnion...),
 	}
 )
 
@@ -181,18 +183,25 @@ type MetadataCalls struct {
 type MetadataIngress struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Method string `parser:"'ingress' @('GET' | 'POST')" protobuf:"2"`
-	Path   string `parser:"@('/' @('{' | '}' | Ident)+)+" protobuf:"3"`
+	Method string                 `parser:"'ingress' @('GET' | 'POST')" protobuf:"2"`
+	Path   []IngressPathComponent `parser:"('/' @@)+" protobuf:"3"`
 }
 
-func (m *MetadataIngress) Parameters() []string {
-	var params []string
-	for _, part := range strings.Split(m.Path, "/") {
-		if len(part) > 0 && part[0] == '{' && part[len(part)-1] == '}' {
-			params = append(params, part[1:len(part)-1])
-		}
-	}
-	return params
+type IngressPathComponent interface {
+	Node
+	schemaIngressPathComponent()
+}
+
+type IngressPathLiteral struct {
+	Pos Position `parser:"" protobuf:"1,optional"`
+
+	Text string `parser:"@Ident" protobuf:"2"`
+}
+
+type IngressPathParameter struct {
+	Pos Position `parser:"" protobuf:"1,optional"`
+
+	Name string `parser:"'{' @Ident '}'" protobuf:"2"`
 }
 
 type Module struct {
@@ -326,7 +335,7 @@ var (
 		{Name: "Comment", Pattern: `//.*`},
 		{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
 		{Name: "Number", Pattern: `[0-9]+(?:\.[0-9]+)?`},
-		{Name: "Punct", Pattern: `[-:[\]{}<>()*+?.,\\^$|#]`},
+		{Name: "Punct", Pattern: `[/-:[\]{}<>()*+?.,\\^$|#]`},
 	})
 
 	commonParserOptions = []participle.Option{
@@ -338,6 +347,7 @@ var (
 			return token, nil
 		}, "Comment"),
 		participle.Union(metadataUnion...),
+		participle.Union(ingressUnion...),
 		participle.Union(declUnion...),
 	}
 

@@ -197,7 +197,7 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 		return &MetadataIngress{
 			Pos:    PosFromProto(s.Ingress.Pos),
 			Method: s.Ingress.Method,
-			Path:   s.Ingress.Path,
+			Path:   ingressPathComponentListToSchema(s.Ingress.Path),
 		}
 
 	default:
@@ -210,5 +210,25 @@ func verbRefListToSchema(s []*schemapb.VerbRef) []*VerbRef {
 	for _, n := range s {
 		out = append(out, verbRefToSchema(n))
 	}
+	return out
+}
+
+func ingressPathComponentListToSchema(s []*schemapb.IngressPathComponent) []IngressPathComponent {
+	var out []IngressPathComponent
+	for _, n := range s {
+		switch n := n.Value.(type) {
+		case *schemapb.IngressPathComponent_IngressPathLiteral:
+			out = append(out, &IngressPathLiteral{
+				Pos:  PosFromProto(n.IngressPathLiteral.Pos),
+				Text: n.IngressPathLiteral.Text,
+			})
+		case *schemapb.IngressPathComponent_IngressPathParameter:
+			out = append(out, &IngressPathParameter{
+				Pos:  PosFromProto(n.IngressPathParameter.Pos),
+				Name: n.IngressPathParameter.Name,
+			})
+		}
+	}
+
 	return out
 }
