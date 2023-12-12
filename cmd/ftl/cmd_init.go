@@ -39,7 +39,7 @@ func (i initGoCmd) Run(parent *initCmd) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	return scaffold(parent.Hermit, tmpDir, i.Dir, i)
+	return scaffold(parent.Hermit, tmpDir, i.Dir, i, scaffolder.Exclude("^go.mod$"))
 }
 
 type initKotlinCmd struct {
