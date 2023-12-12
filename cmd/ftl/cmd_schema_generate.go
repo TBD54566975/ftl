@@ -9,13 +9,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/TBD54566975/scaffolder"
+	"github.com/TBD54566975/scaffolder/extensions/javascript"
 	"github.com/iancoleman/strcase"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/TBD54566975/scaffolder"
-	"github.com/TBD54566975/scaffolder/extensions/javascript"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/slices"
