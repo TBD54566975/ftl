@@ -16,18 +16,18 @@ require (
 	github.com/alecthomas/kong-toml v0.1.0
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.9.0
-	github.com/amacneil/dbmate/v2 v2.8.0
+	github.com/amacneil/dbmate/v2 v2.9.0
 	github.com/beevik/etree v1.2.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/deckarep/golang-set/v2 v2.5.0
 	github.com/go-logr/logr v1.3.0
 	github.com/gofrs/flock v0.8.1
 	github.com/golang/protobuf v1.5.3
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.5.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.5.1
-	github.com/jellydator/ttlcache/v3 v3.1.0
+	github.com/jellydator/ttlcache/v3 v3.1.1
 	github.com/jpillora/backoff v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-isatty v0.0.20
@@ -52,9 +52,9 @@ require (
 	golang.org/x/mod v0.14.0
 	golang.org/x/net v0.19.0
 	golang.org/x/sync v0.5.0
-	golang.org/x/tools v0.16.0
+	golang.org/x/tools v0.16.1
 	google.golang.org/protobuf v1.31.0
-	modernc.org/sqlite v1.27.0
+	modernc.org/sqlite v1.28.0
 )
 
 require (
