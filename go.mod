@@ -7,8 +7,8 @@ require (
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/otelconnect v0.6.0
 	github.com/BurntSushi/toml v1.3.2
-	github.com/TBD54566975/scaffolder v0.6.2
-	github.com/TBD54566975/scaffolder/extensions/javascript v0.6.2
+	github.com/TBD54566975/scaffolder v0.7.0
+	github.com/TBD54566975/scaffolder/extensions/javascript v0.7.0
 	github.com/alecthomas/assert/v2 v2.4.1
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
