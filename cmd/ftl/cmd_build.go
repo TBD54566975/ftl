@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/beevik/etree"
@@ -37,7 +38,7 @@ func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleCo
 
 	logger.Infof("Building kotlin module '%s'", config.Module)
 
-	if err := b.setPomVersion(logger); err != nil {
+	if err := b.setPomProperties(logger); err != nil {
 		return fmt.Errorf("unable to update ftl.version in %s: %w", b.ModuleDir, err)
 	}
 
@@ -50,10 +51,15 @@ func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleCo
 	return nil
 }
 
-func (b *buildCmd) setPomVersion(logger *log.Logger) error {
+func (b *buildCmd) setPomProperties(logger *log.Logger) error {
 	ftlVersion := ftl.Version
 	if ftlVersion == "dev" {
 		ftlVersion = "1.0-SNAPSHOT"
+	}
+
+	ftlEndpoint := os.Getenv("FTL_ENDPOINT")
+	if ftlEndpoint == "" {
+		ftlEndpoint = "http://127.0.0.1:8892"
 	}
 
 	pomFile := filepath.Clean(filepath.Join(b.ModuleDir, "..", "pom.xml"))
@@ -74,6 +80,12 @@ func (b *buildCmd) setPomVersion(logger *log.Logger) error {
 		return fmt.Errorf("unable to find <properties>/<ftl.version> in %s", pomFile)
 	}
 	version.SetText(ftlVersion)
+
+	endpoint := properties.SelectElement("ftlEndpoint")
+	if endpoint == nil {
+		return fmt.Errorf("unable to find <properties>/<ftlEndpoint> in %s", pomFile)
+	}
+	endpoint.SetText(ftlEndpoint)
 
 	return tree.WriteToFile(pomFile)
 }
