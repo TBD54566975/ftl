@@ -58,12 +58,12 @@ jobs:
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Retrieve Runner Docker image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: docker-runner-artifact
           path: artifacts/ftl-runner
       - name: Retrieve Controller Docker image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: docker-controller-artifact
           path: artifacts/ftl-controller
