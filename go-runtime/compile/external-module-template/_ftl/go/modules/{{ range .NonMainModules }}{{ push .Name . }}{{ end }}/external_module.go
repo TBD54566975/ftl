@@ -1,0 +1,26 @@
+//ftl:module {{.Name}}
+package {{.Name}}
+
+import (
+  "context"
+{{- range $import, $alias := (.|imports)}}
+  {{if $alias}}{{$alias}} {{end}}"{{$import}}"
+{{- end}}
+)
+{{- range .Decls }}
+{{if is "Data" . }}
+type {{.Name|title}} struct {
+  {{- range .Fields}}
+  {{.Name|title}} {{type $ .Type}} `json:"{{.Name}}"`
+  {{- end}}
+}
+{{- else if is "Verb" .}}
+{{.Comments|comment }}
+{{if .Comments}}//
+{{end -}}
+//ftl:verb
+func {{.Name|title}}(context.Context, {{type $ .Request}}) ({{type $ .Response}}, error) {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/sdk.Call()")
+}
+{{- end}}
+{{- end}}

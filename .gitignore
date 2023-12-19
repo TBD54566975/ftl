@@ -5,7 +5,6 @@
 target/
 build/
 deploy/
-.ftl*/
 .DS_Store
 reflex.conf
 /logs/
@@ -14,3 +13,5 @@ reflex.conf
 generated_ftl_module.go
 *.zip
 dist/
+examples/**/_ftl/
+go.work*

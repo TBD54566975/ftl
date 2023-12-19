@@ -48,7 +48,7 @@ func TestIntegration(t *testing.T) {
 		assertions assertions
 	}{
 		{name: "DeployTime", assertions: assertions{
-			run("examples", "ftl-go", "deploy", "time"),
+			run("examples", "ftl", "deploy", "time"),
 			deploymentExists("time"),
 		}},
 		{name: "CallTime", assertions: assertions{

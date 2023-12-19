@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/currency"
+	"ftl/currency"
 )
 
 type InvalidCreditCardErr struct{}

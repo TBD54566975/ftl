@@ -17,7 +17,7 @@ package money
 import (
 	"errors"
 
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/currency"
+	"ftl/currency"
 )
 
 const (

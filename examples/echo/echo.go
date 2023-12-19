@@ -7,13 +7,14 @@ import (
 	"context"
 	"fmt"
 
-	timemodule "github.com/TBD54566975/ftl/examples/time"
-	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
+	"ftl/time"
+
+	"github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 
 // An echo request.
 type EchoRequest struct {
-	Name ftl.Option[string] `json:"name"`
+	Name sdk.Option[string] `json:"name"`
 }
 
 type EchoResponse struct {
@@ -26,7 +27,7 @@ type EchoResponse struct {
 //ftl:ingress GET /echo
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	fmt.Println("Echo received a request!")
-	tresp, err := ftl.Call(ctx, timemodule.Time, timemodule.TimeRequest{})
+	tresp, err := sdk.Call(ctx, time.Time, time.TimeRequest{})
 	if err != nil {
 		return EchoResponse{}, err
 	}

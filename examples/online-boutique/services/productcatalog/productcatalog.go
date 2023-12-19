@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"ftl/currency"
+
 	"github.com/TBD54566975/ftl/examples/online-boutique/common"
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/currency"
 )
 
 var (

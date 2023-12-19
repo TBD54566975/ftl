@@ -44,6 +44,9 @@ func ExtractModuleSchema(dir string) (*schema.Module, error) {
 	}
 	module := &schema.Module{}
 	for _, pkg := range pkgs {
+		if len(pkg.Errors) > 0 {
+			return nil, fmt.Errorf("%s: %w", pkg.PkgPath, pkg.Errors[0])
+		}
 		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module}
 		for _, file := range pkg.Syntax {
 			var verb *schema.Verb

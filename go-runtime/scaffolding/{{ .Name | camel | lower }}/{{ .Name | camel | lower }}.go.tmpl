@@ -18,5 +18,5 @@ type EchoResponse struct {
 
 //ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
-	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name)}, nil
+	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name.Default("anonymous"))}, nil
 }

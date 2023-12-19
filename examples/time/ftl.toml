@@ -1,2 +1,5 @@
 module = "time"
 language = "go"
+
+[go.replace]
+"github.com/TBD54566975/ftl" = "../.."

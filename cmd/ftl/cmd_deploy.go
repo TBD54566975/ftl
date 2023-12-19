@@ -41,7 +41,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	}
 
 	build := buildCmd{ModuleDir: d.ModuleDir}
-	err = build.Run(ctx)
+	err = build.Run(ctx, client)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 
 	module, err := d.loadProtoSchema(deployDir, config)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load protobuf schema from %q: %w", config.Schema, err)
 	}
 
 	logger.Infof("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))

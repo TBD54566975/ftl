@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/productcatalog"
+	"ftl/productcatalog"
+
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 
@@ -36,10 +37,10 @@ func List(ctx context.Context, req ListRequest) (ListResponse, error) {
 	}
 	filtered := make([]string, 0, len(catalog.Products))
 	for _, product := range catalog.Products {
-		if _, ok := userIDs[product.ID]; ok {
+		if _, ok := userIDs[product.Id]; ok {
 			continue
 		}
-		filtered = append(filtered, product.ID)
+		filtered = append(filtered, product.Id)
 	}
 
 	// Sample from filtered products and return them.

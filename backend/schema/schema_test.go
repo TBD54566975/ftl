@@ -218,8 +218,8 @@ func TestParsing(t *testing.T) {
 		{name: "InvalidRequestRef",
 			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
 			errors: []string{
-				"1:25: reference to unknown data structure \"InvalidRequest\"",
-				"1:41: reference to unknown data structure \"InvalidResponse\""}},
+				"1:25: unqualified reference to unknown data structure \"InvalidRequest\"",
+				"1:41: unqualified reference to unknown data structure \"InvalidResponse\""}},
 		{name: "InvalidDataRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
@@ -234,7 +234,7 @@ func TestParsing(t *testing.T) {
 			input: `module test { data Data {} calls verb }`,
 			errors: []string{
 				"1:28: metadata \"calls verb\" is not valid on data structures",
-				"1:34: reference to unknown Verb \"verb\"",
+				"1:34: unqualified reference to unknown Verb \"verb\"",
 			}},
 		{name: "KeywordAsName",
 			input:  `module int { data String { name String } verb verb(String) String }`,
