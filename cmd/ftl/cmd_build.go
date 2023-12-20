@@ -83,9 +83,10 @@ func (b *buildCmd) setPomProperties(logger *log.Logger) error {
 
 	endpoint := properties.SelectElement("ftlEndpoint")
 	if endpoint == nil {
-		return fmt.Errorf("unable to find <properties>/<ftlEndpoint> in %s", pomFile)
+		logger.Warnf("unable to find <properties>/<ftlEndpoint> in %s", pomFile)
+	} else {
+		endpoint.SetText(ftlEndpoint)
 	}
-	endpoint.SetText(ftlEndpoint)
 
 	return tree.WriteToFile(pomFile)
 }
