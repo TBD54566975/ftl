@@ -7,7 +7,7 @@ replace github.com/TBD54566975/ftl => ../
 require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 
 require (
-	connectrpc.com/connect v1.13.0 // indirect
+	connectrpc.com/connect v1.14.0 // indirect
 	connectrpc.com/grpcreflect v1.2.0 // indirect
 	connectrpc.com/otelconnect v0.6.0 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
@@ -15,7 +15,7 @@ require (
 	github.com/alecthomas/types v0.9.0 // indirect
 	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
-	github.com/go-logr/logr v1.3.0 // indirect
+	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.5.0 // indirect
@@ -36,5 +36,5 @@ require (
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.32.0 // indirect
 )

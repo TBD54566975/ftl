@@ -53,10 +53,10 @@
         <maven.deploy.skip>true</maven.deploy.skip>
         <rootDir>${basedir}</rootDir>
         <java.version>1.8</java.version>
-        <kotlin.version>1.9.21</kotlin.version>
+        <kotlin.version>1.9.22</kotlin.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <wire.version>4.9.3</wire.version>
-        <grpc.version>1.60.0</grpc.version>
+        <grpc.version>1.60.1</grpc.version>
         <logback.version>1.4.14</logback.version>
         <junit.version>5.10.1</junit.version>
         <logstash.version>7.4</logstash.version>
@@ -157,7 +157,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.12.1</version>
                 <executions>
                     <execution>
                         <id>default-compile</id>
