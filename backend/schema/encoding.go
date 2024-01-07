@@ -33,6 +33,12 @@ func (*String) schemaChildren() []Node { return nil }
 func (*String) schemaType()            {}
 func (*String) String() string         { return "String" }
 
+var _ Type = (*Bytes)(nil)
+
+func (*Bytes) schemaChildren() []Node { return nil }
+func (*Bytes) schemaType()            {}
+func (*Bytes) String() string         { return "Bytes" }
+
 var _ Type = (*Bool)(nil)
 
 func (*Bool) schemaChildren() []Node { return nil }

@@ -24,7 +24,7 @@ const pluginRetryDelay = time.Millisecond * 100
 
 // PingableClient is a gRPC client that can be pinged.
 type PingableClient interface {
-	Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error)
+	Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error)
 }
 
 type pluginOptions struct {

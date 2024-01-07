@@ -17,6 +17,10 @@ message Bool {
   optional Position pos = 1;
 }
 
+message Bytes {
+  optional Position pos = 1;
+}
+
 message Data {
   optional Position pos = 1;
   string name = 2;
@@ -132,12 +136,13 @@ message Type {
     Int int = 1;
     Float float = 2;
     String string = 3;
-    Bool bool = 4;
-    Time time = 5;
-    Array array = 6;
-    Map map = 7;
-    DataRef dataRef = 8;
-    Optional optional = 9;
+    Bytes bytes = 4;
+    Bool bool = 5;
+    Time time = 6;
+    Array array = 7;
+    Map map = 8;
+    DataRef dataRef = 9;
+    Optional optional = 10;
   }
 }
 

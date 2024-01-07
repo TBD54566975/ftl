@@ -54,6 +54,10 @@ func Normalise[T Node](n T) T {
 		c.Str = false
 		c.Pos = zero
 
+	case *Bytes:
+		c.Bytes = false
+		c.Pos = zero
+
 	case *Verb:
 		c.Pos = zero
 		c.Request = Normalise(c.Request)

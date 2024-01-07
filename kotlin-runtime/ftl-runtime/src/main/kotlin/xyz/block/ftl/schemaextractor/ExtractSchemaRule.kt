@@ -115,7 +115,8 @@ class SchemaExtractor(
       verb = it
     }
     val verbSourcePos = verb.getLineAndColumn()
-    module = requireNotNull(verb.getElementParentDeclaration()) { "$verbSourcePos Could not extract $currentModuleName definition" }
+    module =
+      requireNotNull(verb.getElementParentDeclaration()) { "$verbSourcePos Could not extract $currentModuleName definition" }
 
     // Skip ignored modules.
     if (module.annotationEntries.firstOrNull {
@@ -231,9 +232,9 @@ class SchemaExtractor(
   private fun extractPathComponents(path: String): List<IngressPathComponent> {
     return path.split("/").filter { it.isNotEmpty() }.map { part ->
       if (part.startsWith("{") && part.endsWith("}")) {
-        IngressPathComponent(ingressPathParameter =  IngressPathParameter(name = part.substring(1, part.length - 1)))
+        IngressPathComponent(ingressPathParameter = IngressPathParameter(name = part.substring(1, part.length - 1)))
       } else {
-        IngressPathComponent(ingressPathLiteral =  IngressPathLiteral(text = part))
+        IngressPathComponent(ingressPathLiteral = IngressPathLiteral(text = part))
       }
     }
   }
@@ -329,6 +330,7 @@ class SchemaExtractor(
       Double::class.qualifiedName -> Type(float = xyz.block.ftl.v1.schema.Float())
       Boolean::class.qualifiedName -> Type(bool = xyz.block.ftl.v1.schema.Bool())
       OffsetDateTime::class.qualifiedName -> Type(time = xyz.block.ftl.v1.schema.Time())
+      ByteArray::class.qualifiedName -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
       Map::class.qualifiedName -> {
         return Type(
           map = xyz.block.ftl.v1.schema.Map(

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -102,7 +103,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	}
 
 	recreate := s.Recreate
-	port := fmt.Sprintf("%d", s.DBPort)
+	port := strconv.Itoa(s.DBPort)
 
 	if len(output) == 0 {
 		logger.Infof("Creating docker container '%s' for postgres db", ftlContainerName)

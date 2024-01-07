@@ -70,6 +70,16 @@ func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *jsonschema.Schema {
 		st := jsonschema.String
 		return &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}}
 
+	case *Bytes:
+		st := jsonschema.String
+		encoding := "base64"
+		mediaType := "application/octet-stream"
+		return &jsonschema.Schema{
+			Type:             &jsonschema.Type{SimpleTypes: &st},
+			ContentEncoding:  &encoding,
+			ContentMediaType: &mediaType,
+		}
+
 	case *Bool:
 		st := jsonschema.Boolean
 		return &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}}

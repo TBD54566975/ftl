@@ -23,6 +23,7 @@ type Req struct {
 	Optional sdk.Option[Nested]
 	Time     time.Time
 	User     two.User
+	Bytes    []byte
 }
 type Resp struct{}
 

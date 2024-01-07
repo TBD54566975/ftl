@@ -43,6 +43,7 @@ public class TestModule()
             Field(name = "int", type = Type(int = Int())),
             Field(name = "float", type = Type(float = Float())),
             Field(name = "string", type = Type(string = String())),
+            Field(name = "bytes", type = Type(bytes = Bytes())),
             Field(name = "bool", type = Type(bool = Bool())),
             Field(name = "time", type = Type(time = Time())),
             Field(name = "optional", type = Type(optional = Optional(type = Type(string = String())))),
@@ -84,6 +85,7 @@ package ftl.test
 
 import java.time.OffsetDateTime
 import kotlin.Boolean
+import kotlin.ByteArray
 import kotlin.Float
 import kotlin.Long
 import kotlin.String
@@ -106,6 +108,7 @@ public data class TestResponse(
   public val int: Long,
   public val float: Float,
   public val string: String,
+  public val bytes: ByteArray,
   public val bool: Boolean,
   public val time: OffsetDateTime,
   public val optional: String? = null,
@@ -144,9 +147,11 @@ public class TestModule()
           request = DataRef(name = "TestRequest"),
           response = DataRef(name = "TestResponse"),
           metadata = listOf(
-            Metadata(ingress = MetadataIngress(
-              path = listOf(IngressPathComponent(ingressPathLiteral = IngressPathLiteral(text = "test"))),
-              method = "GET")
+            Metadata(
+              ingress = MetadataIngress(
+                path = listOf(IngressPathComponent(ingressPathLiteral = IngressPathLiteral(text = "test"))),
+                method = "GET"
+              )
             ),
           )
         )

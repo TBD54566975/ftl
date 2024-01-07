@@ -59,7 +59,7 @@ var (
 )
 
 type Pingable interface {
-	Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error)
+	Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error)
 }
 
 // GetHTTPClient returns a HTTP client usable for the given URL.
