@@ -10,16 +10,16 @@ import (
 )
 
 func nodeListToProto[T proto.Message, U Node](nodes []U) []T {
-	out := []T{}
-	for _, n := range nodes {
-		out = append(out, n.ToProto().(T))
+	out := make([]T, len(nodes))
+	for i, n := range nodes {
+		out[i] = n.ToProto().(T)
 	}
 	return out
 }
 
 func declListToProto(nodes []Decl) []*schemapb.Decl {
-	out := []*schemapb.Decl{}
-	for _, n := range nodes {
+	out := make([]*schemapb.Decl, len(nodes))
+	for i, n := range nodes {
 		var v schemapb.IsDeclValue
 		switch n := n.(type) {
 		case *Verb:
@@ -27,14 +27,14 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 		case *Data:
 			v = &schemapb.Decl_Data{Data: n.ToProto().(*schemapb.Data)}
 		}
-		out = append(out, &schemapb.Decl{Value: v})
+		out[i] = &schemapb.Decl{Value: v}
 	}
 	return out
 }
 
 func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
-	var out []*schemapb.Metadata
-	for _, n := range nodes {
+	out := make([]*schemapb.Metadata, len(nodes))
+	for i, n := range nodes {
 		var v schemapb.IsMetadataValue
 		switch n := n.(type) {
 		case *MetadataCalls:
@@ -46,19 +46,19 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}
-		out = append(out, &schemapb.Metadata{Value: v})
+		out[i] = &schemapb.Metadata{Value: v}
 	}
 	return out
 }
 
 func ingressListToProto(nodes []IngressPathComponent) []*schemapb.IngressPathComponent {
-	var out []*schemapb.IngressPathComponent
-	for _, n := range nodes {
+	out := make([]*schemapb.IngressPathComponent, len(nodes))
+	for i, n := range nodes {
 		switch n := n.(type) {
 		case *IngressPathLiteral:
-			out = append(out, &schemapb.IngressPathComponent{Value: &schemapb.IngressPathComponent_IngressPathLiteral{IngressPathLiteral: n.ToProto().(*schemapb.IngressPathLiteral)}})
+			out[i] = &schemapb.IngressPathComponent{Value: &schemapb.IngressPathComponent_IngressPathLiteral{IngressPathLiteral: n.ToProto().(*schemapb.IngressPathLiteral)}}
 		case *IngressPathParameter:
-			out = append(out, &schemapb.IngressPathComponent{Value: &schemapb.IngressPathComponent_IngressPathParameter{IngressPathParameter: n.ToProto().(*schemapb.IngressPathParameter)}})
+			out[i] = &schemapb.IngressPathComponent{Value: &schemapb.IngressPathComponent_IngressPathParameter{IngressPathParameter: n.ToProto().(*schemapb.IngressPathParameter)}}
 
 		default:
 			panic(fmt.Sprintf("unhandled ingress path component type %T", n))
@@ -85,6 +85,7 @@ func (s *Schema) ToProto() proto.Message {
 func (m *Module) ToProto() proto.Message {
 	return &schemapb.Module{
 		Pos:      m.Pos.ToProto().(*schemapb.Position),
+		Builtin:  m.Builtin,
 		Name:     m.Name,
 		Comments: m.Comments,
 		Decls:    declListToProto(m.Decls),

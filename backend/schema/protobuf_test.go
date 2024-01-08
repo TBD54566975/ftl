@@ -9,9 +9,8 @@ import (
 )
 
 func TestProtoRoundtrip(t *testing.T) {
-	p := schema.ToProto()
-	decoded, err := FromProto(p.(*schemapb.Schema))
+	p := MustValidate(schema).ToProto()
+	actual, err := FromProto(p.(*schemapb.Schema))
 	assert.NoError(t, err)
-	actual := Normalise(decoded)
-	assert.Equal(t, schema, actual)
+	assert.Equal(t, Normalise(schema), Normalise(actual))
 }

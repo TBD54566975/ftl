@@ -213,9 +213,10 @@ type IngressPathParameter struct {
 type Module struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" protobuf:"3"`
-	Name     string   `parser:"'module' @Ident '{'" protobuf:"2"`
-	Decls    []Decl   `parser:"@@* '}'" protobuf:"4"`
+	Comments []string `parser:"@Comment*" protobuf:"2"`
+	Builtin  bool     `parser:"@'builtin'?" protobuf:"3"`
+	Name     string   `parser:"'module' @Ident '{'" protobuf:"4"`
+	Decls    []Decl   `parser:"@@* '}'" protobuf:"5"`
 }
 
 type Decl interface {
@@ -389,7 +390,7 @@ func ParseString(filename, input string) (*Schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mod, Validate(mod)
+	return Validate(mod)
 }
 
 func ParseModuleString(filename, input string) (*Module, error) {
@@ -410,7 +411,7 @@ func Parse(filename string, r io.Reader) (*Schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mod, Validate(mod)
+	return Validate(mod)
 }
 
 func ParseModule(filename string, r io.Reader) (*Module, error) {
