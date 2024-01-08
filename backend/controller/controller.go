@@ -718,7 +718,8 @@ func (s *Service) validateWholeSchema(ctx context.Context, module *schema.Module
 	schemaMap := ftlmaps.FromSlice(existingModules, func(el *schema.Module) (string, *schema.Module) { return el.Name, el })
 	schemaMap[module.Name] = module
 	fullSchema := &schema.Schema{Modules: maps.Values(schemaMap)}
-	return schema.Validate(fullSchema)
+	_, err = schema.Validate(fullSchema)
+	return err
 }
 
 func (s *Service) getDeployment(ctx context.Context, name string) (*model.Deployment, error) {

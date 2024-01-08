@@ -212,6 +212,9 @@ func (m *Module) schemaChildren() []Node {
 func (m *Module) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(m.Comments))
+	if m.Builtin {
+		fmt.Fprint(w, "builtin ")
+	}
 	fmt.Fprintf(w, "module %s {\n", m.Name)
 	for i, s := range m.Decls {
 		if i > 0 {

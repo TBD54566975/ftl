@@ -102,9 +102,10 @@ message Module {
   optional ModuleRuntime runtime = 31634;
 
   optional Position pos = 1;
-  string name = 2;
-  repeated string comments = 3;
-  repeated Decl decls = 4;
+  repeated string comments = 2;
+  bool builtin = 3;
+  string name = 4;
+  repeated Decl decls = 5;
 }
 
 message Optional {

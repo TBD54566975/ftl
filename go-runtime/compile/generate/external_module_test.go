@@ -4,8 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestCodegen(t *testing.T) {
@@ -27,7 +28,7 @@ func TestCodegen(t *testing.T) {
 		}`
 	s, err := schema.ParseString("", module)
 	assert.NoError(t, err)
-	err = ExternalModule(w, s.Modules[0], "github.com/TBD54566975/ftl/examples")
+	err = ExternalModule(w, s.Modules[1], "github.com/TBD54566975/ftl/examples")
 	assert.NoError(t, err)
 	expected := `//ftl:module basket
 package basket

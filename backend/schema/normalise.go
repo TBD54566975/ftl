@@ -1,7 +1,10 @@
 package schema
 
-// Normalise normalises (zeroes) positional information in schema Nodes.
+import "golang.design/x/reflect"
+
+// Normalise clones and normalises (zeroes) positional information in schema Nodes.
 func Normalise[T Node](n T) T {
+	n = reflect.DeepCopy(n)
 	var zero Position
 	var ni Node = n
 	switch c := ni.(type) {

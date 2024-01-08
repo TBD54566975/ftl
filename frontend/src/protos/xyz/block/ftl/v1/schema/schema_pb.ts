@@ -757,17 +757,22 @@ export class Module extends Message<Module> {
   pos?: Position;
 
   /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: repeated string comments = 3;
+   * @generated from field: repeated string comments = 2;
    */
   comments: string[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Decl decls = 4;
+   * @generated from field: bool builtin = 3;
+   */
+  builtin = false;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name = "";
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Decl decls = 5;
    */
   decls: Decl[] = [];
 
@@ -781,9 +786,10 @@ export class Module extends Message<Module> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 31634, name: "runtime", kind: "message", T: ModuleRuntime, opt: true },
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "decls", kind: "message", T: Decl, repeated: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "builtin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "decls", kind: "message", T: Decl, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {

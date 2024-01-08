@@ -17,7 +17,7 @@ func FromProto(s *schemapb.Schema) (*Schema, error) {
 	schema := &Schema{
 		Modules: modules,
 	}
-	return schema, Validate(schema)
+	return Validate(schema)
 }
 
 func moduleListToSchema(s []*schemapb.Module) ([]*Module, error) {
@@ -47,6 +47,7 @@ func PosFromProto(pos *schemapb.Position) Position {
 func ModuleFromProto(s *schemapb.Module) (*Module, error) {
 	module := &Module{
 		Pos:      PosFromProto(s.Pos),
+		Builtin:  s.Builtin,
 		Name:     s.Name,
 		Comments: s.Comments,
 		Decls:    declListToSchema(s.Decls),

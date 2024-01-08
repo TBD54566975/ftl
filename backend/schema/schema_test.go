@@ -10,7 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/errors"
 )
 
-var schema = Normalise(&Schema{
+var schema = MustValidate(Normalise(&Schema{
 	Modules: []*Module{
 		{
 			Name:     "todo",
@@ -63,14 +63,14 @@ var schema = Normalise(&Schema{
 		},
 	},
 },
-)
+))
 
 func TestIndent(t *testing.T) {
 	assert.Equal(t, "  a\n  b\n  c", indent("a\nb\nc"))
 }
 
 func TestSchemaString(t *testing.T) {
-	expected := `
+	expected := BuiltinsSource + `
 // A comment
 module todo {
   data CreateRequest {
@@ -118,42 +118,42 @@ func TestImports(t *testing.T) {
 
 func TestVisit(t *testing.T) {
 	expected := `
-Schema
-  Module
-    Data
-      Field
-        Optional
-          Map
-            String
-            String
-    Data
-      Field
-        Array
+Module
+  Data
+    Field
+      Optional
+        Map
           String
-    Data
-      Field
+          String
+  Data
+    Field
+      Array
         String
-    Data
-      Field
-        String
-      Field
-        Time
-    Verb
-      DataRef
-      DataRef
-      MetadataCalls
-        VerbRef
-    Verb
-      DataRef
-      DataRef
-      MetadataIngress
-        IngressPathLiteral
-        IngressPathLiteral
-        IngressPathParameter
+  Data
+    Field
+      String
+  Data
+    Field
+      String
+    Field
+      Time
+  Verb
+    DataRef
+    DataRef
+    MetadataCalls
+      VerbRef
+  Verb
+    DataRef
+    DataRef
+    MetadataIngress
+      IngressPathLiteral
+      IngressPathLiteral
+      IngressPathParameter
 `
 	actual := &strings.Builder{}
 	i := 0
-	err := Visit(schema, func(n Node, next func() error) error {
+	// Modules[0] is always the builtins, which we skip.
+	err := Visit(schema.Modules[1], func(n Node, next func() error) error {
 		prefix := strings.Repeat(" ", i)
 		tn := strings.TrimPrefix(fmt.Sprintf("%T", n), "*schema.")
 		fmt.Fprintf(actual, "%s%s\n", prefix, tn)
@@ -168,8 +168,10 @@ Schema
 func TestParserRoundTrip(t *testing.T) {
 	actual, err := ParseString("", schema.String())
 	assert.NoError(t, err, "%s", schema.String())
+	actual, err = Validate(actual)
+	assert.NoError(t, err)
 	actual = Normalise(actual)
-	assert.Equal(t, schema, actual, "%s", schema.String())
+	assert.Equal(t, Normalise(schema), Normalise(actual), "%s", schema.String())
 }
 
 func TestParsing(t *testing.T) {
@@ -212,8 +214,8 @@ func TestParsing(t *testing.T) {
 		{name: "InvalidRequestRef",
 			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
 			errors: []string{
-				"1:25: reference to unknown data structure \"test.InvalidRequest\"",
-				"1:41: reference to unknown data structure \"test.InvalidResponse\""}},
+				"1:25: reference to unknown data structure \"InvalidRequest\"",
+				"1:41: reference to unknown data structure \"InvalidResponse\""}},
 		{name: "InvalidDataRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
@@ -228,11 +230,26 @@ func TestParsing(t *testing.T) {
 			input: `module test { data Data {} calls verb }`,
 			errors: []string{
 				"1:28: metadata \"calls verb\" is not valid on data structures",
-				"1:34: reference to unknown Verb \"test.verb\"",
+				"1:34: reference to unknown Verb \"verb\"",
 			}},
 		{name: "KeywordAsName",
 			input:  `module int { data String { name String } verb verb(String) String }`,
 			errors: []string{"1:14: data structure name \"String\" is a reserved word"}},
+		{name: "BuiltinRef",
+			input: `module test { verb myIngress(HttpRequest) HttpResponse }`,
+			expected: &Schema{
+				Modules: []*Module{{
+					Name: "test",
+					Decls: []Decl{
+						&Verb{
+							Name:     "myIngress",
+							Request:  &DataRef{Module: "ftl", Name: "HttpRequest"},
+							Response: &DataRef{Module: "ftl", Name: "HttpResponse"},
+						},
+					},
+				}},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -250,7 +267,8 @@ func TestParsing(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				actual = Normalise(actual)
-				assert.Equal(t, test.expected, actual, test.input)
+				test.expected.Modules = append([]*Module{Builtins()}, test.expected.Modules...)
+				assert.Equal(t, Normalise(test.expected), Normalise(actual), test.input)
 			}
 		})
 	}
@@ -283,5 +301,5 @@ module todo {
 	actual, err := ParseModuleString("", input)
 	assert.NoError(t, err)
 	actual = Normalise(actual)
-	assert.Equal(t, schema.Modules[0], actual)
+	assert.Equal(t, Normalise(schema.Modules[1]), Normalise(actual))
 }
