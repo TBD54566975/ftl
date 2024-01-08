@@ -38,6 +38,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/swaggest/jsonschema-go v0.3.64
 	github.com/titanous/json5 v1.0.0
+	github.com/tmc/langchaingo v0.1.3
 	github.com/zalando/go-keyring v0.2.3
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
@@ -76,7 +77,6 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
-	github.com/tmc/langchaingo v0.1.3 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

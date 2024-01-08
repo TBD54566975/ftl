@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/TBD54566975/ftl/backend/common/exec"
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/tmc/langchaingo/llms"
-	"github.com/tmc/langchaingo/llms/ollama"
 	"net"
 	"os"
 	"path/filepath"
+
+	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/ollama"
+
+	"github.com/TBD54566975/ftl/backend/common/exec"
+	"github.com/TBD54566975/ftl/backend/common/log"
 )
 
 type schemaImportCmd struct {
