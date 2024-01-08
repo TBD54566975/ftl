@@ -393,13 +393,6 @@ func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSch
 }
 
 func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
-	if err := stream.Send(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
-		Schema:     schema.Builtins().ToProto().(*schemapb.Module),
-		More:       true,
-		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
-	}); err != nil {
-		return err
-	}
 	return s.watchModuleChanges(ctx, func(response *ftlv1.PullSchemaResponse) error {
 		return stream.Send(response)
 	})
@@ -956,6 +949,19 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		deploymentChanges <- dal.DeploymentNotification{Message: types.Some(deployment)}
 	}
 	logger.Infof("Seeded %d deployments", initialCount)
+
+	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	buildinsResponse := &ftlv1.PullSchemaResponse{
+		ModuleName: builtins.Name,
+		Schema:     builtins,
+		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+		More:       initialCount > 1,
+	}
+
+	err = sendChange(buildinsResponse)
+	if err != nil {
+		return err
+	}
 
 	// Subscribe to deployment changes.
 	s.dal.DeploymentChanges.Subscribe(deploymentChanges)
