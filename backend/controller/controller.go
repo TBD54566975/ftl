@@ -383,15 +383,23 @@ func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSch
 	if err != nil {
 		return nil, err
 	}
-	sch := &schemapb.Schema{
-		Modules: slices.Map(schemas, func(d *schema.Module) *schemapb.Module {
-			return d.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-		}),
+	modules := []*schemapb.Module{ //nolint:forcetypeassert
+		schema.Builtins().ToProto().(*schemapb.Module),
 	}
-	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: sch}), nil
+	modules = append(modules, slices.Map(schemas, func(d *schema.Module) *schemapb.Module {
+		return d.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	})...)
+	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: &schemapb.Schema{Modules: modules}}), nil
 }
 
 func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
+	if err := stream.Send(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
+		Schema:     schema.Builtins().ToProto().(*schemapb.Module),
+		More:       true,
+		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+	}); err != nil {
+		return err
+	}
 	return s.watchModuleChanges(ctx, func(response *ftlv1.PullSchemaResponse) error {
 		return stream.Send(response)
 	})
