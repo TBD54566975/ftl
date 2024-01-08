@@ -14,7 +14,7 @@
 
     <properties>
         <ftl.version>1.0-SNAPSHOT</ftl.version>
-        <ftlEndpoint>http://127.0.0.1:8892</ftlEndpoint>
+        <ftlEndpoint>http://localhost:8892</ftlEndpoint>
         <java.version>1.8</java.version>
         <kotlin.version>1.9.0</kotlin.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
