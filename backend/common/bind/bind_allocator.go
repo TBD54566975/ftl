@@ -1,7 +1,6 @@
 package bind
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -44,7 +43,7 @@ func (b *BindAllocator) Next() *url.URL {
 		_ = l.Close()
 
 		newURL := *b.baseURL
-		newURL.Host = net.JoinHostPort(b.baseURL.Hostname(), fmt.Sprintf("%d", b.port.Load()))
+		newURL.Host = net.JoinHostPort(b.baseURL.Hostname(), strconv.Itoa(int(b.port.Load())))
 		return &newURL
 	}
 }

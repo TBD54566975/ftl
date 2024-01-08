@@ -412,7 +412,11 @@ func parseMap(pctx *parseContext, node ast.Node, tnode *types.Map) (*schema.Map,
 	}, nil
 }
 
-func parseSlice(pctx *parseContext, node ast.Node, tnode *types.Slice) (*schema.Array, error) {
+func parseSlice(pctx *parseContext, node ast.Node, tnode *types.Slice) (schema.Type, error) {
+	// If it's a []byte, treat it as a Bytes type.
+	if basic, ok := tnode.Elem().Underlying().(*types.Basic); ok && basic.Kind() == types.Byte {
+		return &schema.Bytes{Pos: goPosToSchemaPos(node.Pos())}, nil
+	}
 	value, err := parseType(pctx, node, tnode.Elem())
 	if err != nil {
 		return nil, err

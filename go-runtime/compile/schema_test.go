@@ -29,6 +29,7 @@ func TestExtractModuleSchema(t *testing.T) {
     optional Nested?
     time Time
     user two.User
+    bytes Bytes
   }
 
   data Resp {

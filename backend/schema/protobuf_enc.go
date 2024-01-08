@@ -167,6 +167,10 @@ func (s *String) ToProto() proto.Message {
 	return &schemapb.String{}
 }
 
+func (s *Bytes) ToProto() proto.Message {
+	return &schemapb.Bytes{}
+}
+
 func (b *Bool) ToProto() proto.Message {
 	return &schemapb.Bool{}
 }
@@ -210,6 +214,9 @@ func typeToProto(t Type) *schemapb.Type {
 
 	case *String:
 		return &schemapb.Type{Value: &schemapb.Type_String_{String_: t.ToProto().(*schemapb.String)}}
+
+	case *Bytes:
+		return &schemapb.Type{Value: &schemapb.Type_Bytes{Bytes: t.ToProto().(*schemapb.Bytes)}}
 
 	case *Time:
 		return &schemapb.Type{Value: &schemapb.Type_Time{Time: t.ToProto().(*schemapb.Time)}}

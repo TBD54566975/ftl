@@ -15,7 +15,7 @@ import (
 
 var (
 	declUnion            = []Decl{&Data{}, &Verb{}}
-	nonOptionalTypeUnion = []Type{&Int{}, &Float{}, &String{}, &Bool{}, &Time{}, &Array{}, &Map{} /*&VerbRef{},*/, &DataRef{}}
+	nonOptionalTypeUnion = []Type{&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{}, &Map{} /*&VerbRef{},*/, &DataRef{}}
 	typeUnion            = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion        = []Metadata{&MetadataCalls{}, &MetadataIngress{}}
 	ingressUnion         = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
@@ -85,6 +85,12 @@ type String struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Str bool `parser:"@'String'" protobuf:"-"`
+}
+
+type Bytes struct {
+	Pos Position `parser:"" protobuf:"1,optional"`
+
+	Bytes bool `parser:"@'Bytes'" protobuf:"-"`
 }
 
 type Bool struct {

@@ -132,6 +132,8 @@ func typeToSchema(s *schemapb.Type) Type {
 		return &Float{Pos: PosFromProto(s.Float.Pos)}
 	case *schemapb.Type_String_:
 		return &String{Pos: PosFromProto(s.String_.Pos)}
+	case *schemapb.Type_Bytes:
+		return &Bytes{Pos: PosFromProto(s.Bytes.Pos)}
 	case *schemapb.Type_Time:
 		return &Time{Pos: PosFromProto(s.Time.Pos)}
 	case *schemapb.Type_Bool:

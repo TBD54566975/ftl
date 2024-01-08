@@ -91,6 +91,9 @@ func genType(module *schema.Module, t schema.Type) string {
 	case *schema.Time:
 		return "time.Time"
 
+	case *schema.Bytes:
+		return "[]byte"
+
 	case *schema.Int, *schema.Bool, *schema.String:
 		return strings.ToLower(t.String())
 

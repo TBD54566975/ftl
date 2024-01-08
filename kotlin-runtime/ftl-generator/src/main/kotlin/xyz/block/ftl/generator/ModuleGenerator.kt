@@ -143,6 +143,7 @@ class ModuleGenerator() {
       type.int != null -> ClassName("kotlin", "Long")
       type.float != null -> ClassName("kotlin", "Float")
       type.string != null -> ClassName("kotlin", "String")
+      type.bytes != null -> ClassName("kotlin", "ByteArray")
       type.bool != null -> ClassName("kotlin", "Boolean")
       type.time != null -> ClassName("java.time", "OffsetDateTime")
       type.array != null -> {

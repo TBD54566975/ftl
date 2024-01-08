@@ -90,6 +90,43 @@ export class Bool extends Message<Bool> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.Bytes
+ */
+export class Bytes extends Message<Bytes> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  constructor(data?: PartialMessage<Bytes>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Bytes";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Bytes {
+    return new Bytes().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Bytes {
+    return new Bytes().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Bytes {
+    return new Bytes().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Bytes | PlainMessage<Bytes> | undefined, b: Bytes | PlainMessage<Bytes> | undefined): boolean {
+    return proto3.util.equals(Bytes, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Data
  */
 export class Data extends Message<Data> {
@@ -1002,37 +1039,43 @@ export class Type extends Message<Type> {
     case: "string";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Bool bool = 4;
+     * @generated from field: xyz.block.ftl.v1.schema.Bytes bytes = 4;
+     */
+    value: Bytes;
+    case: "bytes";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Bool bool = 5;
      */
     value: Bool;
     case: "bool";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Time time = 5;
+     * @generated from field: xyz.block.ftl.v1.schema.Time time = 6;
      */
     value: Time;
     case: "time";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Array array = 6;
+     * @generated from field: xyz.block.ftl.v1.schema.Array array = 7;
      */
     value: Array;
     case: "array";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Map map = 7;
+     * @generated from field: xyz.block.ftl.v1.schema.Map map = 8;
      */
     value: Map;
     case: "map";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.DataRef dataRef = 8;
+     * @generated from field: xyz.block.ftl.v1.schema.DataRef dataRef = 9;
      */
     value: DataRef;
     case: "dataRef";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 9;
+     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 10;
      */
     value: Optional;
     case: "optional";
@@ -1049,12 +1092,13 @@ export class Type extends Message<Type> {
     { no: 1, name: "int", kind: "message", T: Int, oneof: "value" },
     { no: 2, name: "float", kind: "message", T: Float, oneof: "value" },
     { no: 3, name: "string", kind: "message", T: String, oneof: "value" },
-    { no: 4, name: "bool", kind: "message", T: Bool, oneof: "value" },
-    { no: 5, name: "time", kind: "message", T: Time, oneof: "value" },
-    { no: 6, name: "array", kind: "message", T: Array, oneof: "value" },
-    { no: 7, name: "map", kind: "message", T: Map, oneof: "value" },
-    { no: 8, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
-    { no: 9, name: "optional", kind: "message", T: Optional, oneof: "value" },
+    { no: 4, name: "bytes", kind: "message", T: Bytes, oneof: "value" },
+    { no: 5, name: "bool", kind: "message", T: Bool, oneof: "value" },
+    { no: 6, name: "time", kind: "message", T: Time, oneof: "value" },
+    { no: 7, name: "array", kind: "message", T: Array, oneof: "value" },
+    { no: 8, name: "map", kind: "message", T: Map, oneof: "value" },
+    { no: 9, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
+    { no: 10, name: "optional", kind: "message", T: Optional, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Type {

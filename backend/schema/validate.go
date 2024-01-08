@@ -9,8 +9,12 @@ import (
 
 var (
 	// Identifiers that can't be used as data or verb names.
+	//
+	// We don't need Array/Map/VerbRef/DataRef here because there are no
+	// keywords associated with these types.
 	reservedIdentNames = map[string]bool{
 		"Int": true, "Float": true, "String": true, "Bool": true, "Time": true,
+		"Bytes": true,
 	}
 )
 
@@ -128,7 +132,7 @@ func ValidateModule(module *Module) error {
 			}
 
 		case *Array, *Bool, *DataRef, *Field, *Float, *Int,
-			*Time, *Map, *Module, *Schema, *String, *VerbRef,
+			*Time, *Map, *Module, *Schema, *String, *Bytes, *VerbRef,
 			*MetadataCalls, *MetadataIngress, IngressPathComponent,
 			*IngressPathLiteral, *IngressPathParameter, *Optional:
 		case Type, Metadata, Decl: // Union sql.
