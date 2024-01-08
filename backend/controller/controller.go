@@ -383,12 +383,13 @@ func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSch
 	if err != nil {
 		return nil, err
 	}
-	sch := &schemapb.Schema{
-		Modules: slices.Map(schemas, func(d *schema.Module) *schemapb.Module {
-			return d.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-		}),
+	modules := []*schemapb.Module{ //nolint:forcetypeassert
+		schema.Builtins().ToProto().(*schemapb.Module),
 	}
-	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: sch}), nil
+	modules = append(modules, slices.Map(schemas, func(d *schema.Module) *schemapb.Module {
+		return d.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	})...)
+	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: &schemapb.Schema{Modules: modules}}), nil
 }
 
 func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], stream *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
@@ -948,6 +949,19 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		deploymentChanges <- dal.DeploymentNotification{Message: types.Some(deployment)}
 	}
 	logger.Infof("Seeded %d deployments", initialCount)
+
+	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	buildinsResponse := &ftlv1.PullSchemaResponse{
+		ModuleName: builtins.Name,
+		Schema:     builtins,
+		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+		More:       initialCount > 1,
+	}
+
+	err = sendChange(buildinsResponse)
+	if err != nil {
+		return err
+	}
 
 	// Subscribe to deployment changes.
 	s.dal.DeploymentChanges.Subscribe(deploymentChanges)

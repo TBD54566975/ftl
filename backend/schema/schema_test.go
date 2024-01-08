@@ -243,8 +243,8 @@ func TestParsing(t *testing.T) {
 					Decls: []Decl{
 						&Verb{
 							Name:     "myIngress",
-							Request:  &DataRef{Module: "ftl", Name: "HttpRequest"},
-							Response: &DataRef{Module: "ftl", Name: "HttpResponse"},
+							Request:  &DataRef{Module: "builtin", Name: "HttpRequest"},
+							Response: &DataRef{Module: "builtin", Name: "HttpResponse"},
 						},
 					},
 				}},

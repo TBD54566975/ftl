@@ -23,7 +23,7 @@ var (
 	// BuiltinsSource is the schema source code for built-in types.
 	BuiltinsSource = `
 // Built-in types for FTL.
-builtin module ftl {
+builtin module builtin {
   // HTTP request structure used for HTTP ingress verbs.
   data HttpRequest {
     method String
@@ -152,7 +152,7 @@ func resolveRef(localModule *Module, ref *Ref, exist map[string]bool) bool {
 	if ref.Module != "" {
 		return exist[ref.String()]
 	}
-	for _, module := range []string{localModule.Name, "ftl"} {
+	for _, module := range []string{localModule.Name, "builtin"} {
 		clone := reflect.DeepCopy(ref)
 		clone.Module = module
 		if exist[clone.String()] {
@@ -173,7 +173,7 @@ func ValidateModule(module *Module) error {
 	if !validNameRe.MatchString(module.Name) {
 		merr = append(merr, fmt.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
 	}
-	if module.Builtin && module.Name != "ftl" {
+	if module.Builtin && module.Name != "builtin" {
 		merr = append(merr, fmt.Errorf("%s: only the \"ftl\" module can be marked as builtin", module.Pos))
 	}
 	err := Visit(module, func(n Node, next func() error) error {
