@@ -51,7 +51,7 @@ require (
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e
 	golang.org/x/mod v0.14.0
 	golang.org/x/net v0.19.0
-	golang.org/x/sync v0.5.0
+	golang.org/x/sync v0.6.0
 	golang.org/x/tools v0.16.1
 	google.golang.org/protobuf v1.32.0
 	modernc.org/sqlite v1.28.0
