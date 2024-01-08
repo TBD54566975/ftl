@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/alecthomas/types"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 )
@@ -310,6 +311,16 @@ type Schema struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Modules []*Module `parser:"@@*" protobuf:"2"`
+}
+
+// Module returns the named module if it exists.
+func (s *Schema) Module(name string) types.Option[*Module] {
+	for _, module := range s.Modules {
+		if module.Name == name {
+			return types.Some(module)
+		}
+	}
+	return types.None[*Module]()
 }
 
 func (s *Schema) DataMap() map[DataRef]*Data {

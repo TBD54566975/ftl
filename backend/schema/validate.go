@@ -73,10 +73,12 @@ func Validate(schema *Schema) (*Schema, error) {
 	dataRefs := []*DataRef{}
 	merr := []error{}
 	ingress := map[string]*Verb{}
+
 	// Inject builtins.
 	builtins := Builtins()
 	schema.Modules = slices.DeleteFunc(schema.Modules, func(m *Module) bool { return m.Name == builtins.Name })
 	schema.Modules = append([]*Module{builtins}, schema.Modules...)
+
 	// Map from reference to the module it is defined in.
 	localModule := map[*Ref]*Module{}
 
