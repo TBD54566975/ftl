@@ -5,7 +5,7 @@ top="$(git rev-parse --show-toplevel)"
 cd "${top}"
 
 prepare_template() (
-  bit build/template/ftl/jars/ftl-runtime.jar
+  just install-jars
 )
 
 prepare_template
