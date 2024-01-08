@@ -693,7 +693,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		logger.Errorf(err, "Invalid module schema")
 		return nil, fmt.Errorf("%s: %w", "invalid module schema", err)
 	}
-	if err := s.validateWholeSchema(ctx, module); err != nil {
+	module, err = s.validateWholeSchema(ctx, module)
+	if err != nil {
 		logger.Errorf(err, "Invalid module schema")
 		return nil, fmt.Errorf("%s: %w", "invalid module schema", err)
 	}
@@ -710,16 +711,19 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 }
 
 // Load schemas for existing modules, combine with our new one, and validate as a whole.
-func (s *Service) validateWholeSchema(ctx context.Context, module *schema.Module) error {
+func (s *Service) validateWholeSchema(ctx context.Context, module *schema.Module) (*schema.Module, error) {
 	existingModules, err := s.dal.GetActiveDeploymentSchemas(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: %w", "could not get existing schemas", err)
+		return nil, fmt.Errorf("%s: %w", "could not get existing schemas", err)
 	}
 	schemaMap := ftlmaps.FromSlice(existingModules, func(el *schema.Module) (string, *schema.Module) { return el.Name, el })
 	schemaMap[module.Name] = module
 	fullSchema := &schema.Schema{Modules: maps.Values(schemaMap)}
-	_, err = schema.Validate(fullSchema)
-	return err
+	schema, err := schema.Validate(fullSchema)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", "invalid schema", err)
+	}
+	return schema.Module(module.Name).MustGet(), nil
 }
 
 func (s *Service) getDeployment(ctx context.Context, name string) (*model.Deployment, error) {
@@ -1053,11 +1057,11 @@ func (s *Service) getActiveSchema(ctx context.Context) (*schema.Schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &schema.Schema{
+	return schema.Validate(&schema.Schema{
 		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
 			return d.Schema
 		}),
-	}, nil
+	})
 }
 
 // Copied from the Apache-licensed connect-go source.
