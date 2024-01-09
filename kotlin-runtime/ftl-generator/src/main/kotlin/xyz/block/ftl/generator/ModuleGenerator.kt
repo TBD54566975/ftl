@@ -3,6 +3,7 @@ package xyz.block.ftl.generator
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import xyz.block.ftl.Context
+import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Ingress
 import xyz.block.ftl.v1.schema.*
@@ -23,9 +24,7 @@ class ModuleGenerator() {
       val file = generateModule(it, moduleClientSuffix)
       file.writeTo(sourcesDest)
 
-      println(
-        "Generated module: ${fqOutputDir}/generated-sources/ftl/${it.name}/${file.name}.kt"
-      )
+      println("Generated module: ${fqOutputDir}/generated-sources/ftl/${it.name}/${file.name}.kt")
     }
   }
 
@@ -101,7 +100,7 @@ class ModuleGenerator() {
     verb.metadata.forEach { metadata ->
       metadata.ingress?.let {
         verbFunBuilder.addAnnotation(
-          AnnotationSpec.builder(Ingress::class)
+          AnnotationSpec.builder(if (it.type == "ftl") Ingress::class else HttpIngress::class)
             .addMember("%T", ClassName("xyz.block.ftl.Method", it.method.replaceBefore(".", "")))
             .addMember("%S", ingressPathString(it.path))
             .build()

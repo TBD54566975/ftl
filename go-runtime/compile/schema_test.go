@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 )
@@ -47,30 +48,35 @@ func TestParseDirectives(t *testing.T) {
 		input    string
 		expected directive
 	}{
-		{name: "NoAttributes", input: "ftl:verb", expected: directive{Kind: "verb"}},
-		{name: "PositionalAttribute", input: `ftl:ingress GET /foo`, expected: directive{
-			Kind: "ingress",
-			Attrs: []directiveAttr{
-				dirAttrIdent("", "GET"),
-				dirAttrPath("", "/foo"),
+		{name: "Module", input: "ftl:module foo", expected: &directiveModule{Name: "foo"}},
+		{name: "Verb", input: "ftl:verb", expected: &directiveVerb{Verb: true}},
+		{name: "IngressImplicitFTL", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
+			Type: &directiveIngressHTTP{
+				Method: "GET",
+				Path:   "/foo",
 			},
 		}},
-		{name: "MixedPositionalKeywordAttributes", input: `ftl:ingress POST path=/bar`,
-			expected: directive{
-				Kind: "ingress",
-				Attrs: []directiveAttr{
-					dirAttrIdent("", "POST"),
-					dirAttrPath("path", "/bar"),
-				},
+		{name: "IngressFTL", input: `ftl:ingress ftl POST /bar`, expected: &directiveIngress{
+			Type: &directiveIngressHTTP{
+				Type:   "ftl",
+				Method: "POST",
+				Path:   "/bar",
 			},
-		},
+		}},
+		{name: "IngressHTTP", input: `ftl:ingress http POST /bar`, expected: &directiveIngress{
+			Type: &directiveIngressHTTP{
+				Type:   "http",
+				Method: "POST",
+				Path:   "/bar",
+			},
+		}},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := directiveParser.ParseString("", tt.input)
 			assert.NoError(t, err)
-			assert.Equal(t, &tt.expected, got)
+			assert.Equal(t, tt.expected, got.Directive, assert.Exclude[lexer.Position]())
 		})
 	}
 }
@@ -101,17 +107,4 @@ func TestParseBasicTypes(t *testing.T) {
 			assert.Equal(t, tt.expected, parsed)
 		})
 	}
-}
-
-func dirAttrIdent(key string, s string) directiveAttr {
-	if key == "" {
-		return directiveAttr{Value: directiveValue{Ident: &s}}
-	}
-	return directiveAttr{Key: &key, Value: directiveValue{Ident: &s}}
-}
-func dirAttrPath(key string, s string) directiveAttr {
-	if key == "" {
-		return directiveAttr{Value: directiveValue{Path: &s}}
-	}
-	return directiveAttr{Key: &key, Value: directiveValue{Path: &s}}
 }

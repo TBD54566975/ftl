@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -161,6 +162,12 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	return svc, nil
 }
 
+type HTTPResponse struct {
+	Status  int
+	Headers map[string][]string
+	Body    []byte
+}
+
 // ServeHTTP handles ingress routes.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := log.FromContext(r.Context())
@@ -190,7 +197,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := ingress.ValidateAndExtractBody(route, r, sch)
+	body, err := ingress.ValidateAndExtractRequestBody(route, r, sch)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -219,9 +226,35 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch msg := resp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Body:
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		_, _ = w.Write(msg.Body)
+		verb := sch.ResolveVerbRef(&schema.VerbRef{Name: route.Verb, Module: route.Module})
+		if verb == nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var responseBody []byte
+
+		if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
+			var response HTTPResponse
+			if err := json.Unmarshal(msg.Body, &response); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			for k, v := range response.Headers {
+				w.Header()[k] = v
+			}
+			w.WriteHeader(response.Status)
+			responseBody = response.Body
+		} else {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			responseBody = msg.Body
+		}
+		_, err = w.Write(responseBody)
+		if err != nil {
+			logger.Errorf(err, "Could not write response body")
+		}
 
 	case *ftlv1.CallResponse_Error_:
 		http.Error(w, msg.Error.Message, http.StatusInternalServerError)
@@ -955,7 +988,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		ModuleName: builtins.Name,
 		Schema:     builtins,
 		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
-		More:       initialCount > 1,
+		More:       initialCount > 0,
 	}
 
 	err = sendChange(buildinsResponse)

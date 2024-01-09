@@ -703,12 +703,17 @@ export class MetadataIngress extends Message<MetadataIngress> {
   pos?: Position;
 
   /**
-   * @generated from field: string method = 2;
+   * @generated from field: string type = 2;
+   */
+  type = "";
+
+  /**
+   * @generated from field: string method = 3;
    */
   method = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.IngressPathComponent path = 3;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.IngressPathComponent path = 4;
    */
   path: IngressPathComponent[] = [];
 
@@ -721,8 +726,9 @@ export class MetadataIngress extends Message<MetadataIngress> {
   static readonly typeName = "xyz.block.ftl.v1.schema.MetadataIngress";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "path", kind: "message", T: IngressPathComponent, repeated: true },
+    { no: 2, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "path", kind: "message", T: IngressPathComponent, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataIngress {

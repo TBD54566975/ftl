@@ -77,6 +77,7 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 	case *schemapb.Metadata_Ingress:
 		return &MetadataIngress{
 			Pos:    posFromProto(s.Ingress.Pos),
+			Type:   s.Ingress.Type,
 			Method: s.Ingress.Method,
 			Path:   ingressPathComponentListToSchema(s.Ingress.Path),
 		}

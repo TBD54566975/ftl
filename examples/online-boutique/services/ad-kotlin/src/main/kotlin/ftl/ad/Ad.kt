@@ -19,7 +19,7 @@ class AdModule {
 
   @Throws(Exception::class)
   @Verb
-  @Ingress(Method.GET, "/get")
+  @Ingress(Type.FTL, Method.GET, "/get")
   fun get(context: Context, req: AdRequest): AdResponse {
     return when {
       req.contextKeys.isNotEmpty() -> AdResponse(ads = contextualAds(req.contextKeys))

@@ -50,6 +50,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			return d.Schema
 		}),
 	}
+	sch.Modules = append(sch.Modules, schema.Builtins())
 
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
@@ -63,7 +64,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				v := decl.ToProto().(*schemapb.Verb)
 				verbSchema := schema.VerbToSchema(v)
 				dataRef := schema.DataRef{
-					Module: deployment.Module,
+					Module: verbSchema.Request.Module,
 					Name:   verbSchema.Request.Name,
 				}
 				jsonRequestSchema, err := schema.DataToJSONSchema(sch, dataRef)

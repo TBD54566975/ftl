@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alecthomas/types"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -48,6 +49,15 @@ func (v *Verb) AddCall(verb *VerbRef) {
 		}
 	}
 	v.Metadata = append(v.Metadata, &MetadataCalls{Calls: []*VerbRef{verb}})
+}
+
+func (v *Verb) GetMetadataIngress() types.Option[*MetadataIngress] {
+	for _, m := range v.Metadata {
+		if m, ok := m.(*MetadataIngress); ok {
+			return types.Some(m)
+		}
+	}
+	return types.None[*MetadataIngress]()
 }
 
 func (v *Verb) ToProto() proto.Message {

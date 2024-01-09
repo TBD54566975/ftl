@@ -10,6 +10,7 @@
 
     <modules>
         <module>ftl-module-echo</module>
+        <module>ftl-module-api</module>
     </modules>
 
     <properties>

@@ -163,6 +163,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             metadata = listOf(
               Metadata(
                 ingress = MetadataIngress(
+                  type = "ftl",
                   method = "GET",
                   path = listOf(
                     IngressPathComponent(
