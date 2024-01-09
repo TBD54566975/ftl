@@ -9,6 +9,10 @@ import (
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
+func posToProto(pos Position) *schemapb.Position {
+	return &schemapb.Position{Line: int64(pos.Line), Column: int64(pos.Column), Filename: pos.Filename}
+}
+
 func nodeListToProto[T proto.Message, U Node](nodes []U) []T {
 	out := make([]T, len(nodes))
 	for i, n := range nodes {
@@ -65,138 +69,6 @@ func ingressListToProto(nodes []IngressPathComponent) []*schemapb.IngressPathCom
 		}
 	}
 	return out
-}
-
-func (p Position) ToProto() proto.Message {
-	return &schemapb.Position{
-		Line:     int64(p.Line),
-		Column:   int64(p.Column),
-		Filename: p.Filename,
-	}
-}
-
-func (s *Schema) ToProto() proto.Message {
-	return &schemapb.Schema{
-		Pos:     s.Pos.ToProto().(*schemapb.Position),
-		Modules: nodeListToProto[*schemapb.Module](s.Modules),
-	}
-}
-
-func (m *Module) ToProto() proto.Message {
-	return &schemapb.Module{
-		Pos:      m.Pos.ToProto().(*schemapb.Position),
-		Builtin:  m.Builtin,
-		Name:     m.Name,
-		Comments: m.Comments,
-		Decls:    declListToProto(m.Decls),
-	}
-}
-
-func (v *Verb) ToProto() proto.Message {
-	return &schemapb.Verb{
-		Pos:      v.Pos.ToProto().(*schemapb.Position),
-		Name:     v.Name,
-		Comments: v.Comments,
-		Request:  v.Request.ToProto().(*schemapb.DataRef),
-		Response: v.Response.ToProto().(*schemapb.DataRef),
-		Metadata: metadataListToProto(v.Metadata),
-	}
-}
-
-func (d *Data) ToProto() proto.Message {
-	return &schemapb.Data{
-		Pos:      d.Pos.ToProto().(*schemapb.Position),
-		Name:     d.Name,
-		Fields:   nodeListToProto[*schemapb.Field](d.Fields),
-		Comments: d.Comments,
-	}
-}
-
-func (f *Field) ToProto() proto.Message {
-	return &schemapb.Field{
-		Pos:      f.Pos.ToProto().(*schemapb.Position),
-		Name:     f.Name,
-		Type:     typeToProto(f.Type),
-		Comments: f.Comments,
-	}
-}
-
-func (v *VerbRef) ToProto() proto.Message {
-	return &schemapb.VerbRef{
-		Pos:    v.Pos.ToProto().(*schemapb.Position),
-		Name:   v.Name,
-		Module: v.Module,
-	}
-}
-
-func (s *DataRef) ToProto() proto.Message {
-	return &schemapb.DataRef{
-		Pos:    s.Pos.ToProto().(*schemapb.Position),
-		Name:   s.Name,
-		Module: s.Module,
-	}
-}
-
-func (m *MetadataCalls) ToProto() proto.Message {
-	return &schemapb.MetadataCalls{
-		Pos:   m.Pos.ToProto().(*schemapb.Position),
-		Calls: nodeListToProto[*schemapb.VerbRef](m.Calls),
-	}
-}
-
-func (m *MetadataIngress) ToProto() proto.Message {
-	return &schemapb.MetadataIngress{
-		Pos:    m.Pos.ToProto().(*schemapb.Position),
-		Method: m.Method,
-		Path:   ingressListToProto(m.Path),
-	}
-}
-
-func (l *IngressPathLiteral) ToProto() proto.Message {
-	return &schemapb.IngressPathLiteral{Text: l.Text}
-}
-
-func (l *IngressPathParameter) ToProto() proto.Message {
-	return &schemapb.IngressPathParameter{Name: l.Name}
-}
-
-func (i *Int) ToProto() proto.Message {
-	return &schemapb.Int{}
-}
-
-func (s *String) ToProto() proto.Message {
-	return &schemapb.String{}
-}
-
-func (s *Bytes) ToProto() proto.Message {
-	return &schemapb.Bytes{}
-}
-
-func (b *Bool) ToProto() proto.Message {
-	return &schemapb.Bool{}
-}
-
-func (f *Float) ToProto() proto.Message {
-	return &schemapb.Float{}
-}
-
-func (t *Time) ToProto() proto.Message {
-	return &schemapb.Time{}
-}
-
-func (m *Map) ToProto() proto.Message {
-	return &schemapb.Map{
-		Key:   typeToProto(m.Key),
-		Value: typeToProto(m.Value),
-	}
-}
-
-func (a *Array) ToProto() proto.Message {
-	return &schemapb.Array{Element: typeToProto(a.Element)}
-}
-
-func (o *Optional) ToProto() proto.Message {
-	return &schemapb.Optional{Type: typeToProto(o.Type)}
 }
 
 func typeToProto(t Type) *schemapb.Type {
