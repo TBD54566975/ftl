@@ -8,6 +8,30 @@ import "xyz/block/ftl/v1/schema/runtime.proto";
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema;schemapb";
 option java_multiple_files = true;
 
+message DataRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message SinkRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message SourceRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message VerbRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
 message Array {
   optional Position pos = 1;
   Type element = 2;
@@ -112,30 +136,6 @@ message Position {
   string filename = 1;
   int64 line = 2;
   int64 column = 3;
-}
-
-message DataRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message SinkRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message SourceRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message VerbRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
 }
 
 message Schema {
