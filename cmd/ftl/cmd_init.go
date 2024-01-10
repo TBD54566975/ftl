@@ -10,10 +10,9 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
-
-	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
