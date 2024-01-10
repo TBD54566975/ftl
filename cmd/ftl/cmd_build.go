@@ -38,7 +38,7 @@ func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleCo
 
 	logger.Infof("Building kotlin module '%s'", config.Module)
 
-	if err := b.setPomProperties(logger); err != nil {
+	if err := setPomProperties(logger, filepath.Join(b.ModuleDir, "..")); err != nil {
 		return fmt.Errorf("unable to update ftl.version in %s: %w", b.ModuleDir, err)
 	}
 
@@ -51,7 +51,7 @@ func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleCo
 	return nil
 }
 
-func (b *buildCmd) setPomProperties(logger *log.Logger) error {
+func setPomProperties(logger *log.Logger, baseDir string) error {
 	ftlVersion := ftl.Version
 	if ftlVersion == "dev" {
 		ftlVersion = "1.0-SNAPSHOT"
@@ -62,7 +62,7 @@ func (b *buildCmd) setPomProperties(logger *log.Logger) error {
 		ftlEndpoint = "http://127.0.0.1:8892"
 	}
 
-	pomFile := filepath.Clean(filepath.Join(b.ModuleDir, "..", "pom.xml"))
+	pomFile := filepath.Clean(filepath.Join(baseDir, "pom.xml"))
 
 	logger.Infof("Setting ftl.version in %s to %s", pomFile, ftlVersion)
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"html/template"
 	"os"
@@ -9,10 +10,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
 
+	"github.com/TBD54566975/scaffolder"
+
+	"github.com/TBD54566975/ftl/backend/common/log"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
@@ -49,7 +52,7 @@ type initKotlinCmd struct {
 	Name       string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
-func (i initKotlinCmd) Run(parent *initCmd) error {
+func (i initKotlinCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
@@ -75,7 +78,11 @@ func (i initKotlinCmd) Run(parent *initCmd) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	return scaffold(parent.Hermit, tmpDir, i.Dir, i, options...)
+	if err := scaffold(parent.Hermit, tmpDir, i.Dir, i, options...); err != nil {
+		return err
+	}
+
+	return setPomProperties(log.FromContext(ctx), i.Dir)
 }
 
 func updatePom(pomFile, name string) error {
