@@ -3,11 +3,7 @@ package xyz.block.ftl.registry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import xyz.block.ftl.Context
-import xyz.block.ftl.Ignore
-import xyz.block.ftl.Ingress
-import xyz.block.ftl.Method
-import xyz.block.ftl.Verb
+import xyz.block.ftl.*
 import xyz.block.ftl.client.LoopbackVerbServiceClient
 import xyz.block.ftl.serializer.makeGson
 import kotlin.test.assertContentEquals
@@ -73,7 +69,8 @@ class RegistryTest {
   // For some reason "RenamedVerb" does not show up in the scan result.
   // I think it's because there's some additional magic that has to be
   // done to get the class to load when they're in tests.
-  @Disabled("Verbs defined in the tests don't seem to be stable.") @Test
+  @Disabled("Verbs defined in the tests don't seem to be stable.")
+  @Test
   fun registerAll() {
     val registry = Registry("xyz.block")
     registry.registerAll()

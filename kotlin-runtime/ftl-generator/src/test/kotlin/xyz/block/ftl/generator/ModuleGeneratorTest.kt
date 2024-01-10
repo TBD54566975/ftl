@@ -149,6 +149,7 @@ public class TestModule()
           metadata = listOf(
             Metadata(
               ingress = MetadataIngress(
+                type = "ftl",
                 path = listOf(IngressPathComponent(ingressPathLiteral = IngressPathLiteral(text = "test"))),
                 method = "GET"
               )

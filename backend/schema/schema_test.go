@@ -50,6 +50,7 @@ var schema = MustValidate(Normalise(&Schema{
 					Response: &DataRef{Module: "todo", Name: "DestroyResponse"},
 					Metadata: []Metadata{
 						&MetadataIngress{
+							Type:   "ftl",
 							Method: "GET",
 							Path: []IngressPathComponent{
 								&IngressPathLiteral{Text: "todo"},
@@ -96,7 +97,7 @@ module todo {
       
 
   verb destroy(todo.DestroyRequest) todo.DestroyResponse  
-      ingress GET /todo/destroy/{id}
+      ingress ftl GET /todo/destroy/{id}
 }
 `
 	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(schema.String()))
@@ -295,7 +296,7 @@ module todo {
   verb create(todo.CreateRequest) todo.CreateResponse
   	calls todo.destroy
   verb destroy(todo.DestroyRequest) todo.DestroyResponse
-  	ingress GET /todo/destroy/{id}
+  	ingress ftl GET /todo/destroy/{id}
 }
 `
 	actual, err := ParseModuleString("", input)

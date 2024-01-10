@@ -1,9 +1,11 @@
 package ingress
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -74,26 +76,61 @@ func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) 
 	return validateRequestMap(verb.Request, []string{verb.Request.String()}, requestMap, sch)
 }
 
-// ValidateAndExtractBody validates the request body against the schema and extracts the request body as a JSON blob.
-func ValidateAndExtractBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
+type HTTPRequest struct {
+	Method         string              `json:"method"`
+	Path           string              `json:"path"`
+	PathParameters map[string]string   `json:"pathParameters"`
+	Query          map[string][]string `json:"query"`
+	Headers        map[string][]string `json:"headers"`
+	Body           []byte              `json:"body"`
+}
+
+// ValidateAndExtractRequestBody extracts the HttpRequest body from an HTTP request.
+func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
 	verb := sch.ResolveVerbRef(&schema.VerbRef{Name: route.Verb, Module: route.Module})
 	if verb == nil {
 		return nil, fmt.Errorf("unknown verb %s", route.Verb)
 	}
 
-	requestMap, err := buildRequestMap(route, r, verb.Request, sch)
-	if err != nil {
-		return nil, err
-	}
+	var body []byte
+	if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
+		defer r.Body.Close()
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			return nil, err
+		}
+		pathParameters := map[string]string{}
+		matchSegments(route.Path, r.URL.Path, func(segment, value string) {
+			pathParameters[segment] = value
+		})
 
-	err = validateRequestMap(verb.Request, []string{verb.Request.String()}, requestMap, sch)
-	if err != nil {
-		return nil, err
-	}
+		request := &HTTPRequest{
+			Method:         r.Method,
+			Path:           r.URL.Path,
+			PathParameters: pathParameters,
+			Query:          r.URL.Query(),
+			Headers:        r.Header,
+			Body:           bodyBytes,
+		}
+		body, err = json.Marshal(request)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		requestMap, err := buildRequestMap(route, r, verb.Request, sch)
+		if err != nil {
+			return nil, err
+		}
 
-	body, err := json.Marshal(requestMap)
-	if err != nil {
-		return nil, err
+		err = validateRequestMap(verb.Request, []string{verb.Request.String()}, requestMap, sch)
+		if err != nil {
+			return nil, err
+		}
+
+		body, err = json.Marshal(requestMap)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return body, nil
@@ -233,6 +270,15 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		if valueMap, ok := value.(map[string]any); ok {
 			if err := validateRequestMap(fieldType, path, valueMap, sch); err != nil {
 				return err
+			}
+			typeMatches = true
+		}
+	case *schema.Bytes:
+		_, typeMatches = value.([]byte)
+		if bodyStr, ok := value.(string); ok {
+			_, err := base64.StdEncoding.DecodeString(bodyStr)
+			if err != nil {
+				return fmt.Errorf("%s is not a valid base64 string", path)
 			}
 			typeMatches = true
 		}

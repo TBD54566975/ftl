@@ -94,8 +94,9 @@ message MetadataCalls {
 
 message MetadataIngress {
   optional Position pos = 1;
-  string method = 2;
-  repeated IngressPathComponent path = 3;
+  string type = 2;
+  string method = 3;
+  repeated IngressPathComponent path = 4;
 }
 
 message Module {

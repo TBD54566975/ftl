@@ -4,6 +4,7 @@ import io.grpc.stub.StreamObserver
 import okio.ByteString.Companion.encodeUtf8
 import xyz.block.ftl.Context
 import xyz.block.ftl.client.VerbServiceClient
+import xyz.block.ftl.logging.Logging
 import xyz.block.ftl.registry.Registry
 import xyz.block.ftl.registry.defaultJvmModuleName
 import xyz.block.ftl.registry.toModel
@@ -17,6 +18,8 @@ class Server(
   val routingClient: VerbServiceClient,
   val jvmModule: String = defaultJvmModuleName,
 ) : VerbServiceWireGrpc.VerbServiceImplBase() {
+
+  private val logger = Logging.logger(Server::class)
 
   override fun Ping(request: PingRequest, response: StreamObserver<PingResponse>) {
     response.onNext(PingResponse())
@@ -39,6 +42,7 @@ class Server(
       response.onNext(CallResponse(body = out.encodeUtf8()))
     } catch (t: Throwable) {
       val stackTrace = t.stackTraceToString()
+      logger.error("error calling verb $verbRef: $stackTrace")
       response.onNext(
         CallResponse(
           error = CallResponse.Error(

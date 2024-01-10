@@ -28,6 +28,7 @@ builtin module builtin {
   data HttpRequest {
     method String
     path String
+    pathParameters {String: String}
     query {String: [String]}
     headers {String: [String]}
     body Bytes
@@ -109,6 +110,10 @@ func Validate(schema *Schema) (*Schema, error) {
 					if md, ok := md.(*MetadataIngress); ok {
 						if existing, ok := ingress[md.String()]; ok {
 							return fmt.Errorf("duplicate %q for %s:%q and %s:%q", md.String(), existing.Pos, existing.Name, n.Pos, n.Name)
+						}
+						if md.Type == "http" && (n.Request.String() != "builtin.HttpRequest" || n.Response.String() != "builtin.HttpResponse") {
+							return fmt.Errorf("%s: HTTP ingress verb %s(%s) %s must have the signature %s(builtin.HttpRequest) builtin.HttpResponse",
+								md.Pos, n.Name, n.Request, n.Response, n.Name)
 						}
 						ingress[md.String()] = n
 					}
