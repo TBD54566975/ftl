@@ -11,7 +11,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/TBD54566975/scaffolder"
 	"github.com/TBD54566975/scaffolder/extensions/javascript"
-	"github.com/iancoleman/strcase"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
@@ -138,17 +137,7 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 
 	for _, module := range modules {
 		if err := scaffolder.Scaffold(s.Template, s.Dest, module,
-			scaffolder.Functions(scaffolder.FuncMap{
-				"snake":          strcase.ToSnake,
-				"screamingSnake": strcase.ToScreamingSnake,
-				"camel":          strcase.ToCamel,
-				"lowerCamel":     strcase.ToLowerCamel,
-				"kebab":          strcase.ToKebab,
-				"screamingKebab": strcase.ToScreamingKebab,
-				"upper":          strings.ToUpper,
-				"lower":          strings.ToLower,
-				"title":          strings.Title,
-			}),
+			scaffolder.Functions(scaffoldFuncs),
 			scaffolder.Extend(javascript.Extension("template.js", javascript.WithLogger(makeJSLoggerAdapter(logger)))),
 		); err != nil {
 			return err
