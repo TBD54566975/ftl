@@ -19,7 +19,7 @@ import (
 
 // Call a Verb through the FTL Controller.
 func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (resp Resp, err error) {
-	callee := ToVerbRef(verb)
+	callee := VerbToRef(verb)
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	reqData, err := encoding.Marshal(req)
 	if err != nil {
@@ -45,10 +45,19 @@ func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (re
 	}
 }
 
-// ToVerbRef returns the FTL reference for a Verb.
-func ToVerbRef[Req, Resp any](verb Verb[Req, Resp]) VerbRef {
+// Call a Sink through the FTL controller.
+// func CallSink[Req any](ctx context.Context, sink Sink[Req]) error {
+// }
+
+// VerbToRef returns the FTL reference for a Verb.
+func VerbToRef[Req, Resp any](verb Verb[Req, Resp]) VerbRef {
 	ref := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
 	return goRefToFTLRef(ref)
+}
+
+func SinkToRef[Req any](sink Sink[Req]) SinkRef {
+	ref := runtime.FuncForPC(reflect.ValueOf(sink).Pointer()).Name()
+	return SinkRef(goRefToFTLRef(ref))
 }
 
 func goRefToFTLRef(ref string) VerbRef {

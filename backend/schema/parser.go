@@ -62,18 +62,6 @@ type Type interface {
 	schemaType()
 }
 
-// Ref is a reference to another symbol.
-type Ref struct {
-	Pos Position `parser:"" protobuf:"1,optional"`
-
-	Module string `parser:"(@Ident '.')?" protobuf:"3"`
-	Name   string `parser:"@Ident" protobuf:"2"`
-}
-
-func (r *Ref) String() string {
-	return makeRef(r.Module, r.Name)
-}
-
 type Metadata interface {
 	Node
 	schemaMetadata()
@@ -112,7 +100,6 @@ var (
 
 	parser       = participle.MustBuild[Schema](parserOptions...)
 	moduleParser = participle.MustBuild[Module](parserOptions...)
-	refParser    = participle.MustBuild[Ref](parserOptions...)
 	typeParser   = participle.MustBuild[typeParserGrammar](append(commonParserOptions, participle.Union(nonOptionalTypeUnion...))...)
 )
 
@@ -148,11 +135,6 @@ func ParseModuleString(filename, input string) (*Module, error) {
 		return nil, err
 	}
 	return mod, ValidateModule(mod)
-}
-
-func ParseRef(ref string) (*Ref, error) {
-	r, err := refParser.ParseString("", ref)
-	return r, err
 }
 
 func Parse(filename string, r io.Reader) (*Schema, error) {

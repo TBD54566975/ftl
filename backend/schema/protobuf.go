@@ -21,6 +21,8 @@ var typesWithRuntime = map[string]bool{
 func ProtobufSchema() string {
 	messages := map[string]string{}
 	generateMessage(reflect.TypeOf(Schema{}), messages)
+	generateMessage(reflect.TypeOf(SourceRef{}), messages)
+	generateMessage(reflect.TypeOf(SinkRef{}), messages)
 	keys := maps.Keys(messages)
 	slices.Sort(keys)
 	w := &strings.Builder{}
@@ -60,6 +62,18 @@ func generateMessage(et reflect.Type, messages map[string]string) {
 	}
 }
 
+func structName(t reflect.Type) string {
+	if t.Kind() == reflect.Ptr {
+		return structName(t.Elem())
+	}
+	name := t.Name()
+	if strings.Contains(name, "[") {
+		name = strings.Split(strings.Split(name, "[")[1], "]")[0]
+		name = strings.Split(name, ".")[2]
+	}
+	return name
+}
+
 func generateStruct(t reflect.Type, messages map[string]string) {
 	t = indirect(t)
 	if _, ok := messages[t.Name()]; ok {
@@ -67,9 +81,10 @@ func generateStruct(t reflect.Type, messages map[string]string) {
 	}
 	messages[t.Name()] = ""
 	w := &strings.Builder{}
-	fmt.Fprintf(w, "\nmessage %s {", t.Name())
+	name := structName(t)
+	fmt.Fprintf(w, "\nmessage %s {", name)
 	if typesWithRuntime[t.Name()] {
-		fmt.Fprintf(w, "\n  optional %sRuntime runtime = 31634;\n", t.Name())
+		fmt.Fprintf(w, "\n  optional %sRuntime runtime = 31634;\n", name)
 	}
 	fields := reflect.VisibleFields(t)
 	// Sort by protobuf tag
@@ -131,7 +146,8 @@ func generateUnion(t reflect.Type, messages map[string]string) {
 	fmt.Fprintln(w, "  oneof value {")
 	for i, ut := range unions[t] {
 		ut = indirect(ut)
-		fmt.Fprintf(w, "    %s %s = %d;\n", ut.Name(), strcase.ToLowerCamel(strings.TrimPrefix(ut.Name(), t.Name())), i+1)
+		name := structName(ut)
+		fmt.Fprintf(w, "    %s %s = %d;\n", name, strcase.ToLowerCamel(strings.TrimPrefix(name, structName(t))), i+1)
 		generateMessage(ut, messages)
 	}
 	fmt.Fprintln(w, "  }")
@@ -146,7 +162,7 @@ func generateProtoType(t reflect.Type) string {
 	case reflect.Interface:
 		return t.Name()
 	case reflect.Struct:
-		return t.Name()
+		return structName(t)
 	case reflect.String:
 		return "string"
 	case reflect.Int:

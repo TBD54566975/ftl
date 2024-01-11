@@ -57,11 +57,11 @@ func GetCallers(header http.Header) ([]*schema.VerbRef, error) {
 	}
 	refs := make([]*schema.VerbRef, len(headers))
 	for i, header := range headers {
-		ref, err := schema.ParseRef(header)
+		ref, err := schema.ParseVerbRef(header)
 		if err != nil {
 			return nil, fmt.Errorf("invalid %s header %q: %w", VerbHeader, header, err)
 		}
-		refs[i] = (*schema.VerbRef)(ref)
+		refs[i] = ref
 	}
 	return refs, nil
 }
@@ -74,11 +74,11 @@ func GetCaller(header http.Header) (types.Option[*schema.VerbRef], error) {
 	if len(headers) == 0 {
 		return types.None[*schema.VerbRef](), nil
 	}
-	ref, err := schema.ParseRef(headers[len(headers)-1])
+	ref, err := schema.ParseVerbRef(headers[len(headers)-1])
 	if err != nil {
 		return types.None[*schema.VerbRef](), err
 	}
-	return types.Some((*schema.VerbRef)(ref)), nil
+	return types.Some(ref), nil
 }
 
 // AddCaller to an outgoing request.

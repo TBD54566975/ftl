@@ -157,6 +157,9 @@ Module
 	err := Visit(schema.Modules[1], func(n Node, next func() error) error {
 		prefix := strings.Repeat(" ", i)
 		tn := strings.TrimPrefix(fmt.Sprintf("%T", n), "*schema.")
+		if strings.Contains(tn, "[") {
+			tn = strings.TrimSuffix(strings.Split(tn, ".")[2], "]")
+		}
 		fmt.Fprintf(actual, "%s%s\n", prefix, tn)
 		i += 2
 		defer func() { i -= 2 }()

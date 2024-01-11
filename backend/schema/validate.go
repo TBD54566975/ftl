@@ -214,7 +214,8 @@ func ValidateModule(module *Module) error {
 		case *Array, *Bool, *DataRef, *Field, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes, *VerbRef,
 			*MetadataCalls, *MetadataIngress, IngressPathComponent,
-			*IngressPathLiteral, *IngressPathParameter, *Optional:
+			*IngressPathLiteral, *IngressPathParameter, *Optional,
+			*SourceRef, *SinkRef:
 		case Type, Metadata, Decl: // Union sql.
 		}
 		return next()

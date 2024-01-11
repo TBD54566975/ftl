@@ -188,55 +188,6 @@ export class Data extends Message<Data> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.schema.DataRef
- */
-export class DataRef extends Message<DataRef> {
-  /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
-   */
-  pos?: Position;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: string module = 3;
-   */
-  module = "";
-
-  constructor(data?: PartialMessage<DataRef>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.schema.DataRef";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataRef {
-    return new DataRef().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DataRef {
-    return new DataRef().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DataRef {
-    return new DataRef().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DataRef | PlainMessage<DataRef> | undefined, b: DataRef | PlainMessage<DataRef> | undefined): boolean {
-    return proto3.util.equals(DataRef, a, b);
-  }
-}
-
-/**
  * @generated from message xyz.block.ftl.v1.schema.Decl
  */
 export class Decl extends Message<Decl> {
@@ -908,6 +859,202 @@ export class Position extends Message<Position> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.DataRef
+ */
+export class DataRef extends Message<DataRef> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string module = 3;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<DataRef>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.DataRef";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataRef {
+    return new DataRef().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DataRef {
+    return new DataRef().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DataRef {
+    return new DataRef().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DataRef | PlainMessage<DataRef> | undefined, b: DataRef | PlainMessage<DataRef> | undefined): boolean {
+    return proto3.util.equals(DataRef, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.SinkRef
+ */
+export class SinkRef extends Message<SinkRef> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string module = 3;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<SinkRef>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.SinkRef";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SinkRef {
+    return new SinkRef().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SinkRef {
+    return new SinkRef().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SinkRef {
+    return new SinkRef().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SinkRef | PlainMessage<SinkRef> | undefined, b: SinkRef | PlainMessage<SinkRef> | undefined): boolean {
+    return proto3.util.equals(SinkRef, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.SourceRef
+ */
+export class SourceRef extends Message<SourceRef> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string module = 3;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<SourceRef>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.SourceRef";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SourceRef {
+    return new SourceRef().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SourceRef {
+    return new SourceRef().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SourceRef {
+    return new SourceRef().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SourceRef | PlainMessage<SourceRef> | undefined, b: SourceRef | PlainMessage<SourceRef> | undefined): boolean {
+    return proto3.util.equals(SourceRef, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.VerbRef
+ */
+export class VerbRef extends Message<VerbRef> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string module = 3;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<VerbRef>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.VerbRef";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRef {
+    return new VerbRef().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerbRef {
+    return new VerbRef().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerbRef {
+    return new VerbRef().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerbRef | PlainMessage<VerbRef> | undefined, b: VerbRef | PlainMessage<VerbRef> | undefined): boolean {
+    return proto3.util.equals(VerbRef, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Schema
  */
 export class Schema extends Message<Schema> {
@@ -1200,55 +1347,6 @@ export class Verb extends Message<Verb> {
 
   static equals(a: Verb | PlainMessage<Verb> | undefined, b: Verb | PlainMessage<Verb> | undefined): boolean {
     return proto3.util.equals(Verb, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.schema.VerbRef
- */
-export class VerbRef extends Message<VerbRef> {
-  /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
-   */
-  pos?: Position;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: string module = 3;
-   */
-  module = "";
-
-  constructor(data?: PartialMessage<VerbRef>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.schema.VerbRef";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRef {
-    return new VerbRef().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerbRef {
-    return new VerbRef().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerbRef {
-    return new VerbRef().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: VerbRef | PlainMessage<VerbRef> | undefined, b: VerbRef | PlainMessage<VerbRef> | undefined): boolean {
-    return proto3.util.equals(VerbRef, a, b);
   }
 }
 

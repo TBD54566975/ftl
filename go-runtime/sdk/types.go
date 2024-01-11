@@ -5,79 +5,86 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/TBD54566975/ftl/backend/schema"
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
-// A Verb is a function that can be called with an input and an output.
+// Ref is an untyped reference to a symbol.
+type Ref struct {
+	Module string `json:"module"`
+	Name   string `json:"name"`
+}
+
+// AbstractRef is an abstract reference to a symbol.
+type AbstractRef[Proto schema.RefProto] Ref
+
+func ParseRef[Proto schema.RefProto](ref string) (AbstractRef[Proto], error) {
+	var out AbstractRef[Proto]
+	if err := out.UnmarshalText([]byte(ref)); err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+func (v *AbstractRef[Proto]) UnmarshalText(text []byte) error {
+	parts := strings.Split(string(text), ".")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid reference %q", string(text))
+	}
+	v.Module = parts[0]
+	v.Name = parts[1]
+	return nil
+}
+
+func (v *AbstractRef[Proto]) String() string { return v.Module + "." + v.Name }
+func (v *AbstractRef[Proto]) ToProto() *Proto {
+	switch any((*Proto)(nil)).(type) {
+	case *schemapb.VerbRef:
+		return any(&schemapb.VerbRef{Module: v.Module, Name: v.Name}).(*Proto) //nolint:forcetypeassert
+
+	case *schemapb.DataRef:
+		return any(&schemapb.DataRef{Module: v.Module, Name: v.Name}).(*Proto) //nolint:forcetypeassert
+
+	case *schemapb.SinkRef:
+		return any(&schemapb.SinkRef{Module: v.Module, Name: v.Name}).(*Proto) //nolint:forcetypeassert
+
+	case *schemapb.SourceRef:
+		return any(&schemapb.SourceRef{Module: v.Module, Name: v.Name}).(*Proto) //nolint:forcetypeassert
+
+	default:
+		panic(fmt.Sprintf("unsupported proto type %T", (*Proto)(nil)))
+	}
+}
+
+// A Verb is a function that accepts input and returns output.
 type Verb[Req, Resp any] func(context.Context, Req) (Resp, error)
 
-// A Sink is a function that can be called with an input and no output.
-type Sink[Req any] func(context.Context, Req) error
+// VerbRef is a reference to a verb (a function in the form F(I)O).
+type VerbRef = AbstractRef[schemapb.VerbRef]
 
-func ParseVerbRef(ref string) (VerbRef, error) {
-	m, n, err := parseRef(ref)
-	if err != nil {
-		return VerbRef{}, err
-	}
-	return VerbRef{Module: m, Name: n}, nil
-}
+func ParseVerbRef(ref string) (VerbRef, error)     { return ParseRef[schemapb.VerbRef](ref) }
 func VerbRefFromProto(p *schemapb.VerbRef) VerbRef { return VerbRef{Module: p.Module, Name: p.Name} }
 
-// VerbRef is a reference to a Verb.
-type VerbRef struct {
-	Module string `json:"module,omitempty"`
-	Name   string `json:"name"`
-}
+// A Sink is a function that accepts input but returns nothing.
+type Sink[Req any] func(context.Context, Req) error
 
-func (v *VerbRef) UnmarshalText(text []byte) error {
-	parts := strings.Split(string(text), ".")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid reference %q", string(text))
-	}
-	v.Module = parts[0]
-	v.Name = parts[1]
-	return nil
-}
+type SinkRef = AbstractRef[schemapb.SinkRef]
 
-func (v VerbRef) String() string { return v.Module + "." + v.Name }
-func (v VerbRef) ToProto() *schemapb.VerbRef {
-	return &schemapb.VerbRef{Module: v.Module, Name: v.Name}
-}
+func ParseSinkRef(ref string) (SinkRef, error)     { return ParseRef[schemapb.SinkRef](ref) }
+func SinkRefFromProto(p *schemapb.SinkRef) SinkRef { return SinkRef{Module: p.Module, Name: p.Name} }
 
-func ParseDataRef(ref string) (DataRef, error) {
-	m, n, err := parseRef(ref)
-	if err != nil {
-		return DataRef{}, err
-	}
-	return DataRef{Module: m, Name: n}, nil
+// A Source is a function that does not accept input but returns output.
+type Source[Req any] func(context.Context, Req) error
+
+type SourceRef = AbstractRef[schemapb.SourceRef]
+
+func ParseSourceRef(ref string) (SourceRef, error) { return ParseRef[schemapb.SourceRef](ref) }
+func SourceRefFromProto(p *schemapb.SourceRef) SourceRef {
+	return SourceRef{Module: p.Module, Name: p.Name}
 }
-func DataRefFromProto(p *schemapb.DataRef) DataRef { return DataRef{Module: p.Module, Name: p.Name} }
 
 // DataRef is a reference to a Data type.
-type DataRef struct {
-	Module string `json:"module,omitempty"`
-	Name   string `json:"name"`
-}
+type DataRef = AbstractRef[schemapb.DataRef]
 
-func (v *DataRef) UnmarshalText(text []byte) error {
-	parts := strings.Split(string(text), ".")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid reference %q", string(text))
-	}
-	v.Module = parts[0]
-	v.Name = parts[1]
-	return nil
-}
-
-func (v DataRef) String() string { return v.Module + "." + v.Name }
-func (v DataRef) ToProto() *schemapb.DataRef {
-	return &schemapb.DataRef{Module: v.Module, Name: v.Name}
-}
-
-func parseRef(s string) (string, string, error) {
-	parts := strings.Split(s, ".")
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid reference %q", s)
-	}
-	return parts[0], parts[1], nil
-}
+func ParseDataRef(ref string) (DataRef, error)     { return ParseRef[schemapb.DataRef](ref) }
+func DataRefFromProto(p *schemapb.DataRef) DataRef { return DataRef{Module: p.Module, Name: p.Name} }

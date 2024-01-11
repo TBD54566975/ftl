@@ -73,7 +73,7 @@ func ingressListToProto(nodes []IngressPathComponent) []*schemapb.IngressPathCom
 
 func typeToProto(t Type) *schemapb.Type {
 	switch t := t.(type) {
-	case *VerbRef:
+	case *VerbRef, *SourceRef, *SinkRef:
 		panic("unreachable")
 
 	case *DataRef:
