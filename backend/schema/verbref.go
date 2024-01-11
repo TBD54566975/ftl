@@ -1,27 +1,15 @@
 package schema
 
 import (
-	"google.golang.org/protobuf/proto"
-
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
 // VerbRef is a reference to a Verb.
-type VerbRef Ref
+type VerbRef = AbstractRef[schemapb.VerbRef]
 
 var _ Type = (*VerbRef)(nil)
 
-func (*VerbRef) schemaChildren() []Node { return nil }
-func (*VerbRef) schemaType()            {}
-func (v VerbRef) String() string        { return makeRef(v.Module, v.Name) }
-
-func (v *VerbRef) ToProto() proto.Message {
-	return &schemapb.VerbRef{
-		Pos:    posToProto(v.Pos),
-		Name:   v.Name,
-		Module: v.Module,
-	}
-}
+func ParseVerbRef(ref string) (*VerbRef, error) { return ParseRef[schemapb.VerbRef](ref) }
 
 func VerbRefFromProto(s *schemapb.VerbRef) *VerbRef {
 	return &VerbRef{

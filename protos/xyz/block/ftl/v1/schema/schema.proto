@@ -29,12 +29,6 @@ message Data {
   repeated string comments = 5;
 }
 
-message DataRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
 message Decl {
   oneof value {
     Data data = 1;
@@ -120,6 +114,30 @@ message Position {
   int64 column = 3;
 }
 
+message DataRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message SinkRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message SourceRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message VerbRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
 message Schema {
   optional Position pos = 1;
   repeated Module modules = 2;
@@ -157,10 +175,4 @@ message Verb {
   DataRef request = 4;
   DataRef response = 5;
   repeated Metadata metadata = 6;
-}
-
-message VerbRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
 }

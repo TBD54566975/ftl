@@ -85,6 +85,17 @@ func genType(module *schema.Module, t schema.Type) string {
 		}
 		return t.String()
 
+	case *schema.SourceRef:
+		if t.Module == module.Name {
+			return t.Name
+		}
+		return t.String()
+
+	case *schema.SinkRef:
+		if t.Module == module.Name {
+			return t.Name
+		}
+
 	case *schema.Float:
 		return "float64"
 

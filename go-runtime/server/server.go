@@ -49,7 +49,7 @@ type Handler struct {
 
 // Handle creates a Handler from a Verb.
 func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
-	ref := sdkgo.ToVerbRef(verb)
+	ref := sdkgo.VerbToRef(verb)
 	return Handler{
 		ref: ref,
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
