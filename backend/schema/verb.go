@@ -15,10 +15,20 @@ type Verb struct {
 
 	Comments []string   `parser:"@Comment*" protobuf:"3"`
 	Name     string     `parser:"'verb' @Ident" protobuf:"2"`
-	Request  *DataRef   `parser:"'(' @@ ')'" protobuf:"4"`
-	Response *DataRef   `parser:"@@" protobuf:"5"`
+	Request  Type       `parser:"'(' @@ ')'" protobuf:"4"`
+	Response Type       `parser:"@@" protobuf:"5"`
 	Metadata []Metadata `parser:"@@*" protobuf:"6"`
 }
+
+// verb mySink(Req) Unit
+// verb mySource(Unit) Req
+//
+// func MySource(context.Context) (Req, error) {}
+//
+// func Checkout(ctx context.Context, req CheckoutRequest) (CheckoutResponse, error) {
+//    addresses, err := ftl.Call(ctx, GetAddress, req.User)
+//    addresses, err := ftl.Call(ctx, GetAddress, GetAddressRequest{User: req.User})
+// 	  return CheckoutResponse{}, nil
 
 var _ Decl = (*Verb)(nil)
 
@@ -65,8 +75,8 @@ func (v *Verb) ToProto() proto.Message {
 		Pos:      posToProto(v.Pos),
 		Name:     v.Name,
 		Comments: v.Comments,
-		Request:  v.Request.ToProto().(*schemapb.DataRef),  //nolint:forcetypeassert
-		Response: v.Response.ToProto().(*schemapb.DataRef), //nolint:forcetypeassert
+		Request:  typeToProto(v.Request),
+		Response: typeToProto(v.Response),
 		Metadata: metadataListToProto(v.Metadata),
 	}
 }
@@ -76,8 +86,8 @@ func VerbToSchema(s *schemapb.Verb) *Verb {
 		Pos:      posFromProto(s.Pos),
 		Name:     s.Name,
 		Comments: s.Comments,
-		Request:  dataRefToSchema(s.Request),
-		Response: dataRefToSchema(s.Response),
+		Request:  typeToSchema(s.Request),
+		Response: typeToSchema(s.Response),
 		Metadata: metadataListToSchema(s.Metadata),
 	}
 }

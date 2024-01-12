@@ -14,10 +14,7 @@ type Bool struct {
 
 var _ Type = (*Bool)(nil)
 
-func (*Bool) schemaChildren() []Node { return nil }
-func (*Bool) schemaType()            {}
-func (*Bool) String() string         { return "Bool" }
-
-func (b *Bool) ToProto() proto.Message {
-	return &schemapb.Bool{Pos: posToProto(b.Pos)}
-}
+func (*Bool) schemaChildren() []Node   { return nil }
+func (*Bool) schemaType()              {}
+func (*Bool) String() string           { return "Bool" }
+func (b *Bool) ToProto() proto.Message { return &schemapb.Bool{Pos: posToProto(b.Pos)} }

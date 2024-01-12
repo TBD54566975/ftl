@@ -155,28 +155,45 @@ func isType[T types.Type](t types.Type) bool {
 	return ok
 }
 
-func checkSignature(sig *types.Signature) error {
+func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
 	params := sig.Params()
 	results := sig.Results()
-	if params.Len() != 2 {
-		return fmt.Errorf("must have exactly two parameters in the form (context.Context, struct) but has %d", params.Len())
+
+	if params.Len() > 2 {
+		return nil, nil, fmt.Errorf("must have at most two parameters (context.Context, struct)")
 	}
-	if results.Len() != 2 {
-		return fmt.Errorf("must have exactly two result values in the form (error, struct) but has %d", results.Len())
+	if params.Len() == 0 {
+		return nil, nil, fmt.Errorf("first parameter must be context.Context")
 	}
 	if !types.AssertableTo(contextIfaceType(), params.At(0).Type()) {
-		return fmt.Errorf("first parameter must be of type context.Context but is %s", params.At(0).Type())
+		return nil, nil, fmt.Errorf("first parameter must be of type context.Context but is %s", params.At(0).Type())
 	}
-	if !isType[*types.Struct](params.At(1).Type()) {
-		return fmt.Errorf("second parameter must be a struct but is %s", params.At(1).Type())
+	if params.Len() == 2 {
+		if !isType[*types.Struct](params.At(1).Type()) {
+			return nil, nil, fmt.Errorf("second parameter must be a struct but is %s", params.At(1).Type())
+		}
+		req = params.At(1)
 	}
-	if !types.AssertableTo(errorIFaceType(), results.At(1).Type()) {
-		return fmt.Errorf("first result must be an error but is %s", results.At(0).Type())
+
+	if results.Len() > 2 {
+		return nil, nil, fmt.Errorf("must have at most two results (struct, error)")
 	}
-	if !isType[*types.Struct](results.At(0).Type()) {
-		return fmt.Errorf("first result must be a struct but is %s", results.At(0).Type())
+	if results.Len() == 0 {
+		return nil, nil, fmt.Errorf("must at least return an error")
 	}
-	return nil
+	if !types.AssertableTo(errorIFaceType(), results.At(results.Len()-1).Type()) {
+		return nil, nil, fmt.Errorf("must return an error but is %s", results.At(0).Type())
+	}
+	if results.Len() == 2 {
+		if !isType[*types.Struct](results.At(0).Type()) {
+			return nil, nil, fmt.Errorf("first result must be a struct but is %s", results.At(0).Type())
+		}
+		resp = results.At(0)
+	}
+	if params.Len() == 1 && results.Len() == 1 {
+		return nil, nil, fmt.Errorf("must either accept an input or return a result, but does neither")
+	}
+	return req, resp, nil
 }
 
 func goPosToSchemaPos(pos token.Pos) schema.Position {
@@ -233,16 +250,27 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	params := sig.Params()
 	results := sig.Results()
-	if err := checkSignature(sig); err != nil {
-		return nil, err
-	}
-	req, err := parseStruct(pctx, node, params.At(1).Type())
+	reqt, respt, err := checkSignature(sig)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := parseStruct(pctx, node, results.At(0).Type())
-	if err != nil {
-		return nil, err
+	var req schema.Type
+	if reqt != nil {
+		req, err = parseStruct(pctx, node, params.At(1).Type())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		req = &schema.Unit{}
+	}
+	var resp schema.Type
+	if respt != nil {
+		resp, err = parseStruct(pctx, node, results.At(0).Type())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		resp = &schema.Unit{}
 	}
 	verb = &schema.Verb{
 		Pos:      goPosToSchemaPos(node.Pos()),

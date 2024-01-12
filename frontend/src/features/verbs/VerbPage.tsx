@@ -9,7 +9,6 @@ import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { callFilter, eventTypesFilter, streamEvents } from '../../services/console.service'
 import { CallList } from '../calls/CallList'
 import { VerbForm } from './VerbForm'
-import { buildVerbSchema } from './verb.utils'
 
 export const VerbPage = () => {
   const { deploymentName, verbName } = useParams()
@@ -17,10 +16,6 @@ export const VerbPage = () => {
   const [module, setModule] = useState<Module | undefined>()
   const [verb, setVerb] = useState<Verb | undefined>()
   const [calls, setCalls] = useState<CallEvent[]>([])
-
-  const callData =
-    module?.data.filter((data) => [verb?.verb?.request?.name, verb?.verb?.response?.name].includes(data.data?.name)) ??
-    []
 
   useEffect(() => {
     if (modules) {
@@ -68,15 +63,7 @@ export const VerbPage = () => {
           <div className='flex-1 flex flex-col h-full'>
             <div className='flex-1 flex flex-grow h-1/2 mb-4'>
               <div className='mr-2 flex-1 w-1/2 overflow-y-auto'>
-                {verb?.verb?.request?.toJsonString() && (
-                  <CodeBlock
-                    code={buildVerbSchema(
-                      verb?.schema,
-                      callData.map((d) => d.schema),
-                    )}
-                    language='json'
-                  />
-                )}
+                {verb?.verb?.request?.toJsonString() && <CodeBlock code={verb?.schema} language='json' />}
               </div>
               <div className='ml-2 flex-1 w-1/2 overflow-y-auto'>
                 <VerbForm module={module} verb={verb} />

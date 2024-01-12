@@ -136,16 +136,16 @@ public class TestModule()
         verb = Verb(
           name = "TestVerb",
           comments = listOf("TestVerb comments"),
-          request = DataRef(name = "TestRequest"),
-          response = DataRef(name = "TestResponse")
+          request = Type(dataRef = DataRef(name = "TestRequest")),
+          response = Type(dataRef = DataRef(name = "TestResponse"))
         )
       ),
       Decl(
         verb = Verb(
           name = "TestIngressVerb",
           comments = listOf("TestIngressVerb comments"),
-          request = DataRef(name = "TestRequest"),
-          response = DataRef(name = "TestResponse"),
+          request = Type(dataRef = DataRef(name = "TestRequest")),
+          response = Type(dataRef = DataRef(name = "TestResponse")),
           metadata = listOf(
             Metadata(
               ingress = MetadataIngress(

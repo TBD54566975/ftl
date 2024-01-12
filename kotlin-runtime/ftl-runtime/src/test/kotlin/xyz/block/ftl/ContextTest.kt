@@ -13,12 +13,13 @@ data class EchoResponse(val text: String)
 class Echo {
   @Verb
   fun echo(context: Context, req: EchoRequest): EchoResponse {
-    val time = context.call(Time::time, TimeRequest())
+    val time = context.call(Time::time, TimeRequest)
     return EchoResponse("Hello ${req.user}, the time is ${time.time}!")
   }
 }
 
-data class TimeRequest(val _unused: Unit = Unit)
+typealias TimeRequest = Unit
+
 data class TimeResponse(val time: OffsetDateTime)
 
 val staticTime = OffsetDateTime.now()
@@ -42,7 +43,7 @@ class ContextTest {
           expected = EchoResponse("Hello Alice, the time is $staticTime!"),
         ),
         TestCase(
-          invoke = { ctx -> ctx.call(Time::time, TimeRequest()) },
+          invoke = { ctx -> ctx.call(Time::time, TimeRequest) },
           expected = TimeResponse(staticTime),
         ),
       )

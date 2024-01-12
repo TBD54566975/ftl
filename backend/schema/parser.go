@@ -13,10 +13,13 @@ import (
 
 var (
 	declUnion            = []Decl{&Data{}, &Verb{}}
-	nonOptionalTypeUnion = []Type{&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{}, &Map{} /*&VerbRef{},*/, &DataRef{}}
-	typeUnion            = append(nonOptionalTypeUnion, &Optional{})
-	metadataUnion        = []Metadata{&MetadataCalls{}, &MetadataIngress{}}
-	ingressUnion         = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
+	nonOptionalTypeUnion = []Type{
+		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
+		&Map{}, &DataRef{}, &Unit{},
+	}
+	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
+	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}}
+	ingressUnion  = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
 
 	// Used by protobuf generation.
 	unions = map[reflect.Type][]reflect.Type{

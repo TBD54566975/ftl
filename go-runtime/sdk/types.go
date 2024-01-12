@@ -9,6 +9,12 @@ import (
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
+// Unit is a type that has no value.
+//
+// It can be used as a parameter or return value to indicate that a function
+// does not accept or return any value.
+var Unit = DataRef{Module: "builtin", Name: "Unit"}
+
 // Ref is an untyped reference to a symbol.
 type Ref struct {
 	Module string `json:"module"`

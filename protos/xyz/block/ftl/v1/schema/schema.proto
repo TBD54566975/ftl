@@ -8,6 +8,30 @@ import "xyz/block/ftl/v1/schema/runtime.proto";
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema;schemapb";
 option java_multiple_files = true;
 
+message DataRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message SinkRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message SourceRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message VerbRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
 message Array {
   optional Position pos = 1;
   Type element = 2;
@@ -114,30 +138,6 @@ message Position {
   int64 column = 3;
 }
 
-message DataRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message SinkRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message SourceRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message VerbRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
 message Schema {
   optional Position pos = 1;
   repeated Module modules = 2;
@@ -162,8 +162,13 @@ message Type {
     Array array = 7;
     Map map = 8;
     DataRef dataRef = 9;
-    Optional optional = 10;
+    Unit unit = 10;
+    Optional optional = 11;
   }
+}
+
+message Unit {
+  optional Position pos = 1;
 }
 
 message Verb {
@@ -172,7 +177,7 @@ message Verb {
   optional Position pos = 1;
   string name = 2;
   repeated string comments = 3;
-  DataRef request = 4;
-  DataRef response = 5;
+  Type request = 4;
+  Type response = 5;
   repeated Metadata metadata = 6;
 }

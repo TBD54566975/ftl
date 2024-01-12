@@ -8,6 +8,9 @@ func Normalise[T Node](n T) T {
 	var zero Position
 	var ni Node = n
 	switch c := ni.(type) {
+	case *Unit:
+		c.Pos = zero
+
 	case *Schema:
 		c.Pos = zero
 		c.Modules = normaliseSlice(c.Modules)

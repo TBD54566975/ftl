@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
@@ -73,7 +74,7 @@ func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) 
 		return fmt.Errorf("HTTP request body is not valid JSON: %w", err)
 	}
 
-	return validateRequestMap(verb.Request, []string{verb.Request.String()}, requestMap, sch)
+	return validateValue(verb.Request, []string{verb.Request.String()}, requestMap, sch)
 }
 
 type HTTPRequest struct {
@@ -117,12 +118,16 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 			return nil, err
 		}
 	} else {
-		requestMap, err := buildRequestMap(route, r, verb.Request, sch)
+		request, ok := verb.Request.(*schema.DataRef)
+		if !ok {
+			return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
+		}
+		requestMap, err := buildRequest(route, r, request, sch)
 		if err != nil {
 			return nil, err
 		}
 
-		err = validateRequestMap(verb.Request, []string{verb.Request.String()}, requestMap, sch)
+		err = validateRequestMap(request, []string{verb.Request.String()}, requestMap, sch)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +141,7 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 	return body, nil
 }
 
-func buildRequestMap(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (map[string]any, error) {
+func buildRequest(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (map[string]any, error) {
 	requestMap := map[string]any{}
 	matchSegments(route.Path, r.URL.Path, func(segment, value string) {
 		requestMap[segment] = value
@@ -205,6 +210,24 @@ func validateRequestMap(dataRef *schema.DataRef, path path, request map[string]a
 func validateValue(fieldType schema.Type, path path, value any, sch *schema.Schema) error {
 	var typeMatches bool
 	switch fieldType := fieldType.(type) {
+	case *schema.Unit:
+		rv := reflect.ValueOf(value)
+		if rv.Kind() != reflect.Map || rv.Len() != 0 {
+			return fmt.Errorf("%s must be an empty map", path)
+		}
+		return nil
+
+	case *schema.Time:
+		str, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("time %s must be an RFC3339 formatted string", path)
+		}
+		_, err := time.Parse(time.RFC3339Nano, str)
+		if err != nil {
+			return fmt.Errorf("time %s must be an RFC3339 formatted string: %w", path, err)
+		}
+		return nil
+
 	case *schema.Int:
 		switch value := value.(type) {
 		case float64:
@@ -214,6 +237,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 				typeMatches = true
 			}
 		}
+
 	case *schema.Float:
 		switch value := value.(type) {
 		case float64:
@@ -223,8 +247,10 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 				typeMatches = true
 			}
 		}
+
 	case *schema.String:
 		_, typeMatches = value.(string)
+
 	case *schema.Bool:
 		switch value := value.(type) {
 		case bool:
@@ -234,6 +260,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 				typeMatches = true
 			}
 		}
+
 	case *schema.Array:
 		rv := reflect.ValueOf(value)
 		if rv.Kind() != reflect.Slice {
@@ -248,6 +275,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 			}
 		}
 		typeMatches = true
+
 	case *schema.Map:
 		rv := reflect.ValueOf(value)
 		if rv.Kind() != reflect.Map {
@@ -266,6 +294,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 			}
 		}
 		typeMatches = true
+
 	case *schema.DataRef:
 		if valueMap, ok := value.(map[string]any); ok {
 			if err := validateRequestMap(fieldType, path, valueMap, sch); err != nil {
@@ -273,6 +302,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 			}
 			typeMatches = true
 		}
+
 	case *schema.Bytes:
 		_, typeMatches = value.([]byte)
 		if bodyStr, ok := value.(string); ok {
@@ -282,15 +312,13 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 			}
 			typeMatches = true
 		}
+
 	case *schema.Optional:
 		if value == nil {
 			typeMatches = true
 		} else {
 			return validateValue(fieldType.Type, path, value, sch)
 		}
-
-	default:
-		return fmt.Errorf("%s has unsupported type %T", path, fieldType)
 	}
 
 	if !typeMatches {
