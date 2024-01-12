@@ -261,7 +261,7 @@ class SchemaExtractor(
         require(requestType.dataRef != null && requestType.dataRef.compare("builtin", "HttpRequest")) {
           "$sourcePos @HttpIngress-annotated ${verb.name} request must be ftl.builtin.HttpRequest"
         }
-        require(responseType.dataRef != null && responseType.dataRef.compare("builtin", "HttpRequest")) {
+        require(responseType.dataRef != null && responseType.dataRef.compare("builtin", "HttpResponse")) {
           "$sourcePos @HttpIngress-annotated ${verb.name} response must be ftl.builtin.HttpResponse"
         }
       }
