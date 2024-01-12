@@ -94,10 +94,10 @@ func TestIntegration(t *testing.T) {
 			}),
 		}},
 		{name: "UseKotlinDbConn", assertions: assertions{
-			setUpKotlinModuleDb(filepath.Join(modulesDir, "ftl-module-echo3")),
+			setUpModuleDb(filepath.Join(modulesDir, "ftl-module-echo3")),
 			run(".", "ftl", "deploy", filepath.Join(modulesDir, "ftl-module-echo3")),
 			call("dbtest", "create", obj{"data": "Hello"}, func(t testing.TB, resp obj) {}),
-			validateKotlinModuleDb(),
+			validateModuleDb(),
 		}},
 		{name: "SchemaGenerateJS", assertions: assertions{
 			run(".", "ftl", "schema", "generate", "integration/testdata/schema-generate", "build/schema-generate"),
@@ -230,7 +230,7 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 	}
 }
 
-func setUpKotlinModuleDb(dir string) assertion {
+func setUpModuleDb(dir string) assertion {
 	os.Setenv("FTL_POSTGRES_DSN_dbtest_testdb", "postgres://postgres:secret@localhost:54320/testdb?sslmode=disable")
 	return func(t testing.TB, ic itContext) error {
 		db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable")
@@ -265,7 +265,7 @@ func setUpKotlinModuleDb(dir string) assertion {
 	}
 }
 
-func validateKotlinModuleDb() assertion {
+func validateModuleDb() assertion {
 	return func(t testing.TB, ic itContext) error {
 		db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/testdb?sslmode=disable")
 		assert.NoError(t, err)

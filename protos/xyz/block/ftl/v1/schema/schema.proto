@@ -53,10 +53,17 @@ message Data {
   repeated string comments = 5;
 }
 
+message Database {
+  optional Position pos = 1;
+  string name = 2;
+  repeated string comments = 3;
+}
+
 message Decl {
   oneof value {
     Data data = 1;
     Verb verb = 2;
+    Database database = 3;
   }
 }
 
@@ -102,12 +109,18 @@ message Metadata {
   oneof value {
     MetadataCalls calls = 1;
     MetadataIngress ingress = 2;
+    MetadataDatabases databases = 3;
   }
 }
 
 message MetadataCalls {
   optional Position pos = 1;
   repeated VerbRef calls = 2;
+}
+
+message MetadataDatabases {
+  optional Position pos = 1;
+  repeated Database calls = 2;
 }
 
 message MetadataIngress {

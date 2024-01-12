@@ -384,6 +384,55 @@ export class Data extends Message<Data> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.Database
+ */
+export class Database extends Message<Database> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: repeated string comments = 3;
+   */
+  comments: string[] = [];
+
+  constructor(data?: PartialMessage<Database>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Database";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Database {
+    return new Database().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Database {
+    return new Database().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Database {
+    return new Database().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Database | PlainMessage<Database> | undefined, b: Database | PlainMessage<Database> | undefined): boolean {
+    return proto3.util.equals(Database, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Decl
  */
 export class Decl extends Message<Decl> {
@@ -402,6 +451,12 @@ export class Decl extends Message<Decl> {
      */
     value: Verb;
     case: "verb";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Database database = 3;
+     */
+    value: Database;
+    case: "database";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Decl>) {
@@ -414,6 +469,7 @@ export class Decl extends Message<Decl> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "data", kind: "message", T: Data, oneof: "value" },
     { no: 2, name: "verb", kind: "message", T: Verb, oneof: "value" },
+    { no: 3, name: "database", kind: "message", T: Database, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Decl {
@@ -766,6 +822,12 @@ export class Metadata extends Message<Metadata> {
      */
     value: MetadataIngress;
     case: "ingress";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataDatabases databases = 3;
+     */
+    value: MetadataDatabases;
+    case: "databases";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Metadata>) {
@@ -778,6 +840,7 @@ export class Metadata extends Message<Metadata> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "calls", kind: "message", T: MetadataCalls, oneof: "value" },
     { no: 2, name: "ingress", kind: "message", T: MetadataIngress, oneof: "value" },
+    { no: 3, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Metadata {
@@ -837,6 +900,49 @@ export class MetadataCalls extends Message<MetadataCalls> {
 
   static equals(a: MetadataCalls | PlainMessage<MetadataCalls> | undefined, b: MetadataCalls | PlainMessage<MetadataCalls> | undefined): boolean {
     return proto3.util.equals(MetadataCalls, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataDatabases
+ */
+export class MetadataDatabases extends Message<MetadataDatabases> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Database calls = 2;
+   */
+  calls: Database[] = [];
+
+  constructor(data?: PartialMessage<MetadataDatabases>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataDatabases";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "calls", kind: "message", T: Database, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataDatabases {
+    return new MetadataDatabases().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataDatabases {
+    return new MetadataDatabases().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataDatabases {
+    return new MetadataDatabases().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataDatabases | PlainMessage<MetadataDatabases> | undefined, b: MetadataDatabases | PlainMessage<MetadataDatabases> | undefined): boolean {
+    return proto3.util.equals(MetadataDatabases, a, b);
   }
 }
 

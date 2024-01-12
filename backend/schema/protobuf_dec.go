@@ -25,6 +25,8 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 			out = append(out, VerbToSchema(n.Verb))
 		case *schemapb.Decl_Data:
 			out = append(out, DataToSchema(n.Data))
+		case *schemapb.Decl_Database:
+			out = append(out, DatabaseToSchema(n.Database))
 		}
 	}
 	return out
@@ -72,6 +74,12 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 		return &MetadataCalls{
 			Pos:   posFromProto(s.Calls.Pos),
 			Calls: verbRefListToSchema(s.Calls.Calls),
+		}
+
+	case *schemapb.Metadata_Databases:
+		return &MetadataDatabases{
+			Pos:   posFromProto(s.Databases.Pos),
+			Calls: databaseListToSchema(s.Databases.Calls),
 		}
 
 	case *schemapb.Metadata_Ingress:
