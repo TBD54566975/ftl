@@ -62,10 +62,14 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			case *schema.Verb:
 				//nolint:forcetypeassert
 				v := decl.ToProto().(*schemapb.Verb)
-				verbSchema := schema.VerbToSchema(v)
+				verbSchema := schema.VerbToSchema(v) // TODO: include all of the types  that the verb references
+				requestData, ok := verbSchema.Request.(*schema.DataRef)
+				if !ok {
+					return nil, fmt.Errorf("expected request to be a data ref, got %T", verbSchema.Request)
+				}
 				dataRef := schema.DataRef{
-					Module: verbSchema.Request.Module,
-					Name:   verbSchema.Request.Name,
+					Module: requestData.Module,
+					Name:   requestData.Name,
 				}
 				jsonRequestSchema, err := schema.DataToJSONSchema(sch, dataRef)
 				if err != nil {
@@ -80,6 +84,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 					Schema:            verbSchema.String(),
 					JsonRequestSchema: string(jsonData),
 				})
+
 			case *schema.Data:
 				//nolint:forcetypeassert
 				d := decl.ToProto().(*schemapb.Data)

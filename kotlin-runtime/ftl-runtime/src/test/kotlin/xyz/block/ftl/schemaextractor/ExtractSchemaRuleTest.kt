@@ -152,13 +152,17 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             * Echoes the given message.
             */"""
             ),
-            request = DataRef(
-              name = "EchoRequest",
-              module = "echo"
+            request = Type(
+              dataRef = DataRef(
+                name = "EchoRequest",
+                module = "echo"
+              )
             ),
-            response = DataRef(
-              name = "EchoResponse",
-              module = "echo"
+            response = Type(
+              dataRef = DataRef(
+                name = "EchoResponse",
+                module = "echo"
+              )
             ),
             metadata = listOf(
               Metadata(

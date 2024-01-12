@@ -73,6 +73,9 @@ func ingressListToProto(nodes []IngressPathComponent) []*schemapb.IngressPathCom
 
 func typeToProto(t Type) *schemapb.Type {
 	switch t := t.(type) {
+	case *Unit:
+		return &schemapb.Type{Value: &schemapb.Type_Unit{Unit: t.ToProto().(*schemapb.Unit)}}
+
 	case *VerbRef, *SourceRef, *SinkRef:
 		panic("unreachable")
 

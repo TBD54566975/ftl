@@ -17,41 +17,9 @@ var (
 	// keywords associated with these types.
 	reservedIdentNames = map[string]bool{
 		"Int": true, "Float": true, "String": true, "Bytes": true, "Bool": true,
-		"Time": true, "Map": true, "Array": true,
+		"Time": true, "Unit": true,
 	}
-
-	// BuiltinsSource is the schema source code for built-in types.
-	BuiltinsSource = `
-// Built-in types for FTL.
-builtin module builtin {
-  // HTTP request structure used for HTTP ingress verbs.
-  data HttpRequest {
-    method String
-    path String
-    pathParameters {String: String}
-    query {String: [String]}
-    headers {String: [String]}
-    body Bytes
-  }
-
-  // HTTP response structure used for HTTP ingress verbs.
-  data HttpResponse {
-    status Int
-    headers {String: [String]}
-    body Bytes
-  }
-}
-`
 )
-
-// Builtins returns a [Module] containing built-in types.
-func Builtins() *Module {
-	module, err := ParseModuleString("builtins.ftl", BuiltinsSource)
-	if err != nil {
-		panic("failed to parse builtins: " + err.Error())
-	}
-	return module
-}
 
 // MustValidate panics if a schema is invalid.
 //
@@ -215,7 +183,7 @@ func ValidateModule(module *Module) error {
 			*Time, *Map, *Module, *Schema, *String, *Bytes, *VerbRef,
 			*MetadataCalls, *MetadataIngress, IngressPathComponent,
 			*IngressPathLiteral, *IngressPathParameter, *Optional,
-			*SourceRef, *SinkRef:
+			*SourceRef, *SinkRef, *Unit:
 		case Type, Metadata, Decl: // Union sql.
 		}
 		return next()

@@ -49,7 +49,7 @@ class ModuleGenerator() {
     types.forEach { file.addType(buildDataClass(it, namespace)) }
 
     val verbs = module.decls.mapNotNull { it.verb }
-    verbs.forEach { moduleClass.addFunction(buildVerbFunction(className, it)) }
+    verbs.forEach { moduleClass.addFunction(buildVerbFunction(className, namespace, it)) }
 
     file.addType(moduleClass.build())
     return file.build()
@@ -91,7 +91,7 @@ class ModuleGenerator() {
     return dataClassBuilder.build()
   }
 
-  private fun buildVerbFunction(className: String, verb: Verb): FunSpec {
+  private fun buildVerbFunction(className: String, namespace: String, verb: Verb): FunSpec {
     val verbFunBuilder =
       FunSpec.builder(verb.name).addKdoc(verb.comments.joinToString("\n")).addAnnotation(
         AnnotationSpec.builder(xyz.block.ftl.Verb::class).build()
@@ -112,12 +112,12 @@ class ModuleGenerator() {
 
     verb.request?.let {
       verbFunBuilder.addParameter(
-        "req", TypeVariableName(it.name)
+        "req", getTypeClass(it, namespace)
       )
     }
 
     verb.response?.let {
-      verbFunBuilder.returns(TypeVariableName(it.name))
+      verbFunBuilder.returns(getTypeClass(it, namespace))
     }
 
     val message =

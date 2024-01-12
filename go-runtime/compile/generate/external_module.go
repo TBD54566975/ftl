@@ -73,6 +73,9 @@ func ExternalModule(w io.Writer, module *schema.Module, importRoot string) error
 
 func genType(module *schema.Module, t schema.Type) string {
 	switch t := t.(type) {
+	case *schema.Unit:
+		return "sdk.Unit"
+
 	case *schema.DataRef:
 		if t.Module == module.Name {
 			return t.Name

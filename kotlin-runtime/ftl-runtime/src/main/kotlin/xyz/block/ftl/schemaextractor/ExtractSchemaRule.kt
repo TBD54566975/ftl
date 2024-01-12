@@ -164,12 +164,12 @@ class SchemaExtractor(
     val verbSourcePos = verb.getLineAndColumn()
     val requestRef = verb.valueParameters.last()?.let {
       val position = it.getLineAndColumn().toPosition(filename)
-      return@let it.typeReference?.resolveType()?.toSchemaType(position)?.dataRef
+      return@let it.typeReference?.resolveType()?.toSchemaType(position)
     }
     requireNotNull(requestRef) { "$verbSourcePos Could not resolve request type for ${verb.name}" }
     val returnRef = verb.createTypeBindingForReturnType(bindingContext)?.let {
       val position = it.psiElement.getLineAndColumn().toPosition(filename)
-      return@let it.type.toSchemaType(position).dataRef
+      return@let it.type.toSchemaType(position)
     }
     requireNotNull(returnRef) { "$verbSourcePos Could not resolve response type for ${verb.name}" }
 
@@ -204,7 +204,7 @@ class SchemaExtractor(
       .toSet()
   }
 
-  private fun extractIngress(requestRef: DataRef, returnRef: DataRef): MetadataIngress? {
+  private fun extractIngress(requestType: Type, responseType: Type): MetadataIngress? {
     return verb.annotationEntries.firstOrNull {
       listOf(
         Ingress::class.qualifiedName,
@@ -215,18 +215,21 @@ class SchemaExtractor(
       val type = if (annotationName == Ingress::class.qualifiedName) "ftl" else "http"
       val sourcePos = annotationEntry.getLineAndColumn()
 
-      println("annotationName: $annotationName")
-      println("Ingress: ${Ingress::class.qualifiedName}")
-      println("type: $type")
-      println("requestRef: $requestRef")
-      println("returnRef: $returnRef")
+      require(requestType.dataRef != null) {
+        "$sourcePos ingress ${verb.name} request must be a data class"
+      }
+      require(responseType.dataRef != null) {
+        "$sourcePos ingress ${verb.name} response must be a data class"
+      }
 
-      // If it's an HTTP ingress, validate the signature.
-      require(
-        type != "http" || (requestRef.compare("builtin", "HttpRequest") && returnRef.compare("builtin", "HttpResponse"))
-      ) {
-        "$sourcePos ${type} ${verb.name}(${requestRef.text()}) ${returnRef.text()} annotated with @HttpIngress must have signature " +
-          "${verb.name}(builtin.HttpRequest) builtin.HttpResponse"
+      // If it's HTTP ingress, validate the signature.
+      if (type == "http") {
+        require(requestType.dataRef != null && requestType.dataRef.compare("builtin", "HttpRequest")) {
+          "$sourcePos @HttpIngress-annotated ${verb.name} request must be ftl.builtin.HttpRequest"
+        }
+        require(responseType.dataRef != null && responseType.dataRef.compare("builtin", "HttpRequest")) {
+          "$sourcePos @HttpIngress-annotated ${verb.name} response must be ftl.builtin.HttpResponse"
+        }
       }
 
       require(annotationEntry.valueArguments.size >= 2) {
