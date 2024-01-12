@@ -244,11 +244,25 @@ type DAL struct {
 	// RouteChanges is a Topic that receives changes to the routing table.
 }
 
+func (d *DAL) GetControllers(ctx context.Context, allControllers bool) ([]Controller, error) {
+	controllers, err := d.db.GetControllers(ctx, allControllers)
+	if err != nil {
+		return nil, translatePGError(err)
+	}
+	return slices.Map(controllers, func(in sql.Controller) Controller {
+		return Controller{
+			Key:      in.Key,
+			Endpoint: in.Endpoint,
+			State:    ControllerState(in.State),
+		}
+	}), nil
+}
+
 func (d *DAL) GetStatus(
 	ctx context.Context,
 	allControllers, allRunners, allDeployments, allIngressRoutes bool,
 ) (Status, error) {
-	controllers, err := d.db.GetControllers(ctx, allControllers)
+	controllers, err := d.GetControllers(ctx, allControllers)
 	if err != nil {
 		return Status{}, fmt.Errorf("%s: %w", "could not get control planes", translatePGError(err))
 	}
@@ -315,13 +329,7 @@ func (d *DAL) GetStatus(
 		return Status{}, err
 	}
 	return Status{
-		Controllers: slices.Map(controllers, func(in sql.Controller) Controller {
-			return Controller{
-				Key:      in.Key,
-				Endpoint: in.Endpoint,
-				State:    ControllerState(in.State),
-			}
-		}),
+		Controllers: controllers,
 		Deployments: statusDeployments,
 		Runners:     domainRunners,
 		IngressRoutes: slices.Map(ingressRoutes, func(in sql.GetAllIngressRoutesRow) IngressRouteEntry {
