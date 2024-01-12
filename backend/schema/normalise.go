@@ -32,6 +32,9 @@ func Normalise[T Node](n T) T {
 		c.Fields = normaliseSlice(c.Fields)
 		c.Metadata = normaliseSlice(c.Metadata)
 
+	case *Database:
+		c.Pos = zero
+
 	case *DataRef:
 		c.Pos = zero
 
@@ -74,6 +77,10 @@ func Normalise[T Node](n T) T {
 		c.Pos = zero
 
 	case *MetadataCalls:
+		c.Pos = zero
+		c.Calls = normaliseSlice(c.Calls)
+
+	case *MetadataDatabases:
 		c.Pos = zero
 		c.Calls = normaliseSlice(c.Calls)
 

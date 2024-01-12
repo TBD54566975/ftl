@@ -30,6 +30,8 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 			v = &schemapb.Decl_Verb{Verb: n.ToProto().(*schemapb.Verb)}
 		case *Data:
 			v = &schemapb.Decl_Data{Data: n.ToProto().(*schemapb.Data)}
+		case *Database:
+			v = &schemapb.Decl_Database{Database: n.ToProto().(*schemapb.Database)}
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}
@@ -43,6 +45,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		switch n := n.(type) {
 		case *MetadataCalls:
 			v = &schemapb.Metadata_Calls{Calls: n.ToProto().(*schemapb.MetadataCalls)}
+
+		case *MetadataDatabases:
+			v = &schemapb.Metadata_Databases{Databases: n.ToProto().(*schemapb.MetadataDatabases)}
 
 		case *MetadataIngress:
 			v = &schemapb.Metadata_Ingress{Ingress: n.ToProto().(*schemapb.MetadataIngress)}

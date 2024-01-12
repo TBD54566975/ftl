@@ -5,7 +5,9 @@ package integration
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,10 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"errors"
-
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
+	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
+	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
@@ -26,6 +28,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/scaffolder"
 )
 
 const integrationTestTimeout = time.Second * 60
@@ -89,6 +92,12 @@ func TestIntegration(t *testing.T) {
 				assert.True(t, ok, "message is not a string")
 				assert.True(t, regexp.MustCompile(`^Hello, Alice!`).MatchString(message), "%q does not match %q", message, `^Hello, Alice!`)
 			}),
+		}},
+		{name: "UseKotlinDbConn", assertions: assertions{
+			setUpModuleDb(filepath.Join(modulesDir, "ftl-module-echo3")),
+			run(".", "ftl", "deploy", filepath.Join(modulesDir, "ftl-module-echo3")),
+			call("dbtest", "create", obj{"data": "Hello"}, func(t testing.TB, resp obj) {}),
+			validateModuleDb(),
 		}},
 		{name: "SchemaGenerateJS", assertions: assertions{
 			run(".", "ftl", "schema", "generate", "integration/testdata/schema-generate", "build/schema-generate"),
@@ -218,6 +227,71 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 
 		onResponse(t, resp)
 		return nil
+	}
+}
+
+func setUpModuleDb(dir string) assertion {
+	os.Setenv("FTL_POSTGRES_DSN_dbtest_testdb", "postgres://postgres:secret@localhost:54320/testdb?sslmode=disable")
+	return func(t testing.TB, ic itContext) error {
+		db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable")
+		assert.NoError(t, err)
+		t.Cleanup(func() {
+			err := db.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+
+		err = db.Ping()
+		assert.NoError(t, err)
+
+		var exists bool
+		query := `SELECT EXISTS(SELECT datname FROM pg_catalog.pg_database WHERE datname = $1);`
+		err = db.QueryRow(query, "testdb").Scan(&exists)
+		assert.NoError(t, err)
+		if !exists {
+			db.Exec("CREATE DATABASE testdb;")
+		}
+
+		// add DbTest.kt with a new verb that uses the db
+		err = scaffolder.Scaffold(
+			filepath.Join(ic.rootDir, "integration/testdata/database"),
+			filepath.Join(dir, "src/main/kotlin/ftl/dbtest"),
+			ic,
+		)
+		assert.NoError(t, err)
+
+		return nil
+	}
+}
+
+func validateModuleDb() assertion {
+	return func(t testing.TB, ic itContext) error {
+		db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/testdb?sslmode=disable")
+		assert.NoError(t, err)
+		t.Cleanup(func() {
+			err := db.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+
+		err = db.Ping()
+		assert.NoError(t, err)
+
+		rows, err := db.Query("SELECT data FROM requests")
+		assert.NoError(t, err)
+
+		for rows.Next() {
+			var data string
+			err := rows.Scan(&data)
+			assert.NoError(t, err)
+			if data == "Hello" {
+				return nil
+			}
+		}
+
+		return errors.New("data not found")
 	}
 }
 

@@ -179,9 +179,9 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
-		case *Array, *Bool, *DataRef, *Field, *Float, *Int,
+		case *Array, *Bool, *DataRef, *Database, *Field, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes, *VerbRef,
-			*MetadataCalls, *MetadataIngress, IngressPathComponent,
+			*MetadataCalls, *MetadataDatabases, *MetadataIngress, IngressPathComponent,
 			*IngressPathLiteral, *IngressPathParameter, *Optional,
 			*SourceRef, *SinkRef, *Unit:
 		case Type, Metadata, Decl: // Union sql.

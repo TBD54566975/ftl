@@ -3,9 +3,11 @@ package xyz.block.ftl.schemaextractor
 import io.gitlab.arturbosch.detekt.api.*
 import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
+import org.jetbrains.kotlin.cfg.getDeclarationDescriptorIncludingConstructors
 import org.jetbrains.kotlin.cfg.getElementParentDeclaration
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
+import org.jetbrains.kotlin.descriptors.impl.referencedProperty
 import org.jetbrains.kotlin.diagnostics.DiagnosticUtils.getLineAndColumnInPsiFile
 import org.jetbrains.kotlin.diagnostics.PsiDiagnosticUtils.LineAndColumn
 import org.jetbrains.kotlin.js.descriptorUtils.getKotlinTypeFqName
@@ -23,6 +25,7 @@ import org.jetbrains.kotlin.types.typeUtil.requiresTypeAliasExpansion
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.*
 import xyz.block.ftl.Context
+import xyz.block.ftl.Database
 import xyz.block.ftl.v1.schema.*
 import xyz.block.ftl.v1.schema.Array
 import xyz.block.ftl.v1.schema.Verb
@@ -186,12 +189,43 @@ class SchemaExtractor(
     )
 
     val moduleData = ModuleData(
-      decls = mutableSetOf(Decl(verb = verb), *extractDataDeclarations().toTypedArray()),
+      decls = mutableSetOf(
+        Decl(verb = verb),
+        *extractDataDeclarations().toTypedArray(),
+        *extractDatabases().toTypedArray(),
+      ),
       comments = module.comments()
     )
     modules[currentModuleName]?.decls?.addAll(moduleData.decls) ?: run {
       modules[currentModuleName] = moduleData
     }
+  }
+
+  private fun extractDatabases(): Set<Decl> {
+    return verb.containingKtFile.declarations
+      .filter {
+        (it as? KtProperty)
+          ?.getDeclarationDescriptorIncludingConstructors(bindingContext)?.referencedProperty?.returnType
+          ?.fqNameOrNull()?.asString() == Database::class.qualifiedName
+      }
+      .flatMap { it.children.asSequence() }
+      .map {
+        val sourcePos = it.getLineAndColumn()
+        val dbName = (it as? KtCallExpression).getResolvedCall(bindingContext)?.valueArguments?.entries?.single { e ->
+          e.key.name.asString() == "name"
+        }
+          ?.value?.toString()
+          ?.trim('"')
+        requireNotNull(dbName) { "$sourcePos $dbName Could not extract database name" }
+
+        Decl(
+          database = xyz.block.ftl.v1.schema.Database(
+            pos = sourcePos.toPosition(verb.containingKtFile.name),
+            name = dbName
+          )
+        )
+      }
+      .toSet()
   }
 
   private fun extractDataDeclarations(): Set<Decl> {
