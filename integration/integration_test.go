@@ -94,8 +94,9 @@ func TestIntegration(t *testing.T) {
 			}),
 		}},
 		{name: "UseKotlinDbConn", assertions: assertions{
-			setUpModuleDb(filepath.Join(modulesDir, "ftl-module-echo3")),
-			run(".", "ftl", "deploy", filepath.Join(modulesDir, "ftl-module-echo3")),
+			run(".", "ftl", "init", "kotlin", modulesDir, "dbtest"),
+			setUpModuleDb(filepath.Join(modulesDir, "ftl-module-dbtest")),
+			run(".", "ftl", "deploy", filepath.Join(modulesDir, "ftl-module-dbtest")),
 			call("dbtest", "create", obj{"data": "Hello"}, func(t testing.TB, resp obj) {}),
 			validateModuleDb(),
 		}},
