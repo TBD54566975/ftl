@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/iancoleman/strcase"
 	"google.golang.org/protobuf/proto"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/scaffolder"
 )
 
 type buildContext struct {
