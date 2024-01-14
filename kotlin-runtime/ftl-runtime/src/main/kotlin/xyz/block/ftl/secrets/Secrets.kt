@@ -1,17 +1,21 @@
 package xyz.block.ftl.secrets
 
-object Secrets {
-  private const val FTL_SECRETS_ENV_VAR_PREFIX = "FTL_SECRET_"
+import xyz.block.ftl.serializer.makeGson
 
-  fun get(name: String): String {
-    if (!name.startsWith(FTL_SECRETS_ENV_VAR_PREFIX)) {
-      throw Exception("Invalid secret name; must start with $FTL_SECRETS_ENV_VAR_PREFIX")
-    }
+class Secret<T>(val name: String) {
+  val module: String
+  val gson = makeGson()
 
-    return try {
-      System.getenv(name)
-    } catch (e: Exception) {
-      throw Exception("Secret $name not found")
-    }
+  init {
+    val caller = Thread.currentThread().getStackTrace()[2].className
+    require(caller.startsWith("ftl.") || caller.startsWith("xyz.block.ftl.secrets.")) { "Secrets must be defined in an FTL module not ${caller}" }
+    val parts = caller.split(".")
+    module = parts[parts.size - 2]
+  }
+
+  inline fun <reified T> get(): T {
+    val key = "FTL_SECRET_${module.uppercase()}_${name.uppercase()}"
+    val value = System.getenv(key) ?: throw Exception("Secret ${module}.${name} not found")
+    return gson.fromJson(value, T::class.java)
   }
 }
