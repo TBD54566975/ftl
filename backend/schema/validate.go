@@ -38,18 +38,15 @@ func Validate(schema *Schema) (*Schema, error) {
 	modules := map[string]bool{}
 	verbs := map[string]bool{}
 	data := map[string]bool{}
-	verbRefs := []*VerbRef{}
-	dataRefs := []*DataRef{}
 	merr := []error{}
 	ingress := map[string]*Verb{}
+	verbRefs := []*VerbRef{}
+	dataRefs := []*DataRef{}
 
 	// Inject builtins.
 	builtins := Builtins()
 	schema.Modules = slices.DeleteFunc(schema.Modules, func(m *Module) bool { return m.Name == builtins.Name })
 	schema.Modules = append([]*Module{builtins}, schema.Modules...)
-
-	// Map from reference to the module it is defined in.
-	localModule := map[*Ref]*Module{}
 
 	// Validate modules.
 	for _, module := range schema.Modules {
@@ -66,11 +63,9 @@ func Validate(schema *Schema) (*Schema, error) {
 		err := Visit(module, func(n Node, next func() error) error {
 			switch n := n.(type) {
 			case *VerbRef:
-				localModule[(*Ref)(n)] = module
 				verbRefs = append(verbRefs, n)
 
 			case *DataRef:
-				localModule[(*Ref)(n)] = module
 				dataRefs = append(dataRefs, n)
 
 			case *Verb:
@@ -105,25 +100,118 @@ func Validate(schema *Schema) (*Schema, error) {
 	}
 
 	for _, ref := range verbRefs {
-		if !resolveRef(localModule[(*Ref)(ref)], (*Ref)(ref), verbs) {
+		if ref.Module != "" && !verbs[ref.String()] {
 			merr = append(merr, fmt.Errorf("%s: reference to unknown Verb %q", ref.Pos, ref))
 		}
 	}
 	for _, ref := range dataRefs {
-		if !resolveRef(localModule[(*Ref)(ref)], (*Ref)(ref), data) {
+		if ref.Module != "" && !data[ref.String()] {
 			merr = append(merr, fmt.Errorf("%s: reference to unknown data structure %q", ref.Pos, ref))
 		}
 	}
 	return schema, errors.Join(merr...)
 }
 
+var validNameRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// ValidateModule performs the subset of semantic validation possible on a single module.
+func ValidateModule(module *Module) error {
+	verbs := map[string]bool{}
+	data := map[string]bool{}
+	verbRefs := []*VerbRef{}
+	dataRefs := []*DataRef{}
+	merr := []error{}
+
+	if !validNameRe.MatchString(module.Name) {
+		merr = append(merr, fmt.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
+	}
+	if module.Builtin && module.Name != "builtin" {
+		merr = append(merr, fmt.Errorf("%s: only the \"ftl\" module can be marked as builtin", module.Pos))
+	}
+	visit := func(module *Module) error {
+		return Visit(module, func(n Node, next func() error) error {
+			switch n := n.(type) {
+			case *VerbRef:
+				verbRefs = append(verbRefs, n)
+
+			case *DataRef:
+				dataRefs = append(dataRefs, n)
+
+			case *Verb:
+				if !validNameRe.MatchString(n.Name) {
+					merr = append(merr, fmt.Errorf("%s: Verb name %q is invalid", n.Pos, n.Name))
+				}
+				if _, ok := reservedIdentNames[n.Name]; ok {
+					merr = append(merr, fmt.Errorf("%s: Verb name %q is a reserved word", n.Pos, n.Name))
+				}
+				if _, ok := verbs[n.Name]; ok {
+					merr = append(merr, fmt.Errorf("%s: duplicate Verb %q", n.Pos, n.Name))
+				}
+				verbs[module.Name+"."+n.Name] = true
+
+			case *Data:
+				if !validNameRe.MatchString(n.Name) {
+					merr = append(merr, fmt.Errorf("%s: data structure name %q is invalid", n.Pos, n.Name))
+				}
+				if _, ok := reservedIdentNames[n.Name]; ok {
+					merr = append(merr, fmt.Errorf("%s: data structure name %q is a reserved word", n.Pos, n.Name))
+				}
+				if _, ok := data[n.Name]; ok {
+					merr = append(merr, fmt.Errorf("%s: duplicate data structure %q", n.Pos, n.Name))
+				}
+				for _, md := range n.Metadata {
+					if md, ok := md.(*MetadataCalls); ok {
+						merr = append(merr, fmt.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
+					}
+				}
+				data[module.Name+"."+n.Name] = true
+
+			case *Array, *Bool, *Database, *Field, *Float, *Int,
+				*Time, *Map, *Module, *Schema, *String, *Bytes,
+				*MetadataCalls, *MetadataDatabases, *MetadataIngress, IngressPathComponent,
+				*IngressPathLiteral, *IngressPathParameter, *Optional,
+				*SourceRef, *SinkRef, *Unit:
+
+			case Type, Metadata, Decl: // Union types.
+			}
+			return next()
+		})
+	}
+
+	// Collect all the builtin verbs and data structures so that unqualified refs in our module can be resolved.
+	builtins := Builtins()
+	if err := visit(builtins); err != nil {
+		return err
+	}
+	// Clear collected refs because we don't care about any that might be in the builtins.
+	verbRefs = nil
+	dataRefs = nil
+
+	// Collect verbs and data structures from this module.
+	if err := visit(module); err != nil {
+		return err
+	}
+
+	for _, ref := range verbRefs {
+		if !resolveLocalRef(module, (*Ref)(ref), verbs) {
+			merr = append(merr, fmt.Errorf("%s: unqualified reference to unknown Verb %q", ref.Pos, ref))
+		}
+	}
+	for _, ref := range dataRefs {
+		if !resolveLocalRef(module, (*Ref)(ref), data) {
+			merr = append(merr, fmt.Errorf("%s: unqualified reference to unknown data structure %q", ref.Pos, ref))
+		}
+	}
+	return errors.Join(merr...)
+}
+
 // Try to resolve a relative reference (ie. one without a module).
 //
 // This first tries to resolve the reference against the local module, then against
 // the builtins module.
-func resolveRef(localModule *Module, ref *Ref, exist map[string]bool) bool {
+func resolveLocalRef(localModule *Module, ref *Ref, exist map[string]bool) bool {
 	if ref.Module != "" {
-		return exist[ref.String()]
+		return true
 	}
 	for _, module := range []string{localModule.Name, "builtin"} {
 		clone := reflect.DeepCopy(ref)
@@ -134,62 +222,4 @@ func resolveRef(localModule *Module, ref *Ref, exist map[string]bool) bool {
 		}
 	}
 	return false
-}
-
-var validNameRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
-
-// ValidateModule performs the subset of semantic validation possible on a single module.
-func ValidateModule(module *Module) error {
-	verbs := map[string]bool{}
-	data := map[string]bool{}
-	merr := []error{}
-	if !validNameRe.MatchString(module.Name) {
-		merr = append(merr, fmt.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
-	}
-	if module.Builtin && module.Name != "builtin" {
-		merr = append(merr, fmt.Errorf("%s: only the \"ftl\" module can be marked as builtin", module.Pos))
-	}
-	err := Visit(module, func(n Node, next func() error) error {
-		switch n := n.(type) {
-		case *Verb:
-			if !validNameRe.MatchString(n.Name) {
-				merr = append(merr, fmt.Errorf("%s: Verb name %q is invalid", n.Pos, n.Name))
-			}
-			if _, ok := reservedIdentNames[n.Name]; ok {
-				merr = append(merr, fmt.Errorf("%s: Verb name %q is a reserved word", n.Pos, n.Name))
-			}
-			if _, ok := verbs[n.Name]; ok {
-				merr = append(merr, fmt.Errorf("%s: duplicate Verb %q", n.Pos, n.Name))
-			}
-			verbs[n.Name] = true
-
-		case *Data:
-			if !validNameRe.MatchString(n.Name) {
-				merr = append(merr, fmt.Errorf("%s: data structure name %q is invalid", n.Pos, n.Name))
-			}
-			if _, ok := reservedIdentNames[n.Name]; ok {
-				merr = append(merr, fmt.Errorf("%s: data structure name %q is a reserved word", n.Pos, n.Name))
-			}
-			if _, ok := data[n.Name]; ok {
-				merr = append(merr, fmt.Errorf("%s: duplicate data structure %q", n.Pos, n.Name))
-			}
-			for _, md := range n.Metadata {
-				if md, ok := md.(*MetadataCalls); ok {
-					merr = append(merr, fmt.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
-				}
-			}
-
-		case *Array, *Bool, *DataRef, *Database, *Field, *Float, *Int,
-			*Time, *Map, *Module, *Schema, *String, *Bytes, *VerbRef,
-			*MetadataCalls, *MetadataDatabases, *MetadataIngress, IngressPathComponent,
-			*IngressPathLiteral, *IngressPathParameter, *Optional,
-			*SourceRef, *SinkRef, *Unit:
-		case Type, Metadata, Decl: // Union sql.
-		}
-		return next()
-	})
-	if err != nil {
-		merr = append(merr, err)
-	}
-	return errors.Join(merr...)
 }

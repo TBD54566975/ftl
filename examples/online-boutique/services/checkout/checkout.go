@@ -7,13 +7,14 @@ import (
 
 	"github.com/google/uuid"
 
+	"ftl/cart"
+	"ftl/currency"
+	"ftl/payment"
+	"ftl/productcatalog"
+	"ftl/shipping"
+
 	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/examples/online-boutique/common/money"
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/cart"
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/currency"
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/payment"
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/productcatalog"
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/shipping"
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 
@@ -49,7 +50,7 @@ func PlaceOrder(ctx context.Context, req PlaceOrderRequest) (Order, error) {
 
 	orders := make([]OrderItem, len(cartItems.Items))
 	for i, item := range cartItems.Items {
-		product, err := ftl.Call(ctx, productcatalog.Get, productcatalog.GetRequest{ID: item.ProductID})
+		product, err := ftl.Call(ctx, productcatalog.Get, productcatalog.GetRequest{Id: item.ProductID})
 		if err != nil {
 			return Order{}, fmt.Errorf("failed to get product #%q: %w", item.ProductID, err)
 		}
@@ -103,14 +104,14 @@ func PlaceOrder(ctx context.Context, req PlaceOrderRequest) (Order, error) {
 	if err != nil {
 		return Order{}, fmt.Errorf("shipping error: %w", err)
 	}
-	fmt.Printf("Shipped order, tracking ID %s", shippingTrackingID.ID)
+	fmt.Printf("Shipped order, tracking ID %s", shippingTrackingID.Id)
 
 	// Empty the cart, but don't worry about errors.
 	_, _ = ftl.Call(ctx, cart.EmptyCart, cart.EmptyCartRequest{UserID: req.UserID})
 
 	order := Order{
 		ID:                 uuid.New().String(),
-		ShippingTrackingID: shippingTrackingID.ID,
+		ShippingTrackingID: shippingTrackingID.Id,
 		ShippingCost:       shippingPrice,
 		ShippingAddress:    req.Address,
 		Items:              orders,

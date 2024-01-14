@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/cart"
-	"github.com/TBD54566975/ftl/examples/online-boutique/services/currency"
+	"ftl/cart"
+	"ftl/currency"
 )
 
 type Address struct {

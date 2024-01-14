@@ -26,8 +26,8 @@ func TestExtractModuleSchema(t *testing.T) {
     string String
     slice [String]
     map {String: String}
-    nested Nested
-    optional Nested?
+    nested one.Nested
+    optional one.Nested?
     time Time
     user two.User
     bytes Bytes
@@ -36,7 +36,7 @@ func TestExtractModuleSchema(t *testing.T) {
   data Resp {
   }
 
-  verb verb(Req) Resp
+  verb verb(one.Req) one.Resp
 }
 `
 	assert.Equal(t, expected, actual.String())

@@ -1,8 +1,0 @@
-{{- /*gotype: github.com/TBD54566975/ftl/go-runtime/compile/generate.GoModConfig*/ -}}
-module main
-
-go 1.21
-
-{{range $module, $dir := .Replace}}
-replace {{$module}} => {{$dir}}
-{{end}}

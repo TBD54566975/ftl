@@ -90,6 +90,14 @@ go-runtime/scaffolding.zip: go-runtime/scaffolding/**/*
   cd go-runtime/scaffolding
   build: zip -q --symlinks -r ../scaffolding.zip .
 
+go-runtime/compile/build-template.zip: go-runtime/compile/build-template/**/*
+  cd go-runtime/compile/build-template
+  build: zip -q --symlinks -r ../build-template.zip .
+
+go-runtime/compile/external-module-template.zip: go-runtime/compile/external-module-template/**/* 
+  cd go-runtime/compile/external-module-template
+  build: zip -q --symlinks -r ../external-module-template.zip .
+
 kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
   cd kotlin-runtime/scaffolding
   build: zip -q --symlinks -r ../scaffolding.zip .

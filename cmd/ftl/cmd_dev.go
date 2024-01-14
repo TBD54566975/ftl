@@ -13,6 +13,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 
+	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -41,7 +42,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	for {
 		iterationStartTime := time.Now()
 
-		tomls, err := d.getTomls()
+		tomls, err := d.getTomls(ctx)
 		if err != nil {
 			return err
 		}
@@ -50,7 +51,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 		for dir := range d.modules {
 			currentModule := d.modules[dir]
-			err := d.updateFileInfo(dir)
+			err := d.updateFileInfo(ctx, dir)
 			if err != nil {
 				return err
 			}
@@ -77,9 +78,9 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	}
 }
 
-func (d *devCmd) getTomls() ([]string, error) {
+func (d *devCmd) getTomls(ctx context.Context) ([]string, error) {
 	baseDir := d.BaseDir
-	ignores := loadGitIgnore(os.DirFS(baseDir), ".")
+	ignores := initGitIgnore(ctx, baseDir)
 	tomls := []string{}
 
 	err := walkDir(baseDir, ignores, func(srcPath string, d fs.DirEntry) error {
@@ -120,13 +121,13 @@ func (d *devCmd) addOrRemoveModules(tomls []string) {
 	}
 }
 
-func (d *devCmd) updateFileInfo(dir string) error {
+func (d *devCmd) updateFileInfo(ctx context.Context, dir string) error {
 	config, err := moduleconfig.LoadConfig(dir)
 	if err != nil {
 		return err
 	}
 
-	ignores := loadGitIgnore(os.DirFS(dir), ".")
+	ignores := initGitIgnore(ctx, dir)
 	d.modules[dir] = moduleFolderInfo{}
 
 	err = walkDir(dir, ignores, func(srcPath string, entry fs.DirEntry) error {
@@ -221,7 +222,7 @@ func walkDir(dir string, ignores []string, fn func(path string, d fs.DirEntry) e
 	// Then, recurse into subdirectories
 	for _, dirEntry := range dirs {
 		dirPath := filepath.Join(dir, dirEntry.Name())
-		ignores = append(ignores, loadGitIgnore(os.DirFS(dirPath), ".")...)
+		ignores = append(ignores, loadGitIgnore(dirPath)...)
 		if err := walkDir(dirPath, ignores, fn); err != nil {
 			if errors.Is(err, errSkip) {
 				return errSkip // Propagate errSkip upwards to stop this branch of recursion
@@ -232,15 +233,31 @@ func walkDir(dir string, ignores []string, fn func(path string, d fs.DirEntry) e
 	return nil
 }
 
-func loadGitIgnore(root fs.FS, dir string) []string {
+func initGitIgnore(ctx context.Context, dir string) []string {
 	ignore := []string{
 		"**/.*",
 		"**/.*/**",
 	}
-	r, err := root.Open(path.Join(dir, ".gitignore"))
+	home, err := os.UserHomeDir()
+	if err == nil {
+		ignore = append(ignore, loadGitIgnore(home)...)
+	}
+	gitRootBytes, err := exec.Capture(ctx, dir, "git", "rev-parse", "--show-toplevel")
+	if err == nil {
+		gitRoot := strings.TrimSpace(string(gitRootBytes))
+		for current := dir; strings.HasPrefix(current, gitRoot); current = path.Dir(current) {
+			ignore = append(ignore, loadGitIgnore(current)...)
+		}
+	}
+	return ignore
+}
+
+func loadGitIgnore(dir string) []string {
+	r, err := os.Open(path.Join(dir, ".gitignore"))
 	if err != nil {
 		return nil
 	}
+	ignore := []string{}
 	lr := bufio.NewScanner(r)
 	for lr.Scan() {
 		line := lr.Text()

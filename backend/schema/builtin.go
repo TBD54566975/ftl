@@ -1,7 +1,11 @@
 package schema
 
+import (
+	"golang.design/x/reflect"
+)
+
 // BuiltinsSource is the schema source code for built-in types.
-var BuiltinsSource = `
+const BuiltinsSource = `
 // Built-in types for FTL.
 builtin module builtin {
   // HTTP request structure used for HTTP ingress verbs.
@@ -23,11 +27,15 @@ builtin module builtin {
 }
 `
 
-// Builtins returns a [Module] containing built-in types.
-func Builtins() *Module {
-	module, err := ParseModuleString("builtins.ftl", BuiltinsSource)
+var builtinsModuleParsed = func() *Module {
+	module, err := moduleParser.ParseString("", BuiltinsSource)
 	if err != nil {
-		panic("failed to parse builtins: " + err.Error())
+		panic(err)
 	}
 	return module
+}()
+
+// Builtins returns a [Module] containing built-in types.
+func Builtins() *Module {
+	return reflect.DeepCopy(builtinsModuleParsed)
 }

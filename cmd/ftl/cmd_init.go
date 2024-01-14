@@ -14,6 +14,7 @@ import (
 	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
 
+	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
@@ -21,7 +22,7 @@ import (
 )
 
 type initCmd struct {
-	Hermit bool          `default:"true" help:"Include Hermit language-specific toolchain binaries in the module." negatable:""`
+	Hermit bool          `help:"Include Hermit language-specific toolchain binaries in the module." negatable:""`
 	Go     initGoCmd     `cmd:"" help:"Initialize a new FTL Go module."`
 	Kotlin initKotlinCmd `cmd:"" help:"Initialize a new FTL Kotlin module."`
 }
@@ -31,17 +32,17 @@ type initGoCmd struct {
 	Name string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
-func (i initGoCmd) Run(parent *initCmd) error {
+func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
-	tmpDir, err := unzipToTmpDir(goruntime.Files)
-	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to unzip kotlin runtime", err)
+	logger := log.FromContext(ctx)
+	logger.Infof("Initializing FTL Go module %s in %s", i.Name, i.Dir)
+	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
+		return err
 	}
-	defer os.RemoveAll(tmpDir)
-
-	return scaffold(parent.Hermit, tmpDir, i.Dir, i, scaffolder.Exclude("^go.mod$"))
+	logger.Infof("Running go mod tidy")
+	return exec.Command(ctx, log.Debug, filepath.Join(i.Dir, i.Name), "go", "mod", "tidy").Run()
 }
 
 type initKotlinCmd struct {
@@ -71,13 +72,7 @@ func (i initKotlinCmd) Run(ctx context.Context, parent *initCmd) error {
 		}
 	}
 
-	tmpDir, err := unzipToTmpDir(kotlinruntime.Files)
-	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to unzip kotlin runtime", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	if err := scaffold(parent.Hermit, tmpDir, i.Dir, i, options...); err != nil {
+	if err := scaffold(parent.Hermit, kotlinruntime.Files(), i.Dir, i, options...); err != nil {
 		return err
 	}
 
@@ -122,13 +117,13 @@ func unzipToTmpDir(reader *zip.Reader) (string, error) {
 	return tmpDir, nil
 }
 
-func scaffold(hermit bool, source string, destination string, ctx any, options ...scaffolder.Option) error {
+func scaffold(hermit bool, source *zip.Reader, destination string, ctx any, options ...scaffolder.Option) error {
 	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("^go.mod$")}
 	if !hermit {
 		opts = append(opts, scaffolder.Exclude("^bin"))
 	}
 	opts = append(opts, options...)
-	if err := scaffolder.Scaffold(source, destination, ctx, opts...); err != nil {
+	if err := internal.ScaffoldZip(source, destination, ctx, opts...); err != nil {
 		return fmt.Errorf("%s: %w", "failed to scaffold", err)
 	}
 	return nil

@@ -3,8 +3,10 @@
 package kotlinruntime
 
 import (
+	"archive/zip"
+
 	"github.com/TBD54566975/ftl/internal"
 )
 
 // Files is the FTL Kotlin runtime scaffolding files.
-var Files = internal.ZipRelativeToCaller("scaffolding")
+func Files() *zip.Reader { return internal.ZipRelativeToCaller("scaffolding") }
