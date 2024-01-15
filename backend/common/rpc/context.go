@@ -95,7 +95,11 @@ func DefaultHandlerOptions() []connect.HandlerOption {
 }
 
 func otelInterceptor() connect.Interceptor {
-	return otelconnect.NewInterceptor(otelconnect.WithTrustRemote(), otelconnect.WithoutServerPeerAttributes())
+	otel, err := otelconnect.NewInterceptor(otelconnect.WithTrustRemote(), otelconnect.WithoutServerPeerAttributes())
+	if err != nil {
+		panic(err)
+	}
+	return otel
 }
 
 // MetadataInterceptor propagates FTL metadata through servers and clients.
