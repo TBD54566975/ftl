@@ -34,7 +34,6 @@ import (
 const integrationTestTimeout = time.Second * 60
 
 func TestIntegration(t *testing.T) {
-	t.Skip()
 	tmpDir := t.TempDir()
 
 	cwd, err := os.Getwd()

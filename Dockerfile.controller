@@ -19,7 +19,7 @@ RUN go mod download -x
 
 # Build
 COPY . /src/
-RUN git ls-files -- '*.go' | xargs errtrace -w && go mod tidy
+RUN git ls-files -z -- '*.go' | xargs -0 errtrace -w && go mod tidy
 RUN bit build/release/ftl-controller
 RUN bit build/release/ftl-initdb
 RUN bit build/release/ftl
