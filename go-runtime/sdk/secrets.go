@@ -13,8 +13,8 @@ import (
 // allow any type that FTL supports, including structs.
 type SecretType interface {
 	string | int | float64 | bool |
-		[]string | []int | []float64 | []bool | []byte
-	map[string]string | map[string]int | map[string]float64 | map[string]bool | map[string][]byte
+		[]string | []int | []float64 | []bool | []byte |
+		map[string]string | map[string]int | map[string]float64 | map[string]bool | map[string][]byte
 }
 
 // Secret declares a typed secret for the current module.
