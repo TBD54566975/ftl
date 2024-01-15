@@ -6,9 +6,9 @@ import org.junitpioneer.jupiter.SetEnvironmentVariable
 
 class ConfigTest {
   @Test
-  @SetEnvironmentVariable(key = "FTL_SECRET_SECRETS_TEST", value = "testingtesting")
+  @SetEnvironmentVariable(key = "FTL_CONFIG_CONFIG_TEST", value = "testingtesting")
   fun testSecret() {
-    val secret = Secret<String>("test")
-    assertEquals("testingtesting", secret.get())
+    val config = Config.new<String>("test")
+    assertEquals("testingtesting", config.get())
   }
 }
