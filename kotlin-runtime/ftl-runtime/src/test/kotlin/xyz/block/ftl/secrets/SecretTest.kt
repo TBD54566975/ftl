@@ -8,7 +8,7 @@ class SecretTest {
   @Test
   @SetEnvironmentVariable(key = "FTL_SECRET_SECRETS_TEST", value = "testingtesting")
   fun testSecret() {
-    val secret = Secret<String>("test")
+    val secret = Secret.new<String>("test")
     assertEquals("testingtesting", secret.get())
   }
 }

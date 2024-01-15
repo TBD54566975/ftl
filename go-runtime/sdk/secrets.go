@@ -34,13 +34,13 @@ func (s *SecretValue[Type]) String() string {
 }
 
 // Get returns the value of the secret from FTL.
-func (c *SecretValue[Type]) Get() (out Type) {
-	value, ok := os.LookupEnv(fmt.Sprintf("FTL_SECRET_%s_%s", strings.ToUpper(c.module), strings.ToUpper(c.name)))
+func (s *SecretValue[Type]) Get() (out Type) {
+	value, ok := os.LookupEnv(fmt.Sprintf("FTL_SECRET_%s_%s", strings.ToUpper(s.module), strings.ToUpper(s.name)))
 	if !ok {
 		return out
 	}
 	if err := json.Unmarshal([]byte(value), &out); err != nil {
-		panic(fmt.Errorf("failed to parse %s: %w", c, err))
+		panic(fmt.Errorf("failed to parse %s: %w", s, err))
 	}
 	return
 }
