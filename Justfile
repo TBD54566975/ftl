@@ -3,15 +3,15 @@ install-jars: install-root-jar install-generator-jar install-runtime-jar
 
 # Install root JAR to local Maven repository
 install-root-jar:
-  mvn install
+  mvn -B install
 
 # Install ftl-generator JAR to local Maven repository
 install-generator-jar:
-  mvn -pl :ftl-generator install
+  mvn -B -pl :ftl-generator install
 
 # Install ftl-runtime JAR to local Maven repository
 install-runtime-jar:
-  mvn -pl :ftl-runtime install
+  mvn -B -pl :ftl-runtime install
 
 # Deploy the Go time module
 deploy-time:

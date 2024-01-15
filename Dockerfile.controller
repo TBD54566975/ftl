@@ -10,7 +10,7 @@ WORKDIR /src
 
 # Seed some of the most common tools - this will be cached
 RUN go version
-RUN mvn --version
+RUN mvn -B --version
 
 # Download Go dependencies separately so Docker will cache them
 COPY go.mod go.sum ./

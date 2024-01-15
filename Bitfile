@@ -118,15 +118,15 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
 
 %{KT_RUNTIME_OUT}: %{KT_RUNTIME_IN} %{PROTO_IN}
   build:
-    mvn -N install
-    mvn -pl :ftl-runtime install
-  +clean: mvn -pl :ftl-runtime clean
+    mvn -B -N install
+    mvn -B -pl :ftl-runtime install
+  +clean: mvn -B -pl :ftl-runtime clean
 
 %{KT_GENERATOR_OUT}: %{KT_GENERATOR_IN}
   build:
-    mvn -N install
-    mvn -pl :ftl-generator install
-  +clean: mvn -pl :ftl-generator clean
+    mvn -B -N install
+    mvn -B -pl :ftl-generator install
+  +clean: mvn -B -pl :ftl-generator clean
 
 %(dirname %{KT_RUNTIME_RUNNER_TEMPLATE_OUT})%:
   build: install -m 0700 -d %{OUT}

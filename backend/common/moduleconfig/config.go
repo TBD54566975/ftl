@@ -53,7 +53,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	switch config.Language {
 	case "kotlin":
 		if config.Build == "" {
-			config.Build = "mvn --batch-mode compile"
+			config.Build = "mvn -B compile"
 		}
 		if config.DeployDir == "" {
 			config.DeployDir = "target"

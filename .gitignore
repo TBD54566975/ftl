@@ -14,4 +14,5 @@ generated_ftl_module.go
 *.zip
 dist/
 examples/**/_ftl/
-go.work*
+examples/**/go.work
+examples/**/go.work.sum
