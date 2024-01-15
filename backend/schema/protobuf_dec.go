@@ -56,8 +56,10 @@ func typeToSchema(s *schemapb.Type) Type {
 		return mapToSchema(s.Map)
 	case *schemapb.Type_Optional:
 		return &Optional{Pos: posFromProto(s.Optional.Pos), Type: typeToSchema(s.Optional.Type)}
+	case *schemapb.Type_Unit:
+		return &Unit{Pos: posFromProto(s.Unit.Pos)}
 	}
-	panic("unreachable")
+	panic(fmt.Sprintf("unhandled type: %T", s.Value))
 }
 
 func metadataListToSchema(s []*schemapb.Metadata) []Metadata {

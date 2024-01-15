@@ -259,7 +259,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	var req schema.Type
 	if reqt != nil {
-		req, err = parseStruct(pctx, node, params.At(1).Type())
+		req, err = parseType(pctx, node, params.At(1).Type())
 		if err != nil {
 			return nil, err
 		}
@@ -268,7 +268,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	var resp schema.Type
 	if respt != nil {
-		resp, err = parseStruct(pctx, node, results.At(0).Type())
+		resp, err = parseType(pctx, node, results.At(0).Type())
 		if err != nil {
 			return nil, err
 		}
@@ -404,6 +404,9 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		switch named.Obj().Pkg().Path() + "." + named.Obj().Name() {
 		case "time.Time":
 			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
+
+		case "github.com/TBD54566975/ftl/go-runtime/sdk.Unit":
+			return &schema.Unit{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		case "github.com/TBD54566975/ftl/go-runtime/sdk.Option":
 			underlying, err := parseType(pctx, node, named.TypeArgs().At(0))
