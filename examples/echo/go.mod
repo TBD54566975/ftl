@@ -1,6 +1,6 @@
 module ftl/echo
 
-go 1.21.6
+go 1.21.5
 
 require github.com/TBD54566975/ftl v0.95.0
 

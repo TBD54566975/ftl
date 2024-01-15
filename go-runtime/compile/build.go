@@ -10,9 +10,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/iancoleman/strcase"
+	"golang.org/x/mod/modfile"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -21,13 +23,19 @@ import (
 	"github.com/TBD54566975/ftl/internal"
 )
 
-type buildContext struct {
+type externalModuleContext struct {
 	ModuleDir string
 	*schema.Schema
-	Main string
+	GoVersion string
+	Main      string
 }
 
-func (b buildContext) NonMainModules() []*schema.Module {
+type mainModuleContext struct {
+	GoVersion string
+	*schema.Module
+}
+
+func (b externalModuleContext) NonMainModules() []*schema.Module {
 	modules := make([]*schema.Module, 0, len(b.Modules)-1)
 	for _, module := range b.Modules {
 		if module.Name == b.Main {
@@ -42,6 +50,11 @@ const buildDirName = "_ftl"
 
 // Build the given module.
 func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
+	goModVersion, err := readGoModVersion(filepath.Join(moduleDir, "go.mod"))
+	if err != nil {
+		return err
+	}
+
 	config, err := moduleconfig.LoadConfig(moduleDir)
 	if err != nil {
 		return fmt.Errorf("failed to load module config: %w", err)
@@ -56,8 +69,9 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	_ = os.RemoveAll(filepath.Join(buildDir, "go", "modules"))
 
 	logger.Infof("Generating external modules")
-	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), moduleDir, buildContext{
+	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), moduleDir, externalModuleContext{
 		ModuleDir: moduleDir,
+		GoVersion: goModVersion,
 		Schema:    sch,
 		Main:      config.Module,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
@@ -79,7 +93,10 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	}
 
 	logger.Infof("Generating main module")
-	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, main, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
+	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
+		GoVersion: goModVersion,
+		Module:    main,
+	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
 
@@ -178,4 +195,16 @@ func genType(module *schema.Module, t schema.Type) string {
 		return "[]byte"
 	}
 	panic(fmt.Sprintf("unsupported type %T", t))
+}
+
+func readGoModVersion(goModPath string) (string, error) {
+	goModBytes, err := os.ReadFile(goModPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s: %w", goModPath, err)
+	}
+	goModfile, err := modfile.Parse(goModPath, goModBytes, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
+	}
+	return goModfile.Go.Version, nil
 }
