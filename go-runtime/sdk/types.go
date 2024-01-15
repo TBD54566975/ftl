@@ -13,7 +13,7 @@ import (
 //
 // It can be used as a parameter or return value to indicate that a function
 // does not accept or return any value.
-var Unit = DataRef{Module: "builtin", Name: "Unit"}
+type Unit struct{}
 
 // Ref is an untyped reference to a symbol.
 type Ref struct {

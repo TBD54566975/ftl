@@ -25,10 +25,11 @@ type moduleFolderInfo struct {
 }
 
 type devCmd struct {
-	BaseDir string        `arg:"" help:"Directory to watch for FTL modules" type:"existingdir" default:"."`
-	Watch   time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
-	modules map[string]moduleFolderInfo
-	client  ftlv1connect.ControllerServiceClient
+	BaseDir      string        `arg:"" help:"Directory to watch for FTL modules" type:"existingdir" default:"."`
+	Watch        time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
+	FailureDelay time.Duration `help:"Delay before retrying a failed deploy." default:"5s"`
+	modules      map[string]moduleFolderInfo
+	client       ftlv1connect.ControllerServiceClient
 }
 
 func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
@@ -40,6 +41,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 	lastScanTime := time.Now()
 	for {
+		delay := d.Watch
 		iterationStartTime := time.Now()
 
 		tomls, err := d.getTomls(ctx)
@@ -65,13 +67,15 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 				if err != nil {
 					logger.Errorf(err, "Error deploying module %s. Will retry", dir)
 					delete(d.modules, dir)
+					// Increase delay when there's a compile failure.
+					delay = d.FailureDelay
 				}
 			}
 		}
 
 		lastScanTime = iterationStartTime
 		select {
-		case <-time.After(d.Watch):
+		case <-time.After(delay):
 		case <-ctx.Done():
 			return nil
 		}
