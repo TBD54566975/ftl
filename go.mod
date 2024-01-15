@@ -1,11 +1,11 @@
 module github.com/TBD54566975/ftl
 
-go 1.21.5
+go 1.21.6
 
 require (
 	connectrpc.com/connect v1.14.0
 	connectrpc.com/grpcreflect v1.2.0
-	connectrpc.com/otelconnect v0.6.0
+	connectrpc.com/otelconnect v0.7.0
 	github.com/BurntSushi/toml v1.3.2
 	github.com/TBD54566975/scaffolder v0.8.0
 	github.com/TBD54566975/scaffolder/extensions/javascript v0.8.0
@@ -26,7 +26,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
-	github.com/jackc/pgx/v5 v5.5.1
+	github.com/jackc/pgx/v5 v5.5.2
 	github.com/jellydator/ttlcache/v3 v3.1.1
 	github.com/jpillora/backoff v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -51,9 +51,9 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e
 	golang.org/x/mod v0.14.0
-	golang.org/x/net v0.19.0
+	golang.org/x/net v0.20.0
 	golang.org/x/sync v0.6.0
-	golang.org/x/tools v0.16.1
+	golang.org/x/tools v0.17.0
 	google.golang.org/protobuf v1.32.0
 	modernc.org/sqlite v1.28.0
 )
@@ -105,8 +105,8 @@ require (
 	github.com/swaggest/refl v1.3.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.21.0 // indirect
 	golang.design/x/reflect v0.0.0-20220504060917-02c43be63f3b
-	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231120223509-83a465c0220f // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f // indirect
