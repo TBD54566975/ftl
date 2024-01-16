@@ -79,6 +79,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
+	logger.Infof("Tidying go.mod")
+	if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").Run(); err != nil {
+		return fmt.Errorf("failed to tidy go.mod: %w", err)
+	}
+
 	logger.Infof("Extracting schema")
 	main, err := ExtractModuleSchema(moduleDir)
 	if err != nil {
@@ -106,6 +111,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	if err := exec.Command(ctx, log.Debug, mainDir, "go", "mod", "tidy").Run(); err != nil {
 		return fmt.Errorf("failed to tidy go.mod: %w", err)
 	}
+
 	return exec.Command(ctx, log.Info, mainDir, "go", "build", "-o", "../../main", ".").Run()
 }
 

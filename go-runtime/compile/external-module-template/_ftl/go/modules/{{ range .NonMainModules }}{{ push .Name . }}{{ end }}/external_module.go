@@ -9,6 +9,9 @@ import (
   {{if $alias}}{{$alias}} {{end}}"{{$import}}"
 {{- end}}
 )
+
+var _ = context.Background
+
 {{- range .Decls }}
 {{if is "Data" . }}
 type {{.Name|title}} struct {
