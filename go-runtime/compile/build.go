@@ -10,13 +10,12 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/mod/modfile"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/scaffolder"
-
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
@@ -79,6 +78,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
+	logger.Infof("Tidying go.mod")
+	if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").Run(); err != nil {
+		return fmt.Errorf("failed to tidy go.mod: %w", err)
+	}
+
 	logger.Infof("Extracting schema")
 	main, err := ExtractModuleSchema(moduleDir)
 	if err != nil {
@@ -106,6 +110,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	if err := exec.Command(ctx, log.Debug, mainDir, "go", "mod", "tidy").Run(); err != nil {
 		return fmt.Errorf("failed to tidy go.mod: %w", err)
 	}
+
 	return exec.Command(ctx, log.Info, mainDir, "go", "build", "-o", "../../main", ".").Run()
 }
 
