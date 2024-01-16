@@ -215,7 +215,11 @@ func updateGoModule(goModPath string) (version string, err error) {
 		return "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
 	}
 	if ftl.IsRelease(ftl.Version) {
-		if err := goModfile.AddRequire("github.com/TBD54566975/ftl", "v"+ftl.Version); err != nil {
+		version := ftl.Version
+		if !strings.HasPrefix(version, "v") {
+			version = "v" + version
+		}
+		if err := goModfile.AddRequire("github.com/TBD54566975/ftl", version); err != nil {
 			return "", fmt.Errorf("failed to add github.com/TBD54566975/ftl to %s: %w", goModPath, err)
 		}
 		goModBytes = modfile.Format(goModfile.Syntax)
