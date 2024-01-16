@@ -13,6 +13,6 @@ reflex.conf
 generated_ftl_module.go
 *.zip
 dist/
-examples/**/_ftl/
 examples/**/go.work
 examples/**/go.work.sum
+**/_ftl

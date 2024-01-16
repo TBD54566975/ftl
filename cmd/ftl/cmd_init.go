@@ -2,10 +2,12 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"context"
 	"fmt"
 	"html/template"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -39,6 +41,9 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Initializing FTL Go module %s in %s", i.Name, i.Dir)
 	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
+		return err
+	}
+	if err := updateGitIgnore(ctx, i.Dir); err != nil {
 		return err
 	}
 	logger.Infof("Running go mod tidy")
@@ -142,4 +147,28 @@ var scaffoldFuncs = template.FuncMap{
 	"typename": func(v any) string {
 		return reflect.Indirect(reflect.ValueOf(v)).Type().Name()
 	},
+}
+
+func updateGitIgnore(ctx context.Context, dir string) error {
+	gitRoot := gitRoot(ctx, dir)
+	f, err := os.OpenFile(path.Join(gitRoot, ".gitignore"), os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close() //nolint:gosec
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		if strings.TrimSpace(scanner.Text()) == "**/_ftl" {
+			return nil
+		}
+	}
+
+	if scanner.Err() != nil {
+		return scanner.Err()
+	}
+
+	// append if not already present
+	_, err = f.WriteString("**/_ftl\n")
+	return err
 }
