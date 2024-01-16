@@ -151,7 +151,7 @@ var scaffoldFuncs = template.FuncMap{
 
 func updateGitIgnore(ctx context.Context, dir string) error {
 	gitRoot := gitRoot(ctx, dir)
-	f, err := os.OpenFile(path.Join(gitRoot, ".gitignore"), os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(path.Join(gitRoot, ".gitignore"), os.O_RDWR|os.O_CREATE, 0644) //nolint:gosec
 	if err != nil {
 		return err
 	}
