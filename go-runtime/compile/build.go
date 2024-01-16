@@ -204,7 +204,7 @@ func genType(module *schema.Module, t schema.Type) string {
 }
 
 // Update go.mod file to include the FTL version.
-func updateGoModule(goModPath string) (version string, err error) {
+func updateGoModule(goModPath string) (string, error) {
 	goModBytes, err := os.ReadFile(goModPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read %s: %w", goModPath, err)
@@ -214,11 +214,7 @@ func updateGoModule(goModPath string) (version string, err error) {
 		return "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
 	}
 	if ftl.IsRelease(ftl.Version) {
-		version := ftl.Version
-		if !strings.HasPrefix(version, "v") {
-			version = "v" + version
-		}
-		if err := goModfile.AddRequire("github.com/TBD54566975/ftl", version); err != nil {
+		if err := goModfile.AddRequire("github.com/TBD54566975/ftl", ftl.Version); err != nil {
 			return "", fmt.Errorf("failed to add github.com/TBD54566975/ftl to %s: %w", goModPath, err)
 		}
 		goModBytes = modfile.Format(goModfile.Syntax)

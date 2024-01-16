@@ -1,4 +1,4 @@
-VERSION = %(git describe --tags --always --dirty)%
+VERSION = %(git describe --tags --always --dirty | sed -e 's/^v//')%
 DEST = build
 RELEASE = %{DEST}/release
 

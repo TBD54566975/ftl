@@ -133,6 +133,7 @@ func (d *devCmd) updateFileInfo(ctx context.Context, dir string) error {
 	ignores := initGitIgnore(ctx, dir)
 	d.modules[dir] = moduleFolderInfo{}
 
+	var changed string
 	err = walkDir(dir, ignores, func(srcPath string, entry fs.DirEntry) error {
 		for _, pattern := range config.Watch {
 			relativePath, err := filepath.Rel(dir, srcPath)
@@ -154,6 +155,7 @@ func (d *devCmd) updateFileInfo(ctx context.Context, dir string) error {
 				module := d.modules[dir]
 				module.NumFiles++
 				if fileInfo.ModTime().After(module.LastModTime) {
+					changed = srcPath
 					module.LastModTime = fileInfo.ModTime()
 				}
 				d.modules[dir] = module
@@ -162,6 +164,10 @@ func (d *devCmd) updateFileInfo(ctx context.Context, dir string) error {
 
 		return nil
 	})
+
+	if changed != "" {
+		log.FromContext(ctx).Tracef("Detected change in %s", changed)
+	}
 
 	return err
 }
