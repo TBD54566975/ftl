@@ -99,13 +99,6 @@
             <groupId>io.gitlab.arturbosch.detekt</groupId>
             <artifactId>detekt-test</artifactId>
             <version>${detekt.version}</version>
-            <exclusions>
-                <!-- Exclude Kotlin Main KTS to fix SLF4J diamond dependency problem. -->
-                <exclusion>
-                    <groupId>org.jetbrains.kotlin</groupId>
-                    <artifactId>kotlin-main-kts</artifactId>
-                </exclusion>
-            </exclusions>
             <scope>test</scope>
         </dependency>
         <dependency>
