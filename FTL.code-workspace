@@ -1,0 +1,45 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "go-runtime"
+		},
+		{
+			"path": "kotlin-runtime"
+		},
+		{
+			"path": "examples/time"
+		},
+		{
+			"path": "examples/echo"
+		},
+		{
+			"path": "examples/online-boutique"
+		},
+		{
+			"path": "backend"
+		},
+		{
+			"path": "cmd/ftl",
+			"name": "cmd/ftl"
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.git": true,
+			"**/.svn": true,
+			"**/.hg": true,
+			"**/CVS": true,
+			"**/.DS_Store": true,
+			"**/Thumbs.db": true,
+			"**/_ftl": true,
+			"**/node_modules": true,
+			"**/go.work": true,
+			"**/go.work.sum": true,
+			".hermit": true,
+			"**/*.zip": true,
+		}
+	}
+}

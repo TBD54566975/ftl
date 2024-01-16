@@ -14,6 +14,7 @@ import (
 	"golang.org/x/mod/modfile"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
@@ -50,7 +51,7 @@ const buildDirName = "_ftl"
 
 // Build the given module.
 func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
-	goModVersion, err := readGoModVersion(filepath.Join(moduleDir, "go.mod"))
+	goModVersion, err := updateGoModule(filepath.Join(moduleDir, "go.mod"))
 	if err != nil {
 		return err
 	}
@@ -197,7 +198,8 @@ func genType(module *schema.Module, t schema.Type) string {
 	panic(fmt.Sprintf("unsupported type %T", t))
 }
 
-func readGoModVersion(goModPath string) (string, error) {
+// Update go.mod file to include the FTL version.
+func updateGoModule(goModPath string) (version string, err error) {
 	goModBytes, err := os.ReadFile(goModPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read %s: %w", goModPath, err)
@@ -205,6 +207,15 @@ func readGoModVersion(goModPath string) (string, error) {
 	goModfile, err := modfile.Parse(goModPath, goModBytes, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
+	}
+	if ftl.IsRelease(ftl.Version) {
+		if err := goModfile.AddRequire("github.com/TBD54566975/ftl", ftl.Version); err != nil {
+			return "", fmt.Errorf("failed to add github.com/TBD54566975/ftl to %s: %w", goModPath, err)
+		}
+		goModBytes = modfile.Format(goModfile.Syntax)
+		if err := os.WriteFile(goModPath, goModBytes, 0600); err != nil {
+			return "", fmt.Errorf("failed to update %s: %w", goModPath, err)
+		}
 	}
 	return goModfile.Go.Version, nil
 }

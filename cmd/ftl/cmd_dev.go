@@ -13,7 +13,6 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 
-	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -246,9 +245,8 @@ func initGitIgnore(ctx context.Context, dir string) []string {
 	if err == nil {
 		ignore = append(ignore, loadGitIgnore(home)...)
 	}
-	gitRootBytes, err := exec.Capture(ctx, dir, "git", "rev-parse", "--show-toplevel")
-	if err == nil {
-		gitRoot := strings.TrimSpace(string(gitRootBytes))
+	gitRoot := gitRoot(ctx, dir)
+	if gitRoot != "" {
 		for current := dir; strings.HasPrefix(current, gitRoot); current = path.Dir(current) {
 			ignore = append(ignore, loadGitIgnore(current)...)
 		}
