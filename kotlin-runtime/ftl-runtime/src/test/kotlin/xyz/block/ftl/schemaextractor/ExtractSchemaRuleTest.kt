@@ -1,6 +1,7 @@
 package xyz.block.ftl.schemaextractor
 
 import io.gitlab.arturbosch.detekt.api.Config
+import io.gitlab.arturbosch.detekt.rules.KotlinCoreEnvironmentTest
 import io.gitlab.arturbosch.detekt.test.compileAndLintWithContext
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -12,16 +13,8 @@ import xyz.block.ftl.v1.schema.Array
 import xyz.block.ftl.v1.schema.Map
 import java.io.File
 import kotlin.test.AfterTest
-import kotlin.test.Ignore
 
-
-// TODO(@worstell):
-// This test can't run when org.jetbrains.kotlin:kotlin-main-kts is excluded from the
-// io.gitlab.arturbosch.detekt:detekt-test dependency, which is necessary to avoid a dependency conflict with
-// Logback/SLF4J. When fixed we should uncomment the @KotlinCoreEnvironmentTest annotation amd no longer ignore this
-// test.
-@Ignore
-//@KotlinCoreEnvironmentTest
+@KotlinCoreEnvironmentTest
 internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
 
   @Test
@@ -64,7 +57,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             }
 
             fun callTime(context: Context): TimeResponse {
-                return context.call(TimeModuleClient::time, TimeRequest())
+                return context.call(TimeModuleClient::time, TimeRequest)
             }
         }
         """
@@ -82,28 +75,17 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       decls = listOf(
         Decl(
           data_ = Data(
-            name = "EchoRequest",
-            fields = listOf(
-              Field(
-                name = "name",
-                type = Type(string = xyz.block.ftl.v1.schema.String())
-              )
-            ),
-            comments = listOf(
-              """/**
-         * Request to echo a message.
-         */"""
-            )
-          ),
-        ),
-        Decl(
-          data_ = Data(
             name = "MapValue",
             fields = listOf(
               Field(
                 name = "value",
                 type = Type(string = xyz.block.ftl.v1.schema.String())
               )
+            ),
+            pos = Position(
+              filename = "Test.kt",
+              line = 14,
+              column = 9,
             ),
           ),
         ),
@@ -120,11 +102,46 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 type = Type(
                   map = Map(
                     key = xyz.block.ftl.v1.schema.Type(string = xyz.block.ftl.v1.schema.String()),
-                    value_ = xyz.block.ftl.v1.schema.Type(dataRef = DataRef(name = "MapValue", module = "echo"))
+                    value_ = xyz.block.ftl.v1.schema.Type(
+                      dataRef = DataRef(
+                        name = "MapValue",
+                        pos = Position(
+                          filename = "Test.kt",
+                          line = 15,
+                          column = 67,
+                        ),
+                      )
+                    )
                   )
                 )
               )
-            )
+            ),
+            pos = Position(
+              filename = "Test.kt",
+              line = 15,
+              column = 9,
+            ),
+          ),
+        ),
+        Decl(
+          data_ = Data(
+            name = "EchoRequest",
+            fields = listOf(
+              Field(
+                name = "name",
+                type = Type(string = xyz.block.ftl.v1.schema.String())
+              )
+            ),
+            comments = listOf(
+              """/**
+         * Request to echo a message.
+         */"""
+            ),
+            pos = Position(
+              filename = "Test.kt",
+              line = 17,
+              column = 9,
+            ),
           ),
         ),
         Decl(
@@ -136,12 +153,24 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 type = Type(
                   array = Array(
                     element = xyz.block.ftl.v1.schema.Type(
-                      dataRef = DataRef(name = "EchoMessage", module = "echo")
+                      dataRef = DataRef(
+                        name = "EchoMessage",
+                        pos = Position(
+                          filename = "Test.kt",
+                          line = 21,
+                          column = 47,
+                        )
+                      )
                     )
                   )
                 )
               )
-            )
+            ),
+            pos = Position(
+              filename = "Test.kt",
+              line = 21,
+              column = 9,
+            ),
           ),
         ),
         Decl(
@@ -155,13 +184,21 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             request = Type(
               dataRef = DataRef(
                 name = "EchoRequest",
-                module = "echo"
+                pos = Position(
+                  filename = "Test.kt",
+                  line = 33,
+                  column = 40,
+                ),
               )
             ),
             response = Type(
               dataRef = DataRef(
                 name = "EchoResponse",
-                module = "echo"
+                pos = Position(
+                  filename = "Test.kt",
+                  line = 33,
+                  column = 59,
+                ),
               )
             ),
             metadata = listOf(
@@ -234,7 +271,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             }
 
             fun callTime(context: Context): TimeResponse {
-                return context.call(TimeModuleClient::time, TimeRequest())
+                return context.call(TimeModuleClient::time, TimeRequest)
             }
         }
         """

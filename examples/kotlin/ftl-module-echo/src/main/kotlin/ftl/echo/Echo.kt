@@ -17,7 +17,7 @@ class Echo {
   @Verb
   @Ingress(Method.GET, "/echo")
   fun echo(context: Context, req: EchoRequest): EchoResponse {
-    val response = context.call(TimeModuleClient::time, TimeRequest())
+    val response = context.call(TimeModuleClient::time, TimeRequest)
     return EchoResponse(message = "Hello, ${req.name ?: "anonymous"}! The time is ${response.time}.")
   }
 }

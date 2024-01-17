@@ -46,7 +46,17 @@ class ModuleGenerator() {
       )
 
     val types = module.decls.mapNotNull { it.data_ }
-    types.forEach { file.addType(buildDataClass(it, namespace)) }
+    types.forEach {
+      if (it.fields.isEmpty()) {
+        file.addTypeAlias(
+          TypeAliasSpec.builder(it.name, Unit::class)
+            .addKdoc(it.comments.joinToString("\n"))
+            .build()
+        )
+      } else {
+        file.addType(buildDataClass(it, namespace))
+      }
+    }
 
     val verbs = module.decls.mapNotNull { it.verb }
     verbs.forEach { moduleClass.addFunction(buildVerbFunction(className, namespace, it)) }
@@ -74,16 +84,6 @@ class ModuleGenerator() {
           PropertySpec.builder(field.name, getTypeClass(it, namespace)).initializer(field.name).build()
         )
       }
-    }
-
-    // Handle empty data classes.
-    if (type.fields.isEmpty()) {
-      dataConstructorBuilder.addParameter(
-        ParameterSpec.builder("_empty", Unit::class).defaultValue("Unit").build()
-      )
-      dataClassBuilder.addProperty(
-        PropertySpec.builder("_empty", Unit::class).initializer("_empty").build()
-      )
     }
 
     dataClassBuilder.primaryConstructor(dataConstructorBuilder.build())

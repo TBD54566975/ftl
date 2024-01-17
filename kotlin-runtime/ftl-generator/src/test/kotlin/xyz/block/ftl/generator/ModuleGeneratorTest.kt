@@ -97,9 +97,7 @@ import xyz.block.ftl.Ignore
 /**
  * Request comments
  */
-public data class TestRequest(
-  public val _empty: Unit = Unit,
-)
+public typealias TestRequest = Unit
 
 /**
  * Response comments
@@ -174,16 +172,12 @@ import xyz.block.ftl.Verb
 /**
  * Request comments
  */
-public data class TestRequest(
-  public val _empty: Unit = Unit,
-)
+public typealias TestRequest = Unit
 
 /**
  * Response comments
  */
-public data class TestResponse(
-  public val _empty: Unit = Unit,
-)
+public typealias TestResponse = Unit
 
 @Ignore
 public class TestModule() {
