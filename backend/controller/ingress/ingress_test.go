@@ -4,8 +4,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 type obj = map[string]any

@@ -209,18 +209,39 @@ func updateGoModule(goModPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read %s: %w", goModPath, err)
 	}
-	goModfile, err := modfile.Parse(goModPath, goModBytes, nil)
+	goModFile, err := modfile.Parse(goModPath, goModBytes, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
 	}
-	if ftl.IsRelease(ftl.Version) {
-		if err := goModfile.AddRequire("github.com/TBD54566975/ftl", "v"+ftl.Version); err != nil {
-			return "", fmt.Errorf("failed to add github.com/TBD54566975/ftl to %s: %w", goModPath, err)
-		}
-		goModBytes = modfile.Format(goModfile.Syntax)
-		if err := os.WriteFile(goModPath, goModBytes, 0600); err != nil {
-			return "", fmt.Errorf("failed to update %s: %w", goModPath, err)
+	if !ftl.IsRelease(ftl.Version) || !shouldUpdateVersion(goModFile) {
+		return goModFile.Go.Version, nil
+	}
+	if err := goModFile.AddRequire("github.com/TBD54566975/ftl", "v"+ftl.Version); err != nil {
+		return "", fmt.Errorf("failed to add github.com/TBD54566975/ftl to %s: %w", goModPath, err)
+	}
+
+	// Atomically write the updated go.mod file.
+	tmpFile, err := os.CreateTemp(filepath.Dir(goModPath), ".go.mod-")
+	if err != nil {
+		return "", fmt.Errorf("update %s: %w", goModPath, err)
+	}
+	defer os.Remove(tmpFile.Name()) // Delete the temp file if we error.
+	defer tmpFile.Close()
+	goModBytes = modfile.Format(goModFile.Syntax)
+	if _, err := tmpFile.Write(goModBytes); err != nil {
+		return "", fmt.Errorf("update %s: %w", goModPath, err)
+	}
+	if err := os.Rename(tmpFile.Name(), goModPath); err != nil {
+		return "", fmt.Errorf("update %s: %w", goModPath, err)
+	}
+	return goModFile.Go.Version, nil
+}
+
+func shouldUpdateVersion(goModfile *modfile.File) bool {
+	for _, require := range goModfile.Require {
+		if require.Mod.Path == "github.com/TBD54566975/ftl" && require.Mod.Version == ftl.Version {
+			return false
 		}
 	}
-	return goModfile.Go.Version, nil
+	return true
 }
