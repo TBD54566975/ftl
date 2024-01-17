@@ -18,6 +18,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/schema"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
@@ -37,6 +38,9 @@ type initGoCmd struct {
 func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
+	}
+	if !schema.ValidateName(i.Name) {
+		return fmt.Errorf("module name %q is invalid", i.Name)
 	}
 	logger := log.FromContext(ctx)
 	logger.Infof("Initializing FTL Go module %s in %s", i.Name, i.Dir)
@@ -60,6 +64,10 @@ type initKotlinCmd struct {
 func (i initKotlinCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
+	}
+
+	if !schema.ValidateName(i.Name) {
+		return fmt.Errorf("module name %q is invalid", i.Name)
 	}
 
 	if _, err := os.Stat(filepath.Join(i.Dir, "ftl-module-"+i.Name)); err == nil {

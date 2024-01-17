@@ -114,6 +114,11 @@ func Validate(schema *Schema) (*Schema, error) {
 
 var validNameRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
+// ValidateName validates an FTL name.
+func ValidateName(name string) bool {
+	return validNameRe.MatchString(name)
+}
+
 // ValidateModule performs the subset of semantic validation possible on a single module.
 func ValidateModule(module *Module) error {
 	verbs := map[string]bool{}
@@ -122,7 +127,7 @@ func ValidateModule(module *Module) error {
 	dataRefs := []*DataRef{}
 	merr := []error{}
 
-	if !validNameRe.MatchString(module.Name) {
+	if !ValidateName(module.Name) {
 		merr = append(merr, fmt.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
 	}
 	if module.Builtin && module.Name != "builtin" {
@@ -138,7 +143,7 @@ func ValidateModule(module *Module) error {
 				dataRefs = append(dataRefs, n)
 
 			case *Verb:
-				if !validNameRe.MatchString(n.Name) {
+				if !ValidateName(n.Name) {
 					merr = append(merr, fmt.Errorf("%s: Verb name %q is invalid", n.Pos, n.Name))
 				}
 				if _, ok := reservedIdentNames[n.Name]; ok {
@@ -150,7 +155,7 @@ func ValidateModule(module *Module) error {
 				verbs[module.Name+"."+n.Name] = true
 
 			case *Data:
-				if !validNameRe.MatchString(n.Name) {
+				if !ValidateName(n.Name) {
 					merr = append(merr, fmt.Errorf("%s: data structure name %q is invalid", n.Pos, n.Name))
 				}
 				if _, ok := reservedIdentNames[n.Name]; ok {
