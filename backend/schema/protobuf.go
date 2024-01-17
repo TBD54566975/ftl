@@ -172,6 +172,9 @@ func generateProtoType(t reflect.Type) string {
 	case reflect.Float64:
 		return "double"
 	case reflect.Slice:
+		if t.Elem().Kind() == reflect.Uint8 {
+			return "bytes"
+		}
 		return fmt.Sprintf("repeated %s", generateProtoType(t.Elem()))
 	case reflect.Map:
 		return fmt.Sprintf("map<string, %s>", generateProtoType(t.Elem()))

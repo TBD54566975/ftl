@@ -10,10 +10,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/mod/modfile"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/common/exec"
@@ -214,7 +215,7 @@ func updateGoModule(goModPath string) (string, error) {
 		return "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
 	}
 	if ftl.IsRelease(ftl.Version) {
-		if err := goModfile.AddRequire("github.com/TBD54566975/ftl", ftl.Version); err != nil {
+		if err := goModfile.AddRequire("github.com/TBD54566975/ftl", "v"+ftl.Version); err != nil {
 			return "", fmt.Errorf("failed to add github.com/TBD54566975/ftl to %s: %w", goModPath, err)
 		}
 		goModBytes = modfile.Format(goModfile.Syntax)

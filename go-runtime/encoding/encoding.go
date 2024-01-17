@@ -4,6 +4,7 @@ package encoding
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"reflect"
 
@@ -29,6 +30,9 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 		return encodeValue(v.Elem(), w)
 
 	case reflect.Slice:
+		if v.Type().Elem().Kind() == reflect.Uint8 {
+			return encodeBytes(v, w)
+		}
 		return encodeSlice(v, w)
 
 	case reflect.Map:
@@ -47,7 +51,7 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 		return encodeBool(v, w)
 
 	default:
-		return fmt.Errorf("unsupported type: %s", v.Type())
+		panic(fmt.Sprintf("unsupported typefoo: %s", v.Type()))
 	}
 }
 
@@ -64,6 +68,14 @@ func encodeStruct(v reflect.Value, w *bytes.Buffer) error {
 		}
 	}
 	w.WriteRune('}')
+	return nil
+}
+
+func encodeBytes(v reflect.Value, w *bytes.Buffer) error {
+	w.WriteRune('"')
+	data := base64.StdEncoding.EncodeToString(v.Bytes())
+	w.WriteString(data)
+	w.WriteRune('"')
 	return nil
 }
 

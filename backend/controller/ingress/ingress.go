@@ -356,6 +356,10 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 		}
 
 		switch field.Type.(type) {
+		// Explicitly enumerate known types here so go-check-sumtype will tell
+		// us when we're missing a case.
+		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time, *schema.Unit:
+
 		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
 			if len(value) > 1 {
 				return nil, fmt.Errorf("multiple values for %q are not supported", key)
@@ -364,6 +368,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 				return nil, fmt.Errorf("complex value %q is not supported, use '@json=' instead", value[0])
 			}
 			queryMap[key] = value[0]
+
 		case *schema.Array:
 			for _, v := range value {
 				if hasInvalidQueryChars(v) {
@@ -371,8 +376,9 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 				}
 			}
 			queryMap[key] = value
+
 		default:
-			return nil, fmt.Errorf("unsupported type %T for field %q", field.Type, key)
+			panic(fmt.Sprintf("unsupported type %T for query parameter field %q", field.Type, key))
 		}
 	}
 
