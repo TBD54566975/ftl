@@ -10,11 +10,10 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/mod/modfile"
 	"google.golang.org/protobuf/proto"
-
-	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/common/exec"
