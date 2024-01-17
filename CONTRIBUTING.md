@@ -42,6 +42,47 @@ hot-reloading ftl agent:
 $ ftl devel ./examples/echo ./examples/time
 ```
 
+## Best practices
+
+### Sum types
+
+We're using a tool called go-check-sumtype, which is basically a hacky way to
+check that switch statements on certain types are exhaustive. An example of that
+is schema.Type. The way it works is that if you have a type switch like this:
+
+```go
+switch t := t.(type) {
+  case *schema.Int:
+}
+```
+
+It will detect that the switch isn't exhaustive. However, if you have this:
+
+```go
+switch t := t.(type) {
+  case *schema.Int:
+  default:
+    return fmt.Errorf("unsupported type")
+}
+```
+
+Then it will assume you're intentionally handling the default case, and won't
+detect it. Instead, if you panic in the default case rather than returning an error,
+`go-check-sumtype` will be able to detect the missing case. A panic is usually
+what we want anyway, because it isn't a recoverable error.
+
+TL;DR Don't do the above, do this:
+
+```go
+switch t := t.(type) {
+  case *schema.Int:
+
+  // All other cases
+  default:
+    panic(fmt.Sprintf("unsupported type %T"))
+}
+```
+
 ## Communications
 
 ### Issues
