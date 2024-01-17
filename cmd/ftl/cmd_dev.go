@@ -2,8 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
+	"hash"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -22,9 +26,8 @@ import (
 )
 
 type moduleFolderInfo struct {
-	ModuleName  string
-	NumFiles    int
-	LastModTime time.Time
+	ModuleName string
+	FileHash   hash.Hash
 }
 
 type devCmd struct {
@@ -37,14 +40,13 @@ type devCmd struct {
 type moduleMap map[string]*moduleFolderInfo
 
 func (m *moduleMap) ForceRebuild(dir string) {
-	(*m)[dir].NumFiles = 0
-	(*m)[dir].LastModTime = time.Now()
+	(*m)[dir].FileHash = sha256.New()
 }
 
 func (m *moduleMap) AddModule(dir string, module string) {
 	(*m)[dir] = &moduleFolderInfo{
-		ModuleName:  module,
-		LastModTime: time.Now(),
+		ModuleName: module,
+		FileHash:   sha256.New(),
 	}
 }
 
@@ -64,7 +66,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	logger := log.FromContext(ctx)
 	logger.Infof("Watching %s for FTL modules", d.BaseDir)
 
-	schemaChanges := make(chan string)
+	schemaChanges := make(chan string, 64)
 	modules := make(moduleMap)
 
 	wg, ctx := errgroup.WithContext(ctx)
@@ -73,10 +75,8 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 		return d.watchForSchemaChanges(ctx, client, schemaChanges)
 	})
 
-	lastScanTime := time.Now()
 	for {
 		delay := d.Watch
-		iterationStartTime := time.Now()
 
 		tomls, err := d.getTomls(ctx)
 		if err != nil {
@@ -90,12 +90,12 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 		for dir := range modules {
 			currentModule := modules[dir]
-			err := d.updateFileInfo(ctx, dir, modules)
+			fileHash, err := d.updateFileInfo(ctx, dir)
 			if err != nil {
 				return err
 			}
 
-			if currentModule.NumFiles != modules[dir].NumFiles || modules[dir].LastModTime.After(lastScanTime) {
+			if !bytes.Equal(currentModule.FileHash.Sum(nil), fileHash.Sum(nil)) {
 				deploy := deployCmd{
 					Replicas:  1,
 					ModuleDir: dir,
@@ -108,18 +108,24 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 					delay = d.FailureDelay
 				}
 			}
+			currentModule.FileHash = fileHash
+			modules[dir] = currentModule
 		}
 
-		lastScanTime = iterationStartTime
 		select {
 		case moduleName := <-schemaChanges:
-			logger.Infof("Schema change detected for module %s, rebuilding other modules.", moduleName)
+			logger.Warnf("Schema change detected for module %s, rebuilding other modules.", moduleName)
 			modules.ForceRebuildFromDependent(moduleName)
-			// Consume all remaining messages in the channel
-			for len(schemaChanges) > 0 {
-				moduleName := <-schemaChanges
-				logger.Infof("Schema change detected for module %s, rebuilding other modules.", moduleName)
-				modules.ForceRebuildFromDependent(moduleName)
+
+		drainLoop: // Drain all messages from the channel to avoid extra redeploys
+			for {
+				select {
+				case moduleName := <-schemaChanges:
+					logger.Warnf("Schema change detected for module %s, rebuilding other modules.", moduleName)
+					modules.ForceRebuildFromDependent(moduleName)
+				default:
+					break drainLoop
+				}
 			}
 		case <-time.After(delay):
 		case <-ctx.Done():
@@ -139,6 +145,7 @@ func (d *devCmd) watchForSchemaChanges(ctx context.Context, client ftlv1connect.
 		for stream.Receive() {
 			msg := stream.Msg()
 			if msg.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED {
+				logger.Warnf("Schema change detected for module %s", msg.ModuleName)
 				schemaChanges <- msg.ModuleName
 			}
 		}
@@ -195,15 +202,15 @@ func (d *devCmd) addOrRemoveModules(tomls []string, modules moduleMap) error {
 	return nil
 }
 
-func (d *devCmd) updateFileInfo(ctx context.Context, dir string, modules moduleMap) error {
+func (d *devCmd) updateFileInfo(ctx context.Context, dir string) (hash.Hash, error) {
 	config, err := moduleconfig.LoadConfig(dir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ignores := initGitIgnore(ctx, dir)
 
-	var changed string
+	fileHash := sha256.New()
 	err = walkDir(dir, ignores, func(srcPath string, entry fs.DirEntry) error {
 		for _, pattern := range config.Watch {
 			relativePath, err := filepath.Rel(dir, srcPath)
@@ -217,29 +224,30 @@ func (d *devCmd) updateFileInfo(ctx context.Context, dir string, modules moduleM
 			}
 
 			if match && !entry.IsDir() {
-				fileInfo, err := entry.Info()
+				file, err := os.Open(srcPath)
 				if err != nil {
 					return err
 				}
 
-				module := modules[dir]
-				module.NumFiles++
-				if fileInfo.ModTime().After(module.LastModTime) {
-					changed = srcPath
-					module.LastModTime = fileInfo.ModTime()
+				if _, err := io.Copy(fileHash, file); err != nil {
+					_ = file.Close()
+					return err
 				}
-				modules[dir] = module
+
+				err = file.Close()
+				if err != nil {
+					return err
+				}
 			}
 		}
 
 		return nil
 	})
-
-	if changed != "" {
-		log.FromContext(ctx).Tracef("Detected change in %s", changed)
+	if err != nil {
+		return nil, err
 	}
 
-	return err
+	return fileHash, err
 }
 
 // errSkip is returned by walkDir to skip a file or directory.
