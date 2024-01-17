@@ -13,6 +13,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/bmatcuk/doublestar/v4"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
@@ -30,7 +31,7 @@ type devCmd struct {
 	BaseDir        string        `arg:"" help:"Directory to watch for FTL modules" type:"existingdir" default:"."`
 	Watch          time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
 	FailureDelay   time.Duration `help:"Delay before retrying a failed deploy." default:"5s"`
-	ReconnectDelay time.Duration `help:"Delay before attempting to reconnect to FTL." default:"5s"`
+	ReconnectDelay time.Duration `help:"Delay before attempting to reconnect to FTL." default:"1s"`
 }
 
 type moduleMap map[string]*moduleFolderInfo
@@ -66,8 +67,11 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	schemaChanges := make(chan string)
 	modules := make(moduleMap)
 
-	// Start a goroutine to watch for schema changes
-	go d.watchForSchemaChanges(ctx, client, schemaChanges)
+	wg, ctx := errgroup.WithContext(ctx)
+
+	wg.Go(func() error {
+		return d.watchForSchemaChanges(ctx, client, schemaChanges)
+	})
 
 	lastScanTime := time.Now()
 	for {
@@ -111,21 +115,25 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 		case moduleName := <-schemaChanges:
 			logger.Infof("Schema change detected for module %s, rebuilding other modules.", moduleName)
 			modules.ForceRebuildFromDependent(moduleName)
+			// Consume all remaining messages in the channel
+			for len(schemaChanges) > 0 {
+				moduleName := <-schemaChanges
+				logger.Infof("Schema change detected for module %s, rebuilding other modules.", moduleName)
+				modules.ForceRebuildFromDependent(moduleName)
+			}
 		case <-time.After(delay):
 		case <-ctx.Done():
-			return nil
+			return wg.Wait()
 		}
 	}
 }
 
-func (d *devCmd) watchForSchemaChanges(ctx context.Context, client ftlv1connect.ControllerServiceClient, schemaChanges chan string) {
+func (d *devCmd) watchForSchemaChanges(ctx context.Context, client ftlv1connect.ControllerServiceClient, schemaChanges chan string) error {
 	logger := log.FromContext(ctx)
 	for {
 		stream, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 		if err != nil {
-			logger.Errorf(err, "Error connecting to FTL. Will retry...")
-			time.Sleep(d.ReconnectDelay)
-			continue
+			return err
 		}
 
 		for stream.Receive() {

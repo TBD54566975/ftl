@@ -23,9 +23,10 @@ import (
 )
 
 type schemaGenerateCmd struct {
-	Watch    time.Duration `short:"w" help:"Watch template directory at this frequency and regenerate on change."`
-	Template string        `arg:"" help:"Template directory to use." type:"existingdir"`
-	Dest     string        `arg:"" help:"Destination directory to write files to (will be erased)."`
+	Watch          time.Duration `short:"w" help:"Watch template directory at this frequency and regenerate on change."`
+	Template       string        `arg:"" help:"Template directory to use." type:"existingdir"`
+	Dest           string        `arg:"" help:"Destination directory to write files to (will be erased)."`
+	ReconnectDelay time.Duration `help:"Delay before attempting to reconnect to FTL." default:"5s"`
 }
 
 func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
@@ -71,40 +72,46 @@ func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.C
 		return err
 	}
 
-	stream, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
-	if err != nil {
-		return err
-	}
 	wg, ctx := errgroup.WithContext(ctx)
 
 	moduleChange := make(chan []*schema.Module)
 
 	wg.Go(func() error {
-		modules := map[string]*schema.Module{}
-		regenerate := false
-		for stream.Receive() {
-			msg := stream.Msg()
-			switch msg.ChangeType {
-			case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
-				module, err := schema.ModuleFromProto(msg.Schema)
-				if err != nil {
-					return fmt.Errorf("%s: %w", "invalid module schema", err)
+		for {
+			stream, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
+			if err != nil {
+				return err
+			}
+
+			modules := map[string]*schema.Module{}
+			regenerate := false
+			for stream.Receive() {
+				msg := stream.Msg()
+				switch msg.ChangeType {
+				case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
+					module, err := schema.ModuleFromProto(msg.Schema)
+					if err != nil {
+						return fmt.Errorf("%s: %w", "invalid module schema", err)
+					}
+					modules[module.Name] = module
+
+				case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
+					delete(modules, msg.ModuleName)
 				}
-				modules[module.Name] = module
+				if !msg.More {
+					regenerate = true
+				}
+				if !regenerate {
+					continue
+				}
 
-			case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-				delete(modules, msg.ModuleName)
-			}
-			if !msg.More {
-				regenerate = true
-			}
-			if !regenerate {
-				continue
+				moduleChange <- maps.Values(modules)
 			}
 
-			moduleChange <- maps.Values(modules)
+			stream.Close()
+			logger.Infof("Stream disconnected, attempting to reconnect...")
+			time.Sleep(s.ReconnectDelay)
 		}
-		return nil
 	})
 
 	wg.Go(func() error { return watch.Start(s.Watch) })
