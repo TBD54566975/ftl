@@ -1,9 +1,6 @@
 {
 	"folders": [
 		{
-			"path": "."
-		},
-		{
 			"path": "go-runtime"
 		},
 		{
@@ -24,6 +21,9 @@
 		{
 			"path": "cmd/ftl",
 			"name": "cmd/ftl"
+		},
+		{
+			"path": "."
 		}
 	],
 	"settings": {

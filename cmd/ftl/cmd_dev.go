@@ -53,6 +53,10 @@ func (m *moduleMap) RemoveModule(dir string) {
 	delete(*m, dir)
 }
 
+func (m *moduleMap) SetModule(dir string, module *moduleFolderInfo) {
+	(*m)[dir] = module
+}
+
 func (m *moduleMap) ForceRebuildFromDependent(module string) {
 	for dir, moduleInfo := range *m {
 		if moduleInfo.moduleName != module {
@@ -75,6 +79,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	})
 
 	for {
+		logger.Debugf("Scanning %s for FTL module changes", d.BaseDir)
 		delay := d.Watch
 
 		tomls, err := d.getTomls(ctx)
@@ -105,10 +110,11 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 					modules.RemoveModule(dir)
 					// Increase delay when there's a compile failure.
 					delay = d.FailureDelay
+				} else {
+					currentModule.fileHashes = hashes
+					modules.SetModule(dir, currentModule)
 				}
 			}
-			currentModule.fileHashes = hashes
-			modules[dir] = currentModule
 		}
 
 		select {
