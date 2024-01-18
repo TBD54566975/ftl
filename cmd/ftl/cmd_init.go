@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/backend/schema"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
@@ -144,9 +144,7 @@ var scaffoldFuncs = template.FuncMap{
 	"upper":          strings.ToUpper,
 	"lower":          strings.ToLower,
 	"title":          strings.Title,
-	"typename": func(v any) string {
-		return reflect.Indirect(reflect.ValueOf(v)).Type().Name()
-	},
+	"typename":       schema.TypeName,
 }
 
 func updateGitIgnore(ctx context.Context, dir string) error {
