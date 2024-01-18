@@ -35,7 +35,7 @@ func (m *Module) Resolve(ref Ref) *ModuleDecl {
 				return &ModuleDecl{m, d}
 			}
 
-		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time, *Unit:
+		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time, *Unit, *Any:
 		}
 	}
 	return nil

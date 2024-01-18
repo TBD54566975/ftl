@@ -40,6 +40,9 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 
 func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *jsonschema.Schema {
 	switch node := node.(type) {
+	case *Any:
+		return &jsonschema.Schema{}
+
 	case *Unit:
 		st := jsonschema.Object
 		return &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}}

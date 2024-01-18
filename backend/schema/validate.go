@@ -27,6 +27,7 @@ var (
 		"Bool":   ModuleDecl{Decl: &Bool{}},
 		"Time":   ModuleDecl{Decl: &Time{}},
 		"Unit":   ModuleDecl{Decl: &Unit{}},
+		"Any":    ModuleDecl{Decl: &Any{}},
 	}
 )
 
@@ -102,7 +103,7 @@ func (s *Scopes) PushModule(module *Module) (Scopes, error) {
 				return nil, err
 			}
 
-		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time, *Unit:
+		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time, *Unit, *Any:
 		}
 	}
 	return out, nil
@@ -238,7 +239,7 @@ func Validate(schema *Schema) (*Schema, error) {
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
 				*MetadataIngress, *Module, *Optional, *Schema, *String, *Time, Type,
-				*Unit:
+				*Unit, *Any:
 			}
 			return next()
 		})
@@ -319,7 +320,7 @@ func ValidateModule(module *Module) error {
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, IngressPathComponent,
 			*IngressPathLiteral, *IngressPathParameter, *Optional,
-			*SourceRef, *SinkRef, *Unit:
+			*SourceRef, *SinkRef, *Unit, *Any:
 
 		case Type, Metadata, Decl: // Union types.
 		}

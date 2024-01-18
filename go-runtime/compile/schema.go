@@ -425,6 +425,12 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 	case *types.Slice:
 		return parseSlice(pctx, node, underlying)
 
+	case *types.Interface:
+		if underlying.String() == "any" {
+			return &schema.Any{Pos: goPosToSchemaPos(node.Pos())}, nil
+		}
+		return nil, fmt.Errorf("%s: unsupported type %T", goPosToSchemaPos(node.Pos()), node)
+
 	default:
 		return nil, fmt.Errorf("%s: unsupported type %T", goPosToSchemaPos(node.Pos()), node)
 	}

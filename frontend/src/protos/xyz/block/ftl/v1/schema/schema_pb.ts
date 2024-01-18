@@ -157,6 +157,43 @@ export class VerbRef extends Message<VerbRef> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.Any
+ */
+export class Any extends Message<Any> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  constructor(data?: PartialMessage<Any>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Any";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Any {
+    return new Any().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Any {
+    return new Any().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Any {
+    return new Any().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Any | PlainMessage<Any> | undefined, b: Any | PlainMessage<Any> | undefined): boolean {
+    return proto3.util.equals(Any, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Array
  */
 export class Array extends Message<Array> {
@@ -1352,7 +1389,13 @@ export class Type extends Message<Type> {
     case: "unit";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 11;
+     * @generated from field: xyz.block.ftl.v1.schema.Any any = 11;
+     */
+    value: Any;
+    case: "any";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 12;
      */
     value: Optional;
     case: "optional";
@@ -1376,7 +1419,8 @@ export class Type extends Message<Type> {
     { no: 8, name: "map", kind: "message", T: Map, oneof: "value" },
     { no: 9, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
     { no: 10, name: "unit", kind: "message", T: Unit, oneof: "value" },
-    { no: 11, name: "optional", kind: "message", T: Optional, oneof: "value" },
+    { no: 11, name: "any", kind: "message", T: Any, oneof: "value" },
+    { no: 12, name: "optional", kind: "message", T: Optional, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Type {

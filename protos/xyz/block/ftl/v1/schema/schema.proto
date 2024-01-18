@@ -26,6 +26,10 @@ message VerbRef {
   string module = 3;
 }
 
+message Any {
+  optional Position pos = 1;
+}
+
 message Array {
   optional Position pos = 1;
   Type element = 2;
@@ -177,7 +181,8 @@ message Type {
     Map map = 8;
     DataRef dataRef = 9;
     Unit unit = 10;
-    Optional optional = 11;
+    Any any = 11;
+    Optional optional = 12;
   }
 }
 

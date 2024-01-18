@@ -72,6 +72,7 @@ public class TestModule()
             ),
             Field(name = "dataRef", type = Type(dataRef = DataRef(name = "TestRequest"))),
             Field(name = "externalDataRef", type = Type(dataRef = DataRef(module = "other", name = "TestRequest"))),
+            Field(name = "any", type = Type(any = xyz.block.ftl.v1.schema.Any())),
           )
         )
       ),
@@ -84,6 +85,7 @@ public class TestModule()
 package ftl.test
 
 import java.time.OffsetDateTime
+import kotlin.Any
 import kotlin.Boolean
 import kotlin.ByteArray
 import kotlin.Float
@@ -117,6 +119,7 @@ public data class TestResponse(
   public val nestedMap: Map<String, Map<String, Long>>,
   public val dataRef: TestRequest,
   public val externalDataRef: ftl.other.TestRequest,
+  public val any: Any,
 )
 
 @Ignore
