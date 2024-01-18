@@ -124,9 +124,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	"upper":          strings.ToUpper,
 	"lower":          strings.ToLower,
 	"title":          strings.Title,
-	"typename": func(v any) string {
-		return reflect.Indirect(reflect.ValueOf(v)).Type().Name()
-	},
+	"typename":       schema.TypeName,
 	"comment": func(s []string) string {
 		if len(s) == 0 {
 			return ""

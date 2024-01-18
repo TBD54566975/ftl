@@ -3,6 +3,7 @@ package schema
 import (
 	"crypto/sha256"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/alecthomas/types"
@@ -106,6 +107,17 @@ func (s *Schema) ToProto() proto.Message {
 		Pos:     posToProto(s.Pos),
 		Modules: nodeListToProto[*schemapb.Module](s.Modules),
 	}
+}
+
+func TypeName(v any) string {
+	t := reflect.Indirect(reflect.ValueOf(v)).Type()
+
+	// handle AbstractRefs like "AbstractRef[github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema.DataRef]"
+	if strings.HasPrefix(t.Name(), "AbstractRef[") {
+		return strings.TrimSuffix(strings.Split(t.Name(), ".")[2], "]")
+	}
+
+	return t.Name()
 }
 
 // FromProto converts a protobuf Schema to a Schema and validates it.
