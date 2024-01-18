@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
-	"hash"
 	"io"
 	"io/fs"
 	"os"
@@ -26,8 +25,8 @@ import (
 )
 
 type moduleFolderInfo struct {
-	ModuleName string
-	FileHash   hash.Hash
+	moduleName string
+	fileHashes map[string][]byte
 }
 
 type devCmd struct {
@@ -40,13 +39,13 @@ type devCmd struct {
 type moduleMap map[string]*moduleFolderInfo
 
 func (m *moduleMap) ForceRebuild(dir string) {
-	(*m)[dir].FileHash = sha256.New()
+	(*m)[dir].fileHashes = make(map[string][]byte)
 }
 
 func (m *moduleMap) AddModule(dir string, module string) {
 	(*m)[dir] = &moduleFolderInfo{
-		ModuleName: module,
-		FileHash:   sha256.New(),
+		moduleName: module,
+		fileHashes: make(map[string][]byte),
 	}
 }
 
@@ -56,7 +55,7 @@ func (m *moduleMap) RemoveModule(dir string) {
 
 func (m *moduleMap) ForceRebuildFromDependent(module string) {
 	for dir, moduleInfo := range *m {
-		if moduleInfo.ModuleName != module {
+		if moduleInfo.moduleName != module {
 			(*m).ForceRebuild(dir)
 		}
 	}
@@ -90,12 +89,12 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 		for dir := range modules {
 			currentModule := modules[dir]
-			fileHash, err := d.updateFileInfo(ctx, dir)
+			hashes, err := d.computeFileHashes(ctx, dir)
 			if err != nil {
 				return err
 			}
 
-			if !bytes.Equal(currentModule.FileHash.Sum(nil), fileHash.Sum(nil)) {
+			if !compareFileHashes(ctx, currentModule.fileHashes, hashes) {
 				deploy := deployCmd{
 					Replicas:  1,
 					ModuleDir: dir,
@@ -108,20 +107,18 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 					delay = d.FailureDelay
 				}
 			}
-			currentModule.FileHash = fileHash
+			currentModule.fileHashes = hashes
 			modules[dir] = currentModule
 		}
 
 		select {
 		case moduleName := <-schemaChanges:
-			logger.Warnf("Schema change detected for module %s, rebuilding other modules.", moduleName)
 			modules.ForceRebuildFromDependent(moduleName)
 
 		drainLoop: // Drain all messages from the channel to avoid extra redeploys
 			for {
 				select {
 				case moduleName := <-schemaChanges:
-					logger.Warnf("Schema change detected for module %s, rebuilding other modules.", moduleName)
 					modules.ForceRebuildFromDependent(moduleName)
 				default:
 					break drainLoop
@@ -202,7 +199,7 @@ func (d *devCmd) addOrRemoveModules(tomls []string, modules moduleMap) error {
 	return nil
 }
 
-func (d *devCmd) updateFileInfo(ctx context.Context, dir string) (hash.Hash, error) {
+func (d *devCmd) computeFileHashes(ctx context.Context, dir string) (map[string][]byte, error) {
 	config, err := moduleconfig.LoadConfig(dir)
 	if err != nil {
 		return nil, err
@@ -210,7 +207,7 @@ func (d *devCmd) updateFileInfo(ctx context.Context, dir string) (hash.Hash, err
 
 	ignores := initGitIgnore(ctx, dir)
 
-	fileHash := sha256.New()
+	fileHashes := make(map[string][]byte)
 	err = walkDir(dir, ignores, func(srcPath string, entry fs.DirEntry) error {
 		for _, pattern := range config.Watch {
 			relativePath, err := filepath.Rel(dir, srcPath)
@@ -229,13 +226,15 @@ func (d *devCmd) updateFileInfo(ctx context.Context, dir string) (hash.Hash, err
 					return err
 				}
 
-				if _, err := io.Copy(fileHash, file); err != nil {
+				hasher := sha256.New()
+				if _, err := io.Copy(hasher, file); err != nil {
 					_ = file.Close()
 					return err
 				}
 
-				err = file.Close()
-				if err != nil {
+				fileHashes[srcPath] = hasher.Sum(nil)
+
+				if err := file.Close(); err != nil {
 					return err
 				}
 			}
@@ -247,7 +246,7 @@ func (d *devCmd) updateFileInfo(ctx context.Context, dir string) (hash.Hash, err
 		return nil, err
 	}
 
-	return fileHash, err
+	return fileHashes, err
 }
 
 // errSkip is returned by walkDir to skip a file or directory.
@@ -359,4 +358,29 @@ func loadGitIgnore(dir string) []string {
 		ignore = append(ignore, line)
 	}
 	return ignore
+}
+
+func compareFileHashes(ctx context.Context, oldFiles, newFiles map[string][]byte) bool {
+	logger := log.FromContext(ctx)
+
+	for key, hash1 := range oldFiles {
+		hash2, exists := newFiles[key]
+		if !exists {
+			logger.Warnf("Detected file removed: %s", key)
+			return false
+		}
+		if !bytes.Equal(hash1, hash2) {
+			logger.Warnf("Detected change in file %s", key)
+			return false
+		}
+	}
+
+	for key := range newFiles {
+		if _, exists := oldFiles[key]; !exists {
+			logger.Tracef("Detected file added: %s", key)
+			return false
+		}
+	}
+
+	return true
 }
