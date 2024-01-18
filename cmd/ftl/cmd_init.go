@@ -38,6 +38,9 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
+	if !schema.ValidateName(i.Name) {
+		return fmt.Errorf("module name %q is invalid", i.Name)
+	}
 	logger := log.FromContext(ctx)
 	logger.Infof("Initializing FTL Go module %s in %s", i.Name, i.Dir)
 	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
@@ -60,6 +63,10 @@ type initKotlinCmd struct {
 func (i initKotlinCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
+	}
+
+	if !schema.ValidateName(i.Name) {
+		return fmt.Errorf("module name %q is invalid", i.Name)
 	}
 
 	if _, err := os.Stat(filepath.Join(i.Dir, "ftl-module-"+i.Name)); err == nil {
