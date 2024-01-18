@@ -133,11 +133,6 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			return "", err
 		}
 
-		err = pollContainerHealth(ctx, ftlContainerName, 10*time.Second)
-		if err != nil {
-			return "", err
-		}
-
 		recreate = true
 	} else {
 		// Start the existing container
@@ -160,6 +155,11 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		})
 
 		logger.Infof("Reusing existing docker container %q on port %q for postgres db", ftlContainerName, port)
+	}
+
+	err = pollContainerHealth(ctx, ftlContainerName, 10*time.Second)
+	if err != nil {
+		return "", err
 	}
 
 	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%s/ftl?sslmode=disable", port)
