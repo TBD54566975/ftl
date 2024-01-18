@@ -21,7 +21,27 @@ type Module struct {
 }
 
 var _ Node = (*Module)(nil)
+var _ Decl = (*Module)(nil)
 
+func (m *Module) Resolve(ref Ref) *ModuleDecl {
+	for _, d := range m.Decls {
+		switch d := d.(type) {
+		case *Data:
+			if d.Name == ref.Name {
+				return &ModuleDecl{m, d}
+			}
+		case *Verb:
+			if d.Name == ref.Name {
+				return &ModuleDecl{m, d}
+			}
+
+		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time, *Unit:
+		}
+	}
+	return nil
+}
+func (m *Module) schemaDecl()        {}
+func (m *Module) Position() Position { return m.Pos }
 func (m *Module) schemaChildren() []Node {
 	children := make([]Node, 0, len(m.Decls))
 	for _, d := range m.Decls {

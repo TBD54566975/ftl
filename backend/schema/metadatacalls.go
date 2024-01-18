@@ -17,6 +17,7 @@ type MetadataCalls struct {
 
 var _ Metadata = (*MetadataCalls)(nil)
 
+func (m *MetadataCalls) Position() Position { return m.Pos }
 func (m *MetadataCalls) String() string {
 	out := &strings.Builder{}
 	fmt.Fprint(out, "calls ")

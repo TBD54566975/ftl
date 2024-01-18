@@ -28,10 +28,14 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 		switch n := n.(type) {
 		case *Verb:
 			v = &schemapb.Decl_Verb{Verb: n.ToProto().(*schemapb.Verb)}
+
 		case *Data:
 			v = &schemapb.Decl_Data{Data: n.ToProto().(*schemapb.Data)}
+
 		case *Database:
 			v = &schemapb.Decl_Database{Database: n.ToProto().(*schemapb.Database)}
+
+		case *Bool, *Bytes, *Float, *Int, *Module, *String, *Time, *Unit:
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}

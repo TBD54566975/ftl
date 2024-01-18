@@ -13,8 +13,11 @@ type Time struct {
 }
 
 var _ Type = (*Time)(nil)
+var _ Decl = (*Time)(nil)
 
+func (t *Time) Position() Position     { return t.Pos }
 func (*Time) schemaChildren() []Node   { return nil }
 func (*Time) schemaType()              {}
+func (*Time) schemaDecl()              {}
 func (*Time) String() string           { return "Time" }
 func (t *Time) ToProto() proto.Message { return &schemapb.Time{Pos: posToProto(t.Pos)} }

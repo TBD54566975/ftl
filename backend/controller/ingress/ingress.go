@@ -358,7 +358,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 		switch field.Type.(type) {
 		// Explicitly enumerate known types here so go-check-sumtype will tell
 		// us when we're missing a case.
-		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time, *schema.Unit:
+		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time, *schema.Unit, *schema.DataRef:
 
 		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
 			if len(value) > 1 {

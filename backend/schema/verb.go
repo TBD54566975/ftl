@@ -32,7 +32,8 @@ type Verb struct {
 
 var _ Decl = (*Verb)(nil)
 
-func (v *Verb) schemaDecl() {}
+func (v *Verb) Position() Position { return v.Pos }
+func (v *Verb) schemaDecl()        {}
 func (v *Verb) schemaChildren() []Node {
 	children := make([]Node, 2+len(v.Metadata))
 	children[0] = v.Request

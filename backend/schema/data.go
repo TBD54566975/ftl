@@ -13,16 +13,17 @@ import (
 type Data struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string   `parser:"@Comment*" protobuf:"5"`
-	Name     string     `parser:"'data' @Ident '{'" protobuf:"2"`
-	Fields   []*Field   `parser:"@@* '}'" protobuf:"3"`
-	Metadata []Metadata `parser:"@@*" protobuf:"4"`
+	Comments       []string   `parser:"@Comment*" protobuf:"2"`
+	Name           string     `parser:"'data' @Ident" protobuf:"3"`
+	TypeParameters []string   `parser:"( '<' @Ident (',' @Ident)* '>' )?" protobuf:"6"`
+	Fields         []*Field   `parser:"'{' @@* '}'" protobuf:"4"`
+	Metadata       []Metadata `parser:"@@*" protobuf:"5"`
 }
 
 var _ Decl = (*Data)(nil)
 
-// schemaDecl implements Decl
-func (*Data) schemaDecl() {}
+func (d *Data) Position() Position { return d.Pos }
+func (*Data) schemaDecl()          {}
 func (d *Data) schemaChildren() []Node {
 	children := make([]Node, 0, len(d.Fields)+len(d.Metadata))
 	for _, f := range d.Fields {
@@ -36,7 +37,11 @@ func (d *Data) schemaChildren() []Node {
 func (d *Data) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(d.Comments))
-	fmt.Fprintf(w, "data %s {\n", d.Name)
+	typeParameters := ""
+	if len(d.TypeParameters) > 0 {
+		typeParameters = "<" + strings.Join(d.TypeParameters, ", ") + ">"
+	}
+	fmt.Fprintf(w, "data %s%s {\n", d.Name, typeParameters)
 	for _, f := range d.Fields {
 		fmt.Fprintln(w, indent(f.String()))
 	}
