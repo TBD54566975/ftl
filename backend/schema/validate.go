@@ -117,7 +117,6 @@ func Validate(schema *Schema) (*Schema, error) {
 						merr = append(merr, fmt.Errorf("%s: reference to invalid data structure %q at %s", n.Pos, n, mdecl.Decl.Position()))
 					}
 				} else {
-					fmt.Printf("%sBAD\n", strings.Repeat("  ", indent))
 					merr = append(merr, fmt.Errorf("%s: reference to unknown data structure %q", n.Pos, n))
 				}
 
