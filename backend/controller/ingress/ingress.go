@@ -210,6 +210,9 @@ func validateRequestMap(dataRef *schema.DataRef, path path, request map[string]a
 func validateValue(fieldType schema.Type, path path, value any, sch *schema.Schema) error {
 	var typeMatches bool
 	switch fieldType := fieldType.(type) {
+	case *schema.Any:
+		typeMatches = true
+
 	case *schema.Unit:
 		rv := reflect.ValueOf(value)
 		if rv.Kind() != reflect.Map || rv.Len() != 0 {
@@ -358,7 +361,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 		switch field.Type.(type) {
 		// Explicitly enumerate known types here so go-check-sumtype will tell
 		// us when we're missing a case.
-		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time, *schema.Unit, *schema.DataRef:
+		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time, *schema.Unit, *schema.DataRef, *schema.Any:
 
 		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
 			if len(value) > 1 {

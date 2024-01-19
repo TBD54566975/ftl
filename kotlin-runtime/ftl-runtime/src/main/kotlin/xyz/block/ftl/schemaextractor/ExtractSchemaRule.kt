@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.getAbbreviation
 import org.jetbrains.kotlin.types.isNullable
+import org.jetbrains.kotlin.types.typeUtil.isAny
 import org.jetbrains.kotlin.types.typeUtil.requiresTypeAliasExpansion
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.*
@@ -33,6 +34,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
 import java.time.OffsetDateTime
+import kotlin.Any
 import kotlin.Boolean
 import kotlin.String
 import kotlin.collections.Map
@@ -388,6 +390,7 @@ class SchemaExtractor(
       Boolean::class.qualifiedName -> Type(bool = xyz.block.ftl.v1.schema.Bool())
       OffsetDateTime::class.qualifiedName -> Type(time = xyz.block.ftl.v1.schema.Time())
       ByteArray::class.qualifiedName -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
+      Any::class.qualifiedName -> Type(any = xyz.block.ftl.v1.schema.Any())
       Map::class.qualifiedName -> {
         return Type(
           map = xyz.block.ftl.v1.schema.Map(
@@ -440,6 +443,9 @@ class SchemaExtractor(
     }
     if (this.isNullable()) {
       return Type(optional = Optional(type = type))
+    }
+    if (this.isAny()) {
+      return Type(any = xyz.block.ftl.v1.schema.Any())
     }
     return type
   }

@@ -195,6 +195,9 @@ func genType(module *schema.Module, t schema.Type) string {
 	case *schema.Unit:
 		return "sdk.Unit"
 
+	case *schema.Any:
+		return "any"
+
 	case *schema.Bytes:
 		return "[]byte"
 	}

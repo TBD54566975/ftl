@@ -38,7 +38,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         /**
          * Request to echo a message.
          */
-        data class EchoRequest(val name: String)
+        data class EchoRequest(val name: String, val stuff: Any)
         data class EchoResponse(val messages: List<EchoMessage>)
 
         /**
@@ -130,6 +130,10 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               Field(
                 name = "name",
                 type = Type(string = xyz.block.ftl.v1.schema.String())
+              ),
+              Field(
+                name = "stuff",
+                type = Type(any = xyz.block.ftl.v1.schema.Any())
               )
             ),
             comments = listOf(
@@ -252,7 +256,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         /**
          * Request to echo a message.
          */
-        data class EchoRequest(val name: Any)
+        data class EchoRequest(val name: Char)
         data class EchoResponse(val messages: List<EchoMessage>)
 
         /**
@@ -275,7 +279,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             }
         }
         """
-    assertThrows<IllegalArgumentException>(message = "kotlin.Any type is not supported in FTL schema") {
+    assertThrows<IllegalArgumentException>(message = "kotlin.Char type is not supported in FTL schema") {
       ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
     }
   }

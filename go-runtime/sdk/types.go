@@ -9,6 +9,9 @@ import (
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
+// Any is a generic type that can hold any value.
+type Any = any
+
 // Unit is a type that has no value.
 //
 // It can be used as a parameter or return value to indicate that a function

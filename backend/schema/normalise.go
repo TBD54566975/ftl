@@ -8,6 +8,10 @@ func Normalise[T Node](n T) T {
 	var zero Position
 	var ni Node = n
 	switch c := ni.(type) {
+	case *Any:
+		c.Any = false
+		c.Pos = zero
+
 	case *Unit:
 		c.Pos = zero
 

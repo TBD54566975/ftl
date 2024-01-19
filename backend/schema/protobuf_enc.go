@@ -35,7 +35,7 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 		case *Database:
 			v = &schemapb.Decl_Database{Database: n.ToProto().(*schemapb.Database)}
 
-		case *Bool, *Bytes, *Float, *Int, *Module, *String, *Time, *Unit:
+		case *Bool, *Bytes, *Float, *Int, *Module, *String, *Time, *Unit, *Any:
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}
@@ -82,6 +82,9 @@ func ingressListToProto(nodes []IngressPathComponent) []*schemapb.IngressPathCom
 
 func typeToProto(t Type) *schemapb.Type {
 	switch t := t.(type) {
+	case *Any:
+		return &schemapb.Type{Value: &schemapb.Type_Any{Any: t.ToProto().(*schemapb.Any)}}
+
 	case *Unit:
 		return &schemapb.Type{Value: &schemapb.Type_Unit{Unit: t.ToProto().(*schemapb.Unit)}}
 

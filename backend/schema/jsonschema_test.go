@@ -28,6 +28,7 @@ var jsonSchemaSample = &Schema{
 					{Name: "map", Type: &Map{Key: &String{}, Value: &Int{}}},
 					{Name: "optionalMap", Type: &Map{Key: &String{}, Value: &Optional{Type: &Int{}}}},
 					{Name: "ref", Type: &DataRef{Module: "bar", Name: "Bar"}},
+					{Name: "any", Type: &Any{}},
 				},
 			},
 			&Data{
@@ -59,7 +60,8 @@ func TestDataToJSONSchema(t *testing.T) {
     "optionalArray",
     "map",
     "optionalMap",
-    "ref"
+    "ref",
+    "any"
   ],
   "additionalProperties": false,
   "definitions": {
@@ -89,6 +91,7 @@ func TestDataToJSONSchema(t *testing.T) {
     }
   },
   "properties": {
+    "any": {},
     "array": {
       "items": {
         "type": "string"
@@ -198,7 +201,8 @@ func TestJSONShemaValidation(t *testing.T) {
     "optionalArray": [null, "foo"],
     "map": {"one": 2},
     "optionalMap": {"one": 2, "two": null},
-    "ref": {"bar": "Name"}
+    "ref": {"bar": "Name"},
+    "any": [{"name": "Name"}, "string", 1, 1.23, true, "2018-11-13T20:20:39+00:00", ["one"], {"one": 2}, null]
   }
    `
 
