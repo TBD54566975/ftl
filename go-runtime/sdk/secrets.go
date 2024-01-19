@@ -8,14 +8,7 @@ import (
 )
 
 // SecretType is a type that can be used as a secret value.
-//
-// Supported types are currently limited, but will eventually be extended to
-// allow any type that FTL supports, including structs.
-type SecretType interface {
-	string | int | float64 | bool |
-		[]string | []int | []float64 | []bool | []byte |
-		map[string]string | map[string]int | map[string]float64 | map[string]bool | map[string][]byte
-}
+type SecretType interface{ any }
 
 // Secret declares a typed secret for the current module.
 func Secret[Type SecretType](name string) SecretValue[Type] {
