@@ -13,19 +13,31 @@ import (
 type Data struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments       []string   `parser:"@Comment*" protobuf:"2"`
-	Name           string     `parser:"'data' @Ident" protobuf:"3"`
-	TypeParameters []string   `parser:"( '<' @Ident (',' @Ident)* '>' )?" protobuf:"6"`
-	Fields         []*Field   `parser:"'{' @@* '}'" protobuf:"4"`
-	Metadata       []Metadata `parser:"@@*" protobuf:"5"`
+	Comments       []string         `parser:"@Comment*" protobuf:"2"`
+	Name           string           `parser:"'data' @Ident" protobuf:"3"`
+	TypeParameters []*TypeParameter `parser:"( '<' @@ (',' @@)* '>' )?" protobuf:"6"`
+	Fields         []*Field         `parser:"'{' @@* '}'" protobuf:"4"`
+	Metadata       []Metadata       `parser:"@@*" protobuf:"5"`
 }
 
 var _ Decl = (*Data)(nil)
+var _ Scoped = (*Data)(nil)
+
+func (d *Data) Scope() Scope {
+	scope := Scope{}
+	for _, t := range d.TypeParameters {
+		scope[t.Name] = ModuleDecl{Decl: t}
+	}
+	return scope
+}
 
 func (d *Data) Position() Position { return d.Pos }
 func (*Data) schemaDecl()          {}
 func (d *Data) schemaChildren() []Node {
 	children := make([]Node, 0, len(d.Fields)+len(d.Metadata))
+	for _, t := range d.TypeParameters {
+		children = append(children, t)
+	}
 	for _, f := range d.Fields {
 		children = append(children, f)
 	}
@@ -34,12 +46,20 @@ func (d *Data) schemaChildren() []Node {
 	}
 	return children
 }
+
 func (d *Data) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(d.Comments))
 	typeParameters := ""
 	if len(d.TypeParameters) > 0 {
-		typeParameters = "<" + strings.Join(d.TypeParameters, ", ") + ">"
+		typeParameters = "<"
+		for i, t := range d.TypeParameters {
+			if i != 0 {
+				typeParameters += ", "
+			}
+			typeParameters += t.String()
+		}
+		typeParameters += ">"
 	}
 	fmt.Fprintf(w, "data %s%s {\n", d.Name, typeParameters)
 	for _, f := range d.Fields {

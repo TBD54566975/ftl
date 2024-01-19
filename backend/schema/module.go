@@ -23,6 +23,23 @@ type Module struct {
 var _ Node = (*Module)(nil)
 var _ Decl = (*Module)(nil)
 
+func (m *Module) Scope() Scope {
+	scope := Scope{}
+	for _, d := range m.Decls {
+		switch d := d.(type) {
+		case *Data:
+			scope[d.Name] = ModuleDecl{m, d}
+
+		case *Verb:
+			scope[d.Name] = ModuleDecl{m, d}
+
+		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time,
+			*Unit, *Any, *TypeParameter:
+		}
+	}
+	return scope
+}
+
 func (m *Module) Resolve(ref Ref) *ModuleDecl {
 	for _, d := range m.Decls {
 		switch d := d.(type) {
@@ -35,11 +52,13 @@ func (m *Module) Resolve(ref Ref) *ModuleDecl {
 				return &ModuleDecl{m, d}
 			}
 
-		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time, *Unit, *Any:
+		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time,
+			*Unit, *Any, *TypeParameter:
 		}
 	}
 	return nil
 }
+
 func (m *Module) schemaDecl()        {}
 func (m *Module) Position() Position { return m.Pos }
 func (m *Module) schemaChildren() []Node {

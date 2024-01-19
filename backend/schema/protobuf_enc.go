@@ -35,7 +35,8 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 		case *Database:
 			v = &schemapb.Decl_Database{Database: n.ToProto().(*schemapb.Database)}
 
-		case *Bool, *Bytes, *Float, *Int, *Module, *String, *Time, *Unit, *Any:
+		case *Bool, *Bytes, *Float, *Int, *Module, *String, *Time, *Unit, *Any,
+			*TypeParameter:
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}
@@ -120,6 +121,9 @@ func typeToProto(t Type) *schemapb.Type {
 
 	case *Optional:
 		return &schemapb.Type{Value: &schemapb.Type_Optional{Optional: t.ToProto().(*schemapb.Optional)}}
+
+	case *TypeParameter:
+		panic("unreachable")
 	}
 	panic(fmt.Sprintf("unhandled type: %T", t))
 }

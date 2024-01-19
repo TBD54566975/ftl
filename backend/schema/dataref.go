@@ -10,9 +10,9 @@ import (
 type DataRef struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Module string `parser:"(@Ident '.')?" protobuf:"3"`
-	Name   string `parser:"@Ident" protobuf:"2"`
-	// TypeParameters []Type `parser:"[ '<' @@ (',' @@)* '>' ]" protobuf:"4"`
+	Module         string `parser:"(@Ident '.')?" protobuf:"3"`
+	Name           string `parser:"@Ident" protobuf:"2"`
+	TypeParameters []Type `parser:"[ '<' @@ (',' @@)* '>' ]" protobuf:"4"`
 }
 
 var _ Type = (*DataRef)(nil)
@@ -20,23 +20,25 @@ var _ Type = (*DataRef)(nil)
 func (d *DataRef) Position() Position { return d.Pos }
 
 // Untyped converts a typed reference to an untyped reference.
-func (d *DataRef) Untyped() Ref { return Ref(*d) }
+func (d *DataRef) Untyped() Ref {
+	return Ref{Pos: d.Pos, Module: d.Module, Name: d.Name}
+}
 
 func (d *DataRef) String() string {
 	out := d.Name
 	if d.Module != "" {
 		out = d.Module + "." + out
 	}
-	// if len(d.TypeParameters) > 0 {
-	// 	out += "<"
-	// 	for i, t := range d.TypeParameters {
-	// 		if i != 0 {
-	// 			out += ", "
-	// 		}
-	// 		out += t.String()
-	// 	}
-	// 	out += ">"
-	// }
+	if len(d.TypeParameters) > 0 {
+		out += "<"
+		for i, t := range d.TypeParameters {
+			if i != 0 {
+				out += ", "
+			}
+			out += t.String()
+		}
+		out += ">"
+	}
 	return out
 }
 

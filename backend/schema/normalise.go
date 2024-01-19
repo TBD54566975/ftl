@@ -12,6 +12,9 @@ func Normalise[T Node](n T) T {
 		c.Any = false
 		c.Pos = zero
 
+	case *TypeParameter:
+		c.Pos = zero
+
 	case *Unit:
 		c.Pos = zero
 
@@ -33,6 +36,7 @@ func Normalise[T Node](n T) T {
 
 	case *Data:
 		c.Pos = zero
+		c.TypeParameters = normaliseSlice(c.TypeParameters)
 		c.Fields = normaliseSlice(c.Fields)
 		c.Metadata = normaliseSlice(c.Metadata)
 
