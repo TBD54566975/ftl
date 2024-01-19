@@ -322,6 +322,9 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		} else {
 			return validateValue(fieldType.Type, path, value, sch)
 		}
+
+	case *schema.TypeParameter:
+		panic("unreachable")
 	}
 
 	if !typeMatches {
@@ -359,9 +362,8 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 		}
 
 		switch field.Type.(type) {
-		// Explicitly enumerate known types here so go-check-sumtype will tell
-		// us when we're missing a case.
-		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time, *schema.Unit, *schema.DataRef, *schema.Any:
+		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time,
+			*schema.Unit, *schema.DataRef, *schema.Any, *schema.TypeParameter:
 
 		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
 			if len(value) > 1 {

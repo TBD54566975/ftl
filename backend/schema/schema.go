@@ -80,12 +80,12 @@ func (s *Schema) Module(name string) types.Option[*Module] {
 	return types.None[*Module]()
 }
 
-func (s *Schema) DataMap() map[DataRef]*Data {
-	dataTypes := map[DataRef]*Data{}
+func (s *Schema) DataMap() map[Ref]*Data {
+	dataTypes := map[Ref]*Data{}
 	for _, module := range s.Modules {
 		for _, decl := range module.Decls {
 			if data, ok := decl.(*Data); ok {
-				dataTypes[DataRef{Module: module.Name, Name: data.Name}] = data
+				dataTypes[Ref{Module: module.Name, Name: data.Name}] = data
 			}
 		}
 	}

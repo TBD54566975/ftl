@@ -15,13 +15,13 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	dataTypes := schema.DataMap()
 
 	// Find the root data type.
-	rootData, ok := dataTypes[DataRef{Module: dataRef.Module, Name: dataRef.Name}]
+	rootData, ok := dataTypes[dataRef.Untyped()]
 	if !ok {
 		return nil, fmt.Errorf("unknown data type %s", dataRef)
 	}
 
 	// Encode root, and collect all data types reachable from the root.
-	dataRefs := map[DataRef]bool{}
+	dataRefs := map[Ref]bool{}
 	root := nodeToJSSchema(rootData, dataRefs)
 	if len(dataRefs) == 0 {
 		return root, nil
@@ -29,7 +29,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	// Resolve and encode all data types reachable from the root.
 	root.Definitions = map[string]jsonschema.SchemaOrBool{}
 	for dataRef := range dataRefs {
-		data, ok := dataTypes[DataRef{Module: dataRef.Module, Name: dataRef.Name}]
+		data, ok := dataTypes[dataRef]
 		if !ok {
 			return nil, fmt.Errorf("unknown data type %s", dataRef)
 		}
@@ -38,7 +38,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	return root, nil
 }
 
-func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *jsonschema.Schema {
+func nodeToJSSchema(node Node, dataRefs map[Ref]bool) *jsonschema.Schema {
 	switch node := node.(type) {
 	case *Any:
 		return &jsonschema.Schema{}
@@ -119,7 +119,7 @@ func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *jsonschema.Schema {
 	case *DataRef:
 		dataRef := *node
 		ref := fmt.Sprintf("#/definitions/%s", dataRef.String())
-		dataRefs[dataRef] = true
+		dataRefs[dataRef.Untyped()] = true
 		return &jsonschema.Schema{Ref: &ref}
 
 	case *Optional:
@@ -131,7 +131,7 @@ func nodeToJSSchema(node Node, dataRefs map[DataRef]bool) *jsonschema.Schema {
 
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
 		IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module,
-		*Schema, Type, *Database, *Verb, *VerbRef, *SourceRef, *SinkRef:
+		*Schema, Type, *Database, *Verb, *VerbRef, *SourceRef, *SinkRef, *TypeParameter:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 
 	default:

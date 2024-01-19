@@ -60,6 +60,9 @@ jobs:
         run: golangci-lint run
       - name: go-check-sumtype
         run: go-check-sumtype ./...
+      # Too annoying to disable individual warnings
+      # - name: staticcheck
+      #   run: staticcheck ./...
       - name: shellcheck
         run: shellcheck -e SC2016 scripts/*
   proto-breaking:

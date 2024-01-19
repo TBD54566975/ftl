@@ -31,130 +31,6 @@ var (
 	}
 )
 
-type Resolver interface {
-	// Resolve a reference to a symbol declaration or nil.
-	Resolve(ref Ref) *ModuleDecl
-}
-
-// Scope maps relative names to fully qualified types.
-type Scope map[string]ModuleDecl
-
-// ModuleDecl is a declaration associated with a module.
-type ModuleDecl struct {
-	Module *Module // May be nil.
-	Decl   Decl
-}
-
-func (s Scope) String() string {
-	out := &strings.Builder{}
-	for name, decl := range s {
-		fmt.Fprintf(out, "%s: %T\n", name, decl.Decl)
-	}
-	return out.String()
-}
-
-// Scopes to search during type resolution.
-type Scopes []Scope
-
-// NewScopes constructs a new type resolution stack with builtins pre-populated.
-func NewScopes() Scopes {
-	builtins := Builtins()
-	scopes := Scopes{primitivesScope, Scope{}}
-	if err := scopes.Add(nil, builtins.Name, builtins); err != nil {
-		panic(err)
-	}
-	var err error
-	scopes, err = scopes.PushModuleSymbols(builtins)
-	if err != nil {
-		panic(err)
-	}
-	return scopes
-}
-
-var _ Resolver = Scopes{}
-
-func (s Scopes) String() string {
-	out := &strings.Builder{}
-	for i, scope := range s {
-		if i != 0 {
-			fmt.Fprintln(out)
-		}
-		fmt.Fprintf(out, "Scope %d:\n", i)
-		for name, decl := range scope {
-			fmt.Fprintf(out, "  %s: %T\n", name, decl.Decl)
-		}
-	}
-	return out.String()
-}
-
-// Push a new Scope onto the stack.
-//
-// This contains references to previous Scopes so that updates are preserved.
-func (s Scopes) Push() Scopes {
-	out := make(Scopes, 0, len(s)+1)
-	out = append(out, s...)
-	out = append(out, Scope{})
-	return out
-}
-
-// PushModuleSymbols pushes a new Scope onto the stack containing all the declarations
-// in the module.
-func (s *Scopes) PushModuleSymbols(module *Module) (Scopes, error) {
-	out := s.Push()
-	for _, decl := range module.Decls {
-		switch decl := decl.(type) {
-		case *Data:
-			if err := out.Add(module, decl.Name, decl); err != nil {
-				return nil, err
-			}
-
-		case *Verb:
-			if err := out.Add(module, decl.Name, decl); err != nil {
-				return nil, err
-			}
-
-		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time, *Unit, *Any:
-		}
-	}
-	return out, nil
-}
-
-// Add a declaration to the current scope.
-func (s *Scopes) Add(owner *Module, name string, decl Decl) error {
-	end := len(*s) - 1
-	if prev, ok := (*s)[end][name]; ok {
-		return fmt.Errorf("%s: duplicate declaration of %q at %s", decl.Position(), name, prev.Decl.Position())
-	}
-	(*s)[end][name] = ModuleDecl{owner, decl}
-	return nil
-}
-
-// Resolve a reference to a symbol declaration or nil.
-func (s Scopes) Resolve(ref Ref) *ModuleDecl {
-	if ref.Module == "" {
-		for i := len(s) - 1; i >= 0; i-- {
-			scope := s[i]
-			if decl, ok := scope[ref.Name]; ok {
-				return &decl
-			}
-		}
-		return nil
-	}
-	// If a module is provided, try to resolve it, then resolve the reference through the module.
-	for i := len(s) - 1; i >= 0; i-- {
-		scope := s[i]
-		if mdecl, ok := scope[ref.Module]; ok {
-			if resolver, ok := mdecl.Decl.(Resolver); ok {
-				if decl := resolver.Resolve(ref); decl != nil {
-					// Holy nested if statement Batman.
-					return decl
-				}
-			}
-		}
-	}
-	return nil
-}
-
 // MustValidate panics if a schema is invalid.
 //
 // This is useful for testing.
@@ -181,7 +57,7 @@ func Validate(schema *Schema) (*Schema, error) {
 
 	scopes := NewScopes()
 
-	// First pass, add all the types.
+	// First pass, add all the modules.
 	for _, module := range schema.Modules {
 		if module == builtins {
 			continue
@@ -206,15 +82,18 @@ func Validate(schema *Schema) (*Schema, error) {
 			merr = append(merr, err)
 		}
 
-		moduleScopes, err := scopes.PushModuleSymbols(module)
-		if err != nil {
-			merr = append(merr, err)
-		}
-
-		err = Visit(module, func(n Node, next func() error) error {
+		indent := 0
+		err := Visit(module, func(n Node, next func() error) error {
+			save := scopes
+			if scoped, ok := n.(Scoped); ok {
+				scopes = scopes.PushScope(scoped.Scope())
+				defer func() { scopes = save }()
+			}
+			indent++
+			defer func() { indent-- }()
 			switch n := n.(type) {
 			case *VerbRef:
-				if mdecl := moduleScopes.Resolve(n.Untyped()); mdecl != nil {
+				if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
 					if _, ok := mdecl.Decl.(*Verb); !ok {
 						merr = append(merr, fmt.Errorf("%s: reference to invalid verb %q at %q", n.Pos, n, mdecl.Decl.Position()))
 					} else if mdecl.Module != nil {
@@ -225,13 +104,20 @@ func Validate(schema *Schema) (*Schema, error) {
 				}
 
 			case *DataRef:
-				if mdecl := moduleScopes.Resolve(n.Untyped()); mdecl != nil {
-					if _, ok := mdecl.Decl.(*Data); !ok {
+				if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
+					switch mdecl.Decl.(type) {
+					case *Data:
+						if mdecl.Module != nil {
+							n.Module = mdecl.Module.Name
+						}
+
+					case *TypeParameter:
+
+					default:
 						merr = append(merr, fmt.Errorf("%s: reference to invalid data structure %q at %s", n.Pos, n, mdecl.Decl.Position()))
-					} else if mdecl.Module == nil {
-						n.Module = mdecl.Module.Name
 					}
 				} else {
+					fmt.Printf("%sBAD\n", strings.Repeat("  ", indent))
 					merr = append(merr, fmt.Errorf("%s: reference to unknown data structure %q", n.Pos, n))
 				}
 
@@ -253,7 +139,7 @@ func Validate(schema *Schema) (*Schema, error) {
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
 				*MetadataIngress, *Module, *Optional, *Schema, *String, *Time, Type,
-				*Unit, *Any:
+				*Unit, *Any, *TypeParameter:
 			}
 			return next()
 		})
@@ -274,9 +160,9 @@ func ValidateName(name string) bool {
 }
 
 // ValidateModule performs the subset of semantic validation possible on a single module.
+//
+// It ignores references to other modules.
 func ValidateModule(module *Module) error {
-	verbRefs := []*VerbRef{}
-	dataRefs := []*DataRef{}
 	merr := []error{}
 
 	scopes := NewScopes()
@@ -290,14 +176,44 @@ func ValidateModule(module *Module) error {
 	if err := scopes.Add(nil, module.Name, module); err != nil {
 		merr = append(merr, err)
 	}
-	scopes = scopes.Push() //nolint:govet
+	scopes = scopes.Push()
 	_ = Visit(module, func(n Node, next func() error) error {
+		if scoped, ok := n.(Scoped); ok {
+			pop := scopes
+			scopes = scopes.PushScope(scoped.Scope())
+			defer func() { scopes = pop }()
+		}
 		switch n := n.(type) {
 		case *VerbRef:
-			verbRefs = append(verbRefs, n)
+			if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
+				if _, ok := mdecl.Decl.(*Verb); !ok && n.Module == "" {
+					merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid verb %q", n.Pos, n))
+				} else {
+					n.Module = mdecl.Module.Name
+				}
+			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
+				merr = append(merr, fmt.Errorf("%s: reference to unknown verb %q", n.Pos, n))
+			}
 
 		case *DataRef:
-			dataRefs = append(dataRefs, n)
+			if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
+				switch mdecl.Decl.(type) {
+				case *Data:
+					if n.Module == "" {
+						n.Module = mdecl.Module.Name
+					}
+
+				case *TypeParameter:
+
+				default:
+					if n.Module == "" {
+						merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid data structure %q", n.Pos, n))
+					}
+					n.Module = mdecl.Module.Name
+				}
+			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
+				merr = append(merr, fmt.Errorf("%s: reference to unknown data structure %q", n.Pos, n))
+			}
 
 		case *Verb:
 			if !ValidateName(n.Name) {
@@ -305,9 +221,6 @@ func ValidateModule(module *Module) error {
 			}
 			if _, ok := primitivesScope[n.Name]; ok {
 				merr = append(merr, fmt.Errorf("%s: Verb name %q is a reserved word", n.Pos, n.Name))
-			}
-			if err := scopes.Add(module, n.Name, n); err != nil {
-				merr = append(merr, err)
 			}
 
 		case *Data:
@@ -322,43 +235,17 @@ func ValidateModule(module *Module) error {
 					merr = append(merr, fmt.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
 				}
 			}
-			if err := scopes.Add(module, n.Name, n); err != nil {
-				merr = append(merr, err)
-			}
 
 		case *Array, *Bool, *Database, *Field, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, IngressPathComponent,
 			*IngressPathLiteral, *IngressPathParameter, *Optional,
-			*SourceRef, *SinkRef, *Unit, *Any:
+			*SourceRef, *SinkRef, *Unit, *Any, *TypeParameter:
 
 		case Type, Metadata, Decl: // Union types.
 		}
 		return next()
 	})
-
-	for _, ref := range verbRefs {
-		if mdecl := scopes.Resolve(ref.Untyped()); mdecl != nil {
-			if _, ok := mdecl.Decl.(*Verb); !ok && ref.Module == "" {
-				merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid verb %q", ref.Pos, ref))
-			} else {
-				ref.Module = mdecl.Module.Name
-			}
-		} else if ref.Module == "" || ref.Module == module.Name { // Don't report errors for external modules.
-			merr = append(merr, fmt.Errorf("%s: reference to unknown verb %q", ref.Pos, ref))
-		}
-	}
-	for _, ref := range dataRefs {
-		if mdecl := scopes.Resolve(ref.Untyped()); mdecl != nil {
-			if _, ok := mdecl.Decl.(*Data); !ok && ref.Module == "" {
-				merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid data structure %q", ref.Pos, ref))
-			} else {
-				ref.Module = mdecl.Module.Name
-			}
-		} else if ref.Module == "" || ref.Module == module.Name { // Don't report errors for external modules.
-			merr = append(merr, fmt.Errorf("%s: reference to unknown data structure %q", ref.Pos, ref))
-		}
-	}
 	merr = cleanErrors(merr)
 	return errors.Join(merr...)
 }

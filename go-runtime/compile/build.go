@@ -200,6 +200,9 @@ func genType(module *schema.Module, t schema.Type) string {
 
 	case *schema.Bytes:
 		return "[]byte"
+
+	case *schema.TypeParameter:
+		return t.Name
 	}
 	panic(fmt.Sprintf("unsupported type %T", t))
 }

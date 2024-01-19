@@ -11,61 +11,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/errors"
 )
 
-var schema = MustValidate(&Schema{
-	Modules: []*Module{
-		{
-			Name:     "todo",
-			Comments: []string{"A comment"},
-			Decls: []Decl{
-				&Data{
-					Name: "CreateRequest",
-					Fields: []*Field{
-						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}},
-					},
-				},
-				&Data{
-					Name: "CreateResponse",
-					Fields: []*Field{
-						{Name: "name", Type: &Array{Element: &String{}}},
-					},
-				},
-				&Data{
-					Name: "DestroyRequest",
-					Fields: []*Field{
-						{Name: "name", Comments: []string{"A comment"}, Type: &String{}},
-					},
-				},
-				&Data{
-					Name: "DestroyResponse",
-					Fields: []*Field{
-						{Name: "name", Type: &String{}},
-						{Name: "when", Type: &Time{}},
-					},
-				},
-				&Verb{Name: "create",
-					Request:  &DataRef{Module: "todo", Name: "CreateRequest"},
-					Response: &DataRef{Module: "todo", Name: "CreateResponse"},
-					Metadata: []Metadata{&MetadataCalls{Calls: []*VerbRef{{Module: "todo", Name: "destroy"}}}}},
-				&Verb{Name: "destroy",
-					Request:  &DataRef{Module: "todo", Name: "DestroyRequest"},
-					Response: &DataRef{Module: "todo", Name: "DestroyResponse"},
-					Metadata: []Metadata{
-						&MetadataIngress{
-							Type:   "ftl",
-							Method: "GET",
-							Path: []IngressPathComponent{
-								&IngressPathLiteral{Text: "todo"},
-								&IngressPathLiteral{Text: "destroy"},
-								&IngressPathParameter{Name: "id"},
-							},
-						},
-					},
-				},
-			},
-		},
-	},
-})
-
 func TestIndent(t *testing.T) {
 	assert.Equal(t, "  a\n  b\n  c", indent("a\nb\nc"))
 }
@@ -100,7 +45,7 @@ module todo {
       ingress ftl GET /todo/destroy/{id}
 }
 `
-	assert.Equal(t, normaliseString(expected), normaliseString(schema.String()))
+	assert.Equal(t, normaliseString(expected), normaliseString(testSchema.String()))
 }
 
 func normaliseString(s string) string {
@@ -158,13 +103,9 @@ Module
 	actual := &strings.Builder{}
 	i := 0
 	// Modules[0] is always the builtins, which we skip.
-	err := Visit(schema.Modules[1], func(n Node, next func() error) error {
+	err := Visit(testSchema.Modules[1], func(n Node, next func() error) error {
 		prefix := strings.Repeat(" ", i)
-		tn := strings.TrimPrefix(fmt.Sprintf("%T", n), "*schema.")
-		if strings.Contains(tn, "[") {
-			tn = strings.TrimSuffix(strings.Split(tn, ".")[2], "]")
-		}
-		fmt.Fprintf(actual, "%s%s\n", prefix, tn)
+		fmt.Fprintf(actual, "%s%s\n", prefix, TypeName(n))
 		i += 2
 		defer func() { i -= 2 }()
 		return next()
@@ -174,12 +115,12 @@ Module
 }
 
 func TestParserRoundTrip(t *testing.T) {
-	actual, err := ParseString("", schema.String())
-	assert.NoError(t, err, "%s", schema.String())
+	actual, err := ParseString("", testSchema.String())
+	assert.NoError(t, err, "%s", testSchema.String())
 	actual, err = Validate(actual)
 	assert.NoError(t, err)
 	actual = Normalise(actual)
-	assert.Equal(t, Normalise(schema), Normalise(actual), "%s", schema.String())
+	assert.Equal(t, Normalise(testSchema), Normalise(actual), "%s", testSchema.String())
 }
 
 func TestParsing(t *testing.T) {
@@ -288,64 +229,94 @@ func TestParsing(t *testing.T) {
 				}
 				`,
 			expected: &Schema{
-				Modules: []*Module{
-					{
-						Name: "echo",
-						Decls: []Decl{
-							&Data{
-								Name: "EchoRequest",
-								Fields: []*Field{
-									{Name: "name", Type: &Optional{Type: &String{}}},
-								},
+				Modules: []*Module{{
+					Name: "echo",
+					Decls: []Decl{
+						&Data{Name: "EchoRequest", Fields: []*Field{{Name: "name", Type: &Optional{Type: &String{}}}}},
+						&Data{Name: "EchoResponse", Fields: []*Field{{Name: "message", Type: &String{}}}},
+						&Verb{
+							Name:     "echo",
+							Request:  &DataRef{Module: "echo", Name: "EchoRequest"},
+							Response: &DataRef{Module: "echo", Name: "EchoResponse"},
+							Metadata: []Metadata{
+								&MetadataIngress{Type: "ftl", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "echo"}}},
+								&MetadataCalls{Calls: []*VerbRef{{Module: "time", Name: "time"}}},
 							},
-							&Data{
-								Name: "EchoResponse",
-								Fields: []*Field{
-									{Name: "message", Type: &String{}},
-								},
+						},
+					},
+				}, {
+					Name: "time",
+					Decls: []Decl{
+						&Data{Name: "TimeRequest"},
+						&Data{Name: "TimeResponse", Fields: []*Field{{Name: "time", Type: &Time{}}}},
+						&Verb{
+							Name:     "time",
+							Request:  &DataRef{Module: "time", Name: "TimeRequest"},
+							Response: &DataRef{Module: "time", Name: "TimeResponse"},
+							Metadata: []Metadata{
+								&MetadataIngress{Type: "ftl", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "time"}}},
 							},
-							&Verb{
-								Name:     "echo",
-								Request:  &DataRef{Module: "echo", Name: "EchoRequest"},
-								Response: &DataRef{Module: "echo", Name: "EchoResponse"},
-								Metadata: []Metadata{
-									&MetadataIngress{
-										Type:   "ftl",
-										Method: "GET",
-										Path:   []IngressPathComponent{&IngressPathLiteral{Text: "echo"}},
+						},
+					},
+				}},
+			},
+		},
+		{name: "TypeParameters",
+			input: `
+				module test {
+					data Data<T> {
+						value T
+					}
+
+					verb test(Data<String>) Data<String>
+				}
+				`,
+			expected: &Schema{
+				Modules: []*Module{{
+					Name: "test",
+					Decls: []Decl{
+						&Data{
+							Comments:       []string{},
+							Name:           "Data",
+							TypeParameters: []*TypeParameter{{Name: "T"}},
+							Fields: []*Field{
+								{Name: "value", Type: &DataRef{Name: "T", TypeParameters: []Type{}}},
+							},
+						},
+						&Verb{
+							Comments: []string{},
+							Name:     "test",
+							Request: &DataRef{
+								Module: "test",
+								Name:   "Data",
+								TypeParameters: []Type{
+									&String{
+										Pos: Position{
+											Offset: 81,
+											Line:   7,
+											Column: 21,
+										},
+										Str: true,
 									},
-									&MetadataCalls{Calls: []*VerbRef{{Module: "time", Name: "time"}}},
+								},
+							},
+							Response: &DataRef{
+								Module: "test",
+								Name:   "Data",
+								TypeParameters: []Type{
+									&String{
+										Pos: Position{
+											Offset: 95,
+											Line:   7,
+											Column: 35,
+										},
+										Str: true,
+									},
 								},
 							},
 						},
 					},
-					{
-						Name: "time",
-						Decls: []Decl{
-							&Data{
-								Name: "TimeRequest",
-							},
-							&Data{
-								Name: "TimeResponse",
-								Fields: []*Field{
-									{Name: "time", Type: &Time{}},
-								},
-							},
-							&Verb{
-								Name:     "time",
-								Request:  &DataRef{Module: "time", Name: "TimeRequest"},
-								Response: &DataRef{Module: "time", Name: "TimeResponse"},
-								Metadata: []Metadata{
-									&MetadataIngress{
-										Type:   "ftl",
-										Method: "GET",
-										Path:   []IngressPathComponent{&IngressPathLiteral{Text: "time"}},
-									},
-								},
-							},
-						},
-					},
-				},
+				}},
 			},
 		},
 	}
@@ -365,8 +336,10 @@ func TestParsing(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				actual = Normalise(actual)
+				assert.NotZero(t, test.expected, "test.expected is nil")
+				assert.NotZero(t, test.expected.Modules, "test.expected.Modules is nil")
 				test.expected.Modules = append([]*Module{Builtins()}, test.expected.Modules...)
-				assert.Equal(t, Normalise(test.expected), Normalise(actual), test.input)
+				assert.Equal(t, Normalise(test.expected), Normalise(actual), test.input, assert.OmitEmpty())
 			}
 		})
 	}
@@ -399,5 +372,60 @@ module todo {
 	actual, err := ParseModuleString("", input)
 	assert.NoError(t, err)
 	actual = Normalise(actual)
-	assert.Equal(t, Normalise(schema.Modules[1]), Normalise(actual))
+	assert.Equal(t, Normalise(testSchema.Modules[1]), Normalise(actual))
 }
+
+var testSchema = MustValidate(&Schema{
+	Modules: []*Module{
+		{
+			Name:     "todo",
+			Comments: []string{"A comment"},
+			Decls: []Decl{
+				&Data{
+					Name: "CreateRequest",
+					Fields: []*Field{
+						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}},
+					},
+				},
+				&Data{
+					Name: "CreateResponse",
+					Fields: []*Field{
+						{Name: "name", Type: &Array{Element: &String{}}},
+					},
+				},
+				&Data{
+					Name: "DestroyRequest",
+					Fields: []*Field{
+						{Name: "name", Comments: []string{"A comment"}, Type: &String{}},
+					},
+				},
+				&Data{
+					Name: "DestroyResponse",
+					Fields: []*Field{
+						{Name: "name", Type: &String{}},
+						{Name: "when", Type: &Time{}},
+					},
+				},
+				&Verb{Name: "create",
+					Request:  &DataRef{Module: "todo", Name: "CreateRequest"},
+					Response: &DataRef{Module: "todo", Name: "CreateResponse"},
+					Metadata: []Metadata{&MetadataCalls{Calls: []*VerbRef{{Module: "todo", Name: "destroy"}}}}},
+				&Verb{Name: "destroy",
+					Request:  &DataRef{Module: "todo", Name: "DestroyRequest"},
+					Response: &DataRef{Module: "todo", Name: "DestroyResponse"},
+					Metadata: []Metadata{
+						&MetadataIngress{
+							Type:   "ftl",
+							Method: "GET",
+							Path: []IngressPathComponent{
+								&IngressPathLiteral{Text: "todo"},
+								&IngressPathLiteral{Text: "destroy"},
+								&IngressPathParameter{Name: "id"},
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+})
