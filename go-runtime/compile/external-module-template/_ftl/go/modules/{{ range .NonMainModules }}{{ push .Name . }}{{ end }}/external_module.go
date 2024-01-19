@@ -14,7 +14,12 @@ var _ = context.Background
 
 {{- range .Decls }}
 {{if is "Data" . }}
-type {{.Name|title}} struct {
+type {{.Name|title}}
+{{- if .TypeParameters}}[
+{{- range $i, $tp := .TypeParameters}}
+{{- if $i}}, {{end}}{{$tp}} any
+{{- end -}}
+]{{- end}} struct {
   {{- range .Fields}}
   {{.Name|title}} {{type $ .Type}} `json:"{{.Name}}"`
   {{- end}}

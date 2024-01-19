@@ -184,6 +184,14 @@ func validateRequestMap(dataRef *schema.DataRef, path path, request map[string]a
 		return fmt.Errorf("unknown data %v", dataRef)
 	}
 
+	if len(dataRef.TypeParameters) > 0 {
+		var err error
+		data, err = data.Monomorphise(dataRef.TypeParameters...)
+		if err != nil {
+			return err
+		}
+	}
+
 	var errs []error
 	for _, field := range data.Fields {
 		fieldPath := append(path, "."+field.Name) //nolint:gocritic
@@ -324,7 +332,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		}
 
 	case *schema.TypeParameter:
-		panic("unreachable")
+		panic("data structures with type parameters should be monomorphised")
 	}
 
 	if !typeMatches {

@@ -105,10 +105,14 @@ func Validate(schema *Schema) (*Schema, error) {
 
 			case *DataRef:
 				if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
-					switch mdecl.Decl.(type) {
+					switch decl := mdecl.Decl.(type) {
 					case *Data:
 						if mdecl.Module != nil {
 							n.Module = mdecl.Module.Name
+						}
+						if len(n.TypeParameters) != len(decl.TypeParameters) {
+							merr = append(merr, fmt.Errorf("%s: reference to data structure %s has %d type parameters, but %d were expected",
+								n.Pos, n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
 						}
 
 					case *TypeParameter:
@@ -196,10 +200,14 @@ func ValidateModule(module *Module) error {
 
 		case *DataRef:
 			if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
-				switch mdecl.Decl.(type) {
+				switch decl := mdecl.Decl.(type) {
 				case *Data:
 					if n.Module == "" {
 						n.Module = mdecl.Module.Name
+					}
+					if len(n.TypeParameters) != len(decl.TypeParameters) {
+						merr = append(merr, fmt.Errorf("%s: reference to data structure %s has %d type parameters, but %d were expected",
+							n.Pos, n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
 					}
 
 				case *TypeParameter:

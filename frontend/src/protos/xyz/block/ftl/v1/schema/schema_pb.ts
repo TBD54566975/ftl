@@ -340,9 +340,9 @@ export class Data extends Message<Data> {
   metadata: Metadata[] = [];
 
   /**
-   * @generated from field: repeated string typeParameters = 6;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.TypeParameter typeParameters = 6;
    */
-  typeParameters: string[] = [];
+  typeParameters: TypeParameter[] = [];
 
   constructor(data?: PartialMessage<Data>) {
     super();
@@ -357,7 +357,7 @@ export class Data extends Message<Data> {
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "fields", kind: "message", T: Field, repeated: true },
     { no: 5, name: "metadata", kind: "message", T: Metadata, repeated: true },
-    { no: 6, name: "typeParameters", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "typeParameters", kind: "message", T: TypeParameter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Data {
@@ -396,6 +396,11 @@ export class DataRef extends Message<DataRef> {
    */
   module = "";
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Type typeParameters = 4;
+   */
+  typeParameters: Type[] = [];
+
   constructor(data?: PartialMessage<DataRef>) {
     super();
     proto3.util.initPartial(data, this);
@@ -407,6 +412,7 @@ export class DataRef extends Message<DataRef> {
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "typeParameters", kind: "message", T: Type, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataRef {
@@ -1395,7 +1401,13 @@ export class Type extends Message<Type> {
     case: "any";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 12;
+     * @generated from field: xyz.block.ftl.v1.schema.TypeParameter parameter = 12;
+     */
+    value: TypeParameter;
+    case: "parameter";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 13;
      */
     value: Optional;
     case: "optional";
@@ -1420,7 +1432,8 @@ export class Type extends Message<Type> {
     { no: 9, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
     { no: 10, name: "unit", kind: "message", T: Unit, oneof: "value" },
     { no: 11, name: "any", kind: "message", T: Any, oneof: "value" },
-    { no: 12, name: "optional", kind: "message", T: Optional, oneof: "value" },
+    { no: 12, name: "parameter", kind: "message", T: TypeParameter, oneof: "value" },
+    { no: 13, name: "optional", kind: "message", T: Optional, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Type {
@@ -1437,6 +1450,49 @@ export class Type extends Message<Type> {
 
   static equals(a: Type | PlainMessage<Type> | undefined, b: Type | PlainMessage<Type> | undefined): boolean {
     return proto3.util.equals(Type, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.TypeParameter
+ */
+export class TypeParameter extends Message<TypeParameter> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<TypeParameter>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.TypeParameter";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeParameter {
+    return new TypeParameter().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypeParameter {
+    return new TypeParameter().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypeParameter {
+    return new TypeParameter().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TypeParameter | PlainMessage<TypeParameter> | undefined, b: TypeParameter | PlainMessage<TypeParameter> | undefined): boolean {
+    return proto3.util.equals(TypeParameter, a, b);
   }
 }
 

@@ -3,6 +3,7 @@ package schema
 import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
+	"github.com/TBD54566975/ftl/backend/common/slices"
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
@@ -43,7 +44,12 @@ func (d *DataRef) String() string {
 }
 
 func (d *DataRef) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.DataRef{Pos: posToProto(d.Pos), Module: d.Module, Name: d.Name}
+	return &schemapb.DataRef{
+		Pos:            posToProto(d.Pos),
+		Module:         d.Module,
+		Name:           d.Name,
+		TypeParameters: slices.Map(d.TypeParameters, typeToProto),
+	}
 }
 
 func (*DataRef) schemaChildren() []Node { return nil }
@@ -55,16 +61,9 @@ func ParseDataRef(ref string) (*DataRef, error) {
 
 func DataRefFromProto(s *schemapb.DataRef) *DataRef {
 	return &DataRef{
-		Pos:    posFromProto(s.Pos),
-		Name:   s.Name,
-		Module: s.Module,
-	}
-}
-
-func dataRefToSchema(s *schemapb.DataRef) *DataRef {
-	return &DataRef{
-		Pos:    posFromProto(s.Pos),
-		Name:   s.Name,
-		Module: s.Module,
+		Pos:            posFromProto(s.Pos),
+		Name:           s.Name,
+		Module:         s.Module,
+		TypeParameters: slices.Map(s.TypeParameters, typeToSchema),
 	}
 }

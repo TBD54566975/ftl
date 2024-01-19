@@ -23,6 +23,7 @@ type Module struct {
 var _ Node = (*Module)(nil)
 var _ Decl = (*Module)(nil)
 
+// Scope returns a scope containing all the declarations in this module.
 func (m *Module) Scope() Scope {
 	scope := Scope{}
 	for _, d := range m.Decls {
@@ -40,7 +41,11 @@ func (m *Module) Scope() Scope {
 	return scope
 }
 
+// Resolve returns the declaration in this module with the given name, or nil
 func (m *Module) Resolve(ref Ref) *ModuleDecl {
+	if ref.Module != "" && ref.Module != m.Name {
+		return nil
+	}
 	for _, d := range m.Decls {
 		switch d := d.(type) {
 		case *Data:

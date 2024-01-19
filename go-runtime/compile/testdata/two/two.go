@@ -1,16 +1,26 @@
 //ftl:module two
 package two
 
-import "context"
+import (
+	"context"
+
+	"github.com/TBD54566975/ftl/go-runtime/sdk"
+)
 
 type User struct {
 	Name string
 }
 
-type Request struct{}
+type Payload[T any] struct {
+	Body T
+}
 
-type Response struct{}
+//ftl:verb
+func Two(ctx context.Context, req Payload[string]) (Payload[string], error) {
+	return Payload[string]{}, nil
+}
 
-func Two(ctx context.Context, req Request) (Response, error) {
-	return Response{}, nil
+//ftl:verb
+func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
+	return sdk.Call(ctx, Two, req)
 }

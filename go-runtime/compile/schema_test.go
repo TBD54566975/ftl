@@ -1,13 +1,17 @@
 package compile
 
 import (
-	"github.com/alecthomas/participle/v2/lexer"
+	"fmt"
 	"go/ast"
 	"go/types"
+	"strings"
 	"testing"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/participle/v2/lexer"
+
+	"github.com/TBD54566975/ftl/backend/common/slices"
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestExtractModuleSchema(t *testing.T) {
@@ -39,6 +43,26 @@ func TestExtractModuleSchema(t *testing.T) {
 }
 `
 	assert.Equal(t, expected, actual.String())
+}
+
+func TestExtractModuleSchemaTwo(t *testing.T) {
+	actual, err := ExtractModuleSchema("testdata/two")
+	fmt.Println(actual)
+	assert.NoError(t, err)
+	actual = schema.Normalise(actual)
+	expected := `module two {
+  data Payload<T> {
+    body T
+  }
+
+  verb two(two.Payload<String>) two.Payload<String>
+
+  verb callsTwo(two.Payload<String>) two.Payload<String>
+      calls two.two
+
+}
+`
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
 func TestParseDirectives(t *testing.T) {
@@ -88,7 +112,7 @@ func TestParseDirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	parsed, err := parseType(nil, &ast.Ident{}, timeRef)
+	parsed, err := visitType(nil, &ast.Ident{}, timeRef)
 	assert.NoError(t, err)
 	_, ok := parsed.(*schema.Time)
 	assert.True(t, ok)
@@ -107,9 +131,13 @@ func TestParseBasicTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := parseType(nil, &ast.Ident{}, tt.input)
+			parsed, err := visitType(nil, &ast.Ident{}, tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, parsed)
 		})
 	}
+}
+
+func normaliseString(s string) string {
+	return strings.TrimSpace(strings.Join(slices.Map(strings.Split(s, "\n"), strings.TrimSpace), "\n"))
 }

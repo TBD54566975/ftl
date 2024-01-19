@@ -49,13 +49,14 @@ message Data {
   string name = 3;
   repeated Field fields = 4;
   repeated Metadata metadata = 5;
-  repeated string typeParameters = 6;
+  repeated TypeParameter typeParameters = 6;
 }
 
 message DataRef {
   optional Position pos = 1;
   string name = 2;
   string module = 3;
+  repeated Type typeParameters = 4;
 }
 
 message Database {
@@ -182,8 +183,14 @@ message Type {
     DataRef dataRef = 9;
     Unit unit = 10;
     Any any = 11;
-    Optional optional = 12;
+    TypeParameter parameter = 12;
+    Optional optional = 13;
   }
+}
+
+message TypeParameter {
+  optional Position pos = 1;
+  string name = 2;
 }
 
 message Unit {
