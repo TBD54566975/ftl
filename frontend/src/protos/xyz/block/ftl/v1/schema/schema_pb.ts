@@ -10,55 +10,6 @@ import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { ModuleRuntime, VerbRuntime } from "./runtime_pb.js";
 
 /**
- * @generated from message xyz.block.ftl.v1.schema.DataRef
- */
-export class DataRef extends Message<DataRef> {
-  /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
-   */
-  pos?: Position;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: string module = 3;
-   */
-  module = "";
-
-  constructor(data?: PartialMessage<DataRef>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.schema.DataRef";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataRef {
-    return new DataRef().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DataRef {
-    return new DataRef().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DataRef {
-    return new DataRef().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DataRef | PlainMessage<DataRef> | undefined, b: DataRef | PlainMessage<DataRef> | undefined): boolean {
-    return proto3.util.equals(DataRef, a, b);
-  }
-}
-
-/**
  * @generated from message xyz.block.ftl.v1.schema.SinkRef
  */
 export class SinkRef extends Message<SinkRef> {
@@ -332,24 +283,29 @@ export class Data extends Message<Data> {
   pos?: Position;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: string name = 3;
    */
   name = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Field fields = 3;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Field fields = 4;
    */
   fields: Field[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 4;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 5;
    */
   metadata: Metadata[] = [];
 
   /**
-   * @generated from field: repeated string comments = 5;
+   * @generated from field: repeated string typeParameters = 6;
    */
-  comments: string[] = [];
+  typeParameters: string[] = [];
 
   constructor(data?: PartialMessage<Data>) {
     super();
@@ -360,10 +316,11 @@ export class Data extends Message<Data> {
   static readonly typeName = "xyz.block.ftl.v1.schema.Data";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "fields", kind: "message", T: Field, repeated: true },
-    { no: 4, name: "metadata", kind: "message", T: Metadata, repeated: true },
-    { no: 5, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "fields", kind: "message", T: Field, repeated: true },
+    { no: 5, name: "metadata", kind: "message", T: Metadata, repeated: true },
+    { no: 6, name: "typeParameters", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Data {
@@ -380,6 +337,55 @@ export class Data extends Message<Data> {
 
   static equals(a: Data | PlainMessage<Data> | undefined, b: Data | PlainMessage<Data> | undefined): boolean {
     return proto3.util.equals(Data, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.DataRef
+ */
+export class DataRef extends Message<DataRef> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string module = 3;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<DataRef>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.DataRef";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataRef {
+    return new DataRef().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DataRef {
+    return new DataRef().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DataRef {
+    return new DataRef().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DataRef | PlainMessage<DataRef> | undefined, b: DataRef | PlainMessage<DataRef> | undefined): boolean {
+    return proto3.util.equals(DataRef, a, b);
   }
 }
 

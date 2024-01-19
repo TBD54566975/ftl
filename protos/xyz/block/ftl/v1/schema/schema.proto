@@ -8,12 +8,6 @@ import "xyz/block/ftl/v1/schema/runtime.proto";
 option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema;schemapb";
 option java_multiple_files = true;
 
-message DataRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
 message SinkRef {
   optional Position pos = 1;
   string name = 2;
@@ -47,10 +41,17 @@ message Bytes {
 
 message Data {
   optional Position pos = 1;
+  repeated string comments = 2;
+  string name = 3;
+  repeated Field fields = 4;
+  repeated Metadata metadata = 5;
+  repeated string typeParameters = 6;
+}
+
+message DataRef {
+  optional Position pos = 1;
   string name = 2;
-  repeated Field fields = 3;
-  repeated Metadata metadata = 4;
-  repeated string comments = 5;
+  string module = 3;
 }
 
 message Database {
