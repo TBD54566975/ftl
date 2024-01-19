@@ -1,14 +1,13 @@
 package compile
 
 import (
+	"github.com/alecthomas/participle/v2/lexer"
 	"go/ast"
 	"go/types"
 	"testing"
 
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/participle/v2/lexer"
-
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestExtractModuleSchema(t *testing.T) {
@@ -50,24 +49,30 @@ func TestParseDirectives(t *testing.T) {
 	}{
 		{name: "Module", input: "ftl:module foo", expected: &directiveModule{Name: "foo"}},
 		{name: "Verb", input: "ftl:verb", expected: &directiveVerb{Verb: true}},
-		{name: "IngressImplicitFTL", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
-			Type: &directiveIngressHTTP{
+		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
+			MetadataIngress: schema.MetadataIngress{
 				Method: "GET",
-				Path:   "/foo",
+				Path: []schema.IngressPathComponent{
+					&schema.IngressPathLiteral{
+						Text: "foo",
+					},
+				},
 			},
 		}},
-		{name: "IngressFTL", input: `ftl:ingress ftl POST /bar`, expected: &directiveIngress{
-			Type: &directiveIngressHTTP{
-				Type:   "ftl",
-				Method: "POST",
-				Path:   "/bar",
-			},
-		}},
-		{name: "IngressHTTP", input: `ftl:ingress http POST /bar`, expected: &directiveIngress{
-			Type: &directiveIngressHTTP{
-				Type:   "http",
-				Method: "POST",
-				Path:   "/bar",
+		{name: "Ingress", input: `ftl:ingress GET /test_path/{something}/987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz`, expected: &directiveIngress{
+			MetadataIngress: schema.MetadataIngress{
+				Method: "GET",
+				Path: []schema.IngressPathComponent{
+					&schema.IngressPathLiteral{
+						Text: "test_path",
+					},
+					&schema.IngressPathParameter{
+						Name: "something",
+					},
+					&schema.IngressPathLiteral{
+						Text: "987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz",
+					},
+				},
 			},
 		}},
 	}
@@ -76,7 +81,7 @@ func TestParseDirectives(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := directiveParser.ParseString("", tt.input)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, got.Directive, assert.Exclude[lexer.Position]())
+			assert.Equal(t, tt.expected, got.Directive, assert.Exclude[lexer.Position](), assert.Exclude[schema.Position]())
 		})
 	}
 }
