@@ -20,6 +20,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
+	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
@@ -27,6 +28,7 @@ import (
 type moduleFolderInfo struct {
 	moduleName string
 	fileHashes map[string][]byte
+	schema     *schema.Module
 }
 
 type devCmd struct {
@@ -57,10 +59,38 @@ func (m *moduleMap) SetModule(dir string, module *moduleFolderInfo) {
 	(*m)[dir] = module
 }
 
-func (m *moduleMap) ForceRebuildFromDependent(module string) {
+func (m *moduleMap) RebuildDependentModules(ctx context.Context, sch *schema.Module) {
+	logger := log.FromContext(ctx)
+	var changedModuleDir string
 	for dir, moduleInfo := range *m {
-		if moduleInfo.moduleName != module {
-			(*m).ForceRebuild(dir)
+		if moduleInfo.moduleName == sch.Name {
+			changedModuleDir = dir
+		}
+	}
+
+	// no module found, nothing to do
+	if (*m)[changedModuleDir] == nil {
+		return
+	}
+
+	oldSchema := (*m)[changedModuleDir].schema
+	(*m)[changedModuleDir].schema = sch
+
+	// no change in schema, nothing to do
+	if oldSchema == nil || oldSchema.String() == sch.String() {
+		return
+	}
+
+	for dir, moduleInfo := range *m {
+		if moduleInfo.schema == nil {
+			continue
+		}
+
+		for _, imp := range moduleInfo.schema.Imports() {
+			if imp == sch.Name {
+				logger.Warnf("Rebuilding %q due to %q schema changes", moduleInfo.moduleName, (*m)[changedModuleDir].moduleName)
+				(*m).ForceRebuild(dir)
+			}
 		}
 	}
 }
@@ -69,7 +99,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	logger := log.FromContext(ctx)
 	logger.Infof("Watching %s for FTL modules", d.BaseDir)
 
-	schemaChanges := make(chan string, 64)
+	schemaChanges := make(chan *schema.Module, 64)
 	modules := make(moduleMap)
 
 	wg, ctx := errgroup.WithContext(ctx)
@@ -118,14 +148,14 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 		}
 
 		select {
-		case moduleName := <-schemaChanges:
-			modules.ForceRebuildFromDependent(moduleName)
+		case module := <-schemaChanges:
+			modules.RebuildDependentModules(ctx, module)
 
 		drainLoop: // Drain all messages from the channel to avoid extra redeploys
 			for {
 				select {
-				case moduleName := <-schemaChanges:
-					modules.ForceRebuildFromDependent(moduleName)
+				case module := <-schemaChanges:
+					modules.RebuildDependentModules(ctx, module)
 				default:
 					break drainLoop
 				}
@@ -137,7 +167,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	}
 }
 
-func (d *devCmd) watchForSchemaChanges(ctx context.Context, client ftlv1connect.ControllerServiceClient, schemaChanges chan string) error {
+func (d *devCmd) watchForSchemaChanges(ctx context.Context, client ftlv1connect.ControllerServiceClient, schemaChanges chan *schema.Module) error {
 	logger := log.FromContext(ctx)
 	for {
 		stream, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
@@ -147,9 +177,12 @@ func (d *devCmd) watchForSchemaChanges(ctx context.Context, client ftlv1connect.
 
 		for stream.Receive() {
 			msg := stream.Msg()
-			if msg.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED {
-				logger.Warnf("Schema change detected for module %s", msg.ModuleName)
-				schemaChanges <- msg.ModuleName
+			if msg.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED || msg.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED {
+				module, err := schema.ModuleFromProto(msg.Schema)
+				if err != nil {
+					return err
+				}
+				schemaChanges <- module
 			}
 		}
 
