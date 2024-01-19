@@ -56,6 +56,21 @@ func (s Scope) String() string {
 // Scopes to search during type resolution.
 type Scopes []Scope
 
+// NewScopes constructs a new type resolution stack with builtins pre-populated.
+func NewScopes() Scopes {
+	builtins := Builtins()
+	scopes := Scopes{primitivesScope, Scope{}}
+	if err := scopes.Add(nil, builtins.Name, builtins); err != nil {
+		panic(err)
+	}
+	var err error
+	scopes, err = scopes.PushModuleSymbols(builtins)
+	if err != nil {
+		panic(err)
+	}
+	return scopes
+}
+
 var _ Resolver = Scopes{}
 
 func (s Scopes) String() string {
@@ -82,14 +97,9 @@ func (s Scopes) Push() Scopes {
 	return out
 }
 
-// PushModule pushes a new Scope onto the stack containing all the declarations
+// PushModuleSymbols pushes a new Scope onto the stack containing all the declarations
 // in the module.
-//
-// The module itself is added to the current scope before pushing.
-func (s *Scopes) PushModule(module *Module) (Scopes, error) {
-	if err := s.Add(nil, module.Name, module); err != nil {
-		return nil, err
-	}
+func (s *Scopes) PushModuleSymbols(module *Module) (Scopes, error) {
 	out := s.Push()
 	for _, decl := range module.Decls {
 		switch decl := decl.(type) {
@@ -169,12 +179,16 @@ func Validate(schema *Schema) (*Schema, error) {
 	schema.Modules = slices.DeleteFunc(schema.Modules, func(m *Module) bool { return m.Name == builtins.Name })
 	schema.Modules = append([]*Module{builtins}, schema.Modules...)
 
-	// Add types from the builtins module to the scope stack.
-	scopes := Scopes{primitivesScope, Scope{}}
-	var err error
-	scopes, err = scopes.PushModule(builtins)
-	if err != nil {
-		return nil, err
+	scopes := NewScopes()
+
+	// First pass, add all the types.
+	for _, module := range schema.Modules {
+		if module == builtins {
+			continue
+		}
+		if err := scopes.Add(nil, module.Name, module); err != nil {
+			merr = append(merr, err)
+		}
 	}
 
 	// Validate modules.
@@ -192,7 +206,7 @@ func Validate(schema *Schema) (*Schema, error) {
 			merr = append(merr, err)
 		}
 
-		moduleScopes, err := scopes.PushModule(module)
+		moduleScopes, err := scopes.PushModuleSymbols(module)
 		if err != nil {
 			merr = append(merr, err)
 		}
@@ -265,11 +279,7 @@ func ValidateModule(module *Module) error {
 	dataRefs := []*DataRef{}
 	merr := []error{}
 
-	scopes := Scopes{primitivesScope, Scope{}}
-	scopes, err := scopes.PushModule(Builtins())
-	if err != nil {
-		return err
-	}
+	scopes := NewScopes()
 
 	if !ValidateName(module.Name) {
 		merr = append(merr, fmt.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
