@@ -7,6 +7,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
+	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/internal/errors"
 )
 
@@ -91,15 +92,19 @@ module todo {
     when Time
   }
 
-  verb create(todo.CreateRequest) todo.CreateResponse  
+  verb create(todo.CreateRequest) todo.CreateResponse
       calls todo.destroy
-      
 
-  verb destroy(todo.DestroyRequest) todo.DestroyResponse  
+
+  verb destroy(todo.DestroyRequest) todo.DestroyResponse
       ingress ftl GET /todo/destroy/{id}
 }
 `
-	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(schema.String()))
+	assert.Equal(t, normaliseString(expected), normaliseString(schema.String()))
+}
+
+func normaliseString(s string) string {
+	return strings.TrimSpace(strings.Join(slices.Map(strings.Split(s, "\n"), strings.TrimSpace), "\n"))
 }
 
 func TestImports(t *testing.T) {
@@ -165,7 +170,7 @@ Module
 		return next()
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(actual.String()), "%s", actual.String())
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()), "%s", actual.String())
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -251,6 +256,96 @@ func TestParsing(t *testing.T) {
 						},
 					},
 				}},
+			},
+		},
+		{name: "TimeEcho",
+			input: `
+				module echo {
+					data EchoRequest {
+						name String?
+					}
+
+					data EchoResponse {
+						message String
+					}
+
+					verb echo(echo.EchoRequest) echo.EchoResponse
+						ingress ftl GET /echo
+						calls time.time
+
+				}
+
+				module time {
+					data TimeRequest {
+					}
+
+					data TimeResponse {
+						time Time
+					}
+
+					verb time(time.TimeRequest) time.TimeResponse
+						ingress ftl GET /time
+				}
+				`,
+			expected: &Schema{
+				Modules: []*Module{
+					{
+						Name: "echo",
+						Decls: []Decl{
+							&Data{
+								Name: "EchoRequest",
+								Fields: []*Field{
+									{Name: "name", Type: &Optional{Type: &String{}}},
+								},
+							},
+							&Data{
+								Name: "EchoResponse",
+								Fields: []*Field{
+									{Name: "message", Type: &String{}},
+								},
+							},
+							&Verb{
+								Name:     "echo",
+								Request:  &DataRef{Module: "echo", Name: "EchoRequest"},
+								Response: &DataRef{Module: "echo", Name: "EchoResponse"},
+								Metadata: []Metadata{
+									&MetadataIngress{
+										Type:   "ftl",
+										Method: "GET",
+										Path:   []IngressPathComponent{&IngressPathLiteral{Text: "echo"}},
+									},
+									&MetadataCalls{Calls: []*VerbRef{{Module: "time", Name: "time"}}},
+								},
+							},
+						},
+					},
+					{
+						Name: "time",
+						Decls: []Decl{
+							&Data{
+								Name: "TimeRequest",
+							},
+							&Data{
+								Name: "TimeResponse",
+								Fields: []*Field{
+									{Name: "time", Type: &Time{}},
+								},
+							},
+							&Verb{
+								Name:     "time",
+								Request:  &DataRef{Module: "time", Name: "TimeRequest"},
+								Response: &DataRef{Module: "time", Name: "TimeResponse"},
+								Metadata: []Metadata{
+									&MetadataIngress{
+										Type:   "ftl",
+										Method: "GET",
+										Path:   []IngressPathComponent{&IngressPathLiteral{Text: "time"}},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
