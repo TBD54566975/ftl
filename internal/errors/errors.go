@@ -1,5 +1,7 @@
 package errors
 
+import "errors"
+
 // UnwrapAll recursively unwraps all errors in err, including all intermediate errors.
 //
 //nolint:errorlint
@@ -30,3 +32,13 @@ func Innermost(err error) bool {
 	}
 	return true
 }
+
+func Join(errs ...error) error { return errors.Join(errs...) }
+
+func New(text string) error { return errors.New(text) }
+
+func As(err error, target interface{}) bool { return errors.As(err, target) }
+
+func Is(err, target error) bool { return errors.Is(err, target) }
+
+func Unwrap(err error) error { return errors.Unwrap(err) }

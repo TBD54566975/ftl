@@ -19,6 +19,7 @@ type Field struct {
 
 var _ Node = (*Field)(nil)
 
+func (f *Field) Position() Position     { return f.Pos }
 func (f *Field) schemaChildren() []Node { return []Node{f.Type} }
 func (f *Field) String() string {
 	w := &strings.Builder{}

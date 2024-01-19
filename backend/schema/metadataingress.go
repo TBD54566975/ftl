@@ -19,6 +19,7 @@ type MetadataIngress struct {
 
 var _ Metadata = (*MetadataIngress)(nil)
 
+func (m *MetadataIngress) Position() Position { return m.Pos }
 func (m *MetadataIngress) String() string {
 	path := make([]string, len(m.Path))
 	for i, p := range m.Path {
@@ -83,6 +84,7 @@ type IngressPathLiteral struct {
 
 var _ IngressPathComponent = (*IngressPathLiteral)(nil)
 
+func (l *IngressPathLiteral) Position() Position        { return l.Pos }
 func (l *IngressPathLiteral) String() string            { return l.Text }
 func (*IngressPathLiteral) schemaChildren() []Node      { return nil }
 func (*IngressPathLiteral) schemaIngressPathComponent() {}
@@ -98,6 +100,7 @@ type IngressPathParameter struct {
 
 var _ IngressPathComponent = (*IngressPathParameter)(nil)
 
+func (l *IngressPathParameter) Position() Position        { return l.Pos }
 func (l *IngressPathParameter) String() string            { return l.Name }
 func (*IngressPathParameter) schemaChildren() []Node      { return nil }
 func (*IngressPathParameter) schemaIngressPathComponent() {}

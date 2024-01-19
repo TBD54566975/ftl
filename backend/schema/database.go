@@ -18,7 +18,7 @@ type Database struct {
 
 var _ Decl = (*Database)(nil)
 
-// schemaDecl implements Decl
+func (d *Database) Position() Position     { return d.Pos }
 func (*Database) schemaDecl()              {}
 func (d *Database) schemaChildren() []Node { return nil }
 func (d *Database) String() string {

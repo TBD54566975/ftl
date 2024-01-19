@@ -14,6 +14,7 @@ type Array struct {
 
 var _ Type = (*Array)(nil)
 
+func (a *Array) Position() Position     { return a.Pos }
 func (a *Array) schemaChildren() []Node { return []Node{a.Element} }
 func (*Array) schemaType()              {}
 func (a *Array) String() string         { return "[" + a.Element.String() + "]" }

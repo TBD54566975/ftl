@@ -22,7 +22,8 @@ type Ref struct {
 	Name   string `parser:"@Ident" protobuf:"2"`
 }
 
-func (b *Ref) String() string { return makeRef(b.Module, b.Name) }
+func (b *Ref) Position() Position { return b.Pos }
+func (b *Ref) String() string     { return makeRef(b.Module, b.Name) }
 
 // AbstractRef is an abstract reference to a function or data type.
 type AbstractRef[Proto RefProto] Ref
@@ -35,25 +36,28 @@ func ParseRef[Proto RefProto](ref string) (*AbstractRef[Proto], error) {
 	return &AbstractRef[Proto]{Module: parts[0], Name: parts[1]}, nil
 }
 
-func (v *AbstractRef[Proto]) ToProto() proto.Message {
+// Untyped converts a typed reference to an untyped reference.
+func (a *AbstractRef[Proto]) Untyped() Ref       { return Ref(*a) }
+func (a *AbstractRef[Proto]) Position() Position { return a.Pos }
+func (a *AbstractRef[Proto]) ToProto() proto.Message {
 	switch any((*Proto)(nil)).(type) {
 	case *schemapb.VerbRef:
-		return any(&schemapb.VerbRef{Pos: posToProto(v.Pos), Module: v.Module, Name: v.Name}).(proto.Message) //nolint:forcetypeassert
+		return any(&schemapb.VerbRef{Pos: posToProto(a.Pos), Module: a.Module, Name: a.Name}).(proto.Message) //nolint:forcetypeassert
 
 	case *schemapb.DataRef:
-		return any(&schemapb.DataRef{Pos: posToProto(v.Pos), Module: v.Module, Name: v.Name}).(proto.Message) //nolint:forcetypeassert
+		return any(&schemapb.DataRef{Pos: posToProto(a.Pos), Module: a.Module, Name: a.Name}).(proto.Message) //nolint:forcetypeassert
 
 	case *schemapb.SinkRef:
-		return any(&schemapb.SinkRef{Pos: posToProto(v.Pos), Module: v.Module, Name: v.Name}).(proto.Message) //nolint:forcetypeassert
+		return any(&schemapb.SinkRef{Pos: posToProto(a.Pos), Module: a.Module, Name: a.Name}).(proto.Message) //nolint:forcetypeassert
 
 	case *schemapb.SourceRef:
-		return any(&schemapb.SourceRef{Pos: posToProto(v.Pos), Module: v.Module, Name: v.Name}).(proto.Message) //nolint:forcetypeassert
+		return any(&schemapb.SourceRef{Pos: posToProto(a.Pos), Module: a.Module, Name: a.Name}).(proto.Message) //nolint:forcetypeassert
 
 	default:
 		panic(fmt.Sprintf("unsupported ref proto type %T", (*Proto)(nil)))
 	}
 }
 
-func (v AbstractRef[Proto]) String() string        { return makeRef(v.Module, v.Name) }
+func (a *AbstractRef[Proto]) String() string       { return makeRef(a.Module, a.Name) }
 func (*AbstractRef[Proto]) schemaChildren() []Node { return nil }
 func (*AbstractRef[Proto]) schemaType()            {}

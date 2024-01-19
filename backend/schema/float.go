@@ -13,8 +13,11 @@ type Float struct {
 }
 
 var _ Type = (*Float)(nil)
+var _ Decl = (*Float)(nil)
 
+func (f *Float) Position() Position     { return f.Pos }
 func (*Float) schemaChildren() []Node   { return nil }
 func (*Float) schemaType()              {}
+func (*Float) schemaDecl()              {}
 func (*Float) String() string           { return "Float" }
 func (f *Float) ToProto() proto.Message { return &schemapb.Float{Pos: posToProto(f.Pos)} }

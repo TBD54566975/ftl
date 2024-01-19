@@ -15,6 +15,7 @@ type Optional struct {
 
 var _ Type = (*Optional)(nil)
 
+func (o *Optional) Position() Position     { return o.Pos }
 func (o *Optional) String() string         { return o.Type.String() + "?" }
 func (*Optional) schemaType()              {}
 func (o *Optional) schemaChildren() []Node { return []Node{o.Type} }

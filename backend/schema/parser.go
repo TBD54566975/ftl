@@ -28,54 +28,7 @@ var (
 		reflect.TypeOf((*IngressPathComponent)(nil)).Elem(): reflectUnion(ingressUnion...),
 		reflect.TypeOf((*Decl)(nil)).Elem():                 reflectUnion(declUnion...),
 	}
-)
 
-type Position struct {
-	Filename string `protobuf:"1"`
-	Offset   int    `parser:"" protobuf:"-"`
-	Line     int    `protobuf:"2"`
-	Column   int    `protobuf:"3"`
-}
-
-func (p Position) String() string {
-	if p.Filename == "" {
-		return fmt.Sprintf("%d:%d", p.Line, p.Column)
-	}
-	return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
-}
-
-func (p Position) ToProto() proto.Message { return posToProto(p) }
-
-// A Node in the schema grammar.
-//
-//sumtype:decl
-type Node interface {
-	String() string
-	ToProto() proto.Message
-	// schemaChildren returns the children of this node.
-	schemaChildren() []Node
-}
-
-// Type represents a Type Node in the schema grammar.
-//
-//sumtype:decl
-type Type interface {
-	Node
-	// schemaType is a marker to ensure that all sqltypes implement the Type interface.
-	schemaType()
-}
-
-type Metadata interface {
-	Node
-	schemaMetadata()
-}
-
-type Decl interface {
-	Node
-	schemaDecl()
-}
-
-var (
 	lex = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "Whitespace", Pattern: `\s+`},
 		{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
@@ -101,10 +54,63 @@ var (
 	// Parser options for every parser _except_ the type parser.
 	parserOptions = append(commonParserOptions, participle.ParseTypeWith(parseType))
 
-	parser       = participle.MustBuild[Schema](parserOptions...)
-	moduleParser = participle.MustBuild[Module](parserOptions...)
-	typeParser   = participle.MustBuild[typeParserGrammar](append(commonParserOptions, participle.Union(nonOptionalTypeUnion...))...)
+	parser        = participle.MustBuild[Schema](parserOptions...)
+	moduleParser  = participle.MustBuild[Module](parserOptions...)
+	typeParser    = participle.MustBuild[typeParserGrammar](append(commonParserOptions, participle.Union(nonOptionalTypeUnion...))...)
+	dataRefParser = participle.MustBuild[DataRef](parserOptions...)
 )
+
+type Position struct {
+	Filename string `protobuf:"1"`
+	Offset   int    `parser:"" protobuf:"-"`
+	Line     int    `protobuf:"2"`
+	Column   int    `protobuf:"3"`
+}
+
+func (p Position) String() string {
+	if p.Filename == "" {
+		return fmt.Sprintf("%d:%d", p.Line, p.Column)
+	}
+	return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
+}
+
+func (p Position) ToProto() proto.Message { return posToProto(p) }
+
+// A Node in the schema grammar.
+//
+//sumtype:decl
+type Node interface {
+	String() string
+	ToProto() proto.Message
+	Position() Position
+	// schemaChildren returns the children of this node.
+	schemaChildren() []Node
+}
+
+// Type represents a Type Node in the schema grammar.
+//
+//sumtype:decl
+type Type interface {
+	Node
+	// schemaType is a marker to ensure that all sqltypes implement the Type interface.
+	schemaType()
+}
+
+// Metadata represents a metadata Node in the schema grammar.
+//
+//sumtype:decl
+type Metadata interface {
+	Node
+	schemaMetadata()
+}
+
+// Decl represents a type declaration in the schema grammar.
+//
+//sumtype:decl
+type Decl interface {
+	Node
+	schemaDecl()
+}
 
 // We have a separate parser for types because Participle doesn't support left
 // recursion and "Type = Type ? | Int | String ..." is left recursive.

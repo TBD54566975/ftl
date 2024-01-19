@@ -13,8 +13,11 @@ type Bool struct {
 }
 
 var _ Type = (*Bool)(nil)
+var _ Decl = (*Bool)(nil)
 
+func (b *Bool) Position() Position     { return b.Pos }
 func (*Bool) schemaChildren() []Node   { return nil }
 func (*Bool) schemaType()              {}
+func (*Bool) schemaDecl()              {}
 func (*Bool) String() string           { return "Bool" }
 func (b *Bool) ToProto() proto.Message { return &schemapb.Bool{Pos: posToProto(b.Pos)} }

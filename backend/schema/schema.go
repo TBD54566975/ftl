@@ -20,6 +20,7 @@ type Schema struct {
 
 var _ Node = (*Schema)(nil)
 
+func (s *Schema) Position() Position { return s.Pos }
 func (s *Schema) String() string {
 	out := &strings.Builder{}
 	for i, m := range s.Modules {
