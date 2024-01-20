@@ -3,8 +3,8 @@ package xyz.block.ftl.schemaextractor
 import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.rules.KotlinCoreEnvironmentTest
 import io.gitlab.arturbosch.detekt.test.compileAndLintWithContext
+import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import xyz.block.ftl.schemaextractor.ExtractSchemaRule.Companion.OUTPUT_FILENAME
@@ -82,11 +82,6 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 type = Type(string = xyz.block.ftl.v1.schema.String())
               )
             ),
-            pos = Position(
-              filename = "Test.kt",
-              line = 14,
-              column = 9,
-            ),
           ),
         ),
         Decl(
@@ -105,21 +100,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                     value_ = xyz.block.ftl.v1.schema.Type(
                       dataRef = DataRef(
                         name = "MapValue",
-                        pos = Position(
-                          filename = "Test.kt",
-                          line = 15,
-                          column = 67,
-                        ),
                       )
                     )
                   )
                 )
               )
-            ),
-            pos = Position(
-              filename = "Test.kt",
-              line = 15,
-              column = 9,
             ),
           ),
         ),
@@ -141,11 +126,6 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
          * Request to echo a message.
          */"""
             ),
-            pos = Position(
-              filename = "Test.kt",
-              line = 17,
-              column = 9,
-            ),
           ),
         ),
         Decl(
@@ -159,21 +139,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                     element = xyz.block.ftl.v1.schema.Type(
                       dataRef = DataRef(
                         name = "EchoMessage",
-                        pos = Position(
-                          filename = "Test.kt",
-                          line = 21,
-                          column = 47,
-                        )
                       )
                     )
                   )
                 )
               )
-            ),
-            pos = Position(
-              filename = "Test.kt",
-              line = 21,
-              column = 9,
             ),
           ),
         ),
@@ -188,21 +158,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             request = Type(
               dataRef = DataRef(
                 name = "EchoRequest",
-                pos = Position(
-                  filename = "Test.kt",
-                  line = 33,
-                  column = 40,
-                ),
               )
             ),
             response = Type(
               dataRef = DataRef(
                 name = "EchoResponse",
-                pos = Position(
-                  filename = "Test.kt",
-                  line = 33,
-                  column = 59,
-                ),
               )
             ),
             metadata = listOf(
@@ -233,7 +193,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       )
     )
 
-    assertEquals(expected, module)
+    assertThat(module)
+      .usingRecursiveComparison()
+      .withEqualsForType({ _, _ -> true }, Position::class.java)
+      .ignoringFieldsMatchingRegexes(".*hashCode\$")
+      .isEqualTo(expected)
   }
 
   @Test

@@ -29,17 +29,17 @@ var (
 		reflect.TypeOf((*Decl)(nil)).Elem():                 reflectUnion(declUnion...),
 	}
 
-	lex = lexer.MustSimple([]lexer.SimpleRule{
+	Lexer = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "Whitespace", Pattern: `\s+`},
 		{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
 		{Name: "Comment", Pattern: `//.*`},
 		{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
 		{Name: "Number", Pattern: `[0-9]+(?:\.[0-9]+)?`},
-		{Name: "Punct", Pattern: `[/-:[\]{}<>()*+?.,\\^$|#]`},
+		{Name: "Punct", Pattern: `[%/\-\_:[\]{}<>()*+?.,\\^$|#~!\'@]`},
 	})
 
 	commonParserOptions = []participle.Option{
-		participle.Lexer(lex),
+		participle.Lexer(Lexer),
 		participle.Elide("Whitespace"),
 		participle.Unquote(),
 		participle.Map(func(token lexer.Token) (lexer.Token, error) {

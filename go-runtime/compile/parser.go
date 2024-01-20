@@ -9,6 +9,8 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 // This file contains a parser for Go FTL directives.
@@ -32,9 +34,7 @@ func (*directiveVerb) directive()       {}
 func (d *directiveVerb) String() string { return "ftl:verb" }
 
 type directiveIngress struct {
-	Pos lexer.Position
-
-	Type directiveIngressType `parser:"'ingress' @@"`
+	schema.MetadataIngress
 }
 
 func (*directiveIngress) directive()       {}
@@ -49,31 +49,13 @@ type directiveModule struct {
 func (*directiveModule) directive()       {}
 func (d *directiveModule) String() string { return "ftl:module" }
 
-//sumtype:decl
-type directiveIngressType interface{ directiveIngressType() }
-
-type directiveIngressHTTP struct {
-	Pos lexer.Position
-
-	Type   string `parser:"@('http' | 'ftl')?"`
-	Method string `parser:"@('GET'|'POST'|'PUT'|'DELETE'|'PATCH')"`
-	Path   string `parser:"@(('/' (('{' Ident '}') | Ident))+ '/'?)"`
-}
-
-func (d *directiveIngressHTTP) directiveIngressType() {}
-func (d *directiveIngressHTTP) String() string {
-	typ := d.Type
-	if d.Type == "" {
-		typ = "ftl"
-	}
-	return fmt.Sprintf("%s %s %s", typ, d.Method, d.Path)
-}
-
 var directiveParser = participle.MustBuild[directiveWrapper](
+	participle.Lexer(schema.Lexer),
+	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
 	participle.Union[directive](&directiveVerb{}, &directiveIngress{}, &directiveModule{}),
-	participle.Union[directiveIngressType](&directiveIngressHTTP{}),
+	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
 func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]directive, error) {

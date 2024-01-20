@@ -222,22 +222,12 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 			isVerb = true
 
 		case *directiveIngress:
-			switch ingress := dir.Type.(type) {
-			case *directiveIngressHTTP:
-				ingressType := "ftl"
-				if ingress.Type != "" {
-					ingressType = ingress.Type
-				}
-				metadata = append(metadata, &schema.MetadataIngress{
-					Pos:    schema.Position(dir.Pos),
-					Type:   ingressType,
-					Method: ingress.Method,
-					Path:   parsePathComponents(ingress.Path, schema.Position(dir.Pos)),
-				})
-
-			default:
-				panic(fmt.Sprintf("unsupported ingress type %T", ingress))
-			}
+			metadata = append(metadata, &schema.MetadataIngress{
+				Pos:    dir.Pos,
+				Type:   dir.Type,
+				Method: dir.Method,
+				Path:   dir.Path,
+			})
 
 		default:
 			panic(fmt.Sprintf("unsupported directive %T", dir))
