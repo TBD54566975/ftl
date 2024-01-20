@@ -7,9 +7,10 @@ import (
 	"go/token"
 	"strings"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 // This file contains a parser for Go FTL directives.
