@@ -10,7 +10,7 @@ import (
 // attributes.
 type Logger = log.Logger
 
-// FromContext retrieves the current logger from the Context.
-func FromContext(ctx context.Context) *Logger {
+// LoggerFromContext retrieves the current logger from the Context.
+func LoggerFromContext(ctx context.Context) *Logger {
 	return log.FromContext(ctx)
 }
