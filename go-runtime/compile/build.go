@@ -131,7 +131,6 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		return "// " + strings.Join(s, "\n// ")
 	},
-	// Overridden in ExternalModule().
 	"type": genType,
 	"is": func(kind string, t schema.Node) bool {
 		return reflect.Indirect(reflect.ValueOf(t)).Type().Name() == kind
@@ -163,10 +162,23 @@ var scaffoldFuncs = scaffolder.FuncMap{
 func genType(module *schema.Module, t schema.Type) string {
 	switch t := t.(type) {
 	case *schema.DataRef:
+		desc := ""
 		if module != nil && t.Module == module.Name {
-			return t.Name
+			desc = t.Name
+		} else {
+			desc = "ftl" + t.Module + "." + t.Name
 		}
-		return "ftl" + t.String()
+		if len(t.TypeParameters) > 0 {
+			desc += "["
+			for i, tp := range t.TypeParameters {
+				if i != 0 {
+					desc += ", "
+				}
+				desc += genType(module, tp)
+			}
+			desc += "]"
+		}
+		return desc
 
 	case *schema.VerbRef:
 		if module != nil && t.Module == module.Name {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.design/x/reflect"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -29,6 +30,79 @@ func (d *Data) Scope() Scope {
 		scope[t.Name] = ModuleDecl{Decl: t}
 	}
 	return scope
+}
+
+// Monomorphise this data type with the given type arguments.
+//
+// Will return nil if it is not a parametric type.
+//
+// This will return a new Data structure with all type parameters replaced with
+// the given types.
+func (d *Data) Monomorphise(types ...Type) (*Data, error) {
+	if len(d.TypeParameters) != len(types) {
+		return nil, fmt.Errorf("expected %d type arguments, got %d", len(d.TypeParameters), len(types))
+	}
+	if len(d.TypeParameters) == 0 {
+		return nil, nil
+	}
+	names := map[string]Type{}
+	for i, t := range d.TypeParameters {
+		names[t.Name] = types[i]
+	}
+	monomorphised := reflect.DeepCopy(d)
+	monomorphised.TypeParameters = nil
+
+	// Because we don't have parent links in the AST allowing us to visit on
+	// Type and replace it on the parent, we have to do a full traversal to find
+	// the parents of all the Type nodes we need to replace. This will be a bit
+	// tricky to maintain, but it's basically any type that has parametric
+	// types: maps, slices, fields, etc.
+	err := Visit(monomorphised, func(n Node, next func() error) error {
+		switch n := n.(type) {
+		case *Map:
+			k, err := maybeMonomorphiseType(n.Key, names)
+			if err != nil {
+				return fmt.Errorf("%s: map key: %w", n.Key.Position(), err)
+			}
+			v, err := maybeMonomorphiseType(n.Value, names)
+			if err != nil {
+				return fmt.Errorf("%s: map value: %w", n.Value.Position(), err)
+			}
+			n.Key = k
+			n.Value = v
+
+		case *Array:
+			t, err := maybeMonomorphiseType(n.Element, names)
+			if err != nil {
+				return fmt.Errorf("%s: array element: %w", n.Element.Position(), err)
+			}
+			n.Element = t
+
+		case *Field:
+			t, err := maybeMonomorphiseType(n.Type, names)
+			if err != nil {
+				return fmt.Errorf("%s: field type: %w", n.Type.Position(), err)
+			}
+			n.Type = t
+
+		case *Optional:
+			t, err := maybeMonomorphiseType(n.Type, names)
+			if err != nil {
+				return fmt.Errorf("%s: optional type: %w", n.Type.Position(), err)
+			}
+			n.Type = t
+
+		case *Any, *Bool, *Bytes, *Data, *DataRef, *Database, Decl, *Float,
+			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Int,
+			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress, *Module,
+			*Schema, *String, *Time, Type, *TypeParameter, *Unit, *Verb:
+		}
+		return next()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to monomorphise: %w", d.Pos, err)
+	}
+	return monomorphised, nil
 }
 
 func (d *Data) Position() Position { return d.Pos }
@@ -72,18 +146,31 @@ func (d *Data) String() string {
 
 func (d *Data) ToProto() proto.Message {
 	return &schemapb.Data{
-		Pos:      posToProto(d.Pos),
-		Name:     d.Name,
-		Fields:   nodeListToProto[*schemapb.Field](d.Fields),
-		Comments: d.Comments,
+		Pos:            posToProto(d.Pos),
+		TypeParameters: nodeListToProto[*schemapb.TypeParameter](d.TypeParameters),
+		Name:           d.Name,
+		Fields:         nodeListToProto[*schemapb.Field](d.Fields),
+		Comments:       d.Comments,
 	}
 }
 
 func DataToSchema(s *schemapb.Data) *Data {
 	return &Data{
-		Pos:      posFromProto(s.Pos),
-		Name:     s.Name,
-		Fields:   fieldListToSchema(s.Fields),
-		Comments: s.Comments,
+		Pos:            posFromProto(s.Pos),
+		Name:           s.Name,
+		TypeParameters: typeParametersToSchema(s.TypeParameters),
+		Fields:         fieldListToSchema(s.Fields),
+		Comments:       s.Comments,
 	}
+}
+
+// MonoType returns the monomorphised type of this data type if applicable, or returns the original type.
+func maybeMonomorphiseType(t Type, typeParameters map[string]Type) (Type, error) {
+	if t, ok := t.(*TypeParameter); ok {
+		if tp, ok := typeParameters[t.Name]; ok {
+			return tp, nil
+		}
+		return nil, fmt.Errorf("%s: unknown type parameter %q", t.Position(), t.Name)
+	}
+	return t, nil
 }

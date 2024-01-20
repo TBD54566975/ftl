@@ -1,6 +1,10 @@
 package schema
 
-import "google.golang.org/protobuf/reflect/protoreflect"
+import (
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+)
 
 type TypeParameter struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
@@ -15,7 +19,18 @@ func (*TypeParameter) schemaType()          {}
 func (t *TypeParameter) Position() Position { return t.Pos }
 func (t *TypeParameter) String() string     { return t.Name }
 func (t *TypeParameter) ToProto() protoreflect.ProtoMessage {
-	panic("unimplemented")
+	return &schemapb.TypeParameter{Pos: posToProto(t.Pos), Name: t.Name}
 }
 func (t *TypeParameter) schemaChildren() []Node { return nil }
 func (t *TypeParameter) schemaDecl()            {}
+
+func typeParametersToSchema(s []*schemapb.TypeParameter) []*TypeParameter {
+	var out []*TypeParameter
+	for _, n := range s {
+		out = append(out, &TypeParameter{
+			Pos:  posFromProto(n.Pos),
+			Name: n.Name,
+		})
+	}
+	return out
+}

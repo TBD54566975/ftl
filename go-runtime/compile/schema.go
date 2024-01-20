@@ -134,7 +134,7 @@ func visitFile(pctx *parseContext, node *ast.File) error {
 	if err != nil {
 		return err
 	}
-	pctx.module.Comments = parseComments(node.Doc)
+	pctx.module.Comments = visitComments(node.Doc)
 	for _, dir := range directives {
 		switch dir := dir.(type) {
 		case *directiveModule:
@@ -249,7 +249,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	var req schema.Type
 	if reqt != nil {
-		req, err = parseType(pctx, node, params.At(1).Type())
+		req, err = visitType(pctx, node, params.At(1).Type())
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +258,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	var resp schema.Type
 	if respt != nil {
-		resp, err = parseType(pctx, node, results.At(0).Type())
+		resp, err = visitType(pctx, node, results.At(0).Type())
 		if err != nil {
 			return nil, err
 		}
@@ -267,7 +267,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	verb = &schema.Verb{
 		Pos:      goPosToSchemaPos(node.Pos()),
-		Comments: parseComments(node.Doc),
+		Comments: visitComments(node.Doc),
 		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  req,
 		Response: resp,
@@ -292,7 +292,7 @@ func parsePathComponents(path string, pos schema.Position) []schema.IngressPathC
 	return out
 }
 
-func parseComments(doc *ast.CommentGroup) []string {
+func visitComments(doc *ast.CommentGroup) []string {
 	comments := []string{}
 	if doc := doc.Text(); doc != "" {
 		comments = strings.Split(strings.TrimSpace(doc), "\n")
@@ -300,7 +300,7 @@ func parseComments(doc *ast.CommentGroup) []string {
 	return comments
 }
 
-func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.DataRef, error) {
+func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.DataRef, error) {
 	named, ok := tnode.(*types.Named)
 	if !ok {
 		return nil, fmt.Errorf("expected named type but got %s", tnode)
@@ -319,6 +319,28 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 		Pos:  goPosToSchemaPos(node.Pos()),
 		Name: named.Obj().Name(),
 	}
+	dataRef := &schema.DataRef{
+		Pos:  goPosToSchemaPos(node.Pos()),
+		Name: out.Name,
+	}
+	for i := 0; i < named.TypeParams().Len(); i++ {
+		param := named.TypeParams().At(i)
+		out.TypeParameters = append(out.TypeParameters, &schema.TypeParameter{
+			Pos:  goPosToSchemaPos(node.Pos()),
+			Name: param.Obj().Name(),
+		})
+		typeArg, err := visitType(pctx, node, named.TypeArgs().At(i))
+		if err != nil {
+			return nil, fmt.Errorf("type parameter %s: %w", param.Obj().Name(), err)
+		}
+		dataRef.TypeParameters = append(dataRef.TypeParameters, typeArg)
+	}
+
+	// If the struct is generic, we need to use the origin type to get the
+	// fields.
+	if named.TypeParams().Len() > 0 {
+		named = named.Origin()
+	}
 
 	// Find type declaration so we can extract comments.
 	pos := named.Obj().Pos()
@@ -331,23 +353,23 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 			switch path := path[i].(type) {
 			case *ast.TypeSpec:
 				if path.Doc != nil {
-					out.Comments = parseComments(path.Doc)
+					out.Comments = visitComments(path.Doc)
 				}
 			case *ast.GenDecl:
 				if path.Doc != nil {
-					out.Comments = parseComments(path.Doc)
+					out.Comments = visitComments(path.Doc)
 				}
 			}
 		}
 	}
 
-	s, ok := tnode.Underlying().(*types.Struct)
+	s, ok := named.Underlying().(*types.Struct)
 	if !ok {
-		return nil, fmt.Errorf("expected struct but got %s", tnode)
+		return nil, fmt.Errorf("expected struct but got %s", named)
 	}
 	for i := 0; i < s.NumFields(); i++ {
 		f := s.Field(i)
-		ft, err := parseType(pctx, node, f.Type())
+		ft, err := visitType(pctx, node, f.Type())
 		if err != nil {
 			return nil, fmt.Errorf("field %s: %w", f.Name(), err)
 		}
@@ -358,13 +380,13 @@ func parseStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 		})
 	}
 	pctx.module.AddData(out)
-	return &schema.DataRef{
-		Pos:  goPosToSchemaPos(node.Pos()),
-		Name: out.Name,
-	}, nil
+	return dataRef, nil
 }
 
-func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
+func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
+	if tparam, ok := tnode.(*types.TypeParam); ok {
+		return &schema.TypeParameter{Name: tparam.Obj().Id()}, nil
+	}
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		switch underlying.Kind() {
@@ -387,7 +409,7 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 	case *types.Struct:
 		named, ok := tnode.(*types.Named)
 		if !ok {
-			return parseStruct(pctx, node, tnode)
+			return visitStruct(pctx, node, tnode)
 		}
 
 		// Special-cased types.
@@ -399,21 +421,21 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 			return &schema.Unit{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		case "github.com/TBD54566975/ftl/go-runtime/sdk.Option":
-			underlying, err := parseType(pctx, node, named.TypeArgs().At(0))
+			underlying, err := visitType(pctx, node, named.TypeArgs().At(0))
 			if err != nil {
 				return nil, err
 			}
 			return &schema.Optional{Type: underlying}, nil
 
 		default:
-			return parseStruct(pctx, node, tnode)
+			return visitStruct(pctx, node, tnode)
 		}
 
 	case *types.Map:
-		return parseMap(pctx, node, underlying)
+		return visitMap(pctx, node, underlying)
 
 	case *types.Slice:
-		return parseSlice(pctx, node, underlying)
+		return visitSlice(pctx, node, underlying)
 
 	case *types.Interface:
 		if underlying.String() == "any" {
@@ -426,12 +448,12 @@ func parseType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 	}
 }
 
-func parseMap(pctx *parseContext, node ast.Node, tnode *types.Map) (*schema.Map, error) {
-	key, err := parseType(pctx, node, tnode.Key())
+func visitMap(pctx *parseContext, node ast.Node, tnode *types.Map) (*schema.Map, error) {
+	key, err := visitType(pctx, node, tnode.Key())
 	if err != nil {
 		return nil, err
 	}
-	value, err := parseType(pctx, node, tnode.Elem())
+	value, err := visitType(pctx, node, tnode.Elem())
 	if err != nil {
 		return nil, err
 	}
@@ -442,12 +464,12 @@ func parseMap(pctx *parseContext, node ast.Node, tnode *types.Map) (*schema.Map,
 	}, nil
 }
 
-func parseSlice(pctx *parseContext, node ast.Node, tnode *types.Slice) (schema.Type, error) {
+func visitSlice(pctx *parseContext, node ast.Node, tnode *types.Slice) (schema.Type, error) {
 	// If it's a []byte, treat it as a Bytes type.
 	if basic, ok := tnode.Elem().Underlying().(*types.Basic); ok && basic.Kind() == types.Byte {
 		return &schema.Bytes{Pos: goPosToSchemaPos(node.Pos())}, nil
 	}
-	value, err := parseType(pctx, node, tnode.Elem())
+	value, err := visitType(pctx, node, tnode.Elem())
 	if err != nil {
 		return nil, err
 	}
