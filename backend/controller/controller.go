@@ -1093,7 +1093,7 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.
 		attrs["request"] = requestName.String()
 	}
 
-	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Sub(attrs)
+	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Attrs(attrs)
 }
 
 // Periodically sync the routing table from the DB.

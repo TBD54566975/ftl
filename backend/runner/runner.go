@@ -60,7 +60,7 @@ func Start(ctx context.Context, config Config) error {
 	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, config.ControllerEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, client)
 
-	logger := log.FromContext(ctx).Sub(map[string]string{"runner": config.Key.String()})
+	logger := log.FromContext(ctx).Attrs(map[string]string{"runner": config.Key.String()})
 	logger.Infof("Starting FTL Runner")
 	logger.Infof("Deployment directory: %s", config.DeploymentDir)
 	err = os.MkdirAll(config.DeploymentDir, 0700)
@@ -208,7 +208,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, fmt.Errorf("%s: %w", "failed to download artefacts", err)
 	}
 
-	verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Sub(map[string]string{"module": module.Name}))
+	verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Attrs(map[string]string{"module": module.Name}))
 	deployment, cmdCtx, err := plugin.Spawn(
 		unstoppable.Context(verbCtx),
 		log.Info,
@@ -385,5 +385,5 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.
 	}
 
 	sink := newDeploymentLogsSink(s.deploymentLogQueue)
-	return log.FromContext(ctx).AddSink(sink).Sub(attrs)
+	return log.FromContext(ctx).AddSink(sink).Attrs(attrs)
 }

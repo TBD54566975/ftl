@@ -45,7 +45,7 @@
 				"kind": "build",
 				"isDefault": true
 			},
-			"detail": "cd /Users/alec/dev/ftl; go build ./..."
+			"detail": "cd ${workspaceFolder}; go build ./..."
 		}
 	]
 }

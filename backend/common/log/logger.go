@@ -41,12 +41,12 @@ func New(level Level, sink Sink) *Logger {
 }
 
 func (l Logger) Scope(scope string) *Logger {
-	return l.Sub(map[string]string{scopeKey: scope})
+	return l.Attrs(map[string]string{scopeKey: scope})
 }
 
-// Sub creates a new logger with the given attributes.
-func (l Logger) Sub(attributes map[string]string) *Logger {
-	attr := map[string]string{}
+// Attrs creates a new logger with the given attributes.
+func (l Logger) Attrs(attributes map[string]string) *Logger {
+	attr := make(map[string]string, len(l.attributes)+len(attributes))
 	maps.Copy(attr, l.attributes)
 	maps.Copy(attr, attributes)
 	l.attributes = attr
