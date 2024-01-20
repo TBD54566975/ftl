@@ -146,7 +146,7 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	}
 	config.SetDefaults()
 	svc := &Service{
-		tasks:              scheduledtask.New(ctx, key, db.GetControllers),
+		tasks:              scheduledtask.New(ctx, key, db),
 		dal:                db,
 		key:                key,
 		deploymentLogsSink: newDeploymentLogsSink(ctx, db),
