@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/atomic"
+	clock "github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 	"github.com/serialx/hashring"
 
@@ -34,6 +35,16 @@ type descriptor struct {
 // run.
 type Job func(ctx context.Context) (time.Duration, error)
 
+type DAL interface {
+	GetControllers(ctx context.Context, all bool) ([]dal.Controller, error)
+}
+
+type DALFunc func(ctx context.Context, all bool) ([]dal.Controller, error)
+
+func (f DALFunc) GetControllers(ctx context.Context, all bool) ([]dal.Controller, error) {
+	return f(ctx, all)
+}
+
 // Scheduler is a task scheduler for the controller.
 //
 // Each job runs in its own goroutine.
@@ -43,16 +54,26 @@ type Job func(ctx context.Context) (time.Duration, error)
 // as the hash ring is only updated periodically and controllers may have
 // inconsistent views of the hash ring.
 type Scheduler struct {
-	getControllers func(ctx context.Context, all bool) ([]dal.Controller, error)
-	key            model.ControllerKey
-	jobs           chan *descriptor
+	controller DAL
+	key        model.ControllerKey
+	jobs       chan *descriptor
+	clock      clock.Clock
 
 	hashring atomic.Value[*hashring.HashRing]
 }
 
 // New creates a new [Scheduler].
-func New(ctx context.Context, id model.ControllerKey, getControllers func(ctx context.Context, all bool) ([]dal.Controller, error)) *Scheduler {
-	s := &Scheduler{getControllers: getControllers, key: id, jobs: make(chan *descriptor)}
+func New(ctx context.Context, id model.ControllerKey, controller DAL) *Scheduler {
+	return NewForTesting(ctx, id, controller, clock.New())
+}
+
+func NewForTesting(ctx context.Context, id model.ControllerKey, controller DAL, clock clock.Clock) *Scheduler {
+	s := &Scheduler{
+		controller: controller,
+		key:        id,
+		jobs:       make(chan *descriptor),
+		clock:      clock,
+	}
 	_ = s.updateHashring(ctx)
 	go s.syncHashRing(ctx)
 	go s.run(ctx)
@@ -81,7 +102,7 @@ func (s *Scheduler) schedule(retry backoff.Backoff, job Job, singlyHomed bool) {
 		retry:       retry,
 		job:         job,
 		singlyHomed: singlyHomed,
-		next:        time.Now().Add(time.Millisecond * time.Duration(rand.Int63n(2000))), //nolint:gosec
+		next:        s.clock.Now().Add(time.Millisecond * time.Duration(rand.Int63n(2000))), //nolint:gosec
 	}
 }
 
@@ -92,7 +113,7 @@ func (s *Scheduler) run(ctx context.Context) {
 	// scheduled in the past. These are skipped on each run.
 	jobs := []*descriptor{}
 	for {
-		next := time.Now().Add(time.Second)
+		next := s.clock.Now().Add(time.Second)
 		// Find the next job to run.
 		if len(jobs) > 0 {
 			sort.Slice(jobs, func(i, j int) bool { return jobs[i].next.Before(jobs[j].next) })
@@ -105,14 +126,15 @@ func (s *Scheduler) run(ctx context.Context) {
 			}
 		}
 
+		now := s.clock.Now()
 		select {
 		case <-ctx.Done():
 			return
 
-		case <-time.After(time.Until(next)):
+		case <-s.clock.After(next.Sub(now)):
 			// Jobs to reschedule on the next run.
 			for i, job := range jobs {
-				if job.next.After(time.Now()) {
+				if job.next.After(s.clock.Now()) {
 					continue
 				}
 				job := job
@@ -130,11 +152,11 @@ func (s *Scheduler) run(ctx context.Context) {
 				go func() {
 					if delay, err := job.job(ctx); err != nil {
 						logger.Scope(job.name).Warnf("%s", err)
-						job.next = time.Now().Add(job.retry.Duration())
+						job.next = s.clock.Now().Add(job.retry.Duration())
 					} else {
 						// Reschedule the job.
 						job.retry.Reset()
-						job.next = time.Now().Add(delay)
+						job.next = s.clock.Now().Add(delay)
 					}
 					s.jobs <- job
 				}()
@@ -155,7 +177,7 @@ func (s *Scheduler) syncHashRing(ctx context.Context) {
 		case <-ctx.Done():
 			return
 
-		case <-time.After(time.Second * 5):
+		case <-s.clock.After(time.Second * 5):
 			if err := s.updateHashring(ctx); err != nil {
 				logger.Warnf("Failed to get controllers: %s", err)
 			}
@@ -164,7 +186,7 @@ func (s *Scheduler) syncHashRing(ctx context.Context) {
 }
 
 func (s *Scheduler) updateHashring(ctx context.Context) error {
-	controllers, err := s.getControllers(ctx, false)
+	controllers, err := s.controller.GetControllers(ctx, false)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -37,11 +38,13 @@ func TestCron(t *testing.T) {
 		{controller: dal.Controller{Key: model.NewControllerKey()}},
 	}
 
+	clock := clock.NewMock()
+
 	for _, c := range controllers {
 		c := c
-		c.cron = New(ctx, c.controller.Key, func(ctx context.Context, all bool) ([]dal.Controller, error) {
+		c.cron = NewForTesting(ctx, c.controller.Key, DALFunc(func(ctx context.Context, all bool) ([]dal.Controller, error) {
 			return slices.Map(controllers, func(c *controller) dal.Controller { return c.controller }), nil
-		})
+		}), clock)
 		c.cron.Singleton(backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
 			singletonCount.Add(1)
 			return time.Second, nil
@@ -52,7 +55,7 @@ func TestCron(t *testing.T) {
 		})
 	}
 
-	time.Sleep(time.Second * 6)
+	clock.Add(time.Second * 6)
 
 	assert.True(t, singletonCount.Load() >= 5 && singletonCount.Load() < 10, "expected singletonCount to be >= 5 but was %d", singletonCount.Load())
 	assert.True(t, multiCount.Load() >= 20 && multiCount.Load() < 30, "expected multiCount to be >= 20 but was %d", multiCount.Load())
