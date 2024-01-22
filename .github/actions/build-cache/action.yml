@@ -5,13 +5,13 @@ runs:
   steps:
     - name: Cache Go Modules
       id: cache-go-modules
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-{{ hashFiles('**/go.sum') }}-go
     - name: Cache Maven Modules
       id: cache-maven
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.m2/repository
         key: ${{ runner.os }}-{{ hashFiles('**/pom.xml') }}-maven
