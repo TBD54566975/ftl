@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -77,15 +76,6 @@ func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) 
 	return validateValue(verb.Request, []string{verb.Request.String()}, requestMap, sch)
 }
 
-type HTTPRequest struct {
-	Method         string              `json:"method"`
-	Path           string              `json:"path"`
-	PathParameters map[string]string   `json:"pathParameters"`
-	Query          map[string][]string `json:"query"`
-	Headers        map[string][]string `json:"headers"`
-	Body           []byte              `json:"body"`
-}
-
 // ValidateAndExtractRequestBody extracts the HttpRequest body from an HTTP request.
 func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
 	verb := sch.ResolveVerbRef(&schema.VerbRef{Name: route.Verb, Module: route.Module})
@@ -93,35 +83,47 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 		return nil, fmt.Errorf("unknown verb %s", route.Verb)
 	}
 
+	var request *schema.DataRef
 	var body []byte
 	if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
-		defer r.Body.Close()
-		bodyBytes, err := io.ReadAll(r.Body)
-		if err != nil {
-			return nil, err
-		}
 		pathParameters := map[string]string{}
 		matchSegments(route.Path, r.URL.Path, func(segment, value string) {
 			pathParameters[segment] = value
 		})
 
-		request := &HTTPRequest{
-			Method:         r.Method,
-			Path:           r.URL.Path,
-			PathParameters: pathParameters,
-			Query:          r.URL.Query(),
-			Headers:        r.Header,
-			Body:           bodyBytes,
+		request, ok = verb.Request.(*schema.DataRef)
+		if !ok {
+			return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
 		}
-		body, err = json.Marshal(request)
+
+		bodyMap, err := buildRequest(route, r, request, sch)
+		if err != nil {
+			return nil, err
+		}
+
+		requestMap := map[string]any{}
+		requestMap["method"] = r.Method
+		requestMap["path"] = r.URL.Path
+		requestMap["pathParameters"] = pathParameters
+		requestMap["query"] = r.URL.Query()
+		requestMap["headers"] = r.Header
+		requestMap["body"] = bodyMap
+
+		err = validateRequestMap(request, []string{request.String()}, requestMap, sch)
+		if err != nil {
+			return nil, err
+		}
+
+		body, err = json.Marshal(requestMap)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		request, ok := verb.Request.(*schema.DataRef)
+		request, ok = verb.Request.(*schema.DataRef)
 		if !ok {
 			return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
 		}
+
 		requestMap, err := buildRequest(route, r, request, sch)
 		if err != nil {
 			return nil, err
@@ -163,6 +165,14 @@ func buildRequest(route *dal.IngressRoute, r *http.Request, dataRef *schema.Data
 		data := sch.ResolveDataRef(dataRef)
 		if data == nil {
 			return nil, fmt.Errorf("unknown data %v", dataRef)
+		}
+
+		if len(dataRef.TypeParameters) > 0 {
+			var err error
+			data, err = data.Monomorphise(dataRef.TypeParameters...)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		queryMap, err := parseQueryParams(r.URL.Query(), data)
@@ -364,9 +374,19 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 			if f.Name == key {
 				field = f
 			}
+			for _, typeParam := range data.TypeParameters {
+				if typeParam.String() == key {
+					field = &schema.Field{
+						Name: key,
+						Type: typeParam,
+					}
+				}
+			}
 		}
+
 		if field == nil {
-			return nil, fmt.Errorf("unknown query parameter %q", key)
+			queryMap[key] = value
+			continue
 		}
 
 		switch field.Type.(type) {

@@ -130,7 +130,8 @@ func Validate(schema *Schema) (*Schema, error) {
 						if existing, ok := ingress[md.String()]; ok {
 							merr = append(merr, fmt.Errorf("%s: duplicate %q for %s:%q and %s:%q", md.Pos, md.String(), existing.Pos, existing.Name, n.Pos, n.Name))
 						}
-						if md.Type == "http" && (n.Request.String() != "builtin.HttpRequest" || n.Response.String() != "builtin.HttpResponse") {
+
+						if md.Type == "http" && (!strings.HasPrefix(n.Request.String(), "builtin.HttpRequest") || !strings.HasPrefix(n.Response.String(), "builtin.HttpResponse")) {
 							merr = append(merr, fmt.Errorf("%s: HTTP ingress verb %s(%s) %s must have the signature %s(builtin.HttpRequest) builtin.HttpResponse",
 								md.Pos, n.Name, n.Request, n.Response, n.Name))
 						}

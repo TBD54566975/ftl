@@ -140,7 +140,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		_ = schema.Visit(m, func(n schema.Node, next func() error) error {
 			switch n := n.(type) {
 			case *schema.DataRef:
-				if n.Module == m.Name {
+				if n.Module == "" || n.Module == m.Name {
 					break
 				}
 				imports[path.Join("ftl", n.Module)] = "ftl" + n.Module
@@ -164,6 +164,8 @@ func genType(module *schema.Module, t schema.Type) string {
 	case *schema.DataRef:
 		desc := ""
 		if module != nil && t.Module == module.Name {
+			desc = t.Name
+		} else if t.Module == "" {
 			desc = t.Name
 		} else {
 			desc = "ftl" + t.Module + "." + t.Name
