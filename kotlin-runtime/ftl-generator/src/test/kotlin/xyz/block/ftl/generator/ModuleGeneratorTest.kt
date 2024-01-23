@@ -36,10 +36,20 @@ public class TestModule()
   @Test
   fun `should generate all Types`() {
     val decls = listOf(
+      Decl(
+        data_ = Data(
+          name = "ParamTestData",
+          typeParameters = listOf(TypeParameter(name = "T")),
+          fields = listOf(
+            Field(name = "t", type = Type(parameter = TypeParameter(name = "T"))),
+          )
+        )
+      ),
       Decl(data_ = Data(comments = listOf("Request comments"), name = "TestRequest")),
       Decl(
         data_ = Data(
-          comments = listOf("Response comments"), name = "TestResponse", fields = listOf(
+          comments = listOf("Response comments"), name = "TestResponse",
+          fields = listOf(
             Field(name = "int", type = Type(int = Int())),
             Field(name = "float", type = Type(float = Float())),
             Field(name = "string", type = Type(string = String())),
@@ -73,6 +83,14 @@ public class TestModule()
             Field(name = "dataRef", type = Type(dataRef = DataRef(name = "TestRequest"))),
             Field(name = "externalDataRef", type = Type(dataRef = DataRef(module = "other", name = "TestRequest"))),
             Field(name = "any", type = Type(any = xyz.block.ftl.v1.schema.Any())),
+            Field(
+              name = "parameterizedDataRef", type = Type(
+                dataRef = DataRef(
+                  name = "ParamTestData",
+                  typeParameters = listOf(Type(parameter = TypeParameter(name = "T")))
+                )
+              )
+            ),
           )
         )
       ),
@@ -95,6 +113,10 @@ import kotlin.Unit
 import kotlin.collections.ArrayList
 import kotlin.collections.Map
 import xyz.block.ftl.Ignore
+
+public data class ParamTestData<T>(
+  public val t: T,
+)
 
 /**
  * Request comments
@@ -120,6 +142,7 @@ public data class TestResponse(
   public val dataRef: TestRequest,
   public val externalDataRef: ftl.other.TestRequest,
   public val any: Any,
+  public val parameterizedDataRef: ParamTestData<T>,
 )
 
 @Ignore

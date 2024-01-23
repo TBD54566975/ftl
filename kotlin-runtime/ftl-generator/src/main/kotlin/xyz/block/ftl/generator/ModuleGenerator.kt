@@ -68,6 +68,7 @@ class ModuleGenerator() {
   private fun buildDataClass(type: Data, namespace: String): TypeSpec {
     val dataClassBuilder = TypeSpec.classBuilder(type.name)
       .addModifiers(KModifier.DATA)
+      .addTypeVariables(type.typeParameters.map { TypeVariableName(it.name) })
       .addKdoc(type.comments.joinToString("\n"))
 
     val dataConstructorBuilder = FunSpec.constructorBuilder()
@@ -146,6 +147,7 @@ class ModuleGenerator() {
       type.bool != null -> ClassName("kotlin", "Boolean")
       type.time != null -> ClassName("java.time", "OffsetDateTime")
       type.any != null -> ClassName("kotlin", "Any")
+      type.parameter != null -> TypeVariableName(type.parameter.name)
       type.array != null -> {
         val element = type.array?.element ?: throw IllegalArgumentException(
           "Missing element type in kotlin array generator"
@@ -167,7 +169,13 @@ class ModuleGenerator() {
 
       type.dataRef != null -> {
         val module = if (type.dataRef.module.isEmpty()) namespace else "ftl.${type.dataRef.module}"
-        ClassName(module, type.dataRef.name)
+        ClassName(module, type.dataRef.name).let { className ->
+          if (type.dataRef.typeParameters.isNotEmpty()) {
+            className.parameterizedBy(type.dataRef.typeParameters.map { getTypeClass(it, namespace) })
+          } else {
+            className
+          }
+        }
       }
 
       type.optional != null -> {

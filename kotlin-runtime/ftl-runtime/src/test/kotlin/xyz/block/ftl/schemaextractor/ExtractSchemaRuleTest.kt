@@ -38,7 +38,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         /**
          * Request to echo a message.
          */
-        data class EchoRequest(val name: String, val stuff: Any)
+        data class EchoRequest<T>(val t: T, val name: String, val stuff: Any)
         data class EchoResponse(val messages: List<EchoMessage>)
 
         /**
@@ -51,7 +51,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             @Throws(InvalidInput::class)
             @Verb
             @Ingress(Method.GET, "/echo")
-            fun echo(context: Context, req: EchoRequest): EchoResponse {
+            fun echo(context: Context, req: EchoRequest<String>): EchoResponse {
                 callTime(context)
                 return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
             }
@@ -96,15 +96,15 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 name = "metadata",
                 type = Type(
                   map = Map(
-                    key = xyz.block.ftl.v1.schema.Type(string = xyz.block.ftl.v1.schema.String()),
-                    value_ = xyz.block.ftl.v1.schema.Type(
+                    key = Type(string = xyz.block.ftl.v1.schema.String()),
+                    value_ = Type(
                       dataRef = DataRef(
                         name = "MapValue",
                       )
                     )
                   )
                 )
-              )
+              ),
             ),
           ),
         ),
@@ -112,6 +112,10 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
           data_ = Data(
             name = "EchoRequest",
             fields = listOf(
+              Field(
+                name = "t",
+                type = Type(parameter = TypeParameter(name = "T"))
+              ),
               Field(
                 name = "name",
                 type = Type(string = xyz.block.ftl.v1.schema.String())
@@ -126,6 +130,9 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
          * Request to echo a message.
          */"""
             ),
+            typeParameters = listOf(
+              TypeParameter(name = "T")
+            )
           ),
         ),
         Decl(
@@ -136,7 +143,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 name = "messages",
                 type = Type(
                   array = Array(
-                    element = xyz.block.ftl.v1.schema.Type(
+                    element = Type(
                       dataRef = DataRef(
                         name = "EchoMessage",
                       )
@@ -158,6 +165,9 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             request = Type(
               dataRef = DataRef(
                 name = "EchoRequest",
+                typeParameters = listOf(
+                  Type(string = xyz.block.ftl.v1.schema.String())
+                )
               )
             ),
             response = Type(
