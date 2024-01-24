@@ -309,12 +309,30 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
 		base := path.Dir(pctx.pkg.PkgPath)
 		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
-		return &schema.DataRef{
+		dataRef := &schema.DataRef{
 			Pos:    goPosToSchemaPos(node.Pos()),
 			Module: destModule,
 			Name:   named.Obj().Name(),
-		}, nil
+		}
+		for i := 0; i < named.TypeArgs().Len(); i++ {
+			arg := named.TypeArgs().At(i)
+			typeArg, err := visitType(pctx, node, arg)
+			if err != nil {
+				return nil, fmt.Errorf("type parameter %s: %w", arg.String(), err)
+			}
+
+			// Fully qualify the DataRef if needed
+			if arg, okArg := typeArg.(*schema.DataRef); okArg {
+				if arg.Module == "" {
+					arg.Module = strings.TrimPrefix(pctx.pkg.PkgPath, base+"/")
+				}
+				typeArg = arg
+			}
+			dataRef.TypeParameters = append(dataRef.TypeParameters, typeArg)
+		}
+		return dataRef, nil
 	}
+
 	out := &schema.Data{
 		Pos:  goPosToSchemaPos(node.Pos()),
 		Name: named.Obj().Name(),

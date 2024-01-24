@@ -4,38 +4,108 @@ import (
 	"golang.design/x/reflect"
 )
 
-// BuiltinsSource is the schema source code for built-in types.
-const BuiltinsSource = `
-// Built-in types for FTL.
-builtin module builtin {
-  // HTTP request structure used for HTTP ingress verbs.
-  data HttpRequest {
-    method String
-    path String
-    pathParameters {String: String}
-    query {String: [String]}
-    headers {String: [String]}
-    body Bytes
-  }
-
-  // HTTP response structure used for HTTP ingress verbs.
-  data HttpResponse {
-    status Int
-    headers {String: [String]}
-    body Bytes
-  }
-}
-`
-
-var builtinsModuleParsed = func() *Module {
-	module, err := moduleParser.ParseString("", BuiltinsSource)
-	if err != nil {
-		panic(err)
-	}
-	return module
-}()
-
 // Builtins returns a [Module] containing built-in types.
 func Builtins() *Module {
-	return reflect.DeepCopy(builtinsModuleParsed)
+	return reflect.DeepCopy(&Module{
+		Comments: []string{
+			"Built-in types for FTL.",
+		},
+		Builtin: true,
+		Name:    "builtin",
+		Decls: []Decl{
+			&Data{
+				Comments: []string{
+					"HTTP request structure used for HTTP ingress verbs.",
+				},
+				Name: "HttpRequest",
+				TypeParameters: []*TypeParameter{
+					{
+						Name: "Body",
+					},
+				},
+				Fields: []*Field{
+					{
+						Comments: []string{},
+						Name:     "method",
+						Type:     &String{},
+					},
+					{
+						Comments: []string{},
+						Name:     "path",
+						Type:     &String{},
+					},
+					{
+						Comments: []string{},
+						Name:     "pathParameters",
+						Type: &Map{
+							Key:   &String{},
+							Value: &String{},
+						},
+					},
+					{
+						Comments: []string{},
+						Name:     "query",
+						Type: &Map{
+							Key: &String{},
+							Value: &Array{
+								Element: &String{},
+							},
+						},
+					},
+					{
+						Comments: []string{},
+						Name:     "headers",
+						Type: &Map{
+							Key: &String{},
+							Value: &Array{
+								Element: &String{},
+							},
+						},
+					},
+					{
+						Comments: []string{},
+						Name:     "body",
+						Type: &TypeParameter{
+							Name: "Body",
+						},
+					},
+				},
+			},
+			&Data{
+				Comments: []string{
+					"HTTP response structure used for HTTP ingress verbs.",
+				},
+				Name: "HttpResponse",
+				TypeParameters: []*TypeParameter{
+					{
+						Name: "Body",
+					},
+				},
+				Fields: []*Field{
+					{
+						Comments: []string{},
+						Name:     "status",
+						Type:     &Int{},
+					},
+					{
+						Comments: []string{},
+						Name:     "headers",
+						Type: &Map{
+							Key: &String{},
+							Value: &Array{
+								Element: &String{},
+							},
+						},
+					},
+					{
+						Comments: []string{},
+						Name:     "body",
+						Type: &TypeParameter{
+							Name: "Body",
+						},
+					},
+				},
+			},
+		},
+	})
 }

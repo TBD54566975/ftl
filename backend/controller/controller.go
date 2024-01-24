@@ -169,12 +169,6 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	return svc, nil
 }
 
-type HTTPResponse struct {
-	Status  int
-	Headers map[string][]string
-	Body    []byte
-}
-
 // ServeHTTP handles ingress routes.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := log.FromContext(r.Context())
@@ -242,17 +236,36 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var responseBody []byte
 
 		if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
-			var response HTTPResponse
-			if err := json.Unmarshal(msg.Body, &response); err != nil {
+			var responseMap map[string]interface{}
+			if err := json.Unmarshal(msg.Body, &responseMap); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			for k, v := range response.Headers {
-				w.Header()[k] = v
+			if status, ok := responseMap["status"].(float64); ok {
+				w.WriteHeader(int(status))
 			}
-			w.WriteHeader(response.Status)
-			responseBody = response.Body
+
+			if headers, ok := responseMap["headers"].(map[string]interface{}); ok {
+				for k, v := range headers {
+					if values, ok := v.([]interface{}); ok {
+						for _, val := range values {
+							if valStr, ok := val.(string); ok {
+								w.Header().Set(k, valStr)
+							}
+						}
+					}
+				}
+			}
+
+			if body, ok := responseMap["body"]; ok {
+				bodyBytes, err := json.Marshal(body)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				responseBody = bodyBytes
+			}
 		} else {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")

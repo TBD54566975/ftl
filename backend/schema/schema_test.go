@@ -16,7 +16,7 @@ func TestIndent(t *testing.T) {
 }
 
 func TestSchemaString(t *testing.T) {
-	expected := BuiltinsSource + `
+	expected := Builtins().String() + `
 // A comment
 module todo {
   data CreateRequest {
@@ -185,15 +185,35 @@ func TestParsing(t *testing.T) {
 			input:  `module int { data String { name String } verb verb(String) String }`,
 			errors: []string{"1:14: data structure name \"String\" is a reserved word"}},
 		{name: "BuiltinRef",
-			input: `module test { verb myIngress(HttpRequest) HttpResponse }`,
+			input: `module test { verb myIngress(HttpRequest<string>) HttpResponse<string> }`,
 			expected: &Schema{
 				Modules: []*Module{{
 					Name: "test",
 					Decls: []Decl{
 						&Verb{
-							Name:     "myIngress",
-							Request:  &DataRef{Module: "builtin", Name: "HttpRequest"},
-							Response: &DataRef{Module: "builtin", Name: "HttpResponse"},
+							Name: "myIngress",
+							Request: &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{
+								&DataRef{
+									Pos: Position{
+										Offset: 41,
+										Line:   1,
+										Column: 42,
+									},
+									Name:           "string",
+									TypeParameters: []Type{},
+								},
+							}},
+							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{
+								&DataRef{
+									Pos: Position{
+										Offset: 63,
+										Line:   1,
+										Column: 64,
+									},
+									Name:           "string",
+									TypeParameters: []Type{},
+								},
+							}},
 						},
 					},
 				}},
@@ -372,7 +392,9 @@ module todo {
 	actual, err := ParseModuleString("", input)
 	assert.NoError(t, err)
 	actual = Normalise(actual)
-	assert.Equal(t, Normalise(testSchema.Modules[1]), Normalise(actual))
+	fmt.Printf("Modules %v\n", Normalise(testSchema.Modules[1]))
+	fmt.Printf("Modules %v\n", Normalise(actual))
+	assert.Equal(t, Normalise(testSchema.Modules[1]), actual)
 }
 
 var testSchema = MustValidate(&Schema{
