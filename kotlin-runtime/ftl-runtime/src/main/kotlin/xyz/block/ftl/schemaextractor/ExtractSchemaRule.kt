@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.resolve.calls.util.getResolvedCall
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isTypeParameterTypeConstructor
 import org.jetbrains.kotlin.types.getAbbreviation
 import org.jetbrains.kotlin.types.isNullable
 import org.jetbrains.kotlin.types.typeUtil.isAny
@@ -42,6 +43,7 @@ import kotlin.io.path.createDirectories
 
 data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
 
+data class blah<T>(val a: T)
 // Helpers
 private fun DataRef.compare(module: String, name: String): Boolean = this.name == name && this.module == module
 private fun DataRef.text(): String = "${this.module}.${this.name}"
@@ -377,11 +379,26 @@ class SchemaExtractor(
         )
       }.toList(),
       comments = this.comments(),
+      typeParameters = this.children.flatMap { (it as? KtTypeParameterList)?.parameters ?: emptyList() }.map {
+        TypeParameter(
+          name = it.name!!,
+          pos = getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition(it.containingKtFile.name),
+        )
+      }.toList(),
       pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(this.containingKtFile.name),
     )
   }
 
   private fun KotlinType.toSchemaType(position: Position): Type {
+    if (this.unwrap().constructor.isTypeParameterTypeConstructor()) {
+      return Type(
+        parameter = TypeParameter(
+          name = this.constructor.declarationDescriptor?.name?.asString() ?: "T",
+          pos = position,
+        )
+      )
+    }
+
     val type = when (this.fqNameOrNull()?.asString()) {
       String::class.qualifiedName -> Type(string = xyz.block.ftl.v1.schema.String())
       Int::class.qualifiedName -> Type(int = xyz.block.ftl.v1.schema.Int())
@@ -437,6 +454,7 @@ class SchemaExtractor(
             name = refName,
             module = fqName.extractModuleName().takeIf { it != currentModuleName } ?: "",
             pos = position,
+            typeParameters = this.arguments.map { it.type.toSchemaType(position) }.toList(),
           )
         )
       }
