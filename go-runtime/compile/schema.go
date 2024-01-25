@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"go/types"
 	"path"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -398,7 +399,7 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 			Pos:   goPosToSchemaPos(node.Pos()),
 			Name:  strcase.ToLowerCamel(f.Name()),
 			Type:  ft,
-			Alias: maybeExtractStructTag(s.Tag(i), aliasFieldTag),
+			Alias: reflect.StructTag(s.Tag(i)).Get(aliasFieldTag),
 		})
 	}
 	pctx.module.AddData(out)
@@ -582,17 +583,4 @@ func tokenFileContainsPos(f *token.File, pos token.Pos) bool {
 	p := int(pos)
 	base := f.Base()
 	return base <= p && p < base+f.Size()
-}
-
-func maybeExtractStructTag(fieldTags string, tag string) string {
-	for _, t := range strings.Split(fieldTags, ",") {
-		tv := strings.Split(t, ":")
-		if len(tv) != 2 {
-			continue
-		}
-		if strings.TrimSpace(tv[0]) == tag {
-			return strings.Trim(strings.TrimSpace(tv[1]), `"`)
-		}
-	}
-	return ""
 }
