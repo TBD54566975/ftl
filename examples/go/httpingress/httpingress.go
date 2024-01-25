@@ -102,3 +102,15 @@ func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builti
 		Body:    DeleteResponse{},
 	}, nil
 }
+
+type HtmlRequest struct{}
+
+//ftl:verb
+//ftl:ingress http GET /http/html
+func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.HttpResponse[string], error) {
+	return builtin.HttpResponse[string]{
+		Status:  200,
+		Headers: map[string][]string{"Content-Type": {"text/html; charset=utf-8"}},
+		Body:    "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>",
+	}, nil
+}
