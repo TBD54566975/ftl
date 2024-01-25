@@ -375,7 +375,10 @@ class SchemaExtractor(
             return@let it.resolveType().toSchemaType(
               getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition(it.containingKtFile.name)
             )
-          }
+          },
+          alias = param.annotationEntries.firstOrNull {
+            bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Alias::class.qualifiedName
+          }?.valueArguments?.single()?.let { (it as KtValueArgument).text.trim('"', ' ') } ?: "",
         )
       }.toList(),
       comments = this.comments(),

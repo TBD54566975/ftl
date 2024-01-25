@@ -27,6 +27,8 @@ var (
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
 	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/sdk.Call"
+
+	aliasFieldTag = "alias"
 )
 
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
@@ -391,10 +393,12 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 		if err != nil {
 			return nil, fmt.Errorf("field %s: %w", f.Name(), err)
 		}
+
 		out.Fields = append(out.Fields, &schema.Field{
-			Pos:  goPosToSchemaPos(node.Pos()),
-			Name: strcase.ToLowerCamel(f.Name()),
-			Type: ft,
+			Pos:   goPosToSchemaPos(node.Pos()),
+			Name:  strcase.ToLowerCamel(f.Name()),
+			Type:  ft,
+			Alias: maybeExtractStructTag(s.Tag(i), aliasFieldTag),
 		})
 	}
 	pctx.module.AddData(out)
@@ -578,4 +582,17 @@ func tokenFileContainsPos(f *token.File, pos token.Pos) bool {
 	p := int(pos)
 	base := f.Base()
 	return base <= p && p < base+f.Size()
+}
+
+func maybeExtractStructTag(fieldTags string, tag string) string {
+	for _, t := range strings.Split(fieldTags, ",") {
+		tv := strings.Split(t, ":")
+		if len(tv) != 2 {
+			continue
+		}
+		if strings.TrimSpace(tv[0]) == tag {
+			return strings.Trim(strings.TrimSpace(tv[1]), `"`)
+		}
+	}
+	return ""
 }

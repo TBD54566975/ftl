@@ -22,7 +22,7 @@ type Req struct {
 	Nested   Nested
 	Optional sdk.Option[Nested]
 	Time     time.Time
-	User     two.User
+	User     two.User `alias:"u"`
 	Bytes    []byte
 }
 type Resp struct{}

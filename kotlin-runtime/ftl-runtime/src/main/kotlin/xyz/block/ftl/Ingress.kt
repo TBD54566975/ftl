@@ -11,3 +11,11 @@ enum class Method {
 @Retention(AnnotationRetention.RUNTIME)
 @MustBeDocumented
 annotation class Ingress(val method: Method, val path: String)
+
+/**
+ * A field marked with Alias will be renamed to the specified name on ingress from external inputs.
+ */
+@Target(AnnotationTarget.FIELD)
+@Retention(AnnotationRetention.RUNTIME)
+@MustBeDocumented
+annotation class Alias(val name: String)

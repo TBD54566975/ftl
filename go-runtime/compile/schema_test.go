@@ -32,7 +32,7 @@ func TestExtractModuleSchema(t *testing.T) {
     nested one.Nested
     optional one.Nested?
     time Time
-    user two.User
+    user two.User alias u
     bytes Bytes
   }
 

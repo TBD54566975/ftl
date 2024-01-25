@@ -74,15 +74,23 @@ class ModuleGenerator() {
     val dataConstructorBuilder = FunSpec.constructorBuilder()
     type.fields.forEach { field ->
       dataClassBuilder.addKdoc(field.comments.joinToString("\n"))
-      field.type?.let {
+      field.type?.let { type ->
         var parameter = ParameterSpec
-          .builder(field.name, getTypeClass(it, namespace))
-        if (it.optional != null) {
+          .builder(field.name, getTypeClass(type, namespace))
+        if (type.optional != null) {
           parameter = parameter.defaultValue("null")
         }
         dataConstructorBuilder.addParameter(parameter.build())
         dataClassBuilder.addProperty(
-          PropertySpec.builder(field.name, getTypeClass(it, namespace)).initializer(field.name).build()
+          PropertySpec.builder(field.name, getTypeClass(type, namespace)).initializer(field.name).let {
+            if (field.alias != "") {
+              it.addAnnotation(
+                AnnotationSpec.builder(xyz.block.ftl.Alias::class).addMember("%S", field.alias).build()
+              )
+            } else {
+              it
+            }
+          }.build()
         )
       }
     }
