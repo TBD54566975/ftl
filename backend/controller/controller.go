@@ -170,9 +170,9 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 }
 
 type HTTPResponse struct {
-	Status  int
-	Headers map[string][]string
-	Body    json.RawMessage
+	Status  int                 `json:"status"`
+	Headers map[string][]string `json:"headers"`
+	Body    json.RawMessage     `json:"body"`
 }
 
 // ServeHTTP handles ingress routes.
@@ -248,11 +248,17 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			responseBody, err = ingress.ResponseBodyForContentType(response.Headers, response.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
 			for k, v := range response.Headers {
 				w.Header()[k] = v
 			}
 			w.WriteHeader(response.Status)
-			responseBody = response.Body
+
 		} else {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
