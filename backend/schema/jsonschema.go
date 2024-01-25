@@ -29,7 +29,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	// Resolve and encode all data types reachable from the root.
 	root.Definitions = map[string]jsonschema.SchemaOrBool{}
 	for dataRef := range dataRefs {
-		data, ok := dataTypes[dataRef]
+		data, ok := dataTypes[Ref{Module: dataRef.Module, Name: dataRef.Name}]
 		if !ok {
 			return nil, fmt.Errorf("unknown data type %s", dataRef)
 		}
