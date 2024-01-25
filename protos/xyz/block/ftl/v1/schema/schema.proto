@@ -78,6 +78,7 @@ message Field {
   string name = 2;
   repeated string comments = 3;
   Type type = 4;
+  string alias = 5;
 }
 
 message Float {

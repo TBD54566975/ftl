@@ -25,6 +25,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         import ftl.time.TimeModuleClient
         import ftl.time.TimeRequest
         import ftl.time.TimeResponse
+        import xyz.block.ftl.Alias
         import xyz.block.ftl.Context
         import xyz.block.ftl.Ingress
         import xyz.block.ftl.Method
@@ -38,7 +39,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         /**
          * Request to echo a message.
          */
-        data class EchoRequest<T>(val t: T, val name: String, val stuff: Any)
+        data class EchoRequest<T>(val t: T, val name: String, @Alias("stf") val stuff: Any)
         data class EchoResponse(val messages: List<EchoMessage>)
 
         /**
@@ -122,7 +123,8 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               ),
               Field(
                 name = "stuff",
-                type = Type(any = xyz.block.ftl.v1.schema.Any())
+                type = Type(any = xyz.block.ftl.v1.schema.Any()),
+                alias = "stf"
               )
             ),
             comments = listOf(

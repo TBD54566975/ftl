@@ -562,6 +562,11 @@ export class Field extends Message<Field> {
    */
   type?: Type;
 
+  /**
+   * @generated from field: string alias = 5;
+   */
+  alias = "";
+
   constructor(data?: PartialMessage<Field>) {
     super();
     proto3.util.initPartial(data, this);
@@ -574,6 +579,7 @@ export class Field extends Message<Field> {
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "type", kind: "message", T: Type },
+    { no: 5, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Field {

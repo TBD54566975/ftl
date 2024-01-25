@@ -91,6 +91,7 @@ public class TestModule()
                 )
               )
             ),
+            Field(name = "withAlias", type = Type(string = String()), alias = "a"),
           )
         )
       ),
@@ -112,6 +113,7 @@ import kotlin.String
 import kotlin.Unit
 import kotlin.collections.ArrayList
 import kotlin.collections.Map
+import xyz.block.ftl.Alias
 import xyz.block.ftl.Ignore
 
 public data class ParamTestData<T>(
@@ -143,6 +145,8 @@ public data class TestResponse(
   public val externalDataRef: ftl.other.TestRequest,
   public val any: Any,
   public val parameterizedDataRef: ParamTestData<T>,
+  @Alias("a")
+  public val withAlias: String,
 )
 
 @Ignore

@@ -184,6 +184,7 @@ func buildRequest(route *dal.IngressRoute, r *http.Request, dataRef *schema.Data
 			requestMap[key] = value
 		}
 	}
+	transformAliasedFields(dataRef, sch, requestMap)
 
 	return requestMap, nil
 }
@@ -436,4 +437,14 @@ func decodeQueryJSON(query string) (map[string]any, error) {
 
 func hasInvalidQueryChars(s string) bool {
 	return strings.ContainsAny(s, "{}[]|\\^`")
+}
+
+func transformAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request map[string]any) {
+	data := sch.ResolveDataRef(dataRef)
+	for _, field := range data.Fields {
+		if _, ok := request[field.Name]; !ok && field.Alias != "" {
+			request[field.Name] = request[field.Alias]
+			delete(request, field.Alias)
+		}
+	}
 }
