@@ -61,7 +61,7 @@ func TestIntegration(t *testing.T) {
 			deploymentExists("echo"),
 		}},
 		{name: "CallEchoKotlin", assertions: assertions{
-			call("echo", "echo", obj{"name": "Alice", "metadata": "hi"}, func(t testing.TB, resp obj) {
+			call("echo", "echo", obj{"name": "Alice"}, func(t testing.TB, resp obj) {
 				message, ok := resp["message"].(string)
 				assert.True(t, ok, "message is not a string")
 				assert.True(t, regexp.MustCompile(`^Hello, Alice!`).MatchString(message), "%q does not match %q", message, `^Hello, Alice!`)
