@@ -24,9 +24,9 @@ class Database(private val name: String) {
 
   fun <R> conn(block: (c: Connection) -> R): R {
     return try {
-      val envVar = listOf(FTL_DSN_VAR_PREFIX, moduleName, name).joinToString("_")
+      val envVar = listOf(FTL_DSN_VAR_PREFIX, moduleName.uppercase(), name.uppercase()).joinToString("_")
       val dsn = System.getenv(envVar)
-      require(dsn != null) { "$envVar environment variable not set" }
+      require(dsn != null) { "missing DSN environment variable $envVar" }
 
       DriverManager.getConnection(dsnToJdbcUrl(dsn)).use {
         block(it)

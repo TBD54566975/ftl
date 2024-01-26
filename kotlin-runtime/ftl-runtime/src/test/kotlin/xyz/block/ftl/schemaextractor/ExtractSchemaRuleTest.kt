@@ -101,6 +101,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                     value_ = Type(
                       dataRef = DataRef(
                         name = "MapValue",
+                        module = "echo"
                       )
                     )
                   )
@@ -148,6 +149,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                     element = Type(
                       dataRef = DataRef(
                         name = "EchoMessage",
+                        module = "echo"
                       )
                     )
                   )
@@ -169,12 +171,14 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 name = "EchoRequest",
                 typeParameters = listOf(
                   Type(string = xyz.block.ftl.v1.schema.String())
-                )
+                ),
+                module = "echo"
               )
             ),
             response = Type(
               dataRef = DataRef(
                 name = "EchoResponse",
+                module = "echo"
               )
             ),
             metadata = listOf(

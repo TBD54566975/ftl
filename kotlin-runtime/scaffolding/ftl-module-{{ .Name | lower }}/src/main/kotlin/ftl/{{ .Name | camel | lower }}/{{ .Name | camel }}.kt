@@ -5,12 +5,12 @@ import xyz.block.ftl.Ingress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 
-data class {{ .Name | camel }}Request(val name: String)
-data class {{ .Name | camel }}Response(val message: String)
+data class EchoRequest(val name: String? = "anonymous")
+data class EchoResponse(val message: String)
 
 class {{ .Name | camel }} {
   @Verb
-  fun echo(context: Context, req: {{ .Name | camel }}Request): {{ .Name | camel }}Response {
-    return {{ .Name | camel }}Response(message = "Hello, ${req.name}!")
+  fun echo(context: Context, req: EchoRequest): EchoResponse {
+    return EchoResponse(message = "Hello, ${req.name}!")
   }
 }

@@ -9,9 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -19,8 +23,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
+	"github.com/iancoleman/strcase"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
-	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -33,78 +37,145 @@ import (
 
 const integrationTestTimeout = time.Second * 60
 
-func TestIntegration(t *testing.T) {
-	tmpDir := t.TempDir()
+var runtimes = []string{"go", "kotlin"}
 
+func TestLifecycle(t *testing.T) {
+	runForRuntimes(t, func(modulesDir string, runtime string, rd runtimeData) []test {
+		return []test{
+			{name: fmt.Sprintf("Init%s", rd.testSuffix), assertions: assertions{
+				run("ftl", rd.initOpts...),
+			}},
+			{name: fmt.Sprintf("Deploy%s", rd.testSuffix), assertions: assertions{
+				run("ftl", "deploy", rd.moduleRoot),
+				deploymentExists(rd.moduleName),
+			}},
+			{name: fmt.Sprintf("Call%s", rd.testSuffix), assertions: assertions{
+				call(rd.moduleName, "echo", obj{"name": "Alice"}, func(t testing.TB, resp obj) {
+					message, ok := resp["message"].(string)
+					assert.True(t, ok, "message is not a string")
+					assert.True(t, regexp.MustCompile(`^Hello, Alice!`).MatchString(message), "%q does not match %q", message, `^Hello, Alice!`)
+				}),
+			}},
+		}
+	})
+}
+func TestHttpIngress(t *testing.T) {
+	runForRuntimes(t, func(modulesDir string, runtime string, rd runtimeData) []test {
+		return []test{
+			{name: fmt.Sprintf("HttpIngress%s", rd.testSuffix), assertions: assertions{
+				run("ftl", rd.initOpts...),
+				scaffoldTestData(runtime, "httpingress", rd.modulePath),
+				run("ftl", "deploy", rd.moduleRoot),
+				httpCall(rd, http.MethodGet, "/users/123/posts/456", obj{}, func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					message, ok := resp.body["message"].(string)
+					assert.True(t, ok, "message is not a string")
+					assert.Equal(t, "UserID: 123, PostID: 456", message)
+
+				}),
+				httpCall(rd, http.MethodPost, "/users", obj{"userID": "123", "postID": "345"}, func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 201, resp.status)
+				}),
+				// contains aliased field
+				httpCall(rd, http.MethodPost, "/users", obj{"id": "123", "postID": "345"}, func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 201, resp.status)
+				}),
+				httpCall(rd, http.MethodPut, "/users/123", obj{"postID": "346"}, func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+				}),
+				httpCall(rd, http.MethodDelete, "/users/123", obj{}, func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+				}),
+			}},
+		}
+	})
+}
+
+func TestDatabase(t *testing.T) {
+	runForRuntimes(t, func(modulesDir string, runtime string, rd runtimeData) []test {
+		dbName := "testdb"
+		err := os.Setenv(
+			fmt.Sprintf("FTL_POSTGRES_DSN_%s_TESTDB", strings.ToUpper(rd.moduleName)),
+			fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", dbName),
+		)
+		assert.NoError(t, err)
+
+		requestData := fmt.Sprintf("Hello %s", runtime)
+		return []test{
+			{name: fmt.Sprintf("Database%s", rd.testSuffix), assertions: assertions{
+				setUpModuleDB(dbName),
+				run("ftl", rd.initOpts...),
+				scaffoldTestData(runtime, "database", rd.modulePath),
+				run("ftl", "deploy", rd.moduleRoot),
+				call(rd.moduleName, "insert", obj{"data": requestData}, func(t testing.TB, resp obj) {}),
+				validateModuleDB(dbName, requestData),
+			}},
+		}
+	})
+}
+
+func TestExternalCalls(t *testing.T) {
+	runForRuntimes(t, func(modulesDir string, runtime string, rd runtimeData) []test {
+		var tests []test
+		for _, callee := range runtimes {
+			calleeRd := getRuntimeData("echo2", modulesDir, callee)
+			tests = append(tests, test{
+				name: fmt.Sprintf("Call%sFrom%s", strcase.ToCamel(callee), strcase.ToCamel(runtime)),
+				assertions: assertions{
+					run("ftl", calleeRd.initOpts...),
+					run("ftl", "deploy", calleeRd.moduleRoot),
+					run("ftl", rd.initOpts...),
+					scaffoldTestData(runtime, "externalcalls", rd.modulePath),
+					run("ftl", "deploy", rd.moduleRoot),
+					call(rd.moduleName, "call", obj{"name": "Alice"}, func(t testing.TB, resp obj) {
+						message, ok := resp["message"].(string)
+						assert.True(t, ok, "message is not a string")
+						assert.True(t, regexp.MustCompile(`^Hello, Alice!`).MatchString(message), "%q does not match %q", message, `^Hello, Alice!`)
+					}),
+					run("rm", "-rf", rd.moduleRoot),
+					run("rm", "-rf", calleeRd.moduleRoot),
+				}})
+		}
+		return tests
+	})
+}
+
+func TestSchemaGenerate(t *testing.T) {
+	tests := []test{
+		{name: "SchemaGenerateJS", assertions: assertions{
+			run("ftl", "schema", "generate", "integration/testdata/schema-generate", "build/schema-generate"),
+			filesExist(file{"build/schema-generate/test.txt", "olleh"}),
+		}},
+	}
+	runTests(t, t.TempDir(), tests)
+}
+
+type testsFunc func(modulesDir string, runtime string, rd runtimeData) []test
+
+func runForRuntimes(t *testing.T, f testsFunc) {
+	t.Helper()
+	tmpDir := t.TempDir()
+	modulesDir := filepath.Join(tmpDir, "modules")
+
+	var tests []test
+	for _, runtime := range runtimes {
+		rd := getRuntimeData("echo", modulesDir, runtime)
+		tests = append(tests, f(modulesDir, runtime, rd)...)
+	}
+	runTests(t, tmpDir, tests)
+}
+
+type test struct {
+	name       string
+	assertions assertions
+}
+
+func runTests(t *testing.T, tmpDir string, tests []test) {
+	t.Helper()
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
 
 	rootDir := filepath.Join(cwd, "..")
-
-	modulesDir := filepath.Join(tmpDir, "modules")
-
-	tests := []struct {
-		name       string
-		assertions assertions
-	}{
-		{name: "DeployTime", assertions: assertions{
-			run("examples", "ftl", "deploy", "time"),
-			deploymentExists("time"),
-		}},
-		{name: "CallTime", assertions: assertions{
-			call("time", "time", obj{}, func(t testing.TB, resp obj) {
-				assert.Equal(t, maps.Keys(resp), []string{"time"})
-			}),
-		}},
-		{name: "DeployEchoKotlin", assertions: assertions{
-			run(".", "ftl", "deploy", "examples/kotlin/ftl-module-echo"),
-			deploymentExists("echo"),
-		}},
-		{name: "CallEchoKotlin", assertions: assertions{
-			call("echo", "echo", obj{"name": "Alice"}, func(t testing.TB, resp obj) {
-				message, ok := resp["message"].(string)
-				assert.True(t, ok, "message is not a string")
-				assert.True(t, regexp.MustCompile(`^Hello, Alice!`).MatchString(message), "%q does not match %q", message, `^Hello, Alice!`)
-			}),
-		}},
-		{name: "InitNewKotlin", assertions: assertions{
-			run(".", "ftl", "init", "kotlin", modulesDir, "echo2"),
-			run(".", "ftl", "init", "kotlin", modulesDir, "echo3"),
-		}},
-		{name: "DeployNewKotlinEcho2", assertions: assertions{
-			run(".", "ftl", "deploy", filepath.Join(modulesDir, "ftl-module-echo2")),
-			deploymentExists("echo2"),
-		}},
-		{name: "CallEcho2", assertions: assertions{
-			call("echo2", "echo", obj{"name": "Alice"}, func(t testing.TB, resp obj) {
-				message, ok := resp["message"].(string)
-				assert.True(t, ok, "message is not a string")
-				assert.True(t, regexp.MustCompile(`^Hello, Alice!`).MatchString(message), "%q does not match %q", message, `^Hello, Alice!`)
-			}),
-		}},
-		{name: "DeployNewKotlinEcho3", assertions: assertions{
-			run(".", "ftl", "deploy", filepath.Join(modulesDir, "ftl-module-echo3")),
-			deploymentExists("echo3"),
-		}},
-		{name: "CallEcho3", assertions: assertions{
-			call("echo3", "echo", obj{"name": "Alice"}, func(t testing.TB, resp obj) {
-				message, ok := resp["message"].(string)
-				assert.True(t, ok, "message is not a string")
-				assert.True(t, regexp.MustCompile(`^Hello, Alice!`).MatchString(message), "%q does not match %q", message, `^Hello, Alice!`)
-			}),
-		}},
-		{name: "UseKotlinDbConn", assertions: assertions{
-			run(".", "ftl", "init", "kotlin", modulesDir, "dbtest"),
-			setUpModuleDb(filepath.Join(modulesDir, "ftl-module-dbtest")),
-			run(".", "ftl", "deploy", filepath.Join(modulesDir, "ftl-module-dbtest")),
-			call("dbtest", "create", obj{"data": "Hello"}, func(t testing.TB, resp obj) {}),
-			validateModuleDb(),
-		}},
-		{name: "SchemaGenerateJS", assertions: assertions{
-			run(".", "ftl", "schema", "generate", "integration/testdata/schema-generate", "build/schema-generate"),
-			filesExist(file{"build/schema-generate/test.txt", "olleh"}),
-		}},
-	}
 
 	// Build FTL binary
 	logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
@@ -117,7 +188,7 @@ func TestIntegration(t *testing.T) {
 	controller := rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 	verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
-	ctx = startProcess(t, ctx, filepath.Join(binDir, "ftl"), "serve", "--recreate")
+	ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
 
 	ic := itContext{
 		Context:    ctx,
@@ -142,17 +213,52 @@ func TestIntegration(t *testing.T) {
 	}
 }
 
+type runtimeData struct {
+	testSuffix string
+	moduleName string
+	moduleRoot string
+	modulePath string
+	initOpts   []string
+}
+
+func getRuntimeData(moduleName string, modulesDir string, runtime string) runtimeData {
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	ftlRoot := filepath.Join(cwd, "..")
+
+	t := runtimeData{
+		testSuffix: strcase.ToCamel(runtime),
+		moduleName: moduleName,
+	}
+	switch runtime {
+	case "go":
+		t.moduleRoot = filepath.Join(modulesDir, t.moduleName)
+		t.modulePath = t.moduleRoot
+		// include replace flag to use local ftl in go.mod
+		t.initOpts = []string{"init", runtime, modulesDir, t.moduleName, "--replace", fmt.Sprintf("github.com/TBD54566975/ftl=%s", ftlRoot)}
+	case "kotlin":
+		t.moduleRoot = filepath.Join(modulesDir, fmt.Sprintf("ftl-module-%s", t.moduleName))
+		t.modulePath = filepath.Join(t.moduleRoot, "src/main/kotlin/ftl", t.moduleName)
+		t.initOpts = []string{"init", runtime, modulesDir, t.moduleName}
+	default:
+		panic(fmt.Sprintf("unknown runtime %q", runtime))
+	}
+	return t
+}
+
 type assertion func(t testing.TB, ic itContext) error
 type assertions []assertion
 
 // Assertions
 
 // Run a command in "dir" which is relative to the root directory of the project.
-func run(dir, cmd string, args ...string) assertion {
+func run(cmd string, args ...string) assertion {
 	return func(t testing.TB, ic itContext) error {
 		path := os.Getenv("PATH")
 		path = ic.binDir + ":" + path
-		cmd := exec.Command(ic, log.Debug, filepath.Join(ic.rootDir, dir), cmd, args...)
+		cmd := exec.Command(ic, log.Debug, ic.rootDir, cmd, args...)
 		cmd.Env = append(cmd.Env, os.Environ()...)
 		cmd.Env = append(cmd.Env, "PATH="+path)
 		return cmd.Run()
@@ -162,11 +268,11 @@ func run(dir, cmd string, args ...string) assertion {
 func deploymentExists(name string) assertion {
 	return status(func(t testing.TB, status *ftlv1.StatusResponse) {
 		for _, deployment := range status.Deployments {
-			if deployment.Schema.Name == "time" {
+			if deployment.Schema.Name == name {
 				return
 			}
 		}
-		t.Fatal("time deployment not found")
+		t.Fatal(fmt.Sprintf("%s deployment not found", name))
 	})
 }
 
@@ -231,8 +337,60 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 	}
 }
 
-func setUpModuleDb(dir string) assertion {
-	os.Setenv("FTL_POSTGRES_DSN_dbtest_testdb", "postgres://postgres:secret@localhost:54320/testdb?sslmode=disable")
+type httpResponse struct {
+	status int
+	body   map[string]any
+}
+
+func httpCall(rd runtimeData, method string, path string, body obj, onResponse func(t testing.TB, resp *httpResponse)) assertion {
+	return func(t testing.TB, ic itContext) error {
+		b, err := json.Marshal(body)
+		assert.NoError(t, err)
+
+		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8892/ingress/%s", rd.moduleName))
+		assert.NoError(t, err)
+
+		r, err := http.NewRequestWithContext(ic, method, baseURL.JoinPath(path).String(), bytes.NewReader(b))
+		assert.NoError(t, err)
+
+		r.Header.Add("Content-Type", "application/json")
+
+		client := http.Client{}
+		resp, err := client.Do(r)
+		assert.NoError(t, err)
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusNotFound {
+			// error here so that the test retries in case the 404 is caused by the runner not being ready
+			return fmt.Errorf("endpoint not found: %s", path)
+		}
+
+		bodyBytes, err := io.ReadAll(resp.Body)
+		assert.NoError(t, err)
+
+		var resBody map[string]any
+		err = json.Unmarshal(bodyBytes, &resBody)
+		assert.NoError(t, err)
+
+		onResponse(t, &httpResponse{
+			status: resp.StatusCode,
+			body:   resBody,
+		})
+		return nil
+	}
+}
+
+func scaffoldTestData(runtime string, testDataDirectory string, targetModulePath string) assertion {
+	return func(t testing.TB, ic itContext) error {
+		return scaffolder.Scaffold(
+			filepath.Join(ic.rootDir, fmt.Sprintf("integration/testdata/%s/", runtime), testDataDirectory),
+			targetModulePath,
+			ic,
+		)
+	}
+}
+
+func setUpModuleDB(dbName string) assertion {
 	return func(t testing.TB, ic itContext) error {
 		db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable")
 		assert.NoError(t, err)
@@ -248,27 +406,19 @@ func setUpModuleDb(dir string) assertion {
 
 		var exists bool
 		query := `SELECT EXISTS(SELECT datname FROM pg_catalog.pg_database WHERE datname = $1);`
-		err = db.QueryRow(query, "testdb").Scan(&exists)
+		err = db.QueryRow(query, dbName).Scan(&exists)
 		assert.NoError(t, err)
 		if !exists {
-			db.Exec("CREATE DATABASE testdb;")
+			_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s;", dbName))
+			assert.NoError(t, err)
 		}
-
-		// add DbTest.kt with a new verb that uses the db
-		err = scaffolder.Scaffold(
-			filepath.Join(ic.rootDir, "integration/testdata/database"),
-			filepath.Join(dir, "src/main/kotlin/ftl/dbtest"),
-			ic,
-		)
-		assert.NoError(t, err)
 
 		return nil
 	}
 }
-
-func validateModuleDb() assertion {
+func validateModuleDB(dbName string, expectedRowData string) assertion {
 	return func(t testing.TB, ic itContext) error {
-		db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/testdb?sslmode=disable")
+		db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", dbName))
 		assert.NoError(t, err)
 		t.Cleanup(func() {
 			err := db.Close()
@@ -281,13 +431,14 @@ func validateModuleDb() assertion {
 		assert.NoError(t, err)
 
 		rows, err := db.Query("SELECT data FROM requests")
+		defer rows.Close()
 		assert.NoError(t, err)
 
 		for rows.Next() {
 			var data string
 			err := rows.Scan(&data)
 			assert.NoError(t, err)
-			if data == "Hello" {
+			if data == expectedRowData {
 				return nil
 			}
 		}
@@ -324,7 +475,7 @@ func (i itContext) assertWithRetry(t testing.TB, assertion assertion) {
 }
 
 // startProcess runs a binary in the background.
-func startProcess(t testing.TB, ctx context.Context, args ...string) context.Context {
+func startProcess(ctx context.Context, t testing.TB, args ...string) context.Context {
 	t.Helper()
 	ctx, cancel := context.WithCancel(ctx)
 	cmd := exec.Command(ctx, log.Info, "..", args[0], args[1:]...)
@@ -360,11 +511,10 @@ func (l *logWriter) Write(p []byte) (n int, err error) {
 		if index == -1 {
 			l.buffer = append(l.buffer, p...)
 			return n, nil
-		} else {
-			l.buffer = append(l.buffer, p[:index]...)
-			l.logger.Log(string(l.buffer))
-			l.buffer = l.buffer[:0]
-			p = p[index+1:]
 		}
+		l.buffer = append(l.buffer, p[:index]...)
+		l.logger.Log(string(l.buffer))
+		l.buffer = l.buffer[:0]
+		p = p[index+1:]
 	}
 }

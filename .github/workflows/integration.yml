@@ -6,9 +6,32 @@ concurrency:
   cancel-in-progress: true
 name: Integration
 jobs:
-  integration:
-    name: Integration tests
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-tests.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Extract test cases
+        id: extract-tests
+        run: |
+          echo "cases=$(go test -v -list . -tags integration ./integration | grep '^Test' | awk '{print $1}' | cut -d '(' -f1 | tr '\n' ',' | sed 's/,$//')" >> "$GITHUB_OUTPUT"
+      - name: Format test matrix
+        id: set-tests
+        run: |
+          IFS=',' read -ra TESTS <<< "${{ steps.extract-tests.outputs.cases }}"
+          TEST_JSON=$(printf ',"%s"' "${TESTS[@]}")
+          TEST_JSON="[${TEST_JSON:1}]"
+          echo "matrix={\"test\": $TEST_JSON}" >> "$GITHUB_OUTPUT"
+  integration:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,5 +43,5 @@ jobs:
         run: docker compose up -d --wait
       - name: Download Go Modules
         run: go mod download
-      - name: Integration tests
-        run: go test -v -tags integration ./integration
+      - name: Run ${{ matrix.test }}
+        run: go test -v -tags integration -run ${{ matrix.test }} ./integration

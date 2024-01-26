@@ -1,3 +1,4 @@
 #!/bin/bash
 set -euo pipefail
-go test -count 1 -v -tags integration ./integration
+testName=${1:-}
+go test -count 1 -v -tags integration -run "$testName" ./integration
