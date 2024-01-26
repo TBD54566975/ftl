@@ -122,6 +122,11 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 		requestMap["headers"] = r.Header
 		requestMap["body"] = bodyMap
 
+		requestMap, err = transformAliasedFields(request, sch, requestMap)
+		if err != nil {
+			return nil, err
+		}
+
 		err = validateRequestMap(request, []string{request.String()}, requestMap, sch)
 		if err != nil {
 			return nil, err
@@ -197,7 +202,6 @@ func buildRequest(route *dal.IngressRoute, r *http.Request, dataRef *schema.Data
 			requestMap[key] = value
 		}
 	}
-	transformAliasedFields(dataRef, sch, requestMap)
 
 	return requestMap, nil
 }
@@ -452,12 +456,32 @@ func hasInvalidQueryChars(s string) bool {
 	return strings.ContainsAny(s, "{}[]|\\^`")
 }
 
-func transformAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request map[string]any) {
+func transformAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request map[string]any) (map[string]any, error) {
 	data := sch.ResolveDataRef(dataRef)
+	if len(dataRef.TypeParameters) > 0 {
+		var err error
+		data, err = data.Monomorphise(dataRef.TypeParameters...)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	for _, field := range data.Fields {
 		if _, ok := request[field.Name]; !ok && field.Alias != "" {
 			request[field.Name] = request[field.Alias]
 			delete(request, field.Alias)
 		}
+
+		if d, ok := field.Type.(*schema.DataRef); ok {
+			if _, found := request[field.Name]; found {
+				rMap, err := transformAliasedFields(d, sch, request[field.Name].(map[string]any))
+				if err != nil {
+					return nil, err
+				}
+				request[field.Name] = rMap
+			}
+		}
 	}
+
+	return request, nil
 }
