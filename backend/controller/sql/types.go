@@ -5,22 +5,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
 
-type NullKey = types.Option[Key]
+type NullKey = optional.Option[Key]
 
-// FromOption converts a types.Option[~ulid.ULID] to a NullKey.
-func FromOption[T ~[16]byte](o types.Option[T]) NullKey {
+// FromOption converts a optional.Option[~ulid.ULID] to a NullKey.
+func FromOption[T ~[16]byte](o optional.Option[T]) NullKey {
 	if v, ok := o.Get(); ok {
 		return SomeKey(Key(v))
 	}
 	return NoneKey()
 }
-func SomeKey(key Key) NullKey { return types.Some(key) }
-func NoneKey() NullKey        { return types.None[Key]() }
+func SomeKey(key Key) NullKey { return optional.Some(key) }
+func NoneKey() NullKey        { return optional.None[Key]() }
 
 // Key is a ULID that can be used as a column in a database.
 type Key ulid.ULID
@@ -57,5 +57,5 @@ func (u *Key) UnmarshalText(text []byte) error {
 	return nil
 }
 
-type NullTime = types.Option[time.Time]
-type NullDuration = types.Option[time.Duration]
+type NullTime = optional.Option[time.Time]
+type NullDuration = optional.Option[time.Duration]

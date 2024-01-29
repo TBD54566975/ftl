@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
@@ -58,16 +58,16 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 			}
 			deployment = dep
 
-			var errorStr types.Option[string]
+			var errorStr optional.Option[string]
 			if entry.Error != nil {
-				errorStr = types.Some(entry.Error.Error())
+				errorStr = optional.Some(entry.Error.Error())
 			}
 
-			var request types.Option[model.RequestName]
+			var request optional.Option[model.RequestName]
 			if reqStr, ok := entry.Attributes["request"]; ok {
 				_, req, err := model.ParseRequestName(reqStr)
 				if err == nil {
-					request = types.Some(req)
+					request = optional.Some(req)
 				}
 			}
 

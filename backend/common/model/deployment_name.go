@@ -9,12 +9,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 )
 
 type DeploymentName string
 
-type MaybeDeploymentName types.Option[DeploymentName]
+type MaybeDeploymentName optional.Option[DeploymentName]
 
 var _ interface {
 	sql.Scanner

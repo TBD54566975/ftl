@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
 	"github.com/jpillora/backoff"
 
@@ -27,8 +27,8 @@ type Notification[T NotificationPayload, Key any, KeyP interface {
 	*Key
 	encoding.TextUnmarshaler
 }] struct {
-	Deleted types.Option[Key] // If present the object was deleted.
-	Message types.Option[T]
+	Deleted optional.Option[Key] // If present the object was deleted.
+	Message optional.Option[T]
 }
 
 func (n Notification[T, Key, KeyP]) String() string {
@@ -95,14 +95,14 @@ func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
 func (d *DAL) publishNotification(ctx context.Context, notification event, logger *log.Logger) error {
 	switch notification.Table {
 	case "deployments":
-		deployment, err := decodeNotification(notification, func(key model.DeploymentName) (Deployment, types.Option[model.DeploymentName], error) {
+		deployment, err := decodeNotification(notification, func(key model.DeploymentName) (Deployment, optional.Option[model.DeploymentName], error) {
 			row, err := d.db.GetDeployment(ctx, key)
 			if err != nil {
-				return Deployment{}, types.None[model.DeploymentName](), translatePGError(err)
+				return Deployment{}, optional.None[model.DeploymentName](), translatePGError(err)
 			}
 			moduleSchema, err := schema.ModuleFromBytes(row.Deployment.Schema)
 			if err != nil {
-				return Deployment{}, types.None[model.DeploymentName](), err
+				return Deployment{}, optional.None[model.DeploymentName](), err
 			}
 			return Deployment{
 				CreatedAt:   row.Deployment.CreatedAt,
@@ -111,7 +111,7 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 				Schema:      moduleSchema,
 				MinReplicas: int(row.Deployment.MinReplicas),
 				Language:    row.Language,
-			}, types.None[model.DeploymentName](), nil
+			}, optional.None[model.DeploymentName](), nil
 		})
 		if err != nil {
 			return err
@@ -133,10 +133,10 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 func decodeNotification[K any, T NotificationPayload, KP interface {
 	*K
 	encoding.TextUnmarshaler
-}](notification event, translate func(key K) (T, types.Option[K], error)) (Notification[T, K, KP], error) {
+}](notification event, translate func(key K) (T, optional.Option[K], error)) (Notification[T, K, KP], error) {
 	var (
-		deleted types.Option[K]
-		message types.Option[T]
+		deleted optional.Option[K]
+		message optional.Option[T]
 	)
 	if notification.Action == "DELETE" {
 		var deletedKey K
@@ -144,7 +144,7 @@ func decodeNotification[K any, T NotificationPayload, KP interface {
 		if err := deletedKeyP.UnmarshalText([]byte(notification.Old)); err != nil {
 			return Notification[T, K, KP]{}, fmt.Errorf("%s: %w", "failed to unmarshal notification key", err)
 		}
-		deleted = types.Some(deletedKey)
+		deleted = optional.Some(deletedKey)
 	} else {
 		var newKey K
 		var newKeyP KP = &newKey
@@ -159,7 +159,7 @@ func decodeNotification[K any, T NotificationPayload, KP interface {
 		}
 
 		if !deleted.Ok() {
-			message = types.Some(msg)
+			message = optional.Some(msg)
 		}
 	}
 

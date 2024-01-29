@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 )
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
@@ -228,8 +228,8 @@ type GetActiveRunnersRow struct {
 	State          RunnerState
 	Labels         []byte
 	LastSeen       time.Time
-	ModuleName     types.Option[string]
-	DeploymentName types.Option[string]
+	ModuleName     optional.Option[string]
+	DeploymentName optional.Option[string]
 }
 
 func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error) {
@@ -755,7 +755,7 @@ type GetProcessListRow struct {
 	DeploymentName   model.DeploymentName
 	DeploymentLabels []byte
 	RunnerKey        NullKey
-	Endpoint         types.Option[string]
+	Endpoint         optional.Option[string]
 	RunnerLabels     []byte
 }
 
@@ -796,7 +796,7 @@ WHERE r.key = $1
 type GetRouteForRunnerRow struct {
 	Endpoint       string
 	RunnerKey      Key
-	ModuleName     types.Option[string]
+	ModuleName     optional.Option[string]
 	DeploymentName model.DeploymentName
 	State          RunnerState
 }
@@ -827,7 +827,7 @@ WHERE state = 'assigned'
 type GetRoutingTableRow struct {
 	Endpoint       string
 	RunnerKey      Key
-	ModuleName     types.Option[string]
+	ModuleName     optional.Option[string]
 	DeploymentName model.DeploymentName
 }
 
@@ -877,8 +877,8 @@ type GetRunnerRow struct {
 	State          RunnerState
 	Labels         []byte
 	LastSeen       time.Time
-	ModuleName     types.Option[string]
-	DeploymentName types.Option[string]
+	ModuleName     optional.Option[string]
+	DeploymentName optional.Option[string]
 }
 
 func (q *Queries) GetRunner(ctx context.Context, key Key) (GetRunnerRow, error) {
@@ -925,8 +925,8 @@ type GetRunnersForDeploymentRow struct {
 	ReservationTimeout NullTime
 	State              RunnerState
 	Endpoint           string
-	ModuleName         types.Option[string]
-	DeploymentID       types.Option[int64]
+	ModuleName         optional.Option[string]
+	DeploymentID       optional.Option[int64]
 	Labels             []byte
 	ID_2               int64
 	CreatedAt          time.Time
@@ -1000,17 +1000,17 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
 
 type InsertCallEventParams struct {
 	DeploymentName string
-	RequestName    types.Option[string]
+	RequestName    optional.Option[string]
 	TimeStamp      time.Time
-	SourceModule   types.Option[string]
-	SourceVerb     types.Option[string]
+	SourceModule   optional.Option[string]
+	SourceVerb     optional.Option[string]
 	DestModule     string
 	DestVerb       string
 	DurationMs     int64
 	Request        []byte
 	Response       []byte
-	Error          types.Option[string]
-	Stack          types.Option[string]
+	Error          optional.Option[string]
+	Stack          optional.Option[string]
 }
 
 func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
@@ -1050,7 +1050,7 @@ type InsertDeploymentCreatedEventParams struct {
 	Language       string
 	ModuleName     string
 	MinReplicas    int32
-	Replaced       types.Option[string]
+	Replaced       optional.Option[string]
 }
 
 func (q *Queries) InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error {
@@ -1107,12 +1107,12 @@ RETURNING id
 
 type InsertEventParams struct {
 	DeploymentID int64
-	RequestID    types.Option[int64]
+	RequestID    optional.Option[int64]
 	Type         EventType
-	CustomKey1   types.Option[string]
-	CustomKey2   types.Option[string]
-	CustomKey3   types.Option[string]
-	CustomKey4   types.Option[string]
+	CustomKey1   optional.Option[string]
+	CustomKey2   optional.Option[string]
+	CustomKey3   optional.Option[string]
+	CustomKey4   optional.Option[string]
 	Payload      json.RawMessage
 }
 
@@ -1150,13 +1150,13 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = $1 LIMIT 1),
 
 type InsertLogEventParams struct {
 	DeploymentName model.DeploymentName
-	RequestName    types.Option[string]
+	RequestName    optional.Option[string]
 	TimeStamp      time.Time
 	Level          int32
 	Message        string
 	Attributes     []byte
-	Error          types.Option[string]
-	Stack          types.Option[string]
+	Error          optional.Option[string]
+	Stack          optional.Option[string]
 }
 
 func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
@@ -1337,7 +1337,7 @@ type UpsertRunnerParams struct {
 	Endpoint       string
 	State          RunnerState
 	Labels         []byte
-	DeploymentName types.Option[string]
+	DeploymentName optional.Option[string]
 }
 
 // Upsert a runner and return the deployment ID that it is assigned to, if any.
@@ -1345,7 +1345,7 @@ type UpsertRunnerParams struct {
 // otherwise we try to retrieve the deployments.id using the key. If
 // there is no corresponding deployment, then the deployment ID is -1
 // and the parent statement will fail due to a foreign key constraint.
-func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (types.Option[int64], error) {
+func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (optional.Option[int64], error) {
 	row := q.db.QueryRow(ctx, upsertRunner,
 		arg.Key,
 		arg.Endpoint,
@@ -1353,7 +1353,7 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (typ
 		arg.Labels,
 		arg.DeploymentName,
 	)
-	var deployment_id types.Option[int64]
+	var deployment_id optional.Option[int64]
 	err := row.Scan(&deployment_id)
 	return deployment_id, err
 }

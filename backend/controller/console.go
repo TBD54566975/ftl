@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/types"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
@@ -269,13 +270,13 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 			}
 			query = append(query, dal.FilterIDRange(lowerThan, higherThan))
 		case *pbconsole.EventsQuery_Filter_Call:
-			var sourceModule types.Option[string]
+			var sourceModule optional.Option[string]
 			if filter.Call.SourceModule != nil {
-				sourceModule = types.Some(*filter.Call.SourceModule)
+				sourceModule = optional.Some(*filter.Call.SourceModule)
 			}
-			var destVerb types.Option[string]
+			var destVerb optional.Option[string]
 			if filter.Call.DestVerb != nil {
-				destVerb = types.Some(*filter.Call.DestVerb)
+				destVerb = optional.Some(*filter.Call.DestVerb)
 			}
 			query = append(query, dal.FilterCall(sourceModule, filter.Call.DestModule, destVerb))
 

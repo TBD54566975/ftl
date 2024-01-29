@@ -9,14 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types"
 )
 
 //nolint:maintidx
@@ -128,7 +129,7 @@ func TestDAL(t *testing.T) {
 		Labels:     labels,
 		Endpoint:   "http://localhost:8080",
 		State:      RunnerStateReserved,
-		Deployment: types.Some(deploymentName),
+		Deployment: optional.Some(deploymentName),
 	}
 
 	t.Run("GetDeploymentsNeedingReconciliation", func(t *testing.T) {
@@ -190,7 +191,7 @@ func TestDAL(t *testing.T) {
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
-			Deployment: types.Some(deploymentName),
+			Deployment: optional.Some(deploymentName),
 		})
 		assert.NoError(t, err)
 	})
@@ -209,7 +210,7 @@ func TestDAL(t *testing.T) {
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
-			Deployment: types.Some(deploymentName),
+			Deployment: optional.Some(deploymentName),
 		}}, runners)
 	})
 
@@ -222,7 +223,7 @@ func TestDAL(t *testing.T) {
 	callEvent := &CallEvent{
 		Time:           time.Now().Round(time.Millisecond),
 		DeploymentName: deploymentName,
-		RequestName:    types.Some(requestName),
+		RequestName:    optional.Some(requestName),
 		Request:        []byte("{}"),
 		Response:       []byte(`{"time": "now"}`),
 		DestVerb:       schema.VerbRef{Module: "time", Name: "time"},
@@ -235,7 +236,7 @@ func TestDAL(t *testing.T) {
 	logEvent := &LogEvent{
 		Time:           time.Now().Round(time.Millisecond),
 		DeploymentName: deploymentName,
-		RequestName:    types.Some(requestName),
+		RequestName:    optional.Some(requestName),
 		Level:          int32(log.Warn),
 		Attributes:     map[string]string{"attr": "value"},
 		Message:        "A log entry",
@@ -270,7 +271,7 @@ func TestDAL(t *testing.T) {
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(types.None[string](), "time", types.None[string]()))
+			events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []Event{callEvent}, events)
 		})
@@ -299,7 +300,7 @@ func TestDAL(t *testing.T) {
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
 			State:      RunnerStateAssigned,
-			Deployment: types.Some(model.NewDeploymentName("test")),
+			Deployment: optional.Some(model.NewDeploymentName("test")),
 		})
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrNotFound)

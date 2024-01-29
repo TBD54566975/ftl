@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 
 	model "github.com/TBD54566975/ftl/backend/common/model"
 )
@@ -32,13 +32,13 @@ func (m *Metadata) Add(key, value string) {
 	m.Values = append(m.Values, &Metadata_Pair{Key: key, Value: value})
 }
 
-func (m *Metadata) Get(key string) types.Option[string] {
+func (m *Metadata) Get(key string) optional.Option[string] {
 	for _, pair := range m.Values {
 		if strings.EqualFold(pair.Key, key) {
-			return types.Some(pair.Value)
+			return optional.Some(pair.Value)
 		}
 	}
-	return types.None[string]()
+	return optional.None[string]()
 }
 
 func (m *Metadata) GetAll(key string) (out []string) {
@@ -60,13 +60,13 @@ func (m *Metadata) Delete(key string) {
 	m.Values = out
 }
 
-func (r *RegisterRunnerRequest) DeploymentAsOptional() (types.Option[model.DeploymentName], error) {
+func (r *RegisterRunnerRequest) DeploymentAsOptional() (optional.Option[model.DeploymentName], error) {
 	if r.Deployment == nil {
-		return types.None[model.DeploymentName](), nil
+		return optional.None[model.DeploymentName](), nil
 	}
 	key, err := model.ParseDeploymentName(*r.Deployment)
 	if err != nil {
-		return types.None[model.DeploymentName](), fmt.Errorf("%s: %w", "invalid deployment key", err)
+		return optional.None[model.DeploymentName](), fmt.Errorf("%s: %w", "invalid deployment key", err)
 	}
-	return types.Some(key), nil
+	return optional.Some(key), nil
 }

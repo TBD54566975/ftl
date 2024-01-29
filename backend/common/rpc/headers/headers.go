@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -69,16 +69,16 @@ func GetCallers(header http.Header) ([]*schema.VerbRef, error) {
 // GetCaller returns the module.verb of the caller, if any.
 //
 // Will return an error if the header is malformed.
-func GetCaller(header http.Header) (types.Option[*schema.VerbRef], error) {
+func GetCaller(header http.Header) (optional.Option[*schema.VerbRef], error) {
 	headers := header.Values(VerbHeader)
 	if len(headers) == 0 {
-		return types.None[*schema.VerbRef](), nil
+		return optional.None[*schema.VerbRef](), nil
 	}
 	ref, err := schema.ParseVerbRef(headers[len(headers)-1])
 	if err != nil {
-		return types.None[*schema.VerbRef](), err
+		return optional.None[*schema.VerbRef](), err
 	}
-	return types.Some(ref), nil
+	return optional.Some(ref), nil
 }
 
 // AddCaller to an outgoing request.

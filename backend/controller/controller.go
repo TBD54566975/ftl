@@ -18,7 +18,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/kong"
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
@@ -396,13 +396,13 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
 		}
-		var requestName types.Option[model.RequestName]
+		var requestName optional.Option[model.RequestName]
 		if msg.RequestName != nil {
 			_, rkey, err := model.ParseRequestName(*msg.RequestName)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid request key", err))
 			}
-			requestName = types.Some(rkey)
+			requestName = optional.Some(rkey)
 		}
 
 		err = s.dal.InsertLogEvent(ctx, &dal.LogEvent{
@@ -412,7 +412,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			Level:          msg.LogLevel,
 			Attributes:     msg.Attributes,
 			Message:        msg.Message,
-			Error:          types.Ptr(msg.Error),
+			Error:          optional.Ptr(msg.Error),
 		})
 		if err != nil {
 			return nil, err
@@ -671,9 +671,9 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
 
 	resp, err := client.verb.Call(ctx, req)
-	var maybeResponse types.Option[*ftlv1.CallResponse]
+	var maybeResponse optional.Option[*ftlv1.CallResponse]
 	if resp != nil {
-		maybeResponse = types.Some(resp.Msg)
+		maybeResponse = optional.Some(resp.Msg)
 	}
 	s.recordCall(ctx, &Call{
 		deploymentName: route.Deployment,
@@ -681,7 +681,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		startTime:      start,
 		destVerb:       verbRef,
 		callers:        callers,
-		callError:      types.Nil(err),
+		callError:      optional.Nil(err),
 		request:        req.Msg,
 		response:       maybeResponse,
 	})
@@ -996,7 +996,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	initialCount := len(seedDeployments)
 	deploymentChanges := make(chan dal.DeploymentNotification, len(seedDeployments))
 	for _, deployment := range seedDeployments {
-		deploymentChanges <- dal.DeploymentNotification{Message: types.Some(deployment)}
+		deploymentChanges <- dal.DeploymentNotification{Message: optional.Some(deployment)}
 	}
 	logger.Infof("Seeded %d deployments", initialCount)
 

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 )
 
 type Querier interface {
@@ -68,7 +68,7 @@ type Querier interface {
 	// otherwise we try to retrieve the deployments.id using the key. If
 	// there is no corresponding deployment, then the deployment ID is -1
 	// and the parent statement will fail due to a foreign key constraint.
-	UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (types.Option[int64], error)
+	UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (optional.Option[int64], error)
 }
 
 var _ Querier = (*Queries)(nil)

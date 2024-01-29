@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 )
 
 type ControllerState string
@@ -225,12 +225,12 @@ type Event struct {
 	ID           int64
 	TimeStamp    time.Time
 	DeploymentID int64
-	RequestID    types.Option[int64]
+	RequestID    optional.Option[int64]
 	Type         EventType
-	CustomKey1   types.Option[string]
-	CustomKey2   types.Option[string]
-	CustomKey3   types.Option[string]
-	CustomKey4   types.Option[string]
+	CustomKey1   optional.Option[string]
+	CustomKey2   optional.Option[string]
+	CustomKey3   optional.Option[string]
+	CustomKey4   optional.Option[string]
 	Payload      json.RawMessage
 }
 
@@ -263,7 +263,7 @@ type Runner struct {
 	ReservationTimeout NullTime
 	State              RunnerState
 	Endpoint           string
-	ModuleName         types.Option[string]
-	DeploymentID       types.Option[int64]
+	ModuleName         optional.Option[string]
+	DeploymentID       optional.Option[int64]
 	Labels             []byte
 }
