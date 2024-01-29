@@ -8,10 +8,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
