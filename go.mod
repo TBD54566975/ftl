@@ -15,7 +15,7 @@ require (
 	github.com/alecthomas/kong v0.8.1
 	github.com/alecthomas/kong-toml v0.1.0
 	github.com/alecthomas/participle/v2 v2.1.1
-	github.com/alecthomas/types v0.10.0
+	github.com/alecthomas/types v0.10.1
 	github.com/amacneil/dbmate/v2 v2.11.0
 	github.com/beevik/etree v1.3.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
