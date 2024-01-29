@@ -9,7 +9,7 @@ replace github.com/TBD54566975/ftl/examples/online-boutique => ../..
 require (
 	github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 	github.com/TBD54566975/ftl/examples/online-boutique v0.0.0-00010101000000-000000000000
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 )
 
 require (
@@ -36,9 +36,9 @@ require (
 	github.com/swaggest/jsonschema-go v0.3.64 // indirect
 	github.com/swaggest/refl v1.3.0 // indirect
 	github.com/zalando/go-keyring v0.2.3 // indirect
-	go.opentelemetry.io/otel v1.21.0 // indirect
-	go.opentelemetry.io/otel/metric v1.21.0 // indirect
-	go.opentelemetry.io/otel/trace v1.21.0 // indirect
+	go.opentelemetry.io/otel v1.22.0 // indirect
+	go.opentelemetry.io/otel/metric v1.22.0 // indirect
+	go.opentelemetry.io/otel/trace v1.22.0 // indirect
 	golang.design/x/reflect v0.0.0-20220504060917-02c43be63f3b // indirect
 	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e // indirect
