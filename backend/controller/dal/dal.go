@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 	sets "github.com/deckarep/golang-set/v2"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -84,9 +84,9 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 }
 
 func runnerFromDB(row sql.GetRunnerRow) Runner {
-	var deployment types.Option[model.DeploymentName]
+	var deployment optional.Option[model.DeploymentName]
 	if name, ok := row.DeploymentName.Get(); ok {
-		deployment = types.Some(model.DeploymentName(name))
+		deployment = optional.Some(model.DeploymentName(name))
 	}
 	attrs := model.Labels{}
 	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
@@ -105,10 +105,10 @@ type Runner struct {
 	Key                model.RunnerKey
 	Endpoint           string
 	State              RunnerState
-	ReservationTimeout types.Option[time.Duration]
-	Module             types.Option[string]
+	ReservationTimeout optional.Option[time.Duration]
+	Module             optional.Option[string]
 	// Assigned deployment key, if any.
-	Deployment types.Option[model.DeploymentName]
+	Deployment optional.Option[model.DeploymentName]
 	Labels     model.Labels
 }
 
@@ -309,9 +309,9 @@ func (d *DAL) GetStatus(
 		return Status{}, err
 	}
 	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
-		var deployment types.Option[model.DeploymentName]
+		var deployment optional.Option[model.DeploymentName]
 		if name, ok := in.DeploymentName.Get(); ok {
-			deployment = types.Some(model.DeploymentName(name))
+			deployment = optional.Some(model.DeploymentName(name))
 		}
 		attrs := model.Labels{}
 		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
@@ -367,7 +367,7 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 			Key:        model.RunnerKey(row.Key),
 			Endpoint:   row.Endpoint,
 			State:      RunnerState(row.State),
-			Deployment: types.Some(deployment),
+			Deployment: optional.Some(deployment),
 			Labels:     attrs,
 		})
 	}
@@ -507,9 +507,9 @@ func (d *DAL) GetDeployment(ctx context.Context, name model.DeploymentName) (*mo
 // ErrConflict will be returned if a runner with the same endpoint and a
 // different key already exists.
 func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
-	var pgDeploymentName types.Option[string]
+	var pgDeploymentName optional.Option[string]
 	if dkey, ok := runner.Deployment.Get(); ok {
-		pgDeploymentName = types.Some(dkey.String())
+		pgDeploymentName = optional.Some(dkey.String())
 	}
 	attrBytes, err := json.Marshal(runner.Labels)
 	if err != nil {
@@ -595,7 +595,7 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.D
 			Key:        model.RunnerKey(runner.Key),
 			Endpoint:   runner.Endpoint,
 			State:      RunnerState(runner.State),
-			Deployment: types.Some(deployment),
+			Deployment: optional.Some(deployment),
 			Labels:     runnerLabels,
 		},
 	}, nil
@@ -667,7 +667,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 		return translatePGError(err)
 	}
 
-	var replacedDeployment types.Option[string]
+	var replacedDeployment optional.Option[string]
 
 	// If there's an existing deployment, set its desired replicas to 0
 	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
@@ -679,7 +679,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 		if count == 1 {
 			return fmt.Errorf("%s: %w", "deployment already exists", ErrConflict)
 		}
-		replacedDeployment = types.Some(oldDeployment.Name.String())
+		replacedDeployment = optional.Some(oldDeployment.Name.String())
 	} else if !isNotFound(err) {
 		return translatePGError(err)
 	} else {
@@ -782,7 +782,7 @@ type Process struct {
 	Deployment  model.DeploymentName
 	MinReplicas int
 	Labels      model.Labels
-	Runner      types.Option[ProcessRunner]
+	Runner      optional.Option[ProcessRunner]
 }
 
 // GetProcessList returns a list of all "processes".
@@ -792,13 +792,13 @@ func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 		return nil, translatePGError(err)
 	}
 	return slices.MapErr(rows, func(row sql.GetProcessListRow) (Process, error) {
-		var runner types.Option[ProcessRunner]
+		var runner optional.Option[ProcessRunner]
 		if endpoint, ok := row.Endpoint.Get(); ok {
 			var labels model.Labels
 			if err := json.Unmarshal(row.RunnerLabels, &labels); err != nil {
 				return Process{}, fmt.Errorf("invalid labels JSON for runner %s: %w", row.RunnerKey, err)
 			}
-			runner = types.Some(ProcessRunner{
+			runner = optional.Some(ProcessRunner{
 				Key:      model.RunnerKey(row.RunnerKey.MustGet()),
 				Endpoint: endpoint,
 				Labels:   labels,
@@ -905,9 +905,9 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	if err != nil {
 		return err
 	}
-	var requestName types.Option[string]
+	var requestName optional.Option[string]
 	if name, ok := log.RequestName.Get(); ok {
-		requestName = types.Some(string(name))
+		requestName = optional.Some(string(name))
 	}
 	return translatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
 		DeploymentName: log.DeploymentName,
@@ -984,13 +984,13 @@ func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, add
 }
 
 func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
-	var sourceModule, sourceVerb types.Option[string]
+	var sourceModule, sourceVerb optional.Option[string]
 	if sr, ok := call.SourceVerb.Get(); ok {
-		sourceModule, sourceVerb = types.Some(sr.Module), types.Some(sr.Name)
+		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
 	}
-	var requestName types.Option[string]
+	var requestName optional.Option[string]
 	if rn, ok := call.RequestName.Get(); ok {
-		requestName = types.Some(string(rn))
+		requestName = optional.Some(string(rn))
 	}
 	return translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
 		DeploymentName: call.DeploymentName.String(),

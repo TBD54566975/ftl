@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
@@ -20,35 +20,35 @@ type Call struct {
 	destVerb       *schema.VerbRef
 	callers        []*schema.VerbRef
 	request        *ftlv1.CallRequest
-	response       types.Option[*ftlv1.CallResponse]
-	callError      types.Option[error]
+	response       optional.Option[*ftlv1.CallResponse]
+	callError      optional.Option[error]
 }
 
 func (s *Service) recordCall(ctx context.Context, call *Call) {
 	logger := log.FromContext(ctx)
-	var sourceVerb types.Option[schema.VerbRef]
+	var sourceVerb optional.Option[schema.VerbRef]
 	if len(call.callers) > 0 {
-		sourceVerb = types.Some(*call.callers[0])
+		sourceVerb = optional.Some(*call.callers[0])
 	}
 
-	var errorStr types.Option[string]
-	var stack types.Option[string]
+	var errorStr optional.Option[string]
+	var stack optional.Option[string]
 	var responseBody []byte
 
 	if callError, ok := call.callError.Get(); ok {
-		errorStr = types.Some(callError.Error())
+		errorStr = optional.Some(callError.Error())
 	} else if response, ok := call.response.Get(); ok {
 		responseBody = response.GetBody()
 		if callError := response.GetError(); callError != nil {
-			errorStr = types.Some(callError.Message)
-			stack = types.Ptr(callError.Stack)
+			errorStr = optional.Some(callError.Message)
+			stack = optional.Ptr(callError.Stack)
 		}
 	}
 
 	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{
 		Time:           call.startTime,
 		DeploymentName: call.deploymentName,
-		RequestName:    types.Some(call.requestName),
+		RequestName:    optional.Some(call.requestName),
 		Duration:       time.Since(call.startTime),
 		SourceVerb:     sourceVerb,
 		DestVerb:       *call.destVerb,

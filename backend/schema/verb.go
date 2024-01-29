@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -62,13 +62,13 @@ func (v *Verb) AddCall(verb *VerbRef) {
 	v.Metadata = append(v.Metadata, &MetadataCalls{Calls: []*VerbRef{verb}})
 }
 
-func (v *Verb) GetMetadataIngress() types.Option[*MetadataIngress] {
+func (v *Verb) GetMetadataIngress() optional.Option[*MetadataIngress] {
 	for _, m := range v.Metadata {
 		if m, ok := m.(*MetadataIngress); ok {
-			return types.Some(m)
+			return optional.Some(m)
 		}
 	}
-	return types.None[*MetadataIngress]()
+	return optional.None[*MetadataIngress]()
 }
 
 func (v *Verb) ToProto() proto.Message {

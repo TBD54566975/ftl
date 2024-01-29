@@ -24,42 +24,42 @@ sql:
           - db_type: "timestamptz"
             nullable: true
             go_type:
-              type:  "NullTime"
+              type: "NullTime"
           - db_type: "uuid"
             go_type:
-              type:  "Key"
+              type: "Key"
           - db_type: "uuid"
             nullable: true
             go_type:
-              type:  "NullKey"
+              type: "NullKey"
           - db_type: "pg_catalog.varchar"
             nullable: true
-            go_type: "github.com/alecthomas/types.Option[string]"
+            go_type: "github.com/alecthomas/types/optional.Option[string]"
           - db_type: "text"
             go_type: "string"
           - db_type: "text"
             nullable: true
-            go_type: "github.com/alecthomas/types.Option[string]"
+            go_type: "github.com/alecthomas/types/optional.Option[string]"
           - db_type: "pg_catalog.int8"
             nullable: true
-            go_type: "github.com/alecthomas/types.Option[int64]"
+            go_type: "github.com/alecthomas/types/optional.Option[int64]"
           - db_type: "bigint"
             nullable: true
-            go_type: "github.com/alecthomas/types.Option[int64]"
+            go_type: "github.com/alecthomas/types/optional.Option[int64]"
           - db_type: "int"
             nullable: true
-            go_type: "github.com/alecthomas/types.Option[int32]"
+            go_type: "github.com/alecthomas/types/optional.Option[int32]"
           - db_type: "bool"
             nullable: true
-            go_type: "github.com/alecthomas/types.Option[bool]"
+            go_type: "github.com/alecthomas/types/optional.Option[bool]"
           # Can't use until https://github.com/sqlc-dev/sqlc/issues/2632 is fixed, if it ever is...
-#          - column: "ingress_requests.key"
-#            go_type: "github.com/TBD54566975/ftl/backend/common/model.RequestName"
-#          - column: "ingress_requests.key"
-#            nullable: true
-#            go_type: "github.com/TBD54566975/ftl/backend/common/model.NullRequestName"
-#          - column: "runners.key"
-#            go_type: "github.com/TBD54566975/ftl/backend/common/model.RunnerKey"
+          #          - column: "ingress_requests.key"
+          #            go_type: "github.com/TBD54566975/ftl/backend/common/model.RequestName"
+          #          - column: "ingress_requests.key"
+          #            nullable: true
+          #            go_type: "github.com/TBD54566975/ftl/backend/common/model.NullRequestName"
+          #          - column: "runners.key"
+          #            go_type: "github.com/TBD54566975/ftl/backend/common/model.RunnerKey"
           - column: "controller.key"
             go_type: "github.com/TBD54566975/ftl/backend/common/model.ControllerKey"
           - column: "deployments.name"
@@ -71,9 +71,9 @@ sql:
       # - postgresql-query-too-costly
       - postgresql-no-seq-scan
 rules:
-- name: postgresql-query-too-costly
-  message: "Query cost estimate is too high"
-  rule: "postgresql.explain.plan.total_cost > 500.0"
-- name: postgresql-no-seq-scan
-  message: "Query plan results in a sequential scan"
-  rule: "postgresql.explain.plan.node_type == 'Seq Scan'"
+  - name: postgresql-query-too-costly
+    message: "Query cost estimate is too high"
+    rule: "postgresql.explain.plan.total_cost > 500.0"
+  - name: postgresql-no-seq-scan
+    message: "Query plan results in a sequential scan"
+    rule: "postgresql.explain.plan.node_type == 'Seq Scan'"

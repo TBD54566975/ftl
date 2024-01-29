@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
@@ -71,13 +71,13 @@ func (s *Schema) ResolveVerbRef(ref *VerbRef) *Verb {
 }
 
 // Module returns the named module if it exists.
-func (s *Schema) Module(name string) types.Option[*Module] {
+func (s *Schema) Module(name string) optional.Option[*Module] {
 	for _, module := range s.Modules {
 		if module.Name == name {
-			return types.Some(module)
+			return optional.Some(module)
 		}
 	}
-	return types.None[*Module]()
+	return optional.None[*Module]()
 }
 
 func (s *Schema) DataMap() map[Ref]*Data {

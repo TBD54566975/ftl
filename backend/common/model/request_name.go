@@ -10,13 +10,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 )
 
 // A RequestName represents an inbound request into the cluster.
 type RequestName string
 
-type MaybeRequestName types.Option[RequestName]
+type MaybeRequestName optional.Option[RequestName]
 
 var _ interface {
 	sql.Scanner

@@ -17,7 +17,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 	"github.com/jpillora/backoff"
 	"github.com/otiai10/copy"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -121,12 +121,12 @@ type Service struct {
 	lock        sync.Mutex
 	state       atomic.Value[ftlv1.RunnerState]
 	forceUpdate chan struct{}
-	deployment  atomic.Value[types.Option[*deployment]]
+	deployment  atomic.Value[optional.Option[*deployment]]
 
 	config           Config
 	controllerClient ftlv1connect.ControllerServiceClient
 	// Failed to register with the Controller
-	registrationFailure atomic.Value[types.Option[error]]
+	registrationFailure atomic.Value[optional.Option[error]]
 	labels              *structpb.Struct
 	deploymentLogQueue  chan log.Entry
 }
@@ -179,7 +179,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	defer func() {
 		if err != nil {
 			setState(ftlv1.RunnerState_RUNNER_IDLE)
-			s.deployment.Store(types.None[*deployment]())
+			s.deployment.Store(optional.None[*deployment]())
 		}
 	}()
 
@@ -226,7 +226,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	}
 
 	dep := s.makeDeployment(cmdCtx, key, deployment)
-	s.deployment.Store(types.Some(dep))
+	s.deployment.Store(optional.Some(dep))
 
 	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
@@ -262,7 +262,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 			return nil, fmt.Errorf("%s: %w", "failed to kill plugin", err)
 		}
 	}
-	s.deployment.Store(types.None[*deployment]())
+	s.deployment.Store(optional.None[*deployment]())
 	s.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 	return connect.NewResponse(&ftlv1.RegisterRunnerRequest{
 		Key:      s.key.String(),
@@ -298,7 +298,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 			errStr := err.Error()
 			errPtr = &errStr
 			s.getDeploymentLogger(ctx, depl.key).Errorf(err, "Deployment terminated")
-			s.deployment.Store(types.None[*deployment]())
+			s.deployment.Store(optional.None[*deployment]())
 
 		default:
 			state = ftlv1.RunnerState_RUNNER_ASSIGNED
@@ -316,10 +316,10 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		Error:      errPtr,
 	})
 	if err != nil {
-		s.registrationFailure.Store(types.Some(err))
+		s.registrationFailure.Store(optional.Some(err))
 		return fmt.Errorf("%s: %w", "failed to register with Controller", err)
 	}
-	s.registrationFailure.Store(types.None[error]())
+	s.registrationFailure.Store(optional.None[error]())
 
 	// Wait for the next heartbeat.
 	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
@@ -327,7 +327,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	select {
 	case <-ctx.Done():
 		err = context.Cause(ctx)
-		s.registrationFailure.Store(types.Some(err))
+		s.registrationFailure.Store(optional.Some(err))
 		return err
 
 	case <-s.forceUpdate:

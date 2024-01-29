@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/alecthomas/types"
+	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -37,13 +37,13 @@ type Event interface {
 type LogEvent struct {
 	ID             int64
 	DeploymentName model.DeploymentName
-	RequestName    types.Option[model.RequestName]
+	RequestName    optional.Option[model.RequestName]
 	Time           time.Time
 	Level          int32
 	Attributes     map[string]string
 	Message        string
-	Error          types.Option[string]
-	Stack          types.Option[string]
+	Error          optional.Option[string]
+	Stack          optional.Option[string]
 }
 
 func (e *LogEvent) GetID() int64 { return e.ID }
@@ -52,15 +52,15 @@ func (e *LogEvent) event()       {}
 type CallEvent struct {
 	ID             int64
 	DeploymentName model.DeploymentName
-	RequestName    types.Option[model.RequestName]
+	RequestName    optional.Option[model.RequestName]
 	Time           time.Time
-	SourceVerb     types.Option[schema.VerbRef]
+	SourceVerb     optional.Option[schema.VerbRef]
 	DestVerb       schema.VerbRef
 	Duration       time.Duration
 	Request        []byte
 	Response       []byte
-	Error          types.Option[string]
-	Stack          types.Option[string]
+	Error          optional.Option[string]
+	Stack          optional.Option[string]
 }
 
 func (e *CallEvent) GetID() int64 { return e.ID }
@@ -73,7 +73,7 @@ type DeploymentCreatedEvent struct {
 	Language           string
 	ModuleName         string
 	MinReplicas        int
-	ReplacedDeployment types.Option[model.DeploymentName]
+	ReplacedDeployment optional.Option[model.DeploymentName]
 }
 
 func (e *DeploymentCreatedEvent) GetID() int64 { return e.ID }
@@ -91,9 +91,9 @@ func (e *DeploymentUpdatedEvent) GetID() int64 { return e.ID }
 func (e *DeploymentUpdatedEvent) event()       {}
 
 type eventFilterCall struct {
-	sourceModule types.Option[string]
+	sourceModule optional.Option[string]
 	destModule   string
-	destVerb     types.Option[string]
+	destVerb     optional.Option[string]
 }
 
 type eventFilter struct {
@@ -120,7 +120,7 @@ func FilterLogLevel(level log.Level) EventFilter {
 // FilterCall filters call events between the given modules.
 //
 // May be called multiple times.
-func FilterCall(sourceModule types.Option[string], destModule string, destVerb types.Option[string]) EventFilter {
+func FilterCall(sourceModule optional.Option[string], destModule string, destVerb optional.Option[string]) EventFilter {
 	return func(query *eventFilter) {
 		query.calls = append(query.calls, &eventFilterCall{sourceModule: sourceModule, destModule: destModule, destVerb: destVerb})
 	}
@@ -173,23 +173,23 @@ func FilterDescending() EventFilter {
 
 // The internal JSON payload of a call event.
 type eventCallJSON struct {
-	DurationMS int64                `json:"duration_ms"`
-	Request    json.RawMessage      `json:"request"`
-	Response   json.RawMessage      `json:"response"`
-	Error      types.Option[string] `json:"error,omitempty"`
-	Stack      types.Option[string] `json:"stack,omitempty"`
+	DurationMS int64                   `json:"duration_ms"`
+	Request    json.RawMessage         `json:"request"`
+	Response   json.RawMessage         `json:"response"`
+	Error      optional.Option[string] `json:"error,omitempty"`
+	Stack      optional.Option[string] `json:"stack,omitempty"`
 }
 
 type eventLogJSON struct {
-	Message    string               `json:"message"`
-	Attributes map[string]string    `json:"attributes"`
-	Error      types.Option[string] `json:"error,omitempty"`
-	Stack      types.Option[string] `json:"stack,omitempty"`
+	Message    string                  `json:"message"`
+	Attributes map[string]string       `json:"attributes"`
+	Error      optional.Option[string] `json:"error,omitempty"`
+	Stack      optional.Option[string] `json:"stack,omitempty"`
 }
 
 type eventDeploymentCreatedJSON struct {
-	MinReplicas        int                                `json:"min_replicas"`
-	ReplacedDeployment types.Option[model.DeploymentName] `json:"replaced,omitempty"`
+	MinReplicas        int                                   `json:"min_replicas"`
+	ReplacedDeployment optional.Option[model.DeploymentName] `json:"replaced,omitempty"`
 }
 
 type eventDeploymentUpdatedJSON struct {
@@ -200,7 +200,7 @@ type eventDeploymentUpdatedJSON struct {
 type eventRow struct {
 	sql.Event
 	DeploymentName model.DeploymentName
-	RequestName    types.Option[model.RequestName]
+	RequestName    optional.Option[model.RequestName]
 }
 
 func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter) ([]Event, error) {
@@ -341,9 +341,9 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 
 		row.DeploymentName = deploymentNames[deploymentID]
 
-		var requestName types.Option[model.RequestName]
+		var requestName optional.Option[model.RequestName]
 		if key, ok := row.RequestName.Get(); ok {
-			requestName = types.Some(key)
+			requestName = optional.Some(key)
 		}
 		switch row.Type {
 		case sql.EventTypeLog:
@@ -372,11 +372,11 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
 				return nil, err
 			}
-			var sourceVerb types.Option[schema.VerbRef]
+			var sourceVerb optional.Option[schema.VerbRef]
 			sourceModule, smok := row.CustomKey1.Get()
 			sourceName, snok := row.CustomKey2.Get()
 			if smok && snok {
-				sourceVerb = types.Some(schema.VerbRef{Module: sourceModule, Name: sourceName})
+				sourceVerb = optional.Some(schema.VerbRef{Module: sourceModule, Name: sourceName})
 			}
 			out = append(out, &CallEvent{
 				ID:             row.ID,
