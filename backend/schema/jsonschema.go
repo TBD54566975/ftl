@@ -11,34 +11,55 @@ import (
 //
 // It takes in the full schema in order to resolve and define references.
 func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, error) {
-	// Collect all data types.
-	dataTypes := schema.DataMap()
-
-	// Find the root data type.
-	rootData, ok := dataTypes[dataRef.Untyped()]
-	if !ok {
+	data := schema.ResolveDataRef(&dataRef)
+	if data == nil {
 		return nil, fmt.Errorf("unknown data type %s", dataRef)
 	}
 
+	if len(dataRef.TypeParameters) > 0 {
+		var err error
+		data, err = data.Monomorphise(dataRef.TypeParameters...)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Collect all data types.
+	dataTypes := schema.DataMap()
+
 	// Encode root, and collect all data types reachable from the root.
-	dataRefs := map[Ref]bool{}
-	root := nodeToJSSchema(rootData, dataRefs)
-	if len(dataRefs) == 0 {
+	refs := map[Ref]*DataRef{}
+	root := nodeToJSSchema(data, refs)
+	if len(refs) == 0 {
 		return root, nil
 	}
+
 	// Resolve and encode all data types reachable from the root.
 	root.Definitions = map[string]jsonschema.SchemaOrBool{}
-	for dataRef := range dataRefs {
-		data, ok := dataTypes[Ref{Module: dataRef.Module, Name: dataRef.Name}]
+	for key, dataRef := range refs {
+		data, ok := dataTypes[Ref{Module: key.Module, Name: key.Name}]
 		if !ok {
-			return nil, fmt.Errorf("unknown data type %s", dataRef)
+			return nil, fmt.Errorf("unknown data type %s", key)
 		}
-		root.Definitions[dataRef.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(data, dataRefs)}
+
+		if len(dataRef.TypeParameters) > 0 {
+			monomorphisedData, err := data.Monomorphise(dataRef.TypeParameters...)
+			if err != nil {
+				return nil, err
+			}
+			data = monomorphisedData
+
+			ref := fmt.Sprintf("%s.%s", dataRef.Module, genericRefName(dataRef))
+			root.Definitions[ref] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(data, refs)}
+		} else {
+			root.Definitions[dataRef.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(data, refs)}
+		}
+
 	}
 	return root, nil
 }
 
-func nodeToJSSchema(node Node, dataRefs map[Ref]bool) *jsonschema.Schema {
+func nodeToJSSchema(node Node, dataRefs map[Ref]*DataRef) *jsonschema.Schema {
 	switch node := node.(type) {
 	case *Any:
 		return &jsonschema.Schema{}
@@ -117,10 +138,18 @@ func nodeToJSSchema(node Node, dataRefs map[Ref]bool) *jsonschema.Schema {
 		}
 
 	case *DataRef:
-		dataRef := *node
-		ref := fmt.Sprintf("#/definitions/%s", dataRef.String())
-		dataRefs[dataRef.Untyped()] = true
-		return &jsonschema.Schema{Ref: &ref}
+		var ref string
+		if len(node.TypeParameters) > 0 {
+			name := genericRefName(node)
+			ref = fmt.Sprintf("#/definitions/%s.%s", node.Module, name)
+		} else {
+			ref = fmt.Sprintf("#/definitions/%s", node.String())
+		}
+
+		dataRefs[node.Untyped()] = node
+		schema := &jsonschema.Schema{Ref: &ref}
+
+		return schema
 
 	case *Optional:
 		null := jsonschema.Null
@@ -152,4 +181,12 @@ func jsComments(comments []string) *string {
 	}
 	out := strings.Join(comments, "\n")
 	return &out
+}
+
+func genericRefName(dataRef *DataRef) string {
+	var suffix []string
+	for _, t := range dataRef.TypeParameters {
+		suffix = append(suffix, t.String())
+	}
+	return fmt.Sprintf("%s[%s]", dataRef.Name, strings.Join(suffix, ", "))
 }
