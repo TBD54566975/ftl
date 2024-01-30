@@ -11,9 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/beevik/etree"
 	"github.com/iancoleman/strcase"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -30,8 +31,9 @@ type initCmd struct {
 }
 
 type initGoCmd struct {
-	Dir  string `arg:"" help:"Directory to initialize the module in."`
-	Name string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+	Replace map[string]string `short:"r" help:"Replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..."`
+	Dir     string            `arg:"" help:"Directory to initialize the module in."`
+	Name    string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
 func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
