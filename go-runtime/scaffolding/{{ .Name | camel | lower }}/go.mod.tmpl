@@ -3,3 +3,7 @@ module ftl/{{ .Name }}
 go 1.21
 
 require github.com/TBD54566975/ftl latest
+
+{{- range $old, $new := .Replace }}
+replace {{ $old }} => {{ $new }}
+{{- end }}
