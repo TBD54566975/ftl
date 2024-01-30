@@ -29,10 +29,19 @@ var jsonSchemaSample = &Schema{
 					{Name: "optionalMap", Type: &Map{Key: &String{}, Value: &Optional{Type: &Int{}}}},
 					{Name: "ref", Type: &DataRef{Module: "bar", Name: "Bar"}},
 					{Name: "any", Type: &Any{}},
+					{Name: "keyValue", Type: &DataRef{Module: "foo", Name: "Generic", TypeParameters: []Type{&String{}, &Int{}}}},
 				},
 			},
 			&Data{
 				Name: "Item", Fields: []*Field{{Name: "name", Type: &String{}}},
+			},
+			&Data{
+				Name:           "Generic",
+				TypeParameters: []*TypeParameter{{Name: "K"}, {Name: "V"}},
+				Fields: []*Field{
+					{Name: "key", Type: &TypeParameter{Name: "K"}},
+					{Name: "value", Type: &TypeParameter{Name: "V"}},
+				},
 			},
 		}},
 		{Name: "bar", Decls: []Decl{
@@ -61,7 +70,8 @@ func TestDataToJSONSchema(t *testing.T) {
     "map",
     "optionalMap",
     "ref",
-    "any"
+    "any",
+    "keyValue"
   ],
   "additionalProperties": false,
   "definitions": {
@@ -73,6 +83,22 @@ func TestDataToJSONSchema(t *testing.T) {
       "properties": {
         "bar": {
           "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "foo.Generic[String, Int]": {
+      "required": [
+        "key",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "integer"
         }
       },
       "type": "object"
@@ -121,6 +147,9 @@ func TestDataToJSONSchema(t *testing.T) {
     },
     "int": {
       "type": "integer"
+    },
+    "keyValue": {
+      "$ref": "#/definitions/foo.Generic[String, Int]"
     },
     "map": {
       "additionalProperties": {
@@ -187,7 +216,7 @@ func TestDataToJSONSchema(t *testing.T) {
 	assert.Equal(t, expected, string(actual))
 }
 
-func TestJSONShemaValidation(t *testing.T) {
+func TestJSONSchemaValidation(t *testing.T) {
 	input := `
    {
     "string": "string",
@@ -202,7 +231,8 @@ func TestJSONShemaValidation(t *testing.T) {
     "map": {"one": 2},
     "optionalMap": {"one": 2, "two": null},
     "ref": {"bar": "Name"},
-    "any": [{"name": "Name"}, "string", 1, 1.23, true, "2018-11-13T20:20:39+00:00", ["one"], {"one": 2}, null]
+    "any": [{"name": "Name"}, "string", 1, 1.23, true, "2018-11-13T20:20:39+00:00", ["one"], {"one": 2}, null],
+    "keyValue": {"key": "string", "value": 1}
   }
    `
 
