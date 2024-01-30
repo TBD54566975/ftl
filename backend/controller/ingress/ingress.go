@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -63,15 +64,35 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 
 func ResponseBodyForContentType(headers map[string][]string, body []byte) ([]byte, error) {
 	contentType, hasContentType := headers["Content-Type"]
-	if !hasContentType || len(contentType) == 0 || contentType[0] == "" || !strings.HasPrefix(contentType[0], "text/") {
+	if !hasContentType || len(contentType) == 0 || contentType[0] == "" {
 		return body, nil
 	}
 
-	var htmlContent string
-	if err := json.Unmarshal(body, &htmlContent); err != nil {
-		return nil, err
+	needsEscaping := false
+	contentTypesToEscape := []string{
+		"text/html",
+		"application/xhtml+xml",
+		"text/xml",
 	}
-	return []byte(htmlContent), nil
+	for _, ct := range contentTypesToEscape {
+		if strings.HasPrefix(contentType[0], ct) {
+			needsEscaping = true
+			break
+		}
+	}
+
+	if needsEscaping {
+		var htmlContent string
+		if err := json.Unmarshal(body, &htmlContent); err != nil {
+			return nil, err
+		}
+
+		// Escape HTML content to prevent XSS
+		escapedContent := html.EscapeString(htmlContent)
+		return []byte(escapedContent), nil
+	}
+
+	return body, nil
 }
 
 func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) error {
