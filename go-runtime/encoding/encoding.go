@@ -4,20 +4,60 @@ package encoding
 
 import (
 	"bytes"
+	"encoding"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
 	"github.com/iancoleman/strcase"
 )
 
+var (
+	textUnarmshaler = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	jsonUnmarshaler = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
+)
+
 func Marshal(v any) ([]byte, error) {
+	data, _ := json.Marshal(v)
+	fmt.Println(string(data))
 	w := &bytes.Buffer{}
 	err := encodeValue(reflect.ValueOf(v), w)
 	return w.Bytes(), err
 }
 
 func encodeValue(v reflect.Value, w *bytes.Buffer) error {
+	t := v.Type()
+	switch {
+	case t.Kind() == reflect.Ptr && t.Elem().Implements(jsonUnmarshaler):
+		v = v.Elem()
+		fallthrough
+	case t.Implements(jsonUnmarshaler):
+		enc := v.Interface().(json.Marshaler) //nolint:forcetypeassert
+		data, err := enc.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		w.Write(data)
+		return nil
+
+	case t.Kind() == reflect.Ptr && t.Elem().Implements(textUnarmshaler):
+		v = v.Elem()
+		fallthrough
+	case t.Implements(textUnarmshaler):
+		enc := v.Interface().(encoding.TextMarshaler) //nolint:forcetypeassert
+		data, err := enc.MarshalText()
+		if err != nil {
+			return err
+		}
+		data, err = json.Marshal(string(data))
+		if err != nil {
+			return err
+		}
+		w.Write(data)
+		return nil
+	}
+
 	switch v.Kind() {
 	case reflect.Struct:
 		return encodeStruct(v, w)

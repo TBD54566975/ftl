@@ -1,12 +1,16 @@
-package encoding
+package encoding_test
 
 import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+
+	. "github.com/TBD54566975/ftl/go-runtime/encoding"
+	"github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 
 func TestMarshal(t *testing.T) {
+	somePtr := sdk.Some(42)
 	tests := []struct {
 		name     string
 		input    any
@@ -21,6 +25,8 @@ func TestMarshal(t *testing.T) {
 		{name: "Nil", input: struct{ Nil *int }{nil}, expected: `{"nil":null}`},
 		{name: "Slice", input: struct{ Slice []int }{[]int{1, 2, 3}}, expected: `{"slice":[1,2,3]}`},
 		{name: "Map", input: struct{ Map map[string]int }{map[string]int{"foo": 42}}, expected: `{"map":{"foo":42}}`},
+		{name: "Option", input: struct{ Option sdk.Option[int] }{sdk.Some(42)}, expected: `{"option":42}`},
+		{name: "OptionPtr", input: struct{ Option *sdk.Option[int] }{&somePtr}, expected: `{"option":42}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
