@@ -140,3 +140,49 @@ func TestParseQueryJson(t *testing.T) {
 		assert.Equal(t, test.request, actual, test.query)
 	}
 }
+
+func TestSetDefaultContentType(t *testing.T) {
+	headers := map[string][]string{}
+	SetDefaultContentType(headers)
+	assert.Equal(t, map[string][]string{"Content-Type": {"application/json"}}, headers)
+
+	headers = map[string][]string{"Content-Type": {"text/html"}}
+	SetDefaultContentType(headers)
+	assert.Equal(t, map[string][]string{"Content-Type": {"text/html"}}, headers)
+}
+
+func TestResponseBodyForContentType(t *testing.T) {
+	tests := []struct {
+		name         string
+		headers      map[string][]string
+		body         []byte
+		expectedBody []byte
+	}{
+		{
+			name:         "application/json",
+			headers:      map[string][]string{"Content-Type": {"application/json"}},
+			body:         []byte(`{"message": "Hello, World!"}`),
+			expectedBody: []byte(`{"message": "Hello, World!"}`),
+		},
+		{
+			name:         "text/html",
+			headers:      map[string][]string{"Content-Type": {"text/html"}},
+			body:         []byte(`"<html><body>Hello, World!</body></html>"`),
+			expectedBody: []byte("<html><body>Hello, World!</body></html>"),
+		},
+		{
+			name:         "Default to application/json",
+			headers:      map[string][]string{},
+			body:         []byte(`{"message": "Default to JSON"}`),
+			expectedBody: []byte(`{"message": "Default to JSON"}`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := ResponseBodyForContentType(tc.headers, tc.body)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedBody, result)
+		})
+	}
+}
