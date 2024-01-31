@@ -61,17 +61,24 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 	return true
 }
 
+func SetDefaultContentType(headers map[string][]string) {
+	if _, hasContentType := headers["Content-Type"]; !hasContentType {
+		headers["Content-Type"] = []string{"application/json"}
+	}
+}
+
 func ResponseBodyForContentType(headers map[string][]string, body []byte) ([]byte, error) {
-	contentType, hasContentType := headers["Content-Type"]
-	if !hasContentType || len(contentType) == 0 || contentType[0] == "" || !strings.HasPrefix(contentType[0], "text/") {
-		return body, nil
+	if contentType, hasContentType := headers["Content-Type"]; hasContentType {
+		if strings.HasPrefix(contentType[0], "text/") {
+			var textContent string
+			if err := json.Unmarshal(body, &textContent); err != nil {
+				return nil, err
+			}
+			return []byte(textContent), nil
+		}
 	}
 
-	var htmlContent string
-	if err := json.Unmarshal(body, &htmlContent); err != nil {
-		return nil, err
-	}
-	return []byte(htmlContent), nil
+	return body, nil
 }
 
 func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) error {
