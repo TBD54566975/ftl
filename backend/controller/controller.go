@@ -249,7 +249,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 
 			ingress.SetDefaultContentType(response.Headers)
-			responseBody, err = ingress.ResponseBodyForContentType(response.Headers, response.Body)
+			responseBody, err = ingress.ResponseBodyForVerb(sch, verb, response.Body, response.Headers)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

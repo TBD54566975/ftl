@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -67,20 +68,6 @@ func SetDefaultContentType(headers map[string][]string) {
 	}
 }
 
-func ResponseBodyForContentType(headers map[string][]string, body []byte) ([]byte, error) {
-	if contentType, hasContentType := headers["Content-Type"]; hasContentType {
-		if strings.HasPrefix(contentType[0], "text/") {
-			var textContent string
-			if err := json.Unmarshal(body, &textContent); err != nil {
-				return nil, err
-			}
-			return []byte(textContent), nil
-		}
-	}
-
-	return body, nil
-}
-
 func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) error {
 	verb := sch.ResolveVerbRef(verbRef)
 	if verb == nil {
@@ -116,7 +103,7 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 			return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
 		}
 
-		bodyMap, err := buildRequest(route, r, request, sch)
+		httpRequestBody, err := extractHTTPRequestBody(route, r, request, sch)
 		if err != nil {
 			return nil, err
 		}
@@ -127,9 +114,9 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 		requestMap["pathParameters"] = pathParameters
 		requestMap["query"] = r.URL.Query()
 		requestMap["headers"] = r.Header
-		requestMap["body"] = bodyMap
+		requestMap["body"] = httpRequestBody
 
-		requestMap, err = transformAliasedFields(request, sch, requestMap)
+		requestMap, err = transformFromAliasedFields(request, sch, requestMap)
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +136,7 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 			return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
 		}
 
-		requestMap, err := buildRequest(route, r, request, sch)
+		requestMap, err := buildRequestMap(route, r, request, sch)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +155,93 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 	return body, nil
 }
 
-func buildRequest(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (map[string]any, error) {
+func ResponseBodyForVerb(sch *schema.Schema, verb *schema.Verb, body []byte, headers map[string][]string) ([]byte, error) {
+	if contentType, hasContentType := headers["Content-Type"]; hasContentType {
+		if strings.HasPrefix(contentType[0], "text/") {
+			var textContent string
+			if err := json.Unmarshal(body, &textContent); err != nil {
+				return nil, err
+			}
+			return []byte(textContent), nil
+		}
+	}
+
+	responseRef, ok := verb.Response.(*schema.DataRef)
+	if !ok {
+		return body, nil
+	}
+
+	bodyField, err := getBodyField(responseRef, sch)
+	if err != nil {
+		return nil, err
+	}
+
+	if bodyType, ok := bodyField.Type.(*schema.DataRef); ok {
+		var responseMap map[string]any
+		err := json.Unmarshal(body, &responseMap)
+		if err != nil {
+			return nil, fmt.Errorf("HTTP response body is not valid JSON: %w", err)
+		}
+
+		aliasedResponseMap, err := transformToAliasedFields(bodyType, sch, responseMap)
+		if err != nil {
+			return nil, err
+		}
+
+		return json.Marshal(aliasedResponseMap)
+	}
+
+	return body, nil
+}
+
+func getBodyField(dataRef *schema.DataRef, sch *schema.Schema) (*schema.Field, error) {
+	data, err := sch.ResolveDataRefMonomorphised(dataRef)
+	if err != nil {
+		return nil, err
+	}
+	var bodyField *schema.Field
+	for _, field := range data.Fields {
+		if field.Name == "body" {
+			bodyField = field
+			break
+		}
+	}
+
+	if bodyField == nil {
+		return nil, fmt.Errorf("verb %s must have a 'body' field", dataRef.Name)
+	}
+
+	return bodyField, nil
+}
+
+func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (any, error) {
+	bodyField, err := getBodyField(dataRef, sch)
+	if err != nil {
+		return nil, err
+	}
+
+	switch bodyType := bodyField.Type.(type) {
+	case *schema.DataRef:
+		bodyMap, err := buildRequestMap(route, r, bodyType, sch)
+		if err != nil {
+			return nil, err
+		}
+		return bodyMap, nil
+
+	case *schema.Bytes:
+		defer r.Body.Close()
+		bodyData, err := io.ReadAll(r.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading request body: %w", err)
+		}
+		return bodyData, nil
+
+	default:
+		return nil, fmt.Errorf("unsupported HttpRequest.Body type %T", bodyField.Type)
+	}
+}
+
+func buildRequestMap(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (map[string]any, error) {
 	requestMap := map[string]any{}
 	matchSegments(route.Path, r.URL.Path, func(segment, value string) {
 		requestMap[segment] = value
@@ -187,17 +260,9 @@ func buildRequest(route *dal.IngressRoute, r *http.Request, dataRef *schema.Data
 			requestMap[k] = v
 		}
 	default:
-		data := sch.ResolveDataRef(dataRef)
-		if data == nil {
-			return nil, fmt.Errorf("unknown data %v", dataRef)
-		}
-
-		if len(dataRef.TypeParameters) > 0 {
-			var err error
-			data, err = data.Monomorphise(dataRef.TypeParameters...)
-			if err != nil {
-				return nil, err
-			}
+		data, err := sch.ResolveDataRefMonomorphised(dataRef)
+		if err != nil {
+			return nil, err
 		}
 
 		queryMap, err := parseQueryParams(r.URL.Query(), data)
@@ -214,17 +279,9 @@ func buildRequest(route *dal.IngressRoute, r *http.Request, dataRef *schema.Data
 }
 
 func validateRequestMap(dataRef *schema.DataRef, path path, request map[string]any, sch *schema.Schema) error {
-	data := sch.ResolveDataRef(dataRef)
-	if data == nil {
-		return fmt.Errorf("unknown data %v", dataRef)
-	}
-
-	if len(dataRef.TypeParameters) > 0 {
-		var err error
-		data, err = data.Monomorphise(dataRef.TypeParameters...)
-		if err != nil {
-			return err
-		}
+	data, err := sch.ResolveDataRefMonomorphised(dataRef)
+	if err != nil {
+		return err
 	}
 
 	var errs []error
@@ -461,34 +518,4 @@ func decodeQueryJSON(query string) (map[string]any, error) {
 
 func hasInvalidQueryChars(s string) bool {
 	return strings.ContainsAny(s, "{}[]|\\^`")
-}
-
-func transformAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request map[string]any) (map[string]any, error) {
-	data := sch.ResolveDataRef(dataRef)
-	if len(dataRef.TypeParameters) > 0 {
-		var err error
-		data, err = data.Monomorphise(dataRef.TypeParameters...)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	for _, field := range data.Fields {
-		if _, ok := request[field.Name]; !ok && field.Alias != "" && request[field.Alias] != nil {
-			request[field.Name] = request[field.Alias]
-			delete(request, field.Alias)
-		}
-
-		if d, ok := field.Type.(*schema.DataRef); ok {
-			if _, found := request[field.Name]; found {
-				rMap, err := transformAliasedFields(d, sch, request[field.Name].(map[string]any))
-				if err != nil {
-					return nil, err
-				}
-				request[field.Name] = rMap
-			}
-		}
-	}
-
-	return request, nil
 }

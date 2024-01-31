@@ -6,28 +6,22 @@ import (
 	"fmt"
 
 	"ftl/builtin"
-
-	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
 )
 
 type GetRequest struct {
-	UserID string `json:"userId"`
-	PostID string `json:"postId"`
+	UserID string `alias:"userId"`
+	PostID string `alias:"postId"`
 }
 
 type GetResponse struct {
-	Message string `json:"message"`
+	Message string `alias:"random"`
 }
 
+// Example: curl -i http://localhost:8892/ingress/http/users/123/posts?postId=456
+//
 //ftl:verb
-//ftl:ingress http GET /http/users/{userID}/posts/{postID}
+//ftl:ingress http GET /http/users/{userID}/posts
 func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[GetResponse], error) {
-	logger := ftl.LoggerFromContext(ctx)
-	logger.Infof("Path: %s", req.Path)
-	logger.Infof("Method: %s", req.Method)
-	logger.Infof("Query: %s", req.Query)
-	logger.Infof("Body: %s", req.Body)
-	logger.Infof("Headers: %s", req.Headers)
 	return builtin.HttpResponse[GetResponse]{
 		Status:  200,
 		Headers: map[string][]string{"Get": {"Header from FTL"}},
@@ -36,44 +30,38 @@ func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.Http
 }
 
 type PostRequest struct {
-	UserID string `json:"userId"`
-	PostID string `json:"postId"`
+	UserID int `alias:"user_id"`
+	PostID int `alias:"post_id"`
 }
 
-type PostResponse struct{}
+type PostResponse struct {
+	Success bool `alias:"success"`
+}
 
+// Example: curl -i --json '{"user_id": 123, "post_id": 345}' http://localhost:8892/ingress/http/users
+//
 //ftl:verb
 //ftl:ingress http POST /http/users
 func Post(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse], error) {
-	logger := ftl.LoggerFromContext(ctx)
-	logger.Infof("Path: %s", req.Path)
-	logger.Infof("Method: %s", req.Method)
-	logger.Infof("Query: %s", req.Query)
-	logger.Infof("Body: %s", req.Body)
-	logger.Infof("Headers: %s", req.Headers)
 	return builtin.HttpResponse[PostResponse]{
 		Status:  201,
 		Headers: map[string][]string{"Post": {"Header from FTL"}},
-		Body:    PostResponse{},
+		Body:    PostResponse{Success: true},
 	}, nil
 }
 
 type PutRequest struct {
-	UserID string `json:"userId"`
-	PostID string `json:"postId"`
+	UserID string `alias:"userId"`
+	PostID string `alias:"postId"`
 }
 
 type PutResponse struct{}
 
+// Example: curl -X PUT http://localhost:8892/ingress/http/users/123 -d '{"postID": "123"}'
+//
 //ftl:verb
 //ftl:ingress http PUT /http/users/{userID}
 func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[PutResponse], error) {
-	logger := ftl.LoggerFromContext(ctx)
-	logger.Infof("Path: %s", req.Path)
-	logger.Infof("Method: %s", req.Method)
-	logger.Infof("Query: %s", req.Query)
-	logger.Infof("Body: %s", req.Body)
-	logger.Infof("Headers: %s", req.Headers)
 	return builtin.HttpResponse[PutResponse]{
 		Status:  200,
 		Headers: map[string][]string{"Put": {"Header from FTL"}},
@@ -82,20 +70,16 @@ func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.Http
 }
 
 type DeleteRequest struct {
-	UserID string `json:"userId"`
+	UserID string `alias:"userId"`
 }
 
 type DeleteResponse struct{}
 
+// Example: curl -X DELETE http://localhost:8892/ingress/http/users/123
+//
 //ftl:verb
 //ftl:ingress http DELETE /http/users/{userID}
 func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[DeleteResponse], error) {
-	logger := ftl.LoggerFromContext(ctx)
-	logger.Infof("Path: %s", req.Path)
-	logger.Infof("Method: %s", req.Method)
-	logger.Infof("Query: %s", req.Query)
-	logger.Infof("Body: %s", req.Body)
-	logger.Infof("Headers: %s", req.Headers)
 	return builtin.HttpResponse[DeleteResponse]{
 		Status:  200,
 		Headers: map[string][]string{"Put": {"Header from FTL"}},
@@ -112,5 +96,17 @@ func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.Ht
 		Status:  200,
 		Headers: map[string][]string{"Content-Type": {"text/html; charset=utf-8"}},
 		Body:    "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>",
+	}, nil
+}
+
+// Example: curl -X POST http://localhost:8892/ingress/http/bytes -d 'Your data here'
+//
+//ftl:verb
+//ftl:ingress http POST /http/bytes
+func Bytes(ctx context.Context, req builtin.HttpRequest[[]byte]) (builtin.HttpResponse[[]byte], error) {
+	return builtin.HttpResponse[[]byte]{
+		Status:  200,
+		Headers: map[string][]string{"Content-Type": {"application/octet-stream"}},
+		Body:    req.Body,
 	}, nil
 }

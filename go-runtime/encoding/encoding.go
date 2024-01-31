@@ -19,8 +19,6 @@ var (
 )
 
 func Marshal(v any) ([]byte, error) {
-	data, _ := json.Marshal(v)
-	fmt.Println(string(data))
 	w := &bytes.Buffer{}
 	err := encodeValue(reflect.ValueOf(v), w)
 	return w.Bytes(), err

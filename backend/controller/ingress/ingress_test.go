@@ -151,36 +151,73 @@ func TestSetDefaultContentType(t *testing.T) {
 	assert.Equal(t, map[string][]string{"Content-Type": {"text/html"}}, headers)
 }
 
-func TestResponseBodyForContentType(t *testing.T) {
+func TestResponseBodyForVerb(t *testing.T) {
+	jsonVerb := &schema.Verb{
+		Name: "Json",
+		Response: &schema.DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
+			&schema.DataRef{
+				Module:         "test",
+				Name:           "Test",
+				TypeParameters: []schema.Type{},
+			},
+		}},
+	}
+	bytesVerb := &schema.Verb{
+		Name: "Json",
+		Response: &schema.DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
+			&schema.Bytes{},
+		}},
+	}
+	sch := &schema.Schema{
+		Modules: []*schema.Module{
+			schema.Builtins(),
+			{
+				Name: "test",
+				Decls: []schema.Decl{
+					&schema.Data{
+						Name: "Test",
+						Fields: []*schema.Field{
+							{Name: "message", Type: &schema.String{}, Alias: "msg"},
+						},
+					},
+					jsonVerb,
+				},
+			},
+		},
+	}
 	tests := []struct {
 		name         string
+		verb         *schema.Verb
 		headers      map[string][]string
 		body         []byte
 		expectedBody []byte
 	}{
 		{
 			name:         "application/json",
+			verb:         jsonVerb,
 			headers:      map[string][]string{"Content-Type": {"application/json"}},
 			body:         []byte(`{"message": "Hello, World!"}`),
-			expectedBody: []byte(`{"message": "Hello, World!"}`),
-		},
-		{
-			name:         "text/html",
-			headers:      map[string][]string{"Content-Type": {"text/html"}},
-			body:         []byte(`"<html><body>Hello, World!</body></html>"`),
-			expectedBody: []byte("<html><body>Hello, World!</body></html>"),
+			expectedBody: []byte(`{"msg":"Hello, World!"}`),
 		},
 		{
 			name:         "Default to application/json",
+			verb:         jsonVerb,
 			headers:      map[string][]string{},
 			body:         []byte(`{"message": "Default to JSON"}`),
-			expectedBody: []byte(`{"message": "Default to JSON"}`),
+			expectedBody: []byte(`{"msg":"Default to JSON"}`),
+		},
+		{
+			name:         "text/html",
+			verb:         bytesVerb,
+			headers:      map[string][]string{"Content-Type": {"text/html"}},
+			body:         []byte(`"<html><body>Hello, World!</body></html>"`),
+			expectedBody: []byte("<html><body>Hello, World!</body></html>"),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := ResponseBodyForContentType(tc.headers, tc.body)
+			result, err := ResponseBodyForVerb(sch, tc.verb, tc.body, tc.headers)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedBody, result)
 		})

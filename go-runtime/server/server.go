@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/observability"
 	"github.com/TBD54566975/ftl/backend/common/plugin"
 	"github.com/TBD54566975/ftl/backend/common/rpc"
+	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	sdkgo "github.com/TBD54566975/ftl/go-runtime/sdk"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -66,7 +67,7 @@ func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)
 				return nil, fmt.Errorf("call to verb %s failed: %w", ref, err)
 			}
 
-			respdata, err := json.Marshal(resp)
+			respdata, err := encoding.Marshal(resp)
 			if err != nil {
 				return nil, err
 			}
