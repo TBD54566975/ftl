@@ -11,17 +11,12 @@ import (
 //
 // It takes in the full schema in order to resolve and define references.
 func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, error) {
-	data := schema.ResolveDataRef(&dataRef)
+	data, err := schema.ResolveDataRefMonomorphised(&dataRef)
+	if err != nil {
+		return nil, err
+	}
 	if data == nil {
 		return nil, fmt.Errorf("unknown data type %s", dataRef)
-	}
-
-	if len(dataRef.TypeParameters) > 0 {
-		var err error
-		data, err = data.Monomorphise(dataRef.TypeParameters...)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// Collect all data types.

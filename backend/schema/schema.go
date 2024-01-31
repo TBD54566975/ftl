@@ -57,6 +57,19 @@ func (s *Schema) ResolveDataRef(ref *DataRef) *Data {
 	return nil
 }
 
+func (s *Schema) ResolveDataRefMonomorphised(ref *DataRef) (*Data, error) {
+	data := s.ResolveDataRef(ref)
+	if data == nil {
+		return nil, fmt.Errorf("unknown data %v", ref)
+	}
+
+	if len(ref.TypeParameters) > 0 {
+		return data.Monomorphise(ref.TypeParameters...)
+	}
+
+	return data, nil
+}
+
 func (s *Schema) ResolveVerbRef(ref *VerbRef) *Verb {
 	for _, module := range s.Modules {
 		if module.Name == ref.Module {
