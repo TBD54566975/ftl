@@ -474,7 +474,7 @@ func transformAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request
 	}
 
 	for _, field := range data.Fields {
-		if _, ok := request[field.Name]; !ok && field.Alias != "" {
+		if _, ok := request[field.Name]; !ok && field.Alias != "" && request[field.Alias] != nil {
 			request[field.Name] = request[field.Alias]
 			delete(request, field.Alias)
 		}
