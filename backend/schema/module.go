@@ -176,6 +176,10 @@ func ModuleFromBytes(b []byte) (*Module, error) {
 	return ModuleFromProto(s)
 }
 
+func ModuleToBytes(m *Module) ([]byte, error) {
+	return proto.Marshal(m.ToProto())
+}
+
 func moduleListToSchema(s []*schemapb.Module) ([]*Module, error) {
 	var out []*Module
 	for _, n := range s {

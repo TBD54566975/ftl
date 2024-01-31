@@ -61,7 +61,7 @@ WHERE d.name = $1;
 
 -- name: GetDeploymentsWithArtefacts :many
 -- Get all deployments that have artefacts matching the given digests.
-SELECT d.id, d.created_at, d.name as deployment_name, m.name AS module_name
+SELECT d.id, d.created_at, d.name as deployment_name, d.schema, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON d.module_id = m.id
 WHERE EXISTS (SELECT 1
@@ -69,6 +69,7 @@ WHERE EXISTS (SELECT 1
                        INNER JOIN artefacts a ON da.artefact_id = a.id
               WHERE a.digest = ANY (@digests::bytea[])
                 AND da.deployment_id = d.id
+                AND d.schema = @schema::BYTEA
               HAVING COUNT(*) = @count::BIGINT -- Number of unique digests provided
 );
 
