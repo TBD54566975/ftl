@@ -541,7 +541,7 @@ func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Ge
 }
 
 const getDeploymentsWithArtefacts = `-- name: GetDeploymentsWithArtefacts :many
-SELECT d.id, d.created_at, d.name as deployment_name, m.name AS module_name
+SELECT d.id, d.created_at, d.name as deployment_name, d.schema, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON d.module_id = m.id
 WHERE EXISTS (SELECT 1
@@ -558,6 +558,7 @@ type GetDeploymentsWithArtefactsRow struct {
 	ID             int64
 	CreatedAt      time.Time
 	DeploymentName model.DeploymentName
+	Schema         []byte
 	ModuleName     string
 }
 
@@ -575,6 +576,7 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 			&i.ID,
 			&i.CreatedAt,
 			&i.DeploymentName,
+			&i.Schema,
 			&i.ModuleName,
 		); err != nil {
 			return nil, err
