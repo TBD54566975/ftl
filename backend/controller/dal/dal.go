@@ -408,7 +408,7 @@ type IngressRoutingEntry struct {
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentName, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentName, err error) {
 	logger := log.FromContext(ctx)
 
 	// Start the transaction
@@ -419,37 +419,32 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 
 	defer tx.CommitOrRollback(ctx, &err)
 
-	// Check if the deployment already exists and if so, return it.
-	existing, err := tx.GetDeploymentsWithArtefacts(ctx,
-		sha256esToBytes(slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return in.Digest })),
-		int64(len(artefacts)),
-	)
+	existingDeployment, err := d.checkForExistingDeployments(ctx, tx, moduleSchema, artefacts)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", "couldn't check for existing deployment", err)
-	}
-	if len(existing) > 0 {
-		logger.Debugf("Returning existing deployment %s", existing[0].DeploymentName)
-		return existing[0].DeploymentName, nil
+		return "", err
+	} else if existingDeployment != "" {
+		logger.Debugf("Returning existing deployment %s", existingDeployment)
+		return existingDeployment, nil
 	}
 
 	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
 		return in.Digest, in
 	})
 
-	schemaBytes, err := proto.Marshal(schema.ToProto())
+	schemaBytes, err := proto.Marshal(moduleSchema.ToProto())
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", "failed to marshal schema", err)
 	}
 
 	// TODO(aat): "schema" containing language?
-	_, err = tx.UpsertModule(ctx, language, schema.Name)
+	_, err = tx.UpsertModule(ctx, language, moduleSchema.Name)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", "failed to upsert module", translatePGError(err))
 	}
 
-	deploymentName := model.NewDeploymentName(schema.Name)
+	deploymentName := model.NewDeploymentName(moduleSchema.Name)
 	// Create the deployment
-	err = tx.CreateDeployment(ctx, deploymentName, schema.Name, schemaBytes)
+	err = tx.CreateDeployment(ctx, deploymentName, moduleSchema.Name, schemaBytes)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", "failed to create deployment", translatePGError(err))
 	}
@@ -483,7 +478,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, schema *sch
 			Name:   deploymentName,
 			Method: ingressRoute.Method,
 			Path:   ingressRoute.Path,
-			Module: schema.Name,
+			Module: moduleSchema.Name,
 			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
@@ -1016,6 +1011,26 @@ func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
 	return slices.Map(rows, func(row sql.GetActiveRunnersRow) Runner {
 		return runnerFromDB(sql.GetRunnerRow(row))
 	}), nil
+}
+
+// Check if a deployment exists that exactly matches the given artefacts and schema.
+func (*DAL) checkForExistingDeployments(ctx context.Context, tx *sql.Tx, moduleSchema *schema.Module, artefacts []DeploymentArtefact) (model.DeploymentName, error) {
+	schemaBytes, err := schema.ModuleToBytes(moduleSchema)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal schema: %w", err)
+	}
+	existing, err := tx.GetDeploymentsWithArtefacts(ctx,
+		sha256esToBytes(slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return in.Digest })),
+		schemaBytes,
+		int64(len(artefacts)),
+	)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", "couldn't check for existing deployment", err)
+	}
+	if len(existing) > 0 {
+		return existing[0].DeploymentName, nil
+	}
+	return "", nil
 }
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
