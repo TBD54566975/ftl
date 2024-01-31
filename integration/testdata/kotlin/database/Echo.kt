@@ -1,22 +1,23 @@
-package ftl.dbtest
+package ftl.echo
 
 import xyz.block.ftl.Context
 import xyz.block.ftl.Verb
 import xyz.block.ftl.Database
 
-data class DbRequest(val data: String?)
-data class DbResponse(val message: String? = "ok")
+data class InsertRequest(val data: String)
+typealias InsertResponse = Unit
 
 val db = Database("testdb")
 
-class DbTest {
+class Echo {
+
   @Verb
-  fun create(context: Context, req: DbRequest): DbResponse {
+  fun insert(context: Context, req: InsertRequest): InsertResponse {
     persistRequest(req)
-    return DbResponse()
+    return InsertResponse
   }
 
-  fun persistRequest(req: DbRequest) {
+  fun persistRequest(req: InsertRequest) {
     db.conn {
       it.prepareStatement(
         """

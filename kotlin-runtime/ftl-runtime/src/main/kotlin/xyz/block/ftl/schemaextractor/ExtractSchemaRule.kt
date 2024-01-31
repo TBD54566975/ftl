@@ -42,8 +42,6 @@ import kotlin.collections.Map
 import kotlin.io.path.createDirectories
 
 data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
-
-data class blah<T>(val a: T)
 // Helpers
 private fun DataRef.compare(module: String, name: String): Boolean = this.name == name && this.module == module
 private fun DataRef.text(): String = "${this.module}.${this.name}"
@@ -455,7 +453,7 @@ class SchemaExtractor(
         return Type(
           dataRef = DataRef(
             name = refName,
-            module = fqName.extractModuleName().takeIf { it != currentModuleName } ?: "",
+            module = fqName.extractModuleName(),
             pos = position,
             typeParameters = this.arguments.map { it.type.toSchemaType(position) }.toList(),
           )
