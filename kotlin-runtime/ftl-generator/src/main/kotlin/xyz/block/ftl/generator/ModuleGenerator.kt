@@ -3,7 +3,6 @@ package xyz.block.ftl.generator
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import xyz.block.ftl.Context
-import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Ingress
 import xyz.block.ftl.v1.schema.*
@@ -109,9 +108,10 @@ class ModuleGenerator() {
     verb.metadata.forEach { metadata ->
       metadata.ingress?.let {
         verbFunBuilder.addAnnotation(
-          AnnotationSpec.builder(if (it.type == "ftl") Ingress::class else HttpIngress::class)
+          AnnotationSpec.builder(Ingress::class)
             .addMember("%T", ClassName("xyz.block.ftl.Method", it.method.replaceBefore(".", "")))
             .addMember("%S", ingressPathString(it.path))
+            .addMember("%T", ClassName("xyz.block.ftl.Ingress.Type", it.type.uppercase().replaceBefore(".", "")))
             .build()
         )
       }

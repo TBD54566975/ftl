@@ -5,6 +5,8 @@ import io.gitlab.arturbosch.detekt.rules.KotlinCoreEnvironmentTest
 import io.gitlab.arturbosch.detekt.test.compileAndLintWithContext
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
+import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import xyz.block.ftl.schemaextractor.ExtractSchemaRule.Companion.OUTPUT_FILENAME
@@ -16,12 +18,20 @@ import kotlin.test.AfterTest
 
 @KotlinCoreEnvironmentTest
 internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
+  @BeforeEach
+  fun setup() {
+    val dependenciesDir = File("src/test/kotlin/xyz/block/ftl/schemaextractor/testdata/dependencies")
+    val dependencies = dependenciesDir.listFiles { file -> file.extension == "kt" }?.toList() ?: emptyList()
+    env.configuration.addJvmClasspathRoots(dependencies)
+  }
 
   @Test
   fun `extracts schema`() {
     val code = """
         package ftl.echo
 
+        import ftl.builtin.HttpRequest
+        import ftl.builtin.HttpResponse
         import ftl.time.TimeModuleClient
         import ftl.time.TimeRequest
         import ftl.time.TimeResponse
@@ -52,9 +62,14 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             @Throws(InvalidInput::class)
             @Verb
             @Ingress(Method.GET, "/echo")
-            fun echo(context: Context, req: EchoRequest<String>): EchoResponse {
+            fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse> {
                 callTime(context)
-                return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
+
+                return HttpResponse<EchoResponse>(
+                  status = 200,
+                  headers = mapOf("Get" to arrayListOf("Header from FTL")),
+                  body = EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
+                )
             }
 
             fun callTime(context: Context): TimeResponse {
@@ -168,23 +183,39 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             ),
             request = Type(
               dataRef = DataRef(
-                name = "EchoRequest",
+                name = "HttpRequest",
                 typeParameters = listOf(
-                  Type(string = xyz.block.ftl.v1.schema.String())
+                  Type(
+                    dataRef = DataRef(
+                      name = "EchoRequest",
+                      typeParameters = listOf(
+                        Type(string = xyz.block.ftl.v1.schema.String())
+                      ),
+                      module = "echo"
+                    )
+                  )
                 ),
-                module = "echo"
+                module = "builtin"
               )
             ),
             response = Type(
               dataRef = DataRef(
-                name = "EchoResponse",
-                module = "echo"
-              )
+                name = "HttpResponse",
+                module = "builtin",
+                typeParameters = listOf(
+                  Type(
+                    dataRef = DataRef(
+                      name = "EchoResponse",
+                      module = "echo"
+                    )
+                  )
+                ),
+              ),
             ),
             metadata = listOf(
               Metadata(
                 ingress = MetadataIngress(
-                  type = "ftl",
+                  type = "http",
                   method = "GET",
                   path = listOf(
                     IngressPathComponent(
@@ -260,6 +291,42 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         }
         """
     assertThrows<IllegalArgumentException>(message = "kotlin.Char type is not supported in FTL schema") {
+      ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
+    }
+  }
+
+  @Test
+  fun `fails if http ingress without http request-response types`() {
+    val code = """
+        package ftl.echo
+
+        import xyz.block.ftl.Context
+        import xyz.block.ftl.Ingress
+        import xyz.block.ftl.Method
+        import xyz.block.ftl.Verb
+
+        /**
+         * Request to echo a message.
+         */
+        data class EchoRequest(val name: String)
+        data class EchoResponse(val message: String)
+
+        /**
+         * Echo module.
+         */
+        class Echo {
+           /**
+            * Echoes the given message.
+            */
+            @Throws(InvalidInput::class)
+            @Verb
+            @Ingress(Method.GET, "/echo")
+            fun echo(context: Context, req: EchoRequest): EchoResponse {
+                return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
+            }
+        }
+        """
+    assertThrows<java.lang.IllegalArgumentException>(message = "HTTP @Ingress-annotated echo request must be ftl.builtin.HttpRequest") {
       ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
     }
   }

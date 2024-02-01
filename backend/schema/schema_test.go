@@ -41,8 +41,8 @@ module todo {
       calls todo.destroy
 
 
-  verb destroy(todo.DestroyRequest) todo.DestroyResponse
-      ingress ftl GET /todo/destroy/{id}
+  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse>
+      ingress http GET /todo/destroy/{id}
 }
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(testSchema.String()))
@@ -119,7 +119,6 @@ func TestParserRoundTrip(t *testing.T) {
 	assert.NoError(t, err, "%s", testSchema.String())
 	actual, err = Validate(actual)
 	assert.NoError(t, err)
-	actual = Normalise(actual)
 	assert.Equal(t, Normalise(testSchema), Normalise(actual), "%s", testSchema.String())
 }
 
@@ -230,8 +229,8 @@ func TestParsing(t *testing.T) {
 						message String
 					}
 
-					verb echo(echo.EchoRequest) echo.EchoResponse
-						ingress ftl GET /echo
+					verb echo(builtin.HttpRequest<echo.EchoRequest>) builtin.HttpResponse<echo.EchoResponse>
+						ingress http GET /echo
 						calls time.time
 
 				}
@@ -244,8 +243,8 @@ func TestParsing(t *testing.T) {
 						time Time
 					}
 
-					verb time(time.TimeRequest) time.TimeResponse
-						ingress ftl GET /time
+					verb time(builtin.HttpRequest<time.TimeRequest>) builtin.HttpResponse<time.TimeResponse>
+						ingress http GET /time
 				}
 				`,
 			expected: &Schema{
@@ -256,10 +255,10 @@ func TestParsing(t *testing.T) {
 						&Data{Name: "EchoResponse", Fields: []*Field{{Name: "message", Type: &String{}}}},
 						&Verb{
 							Name:     "echo",
-							Request:  &DataRef{Module: "echo", Name: "EchoRequest"},
-							Response: &DataRef{Module: "echo", Name: "EchoResponse"},
+							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "echo", Name: "EchoRequest"}}},
+							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "echo", Name: "EchoResponse"}}},
 							Metadata: []Metadata{
-								&MetadataIngress{Type: "ftl", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "echo"}}},
+								&MetadataIngress{Type: "http", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "echo"}}},
 								&MetadataCalls{Calls: []*VerbRef{{Module: "time", Name: "time"}}},
 							},
 						},
@@ -271,10 +270,10 @@ func TestParsing(t *testing.T) {
 						&Data{Name: "TimeResponse", Fields: []*Field{{Name: "time", Type: &Time{}}}},
 						&Verb{
 							Name:     "time",
-							Request:  &DataRef{Module: "time", Name: "TimeRequest"},
-							Response: &DataRef{Module: "time", Name: "TimeResponse"},
+							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "time", Name: "TimeRequest"}}},
+							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "time", Name: "TimeResponse"}}},
 							Metadata: []Metadata{
-								&MetadataIngress{Type: "ftl", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "time"}}},
+								&MetadataIngress{Type: "http", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "time"}}},
 							},
 						},
 					},
@@ -385,16 +384,14 @@ module todo {
   }
   verb create(todo.CreateRequest) todo.CreateResponse
   	calls todo.destroy
-  verb destroy(todo.DestroyRequest) todo.DestroyResponse
-  	ingress ftl GET /todo/destroy/{id}
+  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse>
+  	ingress http GET /todo/destroy/{id}
 }
 `
 	actual, err := ParseModuleString("", input)
 	assert.NoError(t, err)
 	actual = Normalise(actual)
-	fmt.Printf("Modules %v\n", Normalise(testSchema.Modules[1]))
-	fmt.Printf("Modules %v\n", Normalise(actual))
-	assert.Equal(t, Normalise(testSchema.Modules[1]), actual)
+	assert.Equal(t, Normalise(testSchema.Modules[1]), actual, assert.Exclude[Position])
 }
 
 var testSchema = MustValidate(&Schema{
@@ -433,11 +430,11 @@ var testSchema = MustValidate(&Schema{
 					Response: &DataRef{Module: "todo", Name: "CreateResponse"},
 					Metadata: []Metadata{&MetadataCalls{Calls: []*VerbRef{{Module: "todo", Name: "destroy"}}}}},
 				&Verb{Name: "destroy",
-					Request:  &DataRef{Module: "todo", Name: "DestroyRequest"},
-					Response: &DataRef{Module: "todo", Name: "DestroyResponse"},
+					Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "todo", Name: "DestroyRequest"}}},
+					Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "todo", Name: "DestroyResponse"}}},
 					Metadata: []Metadata{
 						&MetadataIngress{
-							Type:   "ftl",
+							Type:   "http",
 							Method: "GET",
 							Path: []IngressPathComponent{
 								&IngressPathLiteral{Text: "todo"},

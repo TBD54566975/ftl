@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getValueParameters
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.util.getResolvedCall
+import org.jetbrains.kotlin.resolve.calls.util.getType
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
@@ -42,6 +43,7 @@ import kotlin.collections.Map
 import kotlin.io.path.createDirectories
 
 data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
+
 // Helpers
 private fun DataRef.compare(module: String, name: String): Boolean = this.name == name && this.module == module
 private fun DataRef.text(): String = "${this.module}.${this.name}"
@@ -242,47 +244,62 @@ class SchemaExtractor(
 
   private fun extractIngress(requestType: Type, responseType: Type): MetadataIngress? {
     return verb.annotationEntries.firstOrNull {
-      listOf(
-        Ingress::class.qualifiedName,
-        HttpIngress::class.qualifiedName
-      ).contains(bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString())
+      bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Ingress::class.qualifiedName
     }?.let { annotationEntry ->
-      val annotationName = annotationEntry.typeReference?.resolveType()?.fqNameOrNull()?.asString()
-      val type = if (annotationName == Ingress::class.qualifiedName) "ftl" else "http"
       val sourcePos = annotationEntry.getLineAndColumn()
-
       require(requestType.dataRef != null) {
         "$sourcePos ingress ${verb.name} request must be a data class"
       }
       require(responseType.dataRef != null) {
         "$sourcePos ingress ${verb.name} response must be a data class"
       }
-
-      // If it's HTTP ingress, validate the signature.
-      if (type == "http") {
-        require(requestType.dataRef != null && requestType.dataRef.compare("builtin", "HttpRequest")) {
-          "$sourcePos @HttpIngress-annotated ${verb.name} request must be ftl.builtin.HttpRequest"
-        }
-        require(responseType.dataRef != null && responseType.dataRef.compare("builtin", "HttpResponse")) {
-          "$sourcePos @HttpIngress-annotated ${verb.name} response must be ftl.builtin.HttpResponse"
-        }
-      }
-
       require(annotationEntry.valueArguments.size >= 2) {
         "$sourcePos ${verb.name} @Ingress annotation requires at least 2 arguments"
       }
 
-      val methodArg = requireNotNull(annotationEntry.valueArguments[0].getArgumentExpression()?.text) {
-        "$sourcePos Could not extract method from ${verb.name} @Ingress annotation"
+      var typeArg = Ingress.Type.HTTP.name
+      var pathArg: List<IngressPathComponent>? = null
+      var methodArg: String? = null
+      annotationEntry.valueArguments.map { arg ->
+        // Method arg is named "method" or is of type xyz.block.ftl.Method (in the case where args are
+        // positional rather than named).
+        if (arg.getArgumentName()?.asName?.asString() == "method"
+          || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()
+            ?.asString() == Method::class.qualifiedName
+        ) {
+          methodArg = arg.getArgumentExpression()?.text?.substringAfter(".")
+          // Type arg is named "type" or is of type xyz.block.ftl.Ingress.Type.
+        } else if (arg.getArgumentName()?.asName?.asString() == "type"
+          || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()
+            ?.asString() == Ingress.Type::class.qualifiedName
+        ) {
+          typeArg = requireNotNull(arg.getArgumentExpression()?.text?.substringAfter(".")) {
+            "$sourcePos Could not extract type from ${verb.name} @Ingress annotation"
+          }
+          // Path arg is named "path" or is of type kotlin.String.
+        } else if (arg.getArgumentName()?.asName?.asString() == "path"
+          || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()
+            ?.asString() == String::class.qualifiedName
+        ) {
+          pathArg = arg.getArgumentExpression()?.text?.let { extractPathComponents(it.trim('\"')) }
+        }
       }
-      val pathArg = requireNotNull(annotationEntry.valueArguments[1].getArgumentExpression()?.text) {
-        "$sourcePos Could not extract path from ${verb.name} @Ingress annotation"
+
+      // If it's HTTP ingress, validate the signature.
+      if (typeArg == Ingress.Type.HTTP.name) {
+        require(requestType.dataRef.compare("builtin", "HttpRequest")) {
+          "$sourcePos HTTP @Ingress-annotated ${verb.name} request must be ftl.builtin.HttpRequest"
+        }
+        require(responseType.dataRef.compare("builtin", "HttpResponse")) {
+          "$sourcePos HTTP @Ingress-annotated ${verb.name} response must be ftl.builtin.HttpResponse"
+        }
       }
 
       MetadataIngress(
-        type = type,
-        method = methodArg.substringAfter("."),
-        path = extractPathComponents(pathArg.trim('\"'))
+        path = requireNotNull(pathArg) { "Could not extract path from ${verb.name} @Ingress annotation" },
+        method = requireNotNull(methodArg) { "Could not extract method from ${verb.name} @Ingress annotation" },
+        type = typeArg.lowercase(),
+        pos = sourcePos.toPosition(verb.containingKtFile.name),
       )
     }
   }
