@@ -90,66 +90,54 @@ func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch
 		return nil, fmt.Errorf("unknown verb %s", route.Verb)
 	}
 
-	var request *schema.DataRef
+	request, ok := verb.Request.(*schema.DataRef)
+	if !ok {
+		return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
+	}
+
 	var body []byte
+
+	var requestMap map[string]any
+
 	if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
 		pathParameters := map[string]string{}
 		matchSegments(route.Path, r.URL.Path, func(segment, value string) {
 			pathParameters[segment] = value
 		})
 
-		request, ok = verb.Request.(*schema.DataRef)
-		if !ok {
-			return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
-		}
-
 		httpRequestBody, err := extractHTTPRequestBody(route, r, request, sch)
 		if err != nil {
 			return nil, err
 		}
 
-		requestMap := map[string]any{}
+		requestMap = map[string]any{}
 		requestMap["method"] = r.Method
 		requestMap["path"] = r.URL.Path
 		requestMap["pathParameters"] = pathParameters
 		requestMap["query"] = r.URL.Query()
 		requestMap["headers"] = r.Header
 		requestMap["body"] = httpRequestBody
-
-		requestMap, err = transformFromAliasedFields(request, sch, requestMap)
-		if err != nil {
-			return nil, err
-		}
-
-		err = validateRequestMap(request, []string{request.String()}, requestMap, sch)
-		if err != nil {
-			return nil, err
-		}
-
-		body, err = json.Marshal(requestMap)
-		if err != nil {
-			return nil, err
-		}
 	} else {
-		request, ok = verb.Request.(*schema.DataRef)
-		if !ok {
-			return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
-		}
-
-		requestMap, err := buildRequestMap(route, r, request, sch)
+		var err error
+		requestMap, err = buildRequestMap(route, r, request, sch)
 		if err != nil {
 			return nil, err
 		}
+	}
 
-		err = validateRequestMap(request, []string{verb.Request.String()}, requestMap, sch)
-		if err != nil {
-			return nil, err
-		}
+	requestMap, err := transformFromAliasedFields(request, sch, requestMap)
+	if err != nil {
+		return nil, err
+	}
 
-		body, err = json.Marshal(requestMap)
-		if err != nil {
-			return nil, err
-		}
+	err = validateRequestMap(request, []string{request.String()}, requestMap, sch)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err = json.Marshal(requestMap)
+	if err != nil {
+		return nil, err
 	}
 
 	return body, nil
@@ -453,7 +441,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 
 		var field *schema.Field
 		for _, f := range data.Fields {
-			if f.Name == key {
+			if (f.Alias != "" && f.Alias == key) || f.Name == key {
 				field = f
 			}
 			for _, typeParam := range data.TypeParameters {

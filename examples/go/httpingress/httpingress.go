@@ -8,6 +8,10 @@ import (
 	"ftl/builtin"
 )
 
+type Nested struct {
+	GoodStuff string `alias:"good_stuff"`
+}
+
 type GetRequest struct {
 	UserID string `alias:"userId"`
 	PostID string `alias:"postId"`
@@ -15,6 +19,7 @@ type GetRequest struct {
 
 type GetResponse struct {
 	Message string `alias:"random"`
+	Nested  Nested `alias:"nested"`
 }
 
 // Example: curl -i http://localhost:8892/ingress/http/users/123/posts?postId=456
@@ -25,7 +30,7 @@ func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.Http
 	return builtin.HttpResponse[GetResponse]{
 		Status:  200,
 		Headers: map[string][]string{"Get": {"Header from FTL"}},
-		Body:    GetResponse{Message: fmt.Sprintf("UserID, %s : PostID %s", req.Body.UserID, req.Body.PostID)},
+		Body:    GetResponse{Message: fmt.Sprintf("UserID, %s : PostID %s", req.Body.UserID, req.Body.PostID), Nested: Nested{GoodStuff: "Nested Good Stuff"}},
 	}, nil
 }
 
