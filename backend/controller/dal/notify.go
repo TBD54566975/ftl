@@ -14,7 +14,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 // NotificationPayload is a row from the database.
@@ -100,15 +99,11 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 			if err != nil {
 				return Deployment{}, optional.None[model.DeploymentName](), translatePGError(err)
 			}
-			moduleSchema, err := schema.ModuleFromBytes(row.Deployment.Schema)
-			if err != nil {
-				return Deployment{}, optional.None[model.DeploymentName](), err
-			}
 			return Deployment{
 				CreatedAt:   row.Deployment.CreatedAt,
 				Name:        row.Deployment.Name,
 				Module:      row.ModuleName,
-				Schema:      moduleSchema,
+				Schema:      row.Deployment.Schema,
 				MinReplicas: int(row.Deployment.MinReplicas),
 				Language:    row.Language,
 			}, optional.None[model.DeploymentName](), nil

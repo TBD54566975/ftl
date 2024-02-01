@@ -21,6 +21,8 @@ sql:
             nullable: true
             go_type:
               type: "NullDuration"
+          - db_type: "module_schema_pb"
+            go_type: "*github.com/TBD54566975/ftl/backend/schema.Module"
           - db_type: "timestamptz"
             nullable: true
             go_type:

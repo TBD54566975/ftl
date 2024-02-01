@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"sort"
 	"strings"
@@ -22,6 +24,23 @@ type Module struct {
 
 var _ Node = (*Module)(nil)
 var _ Decl = (*Module)(nil)
+var _ sql.Scanner = (*Module)(nil)
+var _ driver.Valuer = (*Module)(nil)
+
+func (m *Module) Value() (driver.Value, error) { return proto.Marshal(m.ToProto()) }
+func (m *Module) Scan(src any) error {
+	switch src := src.(type) {
+	case []byte:
+		module, err := ModuleFromBytes(src)
+		if err != nil {
+			return err
+		}
+		*m = *module
+		return nil
+	default:
+		return fmt.Errorf("cannot scan %T", src)
+	}
+}
 
 // Scope returns a scope containing all the declarations in this module.
 func (m *Module) Scope() Scope {

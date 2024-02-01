@@ -15,7 +15,7 @@ import (
 )
 
 //go:embed schema
-var schema embed.FS
+var migrationSchema embed.FS
 
 // Migrate the database.
 func Migrate(ctx context.Context, dsn string) error {
@@ -30,7 +30,7 @@ func Migrate(ctx context.Context, dsn string) error {
 	defer conn.Close()
 
 	db := dbmate.New(u)
-	db.FS = schema
+	db.FS = migrationSchema
 	db.Log = log.FromContext(ctx).Scope("migrate").WriterAt(log.Debug)
 	db.MigrationsDir = []string{"schema"}
 	err = db.CreateAndMigrate()
