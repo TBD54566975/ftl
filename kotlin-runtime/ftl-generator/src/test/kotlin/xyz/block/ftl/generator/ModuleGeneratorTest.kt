@@ -177,7 +177,7 @@ public class TestModule()
           metadata = listOf(
             Metadata(
               ingress = MetadataIngress(
-                type = "ftl",
+                type = "http",
                 path = listOf(IngressPathComponent(ingressPathLiteral = IngressPathLiteral(text = "test"))),
                 method = "GET"
               )
@@ -196,6 +196,7 @@ import kotlin.Unit
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Ingress
+import xyz.block.ftl.Ingress.Type.HTTP
 import xyz.block.ftl.Method.GET
 import xyz.block.ftl.Verb
 
@@ -225,6 +226,7 @@ public class TestModule() {
   @Ingress(
     GET,
     "/test",
+    HTTP,
   )
   public fun TestIngressVerb(context: Context, req: TestRequest): TestResponse = throw
       NotImplementedError("Verb stubs should not be called directly, instead use context.call(TestModule::TestIngressVerb, ...)")
