@@ -28,7 +28,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
 )
 
 var (
@@ -283,14 +282,6 @@ func (d *DAL) GetStatus(
 		return Status{}, fmt.Errorf("%s: %w", "could not get routing table", translatePGError(err))
 	}
 	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
-		protoSchema := &schemapb.Module{}
-		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
-			return Deployment{}, fmt.Errorf("%q: could not unmarshal schema: %w", in.ModuleName, err)
-		}
-		modelSchema, err := schema.ModuleFromProto(protoSchema)
-		if err != nil {
-			return Deployment{}, fmt.Errorf("%q: invalid schema in database: %w", in.ModuleName, err)
-		}
 		labels := model.Labels{}
 		err = json.Unmarshal(in.Deployment.Labels, &labels)
 		if err != nil {
@@ -301,7 +292,7 @@ func (d *DAL) GetStatus(
 			Module:      in.ModuleName,
 			Language:    in.Language,
 			MinReplicas: int(in.Deployment.MinReplicas),
-			Schema:      modelSchema,
+			Schema:      in.Deployment.Schema,
 			Labels:      labels,
 		}, nil
 	})
@@ -730,20 +721,12 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 		return nil, translatePGError(err)
 	}
 	return slices.MapErr(rows, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
-		protoSchema := &schemapb.Module{}
-		if err := proto.Unmarshal(in.Deployment.Schema, protoSchema); err != nil {
-			return Deployment{}, fmt.Errorf("%q: could not unmarshal schema: %w", in.ModuleName, err)
-		}
-		modelSchema, err := schema.ModuleFromProto(protoSchema)
-		if err != nil {
-			return Deployment{}, fmt.Errorf("%q: invalid schema in database: %w", in.ModuleName, err)
-		}
 		return Deployment{
 			Name:        in.Deployment.Name,
 			Module:      in.ModuleName,
 			Language:    in.Language,
 			MinReplicas: int(in.Deployment.MinReplicas),
-			Schema:      modelSchema,
+			Schema:      in.Deployment.Schema,
 			CreatedAt:   in.Deployment.CreatedAt,
 		}, nil
 	})
@@ -754,17 +737,7 @@ func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module,
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", "could not get active deployments", translatePGError(err))
 	}
-	return slices.MapErr(rows, func(in sql.GetActiveDeploymentSchemasRow) (*schema.Module, error) {
-		protoSchema := &schemapb.Module{}
-		if err := proto.Unmarshal(in.Schema, protoSchema); err != nil {
-			return nil, fmt.Errorf("%q: could not unmarshal schema: %w", in.Name, err)
-		}
-		modelSchema, err := schema.ModuleFromProto(protoSchema)
-		if err != nil {
-			return nil, fmt.Errorf("%q: invalid schema in database: %w", in.Name, err)
-		}
-		return modelSchema, nil
-	})
+	return slices.MapErr(rows, func(in sql.GetActiveDeploymentSchemasRow) (*schema.Module, error) { return in.Schema, nil })
 }
 
 type ProcessRunner struct {
@@ -917,20 +890,11 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 }
 
 func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRow) (*model.Deployment, error) {
-	pm := &schemapb.Module{}
-	err := proto.Unmarshal(deployment.Deployment.Schema, pm)
-	if err != nil {
-		return nil, err
-	}
-	module, err := schema.ModuleFromProto(pm)
-	if err != nil {
-		return nil, err
-	}
 	out := &model.Deployment{
 		Module:   deployment.ModuleName,
 		Language: deployment.Language,
 		Name:     deployment.Deployment.Name,
-		Schema:   module,
+		Schema:   deployment.Deployment.Schema,
 	}
 	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
 	if err != nil {

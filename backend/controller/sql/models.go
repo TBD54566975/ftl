@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/types/optional"
 )
 
@@ -208,7 +209,7 @@ type Deployment struct {
 	CreatedAt   time.Time
 	ModuleID    int64
 	Name        model.DeploymentName
-	Schema      []byte
+	Schema      *schema.Module
 	Labels      []byte
 	MinReplicas int32
 }

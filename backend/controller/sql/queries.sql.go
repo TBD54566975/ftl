@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/types/optional"
 )
 
@@ -137,7 +138,7 @@ SELECT name, schema FROM deployments WHERE min_replicas > 0
 
 type GetActiveDeploymentSchemasRow struct {
 	Name   model.DeploymentName
-	Schema []byte
+	Schema *schema.Module
 }
 
 func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error) {
@@ -558,7 +559,7 @@ type GetDeploymentsWithArtefactsRow struct {
 	ID             int64
 	CreatedAt      time.Time
 	DeploymentName model.DeploymentName
-	Schema         []byte
+	Schema         *schema.Module
 	ModuleName     string
 }
 
@@ -603,7 +604,7 @@ type GetExistingDeploymentForModuleRow struct {
 	CreatedAt   time.Time
 	ModuleID    int64
 	Name        model.DeploymentName
-	Schema      []byte
+	Schema      *schema.Module
 	Labels      []byte
 	MinReplicas int32
 	ID_2        int64
@@ -935,7 +936,7 @@ type GetRunnersForDeploymentRow struct {
 	CreatedAt          time.Time
 	ModuleID           int64
 	Name               model.DeploymentName
-	Schema             []byte
+	Schema             *schema.Module
 	Labels_2           []byte
 	MinReplicas        int32
 }
