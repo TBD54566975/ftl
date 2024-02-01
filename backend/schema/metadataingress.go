@@ -12,7 +12,7 @@ import (
 type MetadataIngress struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Type   string                 `parser:"'ingress' @('http' | 'ftl')?" protobuf:"2"`
+	Type   string                 `parser:"'ingress' @('http')?" protobuf:"2"`
 	Method string                 `parser:"@('GET' | 'POST' | 'PUT' | 'DELETE')" protobuf:"3"`
 	Path   []IngressPathComponent `parser:"('/' @@)+" protobuf:"4"`
 }

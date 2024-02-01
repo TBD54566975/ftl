@@ -18,6 +18,20 @@ data class Todo(
   val completed: Boolean = false,
 )
 
+typealias GetStatusRequest = Unit
+
+data class GetStatusResponse(
+  val status: String,
+)
+
+data class GetTodoRequest(
+  val id: Int,
+)
+
+data class GetTodoResponse(
+  val todo: Todo?,
+)
+
 data class CreateTodoRequest(
   val title: String,
 )
@@ -44,32 +58,32 @@ class Api {
   private val headers = mapOf("Content-Type" to arrayListOf("application/json"))
 
   @Verb
-  @HttpIngress(Method.GET, "/api/status")
-  fun status(context: Context, req: HttpRequest): HttpResponse {
-    return HttpResponse(status = 200, headers = mapOf(), body = "OK".toByteArray())
+  @Ingress(Method.GET, "/api/status")
+  fun status(context: Context, req: HttpRequest<GetStatusRequest>): HttpResponse<GetStatusResponse> {
+    return HttpResponse<GetStatusResponse>(status = 200, headers = mapOf(), body = GetStatusResponse("OK"))
   }
 
   @Verb
-  @HttpIngress(Method.GET, "/api/todos/{todoId}")
-  fun getTodo(context: Context, req: HttpRequest): HttpResponse {
-    val todoId = req.pathParameters["todoId"]?.toIntOrNull()
+  @Ingress(Method.GET, "/api/todos/{id}")
+  fun getTodo(context: Context, req: HttpRequest<GetTodoRequest>): HttpResponse<GetTodoResponse> {
+    val todoId = req.pathParameters["id"]?.toIntOrNull()
     val todo = todos[todoId]
 
     return if (todo != null) {
-      HttpResponse(
+      HttpResponse<GetTodoResponse>(
         status = 200,
         headers = mapOf(),
-        body = gson.toJson(todo).toByteArray()
+        body = GetTodoResponse(todo)
       )
     } else {
-      HttpResponse(status = 404, headers = mapOf(), body = "Todo not found".toByteArray())
+      HttpResponse<GetTodoResponse>(status = 404, headers = mapOf(), body = GetTodoResponse(null))
     }
   }
 
   @Verb
-  @HttpIngress(Method.POST, "/api/todos")
-  fun addTodo(context: Context, req: HttpRequest): HttpResponse {
-    val todoReq = gson.fromJson(req.body.toString(Charsets.UTF_8), CreateTodoRequest::class.java)
+  @Ingress(Method.POST, "/api/todos")
+  fun addTodo(context: Context, req: HttpRequest<CreateTodoRequest>): HttpResponse<CreateTodoResponse> {
+    val todoReq = req.body
     val id = idCounter.incrementAndGet()
     todos.put(
       id, Todo(
@@ -78,10 +92,10 @@ class Api {
       )
     )
 
-    return HttpResponse(
+    return HttpResponse<CreateTodoResponse>(
       status = 201,
       headers = headers,
-      body = gson.toJson(CreateTodoResponse(id)).toByteArray(),
+      body = CreateTodoResponse(id),
     )
   }
 }

@@ -6,7 +6,8 @@ import kotlin.String
 import kotlin.Unit
 import xyz.block.ftl.Alias
 import xyz.block.ftl.Context
-import xyz.block.ftl.HttpIngress
+import xyz.block.ftl.Ingress
+import xyz.block.ftl.Ingress.Type.HTTP
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 
@@ -47,9 +48,10 @@ data class DeleteResponse(
 
 class Echo {
   @Verb
-  @HttpIngress(
+  @Ingress(
     Method.GET,
     "/echo/users/{userID}/posts/{postID}",
+    HTTP
   )
   fun `get`(context: Context, req: HttpRequest<GetRequest>): HttpResponse<GetResponse> {
     return HttpResponse<GetResponse>(
@@ -60,9 +62,10 @@ class Echo {
   }
 
   @Verb
-  @HttpIngress(
+  @Ingress(
     Method.POST,
     "/echo/users",
+    HTTP
   )
   fun post(context: Context, req: HttpRequest<PostRequest>): HttpResponse<PostResponse> {
     return HttpResponse<PostResponse>(
@@ -73,9 +76,10 @@ class Echo {
   }
 
   @Verb
-  @HttpIngress(
+  @Ingress(
     Method.PUT,
     "/echo/users/{userID}",
+    HTTP
   )
   fun put(context: Context, req: HttpRequest<PutRequest>): HttpResponse<PutResponse> {
     return HttpResponse<PutResponse>(
@@ -86,7 +90,7 @@ class Echo {
   }
 
   @Verb
-  @HttpIngress(Method.DELETE, "/echo/users/{userID}")
+  @Ingress(Method.DELETE, "/echo/users/{userID}", HTTP)
   fun delete(context: Context, req: HttpRequest<DeleteRequest>): HttpResponse<DeleteResponse> {
     return HttpResponse<DeleteResponse>(
       status = 200,

@@ -44,6 +44,7 @@ func Normalise[T Node](n T) T {
 		c.Pos = zero
 
 	case *DataRef:
+		c.TypeParameters = normaliseSlice(c.TypeParameters)
 		c.Pos = zero
 
 	case *Field:

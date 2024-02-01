@@ -225,9 +225,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 			isVerb = true
 
 		case *directiveIngress:
+			typ := dir.Type
+			if typ == "" {
+				typ = "http"
+			}
 			metadata = append(metadata, &schema.MetadataIngress{
 				Pos:    dir.Pos,
-				Type:   dir.Type,
+				Type:   typ,
 				Method: dir.Method,
 				Path:   dir.Path,
 			})
