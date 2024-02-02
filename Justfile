@@ -1,17 +1,10 @@
-# Install all JARs to local Maven repository
-install-jars: install-root-jar install-generator-jar install-runtime-jar
+# Start a hot-reloading dev cluster
+dev: install-jars
+  goreman -logtime=false start
 
-# Install root JAR to local Maven repository
-install-root-jar:
-  mvn -B install
-
-# Install ftl-generator JAR to local Maven repository
-install-generator-jar:
-  mvn -B -pl :ftl-generator install
-
-# Install ftl-runtime JAR to local Maven repository
-install-runtime-jar:
-  mvn -B -pl :ftl-runtime install
+# Install all JARs to local Maven repository and local build directory
+install-jars:
+  bit 'build/**/*.jar'
 
 # Deploy the Go time module
 deploy-time:
