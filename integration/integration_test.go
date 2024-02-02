@@ -71,7 +71,7 @@ func TestHttpIngress(t *testing.T) {
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
 
 					message, ok := resp.body["msg"].(string)
-					assert.True(t, ok, "message is not a string")
+					assert.True(t, ok, "msg is not a string")
 					assert.Equal(t, "UserID: 123, PostID: 456", message)
 
 					nested, ok := resp.body["nested"].(map[string]any)

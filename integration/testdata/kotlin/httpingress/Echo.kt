@@ -12,90 +12,104 @@ import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 
 data class GetRequest(
-  val userID: String,
-  val postID: String,
+  @Alias("userId") val userID: String,
+  @Alias("postId") val postID: String,
+)
+
+data class Nested(
+  @Alias("good_stuff") val goodStuff: String,
 )
 
 data class GetResponse(
-  val message: String,
+  @Alias("msg") val message: String,
+  @Alias("nested") val nested: Nested,
 )
 
 data class PostRequest(
-  @Alias("id") val userID: String,
-  val postID: String,
+  @Alias("user_id") val userID: Int,
+  val postID: Int,
 )
 
 data class PostResponse(
-  val message: String,
+  @Alias("success") val success: Boolean,
 )
 
 data class PutRequest(
-  val userID: String,
-  val postID: String,
+  @Alias("userId") val userID: String,
+  @Alias("postId") val postID: String,
 )
 
-data class PutResponse(
-  val message: String,
-)
+typealias PutResponse = Unit
 
 data class DeleteRequest(
-  val userID: String,
+  @Alias("userId") val userID: String,
 )
 
-data class DeleteResponse(
-  val message: String,
-)
+typealias DeleteResponse = Unit
+typealias HtmlRequest = Unit
 
 class Echo {
   @Verb
   @Ingress(
-    Method.GET,
-    "/echo/users/{userID}/posts/{postID}",
-    HTTP
-  )
+    Method.GET, "/users/{userID}/posts/{postID}", HTTP)
   fun `get`(context: Context, req: HttpRequest<GetRequest>): HttpResponse<GetResponse> {
     return HttpResponse<GetResponse>(
       status = 200,
       headers = mapOf("Get" to arrayListOf("Header from FTL")),
-      body = GetResponse(message = "UserID: ${req.body.userID}, PostID ${req.body.postID}")
+      body = GetResponse(
+        message = "UserID: ${req.body.userID}, PostID: ${req.body.postID}",
+        nested = Nested(goodStuff = "This is good stuff")
+      )
     )
   }
 
   @Verb
-  @Ingress(
-    Method.POST,
-    "/echo/users",
-    HTTP
-  )
+  @Ingress(Method.POST, "/users", HTTP)
   fun post(context: Context, req: HttpRequest<PostRequest>): HttpResponse<PostResponse> {
     return HttpResponse<PostResponse>(
       status = 201,
       headers = mapOf("Post" to arrayListOf("Header from FTL")),
-      body = PostResponse(message = "UserID: ${req.body.userID}, PostID ${req.body.postID}")
+      body = PostResponse(success = true)
     )
   }
 
   @Verb
-  @Ingress(
-    Method.PUT,
-    "/echo/users/{userID}",
-    HTTP
-  )
+  @Ingress(Method.PUT, "/users/{userId}", HTTP)
   fun put(context: Context, req: HttpRequest<PutRequest>): HttpResponse<PutResponse> {
     return HttpResponse<PutResponse>(
       status = 200,
       headers = mapOf("Put" to arrayListOf("Header from FTL")),
-      body = PutResponse(message = "UserID: ${req.body.userID}, PostID ${req.body.postID}")
+      body = PutResponse
     )
   }
 
   @Verb
-  @Ingress(Method.DELETE, "/echo/users/{userID}", HTTP)
+  @Ingress(Method.DELETE, "/users/{userId}", HTTP)
   fun delete(context: Context, req: HttpRequest<DeleteRequest>): HttpResponse<DeleteResponse> {
     return HttpResponse<DeleteResponse>(
       status = 200,
       headers = mapOf("Delete" to arrayListOf("Header from FTL")),
-      body = DeleteResponse(message = "UserID: ${req.body.userID}")
+      body = DeleteResponse
+    )
+  }
+
+  @Verb
+  @Ingress(Method.GET, "/html", HTTP)
+  fun html(context: Context, req: HttpRequest<HtmlRequest>): HttpResponse<String> {
+    return HttpResponse<String>(
+      status = 200,
+      headers = mapOf("Content-Type" to arrayListOf("text/html; charset=utf-8")),
+      body = "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>",
+    )
+  }
+
+  @Verb
+  @Ingress(Method.POST, "/bytes", HTTP)
+  fun bytes(context: Context, req: HttpRequest<ByteArray>): HttpResponse<ByteArray> {
+    return HttpResponse<ByteArray>(
+      status = 200,
+      headers = mapOf("Content-Type" to arrayListOf("application/octet-stream")),
+      body = req.body,
     )
   }
 }
