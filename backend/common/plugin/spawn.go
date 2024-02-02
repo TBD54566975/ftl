@@ -121,7 +121,7 @@ func Spawn[Client PingableClient](
 
 	// Start the plugin process.
 	pluginEndpoint := &url.URL{Scheme: "http", Host: addr.String()}
-	logger.Debugf("Spawning plugin on %s", pluginEndpoint)
+	logger.Tracef("Spawning plugin on %s", pluginEndpoint)
 	cmd := exec.Command(ctx, defaultLevel, dir, exe)
 
 	// Send the plugin's stderr to the logger.
@@ -142,7 +142,7 @@ func Spawn[Client PingableClient](
 	go func() { cancelWithCause(cmd.Wait()) }()
 
 	go func() {
-		err := log.JSONStreamer(pipe, logger, log.Info)
+		err := log.JSONStreamer(pipe, logger, log.Debug)
 		if err != nil {
 			logger.Errorf(err, "Error streaming plugin logs.")
 		}
@@ -196,7 +196,7 @@ func Spawn[Client PingableClient](
 		makeClient(pluginEndpoint.String())
 	}
 
-	logger.Infof("Online")
+	logger.Debugf("Online")
 	plugin = &Plugin[Client]{Cmd: cmd, Endpoint: pluginEndpoint, Client: client}
 	return plugin, cmdCtx, nil
 }

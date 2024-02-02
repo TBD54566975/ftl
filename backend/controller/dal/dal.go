@@ -414,7 +414,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	if err != nil {
 		return "", err
 	} else if existingDeployment != "" {
-		logger.Debugf("Returning existing deployment %s", existingDeployment)
+		logger.Tracef("Returning existing deployment %s", existingDeployment)
 		return existingDeployment, nil
 	}
 

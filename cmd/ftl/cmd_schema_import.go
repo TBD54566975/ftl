@@ -108,7 +108,7 @@ func (i *importKotlinCmd) Run(ctx context.Context, parent *schemaImportCmd) erro
 func query(ctx context.Context, prompt string) error {
 	logger := log.FromContext(ctx)
 
-	logger.Infof("The import schema command relies on the %s AI chat model to translate schemas from other "+
+	logger.Debugf("The import schema command relies on the %s AI chat model to translate schemas from other "+
 		"languages into FTL compliant objects in the specified language. Output may vary and results should be inspected "+
 		"for correctness. It is suggested that if the results are not satisfactory, you try again.\n\n", ollamaModel)
 
@@ -145,7 +145,7 @@ func (s *schemaImportCmd) setup(ctx context.Context) error {
 	port := fmt.Sprintf("%d", s.OllamaPort)
 
 	if len(output) == 0 {
-		logger.Infof("Creating docker container '%s' for ollama", ollamaContainerName)
+		logger.Debugf("Creating docker container '%s' for ollama", ollamaContainerName)
 
 		// check if port s.OllamaPort is already in use
 		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", s.OllamaPort))
@@ -154,13 +154,12 @@ func (s *schemaImportCmd) setup(ctx context.Context) error {
 		}
 		_ = l.Close()
 
-		err = exec.Command(ctx, logger.GetLevel(), "./", "docker", "run",
+		err = exec.Command(ctx, log.Debug, "./", "docker", "run",
 			"-d", // run detached so we can follow with other commands
 			"-v", ollamaVolume,
 			"-p", fmt.Sprintf("%s:11434", port),
 			"--name", ollamaContainerName,
-			"ollama/ollama",
-		).Run()
+			"ollama/ollama").RunBuffered(ctx)
 		if err != nil {
 			return err
 		}
@@ -173,11 +172,10 @@ func (s *schemaImportCmd) setup(ctx context.Context) error {
 	}
 
 	// Initialize Ollama
-	err = exec.Command(ctx, logger.GetLevel(), "./", "docker", "exec",
+	err = exec.Command(ctx, log.Debug, "./", "docker", "exec",
 		ollamaContainerName,
 		"ollama",
-		"run", ollamaModel,
-	).Run()
+		"run", ollamaModel).RunBuffered(ctx)
 	if err != nil {
 		return err
 	}

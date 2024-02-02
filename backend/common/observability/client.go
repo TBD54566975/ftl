@@ -40,7 +40,7 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 		return nil
 	}
 
-	logger.Infof("OTEL is enabled, exporting to %s", os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
+	logger.Debugf("OTEL is enabled, exporting to %s", os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
 
 	otelLogger := NewOtelLogger(logger, config.LogLevel)
 	otel.SetLogger(otelLogger)

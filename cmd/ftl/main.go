@@ -78,7 +78,7 @@ func main() {
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigch
-		logger.Infof("FTL terminating with signal %s", sig)
+		logger.Debugf("FTL terminating with signal %s", sig)
 		cancel()
 		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
 		os.Exit(0)

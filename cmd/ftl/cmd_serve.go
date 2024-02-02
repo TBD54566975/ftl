@@ -34,13 +34,12 @@ const ftlContainerName = "ftl-db-1"
 
 func (s *serveCmd) Run(ctx context.Context) error {
 	logger := log.FromContext(ctx)
+	logger.Infof("Starting FTL with %d controller(s) and %d runner(s)", s.Controllers, s.Runners)
 
 	dsn, err := s.setupDB(ctx)
 	if err != nil {
 		return err
 	}
-
-	logger.Infof("Starting %d controller(s) and %d runner(s)", s.Controllers, s.Runners)
 
 	wg, ctx := errgroup.WithContext(ctx)
 
@@ -106,7 +105,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	port := strconv.Itoa(s.DBPort)
 
 	if len(output) == 0 {
-		logger.Infof("Creating docker container '%s' for postgres db", ftlContainerName)
+		logger.Debugf("Creating docker container '%s' for postgres db", ftlContainerName)
 
 		// check if port s.DBPort is already in use
 		_, err := exec.Capture(ctx, ".", "sh", "-c", fmt.Sprintf("lsof -i:%d", s.DBPort))
@@ -114,7 +113,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			return "", fmt.Errorf("port %d is already in use", s.DBPort)
 		}
 
-		err = exec.Command(ctx, logger.GetLevel(), "./", "docker", "run",
+		err = exec.Command(ctx, log.Debug, "./", "docker", "run",
 			"-d", // run detached so we can follow with other commands
 			"--name", ftlContainerName,
 			"--user", "postgres",
@@ -127,8 +126,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			"--health-retries=60",
 			"--health-start-period=80s",
 			"postgres:latest", "postgres",
-		).Run()
-
+		).RunBuffered(ctx)
 		if err != nil {
 			return "", err
 		}
@@ -154,7 +152,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			return port
 		})
 
-		logger.Infof("Reusing existing docker container %q on port %q for postgres db", ftlContainerName, port)
+		logger.Debugf("Reusing existing docker container %q on port %q for postgres db", ftlContainerName, port)
 	}
 
 	err = pollContainerHealth(ctx, ftlContainerName, 10*time.Second)
@@ -163,7 +161,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	}
 
 	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%s/ftl?sslmode=disable", port)
-	logger.Infof("Postgres DSN: %s", dsn)
+	logger.Debugf("Postgres DSN: %s", dsn)
 
 	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
 	if err != nil {
@@ -175,7 +173,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 
 func pollContainerHealth(ctx context.Context, containerName string, timeout time.Duration) error {
 	logger := log.FromContext(ctx)
-	logger.Infof("Waiting for %s to be healthy", containerName)
+	logger.Debugf("Waiting for %s to be healthy", containerName)
 
 	pollCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

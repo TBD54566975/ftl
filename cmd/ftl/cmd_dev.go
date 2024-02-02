@@ -98,7 +98,7 @@ func (m *moduleMap) RebuildDependentModules(ctx context.Context, sch *schema.Mod
 
 func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
-	logger.Infof("Watching %s for FTL modules", d.BaseDir)
+	logger.Debugf("Watching %s for FTL modules", d.BaseDir)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -112,7 +112,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	})
 
 	for {
-		logger.Debugf("Scanning %s for FTL module changes", d.BaseDir)
+		logger.Tracef("Scanning %s for FTL module changes", d.BaseDir)
 		delay := d.Watch
 
 		tomls, err := d.getTomls(ctx)

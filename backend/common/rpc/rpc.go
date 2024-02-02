@@ -154,7 +154,7 @@ func RetryStreamingClientStream[Req, Resp any](
 				break
 			}
 			if errored {
-				logger.Infof("Stream recovered")
+				logger.Debugf("Stream recovered")
 				errored = false
 			}
 			select {

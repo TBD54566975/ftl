@@ -31,7 +31,7 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 	logger := log.FromContext(ctx).Scope(endpoint.Hostname())
 
 	// Next, try the authenticator.
-	logger.Debugf("Trying authenticator")
+	logger.Tracef("Trying authenticator")
 	authenticator, ok := authenticators[endpoint.Hostname()]
 	if !ok {
 		logger.Tracef("No authenticator found for %s in %s", endpoint, authenticators)
@@ -51,13 +51,13 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 
 	// First, check if we have credentials in the keyring and that they work.
 	keyringKey := "ftl+" + endpoint.String()
-	logger.Debugf("Trying keyring key %s", keyringKey)
+	logger.Tracef("Trying keyring key %s", keyringKey)
 	creds, err := keyring.Get(keyringKey, usr.Name)
 	if errors.Is(err, keyring.ErrNotFound) {
 		logger.Tracef("No credentials found in keyring")
 	} else if err != nil {
 		if !strings.Contains(err.Error(), `exec: "dbus-launch": executable file not found in $PATH`) {
-			logger.Debugf("Failed to get credentials from keyring: %s", err)
+			logger.Tracef("Failed to get credentials from keyring: %s", err)
 		}
 	} else {
 		logger.Tracef("Credentials found in keyring: %s", creds)
@@ -84,7 +84,7 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 		return nil, nil
 	}
 
-	logger.Debugf("Authenticator %s succeeded", authenticator)
+	logger.Tracef("Authenticator %s succeeded", authenticator)
 	w := &strings.Builder{}
 	for name, values := range headers {
 		for _, value := range values {
@@ -93,7 +93,7 @@ func GetAuthenticationHeaders(ctx context.Context, endpoint *url.URL, authentica
 	}
 	err = keyring.Set(keyringKey, usr.Name, w.String())
 	if err != nil {
-		logger.Debugf("Failed to save credentials to keyring: %s", err)
+		logger.Tracef("Failed to save credentials to keyring: %s", err)
 	}
 	return headers, nil
 }
@@ -127,7 +127,7 @@ func checkAuth(ctx context.Context, logger *log.Logger, endpoint *url.URL, creds
 	if err != nil {
 		return nil, err
 	}
-	logger.Debugf("Authentication probe: %s %s", req.Method, req.URL)
+	logger.Tracef("Authentication probe: %s %s", req.Method, req.URL)
 	for header, values := range headers {
 		for _, value := range values {
 			req.Header.Add(header, value)
@@ -141,12 +141,12 @@ func checkAuth(ctx context.Context, logger *log.Logger, endpoint *url.URL, creds
 	defer resp.Body.Close() //nolint:gosec
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		logger.Debugf("Endpoint returned %d for authenticated request", resp.StatusCode)
-		logger.Debugf("Response headers: %s", resp.Header)
-		logger.Debugf("Response body: %s", body)
+		logger.Tracef("Endpoint returned %d for authenticated request", resp.StatusCode)
+		logger.Tracef("Response headers: %s", resp.Header)
+		logger.Tracef("Response body: %s", body)
 		return nil, nil
 	}
-	logger.Debugf("Successfully authenticated with %s", headers)
+	logger.Tracef("Successfully authenticated with %s", headers)
 	return headers, nil
 }
 

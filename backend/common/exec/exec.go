@@ -2,6 +2,7 @@ package exec
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -13,6 +14,7 @@ import (
 
 type Cmd struct {
 	*exec.Cmd
+	level log.Level
 }
 
 func LookPath(exe string) (string, error) {
@@ -45,7 +47,23 @@ func Command(ctx context.Context, level log.Level, dir, exe string, args ...stri
 	cmd.Stdout = output
 	cmd.Stderr = output
 	cmd.Env = os.Environ()
-	return &Cmd{cmd}
+	return &Cmd{cmd, level}
+}
+
+// RunBuffered runs the command and captures the output. If the command fails, the output is logged.
+func (c *Cmd) RunBuffered(ctx context.Context) error {
+	outputBuffer := NewCircularBuffer(100)
+	output := outputBuffer.WriterAt(ctx, c.level)
+	c.Cmd.Stdout = output
+	c.Cmd.Stderr = output
+
+	err := c.Run()
+	if err != nil {
+		fmt.Printf("%s", outputBuffer.Bytes())
+		return err
+	}
+
+	return nil
 }
 
 // Kill sends a signal to the process group of the command.

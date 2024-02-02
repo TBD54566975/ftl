@@ -39,7 +39,7 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 			if !filepath.IsLocal(artefact.Path) {
 				return fmt.Errorf("path %q is not local", artefact.Path)
 			}
-			logger.Infof("Downloading %s", filepath.Join(dest, artefact.Path))
+			logger.Debugf("Downloading %s", filepath.Join(dest, artefact.Path))
 			err = os.MkdirAll(filepath.Join(dest, filepath.Dir(artefact.Path)), 0700)
 			if err != nil {
 				return err
@@ -63,6 +63,6 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 	if w != nil {
 		w.Close()
 	}
-	logger.Infof("Downloaded %d artefacts in %s", count, time.Since(start))
+	logger.Debugf("Downloaded %d artefacts in %s", count, time.Since(start))
 	return stream.Err()
 }
