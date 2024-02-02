@@ -258,8 +258,10 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			for k, v := range response.Headers {
 				w.Header()[k] = v
 			}
-			w.WriteHeader(response.Status)
 
+			if response.Status != 0 {
+				w.WriteHeader(response.Status)
+			}
 		} else {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")

@@ -66,25 +66,52 @@ func TestHttpIngress(t *testing.T) {
 				run("ftl", rd.initOpts...),
 				scaffoldTestData(runtime, "httpingress", rd.modulePath),
 				run("ftl", "deploy", rd.moduleRoot),
-				httpCall(rd, http.MethodGet, "/users/123/posts/456", obj{}, func(t testing.TB, resp *httpResponse) {
+				httpCall(rd, http.MethodGet, "/users/123/posts/456", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
-					message, ok := resp.body["message"].(string)
+					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
+
+					message, ok := resp.body["msg"].(string)
 					assert.True(t, ok, "message is not a string")
 					assert.Equal(t, "UserID: 123, PostID: 456", message)
 
+					nested, ok := resp.body["nested"].(map[string]any)
+					assert.True(t, ok, "nested is not a map")
+					goodStuff, ok := nested["good_stuff"].(string)
+					assert.True(t, ok, "good_stuff is not a string")
+					assert.Equal(t, "This is good stuff", goodStuff)
 				}),
-				httpCall(rd, http.MethodPost, "/users", obj{"userID": "123", "postID": "345"}, func(t testing.TB, resp *httpResponse) {
+				httpCall(rd, http.MethodPost, "/users", jsonData(t, obj{"userID": 123, "postID": 345}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 201, resp.status)
+					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Post"])
+					success, ok := resp.body["success"].(bool)
+					assert.True(t, ok, "success is not a bool")
+					assert.True(t, success)
 				}),
 				// contains aliased field
-				httpCall(rd, http.MethodPost, "/users", obj{"id": "123", "postID": "345"}, func(t testing.TB, resp *httpResponse) {
+				httpCall(rd, http.MethodPost, "/users", jsonData(t, obj{"user_id": 123, "postID": 345}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 201, resp.status)
 				}),
-				httpCall(rd, http.MethodPut, "/users/123", obj{"postID": "346"}, func(t testing.TB, resp *httpResponse) {
+				httpCall(rd, http.MethodPut, "/users/123", jsonData(t, obj{"postID": "346"}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
+					assert.Equal(t, map[string]any{}, resp.body)
 				}),
-				httpCall(rd, http.MethodDelete, "/users/123", obj{}, func(t testing.TB, resp *httpResponse) {
+				httpCall(rd, http.MethodDelete, "/users/123", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Delete"])
+					assert.Equal(t, map[string]any{}, resp.body)
+				}),
+
+				httpCall(rd, http.MethodGet, "/html", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"text/html; charset=utf-8"}, resp.headers["Content-Type"])
+					assert.Equal(t, "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>", string(resp.bodyBytes))
+				}),
+
+				httpCall(rd, http.MethodPost, "/bytes", []byte("Hello, World!"), func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"application/octet-stream"}, resp.headers["Content-Type"])
+					assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
 				}),
 			}},
 		}
@@ -338,19 +365,24 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 }
 
 type httpResponse struct {
-	status int
-	body   map[string]any
+	status    int
+	headers   map[string][]string
+	body      map[string]any
+	bodyBytes []byte
 }
 
-func httpCall(rd runtimeData, method string, path string, body obj, onResponse func(t testing.TB, resp *httpResponse)) assertion {
+func jsonData(t testing.TB, body obj) []byte {
+	b, err := json.Marshal(body)
+	assert.NoError(t, err)
+	return b
+}
+
+func httpCall(rd runtimeData, method string, path string, body []byte, onResponse func(t testing.TB, resp *httpResponse)) assertion {
 	return func(t testing.TB, ic itContext) error {
-		b, err := json.Marshal(body)
+		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8892/ingress"))
 		assert.NoError(t, err)
 
-		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8892/ingress/%s", rd.moduleName))
-		assert.NoError(t, err)
-
-		r, err := http.NewRequestWithContext(ic, method, baseURL.JoinPath(path).String(), bytes.NewReader(b))
+		r, err := http.NewRequestWithContext(ic, method, baseURL.JoinPath(path).String(), bytes.NewReader(body))
 		assert.NoError(t, err)
 
 		r.Header.Add("Content-Type", "application/json")
@@ -369,12 +401,14 @@ func httpCall(rd runtimeData, method string, path string, body obj, onResponse f
 		assert.NoError(t, err)
 
 		var resBody map[string]any
-		err = json.Unmarshal(bodyBytes, &resBody)
-		assert.NoError(t, err)
+		// ignore the error here since some responses are just `[]byte`.
+		_ = json.Unmarshal(bodyBytes, &resBody)
 
 		onResponse(t, &httpResponse{
-			status: resp.StatusCode,
-			body:   resBody,
+			status:    resp.StatusCode,
+			headers:   resp.Header,
+			body:      resBody,
+			bodyBytes: bodyBytes,
 		})
 		return nil
 	}
