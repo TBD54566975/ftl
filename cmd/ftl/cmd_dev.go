@@ -32,10 +32,11 @@ type moduleFolderInfo struct {
 }
 
 type devCmd struct {
-	BaseDir        string        `arg:"" help:"Directory to watch for FTL modules" type:"existingdir" default:"."`
-	Watch          time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
-	FailureDelay   time.Duration `help:"Delay before retrying a failed deploy." default:"5s"`
-	ReconnectDelay time.Duration `help:"Delay before attempting to reconnect to FTL." default:"1s"`
+	BaseDir         string        `arg:"" help:"Directory to watch for FTL modules" type:"existingdir" default:"."`
+	Watch           time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
+	FailureDelay    time.Duration `help:"Delay before retrying a failed deploy." default:"5s"`
+	ReconnectDelay  time.Duration `help:"Delay before attempting to reconnect to FTL." default:"1s"`
+	ExitAfterDeploy bool          `help:"Exit after all modules are deployed successfully." default:"false"`
 }
 
 type moduleMap map[string]*moduleFolderInfo
@@ -98,6 +99,8 @@ func (m *moduleMap) RebuildDependentModules(ctx context.Context, sch *schema.Mod
 func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Watching %s for FTL modules", d.BaseDir)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	schemaChanges := make(chan *schema.Module, 64)
 	modules := make(moduleMap)
@@ -122,6 +125,8 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 			return err
 		}
 
+		allModulesDeployed := true
+
 		for dir := range modules {
 			currentModule := modules[dir]
 			hashes, err := d.computeFileHashes(ctx, dir)
@@ -140,11 +145,18 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 					modules.RemoveModule(dir)
 					// Increase delay when there's a compile failure.
 					delay = d.FailureDelay
+					allModulesDeployed = false
 				} else {
 					currentModule.fileHashes = hashes
 					modules.SetModule(dir, currentModule)
 				}
 			}
+		}
+
+		if allModulesDeployed && d.ExitAfterDeploy {
+			logger.Infof("All modules deployed successfully.")
+			cancel()
+			return wg.Wait()
 		}
 
 		select {
@@ -169,13 +181,28 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 func (d *devCmd) watchForSchemaChanges(ctx context.Context, client ftlv1connect.ControllerServiceClient, schemaChanges chan *schema.Module) error {
 	logger := log.FromContext(ctx)
+
 	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		stream, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 		if err != nil {
 			return err
 		}
 
 		for stream.Receive() {
+			select {
+			case <-ctx.Done():
+				logger.Warnf("Context canceled during schema change streaming, closing stream...")
+				stream.Close()
+				return ctx.Err()
+			default:
+			}
+
 			msg := stream.Msg()
 			if msg.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED || msg.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED {
 				module, err := schema.ModuleFromProto(msg.Schema)
@@ -186,8 +213,11 @@ func (d *devCmd) watchForSchemaChanges(ctx context.Context, client ftlv1connect.
 			}
 		}
 
+		if errors.Is(ctx.Err(), context.Canceled) {
+			logger.Infof("Stream disconnected, attempting to reconnect...")
+		}
+
 		stream.Close()
-		logger.Infof("Stream disconnected, attempting to reconnect...")
 		time.Sleep(d.ReconnectDelay)
 	}
 }
