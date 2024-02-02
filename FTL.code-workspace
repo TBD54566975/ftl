@@ -7,13 +7,15 @@
 			"path": "kotlin-runtime"
 		},
 		{
-			"path": "examples/time"
-		},
-		{
-			"path": "examples/echo"
-		},
-		{
 			"path": "examples/online-boutique"
+		},
+		{
+			"path": "examples/go",
+			"name": "examples/go"
+		},
+		{
+			"path": "examples/kotlin",
+			"name": "examples/kotlin"
 		},
 		{
 			"path": "backend"

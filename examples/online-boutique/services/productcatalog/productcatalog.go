@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"ftl/builtin"
 	"ftl/currency"
 
 	"github.com/TBD54566975/ftl/examples/online-boutique/common"
@@ -38,8 +39,10 @@ type ListResponse struct {
 
 //ftl:verb
 //ftl:ingress GET /productcatalog
-func List(ctx context.Context, req ListRequest) (ListResponse, error) {
-	return ListResponse{Products: database}, nil
+func List(ctx context.Context, req builtin.HttpRequest[ListRequest]) (builtin.HttpResponse[ListResponse], error) {
+	return builtin.HttpResponse[ListResponse]{
+		Body: ListResponse{Products: database},
+	}, nil
 }
 
 type GetRequest struct {
@@ -48,13 +51,13 @@ type GetRequest struct {
 
 //ftl:verb
 //ftl:ingress GET /productcatalog/{id}
-func Get(ctx context.Context, req GetRequest) (Product, error) {
+func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[Product], error) {
 	for _, p := range database {
-		if p.ID == req.ID {
-			return p, nil
+		if p.ID == req.Body.ID {
+			return builtin.HttpResponse[Product]{Body: p}, nil
 		}
 	}
-	return Product{}, fmt.Errorf("product not found: %q", req.ID)
+	return builtin.HttpResponse[Product]{Body: Product{}}, fmt.Errorf("product not found: %q", req.Body.ID)
 }
 
 type SearchRequest struct {
