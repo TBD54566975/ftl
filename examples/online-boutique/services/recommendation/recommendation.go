@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"ftl/builtin"
 	"ftl/productcatalog"
 
 	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
@@ -22,21 +23,20 @@ type ListResponse struct {
 
 //ftl:verb
 //ftl:ingress GET /recommendation
-func List(ctx context.Context, req ListRequest) (ListResponse, error) {
-
-	catalog, err := ftl.Call(ctx, productcatalog.List, productcatalog.ListRequest{})
+func List(ctx context.Context, req builtin.HttpRequest[ListRequest]) (builtin.HttpResponse[ListResponse], error) {
+	cresp, err := ftl.Call(ctx, productcatalog.List, builtin.HttpRequest[productcatalog.ListRequest]{})
 	if err != nil {
-		return ListResponse{}, fmt.Errorf("%s: %w", "failed to retrieve product catalog", err)
+		return builtin.HttpResponse[ListResponse]{Body: ListResponse{}}, fmt.Errorf("%s: %w", "failed to retrieve product catalog", err)
 	}
 
 	// Remove user-provided products from the catalog, to avoid recommending
 	// them.
-	userIDs := make(map[string]struct{}, len(req.UserProductIDs))
-	for _, id := range req.UserProductIDs {
+	userIDs := make(map[string]struct{}, len(req.Body.UserProductIDs))
+	for _, id := range req.Body.UserProductIDs {
 		userIDs[id] = struct{}{}
 	}
-	filtered := make([]string, 0, len(catalog.Products))
-	for _, product := range catalog.Products {
+	filtered := make([]string, 0, len(cresp.Body.Products))
+	for _, product := range cresp.Body.Products {
 		if _, ok := userIDs[product.Id]; ok {
 			continue
 		}
@@ -53,6 +53,6 @@ func List(ctx context.Context, req ListRequest) (ListResponse, error) {
 			break
 		}
 	}
-	return ListResponse{ProductIDs: ret}, nil
+	return builtin.HttpResponse[ListResponse]{Body: ListResponse{ProductIDs: ret}}, nil
 
 }

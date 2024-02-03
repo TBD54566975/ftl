@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 
+	"ftl/builtin"
+
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/examples/online-boutique/common"
@@ -45,8 +47,10 @@ type GetSupportedCurrenciesResponse struct {
 
 //ftl:verb
 //ftl:ingress GET /currency/supported
-func GetSupportedCurrencies(ctx context.Context, req GetSupportedCurrenciesRequest) (GetSupportedCurrenciesResponse, error) {
-	return GetSupportedCurrenciesResponse{CurrencyCodes: maps.Keys(database)}, nil
+func GetSupportedCurrencies(ctx context.Context, req builtin.HttpRequest[GetSupportedCurrenciesRequest]) (builtin.HttpResponse[GetSupportedCurrenciesResponse], error) {
+	return builtin.HttpResponse[GetSupportedCurrenciesResponse]{
+		Body: GetSupportedCurrenciesResponse{CurrencyCodes: maps.Keys(database)},
+	}, nil
 }
 
 type ConvertRequest struct {
@@ -56,20 +60,21 @@ type ConvertRequest struct {
 
 //ftl:verb
 //ftl:ingress POST /currency/convert
-func Convert(ctx context.Context, req ConvertRequest) (Money, error) {
-	from := req.From
+func Convert(ctx context.Context, req builtin.HttpRequest[ConvertRequest]) (builtin.HttpResponse[Money], error) {
+	from := req.Body.From
 	fromRate, ok := database[from.CurrencyCode]
 	if !ok {
-		return Money{}, fmt.Errorf("unknown origin currency %q", req.From.CurrencyCode)
+		return builtin.HttpResponse[Money]{}, fmt.Errorf("unknown origin currency %q", req.Body.From.CurrencyCode)
 	}
-	toRate, ok := database[req.ToCode]
+	toRate, ok := database[req.Body.ToCode]
 	if !ok {
-		return Money{}, fmt.Errorf("unknown destination currency %q", req.ToCode)
+		return builtin.HttpResponse[Money]{}, fmt.Errorf("unknown destination currency %q", req.Body.ToCode)
 	}
 	euros := carry(float64(from.Units)/fromRate, float64(from.Nanos)/fromRate)
 	to := carry(float64(euros.Units)*toRate, float64(euros.Nanos)*toRate)
-	to.CurrencyCode = req.ToCode
-	return to, nil
+	to.CurrencyCode = req.Body.ToCode
+
+	return builtin.HttpResponse[Money]{Body: to}, nil
 }
 
 // carry is a helper function that handles decimal/fractional carrying.

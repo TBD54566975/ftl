@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 
+	"ftl/builtin"
 	"ftl/cart"
 	"ftl/currency"
 )
@@ -25,8 +26,8 @@ type ShippingRequest struct {
 
 //ftl:verb
 //ftl:ingress POST /shipping/quote
-func GetQuote(ctx context.Context, req ShippingRequest) (currency.Money, error) {
-	return moneyFromUSD(8.99), nil
+func GetQuote(ctx context.Context, req builtin.HttpRequest[ShippingRequest]) (builtin.HttpResponse[currency.Money], error) {
+	return builtin.HttpResponse[currency.Money]{Body: moneyFromUSD(8.99)}, nil
 }
 
 type ShipOrderResponse struct {
@@ -35,9 +36,9 @@ type ShipOrderResponse struct {
 
 //ftl:verb
 //ftl:ingress POST /shipping/ship
-func ShipOrder(ctx context.Context, req ShippingRequest) (ShipOrderResponse, error) {
-	baseAddress := fmt.Sprintf("%s, %s, %s", req.Address.StreetAddress, req.Address.City, req.Address.State)
-	return ShipOrderResponse{ID: createTrackingID(baseAddress)}, nil
+func ShipOrder(ctx context.Context, req builtin.HttpRequest[ShippingRequest]) (builtin.HttpResponse[ShipOrderResponse], error) {
+	baseAddress := fmt.Sprintf("%s, %s, %s", req.Body.Address.StreetAddress, req.Body.Address.City, req.Body.Address.State)
+	return builtin.HttpResponse[ShipOrderResponse]{Body: ShipOrderResponse{ID: createTrackingID(baseAddress)}}, nil
 }
 
 func moneyFromUSD(value float64) currency.Money {

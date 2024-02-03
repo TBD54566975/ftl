@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"ftl/builtin"
 	"ftl/currency"
 )
 
@@ -53,25 +54,25 @@ type ChargeResponse struct {
 
 //ftl:verb
 //ftl:ingress POST /payment/charge
-func Charge(ctx context.Context, req ChargeRequest) (ChargeResponse, error) {
-	card := req.CreditCard
+func Charge(ctx context.Context, req builtin.HttpRequest[ChargeRequest]) (builtin.HttpResponse[ChargeResponse], error) {
+	card := req.Body.CreditCard
 	number := strings.ReplaceAll(card.Number, "-", "")
 	var company string
 	switch {
 	case len(number) < 4:
-		return ChargeResponse{}, InvalidCreditCardErr{}
+		return builtin.HttpResponse[ChargeResponse]{Body: ChargeResponse{}}, InvalidCreditCardErr{}
 	case number[0] == '4':
 		company = "Visa"
 	case number[0] == '5':
 		company = "MasterCard"
 	default:
-		return ChargeResponse{}, InvalidCreditCardErr{}
+		return builtin.HttpResponse[ChargeResponse]{Body: ChargeResponse{}}, InvalidCreditCardErr{}
 	}
 	if card.CVV < 100 || card.CVV > 9999 {
-		return ChargeResponse{}, InvalidCreditCardErr{}
+		return builtin.HttpResponse[ChargeResponse]{Body: ChargeResponse{}}, InvalidCreditCardErr{}
 	}
 	if time.Date(card.ExpirationYear, card.ExpirationMonth, 0, 0, 0, 0, 0, time.Local).Before(time.Now()) {
-		return ChargeResponse{}, ExpiredCreditCardErr{}
+		return builtin.HttpResponse[ChargeResponse]{Body: ChargeResponse{}}, InvalidCreditCardErr{}
 	}
 
 	// Card is valid: process the transaction.
@@ -79,8 +80,10 @@ func Charge(ctx context.Context, req ChargeRequest) (ChargeResponse, error) {
 		"Transaction processed",
 		"company", company,
 		"last_four", number[len(number)-4:],
-		"currency", req.Amount.CurrencyCode,
-		"amount", fmt.Sprintf("%d.%d", req.Amount.Units, req.Amount.Nanos),
+		"currency", req.Body.Amount.CurrencyCode,
+		"amount", fmt.Sprintf("%d.%d", req.Body.Amount.Units, req.Body.Amount.Nanos),
 	)
-	return ChargeResponse{TransactionID: uuid.New().String()}, nil
+	return builtin.HttpResponse[ChargeResponse]{
+		Body: ChargeResponse{TransactionID: uuid.New().String()},
+	}, nil
 }

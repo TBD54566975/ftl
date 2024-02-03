@@ -2,8 +2,11 @@ package ftl.ad
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import ftl.builtin.HttpRequest
+import ftl.builtin.HttpResponse
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ingress
+import xyz.block.ftl.Ingress.Type.HTTP
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 import java.util.*
@@ -16,12 +19,14 @@ class AdModule {
   private val database: Map<String, Ad> = loadDatabase()
 
   @Verb
-  @Ingress(Method.GET, "/get")
-  fun get(context: Context, req: AdRequest): AdResponse {
-    return when {
-      req.contextKeys != null -> AdResponse(ads = contextualAds(req.contextKeys))
-      else -> AdResponse(ads = randomAds())
+  @Ingress(Method.GET, "/get", HTTP)
+  fun get(context: Context, req: HttpRequest<AdRequest>): HttpResponse<AdResponse> {
+    val ads: List<Ad> = when {
+        req.body.contextKeys != null -> contextualAds(req.body.contextKeys)
+        else -> randomAds()
     }
+
+    return HttpResponse(status = 200, headers = emptyMap(), body = AdResponse(ads = ads))
   }
 
   private fun contextualAds(contextKeys: List<String>): List<Ad> {

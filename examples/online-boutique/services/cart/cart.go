@@ -3,6 +3,7 @@ package cart
 
 import (
 	"context"
+	"ftl/builtin"
 )
 
 var store = NewStore()
@@ -26,9 +27,11 @@ type Cart struct {
 
 //ftl:verb
 //ftl:ingress POST /cart/add
-func AddItem(ctx context.Context, req AddItemRequest) (AddItemResponse, error) {
-	store.Add(req.UserID, req.Item)
-	return AddItemResponse{}, nil
+func AddItem(ctx context.Context, req builtin.HttpRequest[AddItemRequest]) (builtin.HttpResponse[AddItemResponse], error) {
+	store.Add(req.Body.UserID, req.Body.Item)
+	return builtin.HttpResponse[AddItemResponse]{
+		Body: AddItemResponse{},
+	}, nil
 }
 
 type GetCartRequest struct {
@@ -37,8 +40,10 @@ type GetCartRequest struct {
 
 //ftl:verb
 //ftl:ingress GET /cart
-func GetCart(ctx context.Context, req GetCartRequest) (Cart, error) {
-	return Cart{Items: store.Get(req.UserID), UserID: req.UserID}, nil
+func GetCart(ctx context.Context, req builtin.HttpRequest[GetCartRequest]) (builtin.HttpResponse[Cart], error) {
+	return builtin.HttpResponse[Cart]{
+		Body: Cart{Items: store.Get(req.Body.UserID), UserID: req.Body.UserID},
+	}, nil
 }
 
 type EmptyCartRequest struct {
@@ -49,7 +54,9 @@ type EmptyCartResponse struct{}
 
 //ftl:verb
 //ftl:ingress POST /cart/empty
-func EmptyCart(ctx context.Context, req EmptyCartRequest) (EmptyCartResponse, error) {
-	store.Empty(req.UserID)
-	return EmptyCartResponse{}, nil
+func EmptyCart(ctx context.Context, req builtin.HttpRequest[EmptyCartRequest]) (builtin.HttpResponse[EmptyCartResponse], error) {
+	store.Empty(req.Body.UserID)
+	return builtin.HttpResponse[EmptyCartResponse]{
+		Body: EmptyCartResponse{},
+	}, nil
 }

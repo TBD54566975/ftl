@@ -24,7 +24,6 @@ type EchoResponse struct {
 // Echo returns a greeting with the current time.
 //
 //ftl:verb
-//ftl:ingress GET /echo
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	fmt.Println("Echo received a request!")
 	tresp, err := sdk.Call(ctx, time.Time, time.TimeRequest{})

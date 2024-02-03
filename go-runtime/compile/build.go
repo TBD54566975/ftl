@@ -145,6 +145,16 @@ var scaffoldFuncs = scaffolder.FuncMap{
 				}
 				imports[path.Join("ftl", n.Module)] = "ftl" + n.Module
 
+				for _, tp := range n.TypeParameters {
+					tpRef, err := schema.ParseDataRef(tp.String())
+					if err != nil {
+						return err
+					}
+					if tpRef.Module != "" && tpRef.Module != m.Name {
+						imports[path.Join("ftl", tpRef.Module)] = "ftl" + tpRef.Module
+					}
+				}
+
 			case *schema.Time:
 				imports["time"] = "stdtime"
 
