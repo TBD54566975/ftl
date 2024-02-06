@@ -67,11 +67,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				if !ok {
 					return nil, fmt.Errorf("expected request to be a data ref, got %T", verbSchema.Request)
 				}
-				dataRef := schema.DataRef{
-					Module: requestData.Module,
-					Name:   requestData.Name,
-				}
-				jsonRequestSchema, err := schema.DataToJSONSchema(sch, dataRef)
+				jsonRequestSchema, err := schema.DataToJSONSchema(sch, *requestData)
 				if err != nil {
 					return nil, err
 				}
