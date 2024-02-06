@@ -69,6 +69,7 @@ func TestHttpIngress(t *testing.T) {
 				httpCall(rd, http.MethodGet, "/users/123/posts/456", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
+					assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 
 					message, ok := resp.body["msg"].(string)
 					assert.True(t, ok, "msg is not a string")
@@ -94,12 +95,12 @@ func TestHttpIngress(t *testing.T) {
 				httpCall(rd, http.MethodPut, "/users/123", jsonData(t, obj{"postID": "346"}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
-					assert.Equal(t, map[string]any{}, resp.body)
+					assert.Equal(t, nil, resp.body)
 				}),
 				httpCall(rd, http.MethodDelete, "/users/123", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Delete"])
-					assert.Equal(t, map[string]any{}, resp.body)
+					assert.Equal(t, nil, resp.body)
 				}),
 
 				httpCall(rd, http.MethodGet, "/html", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
@@ -111,6 +112,18 @@ func TestHttpIngress(t *testing.T) {
 				httpCall(rd, http.MethodPost, "/bytes", []byte("Hello, World!"), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"application/octet-stream"}, resp.headers["Content-Type"])
+					assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
+				}),
+
+				httpCall(rd, http.MethodGet, "/empty", nil, func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, nil, resp.headers["Content-Type"])
+					assert.Equal(t, nil, resp.bodyBytes)
+				}),
+
+				httpCall(rd, http.MethodGet, "/string", []byte("Hello, World!"), func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 					assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
 				}),
 			}},

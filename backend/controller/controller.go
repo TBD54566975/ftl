@@ -204,7 +204,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := ingress.ValidateAndExtractRequestBody(route, r, sch)
+	body, err := ingress.BuildRequestBody(route, r, sch)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -248,7 +248,13 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			ingress.SetDefaultContentType(response.Headers)
+			verbResponse := verb.Response.(*schema.DataRef) //nolint:forcetypeassert
+			err = ingress.ValidateContentType(verbResponse, sch, response.Headers)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
 			responseBody, err = ingress.ResponseBodyForVerb(sch, verb, response.Body, response.Headers)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -3,12 +3,8 @@ package ingress
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"math/rand"
-	"net/http"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -62,9 +58,52 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 	return true
 }
 
-func SetDefaultContentType(headers map[string][]string) {
-	if _, hasContentType := headers["Content-Type"]; !hasContentType {
-		headers["Content-Type"] = []string{"application/json"}
+func ValidateContentType(dataRef *schema.DataRef, sch *schema.Schema, headers map[string][]string) error {
+	bodyField, err := getBodyField(dataRef, sch)
+	if err != nil {
+		return err
+	}
+
+	_, hasContentType := headers["Content-Type"]
+	if !hasContentType {
+		defaultType := getDefaultContentType(bodyField)
+		if defaultType == "" {
+			return nil // No content type is required
+		}
+		headers["Content-Type"] = []string{defaultType}
+	}
+
+	contentType := headers["Content-Type"][0]
+	switch bodyField.Type.(type) {
+	case *schema.Bytes:
+		if !strings.HasPrefix(contentType, "application/octet-stream") {
+			return fmt.Errorf("expected application/octet-stream content type, got %s", contentType)
+		}
+	case *schema.String, *schema.Int, *schema.Float, *schema.Bool:
+		if !strings.HasPrefix(contentType, "text/") {
+			return fmt.Errorf("expected text content type, got %s", contentType)
+		}
+	case *schema.DataRef, *schema.Map, *schema.Array:
+		if !strings.HasPrefix(contentType, "application/json") {
+			return fmt.Errorf("expected application/json content type, got %s", contentType)
+		}
+	default:
+		return nil
+	}
+
+	return nil
+}
+
+func getDefaultContentType(bodyField *schema.Field) string {
+	switch bodyField.Type.(type) {
+	case *schema.Bytes:
+		return "application/octet-stream"
+	case *schema.String, *schema.Int, *schema.Float, *schema.Bool:
+		return "text/plain; charset=utf-8"
+	case *schema.DataRef, *schema.Map, *schema.Array:
+		return "application/json; charset=utf-8"
+	default:
+		return ""
 	}
 }
 
@@ -81,117 +120,6 @@ func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) 
 	}
 
 	return validateValue(verb.Request, []string{verb.Request.String()}, requestMap, sch)
-}
-
-// ValidateAndExtractRequestBody extracts the HttpRequest body from an HTTP request.
-func ValidateAndExtractRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
-	verb := sch.ResolveVerbRef(&schema.VerbRef{Name: route.Verb, Module: route.Module})
-	if verb == nil {
-		return nil, fmt.Errorf("unknown verb %s", route.Verb)
-	}
-
-	request, ok := verb.Request.(*schema.DataRef)
-	if !ok {
-		return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
-	}
-
-	var body []byte
-
-	var requestMap map[string]any
-
-	if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
-		pathParameters := map[string]string{}
-		matchSegments(route.Path, r.URL.Path, func(segment, value string) {
-			pathParameters[segment] = value
-		})
-
-		httpRequestBody, err := extractHTTPRequestBody(route, r, request, sch)
-		if err != nil {
-			return nil, err
-		}
-
-		requestMap = map[string]any{}
-		requestMap["method"] = r.Method
-		requestMap["path"] = r.URL.Path
-		requestMap["pathParameters"] = pathParameters
-		requestMap["query"] = r.URL.Query()
-		requestMap["headers"] = r.Header
-		requestMap["body"] = httpRequestBody
-	} else {
-		var err error
-		requestMap, err = buildRequestMap(route, r, request, sch)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	requestMap, err := transformFromAliasedFields(request, sch, requestMap)
-	if err != nil {
-		return nil, err
-	}
-
-	err = validateRequestMap(request, []string{request.String()}, requestMap, sch)
-	if err != nil {
-		return nil, err
-	}
-
-	body, err = json.Marshal(requestMap)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
-}
-
-func ResponseBodyForVerb(sch *schema.Schema, verb *schema.Verb, body []byte, headers map[string][]string) ([]byte, error) {
-	if contentType, hasContentType := headers["Content-Type"]; hasContentType {
-		if strings.HasPrefix(contentType[0], "text/") {
-			var textContent string
-			if err := json.Unmarshal(body, &textContent); err != nil {
-				return nil, err
-			}
-			return []byte(textContent), nil
-		}
-	}
-
-	responseRef, ok := verb.Response.(*schema.DataRef)
-	if !ok {
-		return body, nil
-	}
-
-	bodyField, err := getBodyField(responseRef, sch)
-	if err != nil {
-		return nil, err
-	}
-
-	switch bodyType := bodyField.Type.(type) {
-	case *schema.DataRef:
-		var responseMap map[string]any
-		err := json.Unmarshal(body, &responseMap)
-		if err != nil {
-			return nil, fmt.Errorf("HTTP response body is not valid JSON: %w", err)
-		}
-
-		aliasedResponseMap, err := transformToAliasedFields(bodyType, sch, responseMap)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(aliasedResponseMap)
-
-	case *schema.Bytes:
-		var base64String string
-		if err := json.Unmarshal(body, &base64String); err != nil {
-			return nil, fmt.Errorf("HTTP response body is not valid base64: %w", err)
-		}
-		decodedBody, err := base64.StdEncoding.DecodeString(base64String)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode base64 response body: %w", err)
-		}
-		return decodedBody, nil
-
-	default:
-		return body, nil
-	}
 }
 
 func getBodyField(dataRef *schema.DataRef, sch *schema.Schema) (*schema.Field, error) {
@@ -212,99 +140,6 @@ func getBodyField(dataRef *schema.DataRef, sch *schema.Schema) (*schema.Field, e
 	}
 
 	return bodyField, nil
-}
-
-func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (any, error) {
-	bodyField, err := getBodyField(dataRef, sch)
-	if err != nil {
-		return nil, err
-	}
-
-	switch bodyType := bodyField.Type.(type) {
-	case *schema.DataRef:
-		bodyMap, err := buildRequestMap(route, r, bodyType, sch)
-		if err != nil {
-			return nil, err
-		}
-		return bodyMap, nil
-
-	case *schema.Bytes:
-		defer r.Body.Close()
-		bodyData, err := io.ReadAll(r.Body)
-		if err != nil {
-			return nil, fmt.Errorf("error reading request body: %w", err)
-		}
-		return bodyData, nil
-
-	default:
-		return nil, fmt.Errorf("unsupported HttpRequest.Body type %T", bodyField.Type)
-	}
-}
-
-func buildRequestMap(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (map[string]any, error) {
-	requestMap := map[string]any{}
-	matchSegments(route.Path, r.URL.Path, func(segment, value string) {
-		requestMap[segment] = value
-	})
-
-	switch r.Method {
-	case http.MethodPost, http.MethodPut:
-		var bodyMap map[string]any
-		err := json.NewDecoder(r.Body).Decode(&bodyMap)
-		if err != nil {
-			return nil, fmt.Errorf("HTTP request body is not valid JSON: %w", err)
-		}
-
-		// Merge bodyMap into params
-		for k, v := range bodyMap {
-			requestMap[k] = v
-		}
-	default:
-		data, err := sch.ResolveDataRefMonomorphised(dataRef)
-		if err != nil {
-			return nil, err
-		}
-
-		queryMap, err := parseQueryParams(r.URL.Query(), data)
-		if err != nil {
-			return nil, fmt.Errorf("HTTP query params are not valid: %w", err)
-		}
-
-		for key, value := range queryMap {
-			requestMap[key] = value
-		}
-	}
-
-	return requestMap, nil
-}
-
-func validateRequestMap(dataRef *schema.DataRef, path path, request map[string]any, sch *schema.Schema) error {
-	data, err := sch.ResolveDataRefMonomorphised(dataRef)
-	if err != nil {
-		return err
-	}
-
-	var errs []error
-	for _, field := range data.Fields {
-		fieldPath := append(path, "."+field.Name) //nolint:gocritic
-
-		_, isOptional := field.Type.(*schema.Optional)
-		value, haveValue := request[field.Name]
-		if !isOptional && !haveValue {
-			errs = append(errs, fmt.Errorf("%s is required", fieldPath))
-			continue
-		}
-
-		if haveValue {
-			err := validateValue(field.Type, fieldPath, value, sch)
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-
-	}
-
-	return errors.Join(errs...)
 }
 
 func validateValue(fieldType schema.Type, path path, value any, sch *schema.Schema) error {
@@ -428,91 +263,4 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		return fmt.Errorf("%s has wrong type, expected %s found %T", path, fieldType, value)
 	}
 	return nil
-}
-
-func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, error) {
-	if jsonStr, ok := values["@json"]; ok {
-		if len(values) > 1 {
-			return nil, fmt.Errorf("only '@json' parameter is allowed, but other parameters were found")
-		}
-		if len(jsonStr) > 1 {
-			return nil, fmt.Errorf("'@json' parameter must be provided exactly once")
-		}
-
-		return decodeQueryJSON(jsonStr[0])
-	}
-
-	queryMap := make(map[string]any)
-	for key, value := range values {
-		if hasInvalidQueryChars(key) {
-			return nil, fmt.Errorf("complex key %q is not supported, use '@json=' instead", key)
-		}
-
-		var field *schema.Field
-		for _, f := range data.Fields {
-			if (f.Alias != "" && f.Alias == key) || f.Name == key {
-				field = f
-			}
-			for _, typeParam := range data.TypeParameters {
-				if typeParam.Name == key {
-					field = &schema.Field{
-						Name: key,
-						Type: &schema.DataRef{Pos: typeParam.Pos, Name: typeParam.Name},
-					}
-				}
-			}
-		}
-
-		if field == nil {
-			queryMap[key] = value
-			continue
-		}
-
-		switch field.Type.(type) {
-		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time,
-			*schema.Unit, *schema.DataRef, *schema.Any:
-
-		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
-			if len(value) > 1 {
-				return nil, fmt.Errorf("multiple values for %q are not supported", key)
-			}
-			if hasInvalidQueryChars(value[0]) {
-				return nil, fmt.Errorf("complex value %q is not supported, use '@json=' instead", value[0])
-			}
-			queryMap[key] = value[0]
-
-		case *schema.Array:
-			for _, v := range value {
-				if hasInvalidQueryChars(v) {
-					return nil, fmt.Errorf("complex value %q is not supported, use '@json=' instead", v)
-				}
-			}
-			queryMap[key] = value
-
-		default:
-			panic(fmt.Sprintf("unsupported type %T for query parameter field %q", field.Type, key))
-		}
-	}
-
-	return queryMap, nil
-}
-
-func decodeQueryJSON(query string) (map[string]any, error) {
-	decodedJSONStr, err := url.QueryUnescape(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode '@json' query parameter: %w", err)
-	}
-
-	// Unmarshal the JSON string into a map
-	var resultMap map[string]any
-	err = json.Unmarshal([]byte(decodedJSONStr), &resultMap)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse '@json' query parameter: %w", err)
-	}
-
-	return resultMap, nil
-}
-
-func hasInvalidQueryChars(s string) bool {
-	return strings.ContainsAny(s, "{}[]|\\^`")
 }

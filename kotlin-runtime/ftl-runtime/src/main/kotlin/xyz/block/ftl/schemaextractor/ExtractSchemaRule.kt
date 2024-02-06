@@ -426,6 +426,7 @@ class SchemaExtractor(
       OffsetDateTime::class.qualifiedName -> Type(time = xyz.block.ftl.v1.schema.Time())
       ByteArray::class.qualifiedName -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
       Any::class.qualifiedName -> Type(any = xyz.block.ftl.v1.schema.Any())
+      Unit::class.qualifiedName -> Type(unit = xyz.block.ftl.v1.schema.Unit())
       Map::class.qualifiedName -> {
         return Type(
           map = xyz.block.ftl.v1.schema.Map(

@@ -44,8 +44,8 @@ typealias PutResponse = Unit
 data class DeleteRequest(
   @Alias("userId") val userID: String,
 )
-
 typealias DeleteResponse = Unit
+
 typealias HtmlRequest = Unit
 
 class Echo {
@@ -110,6 +110,26 @@ class Echo {
       status = 200,
       headers = mapOf("Content-Type" to arrayListOf("application/octet-stream")),
       body = req.body,
+    )
+  }
+
+  @Verb
+  @Ingress(Method.GET, "/empty", HTTP)
+  fun empty(context: Context, req: HttpRequest<Unit>): HttpResponse<Unit> {
+    return HttpResponse<Unit>(
+      status = 200,
+      headers = mapOf("Empty" to arrayListOf("Header from FTL")),
+      body = Unit
+    )
+  }
+
+  @Verb
+  @Ingress(Method.GET, "/string", HTTP)
+  fun string(context: Context, req: HttpRequest<String>): HttpResponse<String> {
+    return HttpResponse<String>(
+      status = 200,
+      headers = mapOf("String" to arrayListOf("Header from FTL")),
+      body = req.body
     )
   }
 }
