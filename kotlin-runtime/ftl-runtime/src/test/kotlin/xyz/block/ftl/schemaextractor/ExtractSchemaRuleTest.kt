@@ -131,7 +131,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             fields = listOf(
               Field(
                 name = "t",
-                type = Type(parameter = TypeParameter(name = "T"))
+                type = Type(dataRef = DataRef(name = "T"))
               ),
               Field(
                 name = "name",
