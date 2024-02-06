@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"ftl/builtin"
+
+	ftl "github.com/TBD54566975/ftl/go-runtime/sdk" // Import the FTL SDK.
 )
 
 type GetRequest struct {
@@ -64,11 +66,11 @@ type PutResponse struct{}
 
 //ftl:verb
 //ftl:ingress http PUT /users/{userID}
-func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[PutResponse], error) {
-	return builtin.HttpResponse[PutResponse]{
+func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[ftl.Unit], error) {
+	return builtin.HttpResponse[ftl.Unit]{
 		Status:  200,
 		Headers: map[string][]string{"Put": {"Header from FTL"}},
-		Body:    PutResponse{},
+		Body:    ftl.Unit{},
 	}, nil
 }
 
@@ -80,11 +82,11 @@ type DeleteResponse struct{}
 
 //ftl:verb
 //ftl:ingress http DELETE /users/{userId}
-func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[DeleteResponse], error) {
-	return builtin.HttpResponse[DeleteResponse]{
+func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[ftl.Unit], error) {
+	return builtin.HttpResponse[ftl.Unit]{
 		Status:  200,
 		Headers: map[string][]string{"Delete": {"Header from FTL"}},
-		Body:    DeleteResponse{},
+		Body:    ftl.Unit{},
 	}, nil
 }
 
@@ -94,7 +96,6 @@ type HtmlRequest struct{}
 //ftl:ingress http GET /html
 func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.HttpResponse[string], error) {
 	return builtin.HttpResponse[string]{
-		Status:  200,
 		Headers: map[string][]string{"Content-Type": {"text/html; charset=utf-8"}},
 		Body:    "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>",
 	}, nil
@@ -104,8 +105,22 @@ func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.Ht
 //ftl:ingress http POST /bytes
 func Bytes(ctx context.Context, req builtin.HttpRequest[[]byte]) (builtin.HttpResponse[[]byte], error) {
 	return builtin.HttpResponse[[]byte]{
-		Status:  200,
-		Headers: map[string][]string{"Content-Type": {"application/octet-stream"}},
-		Body:    req.Body,
+		Body: req.Body,
+	}, nil
+}
+
+//ftl:verb
+//ftl:ingress http GET /empty
+func Empty(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.HttpResponse[ftl.Unit], error) {
+	return builtin.HttpResponse[ftl.Unit]{
+		Body: ftl.Unit{},
+	}, nil
+}
+
+//ftl:verb
+//ftl:ingress http GET /string
+func String(ctx context.Context, req builtin.HttpRequest[string]) (builtin.HttpResponse[string], error) {
+	return builtin.HttpResponse[string]{
+		Body: req.Body,
 	}, nil
 }

@@ -141,16 +141,6 @@ func TestParseQueryJson(t *testing.T) {
 	}
 }
 
-func TestSetDefaultContentType(t *testing.T) {
-	headers := map[string][]string{}
-	SetDefaultContentType(headers)
-	assert.Equal(t, map[string][]string{"Content-Type": {"application/json"}}, headers)
-
-	headers = map[string][]string{"Content-Type": {"text/html"}}
-	SetDefaultContentType(headers)
-	assert.Equal(t, map[string][]string{"Content-Type": {"text/html"}}, headers)
-}
-
 func TestResponseBodyForVerb(t *testing.T) {
 	jsonVerb := &schema.Verb{
 		Name: "Json",
@@ -162,10 +152,10 @@ func TestResponseBodyForVerb(t *testing.T) {
 			},
 		}},
 	}
-	bytesVerb := &schema.Verb{
-		Name: "Json",
+	stringVerb := &schema.Verb{
+		Name: "String",
 		Response: &schema.DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
-			&schema.Bytes{},
+			&schema.String{},
 		}},
 	}
 	sch := &schema.Schema{
@@ -208,7 +198,7 @@ func TestResponseBodyForVerb(t *testing.T) {
 		},
 		{
 			name:         "text/html",
-			verb:         bytesVerb,
+			verb:         stringVerb,
 			headers:      map[string][]string{"Content-Type": {"text/html"}},
 			body:         []byte(`"<html><body>Hello, World!</body></html>"`),
 			expectedBody: []byte("<html><body>Hello, World!</body></html>"),
