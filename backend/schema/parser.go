@@ -15,7 +15,7 @@ var (
 	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}}
 	nonOptionalTypeUnion = []Type{
 		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
-		&Map{}, &DataRef{}, &Unit{}, &Any{}, &TypeParameter{},
+		&Map{}, &DataRef{}, &Unit{}, &Any{},
 	}
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataDatabases{}}

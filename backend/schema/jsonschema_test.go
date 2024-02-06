@@ -39,8 +39,8 @@ var jsonSchemaSample = &Schema{
 				Name:           "Generic",
 				TypeParameters: []*TypeParameter{{Name: "K"}, {Name: "V"}},
 				Fields: []*Field{
-					{Name: "key", Type: &TypeParameter{Name: "K"}},
-					{Name: "value", Type: &TypeParameter{Name: "V"}},
+					{Name: "key", Type: &DataRef{Name: "K"}},
+					{Name: "value", Type: &DataRef{Name: "V"}},
 				},
 			},
 		}},

@@ -121,9 +121,6 @@ func typeToProto(t Type) *schemapb.Type {
 
 	case *Optional:
 		return &schemapb.Type{Value: &schemapb.Type_Optional{Optional: t.ToProto().(*schemapb.Optional)}}
-
-	case *TypeParameter:
-		return &schemapb.Type{Value: &schemapb.Type_Parameter{Parameter: t.ToProto().(*schemapb.TypeParameter)}}
 	}
 	panic(fmt.Sprintf("unhandled type: %T", t))
 }

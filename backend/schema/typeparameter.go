@@ -12,10 +12,8 @@ type TypeParameter struct {
 	Name string `parser:"@Ident" protobuf:"2"`
 }
 
-var _ Type = (*TypeParameter)(nil)
 var _ Decl = (*TypeParameter)(nil)
 
-func (*TypeParameter) schemaType()          {}
 func (t *TypeParameter) Position() Position { return t.Pos }
 func (t *TypeParameter) String() string     { return t.Name }
 func (t *TypeParameter) ToProto() protoreflect.ProtoMessage {
