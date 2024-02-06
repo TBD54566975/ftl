@@ -75,10 +75,6 @@ func ValidateContentType(dataRef *schema.DataRef, sch *schema.Schema, headers ma
 
 	contentType := headers["Content-Type"][0]
 	switch bodyField.Type.(type) {
-	case *schema.Bytes:
-		if !strings.HasPrefix(contentType, "application/octet-stream") {
-			return fmt.Errorf("expected application/octet-stream content type, got %s", contentType)
-		}
 	case *schema.String, *schema.Int, *schema.Float, *schema.Bool:
 		if !strings.HasPrefix(contentType, "text/") {
 			return fmt.Errorf("expected text content type, got %s", contentType)
