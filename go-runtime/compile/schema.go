@@ -412,7 +412,7 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 
 func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
 	if tparam, ok := tnode.(*types.TypeParam); ok {
-		return &schema.TypeParameter{Name: tparam.Obj().Id()}, nil
+		return &schema.DataRef{Pos: goPosToSchemaPos(node.Pos()), Name: tparam.Obj().Id()}, nil
 	}
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:

@@ -422,9 +422,6 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		} else {
 			return validateValue(fieldType.Type, path, value, sch)
 		}
-
-	case *schema.TypeParameter:
-		panic("data structures with type parameters should be monomorphised")
 	}
 
 	if !typeMatches {
@@ -457,10 +454,10 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 				field = f
 			}
 			for _, typeParam := range data.TypeParameters {
-				if typeParam.String() == key {
+				if typeParam.Name == key {
 					field = &schema.Field{
 						Name: key,
-						Type: typeParam,
+						Type: &schema.DataRef{Pos: typeParam.Pos, Name: typeParam.Name},
 					}
 				}
 			}
@@ -473,7 +470,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 
 		switch field.Type.(type) {
 		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time,
-			*schema.Unit, *schema.DataRef, *schema.Any, *schema.TypeParameter:
+			*schema.Unit, *schema.DataRef, *schema.Any:
 
 		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
 			if len(value) > 1 {

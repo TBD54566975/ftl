@@ -11,7 +11,7 @@ func TestMonomorphisation(t *testing.T) {
 		Name:           "Data",
 		TypeParameters: []*TypeParameter{{Name: "T"}},
 		Fields: []*Field{
-			{Name: "a", Type: &TypeParameter{Name: "T"}},
+			{Name: "a", Type: &DataRef{Name: "T"}},
 		},
 	}
 	actual, err := data.Monomorphise(&String{})

@@ -34,7 +34,7 @@ func (d *Data) Scope() Scope {
 
 // Monomorphise this data type with the given type arguments.
 //
-// Will return nil if it is not a parametric type.
+// If this data type has no type parameters, it will be returned as-is.
 //
 // This will return a new Data structure with all type parameters replaced with
 // the given types.
@@ -43,7 +43,7 @@ func (d *Data) Monomorphise(types ...Type) (*Data, error) {
 		return nil, fmt.Errorf("expected %d type arguments, got %d", len(d.TypeParameters), len(types))
 	}
 	if len(d.TypeParameters) == 0 {
-		return nil, nil
+		return d, nil
 	}
 	names := map[string]Type{}
 	for i, t := range d.TypeParameters {
@@ -166,8 +166,8 @@ func DataToSchema(s *schemapb.Data) *Data {
 
 // MonoType returns the monomorphised type of this data type if applicable, or returns the original type.
 func maybeMonomorphiseType(t Type, typeParameters map[string]Type) (Type, error) {
-	if t, ok := t.(*TypeParameter); ok {
-		if tp, ok := typeParameters[t.Name]; ok {
+	if t, ok := t.(*DataRef); ok {
+		if tp, ok := typeParameters[t.Name]; ok && t.Module == "" {
 			return tp, nil
 		}
 		return nil, fmt.Errorf("%s: unknown type parameter %q", t.Position(), t.Name)

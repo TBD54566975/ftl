@@ -10,10 +10,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/mod/modfile"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/common/exec"
@@ -224,9 +225,6 @@ func genType(module *schema.Module, t schema.Type) string {
 
 	case *schema.Bytes:
 		return "[]byte"
-
-	case *schema.TypeParameter:
-		return t.Name
 	}
 	panic(fmt.Sprintf("unsupported type %T", t))
 }

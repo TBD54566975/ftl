@@ -60,8 +60,6 @@ func typeToSchema(s *schemapb.Type) Type {
 		return &Unit{Pos: posFromProto(s.Unit.Pos)}
 	case *schemapb.Type_Any:
 		return &Any{Pos: posFromProto(s.Any.Pos)}
-	case *schemapb.Type_Parameter:
-		return &TypeParameter{Pos: posFromProto(s.Parameter.Pos), Name: s.Parameter.Name}
 	}
 	panic(fmt.Sprintf("unhandled type: %T", s.Value))
 }
