@@ -43,15 +43,16 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 		return fmt.Errorf("module name %q is invalid", i.Name)
 	}
 	logger := log.FromContext(ctx)
-	logger.Infof("Initializing FTL Go module %s in %s", i.Name, i.Dir)
+	logger.Debugf("Initializing FTL Go module %s in %s", i.Name, i.Dir)
 	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
 		return err
 	}
 	if err := updateGitIgnore(ctx, i.Dir); err != nil {
 		return err
 	}
-	logger.Infof("Running go mod tidy")
-	return exec.Command(ctx, log.Debug, filepath.Join(i.Dir, i.Name), "go", "mod", "tidy").Run()
+	logger.Debugf("Running go mod tidy")
+
+	return exec.Command(ctx, log.Debug, filepath.Join(i.Dir, i.Name), "go", "mod", "tidy").RunBuffered(ctx)
 }
 
 type initKotlinCmd struct {

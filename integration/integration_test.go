@@ -220,9 +220,9 @@ func runTests(t *testing.T, tmpDir string, tests []test) {
 	// Build FTL binary
 	logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
 	ctx := log.ContextWithLogger(context.Background(), logger)
-	logger.Infof("Building ftl")
+	logger.Debugf("Building ftl")
 	binDir := filepath.Join(rootDir, "build", "release")
-	err = exec.Command(ctx, log.Debug, rootDir, filepath.Join(rootDir, "bin", "bit"), "build/release/ftl", "**/*.jar").Run()
+	err = exec.Command(ctx, log.Debug, rootDir, filepath.Join(rootDir, "bin", "bit"), "build/release/ftl", "**/*.jar").RunBuffered(ctx)
 	assert.NoError(t, err)
 
 	controller := rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
@@ -525,7 +525,7 @@ func (i itContext) assertWithRetry(t testing.TB, assertion assertion) {
 func startProcess(ctx context.Context, t testing.TB, args ...string) context.Context {
 	t.Helper()
 	ctx, cancel := context.WithCancel(ctx)
-	cmd := exec.Command(ctx, log.Info, "..", args[0], args[1:]...)
+	cmd := exec.Command(ctx, log.Debug, "..", args[0], args[1:]...)
 	err := cmd.Start()
 	assert.NoError(t, err)
 	terminated := make(chan bool)

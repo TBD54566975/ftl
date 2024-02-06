@@ -68,7 +68,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	// Wipe the modules directory to ensure we don't have any stale modules.
 	_ = os.RemoveAll(filepath.Join(buildDir, "go", "modules"))
 
-	logger.Infof("Generating external modules")
+	logger.Debugf("Generating external modules")
 	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), moduleDir, externalModuleContext{
 		ModuleDir: moduleDir,
 		GoVersion: goModVersion,
@@ -78,12 +78,12 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
-	logger.Infof("Tidying go.mod")
-	if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").Run(); err != nil {
+	logger.Debugf("Tidying go.mod")
+	if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
 		return fmt.Errorf("failed to tidy go.mod: %w", err)
 	}
 
-	logger.Infof("Extracting schema")
+	logger.Debugf("Extracting schema")
 	main, err := ExtractModuleSchema(moduleDir)
 	if err != nil {
 		return fmt.Errorf("failed to extract module schema: %w", err)
@@ -97,7 +97,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return fmt.Errorf("failed to write schema: %w", err)
 	}
 
-	logger.Infof("Generating main module")
+	logger.Debugf("Generating main module")
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
 		GoVersion: goModVersion,
 		Module:    main,
@@ -105,13 +105,13 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
-	logger.Infof("Compiling")
+	logger.Debugf("Compiling")
 	mainDir := filepath.Join(buildDir, "go", "main")
-	if err := exec.Command(ctx, log.Debug, mainDir, "go", "mod", "tidy").Run(); err != nil {
+	if err := exec.Command(ctx, log.Debug, mainDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
 		return fmt.Errorf("failed to tidy go.mod: %w", err)
 	}
 
-	return exec.Command(ctx, log.Info, mainDir, "go", "build", "-o", "../../main", ".").Run()
+	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{

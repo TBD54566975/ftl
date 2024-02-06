@@ -13,6 +13,6 @@ object FtlHotswapAgentPlugin {
   @JvmStatic
   @OnClassLoadEvent(classNameRegexp = ".*", events = [LoadEvent.REDEFINE])
   fun loaded(ctClass: CtClass) {
-    logger.info("Reloaded " + ctClass.name)
+    logger.debug("Reloaded " + ctClass.name)
   }
 }

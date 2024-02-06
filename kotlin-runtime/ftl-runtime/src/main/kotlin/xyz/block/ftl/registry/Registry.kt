@@ -54,7 +54,7 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
 
   /** Register all Verbs in the JVM package by walking the class graph. */
   fun registerAll() {
-    logger.info("Scanning for Verbs in ${jvmModuleName}...")
+    logger.debug("Scanning for Verbs in ${jvmModuleName}...")
     ClassGraph()
       .enableAllInfo() // Scan classes, methods, fields, annotations
       .acceptPackages(jvmModuleName)
@@ -83,7 +83,7 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
       ftlModuleName = moduleName
     }
 
-    logger.info("      @Verb ${function.name}()")
+    logger.debug("      @Verb ${function.name}()")
     val verbRef = VerbRef(module = ftlModuleName!!, name = verbName)
     val verbHandle = VerbHandle(klass, function)
     if (verbs.containsKey(verbRef)) throw IllegalArgumentException("Duplicate Verb $verbRef")

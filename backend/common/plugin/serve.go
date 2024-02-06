@@ -119,14 +119,14 @@ func Start[Impl any, Iface any, Config any](
 	logger = logger.Scope(name)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	logger.Debugf("Starting on %s", cli.Bind)
+	logger.Tracef("Starting on %s", cli.Bind)
 
 	// Signal handling.
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigch
-		logger.Infof("Terminated by signal %s", sig)
+		logger.Debugf("Terminated by signal %s", sig)
 		cancel()
 		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
 		os.Exit(0)

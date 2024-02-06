@@ -21,6 +21,7 @@ var (
 func Marshal(v any) ([]byte, error) {
 	w := &bytes.Buffer{}
 	err := encodeValue(reflect.ValueOf(v), w)
+	fmt.Printf("Marshal: %s\n", w.String())
 	return w.Bytes(), err
 }
 
@@ -68,6 +69,7 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 		return encodeValue(v.Elem(), w)
 
 	case reflect.Slice:
+		fmt.Printf("slice: %s %v\n", v.Type().Elem().Kind(), v)
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			return encodeBytes(v, w)
 		}

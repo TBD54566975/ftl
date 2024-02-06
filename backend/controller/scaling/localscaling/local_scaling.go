@@ -71,7 +71,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		return nil
 	}
 
-	logger.Infof("Adding %d replicas", replicasToAdd)
+	logger.Debugf("Adding %d replicas", replicasToAdd)
 	for i := 0; i < replicasToAdd; i++ {
 		i := i
 
@@ -105,7 +105,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		l.runners[config.Key] = cancel
 
 		go func() {
-			logger.Infof("Starting runner: %s", config.Key)
+			logger.Debugf("Starting runner: %s", config.Key)
 			err := runner.Start(runnerCtx, config)
 			if err != nil && !errors.Is(err, context.Canceled) {
 				logger.Errorf(err, "Runner failed: %s", err)
@@ -118,7 +118,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 
 func (l *LocalScaling) remove(ctx context.Context, runner model.RunnerKey) error {
 	log := log.FromContext(ctx)
-	log.Infof("Removing runner: %s", runner)
+	log.Debugf("Removing runner: %s", runner)
 
 	cancel, ok := l.runners[runner]
 	if !ok {

@@ -61,14 +61,14 @@ func Start(ctx context.Context, config Config) error {
 	ctx = rpc.ContextWithClient(ctx, client)
 
 	logger := log.FromContext(ctx).Attrs(map[string]string{"runner": config.Key.String()})
-	logger.Infof("Starting FTL Runner")
-	logger.Infof("Deployment directory: %s", config.DeploymentDir)
+	logger.Debugf("Starting FTL Runner")
+	logger.Debugf("Deployment directory: %s", config.DeploymentDir)
 	err = os.MkdirAll(config.DeploymentDir, 0700)
 	if err != nil {
 		return fmt.Errorf("%s: %w", "failed to create deployment directory", err)
 	}
-	logger.Infof("Using FTL endpoint: %s", config.ControllerEndpoint)
-	logger.Infof("Listening on %s", config.Bind)
+	logger.Debugf("Using FTL endpoint: %s", config.ControllerEndpoint)
+	logger.Debugf("Listening on %s", config.Bind)
 
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
@@ -211,7 +211,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Attrs(map[string]string{"module": module.Name}))
 	deployment, cmdCtx, err := plugin.Spawn(
 		unstoppable.Context(verbCtx),
-		log.Info,
+		log.FromContext(ctx).GetLevel(),
 		gdResp.Msg.Schema.Name,
 		deploymentDir,
 		"./main",

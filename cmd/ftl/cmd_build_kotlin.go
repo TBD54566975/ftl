@@ -17,16 +17,14 @@ import (
 func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleConfig) error {
 	logger := log.FromContext(ctx)
 
-	logger.Infof("Building kotlin module '%s'", config.Module)
-
 	if err := setPomProperties(logger, filepath.Join(b.ModuleDir, "..")); err != nil {
 		return fmt.Errorf("unable to update ftl.version in %s: %w", b.ModuleDir, err)
 	}
 
-	logger.Infof("Using build command '%s'", config.Build)
-	err := exec.Command(ctx, logger.GetLevel(), b.ModuleDir, "bash", "-c", config.Build).Run()
+	logger.Debugf("Using build command '%s'", config.Build)
+	err := exec.Command(ctx, log.Debug, b.ModuleDir, "bash", "-c", config.Build).RunBuffered(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to build module: %w", err)
 	}
 
 	return nil
@@ -45,7 +43,7 @@ func setPomProperties(logger *log.Logger, baseDir string) error {
 
 	pomFile := filepath.Clean(filepath.Join(baseDir, "pom.xml"))
 
-	logger.Infof("Setting ftl.version in %s to %s", pomFile, ftlVersion)
+	logger.Debugf("Setting ftl.version in %s to %s", pomFile, ftlVersion)
 
 	tree := etree.NewDocument()
 	if err := tree.ReadFromFile(pomFile); err != nil {

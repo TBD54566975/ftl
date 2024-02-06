@@ -34,7 +34,6 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	if err != nil {
 		return err
 	}
-	logger.Infof("Creating deployment for module %s", config.Module)
 
 	if len(config.Deploy) == 0 {
 		return fmt.Errorf("no deploy paths defined in config")
@@ -45,6 +44,8 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	if err != nil {
 		return err
 	}
+
+	logger.Infof("Preparing module '%s' for deployment", config.Module)
 
 	deployDir := filepath.Join(d.ModuleDir, config.DeployDir)
 	files, err := findFiles(deployDir, config.Deploy)
@@ -67,22 +68,23 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return fmt.Errorf("failed to load protobuf schema from %q: %w", config.Schema, err)
 	}
 
-	logger.Infof("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))
+	logger.Debugf("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))
 	for _, missing := range gadResp.Msg.MissingDigests {
 		file := filesByHash[missing]
 		content, err := os.ReadFile(file.localPath)
 		if err != nil {
 			return err
 		}
-		logger.Debugf("Uploading %s", relToCWD(file.localPath))
+		logger.Tracef("Uploading %s", relToCWD(file.localPath))
 		resp, err := client.UploadArtefact(ctx, connect.NewRequest(&ftlv1.UploadArtefactRequest{
 			Content: content,
 		}))
 		if err != nil {
 			return err
 		}
-		logger.Infof("Uploaded %s as %s:%s", relToCWD(file.localPath), sha256.FromBytes(resp.Msg.Digest), file.Path)
+		logger.Debugf("Uploaded %s as %s:%s", relToCWD(file.localPath), sha256.FromBytes(resp.Msg.Digest), file.Path)
 	}
+
 	resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 		Schema: module,
 		Artefacts: slices.Map(maps.Values(filesByHash), func(a deploymentArtefact) *ftlv1.DeploymentArtefact {
@@ -92,9 +94,14 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	if err != nil {
 		return err
 	}
-	logger.Infof("Created deployment %s", resp.Msg.DeploymentName)
+
 	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{DeploymentName: resp.Msg.GetDeploymentName(), MinReplicas: d.Replicas}))
-	return err
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("Successfully created deployment %s", resp.Msg.DeploymentName)
+	return nil
 }
 
 func (d *deployCmd) loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig) (*schemapb.Module, error) {

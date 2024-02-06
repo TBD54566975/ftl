@@ -19,9 +19,9 @@ var proxy = httputil.NewSingleHostReverseProxy(consoleURL)
 
 func Server(ctx context.Context, timestamp time.Time, allowOrigin *url.URL) (http.Handler, error) {
 	logger := log.FromContext(ctx)
-	logger.Infof("Building console...")
+	logger.Debugf("Building console...")
 
-	err := exec.Command(ctx, log.Debug, "frontend", "npm", "install").Run()
+	err := exec.Command(ctx, log.Debug, "frontend", "npm", "install").RunBuffered(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func Server(ctx context.Context, timestamp time.Time, allowOrigin *url.URL) (htt
 	if err != nil {
 		return nil, err
 	}
-	logger.Infof("Console started")
+	logger.Infof("Web console available at: %s", consoleURL)
 
 	if allowOrigin == nil {
 		return proxy, nil

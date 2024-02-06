@@ -76,7 +76,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
-	logger.Infof("Starting FTL controller")
+	logger.Debugf("Starting FTL controller")
 
 	c, err := frontend.Server(ctx, config.ContentTime, config.ConsoleURL)
 	if err != nil {
@@ -97,7 +97,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	if err != nil {
 		return err
 	}
-	logger.Infof("Listening on %s", config.Bind)
+	logger.Debugf("Listening on %s", config.Bind)
 
 	console := NewConsoleService(dal)
 
@@ -178,7 +178,7 @@ type HTTPResponse struct {
 // ServeHTTP handles ingress routes.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := log.FromContext(r.Context())
-	logger.Infof("%s %s", r.Method, r.URL.Path)
+	logger.Debugf("%s %s", r.Method, r.URL.Path)
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
 	if err != nil {
 		if errors.Is(err, dal.ErrNotFound) {
@@ -460,7 +460,7 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 	}
 
 	logger := s.getDeploymentLogger(ctx, deploymentName)
-	logger.Infof("Update deployment for: %s", deploymentName)
+	logger.Debugf("Update deployment for: %s", deploymentName)
 
 	err = s.dal.SetDeploymentReplicas(ctx, deploymentName, int(req.Msg.MinReplicas))
 	if err != nil {
@@ -482,7 +482,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 	}
 
 	logger := s.getDeploymentLogger(ctx, newDeploymentName)
-	logger.Infof("Replace deployment for: %s", newDeploymentName)
+	logger.Debugf("Replace deployment for: %s", newDeploymentName)
 
 	err = s.dal.ReplaceDeployment(ctx, newDeploymentName, int(c.Msg.MinReplicas))
 	if err != nil {
@@ -490,7 +490,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 			logger.Errorf(err, "Deployment not found: %s", newDeploymentName)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		} else if errors.Is(err, dal.ErrConflict) {
-			logger.Infof("Deployment already exists: %s", newDeploymentName)
+			logger.Debugf("Deployment already exists: %s", newDeploymentName)
 		} else {
 			logger.Errorf(err, "Could not replace deployment: %s", newDeploymentName)
 			return nil, fmt.Errorf("%s: %w", "could not replace deployment", err)
@@ -578,7 +578,7 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 	}
 
 	logger := s.getDeploymentLogger(ctx, deployment.Name)
-	logger.Infof("Get deployment for: %s", deployment.Name)
+	logger.Debugf("Get deployment for: %s", deployment.Name)
 
 	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
 		Schema:    deployment.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
@@ -594,7 +594,7 @@ func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Reque
 	defer deployment.Close()
 
 	logger := s.getDeploymentLogger(ctx, deployment.Name)
-	logger.Infof("Get deployment artefacts for: %s", deployment.Name)
+	logger.Debugf("Get deployment artefacts for: %s", deployment.Name)
 
 	chunk := make([]byte, s.config.ArtefactChunkSize)
 nextArtefact:
@@ -717,7 +717,7 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 	if err != nil {
 		return nil, err
 	}
-	logger.Infof("Created new artefact %s", digest)
+	logger.Debugf("Created new artefact %s", digest)
 	return connect.NewResponse(&ftlv1.UploadArtefactResponse{Digest: digest[:]}), nil
 }
 
@@ -762,7 +762,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("%s: %w", "could not create deployment", err)
 	}
 	deploymentLogger := s.getDeploymentLogger(ctx, dname)
-	deploymentLogger.Infof("Created deployment %s", dname)
+	deploymentLogger.Debugf("Created deployment %s", dname)
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentName: dname.String()}), nil
 }
 
@@ -846,7 +846,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 	for _, reconcile := range reconciliation {
 		reconcile := reconcile
 		deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
-		deploymentLogger.Infof("Reconciling %s", reconcile.Deployment)
+		deploymentLogger.Debugf("Reconciling %s", reconcile.Deployment)
 		deployment := model.Deployment{
 			Module:   reconcile.Module,
 			Language: reconcile.Language,
@@ -854,23 +854,23 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 		}
 		require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
 		if require > 0 {
-			deploymentLogger.Infof("Need %d more runners for %s", require, reconcile.Deployment)
+			deploymentLogger.Debugf("Need %d more runners for %s", require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
 				if err := s.deploy(ctx, deployment); err != nil {
 					deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
 				} else {
-					deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
+					deploymentLogger.Debugf("Reconciled %s", reconcile.Deployment)
 				}
 				return nil
 			})
 		} else if require < 0 {
-			deploymentLogger.Infof("Need %d less runners for %s", -require, reconcile.Deployment)
+			deploymentLogger.Debugf("Need %d less runners for %s", -require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
 				ok, err := s.terminateRandomRunner(ctx, deployment.Name)
 				if err != nil {
 					deploymentLogger.Warnf("Failed to terminate runner: %s", err)
 				} else if ok {
-					deploymentLogger.Infof("Reconciled %s", reconcile.Deployment)
+					deploymentLogger.Debugf("Reconciled %s", reconcile.Deployment)
 				} else {
 					deploymentLogger.Warnf("Failed to terminate runner: no runners found")
 				}
@@ -1007,7 +1007,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	for _, deployment := range seedDeployments {
 		deploymentChanges <- dal.DeploymentNotification{Message: optional.Some(deployment)}
 	}
-	logger.Infof("Seeded %d deployments", initialCount)
+	logger.Debugf("Seeded %d deployments", initialCount)
 
 	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	buildinsResponse := &ftlv1.PullSchemaResponse{
@@ -1203,7 +1203,7 @@ func runWithRetries(ctx context.Context, success, failure time.Duration, fn func
 			}
 		} else {
 			if failed {
-				logger.Infof("Recovered")
+				logger.Debugf("Recovered")
 				failed = false
 			}
 			failureRetry.Reset()

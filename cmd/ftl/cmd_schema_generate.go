@@ -66,7 +66,7 @@ func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.C
 	}
 
 	logger := log.FromContext(ctx)
-	logger.Infof("Watching %s", s.Template)
+	logger.Debugf("Watching %s", s.Template)
 
 	if err := watch.AddRecursive(s.Template); err != nil {
 		return err
@@ -109,7 +109,7 @@ func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.C
 			}
 
 			stream.Close()
-			logger.Infof("Stream disconnected, attempting to reconnect...")
+			logger.Debugf("Stream disconnected, attempting to reconnect...")
 			time.Sleep(s.ReconnectDelay)
 		}
 	})
@@ -123,7 +123,7 @@ func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.C
 			return wg.Wait()
 
 		case event := <-watch.Event:
-			logger.Infof("Template changed (%s), regenerating modules", event.Path)
+			logger.Debugf("Template changed (%s), regenerating modules", event.Path)
 			if err := s.regenerateModules(logger, previousModules); err != nil {
 				return err
 			}
@@ -150,14 +150,14 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 			return err
 		}
 	}
-	logger.Infof("Generated %d modules in %s", len(modules), s.Dest)
+	logger.Debugf("Generated %d modules in %s", len(modules), s.Dest)
 	return nil
 }
 
 func makeJSLoggerAdapter(logger *log.Logger) func(args ...any) {
 	return func(args ...any) {
 		strs := slices.Map(args, func(v any) string { return fmt.Sprintf("%v", v) })
-		level := log.Info
+		level := log.Debug
 		if prefix, ok := args[0].(string); ok {
 			switch prefix {
 			case "log:":

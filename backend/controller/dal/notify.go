@@ -53,7 +53,7 @@ type event struct {
 func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
 	logger := log.FromContext(ctx)
 
-	logger.Infof("Starting DB listener")
+	logger.Debugf("Starting DB listener")
 
 	// Wait for the notification channel to be ready.
 	retry := backoff.Backoff{}
@@ -70,10 +70,10 @@ func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
 	// Main loop for listening to notifications.
 	for {
 		delay := time.Millisecond * 100
-		logger.Debugf("Waiting for notification")
+		logger.Tracef("Waiting for notification")
 		notification, err := waitForNotification(ctx, conn)
 		if err == nil {
-			logger.Debugf("Publishing notification: %s", notification)
+			logger.Tracef("Publishing notification: %s", notification)
 			err = d.publishNotification(ctx, notification, logger)
 		}
 		if err != nil {
@@ -111,7 +111,7 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 		if err != nil {
 			return err
 		}
-		logger.Debugf("Deployment notification: %s", deployment)
+		logger.Tracef("Deployment notification: %s", deployment)
 		d.DeploymentChanges.Publish(deployment)
 
 	default:
