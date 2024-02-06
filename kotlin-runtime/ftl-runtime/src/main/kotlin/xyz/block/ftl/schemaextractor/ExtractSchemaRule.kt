@@ -410,7 +410,7 @@ class SchemaExtractor(
   private fun KotlinType.toSchemaType(position: Position): Type {
     if (this.unwrap().constructor.isTypeParameterTypeConstructor()) {
       return Type(
-        parameter = TypeParameter(
+        dataRef = DataRef(
           name = this.constructor.declarationDescriptor?.name?.asString() ?: "T",
           pos = position,
         )

@@ -41,7 +41,7 @@ public class TestModule()
           name = "ParamTestData",
           typeParameters = listOf(TypeParameter(name = "T")),
           fields = listOf(
-            Field(name = "t", type = Type(parameter = TypeParameter(name = "T"))),
+            Field(name = "t", type = Type(dataRef = DataRef(name = "T"))),
           )
         )
       ),
@@ -87,7 +87,7 @@ public class TestModule()
               name = "parameterizedDataRef", type = Type(
                 dataRef = DataRef(
                   name = "ParamTestData",
-                  typeParameters = listOf(Type(parameter = TypeParameter(name = "T")))
+                  typeParameters = listOf(Type(dataRef = DataRef(name = "T")))
                 )
               )
             ),

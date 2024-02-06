@@ -184,8 +184,7 @@ message Type {
     DataRef dataRef = 9;
     Unit unit = 10;
     Any any = 11;
-    TypeParameter parameter = 12;
-    Optional optional = 13;
+    Optional optional = 12;
   }
 }
 
