@@ -3,10 +3,12 @@ package databasetesting
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 )
 
@@ -14,6 +16,7 @@ import (
 //
 // If "recreate" is true, the database will be dropped and recreated.
 func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Pool, error) {
+	logger := log.FromContext(ctx)
 	config, err := pgx.ParseConfig(dsn)
 	if err != nil {
 		return nil, err
@@ -21,11 +24,24 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Po
 
 	noDBDSN := config.Copy()
 	noDBDSN.Database = ""
-	conn, err := pgx.ConnectConfig(ctx, noDBDSN)
-	if err != nil {
-		return nil, err
+	var conn *pgx.Conn
+	for i := 0; i < 10; i++ {
+		conn, err = pgx.ConnectConfig(ctx, noDBDSN)
+		if err == nil {
+			defer conn.Close(ctx)
+			break
+		}
+		logger.Debugf("Waiting for database to be ready: %v", err)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+
+		case <-time.After(1 * time.Second):
+		}
 	}
-	defer conn.Close(ctx)
+	if conn == nil {
+		return nil, fmt.Errorf("database not ready after 10 tries: %w", err)
+	}
 
 	if recreate {
 		// Terminate any dangling connections.
