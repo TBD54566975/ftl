@@ -55,15 +55,19 @@ func normaliseString(s string) string {
 func TestImports(t *testing.T) {
 	input := `
 	module test {
+		data Generic<T> {
+			value T
+		}
 		data Data {
 			ref other.Data
 			ref another.Data
+			ref Generic<new.Data>
 		}
 	}
 	`
 	schema, err := ParseModuleString("", input)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"another", "other"}, schema.Imports())
+	assert.Equal(t, []string{"another", "new", "other"}, schema.Imports())
 }
 
 func TestVisit(t *testing.T) {
