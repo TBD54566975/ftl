@@ -4,7 +4,7 @@ import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import xyz.block.ftl.Context
 import xyz.block.ftl.Ignore
-import xyz.block.ftl.Ingress
+import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.v1.schema.*
 import java.io.File
 import java.nio.file.Path
@@ -108,10 +108,9 @@ class ModuleGenerator() {
     verb.metadata.forEach { metadata ->
       metadata.ingress?.let {
         verbFunBuilder.addAnnotation(
-          AnnotationSpec.builder(Ingress::class)
+          AnnotationSpec.builder(HttpIngress::class)
             .addMember("%T", ClassName("xyz.block.ftl.Method", it.method.replaceBefore(".", "")))
             .addMember("%S", ingressPathString(it.path))
-            .addMember("%T", ClassName("xyz.block.ftl.Ingress.Type", it.type.uppercase().replaceBefore(".", "")))
             .build()
         )
       }
@@ -154,6 +153,7 @@ class ModuleGenerator() {
       type.bytes != null -> ClassName("kotlin", "ByteArray")
       type.bool != null -> ClassName("kotlin", "Boolean")
       type.time != null -> ClassName("java.time", "OffsetDateTime")
+      type.unit != null -> ClassName("kotlin", "Unit")
       type.any != null -> ClassName("kotlin", "Any")
       type.array != null -> {
         val element = type.array?.element ?: throw IllegalArgumentException(

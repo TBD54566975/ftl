@@ -6,8 +6,7 @@ import kotlin.String
 import kotlin.Unit
 import xyz.block.ftl.Alias
 import xyz.block.ftl.Context
-import xyz.block.ftl.Ingress
-import xyz.block.ftl.Ingress.Type.HTTP
+import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 
@@ -50,8 +49,8 @@ typealias HtmlRequest = Unit
 
 class Echo {
   @Verb
-  @Ingress(
-    Method.GET, "/users/{userID}/posts/{postID}", HTTP)
+  @HttpIngress(
+    Method.GET, "/users/{userID}/posts/{postID}")
   fun `get`(context: Context, req: HttpRequest<GetRequest>): HttpResponse<GetResponse> {
     return HttpResponse<GetResponse>(
       status = 200,
@@ -64,7 +63,7 @@ class Echo {
   }
 
   @Verb
-  @Ingress(Method.POST, "/users", HTTP)
+  @HttpIngress(Method.POST, "/users")
   fun post(context: Context, req: HttpRequest<PostRequest>): HttpResponse<PostResponse> {
     return HttpResponse<PostResponse>(
       status = 201,
@@ -74,7 +73,7 @@ class Echo {
   }
 
   @Verb
-  @Ingress(Method.PUT, "/users/{userId}", HTTP)
+  @HttpIngress(Method.PUT, "/users/{userId}")
   fun put(context: Context, req: HttpRequest<PutRequest>): HttpResponse<PutResponse> {
     return HttpResponse<PutResponse>(
       status = 200,
@@ -84,7 +83,7 @@ class Echo {
   }
 
   @Verb
-  @Ingress(Method.DELETE, "/users/{userId}", HTTP)
+  @HttpIngress(Method.DELETE, "/users/{userId}")
   fun delete(context: Context, req: HttpRequest<DeleteRequest>): HttpResponse<DeleteResponse> {
     return HttpResponse<DeleteResponse>(
       status = 200,
@@ -94,7 +93,7 @@ class Echo {
   }
 
   @Verb
-  @Ingress(Method.GET, "/html", HTTP)
+  @HttpIngress(Method.GET, "/html")
   fun html(context: Context, req: HttpRequest<HtmlRequest>): HttpResponse<String> {
     return HttpResponse<String>(
       status = 200,
@@ -104,7 +103,7 @@ class Echo {
   }
 
   @Verb
-  @Ingress(Method.POST, "/bytes", HTTP)
+  @HttpIngress(Method.POST, "/bytes")
   fun bytes(context: Context, req: HttpRequest<ByteArray>): HttpResponse<ByteArray> {
     return HttpResponse<ByteArray>(
       status = 200,
@@ -114,7 +113,7 @@ class Echo {
   }
 
   @Verb
-  @Ingress(Method.GET, "/empty", HTTP)
+  @HttpIngress(Method.GET, "/empty")
   fun empty(context: Context, req: HttpRequest<Unit>): HttpResponse<Unit> {
     return HttpResponse<Unit>(
       status = 200,
@@ -124,7 +123,7 @@ class Echo {
   }
 
   @Verb
-  @Ingress(Method.GET, "/string", HTTP)
+  @HttpIngress(Method.GET, "/string")
   fun string(context: Context, req: HttpRequest<String>): HttpResponse<String> {
     return HttpResponse<String>(
       status = 200,

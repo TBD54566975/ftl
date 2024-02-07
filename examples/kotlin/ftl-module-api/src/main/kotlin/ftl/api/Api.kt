@@ -58,13 +58,13 @@ class Api {
   private val headers = mapOf("Content-Type" to arrayListOf("application/json"))
 
   @Verb
-  @Ingress(Method.GET, "/api/status")
+  @HttpIngress(Method.GET, "/api/status")
   fun status(context: Context, req: HttpRequest<GetStatusRequest>): HttpResponse<GetStatusResponse> {
     return HttpResponse<GetStatusResponse>(status = 200, headers = mapOf(), body = GetStatusResponse("OK"))
   }
 
   @Verb
-  @Ingress(Method.GET, "/api/todos/{id}")
+  @HttpIngress(Method.GET, "/api/todos/{id}")
   fun getTodo(context: Context, req: HttpRequest<GetTodoRequest>): HttpResponse<GetTodoResponse> {
     val todoId = req.pathParameters["id"]?.toIntOrNull()
     val todo = todos[todoId]
@@ -81,7 +81,7 @@ class Api {
   }
 
   @Verb
-  @Ingress(Method.POST, "/api/todos")
+  @HttpIngress(Method.POST, "/api/todos")
   fun addTodo(context: Context, req: HttpRequest<CreateTodoRequest>): HttpResponse<CreateTodoResponse> {
     val todoReq = req.body
     val id = idCounter.incrementAndGet()
