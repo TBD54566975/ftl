@@ -52,8 +52,14 @@ func (d *DataRef) ToProto() protoreflect.ProtoMessage {
 	}
 }
 
-func (*DataRef) schemaChildren() []Node { return nil }
-func (*DataRef) schemaType()            {}
+func (d *DataRef) schemaChildren() []Node {
+	out := make([]Node, 0, len(d.TypeParameters))
+	for _, t := range d.TypeParameters {
+		out = append(out, t)
+	}
+	return out
+}
+func (*DataRef) schemaType() {}
 
 func ParseDataRef(ref string) (*DataRef, error) {
 	return dataRefParser.ParseString("", ref)

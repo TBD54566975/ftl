@@ -63,11 +63,13 @@ func TestImports(t *testing.T) {
 			ref another.Data
 			ref Generic<new.Data>
 		}
+		verb myVerb(test.Data) test.Data
+			calls verbose.verb
 	}
 	`
 	schema, err := ParseModuleString("", input)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"another", "new", "other"}, schema.Imports())
+	assert.Equal(t, []string{"another", "new", "other", "verbose"}, schema.Imports())
 }
 
 func TestVisit(t *testing.T) {
@@ -98,7 +100,9 @@ Module
       VerbRef
   Verb
     DataRef
+      DataRef
     DataRef
+      DataRef
     MetadataIngress
       IngressPathLiteral
       IngressPathLiteral
@@ -115,7 +119,7 @@ Module
 		return next()
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()), "%s", actual.String())
+	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(actual.String()), "%s", actual.String())
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -188,35 +192,15 @@ func TestParsing(t *testing.T) {
 			input:  `module int { data String { name String } verb verb(String) String }`,
 			errors: []string{"1:14: data structure name \"String\" is a reserved word"}},
 		{name: "BuiltinRef",
-			input: `module test { verb myIngress(HttpRequest<string>) HttpResponse<string> }`,
+			input: `module test { verb myIngress(HttpRequest<String>) HttpResponse<String> }`,
 			expected: &Schema{
 				Modules: []*Module{{
 					Name: "test",
 					Decls: []Decl{
 						&Verb{
-							Name: "myIngress",
-							Request: &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{
-								&DataRef{
-									Pos: Position{
-										Offset: 41,
-										Line:   1,
-										Column: 42,
-									},
-									Name:           "string",
-									TypeParameters: []Type{},
-								},
-							}},
-							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{
-								&DataRef{
-									Pos: Position{
-										Offset: 63,
-										Line:   1,
-										Column: 64,
-									},
-									Name:           "string",
-									TypeParameters: []Type{},
-								},
-							}},
+							Name:     "myIngress",
+							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&String{}}},
+							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&String{}}},
 						},
 					},
 				}},
@@ -310,32 +294,14 @@ func TestParsing(t *testing.T) {
 							Comments: []string{},
 							Name:     "test",
 							Request: &DataRef{
-								Module: "test",
-								Name:   "Data",
-								TypeParameters: []Type{
-									&String{
-										Pos: Position{
-											Offset: 81,
-											Line:   7,
-											Column: 21,
-										},
-										Str: true,
-									},
-								},
+								Module:         "test",
+								Name:           "Data",
+								TypeParameters: []Type{&String{}},
 							},
 							Response: &DataRef{
-								Module: "test",
-								Name:   "Data",
-								TypeParameters: []Type{
-									&String{
-										Pos: Position{
-											Offset: 95,
-											Line:   7,
-											Column: 35,
-										},
-										Str: true,
-									},
-								},
+								Module:         "test",
+								Name:           "Data",
+								TypeParameters: []Type{&String{}},
 							},
 						},
 					},

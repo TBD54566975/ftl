@@ -149,14 +149,6 @@ func (m *Module) Imports() []string {
 			if n.Module != "" && n.Module != m.Name {
 				imports[n.Module] = true
 			}
-			// add imports for type parameters DataRefs as well
-			for _, p := range n.TypeParameters {
-				if p, ok := p.(*DataRef); ok {
-					if p.Module != "" && p.Module != m.Name {
-						imports[p.Module] = true
-					}
-				}
-			}
 
 		case *VerbRef:
 			if n.Module != "" && n.Module != m.Name {
