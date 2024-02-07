@@ -818,7 +818,7 @@ func (s *Service) reapStaleRunners(ctx context.Context) (time.Duration, error) {
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", "Failed to delete stale runners", err)
 	} else if count > 0 {
-		logger.Warnf("Reaped %d stale runners", count)
+		logger.Debugf("Reaped %d stale runners", count)
 	}
 	return s.config.RunnerTimeout, nil
 }
@@ -857,7 +857,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 			deploymentLogger.Debugf("Need %d more runners for %s", require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
 				if err := s.deploy(ctx, deployment); err != nil {
-					deploymentLogger.Warnf("Failed to increase deployment replicas: %s", err)
+					deploymentLogger.Debugf("Failed to increase deployment replicas: %s", err)
 				} else {
 					deploymentLogger.Debugf("Reconciled %s", reconcile.Deployment)
 				}
@@ -973,7 +973,7 @@ func (s *Service) reapStaleControllers(ctx context.Context) (time.Duration, erro
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", "failed to delete stale controllers", err)
 	} else if count > 0 {
-		logger.Warnf("Reaped %d stale controllers", count)
+		logger.Debugf("Reaped %d stale controllers", count)
 	}
 	return time.Second * 10, nil
 }
