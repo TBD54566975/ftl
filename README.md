@@ -15,7 +15,7 @@ git init .
 ftl init kotlin . alice
 ```
 
-### Serve FTL in a seperate terminal
+### Serve FTL in a separate terminal
 `ftl serve`
 
 ### Deploy and test the module
