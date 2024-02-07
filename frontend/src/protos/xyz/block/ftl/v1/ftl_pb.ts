@@ -1631,6 +1631,11 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
   minReplicas = 0;
 
   /**
+   * @generated from field: int32 replicas = 7;
+   */
+  replicas = 0;
+
+  /**
    * @generated from field: google.protobuf.Struct labels = 5;
    */
   labels?: Struct;
@@ -1652,6 +1657,7 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "labels", kind: "message", T: Struct },
     { no: 6, name: "schema", kind: "message", T: Module },
   ]);

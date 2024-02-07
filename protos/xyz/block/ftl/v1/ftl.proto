@@ -211,6 +211,7 @@ message StatusResponse {
     string language = 2;
     string name = 3;
     int32 min_replicas = 4;
+    int32 replicas = 7;
     google.protobuf.Struct labels = 5;
     schema.Module schema = 6;
   }

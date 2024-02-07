@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"golang.org/x/exp/maps"
@@ -24,6 +25,7 @@ import (
 type deployCmd struct {
 	Replicas  int32  `short:"n" help:"Number of replicas to deploy." default:"1"`
 	ModuleDir string `arg:"" help:"Directory containing ftl.toml" type:"existingdir" default:"."`
+	Wait      bool   `help:"Only complete the deploy command when sufficient runners have been provisioned, i.e. the deployment is online and reachable." default:"false"`
 }
 
 func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
@@ -100,10 +102,49 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return err
 	}
 
+	if d.Wait {
+		logger.Infof("Waiting for deployment %s to become ready", resp.Msg.DeploymentName)
+		err = d.checkReadiness(ctx, client, resp.Msg.DeploymentName)
+		if err != nil {
+			return err
+		}
+	}
+
 	logger.Infof("Successfully created deployment %s", resp.Msg.DeploymentName)
 	return nil
 }
 
+func (d *deployCmd) checkReadiness(ctx context.Context, client ftlv1connect.ControllerServiceClient, deploymentName string) error {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
+				AllDeployments: true,
+			}))
+			if err != nil {
+				return err
+			}
+
+			var found bool
+			for _, deployment := range status.Msg.Deployments {
+				if deployment.Key == deploymentName {
+					found = true
+					if deployment.Replicas >= d.Replicas {
+						return nil
+					}
+				}
+			}
+			if !found {
+				return fmt.Errorf("deployment %s not found: %v", deploymentName, status.Msg.Deployments)
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
 func (d *deployCmd) loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig) (*schemapb.Module, error) {
 	schema := filepath.Join(deployDir, config.Schema)
 	content, err := os.ReadFile(schema)

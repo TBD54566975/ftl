@@ -337,11 +337,13 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		return out
 	})
 	s.routesMu.RUnlock()
+	replicas := map[string]int32{}
 	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
 		var deployment *string
 		if d, ok := r.Deployment.Get(); ok {
 			asString := d.String()
 			deployment = &asString
+			replicas[asString]++
 		}
 		labels, err := structpb.NewStruct(r.Labels)
 		if err != nil {
@@ -368,6 +370,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 			Language:    d.Language,
 			Name:        d.Module,
 			MinReplicas: int32(d.MinReplicas),
+			Replicas:    replicas[d.Name.String()],
 			Schema:      d.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 			Labels:      labels,
 		}, nil
@@ -551,6 +554,16 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		} else if err != nil {
 			return nil, err
 		}
+
+		routes, err := s.dal.GetRoutingTable(ctx, nil)
+		if errors.Is(err, dal.ErrNotFound) {
+			routes = map[string][]dal.Route{}
+		} else if err != nil {
+			return nil, err
+		}
+		s.routesMu.Lock()
+		s.routes = routes
+		s.routesMu.Unlock()
 	}
 	if stream.Err() != nil {
 		return nil, stream.Err()
