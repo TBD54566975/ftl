@@ -1,7 +1,6 @@
 package ftl.{{ .Name | camel | lower }}
 
 import xyz.block.ftl.Context
-import xyz.block.ftl.Ingress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 

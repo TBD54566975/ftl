@@ -37,7 +37,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         import ftl.time.TimeResponse
         import xyz.block.ftl.Alias
         import xyz.block.ftl.Context
-        import xyz.block.ftl.Ingress
+        import xyz.block.ftl.HttpIngress
         import xyz.block.ftl.Method
         import xyz.block.ftl.Verb
 
@@ -61,7 +61,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             */
             @Throws(InvalidInput::class)
             @Verb
-            @Ingress(Method.GET, "/echo")
+            @HttpIngress(Method.GET, "/echo")
             fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse> {
                 callTime(context)
 
@@ -256,7 +256,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         import ftl.time.TimeRequest
         import ftl.time.TimeResponse
         import xyz.block.ftl.Context
-        import xyz.block.ftl.Ingress
+        import xyz.block.ftl.HttpIngress
         import xyz.block.ftl.Method
         import xyz.block.ftl.Verb
 
@@ -279,7 +279,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             */
             @Throws(InvalidInput::class)
             @Verb
-            @Ingress(Method.GET, "/echo")
+            @HttpIngress(Method.GET, "/echo")
             fun echo(context: Context, req: EchoRequest): EchoResponse {
                 callTime(context)
                 return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -301,7 +301,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         package ftl.echo
 
         import xyz.block.ftl.Context
-        import xyz.block.ftl.Ingress
+        import xyz.block.ftl.HttpIngress
         import xyz.block.ftl.Method
         import xyz.block.ftl.Verb
 
@@ -320,13 +320,13 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             */
             @Throws(InvalidInput::class)
             @Verb
-            @Ingress(Method.GET, "/echo")
+            @HttpIngress(Method.GET, "/echo")
             fun echo(context: Context, req: EchoRequest): EchoResponse {
                 return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
             }
         }
         """
-    assertThrows<java.lang.IllegalArgumentException>(message = "HTTP @Ingress-annotated echo request must be ftl.builtin.HttpRequest") {
+    assertThrows<java.lang.IllegalArgumentException>(message = "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest") {
       ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
     }
   }

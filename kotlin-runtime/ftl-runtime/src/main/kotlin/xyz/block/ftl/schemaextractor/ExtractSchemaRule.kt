@@ -244,7 +244,7 @@ class SchemaExtractor(
 
   private fun extractIngress(requestType: Type, responseType: Type): MetadataIngress? {
     return verb.annotationEntries.firstOrNull {
-      bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Ingress::class.qualifiedName
+      bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == HttpIngress::class.qualifiedName
     }?.let { annotationEntry ->
       val sourcePos = annotationEntry.getLineAndColumn()
       require(requestType.dataRef != null) {
@@ -253,52 +253,38 @@ class SchemaExtractor(
       require(responseType.dataRef != null) {
         "$sourcePos ingress ${verb.name} response must be a data class"
       }
+      require(requestType.dataRef.compare("builtin", "HttpRequest")) {
+        "$sourcePos @HttpIngress-annotated ${verb.name} request must be ftl.builtin.HttpRequest"
+      }
+      require(responseType.dataRef.compare("builtin", "HttpResponse")) {
+        "$sourcePos @HttpIngress-annotated ${verb.name} response must be ftl.builtin.HttpResponse"
+      }
       require(annotationEntry.valueArguments.size >= 2) {
-        "$sourcePos ${verb.name} @Ingress annotation requires at least 2 arguments"
+        "$sourcePos ${verb.name} @HttpIngress annotation requires at least 2 arguments"
       }
 
-      var typeArg = Ingress.Type.HTTP.name
-      var pathArg: List<IngressPathComponent>? = null
-      var methodArg: String? = null
-      annotationEntry.valueArguments.map { arg ->
+      val args = annotationEntry.valueArguments.partition { arg ->
         // Method arg is named "method" or is of type xyz.block.ftl.Method (in the case where args are
         // positional rather than named).
-        if (arg.getArgumentName()?.asName?.asString() == "method"
+        arg.getArgumentName()?.asName?.asString() == "method"
           || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()
-            ?.asString() == Method::class.qualifiedName
-        ) {
-          methodArg = arg.getArgumentExpression()?.text?.substringAfter(".")
-          // Type arg is named "type" or is of type xyz.block.ftl.Ingress.Type.
-        } else if (arg.getArgumentName()?.asName?.asString() == "type"
-          || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()
-            ?.asString() == Ingress.Type::class.qualifiedName
-        ) {
-          typeArg = requireNotNull(arg.getArgumentExpression()?.text?.substringAfter(".")) {
-            "$sourcePos Could not extract type from ${verb.name} @Ingress annotation"
-          }
-          // Path arg is named "path" or is of type kotlin.String.
-        } else if (arg.getArgumentName()?.asName?.asString() == "path"
-          || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()
-            ?.asString() == String::class.qualifiedName
-        ) {
-          pathArg = arg.getArgumentExpression()?.text?.let { extractPathComponents(it.trim('\"')) }
-        }
+          ?.asString() == Method::class.qualifiedName
       }
 
-      // If it's HTTP ingress, validate the signature.
-      if (typeArg == Ingress.Type.HTTP.name) {
-        require(requestType.dataRef.compare("builtin", "HttpRequest")) {
-          "$sourcePos HTTP @Ingress-annotated ${verb.name} request must be ftl.builtin.HttpRequest"
-        }
-        require(responseType.dataRef.compare("builtin", "HttpResponse")) {
-          "$sourcePos HTTP @Ingress-annotated ${verb.name} response must be ftl.builtin.HttpResponse"
-        }
+      val methodArg = requireNotNull(args.first.single().getArgumentExpression()?.text?.substringAfter(".")) {
+        "Could not extract method from ${verb.name} @HttpIngress annotation"
       }
+      val pathArg = requireNotNull(args.second.single().getArgumentExpression()?.text?.let {
+        extractPathComponents(it.trim('\"'))
+      }) {
+        "Could not extract path from ${verb.name} @HttpIngress annotation"
+      }
+
 
       MetadataIngress(
-        path = requireNotNull(pathArg) { "Could not extract path from ${verb.name} @Ingress annotation" },
-        method = requireNotNull(methodArg) { "Could not extract method from ${verb.name} @Ingress annotation" },
-        type = typeArg.lowercase(),
+        type = "http",
+        path = pathArg,
+        method = methodArg,
         pos = sourcePos.toPosition(verb.containingKtFile.name),
       )
     }

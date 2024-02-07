@@ -10,11 +10,7 @@ enum class Method {
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 @MustBeDocumented
-annotation class Ingress(val method: Method, val path: String, val type: Type = Type.HTTP) {
-  enum class Type {
-    HTTP
-  }
-}
+annotation class HttpIngress(val method: Method, val path: String)
 
 /**
  * A field marked with Alias will be renamed to the specified name on ingress from external inputs.

@@ -21,7 +21,7 @@ public class TimeModuleClient() {
    * Time returns the current time.
    */
   @Verb
-  @Ingress(
+  @HttpIngress(
     GET,
     "/time",
   )

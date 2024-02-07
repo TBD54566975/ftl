@@ -23,7 +23,7 @@ class RenamedVerb {
 
 class ExampleVerb {
   @Verb
-  @Ingress(Method.GET, "/test")
+  @HttpIngress(Method.GET, "/test")
   fun verb(context: Context, req: VerbRequest): VerbResponse {
     return VerbResponse("test")
   }
