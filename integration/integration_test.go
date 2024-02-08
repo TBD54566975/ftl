@@ -46,7 +46,7 @@ func TestLifecycle(t *testing.T) {
 				run("ftl", rd.initOpts...),
 			}},
 			{name: fmt.Sprintf("Deploy%s", rd.testSuffix), assertions: assertions{
-				run("ftl", "deploy", rd.moduleRoot),
+				run("ftl", "deploy", "--wait", rd.moduleRoot),
 				deploymentExists(rd.moduleName),
 			}},
 			{name: fmt.Sprintf("Call%s", rd.testSuffix), assertions: assertions{
@@ -65,7 +65,7 @@ func TestHttpIngress(t *testing.T) {
 			{name: fmt.Sprintf("HttpIngress%s", rd.testSuffix), assertions: assertions{
 				run("ftl", rd.initOpts...),
 				scaffoldTestData(runtime, "httpingress", rd.modulePath),
-				run("ftl", "deploy", rd.moduleRoot),
+				run("ftl", "deploy", "--wait", rd.moduleRoot),
 				httpCall(rd, http.MethodGet, "/users/123/posts/456", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
@@ -146,7 +146,7 @@ func TestDatabase(t *testing.T) {
 				setUpModuleDB(dbName),
 				run("ftl", rd.initOpts...),
 				scaffoldTestData(runtime, "database", rd.modulePath),
-				run("ftl", "deploy", rd.moduleRoot),
+				run("ftl", "deploy", "--wait", rd.moduleRoot),
 				call(rd.moduleName, "insert", obj{"data": requestData}, func(t testing.TB, resp obj) {}),
 				validateModuleDB(dbName, requestData),
 			}},
@@ -163,10 +163,10 @@ func TestExternalCalls(t *testing.T) {
 				name: fmt.Sprintf("Call%sFrom%s", strcase.ToCamel(callee), strcase.ToCamel(runtime)),
 				assertions: assertions{
 					run("ftl", calleeRd.initOpts...),
-					run("ftl", "deploy", calleeRd.moduleRoot),
+					run("ftl", "deploy", "--wait", calleeRd.moduleRoot),
 					run("ftl", rd.initOpts...),
 					scaffoldTestData(runtime, "externalcalls", rd.modulePath),
-					run("ftl", "deploy", rd.moduleRoot),
+					run("ftl", "deploy", "--wait", rd.moduleRoot),
 					call(rd.moduleName, "call", obj{"name": "Alice"}, func(t testing.TB, resp obj) {
 						message, ok := resp["message"].(string)
 						assert.True(t, ok, "message is not a string")
@@ -404,11 +404,6 @@ func httpCall(rd runtimeData, method string, path string, body []byte, onRespons
 		resp, err := client.Do(r)
 		assert.NoError(t, err)
 		defer resp.Body.Close()
-
-		if resp.StatusCode == http.StatusNotFound {
-			// error here so that the test retries in case the 404 is caused by the runner not being ready
-			return fmt.Errorf("endpoint not found: %s", path)
-		}
 
 		bodyBytes, err := io.ReadAll(resp.Body)
 		assert.NoError(t, err)

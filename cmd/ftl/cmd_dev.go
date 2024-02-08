@@ -138,6 +138,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 				deploy := deployCmd{
 					Replicas:  1,
 					ModuleDir: dir,
+					Wait:      d.ExitAfterDeploy,
 				}
 				err = deploy.Run(ctx, client)
 				if err != nil {
