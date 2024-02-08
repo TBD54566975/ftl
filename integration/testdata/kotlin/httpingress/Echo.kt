@@ -1,5 +1,6 @@
 package ftl.echo
 
+import ftl.builtin.Empty
 import ftl.builtin.HttpRequest
 import ftl.builtin.HttpResponse
 import kotlin.String
@@ -25,8 +26,8 @@ data class GetResponse(
 )
 
 data class PostRequest(
-  @Alias("user_id") val userID: Int,
-  val postID: Int,
+  @Alias("user_id") val userId: Int,
+  val postId: Int,
 )
 
 data class PostResponse(
@@ -38,14 +39,9 @@ data class PutRequest(
   @Alias("postId") val postID: String,
 )
 
-typealias PutResponse = Unit
-
 data class DeleteRequest(
   @Alias("userId") val userID: String,
 )
-typealias DeleteResponse = Unit
-
-typealias HtmlRequest = Unit
 
 class Echo {
   @Verb
@@ -74,27 +70,27 @@ class Echo {
 
   @Verb
   @HttpIngress(Method.PUT, "/users/{userId}")
-  fun put(context: Context, req: HttpRequest<PutRequest>): HttpResponse<PutResponse> {
-    return HttpResponse<PutResponse>(
+  fun put(context: Context, req: HttpRequest<PutRequest>): HttpResponse<Empty> {
+    return HttpResponse<Empty>(
       status = 200,
       headers = mapOf("Put" to arrayListOf("Header from FTL")),
-      body = PutResponse
+      body = Empty()
     )
   }
 
   @Verb
   @HttpIngress(Method.DELETE, "/users/{userId}")
-  fun delete(context: Context, req: HttpRequest<DeleteRequest>): HttpResponse<DeleteResponse> {
-    return HttpResponse<DeleteResponse>(
+  fun delete(context: Context, req: HttpRequest<DeleteRequest>): HttpResponse<Empty> {
+    return HttpResponse<Empty>(
       status = 200,
       headers = mapOf("Delete" to arrayListOf("Header from FTL")),
-      body = DeleteResponse
+      body = Empty()
     )
   }
 
   @Verb
   @HttpIngress(Method.GET, "/html")
-  fun html(context: Context, req: HttpRequest<HtmlRequest>): HttpResponse<String> {
+  fun html(context: Context, req: HttpRequest<Empty>): HttpResponse<String> {
     return HttpResponse<String>(
       status = 200,
       headers = mapOf("Content-Type" to arrayListOf("text/html; charset=utf-8")),

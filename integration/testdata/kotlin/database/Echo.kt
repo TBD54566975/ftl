@@ -1,20 +1,20 @@
 package ftl.echo
 
+import ftl.builtin.Empty
 import xyz.block.ftl.Context
 import xyz.block.ftl.Verb
 import xyz.block.ftl.Database
 
 data class InsertRequest(val data: String)
-typealias InsertResponse = Unit
 
 val db = Database("testdb")
 
 class Echo {
 
   @Verb
-  fun insert(context: Context, req: InsertRequest): InsertResponse {
+  fun insert(context: Context, req: InsertRequest): Empty {
     persistRequest(req)
-    return InsertResponse
+    return Empty()
   }
 
   fun persistRequest(req: InsertRequest) {

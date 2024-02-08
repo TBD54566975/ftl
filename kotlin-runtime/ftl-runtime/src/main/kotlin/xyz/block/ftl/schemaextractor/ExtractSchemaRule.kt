@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.impl.referencedProperty
 import org.jetbrains.kotlin.diagnostics.DiagnosticUtils.getLineAndColumnInPsiFile
 import org.jetbrains.kotlin.diagnostics.PsiDiagnosticUtils.LineAndColumn
-import org.jetbrains.kotlin.js.descriptorUtils.getKotlinTypeFqName
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getValueParameters
@@ -21,10 +20,8 @@ import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isTypeParameterTypeConstructor
-import org.jetbrains.kotlin.types.getAbbreviation
 import org.jetbrains.kotlin.types.isNullable
 import org.jetbrains.kotlin.types.typeUtil.isAny
-import org.jetbrains.kotlin.types.typeUtil.requiresTypeAliasExpansion
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.*
 import xyz.block.ftl.Context
@@ -150,18 +147,18 @@ class SchemaExtractor(
       }
 
       require(reqParam.typeReference?.resolveType()
-        ?.let { it.toClassDescriptor().isData || it.isEmptyClassTypeAlias() }
+        ?.let { it.toClassDescriptor().isData || it.isEmptyBuiltin() }
         ?: false
       ) {
         "${verb.valueParameters.last().getLineAndColumn()} Second argument of ${verb.name} must be a data class or " +
-          "typealias of Unit"
+          "builtin.Empty"
       }
 
       // Validate return type
       val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type
         ?: throw IllegalStateException("$verbSourcePos Could not resolve ${verb.name} return type")
-      require(respClass.toClassDescriptor().isData || respClass.isEmptyClassTypeAlias()) {
-        "Return type of ${verb.name} must be a data class or typealias of Unit"
+      require(respClass.toClassDescriptor().isData || respClass.isEmptyBuiltin()) {
+        "Return type of ${verb.name} must be a data class or builtin.Empty"
       }
     }
   }
@@ -431,24 +428,14 @@ class SchemaExtractor(
       }
 
       else -> {
-        require(this.toClassDescriptor().isData || this.isEmptyClassTypeAlias()) {
-          "(${position.line},${position.column}) Expected type to be a data class or typealias of Unit, but was ${
+        require(this.toClassDescriptor().isData || this.isEmptyBuiltin()) {
+          "(${position.line},${position.column}) Expected type to be a data class or builtin.Empty, but was ${
             this.fqNameOrNull()?.asString()
           }"
         }
 
-        var refName: String
-        var fqName: String
-        if (this.isEmptyClassTypeAlias()) {
-          this.unwrap().getAbbreviation()!!.run {
-            fqName = this.getKotlinTypeFqName(false)
-            refName = this.constructor.declarationDescriptor?.name?.asString()!!
-          }
-        } else {
-          fqName = this.fqNameOrNull()!!.asString()
-          refName = this.toClassDescriptor().name.asString()
-        }
-
+        val refName = this.toClassDescriptor().name.asString()
+        val fqName = this.fqNameOrNull()!!.asString()
         require(fqName.startsWith("ftl.")) {
           "(${position.line},${position.column}) Expected module name to be in the form ftl.<module>, " +
             "but was ${this.fqNameOrNull()?.asString()}"
@@ -508,11 +495,8 @@ class SchemaExtractor(
       return this.docComment?.text?.trim()?.let { listOf(it) } ?: emptyList()
     }
 
-    // `typealias <name> = Unit` can be used in Kotlin to declare an empty FTL data type.
-    // This is a workaround to support empty objects in the FTL schema despite being unsupported by Kotlin data classes.
-    private fun KotlinType.isEmptyClassTypeAlias(): Boolean {
-      return this.fqNameOrNull()?.asString() == Unit::class.qualifiedName
-        && (this.unwrap().getAbbreviation()?.requiresTypeAliasExpansion() ?: false)
+    private fun KotlinType.isEmptyBuiltin(): Boolean {
+      return this.fqNameOrNull()?.asString() == "ftl.builtin.Empty"
     }
   }
 }

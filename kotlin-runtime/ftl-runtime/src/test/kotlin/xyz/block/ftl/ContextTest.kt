@@ -1,5 +1,6 @@
 package xyz.block.ftl
 
+import ftl.builtin.Empty
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -13,12 +14,10 @@ data class EchoResponse(val text: String)
 class Echo {
   @Verb
   fun echo(context: Context, req: EchoRequest): EchoResponse {
-    val time = context.call(Time::time, TimeRequest)
+    val time = context.call(Time::time, Empty())
     return EchoResponse("Hello ${req.user}, the time is ${time.time}!")
   }
 }
-
-typealias TimeRequest = Unit
 
 data class TimeResponse(val time: OffsetDateTime)
 
@@ -26,7 +25,7 @@ val staticTime = OffsetDateTime.now()
 
 class Time {
   @Verb
-  fun time(context: Context, req: TimeRequest): TimeResponse {
+  fun time(context: Context, req: Empty): TimeResponse {
     return TimeResponse(staticTime)
   }
 }
@@ -43,7 +42,7 @@ class ContextTest {
           expected = EchoResponse("Hello Alice, the time is $staticTime!"),
         ),
         TestCase(
-          invoke = { ctx -> ctx.call(Time::time, TimeRequest) },
+          invoke = { ctx -> ctx.call(Time::time, Empty()) },
           expected = TimeResponse(staticTime),
         ),
       )

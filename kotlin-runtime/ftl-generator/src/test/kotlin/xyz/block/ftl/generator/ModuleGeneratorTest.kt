@@ -45,7 +45,6 @@ public class TestModule()
           )
         )
       ),
-      Decl(data_ = Data(comments = listOf("Request comments"), name = "TestRequest")),
       Decl(
         data_ = Data(
           comments = listOf("Response comments"), name = "TestResponse",
@@ -110,7 +109,6 @@ import kotlin.ByteArray
 import kotlin.Float
 import kotlin.Long
 import kotlin.String
-import kotlin.Unit
 import kotlin.collections.ArrayList
 import kotlin.collections.Map
 import xyz.block.ftl.Alias
@@ -119,11 +117,6 @@ import xyz.block.ftl.Ignore
 public data class ParamTestData<T>(
   public val t: T,
 )
-
-/**
- * Request comments
- */
-public typealias TestRequest = Unit
 
 /**
  * Response comments
@@ -158,22 +151,20 @@ public class TestModule()
   @Test
   fun `should generate all Verbs`() {
     val decls = listOf(
-      Decl(data_ = Data(comments = listOf("Request comments"), name = "TestRequest")),
-      Decl(data_ = Data(comments = listOf("Response comments"), name = "TestResponse")),
       Decl(
         verb = Verb(
           name = "TestVerb",
           comments = listOf("TestVerb comments"),
-          request = Type(dataRef = DataRef(name = "TestRequest")),
-          response = Type(dataRef = DataRef(name = "TestResponse"))
+          request = Type(dataRef = DataRef(name = "Empty", module = "builtin")),
+          response = Type(dataRef = DataRef(name = "Empty", module = "builtin"))
         )
       ),
       Decl(
         verb = Verb(
           name = "TestIngressVerb",
           comments = listOf("TestIngressVerb comments"),
-          request = Type(dataRef = DataRef(name = "TestRequest")),
-          response = Type(dataRef = DataRef(name = "TestResponse")),
+          request = Type(dataRef = DataRef(name = "Empty", module = "builtin")),
+          response = Type(dataRef = DataRef(name = "Empty", module = "builtin")),
           metadata = listOf(
             Metadata(
               ingress = MetadataIngress(
@@ -192,22 +183,12 @@ public class TestModule()
 // Module comments
 package ftl.test
 
-import kotlin.Unit
+import ftl.builtin.Empty
 import xyz.block.ftl.Context
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Ignore
 import xyz.block.ftl.Method.GET
 import xyz.block.ftl.Verb
-
-/**
- * Request comments
- */
-public typealias TestRequest = Unit
-
-/**
- * Response comments
- */
-public typealias TestResponse = Unit
 
 @Ignore
 public class TestModule() {
@@ -215,7 +196,7 @@ public class TestModule() {
    * TestVerb comments
    */
   @Verb
-  public fun TestVerb(context: Context, req: TestRequest): TestResponse = throw
+  public fun TestVerb(context: Context, req: Empty): Empty = throw
       NotImplementedError("Verb stubs should not be called directly, instead use context.call(TestModule::TestVerb, ...)")
 
   /**
@@ -226,9 +207,109 @@ public class TestModule() {
     GET,
     "/test",
   )
-  public fun TestIngressVerb(context: Context, req: TestRequest): TestResponse = throw
+  public fun TestIngressVerb(context: Context, req: Empty): Empty = throw
       NotImplementedError("Verb stubs should not be called directly, instead use context.call(TestModule::TestIngressVerb, ...)")
 }
+"""
+    assertEquals(expected, file.toString())
+  }
+
+  @Test
+  fun `builtins are handled correctly`() {
+    val decls = listOf(
+      Decl(
+        data_ = Data(
+          comments = listOf("HTTP request structure used for HTTP ingress verbs."),
+          name = "HttpRequest",
+          fields = listOf(
+            Field(name = "method", type = Type(string = String())),
+            Field(name = "path", type = Type(string = String())),
+            Field(
+              name = "pathParameters",
+              type = Type(map = Map(key = Type(string = String()), value_ = Type(string = String())))
+            ),
+            Field(
+              name = "query",
+              type = Type(
+                map = Map(
+                  key = Type(string = String()),
+                  value_ = Type(array = Array(element = Type(string = String())))
+                )
+              )
+            ),
+            Field(
+              name = "headers",
+              type = Type(
+                map = Map(
+                  key = Type(string = String()),
+                  value_ = Type(array = Array(element = Type(string = String())))
+                )
+              )
+            ),
+            Field(name = "body", type = Type(dataRef = DataRef(name = "Body")))
+          ),
+          typeParameters = listOf(TypeParameter(name = "Body"))
+        )
+      ),
+      Decl(
+        data_ = Data(
+          comments = listOf("HTTP response structure used for HTTP ingress verbs."),
+          name = "HttpResponse",
+          fields = listOf(
+            Field(name = "status", type = Type(int = Int())),
+            Field(
+              name = "headers",
+              type = Type(
+                map = Map(
+                  key = Type(string = String()),
+                  value_ = Type(array = Array(element = Type(string = String())))
+                )
+              )
+            ),
+            Field(name = "body", type = Type(dataRef = DataRef(name = "Body")))
+          ),
+          typeParameters = listOf(TypeParameter(name = "Body"))
+        )
+      ),
+      Decl(data_ = Data(name = "Empty")),
+    )
+    val module = Module(name = "builtin", comments = listOf("Built-in types for FTL"), decls = decls)
+    val file = generator.generateModule(module)
+    val expected = """// Code generated by FTL-Generator, do not edit.
+// Built-in types for FTL
+package ftl.builtin
+
+import kotlin.Long
+import kotlin.String
+import kotlin.collections.ArrayList
+import kotlin.collections.Map
+import xyz.block.ftl.Ignore
+
+/**
+ * HTTP request structure used for HTTP ingress verbs.
+ */
+public data class HttpRequest<Body>(
+  public val method: String,
+  public val path: String,
+  public val pathParameters: Map<String, String>,
+  public val query: Map<String, ArrayList<String>>,
+  public val headers: Map<String, ArrayList<String>>,
+  public val body: Body,
+)
+
+/**
+ * HTTP response structure used for HTTP ingress verbs.
+ */
+public data class HttpResponse<Body>(
+  public val status: Long,
+  public val headers: Map<String, ArrayList<String>>,
+  public val body: Body,
+)
+
+public class Empty
+
+@Ignore
+public class BuiltinModule()
 """
     assertEquals(expected, file.toString())
   }

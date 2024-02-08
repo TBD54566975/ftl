@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializer
+import ftl.builtin.Empty
 import ftl.builtin.HttpRequest
 import ftl.builtin.HttpResponse
 import xyz.block.ftl.*
@@ -17,8 +18,6 @@ data class Todo(
   val title: String,
   val completed: Boolean = false,
 )
-
-typealias GetStatusRequest = Unit
 
 data class GetStatusResponse(
   val status: String,
@@ -59,7 +58,7 @@ class Api {
 
   @Verb
   @HttpIngress(Method.GET, "/api/status")
-  fun status(context: Context, req: HttpRequest<GetStatusRequest>): HttpResponse<GetStatusResponse> {
+  fun status(context: Context, req: HttpRequest<Empty>): HttpResponse<GetStatusResponse> {
     return HttpResponse<GetStatusResponse>(status = 200, headers = mapOf(), body = GetStatusResponse("OK"))
   }
 

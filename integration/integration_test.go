@@ -96,12 +96,12 @@ func TestHttpIngress(t *testing.T) {
 				httpCall(rd, http.MethodPut, "/users/123", jsonData(t, obj{"postId": "346"}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
-					assert.Equal(t, nil, resp.body)
+					assert.Equal(t, map[string]any{}, resp.body)
 				}),
 				httpCall(rd, http.MethodDelete, "/users/123", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Delete"])
-					assert.Equal(t, nil, resp.body)
+					assert.Equal(t, map[string]any{}, resp.body)
 				}),
 
 				httpCall(rd, http.MethodGet, "/html", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {

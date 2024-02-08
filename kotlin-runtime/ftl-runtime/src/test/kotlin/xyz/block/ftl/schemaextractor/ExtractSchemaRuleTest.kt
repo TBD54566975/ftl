@@ -30,6 +30,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
     val code = """
         package ftl.echo
 
+        import ftl.builtin.Empty
         import ftl.builtin.HttpRequest
         import ftl.builtin.HttpResponse
         import ftl.time.TimeModuleClient
@@ -70,6 +71,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                   headers = mapOf("Get" to arrayListOf("Header from FTL")),
                   body = EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
                 )
+            }
+
+            @Verb
+            fun empty(context: Context, req: Empty): Empty {
+                return builtin.Empty()
             }
 
             fun callTime(context: Context): TimeResponse {
@@ -235,6 +241,23 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 )
               )
             )
+          ),
+        ),
+        Decl(
+          verb = Verb(
+            name = "empty",
+            request = Type(
+              dataRef = DataRef(
+                name = "Empty",
+                module = "builtin"
+              )
+            ),
+            response = Type(
+              dataRef = DataRef(
+                name = "Empty",
+                module = "builtin"
+              )
+            ),
           ),
         )
       )

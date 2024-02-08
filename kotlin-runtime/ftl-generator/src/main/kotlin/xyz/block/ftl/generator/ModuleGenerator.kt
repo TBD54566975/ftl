@@ -46,9 +46,9 @@ class ModuleGenerator() {
 
     val types = module.decls.mapNotNull { it.data_ }
     types.forEach {
-      if (it.fields.isEmpty()) {
-        file.addTypeAlias(
-          TypeAliasSpec.builder(it.name, Unit::class)
+      if (namespace == "ftl.builtin" && it.name == "Empty") {
+        file.addType(
+          TypeSpec.classBuilder(it.name)
             .addKdoc(it.comments.joinToString("\n"))
             .build()
         )
