@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/iancoleman/strcase"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 )
 
 var (

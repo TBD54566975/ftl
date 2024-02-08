@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
-	"github.com/iancoleman/strcase"
 	"golang.org/x/mod/modfile"
 	"google.golang.org/protobuf/proto"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/internal"
 )
 
@@ -30,9 +30,14 @@ type externalModuleContext struct {
 	Main      string
 }
 
+type goVerb struct {
+	Name string
+}
+
 type mainModuleContext struct {
 	GoVersion string
-	*schema.Module
+	Name      string
+	Verbs     []goVerb
 }
 
 func (b externalModuleContext) NonMainModules() []*schema.Module {
@@ -84,7 +89,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	}
 
 	logger.Debugf("Extracting schema")
-	main, err := ExtractModuleSchema(moduleDir)
+	nativeNames, main, err := ExtractModuleSchema(moduleDir)
 	if err != nil {
 		return fmt.Errorf("failed to extract module schema: %w", err)
 	}
@@ -98,9 +103,20 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	}
 
 	logger.Debugf("Generating main module")
+	goVerbs := make([]goVerb, 0, len(main.Decls))
+	for _, decl := range main.Decls {
+		if verb, ok := decl.(*schema.Verb); ok {
+			nativeName, ok := nativeNames[verb]
+			if !ok {
+				return fmt.Errorf("missing native name for verb %s", verb.Name)
+			}
+			goVerbs = append(goVerbs, goVerb{Name: nativeName})
+		}
+	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
 		GoVersion: goModVersion,
-		Module:    main,
+		Name:      main.Name,
+		Verbs:     goVerbs,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -115,12 +131,12 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{
-	"snake":          strcase.ToSnake,
-	"screamingSnake": strcase.ToScreamingSnake,
-	"camel":          strcase.ToCamel,
+	"snake":          strcase.ToLowerSnake,
+	"screamingSnake": strcase.ToUpperSnake,
+	"camel":          strcase.ToUpperCamel,
 	"lowerCamel":     strcase.ToLowerCamel,
-	"kebab":          strcase.ToKebab,
-	"screamingKebab": strcase.ToScreamingKebab,
+	"kebab":          strcase.ToLowerKebab,
+	"screamingKebab": strcase.ToUpperKebab,
 	"upper":          strings.ToUpper,
 	"lower":          strings.ToLower,
 	"title":          strings.Title,

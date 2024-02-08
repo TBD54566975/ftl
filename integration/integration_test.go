@@ -23,8 +23,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
-	"github.com/iancoleman/strcase"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
+
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"

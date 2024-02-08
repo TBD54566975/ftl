@@ -11,12 +11,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/iancoleman/strcase"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/TBD54566975/ftl/backend/common/goast"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 )
 
 var (
@@ -32,25 +32,29 @@ var (
 	aliasFieldTag = "alias"
 )
 
+// NativeNames is a map of top-level declarations to their native Go names.
+type NativeNames map[schema.Decl]string
+
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
-func ExtractModuleSchema(dir string) (*schema.Module, error) {
+func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
 	}, "./...")
 	if err != nil {
-		return &schema.Module{}, err
+		return nil, nil, err
 	}
 	if len(pkgs) == 0 {
-		return &schema.Module{}, fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
+		return nil, nil, fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
 	}
+	nativeNames := NativeNames{}
 	module := &schema.Module{}
 	for _, pkg := range pkgs {
 		if len(pkg.Errors) > 0 {
-			return nil, fmt.Errorf("%s: %w", pkg.PkgPath, pkg.Errors[0])
+			return nil, nil, fmt.Errorf("%s: %w", pkg.PkgPath, pkg.Errors[0])
 		}
-		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module}
+		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}}
 		for _, file := range pkg.Syntax {
 			var verb *schema.Verb
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
@@ -91,14 +95,17 @@ func ExtractModuleSchema(dir string) (*schema.Module, error) {
 				return next()
 			})
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
+		}
+		for decl, nativeName := range pctx.nativeNames {
+			nativeNames[decl] = nativeName
 		}
 	}
 	if module.Name == "" {
-		return module, fmt.Errorf("//ftl:module directive is required")
+		return nil, nil, fmt.Errorf("//ftl:module directive is required")
 	}
-	return module, schema.ValidateModule(module)
+	return nativeNames, module, schema.ValidateModule(module)
 }
 
 func visitCallExpr(pctx *parseContext, verb *schema.Verb, node *ast.CallExpr) error {
@@ -280,6 +287,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 		Response: resp,
 		Metadata: metadata,
 	}
+	pctx.nativeNames[verb] = node.Name.Name
 	pctx.module.Decls = append(pctx.module.Decls, verb)
 	return verb, nil
 }
@@ -342,8 +350,9 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 
 	out := &schema.Data{
 		Pos:  goPosToSchemaPos(node.Pos()),
-		Name: named.Obj().Name(),
+		Name: strcase.ToUpperCamel(named.Obj().Name()),
 	}
+	pctx.nativeNames[out] = named.Obj().Name()
 	dataRef := &schema.DataRef{
 		Pos:  goPosToSchemaPos(node.Pos()),
 		Name: out.Name,
@@ -552,9 +561,10 @@ func deref[T types.Object](pkg *packages.Package, node ast.Expr) (string, T) {
 }
 
 type parseContext struct {
-	pkg    *packages.Package
-	pkgs   []*packages.Package
-	module *schema.Module
+	pkg         *packages.Package
+	pkgs        []*packages.Package
+	module      *schema.Module
+	nativeNames NativeNames
 }
 
 // pathEnclosingInterval returns the PackageInfo and ast.Node that
