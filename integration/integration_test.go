@@ -161,7 +161,7 @@ func TestExternalCalls(t *testing.T) {
 		for _, callee := range runtimes {
 			calleeRd := getRuntimeData("echo2", modulesDir, callee)
 			tests = append(tests, test{
-				name: fmt.Sprintf("Call%sFrom%s", strcase.ToCamel(callee), strcase.ToCamel(runtime)),
+				name: fmt.Sprintf("Call%sFrom%s", strcase.ToUpperCamel(callee), strcase.ToUpperCamel(runtime)),
 				assertions: assertions{
 					run("ftl", calleeRd.initOpts...),
 					run("ftl", "deploy", "--wait", calleeRd.moduleRoot),
@@ -270,7 +270,7 @@ func getRuntimeData(moduleName string, modulesDir string, runtime string) runtim
 	ftlRoot := filepath.Join(cwd, "..")
 
 	t := runtimeData{
-		testSuffix: strcase.ToCamel(runtime),
+		testSuffix: strcase.ToUpperCamel(runtime),
 		moduleName: moduleName,
 	}
 	switch runtime {
