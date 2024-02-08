@@ -127,4 +127,34 @@ class Echo {
       body = req.body
     )
   }
+
+  @Verb
+  @HttpIngress(Method.GET, "/int")
+  fun int(context: Context, req: HttpRequest<Int>): HttpResponse<Int> {
+    return HttpResponse<Int>(
+      status = 200,
+      headers = mapOf("Int" to arrayListOf("Header from FTL")),
+      body = req.body
+    )
+  }
+
+  @Verb
+  @HttpIngress(Method.GET, "/float")
+  fun float(context: Context, req: HttpRequest<Double>): HttpResponse<Double> {
+    return HttpResponse<Double>(
+      status = 200,
+      headers = mapOf("Float" to arrayListOf("Header from FTL")),
+      body = req.body
+    )
+  }
+
+  @Verb
+  @HttpIngress(Method.GET, "/bool")
+  fun bool(context: Context, req: HttpRequest<Boolean>): HttpResponse<Boolean> {
+    return HttpResponse<Boolean>(
+      status = 200,
+      headers = mapOf("Bool" to arrayListOf("Header from FTL")),
+      body = req.body
+    )
+  }
 }

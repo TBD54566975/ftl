@@ -164,10 +164,10 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 
 	case *schema.Int:
 		switch value := value.(type) {
-		case float64:
+		case int64, float64:
 			typeMatches = true
 		case string:
-			if _, err := strconv.ParseFloat(value, 64); err == nil {
+			if _, err := strconv.ParseInt(value, 10, 64); err == nil {
 				typeMatches = true
 			}
 		}

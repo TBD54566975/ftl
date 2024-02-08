@@ -103,23 +103,35 @@ func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.Ht
 //ftl:verb
 //ftl:ingress http POST /bytes
 func Bytes(ctx context.Context, req builtin.HttpRequest[[]byte]) (builtin.HttpResponse[[]byte], error) {
-	return builtin.HttpResponse[[]byte]{
-		Body: req.Body,
-	}, nil
+	return builtin.HttpResponse[[]byte]{Body: req.Body}, nil
 }
 
 //ftl:verb
 //ftl:ingress http GET /empty
 func Empty(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.HttpResponse[ftl.Unit], error) {
-	return builtin.HttpResponse[ftl.Unit]{
-		Body: ftl.Unit{},
-	}, nil
+	return builtin.HttpResponse[ftl.Unit]{Body: ftl.Unit{}}, nil
 }
 
 //ftl:verb
 //ftl:ingress http GET /string
 func String(ctx context.Context, req builtin.HttpRequest[string]) (builtin.HttpResponse[string], error) {
-	return builtin.HttpResponse[string]{
-		Body: req.Body,
-	}, nil
+	return builtin.HttpResponse[string]{Body: req.Body}, nil
+}
+
+//ftl:verb
+//ftl:ingress http GET /int
+func Int(ctx context.Context, req builtin.HttpRequest[int]) (builtin.HttpResponse[int], error) {
+	return builtin.HttpResponse[int]{Body: req.Body}, nil
+}
+
+//ftl:verb
+//ftl:ingress http GET /float
+func Float(ctx context.Context, req builtin.HttpRequest[float64]) (builtin.HttpResponse[float64], error) {
+	return builtin.HttpResponse[float64]{Body: req.Body}, nil
+}
+
+//ftl:verb
+//ftl:ingress http GET /bool
+func Bool(ctx context.Context, req builtin.HttpRequest[bool]) (builtin.HttpResponse[bool], error) {
+	return builtin.HttpResponse[bool]{Body: req.Body}, nil
 }
