@@ -82,7 +82,7 @@ func TestHttpIngress(t *testing.T) {
 					assert.True(t, ok, "good_stuff is not a string")
 					assert.Equal(t, "This is good stuff", goodStuff)
 				}),
-				httpCall(rd, http.MethodPost, "/users", jsonData(t, obj{"userID": 123, "postID": 345}), func(t testing.TB, resp *httpResponse) {
+				httpCall(rd, http.MethodPost, "/users", jsonData(t, obj{"userId": 123, "postId": 345}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 201, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Post"])
 					success, ok := resp.body["success"].(bool)
@@ -90,10 +90,10 @@ func TestHttpIngress(t *testing.T) {
 					assert.True(t, success)
 				}),
 				// contains aliased field
-				httpCall(rd, http.MethodPost, "/users", jsonData(t, obj{"user_id": 123, "postID": 345}), func(t testing.TB, resp *httpResponse) {
+				httpCall(rd, http.MethodPost, "/users", jsonData(t, obj{"user_id": 123, "postId": 345}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 201, resp.status)
 				}),
-				httpCall(rd, http.MethodPut, "/users/123", jsonData(t, obj{"postID": "346"}), func(t testing.TB, resp *httpResponse) {
+				httpCall(rd, http.MethodPut, "/users/123", jsonData(t, obj{"postId": "346"}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
 					assert.Equal(t, nil, resp.body)
