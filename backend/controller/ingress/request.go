@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
@@ -100,6 +101,41 @@ func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, dataRef *s
 			return nil, err
 		}
 		return string(bodyData), nil
+
+	case *schema.Int:
+		bodyData, err := readRequestBody(r)
+		if err != nil {
+			return nil, err
+		}
+
+		intVal, err := strconv.ParseInt(string(bodyData), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse integer from request body: %w", err)
+		}
+		return intVal, nil
+
+	case *schema.Float:
+		bodyData, err := readRequestBody(r)
+		if err != nil {
+			return nil, err
+		}
+
+		floatVal, err := strconv.ParseFloat(string(bodyData), 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse float from request body: %w", err)
+		}
+		return floatVal, nil
+
+	case *schema.Bool:
+		bodyData, err := readRequestBody(r)
+		if err != nil {
+			return nil, err
+		}
+		boolVal, err := strconv.ParseBool(string(bodyData))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse boolean from request body: %w", err)
+		}
+		return boolVal, nil
 
 	case *schema.Unit:
 		return map[string]any{}, nil

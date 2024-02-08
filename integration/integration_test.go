@@ -127,6 +127,22 @@ func TestHttpIngress(t *testing.T) {
 					assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 					assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
 				}),
+
+				httpCall(rd, http.MethodGet, "/int", []byte("1234"), func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
+					assert.Equal(t, []byte("1234"), resp.bodyBytes)
+				}),
+				httpCall(rd, http.MethodGet, "/float", []byte("1234.56789"), func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
+					assert.Equal(t, []byte("1234.56789"), resp.bodyBytes)
+				}),
+				httpCall(rd, http.MethodGet, "/bool", []byte("true"), func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
+					assert.Equal(t, []byte("true"), resp.bodyBytes)
+				}),
 			}},
 		}
 	})
