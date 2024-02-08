@@ -9,7 +9,8 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/iancoleman/strcase"
+
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 
 	"github.com/TBD54566975/ftl/backend/common/rpc"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"

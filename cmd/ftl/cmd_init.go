@@ -11,9 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/beevik/etree"
-	"github.com/iancoleman/strcase"
+
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
@@ -144,12 +145,12 @@ func scaffold(hermit bool, source *zip.Reader, destination string, ctx any, opti
 }
 
 var scaffoldFuncs = template.FuncMap{
-	"snake":          strcase.ToSnake,
-	"screamingSnake": strcase.ToScreamingSnake,
-	"camel":          strcase.ToCamel,
+	"snake":          strcase.ToLowerSnake,
+	"screamingSnake": strcase.ToUpperSnake,
+	"camel":          strcase.ToUpperCamel,
 	"lowerCamel":     strcase.ToLowerCamel,
-	"kebab":          strcase.ToKebab,
-	"screamingKebab": strcase.ToScreamingKebab,
+	"kebab":          strcase.ToLowerKebab,
+	"screamingKebab": strcase.ToUpperKebab,
 	"upper":          strings.ToUpper,
 	"lower":          strings.ToLower,
 	"title":          strings.Title,

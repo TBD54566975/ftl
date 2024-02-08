@@ -14,11 +14,5 @@
       matchManagers: ["hermit"],
       enabled: false,
     },
-    // strcase 0.3 changes the semantics of acronyms, so we want to stick with 0.2 for now
-    {
-      matchPackageNames: ["github.com/iancoleman/strcase"],
-      matchManagers: ["gomod"],
-      enabled: false,
-    },
   ],
 }

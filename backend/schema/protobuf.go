@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iancoleman/strcase"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
+
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 )
 
 var typesWithRuntime = map[string]bool{

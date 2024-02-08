@@ -15,7 +15,7 @@ import (
 )
 
 func TestExtractModuleSchema(t *testing.T) {
-	actual, err := ExtractModuleSchema("testdata/one")
+	_, actual, err := ExtractModuleSchema("testdata/one")
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module one {
@@ -46,7 +46,7 @@ func TestExtractModuleSchema(t *testing.T) {
 }
 
 func TestExtractModuleSchemaTwo(t *testing.T) {
-	actual, err := ExtractModuleSchema("testdata/two")
+	_, actual, err := ExtractModuleSchema("testdata/two")
 	fmt.Println(actual)
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)

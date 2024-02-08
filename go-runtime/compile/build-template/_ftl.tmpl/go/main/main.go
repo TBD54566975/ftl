@@ -14,7 +14,7 @@ import (
 func main() {
   verbConstructor := server.NewUserVerbServer("{{.Name}}",
 {{- range .Verbs}}
-    server.Handle({{$.Name}}.{{.Name|camel}}),
+    server.Handle({{$.Name}}.{{.Name}}),
 {{- end}}
   )
   plugin.Start(context.Background(), "{{.Name}}", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
