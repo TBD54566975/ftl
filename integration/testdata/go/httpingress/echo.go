@@ -66,10 +66,10 @@ type PutResponse struct{}
 
 //ftl:verb
 //ftl:ingress http PUT /users/{userId}
-func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[ftl.Unit], error) {
-	return builtin.HttpResponse[ftl.Unit]{
+func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[builtin.Empty], error) {
+	return builtin.HttpResponse[builtin.Empty]{
 		Headers: map[string][]string{"Put": {"Header from FTL"}},
-		Body:    ftl.Unit{},
+		Body:    builtin.Empty{},
 	}, nil
 }
 
@@ -81,11 +81,11 @@ type DeleteResponse struct{}
 
 //ftl:verb
 //ftl:ingress http DELETE /users/{userId}
-func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[ftl.Unit], error) {
-	return builtin.HttpResponse[ftl.Unit]{
+func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[builtin.Empty], error) {
+	return builtin.HttpResponse[builtin.Empty]{
 		Status:  200,
 		Headers: map[string][]string{"Delete": {"Header from FTL"}},
-		Body:    ftl.Unit{},
+		Body:    builtin.Empty{},
 	}, nil
 }
 

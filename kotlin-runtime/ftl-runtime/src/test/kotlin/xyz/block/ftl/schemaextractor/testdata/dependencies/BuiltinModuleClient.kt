@@ -29,5 +29,7 @@ public data class HttpResponse<Body>(
   public val body: Body,
 )
 
+public class Empty
+
 @Ignore
 public class BuiltinModuleClient()
