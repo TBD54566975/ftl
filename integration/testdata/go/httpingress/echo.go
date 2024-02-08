@@ -65,10 +65,9 @@ type PutRequest struct {
 type PutResponse struct{}
 
 //ftl:verb
-//ftl:ingress http PUT /users/{userID}
+//ftl:ingress http PUT /users/{userId}
 func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[ftl.Unit], error) {
 	return builtin.HttpResponse[ftl.Unit]{
-		Status:  200,
 		Headers: map[string][]string{"Put": {"Header from FTL"}},
 		Body:    ftl.Unit{},
 	}, nil
