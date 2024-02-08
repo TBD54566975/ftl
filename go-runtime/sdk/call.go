@@ -10,9 +10,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
-
 	"github.com/TBD54566975/ftl/backend/common/rpc"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"

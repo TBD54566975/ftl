@@ -11,14 +11,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/beevik/etree"
-
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/scaffolder"
+	"github.com/beevik/etree"
 
 	"github.com/TBD54566975/ftl/backend/common/exec"
 	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
