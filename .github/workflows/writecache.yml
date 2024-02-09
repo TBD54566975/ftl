@@ -1,0 +1,32 @@
+on:
+  push:
+    branches:
+      - main
+name: Write Cache
+jobs:
+  write-cache:
+    name: Write Cache
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Download Maven Dependencies
+        run: mvn dependency:resolve --batch-mode
+      - name: Download Go Dependencies
+        run: go mod download -x
+      - name: Save Go Modules Cache
+        id: cache-go-modules
+        uses: actions/cache/save@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-{{ hashFiles('**/go.sum') }}-go
+      - name: Save Maven Modules Cache
+        id: cache-maven
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-{{ hashFiles('**/pom.xml') }}-maven

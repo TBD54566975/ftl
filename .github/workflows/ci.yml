@@ -19,9 +19,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Test
-        run: |
-          find ~/.m2 -ls
-          mvn test --batch-mode
+        run: mvn test --batch-mode
   test:
     name: Test Go
     runs-on: ubuntu-latest
