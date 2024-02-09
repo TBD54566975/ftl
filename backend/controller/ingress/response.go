@@ -63,65 +63,107 @@ func ResponseForVerb(sch *schema.Schema, verb *schema.Verb, response HTTPRespons
 		}
 	}
 
-	switch bodyType := fieldType.(type) {
+	outBody, err := bodyForType(fieldType, sch, body)
+	return outBody, headers, err
+}
+
+func bodyForType(typ schema.Type, sch *schema.Schema, data []byte) ([]byte, error) {
+	switch t := typ.(type) {
 	case *schema.DataRef:
 		var responseMap map[string]any
-		err := json.Unmarshal(body, &responseMap)
+		err := json.Unmarshal(data, &responseMap)
 		if err != nil {
-			return nil, nil, fmt.Errorf("HTTP response body is not valid JSON: %w", err)
+			return nil, fmt.Errorf("HTTP response body is not valid JSON: %w", err)
 		}
 
-		aliasedResponseMap, err := transformToAliasedFields(bodyType, sch, responseMap)
+		aliasedResponseMap, err := transformToAliasedFields(t, sch, responseMap)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		outBody, err := json.Marshal(aliasedResponseMap)
-		return outBody, headers, err
+		return outBody, err
+
+	case *schema.Array:
+		var responseArray []json.RawMessage
+		err := json.Unmarshal(data, &responseArray)
+		if err != nil {
+			return nil, fmt.Errorf("HTTP response body is not valid JSON array: %w", err)
+		}
+
+		transformedArrayData := make([]any, len(responseArray))
+		for i, rawElement := range responseArray {
+			var transformedElement any
+			err := json.Unmarshal(rawElement, &transformedElement)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal array element: %w", err)
+			}
+
+			// Transform the array element to its aliased form.
+			if dataRef, ok := t.Element.(*schema.DataRef); ok {
+				if elementMap, ok := transformedElement.(map[string]any); ok {
+					aliasedElement, err := transformToAliasedFields(dataRef, sch, elementMap)
+					if err != nil {
+						return nil, err
+					}
+					transformedElement = aliasedElement
+				}
+			}
+
+			transformedArrayData[i] = transformedElement
+		}
+
+		// Marshal the transformed array back to JSON.
+		outBody, err := json.Marshal(transformedArrayData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal transformed array data: %w", err)
+		}
+
+		return outBody, nil
 
 	case *schema.Bytes:
 		var base64String string
-		if err := json.Unmarshal(body, &base64String); err != nil {
-			return nil, nil, fmt.Errorf("HTTP response body is not valid base64: %w", err)
+		if err := json.Unmarshal(data, &base64String); err != nil {
+			return nil, fmt.Errorf("HTTP response body is not valid base64: %w", err)
 		}
 		decodedBody, err := base64.StdEncoding.DecodeString(base64String)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode base64 response body: %w", err)
+			return nil, fmt.Errorf("failed to decode base64 response body: %w", err)
 		}
-		return decodedBody, headers, nil
+		return decodedBody, nil
 
 	case *schema.String:
 		var responseString string
-		if err := json.Unmarshal(body, &responseString); err != nil {
-			return nil, nil, fmt.Errorf("HTTP response body is not a valid string: %w", err)
+		if err := json.Unmarshal(data, &responseString); err != nil {
+			return nil, fmt.Errorf("HTTP response body is not a valid string: %w", err)
 		}
-		return []byte(responseString), headers, nil
+		return []byte(responseString), nil
 
 	case *schema.Int:
 		var responseInt int
-		if err := json.Unmarshal(body, &responseInt); err != nil {
-			return nil, nil, fmt.Errorf("HTTP response body is not a valid int: %w", err)
+		if err := json.Unmarshal(data, &responseInt); err != nil {
+			return nil, fmt.Errorf("HTTP response body is not a valid int: %w", err)
 		}
-		return []byte(strconv.Itoa(responseInt)), headers, nil
+		return []byte(strconv.Itoa(responseInt)), nil
 
 	case *schema.Float:
 		var responseFloat float64
-		if err := json.Unmarshal(body, &responseFloat); err != nil {
-			return nil, nil, fmt.Errorf("HTTP response body is not a valid float: %w", err)
+		if err := json.Unmarshal(data, &responseFloat); err != nil {
+			return nil, fmt.Errorf("HTTP response body is not a valid float: %w", err)
 		}
-		return []byte(strconv.FormatFloat(responseFloat, 'f', -1, 64)), headers, nil
+		return []byte(strconv.FormatFloat(responseFloat, 'f', -1, 64)), nil
 
 	case *schema.Bool:
 		var responseBool bool
-		if err := json.Unmarshal(body, &responseBool); err != nil {
-			return nil, nil, fmt.Errorf("HTTP response body is not a valid bool: %w", err)
+		if err := json.Unmarshal(data, &responseBool); err != nil {
+			return nil, fmt.Errorf("HTTP response body is not a valid bool: %w", err)
 		}
-		return []byte(strconv.FormatBool(responseBool)), headers, nil
+		return []byte(strconv.FormatBool(responseBool)), nil
 
 	case *schema.Unit:
-		return []byte{}, headers, nil
+		return []byte{}, nil
 
 	default:
-		return body, headers, nil
+		return data, nil
 	}
 }
 

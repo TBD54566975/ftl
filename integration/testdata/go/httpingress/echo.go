@@ -144,3 +144,23 @@ func Error(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.Http
 		Error:  ftl.Some("Error from FTL"),
 	}, nil
 }
+
+//ftl:verb
+//ftl:ingress http GET /array/string
+func ArrayString(ctx context.Context, req builtin.HttpRequest[[]string]) (builtin.HttpResponse[[]string, string], error) {
+	return builtin.HttpResponse[[]string, string]{
+		Body: ftl.Some(req.Body),
+	}, nil
+}
+
+type ArrayType struct {
+	Item string `alias:"item"`
+}
+
+//ftl:verb
+//ftl:ingress http POST /array/data
+func ArrayData(ctx context.Context, req builtin.HttpRequest[[]ArrayType]) (builtin.HttpResponse[[]ArrayType, string], error) {
+	return builtin.HttpResponse[[]ArrayType, string]{
+		Body: ftl.Some(req.Body),
+	}, nil
+}

@@ -221,3 +221,25 @@ func TestResponseBodyForVerb(t *testing.T) {
 		})
 	}
 }
+
+func TestValueForData(t *testing.T) {
+	tests := []struct {
+		typ    schema.Type
+		data   []byte
+		result any
+	}{
+		{&schema.String{}, []byte("test"), "test"},
+		{&schema.Int{}, []byte("1234"), 1234},
+		{&schema.Float{}, []byte("12.34"), 12.34},
+		{&schema.Bool{}, []byte("true"), true},
+		{&schema.Array{Element: &schema.String{}}, []byte(`["test1", "test2"]`), []any{"test1", "test2"}},
+		{&schema.Map{Key: &schema.String{}, Value: &schema.String{}}, []byte(`{"key1": "value1", "key2": "value2"}`), obj{"key1": "value1", "key2": "value2"}},
+		{&schema.DataRef{Module: "test", Name: "Test"}, []byte(`{"intValue": 10.0}`), obj{"intValue": 10.0}},
+	}
+
+	for _, test := range tests {
+		result, err := valueForData(test.typ, test.data)
+		assert.NoError(t, err)
+		assert.Equal(t, test.result, result)
+	}
+}

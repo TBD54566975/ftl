@@ -80,58 +80,77 @@ func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, dataRef *s
 		return nil, err
 	}
 
-	switch bodyType := bodyField.Type.(type) {
+	if dataRef, ok := bodyField.Type.(*schema.DataRef); ok {
+		return buildRequestMap(route, r, dataRef, sch)
+	}
+
+	bodyData, err := readRequestBody(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return valueForData(bodyField.Type, bodyData)
+}
+
+func valueForData(typ schema.Type, data []byte) (any, error) {
+	switch typ.(type) {
 	case *schema.DataRef:
-		bodyMap, err := buildRequestMap(route, r, bodyType, sch)
+		var bodyMap map[string]any
+		err := json.Unmarshal(data, &bodyMap)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("HTTP request body is not valid JSON: %w", err)
+		}
+		return bodyMap, nil
+
+	case *schema.Array:
+		var rawData []json.RawMessage
+		err := json.Unmarshal(data, &rawData)
+		if err != nil {
+			return nil, fmt.Errorf("HTTP request body is not a valid JSON array: %w", err)
+		}
+
+		arrayData := make([]any, len(rawData))
+		for i, rawElement := range rawData {
+			var parsedElement any
+			err := json.Unmarshal(rawElement, &parsedElement)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse array element: %w", err)
+			}
+			arrayData[i] = parsedElement
+		}
+
+		return arrayData, nil
+
+	case *schema.Map:
+		var bodyMap map[string]any
+		err := json.Unmarshal(data, &bodyMap)
+		if err != nil {
+			return nil, fmt.Errorf("HTTP request body is not valid JSON: %w", err)
 		}
 		return bodyMap, nil
 
 	case *schema.Bytes:
-		bodyData, err := readRequestBody(r)
-		if err != nil {
-			return nil, err
-		}
-		return bodyData, nil
+		return data, nil
 
 	case *schema.String:
-		bodyData, err := readRequestBody(r)
-		if err != nil {
-			return nil, err
-		}
-		return string(bodyData), nil
+		return string(data), nil
 
 	case *schema.Int:
-		bodyData, err := readRequestBody(r)
-		if err != nil {
-			return nil, err
-		}
-
-		intVal, err := strconv.ParseInt(string(bodyData), 10, 64)
+		intVal, err := strconv.ParseInt(string(data), 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse integer from request body: %w", err)
 		}
 		return intVal, nil
 
 	case *schema.Float:
-		bodyData, err := readRequestBody(r)
-		if err != nil {
-			return nil, err
-		}
-
-		floatVal, err := strconv.ParseFloat(string(bodyData), 64)
+		floatVal, err := strconv.ParseFloat(string(data), 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse float from request body: %w", err)
 		}
 		return floatVal, nil
 
 	case *schema.Bool:
-		bodyData, err := readRequestBody(r)
-		if err != nil {
-			return nil, err
-		}
-		boolVal, err := strconv.ParseBool(string(bodyData))
+		boolVal, err := strconv.ParseBool(string(data))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse boolean from request body: %w", err)
 		}
@@ -141,7 +160,7 @@ func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, dataRef *s
 		return map[string]any{}, nil
 
 	default:
-		return nil, fmt.Errorf("unsupported HttpRequest.Body type %T", bodyField.Type)
+		return nil, fmt.Errorf("unsupported data type %T", typ)
 	}
 }
 

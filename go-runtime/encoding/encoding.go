@@ -91,7 +91,7 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 		return encodeBool(v, w)
 
 	default:
-		panic(fmt.Sprintf("unsupported typefoo: %s", v.Type()))
+		panic(fmt.Sprintf("unsupported type: %s", v.Type()))
 	}
 }
 

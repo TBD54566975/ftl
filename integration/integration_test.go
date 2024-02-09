@@ -145,9 +145,19 @@ func TestHttpIngress(t *testing.T) {
 					assert.Equal(t, []byte("true"), resp.bodyBytes)
 				}),
 				httpCall(rd, http.MethodGet, "/error", nil, func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 500, resp.status)
 					assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 					assert.Equal(t, []byte("Error from FTL"), resp.bodyBytes)
-					assert.Equal(t, 500, resp.status)
+				}),
+				httpCall(rd, http.MethodGet, "/array/string", jsonData(t, []string{"hello", "world"}), func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
+					assert.Equal(t, jsonData(t, []string{"hello", "world"}), resp.bodyBytes)
+				}),
+				httpCall(rd, http.MethodPost, "/array/data", jsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 200, resp.status)
+					assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
+					assert.Equal(t, jsonData(t, []obj{{"item": "a"}, {"item": "b"}}), resp.bodyBytes)
 				}),
 			}},
 		}
@@ -407,7 +417,7 @@ type httpResponse struct {
 	bodyBytes []byte
 }
 
-func jsonData(t testing.TB, body obj) []byte {
+func jsonData(t testing.TB, body interface{}) []byte {
 	b, err := json.Marshal(body)
 	assert.NoError(t, err)
 	return b
