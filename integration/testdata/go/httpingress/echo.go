@@ -135,3 +135,12 @@ func Float(ctx context.Context, req builtin.HttpRequest[float64]) (builtin.HttpR
 func Bool(ctx context.Context, req builtin.HttpRequest[bool]) (builtin.HttpResponse[bool, string], error) {
 	return builtin.HttpResponse[bool, string]{Body: ftl.Some(req.Body)}, nil
 }
+
+//ftl:verb
+//ftl:ingress http GET /error
+func Error(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.HttpResponse[ftl.Unit, string], error) {
+	return builtin.HttpResponse[ftl.Unit, string]{
+		Status: 500,
+		Error:  ftl.Some("Error from FTL"),
+	}, nil
+}

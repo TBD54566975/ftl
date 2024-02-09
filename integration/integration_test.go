@@ -144,6 +144,11 @@ func TestHttpIngress(t *testing.T) {
 					assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 					assert.Equal(t, []byte("true"), resp.bodyBytes)
 				}),
+				httpCall(rd, http.MethodGet, "/error", nil, func(t testing.TB, resp *httpResponse) {
+					assert.Equal(t, 500, resp.status)
+					assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
+					assert.Equal(t, []byte("Error from FTL"), resp.bodyBytes)
+				}),
 			}},
 		}
 	})
