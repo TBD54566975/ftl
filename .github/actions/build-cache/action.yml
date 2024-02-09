@@ -2,20 +2,18 @@ name: Build Cache
 description: Cache builds
 runs:
   using: "composite"
+  # Make sure to keep these cache entries in sync with those in writecache.yml
   steps:
-    - name: Cache Go Modules
+    - name: Restore Go Modules Cache
       id: cache-go-modules
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-{{ hashFiles('**/go.sum') }}-go
-    - name: Cache Maven Modules
+    - name: Restore Maven Modules Cache
       id: cache-maven
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: ~/.m2/repository
         key: ${{ runner.os }}-{{ hashFiles('**/pom.xml') }}-maven
-    - name: Populate Cache
-      id: populate-cache
-      uses: ./.github/actions/populate-cache
 
