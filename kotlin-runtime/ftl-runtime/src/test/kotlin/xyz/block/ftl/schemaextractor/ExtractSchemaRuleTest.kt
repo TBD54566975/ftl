@@ -15,6 +15,7 @@ import xyz.block.ftl.v1.schema.Array
 import xyz.block.ftl.v1.schema.Map
 import java.io.File
 import kotlin.test.AfterTest
+import kotlin.test.assertContains
 
 @KotlinCoreEnvironmentTest
 internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
@@ -28,72 +29,68 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
   @Test
   fun `extracts schema`() {
     val code = """
-        package ftl.echo
+      // Echo module.
+      package ftl.echo
 
-        import ftl.builtin.Empty
-        import ftl.builtin.HttpRequest
-        import ftl.builtin.HttpResponse
-        import ftl.time.TimeModuleClient
-        import ftl.time.TimeRequest
-        import ftl.time.TimeResponse
-        import xyz.block.ftl.Alias
-        import xyz.block.ftl.Context
-        import xyz.block.ftl.HttpIngress
-        import xyz.block.ftl.Method
-        import xyz.block.ftl.Verb
+      import ftl.builtin.Empty
+      import ftl.builtin.HttpRequest
+      import ftl.builtin.HttpResponse
+      import ftl.time.time as verb
+      import ftl.time.other
+      import ftl.time.TimeRequest
+      import ftl.time.TimeResponse
+      import xyz.block.ftl.Alias
+      import xyz.block.ftl.Context
+      import xyz.block.ftl.HttpIngress
+      import xyz.block.ftl.Method
+      import xyz.block.ftl.Module
+      import xyz.block.ftl.Verb
 
-        class InvalidInput(val field: String) : Exception()
+      class InvalidInput(val field: String) : Exception()
 
-        data class MapValue(val value: String)
-        data class EchoMessage(val message: String, val metadata: Map<String, MapValue>? = null)
+      data class MapValue(val value: String)
+      data class EchoMessage(val message: String, val metadata: Map<String, MapValue>? = null)
 
-        /**
-         * Request to echo a message.
-         */
-        data class EchoRequest<T>(val t: T, val name: String, @Alias("stf") val stuff: Any)
-        data class EchoResponse(val messages: List<EchoMessage>)
+      /**
+       * Request to echo a message.
+       */
+      data class EchoRequest<T>(val t: T, val name: String, @Alias("stf") val stuff: Any)
+      data class EchoResponse(val messages: List<EchoMessage>)
 
-        /**
-         * Echo module.
-         */
-        class Echo {
-           /**
-            * Echoes the given message.
-            */
-            @Throws(InvalidInput::class)
-            @Verb
-            @HttpIngress(Method.GET, "/echo")
-            fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse, String> {
-                callTime(context)
+      /**
+       * Echoes the given message.
+       */
+      @Throws(InvalidInput::class)
+      @Verb
+      @HttpIngress(Method.GET, "/echo")
+      fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse, String> {
+        callTime(context)
 
-                return HttpResponse(
-                  status = 200,
-                  headers = mapOf("Get" to arrayListOf("Header from FTL")),
-                  body = EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
-                )
-            }
+        return HttpResponse(
+          status = 200,
+          headers = mapOf("Get" to arrayListOf("Header from FTL")),
+          body = EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
+        )
+      }
 
-            @Verb
-            fun empty(context: Context, req: Empty): Empty {
-                return builtin.Empty()
-            }
+      @Verb
+      fun empty(context: Context, req: Empty): Empty {
+        return builtin.Empty()
+      }
 
-            fun callTime(context: Context): TimeResponse {
-                return context.call(TimeModuleClient::time, TimeRequest)
-            }
-        }
-        """
+      fun callTime(context: Context): TimeResponse {
+        context.call(::empty, builtin.Empty())
+        context.call(::other, builtin.Empty())
+        return context.call(::verb, builtin.Empty())
+      }
+    """
     ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
     val file = File(OUTPUT_FILENAME)
     val module = Module.ADAPTER.decode(file.inputStream())
 
     val expected = Module(
       name = "echo",
-      comments = listOf(
-        """/**
-         * Echo module.
-         */"""
-      ),
+      comments = listOf("Echo module."),
       decls = listOf(
         Decl(
           data_ = Data(
@@ -151,8 +148,8 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             ),
             comments = listOf(
               """/**
-         * Request to echo a message.
-         */"""
+       * Request to echo a message.
+       */"""
             ),
             typeParameters = listOf(
               TypeParameter(name = "T")
@@ -184,8 +181,8 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             name = "echo",
             comments = listOf(
               """/**
-            * Echoes the given message.
-            */"""
+       * Echoes the given message.
+       */"""
             ),
             request = Type(
               dataRef = DataRef(
@@ -237,6 +234,14 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 calls = MetadataCalls(
                   calls = listOf(
                     VerbRef(
+                      name = "empty",
+                      module = "echo"
+                    ),
+                    VerbRef(
+                      name = "other",
+                      module = "time"
+                    ),
+                    VerbRef(
                       name = "time",
                       module = "time"
                     )
@@ -275,86 +280,82 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
 
   @Test
   fun `fails if invalid schema type is included`() {
-    val code = """
-        package ftl.echo
+    val code = """/**
+ * Echo module.
+ */
+package ftl.echo
 
-        import ftl.time.TimeModuleClient
-        import ftl.time.TimeRequest
-        import ftl.time.TimeResponse
-        import xyz.block.ftl.Context
-        import xyz.block.ftl.HttpIngress
-        import xyz.block.ftl.Method
-        import xyz.block.ftl.Verb
+import ftl.builtin.Empty
+import ftl.time.time
+import ftl.time.TimeRequest
+import ftl.time.TimeResponse
+import xyz.block.ftl.Context
+import xyz.block.ftl.Method
+import xyz.block.ftl.Verb
 
-        class InvalidInput(val field: String) : Exception()
+class InvalidInput(val field: String) : Exception()
 
-        data class EchoMessage(val message: String, val metadata: Map<String, String>? = null)
+data class EchoMessage(val message: String, val metadata: Map<String, String>? = null)
 
-        /**
-         * Request to echo a message.
-         */
-        data class EchoRequest(val name: Char)
-        data class EchoResponse(val messages: List<EchoMessage>)
+/**
+ * Request to echo a message.
+ */
+data class EchoRequest(val name: Char)
+data class EchoResponse(val messages: List<EchoMessage>)
 
-        /**
-         * Echo module.
-         */
-        class Echo {
-           /**
-            * Echoes the given message.
-            */
-            @Throws(InvalidInput::class)
-            @Verb
-            @HttpIngress(Method.GET, "/echo")
-            fun echo(context: Context, req: EchoRequest): EchoResponse {
-                callTime(context)
-                return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
-            }
+/**
+ * Echoes the given message.
+ */
+@Throws(InvalidInput::class)
+@Verb
+fun echo(context: Context, req: EchoRequest): EchoResponse {
+  callTime(context)
+  return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
+}
 
-            fun callTime(context: Context): TimeResponse {
-                return context.call(TimeModuleClient::time, TimeRequest)
-            }
-        }
-        """
-    assertThrows<IllegalArgumentException>(message = "kotlin.Char type is not supported in FTL schema") {
+fun callTime(context: Context): TimeResponse {
+  return context.call(::time, Empty())
+}
+"""
+    val message = assertThrows<IllegalArgumentException> {
       ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
-    }
+    }.message!!
+    assertContains(message, "Expected type to be a data class or builtin.Empty, but was kotlin.Char")
   }
 
   @Test
   fun `fails if http ingress without http request-response types`() {
     val code = """
-        package ftl.echo
+ /**
+ * Echo module.
+ */
+package ftl.echo
 
-        import xyz.block.ftl.Context
-        import xyz.block.ftl.HttpIngress
-        import xyz.block.ftl.Method
-        import xyz.block.ftl.Verb
+import xyz.block.ftl.Context
+import xyz.block.ftl.HttpIngress
+import xyz.block.ftl.Method
+import xyz.block.ftl.Verb
 
-        /**
-         * Request to echo a message.
-         */
-        data class EchoRequest(val name: String)
-        data class EchoResponse(val message: String)
+/**
+ * Request to echo a message.
+ */
+data class EchoRequest(val name: String)
+data class EchoResponse(val message: String)
 
-        /**
-         * Echo module.
-         */
-        class Echo {
-           /**
-            * Echoes the given message.
-            */
-            @Throws(InvalidInput::class)
-            @Verb
-            @HttpIngress(Method.GET, "/echo")
-            fun echo(context: Context, req: EchoRequest): EchoResponse {
-                return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
-            }
-        }
+/**
+ * Echoes the given message.
+ */
+@Throws(InvalidInput::class)
+@Verb
+@HttpIngress(Method.GET, "/echo")
+fun echo(context: Context, req: EchoRequest): EchoResponse {
+  return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
+}
         """
-    assertThrows<java.lang.IllegalArgumentException>(message = "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest") {
+    val message = assertThrows<java.lang.IllegalArgumentException> {
       ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
-    }
+    }.message!!
+    assertContains(message, "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest")
   }
 
   @AfterTest

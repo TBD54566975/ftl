@@ -2,29 +2,28 @@
 //
 package ftl.time
 
-import xyz.block.ftl.*
-import java.time.OffsetDateTime
-import kotlin.Unit
+import ftl.builtin.Empty
+import xyz.block.ftl.Context
+import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method.GET
-
-public data class TimeRequest(
-  public val _empty: Unit = Unit,
-)
+import xyz.block.ftl.Verb
+import java.time.OffsetDateTime
 
 public data class TimeResponse(
   public val time: OffsetDateTime,
 )
 
-@Ignore
-public class TimeModuleClient() {
-  /**
-   * Time returns the current time.
-   */
-  @Verb
-  @HttpIngress(
-    GET,
-    "/time",
-  )
-  public fun time(context: Context, req: TimeRequest): TimeResponse = throw
-      NotImplementedError("Verb stubs should not be called directly, instead use context.call(TimeModuleClient::time, ...)")
-}
+/**
+ * Time returns the current time.
+ */
+@Verb
+@HttpIngress(
+  GET,
+  "/time",
+)
+public fun time(context: Context, req: Empty): TimeResponse =
+  throw NotImplementedError("Verb stubs should not be called directly, instead use context.call(TimeModuleClient::time, ...)")
+
+@Verb
+public fun other(context: Context, req: Empty): TimeResponse =
+  throw NotImplementedError("Verb stubs should not be called directly, instead use context.call(TimeModuleClient::time, ...)")

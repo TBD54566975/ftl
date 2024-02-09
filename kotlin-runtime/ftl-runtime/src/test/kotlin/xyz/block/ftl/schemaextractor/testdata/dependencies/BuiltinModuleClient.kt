@@ -3,12 +3,6 @@
 // This is copied from the FTL runtime and is not meant to be edited.
 package ftl.builtin
 
-import kotlin.Long
-import kotlin.String
-import kotlin.collections.ArrayList
-import kotlin.collections.Map
-import xyz.block.ftl.Ignore
-
 /**
  * HTTP request structure used for HTTP ingress verbs.
  */
@@ -32,6 +26,3 @@ public data class HttpResponse<Body, Error>(
 )
 
 public class Empty
-
-@Ignore
-public class BuiltinModuleClient()
