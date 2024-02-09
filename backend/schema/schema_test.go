@@ -41,7 +41,7 @@ module todo {
       calls todo.destroy
 
 
-  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse>
+  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       ingress http GET /todo/destroy/{id}
 }
 `
@@ -103,6 +103,7 @@ Module
       DataRef
     DataRef
       DataRef
+      String
     MetadataIngress
       IngressPathLiteral
       IngressPathLiteral
@@ -192,7 +193,7 @@ func TestParsing(t *testing.T) {
 			input:  `module int { data String { name String } verb verb(String) String }`,
 			errors: []string{"1:14: data structure name \"String\" is a reserved word"}},
 		{name: "BuiltinRef",
-			input: `module test { verb myIngress(HttpRequest<String>) HttpResponse<String> }`,
+			input: `module test { verb myIngress(HttpRequest<String>) HttpResponse<String, String> }`,
 			expected: &Schema{
 				Modules: []*Module{{
 					Name: "test",
@@ -200,7 +201,7 @@ func TestParsing(t *testing.T) {
 						&Verb{
 							Name:     "myIngress",
 							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&String{}}},
-							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&String{}}},
+							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&String{}, &String{}}},
 						},
 					},
 				}},
@@ -217,7 +218,7 @@ func TestParsing(t *testing.T) {
 						message String
 					}
 
-					verb echo(builtin.HttpRequest<echo.EchoRequest>) builtin.HttpResponse<echo.EchoResponse>
+					verb echo(builtin.HttpRequest<echo.EchoRequest>) builtin.HttpResponse<echo.EchoResponse, String>
 						ingress http GET /echo
 						calls time.time
 
@@ -231,7 +232,7 @@ func TestParsing(t *testing.T) {
 						time Time
 					}
 
-					verb time(builtin.HttpRequest<time.TimeRequest>) builtin.HttpResponse<time.TimeResponse>
+					verb time(builtin.HttpRequest<time.TimeRequest>) builtin.HttpResponse<time.TimeResponse, String>
 						ingress http GET /time
 				}
 				`,
@@ -244,7 +245,7 @@ func TestParsing(t *testing.T) {
 						&Verb{
 							Name:     "echo",
 							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "echo", Name: "EchoRequest"}}},
-							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "echo", Name: "EchoResponse"}}},
+							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "echo", Name: "EchoResponse"}, &String{}}},
 							Metadata: []Metadata{
 								&MetadataIngress{Type: "http", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "echo"}}},
 								&MetadataCalls{Calls: []*VerbRef{{Module: "time", Name: "time"}}},
@@ -259,7 +260,7 @@ func TestParsing(t *testing.T) {
 						&Verb{
 							Name:     "time",
 							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "time", Name: "TimeRequest"}}},
-							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "time", Name: "TimeResponse"}}},
+							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "time", Name: "TimeResponse"}, &String{}}},
 							Metadata: []Metadata{
 								&MetadataIngress{Type: "http", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "time"}}},
 							},
@@ -328,7 +329,7 @@ func TestParsing(t *testing.T) {
 				assert.NotZero(t, test.expected, "test.expected is nil")
 				assert.NotZero(t, test.expected.Modules, "test.expected.Modules is nil")
 				test.expected.Modules = append([]*Module{Builtins()}, test.expected.Modules...)
-				assert.Equal(t, Normalise(test.expected), Normalise(actual), test.input, assert.OmitEmpty())
+				assert.Equal(t, Normalise(test.expected), Normalise(actual), assert.OmitEmpty())
 			}
 		})
 	}
@@ -354,7 +355,7 @@ module todo {
   }
   verb create(todo.CreateRequest) todo.CreateResponse
   	calls todo.destroy
-  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse>
+  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
   	ingress http GET /todo/destroy/{id}
 }
 `
@@ -401,7 +402,7 @@ var testSchema = MustValidate(&Schema{
 					Metadata: []Metadata{&MetadataCalls{Calls: []*VerbRef{{Module: "todo", Name: "destroy"}}}}},
 				&Verb{Name: "destroy",
 					Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "todo", Name: "DestroyRequest"}}},
-					Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "todo", Name: "DestroyResponse"}}},
+					Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "todo", Name: "DestroyResponse"}, &String{}}},
 					Metadata: []Metadata{
 						&MetadataIngress{
 							Type:   "http",

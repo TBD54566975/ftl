@@ -63,10 +63,10 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             @Throws(InvalidInput::class)
             @Verb
             @HttpIngress(Method.GET, "/echo")
-            fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse> {
+            fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse, String> {
                 callTime(context)
 
-                return HttpResponse<EchoResponse>(
+                return HttpResponse(
                   status = 200,
                   headers = mapOf("Get" to arrayListOf("Header from FTL")),
                   body = EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -214,7 +214,10 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                       name = "EchoResponse",
                       module = "echo"
                     )
-                  )
+                  ),
+                  Type(
+                    string = xyz.block.ftl.v1.schema.String()
+                  ),
                 ),
               ),
             ),

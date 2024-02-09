@@ -10,6 +10,9 @@ import (
 )
 
 func TestMarshal(t *testing.T) {
+	type inner struct {
+		FooBar string
+	}
 	somePtr := sdk.Some(42)
 	tests := []struct {
 		name     string
@@ -27,6 +30,7 @@ func TestMarshal(t *testing.T) {
 		{name: "Map", input: struct{ Map map[string]int }{map[string]int{"foo": 42}}, expected: `{"map":{"foo":42}}`},
 		{name: "Option", input: struct{ Option sdk.Option[int] }{sdk.Some(42)}, expected: `{"option":42}`},
 		{name: "OptionPtr", input: struct{ Option *sdk.Option[int] }{&somePtr}, expected: `{"option":42}`},
+		{name: "OptionStruct", input: struct{ Option sdk.Option[inner] }{sdk.Some(inner{"foo"})}, expected: `{"option":{"fooBar":"foo"}}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

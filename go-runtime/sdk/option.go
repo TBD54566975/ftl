@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+
+	ftlencoding "github.com/TBD54566975/ftl/go-runtime/encoding"
 )
 
 // Stdlib interfaces types implement.
@@ -167,7 +169,7 @@ func (o Option[T]) Default(value T) T {
 
 func (o Option[T]) MarshalJSON() ([]byte, error) {
 	if o.ok {
-		return json.Marshal(o.value)
+		return ftlencoding.Marshal(o.value)
 	}
 	return []byte("null"), nil
 }

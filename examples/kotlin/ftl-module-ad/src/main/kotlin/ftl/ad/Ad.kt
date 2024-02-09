@@ -19,7 +19,7 @@ class AdModule {
 
   @Verb
   @HttpIngress(Method.GET, "/get")
-  fun get(context: Context, req: HttpRequest<AdRequest>): HttpResponse<AdResponse> {
+  fun get(context: Context, req: HttpRequest<AdRequest>): HttpResponse<AdResponse, String> {
     val ads: List<Ad> = when {
         req.body.contextKeys != null -> contextualAds(req.body.contextKeys)
         else -> randomAds()

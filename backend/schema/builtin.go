@@ -17,10 +17,12 @@ builtin module builtin {
   }
 
   // HTTP response structure used for HTTP ingress verbs.
-  data HttpResponse<Body> {
+  data HttpResponse<Body, Error> {
     status Int
     headers {String: [String]}
-    body Body
+    // Either "body" or "error" must be present, not both.
+    body Body?
+    error Error?
   }
 
   data Empty {}

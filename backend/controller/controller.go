@@ -169,12 +169,6 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	return svc, nil
 }
 
-type HTTPResponse struct {
-	Status  int                 `json:"status"`
-	Headers map[string][]string `json:"headers"`
-	Body    json.RawMessage     `json:"body"`
-}
-
 // ServeHTTP handles ingress routes.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := log.FromContext(r.Context())
@@ -242,26 +236,20 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var responseBody []byte
 
 		if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
-			var response HTTPResponse
+			var response ingress.HTTPResponse
 			if err := json.Unmarshal(msg.Body, &response); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			verbResponse := verb.Response.(*schema.DataRef) //nolint:forcetypeassert
-			err = ingress.ValidateContentType(verbResponse, sch, response.Headers)
+			var responseHeaders http.Header
+			responseBody, responseHeaders, err = ingress.ResponseForVerb(sch, verb, response)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			responseBody, err = ingress.ResponseBodyForVerb(sch, verb, response.Body, response.Headers)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			for k, v := range response.Headers {
+			for k, v := range responseHeaders {
 				w.Header()[k] = v
 			}
 

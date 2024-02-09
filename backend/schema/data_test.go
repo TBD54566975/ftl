@@ -14,7 +14,7 @@ func TestMonomorphisation(t *testing.T) {
 			{Name: "a", Type: &DataRef{Name: "T"}},
 		},
 	}
-	actual, err := data.Monomorphise(&String{})
+	actual, err := data.Monomorphise(&DataRef{TypeParameters: []Type{&String{}}})
 	assert.NoError(t, err)
 	expected := &Data{
 		Comments: []string{},

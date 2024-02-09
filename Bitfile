@@ -94,7 +94,7 @@ go-runtime/compile/build-template.zip: go-runtime/compile/build-template/**/*
   cd go-runtime/compile/build-template
   build: zip -q --symlinks -r ../build-template.zip .
 
-go-runtime/compile/external-module-template.zip: go-runtime/compile/external-module-template/**/* 
+go-runtime/compile/external-module-template.zip: go-runtime/compile/external-module-template/**/*
   cd go-runtime/compile/external-module-template
   build: zip -q --symlinks -r ../external-module-template.zip .
 
@@ -102,7 +102,7 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
   cd kotlin-runtime/scaffolding
   build: zip -q --symlinks -r ../scaffolding.zip .
 
-%{SCHEMA_OUT}: %{SCHEMA_IN} 
+%{SCHEMA_OUT}: %{SCHEMA_IN}
   build:
     ftl-schema > %{OUT}
     buf format -w %{OUT}
@@ -114,7 +114,7 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
     (cd protos && buf generate)
     (cd backend/common/3rdparty/protos && buf generate)
   # There's a build cycle dependency here, so we can't clean: ftl-schema depends on generated .pb.go files
-  -clean 
+  -clean
 
 %{KT_RUNTIME_OUT}: %{KT_RUNTIME_IN} %{PROTO_IN}
   build:
