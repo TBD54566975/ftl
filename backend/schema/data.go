@@ -32,22 +32,31 @@ func (d *Data) Scope() Scope {
 	return scope
 }
 
+func (d *Data) FieldByName(name string) *Field {
+	for _, f := range d.Fields {
+		if f.Name == name {
+			return f
+		}
+	}
+	return nil
+}
+
 // Monomorphise this data type with the given type arguments.
 //
 // If this data type has no type parameters, it will be returned as-is.
 //
 // This will return a new Data structure with all type parameters replaced with
 // the given types.
-func (d *Data) Monomorphise(types ...Type) (*Data, error) {
-	if len(d.TypeParameters) != len(types) {
-		return nil, fmt.Errorf("expected %d type arguments, got %d", len(d.TypeParameters), len(types))
+func (d *Data) Monomorphise(ref *DataRef) (*Data, error) {
+	if len(d.TypeParameters) != len(ref.TypeParameters) {
+		return nil, fmt.Errorf("%s: expected %d type arguments, got %d", ref.Pos, len(d.TypeParameters), len(ref.TypeParameters))
 	}
 	if len(d.TypeParameters) == 0 {
 		return d, nil
 	}
 	names := map[string]Type{}
 	for i, t := range d.TypeParameters {
-		names[t.Name] = types[i]
+		names[t.Name] = ref.TypeParameters[i]
 	}
 	monomorphised := reflect.DeepCopy(d)
 	monomorphised.TypeParameters = nil

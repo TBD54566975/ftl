@@ -58,51 +58,6 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 	return true
 }
 
-func ValidateContentType(dataRef *schema.DataRef, sch *schema.Schema, headers map[string][]string) error {
-	bodyField, err := getBodyField(dataRef, sch)
-	if err != nil {
-		return err
-	}
-
-	_, hasContentType := headers["Content-Type"]
-	if !hasContentType {
-		defaultType := getDefaultContentType(bodyField)
-		if defaultType == "" {
-			return nil // No content type is required
-		}
-		headers["Content-Type"] = []string{defaultType}
-	}
-
-	contentType := headers["Content-Type"][0]
-	switch bodyField.Type.(type) {
-	case *schema.String, *schema.Int, *schema.Float, *schema.Bool:
-		if !strings.HasPrefix(contentType, "text/") {
-			return fmt.Errorf("expected text content type, got %s", contentType)
-		}
-	case *schema.DataRef, *schema.Map, *schema.Array:
-		if !strings.HasPrefix(contentType, "application/json") {
-			return fmt.Errorf("expected application/json content type, got %s", contentType)
-		}
-	default:
-		return nil
-	}
-
-	return nil
-}
-
-func getDefaultContentType(bodyField *schema.Field) string {
-	switch bodyField.Type.(type) {
-	case *schema.Bytes:
-		return "application/octet-stream"
-	case *schema.String, *schema.Int, *schema.Float, *schema.Bool:
-		return "text/plain; charset=utf-8"
-	case *schema.DataRef, *schema.Map, *schema.Array:
-		return "application/json; charset=utf-8"
-	default:
-		return ""
-	}
-}
-
 func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) error {
 	verb := sch.ResolveVerbRef(verbRef)
 	if verb == nil {

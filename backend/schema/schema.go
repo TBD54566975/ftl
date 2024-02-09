@@ -63,7 +63,7 @@ func (s *Schema) ResolveDataRefMonomorphised(ref *DataRef) (*Data, error) {
 		return nil, fmt.Errorf("unknown data %v", ref)
 	}
 
-	return data.Monomorphise(ref.TypeParameters...)
+	return data.Monomorphise(ref)
 }
 
 func (s *Schema) ResolveVerbRef(ref *VerbRef) *Verb {

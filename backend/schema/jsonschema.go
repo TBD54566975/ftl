@@ -38,7 +38,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 		}
 
 		if len(dataRef.TypeParameters) > 0 {
-			monomorphisedData, err := data.Monomorphise(dataRef.TypeParameters...)
+			monomorphisedData, err := data.Monomorphise(dataRef)
 			if err != nil {
 				return nil, err
 			}

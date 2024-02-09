@@ -158,7 +158,7 @@ class SchemaExtractor(
       val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type
         ?: throw IllegalStateException("$verbSourcePos Could not resolve ${verb.name} return type")
       require(respClass.toClassDescriptor().isData || respClass.isEmptyBuiltin()) {
-        "Return type of ${verb.name} must be a data class or builtin.Empty"
+        "${verbSourcePos}: return type of ${verb.name} must be a data class or builtin.Empty but is ${respClass.fqNameOrNull()?.asString()}"
       }
     }
   }

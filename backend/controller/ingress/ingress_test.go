@@ -1,6 +1,7 @@
 package ingress
 
 import (
+	"net/http"
 	"net/url"
 	"testing"
 
@@ -146,15 +147,16 @@ func TestResponseBodyForVerb(t *testing.T) {
 		Name: "Json",
 		Response: &schema.DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
 			&schema.DataRef{
-				Module:         "test",
-				Name:           "Test",
-				TypeParameters: []schema.Type{},
+				Module: "test",
+				Name:   "Test",
 			},
+			&schema.String{},
 		}},
 	}
 	stringVerb := &schema.Verb{
 		Name: "String",
 		Response: &schema.DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
+			&schema.String{},
 			&schema.String{},
 		}},
 	}
@@ -176,25 +178,28 @@ func TestResponseBodyForVerb(t *testing.T) {
 		},
 	}
 	tests := []struct {
-		name         string
-		verb         *schema.Verb
-		headers      map[string][]string
-		body         []byte
-		expectedBody []byte
+		name            string
+		verb            *schema.Verb
+		headers         map[string][]string
+		body            []byte
+		expectedBody    []byte
+		expectedHeaders http.Header
 	}{
 		{
-			name:         "application/json",
-			verb:         jsonVerb,
-			headers:      map[string][]string{"Content-Type": {"application/json"}},
-			body:         []byte(`{"message": "Hello, World!"}`),
-			expectedBody: []byte(`{"msg":"Hello, World!"}`),
+			name:            "application/json",
+			verb:            jsonVerb,
+			headers:         map[string][]string{"Content-Type": {"application/json"}},
+			body:            []byte(`{"message": "Hello, World!"}`),
+			expectedBody:    []byte(`{"msg":"Hello, World!"}`),
+			expectedHeaders: http.Header{"Content-Type": []string{"application/json"}},
 		},
 		{
-			name:         "Default to application/json",
-			verb:         jsonVerb,
-			headers:      map[string][]string{},
-			body:         []byte(`{"message": "Default to JSON"}`),
-			expectedBody: []byte(`{"msg":"Default to JSON"}`),
+			name:            "Default to application/json",
+			verb:            jsonVerb,
+			headers:         map[string][]string{},
+			body:            []byte(`{"message": "Default to JSON"}`),
+			expectedBody:    []byte(`{"msg":"Default to JSON"}`),
+			expectedHeaders: http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
 		},
 		{
 			name:         "text/html",
@@ -207,9 +212,12 @@ func TestResponseBodyForVerb(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := ResponseBodyForVerb(sch, tc.verb, tc.body, tc.headers)
+			result, headers, err := ResponseForVerb(sch, tc.verb, HTTPResponse{Body: tc.body, Headers: tc.headers})
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedBody, result)
+			if tc.expectedHeaders != nil {
+				assert.Equal(t, tc.expectedHeaders, headers)
+			}
 		})
 	}
 }

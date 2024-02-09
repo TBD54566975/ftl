@@ -22,6 +22,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/repr"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
@@ -72,21 +73,21 @@ func TestHttpIngress(t *testing.T) {
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
 					assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 
-					message, ok := resp.body["msg"].(string)
-					assert.True(t, ok, "msg is not a string")
+					message, ok := resp.jsonBody["msg"].(string)
+					assert.True(t, ok, "msg is not a string: %s", repr.String(resp.jsonBody))
 					assert.Equal(t, "UserID: 123, PostID: 456", message)
 
-					nested, ok := resp.body["nested"].(map[string]any)
-					assert.True(t, ok, "nested is not a map")
+					nested, ok := resp.jsonBody["nested"].(map[string]any)
+					assert.True(t, ok, "nested is not a map: %s", repr.String(resp.jsonBody))
 					goodStuff, ok := nested["good_stuff"].(string)
-					assert.True(t, ok, "good_stuff is not a string")
+					assert.True(t, ok, "good_stuff is not a string: %s", repr.String(resp.jsonBody))
 					assert.Equal(t, "This is good stuff", goodStuff)
 				}),
 				httpCall(rd, http.MethodPost, "/users", jsonData(t, obj{"userId": 123, "postId": 345}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 201, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Post"])
-					success, ok := resp.body["success"].(bool)
-					assert.True(t, ok, "success is not a bool")
+					success, ok := resp.jsonBody["success"].(bool)
+					assert.True(t, ok, "success is not a bool: %s", repr.String(resp.jsonBody))
 					assert.True(t, success)
 				}),
 				// contains aliased field
@@ -96,12 +97,12 @@ func TestHttpIngress(t *testing.T) {
 				httpCall(rd, http.MethodPut, "/users/123", jsonData(t, obj{"postId": "346"}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
-					assert.Equal(t, map[string]any{}, resp.body)
+					assert.Equal(t, map[string]any{}, resp.jsonBody)
 				}),
 				httpCall(rd, http.MethodDelete, "/users/123", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 					assert.Equal(t, 200, resp.status)
 					assert.Equal(t, []string{"Header from FTL"}, resp.headers["Delete"])
-					assert.Equal(t, map[string]any{}, resp.body)
+					assert.Equal(t, map[string]any{}, resp.jsonBody)
 				}),
 
 				httpCall(rd, http.MethodGet, "/html", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
@@ -397,7 +398,7 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 type httpResponse struct {
 	status    int
 	headers   map[string][]string
-	body      map[string]any
+	jsonBody  map[string]any
 	bodyBytes []byte
 }
 
@@ -432,7 +433,7 @@ func httpCall(rd runtimeData, method string, path string, body []byte, onRespons
 		onResponse(t, &httpResponse{
 			status:    resp.StatusCode,
 			headers:   resp.Header,
-			body:      resBody,
+			jsonBody:  resBody,
 			bodyBytes: bodyBytes,
 		})
 		return nil

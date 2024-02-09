@@ -30,6 +30,7 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 	case t.Kind() == reflect.Ptr && t.Elem().Implements(jsonUnmarshaler):
 		v = v.Elem()
 		fallthrough
+
 	case t.Implements(jsonUnmarshaler):
 		enc := v.Interface().(json.Marshaler) //nolint:forcetypeassert
 		data, err := enc.MarshalJSON()
@@ -42,6 +43,7 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 	case t.Kind() == reflect.Ptr && t.Elem().Implements(textUnarmshaler):
 		v = v.Elem()
 		fallthrough
+
 	case t.Implements(textUnarmshaler):
 		enc := v.Interface().(encoding.TextMarshaler) //nolint:forcetypeassert
 		data, err := enc.MarshalText()

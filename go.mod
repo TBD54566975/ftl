@@ -60,7 +60,7 @@ require (
 require github.com/pkoukk/tiktoken-go v0.1.2 // indirect
 
 require (
-	github.com/alecthomas/repr v0.3.0 // indirect
+	github.com/alecthomas/repr v0.3.0
 	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/benbjohnson/clock v1.3.5
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
