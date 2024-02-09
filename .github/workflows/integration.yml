@@ -9,7 +9,7 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-tests.outputs.matrix }}
+      matrix: ${{ steps.extract-tests.outputs.matrix }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,14 +18,8 @@ jobs:
       - name: Extract test cases
         id: extract-tests
         run: |
-          echo "cases=$(go test -v -list . -tags integration ./integration | grep '^Test' | awk '{print $1}' | cut -d '(' -f1 | tr '\n' ',' | sed 's/,$//')" >> "$GITHUB_OUTPUT"
-      - name: Format test matrix
-        id: set-tests
-        run: |
-          IFS=',' read -ra TESTS <<< "${{ steps.extract-tests.outputs.cases }}"
-          TEST_JSON=$(printf ',"%s"' "${TESTS[@]}")
-          TEST_JSON="[${TEST_JSON:1}]"
-          echo "matrix={\"test\": $TEST_JSON}" >> "$GITHUB_OUTPUT"
+          # shellcheck disable=SC2046
+          echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(grep '^func Test' integration/*_test.go | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
   integration:
     needs: prepare
     runs-on: ubuntu-latest
@@ -37,6 +31,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+        with:
+          cache: true
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose

@@ -1,0 +1,6 @@
+name: Populate Cache
+description: "Populates the cache with the necessary dependencies"
+runs:
+  using: node20
+  main: "main.js"
+  post: "post.js"
