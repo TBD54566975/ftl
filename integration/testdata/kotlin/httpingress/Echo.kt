@@ -157,4 +157,14 @@ class Echo {
       body = req.body
     )
   }
+
+  @Verb
+  @HttpIngress(Method.GET, "/error")
+  fun error(context: Context, req: HttpRequest<Unit>): HttpResponse<Boolean, String> {
+    return HttpResponse(
+      status = 500,
+      headers = mapOf("Error" to arrayListOf("Header from FTL")),
+      error = "Error from FTL"
+    )
+  }
 }
