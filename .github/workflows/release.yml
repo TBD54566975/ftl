@@ -15,7 +15,7 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: |
-          docker build -t ghcr.io/tbd54566975/ftl-runner:$GITHUB_SHA -t ghcr.io/tbd54566975/ftl-runner:latest -f Dockerfile.runner .
+          docker build -t ghcr.io/tbd54566975/ftl-runner:"$GITHUB_SHA" -t ghcr.io/tbd54566975/ftl-runner:latest -f Dockerfile.runner .
           mkdir -p artifacts/ftl-runner
           docker save -o artifacts/ftl-runner/ftl-runner.tar ghcr.io/tbd54566975/ftl-runner:latest
       - name: Temporarily save Docker image
@@ -34,7 +34,7 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: |
-          docker build -t ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA -t ghcr.io/tbd54566975/ftl-controller:latest -f Dockerfile.controller .
+          docker build -t ghcr.io/tbd54566975/ftl-controller:"$GITHUB_SHA" -t ghcr.io/tbd54566975/ftl-controller:latest -f Dockerfile.controller .
           mkdir -p artifacts/ftl-controller
           docker save -o artifacts/ftl-controller/ftl-controller.tar ghcr.io/tbd54566975/ftl-controller:latest
       - name: Temporarily save Docker image
@@ -79,12 +79,12 @@ jobs:
           password: ${{ github.token }}
       - name: Push Docker Images
         run: |
-          version=$(git describe --tags --abbrev=0)
-          docker tag ghcr.io/tbd54566975/ftl-runner:latest ghcr.io/tbd54566975/ftl-runner:$GITHUB_SHA
-          docker tag ghcr.io/tbd54566975/ftl-runner:latest ghcr.io/tbd54566975/ftl-runner:$version
+          version="$(git describe --tags --abbrev=0)"
+          docker tag ghcr.io/tbd54566975/ftl-runner:latest ghcr.io/tbd54566975/ftl-runner:"$GITHUB_SHA"
+          docker tag ghcr.io/tbd54566975/ftl-runner:latest ghcr.io/tbd54566975/ftl-runner:"$version"
           docker push -a ghcr.io/tbd54566975/ftl-runner
-          docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:$GITHUB_SHA
-          docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:$version
+          docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:"$GITHUB_SHA"
+          docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:"$version"
           docker push -a ghcr.io/tbd54566975/ftl-controller
   release-jars:
     name: Release JARs
@@ -113,9 +113,9 @@ jobs:
       - name: Publish JARs # Snapshots are published first, then the tagged release
         run: |
           mvn -U -B clean deploy -P release
-          mvn -B versions:set -DnewVersion=$(git describe --tags --abbrev=0 | cut -c2-) -DprocessAllModules -DgenerateBackupPoms=false
+          mvn -B versions:set -DnewVersion="$(git describe --tags --abbrev=0 | cut -c2-)" -DprocessAllModules -DgenerateBackupPoms=false
           mvn -U -B clean deploy -P release
-          git clean -f *.flattened_pom.xml
+          git clean -f ./*.flattened_pom.xml
         env:
           SIGN_KEY_PASS: ${{ secrets.GPG_PASSPHRASE }}
           OSSRH_USERNAME: ${{ secrets.SONATYPE_USERNAME }}

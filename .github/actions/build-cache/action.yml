@@ -15,4 +15,7 @@ runs:
       with:
         path: ~/.m2/repository
         key: ${{ runner.os }}-{{ hashFiles('**/pom.xml') }}-maven
+    - name: Populate Cache
+      id: populate-cache
+      uses: ./.github/actions/populate-cache
 

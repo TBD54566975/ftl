@@ -15,12 +15,12 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
       - name: Init Hermit
-        run: ./bin/hermit env -r >> $GITHUB_ENV
+        run: ./bin/hermit env -r >> "$GITHUB_ENV"
       - name: Auto format
         run: autofmt
       - name: Check for modified files
         id: git-check
-        run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
+        run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> "$GITHUB_OUTPUT"
       - name: Switch to main
         if: github.ref == 'refs/heads/main'
         run: |

@@ -16,8 +16,12 @@ jobs:
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
       - name: Test
-        run: mvn test
+        run: |
+          find ~/.m2 -ls
+          mvn test --batch-mode
   test:
     name: Test Go
     runs-on: ubuntu-latest
@@ -40,6 +44,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Initialise database
@@ -60,6 +66,8 @@ jobs:
         run: golangci-lint run
       - name: go-check-sumtype
         run: go-check-sumtype ./...
+      - name: actionlint
+        run: actionlint --oneline
       # Too annoying to disable individual warnings
       # - name: staticcheck
       #   run: staticcheck ./...
@@ -94,6 +102,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
       - name: Console NPM Install
         working-directory: frontend
         run: npm install
