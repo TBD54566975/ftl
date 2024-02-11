@@ -1,0 +1,15 @@
+name: Remove workflow labels once an issue is assigned
+on:
+  issues:
+    types:
+      - assigned
+jobs:
+  label_issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - run: gh issue edit "$NUMBER" --remove-label triage --remove-label next
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUMBER: ${{ github.event.issue.number }}

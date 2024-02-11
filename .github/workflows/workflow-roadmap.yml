@@ -1,0 +1,16 @@
+name: Update roadmap issue #728
+on:
+  issues:
+    types:
+      - assigned
+      - labeled
+  workflow_dispatch:
+jobs:
+  label_issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - run: update-workflow-issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
