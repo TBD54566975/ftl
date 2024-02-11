@@ -7,9 +7,7 @@ import xyz.block.ftl.Verb
 data class EchoRequest(val name: String? = "anonymous")
 data class EchoResponse(val message: String)
 
-class {{ .Name | camel }} {
-  @Verb
-  fun echo(context: Context, req: EchoRequest): EchoResponse {
-    return EchoResponse(message = "Hello, ${req.name}!")
-  }
+@Verb
+fun echo(context: Context, req: EchoRequest): EchoResponse {
+  return EchoResponse(message = "Hello, ${req.name}!")
 }

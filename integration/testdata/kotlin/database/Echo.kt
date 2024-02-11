@@ -9,18 +9,16 @@ data class InsertRequest(val data: String)
 
 val db = Database("testdb")
 
-class Echo {
+@Verb
+fun insert(context: Context, req: InsertRequest): Empty {
+  persistRequest(req)
+  return Empty()
+}
 
-  @Verb
-  fun insert(context: Context, req: InsertRequest): Empty {
-    persistRequest(req)
-    return Empty()
-  }
-
-  fun persistRequest(req: InsertRequest) {
-    db.conn {
-      it.prepareStatement(
-        """
+fun persistRequest(req: InsertRequest) {
+  db.conn {
+    it.prepareStatement(
+      """
         CREATE TABLE IF NOT EXISTS requests
         (
           data TEXT,
@@ -28,9 +26,8 @@ class Echo {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc')
        );
        """
-      ).execute()
-      it.prepareStatement("INSERT INTO requests (data) VALUES ('${req.data}');")
-        .execute()
-    }
+    ).execute()
+    it.prepareStatement("INSERT INTO requests (data) VALUES ('${req.data}');")
+      .execute()
   }
 }

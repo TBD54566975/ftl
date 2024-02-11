@@ -1,79 +1,42 @@
 package xyz.block.ftl.registry
 
+import ftl.test.VerbRequest
+import ftl.test.VerbResponse
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import xyz.block.ftl.*
+import xyz.block.ftl.Context
 import xyz.block.ftl.client.LoopbackVerbServiceClient
 import xyz.block.ftl.serializer.makeGson
 import kotlin.test.assertContentEquals
 
-data class VerbRequest(val text: String = "")
-data class VerbResponse(val text: String = "")
-
-data class RenamedVerbRequest(val text: String = "")
-data class RenamedVerbResponse(val text: String = "")
-
-class RenamedVerb {
-  @Verb("something")
-  fun renamed(context: Context, req: RenamedVerbRequest): RenamedVerbResponse {
-    return RenamedVerbResponse("renamed")
-  }
-}
-
-class ExampleVerb {
-  @Verb
-  @HttpIngress(Method.GET, "/test")
-  fun verb(context: Context, req: VerbRequest): VerbResponse {
-    return VerbResponse("test")
-  }
-}
-
-@Ignore
-class IgnoredVerb {
-  @Verb
-  fun anotherVerb(context: Context, req: VerbRequest): VerbResponse {
-    return VerbResponse("ignored")
-  }
-}
-
 class RegistryTest {
   private val gson = makeGson()
-  private val verbRef = VerbRef(module = "registry", name = "verb")
-  private val renamedVerbRef = VerbRef(module = "registry", name = "something")
+  private val verbRef = VerbRef(module = "test", name = "verb")
 
   @Test
   fun moduleName() {
-    val registry = Registry("xyz.block.ftl")
-    registry.register(ExampleVerb::class)
-    assertEquals("registry", registry.moduleName)
+    val registry = Registry("ftl.test")
+    registry.registerAll()
+    assertEquals("test", registry.moduleName)
   }
 
   @Test
-  fun register() {
-    val registry = Registry("xyz.block.ftl")
-    registry.register(ExampleVerb::class)
-    registry.register(RenamedVerb::class)
-    assertContentEquals(listOf(renamedVerbRef, verbRef), registry.refs.sortedBy { it.toString() })
+  fun registerAll() {
+    val registry = Registry("ftl.test")
+    registry.registerAll()
+    assertContentEquals(listOf(
+      VerbRef(module = "test", name = "echo"),
+      VerbRef(module = "test", name = "time"),
+      VerbRef(module = "test", name = "verb"),
+    ), registry.refs.sortedBy { it.toString() })
   }
 
   @Test
   fun invoke() {
-    val registry = Registry("xyz.block.ftl")
-    registry.register(ExampleVerb::class)
-    val context = Context("xyz.block.ftl", LoopbackVerbServiceClient(registry))
+    val registry = Registry("ftl.test")
+    registry.registerAll()
+    val context = Context("ftl.test", LoopbackVerbServiceClient(registry))
     val result = registry.invoke(context, verbRef, gson.toJson(VerbRequest("test")))
     assertEquals(result, gson.toJson(VerbResponse("test")))
-  }
-
-  // For some reason "RenamedVerb" does not show up in the scan result.
-  // I think it's because there's some additional magic that has to be
-  // done to get the class to load when they're in tests.
-  @Disabled("Verbs defined in the tests don't seem to be stable.")
-  @Test
-  fun registerAll() {
-    val registry = Registry("xyz.block")
-    registry.registerAll()
-    // assertContentEquals(listOf(verbRef), registry.refs.sortedBy { it.toString() })
   }
 }

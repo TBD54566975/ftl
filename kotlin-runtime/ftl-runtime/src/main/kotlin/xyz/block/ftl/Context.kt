@@ -23,7 +23,7 @@ class Context(
     if (verb !is CallableReference) {
       throw InvalidParameterException("could not determine module from verb name")
     }
-    val ftlModule = ftlModuleFromJvmModule(jvmModule, verb.owner.toString().removePrefix("class "))
+    val ftlModule = ftlModuleFromJvmModule(jvmModule, verb)
     val requestJson = gson.toJson(request)
     val responseJson = routingClient.call(this, VerbRef(ftlModule, verb.name), requestJson)
     return gson.fromJson(responseJson, R::class.java)

@@ -1,9 +1,9 @@
 package xyz.block.ftl
 
 /**
- * Ignore a class or method when registering verbs.
+ * Ignore a method when registering verbs.
  */
-@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
+@Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 @MustBeDocumented
-annotation class Ignore()
+annotation class Ignore
