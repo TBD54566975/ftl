@@ -101,6 +101,8 @@ linters-settings:
             desc: "use fmt.Errorf or errors.New"
           - pkg: braces.dev/errtrace
             desc: "use fmt.Errorf or errors.New"
+          - pkg: os/exec
+            desc: "use github.com/TBD54566975/ftl/backend/common/exec"
   # wrapcheck:
   #   ignorePackageGlobs:
   #     - github.com/TBD54566975/ftl/*

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
+	"os/exec" //nolint:depguard
 	"syscall"
 
 	"github.com/kballard/go-shellquote"
