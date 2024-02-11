@@ -1,4 +1,5 @@
-name: Remove workflow labels once an issue is assigned
+# This name needs to be kept in sync with the workflow_run event in workflow-roadmap.yml
+name: Clear workflow labels once an issue is assigned
 on:
   issues:
     types:

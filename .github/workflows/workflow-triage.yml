@@ -1,4 +1,5 @@
-name: Label issues
+# This name needs to be kept in sync with the workflow_run event in workflow-roadmap.yml
+name: Add triage label to new issues
 on:
   issues:
     types:

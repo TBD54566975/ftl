@@ -5,6 +5,14 @@ on:
       - assigned
       - labeled
   workflow_dispatch:
+  # We need to separately trigger when one of the other workflows completes
+  # because GHA won't trigger another workflow based only on changes from
+  # another workflow, such as updating labels.
+  workflow_run:
+    workflows:
+      - Add triage label to new issues
+      - Clear workflow labels once an issue is assigned
+    types: [completed]
 jobs:
   label_issues:
     runs-on: ubuntu-latest
