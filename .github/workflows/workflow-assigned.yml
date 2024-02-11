@@ -12,4 +12,5 @@ jobs:
       - run: gh issue edit "$NUMBER" --remove-label triage --remove-label next
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
