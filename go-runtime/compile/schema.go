@@ -50,9 +50,12 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 	}
 	nativeNames := NativeNames{}
 	module := &schema.Module{}
+	merr := []error{}
 	for _, pkg := range pkgs {
 		if len(pkg.Errors) > 0 {
-			return nil, nil, fmt.Errorf("%s: %w", pkg.PkgPath, pkg.Errors[0])
+			for _, perr := range pkg.Errors {
+				merr = append(merr, fmt.Errorf("%s: %w", pkg.PkgPath, perr))
+			}
 		}
 		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}}
 		for _, file := range pkg.Syntax {
@@ -102,6 +105,9 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 			nativeNames[decl] = nativeName
 		}
 	}
+	if len(merr) > 0 {
+		return nil, nil, errors.Join(merr...)
+	}
 	if module.Name == "" {
 		return nil, nil, fmt.Errorf("//ftl:module directive is required")
 	}
@@ -121,7 +127,10 @@ func visitCallExpr(pctx *parseContext, verb *schema.Verb, node *ast.CallExpr) er
 	}
 	_, verbFn := deref[*types.Func](pctx.pkg, node.Args[1])
 	if verbFn == nil {
-		return fmt.Errorf("call first argument must be a function but is %s", node.Args[1])
+		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
+			return fmt.Errorf("call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel)
+		}
+		return fmt.Errorf("call first argument must be a function but is %T", node.Args[1])
 	}
 	moduleName := verbFn.Pkg().Name()
 	if moduleName == pctx.pkg.Name {

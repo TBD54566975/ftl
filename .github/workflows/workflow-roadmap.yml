@@ -4,6 +4,8 @@ on:
     types:
       - assigned
       - labeled
+      - closed
+      - deleted
   workflow_dispatch:
   # We need to separately trigger when one of the other workflows completes
   # because GHA won't trigger another workflow based only on changes from
