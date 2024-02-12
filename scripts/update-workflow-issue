@@ -12,7 +12,7 @@ $(
   test -z "$issues" && exit 0
 
 
-  echo "### Urgent [👀](https://github.com/TBD54566975/ftl/issues?q=is%3Aissue+is%3Aopen+label%3Aurgent)"
+  echo "### https://github.com/TBD54566975/ftl/labels/urgent"
   echo
   echo "> [!WARNING]"
   echo "> These issues are urgent and need immediate attention."
@@ -34,12 +34,12 @@ $(
   issues="$(list_issues --label triage)"
   test -z "$issues" && exit 0
 
-  echo "### Need triage [👀](https://github.com/TBD54566975/ftl/issues?q=is%3Aissue+is%3Aopen+label%3Atriage)"
+  echo "### https://github.com/TBD54566975/ftl/labels/triage"
   echo
   echo "$issues"
 )
 
-### Next [👀](https://github.com/TBD54566975/ftl/issues?q=is%3Aissue+is%3Aopen+label%3Anext)
+### https://github.com/TBD54566975/ftl/labels/next
 
 $(
   issues="$(list_issues --label next)"

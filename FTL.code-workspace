@@ -10,8 +10,16 @@
 			"path": "examples/online-boutique"
 		},
 		{
-			"path": "examples/go",
-			"name": "examples/go"
+			"path": "examples/go/echo",
+			"name": "examples/go/echo"
+		},
+		{
+			"path": "examples/go/time",
+			"name": "examples/go/time"
+		},
+		{
+			"path": "examples/go/httpingress",
+			"name": "examples/go/httpingress"
 		},
 		{
 			"path": "examples/kotlin",
@@ -22,7 +30,7 @@
 		},
 		{
 			"path": "cmd/ftl",
-			"name": "cmd/ftl"
+			"name": "CLI"
 		},
 		{
 			"path": "."

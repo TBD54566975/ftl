@@ -13,6 +13,9 @@ on:
       - Add triage label to new issues
       - Clear workflow labels once an issue is assigned
     types: [completed]
+concurrency:
+  group: ${{ github.ref }}-workflow-roadmap
+  cancel-in-progress: true
 jobs:
   update-workflow-issue:
     runs-on: ubuntu-latest
