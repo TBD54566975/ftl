@@ -34,7 +34,7 @@ $(
   issues="$(list_issues --label triage)"
   test -z "$issues" && exit 0
 
-  echo "### Needs triage [👀](https://github.com/TBD54566975/ftl/issues?q=is%3Aissue+is%3Aopen+label%3Atriage)"
+  echo "### Need triage [👀](https://github.com/TBD54566975/ftl/issues?q=is%3Aissue+is%3Aopen+label%3Atriage)"
   echo
   echo "$issues"
 )
