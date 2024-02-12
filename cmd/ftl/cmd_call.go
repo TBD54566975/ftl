@@ -9,13 +9,13 @@ import (
 	"github.com/titanous/json5"
 
 	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/go-runtime/sdk"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
 type callCmd struct {
-	Verb    sdk.VerbRef `arg:"" required:"" help:"Full path of Verb to call."`
+	Verb    ftl.VerbRef `arg:"" required:"" help:"Full path of Verb to call."`
 	Request string      `arg:"" optional:"" help:"JSON5 request payload." default:"{}"`
 }
 

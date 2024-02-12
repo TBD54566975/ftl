@@ -4,7 +4,7 @@ package two
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/go-runtime/sdk"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 type User struct {
@@ -22,5 +22,5 @@ func Two(ctx context.Context, req Payload[string]) (Payload[string], error) {
 
 //ftl:verb
 func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
-	return sdk.Call(ctx, Two, req)
+	return ftl.Call(ctx, Two, req)
 }

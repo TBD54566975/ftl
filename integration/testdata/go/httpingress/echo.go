@@ -7,7 +7,7 @@ import (
 
 	"ftl/builtin"
 
-	ftl "github.com/TBD54566975/ftl/go-runtime/sdk" // Import the FTL SDK.
+	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
 type GetRequest struct {

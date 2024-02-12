@@ -1,4 +1,4 @@
-package sdk
+package ftl
 
 import (
 	"testing"
@@ -6,12 +6,12 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestSecret(t *testing.T) {
+func TestConfig(t *testing.T) {
 	type C struct {
 		One string
 		Two string
 	}
-	t.Setenv("FTL_SECRET_TESTING_TEST", `{"one": "one", "two": "two"}`)
-	config := Secret[C]("test")
+	t.Setenv("FTL_CONFIG_TESTING_TEST", `{"one": "one", "two": "two"}`)
+	config := Config[C]("test")
 	assert.Equal(t, C{"one", "two"}, config.Get())
 }

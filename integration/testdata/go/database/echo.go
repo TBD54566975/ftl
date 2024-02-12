@@ -4,7 +4,7 @@ package echo
 import (
 	"context"
 
-	ftl "github.com/TBD54566975/ftl/go-runtime/sdk" // Import the FTL SDK.
+	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
 var db = ftl.PostgresDatabase("testdb")

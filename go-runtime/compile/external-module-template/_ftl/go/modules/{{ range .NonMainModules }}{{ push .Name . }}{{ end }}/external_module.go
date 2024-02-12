@@ -30,7 +30,7 @@ type {{.Name|title}}
 {{end -}}
 //ftl:verb
 func {{.Name|title}}(context.Context, {{type $ .Request}}) ({{type $ .Response}}, error) {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/sdk.Call()")
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }
 {{- end}}
 {{- end}}
