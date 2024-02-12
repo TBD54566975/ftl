@@ -14,7 +14,7 @@ on:
       - Clear workflow labels once an issue is assigned
     types: [completed]
 jobs:
-  label_issues:
+  update-workflow-issue:
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -23,5 +23,5 @@ jobs:
       - uses: cashapp/activate-hermit@v1
       - run: update-workflow-issue
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.FTL_WORKFLOW_TOKEN }}
           GH_REPO: ${{ github.repository }}

@@ -7,7 +7,7 @@ on:
       - opened
       - unassigned
 jobs:
-  label_issues:
+  label-issues:
     runs-on: ubuntu-latest
     permissions:
       issues: write
