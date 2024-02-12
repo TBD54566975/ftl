@@ -1,16 +1,17 @@
 # This name needs to be kept in sync with the workflow_run event in workflow-roadmap.yml
-name: Add triage label to new issues
+name: Clear triage label when moved to next
 on:
   issues:
     types:
-      - opened
+      - labeled
 jobs:
-  label-issues:
+  clear-triage-label:
+    if: github.event.label.name == 'next'
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - run: gh issue edit "$NUMBER" --add-label triage
+      - run: gh issue edit "$NUMBER" --remove-label triage
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}

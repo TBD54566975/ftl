@@ -14,6 +14,7 @@ on:
     workflows:
       - Add triage label to new issues
       - Clear workflow labels once an issue is assigned
+      - Clear triage label when moved to next
     types: [completed]
 concurrency:
   group: ${{ github.ref }}-workflow-roadmap
