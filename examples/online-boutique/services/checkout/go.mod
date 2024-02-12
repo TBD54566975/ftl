@@ -40,7 +40,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.22.0 // indirect
 	golang.design/x/reflect v0.0.0-20220504060917-02c43be63f3b // indirect
 	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/exp v0.0.0-20231127185646-65229373498e // indirect
+	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
