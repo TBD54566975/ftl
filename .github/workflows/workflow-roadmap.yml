@@ -20,6 +20,8 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - uses: cashapp/activate-hermit@v1
       - run: update-workflow-issue
         env:
