@@ -9,7 +9,7 @@ import (
 	"ftl/builtin"
 	"ftl/productcatalog"
 
-	ftl "github.com/TBD54566975/ftl/go-runtime/sdk"
+	ftl "github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 type ListRequest struct {

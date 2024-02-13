@@ -7,7 +7,7 @@ import (
 
 	"ftl/builtin"
 
-	"github.com/TBD54566975/ftl/go-runtime/sdk"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 type GetRequest struct {
@@ -28,10 +28,10 @@ type GetResponse struct {
 //
 //ftl:verb
 //ftl:ingress http GET /http/users/{userID}/posts
-func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[GetResponse, sdk.Unit], error) {
-	return builtin.HttpResponse[GetResponse, sdk.Unit]{
+func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[GetResponse, ftl.Unit], error) {
+	return builtin.HttpResponse[GetResponse, ftl.Unit]{
 		Headers: map[string][]string{"Get": {"Header from FTL"}},
-		Body: sdk.Some(GetResponse{
+		Body: ftl.Some(GetResponse{
 			Message: fmt.Sprintf("Got userId %s and postId %s", req.Body.UserID, req.Body.PostID),
 			Nested:  Nested{GoodStuff: "Nested Good Stuff"},
 		}),
@@ -51,11 +51,11 @@ type PostResponse struct {
 //
 //ftl:verb
 //ftl:ingress http POST /http/users
-func Post(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse, sdk.Unit], error) {
-	return builtin.HttpResponse[PostResponse, sdk.Unit]{
+func Post(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse, ftl.Unit], error) {
+	return builtin.HttpResponse[PostResponse, ftl.Unit]{
 		Status:  201,
 		Headers: map[string][]string{"Post": {"Header from FTL"}},
-		Body:    sdk.Some(PostResponse{Success: true}),
+		Body:    ftl.Some(PostResponse{Success: true}),
 	}, nil
 }
 
@@ -70,8 +70,8 @@ type PutResponse struct{}
 //
 //ftl:verb
 //ftl:ingress http PUT /http/users/{userID}
-func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[PutResponse, sdk.Unit], error) {
-	return builtin.HttpResponse[PutResponse, sdk.Unit]{
+func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[PutResponse, ftl.Unit], error) {
+	return builtin.HttpResponse[PutResponse, ftl.Unit]{
 		Headers: map[string][]string{"Put": {"Header from FTL"}},
 	}, nil
 }
@@ -86,8 +86,8 @@ type DeleteResponse struct{}
 //
 //ftl:verb
 //ftl:ingress http DELETE /http/users/{userID}
-func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[DeleteResponse, sdk.Unit], error) {
-	return builtin.HttpResponse[DeleteResponse, sdk.Unit]{
+func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[DeleteResponse, ftl.Unit], error) {
+	return builtin.HttpResponse[DeleteResponse, ftl.Unit]{
 		Headers: map[string][]string{"Put": {"Header from FTL"}},
 	}, nil
 }
@@ -96,10 +96,10 @@ type HtmlRequest struct{}
 
 //ftl:verb
 //ftl:ingress http GET /http/html
-func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.HttpResponse[string, sdk.Unit], error) {
-	return builtin.HttpResponse[string, sdk.Unit]{
+func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.HttpResponse[string, ftl.Unit], error) {
+	return builtin.HttpResponse[string, ftl.Unit]{
 		Headers: map[string][]string{"Content-Type": {"text/html; charset=utf-8"}},
-		Body:    sdk.Some("<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>"),
+		Body:    ftl.Some("<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>"),
 	}, nil
 }
 
@@ -107,9 +107,9 @@ func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.Ht
 //
 //ftl:verb
 //ftl:ingress http POST /http/bytes
-func Bytes(ctx context.Context, req builtin.HttpRequest[[]byte]) (builtin.HttpResponse[[]byte, sdk.Unit], error) {
-	return builtin.HttpResponse[[]byte, sdk.Unit]{
+func Bytes(ctx context.Context, req builtin.HttpRequest[[]byte]) (builtin.HttpResponse[[]byte, ftl.Unit], error) {
+	return builtin.HttpResponse[[]byte, ftl.Unit]{
 		Headers: map[string][]string{"Content-Type": {"application/octet-stream"}},
-		Body:    sdk.Some(req.Body),
+		Body:    ftl.Some(req.Body),
 	}, nil
 }

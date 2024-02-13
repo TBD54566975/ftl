@@ -1,4 +1,4 @@
-package sdk
+package ftl
 
 import (
 	"encoding/json"
@@ -49,7 +49,7 @@ func callerModule() string {
 		panic("failed to get caller")
 	}
 	module := details.Name()
-	if strings.HasPrefix(module, "github.com/TBD54566975/ftl/go-runtime/sdk") {
+	if strings.HasPrefix(module, "github.com/TBD54566975/ftl/go-runtime/ftl") {
 		return "testing"
 	}
 	if !strings.HasPrefix(module, "ftl/") {

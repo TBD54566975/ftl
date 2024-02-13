@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/go-runtime/compile/testdata/two"
-	"github.com/TBD54566975/ftl/go-runtime/sdk"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 type Nested struct {
@@ -20,7 +20,7 @@ type Req struct {
 	Slice    []string
 	Map      map[string]string
 	Nested   Nested
-	Optional sdk.Option[Nested]
+	Optional ftl.Option[Nested]
 	Time     time.Time
 	User     two.User `alias:"u"`
 	Bytes    []byte

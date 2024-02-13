@@ -1,5 +1,5 @@
 //nolint:wrapcheck
-package sdk
+package ftl
 
 import (
 	"database/sql"

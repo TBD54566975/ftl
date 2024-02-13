@@ -1,4 +1,4 @@
-package sdk
+package ftl
 
 import (
 	"encoding/json"

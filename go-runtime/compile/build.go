@@ -175,7 +175,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 				imports["time"] = "stdtime"
 
 			case *schema.Optional, *schema.Unit:
-				imports["github.com/TBD54566975/ftl/go-runtime/sdk"] = ""
+				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
 
 			default:
 			}
@@ -230,10 +230,10 @@ func genType(module *schema.Module, t schema.Type) string {
 		return "map[" + genType(module, t.Key) + "]" + genType(module, t.Value)
 
 	case *schema.Optional:
-		return "sdk.Option[" + genType(module, t.Type) + "]"
+		return "ftl.Option[" + genType(module, t.Type) + "]"
 
 	case *schema.Unit:
-		return "sdk.Unit"
+		return "ftl.Unit"
 
 	case *schema.Any:
 		return "any"

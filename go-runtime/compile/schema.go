@@ -27,7 +27,7 @@ var (
 	errorIFaceType = once(func() *types.Interface {
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
-	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/sdk.Call"
+	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
 
 	aliasFieldTag = "alias"
 )
@@ -462,10 +462,10 @@ func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		case "time.Time":
 			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
 
-		case "github.com/TBD54566975/ftl/go-runtime/sdk.Unit":
+		case "github.com/TBD54566975/ftl/go-runtime/ftl.Unit":
 			return &schema.Unit{Pos: goPosToSchemaPos(node.Pos())}, nil
 
-		case "github.com/TBD54566975/ftl/go-runtime/sdk.Option":
+		case "github.com/TBD54566975/ftl/go-runtime/ftl.Option":
 			underlying, err := visitType(pctx, node, named.TypeArgs().At(0))
 			if err != nil {
 				return nil, err
