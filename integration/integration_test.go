@@ -440,6 +440,7 @@ func httpCall(rd runtimeData, method string, path string, body []byte, onRespons
 
 		bodyBytes, err := io.ReadAll(resp.Body)
 		assert.NoError(t, err)
+		fmt.Printf("%s\n", bodyBytes)
 
 		var resBody map[string]any
 		// ignore the error here since some responses are just `[]byte`.

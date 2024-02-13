@@ -69,56 +69,26 @@ func ResponseForVerb(sch *schema.Schema, verb *schema.Verb, response HTTPRespons
 
 func bodyForType(typ schema.Type, sch *schema.Schema, data []byte) ([]byte, error) {
 	switch t := typ.(type) {
-	case *schema.DataRef:
-		var responseMap map[string]any
-		err := json.Unmarshal(data, &responseMap)
+	case *schema.DataRef, *schema.Array, *schema.Map:
+		var response any
+		err := json.Unmarshal(data, &response)
 		if err != nil {
 			return nil, fmt.Errorf("HTTP response body is not valid JSON: %w", err)
 		}
 
-		aliasedResponseMap, err := transformToAliasedFields(t, sch, responseMap)
+		err = transformAliasedFields(sch, t, response, func(obj map[string]any, field *schema.Field) string {
+			if field.Alias != "" && field.Name != field.Alias {
+				obj[field.Alias] = obj[field.Name]
+				delete(obj, field.Name)
+				return field.Alias
+			}
+			return field.Name
+		})
 		if err != nil {
 			return nil, err
 		}
-		outBody, err := json.Marshal(aliasedResponseMap)
+		outBody, err := json.Marshal(response)
 		return outBody, err
-
-	case *schema.Array:
-		var responseArray []json.RawMessage
-		err := json.Unmarshal(data, &responseArray)
-		if err != nil {
-			return nil, fmt.Errorf("HTTP response body is not valid JSON array: %w", err)
-		}
-
-		transformedArrayData := make([]any, len(responseArray))
-		for i, rawElement := range responseArray {
-			var transformedElement any
-			err := json.Unmarshal(rawElement, &transformedElement)
-			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal array element: %w", err)
-			}
-
-			// Transform the array element to its aliased form.
-			if dataRef, ok := t.Element.(*schema.DataRef); ok {
-				if elementMap, ok := transformedElement.(map[string]any); ok {
-					aliasedElement, err := transformToAliasedFields(dataRef, sch, elementMap)
-					if err != nil {
-						return nil, err
-					}
-					transformedElement = aliasedElement
-				}
-			}
-
-			transformedArrayData[i] = transformedElement
-		}
-
-		// Marshal the transformed array back to JSON.
-		outBody, err := json.Marshal(transformedArrayData)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal transformed array data: %w", err)
-		}
-
-		return outBody, nil
 
 	case *schema.Bytes:
 		var base64String string

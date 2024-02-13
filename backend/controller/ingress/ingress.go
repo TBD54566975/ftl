@@ -100,6 +100,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		typeMatches = true
 
 	case *schema.Unit:
+		// TODO: Use type assertions consistently in this function rather than reflection.
 		rv := reflect.ValueOf(value)
 		if rv.Kind() != reflect.Map || rv.Len() != 0 {
 			return fmt.Errorf("%s must be an empty map", path)
