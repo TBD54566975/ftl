@@ -26,15 +26,15 @@ import (
 )
 
 type moduleFolderInfo struct {
-	moduleName string
-	fileHashes map[string][]byte
-	schema     *schema.Module
+	moduleName   string
+	schema       *schema.Module
+	forceRebuild bool
 }
 
 type devCmd struct {
 	BaseDir         string        `arg:"" help:"Directory to watch for FTL modules" type:"existingdir" default:"."`
 	Watch           time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
-	FailureDelay    time.Duration `help:"Delay before retrying a failed deploy." default:"5s"`
+	FailureDelay    time.Duration `help:"Delay before retrying a failed deploy." default:"500ms"`
 	ReconnectDelay  time.Duration `help:"Delay before attempting to reconnect to FTL." default:"1s"`
 	ExitAfterDeploy bool          `help:"Exit after all modules are deployed successfully." default:"false"`
 }
@@ -42,13 +42,12 @@ type devCmd struct {
 type moduleMap map[string]*moduleFolderInfo
 
 func (m *moduleMap) ForceRebuild(dir string) {
-	(*m)[dir].fileHashes = make(map[string][]byte)
+	(*m)[dir].forceRebuild = true
 }
 
 func (m *moduleMap) AddModule(dir string, module string) {
 	(*m)[dir] = &moduleFolderInfo{
 		moduleName: module,
-		fileHashes: make(map[string][]byte),
 	}
 }
 
@@ -111,6 +110,11 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 		return d.watchForSchemaChanges(ctx, client, schemaChanges)
 	})
 
+	previousFailures := 0
+
+	// Map of module directory to file hashes
+	fileHashes := map[string]map[string][]byte{}
+
 	for {
 		logger.Tracef("Scanning %s for FTL module changes", d.BaseDir)
 		delay := d.Watch
@@ -127,6 +131,8 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 		allModulesDeployed := true
 
+		failedModules := map[string]bool{}
+
 		for dir := range modules {
 			currentModule := modules[dir]
 			hashes, err := d.computeFileHashes(ctx, dir)
@@ -134,7 +140,13 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 				return err
 			}
 
-			if !compareFileHashes(ctx, currentModule.fileHashes, hashes) {
+			if currentModule.forceRebuild || !compareFileHashes(ctx, fileHashes[dir], hashes) {
+				if currentModule.forceRebuild {
+					logger.Debugf("Forcing rebuild of module %s", dir)
+					currentModule.forceRebuild = false
+				} else {
+					logger.Debugf("Detected change in module %s", dir)
+				}
 				deploy := deployCmd{
 					Replicas:  1,
 					ModuleDir: dir,
@@ -143,15 +155,22 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 				err = deploy.Run(ctx, client)
 				if err != nil {
 					logger.Errorf(err, "Error deploying module %s. Will retry", dir)
-					modules.RemoveModule(dir)
+					failedModules[dir] = true
 					// Increase delay when there's a compile failure.
 					delay = d.FailureDelay
 					allModulesDeployed = false
 				} else {
-					currentModule.fileHashes = hashes
 					modules.SetModule(dir, currentModule)
 				}
 			}
+			fileHashes[dir] = hashes
+		}
+		if previousFailures != len(failedModules) || len(modules) == 0 {
+			logger.Debugf("Detected %d failed modules, previously had %d", len(failedModules), previousFailures)
+			for module := range failedModules {
+				modules.ForceRebuild(module)
+			}
+			previousFailures = len(failedModules)
 		}
 
 		if allModulesDeployed && d.ExitAfterDeploy {
