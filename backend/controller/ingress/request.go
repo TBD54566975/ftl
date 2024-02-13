@@ -31,7 +31,7 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 	var requestMap map[string]any
 
 	if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
-		pathParameters := map[string]string{}
+		pathParameters := map[string]any{}
 		matchSegments(route.Path, r.URL.Path, func(segment, value string) {
 			pathParameters[segment] = value
 		})
@@ -41,12 +41,33 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 			return nil, err
 		}
 
+		// Since the query and header parameters are a `map[string][]string`
+		// we need to convert them before they go through the `transformFromAliasedFields` call
+		// otherwise they will fail the type check.
+		queryMap := make(map[string]any)
+		for key, values := range r.URL.Query() {
+			valuesAny := make([]any, len(values))
+			for i, v := range values {
+				valuesAny[i] = v
+			}
+			queryMap[key] = valuesAny
+		}
+
+		headerMap := make(map[string]any)
+		for key, values := range r.Header {
+			valuesAny := make([]any, len(values))
+			for i, v := range values {
+				valuesAny[i] = v
+			}
+			headerMap[key] = valuesAny
+		}
+
 		requestMap = map[string]any{}
 		requestMap["method"] = r.Method
 		requestMap["path"] = r.URL.Path
 		requestMap["pathParameters"] = pathParameters
-		requestMap["query"] = r.URL.Query()
-		requestMap["headers"] = r.Header
+		requestMap["query"] = queryMap
+		requestMap["headers"] = headerMap
 		requestMap["body"] = httpRequestBody
 	} else {
 		var err error
