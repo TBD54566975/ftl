@@ -175,8 +175,8 @@ func DataToSchema(s *schemapb.Data) *Data {
 
 // MonoType returns the monomorphised type of this data type if applicable, or returns the original type.
 func maybeMonomorphiseType(t Type, typeParameters map[string]Type) (Type, error) {
-	if t, ok := t.(*DataRef); ok {
-		if tp, ok := typeParameters[t.Name]; ok && t.Module == "" {
+	if t, ok := t.(*DataRef); ok && t.Module == "" {
+		if tp, ok := typeParameters[t.Name]; ok {
 			return tp, nil
 		}
 		return nil, fmt.Errorf("%s: unknown type parameter %q", t.Position(), t.Name)

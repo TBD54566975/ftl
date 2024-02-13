@@ -43,11 +43,12 @@ data class DeleteRequest(
   @Alias("userId") val userID: String,
 )
 
+data class ArrayType(
+  @Alias("item") val item: String,
+)
 
 @Verb
-@HttpIngress(
-  Method.GET, "/users/{userID}/posts/{postID}"
-)
+@HttpIngress(Method.GET, "/users/{userID}/posts/{postID}")
 fun `get`(context: Context, req: HttpRequest<GetRequest>): HttpResponse<GetResponse, String> {
   return HttpResponse(
     status = 200,
@@ -169,3 +170,22 @@ fun error(context: Context, req: HttpRequest<Unit>): HttpResponse<Boolean, Strin
   )
 }
 
+@Verb
+@HttpIngress(Method.GET, "/array/string")
+fun arrayString(context: Context, req: HttpRequest<List<String>>): HttpResponse<List<String>, String> {
+  return HttpResponse(
+    status = 200,
+    headers = mapOf("ArrayString" to arrayListOf("Header from FTL")),
+    body = req.body
+  )
+}
+
+@Verb
+@HttpIngress(Method.POST, "/array/data")
+fun arrayData(context: Context, req: HttpRequest<List<ArrayType>>): HttpResponse<List<ArrayType>, String> {
+  return HttpResponse(
+    status = 200,
+    headers = mapOf("ArrayData" to arrayListOf("Header from FTL")),
+    body = req.body
+  )
+}

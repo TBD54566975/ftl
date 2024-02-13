@@ -27,6 +27,7 @@ func TestMarshal(t *testing.T) {
 		{name: "Bool", input: struct{ Bool bool }{true}, expected: `{"bool":true}`},
 		{name: "Nil", input: struct{ Nil *int }{nil}, expected: `{"nil":null}`},
 		{name: "Slice", input: struct{ Slice []int }{[]int{1, 2, 3}}, expected: `{"slice":[1,2,3]}`},
+		{name: "SliceOfStrings", input: struct{ Slice []string }{[]string{"hello", "world"}}, expected: `{"slice":["hello","world"]}`},
 		{name: "Map", input: struct{ Map map[string]int }{map[string]int{"foo": 42}}, expected: `{"map":{"foo":42}}`},
 		{name: "Option", input: struct{ Option ftl.Option[int] }{ftl.Some(42)}, expected: `{"option":42}`},
 		{name: "OptionPtr", input: struct{ Option *ftl.Option[int] }{&somePtr}, expected: `{"option":42}`},

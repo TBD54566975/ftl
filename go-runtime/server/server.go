@@ -71,6 +71,7 @@ func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)
 			if err != nil {
 				return nil, err
 			}
+
 			return respdata, nil
 		},
 	}
