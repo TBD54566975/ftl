@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>ftl</groupId>
-    <artifactId>ftl-module-api</artifactId>
+    <artifactId>ftl-module-time</artifactId>
     <version>1.0-SNAPSHOT</version>
     <parent>
         <groupId>ftl</groupId>
@@ -13,7 +13,7 @@
     </parent>
 
     <properties>
-        <ftlModuleName>api</ftlModuleName>
+        <ftlModuleName>time</ftlModuleName>
     </properties>
 
     <build>
