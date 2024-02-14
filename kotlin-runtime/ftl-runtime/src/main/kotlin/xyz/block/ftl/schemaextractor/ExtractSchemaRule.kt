@@ -4,6 +4,7 @@ import io.gitlab.arturbosch.detekt.api.*
 import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
 import org.jetbrains.kotlin.cfg.getDeclarationDescriptorIncludingConstructors
+import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.com.intellij.psi.PsiComment
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
@@ -12,16 +13,25 @@ import org.jetbrains.kotlin.diagnostics.DiagnosticUtils.getLineAndColumnInPsiFil
 import org.jetbrains.kotlin.diagnostics.PsiDiagnosticUtils.LineAndColumn
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.psiUtil.children
 import org.jetbrains.kotlin.psi.psiUtil.getValueParameters
+import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.util.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.util.getType
+import org.jetbrains.kotlin.resolve.descriptorUtil.builtIns
+import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.getClassFqNameUnsafe
 import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext.isTypeParameterTypeConstructor
+import org.jetbrains.kotlin.types.checker.anySuperTypeConstructor
 import org.jetbrains.kotlin.types.isNullable
+import org.jetbrains.kotlin.types.typeUtil.builtIns
 import org.jetbrains.kotlin.types.typeUtil.isAny
+import org.jetbrains.kotlin.types.typeUtil.isAnyOrNullableAny
+import org.jetbrains.kotlin.types.typeUtil.isSubtypeOf
 import org.jetbrains.kotlin.util.containingNonLocalDeclaration
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.*
@@ -34,6 +44,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
 import java.time.OffsetDateTime
+import java.util.HashMap
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.String
@@ -347,6 +358,11 @@ class SchemaExtractor(
       val funcSourcePos = func.getLineAndColumn()
       val body =
         requireNotNull(func.bodyExpression) { "$funcSourcePos Function body cannot be empty; was in ${func.name}" }
+
+      val commentRanges = body.node.children()
+        .filterIsInstance<PsiComment>()
+        .map { it.textRange.shiftLeft(it.startOffset).shiftRight(it.startOffsetInParent) }
+
       val imports = func.containingKtFile.importList?.imports ?: emptyList()
 
       // Look for all params of type Context and extract a matcher for each based on its variable name.
@@ -356,7 +372,10 @@ class SchemaExtractor(
       }.map { ctxParam -> getCallMatcher(ctxParam.text.split(":")[0].trim()) }
 
       val refs = callMatchers.flatMap { matcher ->
-        matcher.findAll(body.text).map { match ->
+        matcher.findAll(body.text).mapNotNull { match ->
+          // ignore commented out matches
+          if (commentRanges.any { it.contains(TextRange(match.range.first, match.range.last)) }) return@mapNotNull null
+
           val verbCall = requireNotNull(match.groups["fn"]?.value?.substringAfter("::")?.trim()) {
             "Error processing function defined at $funcSourcePos: Could not extract outgoing verb call"
           }
@@ -447,33 +466,36 @@ class SchemaExtractor(
         )
       )
     }
-
-    val type = when (this.fqNameOrNull()?.asString()) {
-      String::class.qualifiedName -> Type(string = xyz.block.ftl.v1.schema.String())
-      Int::class.qualifiedName -> Type(int = xyz.block.ftl.v1.schema.Int())
-      Long::class.qualifiedName -> Type(int = xyz.block.ftl.v1.schema.Int())
-      Double::class.qualifiedName -> Type(float = xyz.block.ftl.v1.schema.Float())
-      Boolean::class.qualifiedName -> Type(bool = xyz.block.ftl.v1.schema.Bool())
-      OffsetDateTime::class.qualifiedName -> Type(time = xyz.block.ftl.v1.schema.Time())
-      ByteArray::class.qualifiedName -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
-      Any::class.qualifiedName -> Type(any = xyz.block.ftl.v1.schema.Any())
-      Unit::class.qualifiedName -> Type(unit = xyz.block.ftl.v1.schema.Unit())
-      Map::class.qualifiedName -> {
-        return Type(
-          map = xyz.block.ftl.v1.schema.Map(
-            key = this.arguments.first().type.toSchemaType(position),
-            value_ = this.arguments.last().type.toSchemaType(position),
-          )
+    val builtIns = this.builtIns
+    val type = this.constructor.declarationDescriptor!!.defaultType
+    val schemaType = when {
+      type.isSubtypeOf(builtIns.stringType) -> Type(string = xyz.block.ftl.v1.schema.String())
+      type.isSubtypeOf(builtIns.intType) -> Type(int = xyz.block.ftl.v1.schema.Int())
+      type.isSubtypeOf(builtIns.longType) -> Type(int = xyz.block.ftl.v1.schema.Int())
+      type.isSubtypeOf(builtIns.doubleType) -> Type(float = xyz.block.ftl.v1.schema.Float())
+      type.isSubtypeOf(builtIns.booleanType) -> Type(bool = xyz.block.ftl.v1.schema.Bool())
+      type.isSubtypeOf(builtIns.byteType) -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
+      type.isSubtypeOf(builtIns.unitType) -> Type(unit = xyz.block.ftl.v1.schema.Unit())
+      type.anySuperTypeConstructor {
+        it.getClassFqNameUnsafe().asString() == builtIns.list.fqNameSafe.asString()
+      } -> Type(
+        array = Array(
+          element = this.arguments.first().type.toSchemaType(position)
         )
-      }
+      )
 
-      List::class.qualifiedName -> {
-        return Type(
-          array = Array(
-            element = this.arguments.first().type.toSchemaType(position)
-          )
+      type.anySuperTypeConstructor {
+        it.getClassFqNameUnsafe().asString() == builtIns.map.fqNameSafe.asString()
+      } -> Type(
+        map = xyz.block.ftl.v1.schema.Map(
+          key = this.arguments.first().type.toSchemaType(position),
+          value_ = this.arguments.last().type.toSchemaType(position),
         )
-      }
+      )
+
+      this.isAnyOrNullableAny() -> Type(any = xyz.block.ftl.v1.schema.Any())
+      this.fqNameOrNull()
+        ?.asString() == OffsetDateTime::class.qualifiedName -> Type(time = xyz.block.ftl.v1.schema.Time())
 
       else -> {
         require(this.toClassDescriptor().isData || this.isEmptyBuiltin()) {
@@ -489,7 +511,7 @@ class SchemaExtractor(
             "but was ${this.fqNameOrNull()?.asString()}"
         }
 
-        return Type(
+        Type(
           dataRef = DataRef(
             name = refName,
             module = fqName.extractModuleName(),
@@ -500,12 +522,12 @@ class SchemaExtractor(
       }
     }
     if (this.isNullable()) {
-      return Type(optional = Optional(type = type))
+      return Type(optional = Optional(type = schemaType))
     }
     if (this.isAny()) {
       return Type(any = xyz.block.ftl.v1.schema.Any())
     }
-    return type
+    return schemaType
   }
 
   private fun KtTypeReference.resolveType(): KotlinType =

@@ -54,7 +54,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       /**
        * Request to echo a message.
        */
-      data class EchoRequest<T>(val t: T, val name: String, @Alias("stf") val stuff: Any)
+      data class EchoRequest<T>(
+        val t: T,
+        val name: String,
+        @Alias("stf") val stuff: Any,
+       )
       data class EchoResponse(val messages: List<EchoMessage>)
 
       /**
@@ -81,6 +85,8 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       fun callTime(context: Context): TimeResponse {
         context.call(::empty, builtin.Empty())
         context.call(::other, builtin.Empty())
+        // commented out call is ignored:
+        //context.call(::foo, builtin.Empty())
         return context.call(::verb, builtin.Empty())
       }
     """
@@ -114,15 +120,19 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               Field(
                 name = "metadata",
                 type = Type(
-                  map = Map(
-                    key = Type(string = xyz.block.ftl.v1.schema.String()),
-                    value_ = Type(
-                      dataRef = DataRef(
-                        name = "MapValue",
-                        module = "echo"
+                  optional = Optional(
+                    type = Type(
+                      map = Map(
+                        key = Type(string = xyz.block.ftl.v1.schema.String()),
+                        value_ = Type(
+                          dataRef = DataRef(
+                            name = "MapValue",
+                            module = "echo"
+                          )
+                        )
                       )
                     )
-                  )
+                  ),
                 )
               ),
             ),
