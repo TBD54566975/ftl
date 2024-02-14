@@ -9,11 +9,11 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ hashFiles('**/go.sum') }}-go
+        key: ${{ runner.os }}-go
     - name: Restore Maven Modules Cache
       id: cache-maven
       uses: actions/cache/restore@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-maven
+        key: ${{ runner.os }}-maven
 
