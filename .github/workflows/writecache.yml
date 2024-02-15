@@ -27,15 +27,18 @@ jobs:
         run: mvn dependency:resolve --batch-mode
       - name: Download Go Dependencies
         run: go mod download -x
-      - name: Save Go Modules Cache
-        id: cache-go-modules
-        uses: actions/cache/save@v4
+      - id: find-go-build-cache
+        shell: bash
+        run: echo "cache=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/save@v4
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go
+          path: |
+            ~/go/pkg/mod
+            ${{ steps.find-go-build-cache.outputs.cache }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
       - name: Save Maven Modules Cache
         id: cache-maven
         uses: actions/cache/save@v4
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}

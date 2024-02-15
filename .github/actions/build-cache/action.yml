@@ -4,16 +4,28 @@ runs:
   using: "composite"
   # Make sure to keep these cache entries in sync with those in writecache.yml
   steps:
+    - id: find-go-build-cache
+      shell: bash
+      run: echo "cache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
     - name: Restore Go Modules Cache
       id: cache-go-modules
       uses: actions/cache/restore@v4
       with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go
+        path: |
+          ~/go/pkg/mod
+          ${{ steps.find-go-build-cache.outputs.cache }}
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          ${{ runner.os }}-
     - name: Restore Maven Modules Cache
       id: cache-maven
       uses: actions/cache/restore@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          ${{ runner.os }}-maven-
+
 
