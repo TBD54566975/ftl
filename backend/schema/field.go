@@ -35,11 +35,11 @@ func (f *Field) String() string {
 
 func (f *Field) ToProto() proto.Message {
 	return &schemapb.Field{
-		Pos:      posToProto(f.Pos),
-		Name:     f.Name,
-		Type:     typeToProto(f.Type),
-		Comments: f.Comments,
-		Alias:    f.JSONAlias,
+		Pos:       posToProto(f.Pos),
+		Name:      f.Name,
+		Type:      typeToProto(f.Type),
+		Comments:  f.Comments,
+		JsonAlias: f.JSONAlias,
 	}
 }
 
@@ -57,6 +57,6 @@ func fieldToSchema(s *schemapb.Field) *Field {
 		Name:      s.Name,
 		Comments:  s.Comments,
 		Type:      typeToSchema(s.Type),
-		JSONAlias: s.Alias,
+		JSONAlias: s.JsonAlias,
 	}
 }
