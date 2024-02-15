@@ -417,11 +417,19 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 			return nil, fmt.Errorf("field %s: %w", f.Name(), err)
 		}
 
+		// Extract the JSON tag and split it to get just the field name
+		tagContent := reflect.StructTag(s.Tag(i)).Get(aliasFieldTag)
+		tagParts := strings.Split(tagContent, ",")
+		jsonFieldName := ""
+		if len(tagParts) > 0 {
+			jsonFieldName = tagParts[0]
+		}
+
 		out.Fields = append(out.Fields, &schema.Field{
 			Pos:       goPosToSchemaPos(node.Pos()),
 			Name:      strcase.ToLowerCamel(f.Name()),
 			Type:      ft,
-			JSONAlias: reflect.StructTag(s.Tag(i)).Get(aliasFieldTag),
+			JSONAlias: jsonFieldName,
 		})
 	}
 	pctx.module.AddData(out)
