@@ -474,8 +474,10 @@ class SchemaExtractor(
       type.isSubtypeOf(builtIns.longType) -> Type(int = xyz.block.ftl.v1.schema.Int())
       type.isSubtypeOf(builtIns.doubleType) -> Type(float = xyz.block.ftl.v1.schema.Float())
       type.isSubtypeOf(builtIns.booleanType) -> Type(bool = xyz.block.ftl.v1.schema.Bool())
-      type.isSubtypeOf(builtIns.byteType) -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
       type.isSubtypeOf(builtIns.unitType) -> Type(unit = xyz.block.ftl.v1.schema.Unit())
+      type.anySuperTypeConstructor {
+        it.getClassFqNameUnsafe().asString() == ByteArray::class.qualifiedName
+      } -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
       type.anySuperTypeConstructor {
         it.getClassFqNameUnsafe().asString() == builtIns.list.fqNameSafe.asString()
       } -> Type(
