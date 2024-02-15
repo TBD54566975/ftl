@@ -86,7 +86,7 @@ package ftl.test
                 )
               )
             ),
-            Field(name = "withAlias", type = Type(string = String()), alias = "a"),
+            Field(name = "withAlias", type = Type(string = String()), jsonAlias = "a"),
           )
         )
       ),
@@ -107,7 +107,7 @@ import kotlin.Long
 import kotlin.String
 import kotlin.collections.ArrayList
 import kotlin.collections.Map
-import xyz.block.ftl.Alias
+import xyz.block.ftl.Json
 
 public data class ParamTestData<T>(
   public val t: T,
@@ -133,7 +133,7 @@ public data class TestResponse(
   public val externalDataRef: ftl.other.TestRequest,
   public val any: Any,
   public val parameterizedDataRef: ParamTestData<T>,
-  @Alias("a")
+  @Json("a")
   public val withAlias: String,
 )
 """

@@ -22,7 +22,7 @@ type Req struct {
 	Nested   Nested
 	Optional ftl.Option[Nested]
 	Time     time.Time
-	User     two.User `alias:"u"`
+	User     two.User `json:"u"`
 	Bytes    []byte
 }
 type Resp struct{}

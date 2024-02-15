@@ -13,9 +13,9 @@ enum class Method {
 annotation class HttpIngress(val method: Method, val path: String)
 
 /**
- * A field marked with Alias will be renamed to the specified name on ingress from external inputs.
+ * A field marked with Json will be renamed to the specified name on ingress from external inputs.
  */
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
 @MustBeDocumented
-annotation class Alias(val name: String)
+annotation class Json(val name: String)

@@ -441,8 +441,8 @@ class SchemaExtractor(
               getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition()
             )
           },
-          alias = param.annotationEntries.firstOrNull {
-            bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Alias::class.qualifiedName
+          jsonAlias = param.annotationEntries.firstOrNull {
+            bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Json::class.qualifiedName
           }?.valueArguments?.single()?.let { (it as KtValueArgument).text.trim('"', ' ') } ?: "",
         )
       }.toList(),

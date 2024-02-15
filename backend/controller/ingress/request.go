@@ -280,7 +280,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 
 		var field *schema.Field
 		for _, f := range data.Fields {
-			if (f.Alias != "" && f.Alias == key) || f.Name == key {
+			if (f.JSONAlias != "" && f.JSONAlias == key) || f.Name == key {
 				field = f
 			}
 			for _, typeParam := range data.TypeParameters {

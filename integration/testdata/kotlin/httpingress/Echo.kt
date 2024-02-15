@@ -5,46 +5,46 @@ import ftl.builtin.HttpRequest
 import ftl.builtin.HttpResponse
 import kotlin.String
 import kotlin.Unit
-import xyz.block.ftl.Alias
+import xyz.block.ftl.Json
 import xyz.block.ftl.Context
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb
 
 data class GetRequest(
-  @Alias("userId") val userID: String,
-  @Alias("postId") val postID: String,
+  @Json("userId") val userID: String,
+  @Json("postId") val postID: String,
 )
 
 data class Nested(
-  @Alias("good_stuff") val goodStuff: String,
+  @Json("good_stuff") val goodStuff: String,
 )
 
 data class GetResponse(
-  @Alias("msg") val message: String,
-  @Alias("nested") val nested: Nested,
+  @Json("msg") val message: String,
+  @Json("nested") val nested: Nested,
 )
 
 data class PostRequest(
-  @Alias("user_id") val userId: Int,
+  @Json("user_id") val userId: Int,
   val postId: Int,
 )
 
 data class PostResponse(
-  @Alias("success") val success: Boolean,
+  @Json("success") val success: Boolean,
 )
 
 data class PutRequest(
-  @Alias("userId") val userID: String,
-  @Alias("postId") val postID: String,
+  @Json("userId") val userID: String,
+  @Json("postId") val postID: String,
 )
 
 data class DeleteRequest(
-  @Alias("userId") val userID: String,
+  @Json("userId") val userID: String,
 )
 
 data class ArrayType(
-  @Alias("item") val item: String,
+  @Json("item") val item: String,
 )
 
 @Verb

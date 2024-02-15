@@ -77,9 +77,9 @@ class ModuleGenerator {
         dataConstructorBuilder.addParameter(parameter.build())
         dataClassBuilder.addProperty(
           PropertySpec.builder(field.name, getTypeClass(type, namespace)).initializer(field.name).let {
-            if (field.alias != "") {
+            if (field.jsonAlias != "") {
               it.addAnnotation(
-                AnnotationSpec.builder(xyz.block.ftl.Alias::class).addMember("%S", field.alias).build()
+                AnnotationSpec.builder(xyz.block.ftl.Json::class).addMember("%S", field.jsonAlias).build()
               )
             } else {
               it
