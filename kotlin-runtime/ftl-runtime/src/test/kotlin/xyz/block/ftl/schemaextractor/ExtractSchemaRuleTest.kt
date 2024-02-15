@@ -39,7 +39,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       import ftl.time.other
       import ftl.time.TimeRequest
       import ftl.time.TimeResponse
-      import xyz.block.ftl.Alias
+      import xyz.block.ftl.Json
       import xyz.block.ftl.Context
       import xyz.block.ftl.HttpIngress
       import xyz.block.ftl.Method
@@ -57,7 +57,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       data class EchoRequest<T>(
         val t: T,
         val name: String,
-        @Alias("stf") val stuff: Any,
+        @Json("stf") val stuff: Any,
        )
       data class EchoResponse(val messages: List<EchoMessage>)
 
@@ -153,7 +153,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               Field(
                 name = "stuff",
                 type = Type(any = xyz.block.ftl.v1.schema.Any()),
-                alias = "stf"
+                jsonAlias = "stf"
               )
             ),
             comments = listOf(

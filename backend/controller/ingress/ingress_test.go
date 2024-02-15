@@ -169,7 +169,7 @@ func TestResponseBodyForVerb(t *testing.T) {
 					&schema.Data{
 						Name: "Test",
 						Fields: []*schema.Field{
-							{Name: "message", Type: &schema.String{}, Alias: "msg"},
+							{Name: "message", Type: &schema.String{}, JSONAlias: "msg"},
 						},
 					},
 					jsonVerb,

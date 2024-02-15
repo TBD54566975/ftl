@@ -29,7 +29,7 @@ var (
 	})
 	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
 
-	aliasFieldTag = "alias"
+	aliasFieldTag = "json"
 )
 
 // NativeNames is a map of top-level declarations to their native Go names.
@@ -418,10 +418,10 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 		}
 
 		out.Fields = append(out.Fields, &schema.Field{
-			Pos:   goPosToSchemaPos(node.Pos()),
-			Name:  strcase.ToLowerCamel(f.Name()),
-			Type:  ft,
-			Alias: reflect.StructTag(s.Tag(i)).Get(aliasFieldTag),
+			Pos:       goPosToSchemaPos(node.Pos()),
+			Name:      strcase.ToLowerCamel(f.Name()),
+			Type:      ft,
+			JSONAlias: reflect.StructTag(s.Tag(i)).Get(aliasFieldTag),
 		})
 	}
 	pctx.module.AddData(out)

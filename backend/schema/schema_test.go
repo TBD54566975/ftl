@@ -20,11 +20,11 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {String: String}? alias rqn
+    name {String: String}? alias json rqn
   }
 
   data CreateResponse {
-    name [String] alias rsn
+    name [String] alias json rsn
   }
 
   data DestroyRequest {
@@ -340,10 +340,10 @@ func TestParseModule(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {String: String}? alias rqn
+    name {String: String}? alias json rqn
   }
   data CreateResponse {
-    name [String] alias rsn
+    name [String] alias json rsn
   }
   data DestroyRequest {
     // A comment
@@ -374,13 +374,13 @@ var testSchema = MustValidate(&Schema{
 				&Data{
 					Name: "CreateRequest",
 					Fields: []*Field{
-						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, Alias: "rqn"},
+						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, JSONAlias: "rqn"},
 					},
 				},
 				&Data{
 					Name: "CreateResponse",
 					Fields: []*Field{
-						{Name: "name", Type: &Array{Element: &String{}}, Alias: "rsn"},
+						{Name: "name", Type: &Array{Element: &String{}}, JSONAlias: "rsn"},
 					},
 				},
 				&Data{
