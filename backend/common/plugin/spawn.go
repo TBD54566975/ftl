@@ -142,7 +142,7 @@ func Spawn[Client PingableClient](
 	go func() { cancelWithCause(cmd.Wait()) }()
 
 	go func() {
-		err := log.JSONStreamer(pipe, logger, log.Debug)
+		err := log.JSONStreamer(pipe, logger, log.Error)
 		if err != nil {
 			logger.Errorf(err, "Error streaming plugin logs.")
 		}
