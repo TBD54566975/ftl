@@ -18,10 +18,6 @@
 			"name": "examples/go/time"
 		},
 		{
-			"path": "examples/go/httpingress",
-			"name": "examples/go/httpingress"
-		},
-		{
 			"path": "examples/kotlin",
 			"name": "examples/kotlin"
 		},
