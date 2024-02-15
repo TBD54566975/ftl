@@ -184,6 +184,7 @@
                         <disableDefaultRuleSets>true</disableDefaultRuleSets>
                         <classPath>${generated.classpath}</classPath>
                         <jvmTarget>${java.version}</jvmTarget>
+                        <jdkHome>${java.home}</jdkHome>
                         <config>${project.build.directory}/detekt.yml</config>
                         <plugins>
                             <plugin>
