@@ -11,8 +11,8 @@ import (
 )
 
 type GetRequest struct {
-	UserID string `json:"userId"`
-	PostID string `json:"postId"`
+	UserID string `json:"userId,omitempty"`
+	PostID string `json:"postId,something,else"`
 }
 
 type Nested struct {
