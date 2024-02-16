@@ -7,8 +7,8 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/internal/errors"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 func TestIndent(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 )
 

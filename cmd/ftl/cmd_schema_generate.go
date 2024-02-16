@@ -9,17 +9,18 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/TBD54566975/scaffolder"
-	"github.com/TBD54566975/scaffolder/extensions/javascript"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/slices"
+	"github.com/TBD54566975/scaffolder"
+	"github.com/TBD54566975/scaffolder/extensions/javascript"
+
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type schemaGenerateCmd struct {

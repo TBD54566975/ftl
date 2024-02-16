@@ -5,7 +5,7 @@ RELEASE = %{DEST}/release
 GO_SOURCES = **/*.go
 
 SCHEMA_IN = backend/schema/**/*.go cmd/ftl-schema/**/*.go
-SCHEMA_OUT = protos/xyz/block/ftl/v1/schema/schema.proto
+SCHEMA_OUT = backend/protos/xyz/block/ftl/v1/schema/schema.proto
 
 NODE_PROTOC_PLUGINS = frontend/node_modules/.bin/protoc-gen-connect-es \
   frontend/node_modules/.bin/protoc-gen-es
@@ -13,25 +13,19 @@ NODE_PROTOC_PLUGINS = frontend/node_modules/.bin/protoc-gen-connect-es \
 PROTO_IN = **/*.proto **/buf.* bin/protoc* bin/buf %{NODE_PROTOC_PLUGINS}
 # There's no real way to mechanically generate the list of outputs, so we just
 # explicitly list them here.
-PROTO_OUT = protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
-    protos/xyz/block/ftl/v1/schema/schema.pb.go \
-    protos/xyz/block/ftl/v1/console/console.pb.go \
-    protos/xyz/block/ftl/v1/schema/runtime.pb.go \
-    protos/xyz/block/ftl/v1/ftl.pb.go \
+PROTO_OUT = backend/protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
+    backend/protos/xyz/block/ftl/v1/schema/schema.pb.go \
+    backend/protos/xyz/block/ftl/v1/console/console.pb.go \
+    backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go \
+    backend/protos/xyz/block/ftl/v1/ftl.pb.go \
     frontend/src/protos/xyz/block/ftl/v1/ftl_connect.ts \
     frontend/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
     frontend/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
     frontend/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
-    frontend/src/protos/xyz/block/ftl/v1/console/console_pb.ts \
-    frontend/src/protos/google/protobuf/timestamp_pb.ts \
-    frontend/src/protos/opentelemetry/proto/collector/metrics/v1/metrics_service_pb.ts \
-    frontend/src/protos/opentelemetry/proto/common/v1/common_pb.ts \
-    frontend/src/protos/opentelemetry/proto/metrics/v1/metrics_pb.ts \
-    frontend/src/protos/opentelemetry/proto/resource/v1/resource_pb.ts \
-    frontend/src/protos/opentelemetry/proto/trace/v1/trace_pb.ts
+    frontend/src/protos/xyz/block/ftl/v1/console/console_pb.ts
 
-COMMON_LOG_IN = backend/common/log/api.go
-COMMON_LOG_OUT = backend/common/log/log_level_string.go
+COMMON_LOG_IN = internal/log/api.go
+COMMON_LOG_OUT = internal/log/log_level_string.go
 
 KT_RUNTIME_IN = kotlin-runtime/ftl-runtime/**/*.{kt,kts} pom.xml kotlin-runtime/ftl-runtime/**/pom.xml
 KT_RUNTIME_OUT = kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT.jar
@@ -111,8 +105,7 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
   build:
     buf format -w
     buf lint
-    (cd protos && buf generate)
-    (cd backend/common/3rdparty/protos && buf generate)
+    (cd backend/protos && buf generate)
   # There's a build cycle dependency here, so we can't clean: ftl-schema depends on generated .pb.go files
   -clean
 

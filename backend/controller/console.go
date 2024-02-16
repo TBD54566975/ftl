@@ -12,15 +12,15 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	pbconsole "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
-	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type ConsoleService struct {

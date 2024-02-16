@@ -11,7 +11,7 @@ import (
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
-	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 //go:embed schema

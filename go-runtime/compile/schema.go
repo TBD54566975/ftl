@@ -14,9 +14,9 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 
-	"github.com/TBD54566975/ftl/backend/common/goast"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
+	"github.com/TBD54566975/ftl/internal/goast"
 )
 
 var (

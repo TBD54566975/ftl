@@ -1,4 +1,3 @@
 version: v1
 directories:
-  - protos
-  - backend/common/3rdparty/protos
+  - backend/protos

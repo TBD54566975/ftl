@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/TBD54566975/ftl/backend/common/rpc"
+	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 func MeterWithVerb(ctx context.Context) metric.Meter {

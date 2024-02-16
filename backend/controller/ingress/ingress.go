@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type path []string

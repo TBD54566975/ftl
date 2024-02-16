@@ -8,10 +8,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/titanous/json5"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type callCmd struct {
