@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1.console;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "xyz/block/ftl/v1/ftl.proto";
+import "xyz/block/ftl/v1/schema/schema.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console;pbconsole";
+option java_multiple_files = true;
+
+enum EventType {
+  EVENT_TYPE_UNKNOWN = 0;
+  EVENT_TYPE_LOG = 1;
+  EVENT_TYPE_CALL = 2;
+  EVENT_TYPE_DEPLOYMENT_CREATED = 3;
+  EVENT_TYPE_DEPLOYMENT_UPDATED = 4;
+}
+
+enum LogLevel {
+  LOG_LEVEL_UNKNOWN = 0;
+  LOG_LEVEL_TRACE = 1;
+  LOG_LEVEL_DEBUG = 5;
+  LOG_LEVEL_INFO = 9;
+  LOG_LEVEL_WARN = 13;
+  LOG_LEVEL_ERROR = 17;
+}
+
+message LogEvent {
+  string deployment_name = 1;
+  optional string request_name = 2;
+  google.protobuf.Timestamp time_stamp = 3;
+  int32 log_level = 4;
+  map<string, string> attributes = 5;
+  string message = 6;
+  optional string error = 7;
+  optional string stack = 8;
+}
+
+message CallEvent {
+  optional string request_name = 1;
+  string deployment_name = 2;
+  google.protobuf.Timestamp time_stamp = 3;
+  optional schema.VerbRef source_verb_ref = 4;
+  schema.VerbRef destination_verb_ref = 5;
+  google.protobuf.Duration duration = 6;
+  string request = 7;
+  string response = 8;
+  optional string error = 9;
+  optional string stack = 10;
+}
+
+message DeploymentCreatedEvent {
+  string name = 1;
+  string language = 2;
+  string module_name = 3;
+  int32 min_replicas = 4;
+  optional string replaced = 5;
+}
+
+message DeploymentUpdatedEvent {
+  string name = 1;
+  int32 min_replicas = 2;
+  int32 prev_min_replicas = 3;
+}
+
+message Verb {
+  schema.Verb verb = 1;
+  string schema = 2;
+  string json_request_schema = 3;
+}
+
+message Data {
+  schema.Data data = 1;
+  string schema = 2;
+}
+
+message Module {
+  string name = 1;
+  string deployment_name = 2;
+  string language = 3;
+  string schema = 4;
+  repeated Verb verbs = 5;
+  repeated Data data = 6;
+}
+
+message GetModulesRequest {}
+message GetModulesResponse {
+  repeated Module modules = 1;
+}
+
+// Query for events.
+message EventsQuery {
+  // Limit the number of events returned.
+  message LimitFilter {
+    int32 limit = 1;
+  }
+  // Filters events by log level.
+  message LogLevelFilter {
+    LogLevel log_level = 1;
+  }
+  // Filters events by deployment name.
+  message DeploymentFilter {
+    repeated string deployments = 1;
+  }
+  // Filters events by request key.
+  message RequestFilter {
+    repeated string requests = 1;
+  }
+  // Filters events by event type.
+  message EventTypeFilter {
+    repeated EventType event_types = 1;
+  }
+  // Filters events by time.
+  //
+  // Either end of the time range can be omitted to indicate no bound.
+  message TimeFilter {
+    optional google.protobuf.Timestamp older_than = 1;
+    optional google.protobuf.Timestamp newer_than = 2;
+  }
+  // Filters events by ID.
+  //
+  // Either end of the ID range can be omitted to indicate no bound.
+  message IDFilter {
+    optional int64 lower_than = 1;
+    optional int64 higher_than = 2;
+  }
+  // Filters events by call.
+  message CallFilter {
+    string dest_module = 1;
+    optional string dest_verb = 2;
+    optional string source_module = 3;
+  }
+
+  enum Order {
+    ASC = 0;
+    DESC = 1;
+  }
+
+  message Filter {
+    // These map 1:1 with filters in backend/controller/internal/dal/events.go
+    oneof filter {
+      LimitFilter limit = 1;
+      LogLevelFilter log_level = 2;
+      DeploymentFilter deployments = 3;
+      RequestFilter requests = 4;
+      EventTypeFilter event_types = 5;
+      TimeFilter time = 6;
+      IDFilter id = 7;
+      CallFilter call = 8;
+    }
+  }
+
+  repeated Filter filters = 1;
+  int32 limit = 2;
+  Order order = 3;
+}
+
+message StreamEventsRequest {
+  optional google.protobuf.Duration update_interval = 1;
+  EventsQuery query = 2;
+}
+
+message StreamEventsResponse {
+  repeated Event events = 1;
+}
+
+message Event {
+  google.protobuf.Timestamp time_stamp = 1;
+  // Unique ID for event.
+  int64 id = 2;
+  oneof entry {
+    LogEvent log = 3;
+    CallEvent call = 4;
+    DeploymentCreatedEvent deployment_created = 5;
+    DeploymentUpdatedEvent deployment_updated = 6;
+  }
+}
+
+message GetEventsResponse {
+  repeated Event events = 1;
+
+  // For pagination, this cursor is where we should start our next query
+  optional int64 cursor = 2;
+}
+
+service ConsoleService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
+  rpc StreamEvents(StreamEventsRequest) returns (stream StreamEventsResponse);
+  rpc GetEvents(EventsQuery) returns (GetEventsResponse);
+}

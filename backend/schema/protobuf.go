@@ -34,7 +34,7 @@ package xyz.block.ftl.v1.schema;
 
 import "xyz/block/ftl/v1/schema/runtime.proto";
 
-option go_package = "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema;schemapb";
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb";
 option java_multiple_files = true;
 `)
 	for i, key := range keys {

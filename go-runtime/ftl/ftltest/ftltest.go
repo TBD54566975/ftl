@@ -5,7 +5,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // Context suitable for use in testing FTL verbs.

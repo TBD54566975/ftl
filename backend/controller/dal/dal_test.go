@@ -12,12 +12,12 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/common/sha256"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 //nolint:maintidx

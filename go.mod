@@ -46,7 +46,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.23.1
 	go.opentelemetry.io/otel/sdk/metric v1.23.1
 	go.opentelemetry.io/otel/trace v1.23.1
-	go.opentelemetry.io/proto/otlp v1.1.0
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
 	golang.org/x/mod v0.15.0
@@ -57,7 +56,10 @@ require (
 	modernc.org/sqlite v1.28.0
 )
 
-require github.com/pkoukk/tiktoken-go v0.1.2 // indirect
+require (
+	github.com/pkoukk/tiktoken-go v0.1.2 // indirect
+	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
+)
 
 require (
 	github.com/alecthomas/repr v0.3.0

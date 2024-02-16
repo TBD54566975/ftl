@@ -12,13 +12,13 @@ import (
 	"github.com/alecthomas/kong"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/TBD54566975/ftl/backend/common/bind"
-	"github.com/TBD54566975/ftl/backend/common/exec"
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
+	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type serveCmd struct {

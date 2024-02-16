@@ -3,7 +3,7 @@ package schema
 import (
 	"fmt"
 
-	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
 func posFromProto(pos *schemapb.Position) Position {

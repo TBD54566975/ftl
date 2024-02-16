@@ -15,12 +15,12 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/common/exec"
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 type externalModuleContext struct {

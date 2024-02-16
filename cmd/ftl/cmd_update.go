@@ -5,9 +5,9 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/TBD54566975/ftl/backend/common/model"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 type updateCmd struct {

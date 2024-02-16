@@ -9,9 +9,9 @@ import (
 	"github.com/beevik/etree"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/common/exec"
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleConfig) error {

@@ -10,8 +10,8 @@ import (
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/ollama"
 
-	"github.com/TBD54566975/ftl/backend/common/exec"
-	"github.com/TBD54566975/ftl/backend/common/log"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type schemaImportCmd struct {

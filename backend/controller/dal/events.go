@@ -10,10 +10,10 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 type EventType = sql.EventType

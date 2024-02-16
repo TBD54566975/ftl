@@ -11,10 +11,10 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/common/slices"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 func TestCron(t *testing.T) {

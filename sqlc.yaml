@@ -56,16 +56,16 @@ sql:
             go_type: "github.com/alecthomas/types/optional.Option[bool]"
           # Can't use until https://github.com/sqlc-dev/sqlc/issues/2632 is fixed, if it ever is...
           #          - column: "ingress_requests.key"
-          #            go_type: "github.com/TBD54566975/ftl/backend/common/model.RequestName"
+          #            go_type: "github.com/TBD54566975/ftl/internal/model.RequestName"
           #          - column: "ingress_requests.key"
           #            nullable: true
-          #            go_type: "github.com/TBD54566975/ftl/backend/common/model.NullRequestName"
+          #            go_type: "github.com/TBD54566975/ftl/internal/model.NullRequestName"
           #          - column: "runners.key"
-          #            go_type: "github.com/TBD54566975/ftl/backend/common/model.RunnerKey"
+          #            go_type: "github.com/TBD54566975/ftl/internal/model.RunnerKey"
           - column: "controller.key"
-            go_type: "github.com/TBD54566975/ftl/backend/common/model.ControllerKey"
+            go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - column: "deployments.name"
-            go_type: "github.com/TBD54566975/ftl/backend/common/model.DeploymentName"
+            go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentName"
           - column: "events.payload"
             go_type: "encoding/json.RawMessage"
     rules:

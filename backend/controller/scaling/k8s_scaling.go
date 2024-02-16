@@ -3,7 +3,7 @@ package scaling
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/backend/common/model"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 var _ RunnerScaling = (*K8sScaling)(nil)

@@ -15,8 +15,8 @@ deploy-echo-kotlin:
   ftl deploy examples/echo-kotlin
 
 regen-schema:
-  bit protos/xyz/block/ftl/v1/schema/schema.proto
-  bit protos/xyz/block/ftl/v1/schema/schema.pb.go
+  bit backend/protos/xyz/block/ftl/v1/schema/schema.proto
+  bit backend/protos/xyz/block/ftl/v1/schema/schema.pb.go
 
 # Run errtrace on Go files to add stacks
 errtrace:

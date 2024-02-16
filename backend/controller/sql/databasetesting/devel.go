@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // CreateForDevel creates and migrates a new database for development or testing.

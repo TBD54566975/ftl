@@ -7,9 +7,9 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 var _ log.Sink = (*deploymentLogsSink)(nil)

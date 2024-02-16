@@ -23,16 +23,16 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/TBD54566975/ftl/backend/common/download"
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/model"
-	"github.com/TBD54566975/ftl/backend/common/plugin"
-	"github.com/TBD54566975/ftl/backend/common/rpc"
-	"github.com/TBD54566975/ftl/backend/common/slices"
-	"github.com/TBD54566975/ftl/backend/common/unstoppable"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/internal/download"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/internal/unstoppable"
 )
 
 type Config struct {

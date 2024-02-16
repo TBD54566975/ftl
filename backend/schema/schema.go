@@ -9,7 +9,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
-	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
 type Schema struct {
@@ -122,7 +122,7 @@ func (s *Schema) ToProto() proto.Message {
 func TypeName(v any) string {
 	t := reflect.Indirect(reflect.ValueOf(v)).Type()
 
-	// handle AbstractRefs like "AbstractRef[github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema.DataRef]"
+	// handle AbstractRefs like "AbstractRef[github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema.DataRef]"
 	if strings.HasPrefix(t.Name(), "AbstractRef[") {
 		return strings.TrimSuffix(strings.Split(t.Name(), ".")[2], "]")
 	}

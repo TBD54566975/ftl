@@ -3,8 +3,8 @@ package schema
 import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	"github.com/TBD54566975/ftl/backend/common/slices"
-	schemapb "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // DataRef is a reference to a data structure.

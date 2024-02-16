@@ -6,11 +6,11 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/common/log"
-	"github.com/TBD54566975/ftl/backend/common/model"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlv1 "github.com/TBD54566975/ftl/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 type Call struct {

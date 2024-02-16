@@ -16,7 +16,7 @@ import (
 
 	"errors"
 
-	"github.com/TBD54566975/ftl/backend/common/cors"
+	"github.com/TBD54566975/ftl/internal/cors"
 )
 
 //go:embed all:dist

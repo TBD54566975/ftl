@@ -278,7 +278,7 @@
                                 <arguments>
                                     <argument>-jar</argument>
                                     <argument>target/dependency/wire-compiler.jar</argument>
-                                    <argument>--proto_path=${rootDir}/protos</argument>
+                                    <argument>--proto_path=${rootDir}/backend/protos</argument>
                                     <argument>
                                         --kotlin_out=${project.build.directory}/generated-sources/wire
                                     </argument>
@@ -297,7 +297,7 @@
                                 <arguments>
                                     <argument>-jar</argument>
                                     <argument>target/dependency/wire-compiler.jar</argument>
-                                    <argument>--proto_path=${rootDir}/protos</argument>
+                                    <argument>--proto_path=${rootDir}/backend/protos</argument>
                                     <argument>--kotlin_out=target/generated-sources/wire</argument>
                                     <argument>--kotlin_rpc_role=server</argument>
                                     <argument>--kotlin_rpc_call_style=blocking</argument>
