@@ -1,3 +1,7 @@
 module main
 
 go {{ .GoVersion }}
+
+{{ if ne .FTLVersion "" }}
+require github.com/TBD54566975/ftl {{ .FTLVersion }}
+{{ end }}

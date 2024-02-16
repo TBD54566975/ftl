@@ -26,8 +26,9 @@ import (
 type externalModuleContext struct {
 	ModuleDir string
 	*schema.Schema
-	GoVersion string
-	Main      string
+	GoVersion  string
+	FTLVersion string
+	Main       string
 }
 
 type goVerb struct {
@@ -35,9 +36,10 @@ type goVerb struct {
 }
 
 type mainModuleContext struct {
-	GoVersion string
-	Name      string
-	Verbs     []goVerb
+	GoVersion  string
+	FTLVersion string
+	Name       string
+	Verbs      []goVerb
 }
 
 func (b externalModuleContext) NonMainModules() []*schema.Module {
@@ -60,6 +62,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
+	ftlVersion := ""
+	if ftl.IsRelease(ftl.Version) {
+		ftlVersion = ftl.Version
+	}
+
 	config, err := moduleconfig.LoadConfig(moduleDir)
 	if err != nil {
 		return fmt.Errorf("failed to load module config: %w", err)
@@ -75,10 +82,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 
 	logger.Debugf("Generating external modules")
 	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), moduleDir, externalModuleContext{
-		ModuleDir: moduleDir,
-		GoVersion: goModVersion,
-		Schema:    sch,
-		Main:      config.Module,
+		ModuleDir:  moduleDir,
+		GoVersion:  goModVersion,
+		FTLVersion: ftlVersion,
+		Schema:     sch,
+		Main:       config.Module,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -114,9 +122,10 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		}
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
-		GoVersion: goModVersion,
-		Name:      main.Name,
-		Verbs:     goVerbs,
+		GoVersion:  goModVersion,
+		FTLVersion: ftlVersion,
+		Name:       main.Name,
+		Verbs:      goVerbs,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
