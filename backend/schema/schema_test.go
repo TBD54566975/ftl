@@ -20,11 +20,11 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {String: String}? alias json rqn
+    name {String: String}? alias json "rqn"
   }
 
   data CreateResponse {
-    name [String] alias json rsn
+    name [String] alias json "rsn"
   }
 
   data DestroyRequest {
@@ -340,10 +340,10 @@ func TestParseModule(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {String: String}? alias json rqn
+    name {String: String}? alias json "rqn"
   }
   data CreateResponse {
-    name [String] alias json rsn
+    name [String] alias json "rsn"
   }
   data DestroyRequest {
     // A comment

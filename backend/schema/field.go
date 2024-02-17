@@ -15,7 +15,7 @@ type Field struct {
 	Comments  []string `parser:"@Comment*" protobuf:"3"`
 	Name      string   `parser:"@Ident" protobuf:"2"`
 	Type      Type     `parser:"@@" protobuf:"4"`
-	JSONAlias string   `parser:"('alias' 'json' @Ident)?" protobuf:"5"`
+	JSONAlias string   `parser:"('alias' 'json' @String)?" protobuf:"5"`
 }
 
 var _ Node = (*Field)(nil)
@@ -25,7 +25,7 @@ func (f *Field) schemaChildren() []Node { return []Node{f.Type} }
 func (f *Field) String() string {
 	jsonAlias := ""
 	if f.JSONAlias != "" {
-		jsonAlias = fmt.Sprintf(" alias json %s", f.JSONAlias)
+		jsonAlias = fmt.Sprintf(" alias json %q", f.JSONAlias)
 	}
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(f.Comments))
