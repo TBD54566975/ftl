@@ -181,9 +181,9 @@ message Type {
     Time time = 6;
     Array array = 7;
     Map map = 8;
-    DataRef dataRef = 9;
+    Any any = 9;
     Unit unit = 10;
-    Any any = 11;
+    DataRef dataRef = 11;
     Optional optional = 12;
   }
 }

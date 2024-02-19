@@ -9,6 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
+
+	"github.com/alecthomas/repr"
 
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 )
@@ -25,6 +28,10 @@ func Marshal(v any) ([]byte, error) {
 }
 
 func encodeValue(v reflect.Value, w *bytes.Buffer) error {
+	if !v.IsValid() {
+		w.WriteString("null")
+		return nil
+	}
 	t := v.Type()
 	switch {
 	case t.Kind() == reflect.Ptr && t.Elem().Implements(jsonUnmarshaler):
@@ -90,6 +97,12 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 	case reflect.Bool:
 		return encodeBool(v, w)
 
+	case reflect.Interface: // any
+		if t != reflect.TypeOf((*any)(nil)).Elem() {
+			return fmt.Errorf("the only interface type supported is any, not %s", t)
+		}
+		return encodeValue(v.Elem(), w)
+
 	default:
 		panic(fmt.Sprintf("unsupported type: %s", v.Type()))
 	}
@@ -97,13 +110,26 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 
 func encodeStruct(v reflect.Value, w *bytes.Buffer) error {
 	w.WriteRune('{')
+	afterFirst := false
 	for i := 0; i < v.NumField(); i++ {
-		if i > 0 {
+		ft := v.Type().Field(i)
+		t := ft.Type
+		fv := v.Field(i)
+		// Types that can be skipped if they're zero.
+		if (t.Kind() == reflect.Slice && fv.Len() == 0) ||
+			(t.Kind() == reflect.Map && fv.Len() == 0) ||
+			(t.String() == "ftl.Unit" && fv.IsZero()) ||
+			(strings.HasPrefix(t.String(), "ftl.Option[") && fv.IsZero()) ||
+			(t == reflect.TypeOf((*any)(nil)).Elem() && fv.IsZero()) {
+			repr.Println(ft.Name, fv.Interface())
+			continue
+		}
+		if afterFirst {
 			w.WriteRune(',')
 		}
-		field := v.Type().Field(i)
-		w.WriteString(`"` + strcase.ToLowerCamel(field.Name) + `":`)
-		if err := encodeValue(v.Field(i), w); err != nil {
+		afterFirst = true
+		w.WriteString(`"` + strcase.ToLowerCamel(ft.Name) + `":`)
+		if err := encodeValue(fv, w); err != nil {
 			return err
 		}
 	}

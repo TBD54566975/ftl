@@ -49,22 +49,71 @@ func TestValidation(t *testing.T) {
 		name    string
 		schema  string
 		request obj
+		err     string
 	}{
-		{name: "int", schema: `module test { data Test { intValue Int } }`, request: obj{"intValue": 10.0}},
-		{name: "float", schema: `module test { data Test { floatValue Float } }`, request: obj{"floatValue": 10.0}},
-		{name: "string", schema: `module test { data Test { stringValue String } }`, request: obj{"stringValue": "test"}},
-		{name: "bool", schema: `module test { data Test { boolValue Bool } }`, request: obj{"boolValue": true}},
-		{name: "intString", schema: `module test { data Test { intValue Int } }`, request: obj{"intValue": "10"}},
-		{name: "floatString", schema: `module test { data Test { floatValue Float } }`, request: obj{"floatValue": "10.0"}},
-		{name: "boolString", schema: `module test { data Test { boolValue Bool } }`, request: obj{"boolValue": "true"}},
-		{name: "array", schema: `module test { data Test { arrayValue [String] } }`, request: obj{"arrayValue": []any{"test1", "test2"}}},
-		{name: "map", schema: `module test { data Test { mapValue {String: String} } }`, request: obj{"mapValue": obj{"key1": "value1", "key2": "value2"}}},
-		{name: "dataRef", schema: `module test { data Nested { intValue Int } data Test { dataRef Nested } }`, request: obj{"dataRef": obj{"intValue": 10.0}}},
-		{name: "optional", schema: `module test { data Test { intValue Int? } }`, request: obj{}},
-		{name: "optionalProvided", schema: `module test { data Test { intValue Int? } }`, request: obj{"intValue": 10.0}},
-		{name: "arrayDataRef", schema: `module test { data Nested { intValue Int } data Test { arrayValue [Nested] } }`, request: obj{"arrayValue": []any{obj{"intValue": 10.0}, obj{"intValue": 20.0}}}},
-		{name: "mapDataRef", schema: `module test { data Nested { intValue Int } data Test { mapValue {String: Nested} } }`, request: obj{"mapValue": obj{"key1": obj{"intValue": 10.0}, "key2": obj{"intValue": 20.0}}}},
-		{name: "otherModuleRef", schema: `module other { data Other { intValue Int } } module test { data Test { otherRef other.Other } }`, request: obj{"otherRef": obj{"intValue": 10.0}}},
+		{name: "Int",
+			schema:  `module test { data Test { intValue Int } }`,
+			request: obj{"intValue": 10.0}},
+		{name: "Float",
+			schema:  `module test { data Test { floatValue Float } }`,
+			request: obj{"floatValue": 10.0}},
+		{name: "String",
+			schema:  `module test { data Test { stringValue String } }`,
+			request: obj{"stringValue": "test"}},
+		{name: "Bool",
+			schema:  `module test { data Test { boolValue Bool } }`,
+			request: obj{"boolValue": true}},
+		{name: "IntString",
+			schema:  `module test { data Test { intValue Int } }`,
+			request: obj{"intValue": "10"}},
+		{name: "FloatString",
+			schema:  `module test { data Test { floatValue Float } }`,
+			request: obj{"floatValue": "10.0"}},
+		{name: "BoolString",
+			schema:  `module test { data Test { boolValue Bool } }`,
+			request: obj{"boolValue": "true"}},
+		{name: "Array",
+			schema:  `module test { data Test { arrayValue [String] } }`,
+			request: obj{"arrayValue": []any{"test1", "test2"}}},
+		{name: "Map",
+			schema:  `module test { data Test { mapValue {String: String} } }`,
+			request: obj{"mapValue": obj{"key1": "value1", "key2": "value2"}}},
+		{name: "DataRef",
+			schema:  `module test { data Nested { intValue Int } data Test { dataRef Nested } }`,
+			request: obj{"dataRef": obj{"intValue": 10.0}}},
+		{name: "Optional",
+			schema:  `module test { data Test { intValue Int? } }`,
+			request: obj{}},
+		{name: "OptionalProvided",
+			schema:  `module test { data Test { intValue Int? } }`,
+			request: obj{"intValue": 10.0}},
+		{name: "ArrayDataRef",
+			schema:  `module test { data Nested { intValue Int } data Test { arrayValue [Nested] } }`,
+			request: obj{"arrayValue": []any{obj{"intValue": 10.0}, obj{"intValue": 20.0}}}},
+		{name: "MapDataRef",
+			schema:  `module test { data Nested { intValue Int } data Test { mapValue {String: Nested} } }`,
+			request: obj{"mapValue": obj{"key1": obj{"intValue": 10.0}, "key2": obj{"intValue": 20.0}}}},
+		{name: "OtherModuleRef",
+			schema:  `module other { data Other { intValue Int } } module test { data Test { otherRef other.Other } }`,
+			request: obj{"otherRef": obj{"intValue": 10.0}}},
+		{name: "AllowedMissingFieldTypes",
+			schema: `
+			module test {
+				data Test {
+					array [Int]
+					map {String: Int}
+					any Any
+					bytes Bytes
+					unit Unit
+				}
+			}`,
+			request: obj{}},
+		{name: "RequiredFields",
+			schema:  `module test { data Test { int Int } }`,
+			request: obj{},
+			err:     "int is required",
+		},
+		// TODO: More tests for invalid data.
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -72,7 +121,11 @@ func TestValidation(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = validateRequestMap(&schema.DataRef{Module: "test", Name: "Test"}, nil, test.request, sch)
-			assert.NoError(t, err, "%v", test.name)
+			if test.err != "" {
+				assert.EqualError(t, err, test.err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

@@ -18,7 +18,7 @@ import (
 func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
 	verb := sch.ResolveVerbRef(&schema.VerbRef{Name: route.Verb, Module: route.Module})
 	if verb == nil {
-		return nil, fmt.Errorf("unknown verb %s", route.Verb)
+		return nil, fmt.Errorf("unknown verb %q", route.Verb)
 	}
 
 	request, ok := verb.Request.(*schema.DataRef)
@@ -241,9 +241,8 @@ func validateRequestMap(dataRef *schema.DataRef, path path, request map[string]a
 	for _, field := range data.Fields {
 		fieldPath := append(path, "."+field.Name) //nolint:gocritic
 
-		_, isOptional := field.Type.(*schema.Optional)
 		value, haveValue := request[field.Name]
-		if !isOptional && !haveValue {
+		if !haveValue && !allowMissingField(field) {
 			errs = append(errs, fmt.Errorf("%s is required", fieldPath))
 			continue
 		}
@@ -258,6 +257,17 @@ func validateRequestMap(dataRef *schema.DataRef, path path, request map[string]a
 	}
 
 	return errors.Join(errs...)
+}
+
+// Fields of these types can be omitted from the JSON representation.
+func allowMissingField(field *schema.Field) bool {
+	switch field.Type.(type) {
+	case *schema.Optional, *schema.Any, *schema.Array, *schema.Map, *schema.Bytes, *schema.Unit:
+		return true
+
+	case *schema.Bool, *schema.DataRef, *schema.Float, *schema.Int, *schema.String, *schema.Time:
+	}
+	return false
 }
 
 func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, error) {
