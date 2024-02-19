@@ -19,7 +19,7 @@ jobs:
           mkdir -p artifacts/ftl-runner
           docker save -o artifacts/ftl-runner/ftl-runner.tar ghcr.io/tbd54566975/ftl-runner:latest
       - name: Temporarily save Docker image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-runner-artifact
           path: artifacts/ftl-runner/ftl-runner.tar
@@ -38,7 +38,7 @@ jobs:
           mkdir -p artifacts/ftl-controller
           docker save -o artifacts/ftl-controller/ftl-controller.tar ghcr.io/tbd54566975/ftl-controller:latest
       - name: Temporarily save Docker image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-controller-artifact
           path: artifacts/ftl-controller
@@ -58,12 +58,12 @@ jobs:
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Retrieve Runner Docker image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-runner-artifact
           path: artifacts/ftl-runner
       - name: Retrieve Controller Docker image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-controller-artifact
           path: artifacts/ftl-controller
