@@ -57,7 +57,7 @@
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <wire.version>4.9.7</wire.version>
         <grpc.version>1.61.1</grpc.version>
-        <logback.version>1.4.14</logback.version>
+        <logback.version>1.5.0</logback.version>
         <junit.version>5.10.2</junit.version>
         <logstash.version>7.4</logstash.version>
     </properties>

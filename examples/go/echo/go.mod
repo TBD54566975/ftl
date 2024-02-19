@@ -7,7 +7,7 @@ replace github.com/TBD54566975/ftl => ../../..
 require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 
 require (
-	connectrpc.com/connect v1.14.0 // indirect
+	connectrpc.com/connect v1.15.0 // indirect
 	connectrpc.com/grpcreflect v1.2.0 // indirect
 	connectrpc.com/otelconnect v0.7.0 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
