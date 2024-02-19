@@ -53,6 +53,9 @@ func ResponseForVerb(sch *schema.Schema, verb *schema.Verb, response HTTPRespons
 
 	// Clone and canonicalise the headers.
 	headers := http.Header(maps.Clone(response.Headers))
+	if headers == nil {
+		headers = http.Header{}
+	}
 	for k, v := range response.Headers {
 		headers[http.CanonicalHeaderKey(k)] = v
 	}

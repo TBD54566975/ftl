@@ -1,7 +1,6 @@
 package compile
 
 import (
-	"fmt"
 	"go/ast"
 	"go/types"
 	"strings"
@@ -47,7 +46,6 @@ func TestExtractModuleSchema(t *testing.T) {
 
 func TestExtractModuleSchemaTwo(t *testing.T) {
 	_, actual, err := ExtractModuleSchema("testdata/two")
-	fmt.Println(actual)
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module two {

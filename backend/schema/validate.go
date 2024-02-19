@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
-	"github.com/alecthomas/repr"
 	"golang.design/x/reflect"
 	"golang.org/x/exp/maps"
 
@@ -218,8 +217,6 @@ func ValidateModule(module *Module) error {
 					if n.Module == "" {
 						merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid data structure %q", n.Pos, n))
 					}
-					repr.Println(n)
-					repr.Println(mdecl)
 					n.Module = mdecl.Module.Name
 				}
 			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.

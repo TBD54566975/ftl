@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/alecthomas/repr"
-
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 )
 
@@ -121,7 +119,6 @@ func encodeStruct(v reflect.Value, w *bytes.Buffer) error {
 			(t.String() == "ftl.Unit" && fv.IsZero()) ||
 			(strings.HasPrefix(t.String(), "ftl.Option[") && fv.IsZero()) ||
 			(t == reflect.TypeOf((*any)(nil)).Elem() && fv.IsZero()) {
-			repr.Println(ft.Name, fv.Interface())
 			continue
 		}
 		if afterFirst {
