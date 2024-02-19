@@ -3,7 +3,7 @@ module github.com/TBD54566975/ftl
 go 1.22.0
 
 require (
-	connectrpc.com/connect v1.14.0
+	connectrpc.com/connect v1.15.0
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/otelconnect v0.7.0
 	github.com/BurntSushi/toml v1.3.2
@@ -16,7 +16,7 @@ require (
 	github.com/alecthomas/kong-toml v0.1.0
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.10.1
-	github.com/amacneil/dbmate/v2 v2.11.0
+	github.com/amacneil/dbmate/v2 v2.12.0
 	github.com/beevik/etree v1.3.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/deckarep/golang-set/v2 v2.6.0
@@ -51,14 +51,17 @@ require (
 	golang.org/x/mod v0.15.0
 	golang.org/x/net v0.21.0
 	golang.org/x/sync v0.6.0
-	golang.org/x/tools v0.17.0
+	golang.org/x/tools v0.18.0
 	google.golang.org/protobuf v1.32.0
-	modernc.org/sqlite v1.28.0
+	modernc.org/sqlite v1.29.1
 )
 
 require (
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.2 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
+	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 )
 
 require (
@@ -93,12 +96,12 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/grpc v1.61.0 // indirect
 	lukechampine.com/uint128 v1.2.0 // indirect
-	modernc.org/cc/v3 v3.40.0 // indirect
-	modernc.org/ccgo/v3 v3.16.13 // indirect
-	modernc.org/libc v1.29.0 // indirect
+	modernc.org/cc/v3 v3.41.0 // indirect
+	modernc.org/ccgo/v3 v3.16.15 // indirect
+	modernc.org/libc v1.41.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.7.2 // indirect
 	modernc.org/opt v0.1.3 // indirect
-	modernc.org/strutil v1.1.3 // indirect
+	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
 )
