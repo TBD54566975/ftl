@@ -7,15 +7,18 @@ import (
 )
 
 func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser func(obj map[string]any, field *schema.Field) string) error {
+	if obj == nil {
+		return nil
+	}
 	switch t := t.(type) {
 	case *schema.DataRef:
 		data, err := sch.ResolveDataRefMonomorphised(t)
 		if err != nil {
-			return fmt.Errorf("failed to resolve data type: %w", err)
+			return fmt.Errorf("%s: failed to resolve data type: %w", t.Pos, err)
 		}
 		m, ok := obj.(map[string]any)
 		if !ok {
-			return fmt.Errorf("expected map, got %T", obj)
+			return fmt.Errorf("%s: expected map, got %T", t.Pos, obj)
 		}
 		for _, field := range data.Fields {
 			name := aliaser(m, field)
@@ -27,7 +30,7 @@ func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser 
 	case *schema.Array:
 		a, ok := obj.([]any)
 		if !ok {
-			return fmt.Errorf("expected array, got %T", obj)
+			return fmt.Errorf("%s: expected array, got %T", t.Pos, obj)
 		}
 		for _, elem := range a {
 			if err := transformAliasedFields(sch, t.Element, elem, aliaser); err != nil {
@@ -38,7 +41,7 @@ func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser 
 	case *schema.Map:
 		m, ok := obj.(map[string]any)
 		if !ok {
-			return fmt.Errorf("expected map, got %T", obj)
+			return fmt.Errorf("%s: expected map, got %T", t.Pos, obj)
 		}
 		for key, value := range m {
 			if err := transformAliasedFields(sch, t.Key, key, aliaser); err != nil {

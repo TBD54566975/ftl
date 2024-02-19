@@ -1389,10 +1389,10 @@ export class Type extends Message<Type> {
     case: "map";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.DataRef dataRef = 9;
+     * @generated from field: xyz.block.ftl.v1.schema.Any any = 9;
      */
-    value: DataRef;
-    case: "dataRef";
+    value: Any;
+    case: "any";
   } | {
     /**
      * @generated from field: xyz.block.ftl.v1.schema.Unit unit = 10;
@@ -1401,10 +1401,10 @@ export class Type extends Message<Type> {
     case: "unit";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Any any = 11;
+     * @generated from field: xyz.block.ftl.v1.schema.DataRef dataRef = 11;
      */
-    value: Any;
-    case: "any";
+    value: DataRef;
+    case: "dataRef";
   } | {
     /**
      * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 12;
@@ -1429,9 +1429,9 @@ export class Type extends Message<Type> {
     { no: 6, name: "time", kind: "message", T: Time, oneof: "value" },
     { no: 7, name: "array", kind: "message", T: Array, oneof: "value" },
     { no: 8, name: "map", kind: "message", T: Map, oneof: "value" },
-    { no: 9, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
+    { no: 9, name: "any", kind: "message", T: Any, oneof: "value" },
     { no: 10, name: "unit", kind: "message", T: Unit, oneof: "value" },
-    { no: 11, name: "any", kind: "message", T: Any, oneof: "value" },
+    { no: 11, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
     { no: 12, name: "optional", kind: "message", T: Optional, oneof: "value" },
   ]);
 
