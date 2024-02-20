@@ -17,7 +17,8 @@ import (
 )
 
 type AliasRequest struct {
-	Aliased string `json:"alias"`
+	// FIXME: This should be an alias (`json:"alias"`) once encoding.Unmarshal is available.
+	Aliased string
 }
 
 type PathParameterRequest struct {
@@ -84,14 +85,15 @@ func TestBuildRequestBody(t *testing.T) {
 	`)
 	assert.NoError(t, err)
 	for _, test := range []struct {
-		name     string
-		verb     string
-		method   string
-		path     string
-		query    url.Values
-		body     obj
-		expected any
-		err      string
+		name      string
+		verb      string
+		method    string
+		path      string
+		routePath string
+		query     url.Values
+		body      obj
+		expected  any
+		err       string
 	}{
 		{name: "UnknownVerb",
 			verb: "unknown",
@@ -99,30 +101,30 @@ func TestBuildRequestBody(t *testing.T) {
 		{name: "UnknownModule",
 			verb: "unknown",
 			err:  `unknown verb "unknown"`},
-		//FIXME: Query parameter decoding doesn't work?
-		//
-		// {name: "QueryParameterDecoding",
-		// 	verb:   "getAlias",
-		// 	method: "GET",
-		// 	path:   "/getAlias",
-		// 	query: map[string][]string{
-		// 		"alias": {"value"},
-		// 	},
-		// 	expected: HTTPRequest[AliasRequest]{
-		// 		Method: "GET",
-		// 		Path:   "/getAlias",
-		// 		Query: map[string][]string{
-		// 			"alias": {"value"},
-		// 		},
-		// 		Body: AliasRequest{
-		// 			Aliased: "value",
-		// 		},
-		// 	},
-		// },
+		{name: "QueryParameterDecoding",
+			verb:      "getAlias",
+			method:    "GET",
+			path:      "/getAlias",
+			routePath: "/getAlias",
+			query: map[string][]string{
+				"alias": {"value"},
+			},
+			expected: HTTPRequest[AliasRequest]{
+				Method: "GET",
+				Path:   "/getAlias",
+				Query: map[string][]string{
+					"alias": {"value"},
+				},
+				Body: AliasRequest{
+					Aliased: "value",
+				},
+			},
+		},
 		{name: "AllowMissingFieldTypes",
-			verb:   "postMissingTypes",
-			method: "POST",
-			path:   "/postMissingTypes",
+			verb:      "postMissingTypes",
+			method:    "POST",
+			path:      "/postMissingTypes",
+			routePath: "/postMissingTypes",
 			expected: HTTPRequest[MissingTypes]{
 				Method: "POST",
 				Path:   "/postMissingTypes",
@@ -130,33 +132,33 @@ func TestBuildRequestBody(t *testing.T) {
 			},
 		},
 		{name: "JSONPayload",
-			verb:   "postJsonPayload",
-			method: "POST",
-			path:   "/postJsonPayload",
-			body:   obj{"foo": "bar"},
+			verb:      "postJsonPayload",
+			method:    "POST",
+			path:      "/postJsonPayload",
+			routePath: "/postJsonPayload",
+			body:      obj{"foo": "bar"},
 			expected: HTTPRequest[PostJSONPayload]{
 				Method: "POST",
 				Path:   "/postJsonPayload",
 				Body:   PostJSONPayload{Foo: "bar"},
 			},
 		},
-		// FIXME: Path parameters don't seem to be interpolated into body fields?
-		//
-		// {name: "PathParameterDecoding",
-		// 	verb:  "getPath",
-		// 	method: "GET",
-		// 	path:   "/getPath/bob",
-		// 	expected: HTTPRequest[PathParameterRequest]{
-		// 		Method: "GET",
-		// 		Path:   "/getPath/bob",
-		// 		PathParameters: map[string]string{
-		// 			"username": "bob",
-		// 		},
-		// 		Body: PathParameterRequest{
-		// 			Username: "bob",
-		// 		},
-		// 	},
-		// },
+		{name: "PathParameterDecoding",
+			verb:      "getPath",
+			method:    "GET",
+			path:      "/getPath/bob",
+			routePath: "/getPath/{username}",
+			expected: HTTPRequest[PathParameterRequest]{
+				Method: "GET",
+				Path:   "/getPath/bob",
+				PathParameters: map[string]string{
+					"username": "bob",
+				},
+				Body: PathParameterRequest{
+					Username: "bob",
+				},
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if test.body == nil {
@@ -171,7 +173,7 @@ func TestBuildRequestBody(t *testing.T) {
 			r, err := http.NewRequest(test.method, requestURL, bytes.NewReader(body)) //nolint:noctx
 			assert.NoError(t, err)
 			requestBody, err := BuildRequestBody(&dal.IngressRoute{
-				Path:   test.path,
+				Path:   test.routePath,
 				Module: "test",
 				Verb:   test.verb,
 			}, r, sch)
