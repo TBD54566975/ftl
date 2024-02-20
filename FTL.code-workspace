@@ -7,9 +7,6 @@
 			"path": "kotlin-runtime"
 		},
 		{
-			"path": "examples/online-boutique"
-		},
-		{
 			"path": "examples/go/echo",
 			"name": "examples/go/echo"
 		},
@@ -23,6 +20,9 @@
 		},
 		{
 			"path": "backend"
+		},
+		{
+			"path": "frontend"
 		},
 		{
 			"path": "cmd/ftl",
