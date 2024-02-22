@@ -7,41 +7,41 @@ import (
 )
 
 func TestBuildOrder(t *testing.T) {
-	modules := []ModuleConfig{
+	modules := []Module{
 		{
-			Module:       "alpha",
+			ModuleConfig: ModuleConfig{Module: "alpha"},
 			Dependencies: []string{"beta", "gamma"},
 		},
 		{
-			Module:       "beta",
+			ModuleConfig: ModuleConfig{Module: "beta"},
 			Dependencies: []string{"kappa"},
 		},
 		{
-			Module:       "gamma",
+			ModuleConfig: ModuleConfig{Module: "gamma"},
 			Dependencies: []string{"kappa"},
 		},
 		{
-			Module: "kappa",
+			ModuleConfig: ModuleConfig{Module: "kappa"},
 		},
 		{
-			Module: "delta",
+			ModuleConfig: ModuleConfig{Module: "delta"},
 		},
 	}
 
 	graph, err := BuildOrder(modules)
 	assert.NoError(t, err)
 
-	expected := [][]ModuleConfig{
+	expected := [][]Module{
 		{
-			{Module: "delta"},
-			{Module: "kappa"},
+			{ModuleConfig: ModuleConfig{Module: "delta"}},
+			{ModuleConfig: ModuleConfig{Module: "kappa"}},
 		},
 		{
-			{Module: "beta", Dependencies: []string{"kappa"}},
-			{Module: "gamma", Dependencies: []string{"kappa"}},
+			{ModuleConfig: ModuleConfig{Module: "beta"}, Dependencies: []string{"kappa"}},
+			{ModuleConfig: ModuleConfig{Module: "gamma"}, Dependencies: []string{"kappa"}},
 		},
 		{
-			{Module: "alpha", Dependencies: []string{"beta", "gamma"}},
+			{ModuleConfig: ModuleConfig{Module: "alpha"}, Dependencies: []string{"beta", "gamma"}},
 		},
 	}
 	assert.Equal(t, expected, graph)

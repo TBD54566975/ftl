@@ -18,8 +18,7 @@ type ModuleKotlinConfig struct{}
 //
 // Module config files are currently TOML.
 type ModuleConfig struct {
-	Dir          string   `toml:"-"` // Populated by LoadConfig.
-	Dependencies []string `toml:"-"` // Populated by BuildOrder.
+	Dir string `toml:"-"` // Directory the module config was loaded from.
 
 	Language  string   `toml:"language"`
 	Realm     string   `toml:"realm"`

@@ -13,13 +13,14 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// UpdateAllDependencies returns deep copies of all modules with updated dependencies.
-func UpdateAllDependencies(modules []ModuleConfig) ([]ModuleConfig, error) {
+// UpdateAllDependencies converts ModuleConfigs into Modules containing
+// dependencies.
+func UpdateAllDependencies(modules []ModuleConfig) ([]Module, error) {
 	modulesByName := map[string]ModuleConfig{}
 	for _, module := range modules {
 		modulesByName[module.Module] = module
 	}
-	out := []ModuleConfig{}
+	out := []Module{}
 	for _, module := range modules {
 		updated, err := UpdateDependencies(module)
 		if err != nil {
@@ -31,14 +32,13 @@ func UpdateAllDependencies(modules []ModuleConfig) ([]ModuleConfig, error) {
 }
 
 // UpdateDependencies returns a deep copy of ModuleConfig with updated dependencies.
-func UpdateDependencies(config ModuleConfig) (ModuleConfig, error) {
+func UpdateDependencies(config ModuleConfig) (Module, error) {
 	dependencies, err := extractDependencies(config)
 	if err != nil {
-		return ModuleConfig{}, err
+		return Module{}, err
 	}
 	out := reflect.DeepCopy(config)
-	out.Dependencies = dependencies
-	return out, nil
+	return Module{ModuleConfig: out, Dependencies: dependencies}, nil
 }
 
 func extractDependencies(config ModuleConfig) ([]string, error) {
