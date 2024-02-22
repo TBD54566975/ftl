@@ -5,7 +5,7 @@ list_issues() {
 }
 
 update() {
-  if test -n "$GITHUB_TOKEN"; then
+  if test -z "$NOOP"; then
     gh issue edit -F - 728
   else
     cat
