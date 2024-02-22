@@ -127,18 +127,22 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 		for dir := range modules {
 			currentModule := modules[dir]
-			hashes, err := buildengine.ComputeFileHashes(dir)
+			config, err := buildengine.LoadModuleConfig(dir)
+			if err != nil {
+				return err
+			}
+			hashes, err := buildengine.ComputeFileHashes(config)
 			if err != nil {
 				return err
 			}
 
-			path, equal := buildengine.CompareFileHashes(fileHashes[dir], hashes)
+			changeType, path, equal := buildengine.CompareFileHashes(fileHashes[dir], hashes)
 			if currentModule.forceRebuild || !equal {
 				if currentModule.forceRebuild {
 					logger.Debugf("Forcing rebuild of module %s", dir)
 					currentModule.forceRebuild = false
 				} else {
-					logger.Warnf("Detected change in %s, rebuilding...", path)
+					logger.Warnf("Detected change in %s%s, rebuilding...", changeType, path)
 				}
 				deploy := deployCmd{
 					Replicas:  1,
