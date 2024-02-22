@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -127,7 +128,7 @@ func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 
 		for dir := range modules {
 			currentModule := modules[dir]
-			config, err := buildengine.LoadModuleConfig(dir)
+			config, err := moduleconfig.LoadModuleConfig(dir)
 			if err != nil {
 				return err
 			}
@@ -261,7 +262,7 @@ func (d *devCmd) addOrRemoveModules(tomls []string, modules moduleMap) error {
 	for _, toml := range tomls {
 		dir := filepath.Dir(toml)
 		if _, ok := modules[dir]; !ok {
-			config, err := buildengine.LoadModuleConfig(dir)
+			config, err := moduleconfig.LoadModuleConfig(dir)
 			if err != nil {
 				return err
 			}

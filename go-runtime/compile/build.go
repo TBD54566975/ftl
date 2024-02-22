@@ -17,7 +17,7 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
-	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -67,7 +67,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		ftlVersion = ftl.Version
 	}
 
-	config, err := buildengine.LoadModuleConfig(moduleDir)
+	config, err := moduleconfig.LoadModuleConfig(moduleDir)
 	if err != nil {
 		return fmt.Errorf("failed to load module config: %w", err)
 	}

@@ -1,4 +1,4 @@
-package buildengine
+package buildengine_test
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
+	. "github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

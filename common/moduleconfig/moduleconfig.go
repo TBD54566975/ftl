@@ -1,4 +1,4 @@
-package buildengine
+package moduleconfig
 
 import (
 	"fmt"

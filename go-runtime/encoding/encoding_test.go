@@ -3,10 +3,9 @@ package encoding_test
 import (
 	"testing"
 
-	"github.com/alecthomas/assert/v2"
-
 	. "github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestMarshal(t *testing.T) {
@@ -33,6 +32,7 @@ func TestMarshal(t *testing.T) {
 		{name: "OptionPtr", input: struct{ Option *ftl.Option[int] }{&somePtr}, expected: `{"option":42}`},
 		{name: "OptionStruct", input: struct{ Option ftl.Option[inner] }{ftl.Some(inner{"foo"})}, expected: `{"option":{"fooBar":"foo"}}`},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual, err := Marshal(tt.input)

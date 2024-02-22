@@ -4,12 +4,14 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 )
 
 func TestDiscoverModules(t *testing.T) {
 	modules, err := DiscoverModules("testdata/modules")
 	assert.NoError(t, err)
-	expected := []ModuleConfig{
+	expected := []moduleconfig.ModuleConfig{
 		{
 			Dir:       "testdata/modules/alpha",
 			Language:  "go",

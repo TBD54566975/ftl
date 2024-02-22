@@ -1,4 +1,4 @@
-package main
+package buildengine
 
 import (
 	"context"
@@ -9,20 +9,19 @@ import (
 	"github.com/beevik/etree"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func (b *buildCmd) buildKotlin(ctx context.Context, config buildengine.ModuleConfig) error {
+func buildKotlin(ctx context.Context, module Module) error {
 	logger := log.FromContext(ctx)
 
-	if err := setPomProperties(logger, filepath.Join(b.ModuleDir, "..")); err != nil {
-		return fmt.Errorf("unable to update ftl.version in %s: %w", b.ModuleDir, err)
+	if err := SetPOMProperties(ctx, filepath.Join(module.Dir, "..")); err != nil {
+		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Dir, err)
 	}
 
-	logger.Debugf("Using build command '%s'", config.Build)
-	err := exec.Command(ctx, log.Debug, b.ModuleDir, "bash", "-c", config.Build).RunBuffered(ctx)
+	logger.Debugf("Using build command '%s'", module.Build)
+	err := exec.Command(ctx, log.Debug, module.Dir, "bash", "-c", module.Build).RunBuffered(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to build module: %w", err)
 	}
@@ -30,7 +29,10 @@ func (b *buildCmd) buildKotlin(ctx context.Context, config buildengine.ModuleCon
 	return nil
 }
 
-func setPomProperties(logger *log.Logger, baseDir string) error {
+// SetPOMProperties updates the ftl.version and ftlEndpoint properties in the
+// pom.xml file in the given base directory.
+func SetPOMProperties(ctx context.Context, baseDir string) error {
+	logger := log.FromContext(ctx)
 	ftlVersion := ftl.Version
 	if ftlVersion == "dev" {
 		ftlVersion = "1.0-SNAPSHOT"
