@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/pubsub"
 	sets "github.com/deckarep/golang-set/v2"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -25,7 +26,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/pubsub"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )

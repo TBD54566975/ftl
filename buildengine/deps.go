@@ -13,13 +13,8 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// UpdateAllDependencies converts ModuleConfigs into Modules containing
-// dependencies.
+// UpdateAllDependencies calls UpdateDependencies on each module in the list.
 func UpdateAllDependencies(modules []ModuleConfig) ([]Module, error) {
-	modulesByName := map[string]ModuleConfig{}
-	for _, module := range modules {
-		modulesByName[module.Module] = module
-	}
 	out := []Module{}
 	for _, module := range modules {
 		updated, err := UpdateDependencies(module)
@@ -31,7 +26,8 @@ func UpdateAllDependencies(modules []ModuleConfig) ([]Module, error) {
 	return out, nil
 }
 
-// UpdateDependencies returns a deep copy of ModuleConfig with updated dependencies.
+// UpdateDependencies finds the dependencies for an FTL module and returns a
+// Module with those dependencies populated.
 func UpdateDependencies(config ModuleConfig) (Module, error) {
 	dependencies, err := extractDependencies(config)
 	if err != nil {

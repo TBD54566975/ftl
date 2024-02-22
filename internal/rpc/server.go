@@ -12,10 +12,9 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"github.com/alecthomas/concurrency"
+	"github.com/alecthomas/types/pubsub"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
-
-	"github.com/TBD54566975/ftl/internal/pubsub"
 )
 
 const ShutdownGracePeriod = time.Second * 5
