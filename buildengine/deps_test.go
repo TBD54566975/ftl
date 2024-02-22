@@ -11,3 +11,9 @@ func TestExtractDepsGo(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"another", "other"}, deps)
 }
+
+func TestExtractDepsKotlin(t *testing.T) {
+	deps, err := extractKotlinFTLImports("test", "testdata/modules/alphakotlin")
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"builtin", "other"}, deps)
+}

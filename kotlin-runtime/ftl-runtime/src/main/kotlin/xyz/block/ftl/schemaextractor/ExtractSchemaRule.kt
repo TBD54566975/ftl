@@ -19,7 +19,6 @@ import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.util.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.util.getType
-import org.jetbrains.kotlin.resolve.descriptorUtil.builtIns
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
@@ -44,11 +43,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
 import java.time.OffsetDateTime
-import java.util.HashMap
-import kotlin.Any
-import kotlin.Boolean
-import kotlin.String
-import kotlin.collections.Map
 import kotlin.io.path.createDirectories
 
 data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
