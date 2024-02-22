@@ -1,6 +1,10 @@
 package buildengine
 
-import "sort"
+import (
+	"sort"
+
+	"golang.org/x/exp/maps"
+)
 
 // BuildOrder returns groups of modules in topological order that can be built
 // in parallel.
@@ -20,26 +24,26 @@ func BuildOrder(modules []ModuleConfig) ([][]ModuleConfig, error) {
 
 	for len(modulesByName) > 0 {
 		// Current group of modules that can be built in parallel.
-		group := []ModuleConfig{}
+		group := map[string]ModuleConfig{}
+	nextModule:
 		for _, module := range modulesByName {
 			// Check that all dependencies have been built.
-			allBuilt := true
 			for _, dep := range module.Dependencies {
 				if !built[dep] {
-					allBuilt = false
-					break
+					continue nextModule
 				}
 			}
-			if allBuilt {
-				group = append(group, module)
-				built[module.Module] = true
-				delete(modulesByName, module.Module)
-			}
+			group[module.Module] = module
+			delete(modulesByName, module.Module)
 		}
-		sort.Slice(group, func(i, j int) bool {
-			return group[i].Module < group[j].Module
+		orderedGroup := maps.Values(group)
+		sort.Slice(orderedGroup, func(i, j int) bool {
+			return orderedGroup[i].Module < orderedGroup[j].Module
 		})
-		groups = append(groups, group)
+		for _, module := range orderedGroup {
+			built[module.Module] = true
+		}
+		groups = append(groups, orderedGroup)
 	}
 	return groups, nil
 }
