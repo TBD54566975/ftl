@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"syscall"
 
 	"connectrpc.com/connect"
@@ -16,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -99,22 +97,4 @@ func makeDialer[Client rpc.Pingable](newClient func(connect.HTTPClient, string, 
 	return func() (Client, error) {
 		return rpc.Dial(newClient, cli.Endpoint.String(), log.Error), nil
 	}
-}
-
-// gitRoot returns the root of the git repository containing dir, or empty string if dir is not in a git repository.
-//
-// If dir is empty, the current working directory is used.
-func gitRoot(ctx context.Context, dir string) string {
-	if dir == "" {
-		var err error
-		dir, err = os.Getwd()
-		if err != nil {
-			return ""
-		}
-	}
-	gitRootBytes, err := exec.Capture(ctx, dir, "git", "rev-parse", "--show-toplevel")
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(gitRootBytes))
 }

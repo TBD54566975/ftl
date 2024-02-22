@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 type buildCmd struct {
@@ -20,7 +20,7 @@ func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServic
 	startTime := time.Now()
 	// Load the TOML file.
 	var err error
-	config, err := moduleconfig.LoadConfig(b.ModuleDir)
+	config, err := buildengine.LoadModuleConfig(b.ModuleDir)
 	if err != nil {
 		return err
 	}

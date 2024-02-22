@@ -47,7 +47,7 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
 		return err
 	}
-	if err := updateGitIgnore(ctx, i.Dir); err != nil {
+	if err := updateGitIgnore(i.Dir); err != nil {
 		return err
 	}
 	logger.Debugf("Running go mod tidy")
@@ -156,8 +156,8 @@ var scaffoldFuncs = template.FuncMap{
 	"typename":       schema.TypeName,
 }
 
-func updateGitIgnore(ctx context.Context, dir string) error {
-	gitRoot := gitRoot(ctx, dir)
+func updateGitIgnore(dir string) error {
+	gitRoot := internal.GitRoot(dir)
 	f, err := os.OpenFile(path.Join(gitRoot, ".gitignore"), os.O_RDWR|os.O_CREATE, 0644) //nolint:gosec
 	if err != nil {
 		return err

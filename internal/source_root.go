@@ -1,12 +1,27 @@
-//go:build !release
-
 package internal
 
 import (
 	"os"
-	"path/filepath"
+	"os/exec" //nolint:depguard
+	"strings"
 )
 
-func FTLSourceRoot() string {
-	return filepath.Clean(filepath.Join(filepath.Dir(os.Args[0]), "..", ".."))
+// GitRoot returns the root of the git repository containing dir, or empty string if dir is not in a git repository.
+//
+// If dir is empty, the current working directory is used.
+func GitRoot(dir string) string {
+	if dir == "" {
+		var err error
+		dir, err = os.Getwd()
+		if err != nil {
+			return ""
+		}
+	}
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
 }

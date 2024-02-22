@@ -16,11 +16,11 @@ var templateDirOnce sync.Once
 
 func templateDir(ctx context.Context) string {
 	templateDirOnce.Do(func() {
-		cmd := exec.Command(ctx, log.Debug, internal.FTLSourceRoot(), "bit", "build/template/ftl/jars/ftl-runtime.jar")
+		cmd := exec.Command(ctx, log.Debug, internal.GitRoot(""), "bit", "build/template/ftl/jars/ftl-runtime.jar")
 		err := cmd.Run()
 		if err != nil {
 			panic(err)
 		}
 	})
-	return filepath.Join(internal.FTLSourceRoot(), "build/template")
+	return filepath.Join(internal.GitRoot(""), "build/template")
 }
