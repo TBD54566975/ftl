@@ -11,9 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/beevik/etree"
-
 	"github.com/TBD54566975/scaffolder"
+	"github.com/beevik/etree"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
