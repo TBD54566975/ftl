@@ -5,8 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	osExec "os/exec" //nolint:depguard
+	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -28,12 +32,24 @@ type serveCmd struct {
 	Recreate     bool       `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers  int        `short:"c" help:"Number of controllers to start." default:"1"`
 	Runners      int        `short:"r" help:"Number of runners to start." default:"0"`
+	Background   bool       `help:"Run in the background." default:"false"`
+	Stop         bool       `help:"Stop the running FTL instance." default:"false"`
 }
 
 const ftlContainerName = "ftl-db-1"
 
 func (s *serveCmd) Run(ctx context.Context) error {
 	logger := log.FromContext(ctx)
+
+	if s.Background {
+		runInBackground(logger)
+		os.Exit(0)
+	}
+
+	if s.Stop {
+		return killBackgroundProcess(logger)
+	}
+
 	logger.Infof("Starting FTL with %d controller(s) and %d runner(s)", s.Controllers, s.Runners)
 
 	dsn, err := s.setupDB(ctx)
@@ -89,6 +105,94 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		return fmt.Errorf("serve failed: %w", err)
 	}
 	return nil
+}
+
+func runInBackground(logger *log.Logger) {
+	pidFilePath, err := pidFilePath()
+	if err != nil {
+		logger.Errorf(err, "failed to get pid file path")
+		return
+	}
+
+	if existingPID, err := getPIDFromPath(pidFilePath); err == nil && existingPID != 0 {
+		logger.Warnf("'ftl serve' is already running in the background. Use --stop to stop it.")
+		return
+	}
+
+	args := make([]string, 0, len(os.Args))
+	for _, arg := range os.Args[1:] {
+		if arg == "--background" {
+			continue
+		}
+		args = append(args, arg)
+	}
+
+	cmd := osExec.Command(os.Args[0], args...)
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true,
+	}
+
+	if err := cmd.Start(); err != nil {
+		logger.Errorf(err, "failed to start background process")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(pidFilePath), 0750); err != nil {
+		logger.Errorf(err, "failed to create directory for pid file")
+	}
+
+	pid := cmd.Process.Pid
+	if err := os.WriteFile(pidFilePath, []byte(fmt.Sprintf("%d", pid)), 0600); err != nil {
+		logger.Errorf(err, "failed to write pid file")
+	}
+
+	logger.Infof("FTL running in background with pid: %d\n", pid)
+}
+
+func killBackgroundProcess(logger *log.Logger) error {
+	pidFilePath, err := pidFilePath()
+	if err != nil {
+		logger.Infof("No background process found")
+		return err
+	}
+
+	pid, err := getPIDFromPath(pidFilePath)
+	if err != nil || pid == 0 {
+		logger.Debugf("FTL serve is not running in the background")
+		return nil
+	}
+
+	err = os.Remove(pidFilePath)
+	if err != nil {
+		logger.Errorf(err, "failed to remove pid file")
+	}
+
+	return syscall.Kill(pid, syscall.SIGTERM)
+}
+
+func getPIDFromPath(path string) (int, error) {
+	pid, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+
+	pidInt, err := strconv.Atoi(string(pid))
+	if err != nil {
+		return 0, err
+	}
+
+	return pidInt, nil
+}
+
+func pidFilePath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(homeDir, ".ftl", "ftl-serve.pid"), nil
 }
 
 func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
