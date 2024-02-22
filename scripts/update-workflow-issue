@@ -5,7 +5,7 @@ list_issues() {
 }
 
 update() {
-  if test -z "$NOOP"; then
+  if test -n "$GITHUB_TOKEN"; then
     gh issue edit -F - 728
   else
     cat
@@ -65,4 +65,13 @@ $(
   fi
   echo "$issues"
 )
+
+$(
+  issues="$(list_issues --label epic)"
+  test -z "$issues" && exit 0
+
+  echo "### https://github.com/TBD54566975/ftl/labels/epic"
+  echo "$issues"
+)
+
 EOF
