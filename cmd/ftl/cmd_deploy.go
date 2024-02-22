@@ -16,8 +16,8 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -32,7 +32,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	logger := log.FromContext(ctx)
 
 	// Load the TOML file.
-	config, err := moduleconfig.LoadConfig(d.ModuleDir)
+	config, err := buildengine.LoadModuleConfig(d.ModuleDir)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func (d *deployCmd) checkReadiness(ctx context.Context, client ftlv1connect.Cont
 		}
 	}
 }
-func (d *deployCmd) loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig) (*schemapb.Module, error) {
+func (d *deployCmd) loadProtoSchema(deployDir string, config buildengine.ModuleConfig) (*schemapb.Module, error) {
 	schema := filepath.Join(deployDir, config.Schema)
 	content, err := os.ReadFile(schema)
 	if err != nil {

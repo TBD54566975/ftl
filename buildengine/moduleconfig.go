@@ -1,4 +1,4 @@
-package moduleconfig
+package buildengine
 
 import (
 	"fmt"
@@ -8,19 +8,21 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// GoConfig is language-specific configuration for Go modules.
-type GoConfig struct {
-}
+// ModuleGoConfig is language-specific configuration for Go modules.
+type ModuleGoConfig struct{}
 
-// KotlinConfig is language-specific configuration for Kotlin modules.
-type KotlinConfig struct {
-}
+// ModuleKotlinConfig is language-specific configuration for Kotlin modules.
+type ModuleKotlinConfig struct{}
 
 // ModuleConfig is the configuration for an FTL module.
 //
 // Module config files are currently TOML.
 type ModuleConfig struct {
+	Dir          string   `toml:"-"` // Populated by LoadConfig.
+	Dependencies []string `toml:"-"` // Populated by BuildOrder.
+
 	Language  string   `toml:"language"`
+	Realm     string   `toml:"realm"`
 	Module    string   `toml:"module"`
 	Build     string   `toml:"build"`
 	Deploy    []string `toml:"deploy"`
@@ -28,12 +30,12 @@ type ModuleConfig struct {
 	Schema    string   `toml:"schema"`
 	Watch     []string `toml:"watch"`
 
-	Go     GoConfig     `toml:"go,optional"`
-	Kotlin KotlinConfig `toml:"kotlin,optional"`
+	Go     ModuleGoConfig     `toml:"go,optional"`
+	Kotlin ModuleKotlinConfig `toml:"kotlin,optional"`
 }
 
-// LoadConfig from a directory.
-func LoadConfig(dir string) (ModuleConfig, error) {
+// LoadModuleConfig from a directory.
+func LoadModuleConfig(dir string) (ModuleConfig, error) {
 	path := filepath.Join(dir, "ftl.toml")
 	config := ModuleConfig{}
 	_, err := toml.DecodeFile(path, &config)
@@ -43,10 +45,14 @@ func LoadConfig(dir string) (ModuleConfig, error) {
 	if err := setConfigDefaults(dir, &config); err != nil {
 		return config, fmt.Errorf("%s: %w", path, err)
 	}
+	config.Dir = dir
 	return config, nil
 }
 
 func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
+	if config.Realm == "" {
+		config.Realm = "home"
+	}
 	if config.Schema == "" {
 		config.Schema = "schema.pb"
 	}

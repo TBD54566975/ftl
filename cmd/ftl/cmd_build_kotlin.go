@@ -9,12 +9,12 @@ import (
 	"github.com/beevik/etree"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
-func (b *buildCmd) buildKotlin(ctx context.Context, config moduleconfig.ModuleConfig) error {
+func (b *buildCmd) buildKotlin(ctx context.Context, config buildengine.ModuleConfig) error {
 	logger := log.FromContext(ctx)
 
 	if err := setPomProperties(logger, filepath.Join(b.ModuleDir, "..")); err != nil {
