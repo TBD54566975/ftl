@@ -1,10 +1,14 @@
 package buildengine
 
 import (
+	"bufio"
 	"fmt"
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,7 +47,7 @@ func extractDependencies(config ModuleConfig) ([]string, error) {
 		return extractGoFTLImports(config.Module, config.Dir)
 
 	case "kotlin":
-		return extractKotlinFTLImports(config.Dir)
+		return extractKotlinFTLImports(config.Module, config.Dir)
 
 	default:
 		return nil, fmt.Errorf("unsupported language: %s", config.Language)
@@ -89,6 +93,41 @@ func extractGoFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func extractKotlinFTLImports(dir string) ([]string, error) {
-	panic("not implemented")
+func extractKotlinFTLImports(self, dir string) ([]string, error) {
+	dependencies := map[string]bool{}
+	kotlinImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
+
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !(strings.HasSuffix(path, ".kt") || strings.HasSuffix(path, ".kts")) {
+			return nil
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			matches := kotlinImportRegex.FindStringSubmatch(scanner.Text())
+			if matches != nil && len(matches) > 1 {
+				module := strings.Split(matches[1], ".")[0]
+				if module == self {
+					continue
+				}
+				dependencies[module] = true
+			}
+		}
+		return scanner.Err()
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", self, err)
+	}
+	modules := maps.Keys(dependencies)
+	sort.Strings(modules)
+	return modules, nil
 }
