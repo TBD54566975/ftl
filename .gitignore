@@ -16,3 +16,4 @@ dist/
 examples/**/go.work
 examples/**/go.work.sum
 **/_ftl
+buildengine/.gitignore

@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 )
@@ -60,7 +61,7 @@ func Watch(ctx context.Context, period time.Duration, dirs ...string) *pubsub.To
 				logger.Tracef("error discovering modules: %v", err)
 				continue
 			}
-			moduleConfigsByDir := maps.FromSlice(moduleConfigs, func(config ModuleConfig) (string, ModuleConfig) {
+			moduleConfigsByDir := maps.FromSlice(moduleConfigs, func(config moduleconfig.ModuleConfig) (string, moduleconfig.ModuleConfig) {
 				return config.Module, config
 			})
 

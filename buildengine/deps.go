@@ -15,10 +15,12 @@ import (
 
 	"golang.design/x/reflect"
 	"golang.org/x/exp/maps"
+
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 )
 
 // UpdateAllDependencies calls UpdateDependencies on each module in the list.
-func UpdateAllDependencies(modules []ModuleConfig) ([]Module, error) {
+func UpdateAllDependencies(modules []moduleconfig.ModuleConfig) ([]Module, error) {
 	out := []Module{}
 	for _, module := range modules {
 		updated, err := UpdateDependencies(module)
@@ -32,7 +34,7 @@ func UpdateAllDependencies(modules []ModuleConfig) ([]Module, error) {
 
 // UpdateDependencies finds the dependencies for an FTL module and returns a
 // Module with those dependencies populated.
-func UpdateDependencies(config ModuleConfig) (Module, error) {
+func UpdateDependencies(config moduleconfig.ModuleConfig) (Module, error) {
 	dependencies, err := extractDependencies(config)
 	if err != nil {
 		return Module{}, err
@@ -41,7 +43,7 @@ func UpdateDependencies(config ModuleConfig) (Module, error) {
 	return Module{ModuleConfig: out, Dependencies: dependencies}, nil
 }
 
-func extractDependencies(config ModuleConfig) ([]string, error) {
+func extractDependencies(config moduleconfig.ModuleConfig) ([]string, error) {
 	switch config.Language {
 	case "go":
 		return extractGoFTLImports(config.Module, config.Dir)

@@ -11,11 +11,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/beevik/etree"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
+	"github.com/TBD54566975/ftl/buildengine"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -90,7 +92,7 @@ func (i initKotlinCmd) Run(ctx context.Context, parent *initCmd) error {
 		return err
 	}
 
-	return setPomProperties(log.FromContext(ctx), i.Dir)
+	return buildengine.SetPOMProperties(ctx, i.Dir)
 }
 
 func updatePom(pomFile, name string) error {
