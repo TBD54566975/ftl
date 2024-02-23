@@ -31,6 +31,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -386,7 +387,7 @@ type obj map[string]any
 
 func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, resp Resp)) assertion {
 	return func(t testing.TB, ic itContext) error {
-		jreq, err := json.Marshal(req)
+		jreq, err := encoding.Marshal(req)
 		assert.NoError(t, err)
 
 		cresp, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
@@ -402,7 +403,7 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 		}
 
 		var resp Resp
-		err = json.Unmarshal(cresp.Msg.GetBody(), &resp)
+		err = encoding.Unmarshal(cresp.Msg.GetBody(), &resp)
 		assert.NoError(t, err)
 
 		onResponse(t, resp)

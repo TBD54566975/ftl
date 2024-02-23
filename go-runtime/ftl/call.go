@@ -2,7 +2,6 @@ package ftl
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -34,7 +33,7 @@ func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (re
 		return resp, fmt.Errorf("%s: %s", callee, cresp.Error.Message)
 
 	case *ftlv1.CallResponse_Body:
-		err = json.Unmarshal(cresp.Body, &resp)
+		err = encoding.Unmarshal(cresp.Body, &resp)
 		if err != nil {
 			return resp, fmt.Errorf("%s: failed to decode response: %w", callee, err)
 		}
