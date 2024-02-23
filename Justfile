@@ -4,7 +4,7 @@ dev: install-jars
 
 # Install all JARs to local Maven repository and local build directory
 install-jars:
-  bit 'build/**/*.jar'
+  bit 'kotlin-runtime/**/*.jar'
 
 # Deploy the Go time module
 deploy-time:

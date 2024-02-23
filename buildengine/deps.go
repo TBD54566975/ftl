@@ -99,7 +99,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	dependencies := map[string]bool{}
 	kotlinImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
 
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(filepath.Join(dir, "src/main/kotlin"), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", self, err)
+		return nil, fmt.Errorf("%s: failed to extract dependencies from Kotlin module: %w", self, err)
 	}
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
