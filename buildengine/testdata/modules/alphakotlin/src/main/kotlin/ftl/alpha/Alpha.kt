@@ -1,4 +1,4 @@
-package ftl.echo
+package ftl.alpha
 
 import ftl.builtin.Empty
 import ftl.other.Other
