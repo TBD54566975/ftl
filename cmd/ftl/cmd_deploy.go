@@ -42,7 +42,7 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	}
 
 	build := buildCmd{ModuleDir: d.ModuleDir}
-	err = build.Run(ctx)
+	err = build.Run(ctx, client)
 	if err != nil {
 		return err
 	}
