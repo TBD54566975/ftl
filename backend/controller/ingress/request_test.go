@@ -2,7 +2,6 @@ package ingress
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -17,8 +16,7 @@ import (
 )
 
 type AliasRequest struct {
-	// FIXME: This should be an alias (`json:"alias"`) once encoding.Unmarshal is available.
-	Aliased string
+	Aliased string `json:"alias"`
 }
 
 type PathParameterRequest struct {
@@ -184,7 +182,7 @@ func TestBuildRequestBody(t *testing.T) {
 			assert.NoError(t, err)
 			actualrv := reflect.New(reflect.TypeOf(test.expected))
 			actual := actualrv.Interface()
-			err = json.Unmarshal(requestBody, actual)
+			err = encoding.Unmarshal(requestBody, actual)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, actualrv.Elem().Interface(), assert.OmitEmpty())
 		})

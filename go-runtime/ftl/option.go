@@ -179,7 +179,7 @@ func (o *Option[T]) UnmarshalJSON(data []byte) error {
 		o.ok = false
 		return nil
 	}
-	if err := json.Unmarshal(data, &o.value); err != nil {
+	if err := ftlencoding.Unmarshal(data, &o.value); err != nil {
 		return err
 	}
 	o.ok = true

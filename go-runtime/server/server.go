@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"runtime/debug"
@@ -56,7 +55,7 @@ func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
 			// Decode request.
 			var req Req
-			err := json.Unmarshal(reqdata, &req)
+			err := encoding.Unmarshal(reqdata, &req)
 			if err != nil {
 				return nil, fmt.Errorf("invalid request to verb %s: %w", ref, err)
 			}

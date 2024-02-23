@@ -15,8 +15,10 @@ import (
 )
 
 var (
-	textUnarmshaler = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
-	jsonUnmarshaler = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
+	textMarshaler   = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	textUnmarshaler = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	jsonMarshaler   = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
+	jsonUnmarshaler = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
 )
 
 func Marshal(v any) ([]byte, error) {
@@ -32,11 +34,11 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 	}
 	t := v.Type()
 	switch {
-	case t.Kind() == reflect.Ptr && t.Elem().Implements(jsonUnmarshaler):
+	case t.Kind() == reflect.Ptr && t.Elem().Implements(jsonMarshaler):
 		v = v.Elem()
 		fallthrough
 
-	case t.Implements(jsonUnmarshaler):
+	case t.Implements(jsonMarshaler):
 		enc := v.Interface().(json.Marshaler) //nolint:forcetypeassert
 		data, err := enc.MarshalJSON()
 		if err != nil {
@@ -45,11 +47,11 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 		w.Write(data)
 		return nil
 
-	case t.Kind() == reflect.Ptr && t.Elem().Implements(textUnarmshaler):
+	case t.Kind() == reflect.Ptr && t.Elem().Implements(textMarshaler):
 		v = v.Elem()
 		fallthrough
 
-	case t.Implements(textUnarmshaler):
+	case t.Implements(textMarshaler):
 		enc := v.Interface().(encoding.TextMarshaler) //nolint:forcetypeassert
 		data, err := enc.MarshalText()
 		if err != nil {
@@ -196,5 +198,187 @@ func encodeString(v reflect.Value, w *bytes.Buffer) error {
 	w.WriteRune('"')
 	fmt.Fprintf(w, "%s", v.String())
 	w.WriteRune('"')
+	return nil
+}
+
+func Unmarshal(data []byte, v any) error {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return fmt.Errorf("unmarshal expects a non-nil pointer")
+	}
+
+	d := json.NewDecoder(bytes.NewReader(data))
+	return decodeValue(d, rv.Elem())
+}
+
+func decodeValue(d *json.Decoder, v reflect.Value) error {
+	if !v.CanSet() {
+		return fmt.Errorf("cannot set value")
+	}
+
+	t := v.Type()
+	switch {
+	case v.Kind() != reflect.Ptr && v.CanAddr() && v.Addr().Type().Implements(jsonUnmarshaler):
+		v = v.Addr()
+		fallthrough
+
+	case t.Implements(jsonUnmarshaler):
+		if v.IsNil() {
+			v.Set(reflect.New(t.Elem()))
+		}
+		o := v.Interface()
+		return d.Decode(&o)
+
+	case v.Kind() != reflect.Ptr && v.CanAddr() && v.Addr().Type().Implements(textUnmarshaler):
+		v = v.Addr()
+		fallthrough
+
+	case t.Implements(textUnmarshaler):
+		if v.IsNil() {
+			v.Set(reflect.New(t.Elem()))
+		}
+		dec := v.Interface().(encoding.TextUnmarshaler) //nolint:forcetypeassert
+		var s string
+		if err := d.Decode(&s); err != nil {
+			return err
+		}
+		return dec.UnmarshalText([]byte(s))
+	}
+
+	switch v.Kind() {
+	case reflect.Struct:
+		return decodeStruct(d, v)
+
+	case reflect.Ptr:
+		if token, err := d.Token(); err != nil {
+			return err
+		} else if token == nil {
+			v.Set(reflect.Zero(v.Type()))
+			return nil
+		}
+		return decodeValue(d, v.Elem())
+
+	case reflect.Slice:
+		if v.Type().Elem().Kind() == reflect.Uint8 {
+			return decodeBytes(d, v)
+		}
+		return decodeSlice(d, v)
+
+	case reflect.Map:
+		return decodeMap(d, v)
+
+	case reflect.Interface:
+		if v.Type().NumMethod() != 0 {
+			return fmt.Errorf("the only interface type supported is any, not %s", v.Type())
+		}
+		fallthrough
+
+	default:
+		return d.Decode(v.Addr().Interface())
+	}
+}
+
+func decodeStruct(d *json.Decoder, v reflect.Value) error {
+	if err := expectDelim(d, '{'); err != nil {
+		return err
+	}
+
+	for d.More() {
+		token, err := d.Token()
+		if err != nil {
+			return err
+		}
+		key, ok := token.(string)
+		if !ok {
+			return fmt.Errorf("expected string key, got %T", token)
+		}
+
+		field := v.FieldByNameFunc(func(s string) bool {
+			return strcase.ToLowerCamel(s) == key
+		})
+		if !field.IsValid() {
+			return fmt.Errorf("no field corresponding to key %s", key)
+		}
+		fieldTypeStr := field.Type().String()
+		switch {
+		case fieldTypeStr == "*Unit" || fieldTypeStr == "Unit":
+			if fieldTypeStr == "*Unit" && field.IsNil() {
+				field.Set(reflect.New(field.Type().Elem()))
+			}
+		default:
+			if err := decodeValue(d, field); err != nil {
+				return err
+			}
+		}
+	}
+
+	// consume the closing delimiter of the object
+	_, err := d.Token()
+	return err
+}
+
+func decodeBytes(d *json.Decoder, v reflect.Value) error {
+	var b []byte
+	if err := d.Decode(&b); err != nil {
+		return err
+	}
+	v.SetBytes(b)
+	return nil
+}
+
+func decodeSlice(d *json.Decoder, v reflect.Value) error {
+	if err := expectDelim(d, '['); err != nil {
+		return err
+	}
+
+	for d.More() {
+		newElem := reflect.New(v.Type().Elem()).Elem()
+		if err := decodeValue(d, newElem); err != nil {
+			return err
+		}
+		v.Set(reflect.Append(v, newElem))
+	}
+	// consume the closing delimiter of the slice
+	_, err := d.Token()
+	return err
+}
+
+func decodeMap(d *json.Decoder, v reflect.Value) error {
+	if err := expectDelim(d, '{'); err != nil {
+		return err
+	}
+
+	if v.IsNil() {
+		v.Set(reflect.MakeMap(v.Type()))
+	}
+
+	valType := v.Type().Elem()
+	for d.More() {
+		key, err := d.Token()
+		if err != nil {
+			return err
+		}
+
+		newElem := reflect.New(valType).Elem()
+		if err := decodeValue(d, newElem); err != nil {
+			return err
+		}
+
+		v.SetMapIndex(reflect.ValueOf(key), newElem)
+	}
+	// consume the closing delimiter of the map
+	_, err := d.Token()
+	return err
+}
+
+func expectDelim(d *json.Decoder, expected json.Delim) error {
+	token, err := d.Token()
+	if err != nil {
+		return err
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != expected {
+		return fmt.Errorf("expected delimiter %q, got %q", expected, token)
+	}
 	return nil
 }
