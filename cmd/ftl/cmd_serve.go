@@ -13,12 +13,15 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -38,11 +41,17 @@ type serveCmd struct {
 
 const ftlContainerName = "ftl-db-1"
 
-func (s *serveCmd) Run(ctx context.Context) error {
+func (s *serveCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
 
 	if s.Background {
 		runInBackground(logger)
+
+		err := s.pollControllerOnine(ctx, client)
+		if err != nil {
+			return err
+		}
+
 		os.Exit(0)
 	}
 
@@ -297,6 +306,39 @@ func pollContainerHealth(ctx context.Context, containerName string, timeout time
 			if status == "healthy" {
 				return nil
 			}
+		}
+	}
+}
+
+func (s *serveCmd) pollControllerOnine(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+	logger := log.FromContext(ctx)
+
+	timeoutDuration := 10 * time.Second // should be enough time for the controller to start
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			_, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
+				AllControllers: true,
+			}))
+			if err != nil {
+				logger.Tracef("Error getting status, retrying...: %v", err)
+				continue // retry
+			}
+
+			return nil
+
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				logger.Errorf(ctx.Err(), "Timeout reached while polling for controller status")
+			}
+
+			return ctx.Err()
 		}
 	}
 }
