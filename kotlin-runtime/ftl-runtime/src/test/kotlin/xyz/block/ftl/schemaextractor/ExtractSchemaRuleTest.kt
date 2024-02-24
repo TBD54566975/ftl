@@ -53,6 +53,8 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
 
       /**
        * Request to echo a message.
+       *
+       * More comments.
        */
       data class EchoRequest<T>(
         val t: T,
@@ -157,9 +159,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               )
             ),
             comments = listOf(
-              """/**
-       * Request to echo a message.
-       */"""
+              "Request to echo a message.", "", "More comments."
             ),
             typeParameters = listOf(
               TypeParameter(name = "T")
@@ -190,9 +190,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
           verb = Verb(
             name = "echo",
             comments = listOf(
-              """/**
-       * Echoes the given message.
-       */"""
+              """Echoes the given message."""
             ),
             request = Type(
               dataRef = DataRef(

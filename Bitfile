@@ -96,6 +96,10 @@ kotlin-runtime/scaffolding.zip: kotlin-runtime/scaffolding/**/*
   cd kotlin-runtime/scaffolding
   build: zip -q --symlinks -r ../scaffolding.zip .
 
+kotlin-runtime/external-module-template.zip: kotlin-runtime/external-module-template/**/*
+  cd kotlin-runtime/external-module-template
+  build: zip -q --symlinks -r ../external-module-template.zip .
+
 %{SCHEMA_OUT}: %{SCHEMA_IN}
   build:
     ftl-schema > %{OUT}

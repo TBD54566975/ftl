@@ -131,14 +131,7 @@ class SchemaExtractor(
   fun extract() {
     val moduleComments = file.children
       .filterIsInstance<PsiComment>()
-      .flatMap { c ->
-        // get comments without comment markers
-        c.text.split("\n")
-          .filter { it.isNotBlank() }
-          .joinToString(" ") { it.trimStart('/', '*', ' ').trimEnd('/', '*', ' ') }
-          .trim()
-          .let { listOf(it) }
-      }
+      .flatMap { it.text.normalizeFromDocComment() }
 
     val moduleData = ModuleData(
       decls = mutableSetOf(
@@ -472,6 +465,7 @@ class SchemaExtractor(
       type.anySuperTypeConstructor {
         it.getClassFqNameUnsafe().asString() == ByteArray::class.qualifiedName
       } -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
+
       type.anySuperTypeConstructor {
         it.getClassFqNameUnsafe().asString() == builtIns.list.fqNameSafe.asString()
       } -> Type(
@@ -558,7 +552,20 @@ class SchemaExtractor(
     }
 
     private fun KtDeclaration.comments(): List<String> {
-      return this.docComment?.text?.trim()?.let { listOf(it) } ?: emptyList()
+      return this.docComment?.text?.trim()?.normalizeFromDocComment() ?: emptyList()
+    }
+
+    private fun String.normalizeFromDocComment(): List<String> {
+      // get comments without comment markers
+      return this.lines()
+        .mapNotNull { line ->
+          line.removePrefix("/**")
+            .removePrefix("/*")
+            .removeSuffix("*/")
+            .takeIf { it.isNotBlank() }
+        }
+        .map { it.trim('*', '/', ' ') }
+        .toList()
     }
 
     private fun KotlinType.isEmptyBuiltin(): Boolean {

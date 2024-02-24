@@ -36,6 +36,26 @@ func TestDiscoverModules(t *testing.T) {
 			Watch:     []string{"**/*.go", "go.mod", "go.sum"},
 		},
 		{
+			Dir:      "testdata/modules/echokotlin",
+			Language: "kotlin",
+			Realm:    "home",
+			Module:   "echo",
+			Build:    "mvn -B compile",
+			Deploy: []string{
+				"main",
+				"classes",
+				"dependency",
+				"classpath.txt",
+			},
+			DeployDir: "target",
+			Schema:    "schema.pb",
+			Watch: []string{
+				"pom.xml",
+				"src/**",
+				"target/generated-sources",
+			},
+		},
+		{
 			Dir:       "testdata/modules/other",
 			Language:  "go",
 			Realm:     "home",

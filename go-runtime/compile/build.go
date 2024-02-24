@@ -16,7 +16,6 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -140,16 +139,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{
-	"snake":          strcase.ToLowerSnake,
-	"screamingSnake": strcase.ToUpperSnake,
-	"camel":          strcase.ToUpperCamel,
-	"lowerCamel":     strcase.ToLowerCamel,
-	"kebab":          strcase.ToLowerKebab,
-	"screamingKebab": strcase.ToUpperKebab,
-	"upper":          strings.ToUpper,
-	"lower":          strings.ToLower,
-	"title":          strings.Title,
-	"typename":       schema.TypeName,
 	"comment": func(s []string) string {
 		if len(s) == 0 {
 			return ""

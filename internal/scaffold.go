@@ -2,7 +2,10 @@ package internal
 
 import (
 	"archive/zip"
+	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"os"
+	"strings"
 
 	"github.com/TBD54566975/scaffolder"
 )
@@ -17,5 +20,19 @@ func ScaffoldZip(source *zip.Reader, destination string, ctx any, options ...sca
 	if err := UnzipDir(source, tmpDir); err != nil {
 		return err
 	}
+	options = append(options, scaffolder.Functions(scaffoldFuncs))
 	return scaffolder.Scaffold(tmpDir, destination, ctx, options...)
+}
+
+var scaffoldFuncs = scaffolder.FuncMap{
+	"snake":          strcase.ToLowerSnake,
+	"screamingSnake": strcase.ToUpperSnake,
+	"camel":          strcase.ToUpperCamel,
+	"lowerCamel":     strcase.ToLowerCamel,
+	"kebab":          strcase.ToLowerKebab,
+	"screamingKebab": strcase.ToUpperKebab,
+	"upper":          strings.ToUpper,
+	"lower":          strings.ToLower,
+	"title":          strings.Title,
+	"typename":       schema.TypeName,
 }
