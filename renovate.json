@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    ":semanticCommitScope(deps)",
+    "group:allNonMajor",
+    "schedule:earlyMondays"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["jbr", "ktfmt", "golangci-lint"],
+      "matchManagers": ["hermit"],
+      "enabled": false
+    },
+    {
+      "matchFileNames": ["**/testdata/**/go.mod"],
+      "enabled": false
+    }
+  ]
+}
