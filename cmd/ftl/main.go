@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"syscall"
 
-	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
 	kongtoml "github.com/alecthomas/kong-toml"
 
@@ -82,19 +81,17 @@ func main() {
 		os.Exit(0)
 	}()
 
+	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
+	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
+	kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
+
+	verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
+	ctx = rpc.ContextWithClient(ctx, verbServiceClient)
+	kctx.BindTo(verbServiceClient, (*ftlv1connect.VerbServiceClient)(nil))
+
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
-	err := kctx.BindToProvider(makeDialer(ftlv1connect.NewVerbServiceClient))
-	kctx.FatalIfErrorf(err)
-	err = kctx.BindToProvider(makeDialer(ftlv1connect.NewControllerServiceClient))
-	kctx.FatalIfErrorf(err)
 
-	err = kctx.Run(ctx)
+	err := kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
-}
-
-func makeDialer[Client rpc.Pingable](newClient func(connect.HTTPClient, string, ...connect.ClientOption) Client) func() (Client, error) {
-	return func() (Client, error) {
-		return rpc.Dial(newClient, cli.Endpoint.String(), log.Error), nil
-	}
 }

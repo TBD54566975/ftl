@@ -15,7 +15,7 @@ import (
 )
 
 func TestWatch(t *testing.T) {
-	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	dir := t.TempDir()
 

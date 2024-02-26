@@ -2,6 +2,7 @@ package buildengine
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -17,13 +18,14 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/common/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // UpdateAllDependencies calls UpdateDependencies on each module in the list.
-func UpdateAllDependencies(modules []moduleconfig.ModuleConfig) ([]Module, error) {
+func UpdateAllDependencies(ctx context.Context, modules ...moduleconfig.ModuleConfig) ([]Module, error) {
 	out := []Module{}
 	for _, module := range modules {
-		updated, err := UpdateDependencies(module)
+		updated, err := UpdateDependencies(ctx, module)
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +36,9 @@ func UpdateAllDependencies(modules []moduleconfig.ModuleConfig) ([]Module, error
 
 // UpdateDependencies finds the dependencies for an FTL module and returns a
 // Module with those dependencies populated.
-func UpdateDependencies(config moduleconfig.ModuleConfig) (Module, error) {
+func UpdateDependencies(ctx context.Context, config moduleconfig.ModuleConfig) (Module, error) {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Extracting dependencies for module %s", config.Module)
 	dependencies, err := extractDependencies(config)
 	if err != nil {
 		return Module{}, err
@@ -62,6 +66,9 @@ func extractGoFTLImports(self, dir string) ([]string, error) {
 	err := WalkDir(dir, func(path string, d fs.DirEntry) error {
 		if !d.IsDir() {
 			return nil
+		}
+		if strings.HasPrefix(d.Name(), "_") || d.Name() == "testdata" {
+			return ErrSkip
 		}
 		pkgs, err := parser.ParseDir(fset, path, nil, parser.ImportsOnly)
 		if pkgs == nil {

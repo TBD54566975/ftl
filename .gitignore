@@ -15,5 +15,8 @@ generated_ftl_module.go
 dist/
 examples/**/go.work
 examples/**/go.work.sum
+testdata/**/go.work
+testdata/**/go.work.sum
 **/_ftl
 buildengine/.gitignore
+go.work*

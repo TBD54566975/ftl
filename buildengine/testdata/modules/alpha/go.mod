@@ -1,4 +1,4 @@
-module ftl/root
+module ftl/alpha
 
 go 1.22.0
 

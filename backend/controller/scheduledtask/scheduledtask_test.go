@@ -2,7 +2,6 @@ package scheduledtask
 
 import (
 	"context"
-	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -19,7 +18,7 @@ import (
 
 func TestCron(t *testing.T) {
 	t.Parallel()
-	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{Level: log.Debug}))
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -22,8 +21,7 @@ import (
 
 //nolint:maintidx
 func TestDAL(t *testing.T) {
-	logger := log.Configure(os.Stderr, log.Config{Level: log.Debug})
-	ctx := log.ContextWithLogger(context.Background(), logger)
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal, err := New(ctx, conn)
 	assert.NoError(t, err)

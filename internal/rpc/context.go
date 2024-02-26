@@ -76,7 +76,7 @@ func WithRequestName(ctx context.Context, key model.RequestName) context.Context
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
-	interceptors := []connect.Interceptor{MetadataInterceptor(level), otelInterceptor()}
+	interceptors := []connect.Interceptor{MetadataInterceptor(log.Debug), otelInterceptor()}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
@@ -87,7 +87,7 @@ func DefaultClientOptions(level log.Level) []connect.ClientOption {
 }
 
 func DefaultHandlerOptions() []connect.HandlerOption {
-	interceptors := []connect.Interceptor{MetadataInterceptor(log.Error), otelInterceptor()}
+	interceptors := []connect.Interceptor{MetadataInterceptor(log.Debug), otelInterceptor()}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
@@ -103,9 +103,11 @@ func otelInterceptor() connect.Interceptor {
 }
 
 // MetadataInterceptor propagates FTL metadata through servers and clients.
-func MetadataInterceptor(level log.Level) connect.Interceptor {
+//
+// "errorLevel" is the level at which errors will be logged
+func MetadataInterceptor(errorLevel log.Level) connect.Interceptor {
 	return &metadataInterceptor{
-		errorLevel: level,
+		errorLevel: errorLevel,
 	}
 }
 

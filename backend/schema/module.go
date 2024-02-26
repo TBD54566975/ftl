@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -173,6 +174,15 @@ func (m *Module) ToProto() proto.Message {
 		Comments: m.Comments,
 		Decls:    declListToProto(m.Decls),
 	}
+}
+
+// ModuleFromProtoFile loads a module from the given proto-encoded file.
+func ModuleFromProtoFile(filename string) (*Module, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	return ModuleFromBytes(data)
 }
 
 // ModuleFromProto converts a protobuf Module to a Module and validates it.
