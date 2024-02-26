@@ -1,5 +1,5 @@
 import { RocketLaunchIcon } from '@heroicons/react/24/outline'
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ButtonSmall } from '../../components/ButtonSmall'
 import { Card } from '../../components/Card'
@@ -11,6 +11,9 @@ import { modulesFilter } from '../../services/console.service'
 import { Timeline } from '../timeline/Timeline'
 import { verbRefString } from '../verbs/verb.utils'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
+import { SidePanelProvider } from '../../providers/side-panel-provider'
+
+const timeSettings = { isTailing: true, isPaused: false }
 
 export const DeploymentPage = () => {
   const navigate = useNavigate()
@@ -20,6 +23,12 @@ export const DeploymentPage = () => {
   const navgation = useNavigate()
   const [module, setModule] = useState<Module | undefined>()
   const [calls, setCalls] = useState<VerbRef[]>([])
+
+  const filters = useMemo(() => {
+    if (!module?.deploymentName) return []
+
+    return [modulesFilter([module.deploymentName])]
+  }, [module?.deploymentName])
 
   useEffect(() => {
     if (modules.modules.length > 0 && deploymentName) {
@@ -75,48 +84,45 @@ export const DeploymentPage = () => {
   }
 
   return (
-    <Page>
-      <Page.Header
-        icon={<RocketLaunchIcon />}
-        title={module?.deploymentName || 'Loading...'}
-        breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]}
-      />
+    <SidePanelProvider>
+      <Page>
+        <Page.Header
+          icon={<RocketLaunchIcon />}
+          title={module?.deploymentName || 'Loading...'}
+          breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]}
+        />
 
-      <Page.Body>
-        <div className='flex-1 flex flex-col h-full'>
-          <div className='flex-1 h-1/2 mb-4 p-4'>
-            <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
-              {module?.verbs.map((verb) => (
-                <Card
-                  key={verb.verb?.name}
-                  topBarColor='bg-green-500'
-                  onClick={() => navigate(`/deployments/${module.deploymentName}/verbs/${verb.verb?.name}`)}
-                >
-                  {verb.verb?.name}
-                  <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
-                </Card>
-              ))}
+        <Page.Body>
+          <div className='flex-1 flex flex-col h-full'>
+            <div className='flex-1 h-1/2 mb-4 p-4'>
+              <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
+                {module?.verbs.map((verb) => (
+                  <Card
+                    key={verb.verb?.name}
+                    topBarColor='bg-green-500'
+                    onClick={() => navigate(`/deployments/${module.deploymentName}/verbs/${verb.verb?.name}`)}
+                  >
+                    {verb.verb?.name}
+                    <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
+                  </Card>
+                ))}
+              </div>
+              <h2 className='pt-4'>Calls</h2>
+              {calls.length === 0 && <p className='pt-2 text-sm text-gray-400'>Does not call other verbs</p>}
+              <ul className='pt-2 flex space-x-2'>
+                {calls?.map((verb) => (
+                  <li key={`${module?.name}-${verb.module}-${verb.name}`} className='text-xs'>
+                    <ButtonSmall onClick={() => handleCallClick(verb)}>{verbRefString(verb)}</ButtonSmall>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <h2 className='pt-4'>Calls</h2>
-            {calls.length === 0 && <p className='pt-2 text-sm text-gray-400'>Does not call other verbs</p>}
-            <ul className='pt-2 flex space-x-2'>
-              {calls?.map((verb) => (
-                <li key={`${module?.name}-${verb.module}-${verb.name}`} className='text-xs'>
-                  <ButtonSmall onClick={() => handleCallClick(verb)}>{verbRefString(verb)}</ButtonSmall>
-                </li>
-              ))}
-            </ul>
+            <div className='flex-1 h-1/2 overflow-y-auto'>
+              {module?.deploymentName && <Timeline timeSettings={timeSettings} filters={filters} />}
+            </div>
           </div>
-          <div className='flex-1 h-1/2 overflow-y-auto'>
-            {module?.deploymentName && (
-              <Timeline
-                timeSettings={{ isTailing: true, isPaused: false }}
-                filters={[modulesFilter([module?.deploymentName])]}
-              />
-            )}
-          </div>
-        </div>
-      </Page.Body>
-    </Page>
+        </Page.Body>
+      </Page>
+    </SidePanelProvider>
   )
 }
