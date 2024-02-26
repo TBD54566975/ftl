@@ -41,8 +41,8 @@ func (d *deployCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 		return fmt.Errorf("no deploy paths defined in config")
 	}
 
-	build := buildCmd{ModuleDir: d.ModuleDir}
-	err = build.Run(ctx, client)
+	build := buildCmd{Dirs: []string{d.ModuleDir}}
+	err = build.Run(ctx)
 	if err != nil {
 		return err
 	}

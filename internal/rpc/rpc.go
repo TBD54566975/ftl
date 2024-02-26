@@ -133,7 +133,7 @@ func Wait(ctx context.Context, retry backoff.Backoff, client Pingable) error {
 }
 
 // RetryStreamingClientStream will repeatedly call handler with the stream
-// returned by "rpc" until handler returns nil or the context is cancelled.
+// returned by "rpc" until handler returns an error or the context is cancelled.
 //
 // If the stream errors, it will be closed and a new call will be issued.
 func RetryStreamingClientStream[Req, Resp any](
@@ -169,7 +169,61 @@ func RetryStreamingClientStream[Req, Resp any](
 
 		errored = true
 		delay := retry.Duration()
-		if !errors.Is(err, context.Canceled) {
+		if err != nil && !errors.Is(err, context.Canceled) {
+			logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-time.After(delay):
+		}
+
+	}
+}
+
+// RetryStreamingServerStream will repeatedly call handler with responses from
+// the stream returned by "rpc" until handler returns an error or the context is
+// cancelled.
+func RetryStreamingServerStream[Req, Resp any](
+	ctx context.Context,
+	retry backoff.Backoff,
+	req *Req,
+	rpc func(context.Context, *connect.Request[Req]) (*connect.ServerStreamForClient[Resp], error),
+	handler func(ctx context.Context, resp *Resp) error,
+) {
+	logLevel := log.Debug
+	errored := false
+	logger := log.FromContext(ctx)
+	for {
+		stream, err := rpc(ctx, connect.NewRequest(req))
+		if err == nil {
+			for stream.Receive() {
+				req := stream.Msg()
+				err = handler(ctx, req)
+				if err != nil {
+					break
+				}
+				if errored {
+					logger.Debugf("Stream recovered")
+					errored = false
+				}
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				retry.Reset()
+				logLevel = log.Warn
+			}
+		}
+
+		if err != nil {
+			err = stream.Err()
+		}
+		errored = true
+		delay := retry.Duration()
+		if err != nil && !errors.Is(err, context.Canceled) {
 			logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
 		}
 		select {

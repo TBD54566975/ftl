@@ -1,7 +1,12 @@
 package pkg
 
-import "ftl/another"
+import (
+	"context"
+	"ftl/another"
+
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
+)
 
 func Pkg() {
-    another.Another()
+	ftl.Call(context.Background(), another.Echo, another.EchoRequest{})
 }

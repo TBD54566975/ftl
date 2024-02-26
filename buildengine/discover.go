@@ -1,6 +1,7 @@
 package buildengine
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 // DiscoverModules recursively loads all modules under the given directories.
 //
 // If no directories are provided, the current working directory is used.
-func DiscoverModules(dirs ...string) ([]moduleconfig.ModuleConfig, error) {
+func DiscoverModules(ctx context.Context, dirs ...string) ([]moduleconfig.ModuleConfig, error) {
 	if len(dirs) == 0 {
 		cwd, err := os.Getwd()
 		if err != nil {

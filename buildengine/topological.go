@@ -6,42 +6,40 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// BuildOrder returns groups of modules in topological order that can be built
-// in parallel.
-func BuildOrder(modules []Module) ([][]Module, error) {
-	modulesByName := map[string]Module{}
-	for _, module := range modules {
-		modulesByName[module.Module] = module
+// TopologicalSort returns a sequence of groups of modules in topological order
+// that may be built in parallel.
+func TopologicalSort(graph map[string][]string) [][]string {
+	modulesByName := map[string]bool{}
+	for module := range graph {
+		modulesByName[module] = true
 	}
 	// Order of modules to build.
 	// Each element is a list of modules that can be built in parallel.
-	groups := [][]Module{}
+	groups := [][]string{}
 
 	// Modules that have already been "built"
-	built := map[string]bool{}
+	built := map[string]bool{"builtin": true}
 
 	for len(modulesByName) > 0 {
 		// Current group of modules that can be built in parallel.
-		group := map[string]Module{}
+		group := map[string]bool{}
 	nextModule:
-		for _, module := range modulesByName {
+		for module := range modulesByName {
 			// Check that all dependencies have been built.
-			for _, dep := range module.Dependencies {
+			for _, dep := range graph[module] {
 				if !built[dep] {
 					continue nextModule
 				}
 			}
-			group[module.Module] = module
-			delete(modulesByName, module.Module)
+			group[module] = true
+			delete(modulesByName, module)
 		}
-		orderedGroup := maps.Values(group)
-		sort.Slice(orderedGroup, func(i, j int) bool {
-			return orderedGroup[i].Module < orderedGroup[j].Module
-		})
+		orderedGroup := maps.Keys(group)
+		sort.Strings(orderedGroup)
 		for _, module := range orderedGroup {
-			built[module.Module] = true
+			built[module] = true
 		}
 		groups = append(groups, orderedGroup)
 	}
-	return groups, nil
+	return groups
 }

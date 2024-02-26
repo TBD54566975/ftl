@@ -132,3 +132,5 @@ issues:
     - 'should have comment \(or a comment on this block\) or be unexported'
     - caseOrder
     - unused-parameter
+    - "^loopclosure:"
+    - 'shadow: declaration of "ctx" shadows declaration at'

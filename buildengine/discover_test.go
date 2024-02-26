@@ -1,15 +1,18 @@
 package buildengine
 
 import (
+	"context"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/common/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestDiscoverModules(t *testing.T) {
-	modules, err := DiscoverModules("testdata/modules")
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	modules, err := DiscoverModules(ctx, "testdata/modules")
 	assert.NoError(t, err)
 	expected := []moduleconfig.ModuleConfig{
 		{

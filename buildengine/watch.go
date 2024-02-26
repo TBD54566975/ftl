@@ -56,7 +56,7 @@ func Watch(ctx context.Context, period time.Duration, dirs ...string) *pubsub.To
 			}
 
 			// Find all modules in the given directories.
-			moduleConfigs, err := DiscoverModules(dirs...)
+			moduleConfigs, err := DiscoverModules(ctx, dirs...)
 			if err != nil {
 				logger.Tracef("error discovering modules: %v", err)
 				continue
@@ -94,7 +94,7 @@ func Watch(ctx context.Context, period time.Duration, dirs ...string) *pubsub.To
 					continue
 				}
 
-				module, err := UpdateDependencies(config)
+				module, err := UpdateDependencies(ctx, config)
 				if err != nil {
 					continue
 				}

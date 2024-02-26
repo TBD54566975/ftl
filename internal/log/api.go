@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"os"
 )
 
 type Sink interface {
@@ -62,4 +63,8 @@ func FromContext(ctx context.Context) *Logger {
 // FromContext to retrieve it.
 func ContextWithLogger(ctx context.Context, logger *Logger) context.Context {
 	return context.WithValue(ctx, contextKey{}, logger)
+}
+
+func ContextWithNewDefaultLogger(ctx context.Context) context.Context {
+	return ContextWithLogger(ctx, Configure(os.Stderr, Config{Level: Debug}))
 }

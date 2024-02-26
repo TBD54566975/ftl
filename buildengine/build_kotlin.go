@@ -9,11 +9,12 @@ import (
 	"github.com/beevik/etree"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func buildKotlin(ctx context.Context, module Module) error {
+func buildKotlin(ctx context.Context, _ *schema.Schema, module Module) error {
 	logger := log.FromContext(ctx)
 
 	if err := SetPOMProperties(ctx, filepath.Join(module.Dir, "..")); err != nil {

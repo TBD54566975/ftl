@@ -4,47 +4,21 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 )
 
-func TestBuildOrder(t *testing.T) {
-	modules := []Module{
-		{
-			ModuleConfig: moduleconfig.ModuleConfig{Module: "alpha"},
-			Dependencies: []string{"beta", "gamma"},
-		},
-		{
-			ModuleConfig: moduleconfig.ModuleConfig{Module: "beta"},
-			Dependencies: []string{"kappa"},
-		},
-		{
-			ModuleConfig: moduleconfig.ModuleConfig{Module: "gamma"},
-			Dependencies: []string{"kappa"},
-		},
-		{
-			ModuleConfig: moduleconfig.ModuleConfig{Module: "kappa"},
-		},
-		{
-			ModuleConfig: moduleconfig.ModuleConfig{Module: "delta"},
-		},
+func TestTopologicalSort(t *testing.T) {
+	graph := map[string][]string{
+		"alpha": {"beta", "gamma"},
+		"beta":  {"kappa"},
+		"gamma": {"kappa"},
+		"kappa": {},
+		"delta": {},
 	}
-
-	graph, err := BuildOrder(modules)
-	assert.NoError(t, err)
-
-	expected := [][]Module{
-		{
-			{ModuleConfig: moduleconfig.ModuleConfig{Module: "delta"}},
-			{ModuleConfig: moduleconfig.ModuleConfig{Module: "kappa"}},
-		},
-		{
-			{ModuleConfig: moduleconfig.ModuleConfig{Module: "beta"}, Dependencies: []string{"kappa"}},
-			{ModuleConfig: moduleconfig.ModuleConfig{Module: "gamma"}, Dependencies: []string{"kappa"}},
-		},
-		{
-			{ModuleConfig: moduleconfig.ModuleConfig{Module: "alpha"}, Dependencies: []string{"beta", "gamma"}},
-		},
+	topo := TopologicalSort(graph)
+	expected := [][]string{
+		{"delta", "kappa"},
+		{"beta", "gamma"},
+		{"alpha"},
 	}
-	assert.Equal(t, expected, graph)
+	assert.Equal(t, expected, topo)
 }

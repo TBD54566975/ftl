@@ -20,6 +20,6 @@ type EchoResponse struct {
 
 //ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
-	other.Other()
+	ftl.Call(ctx, other.Echo, other.EchoRequest{})
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name.Default("anonymous"))}, nil
 }

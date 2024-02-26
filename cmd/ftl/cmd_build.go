@@ -2,35 +2,29 @@ package main
 
 import (
 	"context"
-	"time"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/buildengine"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type buildCmd struct {
-	ModuleDir string `arg:"" help:"Directory containing ftl.toml" type:"existingdir" default:"."`
+	Dirs []string `arg:"" help:"Base directories containing modules." type:"existingdir" required:""`
 }
 
-func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
-	logger := log.FromContext(ctx)
-
-	startTime := time.Now()
-
-	module, err := buildengine.LoadModule(b.ModuleDir)
+func (b *buildCmd) Run(ctx context.Context) error {
+	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+	engine, err := buildengine.New(ctx, client)
 	if err != nil {
 		return err
 	}
-	logger.Infof("Building %s module '%s'", module.Language, module.Module)
+	for _, dir := range b.Dirs {
 
-	ctx = rpc.ContextWithClient(ctx, client)
-	err = buildengine.Build(ctx, module)
-	if err != nil {
-		return err
+		ctx = rpc.ContextWithClient(ctx, client)
+		err = engine.Add(ctx, dir)
+		if err != nil {
+			return err
+		}
 	}
-
-	logger.Infof("Successfully built module '%s' in %.2fs", module.Module, time.Since(startTime).Seconds())
-	return nil
+	return engine.Build(ctx)
 }
