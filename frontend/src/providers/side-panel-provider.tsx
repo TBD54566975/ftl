@@ -19,7 +19,7 @@ export const SidePanelContext = React.createContext<SidePanelContextType>(defaul
 
 export const SidePanelProvider = ({ children }: PropsWithChildren) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [component, setComponent] = useState<React.ReactNode>()
+  const [component, setComponent] = useState<React.ReactNode | null>(null)
   const [onCloseCallback, setOnCloseCallback] = useState<(() => void) | null>(null)
 
   const openPanel = React.useCallback((comp: React.ReactNode, onClose?: () => void) => {
@@ -32,7 +32,7 @@ export const SidePanelProvider = ({ children }: PropsWithChildren) => {
 
   const closePanel = React.useCallback(() => {
     setIsOpen(false)
-    setComponent(undefined)
+    setComponent(null)
     if (onCloseCallback) {
       onCloseCallback()
     }

@@ -154,8 +154,17 @@ export const getEvents = async ({
   order?: EventsQuery_Order
   filters?: EventsQuery_Filter[]
 }): Promise<Event[]> => {
-  const response = await client.getEvents({ filters, limit, order }, { signal: abortControllerSignal })
-  return response.events
+  try {
+    const response = await client.getEvents({ filters, limit, order }, { signal: abortControllerSignal })
+    return response.events
+  } catch (error) {
+    if (error instanceof ConnectError) {
+      if (error.code === Code.Canceled) {
+        return []
+      }
+    }
+    throw error
+  }
 }
 
 export const streamEvents = async ({
