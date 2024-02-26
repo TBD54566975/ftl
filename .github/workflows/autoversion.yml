@@ -5,6 +5,8 @@ jobs:
   semver-tag:
     name: Conventional Commits Auto-version
     runs-on: ubuntu-latest
+    # TODO: Re-enable once the new build system is in place.
+    if: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

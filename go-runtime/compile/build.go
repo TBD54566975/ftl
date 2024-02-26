@@ -91,6 +91,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
+	logger.Debugf("Tidying go.mod")
+	if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+		return fmt.Errorf("failed to tidy go.mod: %w", err)
+	}
+
 	logger.Debugf("Extracting schema")
 	nativeNames, main, err := ExtractModuleSchema(moduleDir)
 	if err != nil {
@@ -127,7 +132,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 
 	logger.Debugf("Compiling")
 	mainDir := filepath.Join(buildDir, "go", "main")
-	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-mod=readonly", "-o", "../../main", ".").RunBuffered(ctx)
+	if err := exec.Command(ctx, log.Debug, mainDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+		return fmt.Errorf("failed to tidy go.mod: %w", err)
+	}
+
+	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{
