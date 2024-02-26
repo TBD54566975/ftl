@@ -5,28 +5,25 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/types/eventsource"
-	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
-	"golang.design/x/reflect"
+	"github.com/puzpuzpuz/xsync"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 // Engine for building a set of modules.
 type Engine struct {
 	modules          map[string]Module
-	controllerSchema *eventsource.EventSource[map[string]*schema.Module]
-	updateSchema     *pubsub.Topic[*schema.Module]
+	controllerSchema *xsync.MapOf[string, *schema.Module]
 	cancel           func()
 }
 
@@ -39,18 +36,15 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient) (*Eng
 	ctx = rpc.ContextWithClient(ctx, client)
 	engine := &Engine{
 		modules:          map[string]Module{},
-		controllerSchema: eventsource.New[map[string]*schema.Module](),
-		updateSchema:     pubsub.New[*schema.Module](),
+		controllerSchema: xsync.NewMapOf[*schema.Module](),
 	}
-	engine.controllerSchema.Store(map[string]*schema.Module{
-		"builtin": schema.Builtins(),
-	})
+	engine.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
 	engine.cancel = cancel
-	schemaSync := engine.startSchemaSync(ctx, client)
 	if client == nil {
 		return engine, nil
 	}
+	schemaSync := engine.startSchemaSync(ctx, client)
 	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync)
 	return engine, nil
 }
@@ -58,64 +52,37 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient) (*Eng
 // Sync module schema changes from the FTL controller, as well as from manual
 // updates, and merge them into a single schema map.
 func (e *Engine) startSchemaSync(ctx context.Context, client ftlv1connect.ControllerServiceClient) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
+	logger := log.FromContext(ctx)
 	// Blocking schema sync from the controller.
-	if client != nil {
-		psch, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	psch, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	if err == nil {
+		sch, err := schema.FromProto(psch.Msg.Schema)
 		if err == nil {
-			sch, err := schema.FromProto(psch.Msg.Schema)
-			if err == nil {
-				modules := map[string]*schema.Module{}
-				for _, module := range sch.Modules {
-					modules[module.Name] = module
-				}
-				e.controllerSchema.Store(modules)
+			modules := map[string]*schema.Module{}
+			for _, module := range sch.Modules {
+				e.controllerSchema.Store(module.Name, module)
+				modules[module.Name] = module
 			}
+		} else {
+			logger.Debugf("Failed to parse schema from controller: %s", err)
 		}
+	} else {
+		logger.Debugf("Failed to get schema from controller: %s", err)
 	}
 
-	mu := sync.Mutex{}
-	schemas := map[string]*schema.Module{}
-
-	schemaUpdates := e.updateSchema.SubscribeSync(nil)
-
-	// Update the event source with new schemas manually added to the Engine.
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-
-			case update := <-schemaUpdates:
-				mu.Lock()
-				schemas[update.Msg.Name] = update.Msg
-				clone := reflect.DeepCopy(schemas)
-				mu.Unlock()
-				e.controllerSchema.PublishSync(clone)
-				update.Ack()
-			}
-		}
-	}()
 	// Sync module schema changes from the controller into the schema event source.
 	return func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
-		var clone map[string]*schema.Module
 		switch msg.ChangeType {
 		case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
 			sch, err := schema.ModuleFromProto(msg.Schema)
 			if err == nil {
 				return err
 			}
-			mu.Lock()
-			schemas[sch.Name] = sch
-			clone = reflect.DeepCopy(schemas)
-			mu.Unlock()
+			e.controllerSchema.Store(sch.Name, sch)
 
 		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-			mu.Lock()
-			delete(schemas, msg.ModuleName)
-			clone = reflect.DeepCopy(schemas)
-			mu.Unlock()
+			e.controllerSchema.Delete(msg.ModuleName)
 		}
-		e.controllerSchema.PublishSync(clone)
 		return nil
 	}
 }
@@ -147,7 +114,7 @@ func (e *Engine) buildGraph(name string, out map[string][]string) error {
 	var deps []string
 	if module, ok := e.modules[name]; ok {
 		deps = module.Dependencies
-	} else if sch, ok := e.controllerSchema.Load()[name]; ok {
+	} else if sch, ok := e.controllerSchema.Load(name); ok {
 		deps = sch.Imports()
 	} else {
 		return fmt.Errorf("module %q not found", name)
@@ -183,7 +150,7 @@ func (e *Engine) Add(ctx context.Context, dir string) error {
 // Import manually imports a schema for a module as if it were retrieved from
 // the FTL controller.
 func (e *Engine) Import(ctx context.Context, schema *schema.Module) {
-	e.updateSchema.PublishSync(schema)
+	e.controllerSchema.Store(schema.Name, schema)
 }
 
 // Build attempts to build the specified modules, or all local modules if none are provided.
@@ -242,7 +209,7 @@ func (e *Engine) Build(ctx context.Context, modules ...string) error {
 
 // Publish either the schema from the FTL controller, or from a local build.
 func (e *Engine) mustSchema(ctx context.Context, name string, built map[string]*schema.Module, schemas chan<- *schema.Module) error {
-	if sch, ok := e.controllerSchema.Load()[name]; ok {
+	if sch, ok := e.controllerSchema.Load(name); ok {
 		schemas <- sch
 		return nil
 	}
