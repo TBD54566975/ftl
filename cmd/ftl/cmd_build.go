@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/buildengine"
@@ -19,11 +20,9 @@ func (b *buildCmd) Run(ctx context.Context) error {
 		return err
 	}
 	for _, dir := range b.Dirs {
-
-		ctx = rpc.ContextWithClient(ctx, client)
 		err = engine.Add(ctx, dir)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", dir, err)
 		}
 	}
 	return engine.Build(ctx)

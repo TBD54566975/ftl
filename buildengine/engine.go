@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/types/eventsource"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
@@ -35,6 +36,7 @@ type Engine struct {
 // locally available. If the FTL controller is available, it will be used to
 // pull in missing schemas.
 func New(ctx context.Context, client ftlv1connect.ControllerServiceClient) (*Engine, error) {
+	ctx = rpc.ContextWithClient(ctx, client)
 	engine := &Engine{
 		modules:          map[string]Module{},
 		controllerSchema: eventsource.New[map[string]*schema.Module](),
@@ -45,7 +47,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient) (*Eng
 	})
 	ctx, cancel := context.WithCancel(ctx)
 	engine.cancel = cancel
-	schemaSync := engine.startSchemaSync(ctx)
+	schemaSync := engine.startSchemaSync(ctx, client)
 	if client == nil {
 		return engine, nil
 	}
@@ -55,7 +57,22 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient) (*Eng
 
 // Sync module schema changes from the FTL controller, as well as from manual
 // updates, and merge them into a single schema map.
-func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
+func (e *Engine) startSchemaSync(ctx context.Context, client ftlv1connect.ControllerServiceClient) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
+	// Blocking schema sync from the controller.
+	if client != nil {
+		psch, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+		if err == nil {
+			sch, err := schema.FromProto(psch.Msg.Schema)
+			if err == nil {
+				modules := map[string]*schema.Module{}
+				for _, module := range sch.Modules {
+					modules[module.Name] = module
+				}
+				e.controllerSchema.Store(modules)
+			}
+		}
+	}
+
 	mu := sync.Mutex{}
 	schemas := map[string]*schema.Module{}
 
