@@ -25,6 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -41,8 +42,9 @@ type serveCmd struct {
 
 const ftlContainerName = "ftl-db-1"
 
-func (s *serveCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+func (s *serveCmd) Run(ctx context.Context) error {
 	logger := log.FromContext(ctx)
+	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
 	if s.Background {
 		runInBackground(logger)

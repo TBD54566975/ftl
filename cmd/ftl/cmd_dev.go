@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type moduleFolderInfo struct {
@@ -30,6 +31,8 @@ type devCmd struct {
 	FailureDelay    time.Duration `help:"Delay before retrying a failed deploy." default:"500ms"`
 	ReconnectDelay  time.Duration `help:"Delay before attempting to reconnect to FTL." default:"1s"`
 	ExitAfterDeploy bool          `help:"Exit after all modules are deployed successfully." default:"false"`
+	NoServe         bool          `help:"Do not start the FTL server." default:"false"`
+	ServeCmd        serveCmd      `embed:"" prefix:"serve-"`
 }
 
 type moduleMap map[string]*moduleFolderInfo
@@ -88,16 +91,25 @@ func (m *moduleMap) RebuildDependentModules(ctx context.Context, sch *schema.Mod
 	}
 }
 
-func (d *devCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+func (d *devCmd) Run(ctx context.Context) error {
 	logger := log.FromContext(ctx)
-	logger.Debugf("Watching %s for FTL modules", d.BaseDir)
+	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	wg, ctx := errgroup.WithContext(ctx)
+
+	if !d.NoServe {
+		wg.Go(func() error {
+			return d.ServeCmd.Run(ctx)
+		})
+	}
+
+	logger.Debugf("Watching %s for FTL modules", d.BaseDir)
+
 	schemaChanges := make(chan *schema.Module, 64)
 	modules := make(moduleMap)
-
-	wg, ctx := errgroup.WithContext(ctx)
 
 	wg.Go(func() error {
 		return d.watchForSchemaChanges(ctx, client, schemaChanges)
