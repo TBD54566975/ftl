@@ -32,21 +32,34 @@ type Engine struct {
 // Completely offline builds are possible if the full dependency graph is
 // locally available. If the FTL controller is available, it will be used to
 // pull in missing schemas.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient) (*Engine, error) {
+//
+// "dirs" are directories to scan for local modules.
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs ...string) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
-	engine := &Engine{
+	e := &Engine{
 		modules:          map[string]Module{},
 		controllerSchema: xsync.NewMapOf[*schema.Module](),
 	}
-	engine.controllerSchema.Store("builtin", schema.Builtins())
+	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
-	engine.cancel = cancel
-	if client == nil {
-		return engine, nil
+	e.cancel = cancel
+	configs, err := DiscoverModules(ctx, dirs...)
+	if err != nil {
+		return nil, err
 	}
-	schemaSync := engine.startSchemaSync(ctx, client)
+	modules, err := UpdateAllDependencies(ctx, configs...)
+	if err != nil {
+		return nil, err
+	}
+	for _, module := range modules {
+		e.modules[module.Module] = module
+	}
+	if client == nil {
+		return e, nil
+	}
+	schemaSync := e.startSchemaSync(ctx, client)
 	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync)
-	return engine, nil
+	return e, nil
 }
 
 // Sync module schema changes from the FTL controller, as well as from manual
@@ -124,25 +137,6 @@ func (e *Engine) buildGraph(name string, out map[string][]string) error {
 		if err := e.buildGraph(dep, out); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// Add a directory of local modules to the engine.
-//
-// Existing modules will be replaced. A local module will take precedence over
-// any schema from the FTL cluster, building as required.
-func (e *Engine) Add(ctx context.Context, dir string) error {
-	configs, err := DiscoverModules(ctx, dir)
-	if err != nil {
-		return err
-	}
-	modules, err := UpdateAllDependencies(ctx, configs...)
-	if err != nil {
-		return err
-	}
-	for _, module := range modules {
-		e.modules[module.Module] = module
 	}
 	return nil
 }
