@@ -7,8 +7,8 @@ const groupWidth = 200
 const calculateModuleDepths = (modules: Module[]): Record<string, number> => {
   const depths: Record<string, number> = {}
   const adjList: Record<string, string[]> = {}
+  const visitedInCurrentPath: Set<string> = new Set() // For cycle detection
 
-  // Initialize adjacency list
   modules.forEach((module) => {
     adjList[module.name ?? ''] = []
     ;(module.verbs ?? []).forEach((verb) => {
@@ -26,12 +26,25 @@ const calculateModuleDepths = (modules: Module[]): Record<string, number> => {
 
   // Depth-first search to calculate depths
   const dfs = (node: string, depth: number) => {
+    if (visitedInCurrentPath.has(node)) {
+      // Detected a cycle
+      return
+    }
+    visitedInCurrentPath.add(node)
+
     depths[node] = Math.max(depths[node] ?? 0, depth)
-    adjList[node].forEach((neighbor) => dfs(neighbor, depth + 1))
+    adjList[node].forEach((neighbor) => {
+      dfs(neighbor, depth + 1)
+    })
+
+    visitedInCurrentPath.delete(node) // Remove the node from the current path after exploring all neighbors
   }
 
   // Initialize DFS from each node
-  Object.keys(adjList).forEach((node) => dfs(node, 0))
+  Object.keys(adjList).forEach((node) => {
+    visitedInCurrentPath.clear() // Clear the path before starting a new DFS
+    dfs(node, 0)
+  })
 
   return depths
 }
