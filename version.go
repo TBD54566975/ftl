@@ -1,10 +1,10 @@
 package ftl
 
-import "strings"
+import "regexp"
 
 // IsRelease returns true if the version is a release version.
 func IsRelease(v string) bool {
-	return v != "dev" && !strings.HasSuffix(v, "-dirty")
+	return regexp.MustCompile(`^\d+\.\d+\.\d+$`).MatchString(v)
 }
 
 // Version of FTL binary (set by linker).
