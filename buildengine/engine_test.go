@@ -13,16 +13,10 @@ import (
 
 func TestEngine(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil)
+	engine, err := buildengine.New(ctx, nil, "testdata/modules/alpha", "testdata/modules/another")
 	assert.NoError(t, err)
 
 	defer engine.Close()
-
-	// Explicitly add only two of the modules.
-	err = engine.Add(ctx, "testdata/modules/alpha")
-	assert.NoError(t, err)
-	err = engine.Add(ctx, "testdata/modules/another")
-	assert.NoError(t, err)
 
 	// Import the schema from the third module, simulating a remote schema.
 	otherSchema := &schema.Module{
