@@ -63,22 +63,22 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				//nolint:forcetypeassert
 				v := decl.ToProto().(*schemapb.Verb)
 				verbSchema := schema.VerbToSchema(v) // TODO: include all of the types  that the verb references
-				requestData, ok := verbSchema.Request.(*schema.DataRef)
-				if !ok {
-					return nil, fmt.Errorf("expected request to be a data ref, got %T", verbSchema.Request)
-				}
-				jsonRequestSchema, err := schema.DataToJSONSchema(sch, *requestData)
-				if err != nil {
-					return nil, err
-				}
-				jsonData, err := json.MarshalIndent(jsonRequestSchema, "", "  ")
-				if err != nil {
-					return nil, err
+				var jsonRequestSchema string
+				if requestData, ok := verbSchema.Request.(*schema.DataRef); ok {
+					jsonSchema, err := schema.DataToJSONSchema(sch, *requestData)
+					if err != nil {
+						return nil, err
+					}
+					jsonData, err := json.MarshalIndent(jsonSchema, "", "  ")
+					if err != nil {
+						return nil, err
+					}
+					jsonRequestSchema = string(jsonData)
 				}
 				verbs = append(verbs, &pbconsole.Verb{
 					Verb:              v,
 					Schema:            verbSchema.String(),
-					JsonRequestSchema: string(jsonData),
+					JsonRequestSchema: jsonRequestSchema,
 				})
 
 			case *schema.Data:
