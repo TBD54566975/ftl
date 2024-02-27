@@ -43,6 +43,16 @@ func UpdateDependencies(ctx context.Context, config moduleconfig.ModuleConfig) (
 	if err != nil {
 		return Module{}, err
 	}
+	containsBuiltin := false
+	for _, dep := range dependencies {
+		if dep == "builtin" {
+			containsBuiltin = true
+			break
+		}
+	}
+	if !containsBuiltin {
+		dependencies = append(dependencies, "builtin")
+	}
 	out := reflect.DeepCopy(config)
 	return Module{ModuleConfig: out, Dependencies: dependencies}, nil
 }

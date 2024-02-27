@@ -28,16 +28,12 @@ type externalModuleContext struct {
 }
 
 func (e externalModuleContext) ExternalModules() []*schema.Module {
-	depsSet := make(map[string]struct{})
-	for _, dep := range e.module.Dependencies {
-		depsSet[dep] = struct{}{}
-	}
-
-	modules := make([]*schema.Module, 0)
+	modules := make([]*schema.Module, 0, len(e.Modules))
 	for _, module := range e.Modules {
-		if _, exists := depsSet[module.Name]; exists || module.Name == "builtin" {
-			modules = append(modules, module)
+		if module.Name == e.module.Module {
+			continue
 		}
+		modules = append(modules, module)
 	}
 	return modules
 }
@@ -149,7 +145,7 @@ func generateExternalModules(ctx context.Context, module Module, sch *schema.Sch
 	return internal.ScaffoldZip(kotlinruntime.ExternalModuleTemplates(), config.Dir, externalModuleContext{
 		module: module,
 		Schema: sch,
-	}, scaffolder.Functions(funcs))
+	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{
