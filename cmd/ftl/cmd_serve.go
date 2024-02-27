@@ -30,14 +30,15 @@ import (
 )
 
 type serveCmd struct {
-	Bind         *url.URL   `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
-	AllowOrigins []*url.URL `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
-	DBPort       int        `help:"Port to use for the database." default:"54320"`
-	Recreate     bool       `help:"Recreate the database even if it already exists." default:"false"`
-	Controllers  int        `short:"c" help:"Number of controllers to start." default:"1"`
-	Runners      int        `short:"r" help:"Number of runners to start." default:"0"`
-	Background   bool       `help:"Run in the background." default:"false"`
-	Stop         bool       `help:"Stop the running FTL instance. Can be used to --background to restart the server" default:"false"`
+	Bind           *url.URL      `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
+	AllowOrigins   []*url.URL    `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
+	DBPort         int           `help:"Port to use for the database." default:"54320"`
+	Recreate       bool          `help:"Recreate the database even if it already exists." default:"false"`
+	Controllers    int           `short:"c" help:"Number of controllers to start." default:"1"`
+	Runners        int           `short:"r" help:"Number of runners to start." default:"0"`
+	Background     bool          `help:"Run in the background." default:"false"`
+	Stop           bool          `help:"Stop the running FTL instance. Can be used to --background to restart the server" default:"false"`
+	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"20s"`
 }
 
 const ftlContainerName = "ftl-db-1"
@@ -344,8 +345,7 @@ func pollContainerHealth(ctx context.Context, containerName string, timeout time
 func (s *serveCmd) pollControllerOnine(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
 
-	timeoutDuration := 10 * time.Second // should be enough time for the controller to start
-	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	ctx, cancel := context.WithTimeout(ctx, s.StartupTimeout)
 	defer cancel()
 
 	ticker := time.NewTicker(time.Second)
