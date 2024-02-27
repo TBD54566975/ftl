@@ -46,7 +46,6 @@
 
     <modules>
         <module>kotlin-runtime/ftl-runtime</module>
-        <module>kotlin-runtime/ftl-generator</module>
     </modules>
 
     <properties>
@@ -344,7 +343,6 @@
             <id>release</id>
             <modules>
                 <module>kotlin-runtime/ftl-runtime</module>
-                <module>kotlin-runtime/ftl-generator</module>
             </modules>
             <build>
                 <plugins>
