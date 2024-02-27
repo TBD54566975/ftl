@@ -37,7 +37,7 @@ type serveCmd struct {
 	Controllers  int        `short:"c" help:"Number of controllers to start." default:"1"`
 	Runners      int        `short:"r" help:"Number of runners to start." default:"0"`
 	Background   bool       `help:"Run in the background." default:"false"`
-	Stop         bool       `help:"Stop the running FTL instance." default:"false"`
+	Stop         bool       `help:"Stop the running FTL instance. Can be used to --background to restart the server" default:"false"`
 }
 
 const ftlContainerName = "ftl-db-1"
@@ -47,6 +47,12 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
 	if s.Background {
+		if s.Stop {
+			// allow usage of --background and --stop together to "restart" the background process
+			// ignore error here if the process is not running
+			_ = killBackgroundProcess(logger)
+		}
+
 		runInBackground(logger)
 
 		err := s.pollControllerOnine(ctx, client)
@@ -119,47 +125,40 @@ func (s *serveCmd) Run(ctx context.Context) error {
 }
 
 func runInBackground(logger *log.Logger) {
-	pidFilePath, err := pidFilePath()
-	if err != nil {
-		logger.Errorf(err, "failed to get pid file path")
-		return
-	}
-
-	if existingPID, err := getPIDFromPath(pidFilePath); err == nil && existingPID != 0 {
+	if running, _ := isServeRunning(logger); running {
 		logger.Warnf("'ftl serve' is already running in the background. Use --stop to stop it.")
 		return
 	}
 
 	args := make([]string, 0, len(os.Args))
 	for _, arg := range os.Args[1:] {
-		if arg == "--background" {
+		if arg == "--background" || arg == "--stop" {
 			continue
 		}
 		args = append(args, arg)
 	}
 
 	cmd := osExec.Command(os.Args[0], args...)
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true,
-	}
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
 	if err := cmd.Start(); err != nil {
 		logger.Errorf(err, "failed to start background process")
+		return
 	}
 
+	pidFilePath, _ := pidFilePath()
 	if err := os.MkdirAll(filepath.Dir(pidFilePath), 0750); err != nil {
 		logger.Errorf(err, "failed to create directory for pid file")
+		return
 	}
 
-	pid := cmd.Process.Pid
-	if err := os.WriteFile(pidFilePath, []byte(fmt.Sprintf("%d", pid)), 0600); err != nil {
+	if err := os.WriteFile(pidFilePath, []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0600); err != nil {
 		logger.Errorf(err, "failed to write pid file")
+		return
 	}
 
-	logger.Infof("FTL running in background with pid: %d\n", pid)
+	logger.Infof("`ftl serve` running in background with pid: %d", cmd.Process.Pid)
 }
 
 func killBackgroundProcess(logger *log.Logger) error {
@@ -175,26 +174,18 @@ func killBackgroundProcess(logger *log.Logger) error {
 		return nil
 	}
 
-	err = os.Remove(pidFilePath)
-	if err != nil {
-		logger.Errorf(err, "failed to remove pid file")
+	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
+		if !errors.Is(err, syscall.ESRCH) {
+			return err
+		}
 	}
 
-	return syscall.Kill(pid, syscall.SIGTERM)
-}
-
-func getPIDFromPath(path string) (int, error) {
-	pid, err := os.ReadFile(path)
-	if err != nil {
-		return 0, err
+	if err := os.Remove(pidFilePath); err != nil {
+		logger.Errorf(err, "Failed to remove pid file: %v", err)
 	}
 
-	pidInt, err := strconv.Atoi(string(pid))
-	if err != nil {
-		return 0, err
-	}
-
-	return pidInt, nil
+	logger.Infof("`ftl serve` stopped (pid: %d)", pid)
+	return nil
 }
 
 func pidFilePath() (string, error) {
@@ -202,8 +193,46 @@ func pidFilePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return filepath.Join(homeDir, ".ftl", "ftl-serve.pid"), nil
+}
+
+func getPIDFromPath(path string) (int, error) {
+	pidBytes, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	pid, err := strconv.Atoi(string(pidBytes))
+	if err != nil {
+		return 0, err
+	}
+	return pid, nil
+}
+
+func isServeRunning(logger *log.Logger) (bool, error) {
+	pidFilePath, err := pidFilePath()
+	if err != nil {
+		return false, err
+	}
+
+	pid, err := getPIDFromPath(pidFilePath)
+	if err != nil || pid == 0 {
+		return false, err
+	}
+
+	err = syscall.Kill(pid, 0)
+	if err != nil {
+		if errors.Is(err, syscall.ESRCH) {
+			logger.Infof("Process with PID %d does not exist.", pid)
+			return false, nil
+		}
+		if errors.Is(err, syscall.EPERM) {
+			logger.Infof("Process with PID %d exists but no permission to signal it.", pid)
+			return true, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
