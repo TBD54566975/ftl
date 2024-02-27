@@ -78,23 +78,6 @@
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>3.2.0</version>
                     <executions>
-                        <!-- Install FTL code generator into target directory. -->
-                        <execution>
-                            <phase>initialize</phase>
-                            <goals>
-                                <goal>copy</goal>
-                            </goals>
-                            <configuration>
-                                <artifactItems>
-                                    <artifactItem>
-                                        <groupId>xyz.block</groupId>
-                                        <artifactId>ftl-generator</artifactId>
-                                        <version>${ftl.version}</version>
-                                        <destFileName>ftl-generator.jar</destFileName>
-                                    </artifactItem>
-                                </artifactItems>
-                            </configuration>
-                        </execution>
                         <!-- Copy all dependencies into the target directory -->
                         <execution>
                             <id>copy-dependencies</id>

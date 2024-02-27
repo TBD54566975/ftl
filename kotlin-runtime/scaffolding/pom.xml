@@ -79,23 +79,6 @@
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>3.6.1</version>
                     <executions>
-                        <!-- Install FTL code generator into target directory. -->
-                        <execution>
-                            <phase>initialize</phase>
-                            <goals>
-                                <goal>copy</goal>
-                            </goals>
-                            <configuration>
-                                <artifactItems>
-                                    <artifactItem>
-                                        <groupId>xyz.block</groupId>
-                                        <artifactId>ftl-generator</artifactId>
-                                        <version>${ftl.version}</version>
-                                        <destFileName>ftl-generator.jar</destFileName>
-                                    </artifactItem>
-                                </artifactItems>
-                            </configuration>
-                        </execution>
                         <!-- Copy all dependencies into the target directory -->
                         <execution>
                             <id>copy-dependencies</id>
@@ -129,31 +112,6 @@
                             <configuration>
                                 <outputProperty>generated.classpath</outputProperty>
                                 <prefix>${project.build.directory}/dependency</prefix>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-                <!-- Run the FTL code generator -->
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>exec-maven-plugin</artifactId>
-                    <version>3.2.0</version>
-                    <executions>
-                        <execution>
-                            <phase>initialize</phase>
-                            <goals>
-                                <goal>exec</goal>
-                            </goals>
-                            <configuration>
-                                <executable>java</executable>
-                                <arguments>
-                                    <argument>-jar</argument>
-                                    <argument>target/dependency/ftl-generator.jar</argument>
-                                    <argument>--endpoint=${ftlEndpoint}</argument>
-                                    <argument>--dest=${project.build.directory}</argument>
-                                    <argument>--module=${ftlModuleName}</argument>
-                                    <argument>--module-client-suffix=ModuleClient</argument>
-                                </arguments>
                             </configuration>
                         </execution>
                     </executions>
