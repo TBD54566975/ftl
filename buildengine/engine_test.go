@@ -44,9 +44,10 @@ func TestEngine(t *testing.T) {
 	engine.Import(ctx, otherSchema)
 
 	expected := map[string][]string{
-		"alpha":   {"another", "other"},
-		"another": {},
+		"alpha":   {"another", "other", "builtin"},
+		"another": {"builtin"},
 		"other":   {},
+		"builtin": {},
 	}
 	graph, err := engine.Graph()
 	assert.NoError(t, err)
