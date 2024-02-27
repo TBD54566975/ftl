@@ -2,12 +2,13 @@ package internal
 
 import (
 	"archive/zip"
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"os"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
+
+	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 )
 
 // ScaffoldZip is a convenience function for scaffolding a zip archive with scaffolder.

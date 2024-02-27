@@ -3,12 +3,16 @@ package buildengine
 import (
 	"context"
 	"fmt"
-	sets "github.com/deckarep/golang-set/v2"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/TBD54566975/scaffolder"
+	"github.com/beevik/etree"
+	sets "github.com/deckarep/golang-set/v2"
+	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -16,9 +20,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
-	"github.com/TBD54566975/scaffolder"
-	"github.com/beevik/etree"
-	"golang.org/x/exp/maps"
 )
 
 type externalModuleContext struct {
