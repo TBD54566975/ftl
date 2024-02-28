@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/exp/maps"
@@ -22,9 +23,11 @@ import (
 
 // Engine for building a set of modules.
 type Engine struct {
+	client           ftlv1connect.ControllerServiceClient
 	modules          map[string]Module
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	cancel           func()
+	builds           *pubsub.Topic[Module]
 }
 
 // New constructs a new [Engine].
@@ -37,8 +40,10 @@ type Engine struct {
 func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs ...string) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
+		client:           client,
 		modules:          map[string]Module{},
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
+		builds:           pubsub.New[Module](),
 	}
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
@@ -57,17 +62,17 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	if client == nil {
 		return e, nil
 	}
-	schemaSync := e.startSchemaSync(ctx, client)
+	schemaSync := e.startSchemaSync(ctx)
 	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync)
 	return e, nil
 }
 
 // Sync module schema changes from the FTL controller, as well as from manual
 // updates, and merge them into a single schema map.
-func (e *Engine) startSchemaSync(ctx context.Context, client ftlv1connect.ControllerServiceClient) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
+func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
 	logger := log.FromContext(ctx)
 	// Blocking schema sync from the controller.
-	psch, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	psch, err := e.client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 	if err == nil {
 		sch, err := schema.FromProto(psch.Msg.Schema)
 		if err == nil {
@@ -201,6 +206,56 @@ func (e *Engine) Build(ctx context.Context, modules ...string) error {
 	return nil
 }
 
+func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
+	if len(modules) == 0 {
+		modules = maps.Keys(e.modules)
+	}
+
+	buildSubscription := e.builds.SubscribeSync(nil)
+	defer e.builds.UnsubscribeSync(buildSubscription)
+
+	// Create a channel to signal when a module is deployed.
+	deployedModules := make(chan string, len(modules))
+	expectedBuilds := make(map[string]struct{}, len(modules))
+	for _, name := range modules {
+		expectedBuilds[name] = struct{}{}
+	}
+
+	wg, ctx := errgroup.WithContext(ctx)
+
+	// Listen for build events and deploy the module after it is built.
+	wg.Go(func() error {
+		for build := range buildSubscription {
+			if _, ok := expectedBuilds[build.Msg.Module]; ok {
+				err := Deploy(ctx, e.modules[build.Msg.Module], replicas, waitForDeployOnline, e.client)
+				if err != nil {
+					return err
+				}
+
+				build.Ack()
+				deployedModules <- build.Msg.Module
+			}
+		}
+		return nil
+	})
+
+	// Trigger builds for the specified modules.
+	if err := e.Build(ctx, modules...); err != nil {
+		return err
+	}
+
+	// Wait for all specified modules to be deployed.
+	for i := 0; i < len(modules); i++ {
+		select {
+		case <-deployedModules:
+		case <-ctx.Done():
+			return wg.Wait()
+		}
+	}
+
+	return nil
+}
+
 // Publish either the schema from the FTL controller, or from a local build.
 func (e *Engine) mustSchema(ctx context.Context, name string, built map[string]*schema.Module, schemas chan<- *schema.Module) error {
 	if sch, ok := e.controllerSchema.Load(name); ok {
@@ -226,6 +281,7 @@ func (e *Engine) build(ctx context.Context, name string, built map[string]*schem
 	if err != nil {
 		return fmt.Errorf("load schema %s: %w", name, err)
 	}
+	e.builds.Publish(module)
 	schemas <- moduleSchema
 	return nil
 }

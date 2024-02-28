@@ -158,11 +158,10 @@ func (d *devCmd) Run(ctx context.Context) error {
 					logger.Warnf("Detected change in %s%s, rebuilding...", changeType, path)
 				}
 				deploy := deployCmd{
-					Replicas:  1,
-					ModuleDir: dir,
-					Wait:      d.ExitAfterDeploy,
+					Replicas: 1,
+					Dirs:     []string{dir},
 				}
-				err = deploy.Run(ctx, client)
+				err = deploy.Run(ctx)
 				if err != nil {
 					logger.Errorf(err, "Error deploying module %s. Will retry", dir)
 					failedModules[dir] = true
