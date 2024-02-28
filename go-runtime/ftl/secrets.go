@@ -30,7 +30,10 @@ func (s *SecretValue[Type]) String() string {
 func (s *SecretValue[Type]) Get() (out Type) {
 	value, ok := os.LookupEnv(fmt.Sprintf("FTL_SECRET_%s_%s", strings.ToUpper(s.module), strings.ToUpper(s.name)))
 	if !ok {
-		return out
+		value, ok = os.LookupEnv(fmt.Sprintf("FTL_SECRET_%s", strings.ToUpper(s.name)))
+		if !ok {
+			return out
+		}
 	}
 	if err := json.Unmarshal([]byte(value), &out); err != nil {
 		panic(fmt.Errorf("failed to parse %s: %w", s, err))

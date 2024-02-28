@@ -31,7 +31,10 @@ func (c *ConfigValue[T]) String() string {
 func (c *ConfigValue[T]) Get() (out T) {
 	value, ok := os.LookupEnv(fmt.Sprintf("FTL_CONFIG_%s_%s", strings.ToUpper(c.module), strings.ToUpper(c.name)))
 	if !ok {
-		return out
+		value, ok = os.LookupEnv(fmt.Sprintf("FTL_CONFIG_%s", strings.ToUpper(c.name)))
+		if !ok {
+			return out
+		}
 	}
 	if err := json.Unmarshal([]byte(value), &out); err != nil {
 		panic(fmt.Errorf("failed to parse %s value %q: %w", c, value, err))
