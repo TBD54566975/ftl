@@ -35,6 +35,9 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 		case *Database:
 			v = &schemapb.Decl_Database{Database: n.ToProto().(*schemapb.Database)}
 
+		case *Enum:
+			v = &schemapb.Decl_Enum{Enum: n.ToProto().(*schemapb.Enum)}
+
 		case *Bool, *Bytes, *Float, *Int, *Module, *String, *Time, *Unit, *Any,
 			*TypeParameter:
 		}
@@ -89,7 +92,7 @@ func typeToProto(t Type) *schemapb.Type {
 	case *Unit:
 		return &schemapb.Type{Value: &schemapb.Type_Unit{Unit: t.ToProto().(*schemapb.Unit)}}
 
-	case *VerbRef, *SourceRef, *SinkRef:
+	case *VerbRef, *SourceRef, *SinkRef, *EnumRef:
 		panic("unreachable")
 
 	case *DataRef:
@@ -123,4 +126,14 @@ func typeToProto(t Type) *schemapb.Type {
 		return &schemapb.Type{Value: &schemapb.Type_Optional{Optional: t.ToProto().(*schemapb.Optional)}}
 	}
 	panic(fmt.Sprintf("unhandled type: %T", t))
+}
+
+func valueToProto(v Value) *schemapb.Value {
+	switch t := v.(type) {
+	case *StringValue:
+		return &schemapb.Value{Value: &schemapb.Value_StringValue{StringValue: t.ToProto().(*schemapb.StringValue)}}
+	case *IntValue:
+		return &schemapb.Value{Value: &schemapb.Value_IntValue{IntValue: t.ToProto().(*schemapb.IntValue)}}
+	}
+	panic(fmt.Sprintf("unhandled value type: %T", v))
 }

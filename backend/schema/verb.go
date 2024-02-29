@@ -82,7 +82,7 @@ func (v *Verb) ToProto() proto.Message {
 	}
 }
 
-func VerbToSchema(s *schemapb.Verb) *Verb {
+func VerbFromProto(s *schemapb.Verb) *Verb {
 	return &Verb{
 		Pos:      posFromProto(s.Pos),
 		Name:     s.Name,

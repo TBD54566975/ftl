@@ -35,7 +35,7 @@ func (d *Database) ToProto() proto.Message {
 		Comments: d.Comments,
 	}
 }
-func DatabaseToSchema(s *schemapb.Database) *Database {
+func DatabaseFromProto(s *schemapb.Database) *Database {
 	return &Database{
 		Pos:      posFromProto(s.Pos),
 		Name:     s.Name,
@@ -46,7 +46,7 @@ func DatabaseToSchema(s *schemapb.Database) *Database {
 func databaseListToSchema(s []*schemapb.Database) []*Database {
 	var out []*Database
 	for _, n := range s {
-		out = append(out, DatabaseToSchema(n))
+		out = append(out, DatabaseFromProto(n))
 	}
 	return out
 }

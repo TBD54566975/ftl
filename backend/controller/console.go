@@ -62,7 +62,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			case *schema.Verb:
 				//nolint:forcetypeassert
 				v := decl.ToProto().(*schemapb.Verb)
-				verbSchema := schema.VerbToSchema(v) // TODO: include all of the types  that the verb references
+				verbSchema := schema.VerbFromProto(v) // TODO: include all of the types  that the verb references
 				var jsonRequestSchema string
 				if requestData, ok := verbSchema.Request.(*schema.DataRef); ok {
 					jsonSchema, err := schema.DataToJSONSchema(sch, *requestData)
@@ -86,12 +86,12 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				d := decl.ToProto().(*schemapb.Data)
 				data = append(data, &pbconsole.Data{
 					Data:   d,
-					Schema: schema.DataToSchema(d).String(),
+					Schema: schema.DataFromProto(d).String(),
 				})
 
 			case *schema.Bool, *schema.Bytes, *schema.Database, *schema.Float,
 				*schema.Int, *schema.Module, *schema.String, *schema.Time,
-				*schema.Unit, *schema.Any, *schema.TypeParameter:
+				*schema.Unit, *schema.Any, *schema.TypeParameter, *schema.Enum:
 			}
 		}
 

@@ -22,11 +22,13 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 	for _, n := range s {
 		switch n := n.Value.(type) {
 		case *schemapb.Decl_Verb:
-			out = append(out, VerbToSchema(n.Verb))
+			out = append(out, VerbFromProto(n.Verb))
 		case *schemapb.Decl_Data:
-			out = append(out, DataToSchema(n.Data))
+			out = append(out, DataFromProto(n.Data))
 		case *schemapb.Decl_Database:
-			out = append(out, DatabaseToSchema(n.Database))
+			out = append(out, DatabaseFromProto(n.Database))
+		case *schemapb.Decl_Enum:
+			out = append(out, EnumFromProto(n.Enum))
 		}
 	}
 	return out
@@ -62,6 +64,22 @@ func typeToSchema(s *schemapb.Type) Type {
 		return &Any{Pos: posFromProto(s.Any.Pos)}
 	}
 	panic(fmt.Sprintf("unhandled type: %T", s.Value))
+}
+
+func valueToSchema(v *schemapb.Value) Value {
+	switch s := v.Value.(type) {
+	case *schemapb.Value_IntValue:
+		return &IntValue{
+			Pos:   posFromProto(s.IntValue.Pos),
+			Value: int(s.IntValue.Value),
+		}
+	case *schemapb.Value_StringValue:
+		return &StringValue{
+			Pos:   posFromProto(s.StringValue.Pos),
+			Value: s.StringValue.GetValue(),
+		}
+	}
+	panic(fmt.Sprintf("unhandled schema value: %T", v.Value))
 }
 
 func metadataListToSchema(s []*schemapb.Metadata) []Metadata {

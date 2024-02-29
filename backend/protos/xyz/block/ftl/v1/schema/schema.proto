@@ -8,6 +8,12 @@ import "xyz/block/ftl/v1/schema/runtime.proto";
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb";
 option java_multiple_files = true;
 
+message EnumRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
 message SinkRef {
   optional Position pos = 1;
   string name = 2;
@@ -70,7 +76,22 @@ message Decl {
     Data data = 1;
     Verb verb = 2;
     Database database = 3;
+    Enum enum = 4;
   }
+}
+
+message Enum {
+  optional Position pos = 1;
+  repeated string comments = 2;
+  string name = 3;
+  Type type = 4;
+  repeated EnumVariant variants = 5;
+}
+
+message EnumVariant {
+  optional Position pos = 1;
+  string name = 2;
+  Value value = 3;
 }
 
 message Field {
@@ -104,6 +125,11 @@ message IngressPathParameter {
 
 message Int {
   optional Position pos = 1;
+}
+
+message IntValue {
+  optional Position pos = 1;
+  int64 value = 2;
 }
 
 message Map {
@@ -167,6 +193,11 @@ message String {
   optional Position pos = 1;
 }
 
+message StringValue {
+  optional Position pos = 1;
+  string value = 2;
+}
+
 message Time {
   optional Position pos = 1;
 }
@@ -195,6 +226,13 @@ message TypeParameter {
 
 message Unit {
   optional Position pos = 1;
+}
+
+message Value {
+  oneof value {
+    StringValue stringValue = 1;
+    IntValue intValue = 2;
+  }
 }
 
 message Verb {
