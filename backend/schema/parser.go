@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}}
+	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}}
 	nonOptionalTypeUnion = []Type{
 		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
 		&Map{}, &Any{}, &Unit{},
@@ -23,6 +23,7 @@ var (
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataDatabases{}}
 	ingressUnion  = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
+	valueUnion    = []Value{&StringValue{}, &IntValue{}}
 
 	// Used by protobuf generation.
 	unions = map[reflect.Type][]reflect.Type{
@@ -30,6 +31,7 @@ var (
 		reflect.TypeOf((*Metadata)(nil)).Elem():             reflectUnion(metadataUnion...),
 		reflect.TypeOf((*IngressPathComponent)(nil)).Elem(): reflectUnion(ingressUnion...),
 		reflect.TypeOf((*Decl)(nil)).Elem():                 reflectUnion(declUnion...),
+		reflect.TypeOf((*Value)(nil)).Elem():                reflectUnion(valueUnion...),
 	}
 
 	Lexer = lexer.MustSimple([]lexer.SimpleRule{
@@ -52,6 +54,7 @@ var (
 		participle.Union(metadataUnion...),
 		participle.Union(ingressUnion...),
 		participle.Union(declUnion...),
+		participle.Union(valueUnion...),
 	}
 
 	// Parser options for every parser _except_ the type parser.
@@ -105,6 +108,14 @@ type Type interface {
 type Metadata interface {
 	Node
 	schemaMetadata()
+}
+
+// Value represents a value Node in the schema grammar.
+//
+//sumtype:decl
+type Value interface {
+	Node
+	schemaValueType() Type
 }
 
 // Decl represents a type declaration in the schema grammar.

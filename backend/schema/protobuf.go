@@ -24,6 +24,7 @@ func ProtobufSchema() string {
 	generateMessage(reflect.TypeOf(Schema{}), messages)
 	generateMessage(reflect.TypeOf(SourceRef{}), messages)
 	generateMessage(reflect.TypeOf(SinkRef{}), messages)
+	generateMessage(reflect.TypeOf(EnumRef{}), messages)
 	keys := maps.Keys(messages)
 	slices.Sort(keys)
 	w := &strings.Builder{}

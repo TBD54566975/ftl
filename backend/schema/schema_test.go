@@ -44,6 +44,21 @@ module todo {
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       ingress http GET /todo/destroy/{id}
 }
+
+module foo {
+  // A comment
+  enum Color(String) {
+	Red("Red")
+	Blue("Blue")
+	Green("Green")
+  }
+
+  enum ColorInt(Int) {
+	Red(0)
+	Blue(1)
+	Green(2)
+  }
+}
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(testSchema.String()))
 }
@@ -365,6 +380,29 @@ module todo {
 	assert.Equal(t, Normalise(testSchema.Modules[1]), actual, assert.Exclude[Position])
 }
 
+func TestParseEnum(t *testing.T) {
+	input := `
+module foo {
+  // A comment
+  enum Color(String) {
+    Red("Red")
+    Blue("Blue")
+    Green("Green")
+  }
+
+  enum ColorInt(Int) {
+    Red(0)
+    Blue(1)
+    Green(2)
+  }
+}
+`
+	actual, err := ParseModuleString("", input)
+	assert.NoError(t, err)
+	actual = Normalise(actual)
+	assert.Equal(t, Normalise(testSchema.Modules[2]), actual)
+}
+
 var testSchema = MustValidate(&Schema{
 	Modules: []*Module{
 		{
@@ -413,6 +451,30 @@ var testSchema = MustValidate(&Schema{
 								&IngressPathParameter{Name: "id"},
 							},
 						},
+					},
+				},
+			},
+		},
+		{
+			Name: "foo",
+			Decls: []Decl{
+				&Enum{
+					Comments: []string{"A comment"},
+					Name:     "Color",
+					Type:     &String{},
+					Variants: []*EnumVariant{
+						{Name: "Red", Value: &StringValue{Value: "Red"}},
+						{Name: "Blue", Value: &StringValue{Value: "Blue"}},
+						{Name: "Green", Value: &StringValue{Value: "Green"}},
+					},
+				},
+				&Enum{
+					Name: "ColorInt",
+					Type: &Int{},
+					Variants: []*EnumVariant{
+						{Name: "Red", Value: &IntValue{Value: 0}},
+						{Name: "Blue", Value: &IntValue{Value: 1}},
+						{Name: "Green", Value: &IntValue{Value: 2}},
 					},
 				},
 			},

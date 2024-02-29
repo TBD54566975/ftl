@@ -11,7 +11,7 @@ import (
 
 // RefProto is a constraint on the type of proto that can be used in a Ref.
 type RefProto interface {
-	schemapb.VerbRef | schemapb.DataRef | schemapb.SinkRef | schemapb.SourceRef
+	schemapb.VerbRef | schemapb.DataRef | schemapb.SinkRef | schemapb.SourceRef | schemapb.EnumRef
 }
 
 // Ref is an untyped reference to a symbol.
@@ -52,6 +52,9 @@ func (a *AbstractRef[Proto]) ToProto() proto.Message {
 
 	case *schemapb.SourceRef:
 		return any(&schemapb.SourceRef{Pos: posToProto(a.Pos), Module: a.Module, Name: a.Name}).(proto.Message) //nolint:forcetypeassert
+
+	case *schemapb.EnumRef:
+		return any(&schemapb.EnumRef{Pos: posToProto(a.Pos), Module: a.Module, Name: a.Name}).(proto.Message) //nolint:forcetypeassert
 
 	default:
 		panic(fmt.Sprintf("unsupported ref proto type %T", (*Proto)(nil)))

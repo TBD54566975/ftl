@@ -10,6 +10,55 @@ import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { ModuleRuntime, VerbRuntime } from "./runtime_pb.js";
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.EnumRef
+ */
+export class EnumRef extends Message<EnumRef> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string module = 3;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<EnumRef>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.EnumRef";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnumRef {
+    return new EnumRef().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnumRef {
+    return new EnumRef().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnumRef {
+    return new EnumRef().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EnumRef | PlainMessage<EnumRef> | undefined, b: EnumRef | PlainMessage<EnumRef> | undefined): boolean {
+    return proto3.util.equals(EnumRef, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.SinkRef
  */
 export class SinkRef extends Message<SinkRef> {
@@ -506,6 +555,12 @@ export class Decl extends Message<Decl> {
      */
     value: Database;
     case: "database";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Enum enum = 4;
+     */
+    value: Enum;
+    case: "enum";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Decl>) {
@@ -519,6 +574,7 @@ export class Decl extends Message<Decl> {
     { no: 1, name: "data", kind: "message", T: Data, oneof: "value" },
     { no: 2, name: "verb", kind: "message", T: Verb, oneof: "value" },
     { no: 3, name: "database", kind: "message", T: Database, oneof: "value" },
+    { no: 4, name: "enum", kind: "message", T: Enum, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Decl {
@@ -535,6 +591,116 @@ export class Decl extends Message<Decl> {
 
   static equals(a: Decl | PlainMessage<Decl> | undefined, b: Decl | PlainMessage<Decl> | undefined): boolean {
     return proto3.util.equals(Decl, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.Enum
+ */
+export class Enum extends Message<Enum> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type type = 4;
+   */
+  type?: Type;
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.EnumVariant variants = 5;
+   */
+  variants: EnumVariant[] = [];
+
+  constructor(data?: PartialMessage<Enum>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Enum";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "type", kind: "message", T: Type },
+    { no: 5, name: "variants", kind: "message", T: EnumVariant, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Enum {
+    return new Enum().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Enum {
+    return new Enum().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Enum {
+    return new Enum().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Enum | PlainMessage<Enum> | undefined, b: Enum | PlainMessage<Enum> | undefined): boolean {
+    return proto3.util.equals(Enum, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.EnumVariant
+ */
+export class EnumVariant extends Message<EnumVariant> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Value value = 3;
+   */
+  value?: Value;
+
+  constructor(data?: PartialMessage<EnumVariant>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.EnumVariant";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "value", kind: "message", T: Value },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnumVariant {
+    return new EnumVariant().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnumVariant {
+    return new EnumVariant().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnumVariant {
+    return new EnumVariant().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EnumVariant | PlainMessage<EnumVariant> | undefined, b: EnumVariant | PlainMessage<EnumVariant> | undefined): boolean {
+    return proto3.util.equals(EnumVariant, a, b);
   }
 }
 
@@ -806,6 +972,49 @@ export class Int extends Message<Int> {
 
   static equals(a: Int | PlainMessage<Int> | undefined, b: Int | PlainMessage<Int> | undefined): boolean {
     return proto3.util.equals(Int, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.IntValue
+ */
+export class IntValue extends Message<IntValue> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: int64 value = 2;
+   */
+  value = protoInt64.zero;
+
+  constructor(data?: PartialMessage<IntValue>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.IntValue";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "value", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IntValue {
+    return new IntValue().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IntValue {
+    return new IntValue().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IntValue {
+    return new IntValue().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IntValue | PlainMessage<IntValue> | undefined, b: IntValue | PlainMessage<IntValue> | undefined): boolean {
+    return proto3.util.equals(IntValue, a, b);
   }
 }
 
@@ -1296,6 +1505,49 @@ export class String extends Message<String> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.StringValue
+ */
+export class StringValue extends Message<StringValue> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string value = 2;
+   */
+  value = "";
+
+  constructor(data?: PartialMessage<StringValue>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.StringValue";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StringValue {
+    return new StringValue().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StringValue {
+    return new StringValue().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StringValue {
+    return new StringValue().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StringValue | PlainMessage<StringValue> | undefined, b: StringValue | PlainMessage<StringValue> | undefined): boolean {
+    return proto3.util.equals(StringValue, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Time
  */
 export class Time extends Message<Time> {
@@ -1529,6 +1781,56 @@ export class Unit extends Message<Unit> {
 
   static equals(a: Unit | PlainMessage<Unit> | undefined, b: Unit | PlainMessage<Unit> | undefined): boolean {
     return proto3.util.equals(Unit, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.Value
+ */
+export class Value extends Message<Value> {
+  /**
+   * @generated from oneof xyz.block.ftl.v1.schema.Value.value
+   */
+  value: {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.StringValue stringValue = 1;
+     */
+    value: StringValue;
+    case: "stringValue";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.IntValue intValue = 2;
+     */
+    value: IntValue;
+    case: "intValue";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<Value>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Value";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "stringValue", kind: "message", T: StringValue, oneof: "value" },
+    { no: 2, name: "intValue", kind: "message", T: IntValue, oneof: "value" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Value {
+    return new Value().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Value {
+    return new Value().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Value {
+    return new Value().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Value | PlainMessage<Value> | undefined, b: Value | PlainMessage<Value> | undefined): boolean {
+    return proto3.util.equals(Value, a, b);
   }
 }
 

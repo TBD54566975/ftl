@@ -2,13 +2,14 @@ package schema
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
-	"golang.design/x/reflect"
+	xreflect "golang.design/x/reflect"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/internal/errors"
@@ -44,7 +45,7 @@ func MustValidate(schema *Schema) *Schema {
 
 // Validate clones, normalises and semantically valies a schema.
 func Validate(schema *Schema) (*Schema, error) {
-	schema = reflect.DeepCopy(schema)
+	schema = xreflect.DeepCopy(schema)
 	modules := map[string]bool{}
 	merr := []error{}
 	ingress := map[string]*Verb{}
@@ -139,11 +140,25 @@ func Validate(schema *Schema) (*Schema, error) {
 					}
 				}
 
+			case *Enum:
+				switch t := n.Type.(type) {
+				case *String, *Int:
+					for _, v := range n.Variants {
+						if reflect.TypeOf(v.Value.schemaValueType()) != reflect.TypeOf(t) {
+							merr = append(merr, fmt.Errorf("%s: enum variant %q of type %s cannot have a "+
+								"value of type %s", v.Pos, v.Name, t, v.Value.schemaValueType()))
+						}
+					}
+					return next()
+				default:
+					merr = append(merr, fmt.Errorf("%s: enum type must be String or Int, not %s", n.Pos, n.Type))
+				}
+
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
 				*MetadataIngress, *Module, *Optional, *Schema, *String, *Time, Type,
-				*Unit, *Any, *TypeParameter:
+				*Unit, *Any, *TypeParameter, *EnumVariant, Value, *IntValue, *StringValue:
 			}
 			return next()
 		})
@@ -199,6 +214,17 @@ func ValidateModule(module *Module) error {
 				merr = append(merr, fmt.Errorf("%s: reference to unknown verb %q", n.Pos, n))
 			}
 
+		case *EnumRef:
+			if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
+				if _, ok := mdecl.Decl.(*Enum); !ok && n.Module == "" {
+					merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid enum %q", n.Pos, n))
+				} else {
+					n.Module = mdecl.Module.Name
+				}
+			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
+				merr = append(merr, fmt.Errorf("%s: reference to unknown enum %q", n.Pos, n))
+			}
+
 		case *DataRef:
 			if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
 				switch decl := mdecl.Decl.(type) {
@@ -248,9 +274,9 @@ func ValidateModule(module *Module) error {
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, IngressPathComponent,
 			*IngressPathLiteral, *IngressPathParameter, *Optional,
-			*SourceRef, *SinkRef, *Unit, *Any, *TypeParameter:
+			*SourceRef, *SinkRef, *Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
 
-		case Type, Metadata, Decl: // Union types.
+		case Type, Metadata, Decl, Value: // Union types.
 		}
 		return next()
 	})

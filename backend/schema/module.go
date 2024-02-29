@@ -54,6 +54,9 @@ func (m *Module) Scope() Scope {
 		case *Verb:
 			scope[d.Name] = ModuleDecl{m, d}
 
+		case *Enum:
+			scope[d.Name] = ModuleDecl{m, d}
+
 		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time,
 			*Unit, *Any, *TypeParameter:
 		}
@@ -73,6 +76,10 @@ func (m *Module) Resolve(ref Ref) *ModuleDecl {
 				return &ModuleDecl{m, d}
 			}
 		case *Verb:
+			if d.Name == ref.Name {
+				return &ModuleDecl{m, d}
+			}
+		case *Enum:
 			if d.Name == ref.Name {
 				return &ModuleDecl{m, d}
 			}
@@ -152,6 +159,11 @@ func (m *Module) Imports() []string {
 			}
 
 		case *VerbRef:
+			if n.Module != "" && n.Module != m.Name {
+				imports[n.Module] = true
+			}
+
+		case *EnumRef:
 			if n.Module != "" && n.Module != m.Name {
 				imports[n.Module] = true
 			}

@@ -47,6 +47,18 @@ func Normalise[T Node](n T) T {
 		c.TypeParameters = normaliseSlice(c.TypeParameters)
 		c.Pos = zero
 
+	case *Enum:
+		c.Pos = zero
+		c.Type = Normalise(c.Type)
+		c.Variants = normaliseSlice(c.Variants)
+
+	case *EnumRef:
+		c.Pos = zero
+
+	case *EnumVariant:
+		c.Pos = zero
+		c.Value = Normalise(c.Value)
+
 	case *Field:
 		c.Pos = zero
 		c.Type = Normalise(c.Type)
@@ -57,6 +69,9 @@ func Normalise[T Node](n T) T {
 
 	case *Int:
 		c.Int = false
+		c.Pos = zero
+
+	case *IntValue:
 		c.Pos = zero
 
 	case *Time:
@@ -70,6 +85,9 @@ func Normalise[T Node](n T) T {
 
 	case *String:
 		c.Str = false
+		c.Pos = zero
+
+	case *StringValue:
 		c.Pos = zero
 
 	case *Bytes:
@@ -112,7 +130,7 @@ func Normalise[T Node](n T) T {
 	case *SinkRef:
 		c.Pos = zero
 
-	case Decl, Metadata, IngressPathComponent, Type: // Can never occur in reality, but here to satisfy the sum-type check.
+	case Decl, Metadata, IngressPathComponent, Type, Value: // Can never occur in reality, but here to satisfy the sum-type check.
 		panic("??")
 	}
 	return ni.(T) //nolint:forcetypeassert

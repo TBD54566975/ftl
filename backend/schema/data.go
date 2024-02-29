@@ -104,7 +104,8 @@ func (d *Data) Monomorphise(ref *DataRef) (*Data, error) {
 		case *Any, *Bool, *Bytes, *Data, *DataRef, *Database, Decl, *Float,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Int,
 			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress, *Module,
-			*Schema, *String, *Time, Type, *TypeParameter, *Unit, *Verb:
+			*Schema, *String, *Time, Type, *TypeParameter, *Unit, *Verb, *Enum, *EnumVariant,
+			Value, *IntValue, *StringValue:
 		}
 		return next()
 	})
@@ -163,7 +164,7 @@ func (d *Data) ToProto() proto.Message {
 	}
 }
 
-func DataToSchema(s *schemapb.Data) *Data {
+func DataFromProto(s *schemapb.Data) *Data {
 	return &Data{
 		Pos:            posFromProto(s.Pos),
 		Name:           s.Name,
