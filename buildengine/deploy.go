@@ -85,14 +85,12 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 	}
 
 	if waitForDeployOnline {
-		logger.Infof("Waiting for deployment %s to become ready", resp.Msg.DeploymentName)
+		logger.Debugf("Waiting for deployment %s to become ready", resp.Msg.DeploymentName)
 		err = checkReadiness(ctx, client, resp.Msg.DeploymentName, replicas)
 		if err != nil {
 			return err
 		}
 	}
-
-	logger.Infof("Successfully created deployment %s", resp.Msg.DeploymentName)
 
 	return nil
 }
