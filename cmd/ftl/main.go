@@ -20,7 +20,6 @@ import (
 
 type CLI struct {
 	Version   kong.VersionFlag `help:"Show version."`
-	Config    kong.ConfigFlag  `help:"Load configuration from TOML file." placeholder:"FILE"`
 	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 	Endpoint  *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 
@@ -38,6 +37,8 @@ type CLI struct {
 	Build    buildCmd    `cmd:"" help:"Build an FTL module."`
 	Deploy   deployCmd   `cmd:"" help:"Create a new deployment."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
+	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
+	Config   configCmd   `cmd:"" help:"Manage configuration."`
 }
 
 var cli CLI
@@ -46,6 +47,8 @@ func main() {
 	kctx := kong.Parse(&cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
 		kong.Configuration(kongtoml.Loader, ".ftl.toml", "~/.ftl.toml"),
+		kong.ShortUsageOnError(),
+		kong.HelpOptions{Compact: true, WrapUpperBound: 80},
 		kong.AutoGroup(func(parent kong.Visitable, flag *kong.Flag) *kong.Group {
 			node, ok := parent.(*kong.Command)
 			if !ok {

@@ -1,0 +1,5 @@
+[global]
+[global.configuration]
+baz = "envar://baz"
+foo = "inline://ImJhciI"
+keychain = "keychain://keychain"
