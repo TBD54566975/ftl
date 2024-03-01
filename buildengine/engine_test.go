@@ -52,11 +52,6 @@ func TestEngine(t *testing.T) {
 	graph, err := engine.Graph()
 	assert.NoError(t, err)
 	assert.Equal(t, expected, graph)
-	var callbackModule string
-	err = engine.Build(ctx, func(ctx context.Context, module buildengine.Module) error {
-		callbackModule = module.Module
-		return nil
-	}, "alpha")
+	err = engine.Build(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, "alpha", callbackModule)
 }

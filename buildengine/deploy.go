@@ -25,6 +25,7 @@ type deploymentArtefact struct {
 	localPath string
 }
 
+// Deploy a module to the FTL controller with the given number of replicas. Optionally wait for the deployment to become ready.
 func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnline bool, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx).Scope(module.Module)
 	ctx = log.ContextWithLogger(ctx, logger)

@@ -18,5 +18,5 @@ func (b *buildCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return engine.Build(ctx, nil)
+	return engine.Build(ctx)
 }

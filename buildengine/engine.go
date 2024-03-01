@@ -149,11 +149,30 @@ func (e *Engine) Import(ctx context.Context, schema *schema.Module) {
 	e.controllerSchema.Store(schema.Name, schema)
 }
 
-type BuildCallback func(ctx context.Context, module Module) error
-
 // Build attempts to build the specified modules, or all local modules if none are provided.
-// The callback is invoked for each module after it is built.
-func (e *Engine) Build(ctx context.Context, callback BuildCallback, modules ...string) error {
+func (e *Engine) Build(ctx context.Context, modules ...string) error {
+	return e.buildWithCallback(ctx, nil, modules...)
+}
+
+// Deploy attempts to build and deploy the specified modules, or all local modules if none are provided.
+func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
+	if len(modules) == 0 {
+		modules = maps.Keys(e.modules)
+	}
+
+	expectedBuilds := make(map[string]struct{}, len(modules))
+	for _, name := range modules {
+		expectedBuilds[name] = struct{}{}
+	}
+
+	return e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
+		return Deploy(ctx, module, replicas, waitForDeployOnline, e.client)
+	}, modules...)
+}
+
+type buildCallback func(ctx context.Context, module Module) error
+
+func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, modules ...string) error {
 	mustBuild := map[string]bool{}
 	if len(modules) == 0 {
 		modules = maps.Keys(e.modules)
@@ -209,22 +228,6 @@ func (e *Engine) Build(ctx context.Context, callback BuildCallback, modules ...s
 		}
 	}
 	return nil
-}
-
-// Deploy attempts to build and deploy the specified modules, or all local modules if none are provided.
-func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
-	if len(modules) == 0 {
-		modules = maps.Keys(e.modules)
-	}
-
-	expectedBuilds := make(map[string]struct{}, len(modules))
-	for _, name := range modules {
-		expectedBuilds[name] = struct{}{}
-	}
-
-	return e.Build(ctx, func(ctx context.Context, module Module) error {
-		return Deploy(ctx, module, replicas, waitForDeployOnline, e.client)
-	}, modules...)
 }
 
 // Publish either the schema from the FTL controller, or from a local build.
