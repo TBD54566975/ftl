@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/buildengine"
@@ -19,7 +21,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
-	"github.com/TBD54566975/scaffolder"
 )
 
 type initCmd struct {
