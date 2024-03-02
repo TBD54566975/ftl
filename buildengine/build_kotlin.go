@@ -40,7 +40,7 @@ func (e externalModuleContext) ExternalModules() []*schema.Module {
 
 func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
 	logger := log.FromContext(ctx)
-	if err := SetPOMProperties(ctx, filepath.Join(module.Dir, "..")); err != nil {
+	if err := SetPOMProperties(ctx, module.Dir); err != nil {
 		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Dir, err)
 	}
 
@@ -61,18 +61,13 @@ func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
 	return nil
 }
 
-// SetPOMProperties updates the ftl.version and ftlEndpoint properties in the
+// SetPOMProperties updates the ftl.version properties in the
 // pom.xml file in the given base directory.
 func SetPOMProperties(ctx context.Context, baseDir string) error {
 	logger := log.FromContext(ctx)
 	ftlVersion := ftl.Version
 	if ftlVersion == "dev" {
 		ftlVersion = "1.0-SNAPSHOT"
-	}
-
-	ftlEndpoint := os.Getenv("FTL_ENDPOINT")
-	if ftlEndpoint == "" {
-		ftlEndpoint = "http://127.0.0.1:8892"
 	}
 
 	pomFile := filepath.Clean(filepath.Join(baseDir, "pom.xml"))
@@ -93,13 +88,6 @@ func SetPOMProperties(ctx context.Context, baseDir string) error {
 		return fmt.Errorf("unable to find <properties>/<ftl.version> in %s", pomFile)
 	}
 	version.SetText(ftlVersion)
-
-	endpoint := properties.SelectElement("ftlEndpoint")
-	if endpoint == nil {
-		logger.Warnf("unable to find <properties>/<ftlEndpoint> in %s", pomFile)
-	} else {
-		endpoint.SetText(ftlEndpoint)
-	}
 
 	return tree.WriteToFile(pomFile)
 }
