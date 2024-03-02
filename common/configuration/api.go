@@ -1,4 +1,17 @@
-// Package configuration is a generic configuration and secret management API.
+// Package configuration is the FTL configuration and secret management API.
+//
+// The full design is documented [here].
+//
+// A [Manager] is the high-level interface to storing, listing, and retrieving
+// secrets and configuration. A [Resolver] is the next layer, mapping
+// names to a storage location key such as environment variables, keychain, etc.
+// The [Provider] is the final layer, responsible for actually storing and
+// retrieving values in concrete storage.
+//
+// A constructed [Manager] and its providers are parametric on either secrets or
+// configuration and thus cannot be used interchangeably.
+//
+// [here]: https://hackmd.io/@ftl/S1e6YVEuq6
 package configuration
 
 import (
@@ -70,14 +83,14 @@ type Resolver interface {
 }
 
 // Provider is a generic interface for storing and retrieving configuration and secrets.
-type Provider interface {
-	Key() string
+type Provider[R Role] interface {
+	Key() R
 	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
 }
 
 // A MutableProvider is a Provider that can update configuration.
-type MutableProvider interface {
-	Provider
+type MutableProvider[R Role] interface {
+	Provider[R]
 	// Writer returns true if this provider should be used to store configuration.
 	//
 	// Only one provider should return true.

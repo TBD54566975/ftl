@@ -19,18 +19,18 @@ import (
 
 const schemaURL = semconv.SchemaURL
 
-type exportOTELFlag bool
+type ExportOTELFlag bool
 
-// Default behaviour of Kong is to use strconv.ParseBool, but we want to be less strict.
-func (e *exportOTELFlag) UnmarshalText(text []byte) error {
+func (e *ExportOTELFlag) UnmarshalText(text []byte) error {
+	// Default behaviour of Kong is to use strconv.ParseBool, but we want to be less strict.
 	v := strings.ToLower(string(text))
-	*e = exportOTELFlag(!(v == "false" || v == "0" || v == "no" || v == ""))
+	*e = ExportOTELFlag(!(v == "false" || v == "0" || v == "no" || v == ""))
 	return nil
 }
 
 type Config struct {
 	LogLevel   log.Level      `default:"error" help:"OTEL log level." env:"FTL_O11Y_LOG_LEVEL"`
-	ExportOTEL exportOTELFlag `help:"Export observability data to OTEL." env:"OTEL_EXPORTER_OTLP_ENDPOINT"`
+	ExportOTEL ExportOTELFlag `help:"Export observability data to OTEL." env:"OTEL_EXPORTER_OTLP_ENDPOINT"`
 }
 
 func Init(ctx context.Context, serviceName, serviceVersion string, config Config) error {

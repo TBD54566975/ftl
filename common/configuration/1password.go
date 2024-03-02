@@ -17,9 +17,9 @@ type OnePasswordProvider struct {
 	OnePassword bool `name:"op" help:"Write 1Password secret references - does not write to 1Password." group:"Provider:" xor:"configwriter"`
 }
 
-var _ MutableProvider = OnePasswordProvider{}
+var _ MutableProvider[Secrets] = OnePasswordProvider{}
 
-func (o OnePasswordProvider) Key() string                               { return "op" }
+func (o OnePasswordProvider) Key() Secrets                              { return "op" }
 func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return nil }
 
 func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {

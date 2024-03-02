@@ -111,6 +111,7 @@ kotlin-runtime/external-module-template.zip: kotlin-runtime/external-module-temp
   -clean
 
 %{KT_RUNTIME_OUT}: %{KT_RUNTIME_IN} %{PROTO_IN}
+  # TODO: Figure out how to make Maven build completely offline. Bizarrely "-o" does not do this.
   build:
     mvn -B -N install
     mvn -B -pl :ftl-runtime install

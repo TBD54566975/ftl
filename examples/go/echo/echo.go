@@ -12,6 +12,8 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
+var defaultName = ftl.Config[string]("default")
+
 // An echo request.
 type EchoRequest struct {
 	Name ftl.Option[string] `json:"name"`
@@ -30,5 +32,5 @@ func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	if err != nil {
 		return EchoResponse{}, err
 	}
-	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default("anonymous"), tresp.Time)}, nil
+	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default(defaultName.Get(ctx)), tresp.Time)}, nil
 }

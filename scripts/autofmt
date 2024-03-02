@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Run go mod tidy on all modules
-find . -name 'go.mod' ! -path '*/.ftl/*' ! -path '*/scaffolding/*' -print0 | xargs -0 dirname | while read -r dir; do (echo "Tidying Go module in '$dir'..."; cd "$dir" && go mod tidy); done
+find . -name 'go.mod' ! -path '*/_*/*' ! -path '*/.ftl/*' ! -path '*/scaffolding/*' -print0 | xargs -0 dirname | while read -r dir; do (echo "Tidying Go module in '$dir'..."; cd "$dir" && go mod tidy); done
 
 echo "Formatting Go..."
 # shellcheck disable=SC2207

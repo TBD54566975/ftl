@@ -8,17 +8,17 @@ import (
 )
 
 // InlineProvider is a configuration provider that stores configuration in its key.
-type InlineProvider struct {
+type InlineProvider[R Role] struct {
 	Inline bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"configwriter"`
 }
 
-var _ MutableProvider = InlineProvider{}
+var _ MutableProvider[Configuration] = InlineProvider[Configuration]{}
 
-func (InlineProvider) Key() string { return "inline" }
+func (InlineProvider[R]) Key() R { return "inline" }
 
-func (i InlineProvider) Writer() bool { return i.Inline }
+func (i InlineProvider[R]) Writer() bool { return i.Inline }
 
-func (InlineProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (InlineProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	data, err := base64.RawStdEncoding.DecodeString(key.Host)
 	if err != nil {
 		return nil, fmt.Errorf("invalid base64 data in inline configuration: %w", err)
@@ -26,11 +26,11 @@ func (InlineProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, 
 	return data, nil
 }
 
-func (InlineProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (InlineProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
 	b64 := base64.RawStdEncoding.EncodeToString(value)
 	return &url.URL{Scheme: "inline", Host: b64}, nil
 }
 
-func (InlineProvider) Delete(ctx context.Context, ref Ref) error {
+func (InlineProvider[R]) Delete(ctx context.Context, ref Ref) error {
 	return nil
 }

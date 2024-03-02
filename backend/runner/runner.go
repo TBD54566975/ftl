@@ -27,6 +27,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -218,6 +219,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars(
 			"FTL_ENDPOINT="+s.config.ControllerEndpoint.String(),
+			"FTL_CONFIG="+filepath.Join(internal.GitRoot(""), "ftl-project.toml"),
 			"FTL_OBSERVABILITY_ENDPOINT="+s.config.ControllerEndpoint.String(),
 		),
 	)

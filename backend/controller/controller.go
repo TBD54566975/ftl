@@ -51,6 +51,7 @@ import (
 
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
+	NoConsole                    bool                `help:"Disable the console."`
 	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
 	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
 	AllowOrigins                 []*url.URL          `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
@@ -78,9 +79,18 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL controller")
 
-	c, err := frontend.Server(ctx, config.ContentTime, config.ConsoleURL)
-	if err != nil {
-		return err
+	var consoleHandler http.Handler
+	var err error
+	if config.NoConsole {
+		consoleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotImplemented)
+			_, _ = w.Write([]byte("Console not installed."))
+		})
+	} else {
+		consoleHandler, err = frontend.Server(ctx, config.ContentTime, config.ConsoleURL)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Bring up the DB connection and DAL.
@@ -111,7 +121,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
 		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 		rpc.HTTP("/ingress/", ingressHandler),
-		rpc.HTTP("/", c),
+		rpc.HTTP("/", consoleHandler),
 	)
 }
 
@@ -845,7 +855,6 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 	}
 	wg, ctx := concurrency.New(ctx, concurrency.WithConcurrencyLimit(4))
 	for _, reconcile := range reconciliation {
-		reconcile := reconcile
 		deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
 		deploymentLogger.Debugf("Reconciling %s", reconcile.Deployment)
 		deployment := model.Deployment{
@@ -860,7 +869,10 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 				if err := s.deploy(ctx, deployment); err != nil {
 					deploymentLogger.Debugf("Failed to increase deployment replicas: %s", err)
 				} else {
-					deploymentLogger.Debugf("Reconciled %s", reconcile.Deployment)
+					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas+1, reconcile.RequiredReplicas)
+					if reconcile.AssignedReplicas+1 == reconcile.RequiredReplicas {
+						deploymentLogger.Infof("Deployed %s", reconcile.Deployment)
+					}
 				}
 				return nil
 			})
@@ -871,7 +883,10 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 				if err != nil {
 					deploymentLogger.Warnf("Failed to terminate runner: %s", err)
 				} else if ok {
-					deploymentLogger.Debugf("Reconciled %s", reconcile.Deployment)
+					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas-1, reconcile.RequiredReplicas)
+					if reconcile.AssignedReplicas-1 == reconcile.RequiredReplicas {
+						deploymentLogger.Infof("Stopped %s", reconcile.Deployment)
+					}
 				} else {
 					deploymentLogger.Warnf("Failed to terminate runner: no runners found")
 				}

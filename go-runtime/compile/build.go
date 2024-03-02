@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
+	stdreflect "reflect"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
+	"golang.design/x/reflect"
 	"golang.org/x/mod/modfile"
 	"google.golang.org/protobuf/proto"
 
@@ -25,9 +27,10 @@ import (
 type externalModuleContext struct {
 	ModuleDir string
 	*schema.Schema
-	GoVersion  string
-	FTLVersion string
-	Main       string
+	GoVersion    string
+	FTLVersion   string
+	Main         string
+	Replacements []*modfile.Replace
 }
 
 type goVerb struct {
@@ -35,10 +38,11 @@ type goVerb struct {
 }
 
 type mainModuleContext struct {
-	GoVersion  string
-	FTLVersion string
-	Name       string
-	Verbs      []goVerb
+	GoVersion    string
+	FTLVersion   string
+	Name         string
+	Verbs        []goVerb
+	Replacements []*modfile.Replace
 }
 
 func (b externalModuleContext) NonMainModules() []*schema.Module {
@@ -56,7 +60,7 @@ const buildDirName = "_ftl"
 
 // Build the given module.
 func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
-	goModVersion, err := updateGoModule(filepath.Join(moduleDir, "go.mod"))
+	replacements, goModVersion, err := updateGoModule(filepath.Join(moduleDir, "go.mod"))
 	if err != nil {
 		return err
 	}
@@ -81,11 +85,12 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 
 	logger.Debugf("Generating external modules")
 	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), moduleDir, externalModuleContext{
-		ModuleDir:  moduleDir,
-		GoVersion:  goModVersion,
-		FTLVersion: ftlVersion,
-		Schema:     sch,
-		Main:       config.Module,
+		ModuleDir:    moduleDir,
+		GoVersion:    goModVersion,
+		FTLVersion:   ftlVersion,
+		Schema:       sch,
+		Main:         config.Module,
+		Replacements: replacements,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -121,10 +126,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		}
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
-		GoVersion:  goModVersion,
-		FTLVersion: ftlVersion,
-		Name:       main.Name,
-		Verbs:      goVerbs,
+		GoVersion:    goModVersion,
+		FTLVersion:   ftlVersion,
+		Name:         main.Name,
+		Verbs:        goVerbs,
+		Replacements: replacements,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -138,6 +144,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
+func online() bool {
+	_, err := net.LookupHost("proxy.golang.org")
+	return err == nil
+}
+
 var scaffoldFuncs = scaffolder.FuncMap{
 	"comment": func(s []string) string {
 		if len(s) == 0 {
@@ -147,7 +158,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"type": genType,
 	"is": func(kind string, t schema.Node) bool {
-		return reflect.Indirect(reflect.ValueOf(t)).Type().Name() == kind
+		return stdreflect.Indirect(stdreflect.ValueOf(t)).Type().Name() == kind
 	},
 	"imports": func(m *schema.Module) map[string]string {
 		imports := map[string]string{}
@@ -242,38 +253,53 @@ func genType(module *schema.Module, t schema.Type) string {
 	panic(fmt.Sprintf("unsupported type %T", t))
 }
 
-// Update go.mod file to include the FTL version.
-func updateGoModule(goModPath string) (string, error) {
+// Update go.mod file to include the FTL version and return the Go version and any replace directives.
+func updateGoModule(goModPath string) (replacements []*modfile.Replace, goVersion string, err error) {
 	goModBytes, err := os.ReadFile(goModPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read %s: %w", goModPath, err)
+		return nil, "", fmt.Errorf("failed to read %s: %w", goModPath, err)
 	}
 	goModFile, err := modfile.Parse(goModPath, goModBytes, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
+		return nil, "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
 	}
+
+	// Propagate any replace directives.
+	replacements = reflect.DeepCopy(goModFile.Replace)
+	for i, r := range replacements {
+		if strings.HasPrefix(r.New.Path, ".") {
+			abs, err := filepath.Abs(filepath.Join(filepath.Dir(goModPath), r.New.Path))
+			if err != nil {
+				return nil, "", err
+			}
+			replacements[i].New.Path = abs
+		}
+	}
+
+	// Early return if we're not updating anything.
 	if !ftl.IsRelease(ftl.Version) || !shouldUpdateVersion(goModFile) {
-		return goModFile.Go.Version, nil
+		return replacements, goModFile.Go.Version, nil
 	}
+
 	if err := goModFile.AddRequire("github.com/TBD54566975/ftl", "v"+ftl.Version); err != nil {
-		return "", fmt.Errorf("failed to add github.com/TBD54566975/ftl to %s: %w", goModPath, err)
+		return nil, "", fmt.Errorf("failed to add github.com/TBD54566975/ftl to %s: %w", goModPath, err)
 	}
 
 	// Atomically write the updated go.mod file.
 	tmpFile, err := os.CreateTemp(filepath.Dir(goModPath), ".go.mod-")
 	if err != nil {
-		return "", fmt.Errorf("update %s: %w", goModPath, err)
+		return nil, "", fmt.Errorf("update %s: %w", goModPath, err)
 	}
 	defer os.Remove(tmpFile.Name()) // Delete the temp file if we error.
 	defer tmpFile.Close()
 	goModBytes = modfile.Format(goModFile.Syntax)
 	if _, err := tmpFile.Write(goModBytes); err != nil {
-		return "", fmt.Errorf("update %s: %w", goModPath, err)
+		return nil, "", fmt.Errorf("update %s: %w", goModPath, err)
 	}
 	if err := os.Rename(tmpFile.Name(), goModPath); err != nil {
-		return "", fmt.Errorf("update %s: %w", goModPath, err)
+		return nil, "", fmt.Errorf("update %s: %w", goModPath, err)
 	}
-	return goModFile.Go.Version, nil
+	return replacements, goModFile.Go.Version, nil
 }
 
 func shouldUpdateVersion(goModfile *modfile.File) bool {

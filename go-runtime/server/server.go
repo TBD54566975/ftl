@@ -10,9 +10,10 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
-	sdkgo "github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -22,6 +23,8 @@ import (
 type UserVerbConfig struct {
 	FTLEndpoint         *url.URL             `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
+
+	Config string `help:"Load project configuration file." placeholder:"FILE" type:"existingfile" env:"FTL_CONFIG"`
 }
 
 // NewUserVerbServer starts a new code-generated drive for user Verbs.
@@ -30,26 +33,39 @@ type UserVerbConfig struct {
 func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
+		// Add config manager to context.
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
-
-		err := observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
+		cm, err := cf.NewConfigurationManager(ctx, uc.Config)
 		if err != nil {
 			return nil, nil, err
 		}
-		hmap := maps.FromSlice(handlers, func(h Handler) (sdkgo.VerbRef, Handler) { return h.ref, h })
+		ctx = cf.ContextWithConfig(ctx, cm)
+
+		// Add secrets manager to context.
+		sm, err := cf.NewSecretsManager(ctx, uc.Config)
+		if err != nil {
+			return nil, nil, err
+		}
+		ctx = cf.ContextWithSecrets(ctx, sm)
+
+		err = observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
+		if err != nil {
+			return nil, nil, err
+		}
+		hmap := maps.FromSlice(handlers, func(h Handler) (ftl.VerbRef, Handler) { return h.ref, h })
 		return ctx, &moduleServer{handlers: hmap}, nil
 	}
 }
 
 // Handler for a Verb.
 type Handler struct {
-	ref sdkgo.VerbRef
+	ref ftl.VerbRef
 	fn  func(ctx context.Context, req []byte) ([]byte, error)
 }
 
 // Handle creates a Handler from a Verb.
 func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
-	ref := sdkgo.VerbToRef(verb)
+	ref := ftl.VerbToRef(verb)
 	return Handler{
 		ref: ref,
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
@@ -80,7 +96,7 @@ var _ ftlv1connect.VerbServiceHandler = (*moduleServer)(nil)
 
 // This is the server that is compiled into the same binary as user-defined Verbs.
 type moduleServer struct {
-	handlers map[sdkgo.VerbRef]Handler
+	handlers map[ftl.VerbRef]Handler
 }
 
 func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (response *connect.Response[ftlv1.CallResponse], err error) {
@@ -102,7 +118,7 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 			}}})
 		}
 	}()
-	handler, ok := m.handlers[sdkgo.VerbRefFromProto(req.Msg.Verb)]
+	handler, ok := m.handlers[ftl.VerbRefFromProto(req.Msg.Verb)]
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %q not found", req.Msg.Verb))
 	}

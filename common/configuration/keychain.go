@@ -14,9 +14,9 @@ type KeychainProvider struct {
 	Keychain bool `help:"Write to the system keychain." group:"Provider:" xor:"configwriter"`
 }
 
-var _ MutableProvider = KeychainProvider{}
+var _ MutableProvider[Secrets] = KeychainProvider{}
 
-func (k KeychainProvider) Key() string { return "keychain" }
+func (k KeychainProvider) Key() Secrets { return "keychain" }
 
 func (k KeychainProvider) Writer() bool { return k.Keychain }
 

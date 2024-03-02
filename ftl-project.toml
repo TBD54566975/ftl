@@ -1,0 +1,6 @@
+[global]
+
+[modules]
+  [modules.echo]
+    [modules.echo.configuration]
+      default = "inline://ImFub255bW91cyI"
