@@ -1,22 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns="http://maven.apache.org/POM/4.0.0"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>{{ .GroupID }}</groupId>
-    <artifactId>{{ .ArtifactID }}</artifactId>
+    <groupId>ftl</groupId>
+    <artifactId>echo</artifactId>
     <version>1.0-SNAPSHOT</version>
-
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>ftl-module-{{ .Name | camel | lower }}</module>
-    </modules>
 
     <properties>
         <ftl.version>1.0-SNAPSHOT</ftl.version>
-        <ftlEndpoint>http://127.0.0.1:8892</ftlEndpoint>
         <java.version>1.8</java.version>
         <kotlin.version>1.9.22</kotlin.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
@@ -170,5 +161,25 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <groupId>org.jetbrains.kotlin</groupId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+            </plugin>
+            <!-- Add generated sources to the classpath -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+            </plugin>
+            <!-- Extract schema -->
+            <plugin>
+                <groupId>com.github.ozsie</groupId>
+                <artifactId>detekt-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 </project>

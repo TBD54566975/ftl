@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
-	"github.com/beevik/etree"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
@@ -72,52 +71,16 @@ func (i initKotlinCmd) Run(ctx context.Context, parent *initCmd) error {
 		return fmt.Errorf("module name %q is invalid", i.Name)
 	}
 
-	if _, err := os.Stat(filepath.Join(i.Dir, "ftl-module-"+i.Name)); err == nil {
+	moduleDir := filepath.Join(i.Dir, i.Name)
+	if _, err := os.Stat(moduleDir); err == nil {
 		return fmt.Errorf("module directory %s already exists", filepath.Join(i.Dir, i.Name))
 	}
 
-	options := []scaffolder.Option{}
-
-	// Update root POM if it already exists.
-	pomFile := filepath.Join(i.Dir, "pom.xml")
-	if _, err := os.Stat(pomFile); err == nil {
-		options = append(options, scaffolder.Exclude("^pom.xml$"))
-		if err := updatePom(pomFile, i.Name); err != nil {
-			return err
-		}
-	}
-
-	if err := scaffold(parent.Hermit, kotlinruntime.Files(), i.Dir, i, options...); err != nil {
+	if err := scaffold(parent.Hermit, kotlinruntime.Files(), i.Dir, i); err != nil {
 		return err
 	}
 
-	return buildengine.SetPOMProperties(ctx, i.Dir)
-}
-
-func updatePom(pomFile, name string) error {
-	tree := etree.NewDocument()
-	err := tree.ReadFromFile(pomFile)
-	if err != nil {
-		return err
-	}
-
-	// Add new module entry to root of XML file
-	root := tree.Root()
-	modules := root.SelectElement("modules")
-	if modules == nil {
-		modules = root.CreateElement("modules")
-	}
-	modules.CreateText("    ")
-	module := modules.CreateElement("module")
-	module.SetText("ftl-module-" + name)
-	modules.CreateText("\n    ")
-
-	// Write updated XML file back to disk
-	err = tree.WriteToFile(pomFile)
-	if err != nil {
-		return err
-	}
-	return nil
+	return buildengine.SetPOMProperties(ctx, moduleDir)
 }
 
 func unzipToTmpDir(reader *zip.Reader) (string, error) {

@@ -301,19 +301,20 @@ func getRuntimeData(moduleName string, modulesDir string, runtime string) runtim
 		panic(err)
 	}
 	ftlRoot := filepath.Join(cwd, "..")
+	modulesDir = filepath.Join(modulesDir, runtime)
+	os.MkdirAll(modulesDir, os.ModePerm)
 
 	t := runtimeData{
 		testSuffix: strcase.ToUpperCamel(runtime),
 		moduleName: moduleName,
+		moduleRoot: filepath.Join(modulesDir, moduleName),
 	}
 	switch runtime {
 	case "go":
-		t.moduleRoot = filepath.Join(modulesDir, t.moduleName)
 		t.modulePath = t.moduleRoot
 		// include replace flag to use local ftl in go.mod
 		t.initOpts = []string{"init", runtime, modulesDir, t.moduleName, "--replace", fmt.Sprintf("github.com/TBD54566975/ftl=%s", ftlRoot)}
 	case "kotlin":
-		t.moduleRoot = filepath.Join(modulesDir, fmt.Sprintf("ftl-module-%s", t.moduleName))
 		t.modulePath = filepath.Join(t.moduleRoot, "src/main/kotlin/ftl", t.moduleName)
 		t.initOpts = []string{"init", runtime, modulesDir, t.moduleName}
 	default:
