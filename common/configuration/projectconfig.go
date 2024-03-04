@@ -125,13 +125,19 @@ func (p ProjectConfigResolver[R]) getMapping(ctx context.Context, module optiona
 		}
 	}
 
+	var mapping map[string]*pc.URL
 	if m, ok := module.Get(); ok {
 		if config.Modules == nil {
 			return map[string]*pc.URL{}, nil
 		}
-		return get(config.Modules[m]), nil
+		mapping = get(config.Modules[m])
+	} else {
+		mapping = get(config.Global)
 	}
-	return get(config.Global), nil
+	if mapping == nil {
+		return map[string]*pc.URL{}, nil
+	}
+	return mapping, nil
 }
 
 func (p ProjectConfigResolver[R]) setMapping(ctx context.Context, module optional.Option[string], mapping map[string]*pc.URL) error {
