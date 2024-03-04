@@ -33,7 +33,6 @@ require (
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/otiai10/copy v1.14.0
 	github.com/puzpuzpuz/xsync v1.5.2
-	github.com/puzpuzpuz/xsync/v3 v3.1.0
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.10.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
