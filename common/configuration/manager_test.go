@@ -23,26 +23,53 @@ func TestManager(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	cf, err := New(ctx,
-		ProjectConfigResolver[FromConfig]{Config: config},
-		[]Provider{
-			EnvarProvider[EnvarTypeConfig]{},
-			InlineProvider{Inline: true}, // Writer
-			KeychainProvider{},
+
+	t.Run("Secrets", func(t *testing.T) {
+		kcp := KeychainProvider{Keychain: true}
+		_, err := kcp.Store(ctx, Ref{Name: "mutable"}, []byte("hello"))
+		assert.NoError(t, err)
+		cf, err := New(ctx,
+			ProjectConfigResolver[Secrets]{Config: config},
+			[]Provider[Secrets]{
+				EnvarProvider[Secrets]{},
+				InlineProvider[Secrets]{},
+				kcp,
+			})
+		assert.NoError(t, err)
+		testManager(t, ctx, cf, "FTL_SECRET_YmF6", []Entry{
+			{Ref: Ref{Name: "baz"}, Accessor: URL("envar://baz")},
+			{Ref: Ref{Name: "foo"}, Accessor: URL("inline://ImJhciI")},
+			{Ref: Ref{Name: "mutable"}, Accessor: URL("keychain://mutable")},
 		})
+	})
+	t.Run("Configuration", func(t *testing.T) {
+		cf, err := New(ctx,
+			ProjectConfigResolver[Configuration]{Config: config},
+			[]Provider[Configuration]{
+				EnvarProvider[Configuration]{},
+				InlineProvider[Configuration]{Inline: true}, // Writer
+			})
+		assert.NoError(t, err)
+		testManager(t, ctx, cf, "FTL_CONFIG_YmF6", []Entry{
+			{Ref: Ref{Name: "baz"}, Accessor: URL("envar://baz")},
+			{Ref: Ref{Name: "foo"}, Accessor: URL("inline://ImJhciI")},
+			{Ref: Ref{Name: "mutable"}, Accessor: URL("inline://ImhlbGxvIg")},
+		})
+	})
+}
+
+// nolint
+func testManager[R Role](
+	t *testing.T,
+	ctx context.Context,
+	cf *Manager[R],
+	envarName string,
+	expectedListing []Entry,
+) {
+	actualListing, err := cf.List(ctx)
 	assert.NoError(t, err)
 
-	actual, err := cf.List(ctx)
-	assert.NoError(t, err)
-
-	expected := []Entry{
-		{Ref: Ref{Name: "baz"}, Accessor: URL("envar://baz")},
-		{Ref: Ref{Name: "foo"}, Accessor: URL("inline://ImJhciI")},
-		{Ref: Ref{Name: "keychain"}, Accessor: URL("keychain://keychain")},
-	}
-
-	assert.Equal(t, expected, actual)
-
+	assert.Equal(t, expectedListing, actualListing)
 	// Try to get value from missing envar
 	var bazValue map[string]string
 
@@ -50,7 +77,7 @@ func TestManager(t *testing.T) {
 	assert.IsError(t, err, ErrNotFound)
 
 	// Set the envar and try again.
-	t.Setenv("FTL_CONFIG_YmF6", "eyJiYXoiOiJ3YXoifQ") // baz={"baz": "waz"}
+	t.Setenv(envarName, "eyJiYXoiOiJ3YXoifQ") // baz={"baz": "waz"}
 
 	err = cf.Get(ctx, Ref{Name: "baz"}, &bazValue)
 	assert.NoError(t, err)
@@ -65,12 +92,16 @@ func TestManager(t *testing.T) {
 	assert.IsError(t, err, ErrNotFound)
 
 	// Change value.
-	err = cf.Set(ctx, Ref{Name: "foo"}, "hello")
+	err = cf.Set(ctx, Ref{Name: "mutable"}, "hello")
 	assert.NoError(t, err)
 
-	err = cf.Get(ctx, Ref{Name: "foo"}, &fooValue)
+	err = cf.Get(ctx, Ref{Name: "mutable"}, &fooValue)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", fooValue)
+
+	actualListing, err = cf.List(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedListing, actualListing)
 
 	// Delete value
 	err = cf.Unset(ctx, Ref{Name: "foo"})

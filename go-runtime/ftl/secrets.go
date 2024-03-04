@@ -1,10 +1,10 @@
 package ftl
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
-	"strings"
+
+	"github.com/TBD54566975/ftl/common/configuration"
 )
 
 // SecretType is a type that can be used as a secret value.
@@ -27,16 +27,10 @@ func (s *SecretValue[Type]) String() string {
 }
 
 // Get returns the value of the secret from FTL.
-func (s *SecretValue[Type]) Get() (out Type) {
-	value, ok := os.LookupEnv(fmt.Sprintf("FTL_SECRET_%s_%s", strings.ToUpper(s.module), strings.ToUpper(s.name)))
-	if !ok {
-		value, ok = os.LookupEnv(fmt.Sprintf("FTL_SECRET_%s", strings.ToUpper(s.name)))
-		if !ok {
-			return out
-		}
-	}
-	if err := json.Unmarshal([]byte(value), &out); err != nil {
-		panic(fmt.Errorf("failed to parse %s: %w", s, err))
+func (s *SecretValue[Type]) Get(ctx context.Context) (out Type) {
+	sm := configuration.SecretsFromContext(ctx)
+	if err := sm.Get(ctx, configuration.NewRef(s.module, s.name), &out); err != nil {
+		panic(fmt.Errorf("failed to get %s: %w", s, err))
 	}
 	return
 }

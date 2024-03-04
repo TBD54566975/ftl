@@ -1,11 +1,12 @@
 package ftl
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
+
+	"github.com/TBD54566975/ftl/common/configuration"
 )
 
 // ConfigType is a type that can be used as a configuration value.
@@ -28,16 +29,11 @@ func (c *ConfigValue[T]) String() string {
 }
 
 // Get returns the value of the configuration key from FTL.
-func (c *ConfigValue[T]) Get() (out T) {
-	value, ok := os.LookupEnv(fmt.Sprintf("FTL_CONFIG_%s_%s", strings.ToUpper(c.module), strings.ToUpper(c.name)))
-	if !ok {
-		value, ok = os.LookupEnv(fmt.Sprintf("FTL_CONFIG_%s", strings.ToUpper(c.name)))
-		if !ok {
-			return out
-		}
-	}
-	if err := json.Unmarshal([]byte(value), &out); err != nil {
-		panic(fmt.Errorf("failed to parse %s value %q: %w", c, value, err))
+func (c *ConfigValue[T]) Get(ctx context.Context) (out T) {
+	cm := configuration.ConfigFromContext(ctx)
+	err := cm.Get(ctx, configuration.NewRef(c.module, c.name), &out)
+	if err != nil {
+		panic(fmt.Errorf("failed to get %s: %w", c, err))
 	}
 	return
 }

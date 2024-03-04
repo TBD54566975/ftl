@@ -7,39 +7,19 @@ import (
 	"io"
 	"os"
 
-	"github.com/alecthomas/kong"
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 
 	"github.com/TBD54566975/ftl/common/configuration"
 )
 
-type mutableSecretProviderMixin struct {
-	configuration.InlineProvider
-	configuration.KeychainProvider
-	configuration.EnvarProvider[configuration.EnvarTypeSecrets]
-	configuration.OnePasswordProvider
-}
-
-func (s *mutableSecretProviderMixin) newSecretsManager(ctx context.Context, resolver configuration.Resolver) (*configuration.Manager, error) {
-	return configuration.New(ctx, resolver, []configuration.Provider{
-		s.InlineProvider, s.KeychainProvider, s.EnvarProvider, s.OnePasswordProvider,
-	})
-}
-
 type secretCmd struct {
-	configuration.ProjectConfigResolver[configuration.FromSecrets]
+	configuration.DefaultSecretsMixin
 
 	List  secretListCmd  `cmd:"" help:"List secrets."`
 	Get   secretGetCmd   `cmd:"" help:"Get a secret."`
 	Set   secretSetCmd   `cmd:"" help:"Set a secret."`
 	Unset secretUnsetCmd `cmd:"" help:"Unset a secret."`
-}
-
-func (s *secretCmd) newSecretsManager(ctx context.Context) (*configuration.Manager, error) {
-	mp := mutableSecretProviderMixin{}
-	_ = kong.ApplyDefaults(&mp)
-	return mp.newSecretsManager(ctx, s.ProjectConfigResolver)
 }
 
 func (s *secretCmd) Help() string {
@@ -58,7 +38,7 @@ type secretListCmd struct {
 }
 
 func (s *secretListCmd) Run(ctx context.Context, scmd *secretCmd) error {
-	sm, err := scmd.newSecretsManager(ctx)
+	sm, err := scmd.NewSecretsManager(ctx)
 	if err != nil {
 		return err
 	}
@@ -104,7 +84,7 @@ Returns a JSON-encoded secret value.
 }
 
 func (s *secretGetCmd) Run(ctx context.Context, scmd *secretCmd) error {
-	sm, err := scmd.newSecretsManager(ctx)
+	sm, err := scmd.NewSecretsManager(ctx)
 	if err != nil {
 		return err
 	}
@@ -124,14 +104,12 @@ func (s *secretGetCmd) Run(ctx context.Context, scmd *secretCmd) error {
 }
 
 type secretSetCmd struct {
-	mutableSecretProviderMixin
-
 	JSON bool              `help:"Assume input value is JSON."`
 	Ref  configuration.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
 func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd) error {
-	sm, err := s.newSecretsManager(ctx, scmd.ProjectConfigResolver)
+	sm, err := scmd.NewSecretsManager(ctx)
 	if err != nil {
 		return err
 	}
@@ -168,13 +146,11 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd) error {
 }
 
 type secretUnsetCmd struct {
-	mutableSecretProviderMixin
-
 	Ref configuration.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
 func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd) error {
-	sm, err := s.newSecretsManager(ctx, scmd.ProjectConfigResolver)
+	sm, err := scmd.NewSecretsManager(ctx)
 	if err != nil {
 		return err
 	}

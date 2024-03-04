@@ -7,33 +7,16 @@ import (
 	"io"
 	"os"
 
-	"github.com/alecthomas/kong"
-
 	"github.com/TBD54566975/ftl/common/configuration"
 )
 
-type mutableConfigProviderMixin struct {
-	configuration.InlineProvider
-	configuration.EnvarProvider[configuration.EnvarTypeConfig]
-}
-
-func (s *mutableConfigProviderMixin) newConfigManager(ctx context.Context, resolver configuration.Resolver) (*configuration.Manager, error) {
-	return configuration.New(ctx, resolver, []configuration.Provider{s.InlineProvider, s.EnvarProvider})
-}
-
 type configCmd struct {
-	configuration.ProjectConfigResolver[configuration.FromConfig]
+	configuration.DefaultConfigMixin
 
 	List  configListCmd  `cmd:"" help:"List configuration."`
 	Get   configGetCmd   `cmd:"" help:"Get a configuration value."`
 	Set   configSetCmd   `cmd:"" help:"Set a configuration value."`
 	Unset configUnsetCmd `cmd:"" help:"Unset a configuration value."`
-}
-
-func (s *configCmd) newConfigManager(ctx context.Context) (*configuration.Manager, error) {
-	mp := mutableConfigProviderMixin{}
-	_ = kong.ApplyDefaults(&mp)
-	return mp.newConfigManager(ctx, s.ProjectConfigResolver)
 }
 
 func (s *configCmd) Help() string {
@@ -49,7 +32,7 @@ type configListCmd struct {
 }
 
 func (s *configListCmd) Run(ctx context.Context, scmd *configCmd) error {
-	sm, err := scmd.newConfigManager(ctx)
+	sm, err := scmd.NewConfigurationManager(ctx)
 	if err != nil {
 		return err
 	}
@@ -95,7 +78,7 @@ Returns a JSON-encoded configuration value.
 }
 
 func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd) error {
-	sm, err := scmd.newConfigManager(ctx)
+	sm, err := scmd.NewConfigurationManager(ctx)
 	if err != nil {
 		return err
 	}
@@ -115,15 +98,13 @@ func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd) error {
 }
 
 type configSetCmd struct {
-	mutableConfigProviderMixin
-
 	JSON  bool              `help:"Assume input value is JSON."`
 	Ref   configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 	Value *string           `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
 }
 
 func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd) error {
-	sm, err := s.newConfigManager(ctx, scmd.ProjectConfigResolver)
+	sm, err := scmd.NewConfigurationManager(ctx)
 	if err != nil {
 		return err
 	}
@@ -154,13 +135,11 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd) error {
 }
 
 type configUnsetCmd struct {
-	mutableConfigProviderMixin
-
 	Ref configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
 func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd) error {
-	sm, err := s.newConfigManager(ctx, scmd.ProjectConfigResolver)
+	sm, err := scmd.NewConfigurationManager(ctx)
 	if err != nil {
 		return err
 	}
