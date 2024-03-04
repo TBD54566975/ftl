@@ -32,6 +32,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/otiai10/copy v1.14.0
+	github.com/puzpuzpuz/xsync v1.5.2
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.10.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
@@ -85,7 +86,6 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/puzpuzpuz/xsync v1.5.2
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/serialx/hashring v0.0.0-20200727003509-22c0c7ab6b1b
 	github.com/swaggest/refl v1.3.0 // indirect
