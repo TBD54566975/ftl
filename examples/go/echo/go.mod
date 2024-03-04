@@ -12,7 +12,7 @@ require (
 	connectrpc.com/otelconnect v0.7.0 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
-	github.com/alecthomas/types v0.12.1 // indirect
+	github.com/alecthomas/types v0.13.0 // indirect
 	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
