@@ -24,8 +24,9 @@ type ConfigValue[T ConfigType] struct {
 	name   string
 }
 
-func (c *ConfigValue[T]) String() string {
-	return fmt.Sprintf("config %s.%s", c.module, c.name)
+func (c *ConfigValue[T]) GoString() string {
+	var t T
+	return fmt.Sprintf("ftl.ConfigValue[%T](\"%s.%s\")", t, c.module, c.name)
 }
 
 // Get returns the value of the configuration key from FTL.

@@ -11,23 +11,24 @@ import (
 type SecretType interface{ any }
 
 // Secret declares a typed secret for the current module.
-func Secret[Type SecretType](name string) SecretValue[Type] {
+func Secret[T SecretType](name string) SecretValue[T] {
 	module := callerModule()
-	return SecretValue[Type]{module, name}
+	return SecretValue[T]{module, name}
 }
 
 // SecretValue is a typed secret for the current module.
-type SecretValue[Type SecretType] struct {
+type SecretValue[T SecretType] struct {
 	module string
 	name   string
 }
 
-func (s *SecretValue[Type]) String() string {
-	return fmt.Sprintf("secret %s.%s", s.module, s.name)
+func (s *SecretValue[T]) GoString() string {
+	var t T
+	return fmt.Sprintf("ftl.SecretValue[%T](\"%s.%s\")", t, s.module, s.name)
 }
 
 // Get returns the value of the secret from FTL.
-func (s *SecretValue[Type]) Get(ctx context.Context) (out Type) {
+func (s *SecretValue[T]) Get(ctx context.Context) (out T) {
 	sm := configuration.SecretsFromContext(ctx)
 	if err := sm.Get(ctx, configuration.NewRef(s.module, s.name), &out); err != nil {
 		panic(fmt.Errorf("failed to get %s: %w", s, err))
