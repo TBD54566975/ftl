@@ -9,7 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/jpillora/backoff"
-	"github.com/puzpuzpuz/xsync"
+	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
@@ -38,7 +38,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		modules:          map[string]Module{},
-		controllerSchema: xsync.NewMapOf[*schema.Module](),
+		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 	}
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
