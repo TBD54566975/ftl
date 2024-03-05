@@ -58,6 +58,11 @@ func Validate(schema *Schema) (*Schema, error) {
 
 	scopes := NewScopes()
 
+	// Validate dependencies
+	if err := validateDependencies(schema); err != nil {
+		merr = append(merr, err)
+	}
+
 	// First pass, add all the modules.
 	for _, module := range schema.Modules {
 		if module == builtins {
@@ -308,4 +313,77 @@ func cleanErrors(merr []error) []error {
 		return merr[i].Error() < merr[j].Error()
 	})
 	return merr
+}
+
+type dependencyVertex struct {
+	from, to string
+}
+
+type dependencyVertexState int
+
+const (
+	notExplored dependencyVertexState = iota
+	exploring
+	fullyExplored
+)
+
+func validateDependencies(schema *Schema) error {
+	// go through schema's modules, find cycles in modules' dependencies
+
+	// First pass, set up direct imports and vertex states for each module
+	// We need each import array and vertex array to be sorted to make the output deterministic
+	imports := map[string][]string{}
+	vertexes := []dependencyVertex{}
+	vertexStates := map[dependencyVertex]dependencyVertexState{}
+
+	for _, module := range schema.Modules {
+		currentImports := module.Imports()
+		sort.Strings(currentImports)
+		imports[module.Name] = currentImports
+
+		for _, imp := range currentImports {
+			v := dependencyVertex{module.Name, imp}
+			vertexes = append(vertexes, v)
+			vertexStates[v] = notExplored
+		}
+	}
+
+	sort.Slice(vertexes, func(i, j int) bool {
+		lhs := vertexes[i]
+		rhs := vertexes[j]
+		return lhs.from < rhs.from || (lhs.from == rhs.from && lhs.to < rhs.to)
+	})
+
+	// DFS to find cycles
+	for _, v := range vertexes {
+		if cycle := dfsForDependencyCycle(imports, vertexStates, v); cycle != nil {
+			return fmt.Errorf("found cycle in dependencies: %s", strings.Join(cycle, " -> "))
+		}
+	}
+
+	return nil
+}
+
+func dfsForDependencyCycle(imports map[string][]string, vertexStates map[dependencyVertex]dependencyVertexState, v dependencyVertex) []string {
+	switch vertexStates[v] {
+	case notExplored:
+		vertexStates[v] = exploring
+
+		for _, toModule := range imports[v.to] {
+			nextV := dependencyVertex{v.to, toModule}
+			if cycle := dfsForDependencyCycle(imports, vertexStates, nextV); cycle != nil {
+				// found cycle. prepend current module to cycle and return
+				cycle = append([]string{nextV.from}, cycle...)
+				return cycle
+			}
+		}
+		vertexStates[v] = fullyExplored
+		return nil
+	case exploring:
+		return []string{v.to}
+	case fullyExplored:
+		return nil
+	}
+
+	return nil
 }
