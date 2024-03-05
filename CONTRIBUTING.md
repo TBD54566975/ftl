@@ -42,7 +42,7 @@ hot-reloading ftl agent:
 $ ftl dev ./examples/echo ./examples/time
 ```
 
-You can then the console can be viewed at `http://localhost:8892`
+You can then view the console at `http://localhost:8892`
 
 ## Best practices
 
