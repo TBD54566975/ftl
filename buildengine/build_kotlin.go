@@ -93,7 +93,7 @@ func SetPOMProperties(ctx context.Context, baseDir string) error {
 }
 
 func prepareFTLRoot(module Module) error {
-	buildDir := filepath.Join(module.Dir, "target")
+	buildDir := module.AbsDeployDir()
 	if err := os.MkdirAll(buildDir, 0700); err != nil {
 		return err
 	}

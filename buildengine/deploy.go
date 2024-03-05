@@ -31,7 +31,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Deploying module")
 
-	deployDir := filepath.Join(module.Dir, module.DeployDir)
+	deployDir := module.AbsDeployDir()
 	files, err := findFiles(deployDir, module.Deploy)
 	if err != nil {
 		logger.Errorf(err, "failed to find files in %s", deployDir)
