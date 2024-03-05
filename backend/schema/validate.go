@@ -331,20 +331,32 @@ func validateDependencies(schema *Schema) error {
 	// go through schema's modules, find cycles in modules' dependencies
 
 	// First pass, set up direct imports and vertex states for each module
+	// We need each import array and vertex array to be sorted to make the output deterministic
 	imports := map[string][]string{}
+	vertexes := []dependencyVertex{}
 	vertexStates := map[dependencyVertex]dependencyVertexState{}
+
 	for _, module := range schema.Modules {
 		currentImports := module.Imports()
+		sort.Strings(currentImports)
 		imports[module.Name] = currentImports
 
 		for _, imp := range currentImports {
-			vertexStates[dependencyVertex{module.Name, imp}] = notExplored
+			v := dependencyVertex{module.Name, imp}
+			vertexes = append(vertexes, v)
+			vertexStates[v] = notExplored
 		}
 	}
 
+	sort.Slice(vertexes, func(i, j int) bool {
+		lhs := vertexes[i]
+		rhs := vertexes[j]
+		return lhs.from < rhs.from || (lhs.from == rhs.from && lhs.to < rhs.to)
+	})
+
 	// DFS to find cycles
-	for vertex := range vertexStates {
-		if cycle := dfsForDependencyCycle(imports, vertexStates, vertex); cycle != nil {
+	for _, v := range vertexes {
+		if cycle := dfsForDependencyCycle(imports, vertexStates, v); cycle != nil {
 			return fmt.Errorf("found cycle in dependencies: %s", strings.Join(cycle, " -> "))
 		}
 	}
