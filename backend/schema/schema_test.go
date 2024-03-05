@@ -481,3 +481,86 @@ var testSchema = MustValidate(&Schema{
 		},
 	},
 })
+
+func TestValidateDependencies(t *testing.T) {
+	// one <--> two, cyclical
+	_, err := ParseString("", `
+		module one {
+			verb one(builtin.Empty) builtin.Empty
+				calls two.two
+		}
+
+		module two {
+			verb two(builtin.Empty) builtin.Empty
+				calls one.one
+		}
+	`)
+	assert.Error(t, err)
+
+	// one --> two --> three, noncyclical
+	_, err = ParseString("", `
+		module one {
+			verb one(builtin.Empty) builtin.Empty
+				calls two.two
+		}
+
+		module two {
+			verb two(builtin.Empty) builtin.Empty
+				calls three.three
+		}
+
+		module three {
+			verb three(builtin.Empty) builtin.Empty
+		}
+	`)
+	assert.NoError(t, err)
+
+	// one --> two --> three -> one, cyclical
+	_, err = ParseString("", `
+		module one {
+			verb one(builtin.Empty) builtin.Empty
+				calls two.two
+		}
+
+		module two {
+			verb two(builtin.Empty) builtin.Empty
+				calls three.three
+		}
+
+		module three {
+			verb three(builtin.Empty) builtin.Empty
+			calls one.one
+		}
+	`)
+	assert.Error(t, err)
+
+	// one --> one, this is allowed
+	_, err = ParseString("", `
+		module one {
+			verb a(builtin.Empty) builtin.Empty
+				calls one.b
+
+			verb b(builtin.Empty) builtin.Empty
+				calls one.a
+		}
+	`)
+	assert.NoError(t, err)
+
+	// one.a --> two.a
+	// one.b <---
+	// cyclical (does not depend on verbs used)
+
+	_, err = ParseString("", `
+		module one {
+			verb a(builtin.Empty) builtin.Empty
+				calls two.a
+			verb b(builtin.Empty) builtin.Empty
+		}
+
+		module two {
+			verb a(builtin.Empty) builtin.Empty
+				calls one.b
+		}
+	`)
+	assert.Error(t, err)
+}

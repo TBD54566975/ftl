@@ -32,6 +32,18 @@ var (
 	}
 )
 
+type dependencyVertex struct {
+	from, to string
+}
+
+type dependencyVertexState int
+
+const (
+	notExplored dependencyVertexState = iota
+	exploring
+	fullyExplored
+)
+
 // MustValidate panics if a schema is invalid.
 //
 // This is useful for testing.
@@ -57,6 +69,11 @@ func Validate(schema *Schema) (*Schema, error) {
 	schema.Modules = append([]*Module{builtins}, schema.Modules...)
 
 	scopes := NewScopes()
+
+	// Validate dependencies
+	if err := validateDependencies(schema); err != nil {
+		merr = append(merr, err)
+	}
 
 	// First pass, add all the modules.
 	for _, module := range schema.Modules {
@@ -308,4 +325,53 @@ func cleanErrors(merr []error) []error {
 		return merr[i].Error() < merr[j].Error()
 	})
 	return merr
+}
+
+func validateDependencies(schema *Schema) error {
+	// go through schema's modules, find cycles in modules' dependencies
+
+	// First pass, set up direct imports and vertex states for each module
+	imports := map[string][]string{}
+	vertexStates := map[dependencyVertex]dependencyVertexState{}
+	for _, module := range schema.Modules {
+		currentImports := module.Imports()
+		imports[module.Name] = currentImports
+
+		for _, imp := range currentImports {
+			vertexStates[dependencyVertex{module.Name, imp}] = notExplored
+		}
+	}
+
+	// DFS to find cycles
+	for vertex := range vertexStates {
+		if cycle := dfsForDependencyCycle(imports, vertexStates, vertex); cycle != nil {
+			return fmt.Errorf("found cycle in dependencies: %s", strings.Join(cycle, " -> "))
+		}
+	}
+
+	return nil
+}
+
+func dfsForDependencyCycle(imports map[string][]string, vertexStates map[dependencyVertex]dependencyVertexState, v dependencyVertex) []string {
+	switch vertexStates[v] {
+	case notExplored:
+		vertexStates[v] = exploring
+
+		for _, toModule := range imports[v.to] {
+			nextV := dependencyVertex{v.to, toModule}
+			if cycle := dfsForDependencyCycle(imports, vertexStates, nextV); cycle != nil {
+				// found cycle. prepend current module to cycle and return
+				cycle = append([]string{nextV.from}, cycle...)
+				return cycle
+			}
+		}
+		vertexStates[v] = fullyExplored
+		return nil
+	case exploring:
+		return []string{v.to}
+	case fullyExplored:
+		return nil
+	}
+
+	return nil
 }
