@@ -170,7 +170,7 @@ func visitFile(pctx *parseContext, node *ast.File) error {
 	return nil
 }
 
-func typeCheck[T types.Type](original types.Object) (*T, bool) {
+func getSubType[T types.Type](original types.Object) (*T, bool) {
 	t := original.Type()
 	if _, ok := original.Type().(*types.Named); ok {
 		t = original.Type().Underlying()
@@ -198,7 +198,7 @@ func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
 
 	if params.Len() == 2 {
 		structParam := results.At(0)
-		if s, ok := typeCheck[*types.Struct](structParam); ok {
+		if s, ok := getSubType[*types.Struct](structParam); ok {
 			for i := 0; i < (*s).NumFields(); i++ {
 				fieldName := (*s).Field(i).Name()
 				if len(fieldName) > 0 && unicode.IsLower(rune(fieldName[0])) {
@@ -223,7 +223,7 @@ func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
 	}
 	if results.Len() == 2 {
 		structResult := results.At(0)
-		if s, ok := typeCheck[*types.Struct](structResult); ok {
+		if s, ok := getSubType[*types.Struct](structResult); ok {
 			for i := 0; i < (*s).NumFields(); i++ {
 				fieldName := (*s).Field(i).Name()
 				if len(fieldName) > 0 && unicode.IsLower(rune(fieldName[0])) {
