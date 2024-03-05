@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"unicode"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -170,16 +169,12 @@ func visitFile(pctx *parseContext, node *ast.File) error {
 	return nil
 }
 
-func typeCheck[T types.Type](original types.Object) (*T, bool) {
-	t := original.Type()
-	if _, ok := original.Type().(*types.Named); ok {
-		t = original.Type().Underlying()
+func isType[T types.Type](t types.Type) bool {
+	if _, ok := t.(*types.Named); ok {
+		t = t.Underlying()
 	}
-
-	if t, ok := t.(T); ok {
-		return &t, true
-	}
-	return nil, false
+	_, ok := t.(T)
+	return ok
 }
 
 func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
@@ -195,21 +190,11 @@ func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
 	if !types.AssertableTo(contextIfaceType(), params.At(0).Type()) {
 		return nil, nil, fmt.Errorf("first parameter must be of type context.Context but is %s", params.At(0).Type())
 	}
-
 	if params.Len() == 2 {
-		structParam := results.At(0)
-		if s, ok := typeCheck[*types.Struct](structParam); ok {
-			for i := 0; i < (*s).NumFields(); i++ {
-				fieldName := (*s).Field(i).Name()
-				if len(fieldName) > 0 && unicode.IsLower(rune(fieldName[0])) {
-					return nil, nil, fmt.Errorf("params field %s must be exported by starting with an uppercase letter", fieldName)
-				}
-			}
-		} else {
-			return nil, nil, fmt.Errorf("second parameter must be a struct but is %s", structParam.Type())
+		if !isType[*types.Struct](params.At(1).Type()) {
+			return nil, nil, fmt.Errorf("second parameter must be a struct but is %s", params.At(1).Type())
 		}
-
-		req = structParam
+		req = params.At(1)
 	}
 
 	if results.Len() > 2 {
@@ -222,16 +207,8 @@ func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
 		return nil, nil, fmt.Errorf("must return an error but is %s", results.At(0).Type())
 	}
 	if results.Len() == 2 {
-		structResult := results.At(0)
-		if s, ok := typeCheck[*types.Struct](structResult); ok {
-			for i := 0; i < (*s).NumFields(); i++ {
-				fieldName := (*s).Field(i).Name()
-				if len(fieldName) > 0 && unicode.IsLower(rune(fieldName[0])) {
-					return nil, nil, fmt.Errorf("results field %s must be exported by starting with an uppercase letter", fieldName)
-				}
-			}
-		} else {
-			return nil, nil, fmt.Errorf("first result must be a struct but is %s", structResult.Type())
+		if !isType[*types.Struct](results.At(0).Type()) {
+			return nil, nil, fmt.Errorf("first result must be a struct but is %s", results.At(0).Type())
 		}
 		resp = results.At(0)
 	}
