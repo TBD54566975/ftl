@@ -488,8 +488,8 @@ func TestValidateDependencies(t *testing.T) {
 		schema string
 		err    string
 	}{
-		//one <--> two, cyclical
 		{
+			// one <--> two, cyclical
 			name: "TwoModuleCycle",
 			schema: `
 				module one {
@@ -505,7 +505,7 @@ func TestValidateDependencies(t *testing.T) {
 			err: "found cycle in dependencies: two -> one -> two",
 		},
 		{
-			//one --> two --> three, noncyclical
+			// one --> two --> three, noncyclical
 			name: "ThreeModulesNoCycle",
 			schema: `
 				module one {
@@ -525,7 +525,7 @@ func TestValidateDependencies(t *testing.T) {
 			err: "",
 		},
 		{
-			//one --> two --> three -> one, cyclical
+			// one --> two --> three -> one, cyclical
 			name: "ThreeModulesCycle",
 			schema: `
 				module one {
