@@ -440,6 +440,11 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 			return nil, fmt.Errorf("field %s: %w", f.Name(), err)
 		}
 
+		// Check if field is exported
+		if len(f.Name()) > 0 && unicode.IsLower(rune(f.Name()[0])) {
+			return nil, fmt.Errorf("params field %s must be exported by starting with an uppercase letter", f.Name())
+		}
+
 		// Extract the JSON tag and split it to get just the field name
 		tagContent := reflect.StructTag(s.Tag(i)).Get(aliasFieldTag)
 		tagParts := strings.Split(tagContent, ",")
