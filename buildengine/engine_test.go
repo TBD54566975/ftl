@@ -52,6 +52,6 @@ func TestEngine(t *testing.T) {
 	graph, err := engine.Graph()
 	assert.NoError(t, err)
 	assert.Equal(t, expected, graph)
-	err = engine.Build(ctx, "alpha")
+	err = engine.Build(ctx)
 	assert.NoError(t, err)
 }

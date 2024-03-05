@@ -22,6 +22,7 @@ import (
 
 // Engine for building a set of modules.
 type Engine struct {
+	client           ftlv1connect.ControllerServiceClient
 	modules          map[string]Module
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	cancel           func()
@@ -37,6 +38,7 @@ type Engine struct {
 func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs ...string) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
+		client:           client,
 		modules:          map[string]Module{},
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 	}
@@ -57,17 +59,17 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	if client == nil {
 		return e, nil
 	}
-	schemaSync := e.startSchemaSync(ctx, client)
+	schemaSync := e.startSchemaSync(ctx)
 	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync)
 	return e, nil
 }
 
 // Sync module schema changes from the FTL controller, as well as from manual
 // updates, and merge them into a single schema map.
-func (e *Engine) startSchemaSync(ctx context.Context, client ftlv1connect.ControllerServiceClient) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
+func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
 	logger := log.FromContext(ctx)
 	// Blocking schema sync from the controller.
-	psch, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	psch, err := e.client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 	if err == nil {
 		sch, err := schema.FromProto(psch.Msg.Schema)
 		if err == nil {
@@ -149,6 +151,28 @@ func (e *Engine) Import(ctx context.Context, schema *schema.Module) {
 
 // Build attempts to build the specified modules, or all local modules if none are provided.
 func (e *Engine) Build(ctx context.Context, modules ...string) error {
+	return e.buildWithCallback(ctx, nil, modules...)
+}
+
+// Deploy attempts to build and deploy the specified modules, or all local modules if none are provided.
+func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
+	if len(modules) == 0 {
+		modules = maps.Keys(e.modules)
+	}
+
+	expectedBuilds := make(map[string]struct{}, len(modules))
+	for _, name := range modules {
+		expectedBuilds[name] = struct{}{}
+	}
+
+	return e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
+		return Deploy(ctx, module, replicas, waitForDeployOnline, e.client)
+	}, modules...)
+}
+
+type buildCallback func(ctx context.Context, module Module) error
+
+func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, modules ...string) error {
 	mustBuild := map[string]bool{}
 	if len(modules) == 0 {
 		modules = maps.Keys(e.modules)
@@ -174,6 +198,7 @@ func (e *Engine) Build(ctx context.Context, modules ...string) error {
 	built := map[string]*schema.Module{
 		"builtin": schema.Builtins(),
 	}
+
 	topology := TopologicalSort(graph)
 	for _, group := range topology {
 		// Collect schemas to be inserted into "built" map for subsequent groups.
@@ -183,7 +208,11 @@ func (e *Engine) Build(ctx context.Context, modules ...string) error {
 		for _, name := range group {
 			wg.Go(func() error {
 				if mustBuild[name] {
-					return e.build(ctx, name, built, schemas)
+					err := e.build(ctx, name, built, schemas)
+					if err == nil && callback != nil {
+						return callback(ctx, e.modules[name])
+					}
+					return err
 				}
 				return e.mustSchema(ctx, name, built, schemas)
 			})
