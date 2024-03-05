@@ -1,0 +1,79 @@
+{
+  "$schema": "https://lnav.org/schemas/format-v1.schema.json",
+  "ftl_json": {
+    "title": "FTL JSON log format",
+    "description": "FTL JSON log format",
+    "timestamp-field": "time",
+    "json": true,
+    "file-pattern": "ftl-.*\\.log\\.json",
+    "level-field": "level",
+    "level": {
+      "debug": "debug",
+      "info": "info",
+      "warning": "warn",
+      "error": "error",
+      "fatal": "fatal"
+    },
+    "body-field": "message",
+    "value": {
+      "message": {
+        "kind": "string",
+        "identifier": false
+      },
+      "attributes": {
+        "kind": "json",
+        "identifier": true
+      },
+      "time": {
+        "kind": "string",
+        "identifier": false
+      }
+    },
+    "highlights": {
+      "fatal": {
+        "color": "Red1",
+        "pattern": "CRITICAL|FATAL|fatal"
+      },
+      "error": {
+        "color": "OrangeRed1",
+        "pattern": "ERROR"
+      },
+      "warning": {
+        "color": "Orange1",
+        "pattern": "WARN"
+      },
+      "info": {
+        "color": "Blue1",
+        "pattern": "INFO"
+      },
+      "debug": {
+        "color": "Grey62",
+        "pattern": "DEBUG"
+      },
+      "ipv4": {
+        "color": "Yellow1",
+        "pattern": "\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}:[0-9]+\\b"
+      }
+    },
+    "line-format": [
+      {
+        "field": "__timestamp__",
+        "timestamp-format": "%Y-%m-%dT%H:%M:%S.%N%Z"
+      },
+      " ",
+      {
+        "field": "level",
+        "text-transform": "uppercase",
+        "auto-width": true,
+        "min-width": 7,
+        "align": "right",
+        "prefix": "[",
+        "suffix": "]"
+      },
+      " ",
+      {
+        "field": "message"
+      }
+    ]
+  }
+}
