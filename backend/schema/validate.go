@@ -32,18 +32,6 @@ var (
 	}
 )
 
-type dependencyVertex struct {
-	from, to string
-}
-
-type dependencyVertexState int
-
-const (
-	notExplored dependencyVertexState = iota
-	exploring
-	fullyExplored
-)
-
 // MustValidate panics if a schema is invalid.
 //
 // This is useful for testing.
@@ -326,6 +314,18 @@ func cleanErrors(merr []error) []error {
 	})
 	return merr
 }
+
+type dependencyVertex struct {
+	from, to string
+}
+
+type dependencyVertexState int
+
+const (
+	notExplored dependencyVertexState = iota
+	exploring
+	fullyExplored
+)
 
 func validateDependencies(schema *Schema) error {
 	// go through schema's modules, find cycles in modules' dependencies
