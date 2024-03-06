@@ -70,7 +70,7 @@ func Watch(ctx context.Context, period time.Duration, dirs ...string) *pubsub.To
 				if _, haveModule := moduleConfigsByDir[existingModule.Module.Module]; !haveModule {
 					logger.Debugf("module %s removed: %s", existingModule.Module.Module, existingModule.Module.Dir)
 					topic.Publish(WatchEventModuleRemoved{Module: existingModule.Module})
-					delete(existingModules, existingModule.Module.Module)
+					delete(existingModules, existingModule.Module.ModuleConfig.Dir)
 				}
 			}
 

@@ -24,6 +24,7 @@ import (
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
 	modules          map[string]Module
+	dirs             []string
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	cancel           func()
 }
@@ -39,6 +40,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
+		dirs:             dirs,
 		modules:          map[string]Module{},
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 	}
@@ -149,25 +151,85 @@ func (e *Engine) Import(ctx context.Context, schema *schema.Module) {
 	e.controllerSchema.Store(schema.Name, schema)
 }
 
-// Build attempts to build the specified modules, or all local modules if none are provided.
-func (e *Engine) Build(ctx context.Context, modules ...string) error {
-	return e.buildWithCallback(ctx, nil, modules...)
+// Build attempts to build all local modules.
+func (e *Engine) Build(ctx context.Context) error {
+	return e.buildWithCallback(ctx, nil)
 }
 
-// Deploy attempts to build and deploy the specified modules, or all local modules if none are provided.
-func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
-	if len(modules) == 0 {
-		modules = maps.Keys(e.modules)
+// Deploy attempts to build and deploy all local modules.
+func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline bool) error {
+	return e.buildAndDeploy(ctx, replicas, waitForDeployOnline)
+}
+
+// Dev builds and deploys all local modules and watches for changes, redeploying as necessary.
+func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
+	logger := log.FromContext(ctx)
+
+	// Build and deploy all modules first.
+	err := e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
+		return Deploy(ctx, module, 1, true, e.client)
+	})
+	if err != nil {
+		logger.Errorf(err, "initial deploy failed")
 	}
 
-	expectedBuilds := make(map[string]struct{}, len(modules))
-	for _, name := range modules {
-		expectedBuilds[name] = struct{}{}
-	}
+	// Then watch for changes and redeploy.
+	events := make(chan WatchEvent, 128)
+	watch := Watch(ctx, period, e.dirs...)
+	defer watch.Close()
+	watch.Subscribe(events)
 
-	return e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case event := <-events:
+			switch event := event.(type) {
+			case WatchEventModuleAdded:
+				if _, exists := e.modules[event.Module.Module]; !exists {
+					e.modules[event.Module.Module] = event.Module
+					err = e.buildAndDeploy(ctx, 1, true, event.Module.Module)
+					if err != nil {
+						logger.Errorf(err, "deploy %s failed", event.Module.Module)
+					}
+				}
+			case WatchEventModuleRemoved:
+				// TODO: should we kill the deployment here?
+				delete(e.modules, event.Module.Module)
+
+			case WatchEventModuleChanged:
+				mustBuild := map[string]bool{event.Module.Module: true}
+				for key, module := range e.modules {
+					for _, dep := range module.Dependencies {
+						if dep == event.Module.Module {
+							mustBuild[key] = true
+						}
+					}
+				}
+
+				var modules []string
+				for key := range mustBuild {
+					modules = append(modules, key)
+				}
+
+				e.modules[event.Module.Module] = event.Module
+				err = e.buildAndDeploy(ctx, 1, true, modules...)
+				if err != nil {
+					logger.Errorf(err, "deploy %s failed", event.Module.Module)
+				}
+			}
+		}
+	}
+}
+
+func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
+	err := e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
 		return Deploy(ctx, module, replicas, waitForDeployOnline, e.client)
 	}, modules...)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type buildCallback func(ctx context.Context, module Module) error
