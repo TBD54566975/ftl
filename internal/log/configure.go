@@ -8,7 +8,7 @@ import (
 type Config struct {
 	Level      Level `help:"Log level." default:"info" env:"LOG_LEVEL"`
 	JSON       bool  `help:"Log in JSON format." env:"LOG_JSON"`
-	Timestamps bool  `help:"Include relative timestamps in text logs." env:"LOG_TIMESTAMPS"`
+	Timestamps bool  `help:"Include timestamps in text logs." env:"LOG_TIMESTAMPS"`
 }
 
 // Configure returns a new logger based on the config.
