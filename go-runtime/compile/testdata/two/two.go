@@ -7,6 +7,15 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
+//ftl:enum
+type TwoEnum string
+
+const (
+	Red   TwoEnum = "Red"
+	Blue  TwoEnum = "Blue"
+	Green TwoEnum = "Green"
+)
+
 type User struct {
 	Name string
 }

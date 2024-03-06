@@ -21,3 +21,4 @@ func (*Float) schemaType()              {}
 func (*Float) schemaDecl()              {}
 func (*Float) String() string           { return "Float" }
 func (f *Float) ToProto() proto.Message { return &schemapb.Float{Pos: posToProto(f.Pos)} }
+func (*Float) GetName() string          { return "" }

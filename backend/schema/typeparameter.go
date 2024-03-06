@@ -21,6 +21,7 @@ func (t *TypeParameter) ToProto() protoreflect.ProtoMessage {
 }
 func (t *TypeParameter) schemaChildren() []Node { return nil }
 func (t *TypeParameter) schemaDecl()            {}
+func (t *TypeParameter) GetName() string        { return t.Name }
 
 func typeParametersToSchema(s []*schemapb.TypeParameter) []*TypeParameter {
 	var out []*TypeParameter

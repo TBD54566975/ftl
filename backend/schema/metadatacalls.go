@@ -35,7 +35,7 @@ func (m *MetadataCalls) String() string {
 		w += len(str)
 		fmt.Fprint(out, str)
 	}
-	fmt.Fprintln(out)
+	fmt.Fprint(out)
 	return out.String()
 }
 

@@ -132,6 +132,8 @@ func (d *Data) schemaChildren() []Node {
 	return children
 }
 
+func (d *Data) GetName() string { return d.Name }
+
 func (d *Data) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(d.Comments))

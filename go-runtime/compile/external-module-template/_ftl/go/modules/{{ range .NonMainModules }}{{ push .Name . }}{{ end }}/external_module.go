@@ -13,7 +13,16 @@ import (
 var _ = context.Background
 
 {{- range .Decls }}
-{{if is "Data" . }}
+{{if is "Enum" . }}
+{{$enumName := .Name -}}
+//ftl:enum
+type {{.Name|title}} {{ type $ .Type }}
+const (
+  {{- range .Variants }}
+  {{.Name|title}} {{$enumName}} = {{.Value|value}}
+  {{- end}}
+)
+{{- else if is "Data" . }}
 type {{.Name|title}}
 {{- if .TypeParameters}}[
 {{- range $i, $tp := .TypeParameters}}
@@ -24,7 +33,7 @@ type {{.Name|title}}
   {{.Name|title}} {{type $ .Type}} `json:"{{.Name}}"`
   {{- end}}
 }
-{{- else if is "Verb" .}}
+{{- else if is "Verb" . -}}
 {{.Comments|comment }}
 {{if .Comments}}//
 {{end -}}

@@ -43,6 +43,9 @@ func (v *Verb) schemaChildren() []Node {
 	}
 	return children
 }
+
+func (v *Verb) GetName() string { return v.Name }
+
 func (v *Verb) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(v.Comments))

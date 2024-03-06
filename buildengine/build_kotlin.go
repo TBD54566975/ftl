@@ -158,36 +158,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	"imports": func(m *schema.Module) []string {
 		imports := sets.NewSet[string]()
 		_ = schema.Visit(m, func(n schema.Node, next func() error) error {
-			switch n := n.(type) {
-			case *schema.DataRef:
-				decl := m.Resolve(schema.Ref{
-					Module: n.Module,
-					Name:   n.Name,
-				})
-				if decl != nil {
-					if data, ok := decl.Decl.(*schema.Data); ok {
-						if len(data.Fields) == 0 {
-							imports.Add("ftl.builtin.Empty")
-							break
-						}
-					}
-				}
-
-				if n.Module == "" {
-					break
-				}
-
-				imports.Add("ftl." + n.Module + "." + n.Name)
-
-				for _, tp := range n.TypeParameters {
-					tpRef, err := schema.ParseDataRef(tp.String())
-					if err != nil {
-						return err
-					}
-					if tpRef.Module != "" && tpRef.Module != m.Name {
-						imports.Add("ftl." + tpRef.Module + "." + tpRef.Name)
-					}
-				}
+			switch n.(type) {
 			case *schema.Verb:
 				imports.Append("xyz.block.ftl.Context", "xyz.block.ftl.Ignore", "xyz.block.ftl.Verb")
 
@@ -214,12 +185,15 @@ func genType(module *schema.Module, t schema.Type) string {
 		if decl != nil {
 			if data, ok := decl.Decl.(*schema.Data); ok {
 				if len(data.Fields) == 0 {
-					return "Empty"
+					return "ftl.builtin.Empty"
 				}
 			}
 		}
 
 		desc := t.Name
+		if t.Module != "" {
+			desc = "ftl." + t.Module + "." + desc
+		}
 		if len(t.TypeParameters) > 0 {
 			desc += "<"
 			for i, tp := range t.TypeParameters {

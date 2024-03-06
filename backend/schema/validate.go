@@ -294,6 +294,16 @@ func ValidateModule(module *Module) error {
 		return next()
 	})
 	merr = cleanErrors(merr)
+	sort.SliceStable(module.Decls, func(i, j int) bool {
+		iDecl := module.Decls[i]
+		jDecl := module.Decls[j]
+		iType := reflect.TypeOf(iDecl).String()
+		jType := reflect.TypeOf(jDecl).String()
+		if iType == jType {
+			return iDecl.GetName() < jDecl.GetName()
+		}
+		return iType < jType
+	})
 	return errors.Join(merr...)
 }
 

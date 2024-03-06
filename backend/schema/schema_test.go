@@ -40,7 +40,6 @@ module todo {
   verb create(todo.CreateRequest) todo.CreateResponse
       +calls todo.destroy
 
-
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{id}
 }
