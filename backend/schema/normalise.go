@@ -62,6 +62,7 @@ func Normalise[T Node](n T) T {
 	case *Field:
 		c.Pos = zero
 		c.Type = Normalise(c.Type)
+		c.Metadata = normaliseSlice(c.Metadata)
 
 	case *Float:
 		c.Float = false
@@ -114,6 +115,9 @@ func Normalise[T Node](n T) T {
 	case *MetadataIngress:
 		c.Pos = zero
 		c.Path = normaliseSlice(c.Path)
+
+	case *MetadataAlias:
+		c.Pos = zero
 
 	case *Optional:
 		c.Type = Normalise(c.Type)

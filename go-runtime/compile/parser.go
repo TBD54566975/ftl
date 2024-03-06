@@ -34,11 +34,22 @@ func (*directiveVerb) directive()       {}
 func (d *directiveVerb) String() string { return "ftl:verb" }
 
 type directiveIngress struct {
-	schema.MetadataIngress
+	Pos schema.Position
+
+	Type   string                        `parser:"'ingress' @('http')?"`
+	Method string                        `parser:"@('GET' | 'POST' | 'PUT' | 'DELETE')"`
+	Path   []schema.IngressPathComponent `parser:"('/' @@)+"`
 }
 
-func (*directiveIngress) directive()       {}
-func (d *directiveIngress) String() string { return fmt.Sprintf("ftl:ingress %s", d.Type) }
+func (*directiveIngress) directive() {}
+func (d *directiveIngress) String() string {
+	w := &strings.Builder{}
+	fmt.Fprintf(w, "ftl:ingress %s", d.Method)
+	for _, p := range d.Path {
+		fmt.Fprintf(w, "/%s", p)
+	}
+	return w.String()
+}
 
 type directiveModule struct {
 	Pos lexer.Position

@@ -431,11 +431,19 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 			jsonFieldName = tagParts[0]
 		}
 
+		var metadata []schema.Metadata
+		if jsonFieldName != "" {
+			metadata = append(metadata, &schema.MetadataAlias{
+				Pos:   goPosToSchemaPos(node.Pos()),
+				Kind:  schema.AliasKindJSON,
+				Alias: jsonFieldName,
+			})
+		}
 		out.Fields = append(out.Fields, &schema.Field{
-			Pos:       goPosToSchemaPos(node.Pos()),
-			Name:      strcase.ToLowerCamel(f.Name()),
-			Type:      ft,
-			JSONAlias: jsonFieldName,
+			Pos:      goPosToSchemaPos(node.Pos()),
+			Name:     strcase.ToLowerCamel(f.Name()),
+			Type:     ft,
+			Metadata: metadata,
 		})
 	}
 	pctx.module.AddData(out)

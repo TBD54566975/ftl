@@ -80,10 +80,11 @@ func bodyForType(typ schema.Type, sch *schema.Schema, data []byte) ([]byte, erro
 		}
 
 		err = transformAliasedFields(sch, t, response, func(obj map[string]any, field *schema.Field) string {
-			if field.JSONAlias != "" && field.Name != field.JSONAlias {
-				obj[field.JSONAlias] = obj[field.Name]
+			jsonAlias := field.Alias(schema.AliasKindJSON)
+			if jsonAlias != "" && field.Name != jsonAlias {
+				obj[jsonAlias] = obj[field.Name]
 				delete(obj, field.Name)
-				return field.JSONAlias
+				return jsonAlias
 			}
 			return field.Name
 		})

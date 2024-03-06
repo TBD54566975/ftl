@@ -66,9 +66,10 @@ func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser 
 
 func transformFromAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request map[string]any) (map[string]any, error) {
 	return request, transformAliasedFields(sch, dataRef, request, func(obj map[string]any, field *schema.Field) string {
-		if _, ok := obj[field.Name]; !ok && field.JSONAlias != "" && obj[field.JSONAlias] != nil {
-			obj[field.Name] = obj[field.JSONAlias]
-			delete(obj, field.JSONAlias)
+		jsonAlias := field.Alias(schema.AliasKindJSON)
+		if _, ok := obj[field.Name]; !ok && jsonAlias != "" && obj[jsonAlias] != nil {
+			obj[field.Name] = obj[jsonAlias]
+			delete(obj, jsonAlias)
 		}
 		return field.Name
 	})
@@ -76,10 +77,11 @@ func transformFromAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, req
 
 func transformToAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request map[string]any) (map[string]any, error) {
 	return request, transformAliasedFields(sch, dataRef, request, func(obj map[string]any, field *schema.Field) string {
-		if field.JSONAlias != "" && field.Name != field.JSONAlias {
-			obj[field.JSONAlias] = obj[field.Name]
+		jsonAlias := field.Alias(schema.AliasKindJSON)
+		if jsonAlias != "" && field.Name != jsonAlias {
+			obj[jsonAlias] = obj[field.Name]
 			delete(obj, field.Name)
-			return field.JSONAlias
+			return jsonAlias
 		}
 		return field.Name
 	})

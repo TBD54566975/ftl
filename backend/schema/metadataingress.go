@@ -12,7 +12,7 @@ import (
 type MetadataIngress struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Type   string                 `parser:"'ingress' @('http')?" protobuf:"2"`
+	Type   string                 `parser:"'+' 'ingress' @('http')?" protobuf:"2"`
 	Method string                 `parser:"@('GET' | 'POST' | 'PUT' | 'DELETE')" protobuf:"3"`
 	Path   []IngressPathComponent `parser:"('/' @@)+" protobuf:"4"`
 }
@@ -30,7 +30,7 @@ func (m *MetadataIngress) String() string {
 			path[i] = fmt.Sprintf("{%s}", v.Name)
 		}
 	}
-	return fmt.Sprintf("ingress %s %s /%s", m.Type, strings.ToUpper(m.Method), strings.Join(path, "/"))
+	return fmt.Sprintf("+ingress %s %s /%s", m.Type, strings.ToUpper(m.Method), strings.Join(path, "/"))
 }
 
 func (m *MetadataIngress) schemaChildren() []Node {

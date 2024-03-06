@@ -32,7 +32,7 @@ type devCmd struct {
 	ReconnectDelay  time.Duration `help:"Delay before attempting to reconnect to FTL." default:"1s"`
 	ExitAfterDeploy bool          `help:"Exit after all modules are deployed successfully." default:"false"`
 	NoServe         bool          `help:"Do not start the FTL server." default:"false"`
-	ServeCmd        serveCmd      `embed:"" prefix:"serve-"`
+	ServeCmd        serveCmd      `embed:""`
 }
 
 type moduleMap map[string]*moduleFolderInfo

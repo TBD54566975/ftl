@@ -162,8 +162,9 @@ func Validate(schema *Schema) (*Schema, error) {
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
-				*MetadataIngress, *Module, *Optional, *Schema, *String, *Time, Type,
-				*Unit, *Any, *TypeParameter, *EnumVariant, Value, *IntValue, *StringValue:
+				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema,
+				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
+				Value, *IntValue, *StringValue:
 			}
 			return next()
 		})
@@ -275,10 +276,17 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
-		case *Array, *Bool, *Database, *Field, *Float, *Int,
+		case *Field:
+			for _, md := range n.Metadata {
+				if _, ok := md.(*MetadataAlias); !ok {
+					merr = append(merr, fmt.Errorf("%s: metadata %q is not valid on fields", md.Position(), strings.TrimSpace(md.String())))
+				}
+			}
+
+		case *Array, *Bool, *Database, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
-			*MetadataCalls, *MetadataDatabases, *MetadataIngress, IngressPathComponent,
-			*IngressPathLiteral, *IngressPathParameter, *Optional,
+			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataAlias,
+			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*SourceRef, *SinkRef, *Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
 
 		case Type, Metadata, Decl, Value: // Union types.

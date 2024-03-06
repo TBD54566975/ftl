@@ -421,6 +421,12 @@ class SchemaExtractor(
     return Data(
       name = this.name!!,
       fields = this.getValueParameters().map { param ->
+        // Metadata containing JSON alias if present.
+        val metadata = param.annotationEntries.firstOrNull {
+            bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Json::class.qualifiedName
+          }?.valueArguments?.single()?.let {
+            listOf(Metadata(alias = MetadataAlias(alias = (it as KtValueArgument).text.trim('"', ' '))))
+          } ?: listOf()
         Field(
           name = param.name!!,
           type = param.typeReference?.let {
@@ -428,9 +434,7 @@ class SchemaExtractor(
               getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition()
             )
           },
-          jsonAlias = param.annotationEntries.firstOrNull {
-            bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Json::class.qualifiedName
-          }?.valueArguments?.single()?.let { (it as KtValueArgument).text.trim('"', ' ') } ?: "",
+          metadata = metadata,
         )
       }.toList(),
       comments = this.comments(),

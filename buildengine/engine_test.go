@@ -25,13 +25,13 @@ func TestEngine(t *testing.T) {
 			&schema.Data{
 				Name: "EchoRequest",
 				Fields: []*schema.Field{
-					{Name: "name", Type: &schema.Optional{Type: &schema.String{}}, JSONAlias: "name"},
+					{Name: "name", Type: &schema.Optional{Type: &schema.String{}}, Metadata: []schema.Metadata{&schema.MetadataAlias{Alias: "name"}}},
 				},
 			},
 			&schema.Data{
 				Name: "EchoResponse",
 				Fields: []*schema.Field{
-					{Name: "message", Type: &schema.String{}, JSONAlias: "message"},
+					{Name: "message", Type: &schema.String{}, Metadata: []schema.Metadata{&schema.MetadataAlias{Alias: "message"}}},
 				},
 			},
 			&schema.Verb{

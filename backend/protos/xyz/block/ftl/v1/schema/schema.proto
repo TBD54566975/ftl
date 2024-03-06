@@ -99,7 +99,7 @@ message Field {
   string name = 2;
   repeated string comments = 3;
   Type type = 4;
-  string jsonAlias = 5;
+  repeated Metadata metadata = 5;
 }
 
 message Float {
@@ -143,7 +143,14 @@ message Metadata {
     MetadataCalls calls = 1;
     MetadataIngress ingress = 2;
     MetadataDatabases databases = 3;
+    MetadataAlias alias = 4;
   }
+}
+
+message MetadataAlias {
+  optional Position pos = 1;
+  int64 kind = 2;
+  string alias = 3;
 }
 
 message MetadataCalls {
