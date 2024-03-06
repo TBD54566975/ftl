@@ -4,6 +4,10 @@ list_issues() {
   gh issue list "$@" --json number --jq 'map("- #\(.number)")[]' | sort -n
 }
 
+list_prs() {
+  gh pr list "$@" --json number --jq 'map("- #\(.number)")[]' | sort -n
+}
+
 update() {
   if test -z "$NOOP"; then
     gh issue edit -F - 728
@@ -40,7 +44,9 @@ gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-1
   echo "@$member [🔎](https://github.com/TBD54566975/ftl/issues/assigned/$member)"
   echo
   list_issues -a "$member"
+  list_prs -A "$member"
   list_issues -s closed -S "closed:>$date" -a "$member"
+  list_prs -s closed -S "closed:>$date" -A "$member"
   echo
 done
 )
