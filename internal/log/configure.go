@@ -6,8 +6,9 @@ import (
 
 // Config for the logger.
 type Config struct {
-	Level Level `help:"Log level." default:"info" env:"LOG_LEVEL"`
-	JSON  bool  `help:"Log in JSON format." env:"LOG_JSON"`
+	Level      Level `help:"Log level." default:"info" env:"LOG_LEVEL"`
+	JSON       bool  `help:"Log in JSON format." env:"LOG_JSON"`
+	Timestamps bool  `help:"Include timestamps in text logs." env:"LOG_TIMESTAMPS"`
 }
 
 // Configure returns a new logger based on the config.
@@ -16,7 +17,7 @@ func Configure(w io.Writer, cfg Config) *Logger {
 	if cfg.JSON {
 		sink = newJSONSink(w)
 	} else {
-		sink = newPlainSink(w)
+		sink = newPlainSink(w, cfg.Timestamps)
 	}
 	return New(cfg.Level, sink)
 }

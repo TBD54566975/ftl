@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/mattn/go-isatty"
 )
@@ -18,31 +19,42 @@ var colours = map[Level]string{
 
 var _ Sink = (*plainSink)(nil)
 
-func newPlainSink(w io.Writer) *plainSink {
+func newPlainSink(w io.Writer, logTime bool) *plainSink {
 	var isaTTY bool
 	if f, ok := w.(*os.File); ok {
 		isaTTY = isatty.IsTerminal(f.Fd())
 	}
 	return &plainSink{
-		isaTTY: isaTTY,
-		w:      w,
+		isaTTY:  isaTTY,
+		w:       w,
+		logTime: logTime,
 	}
 }
 
 type plainSink struct {
-	isaTTY bool
-	w      io.Writer
+	isaTTY  bool
+	w       io.Writer
+	logTime bool
 }
 
 // Log implements Sink
 func (t *plainSink) Log(entry Entry) error {
 	var prefix string
+
+	// Add timestamp if required
+	if t.logTime {
+		prefix += entry.Time.Format(time.TimeOnly) + " "
+	}
+
+	// Add scope if required
 	scope, exists := entry.Attributes[scopeKey]
 	if exists {
-		prefix = entry.Level.String() + ":" + scope + ": "
+		prefix += entry.Level.String() + ":" + scope + ": "
 	} else {
-		prefix = entry.Level.String() + ": "
+		prefix += entry.Level.String() + ": "
 	}
+
+	// Print
 	var err error
 	if t.isaTTY {
 		_, err = fmt.Fprintf(t.w, "%s%s%s\x1b[0m\n", colours[entry.Level], prefix, entry.Message)
