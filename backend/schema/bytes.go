@@ -21,3 +21,4 @@ func (*Bytes) schemaType()              {}
 func (*Bytes) schemaDecl()              {}
 func (*Bytes) String() string           { return "Bytes" }
 func (b *Bytes) ToProto() proto.Message { return &schemapb.Bytes{Pos: posToProto(b.Pos)} }
+func (*Bytes) GetName() string          { return "" }

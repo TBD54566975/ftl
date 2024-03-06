@@ -20,3 +20,4 @@ func (*Any) schemaType()              {}
 func (*Any) schemaDecl()              {}
 func (*Any) String() string           { return "Any" }
 func (a *Any) ToProto() proto.Message { return &schemapb.Any{Pos: posToProto(a.Pos)} }
+func (*Any) GetName() string          { return "" }

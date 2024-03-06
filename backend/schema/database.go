@@ -35,6 +35,9 @@ func (d *Database) ToProto() proto.Message {
 		Comments: d.Comments,
 	}
 }
+
+func (d *Database) GetName() string { return d.Name }
+
 func DatabaseFromProto(s *schemapb.Database) *Database {
 	return &Database{
 		Pos:      posFromProto(s.Pos),

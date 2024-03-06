@@ -60,12 +60,21 @@ type directiveModule struct {
 func (*directiveModule) directive()       {}
 func (d *directiveModule) String() string { return "ftl:module" }
 
+type directiveEnum struct {
+	Pos lexer.Position
+
+	Enum bool `parser:"@'enum'"`
+}
+
+func (*directiveEnum) directive()       {}
+func (d *directiveEnum) String() string { return "ftl:enum" }
+
 var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
-	participle.Union[directive](&directiveVerb{}, &directiveIngress{}, &directiveModule{}),
+	participle.Union[directive](&directiveVerb{}, &directiveIngress{}, &directiveModule{}, &directiveEnum{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 

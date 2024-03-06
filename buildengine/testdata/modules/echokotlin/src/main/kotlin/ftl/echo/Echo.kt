@@ -1,6 +1,5 @@
-package ftl.echo2
+package ftl.echo
 
-import ftl.test.TestResponse
 import xyz.block.ftl.Context
 import xyz.block.ftl.Method
 import xyz.block.ftl.Verb

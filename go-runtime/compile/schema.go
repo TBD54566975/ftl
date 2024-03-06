@@ -8,10 +8,12 @@ import (
 	"go/types"
 	"path"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode"
 
+	"golang.org/x/exp/maps"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 
@@ -36,6 +38,8 @@ var (
 // NativeNames is a map of top-level declarations to their native Go names.
 type NativeNames map[schema.Decl]string
 
+type enums map[string]*schema.Enum
+
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
 func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 	pkgs, err := packages.Load(&packages.Config{
@@ -58,7 +62,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 				merr = append(merr, fmt.Errorf("%s: %w", pkg.PkgPath, perr))
 			}
 		}
-		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}}
+		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}}
 		for _, file := range pkg.Syntax {
 			var verb *schema.Verb
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
@@ -93,6 +97,11 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 					verb = nil
 					return nil
 
+				case *ast.GenDecl:
+					if err = visitGenDecl(pctx, node); err != nil {
+						return err
+					}
+
 				case nil:
 				default:
 				}
@@ -104,6 +113,9 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 		}
 		for decl, nativeName := range pctx.nativeNames {
 			nativeNames[decl] = nativeName
+		}
+		for _, e := range maps.Values(pctx.enums) {
+			pctx.module.Decls = append(pctx.module.Decls, e)
 		}
 	}
 	if len(merr) > 0 {
@@ -224,6 +236,103 @@ func goPosToSchemaPos(pos token.Pos) schema.Position {
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}
 }
 
+func visitGenDecl(pctx *parseContext, node *ast.GenDecl) error {
+	switch node.Tok {
+	case token.TYPE:
+		if node.Doc == nil {
+			return nil
+		}
+		directives, err := parseDirectives(fset, node.Doc)
+		if err != nil {
+			return err
+		}
+		for _, dir := range directives {
+			switch dir.(type) {
+			case *directiveEnum:
+				enum := &schema.Enum{
+					Pos:      goPosToSchemaPos(node.Pos()),
+					Comments: visitComments(node.Doc),
+				}
+				if len(node.Specs) != 1 {
+					return fmt.Errorf("%s: error parsing ftl enum %s: expected exactly one type spec",
+						goPosToSchemaPos(node.Pos()), enum.Name)
+				}
+				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
+					pctx.enums[t.Name.Name] = enum
+					err := visitTypeSpec(pctx, t)
+					if err != nil {
+						return err
+					}
+				}
+			case *directiveIngress, *directiveModule, *directiveVerb:
+			}
+		}
+		return nil
+	case token.CONST:
+		var typ ast.Expr
+		for i, s := range node.Specs {
+			if v, ok := s.(*ast.ValueSpec); ok {
+				// In an iota enum, only the first value has a type.
+				// Hydrate this to subsequent values so we can associate them with the enum.
+				if i == 0 && isIotaEnum(v) {
+					typ = v.Type
+				} else if v.Type == nil {
+					v.Type = typ
+				}
+				err := visitValueSpec(pctx, v)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	default:
+		return nil
+	}
+}
+
+func visitTypeSpec(pctx *parseContext, node *ast.TypeSpec) error {
+	enum := pctx.enums[node.Name.Name]
+	if enum == nil {
+		return nil
+	}
+	typ, err := visitType(pctx, node, pctx.pkg.TypesInfo.TypeOf(node.Type))
+	if err != nil {
+		return err
+	}
+	enum.Name = strcase.ToUpperCamel(node.Name.Name)
+	enum.Type = typ
+	pctx.nativeNames[enum] = node.Name.Name
+	return nil
+}
+
+func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) error {
+	var enum *schema.Enum
+	if i, ok := node.Type.(*ast.Ident); ok {
+		enum = pctx.enums[i.Name]
+	}
+	if enum == nil {
+		return nil
+	}
+
+	if c, ok := pctx.pkg.TypesInfo.Defs[node.Names[0]].(*types.Const); ok {
+		value, err := visitConst(c)
+		if err != nil {
+			return err
+		}
+		variant := &schema.EnumVariant{
+			Pos:   goPosToSchemaPos(c.Pos()),
+			Name:  strcase.ToUpperCamel(c.Id()),
+			Value: value,
+		}
+		enum.Variants = append(enum.Variants, variant)
+		return nil
+	}
+
+	return fmt.Errorf("%s: could not extract enum %s: expected exactly one variant name",
+		goPosToSchemaPos(node.Pos()), enum.Name)
+}
+
 func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, err error) {
 	if node.Doc == nil {
 		return nil, nil
@@ -236,6 +345,8 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	isVerb := false
 	for _, dir := range directives {
 		switch dir := dir.(type) {
+		case *directiveEnum:
+
 		case *directiveModule:
 
 		case *directiveVerb:
@@ -450,12 +561,52 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 	return dataRef, nil
 }
 
+func visitConst(cnode *types.Const) (schema.Value, error) {
+	if b, ok := cnode.Type().Underlying().(*types.Basic); ok {
+		switch b.Kind() {
+		case types.String:
+			value, err := strconv.Unquote(cnode.Val().String())
+			if err != nil {
+				return nil, err
+			}
+			return &schema.StringValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: value}, nil
+
+		case types.Int, types.Int64:
+			value, err := strconv.ParseInt(cnode.Val().String(), 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			return &schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)}, nil
+		default:
+			return nil, fmt.Errorf("%s: unsupported basic type %s", goPosToSchemaPos(cnode.Pos()),
+				b)
+		}
+	}
+	return nil, fmt.Errorf("%s: unsupported const type %s", goPosToSchemaPos(cnode.Pos()), cnode.Type())
+}
+
 func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
 	if tparam, ok := tnode.(*types.TypeParam); ok {
 		return &schema.DataRef{Pos: goPosToSchemaPos(node.Pos()), Name: tparam.Obj().Id()}, nil
 	}
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
+		// If this type is named and declared in another module, it's a reference. The only basic-typed references
+		// supported are enums.
+		if named, ok := tnode.(*types.Named); ok {
+			nodePath := named.Obj().Pkg().Path()
+			if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
+				base := path.Dir(pctx.pkg.PkgPath)
+				destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
+				enumRef := &schema.EnumRef{
+					Pos:    goPosToSchemaPos(node.Pos()),
+					Module: destModule,
+					Name:   named.Obj().Name(),
+				}
+				return enumRef, nil
+			}
+		}
+
 		switch underlying.Kind() {
 		case types.String:
 			return &schema.String{Pos: goPosToSchemaPos(node.Pos())}, nil
@@ -596,6 +747,7 @@ type parseContext struct {
 	pkgs        []*packages.Package
 	module      *schema.Module
 	nativeNames NativeNames
+	enums       enums
 }
 
 // pathEnclosingInterval returns the PackageInfo and ast.Node that
@@ -628,4 +780,20 @@ func tokenFileContainsPos(f *token.File, pos token.Pos) bool {
 	p := int(pos)
 	base := f.Base()
 	return base <= p && p < base+f.Size()
+}
+
+func isIotaEnum(node ast.Node) bool {
+	switch t := node.(type) {
+	case *ast.ValueSpec:
+		if len(t.Values) != 1 {
+			return false
+		}
+		return isIotaEnum(t.Values[0])
+	case *ast.Ident:
+		return t.Name == "iota"
+	case *ast.BinaryExpr:
+		return isIotaEnum(t.X) || isIotaEnum(t.Y)
+	default:
+		return false
+	}
 }

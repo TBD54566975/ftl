@@ -51,6 +51,8 @@ func (e *Enum) ToProto() proto.Message {
 	}
 }
 
+func (e *Enum) GetName() string { return e.Name }
+
 func EnumFromProto(s *schemapb.Enum) *Enum {
 	return &Enum{
 		Pos:      posFromProto(s.Pos),

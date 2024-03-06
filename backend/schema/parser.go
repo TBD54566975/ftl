@@ -123,6 +123,7 @@ type Value interface {
 //sumtype:decl
 type Decl interface {
 	Node
+	GetName() string
 	schemaDecl()
 }
 

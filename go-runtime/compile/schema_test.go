@@ -33,9 +33,36 @@ func TestExtractModuleSchema(t *testing.T) {
     time Time
     user two.User +alias json "u"
     bytes Bytes
+    enumRef two.TwoEnum
   }
 
   data Resp {
+  }
+
+  enum Color(String) {
+    Red("Red")
+    Blue("Blue")
+    Green("Green")
+    Yellow("Yellow")
+  }
+
+  enum ColorInt(Int) {
+    RedInt(0)
+    BlueInt(1)
+    GreenInt(2)
+    YellowInt(3)
+  }
+
+  enum IotaExpr(Int) {
+    First(1)
+    Second(3)
+    Third(5)
+  }
+
+  enum SimpleIota(Int) {
+    Zero(0)
+    One(1)
+    Two(2)
   }
 
   verb verb(one.Req) one.Resp
@@ -52,12 +79,17 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
   data Payload<T> {
     body T
   }
-
-  verb two(two.Payload<String>) two.Payload<String>
+  
+  enum TwoEnum(String) {
+    Red("Red")
+    Blue("Blue")
+    Green("Green")
+  }
 
   verb callsTwo(two.Payload<String>) two.Payload<String>
       +calls two.two
 
+  verb two(two.Payload<String>) two.Payload<String>
 }
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))

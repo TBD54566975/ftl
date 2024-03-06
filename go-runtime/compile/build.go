@@ -192,6 +192,15 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		})
 		return imports
 	},
+	"value": func(v schema.Value) string {
+		switch t := v.(type) {
+		case *schema.StringValue:
+			return fmt.Sprintf("%q", t.Value)
+		case *schema.IntValue:
+			return fmt.Sprintf("%d", t.Value)
+		}
+		panic(fmt.Sprintf("unsupported value %T", v))
+	},
 }
 
 func genType(module *schema.Module, t schema.Type) string {
