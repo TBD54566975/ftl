@@ -6,6 +6,11 @@ on:
       - labeled
       - closed
       - deleted
+  pull_request:
+    types:
+      - opened
+      - closed
+      - reopened
   workflow_dispatch:
   # We need to separately trigger when one of the other workflows completes
   # because GHA won't trigger another workflow based only on changes from
