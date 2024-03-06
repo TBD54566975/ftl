@@ -10,7 +10,7 @@ jobs:
     permissions:
       issues: write
     steps:
-      - run: gh issue edit "$NUMBER" --add-label triage
+      - run: test "$(gh issue view "$NUMBER" --json assignees --jq '.assignees | length')" = 0 && gh issue edit "$NUMBER" --add-label triage
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
