@@ -25,18 +25,16 @@ func newPlainSink(w io.Writer, logTime bool) *plainSink {
 		isaTTY = isatty.IsTerminal(f.Fd())
 	}
 	return &plainSink{
-		isaTTY:    isaTTY,
-		w:         w,
-		startTime: time.Now(),
-		logTime:   logTime,
+		isaTTY:  isaTTY,
+		w:       w,
+		logTime: logTime,
 	}
 }
 
 type plainSink struct {
-	isaTTY    bool
-	w         io.Writer
-	startTime time.Time
-	logTime   bool
+	isaTTY  bool
+	w       io.Writer
+	logTime bool
 }
 
 // Log implements Sink
@@ -45,20 +43,7 @@ func (t *plainSink) Log(entry Entry) error {
 
 	// Add timestamp if required
 	if t.logTime {
-		d := entry.Time.Sub(t.startTime)
-		var timestamp string
-		switch {
-		case d < time.Second:
-			timestamp = fmt.Sprintf("%dms", d/time.Millisecond)
-		case d < time.Minute:
-			timestamp = fmt.Sprintf("%ds", d/time.Second)
-		case d < time.Hour:
-			timestamp = fmt.Sprintf("%dm", d/time.Minute)
-		default:
-			timestamp = fmt.Sprintf("%dh", d/time.Hour)
-		}
-
-		prefix += fmt.Sprintf("%5s ", timestamp)
+		prefix += t.startTime.Format(time.TimeOnly) + " "
 	}
 
 	// Add scope if required
