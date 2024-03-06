@@ -42,8 +42,6 @@ hot-reloading ftl agent:
 $ ftl dev ./examples/go
 ```
 
-You can then view the console at `http://localhost:8892`
-
 ## Best practices
 
 ### Sum types
