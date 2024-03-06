@@ -12,7 +12,7 @@ import (
 type MetadataCalls struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Calls []*VerbRef `parser:"'calls' @@ (',' @@)*" protobuf:"2"`
+	Calls []*VerbRef `parser:"'+' 'calls' @@ (',' @@)*" protobuf:"2"`
 }
 
 var _ Metadata = (*MetadataCalls)(nil)
@@ -20,7 +20,7 @@ var _ Metadata = (*MetadataCalls)(nil)
 func (m *MetadataCalls) Position() Position { return m.Pos }
 func (m *MetadataCalls) String() string {
 	out := &strings.Builder{}
-	fmt.Fprint(out, "calls ")
+	fmt.Fprint(out, "+calls ")
 	w := 6
 	for i, call := range m.Calls {
 		if i > 0 {

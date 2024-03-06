@@ -20,11 +20,11 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {String: String}? alias json "rqn"
+    name {String: String}? +alias json "rqn"
   }
 
   data CreateResponse {
-    name [String] alias json "rsn"
+    name [String] +alias json "rsn"
   }
 
   data DestroyRequest {
@@ -38,11 +38,11 @@ module todo {
   }
 
   verb create(todo.CreateRequest) todo.CreateResponse
-      calls todo.destroy
+      +calls todo.destroy
 
 
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
-      ingress http GET /todo/destroy/{id}
+      +ingress http GET /todo/destroy/{id}
 }
 
 module foo {
@@ -79,7 +79,7 @@ func TestImports(t *testing.T) {
 			ref Generic<new.Data>
 		}
 		verb myVerb(test.Data) test.Data
-			calls verbose.verb
+			+calls verbose.verb
 	}
 	`
 	schema, err := ParseModuleString("", input)
@@ -96,10 +96,12 @@ Module
         Map
           String
           String
+      MetadataAlias
   Data
     Field
       Array
         String
+      MetadataAlias
   Data
     Field
       String
@@ -143,7 +145,7 @@ func TestParserRoundTrip(t *testing.T) {
 	assert.NoError(t, err, "%s", testSchema.String())
 	actual, err = Validate(actual)
 	assert.NoError(t, err)
-	assert.Equal(t, Normalise(testSchema), Normalise(actual), "%s", testSchema.String())
+	assert.Equal(t, Normalise(testSchema), Normalise(actual))
 }
 
 func TestParsing(t *testing.T) {
@@ -161,7 +163,7 @@ func TestParsing(t *testing.T) {
 
 					// Create a new list
 					verb createList(todo.CreateListRequest) CreateListResponse
-						calls createList
+						+calls createList
 				}
 			`,
 			expected: &Schema{
@@ -199,10 +201,10 @@ func TestParsing(t *testing.T) {
 			},
 		},
 		{name: "InvalidDataMetadata",
-			input: `module test { data Data {} calls verb }`,
+			input: `module test { data Data {} +calls verb }`,
 			errors: []string{
-				"1:28: metadata \"calls verb\" is not valid on data structures",
-				"1:34: reference to unknown verb \"verb\"",
+				"1:28: metadata \"+calls verb\" is not valid on data structures",
+				"1:35: reference to unknown verb \"verb\"",
 			}},
 		{name: "KeywordAsName",
 			input:  `module int { data String { name String } verb verb(String) String }`,
@@ -234,8 +236,8 @@ func TestParsing(t *testing.T) {
 					}
 
 					verb echo(builtin.HttpRequest<echo.EchoRequest>) builtin.HttpResponse<echo.EchoResponse, String>
-						ingress http GET /echo
-						calls time.time
+						+ingress http GET /echo
+						+calls time.time
 
 				}
 
@@ -248,7 +250,7 @@ func TestParsing(t *testing.T) {
 					}
 
 					verb time(builtin.HttpRequest<time.TimeRequest>) builtin.HttpResponse<time.TimeResponse, String>
-						ingress http GET /time
+						+ingress http GET /time
 				}
 				`,
 			expected: &Schema{
@@ -355,10 +357,10 @@ func TestParseModule(t *testing.T) {
 // A comment
 module todo {
   data CreateRequest {
-    name {String: String}? alias json "rqn"
+    name {String: String}? +alias json "rqn"
   }
   data CreateResponse {
-    name [String] alias json "rsn"
+    name [String] +alias json "rsn"
   }
   data DestroyRequest {
     // A comment
@@ -369,15 +371,15 @@ module todo {
 	when Time
   }
   verb create(todo.CreateRequest) todo.CreateResponse
-  	calls todo.destroy
+  	+calls todo.destroy
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
-  	ingress http GET /todo/destroy/{id}
+  	+ingress http GET /todo/destroy/{id}
 }
 `
 	actual, err := ParseModuleString("", input)
 	assert.NoError(t, err)
 	actual = Normalise(actual)
-	assert.Equal(t, Normalise(testSchema.Modules[1]), actual, assert.Exclude[Position])
+	assert.Equal(t, Normalise(testSchema.Modules[1]), actual, assert.Exclude[Position]())
 }
 
 func TestParseEnum(t *testing.T) {
@@ -412,13 +414,13 @@ var testSchema = MustValidate(&Schema{
 				&Data{
 					Name: "CreateRequest",
 					Fields: []*Field{
-						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, JSONAlias: "rqn"},
+						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJSON, Alias: "rqn"}}},
 					},
 				},
 				&Data{
 					Name: "CreateResponse",
 					Fields: []*Field{
-						{Name: "name", Type: &Array{Element: &String{}}, JSONAlias: "rsn"},
+						{Name: "name", Type: &Array{Element: &String{}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJSON, Alias: "rsn"}}},
 					},
 				},
 				&Data{
@@ -494,12 +496,12 @@ func TestValidateDependencies(t *testing.T) {
 			schema: `
 				module one {
 					verb one(builtin.Empty) builtin.Empty
-						calls two.two
+						+calls two.two
 				}
 
 				module two {
 					verb two(builtin.Empty) builtin.Empty
-						calls one.one
+						+calls one.one
 				}
 				`,
 			err: "found cycle in dependencies: two -> one -> two",
@@ -510,12 +512,12 @@ func TestValidateDependencies(t *testing.T) {
 			schema: `
 				module one {
 					verb one(builtin.Empty) builtin.Empty
-						calls two.two
+						+calls two.two
 				}
 
 				module two {
 					verb two(builtin.Empty) builtin.Empty
-						calls three.three
+						+calls three.three
 				}
 
 				module three {
@@ -530,17 +532,17 @@ func TestValidateDependencies(t *testing.T) {
 			schema: `
 				module one {
 					verb one(builtin.Empty) builtin.Empty
-						calls two.two
+						+calls two.two
 				}
 
 				module two {
 					verb two(builtin.Empty) builtin.Empty
-						calls three.three
+						+calls three.three
 				}
 
 				module three {
 					verb three(builtin.Empty) builtin.Empty
-					calls one.one
+						+calls one.one
 				}
 				`,
 			err: "found cycle in dependencies: two -> three -> one -> two",
@@ -553,13 +555,13 @@ func TestValidateDependencies(t *testing.T) {
 			schema: `
 				module one {
 					verb a(builtin.Empty) builtin.Empty
-						calls two.a
+						+calls two.a
 					verb b(builtin.Empty) builtin.Empty
 				}
 
 				module two {
 					verb a(builtin.Empty) builtin.Empty
-						calls one.b
+						+calls one.b
 				}
 				`,
 			err: "found cycle in dependencies: two -> one -> two",
@@ -570,10 +572,10 @@ func TestValidateDependencies(t *testing.T) {
 			schema: `
 				module one {
 					verb a(builtin.Empty) builtin.Empty
-						calls one.b
+						+calls one.b
 
 					verb b(builtin.Empty) builtin.Empty
-						calls one.a
+						+calls one.a
 				}
 			`,
 			err: "",

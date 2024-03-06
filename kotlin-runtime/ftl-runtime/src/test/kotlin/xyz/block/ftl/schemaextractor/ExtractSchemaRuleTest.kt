@@ -155,7 +155,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               Field(
                 name = "stuff",
                 type = Type(any = xyz.block.ftl.v1.schema.Any()),
-                jsonAlias = "stf"
+                metadata = listOf(Metadata(alias = MetadataAlias(alias = "stf"))),
               )
             ),
             comments = listOf(

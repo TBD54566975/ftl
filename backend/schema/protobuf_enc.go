@@ -60,6 +60,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataIngress:
 			v = &schemapb.Metadata_Ingress{Ingress: n.ToProto().(*schemapb.MetadataIngress)}
 
+		case *MetadataAlias:
+			v = &schemapb.Metadata_Alias{Alias: n.ToProto().(*schemapb.MetadataAlias)}
+
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}
@@ -74,6 +77,7 @@ func ingressListToProto(nodes []IngressPathComponent) []*schemapb.IngressPathCom
 		switch n := n.(type) {
 		case *IngressPathLiteral:
 			out[i] = &schemapb.IngressPathComponent{Value: &schemapb.IngressPathComponent_IngressPathLiteral{IngressPathLiteral: n.ToProto().(*schemapb.IngressPathLiteral)}}
+
 		case *IngressPathParameter:
 			out[i] = &schemapb.IngressPathComponent{Value: &schemapb.IngressPathComponent_IngressPathParameter{IngressPathParameter: n.ToProto().(*schemapb.IngressPathParameter)}}
 

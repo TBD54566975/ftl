@@ -729,9 +729,9 @@ export class Field extends Message<Field> {
   type?: Type;
 
   /**
-   * @generated from field: string jsonAlias = 5;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 5;
    */
-  jsonAlias = "";
+  metadata: Metadata[] = [];
 
   constructor(data?: PartialMessage<Field>) {
     super();
@@ -745,7 +745,7 @@ export class Field extends Message<Field> {
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "type", kind: "message", T: Type },
-    { no: 5, name: "jsonAlias", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "metadata", kind: "message", T: Metadata, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Field {
@@ -1092,6 +1092,12 @@ export class Metadata extends Message<Metadata> {
      */
     value: MetadataDatabases;
     case: "databases";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataAlias alias = 4;
+     */
+    value: MetadataAlias;
+    case: "alias";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Metadata>) {
@@ -1105,6 +1111,7 @@ export class Metadata extends Message<Metadata> {
     { no: 1, name: "calls", kind: "message", T: MetadataCalls, oneof: "value" },
     { no: 2, name: "ingress", kind: "message", T: MetadataIngress, oneof: "value" },
     { no: 3, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
+    { no: 4, name: "alias", kind: "message", T: MetadataAlias, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Metadata {
@@ -1121,6 +1128,55 @@ export class Metadata extends Message<Metadata> {
 
   static equals(a: Metadata | PlainMessage<Metadata> | undefined, b: Metadata | PlainMessage<Metadata> | undefined): boolean {
     return proto3.util.equals(Metadata, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataAlias
+ */
+export class MetadataAlias extends Message<MetadataAlias> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: int64 kind = 2;
+   */
+  kind = protoInt64.zero;
+
+  /**
+   * @generated from field: string alias = 3;
+   */
+  alias = "";
+
+  constructor(data?: PartialMessage<MetadataAlias>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataAlias";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "kind", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataAlias {
+    return new MetadataAlias().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataAlias {
+    return new MetadataAlias().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataAlias {
+    return new MetadataAlias().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataAlias | PlainMessage<MetadataAlias> | undefined, b: MetadataAlias | PlainMessage<MetadataAlias> | undefined): boolean {
+    return proto3.util.equals(MetadataAlias, a, b);
   }
 }
 

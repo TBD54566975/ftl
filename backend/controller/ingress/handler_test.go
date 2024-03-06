@@ -23,7 +23,7 @@ func TestIngress(t *testing.T) {
 	sch, err := schema.ParseString("", `
 		module test {
 			data AliasRequest {
-				aliased String alias json "alias"
+				aliased String +alias json "alias"
 			}
 
 			data PathParameterRequest {
@@ -43,16 +43,16 @@ func TestIngress(t *testing.T) {
 			}
 
 			verb getAlias(HttpRequest<AliasRequest>) HttpResponse<Empty, Empty>
-				ingress http GET /getAlias
+				+ingress http GET /getAlias
 
 			verb getPath(HttpRequest<PathParameterRequest>) HttpResponse<Empty, Empty>
-				ingress http GET /getPath/{username}
+				+ingress http GET /getPath/{username}
 
 			verb postMissingTypes(HttpRequest<MissingTypes>) HttpResponse<Empty, Empty>
-				ingress http POST /postMissingTypes
+				+ingress http POST /postMissingTypes
 
 			verb postJsonPayload(HttpRequest<JsonPayload>) HttpResponse<Empty, Empty>
-				ingress http POST /postJsonPayload
+				+ingress http POST /postJsonPayload
 		}
 	`)
 	assert.NoError(t, err)

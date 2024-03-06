@@ -103,8 +103,9 @@ func (d *Data) Monomorphise(ref *DataRef) (*Data, error) {
 
 		case *Any, *Bool, *Bytes, *Data, *DataRef, *Database, Decl, *Float,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Int,
-			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress, *Module,
-			*Schema, *String, *Time, Type, *TypeParameter, *Unit, *Verb, *Enum, *EnumVariant,
+			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
+			*MetadataAlias, *Module, *Schema, *String, *Time, Type, *TypeParameter,
+			*Unit, *Verb, *Enum, *EnumVariant,
 			Value, *IntValue, *StringValue:
 		}
 		return next()

@@ -6,9 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestGenerateBasicModule(t *testing.T) {
@@ -74,7 +75,7 @@ func TestGenerateAllTypes(t *testing.T) {
 								TypeParameters: []schema.Type{&schema.DataRef{Name: "T"}},
 							},
 							},
-							{Name: "withAlias", Type: &schema.String{}, JSONAlias: "a"},
+							{Name: "withAlias", Type: &schema.String{}, Metadata: []schema.Metadata{&schema.MetadataAlias{Alias: "a"}}},
 							{Name: "unit", Type: &schema.Unit{}},
 						},
 					},

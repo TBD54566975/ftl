@@ -31,7 +31,7 @@ func TestExtractModuleSchema(t *testing.T) {
     nested one.Nested
     optional one.Nested?
     time Time
-    user two.User alias json "u"
+    user two.User +alias json "u"
     bytes Bytes
   }
 
@@ -56,7 +56,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
   verb two(two.Payload<String>) two.Payload<String>
 
   verb callsTwo(two.Payload<String>) two.Payload<String>
-      calls two.two
+      +calls two.two
 
 }
 `
@@ -72,28 +72,24 @@ func TestParseDirectives(t *testing.T) {
 		{name: "Module", input: "ftl:module foo", expected: &directiveModule{Name: "foo"}},
 		{name: "Verb", input: "ftl:verb", expected: &directiveVerb{Verb: true}},
 		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
-			MetadataIngress: schema.MetadataIngress{
-				Method: "GET",
-				Path: []schema.IngressPathComponent{
-					&schema.IngressPathLiteral{
-						Text: "foo",
-					},
+			Method: "GET",
+			Path: []schema.IngressPathComponent{
+				&schema.IngressPathLiteral{
+					Text: "foo",
 				},
 			},
 		}},
 		{name: "Ingress", input: `ftl:ingress GET /test_path/{something}/987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz`, expected: &directiveIngress{
-			MetadataIngress: schema.MetadataIngress{
-				Method: "GET",
-				Path: []schema.IngressPathComponent{
-					&schema.IngressPathLiteral{
-						Text: "test_path",
-					},
-					&schema.IngressPathParameter{
-						Name: "something",
-					},
-					&schema.IngressPathLiteral{
-						Text: "987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz",
-					},
+			Method: "GET",
+			Path: []schema.IngressPathComponent{
+				&schema.IngressPathLiteral{
+					Text: "test_path",
+				},
+				&schema.IngressPathParameter{
+					Name: "something",
+				},
+				&schema.IngressPathLiteral{
+					Text: "987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz",
 				},
 			},
 		}},

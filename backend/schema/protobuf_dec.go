@@ -112,6 +112,13 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Path:   ingressPathComponentListToSchema(s.Ingress.Path),
 		}
 
+	case *schemapb.Metadata_Alias:
+		return &MetadataAlias{
+			Pos:   posFromProto(s.Alias.Pos),
+			Kind:  AliasKind(s.Alias.Kind),
+			Alias: s.Alias.Alias,
+		}
+
 	default:
 		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}

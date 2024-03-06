@@ -12,11 +12,11 @@ func TestTransformFromAliasedFields(t *testing.T) {
 	schemaText := `
 		module test {
 			data Inner {
-				waz String alias json "foo"
+				waz String +alias json "foo"
 			}
 
 			data Test {
-				scalar String alias json "bar"
+				scalar String +alias json "bar"
 				inner Inner
 				array [Inner]
 				map {String: Inner}
@@ -72,11 +72,11 @@ func TestTransformToAliasedFields(t *testing.T) {
 	schemaText := `
 		module test {
 			data Inner {
-				waz String alias json "foo"
+				waz String +alias json "foo"
 			}
 
 			data Test {
-				scalar String alias json "bar"
+				scalar String +alias json "bar"
 				inner Inner
 				array [Inner]
 				map {String: Inner}
