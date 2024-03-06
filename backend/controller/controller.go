@@ -86,7 +86,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 			_, _ = w.Write([]byte("Console not installed."))
 		})
 	} else {
-		consoleHandler, err = frontend.Server(ctx, config.ContentTime, config.ConsoleURL)
+		consoleHandler, err = frontend.Server(ctx, config.ContentTime, config.Bind, config.ConsoleURL)
 		if err != nil {
 			return err
 		}
