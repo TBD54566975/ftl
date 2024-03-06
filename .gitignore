@@ -20,3 +20,4 @@ testdata/**/go.work.sum
 **/_ftl
 buildengine/.gitignore
 go.work*
+junit*.xml

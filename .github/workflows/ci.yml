@@ -33,7 +33,7 @@ jobs:
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Test
-        run: go test ./...
+        run: go-test-annotate
   sql:
     name: SQL
     runs-on: ubuntu-latest
@@ -61,16 +61,16 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: golangci-lint
-        run: golangci-lint run
+        run: golangci-lint run --out-format github-actions ./...
       - name: go-check-sumtype
-        run: go-check-sumtype ./...
+        run: go-check-sumtype ./... | to-annotation
       - name: actionlint
-        run: actionlint --oneline
+        run: actionlint --oneline | to-annotation
       # Too annoying to disable individual warnings
       # - name: staticcheck
       #   run: staticcheck ./...
       - name: shellcheck
-        run: shellcheck -e SC2016 scripts/*
+        run: shellcheck -f gcc -e SC2016 scripts/* | to-annotation
   proto-breaking:
     name: Proto Breaking Change Check
     runs-on: ubuntu-latest
@@ -82,16 +82,7 @@ jobs:
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Proto Breaking Change Check
-        run: |
-          buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | while read -r line; do
-            # Extract the file path, line number, and column number from the warning message
-            file_path=$(echo "$line" | cut -d':' -f1)
-            line_number=$(echo "$line" | cut -d':' -f2)
-            column_number=$(echo "$line" | cut -d':' -f3)
-
-            # Output the warning message in the format expected by GitHub Actions
-            echo "::error file=$file_path,line=$line_number,col=$column_number::$line"
-          done
+        run: buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation
   console:
     name: Console
     runs-on: ubuntu-latest
