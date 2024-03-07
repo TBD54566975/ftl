@@ -2,7 +2,6 @@ package localscaling
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net/url"
@@ -28,8 +27,6 @@ type LocalScaling struct {
 
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
-
-	idSeed int
 }
 
 func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL) (*LocalScaling, error) {
@@ -82,6 +79,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 			Bind:               l.portAllocator.Next(),
 			ControllerEndpoint: controllerEndpoint,
 			TemplateDir:        templateDir(ctx),
+			Key:                model.NewRunnerKey(),
 		}
 
 		name := fmt.Sprintf("runner%d", i)
@@ -89,18 +87,6 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 			"deploymentdir": filepath.Join(l.cacheDir, "ftl-runner", name, "deployments"),
 			"language":      "go,kotlin",
 		}); err != nil {
-			return err
-		}
-
-		// Create a readable ULID for the runner.
-		idSeed := l.idSeed + 1
-		l.idSeed = idSeed
-
-		var ulid [16]byte
-		binary.BigEndian.PutUint32(ulid[10:], uint32(idSeed))
-		ulidStr := fmt.Sprintf("%025X", ulid)
-		err := config.Key.Scan(ulidStr)
-		if err != nil {
 			return err
 		}
 
