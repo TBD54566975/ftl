@@ -60,6 +60,7 @@ type Config struct {
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
+	IdleRunners                  int                 `help:"Number of idle runners to keep around (not supported in production)." default:"1"`
 }
 
 func (c *Config) SetDefaults() {
@@ -787,7 +788,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 			deploymentLogger.Debugf("Need %d more runners for %s", require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
 				if err := s.deploy(ctx, deployment); err != nil {
-					deploymentLogger.Debugf("Failed to increase deployment replicas: %s", err)
+					deploymentLogger.Errorf(err, "Failed to increase deployment replicas")
 				} else {
 					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas+1, reconcile.RequiredReplicas)
 					if reconcile.AssignedReplicas+1 == reconcile.RequiredReplicas {
@@ -825,7 +826,7 @@ func (s *Service) reconcileRunners(ctx context.Context) (time.Duration, error) {
 		return 0, fmt.Errorf("%s: %w", "failed to get deployments needing reconciliation", err)
 	}
 
-	totalRunners := 0
+	totalRunners := s.config.IdleRunners
 	for _, deployment := range activeDeployments {
 		totalRunners += deployment.MinReplicas
 	}
