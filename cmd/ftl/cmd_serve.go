@@ -70,6 +70,10 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		return killBackgroundProcess(logger)
 	}
 
+	if s.isRunning(ctx, client) {
+		return errors.New("FTL is already running")
+	}
+
 	logger.Infof("Starting FTL with %d controller(s) and %d runner(s)", s.Controllers, s.Runners)
 
 	dsn, err := s.setupDB(ctx)
@@ -179,14 +183,14 @@ func killBackgroundProcess(logger *log.Logger) error {
 		return nil
 	}
 
+	if err := os.Remove(pidFilePath); err != nil {
+		logger.Errorf(err, "Failed to remove pid file: %v", err)
+	}
+
 	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
 		if !errors.Is(err, syscall.ESRCH) {
 			return err
 		}
-	}
-
-	if err := os.Remove(pidFilePath); err != nil {
-		logger.Errorf(err, "Failed to remove pid file: %v", err)
 	}
 
 	logger.Infof("`ftl serve` stopped (pid: %d)", pid)
@@ -376,4 +380,9 @@ func (s *serveCmd) pollControllerOnine(ctx context.Context, client ftlv1connect.
 			return ctx.Err()
 		}
 	}
+}
+
+func (s *serveCmd) isRunning(ctx context.Context, client ftlv1connect.ControllerServiceClient) bool {
+	_, err := client.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+	return err == nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -20,25 +21,28 @@ type devCmd struct {
 
 func (d *devCmd) Run(ctx context.Context) error {
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-	engine, err := buildengine.New(ctx, client, d.Dirs...)
-	if err != nil {
-		return err
-	}
 
 	g, ctx := errgroup.WithContext(ctx)
 
 	if !d.NoServe {
+		if d.ServeCmd.isRunning(ctx, client) {
+			return errors.New("FTL is already running")
+		}
 		g.Go(func() error {
 			return d.ServeCmd.Run(ctx)
 		})
 	}
 
-	err = d.ServeCmd.pollControllerOnine(ctx, client)
+	err := d.ServeCmd.pollControllerOnine(ctx, client)
 	if err != nil {
 		return err
 	}
 
 	g.Go(func() error {
+		engine, err := buildengine.New(ctx, client, d.Dirs...)
+		if err != nil {
+			return err
+		}
 		return engine.Dev(ctx, d.Watch)
 	})
 
