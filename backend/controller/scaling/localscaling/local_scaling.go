@@ -28,6 +28,8 @@ type LocalScaling struct {
 
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
+
+	idSeed int
 }
 
 func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL) (*LocalScaling, error) {
@@ -91,8 +93,11 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		}
 
 		// Create a readable ULID for the runner.
+		idSeed := l.idSeed + 1
+		l.idSeed = idSeed
+
 		var ulid [16]byte
-		binary.BigEndian.PutUint32(ulid[10:], uint32(len(l.runners)+1))
+		binary.BigEndian.PutUint32(ulid[10:], uint32(idSeed))
 		ulidStr := fmt.Sprintf("%025X", ulid)
 		err := config.Key.Scan(ulidStr)
 		if err != nil {
