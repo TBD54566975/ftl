@@ -1715,7 +1715,13 @@ export class Type extends Message<Type> {
     case: "dataRef";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 12;
+     * @generated from field: xyz.block.ftl.v1.schema.EnumRef enumRef = 12;
+     */
+    value: EnumRef;
+    case: "enumRef";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 13;
      */
     value: Optional;
     case: "optional";
@@ -1740,7 +1746,8 @@ export class Type extends Message<Type> {
     { no: 9, name: "any", kind: "message", T: Any, oneof: "value" },
     { no: 10, name: "unit", kind: "message", T: Unit, oneof: "value" },
     { no: 11, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
-    { no: 12, name: "optional", kind: "message", T: Optional, oneof: "value" },
+    { no: 12, name: "enumRef", kind: "message", T: EnumRef, oneof: "value" },
+    { no: 13, name: "optional", kind: "message", T: Optional, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Type {

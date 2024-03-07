@@ -296,3 +296,72 @@ func TestValueForData(t *testing.T) {
 		assert.Equal(t, test.result, result)
 	}
 }
+
+func TestEnumValidation(t *testing.T) {
+	sch := &schema.Schema{
+		Modules: []*schema.Module{
+			{Name: "test", Decls: []schema.Decl{
+				&schema.Enum{
+					Name: "Color",
+					Type: &schema.String{},
+					Variants: []*schema.EnumVariant{
+						{Name: "Red", Value: &schema.StringValue{Value: "Red"}},
+						{Name: "Blue", Value: &schema.StringValue{Value: "Blue"}},
+						{Name: "Green", Value: &schema.StringValue{Value: "Green"}},
+					},
+				},
+				&schema.Enum{
+					Name: "ColorInt",
+					Type: &schema.Int{},
+					Variants: []*schema.EnumVariant{
+						{Name: "RedInt", Value: &schema.IntValue{Value: 0}},
+						{Name: "BlueInt", Value: &schema.IntValue{Value: 1}},
+						{Name: "GreenInt", Value: &schema.IntValue{Value: 2}},
+					},
+				},
+				&schema.Data{
+					Name: "StringEnumRequest",
+					Fields: []*schema.Field{
+						{Name: "message", Type: &schema.EnumRef{Name: "Color", Module: "test"}},
+					},
+				},
+				&schema.Data{
+					Name: "IntEnumRequest",
+					Fields: []*schema.Field{
+						{Name: "message", Type: &schema.EnumRef{Name: "ColorInt", Module: "test"}},
+					},
+				},
+				&schema.Data{
+					Name: "OptionalEnumRequest",
+					Fields: []*schema.Field{
+						{Name: "message", Type: &schema.Optional{
+							Type: &schema.EnumRef{Name: "Color", Module: "test"},
+						}},
+					},
+				},
+			}},
+		},
+	}
+
+	tests := []struct {
+		validateRoot *schema.DataRef
+		req          obj
+		err          string
+	}{
+		{&schema.DataRef{Name: "StringEnumRequest", Module: "test"}, obj{"message": "Red"}, ""},
+		{&schema.DataRef{Name: "IntEnumRequest", Module: "test"}, obj{"message": 0}, ""},
+		{&schema.DataRef{Name: "OptionalEnumRequest", Module: "test"}, obj{}, ""},
+		{&schema.DataRef{Name: "OptionalEnumRequest", Module: "test"}, obj{"message": "Red"}, ""},
+		{&schema.DataRef{Name: "StringEnumRequest", Module: "test"}, obj{"message": "akxznc"},
+			"akxznc is not a valid variant of enum test.Color"},
+	}
+
+	for _, test := range tests {
+		err := validateValue(test.validateRoot, []string{test.validateRoot.String()}, test.req, sch)
+		if test.err == "" {
+			assert.NoError(t, err)
+		} else {
+			assert.Contains(t, err.Error(), test.err)
+		}
+	}
+}

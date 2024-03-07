@@ -79,6 +79,19 @@ func (s *Schema) ResolveVerbRef(ref *VerbRef) *Verb {
 	return nil
 }
 
+func (s *Schema) ResolveEnumRef(ref *EnumRef) *Enum {
+	for _, module := range s.Modules {
+		if module.Name == ref.Module {
+			for _, decl := range module.Decls {
+				if enum, ok := decl.(*Enum); ok && enum.Name == ref.Name {
+					return enum
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // Module returns the named module if it exists.
 func (s *Schema) Module(name string) optional.Option[*Module] {
 	for _, module := range s.Modules {

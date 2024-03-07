@@ -591,11 +591,16 @@ func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 	}
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
-		// If this type is named and declared in another module, it's a reference. The only basic-typed references
-		// supported are enums.
 		if named, ok := tnode.(*types.Named); ok {
 			nodePath := named.Obj().Pkg().Path()
-			if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
+			if pctx.enums[named.Obj().Name()] != nil {
+				return &schema.EnumRef{
+					Pos:  goPosToSchemaPos(node.Pos()),
+					Name: named.Obj().Name(),
+				}, nil
+			} else if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
+				// If this type is named and declared in another module, it's a reference.
+				// The only basic-typed references supported are enums.
 				base := path.Dir(pctx.pkg.PkgPath)
 				destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
 				enumRef := &schema.EnumRef{

@@ -222,7 +222,8 @@ message Type {
     Any any = 9;
     Unit unit = 10;
     DataRef dataRef = 11;
-    Optional optional = 12;
+    EnumRef enumRef = 12;
+    Optional optional = 13;
   }
 }
 

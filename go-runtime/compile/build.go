@@ -226,6 +226,17 @@ func genType(module *schema.Module, t schema.Type) string {
 		}
 		return desc
 
+	case *schema.EnumRef:
+		desc := ""
+		if module != nil && t.Module == module.Name {
+			desc = t.Name
+		} else if t.Module == "" {
+			desc = t.Name
+		} else {
+			desc = "ftl" + t.Module + "." + t.Name
+		}
+		return desc
+
 	case *schema.VerbRef:
 		if module != nil && t.Module == module.Name {
 			return t.Name
