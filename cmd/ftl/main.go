@@ -27,15 +27,15 @@ type CLI struct {
 
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
 	Init     initCmd     `cmd:"" help:"Initialize a new FTL module."`
-	Dev      devCmd      `cmd:"" help:"Watch a directory for FTL modules and hot reload them."`
+	Dev      devCmd      `cmd:"" help:"Develop FTL modules. Will start the FTL cluster, build and deploy all modules found in the specified directories, and watch for changes."`
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
 	Update   updateCmd   `cmd:"" help:"Update a deployment."`
 	Kill     killCmd     `cmd:"" help:"Kill a deployment."`
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
-	Build    buildCmd    `cmd:"" help:"Build an FTL module."`
-	Deploy   deployCmd   `cmd:"" help:"Create a new deployment."`
+	Build    buildCmd    `cmd:"" help:"Build all modules found in the specified directories."`
+	Deploy   deployCmd   `cmd:"" help:"Build and deploy all modules found in the specified directories."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
