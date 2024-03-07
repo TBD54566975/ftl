@@ -788,7 +788,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 			deploymentLogger.Debugf("Need %d more runners for %s", require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
 				if err := s.deploy(ctx, deployment); err != nil {
-					deploymentLogger.Debugf("Failed to increase deployment replicas: %s", err)
+					deploymentLogger.Errorf(err, "Failed to increase deployment replicas")
 				} else {
 					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas+1, reconcile.RequiredReplicas)
 					if reconcile.AssignedReplicas+1 == reconcile.RequiredReplicas {
