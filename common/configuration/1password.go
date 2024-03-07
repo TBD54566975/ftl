@@ -3,9 +3,11 @@ package configuration
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -27,7 +29,13 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 	if err != nil {
 		return nil, fmt.Errorf("1Password CLI tool \"op\" not found: %w", err)
 	}
-	output, err := exec.Capture(ctx, ".", "op", "read", "-n", key.String())
+
+	decoded, err := base64.RawStdEncoding.DecodeString(key.Host)
+	if err != nil {
+		return nil, fmt.Errorf("1Password secret reference must be a base64 encoded string: %w", err)
+	}
+
+	output, err := exec.Capture(ctx, ".", "op", "read", "-n", string(decoded))
 	if err != nil {
 		lines := bytes.Split(output, []byte("\n"))
 		logger := log.FromContext(ctx)
@@ -44,11 +52,11 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 	if err := json.Unmarshal(value, &opref); err != nil {
 		return nil, fmt.Errorf("1Password value must be a JSON string containing a 1Password secret refererence: %w", err)
 	}
-	u, err := url.Parse(opref)
-	if err != nil {
-		return nil, fmt.Errorf("invalid 1Password item ID: %w", err)
+	if !strings.HasPrefix(opref, "op://") {
+		return nil, fmt.Errorf("1Password secret reference must start with \"op://\"")
 	}
-	return u, nil
+	encoded := base64.RawStdEncoding.EncodeToString([]byte(opref))
+	return &url.URL{Scheme: "op", Host: encoded}, nil
 }
 
 func (o OnePasswordProvider) Writer() bool { return o.OnePassword }

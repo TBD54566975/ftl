@@ -1,3 +1,5 @@
+set positional-arguments
+
 # Start a hot-reloading dev cluster
 dev: install-jars
   goreman -logtime=false start
