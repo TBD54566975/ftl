@@ -166,9 +166,7 @@ func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 	logger := log.FromContext(ctx)
 
 	// Build and deploy all modules first.
-	err := e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
-		return Deploy(ctx, module, 1, true, e.client)
-	})
+	err := e.buildAndDeploy(ctx, 1, true)
 	if err != nil {
 		logger.Errorf(err, "initial deploy failed")
 	}
@@ -223,13 +221,45 @@ func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 }
 
 func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
-	err := e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
-		return Deploy(ctx, module, replicas, waitForDeployOnline, e.client)
-	}, modules...)
-	if err != nil {
-		return err
+	if len(modules) == 0 {
+		modules = maps.Keys(e.modules)
 	}
-	return nil
+
+	deployQueue := make(chan Module, len(modules))
+	wg, ctx := errgroup.WithContext(ctx)
+
+	wg.Go(func() error {
+		defer close(deployQueue)
+
+		return e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
+			select {
+			case deployQueue <- module:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}, modules...)
+	})
+
+	for i := 0; i < len(modules); i++ {
+		wg.Go(func() error {
+			for {
+				select {
+				case module, ok := <-deployQueue:
+					if !ok {
+						return nil
+					}
+					if err := Deploy(ctx, module, replicas, waitForDeployOnline, e.client); err != nil {
+						return err
+					}
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+		})
+	}
+
+	return wg.Wait()
 }
 
 type buildCallback func(ctx context.Context, module Module) error
