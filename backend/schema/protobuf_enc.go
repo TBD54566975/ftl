@@ -3,7 +3,6 @@ package schema
 
 import (
 	"fmt"
-
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -96,8 +95,11 @@ func typeToProto(t Type) *schemapb.Type {
 	case *Unit:
 		return &schemapb.Type{Value: &schemapb.Type_Unit{Unit: t.ToProto().(*schemapb.Unit)}}
 
-	case *VerbRef, *SourceRef, *SinkRef, *EnumRef:
+	case *VerbRef, *SourceRef, *SinkRef:
 		panic("unreachable")
+
+	case *EnumRef:
+		return &schemapb.Type{Value: &schemapb.Type_EnumRef{EnumRef: t.ToProto().(*schemapb.EnumRef)}}
 
 	case *DataRef:
 		return &schemapb.Type{Value: &schemapb.Type_DataRef{DataRef: t.ToProto().(*schemapb.DataRef)}}

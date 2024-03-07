@@ -193,6 +193,34 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 			typeMatches = true
 		}
 
+	case *schema.EnumRef:
+		enum := sch.ResolveEnumRef(fieldType)
+		if enum == nil {
+			return fmt.Errorf("unknown enum %v", fieldType)
+		}
+
+		for _, v := range enum.Variants {
+			switch t := v.Value.(type) {
+			case *schema.StringValue:
+				if valueStr, ok := value.(string); ok {
+					if t.Value == valueStr {
+						typeMatches = true
+						break
+					}
+				}
+			case *schema.IntValue:
+				if valueInt, ok := value.(int); ok {
+					if t.Value == valueInt {
+						typeMatches = true
+						break
+					}
+				}
+			}
+		}
+		if !typeMatches {
+			return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
+		}
+
 	case *schema.Bytes:
 		_, typeMatches = value.([]byte)
 		if bodyStr, ok := value.(string); ok {

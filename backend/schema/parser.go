@@ -18,7 +18,7 @@ var (
 		&Map{}, &Any{}, &Unit{},
 		// Note: any types resolved by identifier (eg. "Any", "Unit", etc.) must
 		// be prior to DataRef.
-		&DataRef{},
+		&DataRef{}, &EnumRef{},
 	}
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataDatabases{}, &MetadataAlias{}}
