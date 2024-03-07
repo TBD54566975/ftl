@@ -40,6 +40,7 @@ type serveCmd struct {
 	Background     bool          `help:"Run in the background." default:"false"`
 	Stop           bool          `help:"Stop the running FTL instance. Can be used to --background to restart the server" default:"false"`
 	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"20s"`
+	IdleRunners    int           `help:"Number of idle runners to keep around (not supported in production)." default:"1"`
 }
 
 const ftlContainerName = "ftl-db-1"
@@ -100,6 +101,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 			DSN:          dsn,
 			AllowOrigins: s.AllowOrigins,
 			NoConsole:    s.NoConsole,
+			IdleRunners:  s.IdleRunners,
 		}
 		if err := kong.ApplyDefaults(&config); err != nil {
 			return err
