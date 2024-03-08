@@ -7,6 +7,9 @@ import (
 )
 
 func TestGenerateBasicModule(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),
@@ -28,6 +31,9 @@ package ftl.test
 }
 
 func TestGenerateAllTypes(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),
@@ -148,6 +154,9 @@ data class TestResponse(
 }
 
 func TestGenerateAllVerbs(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),
@@ -205,6 +214,9 @@ fun testVerb(context: Context, req: Request): ftl.builtin.Empty = throw
 }
 
 func TestGenerateBuiltins(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),
@@ -251,6 +263,9 @@ class Empty
 }
 
 func TestGenerateEmptyDataRefs(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),
