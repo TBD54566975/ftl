@@ -23,8 +23,7 @@ import (
 type UserVerbConfig struct {
 	FTLEndpoint         *url.URL             `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
-
-	Config string `help:"Load project configuration file." placeholder:"FILE" type:"existingfile" env:"FTL_CONFIG"`
+	Config              []string             `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
 }
 
 // NewUserVerbServer starts a new code-generated drive for user Verbs.
@@ -33,16 +32,19 @@ type UserVerbConfig struct {
 func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
-		// Add config manager to context.
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
-		cm, err := cf.NewConfigurationManager(ctx, uc.Config)
+
+		// Add config manager to context.
+		cr := &cf.ProjectConfigResolver[cf.Configuration]{Config: uc.Config}
+		cm, err := cf.NewConfigurationManager(ctx, cr)
 		if err != nil {
 			return nil, nil, err
 		}
 		ctx = cf.ContextWithConfig(ctx, cm)
 
 		// Add secrets manager to context.
-		sm, err := cf.NewSecretsManager(ctx, uc.Config)
+		sr := &cf.ProjectConfigResolver[cf.Secrets]{Config: uc.Config}
+		sm, err := cf.NewSecretsManager(ctx, sr)
 		if err != nil {
 			return nil, nil, err
 		}

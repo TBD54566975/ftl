@@ -15,22 +15,26 @@ type Role interface {
 	Secrets | Configuration
 }
 
-type Secrets string
+type Secrets struct{}
 
-type Configuration string
+func (Secrets) String() string { return "secrets" }
+
+type Configuration struct{}
+
+func (Configuration) String() string { return "configuration" }
 
 // Manager is a high-level configuration manager that abstracts the details of
 // the Resolver and Provider interfaces.
 type Manager[R Role] struct {
-	providers map[R]Provider[R]
+	providers map[string]Provider[R]
 	writer    MutableProvider[R]
-	resolver  Resolver
+	resolver  Resolver[R]
 }
 
 // New configuration manager.
-func New[R Role](ctx context.Context, resolver Resolver, providers []Provider[R]) (*Manager[R], error) {
+func New[R Role](ctx context.Context, resolver Resolver[R], providers []Provider[R]) (*Manager[R], error) {
 	m := &Manager[R]{
-		providers: map[R]Provider[R]{},
+		providers: map[string]Provider[R]{},
 	}
 	for _, p := range providers {
 		m.providers[p.Key()] = p
@@ -54,7 +58,7 @@ func (m *Manager[R]) Mutable() error {
 	writers := []string{}
 	for _, p := range m.providers {
 		if mutable, ok := p.(MutableProvider[R]); ok {
-			writers = append(writers, "--"+string(mutable.Key()))
+			writers = append(writers, "--"+mutable.Key())
 		}
 	}
 	return fmt.Errorf("no writeable configuration provider available, specify one of %s", strings.Join(writers, ", "))
@@ -76,7 +80,7 @@ func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
 	} else if err != nil {
 		return err
 	}
-	provider, ok := m.providers[R(key.Scheme)]
+	provider, ok := m.providers[key.Scheme]
 	if !ok {
 		return fmt.Errorf("no provider for scheme %q", key.Scheme)
 	}

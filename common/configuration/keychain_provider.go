@@ -16,7 +16,8 @@ type KeychainProvider struct {
 
 var _ MutableProvider[Secrets] = KeychainProvider{}
 
-func (k KeychainProvider) Key() Secrets { return "keychain" }
+func (KeychainProvider) Role() Secrets { return Secrets{} }
+func (k KeychainProvider) Key() string { return "keychain" }
 
 func (k KeychainProvider) Writer() bool { return k.Keychain }
 

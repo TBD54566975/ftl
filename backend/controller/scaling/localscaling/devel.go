@@ -17,7 +17,7 @@ var templateDirOnce sync.Once
 func templateDir(ctx context.Context) string {
 	templateDirOnce.Do(func() {
 		// TODO: Figure out how to make maven build offline
-		err := exec.Command(ctx, log.Debug, internal.GitRoot(""), "bit", "--level=trace", "build/template/ftl/jars/ftl-runtime.jar").RunBuffered(ctx)
+		err := exec.Command(ctx, log.Debug, internal.GitRoot(""), "bit", "build/template/ftl/jars/ftl-runtime.jar").RunBuffered(ctx)
 		if err != nil {
 			panic(err)
 		}

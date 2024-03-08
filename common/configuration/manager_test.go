@@ -29,7 +29,7 @@ func TestManager(t *testing.T) {
 		_, err := kcp.Store(ctx, Ref{Name: "mutable"}, []byte("hello"))
 		assert.NoError(t, err)
 		cf, err := New(ctx,
-			ProjectConfigResolver[Secrets]{Config: config},
+			ProjectConfigResolver[Secrets]{Config: []string{config}},
 			[]Provider[Secrets]{
 				EnvarProvider[Secrets]{},
 				InlineProvider[Secrets]{},
@@ -44,7 +44,7 @@ func TestManager(t *testing.T) {
 	})
 	t.Run("Configuration", func(t *testing.T) {
 		cf, err := New(ctx,
-			ProjectConfigResolver[Configuration]{Config: config},
+			ProjectConfigResolver[Configuration]{Config: []string{config}},
 			[]Provider[Configuration]{
 				EnvarProvider[Configuration]{},
 				InlineProvider[Configuration]{Inline: true}, // Writer

@@ -10,11 +10,11 @@ import (
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 
-	"github.com/TBD54566975/ftl/common/configuration"
+	cf "github.com/TBD54566975/ftl/common/configuration"
 )
 
 type secretCmd struct {
-	configuration.DefaultSecretsMixin
+	cf.DefaultSecretsMixin
 
 	List  secretListCmd  `cmd:"" help:"List secrets."`
 	Get   secretGetCmd   `cmd:"" help:"Get a secret."`
@@ -37,8 +37,8 @@ type secretListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List secrets only in this module."`
 }
 
-func (s *secretListCmd) Run(ctx context.Context, scmd *secretCmd) error {
-	sm, err := scmd.NewSecretsManager(ctx)
+func (s *secretListCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
+	sm, err := scmd.NewSecretsManager(ctx, sr)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (s *secretListCmd) Run(ctx context.Context, scmd *secretCmd) error {
 }
 
 type secretGetCmd struct {
-	Ref configuration.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
+	Ref cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
 func (s *secretGetCmd) Help() string {
@@ -83,8 +83,8 @@ Returns a JSON-encoded secret value.
 `
 }
 
-func (s *secretGetCmd) Run(ctx context.Context, scmd *secretCmd) error {
-	sm, err := scmd.NewSecretsManager(ctx)
+func (s *secretGetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
+	sm, err := scmd.NewSecretsManager(ctx, sr)
 	if err != nil {
 		return err
 	}
@@ -104,12 +104,12 @@ func (s *secretGetCmd) Run(ctx context.Context, scmd *secretCmd) error {
 }
 
 type secretSetCmd struct {
-	JSON bool              `help:"Assume input value is JSON."`
-	Ref  configuration.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
+	JSON bool   `help:"Assume input value is JSON."`
+	Ref  cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd) error {
-	sm, err := scmd.NewSecretsManager(ctx)
+func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
+	sm, err := scmd.NewSecretsManager(ctx, sr)
 	if err != nil {
 		return err
 	}
@@ -146,11 +146,11 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd) error {
 }
 
 type secretUnsetCmd struct {
-	Ref configuration.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
+	Ref cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd) error {
-	sm, err := scmd.NewSecretsManager(ctx)
+func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
+	sm, err := scmd.NewSecretsManager(ctx, sr)
 	if err != nil {
 		return err
 	}

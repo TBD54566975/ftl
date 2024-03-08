@@ -4,22 +4,30 @@ package ftltest
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/common/configuration"
+	"github.com/alecthomas/kong"
+	"github.com/alecthomas/repr"
+
+	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // Context suitable for use in testing FTL verbs.
 func Context() context.Context {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	cm, err := configuration.DefaultConfigMixin{}.NewConfigurationManager(ctx)
+	cr := &cf.ProjectConfigResolver[cf.Configuration]{Config: []string{}}
+	_ = kong.ApplyDefaults(cr)
+	repr.Println(cr)
+	cm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		panic(err)
 	}
-	ctx = configuration.ContextWithConfig(ctx, cm)
-	sm, err := configuration.DefaultSecretsMixin{}.NewSecretsManager(ctx)
+	ctx = cf.ContextWithConfig(ctx, cm)
+	sr := &cf.ProjectConfigResolver[cf.Secrets]{Config: []string{}}
+	_ = kong.ApplyDefaults(sr)
+	sm, err := cf.NewSecretsManager(ctx, sr)
 	if err != nil {
 		panic(err)
 	}
-	ctx = configuration.ContextWithSecrets(ctx, sm)
+	ctx = cf.ContextWithSecrets(ctx, sm)
 	return ctx
 }

@@ -21,7 +21,8 @@ type OnePasswordProvider struct {
 
 var _ MutableProvider[Secrets] = OnePasswordProvider{}
 
-func (o OnePasswordProvider) Key() Secrets                              { return "op" }
+func (OnePasswordProvider) Role() Secrets                               { return Secrets{} }
+func (o OnePasswordProvider) Key() string                               { return "op" }
 func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return nil }
 
 func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {

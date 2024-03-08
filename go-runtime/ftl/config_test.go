@@ -12,7 +12,8 @@ import (
 
 func TestConfig(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	cm, err := configuration.NewConfigurationManager(ctx, "testdata/ftl-project.toml")
+	cr := configuration.ProjectConfigResolver[configuration.Configuration]{Config: []string{"testdata/ftl-project.toml"}}
+	cm, err := configuration.NewConfigurationManager(ctx, cr)
 	assert.NoError(t, err)
 	ctx = configuration.ContextWithConfig(ctx, cm)
 	type C struct {

@@ -12,7 +12,8 @@ import (
 
 func TestSecret(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	sm, err := configuration.NewSecretsManager(ctx, "testdata/ftl-project.toml")
+	sr := configuration.ProjectConfigResolver[configuration.Secrets]{Config: []string{"testdata/ftl-project.toml"}}
+	sm, err := configuration.NewSecretsManager(ctx, sr)
 	assert.NoError(t, err)
 	ctx = configuration.ContextWithSecrets(ctx, sm)
 	type C struct {

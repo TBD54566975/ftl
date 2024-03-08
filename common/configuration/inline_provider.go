@@ -14,7 +14,8 @@ type InlineProvider[R Role] struct {
 
 var _ MutableProvider[Configuration] = InlineProvider[Configuration]{}
 
-func (InlineProvider[R]) Key() R { return "inline" }
+func (InlineProvider[R]) Role() R     { var r R; return r }
+func (InlineProvider[R]) Key() string { return "inline" }
 
 func (i InlineProvider[R]) Writer() bool { return i.Inline }
 

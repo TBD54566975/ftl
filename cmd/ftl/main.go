@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -13,15 +14,17 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	cf "github.com/TBD54566975/ftl/common/configuration"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type CLI struct {
-	Version   kong.VersionFlag `help:"Show version."`
-	LogConfig log.Config       `embed:"" prefix:"log-" group:"Logging:"`
-	Endpoint  *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
+	Version    kong.VersionFlag `help:"Show version."`
+	LogConfig  log.Config       `embed:"" prefix:"log-" group:"Logging:"`
+	Endpoint   *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
+	ConfigFlag []string         `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
 
 	Authenticators map[string]string `help:"Authenticators to use for FTL endpoints." mapsep:"," env:"FTL_AUTHENTICATORS" placeholder:"HOST=EXE,…"`
 
@@ -65,13 +68,21 @@ func main() {
 
 	rpc.InitialiseClients(cli.Authenticators)
 
-	// Set the log level for child processes.
+	// Set some envars for child processes.
 	os.Setenv("LOG_LEVEL", cli.LogConfig.Level.String())
+	if len(cli.ConfigFlag) > 0 {
+		os.Setenv("FTL_CONFIG", strings.Join(cli.ConfigFlag, ","))
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
+
+	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: cli.ConfigFlag}
+	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: cli.ConfigFlag}
+	kctx.BindTo(sr, (*cf.Resolver[cf.Secrets])(nil))
+	kctx.BindTo(cr, (*cf.Resolver[cf.Configuration])(nil))
 
 	// Handle signals.
 	sigch := make(chan os.Signal, 1)

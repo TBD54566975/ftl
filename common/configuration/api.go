@@ -26,6 +26,7 @@ import (
 // ErrNotFound is returned when a configuration entry is not found or cannot be resolved.
 var ErrNotFound = errors.New("not found")
 
+// Entry in the configuration store.
 type Entry struct {
 	Ref
 	Accessor *url.URL
@@ -75,7 +76,8 @@ func (k *Ref) UnmarshalText(text []byte) error {
 // abstracted from the configuration itself. For example, the ftl-project.toml
 // file contains per-module and global configuration maps, but the secrets
 // themselves may be stored in a separate secret store such as a system keychain.
-type Resolver interface {
+type Resolver[R Role] interface {
+	Role() R
 	Get(ctx context.Context, ref Ref) (key *url.URL, err error)
 	Set(ctx context.Context, ref Ref, key *url.URL) error
 	Unset(ctx context.Context, ref Ref) error
@@ -84,7 +86,8 @@ type Resolver interface {
 
 // Provider is a generic interface for storing and retrieving configuration and secrets.
 type Provider[R Role] interface {
-	Key() R
+	Role() R
+	Key() string
 	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
 }
 
