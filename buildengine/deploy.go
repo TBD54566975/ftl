@@ -26,8 +26,16 @@ type deploymentArtefact struct {
 	localPath string
 }
 
+type DeployClient interface {
+	GetArtefactDiffs(context.Context, *connect.Request[ftlv1.GetArtefactDiffsRequest]) (*connect.Response[ftlv1.GetArtefactDiffsResponse], error)
+	UploadArtefact(context.Context, *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error)
+	CreateDeployment(context.Context, *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error)
+	ReplaceDeploy(context.Context, *connect.Request[ftlv1.ReplaceDeployRequest]) (*connect.Response[ftlv1.ReplaceDeployResponse], error)
+	Status(context.Context, *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error)
+}
+
 // Deploy a module to the FTL controller with the given number of replicas. Optionally wait for the deployment to become ready.
-func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnline bool, client ftlv1connect.ControllerServiceClient) error {
+func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnline bool, client DeployClient) error {
 	logger := log.FromContext(ctx).Scope(module.Module)
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Deploying module")
@@ -221,7 +229,7 @@ func relToCWD(path string) string {
 	return rel
 }
 
-func checkReadiness(ctx context.Context, client ftlv1connect.ControllerServiceClient, deploymentName string, replicas int32) error {
+func checkReadiness(ctx context.Context, client DeployClient, deploymentName string, replicas int32) error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
