@@ -60,7 +60,7 @@ type Config struct {
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	IdleRunners                  int                 `help:"Number of idle runners to keep around (not supported in production)." default:"1"`
+	IdleRunners                  int                 `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
 }
 
 func (c *Config) SetDefaults() {
@@ -147,6 +147,8 @@ type Service struct {
 	routes        map[string][]dal.Route
 	config        Config
 	runnerScaling scaling.RunnerScaling
+
+	increaseReplicaFailures map[string]int
 }
 
 func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
@@ -156,14 +158,15 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	}
 	config.SetDefaults()
 	svc := &Service{
-		tasks:              scheduledtask.New(ctx, key, db),
-		dal:                db,
-		key:                key,
-		deploymentLogsSink: newDeploymentLogsSink(ctx, db),
-		clients:            ttlcache.New[string, clients](ttlcache.WithTTL[string, clients](time.Minute)),
-		routes:             map[string][]dal.Route{},
-		config:             config,
-		runnerScaling:      runnerScaling,
+		tasks:                   scheduledtask.New(ctx, key, db),
+		dal:                     db,
+		key:                     key,
+		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
+		clients:                 ttlcache.New[string, clients](ttlcache.WithTTL[string, clients](time.Minute)),
+		routes:                  map[string][]dal.Route{},
+		config:                  config,
+		runnerScaling:           runnerScaling,
+		increaseReplicaFailures: map[string]int{},
 	}
 
 	svc.tasks.Parallel(backoff.Backoff{Min: time.Second, Max: time.Second * 5}, svc.syncRoutes)
@@ -774,6 +777,12 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", "failed to get deployments needing reconciliation", err)
 	}
+	oldFailures := make(map[string]int)
+	for k, v := range s.increaseReplicaFailures {
+		oldFailures[k] = v
+	}
+
+	var lock sync.Mutex
 	wg, ctx := concurrency.New(ctx, concurrency.WithConcurrencyLimit(4))
 	for _, reconcile := range reconciliation {
 		deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
@@ -783,13 +792,29 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 			Language: reconcile.Language,
 			Name:     reconcile.Deployment,
 		}
+
+		delete(oldFailures, reconcile.Deployment.String())
+
 		require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
 		if require > 0 {
 			deploymentLogger.Debugf("Need %d more runners for %s", require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
 				if err := s.deploy(ctx, deployment); err != nil {
-					deploymentLogger.Errorf(err, "Failed to increase deployment replicas")
+					lock.Lock()
+					failureCount := s.increaseReplicaFailures[deployment.Name.String()] + 1
+					s.increaseReplicaFailures[deployment.Name.String()] = failureCount
+					lock.Unlock()
+
+					if failureCount >= 5 {
+						deploymentLogger.Errorf(err, "Failed to increase deployment replicas")
+					} else {
+						deploymentLogger.Debugf("Failed to increase deployment replicas (%d): %s", failureCount, err)
+					}
 				} else {
+					lock.Lock()
+					delete(s.increaseReplicaFailures, deployment.Name.String())
+					lock.Unlock()
+
 					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas+1, reconcile.RequiredReplicas)
 					if reconcile.AssignedReplicas+1 == reconcile.RequiredReplicas {
 						deploymentLogger.Infof("Deployed %s", reconcile.Deployment)
@@ -815,6 +840,16 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 			})
 		}
 	}
+
+	// Clean up old failures, which can happen if a deployment was removed before successfully reconciling.
+	if len(oldFailures) > 0 {
+		lock.Lock()
+		for k := range oldFailures {
+			delete(s.increaseReplicaFailures, k)
+		}
+		lock.Unlock()
+	}
+
 	_ = wg.Wait()
 	return time.Second, nil
 }
