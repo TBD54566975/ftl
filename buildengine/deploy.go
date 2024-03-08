@@ -97,6 +97,31 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 	return nil
 }
 
+func teminateModuleDeployment(ctx context.Context, client ftlv1connect.ControllerServiceClient, module string) error {
+	logger := log.FromContext(ctx).Scope(module)
+
+	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
+	if err != nil {
+		return err
+	}
+
+	var key string
+	for _, deployment := range status.Msg.Deployments {
+		if deployment.Name == module {
+			key = deployment.Key
+			continue
+		}
+	}
+
+	if key == "" {
+		return fmt.Errorf("deployment for module %s not found: %v", module, status.Msg.Deployments)
+	}
+
+	logger.Infof("Terminating deployment %s", key)
+	_, err = client.UpdateDeploy(ctx, connect.NewRequest(&ftlv1.UpdateDeployRequest{DeploymentName: key}))
+	return err
+}
+
 func loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig, replicas int32) (*schemapb.Module, error) {
 	schema := filepath.Join(deployDir, config.Schema)
 	content, err := os.ReadFile(schema)
