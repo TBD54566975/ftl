@@ -40,7 +40,7 @@ type serveCmd struct {
 	Background     bool          `help:"Run in the background." default:"false"`
 	Stop           bool          `help:"Stop the running FTL instance. Can be used to --background to restart the server" default:"false"`
 	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"20s"`
-	IdleRunners    int           `help:"Number of idle runners to keep around (not supported in production)." default:"1"`
+	IdleRunners    int           `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
 }
 
 const ftlContainerName = "ftl-db-1"

@@ -60,7 +60,7 @@ type Config struct {
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	IdleRunners                  int                 `help:"Number of idle runners to keep around (not supported in production)." default:"1"`
+	IdleRunners                  int                 `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
 }
 
 func (c *Config) SetDefaults() {
