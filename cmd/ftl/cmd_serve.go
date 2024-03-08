@@ -36,7 +36,6 @@ type serveCmd struct {
 	DBPort         int           `help:"Port to use for the database." default:"54320"`
 	Recreate       bool          `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers    int           `short:"c" help:"Number of controllers to start." default:"1"`
-	Runners        int           `short:"r" help:"Number of runners to start." default:"0"`
 	Background     bool          `help:"Run in the background." default:"false"`
 	Stop           bool          `help:"Stop the running FTL instance. Can be used to --background to restart the server" default:"false"`
 	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"20s"`
@@ -74,7 +73,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		return errors.New("FTL is already running")
 	}
 
-	logger.Infof("Starting FTL with %d controller(s) and %d runner(s)", s.Controllers, s.Runners)
+	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
 
 	dsn, err := s.setupDB(ctx)
 	if err != nil {
@@ -120,11 +119,6 @@ func (s *serveCmd) Run(ctx context.Context) error {
 			}
 			return nil
 		})
-	}
-
-	err = runnerScaling.SetReplicas(ctx, s.Runners, nil)
-	if err != nil {
-		return err
 	}
 
 	if err := wg.Wait(); err != nil {
