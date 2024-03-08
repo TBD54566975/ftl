@@ -7,45 +7,35 @@ import (
 )
 
 // NewConfigurationManager constructs a new [Manager] with the default providers for configuration.
-func NewConfigurationManager(ctx context.Context, configPath string) (*Manager[Configuration], error) {
-	conf := DefaultConfigMixin{
-		ProjectConfigResolver: ProjectConfigResolver[Configuration]{
-			Config: configPath,
-		},
-	}
+func NewConfigurationManager(ctx context.Context, resolver Resolver[Configuration]) (*Manager[Configuration], error) {
+	conf := DefaultConfigMixin{}
 	_ = kong.ApplyDefaults(&conf)
-	return conf.NewConfigurationManager(ctx)
+	return conf.NewConfigurationManager(ctx, resolver)
 }
 
 // DefaultConfigMixin is a Kong mixin that provides the default configuration manager.
 type DefaultConfigMixin struct {
-	ProjectConfigResolver[Configuration]
 	InlineProvider[Configuration]
 	EnvarProvider[Configuration]
 }
 
 // NewConfigurationManager creates a new configuration manager with the default configuration providers.
-func (d DefaultConfigMixin) NewConfigurationManager(ctx context.Context) (*Manager[Configuration], error) {
-	return New(ctx, &d.ProjectConfigResolver, []Provider[Configuration]{
+func (d DefaultConfigMixin) NewConfigurationManager(ctx context.Context, resolver Resolver[Configuration]) (*Manager[Configuration], error) {
+	return New(ctx, resolver, []Provider[Configuration]{
 		d.InlineProvider,
 		d.EnvarProvider,
 	})
 }
 
 // NewSecretsManager constructs a new [Manager] with the default providers for secrets.
-func NewSecretsManager(ctx context.Context, configPath string) (*Manager[Secrets], error) {
-	conf := DefaultSecretsMixin{
-		ProjectConfigResolver: ProjectConfigResolver[Secrets]{
-			Config: configPath,
-		},
-	}
+func NewSecretsManager(ctx context.Context, resolver Resolver[Secrets]) (*Manager[Secrets], error) {
+	conf := DefaultSecretsMixin{}
 	_ = kong.ApplyDefaults(&conf)
-	return conf.NewSecretsManager(ctx)
+	return conf.NewSecretsManager(ctx, resolver)
 }
 
 // DefaultSecretsMixin is a Kong mixin that provides the default secrets manager.
 type DefaultSecretsMixin struct {
-	ProjectConfigResolver[Secrets]
 	InlineProvider[Secrets]
 	EnvarProvider[Secrets]
 	KeychainProvider
@@ -53,8 +43,8 @@ type DefaultSecretsMixin struct {
 }
 
 // NewSecretsManager creates a new secrets manager with the default secret providers.
-func (d DefaultSecretsMixin) NewSecretsManager(ctx context.Context) (*Manager[Secrets], error) {
-	return New(ctx, &d.ProjectConfigResolver, []Provider[Secrets]{
+func (d DefaultSecretsMixin) NewSecretsManager(ctx context.Context, resolver Resolver[Secrets]) (*Manager[Secrets], error) {
+	return New(ctx, resolver, []Provider[Secrets]{
 		d.InlineProvider,
 		d.EnvarProvider,
 		d.KeychainProvider,

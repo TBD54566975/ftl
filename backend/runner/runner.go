@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -27,7 +28,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -37,6 +37,7 @@ import (
 )
 
 type Config struct {
+	Config             []string        `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
 	Bind               *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893" env:"FTL_RUNNER_BIND"`
 	Advertise          *url.URL        `help:"Endpoint the Runner should advertise (use --bind if omitted)." default:"" env:"FTL_RUNNER_ADVERTISE"`
 	Key                model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" default:"R00000000000000000000000000"`
@@ -219,7 +220,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars(
 			"FTL_ENDPOINT="+s.config.ControllerEndpoint.String(),
-			"FTL_CONFIG="+filepath.Join(internal.GitRoot(""), "ftl-project.toml"),
+			"FTL_CONFIG="+strings.Join(s.config.Config, ","),
 			"FTL_OBSERVABILITY_ENDPOINT="+s.config.ControllerEndpoint.String(),
 		),
 	)

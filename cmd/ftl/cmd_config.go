@@ -7,11 +7,11 @@ import (
 	"io"
 	"os"
 
-	"github.com/TBD54566975/ftl/common/configuration"
+	cf "github.com/TBD54566975/ftl/common/configuration"
 )
 
 type configCmd struct {
-	configuration.DefaultConfigMixin
+	cf.DefaultConfigMixin
 
 	List  configListCmd  `cmd:"" help:"List configuration."`
 	Get   configGetCmd   `cmd:"" help:"Get a configuration value."`
@@ -31,8 +31,8 @@ type configListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
-func (s *configListCmd) Run(ctx context.Context, scmd *configCmd) error {
-	sm, err := scmd.NewConfigurationManager(ctx)
+func (s *configListCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
+	sm, err := scmd.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (s *configListCmd) Run(ctx context.Context, scmd *configCmd) error {
 }
 
 type configGetCmd struct {
-	Ref configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
+	Ref cf.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
 func (s *configGetCmd) Help() string {
@@ -77,8 +77,8 @@ Returns a JSON-encoded configuration value.
 `
 }
 
-func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd) error {
-	sm, err := scmd.NewConfigurationManager(ctx)
+func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
+	sm, err := scmd.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
@@ -98,13 +98,13 @@ func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd) error {
 }
 
 type configSetCmd struct {
-	JSON  bool              `help:"Assume input value is JSON."`
-	Ref   configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
-	Value *string           `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
+	JSON  bool    `help:"Assume input value is JSON."`
+	Ref   cf.Ref  `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
+	Value *string `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
 }
 
-func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd) error {
-	sm, err := scmd.NewConfigurationManager(ctx)
+func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
+	sm, err := scmd.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
@@ -135,11 +135,11 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd) error {
 }
 
 type configUnsetCmd struct {
-	Ref configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
+	Ref cf.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
-func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd) error {
-	sm, err := scmd.NewConfigurationManager(ctx)
+func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
+	sm, err := scmd.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}

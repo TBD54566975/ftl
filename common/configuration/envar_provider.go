@@ -16,7 +16,8 @@ type EnvarProvider[R Role] struct {
 
 var _ MutableProvider[Configuration] = EnvarProvider[Configuration]{}
 
-func (EnvarProvider[R]) Key() R { return "envar" }
+func (EnvarProvider[R]) Role() R     { var r R; return r }
+func (EnvarProvider[R]) Key() string { return "envar" }
 
 func (e EnvarProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	// FTL_<type>_[<module>]_<name> where <module> and <name> are base64 encoded.

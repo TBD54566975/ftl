@@ -2,12 +2,12 @@ package configuration
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
@@ -22,11 +22,13 @@ import (
 //
 // See the [projectconfig] package for details on the configuration file format.
 type ProjectConfigResolver[R Role] struct {
-	Config string `help:"Load project configuration file." placeholder:"FILE" type:"existingfile" env:"FTL_CONFIG"`
+	Config []string `help:"Path to project configuration file." placeholder:"FILE" type:"existingfile" env:"FTL_CONFIG"`
 }
 
-var _ Resolver = ProjectConfigResolver[Configuration]{}
-var _ Resolver = ProjectConfigResolver[Secrets]{}
+var _ Resolver[Configuration] = ProjectConfigResolver[Configuration]{}
+var _ Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
+
+func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
 
 func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 	mapping, err := p.getMapping(ctx, ref.Module)
@@ -87,21 +89,24 @@ func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
 	return p.setMapping(ctx, ref.Module, mapping)
 }
 
-func (p ProjectConfigResolver[R]) configPath() string {
-	if p.Config != "" {
+func (p ProjectConfigResolver[R]) configPaths() []string {
+	if len(p.Config) > 0 {
 		return p.Config
 	}
-	return filepath.Join(internal.GitRoot(""), "ftl-project.toml")
+	path := filepath.Join(internal.GitRoot(""), "ftl-project.toml")
+	_, err := os.Stat(path)
+	if err == nil {
+		return []string{path}
+	}
+	return []string{}
 }
 
 func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) (pc.Config, error) {
 	logger := log.FromContext(ctx)
-	configPath := p.configPath()
-	logger.Tracef("Loading config from %s", configPath)
-	config, err := pc.Load(configPath)
-	if errors.Is(err, os.ErrNotExist) {
-		return pc.Config{}, nil
-	} else if err != nil {
+	configPaths := p.configPaths()
+	logger.Debugf("Loading config from %s", strings.Join(configPaths, " "))
+	config, err := pc.Merge(configPaths...)
+	if err != nil {
 		return pc.Config{}, err
 	}
 	return config, nil
@@ -166,5 +171,6 @@ func (p ProjectConfigResolver[R]) setMapping(ctx context.Context, module optiona
 	} else {
 		set(&config.Global, mapping)
 	}
-	return pc.Save(p.configPath(), config)
+	configPaths := p.configPaths()
+	return pc.Save(configPaths[len(configPaths)-1], config)
 }

@@ -12,7 +12,7 @@ require (
 	github.com/alecthomas/assert/v2 v2.6.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
-	github.com/alecthomas/kong v0.8.1
+	github.com/alecthomas/kong v0.9.0
 	github.com/alecthomas/kong-toml v0.1.0
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.13.0
