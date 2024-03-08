@@ -171,7 +171,15 @@ func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 		logger.Errorf(err, "initial deploy failed")
 	}
 
+	logger.Infof("All modules deployed, watching for changes...")
+
 	// Then watch for changes and redeploy.
+	return e.watchForModuleChanges(ctx, period)
+}
+
+func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration) error {
+	logger := log.FromContext(ctx)
+
 	events := make(chan WatchEvent, 128)
 	watch := Watch(ctx, period, e.dirs...)
 	defer watch.Close()
@@ -186,32 +194,20 @@ func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 			case WatchEventModuleAdded:
 				if _, exists := e.modules[event.Module.Module]; !exists {
 					e.modules[event.Module.Module] = event.Module
-					err = e.buildAndDeploy(ctx, 1, true, event.Module.Module)
+					err := e.buildAndDeploy(ctx, 1, true, event.Module.Module)
 					if err != nil {
 						logger.Errorf(err, "deploy %s failed", event.Module.Module)
 					}
 				}
 			case WatchEventModuleRemoved:
-				// TODO: should we kill the deployment here?
+				err := teminateModuleDeployment(ctx, e.client, event.Module.Module)
+				if err != nil {
+					logger.Errorf(err, "terminate %s failed", event.Module.Module)
+				}
 				delete(e.modules, event.Module.Module)
 
 			case WatchEventModuleChanged:
-				mustBuild := map[string]bool{event.Module.Module: true}
-				for key, module := range e.modules {
-					for _, dep := range module.Dependencies {
-						if dep == event.Module.Module {
-							mustBuild[key] = true
-						}
-					}
-				}
-
-				var modules []string
-				for key := range mustBuild {
-					modules = append(modules, key)
-				}
-
-				e.modules[event.Module.Module] = event.Module
-				err = e.buildAndDeploy(ctx, 1, true, modules...)
+				err := e.buildAndDeploy(ctx, 1, true, event.Module.Module)
 				if err != nil {
 					logger.Errorf(err, "deploy %s failed", event.Module.Module)
 				}
@@ -228,6 +224,7 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 	deployQueue := make(chan Module, len(modules))
 	wg, ctx := errgroup.WithContext(ctx)
 
+	// Build all modules and enqueue them for deployment.
 	wg.Go(func() error {
 		defer close(deployQueue)
 
@@ -241,6 +238,7 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 		}, modules...)
 	})
 
+	// Process deployment queue.
 	for i := 0; i < len(modules); i++ {
 		wg.Go(func() error {
 			for {
