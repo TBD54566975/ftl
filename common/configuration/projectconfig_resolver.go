@@ -31,7 +31,11 @@ var _ Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
 func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
 
 func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
-	mapping, err := p.getMapping(ctx, ref.Module)
+	config, err := p.loadConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	mapping, err := p.getMapping(config, ref.Module)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +56,7 @@ func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
 	moduleNames = append(moduleNames, "")
 	for _, moduleName := range moduleNames {
 		module := optional.Zero(moduleName)
-		mapping, err := p.getMapping(ctx, module)
+		mapping, err := p.getMapping(config, module)
 		if err != nil {
 			return nil, err
 		}
@@ -72,21 +76,29 @@ func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
-	mapping, err := p.getMapping(ctx, ref.Module)
+	config, err := p.loadWritableConfig(ctx)
+	if err != nil {
+		return err
+	}
+	mapping, err := p.getMapping(config, ref.Module)
 	if err != nil {
 		return err
 	}
 	mapping[ref.Name] = (*pc.URL)(key)
-	return p.setMapping(ctx, ref.Module, mapping)
+	return p.setMapping(config, ref.Module, mapping)
 }
 
 func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
-	mapping, err := p.getMapping(ctx, ref.Module)
+	config, err := p.loadWritableConfig(ctx)
+	if err != nil {
+		return err
+	}
+	mapping, err := p.getMapping(config, ref.Module)
 	if err != nil {
 		return err
 	}
 	delete(mapping, ref.Name)
-	return p.setMapping(ctx, ref.Module, mapping)
+	return p.setMapping(config, ref.Module, mapping)
 }
 
 func (p ProjectConfigResolver[R]) configPaths() []string {
@@ -101,10 +113,20 @@ func (p ProjectConfigResolver[R]) configPaths() []string {
 	return []string{}
 }
 
+func (p ProjectConfigResolver[R]) loadWritableConfig(ctx context.Context) (pc.Config, error) {
+	configPaths := p.configPaths()
+	if len(configPaths) == 0 {
+		return pc.Config{}, nil
+	}
+	target := configPaths[len(configPaths)-1]
+	log.FromContext(ctx).Tracef("Loading config from %s", target)
+	return pc.Load(target)
+}
+
 func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) (pc.Config, error) {
 	logger := log.FromContext(ctx)
 	configPaths := p.configPaths()
-	logger.Debugf("Loading config from %s", strings.Join(configPaths, " "))
+	logger.Tracef("Loading config from %s", strings.Join(configPaths, " "))
 	config, err := pc.Merge(configPaths...)
 	if err != nil {
 		return pc.Config{}, err
@@ -112,12 +134,7 @@ func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) (pc.Config, er
 	return config, nil
 }
 
-func (p ProjectConfigResolver[R]) getMapping(ctx context.Context, module optional.Option[string]) (map[string]*pc.URL, error) {
-	config, err := p.loadConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (p ProjectConfigResolver[R]) getMapping(config pc.Config, module optional.Option[string]) (map[string]*pc.URL, error) {
 	var k R
 	get := func(dest pc.ConfigAndSecrets) map[string]*pc.URL {
 		switch any(k).(type) {
@@ -145,12 +162,7 @@ func (p ProjectConfigResolver[R]) getMapping(ctx context.Context, module optiona
 	return mapping, nil
 }
 
-func (p ProjectConfigResolver[R]) setMapping(ctx context.Context, module optional.Option[string], mapping map[string]*pc.URL) error {
-	config, err := p.loadConfig(ctx)
-	if err != nil {
-		return err
-	}
-
+func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.Option[string], mapping map[string]*pc.URL) error {
 	var k R
 	set := func(dest *pc.ConfigAndSecrets, mapping map[string]*pc.URL) {
 		switch any(k).(type) {
