@@ -98,7 +98,9 @@ func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRoute
 const deregisterRunner = `-- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead'
+        SET state = 'dead',
+            deployment_id = NULL,
+            module_name = NULL
         WHERE key = $1
         RETURNING 1)
 SELECT COUNT(*)
