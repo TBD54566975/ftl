@@ -10,6 +10,55 @@ import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { ModuleRuntime, VerbRuntime } from "./runtime_pb.js";
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.ConfigRef
+ */
+export class ConfigRef extends Message<ConfigRef> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string module = 3;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<ConfigRef>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.ConfigRef";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigRef {
+    return new ConfigRef().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigRef {
+    return new ConfigRef().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigRef {
+    return new ConfigRef().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ConfigRef | PlainMessage<ConfigRef> | undefined, b: ConfigRef | PlainMessage<ConfigRef> | undefined): boolean {
+    return proto3.util.equals(ConfigRef, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.EnumRef
  */
 export class EnumRef extends Message<EnumRef> {
@@ -55,6 +104,55 @@ export class EnumRef extends Message<EnumRef> {
 
   static equals(a: EnumRef | PlainMessage<EnumRef> | undefined, b: EnumRef | PlainMessage<EnumRef> | undefined): boolean {
     return proto3.util.equals(EnumRef, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.SecretRef
+ */
+export class SecretRef extends Message<SecretRef> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string module = 3;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<SecretRef>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.SecretRef";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretRef {
+    return new SecretRef().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretRef {
+    return new SecretRef().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretRef {
+    return new SecretRef().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SecretRef | PlainMessage<SecretRef> | undefined, b: SecretRef | PlainMessage<SecretRef> | undefined): boolean {
+    return proto3.util.equals(SecretRef, a, b);
   }
 }
 
@@ -360,6 +458,55 @@ export class Bytes extends Message<Bytes> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.Config
+ */
+export class Config extends Message<Config> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type type = 3;
+   */
+  type?: Type;
+
+  constructor(data?: PartialMessage<Config>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Config";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "type", kind: "message", T: Type },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Config {
+    return new Config().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Config {
+    return new Config().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Config {
+    return new Config().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Config | PlainMessage<Config> | undefined, b: Config | PlainMessage<Config> | undefined): boolean {
+    return proto3.util.equals(Config, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Data
  */
 export class Data extends Message<Data> {
@@ -561,6 +708,18 @@ export class Decl extends Message<Decl> {
      */
     value: Enum;
     case: "enum";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Config config = 5;
+     */
+    value: Config;
+    case: "config";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Secret secret = 6;
+     */
+    value: Secret;
+    case: "secret";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Decl>) {
@@ -575,6 +734,8 @@ export class Decl extends Message<Decl> {
     { no: 2, name: "verb", kind: "message", T: Verb, oneof: "value" },
     { no: 3, name: "database", kind: "message", T: Database, oneof: "value" },
     { no: 4, name: "enum", kind: "message", T: Enum, oneof: "value" },
+    { no: 5, name: "config", kind: "message", T: Config, oneof: "value" },
+    { no: 6, name: "secret", kind: "message", T: Secret, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Decl {
@@ -1524,6 +1685,55 @@ export class Schema extends Message<Schema> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.Secret
+ */
+export class Secret extends Message<Secret> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type type = 3;
+   */
+  type?: Type;
+
+  constructor(data?: PartialMessage<Secret>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Secret";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "type", kind: "message", T: Type },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Secret {
+    return new Secret().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Secret {
+    return new Secret().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Secret {
+    return new Secret().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Secret | PlainMessage<Secret> | undefined, b: Secret | PlainMessage<Secret> | undefined): boolean {
+    return proto3.util.equals(Secret, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.String
  */
 export class String extends Message<String> {
@@ -1721,7 +1931,37 @@ export class Type extends Message<Type> {
     case: "enumRef";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 13;
+     * @generated from field: xyz.block.ftl.v1.schema.VerbRef verbRef = 13;
+     */
+    value: VerbRef;
+    case: "verbRef";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.SinkRef sinkRef = 14;
+     */
+    value: SinkRef;
+    case: "sinkRef";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.SourceRef sourceRef = 15;
+     */
+    value: SourceRef;
+    case: "sourceRef";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.ConfigRef configRef = 16;
+     */
+    value: ConfigRef;
+    case: "configRef";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.SecretRef secretRef = 17;
+     */
+    value: SecretRef;
+    case: "secretRef";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Optional optional = 18;
      */
     value: Optional;
     case: "optional";
@@ -1747,7 +1987,12 @@ export class Type extends Message<Type> {
     { no: 10, name: "unit", kind: "message", T: Unit, oneof: "value" },
     { no: 11, name: "dataRef", kind: "message", T: DataRef, oneof: "value" },
     { no: 12, name: "enumRef", kind: "message", T: EnumRef, oneof: "value" },
-    { no: 13, name: "optional", kind: "message", T: Optional, oneof: "value" },
+    { no: 13, name: "verbRef", kind: "message", T: VerbRef, oneof: "value" },
+    { no: 14, name: "sinkRef", kind: "message", T: SinkRef, oneof: "value" },
+    { no: 15, name: "sourceRef", kind: "message", T: SourceRef, oneof: "value" },
+    { no: 16, name: "configRef", kind: "message", T: ConfigRef, oneof: "value" },
+    { no: 17, name: "secretRef", kind: "message", T: SecretRef, oneof: "value" },
+    { no: 18, name: "optional", kind: "message", T: Optional, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Type {

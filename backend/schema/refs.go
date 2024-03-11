@@ -11,7 +11,8 @@ import (
 
 // RefProto is a constraint on the type of proto that can be used in a Ref.
 type RefProto interface {
-	schemapb.VerbRef | schemapb.DataRef | schemapb.SinkRef | schemapb.SourceRef | schemapb.EnumRef
+	schemapb.VerbRef | schemapb.DataRef | schemapb.SinkRef | schemapb.SourceRef | schemapb.EnumRef |
+		schemapb.SecretRef | schemapb.ConfigRef
 }
 
 // Ref is an untyped reference to a symbol.

@@ -134,6 +134,20 @@ func Normalise[T Node](n T) T {
 	case *SinkRef:
 		c.Pos = zero
 
+	case *Config:
+		c.Pos = zero
+		c.Type = Normalise(c.Type)
+
+	case *Secret:
+		c.Pos = zero
+		c.Type = Normalise(c.Type)
+
+	case *SecretRef:
+		c.Pos = zero
+
+	case *ConfigRef:
+		c.Pos = zero
+
 	case Decl, Metadata, IngressPathComponent, Type, Value: // Can never occur in reality, but here to satisfy the sum-type check.
 		panic("??")
 	}
