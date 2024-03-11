@@ -750,7 +750,7 @@ SELECT d.min_replicas,
        r.endpoint,
        r.labels AS runner_labels
 FROM deployments d
-         LEFT JOIN runners r on d.id = r.deployment_id AND r.state = 'assigned'
+         LEFT JOIN runners r on d.id = r.deployment_id AND r.state != 'dead'
 WHERE d.min_replicas > 0
 ORDER BY d.name
 `
