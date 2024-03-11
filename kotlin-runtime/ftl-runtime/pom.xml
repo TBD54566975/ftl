@@ -26,7 +26,7 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
-            <version>1.9.22</version>
+            <version>1.9.23</version>
         </dependency>
 
         <dependency>
@@ -39,7 +39,7 @@
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.165</version>
+            <version>4.8.168</version>
         </dependency>
 
         <!-- Gson -->

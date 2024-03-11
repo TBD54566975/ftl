@@ -22,10 +22,10 @@ require (
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/go-logr/logr v1.4.1
 	github.com/gofrs/flock v0.8.1
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
-	github.com/jackc/pgx/v5 v5.5.3
+	github.com/jackc/pgx/v5 v5.5.5
 	github.com/jellydator/ttlcache/v3 v3.2.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -35,7 +35,7 @@ require (
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.10.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/swaggest/jsonschema-go v0.3.66
+	github.com/swaggest/jsonschema-go v0.3.69
 	github.com/titanous/json5 v1.0.0
 	github.com/tmc/langchaingo v0.1.5
 	github.com/zalando/go-keyring v0.2.3
@@ -48,13 +48,13 @@ require (
 	go.opentelemetry.io/otel/trace v1.24.0
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	golang.org/x/mod v0.15.0
-	golang.org/x/net v0.21.0
+	golang.org/x/mod v0.16.0
+	golang.org/x/net v0.22.0
 	golang.org/x/sync v0.6.0
-	golang.org/x/term v0.17.0
-	golang.org/x/tools v0.18.0
-	google.golang.org/protobuf v1.32.0
-	modernc.org/sqlite v1.29.2
+	golang.org/x/term v0.18.0
+	golang.org/x/tools v0.19.0
+	google.golang.org/protobuf v1.33.0
+	modernc.org/sqlite v1.29.3
 )
 
 require (
@@ -91,8 +91,8 @@ require (
 	github.com/swaggest/refl v1.3.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.24.0 // indirect
 	golang.design/x/reflect v0.0.0-20220504060917-02c43be63f3b
-	golang.org/x/crypto v0.19.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
