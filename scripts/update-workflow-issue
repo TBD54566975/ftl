@@ -8,6 +8,12 @@ list_prs() {
   gh pr list "$@" --json number --jq 'map("- #\(.number)")[]' | sort -n
 }
 
+list_issues_and_prs() {
+  user="$1"
+  shift
+  (gh pr list -A "$user" "$@" --json number,mergedAt | jq '[.[] | .["closedAt"] = .mergedAt | del(.mergedAt)]'; gh issue list -a "$user" "$@" --json number,closedAt) | jq '.[]' | jq -rs 'sort_by(.closedAt) | reverse | map("- #\(.number)")[]'
+}
+
 update() {
   if test -z "$NOOP"; then
     gh issue edit -F - 728
@@ -35,18 +41,16 @@ $(
 $(
 
 if [ "$(uname -o)" = "GNU/Linux" ]; then
-  date="$(date -d "- 3 days" +%Y-%m-%d)"
+  date="$(date -d "- 5 days" +%Y-%m-%d)"
 else
-  date="$(date -v "-3d" +%Y-%m-%d)"
+  date="$(date -v "-5d" +%Y-%m-%d)"
 fi
 
 gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/TBD54566975/teams/ftl-team/members | jq -r '.[].login' | grep -v dhanji | sort | while read -r member; do
   echo "@$member [🔎](https://github.com/TBD54566975/ftl/issues/assigned/$member)"
   echo
-  list_issues -a "$member"
-  list_prs -A "$member"
-  list_issues -s closed -S "closed:>$date" -a "$member"
-  list_prs -s closed -S "closed:>$date" -A "$member"
+  list_issues_and_prs "$member"
+  list_issues_and_prs "$member" -s closed -S "closed:>$date"
   echo
 done
 )
