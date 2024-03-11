@@ -110,7 +110,8 @@ RETURNING deployment_id;
 -- name: KillStaleRunners :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead'
+        SET state = 'dead',
+        deployment_id = NULL
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
@@ -120,8 +121,7 @@ FROM matches;
 WITH matches AS (
     UPDATE runners
         SET state = 'dead',
-            deployment_id = NULL,
-            module_name = NULL
+            deployment_id = NULL
         WHERE key = $1
         RETURNING 1)
 SELECT COUNT(*)

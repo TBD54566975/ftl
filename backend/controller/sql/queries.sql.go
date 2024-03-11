@@ -99,8 +99,7 @@ const deregisterRunner = `-- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
         SET state = 'dead',
-            deployment_id = NULL,
-            module_name = NULL
+            deployment_id = NULL
         WHERE key = $1
         RETURNING 1)
 SELECT COUNT(*)
@@ -1200,7 +1199,8 @@ func (q *Queries) KillStaleControllers(ctx context.Context, timeout time.Duratio
 const killStaleRunners = `-- name: KillStaleRunners :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead'
+        SET state = 'dead',
+        deployment_id = NULL
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
