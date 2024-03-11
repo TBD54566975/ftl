@@ -52,11 +52,11 @@
         <maven.deploy.skip>true</maven.deploy.skip>
         <rootDir>${basedir}</rootDir>
         <java.version>1.8</java.version>
-        <kotlin.version>1.9.22</kotlin.version>
+        <kotlin.version>1.9.23</kotlin.version>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <wire.version>4.9.7</wire.version>
         <grpc.version>1.62.2</grpc.version>
-        <logback.version>1.5.2</logback.version>
+        <logback.version>1.5.3</logback.version>
         <junit.version>5.10.2</junit.version>
         <logstash.version>7.4</logstash.version>
     </properties>
@@ -371,7 +371,7 @@
                     <plugin>
                         <groupId>org.jetbrains.dokka</groupId>
                         <artifactId>dokka-maven-plugin</artifactId>
-                        <version>1.9.10</version>
+                        <version>1.9.20</version>
                         <executions>
                             <execution>
                                 <id>attach-javadoc</id>
