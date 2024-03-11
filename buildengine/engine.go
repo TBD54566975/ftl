@@ -1,13 +1,16 @@
 package buildengine
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"path/filepath"
 	"runtime"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/exp/maps"
@@ -20,12 +23,18 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
+type schemaChange struct {
+	ChangeType ftlv1.DeploymentChangeType
+	*schema.Module
+}
+
 // Engine for building a set of modules.
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
 	modules          map[string]Module
 	dirs             []string
 	controllerSchema *xsync.MapOf[string, *schema.Module]
+	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
 }
 
@@ -43,6 +52,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 		dirs:             dirs,
 		modules:          map[string]Module{},
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
+		schemaChanges:    pubsub.New[schemaChange](),
 	}
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
@@ -75,10 +85,8 @@ func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, 
 	if err == nil {
 		sch, err := schema.FromProto(psch.Msg.Schema)
 		if err == nil {
-			modules := map[string]*schema.Module{}
 			for _, module := range sch.Modules {
 				e.controllerSchema.Store(module.Name, module)
-				modules[module.Name] = module
 			}
 		} else {
 			logger.Debugf("Failed to parse schema from controller: %s", err)
@@ -92,13 +100,15 @@ func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, 
 		switch msg.ChangeType {
 		case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
 			sch, err := schema.ModuleFromProto(msg.Schema)
-			if err == nil {
+			if err != nil {
 				return err
 			}
 			e.controllerSchema.Store(sch.Name, sch)
+			e.schemaChanges.Publish(schemaChange{ChangeType: msg.ChangeType, Module: sch})
 
 		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
 			e.controllerSchema.Delete(msg.ModuleName)
+			e.schemaChanges.Publish(schemaChange{ChangeType: msg.ChangeType, Module: nil})
 		}
 		return nil
 	}
@@ -180,16 +190,33 @@ func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration) error {
 	logger := log.FromContext(ctx)
 
-	events := make(chan WatchEvent, 128)
-	watch := Watch(ctx, period, e.dirs...)
-	defer watch.Close()
-	watch.Subscribe(events)
+	moduleHashes := map[string][]byte{}
+	e.controllerSchema.Range(func(name string, sch *schema.Module) bool {
+		hash, err := computeModuleHash(sch)
+		if err != nil {
+			logger.Errorf(err, "compute hash for %s failed", name)
+			return false
+		}
+		moduleHashes[name] = hash
+		return true
+	})
 
+	schemaChanges := make(chan schemaChange, 128)
+	e.schemaChanges.Subscribe(schemaChanges)
+	defer e.schemaChanges.Unsubscribe(schemaChanges)
+
+	watchEvents := make(chan WatchEvent, 128)
+	watch := Watch(ctx, period, e.dirs...)
+	watch.Subscribe(watchEvents)
+	defer watch.Unsubscribe(watchEvents)
+	defer watch.Close()
+
+	// Watch for file and schema changes
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case event := <-events:
+		case event := <-watchEvents:
 			switch event := event.(type) {
 			case WatchEventModuleAdded:
 				if _, exists := e.modules[event.Module.Module]; !exists {
@@ -212,8 +239,55 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					logger.Errorf(err, "deploy %s failed", event.Module.Module)
 				}
 			}
+		case change := <-schemaChanges:
+			if change.ChangeType != ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED {
+				continue
+			}
+
+			hash, err := computeModuleHash(change.Module)
+			if err != nil {
+				logger.Errorf(err, "compute hash for %s failed", change.Name)
+				continue
+			}
+
+			if bytes.Equal(hash, moduleHashes[change.Name]) {
+				logger.Tracef("schema for %s has not changed", change.Name)
+				continue
+			}
+
+			moduleHashes[change.Name] = hash
+			modulesToDeploy := e.getDependentModules(change.Name)
+			logger.Infof("%s's schema changed; redeploying: %+v", change.Name, modulesToDeploy)
+			err = e.buildAndDeploy(ctx, 1, true, modulesToDeploy...)
+			if err != nil {
+				logger.Errorf(err, "deploy %s failed", change.Name)
+			}
+		}
+
+	}
+}
+
+func computeModuleHash(module *schema.Module) ([]byte, error) {
+	hasher := sha256.New()
+	data := []byte(module.String())
+	if _, err := hasher.Write(data); err != nil {
+		return nil, err // Handle errors that might occur during the write
+	}
+
+	return hasher.Sum(nil), nil
+}
+
+func (e *Engine) getDependentModules(moduleName string) []string {
+	dependentModules := map[string]bool{}
+	for key, module := range e.modules {
+		for _, dep := range module.Dependencies {
+			if dep == moduleName {
+				dependentModules[key] = true
+			}
 		}
 	}
+
+	return maps.Keys(dependentModules)
 }
 
 func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
