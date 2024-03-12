@@ -1,6 +1,11 @@
 package xyz.block.ftl.schemaextractor
 
-import io.gitlab.arturbosch.detekt.api.*
+import io.gitlab.arturbosch.detekt.api.Config
+import io.gitlab.arturbosch.detekt.api.Debt
+import io.gitlab.arturbosch.detekt.api.Issue
+import io.gitlab.arturbosch.detekt.api.Rule
+import io.gitlab.arturbosch.detekt.api.Severity
+import io.gitlab.arturbosch.detekt.api.config
 import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
 import org.jetbrains.kotlin.cfg.getDeclarationDescriptorIncludingConstructors
@@ -12,7 +17,20 @@ import org.jetbrains.kotlin.descriptors.impl.referencedProperty
 import org.jetbrains.kotlin.diagnostics.DiagnosticUtils.getLineAndColumnInPsiFile
 import org.jetbrains.kotlin.diagnostics.PsiDiagnosticUtils.LineAndColumn
 import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.KtAnnotationEntry
+import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtDeclaration
+import org.jetbrains.kotlin.psi.KtElement
+import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtFunction
+import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtTypeAlias
+import org.jetbrains.kotlin.psi.KtTypeParameterList
+import org.jetbrains.kotlin.psi.KtTypeReference
+import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.children
 import org.jetbrains.kotlin.psi.psiUtil.getValueParameters
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
@@ -33,12 +51,30 @@ import org.jetbrains.kotlin.types.typeUtil.isAnyOrNullableAny
 import org.jetbrains.kotlin.types.typeUtil.isSubtypeOf
 import org.jetbrains.kotlin.util.containingNonLocalDeclaration
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
-import xyz.block.ftl.*
 import xyz.block.ftl.Context
 import xyz.block.ftl.Database
-import xyz.block.ftl.v1.schema.*
+import xyz.block.ftl.HttpIngress
+import xyz.block.ftl.Json
+import xyz.block.ftl.Method
 import xyz.block.ftl.v1.schema.Array
+import xyz.block.ftl.v1.schema.Data
+import xyz.block.ftl.v1.schema.DataRef
+import xyz.block.ftl.v1.schema.Decl
+import xyz.block.ftl.v1.schema.Field
+import xyz.block.ftl.v1.schema.IngressPathComponent
+import xyz.block.ftl.v1.schema.IngressPathLiteral
+import xyz.block.ftl.v1.schema.IngressPathParameter
+import xyz.block.ftl.v1.schema.Metadata
+import xyz.block.ftl.v1.schema.MetadataAlias
+import xyz.block.ftl.v1.schema.MetadataCalls
+import xyz.block.ftl.v1.schema.MetadataIngress
+import xyz.block.ftl.v1.schema.Module
+import xyz.block.ftl.v1.schema.Optional
+import xyz.block.ftl.v1.schema.Position
+import xyz.block.ftl.v1.schema.Type
+import xyz.block.ftl.v1.schema.TypeParameter
 import xyz.block.ftl.v1.schema.Verb
+import xyz.block.ftl.v1.schema.VerbRef
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
@@ -113,7 +149,7 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
 
   private fun Map<String, ModuleData>.toModules(): List<Module> {
     return this.map {
-      Module(name = it.key, decls = it.value.decls.sortedBy { it.data_ == null }, comments = it.value.comments)
+      xyz.block.ftl.v1.schema.Module(name = it.key, decls = it.value.decls.sortedBy { it.data_ == null }, comments = it.value.comments)
     }
   }
 
