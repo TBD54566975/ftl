@@ -32,3 +32,11 @@ func (s *Secret) ToProto() protoreflect.ProtoMessage {
 func (s *Secret) schemaChildren() []Node { return []Node{s.Type} }
 
 func (s *Secret) schemaDecl() {}
+
+func SecretFromProto(p *schemapb.Secret) *Secret {
+	return &Secret{
+		Pos:  posFromProto(p.Pos),
+		Name: p.Name,
+		Type: typeToSchema(p.Type),
+	}
+}

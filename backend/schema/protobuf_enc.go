@@ -145,6 +145,7 @@ func valueToProto(v Value) *schemapb.Value {
 	switch t := v.(type) {
 	case *StringValue:
 		return &schemapb.Value{Value: &schemapb.Value_StringValue{StringValue: t.ToProto().(*schemapb.StringValue)}}
+
 	case *IntValue:
 		return &schemapb.Value{Value: &schemapb.Value_IntValue{IntValue: t.ToProto().(*schemapb.IntValue)}}
 	}

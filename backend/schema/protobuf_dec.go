@@ -29,6 +29,10 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 			out = append(out, DatabaseFromProto(n.Database))
 		case *schemapb.Decl_Enum:
 			out = append(out, EnumFromProto(n.Enum))
+		case *schemapb.Decl_Config:
+			out = append(out, ConfigFromProto(n.Config))
+		case *schemapb.Decl_Secret:
+			out = append(out, SecretFromProto(n.Secret))
 		}
 	}
 	return out

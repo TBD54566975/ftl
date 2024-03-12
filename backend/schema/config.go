@@ -32,3 +32,11 @@ func (s *Config) ToProto() protoreflect.ProtoMessage {
 func (s *Config) schemaChildren() []Node { return []Node{s.Type} }
 
 func (s *Config) schemaDecl() {}
+
+func ConfigFromProto(p *schemapb.Config) *Config {
+	return &Config{
+		Pos:  posFromProto(p.Pos),
+		Name: p.Name,
+		Type: typeToSchema(p.Type),
+	}
+}

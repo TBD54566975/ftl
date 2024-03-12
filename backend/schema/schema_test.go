@@ -19,6 +19,8 @@ func TestSchemaString(t *testing.T) {
 	expected := Builtins().String() + `
 // A comment
 module todo {
+  config configValue String
+
   data CreateRequest {
     name {String: String}? +alias json "rqn"
   }
@@ -36,6 +38,8 @@ module todo {
     name String
     when Time
   }
+
+  secret secretValue String
 
   verb create(todo.CreateRequest) todo.CreateResponse
       +calls todo.destroy
@@ -89,6 +93,8 @@ func TestImports(t *testing.T) {
 func TestVisit(t *testing.T) {
 	expected := `
 Module
+  Config
+    String
   Data
     Field
       Optional
@@ -109,6 +115,8 @@ Module
       String
     Field
       Time
+  Secret
+    String
   Verb
     DataRef
     DataRef
@@ -136,7 +144,7 @@ Module
 		return next()
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(actual.String()), "%s", actual.String())
+	assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(actual.String()))
 }
 
 func TestParserRoundTrip(t *testing.T) {
@@ -355,6 +363,9 @@ func TestParseModule(t *testing.T) {
 	input := `
 // A comment
 module todo {
+  config configValue String
+  secret secretValue String
+
   data CreateRequest {
     name {String: String}? +alias json "rqn"
   }
@@ -410,6 +421,14 @@ var testSchema = MustValidate(&Schema{
 			Name:     "todo",
 			Comments: []string{"A comment"},
 			Decls: []Decl{
+				&Secret{
+					Name: "secretValue",
+					Type: &String{},
+				},
+				&Config{
+					Name: "configValue",
+					Type: &String{},
+				},
 				&Data{
 					Name: "CreateRequest",
 					Fields: []*Field{
