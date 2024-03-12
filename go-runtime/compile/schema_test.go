@@ -3,6 +3,8 @@ package compile
 import (
 	"go/ast"
 	"go/types"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -174,4 +176,10 @@ func TestParseBasicTypes(t *testing.T) {
 
 func normaliseString(s string) string {
 	return strings.TrimSpace(strings.Join(slices.Map(strings.Split(s, "\n"), strings.TrimSpace), "\n"))
+}
+
+func TestErrorReporting(t *testing.T) {
+	pwd, _ := os.Getwd()
+	_, _, err := ExtractModuleSchema("testdata/failing")
+	assert.EqualError(t, err, filepath.Join(pwd, `testdata/failing/failing.go`)+`:15:2: call must have exactly three arguments`)
 }
