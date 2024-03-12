@@ -98,7 +98,8 @@ func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRoute
 const deregisterRunner = `-- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead'
+        SET state = 'dead',
+            deployment_id = NULL
         WHERE key = $1
         RETURNING 1)
 SELECT COUNT(*)
@@ -749,7 +750,7 @@ SELECT d.min_replicas,
        r.endpoint,
        r.labels AS runner_labels
 FROM deployments d
-         LEFT JOIN runners r on d.id = r.deployment_id
+         LEFT JOIN runners r on d.id = r.deployment_id AND r.state != 'dead'
 WHERE d.min_replicas > 0
 ORDER BY d.name
 `
@@ -1198,7 +1199,8 @@ func (q *Queries) KillStaleControllers(ctx context.Context, timeout time.Duratio
 const killStaleRunners = `-- name: KillStaleRunners :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead'
+        SET state = 'dead',
+        deployment_id = NULL
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)

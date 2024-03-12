@@ -110,7 +110,8 @@ RETURNING deployment_id;
 -- name: KillStaleRunners :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead'
+        SET state = 'dead',
+        deployment_id = NULL
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
@@ -119,7 +120,8 @@ FROM matches;
 -- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead'
+        SET state = 'dead',
+            deployment_id = NULL
         WHERE key = $1
         RETURNING 1)
 SELECT COUNT(*)
@@ -160,7 +162,7 @@ SELECT d.min_replicas,
        r.endpoint,
        r.labels AS runner_labels
 FROM deployments d
-         LEFT JOIN runners r on d.id = r.deployment_id
+         LEFT JOIN runners r on d.id = r.deployment_id AND r.state != 'dead'
 WHERE d.min_replicas > 0
 ORDER BY d.name;
 
