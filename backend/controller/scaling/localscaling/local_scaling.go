@@ -42,7 +42,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		runners:             map[model.RunnerKey]context.CancelFunc{},
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
-		prevRunnerSuffix:    0, // first runner will have an id of r-0001
+		prevRunnerSuffix:    0, // first runner will have a key of r-0001
 	}, nil
 }
 
