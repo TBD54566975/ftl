@@ -22,13 +22,13 @@ type SecretValue[T SecretType] struct {
 	name   string
 }
 
-func (s *SecretValue[T]) GoString() string {
+func (s SecretValue[T]) GoString() string {
 	var t T
 	return fmt.Sprintf("ftl.SecretValue[%T](\"%s.%s\")", t, s.module, s.name)
 }
 
 // Get returns the value of the secret from FTL.
-func (s *SecretValue[T]) Get(ctx context.Context) (out T) {
+func (s SecretValue[T]) Get(ctx context.Context) (out T) {
 	sm := configuration.SecretsFromContext(ctx)
 	if err := sm.Get(ctx, configuration.NewRef(s.module, s.name), &out); err != nil {
 		panic(fmt.Errorf("failed to get %s: %w", s, err))

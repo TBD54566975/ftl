@@ -30,7 +30,9 @@ var (
 	errorIFaceType = once(func() *types.Interface {
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
-	ftlCallFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
+	ftlCallFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
+	ftlConfigFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
+	ftlSecretFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
 
 	aliasFieldTag = "json"
 )
@@ -64,7 +66,6 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 		}
 		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}}
 		for _, file := range pkg.Syntax {
-			var verb *schema.Verb
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				defer func() {
 					if err != nil {
@@ -73,11 +74,8 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 				}()
 				switch node := node.(type) {
 				case *ast.CallExpr:
-					// Only track calls when we're in a verb.
-					if verb != nil {
-						if err := visitCallExpr(pctx, verb, node); err != nil {
-							return err
-						}
+					if err := visitCallExpr(pctx, node); err != nil {
+						return err
 					}
 
 				case *ast.File:
@@ -86,15 +84,16 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 					}
 
 				case *ast.FuncDecl:
-					verb, err = visitFuncDecl(pctx, node)
+					verb, err := visitFuncDecl(pctx, node)
 					if err != nil {
 						return err
 					}
+					pctx.activeVerb = verb
 					err = next()
 					if err != nil {
 						return err
 					}
-					verb = nil
+					pctx.activeVerb = nil
 					return nil
 
 				case *ast.GenDecl:
@@ -102,7 +101,6 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 						return err
 					}
 
-				case nil:
 				default:
 				}
 				return next()
@@ -127,16 +125,31 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 	return nativeNames, module, schema.ValidateModule(module)
 }
 
-func visitCallExpr(pctx *parseContext, verb *schema.Verb, node *ast.CallExpr) error {
+func visitCallExpr(pctx *parseContext, node *ast.CallExpr) error {
 	_, fn := deref[*types.Func](pctx.pkg, node.Fun)
 	if fn == nil {
 		return nil
 	}
-	if fn.FullName() != ftlCallFuncPath {
-		return nil
+	switch fn.FullName() {
+	case ftlCallFuncPath:
+		err := parseCall(pctx, node)
+		if err != nil {
+			return err
+		}
+
+	case ftlConfigFuncPath, ftlSecretFuncPath:
+		// Secret/config declaration: ftl.Config[<type>](<name>)
+		err := parseConfigDecl(pctx, node, fn)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func parseCall(pctx *parseContext, node *ast.CallExpr) error {
 	if len(node.Args) != 3 {
-		return errors.New("call must have exactly three arguments")
+		return fmt.Errorf("%s: call must have exactly three arguments", goPosToSchemaPos(node.Pos()))
 	}
 	_, verbFn := deref[*types.Func](pctx.pkg, node.Args[1])
 	if verbFn == nil {
@@ -144,6 +157,9 @@ func visitCallExpr(pctx *parseContext, verb *schema.Verb, node *ast.CallExpr) er
 			return fmt.Errorf("call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel)
 		}
 		return fmt.Errorf("call first argument must be a function but is %T", node.Args[1])
+	}
+	if pctx.activeVerb == nil {
+		return nil
 	}
 	moduleName := verbFn.Pkg().Name()
 	if moduleName == pctx.pkg.Name {
@@ -154,7 +170,49 @@ func visitCallExpr(pctx *parseContext, verb *schema.Verb, node *ast.CallExpr) er
 		Module: moduleName,
 		Name:   strcase.ToLowerCamel(verbFn.Name()),
 	}
-	verb.AddCall(ref)
+	pctx.activeVerb.AddCall(ref)
+	return nil
+}
+
+func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) error {
+	var name string
+	if len(node.Args) == 1 {
+		if literal, ok := node.Args[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
+			var err error
+			name, err = strconv.Unquote(literal.Value)
+			if err != nil {
+				return fmt.Errorf("%s: %w", goPosToSchemaPos(node.Pos()), err)
+			}
+		}
+	}
+	if name == "" {
+		return fmt.Errorf("%s: config and secret declarations must have a single string literal argument", goPosToSchemaPos(node.Pos()))
+	}
+	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert
+
+	// Type parameter
+	tp := pctx.pkg.TypesInfo.Types[index.Index].Type
+	st, err := visitType(pctx, index.Index, tp)
+	if err != nil {
+		return err
+	}
+
+	// Add the declaration to the module.
+	var decl schema.Decl
+	if fn.FullName() == ftlConfigFuncPath {
+		decl = &schema.Config{
+			Pos:  goPosToSchemaPos(node.Pos()),
+			Name: name,
+			Type: st,
+		}
+	} else {
+		decl = &schema.Secret{
+			Pos:  goPosToSchemaPos(node.Pos()),
+			Name: name,
+			Type: st,
+		}
+	}
+	pctx.module.Decls = append(pctx.module.Decls, decl)
 	return nil
 }
 
@@ -264,28 +322,33 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) error {
 						return err
 					}
 				}
+
 			case *directiveIngress, *directiveModule, *directiveVerb:
 			}
 		}
 		return nil
+
 	case token.CONST:
 		var typ ast.Expr
 		for i, s := range node.Specs {
-			if v, ok := s.(*ast.ValueSpec); ok {
-				// In an iota enum, only the first value has a type.
-				// Hydrate this to subsequent values so we can associate them with the enum.
-				if i == 0 && isIotaEnum(v) {
-					typ = v.Type
-				} else if v.Type == nil {
-					v.Type = typ
-				}
-				err := visitValueSpec(pctx, v)
-				if err != nil {
-					return err
-				}
+			v, ok := s.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			// In an iota enum, only the first value has a type.
+			// Hydrate this to subsequent values so we can associate them with the enum.
+			if i == 0 && isIotaEnum(v) {
+				typ = v.Type
+			} else if v.Type == nil {
+				v.Type = typ
+			}
+			err := visitValueSpec(pctx, v)
+			if err != nil {
+				return err
 			}
 		}
 		return nil
+
 	default:
 		return nil
 	}
@@ -314,23 +377,22 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) error {
 	if enum == nil {
 		return nil
 	}
-
-	if c, ok := pctx.pkg.TypesInfo.Defs[node.Names[0]].(*types.Const); ok {
-		value, err := visitConst(c)
-		if err != nil {
-			return err
-		}
-		variant := &schema.EnumVariant{
-			Pos:   goPosToSchemaPos(c.Pos()),
-			Name:  strcase.ToUpperCamel(c.Id()),
-			Value: value,
-		}
-		enum.Variants = append(enum.Variants, variant)
-		return nil
+	c, ok := pctx.pkg.TypesInfo.Defs[node.Names[0]].(*types.Const)
+	if !ok {
+		return fmt.Errorf("%s: could not extract enum %s: expected exactly one variant name",
+			goPosToSchemaPos(node.Pos()), enum.Name)
 	}
-
-	return fmt.Errorf("%s: could not extract enum %s: expected exactly one variant name",
-		goPosToSchemaPos(node.Pos()), enum.Name)
+	value, err := visitConst(c)
+	if err != nil {
+		return err
+	}
+	variant := &schema.EnumVariant{
+		Pos:   goPosToSchemaPos(c.Pos()),
+		Name:  strcase.ToUpperCamel(c.Id()),
+		Value: value,
+	}
+	enum.Variants = append(enum.Variants, variant)
+	return nil
 }
 
 func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, err error) {
@@ -742,6 +804,9 @@ func deref[T types.Object](pkg *packages.Package, node ast.Expr) (string, T) {
 		obj, _ = pkg.TypesInfo.Uses[node.Sel].(T)
 		return x.Name, obj
 
+	case *ast.IndexExpr:
+		return deref[T](pkg, node.X)
+
 	default:
 		return "", obj
 	}
@@ -753,6 +818,7 @@ type parseContext struct {
 	module      *schema.Module
 	nativeNames NativeNames
 	enums       enums
+	activeVerb  *schema.Verb
 }
 
 // pathEnclosingInterval returns the PackageInfo and ast.Node that

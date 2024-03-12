@@ -164,7 +164,7 @@ func Validate(schema *Schema) (*Schema, error) {
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
-				Value, *IntValue, *StringValue:
+				Value, *IntValue, *StringValue, *Config, *Secret:
 			}
 			return next()
 		})
@@ -274,6 +274,22 @@ func ValidateModule(module *Module) error {
 				if md, ok := md.(*MetadataCalls); ok {
 					merr = append(merr, fmt.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
 				}
+			}
+
+		case *Config:
+			if !ValidateName(n.Name) {
+				merr = append(merr, fmt.Errorf("%s: config name %q is invalid", n.Pos, n.Name))
+			}
+			if _, ok := primitivesScope[n.Name]; ok {
+				merr = append(merr, fmt.Errorf("%s: config name %q is a reserved word", n.Pos, n.Name))
+			}
+
+		case *Secret:
+			if !ValidateName(n.Name) {
+				merr = append(merr, fmt.Errorf("%s: secret name %q is invalid", n.Pos, n.Name))
+			}
+			if _, ok := primitivesScope[n.Name]; ok {
+				merr = append(merr, fmt.Errorf("%s: secret name %q is a reserved word", n.Pos, n.Name))
 			}
 
 		case *Field:

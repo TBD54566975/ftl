@@ -18,6 +18,12 @@ func TestExtractModuleSchema(t *testing.T) {
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module one {
+  config configValue one.Config
+
+  data Config {
+    field String
+  }
+
   data Nested {
   }
 
@@ -65,6 +71,8 @@ func TestExtractModuleSchema(t *testing.T) {
     Two(2)
   }
 
+  secret secretValue String
+
   verb verb(one.Req) one.Resp
 }
 `
@@ -79,7 +87,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
   data Payload<T> {
     body T
   }
-  
+
   enum TwoEnum(String) {
     Red("Red")
     Blue("Blue")

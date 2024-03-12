@@ -24,13 +24,13 @@ type ConfigValue[T ConfigType] struct {
 	name   string
 }
 
-func (c *ConfigValue[T]) GoString() string {
+func (c ConfigValue[T]) GoString() string {
 	var t T
 	return fmt.Sprintf("ftl.ConfigValue[%T](\"%s.%s\")", t, c.module, c.name)
 }
 
 // Get returns the value of the configuration key from FTL.
-func (c *ConfigValue[T]) Get(ctx context.Context) (out T) {
+func (c ConfigValue[T]) Get(ctx context.Context) (out T) {
 	cm := configuration.ConfigFromContext(ctx)
 	err := cm.Get(ctx, configuration.NewRef(c.module, c.name), &out)
 	if err != nil {

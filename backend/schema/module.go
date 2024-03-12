@@ -57,6 +57,12 @@ func (m *Module) Scope() Scope {
 		case *Enum:
 			scope[d.Name] = ModuleDecl{m, d}
 
+		case *Config:
+			scope[d.Name] = ModuleDecl{m, d}
+
+		case *Secret:
+			scope[d.Name] = ModuleDecl{m, d}
+
 		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time,
 			*Unit, *Any, *TypeParameter:
 		}
@@ -75,11 +81,23 @@ func (m *Module) Resolve(ref Ref) *ModuleDecl {
 			if d.Name == ref.Name {
 				return &ModuleDecl{m, d}
 			}
+
 		case *Verb:
 			if d.Name == ref.Name {
 				return &ModuleDecl{m, d}
 			}
+
 		case *Enum:
+			if d.Name == ref.Name {
+				return &ModuleDecl{m, d}
+			}
+
+		case *Config:
+			if d.Name == ref.Name {
+				return &ModuleDecl{m, d}
+			}
+
+		case *Secret:
 			if d.Name == ref.Name {
 				return &ModuleDecl{m, d}
 			}

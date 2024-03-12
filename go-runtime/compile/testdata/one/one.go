@@ -64,6 +64,13 @@ type Req struct {
 }
 type Resp struct{}
 
+type Config struct {
+	Field string
+}
+
+var configValue = ftl.Config[Config]("configValue")
+var secretValue = ftl.Secret[string]("secretValue")
+
 //ftl:verb
 func Verb(ctx context.Context, req Req) (Resp, error) {
 	return Resp{}, nil

@@ -101,6 +101,20 @@ func (d *Data) Monomorphise(ref *DataRef) (*Data, error) {
 			}
 			n.Type = t
 
+		case *Config:
+			t, err := maybeMonomorphiseType(n.Type, names)
+			if err != nil {
+				return fmt.Errorf("%s: config type: %w", n.Type.Position(), err)
+			}
+			n.Type = t
+
+		case *Secret:
+			t, err := maybeMonomorphiseType(n.Type, names)
+			if err != nil {
+				return fmt.Errorf("%s: secret type: %w", n.Type.Position(), err)
+			}
+			n.Type = t
+
 		case *Any, *Bool, *Bytes, *Data, *DataRef, *Database, Decl, *Float,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Int,
 			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,

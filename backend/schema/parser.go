@@ -12,13 +12,13 @@ import (
 )
 
 var (
-	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}}
+	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &Config{}, &Secret{}}
 	nonOptionalTypeUnion = []Type{
 		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
 		&Map{}, &Any{}, &Unit{},
 		// Note: any types resolved by identifier (eg. "Any", "Unit", etc.) must
 		// be prior to DataRef.
-		&DataRef{}, &EnumRef{},
+		&DataRef{}, &EnumRef{}, &VerbRef{}, &SinkRef{}, &SourceRef{}, &ConfigRef{}, &SecretRef{},
 	}
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataDatabases{}, &MetadataAlias{}}

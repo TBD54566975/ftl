@@ -8,7 +8,19 @@ import "xyz/block/ftl/v1/schema/runtime.proto";
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb";
 option java_multiple_files = true;
 
+message ConfigRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
 message EnumRef {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+}
+
+message SecretRef {
   optional Position pos = 1;
   string name = 2;
   string module = 3;
@@ -49,6 +61,12 @@ message Bytes {
   optional Position pos = 1;
 }
 
+message Config {
+  optional Position pos = 1;
+  string name = 2;
+  Type type = 3;
+}
+
 message Data {
   optional Position pos = 1;
   repeated string comments = 2;
@@ -77,6 +95,8 @@ message Decl {
     Verb verb = 2;
     Database database = 3;
     Enum enum = 4;
+    Config config = 5;
+    Secret secret = 6;
   }
 }
 
@@ -196,6 +216,12 @@ message Schema {
   repeated Module modules = 2;
 }
 
+message Secret {
+  optional Position pos = 1;
+  string name = 2;
+  Type type = 3;
+}
+
 message String {
   optional Position pos = 1;
 }
@@ -223,7 +249,12 @@ message Type {
     Unit unit = 10;
     DataRef dataRef = 11;
     EnumRef enumRef = 12;
-    Optional optional = 13;
+    VerbRef verbRef = 13;
+    SinkRef sinkRef = 14;
+    SourceRef sourceRef = 15;
+    ConfigRef configRef = 16;
+    SecretRef secretRef = 17;
+    Optional optional = 18;
   }
 }
 
