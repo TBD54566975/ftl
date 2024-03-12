@@ -33,6 +33,7 @@ require (
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.10.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
+	github.com/stretchr/testify v1.8.4
 	github.com/swaggest/jsonschema-go v0.3.69
 	github.com/titanous/json5 v1.0.0
 	github.com/tmc/langchaingo v0.1.5
@@ -57,10 +58,13 @@ require (
 
 require (
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.2 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 )
 

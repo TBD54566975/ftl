@@ -287,9 +287,6 @@ func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
 		}
 		resp = results.At(0)
 	}
-	if params.Len() == 1 && results.Len() == 1 {
-		return nil, nil, fmt.Errorf("must either accept an input or return a result, but does neither")
-	}
 	return req, resp, nil
 }
 

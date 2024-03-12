@@ -44,9 +44,26 @@ func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (re
 	}
 }
 
-// Call a Sink through the FTL controller.
-// func CallSink[Req any](ctx context.Context, sink Sink[Req]) error {
-// }
+// CallSink calls a Sink through the FTL controller.
+func CallSink[Req any](ctx context.Context, sink Sink[Req], req Req) error {
+	verb := func(ctx context.Context, req Req) (Unit, error) {
+		err := sink(ctx, req)
+		return Unit{}, err
+	}
+
+	_, err := Call(ctx, verb, req)
+	return err
+}
+
+// CallSource calls a Source through the FTL controller.
+func CallSource[Resp any](ctx context.Context, source Source[Resp]) (Resp, error) {
+	verb := func(ctx context.Context, _ Unit) (Resp, error) {
+		resp, err := source(ctx)
+		return resp, err
+	}
+
+	return Call(ctx, verb, Unit{})
+}
 
 // VerbToRef returns the FTL reference for a Verb.
 func VerbToRef[Req, Resp any](verb Verb[Req, Resp]) Ref {
@@ -54,8 +71,15 @@ func VerbToRef[Req, Resp any](verb Verb[Req, Resp]) Ref {
 	return goRefToFTLRef(ref)
 }
 
+// SinkToRef returns the FTL reference for a Sink.
 func SinkToRef[Req any](sink Sink[Req]) Ref {
 	ref := runtime.FuncForPC(reflect.ValueOf(sink).Pointer()).Name()
+	return goRefToFTLRef(ref)
+}
+
+// SourceToRef returns the FTL reference for a Source.
+func SourceToRef[Resp any](source Source[Resp]) Ref {
+	ref := runtime.FuncForPC(reflect.ValueOf(source).Pointer()).Name()
 	return goRefToFTLRef(ref)
 }
 

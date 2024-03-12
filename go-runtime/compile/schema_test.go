@@ -47,6 +47,12 @@ func TestExtractModuleSchema(t *testing.T) {
   data Resp {
   }
 
+  data SinkReq {
+  }
+
+  data SourceResp {
+  }
+
   enum Color(String) {
     Red("Red")
     Blue("Blue")
@@ -74,6 +80,12 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   secret secretValue String
+
+  verb nothing(Unit) Unit
+
+  verb sink(one.SinkReq) Unit
+
+  verb source(Unit) one.SourceResp
 
   verb verb(one.Req) one.Resp
 }

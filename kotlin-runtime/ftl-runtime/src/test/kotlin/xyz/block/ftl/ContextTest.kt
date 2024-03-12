@@ -23,6 +23,14 @@ class ContextTest {
           invoke = { ctx -> ctx.call(::time, Empty()) },
           expected = TimeResponse(staticTime),
         ),
+        TestCase(
+          invoke = { ctx -> ctx.callSink(::time, EchoRequest("Alice")) },
+          expected = Unit,
+        ),
+        TestCase(
+          invoke = { ctx -> ctx.callSource(::time) },
+          expected = TimeResponse(staticTime),
+        ),
       )
     }
   }
@@ -35,6 +43,6 @@ class ContextTest {
     val routingClient = LoopbackVerbServiceClient(registry)
     val context = Context("ftl.test", routingClient)
     val result = testCase.invoke(context)
-    assertEquals(result, testCase.expected)
+    assertEquals(testCase.expected, result)
   }
 }
