@@ -2,20 +2,25 @@
 package model
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
 )
 
 func NewRunnerKey(hostname string, port string) RunnerKey {
+	suffix, err := rand.Int(rand.Reader, big.NewInt(10000))
+	if err != nil {
+		panic(err)
+	}
 	return keyType[runnerKey]{
 		Hostname: hostname,
 		Port:     port,
-		Suffix:   rand.Intn(10000),
+		Suffix:   int(suffix.Int64()),
 	}
 }
 func NewLocalRunnerKey(suffix int) RunnerKey {
@@ -23,23 +28,23 @@ func NewLocalRunnerKey(suffix int) RunnerKey {
 		Suffix: suffix,
 	}
 }
-func ParseRunnerKey(key string) (RunnerKey, error)   { return parseKey[RunnerKey](key, true) }
-func ParseRunnerDBKey(key string) (RunnerKey, error) { return parseKey[RunnerKey](key, false) }
+func ParseRunnerKey(key string) (RunnerKey, error) { return parseKey[RunnerKey](key, true) }
 
 type runnerKey struct{}
 type RunnerKey = keyType[runnerKey]
 
 func NewControllerKey(hostname string, port string) ControllerKey {
+	suffix, err := rand.Int(rand.Reader, big.NewInt(10000))
+	if err != nil {
+		panic(err)
+	}
 	return keyType[controllerKey]{
 		Hostname: hostname,
 		Port:     port,
-		Suffix:   rand.Intn(10000),
+		Suffix:   int(suffix.Int64()),
 	}
 }
 func ParseControllerKey(key string) (ControllerKey, error) { return parseKey[ControllerKey](key, true) }
-func ParseControllerDBKey(key string) (ControllerKey, error) {
-	return parseKey[ControllerKey](key, false)
-}
 
 type controllerKey struct{}
 type ControllerKey = keyType[controllerKey]
@@ -142,7 +147,6 @@ func (d keyType[T]) string(includeKind bool) string {
 
 func (d keyType[T]) MarshalText() ([]byte, error) { return []byte(d.String()), nil }
 func (d *keyType[T]) UnmarshalText(bytes []byte) error {
-	fmt.Printf("marshal text: %s\n", string(bytes))
 	id, err := parseKey[keyType[T]](string(bytes), true)
 	if err != nil {
 		return err

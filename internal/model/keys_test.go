@@ -49,7 +49,7 @@ func TestRunnerKey(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, test.key, parsed, "expected %v for %v after parsing", test.key, parsed)
 
-		parsed, err = ParseRunnerDBKey(value)
+		parsed, err = parseKey[RunnerKey](value, false)
 		assert.NoError(t, err)
 		assert.Equal(t, test.key, parsed, "expected %v for %v after parsing db key", test.key, parsed)
 	}

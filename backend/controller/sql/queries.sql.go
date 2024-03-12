@@ -225,7 +225,7 @@ ORDER BY r.key
 `
 
 type GetActiveRunnersRow struct {
-	RunnerKey      string
+	RunnerKey      model.RunnerKey
 	Endpoint       string
 	State          RunnerState
 	Labels         []byte
@@ -680,7 +680,7 @@ WHERE r.state = 'assigned'
 `
 
 type GetIngressRoutesRow struct {
-	RunnerKey      string
+	RunnerKey      model.RunnerKey
 	DeploymentName model.DeploymentName
 	Endpoint       string
 	Path           string
@@ -759,7 +759,7 @@ type GetProcessListRow struct {
 	MinReplicas      int32
 	DeploymentName   model.DeploymentName
 	DeploymentLabels []byte
-	RunnerKey        optional.Option[string]
+	RunnerKey        NullRunnerKey
 	Endpoint         optional.Option[string]
 	RunnerLabels     []byte
 }
@@ -800,7 +800,7 @@ WHERE r.key = $1
 
 type GetRouteForRunnerRow struct {
 	Endpoint       string
-	RunnerKey      string
+	RunnerKey      model.RunnerKey
 	ModuleName     optional.Option[string]
 	DeploymentName model.DeploymentName
 	State          RunnerState
@@ -831,7 +831,7 @@ WHERE state = 'assigned'
 
 type GetRoutingTableRow struct {
 	Endpoint       string
-	RunnerKey      string
+	RunnerKey      model.RunnerKey
 	ModuleName     optional.Option[string]
 	DeploymentName model.DeploymentName
 }
@@ -877,7 +877,7 @@ WHERE r.key = $1
 `
 
 type GetRunnerRow struct {
-	RunnerKey      string
+	RunnerKey      model.RunnerKey
 	Endpoint       string
 	State          RunnerState
 	Labels         []byte
@@ -924,7 +924,7 @@ WHERE state = 'assigned'
 
 type GetRunnersForDeploymentRow struct {
 	ID                 int64
-	Key                string
+	Key                model.RunnerKey
 	Created            time.Time
 	LastSeen           time.Time
 	ReservationTimeout NullTime
