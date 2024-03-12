@@ -106,7 +106,7 @@ SELECT COUNT(*)
 FROM matches
 `
 
-func (q *Queries) DeregisterRunner(ctx context.Context, key Key) (int64, error) {
+func (q *Queries) DeregisterRunner(ctx context.Context, key string) (int64, error) {
 	row := q.db.QueryRow(ctx, deregisterRunner, key)
 	var count int64
 	err := row.Scan(&count)
@@ -225,7 +225,7 @@ ORDER BY r.key
 `
 
 type GetActiveRunnersRow struct {
-	RunnerKey      Key
+	RunnerKey      string
 	Endpoint       string
 	State          RunnerState
 	Labels         []byte
@@ -680,7 +680,7 @@ WHERE r.state = 'assigned'
 `
 
 type GetIngressRoutesRow struct {
-	RunnerKey      Key
+	RunnerKey      string
 	DeploymentName model.DeploymentName
 	Endpoint       string
 	Path           string
@@ -759,7 +759,7 @@ type GetProcessListRow struct {
 	MinReplicas      int32
 	DeploymentName   model.DeploymentName
 	DeploymentLabels []byte
-	RunnerKey        NullKey
+	RunnerKey        optional.Option[string]
 	Endpoint         optional.Option[string]
 	RunnerLabels     []byte
 }
@@ -800,14 +800,14 @@ WHERE r.key = $1
 
 type GetRouteForRunnerRow struct {
 	Endpoint       string
-	RunnerKey      Key
+	RunnerKey      string
 	ModuleName     optional.Option[string]
 	DeploymentName model.DeploymentName
 	State          RunnerState
 }
 
 // Retrieve routing information for a runner.
-func (q *Queries) GetRouteForRunner(ctx context.Context, key Key) (GetRouteForRunnerRow, error) {
+func (q *Queries) GetRouteForRunner(ctx context.Context, key string) (GetRouteForRunnerRow, error) {
 	row := q.db.QueryRow(ctx, getRouteForRunner, key)
 	var i GetRouteForRunnerRow
 	err := row.Scan(
@@ -831,7 +831,7 @@ WHERE state = 'assigned'
 
 type GetRoutingTableRow struct {
 	Endpoint       string
-	RunnerKey      Key
+	RunnerKey      string
 	ModuleName     optional.Option[string]
 	DeploymentName model.DeploymentName
 }
@@ -877,7 +877,7 @@ WHERE r.key = $1
 `
 
 type GetRunnerRow struct {
-	RunnerKey      Key
+	RunnerKey      string
 	Endpoint       string
 	State          RunnerState
 	Labels         []byte
@@ -886,7 +886,7 @@ type GetRunnerRow struct {
 	DeploymentName optional.Option[string]
 }
 
-func (q *Queries) GetRunner(ctx context.Context, key Key) (GetRunnerRow, error) {
+func (q *Queries) GetRunner(ctx context.Context, key string) (GetRunnerRow, error) {
 	row := q.db.QueryRow(ctx, getRunner, key)
 	var i GetRunnerRow
 	err := row.Scan(
@@ -907,7 +907,7 @@ FROM runners
 WHERE key = $1
 `
 
-func (q *Queries) GetRunnerState(ctx context.Context, key Key) (RunnerState, error) {
+func (q *Queries) GetRunnerState(ctx context.Context, key string) (RunnerState, error) {
 	row := q.db.QueryRow(ctx, getRunnerState, key)
 	var state RunnerState
 	err := row.Scan(&state)
@@ -924,7 +924,7 @@ WHERE state = 'assigned'
 
 type GetRunnersForDeploymentRow struct {
 	ID                 int64
-	Key                Key
+	Key                string
 	Created            time.Time
 	LastSeen           time.Time
 	ReservationTimeout NullTime
@@ -1339,7 +1339,7 @@ RETURNING deployment_id
 `
 
 type UpsertRunnerParams struct {
-	Key            Key
+	Key            string
 	Endpoint       string
 	State          RunnerState
 	Labels         []byte

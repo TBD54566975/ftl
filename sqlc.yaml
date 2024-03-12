@@ -27,13 +27,6 @@ sql:
             nullable: true
             go_type:
               type: "NullTime"
-          - db_type: "uuid"
-            go_type:
-              type: "Key"
-          - db_type: "uuid"
-            nullable: true
-            go_type:
-              type: "NullKey"
           - db_type: "pg_catalog.varchar"
             nullable: true
             go_type: "github.com/alecthomas/types/optional.Option[string]"

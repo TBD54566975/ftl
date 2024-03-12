@@ -40,7 +40,7 @@ type Config struct {
 	Config             []string        `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
 	Bind               *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893" env:"FTL_RUNNER_BIND"`
 	Advertise          *url.URL        `help:"Endpoint the Runner should advertise (use --bind if omitted)." default:"" env:"FTL_RUNNER_ADVERTISE"`
-	Key                model.RunnerKey `help:"Runner key (auto)." placeholder:"R<ULID>" default:"R00000000000000000000000000"`
+	Key                model.RunnerKey `help:"Runner key (auto)."`
 	ControllerEndpoint *url.URL        `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
 	TemplateDir        string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
 	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
@@ -76,7 +76,7 @@ func Start(ctx context.Context, config Config) error {
 
 	key := config.Key
 	if key == (model.RunnerKey{}) {
-		key = model.NewRunnerKey()
+		key = model.NewRunnerKey(config.Bind.Hostname(), config.Bind.Port())
 	}
 	labels, err := structpb.NewStruct(map[string]any{
 		"hostname":  hostname,

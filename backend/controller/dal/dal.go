@@ -91,8 +91,14 @@ func runnerFromDB(row sql.GetRunnerRow) Runner {
 	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
 		return Runner{}
 	}
+
+	key, err := model.ParseRunnerDBKey(string(row.RunnerKey))
+	if err != nil {
+		return Runner{}
+	}
+
 	return Runner{
-		Key:        model.RunnerKey(row.RunnerKey),
+		Key:        key,
 		Endpoint:   row.Endpoint,
 		State:      RunnerState(row.State),
 		Deployment: deployment,
@@ -308,8 +314,14 @@ func (d *DAL) GetStatus(
 		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
 			return Runner{}, fmt.Errorf("invalid attributes JSON for runner %s: %w", in.RunnerKey, err)
 		}
+
+		key, err := model.ParseRunnerDBKey(string(in.RunnerKey))
+		if err != nil {
+			return Runner{}, fmt.Errorf("invalid id for runner %s: %w", in.RunnerKey, err)
+		}
+
 		return Runner{
-			Key:        model.RunnerKey(in.RunnerKey),
+			Key:        key,
 			Endpoint:   in.Endpoint,
 			State:      RunnerState(in.State),
 			Deployment: deployment,
@@ -333,9 +345,13 @@ func (d *DAL) GetStatus(
 			}
 		}),
 		Routes: slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
+			key, err := model.ParseRunnerDBKey(string(row.RunnerKey))
+			if err != nil {
+				return Route{}
+			}
 			return Route{
 				Module:     row.ModuleName.MustGet(),
-				Runner:     model.RunnerKey(row.RunnerKey),
+				Runner:     key,
 				Deployment: row.DeploymentName,
 				Endpoint:   row.Endpoint,
 			}
@@ -354,8 +370,14 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 		if err := json.Unmarshal(row.Labels, &attrs); err != nil {
 			return nil, fmt.Errorf("invalid attributes JSON for runner %d: %w", row.ID, err)
 		}
+
+		key, err := model.ParseRunnerDBKey(string(row.Key))
+		if err != nil {
+			return nil, fmt.Errorf("invalid id for runner %d: %w", row.ID, err)
+		}
+
 		runners = append(runners, Runner{
-			Key:        model.RunnerKey(row.Key),
+			Key:        key,
 			Endpoint:   row.Endpoint,
 			State:      RunnerState(row.State),
 			Deployment: optional.Some(deployment),
@@ -502,7 +524,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 		return fmt.Errorf("%s: %w", "failed to JSON encode runner labels", err)
 	}
 	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
-		Key:            sql.Key(runner.Key),
+		Key:            dbKeyFromRunnerKey(runner.Key),
 		Endpoint:       runner.Endpoint,
 		State:          sql.RunnerState(runner.State),
 		DeploymentName: pgDeploymentName,
@@ -534,7 +556,7 @@ func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int6
 
 // DeregisterRunner deregisters the given runner.
 func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
-	count, err := d.db.DeregisterRunner(ctx, sql.Key(key))
+	count, err := d.db.DeregisterRunner(ctx, dbKeyFromRunnerKey(key))
 	if err != nil {
 		return translatePGError(err)
 	}
@@ -574,11 +596,17 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.D
 		cancel()
 		return nil, fmt.Errorf("failed to JSON decode labels for runner %d: %w", runner.ID, err)
 	}
+	key, err := model.ParseRunnerDBKey(string(runner.Key))
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("invalid id for runner %d: %w", runner.ID, err)
+	}
+
 	return &postgresClaim{
 		cancel: cancel,
 		tx:     tx,
 		runner: Runner{
-			Key:        model.RunnerKey(runner.Key),
+			Key:        key,
 			Endpoint:   runner.Endpoint,
 			State:      RunnerState(runner.State),
 			Deployment: optional.Some(deployment),
@@ -628,7 +656,7 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentNam
 	}
 
 	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
-		DeploymentName:  key.String(),
+		DeploymentName:  string(key),
 		MinReplicas:     int32(minReplicas),
 		PrevMinReplicas: deployment.MinReplicas,
 	})
@@ -766,8 +794,12 @@ func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 			if err := json.Unmarshal(row.RunnerLabels, &labels); err != nil {
 				return Process{}, fmt.Errorf("invalid labels JSON for runner %s: %w", row.RunnerKey, err)
 			}
+			key, err := model.ParseRunnerDBKey(string(row.RunnerKey.MustGet()))
+			if err != nil {
+				return Process{}, fmt.Errorf("invalid runner key %s: %w", row.RunnerKey, err)
+			}
 			runner = optional.Some(ProcessRunner{
-				Key:      model.RunnerKey(row.RunnerKey.MustGet()),
+				Key:      key,
 				Endpoint: endpoint,
 				Labels:   labels,
 			})
@@ -812,8 +844,12 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 		if err != nil {
 			return Runner{}, fmt.Errorf("%s: %w", "could not unmarshal labels", err)
 		}
+		key, err := model.ParseRunnerDBKey(string(row.Key))
+		if err != nil {
+			return Runner{}, fmt.Errorf("%s: %w", "invalid runner key", err)
+		}
 		return Runner{
-			Key:      model.RunnerKey(row.Key),
+			Key:      key,
 			Endpoint: row.Endpoint,
 			State:    RunnerState(row.State),
 			Labels:   labels,
@@ -835,20 +871,23 @@ func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string
 	}
 	out := make(map[string][]Route, len(routes))
 	for _, route := range routes {
-		// This is guaranteed to be non-nil by the query, but sqlc doesn't quite understand that.
-		moduleName := route.ModuleName.MustGet()
-		out[moduleName] = append(out[moduleName], Route{
-			Module:     moduleName,
-			Deployment: route.DeploymentName,
-			Runner:     model.RunnerKey(route.RunnerKey),
-			Endpoint:   route.Endpoint,
-		})
+		if runnerKey, err := model.ParseRunnerDBKey(string(route.RunnerKey)); err == nil {
+
+			// This is guaranteed to be non-nil by the query, but sqlc doesn't quite understand that.
+			moduleName := route.ModuleName.MustGet()
+			out[moduleName] = append(out[moduleName], Route{
+				Module:     moduleName,
+				Deployment: route.DeploymentName,
+				Runner:     runnerKey,
+				Endpoint:   route.Endpoint,
+			})
+		}
 	}
 	return out, nil
 }
 
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
-	state, err := d.db.GetRunnerState(ctx, sql.Key(runnerKey))
+	state, err := d.db.GetRunnerState(ctx, dbKeyFromRunnerKey(runnerKey))
 	if err != nil {
 		return "", translatePGError(err)
 	}
@@ -856,7 +895,7 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (Ru
 }
 
 func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {
-	row, err := d.db.GetRunner(ctx, sql.Key(runnerKey))
+	row, err := d.db.GetRunner(ctx, dbKeyFromRunnerKey(runnerKey))
 	if err != nil {
 		return Runner{}, translatePGError(err)
 	}
@@ -926,8 +965,12 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRou
 		return nil, ErrNotFound
 	}
 	return slices.Map(routes, func(row sql.GetIngressRoutesRow) IngressRoute {
+		key, err := model.ParseRunnerDBKey(string(row.RunnerKey))
+		if err != nil {
+			return IngressRoute{}
+		}
 		return IngressRoute{
-			Runner:     model.RunnerKey(row.RunnerKey),
+			Runner:     key,
 			Deployment: row.DeploymentName,
 			Endpoint:   row.Endpoint,
 			Path:       row.Path,
@@ -1042,4 +1085,9 @@ func translatePGError(err error) error {
 		return ErrNotFound
 	}
 	return err
+}
+
+func dbKeyFromRunnerKey(key model.RunnerKey) string {
+	value, _ := key.Value()
+	return value.(string)
 }

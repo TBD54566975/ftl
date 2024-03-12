@@ -22,7 +22,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
-	"github.com/oklog/ulid/v2"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -55,7 +54,7 @@ type Config struct {
 	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
 	AllowOrigins                 []*url.URL          `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
 	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
-	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"C<ULID>" default:"C00000000000000000000000000"`
+	Key                          model.ControllerKey `help:"Controller key (auto)."`
 	DSN                          string              `help:"DAL DSN." default:"postgres://localhost:54320/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
@@ -152,9 +151,10 @@ type Service struct {
 }
 
 func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
+	var zero model.ControllerKey
 	key := config.Key
-	if config.Key.ULID() == (ulid.ULID{}) {
-		key = model.NewControllerKey()
+	if config.Key == zero {
+		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
 	}
 	config.SetDefaults()
 	svc := &Service{

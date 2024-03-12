@@ -31,10 +31,10 @@ func TestCron(t *testing.T) {
 	}
 
 	controllers := []*controller{
-		{controller: dal.Controller{Key: model.NewControllerKey()}},
-		{controller: dal.Controller{Key: model.NewControllerKey()}},
-		{controller: dal.Controller{Key: model.NewControllerKey()}},
-		{controller: dal.Controller{Key: model.NewControllerKey()}},
+		{controller: dal.Controller{Key: model.NewControllerKey("localhost", "8080")}},
+		{controller: dal.Controller{Key: model.NewControllerKey("localhost", "8081")}},
+		{controller: dal.Controller{Key: model.NewControllerKey("localhost", "8082")}},
+		{controller: dal.Controller{Key: model.NewControllerKey("localhost", "8083")}},
 	}
 
 	clock := clock.NewMock()
