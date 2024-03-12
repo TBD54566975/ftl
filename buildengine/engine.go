@@ -36,6 +36,15 @@ type Engine struct {
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
+	parallelism      int
+}
+
+type Option func(o *Engine)
+
+func Parallelism(n int) Option {
+	return func(o *Engine) {
+		o.parallelism = n
+	}
 }
 
 // New constructs a new [Engine].
@@ -45,7 +54,7 @@ type Engine struct {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs ...string) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -53,6 +62,10 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 		modules:          map[string]Module{},
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
+		parallelism:      runtime.NumCPU(),
+	}
+	for _, option := range options {
+		option(e)
 	}
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
@@ -368,7 +381,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		// Collect schemas to be inserted into "built" map for subsequent groups.
 		schemas := make(chan *schema.Module, len(group))
 		wg, ctx := errgroup.WithContext(ctx)
-		wg.SetLimit(runtime.NumCPU())
+		wg.SetLimit(e.parallelism)
 		for _, name := range group {
 			wg.Go(func() error {
 				if mustBuild[name] {

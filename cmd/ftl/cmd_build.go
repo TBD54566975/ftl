@@ -9,12 +9,13 @@ import (
 )
 
 type buildCmd struct {
-	Dirs []string `arg:"" help:"Base directories containing modules." type:"existingdir" required:""`
+	Parallelism int      `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
+	Dirs        []string `arg:"" help:"Base directories containing modules." type:"existingdir" required:""`
 }
 
 func (b *buildCmd) Run(ctx context.Context) error {
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-	engine, err := buildengine.New(ctx, client, b.Dirs...)
+	engine, err := buildengine.New(ctx, client, b.Dirs, buildengine.Parallelism(b.Parallelism))
 	if err != nil {
 		return err
 	}

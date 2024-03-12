@@ -40,8 +40,8 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 
 func typeToSchema(s *schemapb.Type) Type {
 	switch s := s.Value.(type) {
-	// case *schemapb.Type_VerbRef:
-	// 	return verbRefToSchema(s.VerbRef)
+	case *schemapb.Type_VerbRef:
+		return VerbRefFromProto(s.VerbRef)
 	case *schemapb.Type_DataRef:
 		return DataRefFromProto(s.DataRef)
 	case *schemapb.Type_EnumRef:

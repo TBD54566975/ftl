@@ -13,7 +13,7 @@ import (
 
 func TestEngine(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, "testdata/modules/alpha", "testdata/modules/another")
+	engine, err := buildengine.New(ctx, nil, []string{"testdata/modules/alpha", "testdata/modules/another"})
 	assert.NoError(t, err)
 
 	defer engine.Close()
