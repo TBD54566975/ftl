@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -63,6 +64,7 @@ func main() {
 			"version": ftl.Version,
 			"os":      runtime.GOOS,
 			"arch":    runtime.GOARCH,
+			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 		},
 	)
 

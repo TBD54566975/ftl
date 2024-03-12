@@ -13,10 +13,11 @@ import (
 )
 
 type devCmd struct {
-	Dirs     []string      `arg:"" help:"Base directories containing modules." type:"existingdir" required:""`
-	Watch    time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
-	NoServe  bool          `help:"Do not start the FTL server." default:"false"`
-	ServeCmd serveCmd      `embed:""`
+	Parallelism int           `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
+	Dirs        []string      `arg:"" help:"Base directories containing modules." type:"existingdir" required:""`
+	Watch       time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
+	NoServe     bool          `help:"Do not start the FTL server." default:"false"`
+	ServeCmd    serveCmd      `embed:""`
 }
 
 func (d *devCmd) Run(ctx context.Context) error {
@@ -39,7 +40,7 @@ func (d *devCmd) Run(ctx context.Context) error {
 	}
 
 	g.Go(func() error {
-		engine, err := buildengine.New(ctx, client, d.Dirs...)
+		engine, err := buildengine.New(ctx, client, d.Dirs, buildengine.Parallelism(d.Parallelism))
 		if err != nil {
 			return err
 		}
