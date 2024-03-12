@@ -61,7 +61,11 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 	for _, pkg := range pkgs {
 		if len(pkg.Errors) > 0 {
 			for _, perr := range pkg.Errors {
-				merr = append(merr, fmt.Errorf("%s: %w", pkg.PkgPath, perr))
+				if len(pkg.Syntax) > 0 {
+					merr = append(merr, wrapf(pkg.Syntax[0], perr, "%s", pkg.PkgPath))
+				} else {
+					merr = append(merr, fmt.Errorf("%s: %w", pkg.PkgPath, perr))
+				}
 			}
 		}
 		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}}
@@ -69,7 +73,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				defer func() {
 					if err != nil {
-						err = fmt.Errorf("%s: %w", fset.Position(node.Pos()).String(), err)
+						err = wrapf(node, err, "")
 					}
 				}()
 				switch node := node.(type) {
@@ -149,14 +153,14 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr) error {
 
 func parseCall(pctx *parseContext, node *ast.CallExpr) error {
 	if len(node.Args) != 3 {
-		return fmt.Errorf("%s: call must have exactly three arguments", goPosToSchemaPos(node.Pos()))
+		return errorf(node, "call must have exactly three arguments")
 	}
 	_, verbFn := deref[*types.Func](pctx.pkg, node.Args[1])
 	if verbFn == nil {
 		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
-			return fmt.Errorf("call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel)
+			return errorf(node.Args[1], "call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel)
 		}
-		return fmt.Errorf("call first argument must be a function but is %T", node.Args[1])
+		return errorf(node.Args[1], "call first argument must be a function but is %T", node.Args[1])
 	}
 	if pctx.activeVerb == nil {
 		return nil
@@ -181,12 +185,12 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) err
 			var err error
 			name, err = strconv.Unquote(literal.Value)
 			if err != nil {
-				return fmt.Errorf("%s: %w", goPosToSchemaPos(node.Pos()), err)
+				return wrapf(node, err, "")
 			}
 		}
 	}
 	if name == "" {
-		return fmt.Errorf("%s: config and secret declarations must have a single string literal argument", goPosToSchemaPos(node.Pos()))
+		return errorf(node, "config and secret declarations must have a single string literal argument")
 	}
 	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert
 
@@ -229,12 +233,12 @@ func visitFile(pctx *parseContext, node *ast.File) error {
 		switch dir := dir.(type) {
 		case *directiveModule:
 			if dir.Name != pctx.pkg.Name {
-				return fmt.Errorf("%s: FTL module name %q does not match Go package name %q", dir, dir.Name, pctx.pkg.Name)
+				return errorf(node, "%s: FTL module name %q does not match Go package name %q", dir, dir.Name, pctx.pkg.Name)
 			}
 			pctx.module.Name = dir.Name
 
 		default:
-			return fmt.Errorf("%s: invalid directive", dir)
+			return errorf(node, "%s: invalid directive", dir)
 		}
 	}
 	return nil
@@ -442,7 +446,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	results := sig.Results()
 	reqt, respt, err := checkSignature(sig)
 	if err != nil {
-		return nil, err
+		return nil, wrapf(node, err, "")
 	}
 	var req schema.Type
 	if reqt != nil {
@@ -688,7 +692,7 @@ func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 			return &schema.Float{Pos: goPosToSchemaPos(node.Pos())}, nil
 
 		default:
-			return nil, fmt.Errorf("unsupported basic type %s", underlying)
+			return nil, errorf(node, "unsupported basic type %s", underlying)
 		}
 
 	case *types.Struct:
@@ -726,10 +730,10 @@ func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 		if underlying.String() == "any" {
 			return &schema.Any{Pos: goPosToSchemaPos(node.Pos())}, nil
 		}
-		return nil, fmt.Errorf("%s: unsupported type %T", goPosToSchemaPos(node.Pos()), node)
+		return nil, errorf(node, "unsupported type %T", node)
 
 	default:
-		return nil, fmt.Errorf("%s: unsupported type %T", goPosToSchemaPos(node.Pos()), node)
+		return nil, errorf(node, "unsupported type %T", node)
 	}
 }
 
