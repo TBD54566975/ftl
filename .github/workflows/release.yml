@@ -134,11 +134,11 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Build Console
-        run: bit frontend/dist/index.html
+        run: just build-frontend
       - name: Publish Go Binaries
         run: |
           just errtrace
-          bit build/release/ftl
+          just build ftl # Ensure all the prerequisites are built before we use goreleaser
           goreleaser release --skip=validate
         env:
           GITHUB_TOKEN: ${{ github.token }}

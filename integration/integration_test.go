@@ -272,7 +272,7 @@ func runTests(t *testing.T, tmpDir string, tests []test) {
 	ctx := log.ContextWithLogger(context.Background(), logger)
 	logger.Debugf("Building ftl")
 	binDir := filepath.Join(rootDir, "build", "release")
-	err = exec.Command(ctx, log.Debug, rootDir, filepath.Join(rootDir, "bin", "bit"), "build/release/ftl", "**/*.jar").RunBuffered(ctx)
+	err = exec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 	assert.NoError(t, err)
 
 	controller := rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
