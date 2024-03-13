@@ -112,7 +112,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 			return err
 		}
 
-		scope := fmt.Sprintf("controller%d", i)
+		scope := fmt.Sprintf("controller%d", config.Key.Suffix)
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		wg.Go(func() error {
