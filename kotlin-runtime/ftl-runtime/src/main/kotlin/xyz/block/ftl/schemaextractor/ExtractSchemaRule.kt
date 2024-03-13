@@ -56,25 +56,8 @@ import xyz.block.ftl.Database
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Json
 import xyz.block.ftl.Method
+import xyz.block.ftl.v1.schema.*
 import xyz.block.ftl.v1.schema.Array
-import xyz.block.ftl.v1.schema.Data
-import xyz.block.ftl.v1.schema.DataRef
-import xyz.block.ftl.v1.schema.Decl
-import xyz.block.ftl.v1.schema.Field
-import xyz.block.ftl.v1.schema.IngressPathComponent
-import xyz.block.ftl.v1.schema.IngressPathLiteral
-import xyz.block.ftl.v1.schema.IngressPathParameter
-import xyz.block.ftl.v1.schema.Metadata
-import xyz.block.ftl.v1.schema.MetadataAlias
-import xyz.block.ftl.v1.schema.MetadataCalls
-import xyz.block.ftl.v1.schema.MetadataIngress
-import xyz.block.ftl.v1.schema.Module
-import xyz.block.ftl.v1.schema.Optional
-import xyz.block.ftl.v1.schema.Position
-import xyz.block.ftl.v1.schema.Type
-import xyz.block.ftl.v1.schema.TypeParameter
-import xyz.block.ftl.v1.schema.Verb
-import xyz.block.ftl.v1.schema.VerbRef
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
@@ -84,7 +67,7 @@ import kotlin.io.path.createDirectories
 data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
 
 // Helpers
-private fun DataRef.compare(module: String, name: String): Boolean = this.name == name && this.module == module
+private fun Ref.compare(module: String, name: String): Boolean = this.name == name && this.module == module
 
 @RequiresTypeResolution
 class ExtractSchemaRule(config: Config) : Rule(config) {
@@ -308,16 +291,16 @@ class SchemaExtractor(
       bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == HttpIngress::class.qualifiedName
     }?.let { annotationEntry ->
       val sourcePos = annotationEntry.getLineAndColumn()
-      require(requestType.dataRef != null) {
+      require(requestType.ref != null) {
         "$sourcePos ingress ${verb.name} request must be a data class"
       }
-      require(responseType.dataRef != null) {
+      require(responseType.ref != null) {
         "$sourcePos ingress ${verb.name} response must be a data class"
       }
-      require(requestType.dataRef.compare("builtin", "HttpRequest")) {
+      require(requestType.ref.compare("builtin", "HttpRequest")) {
         "$sourcePos @HttpIngress-annotated ${verb.name} request must be ftl.builtin.HttpRequest"
       }
-      require(responseType.dataRef.compare("builtin", "HttpResponse")) {
+      require(responseType.ref.compare("builtin", "HttpResponse")) {
         "$sourcePos @HttpIngress-annotated ${verb.name} response must be ftl.builtin.HttpResponse"
       }
       require(annotationEntry.valueArguments.size >= 2) {
@@ -362,12 +345,12 @@ class SchemaExtractor(
   }
 
   private fun extractCalls(verb: KtNamedFunction): MetadataCalls? {
-    val verbs = mutableSetOf<VerbRef>()
+    val verbs = mutableSetOf<Ref>()
     extractCalls(verb, verbs)
     return verbs.ifNotEmpty { MetadataCalls(calls = verbs.toList()) }
   }
 
-  private fun extractCalls(element: KtElement, calls: MutableSet<VerbRef>) {
+  private fun extractCalls(element: KtElement, calls: MutableSet<Ref>) {
     // Step into function calls inside this expression body to look for transitive calls.
     if (element is KtCallExpression) {
       val resolvedCall = element.getResolvedCall(bindingContext)?.candidateDescriptor?.source?.getPsi() as? KtFunction
@@ -410,7 +393,7 @@ class SchemaExtractor(
           }?.let { import ->
             val moduleRefName = import.importedFqName?.asString()?.extractModuleName()
               .takeIf { refModule -> refModule != currentModuleName }
-            VerbRef(
+            Ref(
               name = import.importedFqName!!.asString().split(".").last(),
               module = moduleRefName ?: "",
             )
@@ -427,7 +410,7 @@ class SchemaExtractor(
               "Error processing function defined at $funcSourcePos: Could not resolve outgoing verb call"
             )
 
-            VerbRef(
+            Ref(
               name = verbCall,
               module = currentModuleName,
             )
@@ -487,7 +470,7 @@ class SchemaExtractor(
   private fun KotlinType.toSchemaType(position: Position): Type {
     if (this.unwrap().constructor.isTypeParameterTypeConstructor()) {
       return Type(
-        dataRef = DataRef(
+        ref = Ref(
           name = this.constructor.declarationDescriptor?.name?.asString() ?: "T",
           pos = position,
         )
@@ -542,7 +525,7 @@ class SchemaExtractor(
         }
 
         Type(
-          dataRef = DataRef(
+          ref = Ref(
             name = refName,
             module = fqName.extractModuleName(),
             pos = position,

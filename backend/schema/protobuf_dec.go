@@ -40,12 +40,8 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 
 func typeToSchema(s *schemapb.Type) Type {
 	switch s := s.Value.(type) {
-	case *schemapb.Type_VerbRef:
-		return VerbRefFromProto(s.VerbRef)
-	case *schemapb.Type_DataRef:
-		return DataRefFromProto(s.DataRef)
-	case *schemapb.Type_EnumRef:
-		return EnumRefFromProto(s.EnumRef)
+	case *schemapb.Type_Ref:
+		return RefFromProto(s.Ref)
 	case *schemapb.Type_Int:
 		return &Int{Pos: posFromProto(s.Int.Pos)}
 	case *schemapb.Type_Float:
@@ -101,7 +97,7 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 	case *schemapb.Metadata_Calls:
 		return &MetadataCalls{
 			Pos:   posFromProto(s.Calls.Pos),
-			Calls: verbRefListToSchema(s.Calls.Calls),
+			Calls: refListToSchema(s.Calls.Calls),
 		}
 
 	case *schemapb.Metadata_Databases:

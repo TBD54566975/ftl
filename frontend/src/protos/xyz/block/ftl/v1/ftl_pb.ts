@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
-import { Module, Schema, VerbRef } from "./schema/schema_pb.js";
+import { Module, Ref, Schema } from "./schema/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.DeploymentChangeType
@@ -254,9 +254,9 @@ export class CallRequest extends Message<CallRequest> {
   metadata?: Metadata;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.VerbRef verb = 2;
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 4;
    */
-  verb?: VerbRef;
+  verb?: Ref;
 
   /**
    * @generated from field: bytes body = 3;
@@ -272,7 +272,7 @@ export class CallRequest extends Message<CallRequest> {
   static readonly typeName = "xyz.block.ftl.v1.CallRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: Metadata },
-    { no: 2, name: "verb", kind: "message", T: VerbRef },
+    { no: 4, name: "verb", kind: "message", T: Ref },
     { no: 3, name: "body", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
@@ -1687,9 +1687,9 @@ export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressR
   deploymentName = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.VerbRef verb = 2;
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 5;
    */
-  verb?: VerbRef;
+  verb?: Ref;
 
   /**
    * @generated from field: string method = 3;
@@ -1710,7 +1710,7 @@ export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressR
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse.IngressRoute";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "verb", kind: "message", T: VerbRef },
+    { no: 5, name: "verb", kind: "message", T: Ref },
     { no: 3, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);

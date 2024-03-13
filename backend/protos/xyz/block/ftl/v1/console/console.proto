@@ -42,13 +42,15 @@ message CallEvent {
   optional string request_name = 1;
   string deployment_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
-  optional schema.VerbRef source_verb_ref = 4;
-  schema.VerbRef destination_verb_ref = 5;
+  optional schema.Ref source_verb_ref = 11;
+  schema.Ref destination_verb_ref = 12;
   google.protobuf.Duration duration = 6;
   string request = 7;
   string response = 8;
   optional string error = 9;
   optional string stack = 10;
+
+  reserved 4, 5;
 }
 
 message DeploymentCreatedEvent {

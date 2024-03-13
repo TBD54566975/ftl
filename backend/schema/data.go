@@ -47,7 +47,7 @@ func (d *Data) FieldByName(name string) *Field {
 //
 // This will return a new Data structure with all type parameters replaced with
 // the given types.
-func (d *Data) Monomorphise(ref *DataRef) (*Data, error) {
+func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 	if len(d.TypeParameters) != len(ref.TypeParameters) {
 		return nil, fmt.Errorf("%s: expected %d type arguments, got %d", ref.Pos, len(d.TypeParameters), len(ref.TypeParameters))
 	}
@@ -115,7 +115,7 @@ func (d *Data) Monomorphise(ref *DataRef) (*Data, error) {
 			}
 			n.Type = t
 
-		case *Any, *Bool, *Bytes, *Data, *DataRef, *Database, Decl, *Float,
+		case *Any, *Bool, *Bytes, *Data, *Ref, *Database, Decl, *Float,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Int,
 			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
 			*MetadataAlias, *Module, *Schema, *String, *Time, Type, *TypeParameter,
@@ -193,7 +193,7 @@ func DataFromProto(s *schemapb.Data) *Data {
 
 // MonoType returns the monomorphised type of this data type if applicable, or returns the original type.
 func maybeMonomorphiseType(t Type, typeParameters map[string]Type) (Type, error) {
-	if t, ok := t.(*DataRef); ok && t.Module == "" {
+	if t, ok := t.(*Ref); ok && t.Module == "" {
 		if tp, ok := typeParameters[t.Name]; ok {
 			return tp, nil
 		}

@@ -55,14 +55,14 @@ func (v *Verb) String() string {
 }
 
 // AddCall adds a call reference to the Verb.
-func (v *Verb) AddCall(verb *VerbRef) {
+func (v *Verb) AddCall(verb *Ref) {
 	for _, c := range v.Metadata {
 		if c, ok := c.(*MetadataCalls); ok {
 			c.Calls = append(c.Calls, verb)
 			return
 		}
 	}
-	v.Metadata = append(v.Metadata, &MetadataCalls{Calls: []*VerbRef{verb}})
+	v.Metadata = append(v.Metadata, &MetadataCalls{Calls: []*Ref{verb}})
 }
 
 func (v *Verb) GetMetadataIngress() optional.Option[*MetadataIngress] {

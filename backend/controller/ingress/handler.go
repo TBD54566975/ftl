@@ -46,7 +46,7 @@ func Handle(
 
 	creq := connect.NewRequest(&ftlv1.CallRequest{
 		Metadata: &ftlv1.Metadata{},
-		Verb:     &schemapb.VerbRef{Module: route.Module, Name: route.Verb},
+		Verb:     &schemapb.Ref{Module: route.Module, Name: route.Verb},
 		Body:     body,
 	})
 
@@ -62,7 +62,12 @@ func Handle(
 	}
 	switch msg := resp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Body:
-		verb := sch.ResolveVerbRef(&schema.VerbRef{Name: route.Verb, Module: route.Module})
+		verb := &schema.Verb{}
+		err = sch.ResolveRefToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		var responseBody []byte
 
 		if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {

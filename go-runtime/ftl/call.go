@@ -49,17 +49,17 @@ func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (re
 // }
 
 // VerbToRef returns the FTL reference for a Verb.
-func VerbToRef[Req, Resp any](verb Verb[Req, Resp]) VerbRef {
+func VerbToRef[Req, Resp any](verb Verb[Req, Resp]) Ref {
 	ref := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
 	return goRefToFTLRef(ref)
 }
 
-func SinkToRef[Req any](sink Sink[Req]) SinkRef {
+func SinkToRef[Req any](sink Sink[Req]) Ref {
 	ref := runtime.FuncForPC(reflect.ValueOf(sink).Pointer()).Name()
-	return SinkRef(goRefToFTLRef(ref))
+	return goRefToFTLRef(ref)
 }
 
-func goRefToFTLRef(ref string) VerbRef {
+func goRefToFTLRef(ref string) Ref {
 	parts := strings.Split(ref[strings.LastIndex(ref, "/")+1:], ".")
-	return VerbRef{parts[len(parts)-2], strcase.ToLowerCamel(parts[len(parts)-1])}
+	return Ref{parts[len(parts)-2], strcase.ToLowerCamel(parts[len(parts)-1])}
 }

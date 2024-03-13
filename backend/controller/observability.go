@@ -17,8 +17,8 @@ type Call struct {
 	deploymentName model.DeploymentName
 	requestName    model.RequestName
 	startTime      time.Time
-	destVerb       *schema.VerbRef
-	callers        []*schema.VerbRef
+	destVerb       *schema.Ref
+	callers        []*schema.Ref
 	request        *ftlv1.CallRequest
 	response       optional.Option[*ftlv1.CallResponse]
 	callError      optional.Option[error]
@@ -26,7 +26,7 @@ type Call struct {
 
 func (s *Service) recordCall(ctx context.Context, call *Call) {
 	logger := log.FromContext(ctx)
-	var sourceVerb optional.Option[schema.VerbRef]
+	var sourceVerb optional.Option[schema.Ref]
 	if len(call.callers) > 0 {
 		sourceVerb = optional.Some(*call.callers[0])
 	}

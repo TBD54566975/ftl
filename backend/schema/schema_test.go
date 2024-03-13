@@ -118,15 +118,15 @@ Module
   Secret
     String
   Verb
-    DataRef
-    DataRef
+    Ref
+    Ref
     MetadataCalls
-      VerbRef
+      Ref
   Verb
-    DataRef
-      DataRef
-    DataRef
-      DataRef
+    Ref
+      Ref
+    Ref
+      Ref
       String
     MetadataIngress
       IngressPathLiteral
@@ -182,10 +182,10 @@ func TestParsing(t *testing.T) {
 							&Data{Name: "CreateListResponse"},
 							&Verb{Name: "createList",
 								Comments: []string{"Create a new list"},
-								Request:  &DataRef{Module: "todo", Name: "CreateListRequest"},
-								Response: &DataRef{Module: "todo", Name: "CreateListResponse"},
+								Request:  &Ref{Module: "todo", Name: "CreateListRequest"},
+								Response: &Ref{Module: "todo", Name: "CreateListResponse"},
 								Metadata: []Metadata{
-									&MetadataCalls{Calls: []*VerbRef{{Module: "todo", Name: "createList"}}},
+									&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "createList"}}},
 								},
 							},
 						},
@@ -195,12 +195,12 @@ func TestParsing(t *testing.T) {
 		{name: "InvalidRequestRef",
 			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
 			errors: []string{
-				"1:25: reference to unknown data structure \"InvalidRequest\"",
-				"1:41: reference to unknown data structure \"InvalidResponse\""}},
-		{name: "InvalidDataRef",
+				"1:25: unknown reference \"InvalidRequest\"",
+				"1:41: unknown reference \"InvalidResponse\""}},
+		{name: "InvalidRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
-				"1:32: reference to unknown data structure \"user.User\""}},
+				"1:32: unknown reference \"user.User\""}},
 		{name: "InvalidMetadataSyntax",
 			input: `module test { data Data {} calls }`,
 			errors: []string{
@@ -211,7 +211,7 @@ func TestParsing(t *testing.T) {
 			input: `module test { data Data {} +calls verb }`,
 			errors: []string{
 				"1:28: metadata \"+calls verb\" is not valid on data structures",
-				"1:35: reference to unknown verb \"verb\"",
+				"1:35: unknown reference \"verb\"",
 			}},
 		{name: "KeywordAsName",
 			input:  `module int { data String { name String } verb verb(String) String }`,
@@ -224,8 +224,8 @@ func TestParsing(t *testing.T) {
 					Decls: []Decl{
 						&Verb{
 							Name:     "myIngress",
-							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&String{}}},
-							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&String{}, &String{}}},
+							Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&String{}}},
+							Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&String{}, &String{}}},
 						},
 					},
 				}},
@@ -268,11 +268,11 @@ func TestParsing(t *testing.T) {
 						&Data{Name: "EchoResponse", Fields: []*Field{{Name: "message", Type: &String{}}}},
 						&Verb{
 							Name:     "echo",
-							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "echo", Name: "EchoRequest"}}},
-							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "echo", Name: "EchoResponse"}, &String{}}},
+							Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "echo", Name: "EchoRequest"}}},
+							Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "echo", Name: "EchoResponse"}, &String{}}},
 							Metadata: []Metadata{
 								&MetadataIngress{Type: "http", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "echo"}}},
-								&MetadataCalls{Calls: []*VerbRef{{Module: "time", Name: "time"}}},
+								&MetadataCalls{Calls: []*Ref{{Module: "time", Name: "time"}}},
 							},
 						},
 					},
@@ -283,8 +283,8 @@ func TestParsing(t *testing.T) {
 						&Data{Name: "TimeResponse", Fields: []*Field{{Name: "time", Type: &Time{}}}},
 						&Verb{
 							Name:     "time",
-							Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "time", Name: "TimeRequest"}}},
-							Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "time", Name: "TimeResponse"}, &String{}}},
+							Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "time", Name: "TimeRequest"}}},
+							Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "time", Name: "TimeResponse"}, &String{}}},
 							Metadata: []Metadata{
 								&MetadataIngress{Type: "http", Method: "GET", Path: []IngressPathComponent{&IngressPathLiteral{Text: "time"}}},
 							},
@@ -312,18 +312,18 @@ func TestParsing(t *testing.T) {
 							Name:           "Data",
 							TypeParameters: []*TypeParameter{{Name: "T"}},
 							Fields: []*Field{
-								{Name: "value", Type: &DataRef{Name: "T", TypeParameters: []Type{}}},
+								{Name: "value", Type: &Ref{Name: "T", TypeParameters: []Type{}}},
 							},
 						},
 						&Verb{
 							Comments: []string{},
 							Name:     "test",
-							Request: &DataRef{
+							Request: &Ref{
 								Module:         "test",
 								Name:           "Data",
 								TypeParameters: []Type{&String{}},
 							},
-							Response: &DataRef{
+							Response: &Ref{
 								Module:         "test",
 								Name:           "Data",
 								TypeParameters: []Type{&String{}},
@@ -455,12 +455,12 @@ var testSchema = MustValidate(&Schema{
 					},
 				},
 				&Verb{Name: "create",
-					Request:  &DataRef{Module: "todo", Name: "CreateRequest"},
-					Response: &DataRef{Module: "todo", Name: "CreateResponse"},
-					Metadata: []Metadata{&MetadataCalls{Calls: []*VerbRef{{Module: "todo", Name: "destroy"}}}}},
+					Request:  &Ref{Module: "todo", Name: "CreateRequest"},
+					Response: &Ref{Module: "todo", Name: "CreateResponse"},
+					Metadata: []Metadata{&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "destroy"}}}}},
 				&Verb{Name: "destroy",
-					Request:  &DataRef{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&DataRef{Module: "todo", Name: "DestroyRequest"}}},
-					Response: &DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&DataRef{Module: "todo", Name: "DestroyResponse"}, &String{}}},
+					Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyRequest"}}},
+					Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyResponse"}, &String{}}},
 					Metadata: []Metadata{
 						&MetadataIngress{
 							Type:   "http",

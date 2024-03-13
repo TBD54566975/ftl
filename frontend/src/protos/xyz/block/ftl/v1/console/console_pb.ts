@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-import { Data as Data$1, Verb as Verb$1, VerbRef } from "../schema/schema_pb.js";
+import { Data as Data$1, Ref, Verb as Verb$1 } from "../schema/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.console.EventType
@@ -188,14 +188,14 @@ export class CallEvent extends Message<CallEvent> {
   timeStamp?: Timestamp;
 
   /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.VerbRef source_verb_ref = 4;
+   * @generated from field: optional xyz.block.ftl.v1.schema.Ref source_verb_ref = 11;
    */
-  sourceVerbRef?: VerbRef;
+  sourceVerbRef?: Ref;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.VerbRef destination_verb_ref = 5;
+   * @generated from field: xyz.block.ftl.v1.schema.Ref destination_verb_ref = 12;
    */
-  destinationVerbRef?: VerbRef;
+  destinationVerbRef?: Ref;
 
   /**
    * @generated from field: google.protobuf.Duration duration = 6;
@@ -233,8 +233,8 @@ export class CallEvent extends Message<CallEvent> {
     { no: 1, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 4, name: "source_verb_ref", kind: "message", T: VerbRef, opt: true },
-    { no: 5, name: "destination_verb_ref", kind: "message", T: VerbRef },
+    { no: 11, name: "source_verb_ref", kind: "message", T: Ref, opt: true },
+    { no: 12, name: "destination_verb_ref", kind: "message", T: Ref },
     { no: 6, name: "duration", kind: "message", T: Duration },
     { no: 7, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },

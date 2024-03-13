@@ -54,8 +54,8 @@ type CallEvent struct {
 	DeploymentName model.DeploymentName
 	RequestName    optional.Option[model.RequestName]
 	Time           time.Time
-	SourceVerb     optional.Option[schema.VerbRef]
-	DestVerb       schema.VerbRef
+	SourceVerb     optional.Option[schema.Ref]
+	DestVerb       schema.Ref
 	Duration       time.Duration
 	Request        []byte
 	Response       []byte
@@ -372,11 +372,11 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
 				return nil, err
 			}
-			var sourceVerb optional.Option[schema.VerbRef]
+			var sourceVerb optional.Option[schema.Ref]
 			sourceModule, smok := row.CustomKey1.Get()
 			sourceName, snok := row.CustomKey2.Get()
 			if smok && snok {
-				sourceVerb = optional.Some(schema.VerbRef{Module: sourceModule, Name: sourceName})
+				sourceVerb = optional.Some(schema.Ref{Module: sourceModule, Name: sourceName})
 			}
 			out = append(out, &CallEvent{
 				ID:             row.ID,
@@ -384,7 +384,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 				RequestName:    requestName,
 				Time:           row.TimeStamp,
 				SourceVerb:     sourceVerb,
-				DestVerb:       schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
+				DestVerb:       schema.Ref{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
 				Duration:       time.Duration(jsonPayload.DurationMS) * time.Millisecond,
 				Request:        jsonPayload.Request,
 				Response:       jsonPayload.Response,

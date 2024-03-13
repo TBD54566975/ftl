@@ -22,14 +22,14 @@ var jsonSchemaSample = &Schema{
 					{Name: "bool", Type: &Bool{}},
 					{Name: "time", Type: &Time{}},
 					{Name: "array", Type: &Array{Element: &String{}}},
-					{Name: "arrayOfRefs", Type: &Array{Element: &DataRef{Module: "foo", Name: "Item"}}},
+					{Name: "arrayOfRefs", Type: &Array{Element: &Ref{Module: "foo", Name: "Item"}}},
 					{Name: "arrayOfArray", Type: &Array{Element: &Array{Element: &String{}}}},
 					{Name: "optionalArray", Type: &Array{Element: &Optional{Type: &String{}}}},
 					{Name: "map", Type: &Map{Key: &String{}, Value: &Int{}}},
 					{Name: "optionalMap", Type: &Map{Key: &String{}, Value: &Optional{Type: &Int{}}}},
-					{Name: "ref", Type: &DataRef{Module: "bar", Name: "Bar"}},
+					{Name: "ref", Type: &Ref{Module: "bar", Name: "Bar"}},
 					{Name: "any", Type: &Any{}},
-					{Name: "keyValue", Type: &DataRef{Module: "foo", Name: "Generic", TypeParameters: []Type{&String{}, &Int{}}}},
+					{Name: "keyValue", Type: &Ref{Module: "foo", Name: "Generic", TypeParameters: []Type{&String{}, &Int{}}}},
 				},
 			},
 			&Data{
@@ -39,8 +39,8 @@ var jsonSchemaSample = &Schema{
 				Name:           "Generic",
 				TypeParameters: []*TypeParameter{{Name: "K"}, {Name: "V"}},
 				Fields: []*Field{
-					{Name: "key", Type: &DataRef{Name: "K"}},
-					{Name: "value", Type: &DataRef{Name: "V"}},
+					{Name: "key", Type: &Ref{Name: "K"}},
+					{Name: "value", Type: &Ref{Name: "V"}},
 				},
 			},
 		}},
@@ -51,7 +51,7 @@ var jsonSchemaSample = &Schema{
 }
 
 func TestDataToJSONSchema(t *testing.T) {
-	schema, err := DataToJSONSchema(jsonSchemaSample, DataRef{Module: "foo", Name: "Foo"})
+	schema, err := DataToJSONSchema(jsonSchemaSample, Ref{Module: "foo", Name: "Foo"})
 	assert.NoError(t, err)
 	actual, err := json.MarshalIndent(schema, "", "  ")
 	assert.NoError(t, err)
@@ -236,7 +236,7 @@ func TestJSONSchemaValidation(t *testing.T) {
   }
    `
 
-	schema, err := DataToJSONSchema(jsonSchemaSample, DataRef{Module: "foo", Name: "Foo"})
+	schema, err := DataToJSONSchema(jsonSchemaSample, Ref{Module: "foo", Name: "Foo"})
 	assert.NoError(t, err)
 	schemaJSON, err := json.MarshalIndent(schema, "", "  ")
 	assert.NoError(t, err)

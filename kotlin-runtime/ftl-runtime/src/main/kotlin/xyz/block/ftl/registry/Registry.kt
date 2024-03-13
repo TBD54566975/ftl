@@ -13,11 +13,11 @@ import kotlin.reflect.jvm.kotlinFunction
 const val defaultJvmModuleName = "ftl"
 
 fun test() {}
-data class VerbRef(val module: String, val name: String) {
+data class Ref(val module: String, val name: String) {
   override fun toString() = "$module.$name"
 }
 
-internal fun xyz.block.ftl.v1.schema.VerbRef.toModel() = VerbRef(module, name)
+internal fun xyz.block.ftl.v1.schema.Ref.toModel() = Ref(module, name)
 
 /**
  * FTL module registry.
@@ -27,7 +27,7 @@ internal fun xyz.block.ftl.v1.schema.VerbRef.toModel() = VerbRef(module, name)
  */
 class Registry(val jvmModuleName: String = defaultJvmModuleName) {
   private val logger = Logging.logger(Registry::class)
-  private val verbs = ConcurrentHashMap<VerbRef, VerbHandle<*>>()
+  private val verbs = ConcurrentHashMap<Ref, VerbHandle<*>>()
   private var ftlModuleName: String? = null
 
   /** Return the FTL module name. This can only be called after one of the register* methods are called. */
@@ -63,16 +63,16 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
     }
 
     logger.debug("      @Verb ${function.name}()")
-    val verbRef = VerbRef(module = ftlModuleName!!, name = function.name)
+    val verbRef = Ref(module = ftlModuleName!!, name = function.name)
     val verbHandle = VerbHandle(function)
     if (verbs.containsKey(verbRef)) throw IllegalArgumentException("Duplicate Verb $verbRef")
     verbs[verbRef] = verbHandle
   }
 
-  fun list(): Set<VerbRef> = verbs.keys
+  fun list(): Set<Ref> = verbs.keys
 
   /** Invoke a Verb with JSON-encoded payload and return its JSON-encoded response. */
-  fun invoke(context: Context, verbRef: VerbRef, request: String): String {
+  fun invoke(context: Context, verbRef: Ref, request: String): String {
     val verb = verbs[verbRef] ?: throw IllegalArgumentException("Unknown verb: $verbRef")
     return verb.invokeVerbInternal(context, request)
   }

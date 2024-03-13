@@ -12,7 +12,7 @@ import (
 type MetadataCalls struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Calls []*VerbRef `parser:"'+' 'calls' @@ (',' @@)*" protobuf:"2"`
+	Calls []*Ref `parser:"'+' 'calls' @@ (',' @@)*" protobuf:"2"`
 }
 
 var _ Metadata = (*MetadataCalls)(nil)
@@ -51,6 +51,6 @@ func (*MetadataCalls) schemaMetadata() {}
 func (m *MetadataCalls) ToProto() proto.Message {
 	return &schemapb.MetadataCalls{
 		Pos:   posToProto(m.Pos),
-		Calls: nodeListToProto[*schemapb.VerbRef](m.Calls),
+		Calls: nodeListToProto[*schemapb.Ref](m.Calls),
 	}
 }

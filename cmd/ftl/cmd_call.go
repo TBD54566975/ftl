@@ -15,8 +15,8 @@ import (
 )
 
 type callCmd struct {
-	Verb    ftl.VerbRef `arg:"" required:"" help:"Full path of Verb to call."`
-	Request string      `arg:"" optional:"" help:"JSON5 request payload." default:"{}"`
+	Verb    ftl.Ref `arg:"" required:"" help:"Full path of Verb to call."`
+	Request string  `arg:"" optional:"" help:"JSON5 request payload." default:"{}"`
 }
 
 func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient) error {

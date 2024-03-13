@@ -3,7 +3,7 @@ package xyz.block.ftl.client
 import okio.ByteString.Companion.encodeUtf8
 import xyz.block.ftl.Context
 import xyz.block.ftl.registry.Registry
-import xyz.block.ftl.registry.VerbRef
+import xyz.block.ftl.registry.Ref
 import xyz.block.ftl.v1.CallRequest
 import xyz.block.ftl.v1.VerbServiceWireGrpc.VerbServiceBlockingStub
 
@@ -18,13 +18,13 @@ interface VerbServiceClient {
    * @param req The request encoded as JSON.
    * @return The response encoded as JSON.
    */
-  fun call(context: Context, ref: VerbRef, req: String): String
+  fun call(context: Context, ref: Ref, req: String): String
 }
 
 class GrpcVerbServiceClient(val client: VerbServiceBlockingStub) : VerbServiceClient {
-  override fun call(context: Context, ref: VerbRef, req: String): String {
+  override fun call(context: Context, ref: Ref, req: String): String {
     val request = CallRequest(
-      verb = xyz.block.ftl.v1.schema.VerbRef(
+      verb = xyz.block.ftl.v1.schema.Ref(
         module = ref.module,
         name = ref.name
       ),
@@ -43,7 +43,7 @@ class GrpcVerbServiceClient(val client: VerbServiceBlockingStub) : VerbServiceCl
  * A client that calls verbs directly via the associated registry.
  */
 class LoopbackVerbServiceClient(private val registry: Registry) : VerbServiceClient {
-  override fun call(context: Context, ref: VerbRef, req: String): String {
+  override fun call(context: Context, ref: Ref, req: String): String {
     return registry.invoke(context, ref, req)
   }
 }

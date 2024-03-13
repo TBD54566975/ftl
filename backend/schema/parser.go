@@ -17,8 +17,8 @@ var (
 		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
 		&Map{}, &Any{}, &Unit{},
 		// Note: any types resolved by identifier (eg. "Any", "Unit", etc.) must
-		// be prior to DataRef.
-		&DataRef{}, &EnumRef{}, &VerbRef{}, &SinkRef{}, &SourceRef{}, &ConfigRef{}, &SecretRef{},
+		// be prior to Ref.
+		&Ref{},
 	}
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataDatabases{}, &MetadataAlias{}}
@@ -60,10 +60,10 @@ var (
 	// Parser options for every parser _except_ the type parser.
 	parserOptions = append(commonParserOptions, participle.ParseTypeWith(parseType))
 
-	parser        = participle.MustBuild[Schema](parserOptions...)
-	moduleParser  = participle.MustBuild[Module](parserOptions...)
-	typeParser    = participle.MustBuild[typeParserGrammar](append(commonParserOptions, participle.Union(nonOptionalTypeUnion...))...)
-	dataRefParser = participle.MustBuild[DataRef](parserOptions...)
+	parser       = participle.MustBuild[Schema](parserOptions...)
+	moduleParser = participle.MustBuild[Module](parserOptions...)
+	typeParser   = participle.MustBuild[typeParserGrammar](append(commonParserOptions, participle.Union(nonOptionalTypeUnion...))...)
+	refParser    = participle.MustBuild[Ref](parserOptions...)
 )
 
 type Position struct {

@@ -11,8 +11,8 @@ func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser 
 		return nil
 	}
 	switch t := t.(type) {
-	case *schema.DataRef:
-		data, err := sch.ResolveDataRefMonomorphised(t)
+	case *schema.Ref:
+		data, err := sch.ResolveRefMonomorphised(t)
 		if err != nil {
 			return fmt.Errorf("%s: failed to resolve data type: %w", t.Pos, err)
 		}
@@ -64,8 +64,8 @@ func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser 
 	return nil
 }
 
-func transformFromAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request map[string]any) (map[string]any, error) {
-	return request, transformAliasedFields(sch, dataRef, request, func(obj map[string]any, field *schema.Field) string {
+func transformFromAliasedFields(ref *schema.Ref, sch *schema.Schema, request map[string]any) (map[string]any, error) {
+	return request, transformAliasedFields(sch, ref, request, func(obj map[string]any, field *schema.Field) string {
 		jsonAlias := field.Alias(schema.AliasKindJSON)
 		if _, ok := obj[field.Name]; !ok && jsonAlias != "" && obj[jsonAlias] != nil {
 			obj[field.Name] = obj[jsonAlias]
@@ -75,8 +75,8 @@ func transformFromAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, req
 	})
 }
 
-func transformToAliasedFields(dataRef *schema.DataRef, sch *schema.Schema, request map[string]any) (map[string]any, error) {
-	return request, transformAliasedFields(sch, dataRef, request, func(obj map[string]any, field *schema.Field) string {
+func transformToAliasedFields(ref *schema.Ref, sch *schema.Schema, request map[string]any) (map[string]any, error) {
+	return request, transformAliasedFields(sch, ref, request, func(obj map[string]any, field *schema.Field) string {
 		jsonAlias := field.Alias(schema.AliasKindJSON)
 		if jsonAlias != "" && field.Name != jsonAlias {
 			obj[jsonAlias] = obj[field.Name]

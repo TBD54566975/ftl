@@ -169,7 +169,7 @@ func parseCall(pctx *parseContext, node *ast.CallExpr) error {
 	if moduleName == pctx.pkg.Name {
 		moduleName = ""
 	}
-	ref := &schema.VerbRef{
+	ref := &schema.Ref{
 		Pos:    goPosToSchemaPos(node.Pos()),
 		Module: moduleName,
 		Name:   strcase.ToLowerCamel(verbFn.Name()),
@@ -502,7 +502,7 @@ func visitComments(doc *ast.CommentGroup) []string {
 	return comments
 }
 
-func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.DataRef, error) {
+func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.Ref, error) {
 	named, ok := tnode.(*types.Named)
 	if !ok {
 		return nil, fmt.Errorf("expected named type but got %s", tnode)
@@ -511,7 +511,7 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
 		base := path.Dir(pctx.pkg.PkgPath)
 		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
-		dataRef := &schema.DataRef{
+		dataRef := &schema.Ref{
 			Pos:    goPosToSchemaPos(node.Pos()),
 			Module: destModule,
 			Name:   named.Obj().Name(),
@@ -523,8 +523,8 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 				return nil, fmt.Errorf("type parameter %s: %w", arg.String(), err)
 			}
 
-			// Fully qualify the DataRef if needed
-			if arg, okArg := typeArg.(*schema.DataRef); okArg {
+			// Fully qualify the Ref if needed
+			if arg, okArg := typeArg.(*schema.Ref); okArg {
 				if arg.Module == "" {
 					arg.Module = strings.TrimPrefix(pctx.pkg.PkgPath, base+"/")
 				}
@@ -540,7 +540,7 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.D
 		Name: strcase.ToUpperCamel(named.Obj().Name()),
 	}
 	pctx.nativeNames[out] = named.Obj().Name()
-	dataRef := &schema.DataRef{
+	dataRef := &schema.Ref{
 		Pos:  goPosToSchemaPos(node.Pos()),
 		Name: out.Name,
 	}
@@ -653,14 +653,14 @@ func visitConst(cnode *types.Const) (schema.Value, error) {
 
 func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
 	if tparam, ok := tnode.(*types.TypeParam); ok {
-		return &schema.DataRef{Pos: goPosToSchemaPos(node.Pos()), Name: tparam.Obj().Id()}, nil
+		return &schema.Ref{Pos: goPosToSchemaPos(node.Pos()), Name: tparam.Obj().Id()}, nil
 	}
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		if named, ok := tnode.(*types.Named); ok {
 			nodePath := named.Obj().Pkg().Path()
 			if pctx.enums[named.Obj().Name()] != nil {
-				return &schema.EnumRef{
+				return &schema.Ref{
 					Pos:  goPosToSchemaPos(node.Pos()),
 					Name: named.Obj().Name(),
 				}, nil
@@ -669,7 +669,7 @@ func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 				// The only basic-typed references supported are enums.
 				base := path.Dir(pctx.pkg.PkgPath)
 				destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
-				enumRef := &schema.EnumRef{
+				enumRef := &schema.Ref{
 					Pos:    goPosToSchemaPos(node.Pos()),
 					Module: destModule,
 					Name:   named.Obj().Name(),

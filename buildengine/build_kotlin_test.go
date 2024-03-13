@@ -51,7 +51,7 @@ func TestGenerateAllTypes(t *testing.T) {
 						Name:           "ParamTestData",
 						TypeParameters: []*schema.TypeParameter{{Name: "T"}},
 						Fields: []*schema.Field{
-							{Name: "t", Type: &schema.DataRef{Name: "T"}},
+							{Name: "t", Type: &schema.Ref{Name: "T"}},
 						},
 					},
 					&schema.Data{Name: "TestRequest", Fields: []*schema.Field{{Name: "field", Type: &schema.Int{}}}},
@@ -74,8 +74,8 @@ func TestGenerateAllTypes(t *testing.T) {
 							{Name: "nestedArray", Type: &schema.Array{
 								Element: &schema.Array{Element: &schema.String{}}},
 							},
-							{Name: "dataRefArray", Type: &schema.Array{
-								Element: &schema.DataRef{Name: "TestRequest", Module: "test"},
+							{Name: "RefArray", Type: &schema.Array{
+								Element: &schema.Ref{Name: "TestRequest", Module: "test"},
 							}},
 							{Name: "map", Type: &schema.Map{
 								Key:   &schema.String{},
@@ -85,10 +85,10 @@ func TestGenerateAllTypes(t *testing.T) {
 								Key:   &schema.String{},
 								Value: &schema.Map{Key: &schema.String{}, Value: &schema.Int{}},
 							}},
-							{Name: "dataRef", Type: &schema.DataRef{Name: "TestRequest"}},
-							{Name: "externalDataRef", Type: &schema.DataRef{Name: "TestRequest", Module: "other"}},
+							{Name: "Ref", Type: &schema.Ref{Name: "TestRequest"}},
+							{Name: "externalRef", Type: &schema.Ref{Name: "TestRequest", Module: "other"}},
 							{Name: "any", Type: &schema.Any{}},
-							{Name: "parameterizedDataRef", Type: &schema.DataRef{
+							{Name: "parameterizedRef", Type: &schema.Ref{
 								Name:           "ParamTestData",
 								TypeParameters: []schema.Type{&schema.String{}},
 							},
@@ -131,13 +131,13 @@ data class TestResponse(
   val optional: String? = null,
   val array: List<String>,
   val nestedArray: List<List<String>>,
-  val dataRefArray: List<ftl.test.TestRequest>,
+  val RefArray: List<ftl.test.TestRequest>,
   val map: Map<String, Long>,
   val nestedMap: Map<String, Map<String, Long>>,
-  val dataRef: TestRequest,
-  val externalDataRef: ftl.other.TestRequest,
+  val Ref: TestRequest,
+  val externalRef: ftl.other.TestRequest,
   val any: Any,
-  val parameterizedDataRef: ParamTestData<String>,
+  val parameterizedRef: ParamTestData<String>,
   val withAlias: String,
   val unit: Unit,
 )
@@ -173,8 +173,8 @@ func TestGenerateAllVerbs(t *testing.T) {
 					&schema.Verb{
 						Name:     "TestVerb",
 						Comments: []string{"TestVerb comments"},
-						Request:  &schema.DataRef{Name: "Request"},
-						Response: &schema.DataRef{Name: "Empty", Module: "builtin"},
+						Request:  &schema.Ref{Name: "Request"},
+						Response: &schema.Ref{Name: "Empty", Module: "builtin"},
 					},
 				},
 			},
@@ -262,7 +262,7 @@ class Empty
 	})
 }
 
-func TestGenerateEmptyDataRefs(t *testing.T) {
+func TestGenerateEmptyRefs(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -276,8 +276,8 @@ func TestGenerateEmptyDataRefs(t *testing.T) {
 					&schema.Data{Name: "EmptyResponse"},
 					&schema.Verb{
 						Name:     "EmptyVerb",
-						Request:  &schema.DataRef{Name: "EmptyRequest"},
-						Response: &schema.DataRef{Name: "EmptyResponse"},
+						Request:  &schema.Ref{Name: "EmptyRequest"},
+						Response: &schema.Ref{Name: "EmptyResponse"},
 					},
 				},
 			},

@@ -1,7 +1,7 @@
 package xyz.block.ftl
 
 import xyz.block.ftl.client.VerbServiceClient
-import xyz.block.ftl.registry.VerbRef
+import xyz.block.ftl.registry.Ref
 import xyz.block.ftl.registry.ftlModuleFromJvmModule
 import xyz.block.ftl.serializer.makeGson
 import java.security.InvalidParameterException
@@ -25,7 +25,7 @@ class Context(
     }
     val ftlModule = ftlModuleFromJvmModule(jvmModule, verb)
     val requestJson = gson.toJson(request)
-    val responseJson = routingClient.call(this, VerbRef(ftlModule, verb.name), requestJson)
+    val responseJson = routingClient.call(this, Ref(ftlModule, verb.name), requestJson)
     return gson.fromJson(responseJson, R::class.java)
   }
 }

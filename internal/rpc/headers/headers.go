@@ -50,14 +50,14 @@ func GetRequestName(header http.Header) (model.RequestName, bool, error) {
 }
 
 // GetCallers history from an incoming request.
-func GetCallers(header http.Header) ([]*schema.VerbRef, error) {
+func GetCallers(header http.Header) ([]*schema.Ref, error) {
 	headers := header.Values(VerbHeader)
 	if len(headers) == 0 {
 		return nil, nil
 	}
-	refs := make([]*schema.VerbRef, len(headers))
+	refs := make([]*schema.Ref, len(headers))
 	for i, header := range headers {
-		ref, err := schema.ParseVerbRef(header)
+		ref, err := schema.ParseRef(header)
 		if err != nil {
 			return nil, fmt.Errorf("invalid %s header %q: %w", VerbHeader, header, err)
 		}
@@ -69,20 +69,20 @@ func GetCallers(header http.Header) ([]*schema.VerbRef, error) {
 // GetCaller returns the module.verb of the caller, if any.
 //
 // Will return an error if the header is malformed.
-func GetCaller(header http.Header) (optional.Option[*schema.VerbRef], error) {
+func GetCaller(header http.Header) (optional.Option[*schema.Ref], error) {
 	headers := header.Values(VerbHeader)
 	if len(headers) == 0 {
-		return optional.None[*schema.VerbRef](), nil
+		return optional.None[*schema.Ref](), nil
 	}
-	ref, err := schema.ParseVerbRef(headers[len(headers)-1])
+	ref, err := schema.ParseRef(headers[len(headers)-1])
 	if err != nil {
-		return optional.None[*schema.VerbRef](), err
+		return optional.None[*schema.Ref](), err
 	}
 	return optional.Some(ref), nil
 }
 
 // AddCaller to an outgoing request.
-func AddCaller(header http.Header, ref *schema.VerbRef) {
+func AddCaller(header http.Header, ref *schema.Ref) {
 	refStr := ref.String()
 	if values := header.Values(VerbHeader); len(values) > 0 {
 		if values[len(values)-1] == refStr {
@@ -92,7 +92,7 @@ func AddCaller(header http.Header, ref *schema.VerbRef) {
 	header.Add(VerbHeader, refStr)
 }
 
-func SetCallers(header http.Header, refs []*schema.VerbRef) {
+func SetCallers(header http.Header, refs []*schema.Ref) {
 	header.Del(VerbHeader)
 	for _, ref := range refs {
 		AddCaller(header, ref)

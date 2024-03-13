@@ -36,8 +36,8 @@ func TestEngine(t *testing.T) {
 			},
 			&schema.Verb{
 				Name:     "echo",
-				Request:  &schema.DataRef{Module: "other", Name: "EchoRequest"},
-				Response: &schema.DataRef{Module: "other", Name: "EchoResponse"},
+				Request:  &schema.Ref{Module: "other", Name: "EchoRequest"},
+				Response: &schema.Ref{Module: "other", Name: "EchoResponse"},
 			},
 		},
 	}

@@ -29,14 +29,14 @@ func WithDirectRouting(ctx context.Context) context.Context {
 }
 
 // WithVerbs adds the module.verb chain from the current request to the context.
-func WithVerbs(ctx context.Context, verbs []*schema.VerbRef) context.Context {
+func WithVerbs(ctx context.Context, verbs []*schema.Ref) context.Context {
 	return context.WithValue(ctx, ftlVerbKey{}, verbs)
 }
 
 // VerbFromContext returns the current module.verb of the current request.
-func VerbFromContext(ctx context.Context) (*schema.VerbRef, bool) {
+func VerbFromContext(ctx context.Context) (*schema.Ref, bool) {
 	value := ctx.Value(ftlVerbKey{})
-	verbs, ok := value.([]*schema.VerbRef)
+	verbs, ok := value.([]*schema.Ref)
 	if len(verbs) == 0 {
 		return nil, false
 	}
@@ -44,9 +44,9 @@ func VerbFromContext(ctx context.Context) (*schema.VerbRef, bool) {
 }
 
 // VerbsFromContext returns the module.verb chain of the current request.
-func VerbsFromContext(ctx context.Context) ([]*schema.VerbRef, bool) {
+func VerbsFromContext(ctx context.Context) ([]*schema.Ref, bool) {
 	value := ctx.Value(ftlVerbKey{})
-	verbs, ok := value.([]*schema.VerbRef)
+	verbs, ok := value.([]*schema.Ref)
 	return verbs, ok
 }
 
