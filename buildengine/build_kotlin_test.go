@@ -360,19 +360,19 @@ data class SinkReq(
 @Verb
 @Ignore
 fun sink(context: Context, req: SinkReq): Unit = throw
-    NotImplementedError("Verb stubs should not be called directly, instead use context.call(::sink, ...)")
+    NotImplementedError("Verb stubs should not be called directly, instead use context.callSink(::sink, ...)")
 data class SourceResp(
   val data: Long,
 )
 
 @Verb
 @Ignore
-fun source(context: Context, req: Unit): SourceResp = throw
-    NotImplementedError("Verb stubs should not be called directly, instead use context.call(::source, ...)")
+fun source(context: Context): SourceResp = throw
+    NotImplementedError("Verb stubs should not be called directly, instead use context.callSource(::source, ...)")
 @Verb
 @Ignore
-fun nothing(context: Context, req: Unit): Unit = throw
-    NotImplementedError("Verb stubs should not be called directly, instead use context.call(::nothing, ...)")
+fun nothing(context: Context): Unit = throw
+    NotImplementedError("Verb stubs should not be called directly, instead use context.callEmpty(::nothing, ...)")
 `
 	bctx := buildContext{
 		moduleDir: "testdata/modules/echokotlin",

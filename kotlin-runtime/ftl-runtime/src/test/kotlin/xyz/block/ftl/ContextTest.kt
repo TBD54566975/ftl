@@ -31,6 +31,10 @@ class ContextTest {
           invoke = { ctx -> ctx.callSource(::time) },
           expected = TimeResponse(staticTime),
         ),
+        TestCase(
+          invoke = { ctx -> ctx.callEmpty(::time) },
+          expected = Unit,
+        ),
       )
     }
   }

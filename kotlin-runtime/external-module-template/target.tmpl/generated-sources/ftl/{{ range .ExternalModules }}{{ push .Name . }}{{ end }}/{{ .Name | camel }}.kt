@@ -34,8 +34,19 @@ data class {{.Name|title}}
 {{- else if is "Verb" . }}
 {{.Comments|comment -}}@Verb
 @Ignore
+{{- if and (eq (type $ .Request) "Unit") (eq (type $ .Response) "Unit")}}
+fun {{.Name|lowerCamel}}(context: Context): Unit = throw
+    NotImplementedError("Verb stubs should not be called directly, instead use context.callEmpty(::{{.Name|lowerCamel}}, ...)")
+{{- else if eq (type $ .Request) "Unit"}}
+fun {{.Name|lowerCamel}}(context: Context): {{type $ .Response}} = throw
+    NotImplementedError("Verb stubs should not be called directly, instead use context.callSource(::{{.Name|lowerCamel}}, ...)")
+{{- else if eq (type $ .Response) "Unit"}}
+fun {{.Name|lowerCamel}}(context: Context, req: {{type $ .Request}}): Unit = throw
+    NotImplementedError("Verb stubs should not be called directly, instead use context.callSink(::{{.Name|lowerCamel}}, ...)")
+{{- else}}
 fun {{.Name|lowerCamel}}(context: Context, req: {{type $ .Request}}): {{type $ .Response}} = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.call(::{{.Name|lowerCamel}}, ...)")
+{{- end}}
 {{- end}}
 
 {{- end}}

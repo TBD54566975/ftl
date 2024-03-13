@@ -36,4 +36,8 @@ class Context(
   inline fun <reified R> callSource(verb: KFunction<R>): R {
     return call(verb, Unit)
   }
+
+  inline fun <reified R> callEmpty(verb: KFunction<R>) {
+    call(verb, Unit)
+  }
 }

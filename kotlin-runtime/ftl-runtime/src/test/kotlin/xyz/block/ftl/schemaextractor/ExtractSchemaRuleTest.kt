@@ -111,6 +111,15 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         //context.call(::foo, builtin.Empty())
         return context.call(::verb, builtin.Empty())
       }
+
+      @Verb
+      fun sink(context: Context, req: Empty) {}
+
+      @Verb
+      fun source(context: Context): Empty {}
+
+      @Verb
+      fun emptyVerb(context: Context) {}
     """
     ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
     val file = File(OUTPUT_FILENAME)
@@ -295,6 +304,45 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               )
             ),
           ),
+        ),
+        Decl(
+          verb = Verb(
+            name = "sink",
+            request = Type(
+              dataRef = DataRef(
+                name = "Empty",
+                module = "builtin"
+              )
+            ),
+            response = Type(
+              unit = Unit()
+            ),
+          ),
+        ),
+        Decl(
+          verb = Verb(
+            name = "source",
+            request = Type(
+              unit = Unit()
+            ),
+            response = Type(
+              dataRef = DataRef(
+                name = "Empty",
+                module = "builtin"
+              )
+            ),
+          ),
+        ),
+        Decl(
+          verb = Verb(
+            name = "emptyVerb",
+            request = Type(
+              unit = Unit()
+            ),
+            response = Type(
+              unit = Unit()
+            ),
+          ),
         )
       )
     )
@@ -353,6 +401,41 @@ fun callTime(context: Context): TimeResponse {
 
   @Test
   fun `fails if http ingress without http request-response types`() {
+    val code = """
+ /**
+ * Echo module.
+ */
+package ftl.echo
+
+import xyz.block.ftl.Context
+import xyz.block.ftl.HttpIngress
+import xyz.block.ftl.Method
+import xyz.block.ftl.Verb
+
+/**
+ * Request to echo a message.
+ */
+data class EchoRequest(val name: String)
+data class EchoResponse(val message: String)
+
+/**
+ * Echoes the given message.
+ */
+@Throws(InvalidInput::class)
+@Verb
+@HttpIngress(Method.GET, "/echo")
+fun echo(context: Context, req: EchoRequest): EchoResponse {
+  return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
+}
+        """
+    val message = assertThrows<java.lang.IllegalArgumentException> {
+      ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
+    }.message!!
+    assertContains(message, "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest")
+  }
+
+  @Test
+  fun `source and sink types`() {
     val code = """
  /**
  * Echo module.
