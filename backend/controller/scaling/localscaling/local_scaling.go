@@ -27,6 +27,8 @@ type LocalScaling struct {
 
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
+
+	prevRunnerSuffix int
 }
 
 func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL) (*LocalScaling, error) {
@@ -40,6 +42,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		runners:             map[model.RunnerKey]context.CancelFunc{},
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
+		prevRunnerSuffix:    -1,
 	}, nil
 }
 
@@ -72,25 +75,28 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 
 	logger.Debugf("Adding %d replicas", replicasToAdd)
 	for i := 0; i < replicasToAdd; i++ {
-		i := i
-
 		controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
+
+		bind := l.portAllocator.Next()
+		keySuffix := l.prevRunnerSuffix + 1
+		l.prevRunnerSuffix = keySuffix
+
 		config := runner.Config{
-			Bind:               l.portAllocator.Next(),
+			Bind:               bind,
 			ControllerEndpoint: controllerEndpoint,
 			TemplateDir:        templateDir(ctx),
-			Key:                model.NewRunnerKey(),
+			Key:                model.NewLocalRunnerKey(keySuffix),
 		}
 
-		name := fmt.Sprintf("runner%d", i)
+		simpleName := fmt.Sprintf("runner%d", keySuffix)
 		if err := kong.ApplyDefaults(&config, kong.Vars{
-			"deploymentdir": filepath.Join(l.cacheDir, "ftl-runner", name, "deployments"),
+			"deploymentdir": filepath.Join(l.cacheDir, "ftl-runner", simpleName, "deployments"),
 			"language":      "go,kotlin",
 		}); err != nil {
 			return err
 		}
 
-		runnerCtx := log.ContextWithLogger(ctx, logger.Scope(name))
+		runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
 
 		runnerCtx, cancel := context.WithCancel(runnerCtx)
 		l.runners[config.Key] = cancel

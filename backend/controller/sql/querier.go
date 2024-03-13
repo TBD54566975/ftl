@@ -19,7 +19,7 @@ type Querier interface {
 	CreateDeployment(ctx context.Context, name model.DeploymentName, moduleName string, schema []byte) error
 	CreateIngressRequest(ctx context.Context, origin Origin, name string, sourceAddr string) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
-	DeregisterRunner(ctx context.Context, key Key) (int64, error)
+	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context, all bool) ([]GetActiveDeploymentsRow, error)
@@ -44,10 +44,10 @@ type Querier interface {
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	// Retrieve routing information for a runner.
-	GetRouteForRunner(ctx context.Context, key Key) (GetRouteForRunnerRow, error)
+	GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error)
 	GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error)
-	GetRunner(ctx context.Context, key Key) (GetRunnerRow, error)
-	GetRunnerState(ctx context.Context, key Key) (RunnerState, error)
+	GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error)
+	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, name model.DeploymentName) ([]GetRunnersForDeploymentRow, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
 	InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error

@@ -2,85 +2,147 @@
 package model
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
-
-	"github.com/google/uuid"
-	"github.com/oklog/ulid/v2"
 )
 
-func NewRunnerKey() RunnerKey                      { return RunnerKey(ulid.Make()) }
-func ParseRunnerKey(key string) (RunnerKey, error) { return parseKey[RunnerKey](key) }
+func NewRunnerKey(hostname string, port string) RunnerKey {
+	hash := make([]byte, 4)
+	_, err := rand.Read(hash)
+	if err != nil {
+		panic(err)
+	}
+	return keyType[runnerKey]{
+		Hostname: hostname,
+		Port:     port,
+		Suffix:   fmt.Sprintf("%08x", hash),
+	}
+}
+func NewLocalRunnerKey(suffix int) RunnerKey {
+	return keyType[runnerKey]{
+		Suffix: fmt.Sprintf("%04d", suffix),
+	}
+}
+func ParseRunnerKey(key string) (RunnerKey, error) { return parseKey[RunnerKey](key, true) }
 
 type runnerKey struct{}
 type RunnerKey = keyType[runnerKey]
 
-func NewControllerKey() ControllerKey                      { return ControllerKey(ulid.Make()) }
-func ParseControllerKey(key string) (ControllerKey, error) { return parseKey[ControllerKey](key) }
+func NewControllerKey(hostname string, port string) ControllerKey {
+	hash := make([]byte, 4)
+	_, err := rand.Read(hash)
+	if err != nil {
+		panic(err)
+	}
+	return keyType[controllerKey]{
+		Hostname: hostname,
+		Port:     port,
+		Suffix:   fmt.Sprintf("%08x", hash),
+	}
+}
+
+func NewLocalControllerKey(suffix int) ControllerKey {
+	return keyType[controllerKey]{
+		Suffix: fmt.Sprintf("%04d", suffix),
+	}
+}
+func ParseControllerKey(key string) (ControllerKey, error) { return parseKey[ControllerKey](key, true) }
 
 type controllerKey struct{}
 type ControllerKey = keyType[controllerKey]
 
-var uuidRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+func parseKey[KT keyType[U], U any](key string, includesKind bool) (KT, error) {
+	// Expected style: [<kind>-]<host>-<port>-<suffix> or [<kind>-]<suffix>
 
-func parseKey[KT keyType[U], U any](key string) (KT, error) {
-	var zero KT
-	kind := kindFromType[U]()
-	switch {
-	case strings.HasPrefix(key, kind):
-		ulid, err := ulid.Parse(key[len(kind):])
-		if err != nil {
-			return zero, fmt.Errorf("%s: %w", "invalid ULID key", err)
+	components := strings.Split(key, "-")
+	if includesKind {
+		//
+		if len(components) == 0 {
+			return KT{}, fmt.Errorf("expected a prefix for key: %s", key)
 		}
-		return KT(ulid), nil
-
-	case uuidRe.MatchString(key):
-		uuid, err := uuid.Parse(key)
-		if err != nil {
-			return zero, fmt.Errorf("%s: %w", "invalid UUID key", err)
+		kind := kindFromType[U]()
+		if components[0] != kind {
+			return KT{}, fmt.Errorf("unexpected prefix for key: %s", key)
 		}
-		return KT(uuid), nil
-
-	default:
-		return zero, fmt.Errorf("invalid %s key %q", kind, key)
+		components = components[1:]
 	}
+
+	switch {
+	case len(components) == 1:
+		//style: [<kind>-]<suffix>
+		return KT{
+			Suffix: components[0],
+		}, nil
+	case len(components) >= 3:
+		//style: [<kind>-]<host>-<port>-<suffix>
+		suffix := components[len(components)-1]
+		port := components[len(components)-2]
+		host := strings.Join(components[:len(components)-2], "-")
+
+		return KT{
+			Hostname: host,
+			Port:     port,
+			Suffix:   suffix,
+		}, nil
+	default:
+		return KT{}, fmt.Errorf("expected more components in key: %s", key)
+	}
+
 }
 
 // Helper type to avoid having to write a bunch of boilerplate. It relies on T being a
 // named struct in the form <name>Key, eg. "runnerKey"
-type keyType[T any] ulid.ULID
+type keyType[T any] struct {
+	Hostname string
+	Port     string
+	Suffix   string
+}
 
 func (d keyType[T]) Value() (driver.Value, error) {
-	return uuid.UUID(d), nil
+	return d.string(false), nil
 }
 
 var _ sql.Scanner = (*keyType[int])(nil)
 var _ driver.Valuer = (*keyType[int])(nil)
 
-// Scan from UUID DB representation.
+// Scan from DB representation.
 func (d *keyType[T]) Scan(src any) error {
 	input, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("expected UUID to be a string but it's a %T", src)
+		return fmt.Errorf("expected key to be a string but it's a %T", src)
 	}
-	id, err := uuid.Parse(input)
+	key, err := parseKey[keyType[T]](input, false)
 	if err != nil {
-		return fmt.Errorf("%s: %w", "invalid UUID", err)
+		return err
 	}
-	*d = keyType[T](id)
+	*d = key
 	return nil
 }
 
-func (d keyType[T]) Kind() string                 { return kindFromType[T]() }
-func (d keyType[T]) String() string               { return d.Kind() + ulid.ULID(d).String() }
-func (d keyType[T]) ULID() ulid.ULID              { return ulid.ULID(d) }
+func (d keyType[T]) Kind() string { return kindFromType[T]() }
+
+func (d keyType[T]) String() string {
+	return d.string(true)
+}
+
+func (d keyType[T]) string(includeKind bool) string {
+	var prefix string
+	if includeKind {
+		prefix = fmt.Sprintf("%s-", d.Kind())
+	}
+	if d.Hostname == "" {
+		return fmt.Sprintf("%s%s", prefix, d.Suffix)
+	}
+	return fmt.Sprintf("%s%s-%s-%s", prefix, d.Hostname, d.Port, d.Suffix)
+}
+
 func (d keyType[T]) MarshalText() ([]byte, error) { return []byte(d.String()), nil }
 func (d *keyType[T]) UnmarshalText(bytes []byte) error {
-	id, err := parseKey[keyType[T]](string(bytes))
+	id, err := parseKey[keyType[T]](string(bytes), true)
 	if err != nil {
 		return err
 	}
@@ -90,5 +152,5 @@ func (d *keyType[T]) UnmarshalText(bytes []byte) error {
 
 func kindFromType[T any]() string {
 	var zero T
-	return strings.ToUpper(strings.TrimSuffix(reflect.TypeOf(zero).Name(), "Key")[:1])
+	return strings.ToLower(strings.TrimSuffix(reflect.TypeOf(zero).Name(), "Key")[:1])
 }

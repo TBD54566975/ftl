@@ -146,7 +146,6 @@ enum RunnerState {
 }
 
 message RegisterRunnerRequest {
-  // UUID representing the runner instance.
   string key = 1;
   string endpoint = 2;
   optional string deployment = 3;

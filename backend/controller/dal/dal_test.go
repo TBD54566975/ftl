@@ -86,7 +86,7 @@ func TestDAL(t *testing.T) {
 		assert.Equal(t, []sha256.SHA256{misshingSHA}, missing)
 	})
 
-	runnerID := model.NewRunnerKey()
+	runnerID := model.NewRunnerKey("localhost", "8080")
 	labels := map[string]any{"languages": []any{"go"}}
 
 	t.Run("RegisterRunner", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("RegisterRunnerFailsOnDuplicate", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, Runner{
-			Key:      model.NewRunnerKey(),
+			Key:      model.NewRunnerKey("localhost", "8080"),
 			Labels:   labels,
 			Endpoint: "http://localhost:8080",
 			State:    RunnerStateIdle,
@@ -333,7 +333,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
-		err = dal.DeregisterRunner(ctx, model.NewRunnerKey())
+		err = dal.DeregisterRunner(ctx, model.NewRunnerKey("localhost", "8080"))
 		assert.IsError(t, err, ErrNotFound)
 	})
 }

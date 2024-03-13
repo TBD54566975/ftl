@@ -1025,8 +1025,6 @@ export class GetDeploymentResponse extends Message<GetDeploymentResponse> {
  */
 export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
   /**
-   * UUID representing the runner instance.
-   *
    * @generated from field: string key = 1;
    */
   key = "";

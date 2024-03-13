@@ -122,7 +122,7 @@ WITH matches AS (
     UPDATE runners
         SET state = 'dead',
             deployment_id = NULL
-        WHERE key = $1
+        WHERE key = sqlc.arg('key')::runner_key
         RETURNING 1)
 SELECT COUNT(*)
 FROM matches;
@@ -222,7 +222,7 @@ RETURNING runners.*;
 -- name: GetRunnerState :one
 SELECT state
 FROM runners
-WHERE key = $1;
+WHERE key = sqlc.arg('key')::runner_key;
 
 -- name: GetRunner :one
 SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
@@ -236,7 +236,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                                             THEN d.name END, NULL) AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
-WHERE r.key = $1;
+WHERE r.key = sqlc.arg('key')::runner_key;
 
 -- name: GetRoutingTable :many
 SELECT endpoint, r.key AS runner_key, r.module_name, d.name deployment_name
@@ -251,7 +251,7 @@ WHERE state = 'assigned'
 SELECT endpoint, r.key AS runner_key, r.module_name, d.name deployment_name, r.state
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
-WHERE r.key = $1;
+WHERE r.key = sqlc.arg('key')::runner_key;
 
 -- name: GetRunnersForDeployment :many
 SELECT *

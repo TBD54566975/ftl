@@ -27,16 +27,17 @@ sql:
             nullable: true
             go_type:
               type: "NullTime"
-          - db_type: "uuid"
-            go_type:
-              type: "Key"
-          - db_type: "uuid"
-            nullable: true
-            go_type:
-              type: "NullKey"
           - db_type: "pg_catalog.varchar"
             nullable: true
             go_type: "github.com/alecthomas/types/optional.Option[string]"
+          - db_type: "runner_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.RunnerKey"
+          - db_type: "runner_key"
+            nullable: true
+            go_type: 
+              type: "NullRunnerKey"
+          - db_type: "controller_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - db_type: "text"
             go_type: "string"
           - db_type: "text"

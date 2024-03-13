@@ -1254,7 +1254,6 @@ type RegisterRunnerRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// UUID representing the runner instance.
 	Key        string           `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 	Endpoint   string           `protobuf:"bytes,2,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
 	Deployment *string          `protobuf:"bytes,3,opt,name=deployment,proto3,oneof" json:"deployment,omitempty"`

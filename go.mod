@@ -23,14 +23,12 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/gofrs/flock v0.8.1
 	github.com/golang/protobuf v1.5.4
-	github.com/google/uuid v1.6.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/jellydator/ttlcache/v3 v3.2.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-isatty v0.0.20
-	github.com/oklog/ulid/v2 v2.1.0
 	github.com/otiai10/copy v1.14.0
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.10.1
@@ -58,6 +56,7 @@ require (
 )
 
 require (
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.2 // indirect
