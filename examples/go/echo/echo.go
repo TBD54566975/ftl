@@ -27,22 +27,10 @@ type EchoResponse struct {
 //
 //ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
-	fmt.Println("Echo received a request!")
 	tresp, err := ftl.Call(ctx, time.Time, time.TimeRequest{})
 	if err != nil {
 		return EchoResponse{}, err
 	}
-	err = ftl.CallEmpty(ctx, time.Empty)
-	if err != nil {
-		return EchoResponse{}, err
-	}
-	err = ftl.CallSink(ctx, time.Sink, time.TimeRequest{})
-	if err != nil {
-		return EchoResponse{}, err
-	}
-	tresp, err = ftl.CallSource(ctx, time.Source)
-	if err != nil {
-		return EchoResponse{}, err
-	}
+
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default(defaultName.Get(ctx)), tresp.Time)}, nil
 }
