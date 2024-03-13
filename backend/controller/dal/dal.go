@@ -499,9 +499,9 @@ func (d *DAL) GetDeployment(ctx context.Context, name model.DeploymentName) (*mo
 // ErrConflict will be returned if a runner with the same endpoint and a
 // different key already exists.
 func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
-	var pgDeploymentName optional.Option[string]
-	if dkey, ok := runner.Deployment.Get(); ok {
-		pgDeploymentName = optional.Some(dkey.String())
+	var pgDeploymentName optional.Option[model.DeploymentName]
+	if dname, ok := runner.Deployment.Get(); ok {
+		pgDeploymentName = optional.Some(dname)
 	}
 	attrBytes, err := json.Marshal(runner.Labels)
 	if err != nil {
@@ -612,7 +612,7 @@ func (p *postgresClaim) Rollback(ctx context.Context) error {
 func (p *postgresClaim) Runner() Runner { return p.runner }
 
 // SetDeploymentReplicas activates the given deployment.
-func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentName, minReplicas int) error {
+func (d *DAL) SetDeploymentReplicas(ctx context.Context, name model.DeploymentName, minReplicas int) error {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -621,18 +621,18 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentNam
 
 	defer tx.CommitOrRollback(ctx, &err)
 
-	deployment, err := d.db.GetDeployment(ctx, key)
+	deployment, err := d.db.GetDeployment(ctx, name)
 	if err != nil {
 		return translatePGError(err)
 	}
 
-	err = d.db.SetDeploymentDesiredReplicas(ctx, key, int32(minReplicas))
+	err = d.db.SetDeploymentDesiredReplicas(ctx, name, int32(minReplicas))
 	if err != nil {
 		return translatePGError(err)
 	}
 
 	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
-		DeploymentName:  string(key),
+		DeploymentName:  name,
 		MinReplicas:     int32(minReplicas),
 		PrevMinReplicas: deployment.MinReplicas,
 	})
@@ -681,7 +681,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 	}
 
 	err = tx.InsertDeploymentCreatedEvent(ctx, sql.InsertDeploymentCreatedEventParams{
-		DeploymentName: newDeploymentName.String(),
+		DeploymentName: newDeploymentName,
 		Language:       newDeployment.Language,
 		ModuleName:     newDeployment.ModuleName,
 		MinReplicas:    int32(minReplicas),
@@ -958,7 +958,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 		requestName = optional.Some(string(rn))
 	}
 	return translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
-		DeploymentName: call.DeploymentName.String(),
+		DeploymentName: call.DeploymentName,
 		RequestName:    requestName,
 		TimeStamp:      call.Time,
 		SourceModule:   sourceModule,
