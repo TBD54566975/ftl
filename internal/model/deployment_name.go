@@ -5,16 +5,14 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding"
-	"encoding/hex"
 	"fmt"
 	"strings"
-
-	"github.com/alecthomas/types/optional"
 )
 
-type DeploymentName string
-
-type MaybeDeploymentName optional.Option[DeploymentName]
+type DeploymentName struct {
+	module string
+	hash   string
+}
 
 var _ interface {
 	sql.Scanner
@@ -29,27 +27,33 @@ func NewDeploymentName(module string) DeploymentName {
 	if err != nil {
 		panic(err)
 	}
-	return DeploymentName(fmt.Sprintf("%s-%010x", module, hash))
+	return DeploymentName{module: module, hash: fmt.Sprintf("%010x", hash)}
 }
 
 func ParseDeploymentName(name string) (DeploymentName, error) {
-	var zero DeploymentName
 	parts := strings.Split(name, "-")
 	if len(parts) < 2 {
-		return zero, fmt.Errorf("should be at least <deployment>-<hash>: invalid deployment name %q", name)
+		return DeploymentName{}, fmt.Errorf("invalid deployment name %q: does not follow <deployment>-<hash> pattern", name)
 	}
-	hash, err := hex.DecodeString(parts[len(parts)-1])
-	if err != nil {
-		return zero, fmt.Errorf("invalid deployment name %q: %w", name, err)
+
+	module := strings.Join(parts[0:len(parts)-1], "-")
+	if len(module) == 0 {
+		return DeploymentName{}, fmt.Errorf("invalid deployment name %q: module name should not be empty", name)
 	}
-	if len(hash) != 5 {
-		return zero, fmt.Errorf("hash should be 5 bytes: invalid deployment name %q", name)
+
+	hash := parts[len(parts)-1]
+	if len(hash) != 10 {
+		return DeploymentName{}, fmt.Errorf("invalid deployment name %q: hash should be 10 hex characters long", name)
 	}
-	return DeploymentName(fmt.Sprintf("%s-%010x", strings.Join(parts[0:len(parts)-1], "-"), hash)), nil
+
+	return DeploymentName{
+		module: module,
+		hash:   parts[len(parts)-1],
+	}, nil
 }
 
 func (d *DeploymentName) String() string {
-	return string(*d)
+	return fmt.Sprintf("%s-%s", d.module, d.hash)
 }
 
 func (d *DeploymentName) UnmarshalText(bytes []byte) error {
@@ -62,7 +66,7 @@ func (d *DeploymentName) UnmarshalText(bytes []byte) error {
 }
 
 func (d *DeploymentName) MarshalText() ([]byte, error) {
-	return []byte(*d), nil
+	return []byte(d.String()), nil
 }
 
 func (d *DeploymentName) Scan(value any) error {
@@ -77,6 +81,6 @@ func (d *DeploymentName) Scan(value any) error {
 	return nil
 }
 
-func (d *DeploymentName) Value() (driver.Value, error) {
+func (d DeploymentName) Value() (driver.Value, error) {
 	return d.String(), nil
 }

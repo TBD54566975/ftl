@@ -269,8 +269,10 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 		if err := rows.Scan(&id, &name); err != nil {
 			return nil, err
 		}
+		deploymentName, _ := model.ParseDeploymentName(name)
+
 		deploymentIDs = append(deploymentIDs, id)
-		deploymentNames[id] = model.DeploymentName(name)
+		deploymentNames[id] = deploymentName
 	}
 
 	q += fmt.Sprintf(` AND e.deployment_id = ANY($%d::BIGINT[])`, param(deploymentIDs))
