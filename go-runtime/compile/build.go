@@ -34,7 +34,9 @@ type externalModuleContext struct {
 }
 
 type goVerb struct {
-	Name string
+	Name        string
+	HasRequest  bool
+	HasResponse bool
 }
 
 type mainModuleContext struct {
@@ -122,7 +124,15 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 			if !ok {
 				return fmt.Errorf("missing native name for verb %s", verb.Name)
 			}
-			goVerbs = append(goVerbs, goVerb{Name: nativeName})
+
+			goverb := goVerb{Name: nativeName}
+			if _, ok := verb.Request.(*schema.Unit); !ok {
+				goverb.HasRequest = true
+			}
+			if _, ok := verb.Response.(*schema.Unit); !ok {
+				goverb.HasResponse = true
+			}
+			goVerbs = append(goVerbs, goverb)
 		}
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
@@ -183,7 +193,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			case *schema.Time:
 				imports["time"] = "stdtime"
 
-			case *schema.Optional, *schema.Unit:
+			case *schema.Optional:
 				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
 
 			default:
@@ -200,6 +210,9 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			return fmt.Sprintf("%d", t.Value)
 		}
 		panic(fmt.Sprintf("unsupported value %T", v))
+	},
+	"isSink": func(v schema.Verb) string {
+		return "wes"
 	},
 }
 

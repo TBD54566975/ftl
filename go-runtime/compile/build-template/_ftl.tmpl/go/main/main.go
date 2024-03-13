@@ -12,10 +12,18 @@ import (
 )
 
 func main() {
-  verbConstructor := server.NewUserVerbServer("{{.Name}}",
+	verbConstructor := server.NewUserVerbServer("{{.Name}}",
 {{- range .Verbs}}
-    server.Handle({{$.Name}}.{{.Name}}),
+	{{- if and .HasRequest .HasResponse}}
+		server.HandleCall({{$.Name}}.{{.Name}}),
+	{{- else if .HasRequest}}
+		server.HandleSink({{$.Name}}.{{.Name}}),
+	{{- else if .HasResponse}}
+		server.HandleSource({{$.Name}}.{{.Name}}),
+	{{- else}}
+		server.HandleEmpty({{$.Name}}.{{.Name}}),
+	{{- end}}
 {{- end}}
-  )
-  plugin.Start(context.Background(), "{{.Name}}", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
+	)
+	plugin.Start(context.Background(), "{{.Name}}", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
 }

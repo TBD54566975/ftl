@@ -38,8 +38,22 @@ type {{.Name|title}}
 {{if .Comments}}//
 {{end -}}
 //ftl:verb
+{{- if and (eq (type $ .Request) "ftl.Unit") (eq (type $ .Response) "ftl.Unit")}}
+func {{.Name|title}}(context.Context) error {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")
+}
+{{- else if eq (type $ .Request) "ftl.Unit"}}
+func {{.Name|title}}(context.Context) ({{type $ .Response}}, error) {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSource()")
+}
+{{- else if eq (type $ .Response) "ftl.Unit"}}
+func {{.Name|title}}(context.Context, {{type $ .Request}}) error {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
+}
+{{- else}}
 func {{.Name|title}}(context.Context, {{type $ .Request}}) ({{type $ .Response}}, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }
+{{- end}}
 {{- end}}
 {{- end}}

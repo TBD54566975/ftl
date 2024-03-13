@@ -65,9 +65,7 @@ type Handler struct {
 	fn  func(ctx context.Context, req []byte) ([]byte, error)
 }
 
-// Handle creates a Handler from a Verb.
-func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
-	ref := ftl.VerbToRef(verb)
+func handler[Req, Resp any](ref ftl.VerbRef, verb func(ctx context.Context, req Req) (Resp, error)) Handler {
 	return Handler{
 		ref: ref,
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
@@ -92,6 +90,47 @@ func Handle[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)
 			return respdata, nil
 		},
 	}
+}
+
+// HandleCall creates a Handler from a Verb.
+func HandleCall[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
+	return handler(ftl.VerbToRef(verb), verb)
+}
+
+// HandleSink creates a Handler from a Sink with no response.
+func HandleSink[Req any](sink func(ctx context.Context, req Req) error) Handler {
+	ref := ftl.SinkToRef(sink)
+
+	verb := func(ctx context.Context, req Req) (ftl.Unit, error) {
+		err := sink(ctx, req)
+		return ftl.Unit{}, err
+	}
+
+	return handler(ftl.VerbRef{Module: ref.Module, Name: ref.Name}, verb)
+}
+
+// HandleSource creates a Handler from a Source with no request.
+func HandleSource[Resp any](source func(ctx context.Context) (Resp, error)) Handler {
+	ref := ftl.SourceToRef(source)
+
+	fmt.Printf("source ref: %v\n", ref)
+	verb := func(ctx context.Context, _ ftl.Unit) (Resp, error) {
+		return source(ctx)
+	}
+
+	return handler(ftl.VerbRef{Module: ref.Module, Name: ref.Name}, verb)
+}
+
+// HandleEmpty creates a Handler from a Verb with no request or response.
+func HandleEmpty(empty func(ctx context.Context) error) Handler {
+	ref := ftl.EmptyToRef(empty)
+
+	verb := func(ctx context.Context, _ ftl.Unit) (ftl.Unit, error) {
+		err := empty(ctx)
+		return ftl.Unit{}, err
+	}
+
+	return handler(ftl.VerbRef{Module: ref.Module, Name: ref.Name}, verb)
 }
 
 var _ ftlv1connect.VerbServiceHandler = (*moduleServer)(nil)

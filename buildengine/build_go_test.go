@@ -64,7 +64,6 @@ package other
 
 import (
   "context"
-  "github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 var _ = context.Background
@@ -100,21 +99,21 @@ type SinkReq struct {
 }
 
 //ftl:verb
-func Sink(context.Context, SinkReq) (ftl.Unit, error) {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
+func Sink(context.Context, SinkReq) error {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
 }
 
 type SourceResp struct {
 }
 
 //ftl:verb
-func Source(context.Context, ftl.Unit) (SourceResp, error) {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
+func Source(context.Context) (SourceResp, error) {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSource()")
 }
 
 //ftl:verb
-func Nothing(context.Context, ftl.Unit) (ftl.Unit, error) {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
+func Nothing(context.Context) error {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")
 }
 `
 	bctx := buildContext{

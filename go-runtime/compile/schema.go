@@ -30,11 +30,12 @@ var (
 	errorIFaceType = once(func() *types.Interface {
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
+
 	ftlCallFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
 	ftlConfigFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
 	ftlSecretFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
-
-	aliasFieldTag = "json"
+	ftlUnitTypePath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
+	aliasFieldTag     = "json"
 )
 
 // NativeNames is a map of top-level declarations to their native Go names.
@@ -269,6 +270,10 @@ func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
 		if !isType[*types.Struct](params.At(1).Type()) {
 			return nil, nil, fmt.Errorf("second parameter must be a struct but is %s", params.At(1).Type())
 		}
+		if params.At(1).Type().String() == ftlUnitTypePath {
+			return nil, nil, fmt.Errorf("second parameter must not be ftl.Unit")
+		}
+
 		req = params.At(1)
 	}
 
@@ -284,6 +289,9 @@ func checkSignature(sig *types.Signature) (req, resp *types.Var, err error) {
 	if results.Len() == 2 {
 		if !isType[*types.Struct](results.At(0).Type()) {
 			return nil, nil, fmt.Errorf("first result must be a struct but is %s", results.At(0).Type())
+		}
+		if results.At(1).Type().String() == ftlUnitTypePath {
+			return nil, nil, fmt.Errorf("first result must not be ftl.Unit")
 		}
 		resp = results.At(0)
 	}
