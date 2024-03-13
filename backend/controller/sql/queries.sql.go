@@ -107,6 +107,7 @@ FROM matches
 `
 
 func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error) {
+
 	row := q.db.QueryRow(ctx, deregisterRunner, key)
 	var count int64
 	err := row.Scan(&count)
@@ -216,7 +217,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.module_name,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.name END, NULL) AS deployment_name
+                                            THEN d.name END, NULL)::deployment_name AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id
 WHERE $1::bool = true
@@ -231,7 +232,7 @@ type GetActiveRunnersRow struct {
 	Labels         []byte
 	LastSeen       time.Time
 	ModuleName     optional.Option[string]
-	DeploymentName optional.Option[string]
+	DeploymentName model.DeploymentName
 }
 
 func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error) {
@@ -870,7 +871,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.module_name,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.name END, NULL) AS deployment_name
+                                            THEN d.name END, NULL)::deployment_name AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE r.key = $1::runner_key
@@ -883,7 +884,7 @@ type GetRunnerRow struct {
 	Labels         []byte
 	LastSeen       time.Time
 	ModuleName     optional.Option[string]
-	DeploymentName optional.Option[string]
+	DeploymentName model.DeploymentName
 }
 
 func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error) {

@@ -55,6 +55,11 @@ service VerbService {
   rpc Call(CallRequest) returns (CallResponse);
 }
 
+message DeploymentName {
+  string module = 1;
+  string hash = 2;
+}
+
 enum DeploymentChangeType {
   DEPLOYMENT_ADDED = 0;
   DEPLOYMENT_REMOVED = 1;
@@ -68,7 +73,7 @@ message GetSchemaResponse {
 
 message PullSchemaRequest {}
 message PullSchemaResponse {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
   string module_name = 2;
   // For deletes this will not be present.
   optional schema.Module schema = 4;
@@ -107,13 +112,13 @@ message CreateDeploymentRequest {
   optional google.protobuf.Struct labels = 3;
 }
 message CreateDeploymentResponse {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
   // Currently active deployment for this module, if any.
   optional string active_deployment_name = 2;
 }
 
 message GetDeploymentArtefactsRequest {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
   repeated DeploymentArtefact have_artefacts = 2;
 }
 message GetDeploymentArtefactsResponse {
@@ -122,7 +127,7 @@ message GetDeploymentArtefactsResponse {
 }
 
 message GetDeploymentRequest {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
 }
 message GetDeploymentResponse {
   schema.Module schema = 1;
@@ -159,7 +164,7 @@ message RegisterRunnerRequest {
 message RegisterRunnerResponse {}
 
 message UpdateDeployRequest {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
   int32 min_replicas = 2;
 }
 message UpdateDeployResponse {}
@@ -171,7 +176,7 @@ message ReplaceDeployRequest {
 message ReplaceDeployResponse {}
 
 message StreamDeploymentLogsRequest {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
   optional string request_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
   int32 log_level = 4;
@@ -217,7 +222,7 @@ message StatusResponse {
   repeated Deployment deployments = 3;
 
   message IngressRoute {
-    string deployment_name = 1;
+    DeploymentName deployment_name = 1;
     schema.VerbRef verb = 2;
     string method = 3;
     string path = 4;
@@ -307,16 +312,16 @@ service ControllerService {
 }
 
 message DeployRequest {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
 }
 message DeployResponse {}
 
 message TerminateRequest {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
 }
 
 message ReserveRequest {
-  string deployment_name = 1;
+  DeploymentName deployment_name = 1;
 }
 message ReserveResponse {}
 

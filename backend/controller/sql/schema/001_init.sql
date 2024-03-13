@@ -39,6 +39,7 @@ CREATE DOMAIN module_schema_pb AS BYTEA;
 
 CREATE DOMAIN runner_key AS varchar;
 CREATE DOMAIN controller_key AS varchar;
+CREATE DOMAIN deployment_name AS varchar;
 
 CREATE TABLE deployments
 (
@@ -46,7 +47,7 @@ CREATE TABLE deployments
     created_at   TIMESTAMPTZ    NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     module_id    BIGINT         NOT NULL REFERENCES modules (id) ON DELETE CASCADE,
     -- Unique name for this deployment in the form <module-name>-<random>.
-    "name"       VARCHAR UNIQUE NOT NULL,
+    "name"       deployment_name UNIQUE NOT NULL,
     "schema"     module_schema_pb  NOT NULL,
     -- Labels are used to match deployments to runners.
     "labels"     JSONB          NOT NULL DEFAULT '{}',

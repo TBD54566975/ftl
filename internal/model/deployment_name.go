@@ -12,7 +12,10 @@ import (
 	"github.com/alecthomas/types/optional"
 )
 
-type DeploymentName string
+type DeploymentName struct {
+	module string
+	hash   string
+}
 
 type MaybeDeploymentName optional.Option[DeploymentName]
 
@@ -29,7 +32,7 @@ func NewDeploymentName(module string) DeploymentName {
 	if err != nil {
 		panic(err)
 	}
-	return DeploymentName(fmt.Sprintf("%s-%010x", module, hash))
+	return DeploymentName{module: module, hash: fmt.Sprintf("%010x", hash)}
 }
 
 func ParseDeploymentName(name string) (DeploymentName, error) {
@@ -45,11 +48,14 @@ func ParseDeploymentName(name string) (DeploymentName, error) {
 	if len(hash) != 5 {
 		return zero, fmt.Errorf("hash should be 5 bytes: invalid deployment name %q", name)
 	}
-	return DeploymentName(fmt.Sprintf("%s-%010x", strings.Join(parts[0:len(parts)-1], "-"), hash)), nil
+	return DeploymentName{
+		module: strings.Join(parts[0:len(parts)-1], "-"),
+		hash:   fmt.Sprintf("%010x", hash),
+	}, nil
 }
 
 func (d *DeploymentName) String() string {
-	return string(*d)
+	return fmt.Sprintf("%s-%s", d.module, d.hash)
 }
 
 func (d *DeploymentName) UnmarshalText(bytes []byte) error {
@@ -62,7 +68,7 @@ func (d *DeploymentName) UnmarshalText(bytes []byte) error {
 }
 
 func (d *DeploymentName) MarshalText() ([]byte, error) {
-	return []byte(*d), nil
+	return []byte(d.String()), nil
 }
 
 func (d *DeploymentName) Scan(value any) error {
