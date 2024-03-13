@@ -14,8 +14,6 @@ type DeploymentName struct {
 	hash   string
 }
 
-// type MaybeDeploymentName optional.Option[DeploymentName]
-
 var _ interface {
 	sql.Scanner
 	driver.Valuer
@@ -36,15 +34,12 @@ func ParseDeploymentName(name string) (DeploymentName, error) {
 	var zero DeploymentName
 	parts := strings.Split(name, "-")
 	if len(parts) < 2 {
-		return zero, fmt.Errorf("should be at least <deployment>-<hash>: invalid deployment name %q", name)
+		return zero, fmt.Errorf("invalid deployment name %s: does not follow <deployment>-<hash> pattern", name)
 	}
-	// hash, err := hex.DecodeString(parts[len(parts)-1])
-	// if err != nil {
-	// 	return zero, fmt.Errorf("invalid deployment name %q: %w", name, err)
-	// }
-	// if len(hash) != 4 {
-	// 	return zero, fmt.Errorf("hash should be 4 bytes: invalid deployment name %q", name)
-	// }
+	hash := parts[len(parts)-1]
+	if len(hash) != 10 {
+		return zero, fmt.Errorf("hash should be 5 bytes: invalid deployment name %q", name)
+	}
 	return DeploymentName{
 		module: strings.Join(parts[0:len(parts)-1], "-"),
 		hash:   parts[len(parts)-1],
@@ -56,7 +51,6 @@ func (d *DeploymentName) String() string {
 }
 
 func (d *DeploymentName) UnmarshalText(bytes []byte) error {
-	fmt.Printf("deploymentName.unmashalText(): %s\n", string(bytes))
 	name, err := ParseDeploymentName(string(bytes))
 	if err != nil {
 		return err
@@ -66,12 +60,10 @@ func (d *DeploymentName) UnmarshalText(bytes []byte) error {
 }
 
 func (d *DeploymentName) MarshalText() ([]byte, error) {
-	fmt.Printf("deploymentName.mashalText(): %s\n", d.String())
 	return []byte(d.String()), nil
 }
 
 func (d *DeploymentName) Scan(value any) error {
-	fmt.Printf("deploymentName.Scan()")
 	if value == nil {
 		return nil
 	}
@@ -83,10 +75,6 @@ func (d *DeploymentName) Scan(value any) error {
 	return nil
 }
 
-func (d *DeploymentName) Value() (driver.Value, error) {
-	fmt.Printf("deploymentName.value(): %s\n", d.String())
+func (d DeploymentName) Value() (driver.Value, error) {
 	return d.String(), nil
 }
-
-var _ sql.Scanner = (*DeploymentName)(nil)
-var _ driver.Valuer = (*DeploymentName)(nil)
