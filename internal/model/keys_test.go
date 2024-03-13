@@ -36,7 +36,8 @@ func TestRunnerKey(t *testing.T) {
 		}
 		aValue, err := test.key.Value()
 		assert.NoError(t, err)
-		value := aValue.(string)
+		value, ok := aValue.(string)
+		assert.True(t, ok, "expected string value for %v", aValue)
 
 		if test.value != "" {
 			assert.Equal(t, test.value, value, "expected value %q for %q", test.value, value)
