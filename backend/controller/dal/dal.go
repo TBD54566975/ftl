@@ -505,15 +505,12 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 		return fmt.Errorf("%s: %w", "failed to JSON encode runner labels", err)
 	}
 	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
-		Key:            dbKeyFromRunnerKey(runner.Key),
+		Key:            runner.Key,
 		Endpoint:       runner.Endpoint,
 		State:          sql.RunnerState(runner.State),
 		DeploymentName: pgDeploymentName,
 		Labels:         attrBytes,
 	})
-	if err != nil {
-		return translatePGError(err)
-	}
 	if err != nil {
 		return translatePGError(err)
 	}
@@ -537,7 +534,7 @@ func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int6
 
 // DeregisterRunner deregisters the given runner.
 func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
-	count, err := d.db.DeregisterRunner(ctx, dbKeyFromRunnerKey(key))
+	count, err := d.db.DeregisterRunner(ctx, key)
 	if err != nil {
 		return translatePGError(err)
 	}
@@ -854,7 +851,7 @@ func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string
 }
 
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
-	state, err := d.db.GetRunnerState(ctx, dbKeyFromRunnerKey(runnerKey))
+	state, err := d.db.GetRunnerState(ctx, runnerKey)
 	if err != nil {
 		return "", translatePGError(err)
 	}
@@ -862,7 +859,7 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (Ru
 }
 
 func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {
-	row, err := d.db.GetRunner(ctx, dbKeyFromRunnerKey(runnerKey))
+	row, err := d.db.GetRunner(ctx, runnerKey)
 	if err != nil {
 		return Runner{}, translatePGError(err)
 	}
@@ -1048,9 +1045,4 @@ func translatePGError(err error) error {
 		return ErrNotFound
 	}
 	return err
-}
-
-func dbKeyFromRunnerKey(key model.RunnerKey) string {
-	value, _ := key.Value()
-	return value.(string)
 }

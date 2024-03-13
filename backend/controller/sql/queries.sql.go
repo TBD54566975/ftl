@@ -100,13 +100,13 @@ WITH matches AS (
     UPDATE runners
         SET state = 'dead',
             deployment_id = NULL
-        WHERE key = $1
+        WHERE key = $1::runner_key
         RETURNING 1)
 SELECT COUNT(*)
 FROM matches
 `
 
-func (q *Queries) DeregisterRunner(ctx context.Context, key string) (int64, error) {
+func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error) {
 	row := q.db.QueryRow(ctx, deregisterRunner, key)
 	var count int64
 	err := row.Scan(&count)
@@ -795,7 +795,7 @@ const getRouteForRunner = `-- name: GetRouteForRunner :one
 SELECT endpoint, r.key AS runner_key, r.module_name, d.name deployment_name, r.state
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
-WHERE r.key = $1
+WHERE r.key = $1::runner_key
 `
 
 type GetRouteForRunnerRow struct {
@@ -807,7 +807,7 @@ type GetRouteForRunnerRow struct {
 }
 
 // Retrieve routing information for a runner.
-func (q *Queries) GetRouteForRunner(ctx context.Context, key string) (GetRouteForRunnerRow, error) {
+func (q *Queries) GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error) {
 	row := q.db.QueryRow(ctx, getRouteForRunner, key)
 	var i GetRouteForRunnerRow
 	err := row.Scan(
@@ -873,7 +873,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                                             THEN d.name END, NULL) AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
-WHERE r.key = $1
+WHERE r.key = $1::runner_key
 `
 
 type GetRunnerRow struct {
@@ -886,7 +886,7 @@ type GetRunnerRow struct {
 	DeploymentName optional.Option[string]
 }
 
-func (q *Queries) GetRunner(ctx context.Context, key string) (GetRunnerRow, error) {
+func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error) {
 	row := q.db.QueryRow(ctx, getRunner, key)
 	var i GetRunnerRow
 	err := row.Scan(
@@ -904,10 +904,10 @@ func (q *Queries) GetRunner(ctx context.Context, key string) (GetRunnerRow, erro
 const getRunnerState = `-- name: GetRunnerState :one
 SELECT state
 FROM runners
-WHERE key = $1
+WHERE key = $1::runner_key
 `
 
-func (q *Queries) GetRunnerState(ctx context.Context, key string) (RunnerState, error) {
+func (q *Queries) GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error) {
 	row := q.db.QueryRow(ctx, getRunnerState, key)
 	var state RunnerState
 	err := row.Scan(&state)
@@ -1339,7 +1339,7 @@ RETURNING deployment_id
 `
 
 type UpsertRunnerParams struct {
-	Key            string
+	Key            model.RunnerKey
 	Endpoint       string
 	State          RunnerState
 	Labels         []byte
