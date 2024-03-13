@@ -500,10 +500,6 @@ func (d *DAL) GetDeployment(ctx context.Context, name model.DeploymentName) (*mo
 // ErrConflict will be returned if a runner with the same endpoint and a
 // different key already exists.
 func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
-	var pgDeploymentName optional.Option[model.DeploymentName]
-	if dname, ok := runner.Deployment.Get(); ok {
-		pgDeploymentName = optional.Some(dname)
-	}
 	attrBytes, err := json.Marshal(runner.Labels)
 	if err != nil {
 		return fmt.Errorf("%s: %w", "failed to JSON encode runner labels", err)
@@ -512,7 +508,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 		Key:            runner.Key,
 		Endpoint:       runner.Endpoint,
 		State:          sql.RunnerState(runner.State),
-		DeploymentName: pgDeploymentName,
+		DeploymentName: runner.Deployment,
 		Labels:         attrBytes,
 	})
 	if err != nil {
