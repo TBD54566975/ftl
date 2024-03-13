@@ -15,8 +15,8 @@ FROM modules
 WHERE id = ANY (@ids::BIGINT[]);
 
 -- name: CreateDeployment :exec
-INSERT INTO deployments (module_id, "schema", name)
-VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, $1);
+INSERT INTO deployments (module_id, "schema", "name")
+VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, sqlc.arg('name'));
 
 -- name: GetArtefactDigests :many
 -- Return the digests that exist in the database.

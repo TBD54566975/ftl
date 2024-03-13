@@ -16,7 +16,7 @@ type Querier interface {
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
-	CreateDeployment(ctx context.Context, name model.DeploymentName, moduleName string, schema []byte) error
+	CreateDeployment(ctx context.Context, moduleName string, schema []byte, name model.DeploymentName) error
 	CreateIngressRequest(ctx context.Context, origin Origin, name string, sourceAddr string) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)

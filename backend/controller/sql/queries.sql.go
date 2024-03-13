@@ -52,12 +52,12 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 }
 
 const createDeployment = `-- name: CreateDeployment :exec
-INSERT INTO deployments (module_id, "schema", name)
-VALUES ((SELECT id FROM modules WHERE name = $2::TEXT LIMIT 1), $3::BYTEA, $1)
+INSERT INTO deployments (module_id, "schema", "name")
+VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3)
 `
 
-func (q *Queries) CreateDeployment(ctx context.Context, name model.DeploymentName, moduleName string, schema []byte) error {
-	_, err := q.db.Exec(ctx, createDeployment, name, moduleName, schema)
+func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema []byte, name model.DeploymentName) error {
+	_, err := q.db.Exec(ctx, createDeployment, moduleName, schema, name)
 	return err
 }
 

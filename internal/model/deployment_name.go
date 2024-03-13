@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding"
-	"encoding/hex"
 	"fmt"
 	"strings"
 )
@@ -39,16 +38,16 @@ func ParseDeploymentName(name string) (DeploymentName, error) {
 	if len(parts) < 2 {
 		return zero, fmt.Errorf("should be at least <deployment>-<hash>: invalid deployment name %q", name)
 	}
-	hash, err := hex.DecodeString(parts[len(parts)-1])
-	if err != nil {
-		return zero, fmt.Errorf("invalid deployment name %q: %w", name, err)
-	}
-	if len(hash) != 5 {
-		return zero, fmt.Errorf("hash should be 5 bytes: invalid deployment name %q", name)
-	}
+	// hash, err := hex.DecodeString(parts[len(parts)-1])
+	// if err != nil {
+	// 	return zero, fmt.Errorf("invalid deployment name %q: %w", name, err)
+	// }
+	// if len(hash) != 4 {
+	// 	return zero, fmt.Errorf("hash should be 4 bytes: invalid deployment name %q", name)
+	// }
 	return DeploymentName{
 		module: strings.Join(parts[0:len(parts)-1], "-"),
-		hash:   fmt.Sprintf("%010x", hash),
+		hash:   parts[len(parts)-1],
 	}, nil
 }
 
@@ -57,6 +56,7 @@ func (d *DeploymentName) String() string {
 }
 
 func (d *DeploymentName) UnmarshalText(bytes []byte) error {
+	fmt.Printf("deploymentName.unmashalText(): %s\n", string(bytes))
 	name, err := ParseDeploymentName(string(bytes))
 	if err != nil {
 		return err

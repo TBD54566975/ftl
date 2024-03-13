@@ -18,13 +18,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -302,7 +300,8 @@ func (d *DAL) GetStatus(
 		return Status{}, err
 	}
 	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
-		var deployment optional.Option[model.DeploymentName]
+		deployment := optional.Some(model.DeploymentName(in.DeploymentName))
+		// var deployment optional.Option[model.DeploymentName]
 		// if _, ok := in.DeploymentName.Get(); ok {
 		// 	// deployment = optional.Some(model.DeploymentName(name))
 		// 	deployment = optional.Nil(model.DeploymentName{})
@@ -424,14 +423,14 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		return existingDeployment, nil
 	}
 
-	artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
-		return in.Digest, in
-	})
+	// artefactsByDigest := maps.FromSlice(artefacts, func(in DeploymentArtefact) (sha256.SHA256, DeploymentArtefact) {
+	// 	return in.Digest, in
+	// })
 
-	schemaBytes, err := proto.Marshal(moduleSchema.ToProto())
-	if err != nil {
-		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to marshal schema", err)
-	}
+	// schemaBytes, err := proto.Marshal(moduleSchema.ToProto())
+	// if err != nil {
+	// 	return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to marshal schema", err)
+	// }
 
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, moduleSchema.Name)
@@ -440,48 +439,50 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	}
 
 	deploymentName := model.NewDeploymentName(moduleSchema.Name)
+	fmt.Printf("CreateDeployment: %v\n", deploymentName)
+
 	// Create the deployment
-	err = tx.CreateDeployment(ctx, deploymentName, moduleSchema.Name, schemaBytes)
-	if err != nil {
-		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to create deployment", translatePGError(err))
-	}
+	// err = tx.CreateDeployment(ctx, moduleSchema.Name, schemaBytes, deploymentName)
+	// if err != nil {
+	// 	return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to create deployment", translatePGError(err))
+	// }
 
-	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
-	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
-	if err != nil {
-		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to get artefact digests", err)
-	}
-	if len(artefactDigests) != len(artefacts) {
-		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return model.DeploymentName{}, fmt.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
-	}
+	// uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
+	// artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
+	// if err != nil {
+	// 	return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to get artefact digests", err)
+	// }
+	// if len(artefactDigests) != len(artefacts) {
+	// 	missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
+	// 	return model.DeploymentName{}, fmt.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+	// }
 
-	// Associate the artefacts with the deployment
-	for _, row := range artefactDigests {
-		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
-		err = tx.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
-			Name:       deploymentName,
-			ArtefactID: row.ID,
-			Executable: artefact.Executable,
-			Path:       artefact.Path,
-		})
-		if err != nil {
-			return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to associate artefact with deployment", translatePGError(err))
-		}
-	}
+	// // Associate the artefacts with the deployment
+	// for _, row := range artefactDigests {
+	// 	artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
+	// 	err = tx.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
+	// 		Name:       deploymentName,
+	// 		ArtefactID: row.ID,
+	// 		Executable: artefact.Executable,
+	// 		Path:       artefact.Path,
+	// 	})
+	// 	if err != nil {
+	// 		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to associate artefact with deployment", translatePGError(err))
+	// 	}
+	// }
 
-	for _, ingressRoute := range ingressRoutes {
-		err = tx.CreateIngressRoute(ctx, sql.CreateIngressRouteParams{
-			Name:   deploymentName,
-			Method: ingressRoute.Method,
-			Path:   ingressRoute.Path,
-			Module: moduleSchema.Name,
-			Verb:   ingressRoute.Verb,
-		})
-		if err != nil {
-			return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to create ingress route", translatePGError(err))
-		}
-	}
+	// for _, ingressRoute := range ingressRoutes {
+	// 	err = tx.CreateIngressRoute(ctx, sql.CreateIngressRouteParams{
+	// 		Name:   deploymentName,
+	// 		Method: ingressRoute.Method,
+	// 		Path:   ingressRoute.Path,
+	// 		Module: moduleSchema.Name,
+	// 		Verb:   ingressRoute.Verb,
+	// 	})
+	// 	if err != nil {
+	// 		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to create ingress route", translatePGError(err))
+	// 	}
+	// }
 
 	return deploymentName, nil
 }
