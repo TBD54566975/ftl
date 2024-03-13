@@ -5,8 +5,9 @@ import (
 	"database/sql/driver"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 type NullTime = optional.Option[time.Time]
