@@ -302,12 +302,11 @@ func (d *DAL) GetStatus(
 		return Status{}, err
 	}
 	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
-		deployment := optional.Some(model.DeploymentName(in.DeploymentName))
-		// var deployment optional.Option[model.DeploymentName]
-		// if _, ok := in.DeploymentName.Get(); ok {
-		// 	// deployment = optional.Some(model.DeploymentName(name))
-		// 	deployment = optional.Nil(model.DeploymentName{})
-		// }
+		var deployment optional.Option[model.DeploymentName]
+		var zero model.DeploymentName
+		if in.DeploymentName != zero {
+			deployment = optional.Some(in.DeploymentName)
+		}
 		attrs := model.Labels{}
 		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
 			return Runner{}, fmt.Errorf("invalid attributes JSON for runner %s: %w", in.RunnerKey, err)
