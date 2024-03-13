@@ -64,7 +64,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				v := decl.ToProto().(*schemapb.Verb)
 				verbSchema := schema.VerbFromProto(v) // TODO: include all of the types  that the verb references
 				var jsonRequestSchema string
-				if requestData, ok := verbSchema.Request.(*schema.DataRef); ok {
+				if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
 					jsonSchema, err := schema.DataToJSONSchema(sch, *requestData)
 					if err != nil {
 						return nil, err

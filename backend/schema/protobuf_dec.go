@@ -42,10 +42,8 @@ func typeToSchema(s *schemapb.Type) Type {
 	switch s := s.Value.(type) {
 	case *schemapb.Type_VerbRef:
 		return VerbRefFromProto(s.VerbRef)
-	case *schemapb.Type_DataRef:
-		return DataRefFromProto(s.DataRef)
-	case *schemapb.Type_EnumRef:
-		return EnumRefFromProto(s.EnumRef)
+	case *schemapb.Type_Ref:
+		return RefFromProto(s.Ref)
 	case *schemapb.Type_Int:
 		return &Int{Pos: posFromProto(s.Int.Pos)}
 	case *schemapb.Type_Float:

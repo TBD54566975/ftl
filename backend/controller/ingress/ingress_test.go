@@ -120,7 +120,7 @@ func TestValidation(t *testing.T) {
 			sch, err := schema.ParseString("", test.schema)
 			assert.NoError(t, err)
 
-			err = validateRequestMap(&schema.DataRef{Module: "test", Name: "Test"}, nil, test.request, sch)
+			err = validateRequestMap(&schema.Ref{Module: "test", Name: "Test"}, nil, test.request, sch)
 			if test.err != "" {
 				assert.EqualError(t, err, test.err)
 			} else {
@@ -198,8 +198,8 @@ func TestParseQueryJson(t *testing.T) {
 func TestResponseBodyForVerb(t *testing.T) {
 	jsonVerb := &schema.Verb{
 		Name: "Json",
-		Response: &schema.DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
-			&schema.DataRef{
+		Response: &schema.Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
+			&schema.Ref{
 				Module: "test",
 				Name:   "Test",
 			},
@@ -208,7 +208,7 @@ func TestResponseBodyForVerb(t *testing.T) {
 	}
 	stringVerb := &schema.Verb{
 		Name: "String",
-		Response: &schema.DataRef{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
+		Response: &schema.Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{
 			&schema.String{},
 			&schema.String{},
 		}},
@@ -287,7 +287,7 @@ func TestValueForData(t *testing.T) {
 		{&schema.Bool{}, []byte("true"), true},
 		{&schema.Array{Element: &schema.String{}}, []byte(`["test1", "test2"]`), []any{"test1", "test2"}},
 		{&schema.Map{Key: &schema.String{}, Value: &schema.String{}}, []byte(`{"key1": "value1", "key2": "value2"}`), obj{"key1": "value1", "key2": "value2"}},
-		{&schema.DataRef{Module: "test", Name: "Test"}, []byte(`{"intValue": 10.0}`), obj{"intValue": 10.0}},
+		{&schema.Ref{Module: "test", Name: "Test"}, []byte(`{"intValue": 10.0}`), obj{"intValue": 10.0}},
 	}
 
 	for _, test := range tests {
@@ -322,20 +322,20 @@ func TestEnumValidation(t *testing.T) {
 				&schema.Data{
 					Name: "StringEnumRequest",
 					Fields: []*schema.Field{
-						{Name: "message", Type: &schema.EnumRef{Name: "Color", Module: "test"}},
+						{Name: "message", Type: &schema.Ref{Name: "Color", Module: "test"}},
 					},
 				},
 				&schema.Data{
 					Name: "IntEnumRequest",
 					Fields: []*schema.Field{
-						{Name: "message", Type: &schema.EnumRef{Name: "ColorInt", Module: "test"}},
+						{Name: "message", Type: &schema.Ref{Name: "ColorInt", Module: "test"}},
 					},
 				},
 				&schema.Data{
 					Name: "OptionalEnumRequest",
 					Fields: []*schema.Field{
 						{Name: "message", Type: &schema.Optional{
-							Type: &schema.EnumRef{Name: "Color", Module: "test"},
+							Type: &schema.Ref{Name: "Color", Module: "test"},
 						}},
 					},
 				},
@@ -344,15 +344,15 @@ func TestEnumValidation(t *testing.T) {
 	}
 
 	tests := []struct {
-		validateRoot *schema.DataRef
+		validateRoot *schema.Ref
 		req          obj
 		err          string
 	}{
-		{&schema.DataRef{Name: "StringEnumRequest", Module: "test"}, obj{"message": "Red"}, ""},
-		{&schema.DataRef{Name: "IntEnumRequest", Module: "test"}, obj{"message": 0}, ""},
-		{&schema.DataRef{Name: "OptionalEnumRequest", Module: "test"}, obj{}, ""},
-		{&schema.DataRef{Name: "OptionalEnumRequest", Module: "test"}, obj{"message": "Red"}, ""},
-		{&schema.DataRef{Name: "StringEnumRequest", Module: "test"}, obj{"message": "akxznc"},
+		{&schema.Ref{Name: "StringEnumRequest", Module: "test"}, obj{"message": "Red"}, ""},
+		{&schema.Ref{Name: "IntEnumRequest", Module: "test"}, obj{"message": 0}, ""},
+		{&schema.Ref{Name: "OptionalEnumRequest", Module: "test"}, obj{}, ""},
+		{&schema.Ref{Name: "OptionalEnumRequest", Module: "test"}, obj{"message": "Red"}, ""},
+		{&schema.Ref{Name: "StringEnumRequest", Module: "test"}, obj{"message": "akxznc"},
 			"akxznc is not a valid variant of enum test.Color"},
 	}
 

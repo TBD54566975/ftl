@@ -73,7 +73,7 @@ func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) 
 	return validateValue(verb.Request, []string{verb.Request.String()}, requestMap, sch)
 }
 
-func getBodyField(dataRef *schema.DataRef, sch *schema.Schema) (*schema.Field, error) {
+func getBodyField(dataRef *schema.Ref, sch *schema.Schema) (*schema.Field, error) {
 	data, err := sch.ResolveDataRefMonomorphised(dataRef)
 	if err != nil {
 		return nil, err
@@ -185,40 +185,43 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		}
 		typeMatches = true
 
-	case *schema.DataRef:
-		if valueMap, ok := value.(map[string]any); ok {
-			if err := validateRequestMap(fieldType, path, valueMap, sch); err != nil {
-				return err
-			}
-			typeMatches = true
+	case *schema.Ref:
+		decl := sch.ResolveRef(fieldType)
+		if decl == nil {
+			return fmt.Errorf("unknown ref %v", fieldType)
 		}
 
-	case *schema.EnumRef:
-		enum := sch.ResolveEnumRef(fieldType)
-		if enum == nil {
-			return fmt.Errorf("unknown enum %v", fieldType)
-		}
-
-		for _, v := range enum.Variants {
-			switch t := v.Value.(type) {
-			case *schema.StringValue:
-				if valueStr, ok := value.(string); ok {
-					if t.Value == valueStr {
-						typeMatches = true
-						break
-					}
+		switch d := decl.(type) {
+		case *schema.Verb:
+		case *schema.Data:
+			if valueMap, ok := value.(map[string]any); ok {
+				if err := validateRequestMap(fieldType, path, valueMap, sch); err != nil {
+					return err
 				}
-			case *schema.IntValue:
-				if valueInt, ok := value.(int); ok {
-					if t.Value == valueInt {
-						typeMatches = true
-						break
+				typeMatches = true
+			}
+		case *schema.Enum:
+			for _, v := range d.Variants {
+				switch t := v.Value.(type) {
+				case *schema.StringValue:
+					if valueStr, ok := value.(string); ok {
+						if t.Value == valueStr {
+							typeMatches = true
+							break
+						}
+					}
+				case *schema.IntValue:
+					if valueInt, ok := value.(int); ok {
+						if t.Value == valueInt {
+							typeMatches = true
+							break
+						}
 					}
 				}
 			}
-		}
-		if !typeMatches {
-			return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
+			if !typeMatches {
+				return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
+			}
 		}
 
 	case *schema.Bytes:

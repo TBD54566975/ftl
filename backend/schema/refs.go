@@ -2,8 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"strings"
-
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -21,20 +19,61 @@ type Ref struct {
 
 	Module string `parser:"(@Ident '.')?" protobuf:"3"`
 	Name   string `parser:"@Ident" protobuf:"2"`
+	// Only used for data references.
+	TypeParameters []Type `parser:"[ '<' @@ (',' @@)* '>' ]" protobuf:"4"`
 }
 
-func (b *Ref) Position() Position { return b.Pos }
-func (b *Ref) String() string     { return makeRef(b.Module, b.Name) }
+// RefKey is a map key for a reference.
+type RefKey struct {
+	Module string
+	Name   string
+}
 
-// AbstractRef is an abstract reference to a function or data type.
-type AbstractRef[Proto RefProto] Ref
+func (r Ref) ToRefKey() RefKey {
+	return RefKey{Module: r.Module, Name: r.Name}
+}
+func (r *Ref) ToProto() proto.Message {
+	panic("abstract ref must be translated to typed ref before proto conversion")
+}
 
-func ParseRef[Proto RefProto](ref string) (*AbstractRef[Proto], error) {
-	parts := strings.Split(ref, ".")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid reference %q", ref)
+func (r *Ref) schemaChildren() []Node {
+	out := make([]Node, 0, len(r.TypeParameters))
+	for _, t := range r.TypeParameters {
+		out = append(out, t)
 	}
-	return &AbstractRef[Proto]{Module: parts[0], Name: parts[1]}, nil
+	return out
+}
+
+func (r *Ref) schemaType() {}
+
+var _ Type = (*Ref)(nil)
+
+func (r *Ref) Position() Position { return r.Pos }
+func (r *Ref) String() string {
+	out := makeRef(r.Module, r.Name)
+	if len(r.TypeParameters) > 0 {
+		out += "<"
+		for i, t := range r.TypeParameters {
+			if i != 0 {
+				out += ", "
+			}
+			out += t.String()
+		}
+		out += ">"
+	}
+	return out
+}
+
+func RefFromProto(s *schemapb.Ref) *Ref {
+	return &Ref{
+		Pos:    posFromProto(s.Pos),
+		Name:   s.Name,
+		Module: s.Module,
+	}
+}
+
+func ParseRef(ref string) (*Ref, error) {
+	return refParser.ParseString("", ref)
 }
 
 // Untyped converts a typed reference to an untyped reference.

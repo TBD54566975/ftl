@@ -44,29 +44,23 @@ func (s *Schema) Hash() [sha256.Size]byte {
 	return sha256.Sum256([]byte(s.String()))
 }
 
-func (s *Schema) ResolveDataRef(ref *DataRef) *Data {
-	for _, module := range s.Modules {
-		if module.Name == ref.Module {
-			for _, decl := range module.Decls {
-				if data, ok := decl.(*Data); ok && data.Name == ref.Name {
-					return data
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (s *Schema) ResolveDataRefMonomorphised(ref *DataRef) (*Data, error) {
-	data := s.ResolveDataRef(ref)
-	if data == nil {
+func (s *Schema) ResolveDataRefMonomorphised(ref *Ref) (*Data, error) {
+	decl := s.ResolveRef(ref)
+	if decl == nil {
 		return nil, fmt.Errorf("unknown data %v", ref)
+	}
+
+	var data *Data
+	if d, ok := decl.(*Data); ok {
+		data = d
+	} else {
+		return nil, fmt.Errorf("invalid data reference %v", ref)
 	}
 
 	return data.Monomorphise(ref)
 }
 
-func (s *Schema) ResolveVerbRef(ref *VerbRef) *Verb {
+func (s *Schema) ResolveVerbRef(ref *Ref) *Verb {
 	for _, module := range s.Modules {
 		if module.Name == ref.Module {
 			for _, decl := range module.Decls {
@@ -79,12 +73,12 @@ func (s *Schema) ResolveVerbRef(ref *VerbRef) *Verb {
 	return nil
 }
 
-func (s *Schema) ResolveEnumRef(ref *EnumRef) *Enum {
+func (s *Schema) ResolveRef(ref *Ref) Decl {
 	for _, module := range s.Modules {
 		if module.Name == ref.Module {
 			for _, decl := range module.Decls {
-				if enum, ok := decl.(*Enum); ok && enum.Name == ref.Name {
-					return enum
+				if decl.GetName() == ref.Name {
+					return decl
 				}
 			}
 		}
@@ -102,12 +96,12 @@ func (s *Schema) Module(name string) optional.Option[*Module] {
 	return optional.None[*Module]()
 }
 
-func (s *Schema) DataMap() map[Ref]*Data {
-	dataTypes := map[Ref]*Data{}
+func (s *Schema) DataMap() map[RefKey]*Data {
+	dataTypes := map[RefKey]*Data{}
 	for _, module := range s.Modules {
 		for _, decl := range module.Decls {
 			if data, ok := decl.(*Data); ok {
-				dataTypes[Ref{Module: module.Name, Name: data.Name}] = data
+				dataTypes[RefKey{Module: module.Name, Name: data.Name}] = data
 			}
 		}
 	}

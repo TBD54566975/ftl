@@ -333,6 +333,72 @@ func TestParsing(t *testing.T) {
 				}},
 			},
 		},
+		{name: "Enums",
+			input: `
+				module foo {
+					data FooRequest {
+					}
+
+					data FooResponse {
+					}
+
+                    enum Color(String) {
+                      Red("Red")
+                      Blue("Blue")
+                      Green("Green")
+                    }
+
+					verb foo(foo.FooRequest) foo.FooResponse
+				}
+
+				module bar {
+					data BarRequest {
+                       color foo.Color
+					}
+
+					data BarResponse {
+					}
+
+					verb bar(bar.BarRequest) bar.BarResponse
+				}
+				`,
+			expected: &Schema{
+				Modules: []*Module{{
+					Name: "foo",
+					Decls: []Decl{
+						&Data{Name: "FooRequest"},
+						&Data{Name: "FooResponse"},
+						&Enum{
+							Name: "Color",
+							Type: &String{},
+							Variants: []*EnumVariant{
+								{Name: "Red", Value: &StringValue{Value: "Red"}},
+								{Name: "Blue", Value: &StringValue{Value: "Blue"}},
+								{Name: "Green", Value: &StringValue{Value: "Green"}},
+							},
+						},
+						&Verb{
+							Name:     "foo",
+							Request:  &DataRef{Module: "foo", Name: "FooRequest"},
+							Response: &DataRef{Module: "foo", Name: "FooResponse"},
+						},
+					},
+				}, {
+					Name: "bar",
+					Decls: []Decl{
+						&Data{Name: "BarRequest"},
+						&Data{Name: "BarResponse", Fields: []*Field{
+							{Name: "color", Type: &EnumRef{Module: "foo", Name: "Color"}},
+						}},
+						&Verb{
+							Name:     "bar",
+							Request:  &DataRef{Module: "bar", Name: "BarRequest"},
+							Response: &DataRef{Module: "bar", Name: "BarResponse"},
+						},
+					},
+				}},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

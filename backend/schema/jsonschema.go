@@ -23,7 +23,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	dataTypes := schema.DataMap()
 
 	// Encode root, and collect all data types reachable from the root.
-	refs := map[Ref]*DataRef{}
+	refs := map[RefKey]*DataRef{}
 	root := nodeToJSSchema(data, refs)
 	if len(refs) == 0 {
 		return root, nil
@@ -32,7 +32,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	// Resolve and encode all data types reachable from the root.
 	root.Definitions = map[string]jsonschema.SchemaOrBool{}
 	for key, dataRef := range refs {
-		data, ok := dataTypes[Ref{Module: key.Module, Name: key.Name}]
+		data, ok := dataTypes[RefKey{Module: key.Module, Name: key.Name}]
 		if !ok {
 			return nil, fmt.Errorf("unknown data type %s", key)
 		}
@@ -54,7 +54,7 @@ func DataToJSONSchema(schema *Schema, dataRef DataRef) (*jsonschema.Schema, erro
 	return root, nil
 }
 
-func nodeToJSSchema(node Node, dataRefs map[Ref]*DataRef) *jsonschema.Schema {
+func nodeToJSSchema(node Node, dataRefs map[RefKey]*DataRef) *jsonschema.Schema {
 	switch node := node.(type) {
 	case *Any:
 		return &jsonschema.Schema{}
@@ -141,7 +141,7 @@ func nodeToJSSchema(node Node, dataRefs map[Ref]*DataRef) *jsonschema.Schema {
 			ref = fmt.Sprintf("#/definitions/%s", node.String())
 		}
 
-		dataRefs[node.Untyped()] = node
+		dataRefs[node.Untyped().ToRefKey()] = node
 		schema := &jsonschema.Schema{Ref: &ref}
 
 		return schema

@@ -164,7 +164,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		imports := map[string]string{}
 		_ = schema.Visit(m, func(n schema.Node, next func() error) error {
 			switch n := n.(type) {
-			case *schema.DataRef:
+			case *schema.Ref:
 				if n.Module == "" || n.Module == m.Name {
 					break
 				}
