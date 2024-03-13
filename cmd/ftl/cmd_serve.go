@@ -102,7 +102,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		i := i
 		config := controller.Config{
 			Bind:         controllerAddresses[i],
-			Key:          model.NewLocalControllerKey(i + 1),
+			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
 			AllowOrigins: s.AllowOrigins,
 			NoConsole:    s.NoConsole,
@@ -112,7 +112,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 			return err
 		}
 
-		scope := fmt.Sprintf("controller%d", config.Key.Suffix)
+		scope := fmt.Sprintf("controller%d", i)
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		wg.Go(func() error {

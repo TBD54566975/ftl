@@ -6,26 +6,25 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"math/big"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
 func NewRunnerKey(hostname string, port string) RunnerKey {
-	suffix, err := rand.Int(rand.Reader, big.NewInt(10000))
+	hash := make([]byte, 4)
+	_, err := rand.Read(hash)
 	if err != nil {
 		panic(err)
 	}
 	return keyType[runnerKey]{
 		Hostname: hostname,
 		Port:     port,
-		Suffix:   int(suffix.Int64()),
+		Suffix:   fmt.Sprintf("%08x", hash),
 	}
 }
 func NewLocalRunnerKey(suffix int) RunnerKey {
 	return keyType[runnerKey]{
-		Suffix: suffix,
+		Suffix: fmt.Sprintf("%04d", suffix),
 	}
 }
 func ParseRunnerKey(key string) (RunnerKey, error) { return parseKey[RunnerKey](key, true) }
@@ -34,19 +33,21 @@ type runnerKey struct{}
 type RunnerKey = keyType[runnerKey]
 
 func NewControllerKey(hostname string, port string) ControllerKey {
-	suffix, err := rand.Int(rand.Reader, big.NewInt(10000))
+	hash := make([]byte, 4)
+	_, err := rand.Read(hash)
 	if err != nil {
 		panic(err)
 	}
 	return keyType[controllerKey]{
 		Hostname: hostname,
 		Port:     port,
-		Suffix:   int(suffix.Int64()),
+		Suffix:   fmt.Sprintf("%08x", hash),
 	}
 }
+
 func NewLocalControllerKey(suffix int) ControllerKey {
 	return keyType[controllerKey]{
-		Suffix: suffix,
+		Suffix: fmt.Sprintf("%04d", suffix),
 	}
 }
 func ParseControllerKey(key string) (ControllerKey, error) { return parseKey[ControllerKey](key, true) }
@@ -73,23 +74,12 @@ func parseKey[KT keyType[U], U any](key string, includesKind bool) (KT, error) {
 	switch {
 	case len(components) == 1:
 		//style: [<kind>-]<suffix>
-
-		suffix, err := strconv.Atoi(components[len(components)-1])
-		if err != nil {
-			return KT{}, fmt.Errorf("invalid suffix for key: %s", key)
-		}
-
 		return KT{
-			Suffix: suffix,
+			Suffix: components[0],
 		}, nil
 	case len(components) >= 3:
 		//style: [<kind>-]<host>-<port>-<suffix>
-
-		suffix, err := strconv.Atoi(components[len(components)-1])
-		if err != nil {
-			return KT{}, fmt.Errorf("invalid suffix for key: %s", key)
-		}
-
+		suffix := components[len(components)-1]
 		port := components[len(components)-2]
 		host := strings.Join(components[:len(components)-2], "-")
 
@@ -109,7 +99,7 @@ func parseKey[KT keyType[U], U any](key string, includesKind bool) (KT, error) {
 type keyType[T any] struct {
 	Hostname string
 	Port     string
-	Suffix   int
+	Suffix   string
 }
 
 func (d keyType[T]) Value() (driver.Value, error) {
@@ -145,9 +135,9 @@ func (d keyType[T]) string(includeKind bool) string {
 		prefix = fmt.Sprintf("%s-", d.Kind())
 	}
 	if d.Hostname == "" {
-		return fmt.Sprintf("%s%04d", prefix, d.Suffix)
+		return fmt.Sprintf("%s%s", prefix, d.Suffix)
 	}
-	return fmt.Sprintf("%s%s-%s-%04d", prefix, d.Hostname, d.Port, d.Suffix)
+	return fmt.Sprintf("%s%s-%s-%s", prefix, d.Hostname, d.Port, d.Suffix)
 }
 
 func (d keyType[T]) MarshalText() ([]byte, error) { return []byte(d.String()), nil }

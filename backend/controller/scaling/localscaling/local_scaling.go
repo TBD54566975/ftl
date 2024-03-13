@@ -42,7 +42,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		runners:             map[model.RunnerKey]context.CancelFunc{},
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
-		prevRunnerSuffix:    0, // first runner will have a key of r-0001
+		prevRunnerSuffix:    -1,
 	}, nil
 }
 
@@ -88,7 +88,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 			Key:                model.NewLocalRunnerKey(keySuffix),
 		}
 
-		simpleName := fmt.Sprintf("runner%d", config.Key.Suffix)
+		simpleName := fmt.Sprintf("runner%d", keySuffix)
 		if err := kong.ApplyDefaults(&config, kong.Vars{
 			"deploymentdir": filepath.Join(l.cacheDir, "ftl-runner", simpleName, "deployments"),
 			"language":      "go,kotlin",
