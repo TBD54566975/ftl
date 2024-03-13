@@ -11,7 +11,7 @@ import kotlin.test.assertContentEquals
 
 class RegistryTest {
   private val gson = makeGson()
-  private val verbRef = VerbRef(module = "test", name = "verb")
+  private val verbRef = Ref(module = "test", name = "verb")
 
   @Test
   fun moduleName() {
@@ -25,9 +25,9 @@ class RegistryTest {
     val registry = Registry("ftl.test")
     registry.registerAll()
     assertContentEquals(listOf(
-      VerbRef(module = "test", name = "echo"),
-      VerbRef(module = "test", name = "time"),
-      VerbRef(module = "test", name = "verb"),
+      Ref(module = "test", name = "echo"),
+      Ref(module = "test", name = "time"),
+      Ref(module = "test", name = "verb"),
     ), registry.refs.sortedBy { it.toString() })
   }
 

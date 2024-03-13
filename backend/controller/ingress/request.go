@@ -16,12 +16,13 @@ import (
 
 // BuildRequestBody extracts the HttpRequest body from an HTTP request.
 func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
-	verb := sch.ResolveVerbRef(&schema.VerbRef{Name: route.Verb, Module: route.Module})
-	if verb == nil {
-		return nil, fmt.Errorf("unknown verb %q", route.Verb)
+	verb := &schema.Verb{}
+	err := sch.ResolveRefToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
+	if err != nil {
+		return nil, err
 	}
 
-	request, ok := verb.Request.(*schema.DataRef)
+	request, ok := verb.Request.(*schema.Ref)
 	if !ok {
 		return nil, fmt.Errorf("verb %s input must be a data structure", verb.Name)
 	}
@@ -77,7 +78,7 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 		}
 	}
 
-	requestMap, err := transformFromAliasedFields(request, sch, requestMap)
+	requestMap, err = transformFromAliasedFields(request, sch, requestMap)
 	if err != nil {
 		return nil, err
 	}
@@ -95,14 +96,14 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 	return body, nil
 }
 
-func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (any, error) {
-	bodyField, err := getBodyField(dataRef, sch)
+func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, sch *schema.Schema) (any, error) {
+	bodyField, err := getBodyField(ref, sch)
 	if err != nil {
 		return nil, err
 	}
 
-	if dataRef, ok := bodyField.Type.(*schema.DataRef); ok {
-		return buildRequestMap(route, r, dataRef, sch)
+	if ref, ok := bodyField.Type.(*schema.Ref); ok {
+		return buildRequestMap(route, r, ref, sch)
 	}
 
 	bodyData, err := readRequestBody(r)
@@ -115,7 +116,7 @@ func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, dataRef *s
 
 func valueForData(typ schema.Type, data []byte) (any, error) {
 	switch typ.(type) {
-	case *schema.DataRef:
+	case *schema.Ref:
 		var bodyMap map[string]any
 		err := json.Unmarshal(data, &bodyMap)
 		if err != nil {
@@ -194,7 +195,7 @@ func readRequestBody(r *http.Request) ([]byte, error) {
 	return bodyData, nil
 }
 
-func buildRequestMap(route *dal.IngressRoute, r *http.Request, dataRef *schema.DataRef, sch *schema.Schema) (map[string]any, error) {
+func buildRequestMap(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, sch *schema.Schema) (map[string]any, error) {
 	requestMap := map[string]any{}
 	matchSegments(route.Path, r.URL.Path, func(segment, value string) {
 		requestMap[segment] = value
@@ -213,7 +214,7 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request, dataRef *schema.D
 			requestMap[k] = v
 		}
 	default:
-		data, err := sch.ResolveDataRefMonomorphised(dataRef)
+		data, err := sch.ResolveRefMonomorphised(ref)
 		if err != nil {
 			return nil, err
 		}
@@ -231,8 +232,8 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request, dataRef *schema.D
 	return requestMap, nil
 }
 
-func validateRequestMap(dataRef *schema.DataRef, path path, request map[string]any, sch *schema.Schema) error {
-	data, err := sch.ResolveDataRefMonomorphised(dataRef)
+func validateRequestMap(ref *schema.Ref, path path, request map[string]any, sch *schema.Schema) error {
+	data, err := sch.ResolveRefMonomorphised(ref)
 	if err != nil {
 		return err
 	}
@@ -265,7 +266,7 @@ func allowMissingField(field *schema.Field) bool {
 	case *schema.Optional, *schema.Any, *schema.Array, *schema.Map, *schema.Bytes, *schema.Unit:
 		return true
 
-	case *schema.Bool, *schema.DataRef, *schema.Float, *schema.Int, *schema.String, *schema.Time:
+	case *schema.Bool, *schema.Ref, *schema.Float, *schema.Int, *schema.String, *schema.Time:
 	}
 	return false
 }
@@ -298,7 +299,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 				if typeParam.Name == key {
 					field = &schema.Field{
 						Name: key,
-						Type: &schema.DataRef{Pos: typeParam.Pos, Name: typeParam.Name},
+						Type: &schema.Ref{Pos: typeParam.Pos, Name: typeParam.Name},
 					}
 				}
 			}
@@ -311,7 +312,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 
 		switch field.Type.(type) {
 		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time,
-			*schema.Unit, *schema.DataRef, *schema.Any:
+			*schema.Unit, *schema.Ref, *schema.Any:
 
 		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
 			if len(value) > 1 {

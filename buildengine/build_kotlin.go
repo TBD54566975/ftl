@@ -177,7 +177,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 
 func genType(module *schema.Module, t schema.Type) string {
 	switch t := t.(type) {
-	case *schema.DataRef:
+	case *schema.Ref:
 		decl := module.Resolve(schema.Ref{
 			Module: t.Module,
 			Name:   t.Name,

@@ -55,8 +55,8 @@ func TestDeploy(t *testing.T) {
 				&schema.Data{Name: "EchoResponse"},
 				&schema.Verb{
 					Name:     "echo",
-					Request:  &schema.DataRef{Name: "EchoRequest"},
-					Response: &schema.DataRef{Name: "EchoResponse"},
+					Request:  &schema.Ref{Name: "EchoRequest"},
+					Response: &schema.Ref{Name: "EchoResponse"},
 				},
 			}},
 		},

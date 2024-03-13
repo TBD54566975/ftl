@@ -224,7 +224,7 @@ func TestDAL(t *testing.T) {
 		RequestName:    optional.Some(requestName),
 		Request:        []byte("{}"),
 		Response:       []byte(`{"time": "now"}`),
-		DestVerb:       schema.VerbRef{Module: "time", Name: "time"},
+		DestVerb:       schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
 		err = dal.InsertCallEvent(ctx, callEvent)

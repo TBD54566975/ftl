@@ -58,14 +58,15 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 	return true
 }
 
-func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) error {
-	verb := sch.ResolveVerbRef(verbRef)
-	if verb == nil {
-		return fmt.Errorf("unknown verb %s", verbRef)
+func ValidateCallBody(body []byte, ref *schema.Ref, sch *schema.Schema) error {
+	verb := &schema.Verb{}
+	err := sch.ResolveRefToType(ref, verb)
+	if err != nil {
+		return err
 	}
 
 	var requestMap map[string]any
-	err := json.Unmarshal(body, &requestMap)
+	err = json.Unmarshal(body, &requestMap)
 	if err != nil {
 		return fmt.Errorf("HTTP request body is not valid JSON: %w", err)
 	}
@@ -73,8 +74,8 @@ func ValidateCallBody(body []byte, verbRef *schema.VerbRef, sch *schema.Schema) 
 	return validateValue(verb.Request, []string{verb.Request.String()}, requestMap, sch)
 }
 
-func getBodyField(dataRef *schema.DataRef, sch *schema.Schema) (*schema.Field, error) {
-	data, err := sch.ResolveDataRefMonomorphised(dataRef)
+func getBodyField(ref *schema.Ref, sch *schema.Schema) (*schema.Field, error) {
+	data, err := sch.ResolveRefMonomorphised(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func getBodyField(dataRef *schema.DataRef, sch *schema.Schema) (*schema.Field, e
 	}
 
 	if bodyField == nil {
-		return nil, fmt.Errorf("verb %s must have a 'body' field", dataRef.Name)
+		return nil, fmt.Errorf("verb %s must have a 'body' field", ref.Name)
 	}
 
 	return bodyField, nil
@@ -184,41 +185,43 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 			}
 		}
 		typeMatches = true
+	case *schema.Ref:
+		decl := sch.ResolveRef(fieldType)
+		if decl == nil {
+			return fmt.Errorf("unknown ref %v", fieldType)
+		}
 
-	case *schema.DataRef:
-		if valueMap, ok := value.(map[string]any); ok {
-			if err := validateRequestMap(fieldType, path, valueMap, sch); err != nil {
-				return err
+		switch d := decl.(type) {
+		case *schema.Verb:
+		case *schema.Data:
+			if valueMap, ok := value.(map[string]any); ok {
+				if err := validateRequestMap(fieldType, path, valueMap, sch); err != nil {
+					return err
+				}
+				typeMatches = true
 			}
-			typeMatches = true
-		}
-
-	case *schema.EnumRef:
-		enum := sch.ResolveEnumRef(fieldType)
-		if enum == nil {
-			return fmt.Errorf("unknown enum %v", fieldType)
-		}
-
-		for _, v := range enum.Variants {
-			switch t := v.Value.(type) {
-			case *schema.StringValue:
-				if valueStr, ok := value.(string); ok {
-					if t.Value == valueStr {
-						typeMatches = true
-						break
+		case *schema.Enum:
+			for _, v := range d.Variants {
+				switch t := v.Value.(type) {
+				case *schema.StringValue:
+					if valueStr, ok := value.(string); ok {
+						if t.Value == valueStr {
+							typeMatches = true
+							break
+						}
+					}
+				case *schema.IntValue:
+					if valueInt, ok := value.(int); ok {
+						if t.Value == valueInt {
+							typeMatches = true
+							break
+						}
 					}
 				}
-			case *schema.IntValue:
-				if valueInt, ok := value.(int); ok {
-					if t.Value == valueInt {
-						typeMatches = true
-						break
-					}
-				}
 			}
-		}
-		if !typeMatches {
-			return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
+			if !typeMatches {
+				return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
+			}
 		}
 
 	case *schema.Bytes:

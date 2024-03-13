@@ -5,7 +5,7 @@ import { ButtonSmall } from '../../components/ButtonSmall'
 import { Card } from '../../components/Card'
 import { Page } from '../../layout'
 import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { MetadataCalls, VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { modulesContext } from '../../providers/modules-provider'
 import { modulesFilter } from '../../services/console.service'
 import { Timeline } from '../timeline/Timeline'
@@ -22,7 +22,7 @@ export const DeploymentPage = () => {
   const notification = useContext(NotificationsContext)
   const navgation = useNavigate()
   const [module, setModule] = useState<Module | undefined>()
-  const [calls, setCalls] = useState<VerbRef[]>([])
+  const [calls, setCalls] = useState<Ref[]>([])
 
   const filters = useMemo(() => {
     if (!module?.deploymentName) return []
@@ -54,7 +54,7 @@ export const DeploymentPage = () => {
   useEffect(() => {
     if (!module) return
 
-    const verbCalls: VerbRef[] = []
+    const verbCalls: Ref[] = []
 
     const metadata = module.verbs
       .map((v) => v.verb)
@@ -69,14 +69,14 @@ export const DeploymentPage = () => {
 
     calls.forEach((call) => {
       if (!verbCalls.find((v) => v.name === call.name && v.module === call.module)) {
-        verbCalls.push({ name: call.name, module: call.module } as VerbRef)
+        verbCalls.push({ name: call.name, module: call.module } as Ref)
       }
     })
 
     setCalls(Array.from(verbCalls))
   }, [module])
 
-  const handleCallClick = (verb: VerbRef) => {
+  const handleCallClick = (verb: Ref) => {
     const module = modules?.modules.find((module) => module.name === verb.module)
     if (module) {
       navigate(`/deployments/${module.deploymentName}/verbs/${verb.name}`)

@@ -22,12 +22,12 @@ type HTTPResponse struct {
 
 // ResponseForVerb returns the HTTP response for a given verb.
 func ResponseForVerb(sch *schema.Schema, verb *schema.Verb, response HTTPResponse) ([]byte, http.Header, error) {
-	responseRef, ok := verb.Response.(*schema.DataRef)
+	responseRef, ok := verb.Response.(*schema.Ref)
 	if !ok {
 		return nil, nil, nil
 	}
 
-	bodyData, err := sch.ResolveDataRefMonomorphised(responseRef)
+	bodyData, err := sch.ResolveRefMonomorphised(responseRef)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to resolve response data type: %w", err)
 	}
@@ -72,7 +72,7 @@ func ResponseForVerb(sch *schema.Schema, verb *schema.Verb, response HTTPRespons
 
 func bodyForType(typ schema.Type, sch *schema.Schema, data []byte) ([]byte, error) {
 	switch t := typ.(type) {
-	case *schema.DataRef, *schema.Array, *schema.Map:
+	case *schema.Ref, *schema.Array, *schema.Map:
 		var response any
 		err := json.Unmarshal(data, &response)
 		if err != nil {
@@ -147,7 +147,7 @@ func getDefaultContentType(typ schema.Type) string {
 		return "application/octet-stream"
 	case *schema.String, *schema.Int, *schema.Float, *schema.Bool:
 		return "text/plain; charset=utf-8"
-	case *schema.DataRef, *schema.Map, *schema.Array:
+	case *schema.Ref, *schema.Map, *schema.Array:
 		return "application/json; charset=utf-8"
 	default:
 		return ""

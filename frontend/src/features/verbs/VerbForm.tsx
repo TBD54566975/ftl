@@ -8,7 +8,7 @@ import { CodeBlock } from '../../components/CodeBlock'
 import { useClient } from '../../hooks/use-client'
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
-import { VerbRef } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { useDarkMode } from '../../providers/dark-mode-provider'
 
 export type Schema = JSONSchema4 | JSONSchema6 | JSONSchema7
@@ -45,10 +45,10 @@ export const VerbForm = ({ module, verb }: { module?: Module; verb?: Verb }) => 
     setError(null)
 
     try {
-      const verbRef: VerbRef = {
+      const verbRef: Ref = {
         name: verb?.verb?.name,
         module: module?.name,
-      } as VerbRef
+      } as Ref
 
       const buffer = Buffer.from(editorText)
       const uint8Array = new Uint8Array(buffer)

@@ -313,7 +313,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
 			return &ftlv1.StatusResponse_IngressRoute{
 				DeploymentName: r.Deployment.String(),
-				Verb:           &schemapb.VerbRef{Module: r.Module, Name: r.Verb},
+				Verb:           &schemapb.Ref{Module: r.Module, Name: r.Verb},
 				Method:         r.Method,
 				Path:           r.Path,
 			}
@@ -571,7 +571,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	if req.Msg.Body == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
-	verbRef := schema.VerbRefFromProto(req.Msg.Verb)
+	verbRef := schema.RefFromProto(req.Msg.Verb)
 
 	sch, err := s.getActiveSchema(ctx)
 	if err != nil {
@@ -612,7 +612,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
-	headers.AddCaller(req.Header(), schema.VerbRefFromProto(req.Msg.Verb))
+	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 
 	resp, err := client.verb.Call(ctx, req)
 	var maybeResponse optional.Option[*ftlv1.CallResponse]

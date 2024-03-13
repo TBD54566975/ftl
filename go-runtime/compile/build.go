@@ -164,14 +164,14 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		imports := map[string]string{}
 		_ = schema.Visit(m, func(n schema.Node, next func() error) error {
 			switch n := n.(type) {
-			case *schema.DataRef:
+			case *schema.Ref:
 				if n.Module == "" || n.Module == m.Name {
 					break
 				}
 				imports[path.Join("ftl", n.Module)] = "ftl" + n.Module
 
 				for _, tp := range n.TypeParameters {
-					tpRef, err := schema.ParseDataRef(tp.String())
+					tpRef, err := schema.ParseRef(tp.String())
 					if err != nil {
 						return err
 					}
@@ -205,7 +205,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 
 func genType(module *schema.Module, t schema.Type) string {
 	switch t := t.(type) {
-	case *schema.DataRef:
+	case *schema.Ref:
 		desc := ""
 		if module != nil && t.Module == module.Name {
 			desc = t.Name
@@ -225,23 +225,6 @@ func genType(module *schema.Module, t schema.Type) string {
 			desc += "]"
 		}
 		return desc
-
-	case *schema.EnumRef:
-		desc := ""
-		if module != nil && t.Module == module.Name {
-			desc = t.Name
-		} else if t.Module == "" {
-			desc = t.Name
-		} else {
-			desc = "ftl" + t.Module + "." + t.Name
-		}
-		return desc
-
-	case *schema.VerbRef:
-		if module != nil && t.Module == module.Name {
-			return t.Name
-		}
-		return "ftl" + t.String()
 
 	case *schema.Float:
 		return "float64"

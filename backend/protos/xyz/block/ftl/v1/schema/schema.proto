@@ -8,42 +8,6 @@ import "xyz/block/ftl/v1/schema/runtime.proto";
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb";
 option java_multiple_files = true;
 
-message ConfigRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message EnumRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message SecretRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message SinkRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message SourceRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
-message VerbRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-}
-
 message Any {
   optional Position pos = 1;
 }
@@ -74,13 +38,6 @@ message Data {
   repeated Field fields = 4;
   repeated Metadata metadata = 5;
   repeated TypeParameter typeParameters = 6;
-}
-
-message DataRef {
-  optional Position pos = 1;
-  string name = 2;
-  string module = 3;
-  repeated Type typeParameters = 4;
 }
 
 message Database {
@@ -175,7 +132,7 @@ message MetadataAlias {
 
 message MetadataCalls {
   optional Position pos = 1;
-  repeated VerbRef calls = 2;
+  repeated Ref calls = 2;
 }
 
 message MetadataDatabases {
@@ -209,6 +166,13 @@ message Position {
   string filename = 1;
   int64 line = 2;
   int64 column = 3;
+}
+
+message Ref {
+  optional Position pos = 1;
+  string name = 2;
+  string module = 3;
+  repeated Type typeParameters = 4;
 }
 
 message Schema {
@@ -247,14 +211,8 @@ message Type {
     Map map = 8;
     Any any = 9;
     Unit unit = 10;
-    DataRef dataRef = 11;
-    EnumRef enumRef = 12;
-    VerbRef verbRef = 13;
-    SinkRef sinkRef = 14;
-    SourceRef sourceRef = 15;
-    ConfigRef configRef = 16;
-    SecretRef secretRef = 17;
-    Optional optional = 18;
+    Ref ref = 11;
+    Optional optional = 12;
   }
 }
 

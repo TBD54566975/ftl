@@ -44,12 +44,21 @@ func (s *Schema) Hash() [sha256.Size]byte {
 	return sha256.Sum256([]byte(s.String()))
 }
 
-func (s *Schema) ResolveDataRef(ref *DataRef) *Data {
+func (s *Schema) ResolveRefMonomorphised(ref *Ref) (*Data, error) {
+	out := &Data{}
+	err := s.ResolveRefToType(ref, out)
+	if err != nil {
+		return nil, err
+	}
+	return out.Monomorphise(ref)
+}
+
+func (s *Schema) ResolveRef(ref *Ref) Decl {
 	for _, module := range s.Modules {
 		if module.Name == ref.Module {
 			for _, decl := range module.Decls {
-				if data, ok := decl.(*Data); ok && data.Name == ref.Name {
-					return data
+				if decl.GetName() == ref.Name {
+					return decl
 				}
 			}
 		}
@@ -57,39 +66,31 @@ func (s *Schema) ResolveDataRef(ref *DataRef) *Data {
 	return nil
 }
 
-func (s *Schema) ResolveDataRefMonomorphised(ref *DataRef) (*Data, error) {
-	data := s.ResolveDataRef(ref)
-	if data == nil {
-		return nil, fmt.Errorf("unknown data %v", ref)
+func (s *Schema) ResolveRefToType(ref *Ref, out Decl) error {
+	if reflect.ValueOf(out).Kind() != reflect.Ptr {
+		return fmt.Errorf("out parameter is not a pointer")
+	}
+	if reflect.ValueOf(out).Elem().Kind() == reflect.Invalid {
+		return fmt.Errorf("out parameter is a nil pointer")
 	}
 
-	return data.Monomorphise(ref)
-}
-
-func (s *Schema) ResolveVerbRef(ref *VerbRef) *Verb {
 	for _, module := range s.Modules {
 		if module.Name == ref.Module {
 			for _, decl := range module.Decls {
-				if verb, ok := decl.(*Verb); ok && verb.Name == ref.Name {
-					return verb
+				if decl.GetName() == ref.Name {
+					declType := reflect.TypeOf(decl)
+					outType := reflect.TypeOf(out)
+					if declType.Elem().AssignableTo(outType.Elem()) {
+						reflect.ValueOf(out).Elem().Set(reflect.ValueOf(decl).Elem())
+						return nil
+					}
+					return fmt.Errorf("resolved declaration is not of the expected type: want %s, got %s",
+						outType, declType)
 				}
 			}
 		}
 	}
-	return nil
-}
-
-func (s *Schema) ResolveEnumRef(ref *EnumRef) *Enum {
-	for _, module := range s.Modules {
-		if module.Name == ref.Module {
-			for _, decl := range module.Decls {
-				if enum, ok := decl.(*Enum); ok && enum.Name == ref.Name {
-					return enum
-				}
-			}
-		}
-	}
-	return nil
+	return fmt.Errorf("could not resolve reference %v", ref)
 }
 
 // Module returns the named module if it exists.
@@ -102,12 +103,12 @@ func (s *Schema) Module(name string) optional.Option[*Module] {
 	return optional.None[*Module]()
 }
 
-func (s *Schema) DataMap() map[Ref]*Data {
-	dataTypes := map[Ref]*Data{}
+func (s *Schema) DataMap() map[RefKey]*Data {
+	dataTypes := map[RefKey]*Data{}
 	for _, module := range s.Modules {
 		for _, decl := range module.Decls {
 			if data, ok := decl.(*Data); ok {
-				dataTypes[Ref{Module: module.Name, Name: data.Name}] = data
+				dataTypes[RefKey{Module: module.Name, Name: data.Name}] = data
 			}
 		}
 	}

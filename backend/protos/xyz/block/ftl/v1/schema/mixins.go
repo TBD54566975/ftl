@@ -7,6 +7,6 @@ type IsDeclValue = isDecl_Value
 type IsTypeValue = isType_Value
 type IsMetadataValue = isMetadata_Value
 
-func (v *VerbRef) ToFTL() string {
+func (v *Ref) ToFTL() string {
 	return v.Module + "." + v.Name
 }

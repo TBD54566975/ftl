@@ -18,7 +18,7 @@ import (
 var (
 	// Primitive types can't be used as identifiers.
 	//
-	// We don't need Array/Map/VerbRef/DataRef here because there are no
+	// We don't need Array/Map/Ref here because there are no
 	// keywords associated with these types.
 	primitivesScope = Scope{
 		"Int":    ModuleDecl{Decl: &Int{}},
@@ -98,20 +98,17 @@ func Validate(schema *Schema) (*Schema, error) {
 			indent++
 			defer func() { indent-- }()
 			switch n := n.(type) {
-			case *VerbRef:
-				if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
-					if _, ok := mdecl.Decl.(*Verb); !ok {
-						merr = append(merr, fmt.Errorf("%s: reference to invalid verb %q at %q", n.Pos, n, mdecl.Decl.Position()))
-					} else if mdecl.Module != nil {
-						n.Module = mdecl.Module.Name
-					}
-				} else {
-					merr = append(merr, fmt.Errorf("%s: reference to unknown verb %q", n.Pos, n))
-				}
-
-			case *DataRef:
-				if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
+			case *Ref:
+				if mdecl := scopes.Resolve(*n); mdecl != nil {
 					switch decl := mdecl.Decl.(type) {
+					case *Verb, *Enum:
+						if mdecl.Module != nil {
+							n.Module = mdecl.Module.Name
+						}
+						if len(n.TypeParameters) != 0 {
+							merr = append(merr, fmt.Errorf("%s: reference to %s %q cannot have type parameters",
+								n.Pos, reflect.TypeOf(decl).Elem().Name(), n.Name))
+						}
 					case *Data:
 						if mdecl.Module != nil {
 							n.Module = mdecl.Module.Name
@@ -122,12 +119,12 @@ func Validate(schema *Schema) (*Schema, error) {
 						}
 
 					case *TypeParameter:
-
 					default:
-						merr = append(merr, fmt.Errorf("%s: reference to invalid data structure %q at %s", n.Pos, n, mdecl.Decl.Position()))
+						merr = append(merr, fmt.Errorf("%s: invalid reference %q at %q", n.Pos, n, mdecl.Decl.Position()))
+
 					}
 				} else {
-					merr = append(merr, fmt.Errorf("%s: reference to unknown data structure %q", n.Pos, n))
+					merr = append(merr, fmt.Errorf("%s: unknown reference %q", n.Pos, n))
 				}
 
 			case *Verb:
@@ -209,31 +206,15 @@ func ValidateModule(module *Module) error {
 			defer func() { scopes = pop }()
 		}
 		switch n := n.(type) {
-		case *VerbRef:
-			if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
-				if _, ok := mdecl.Decl.(*Verb); !ok && n.Module == "" {
-					merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid verb %q", n.Pos, n))
-				} else {
-					n.Module = mdecl.Module.Name
-				}
-			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
-				merr = append(merr, fmt.Errorf("%s: reference to unknown verb %q", n.Pos, n))
-			}
-
-		case *EnumRef:
-			if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
-				if _, ok := mdecl.Decl.(*Enum); !ok && n.Module == "" {
-					merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid enum %q", n.Pos, n))
-				} else {
-					n.Module = mdecl.Module.Name
-				}
-			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
-				merr = append(merr, fmt.Errorf("%s: reference to unknown enum %q", n.Pos, n))
-			}
-
-		case *DataRef:
-			if mdecl := scopes.Resolve(n.Untyped()); mdecl != nil {
+		case *Ref:
+			if mdecl := scopes.Resolve(*n); mdecl != nil {
 				switch decl := mdecl.Decl.(type) {
+				case *Verb, *Enum:
+					n.Module = mdecl.Module.Name
+					if len(n.TypeParameters) != 0 {
+						merr = append(merr, fmt.Errorf("%s: reference to %s %q cannot have type parameters",
+							n.Pos, reflect.TypeOf(decl).Elem().Name(), n.Name))
+					}
 				case *Data:
 					if n.Module == "" {
 						n.Module = mdecl.Module.Name
@@ -242,17 +223,16 @@ func ValidateModule(module *Module) error {
 						merr = append(merr, fmt.Errorf("%s: reference to data structure %s has %d type parameters, but %d were expected",
 							n.Pos, n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
 					}
-
 				case *TypeParameter:
 
 				default:
 					if n.Module == "" {
-						merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid data structure %q", n.Pos, n))
+						merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid %s %q", n.Pos, reflect.TypeOf(decl).Elem().Name(), n))
 					}
 					n.Module = mdecl.Module.Name
 				}
 			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
-				merr = append(merr, fmt.Errorf("%s: reference to unknown data structure %q", n.Pos, n))
+				merr = append(merr, fmt.Errorf("%s: unknown reference %q", n.Pos, n))
 			}
 
 		case *Verb:
@@ -303,7 +283,7 @@ func ValidateModule(module *Module) error {
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
-			*SourceRef, *SinkRef, *Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
+			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
 
 		case Type, Metadata, Decl, Value: // Union types.
 		}

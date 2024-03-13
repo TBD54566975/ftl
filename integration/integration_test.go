@@ -392,7 +392,7 @@ func call[Resp any](module, verb string, req obj, onResponse func(t testing.TB, 
 		assert.NoError(t, err)
 
 		cresp, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
-			Verb: &schemapb.VerbRef{Module: module, Name: verb},
+			Verb: &schemapb.Ref{Module: module, Name: verb},
 			Body: jreq,
 		}))
 		if err != nil {

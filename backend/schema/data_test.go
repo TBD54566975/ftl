@@ -11,7 +11,7 @@ func TestMonomorphisation(t *testing.T) {
 		Name:           "Data",
 		TypeParameters: []*TypeParameter{{Name: "T"}},
 		Fields: []*Field{
-			{Name: "a", Type: &DataRef{Name: "T"}},
+			{Name: "a", Type: &Ref{Name: "T"}},
 		},
 	}
 
@@ -23,18 +23,18 @@ func TestMonomorphisation(t *testing.T) {
 		{typ: &Float{}},
 		{typ: &Bool{}},
 		{typ: &Array{Element: &String{}}},
-		{typ: &Array{Element: &DataRef{Module: "builtin", Name: "Test"}}},
-		{typ: &DataRef{Module: "builtin", Name: "Test"}},
-		{typ: &DataRef{Module: "builtin", Name: "Test", TypeParameters: []Type{&String{}}}},
+		{typ: &Array{Element: &Ref{Module: "builtin", Name: "Test"}}},
+		{typ: &Ref{Module: "builtin", Name: "Test"}},
+		{typ: &Ref{Module: "builtin", Name: "Test", TypeParameters: []Type{&String{}}}},
 		{typ: &Map{Key: &String{}, Value: &Int{}}},
-		{typ: &Map{Key: &DataRef{Module: "builtin", Name: "Test"}, Value: &DataRef{Module: "builtin", Name: "Test"}}},
+		{typ: &Map{Key: &Ref{Module: "builtin", Name: "Test"}, Value: &Ref{Module: "builtin", Name: "Test"}}},
 		{typ: &Optional{Type: &String{}}},
-		{typ: &Optional{Type: &DataRef{Module: "builtin", Name: "Test"}}},
+		{typ: &Optional{Type: &Ref{Module: "builtin", Name: "Test"}}},
 		{typ: &Any{}},
 	}
 
 	for _, test := range tests {
-		actual, err := data.Monomorphise(&DataRef{TypeParameters: []Type{test.typ}})
+		actual, err := data.Monomorphise(&Ref{TypeParameters: []Type{test.typ}})
 		assert.NoError(t, err)
 		expected := &Data{
 			Comments: []string{},

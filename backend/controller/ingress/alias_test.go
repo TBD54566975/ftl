@@ -26,7 +26,7 @@ func TestTransformFromAliasedFields(t *testing.T) {
 		`
 	sch, err := schema.ParseString("test", schemaText)
 	assert.NoError(t, err)
-	actual, err := transformFromAliasedFields(&schema.DataRef{Module: "test", Name: "Test"}, sch, map[string]any{
+	actual, err := transformFromAliasedFields(&schema.Ref{Module: "test", Name: "Test"}, sch, map[string]any{
 		"bar": "value",
 		"inner": map[string]any{
 			"foo": "value",
@@ -86,7 +86,7 @@ func TestTransformToAliasedFields(t *testing.T) {
 		`
 	sch, err := schema.ParseString("test", schemaText)
 	assert.NoError(t, err)
-	actual, err := transformToAliasedFields(&schema.DataRef{Module: "test", Name: "Test"}, sch, map[string]any{
+	actual, err := transformToAliasedFields(&schema.Ref{Module: "test", Name: "Test"}, sch, map[string]any{
 		"scalar": "value",
 		"inner": map[string]any{
 			"waz": "value",

@@ -64,7 +64,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				v := decl.ToProto().(*schemapb.Verb)
 				verbSchema := schema.VerbFromProto(v) // TODO: include all of the types  that the verb references
 				var jsonRequestSchema string
-				if requestData, ok := verbSchema.Request.(*schema.DataRef); ok {
+				if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
 					jsonSchema, err := schema.DataToJSONSchema(sch, *requestData)
 					if err != nil {
 						return nil, err
@@ -291,9 +291,9 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 			rstr := r.String()
 			requestName = &rstr
 		}
-		var sourceVerbRef *schemapb.VerbRef
+		var sourceVerbRef *schemapb.Ref
 		if sourceVerb, ok := event.SourceVerb.Get(); ok {
-			sourceVerbRef = sourceVerb.ToProto().(*schemapb.VerbRef) //nolint:forcetypeassert
+			sourceVerbRef = sourceVerb.ToProto().(*schemapb.Ref) //nolint:forcetypeassert
 		}
 		return &pbconsole.Event{
 			TimeStamp: timestamppb.New(event.Time),
@@ -304,7 +304,7 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 					DeploymentName: event.DeploymentName.String(),
 					TimeStamp:      timestamppb.New(event.Time),
 					SourceVerbRef:  sourceVerbRef,
-					DestinationVerbRef: &schemapb.VerbRef{
+					DestinationVerbRef: &schemapb.Ref{
 						Module: event.DestVerb.Module,
 						Name:   event.DestVerb.Name,
 					},

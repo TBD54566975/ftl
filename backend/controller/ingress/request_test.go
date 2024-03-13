@@ -95,10 +95,10 @@ func TestBuildRequestBody(t *testing.T) {
 	}{
 		{name: "UnknownVerb",
 			verb: "unknown",
-			err:  `unknown verb "unknown"`},
+			err:  `could not resolve reference test.unknown`},
 		{name: "UnknownModule",
 			verb: "unknown",
-			err:  `unknown verb "unknown"`},
+			err:  `could not resolve reference test.unknown`},
 		{name: "QueryParameterDecoding",
 			verb:      "getAlias",
 			method:    "GET",

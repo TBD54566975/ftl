@@ -43,7 +43,7 @@ func Normalise[T Node](n T) T {
 	case *Database:
 		c.Pos = zero
 
-	case *DataRef:
+	case *Ref:
 		c.TypeParameters = normaliseSlice(c.TypeParameters)
 		c.Pos = zero
 
@@ -51,9 +51,6 @@ func Normalise[T Node](n T) T {
 		c.Pos = zero
 		c.Type = Normalise(c.Type)
 		c.Variants = normaliseSlice(c.Variants)
-
-	case *EnumRef:
-		c.Pos = zero
 
 	case *EnumVariant:
 		c.Pos = zero
@@ -101,9 +98,6 @@ func Normalise[T Node](n T) T {
 		c.Response = Normalise(c.Response)
 		c.Metadata = normaliseSlice(c.Metadata)
 
-	case *VerbRef:
-		c.Pos = zero
-
 	case *MetadataCalls:
 		c.Pos = zero
 		c.Calls = normaliseSlice(c.Calls)
@@ -128,12 +122,6 @@ func Normalise[T Node](n T) T {
 	case *IngressPathParameter:
 		c.Pos = zero
 
-	case *SourceRef:
-		c.Pos = zero
-
-	case *SinkRef:
-		c.Pos = zero
-
 	case *Config:
 		c.Pos = zero
 		c.Type = Normalise(c.Type)
@@ -141,12 +129,6 @@ func Normalise[T Node](n T) T {
 	case *Secret:
 		c.Pos = zero
 		c.Type = Normalise(c.Type)
-
-	case *SecretRef:
-		c.Pos = zero
-
-	case *ConfigRef:
-		c.Pos = zero
 
 	case Decl, Metadata, IngressPathComponent, Type, Value: // Can never occur in reality, but here to satisfy the sum-type check.
 		panic("??")

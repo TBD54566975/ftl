@@ -127,7 +127,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                       map = Map(
                         key = Type(string = xyz.block.ftl.v1.schema.String()),
                         value_ = Type(
-                          dataRef = DataRef(
+                          ref = Ref(
                             name = "MapValue",
                             module = "echo"
                           )
@@ -146,7 +146,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
             fields = listOf(
               Field(
                 name = "t",
-                type = Type(dataRef = DataRef(name = "T"))
+                type = Type(ref = Ref(name = "T"))
               ),
               Field(
                 name = "name",
@@ -175,7 +175,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 type = Type(
                   array = Array(
                     element = Type(
-                      dataRef = DataRef(
+                      ref = Ref(
                         name = "EchoMessage",
                         module = "echo"
                       )
@@ -193,11 +193,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               """Echoes the given message."""
             ),
             request = Type(
-              dataRef = DataRef(
+              ref = Ref(
                 name = "HttpRequest",
                 typeParameters = listOf(
                   Type(
-                    dataRef = DataRef(
+                    ref = Ref(
                       name = "EchoRequest",
                       typeParameters = listOf(
                         Type(string = xyz.block.ftl.v1.schema.String())
@@ -210,12 +210,12 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               )
             ),
             response = Type(
-              dataRef = DataRef(
+              ref = Ref(
                 name = "HttpResponse",
                 module = "builtin",
                 typeParameters = listOf(
                   Type(
-                    dataRef = DataRef(
+                    ref = Ref(
                       name = "EchoResponse",
                       module = "echo"
                     )
@@ -241,15 +241,15 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               Metadata(
                 calls = MetadataCalls(
                   calls = listOf(
-                    VerbRef(
+                    Ref(
                       name = "empty",
                       module = "echo"
                     ),
-                    VerbRef(
+                    Ref(
                       name = "other",
                       module = "time"
                     ),
-                    VerbRef(
+                    Ref(
                       name = "time",
                       module = "time"
                     )
@@ -263,13 +263,13 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
           verb = Verb(
             name = "empty",
             request = Type(
-              dataRef = DataRef(
+              ref = Ref(
                 name = "Empty",
                 module = "builtin"
               )
             ),
             response = Type(
-              dataRef = DataRef(
+              ref = Ref(
                 name = "Empty",
                 module = "builtin"
               )

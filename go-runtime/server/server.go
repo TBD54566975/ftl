@@ -54,14 +54,14 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		if err != nil {
 			return nil, nil, err
 		}
-		hmap := maps.FromSlice(handlers, func(h Handler) (ftl.VerbRef, Handler) { return h.ref, h })
+		hmap := maps.FromSlice(handlers, func(h Handler) (ftl.Ref, Handler) { return h.ref, h })
 		return ctx, &moduleServer{handlers: hmap}, nil
 	}
 }
 
 // Handler for a Verb.
 type Handler struct {
-	ref ftl.VerbRef
+	ref ftl.Ref
 	fn  func(ctx context.Context, req []byte) ([]byte, error)
 }
 
@@ -98,7 +98,7 @@ var _ ftlv1connect.VerbServiceHandler = (*moduleServer)(nil)
 
 // This is the server that is compiled into the same binary as user-defined Verbs.
 type moduleServer struct {
-	handlers map[ftl.VerbRef]Handler
+	handlers map[ftl.Ref]Handler
 }
 
 func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (response *connect.Response[ftlv1.CallResponse], err error) {
@@ -120,7 +120,7 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 			}}})
 		}
 	}()
-	handler, ok := m.handlers[ftl.VerbRefFromProto(req.Msg.Verb)]
+	handler, ok := m.handlers[ftl.RefFromProto(req.Msg.Verb)]
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %q not found", req.Msg.Verb))
 	}

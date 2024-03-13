@@ -171,17 +171,7 @@ func (m *Module) Imports() []string {
 	imports := map[string]bool{}
 	_ = Visit(m, func(n Node, next func() error) error {
 		switch n := n.(type) {
-		case *DataRef:
-			if n.Module != "" && n.Module != m.Name {
-				imports[n.Module] = true
-			}
-
-		case *VerbRef:
-			if n.Module != "" && n.Module != m.Name {
-				imports[n.Module] = true
-			}
-
-		case *EnumRef:
+		case *Ref:
 			if n.Module != "" && n.Module != m.Name {
 				imports[n.Module] = true
 			}

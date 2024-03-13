@@ -102,14 +102,8 @@ func typeToProto(t Type) *schemapb.Type {
 	case *Unit:
 		return &schemapb.Type{Value: &schemapb.Type_Unit{Unit: t.ToProto().(*schemapb.Unit)}}
 
-	case *VerbRef, *SourceRef, *SinkRef:
-		panic("unreachable")
-
-	case *EnumRef:
-		return &schemapb.Type{Value: &schemapb.Type_EnumRef{EnumRef: t.ToProto().(*schemapb.EnumRef)}}
-
-	case *DataRef:
-		return &schemapb.Type{Value: &schemapb.Type_DataRef{DataRef: t.ToProto().(*schemapb.DataRef)}}
+	case *Ref:
+		return &schemapb.Type{Value: &schemapb.Type_Ref{Ref: t.ToProto().(*schemapb.Ref)}}
 
 	case *Int:
 		return &schemapb.Type{Value: &schemapb.Type_Int{Int: t.ToProto().(*schemapb.Int)}}
