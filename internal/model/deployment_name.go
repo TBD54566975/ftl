@@ -8,8 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
-
-	"github.com/alecthomas/types/optional"
 )
 
 type DeploymentName struct {
@@ -17,7 +15,7 @@ type DeploymentName struct {
 	hash   string
 }
 
-type MaybeDeploymentName optional.Option[DeploymentName]
+// type MaybeDeploymentName optional.Option[DeploymentName]
 
 var _ interface {
 	sql.Scanner
@@ -68,10 +66,12 @@ func (d *DeploymentName) UnmarshalText(bytes []byte) error {
 }
 
 func (d *DeploymentName) MarshalText() ([]byte, error) {
+	fmt.Printf("deploymentName.mashalText(): %s\n", d.String())
 	return []byte(d.String()), nil
 }
 
 func (d *DeploymentName) Scan(value any) error {
+	fmt.Printf("deploymentName.Scan()")
 	if value == nil {
 		return nil
 	}
@@ -84,5 +84,9 @@ func (d *DeploymentName) Scan(value any) error {
 }
 
 func (d *DeploymentName) Value() (driver.Value, error) {
+	fmt.Printf("deploymentName.value(): %s\n", d.String())
 	return d.String(), nil
 }
+
+var _ sql.Scanner = (*DeploymentName)(nil)
+var _ driver.Valuer = (*DeploymentName)(nil)
