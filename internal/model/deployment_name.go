@@ -31,22 +31,35 @@ func NewDeploymentName(module string) DeploymentName {
 }
 
 func ParseDeploymentName(name string) (DeploymentName, error) {
-	var zero DeploymentName
+	if name == "" {
+		return DeploymentName{}, nil
+	}
+
 	parts := strings.Split(name, "-")
 	if len(parts) < 2 {
-		return zero, fmt.Errorf("invalid deployment name %s: does not follow <deployment>-<hash> pattern", name)
+		return DeploymentName{}, fmt.Errorf("invalid deployment name %q: does not follow <deployment>-<hash> pattern", name)
 	}
+
+	module := strings.Join(parts[0:len(parts)-1], "-")
+	if len(module) == 0 {
+		return DeploymentName{}, fmt.Errorf("invalid deployment name %q: module name should not be empty", name)
+	}
+
 	hash := parts[len(parts)-1]
 	if len(hash) != 10 {
-		return zero, fmt.Errorf("hash should be 5 bytes: invalid deployment name %q", name)
+		return DeploymentName{}, fmt.Errorf("invalid deployment name %q: hash should be 10 hex characters long", name)
 	}
+
 	return DeploymentName{
-		module: strings.Join(parts[0:len(parts)-1], "-"),
+		module: module,
 		hash:   parts[len(parts)-1],
 	}, nil
 }
 
 func (d *DeploymentName) String() string {
+	if d.module == "" {
+		return ""
+	}
 	return fmt.Sprintf("%s-%s", d.module, d.hash)
 }
 
