@@ -220,7 +220,7 @@ class SchemaExtractor(
       if (verb.valueParameters.size == 2) {
         val reqParam = verb.valueParameters.last()
         require(reqParam.typeReference?.resolveType()
-          ?.let { it.toClassDescriptor().isData || it.isEmptyBuiltin() || it.isUnit() }
+          ?.let { it.toClassDescriptor().isData || it.isEmptyBuiltin() }
           ?: false
         ) {
           "${verb.valueParameters.last().getLineAndColumn()} Second argument of ${verb.name} must be a data class or " +

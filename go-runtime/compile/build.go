@@ -211,9 +211,6 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		panic(fmt.Sprintf("unsupported value %T", v))
 	},
-	"isSink": func(v schema.Verb) string {
-		return "wes"
-	},
 }
 
 func genType(module *schema.Module, t schema.Type) string {
