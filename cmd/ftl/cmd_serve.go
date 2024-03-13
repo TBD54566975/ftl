@@ -25,6 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -101,6 +102,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		i := i
 		config := controller.Config{
 			Bind:         controllerAddresses[i],
+			Key:          model.NewLocalControllerKey(i + 1),
 			DSN:          dsn,
 			AllowOrigins: s.AllowOrigins,
 			NoConsole:    s.NoConsole,

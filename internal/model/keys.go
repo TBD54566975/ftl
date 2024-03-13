@@ -44,6 +44,11 @@ func NewControllerKey(hostname string, port string) ControllerKey {
 		Suffix:   int(suffix.Int64()),
 	}
 }
+func NewLocalControllerKey(suffix int) ControllerKey {
+	return keyType[controllerKey]{
+		Suffix: suffix,
+	}
+}
 func ParseControllerKey(key string) (ControllerKey, error) { return parseKey[ControllerKey](key, true) }
 
 type controllerKey struct{}
