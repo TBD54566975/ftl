@@ -440,7 +440,6 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	}
 
 	deploymentName := model.NewDeploymentName(moduleSchema.Name)
-	fmt.Printf("CreateDeployment: %v\n", deploymentName)
 
 	// Create the deployment
 	err = tx.CreateDeployment(ctx, moduleSchema.Name, schemaBytes, deploymentName)
