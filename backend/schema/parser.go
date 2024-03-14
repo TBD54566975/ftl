@@ -118,11 +118,23 @@ type Value interface {
 	schemaValueType() Type
 }
 
-// Decl represents a type declaration in the schema grammar.
+// Symbol represents a symbol in the schema grammar.
+//
+// A Symbol is a named type that can be referenced by other types. This includes
+// user defined data types such as data structures and enums, and builtin types.
+//
+//sumtype:decl
+type Symbol interface {
+	Node
+	GetName() string
+	schemaSymbol()
+}
+
+// Decl represents user-defined data types in the schema grammar.
 //
 //sumtype:decl
 type Decl interface {
-	Node
+	Symbol
 	GetName() string
 	schemaDecl()
 }

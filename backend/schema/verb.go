@@ -20,20 +20,12 @@ type Verb struct {
 	Metadata []Metadata `parser:"@@*" protobuf:"6"`
 }
 
-// verb mySink(Req) Unit
-// verb mySource(Unit) Req
-//
-// func MySource(context.Context) (Req, error) {}
-//
-// func Checkout(ctx context.Context, req CheckoutRequest) (CheckoutResponse, error) {
-//    addresses, err := ftl.Call(ctx, GetAddress, req.User)
-//    addresses, err := ftl.Call(ctx, GetAddress, GetAddressRequest{User: req.User})
-// 	  return CheckoutResponse{}, nil
-
 var _ Decl = (*Verb)(nil)
+var _ Symbol = (*Verb)(nil)
 
 func (v *Verb) Position() Position { return v.Pos }
 func (v *Verb) schemaDecl()        {}
+func (v *Verb) schemaSymbol()      {}
 func (v *Verb) schemaChildren() []Node {
 	children := make([]Node, 2+len(v.Metadata))
 	children[0] = v.Request

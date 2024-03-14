@@ -43,9 +43,6 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 
 		case *Secret:
 			v = &schemapb.Decl_Secret{Secret: n.ToProto().(*schemapb.Secret)}
-
-		case *Bool, *Bytes, *Float, *Int, *Module, *String, *Time, *Unit, *Any,
-			*TypeParameter:
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}

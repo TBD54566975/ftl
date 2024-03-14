@@ -22,12 +22,13 @@ type Data struct {
 }
 
 var _ Decl = (*Data)(nil)
+var _ Symbol = (*Data)(nil)
 var _ Scoped = (*Data)(nil)
 
 func (d *Data) Scope() Scope {
 	scope := Scope{}
 	for _, t := range d.TypeParameters {
-		scope[t.Name] = ModuleDecl{Decl: t}
+		scope[t.Name] = ModuleDecl{Symbol: t}
 	}
 	return scope
 }
@@ -120,7 +121,7 @@ func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
 			*MetadataAlias, *Module, *Schema, *String, *Time, Type, *TypeParameter,
 			*Unit, *Verb, *Enum, *EnumVariant,
-			Value, *IntValue, *StringValue:
+			Value, *IntValue, *StringValue, Symbol:
 		}
 		return next()
 	})
@@ -132,6 +133,7 @@ func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 
 func (d *Data) Position() Position { return d.Pos }
 func (*Data) schemaDecl()          {}
+func (*Data) schemaSymbol()        {}
 func (d *Data) schemaChildren() []Node {
 	children := make([]Node, 0, len(d.Fields)+len(d.Metadata))
 	for _, t := range d.TypeParameters {

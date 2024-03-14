@@ -13,11 +13,11 @@ type Unit struct {
 }
 
 var _ Type = (*Unit)(nil)
-var _ Decl = (*Unit)(nil)
+var _ Symbol = (*Unit)(nil)
 
 func (u *Unit) Position() Position                 { return u.Pos }
 func (u *Unit) schemaType()                        {}
-func (u *Unit) schemaDecl()                        {}
+func (u *Unit) schemaSymbol()                      {}
 func (u *Unit) String() string                     { return "Unit" }
 func (u *Unit) ToProto() protoreflect.ProtoMessage { return &schemapb.Unit{Pos: posToProto(u.Pos)} }
 func (u *Unit) schemaChildren() []Node             { return nil }

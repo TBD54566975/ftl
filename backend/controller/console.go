@@ -89,10 +89,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 					Schema: schema.DataFromProto(d).String(),
 				})
 
-			case *schema.Bool, *schema.Bytes, *schema.Database, *schema.Float,
-				*schema.Int, *schema.Module, *schema.String, *schema.Time,
-				*schema.Unit, *schema.Any, *schema.TypeParameter, *schema.Enum,
-				*schema.Config, *schema.Secret:
+			case *schema.Database, *schema.Enum, *schema.Config, *schema.Secret:
 			}
 		}
 

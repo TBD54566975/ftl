@@ -183,7 +183,7 @@ func genType(module *schema.Module, t schema.Type) string {
 			Name:   t.Name,
 		})
 		if decl != nil {
-			if data, ok := decl.Decl.(*schema.Data); ok {
+			if data, ok := decl.Symbol.(*schema.Data); ok {
 				if len(data.Fields) == 0 {
 					return "ftl.builtin.Empty"
 				}

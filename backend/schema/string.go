@@ -13,12 +13,12 @@ type String struct {
 }
 
 var _ Type = (*String)(nil)
-var _ Decl = (*String)(nil)
+var _ Symbol = (*String)(nil)
 
 func (s *String) Position() Position     { return s.Pos }
 func (*String) schemaChildren() []Node   { return nil }
 func (*String) schemaType()              {}
-func (*String) schemaDecl()              {}
+func (*String) schemaSymbol()            {}
 func (*String) String() string           { return "String" }
 func (s *String) ToProto() proto.Message { return &schemapb.String{Pos: posToProto(s.Pos)} }
 func (*String) GetName() string          { return "" }

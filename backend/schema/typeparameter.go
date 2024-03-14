@@ -12,7 +12,7 @@ type TypeParameter struct {
 	Name string `parser:"@Ident" protobuf:"2"`
 }
 
-var _ Decl = (*TypeParameter)(nil)
+var _ Symbol = (*TypeParameter)(nil)
 
 func (t *TypeParameter) Position() Position { return t.Pos }
 func (t *TypeParameter) String() string     { return t.Name }
@@ -20,7 +20,7 @@ func (t *TypeParameter) ToProto() protoreflect.ProtoMessage {
 	return &schemapb.TypeParameter{Pos: posToProto(t.Pos), Name: t.Name}
 }
 func (t *TypeParameter) schemaChildren() []Node { return nil }
-func (t *TypeParameter) schemaDecl()            {}
+func (t *TypeParameter) schemaSymbol()          {}
 func (t *TypeParameter) GetName() string        { return t.Name }
 
 func typeParametersToSchema(s []*schemapb.TypeParameter) []*TypeParameter {
