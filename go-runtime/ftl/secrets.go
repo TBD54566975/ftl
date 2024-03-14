@@ -22,6 +22,8 @@ type SecretValue[T SecretType] struct {
 	name   string
 }
 
+func (s SecretValue[T]) String() string { return fmt.Sprintf("secret \"%s.%s\"", s.module, s.name) }
+
 func (s SecretValue[T]) GoString() string {
 	var t T
 	return fmt.Sprintf("ftl.SecretValue[%T](\"%s.%s\")", t, s.module, s.name)
