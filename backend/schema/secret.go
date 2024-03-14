@@ -16,6 +16,7 @@ type Secret struct {
 }
 
 var _ Decl = (*Secret)(nil)
+var _ Symbol = (*Secret)(nil)
 
 func (s *Secret) GetName() string    { return s.Name }
 func (s *Secret) Position() Position { return s.Pos }
@@ -31,7 +32,8 @@ func (s *Secret) ToProto() protoreflect.ProtoMessage {
 
 func (s *Secret) schemaChildren() []Node { return []Node{s.Type} }
 
-func (s *Secret) schemaDecl() {}
+func (s *Secret) schemaDecl()   {}
+func (s *Secret) schemaSymbol() {}
 
 func SecretFromProto(p *schemapb.Secret) *Secret {
 	return &Secret{

@@ -13,12 +13,12 @@ type Bytes struct {
 }
 
 var _ Type = (*Bytes)(nil)
-var _ Decl = (*Bytes)(nil)
+var _ Symbol = (*Bytes)(nil)
 
 func (b *Bytes) Position() Position     { return b.Pos }
 func (*Bytes) schemaChildren() []Node   { return nil }
 func (*Bytes) schemaType()              {}
-func (*Bytes) schemaDecl()              {}
+func (*Bytes) schemaSymbol()            {}
 func (*Bytes) String() string           { return "Bytes" }
 func (b *Bytes) ToProto() proto.Message { return &schemapb.Bytes{Pos: posToProto(b.Pos)} }
 func (*Bytes) GetName() string          { return "" }

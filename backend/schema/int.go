@@ -13,10 +13,10 @@ type Int struct {
 }
 
 var _ Type = (*Int)(nil)
-var _ Decl = (*Int)(nil)
+var _ Symbol = (*Int)(nil)
 
 func (i *Int) Position() Position     { return i.Pos }
-func (*Int) schemaDecl()              {}
+func (*Int) schemaSymbol()            {}
 func (*Int) schemaChildren() []Node   { return nil }
 func (*Int) schemaType()              {}
 func (*Int) String() string           { return "Int" }

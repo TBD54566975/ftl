@@ -24,7 +24,7 @@ type Module struct {
 }
 
 var _ Node = (*Module)(nil)
-var _ Decl = (*Module)(nil)
+var _ Symbol = (*Module)(nil)
 var _ sql.Scanner = (*Module)(nil)
 var _ driver.Valuer = (*Module)(nil)
 
@@ -63,8 +63,8 @@ func (m *Module) Scope() Scope {
 		case *Secret:
 			scope[d.Name] = ModuleDecl{m, d}
 
-		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time,
-			*Unit, *Any, *TypeParameter:
+		case *Database:
+			scope[d.Name] = ModuleDecl{m, d}
 		}
 	}
 	return scope
@@ -76,40 +76,14 @@ func (m *Module) Resolve(ref Ref) *ModuleDecl {
 		return nil
 	}
 	for _, d := range m.Decls {
-		switch d := d.(type) {
-		case *Data:
-			if d.Name == ref.Name {
-				return &ModuleDecl{m, d}
-			}
-
-		case *Verb:
-			if d.Name == ref.Name {
-				return &ModuleDecl{m, d}
-			}
-
-		case *Enum:
-			if d.Name == ref.Name {
-				return &ModuleDecl{m, d}
-			}
-
-		case *Config:
-			if d.Name == ref.Name {
-				return &ModuleDecl{m, d}
-			}
-
-		case *Secret:
-			if d.Name == ref.Name {
-				return &ModuleDecl{m, d}
-			}
-
-		case *Bool, *Bytes, *Database, *Float, *Int, *Module, *String, *Time,
-			*Unit, *Any, *TypeParameter:
+		if d.GetName() == ref.Name {
+			return &ModuleDecl{m, d}
 		}
 	}
 	return nil
 }
 
-func (m *Module) schemaDecl()        {}
+func (m *Module) schemaSymbol()      {}
 func (m *Module) Position() Position { return m.Pos }
 func (m *Module) schemaChildren() []Node {
 	children := make([]Node, 0, len(m.Decls))

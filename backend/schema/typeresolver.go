@@ -23,13 +23,13 @@ type Scope map[string]ModuleDecl
 // ModuleDecl is a declaration associated with a module.
 type ModuleDecl struct {
 	Module *Module // May be nil.
-	Decl   Decl
+	Symbol Symbol
 }
 
 func (s Scope) String() string {
 	out := &strings.Builder{}
 	for name, decl := range s {
-		fmt.Fprintf(out, "%s: %T\n", name, decl.Decl)
+		fmt.Fprintf(out, "%s: %T\n", name, decl.Symbol)
 	}
 	return out.String()
 }
@@ -61,7 +61,7 @@ func (s Scopes) String() string {
 		}
 		fmt.Fprintf(out, "Scope %d:\n", i)
 		for name, decl := range scope {
-			fmt.Fprintf(out, "  %s: %T\n", name, decl.Decl)
+			fmt.Fprintf(out, "  %s: %T\n", name, decl.Symbol)
 		}
 	}
 	return out.String()
@@ -83,15 +83,15 @@ func (s Scopes) Push() Scopes {
 }
 
 // Add a declaration to the current scope.
-func (s *Scopes) Add(owner *Module, name string, decl Decl) error {
+func (s *Scopes) Add(owner *Module, name string, symbol Symbol) error {
 	end := len(*s) - 1
 	if name == "destroy" {
 		debug.PrintStack()
 	}
 	if prev, ok := (*s)[end][name]; ok {
-		return fmt.Errorf("%s: duplicate declaration of %q at %s", decl.Position(), name, prev.Decl.Position())
+		return fmt.Errorf("%s: duplicate declaration of %q at %s", symbol.Position(), name, prev.Symbol.Position())
 	}
-	(*s)[end][name] = ModuleDecl{owner, decl}
+	(*s)[end][name] = ModuleDecl{owner, symbol}
 	return nil
 }
 
@@ -110,7 +110,7 @@ func (s Scopes) Resolve(ref Ref) *ModuleDecl {
 	for i := len(s) - 1; i >= 0; i-- {
 		scope := s[i]
 		if mdecl, ok := scope[ref.Module]; ok {
-			if resolver, ok := mdecl.Decl.(Resolver); ok {
+			if resolver, ok := mdecl.Symbol.(Resolver); ok {
 				if decl := resolver.Resolve(ref); decl != nil {
 					// Holy nested if statement Batman.
 					return decl

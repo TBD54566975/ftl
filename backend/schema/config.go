@@ -16,6 +16,7 @@ type Config struct {
 }
 
 var _ Decl = (*Config)(nil)
+var _ Symbol = (*Config)(nil)
 
 func (s *Config) GetName() string    { return s.Name }
 func (s *Config) Position() Position { return s.Pos }
@@ -30,8 +31,8 @@ func (s *Config) ToProto() protoreflect.ProtoMessage {
 }
 
 func (s *Config) schemaChildren() []Node { return []Node{s.Type} }
-
-func (s *Config) schemaDecl() {}
+func (s *Config) schemaDecl()            {}
+func (s *Config) schemaSymbol()          {}
 
 func ConfigFromProto(p *schemapb.Config) *Config {
 	return &Config{

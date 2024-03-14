@@ -19,6 +19,7 @@ type Enum struct {
 }
 
 var _ Decl = (*Enum)(nil)
+var _ Symbol = (*Enum)(nil)
 
 func (e *Enum) Position() Position { return e.Pos }
 
@@ -32,7 +33,8 @@ func (e *Enum) String() string {
 	fmt.Fprint(w, "}")
 	return w.String()
 }
-func (*Enum) schemaDecl() {}
+func (*Enum) schemaDecl()   {}
+func (*Enum) schemaSymbol() {}
 func (e *Enum) schemaChildren() []Node {
 	children := make([]Node, 1+len(e.Variants))
 	children[0] = e.Type

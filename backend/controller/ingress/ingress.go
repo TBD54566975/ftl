@@ -94,7 +94,7 @@ func getBodyField(ref *schema.Ref, sch *schema.Schema) (*schema.Field, error) {
 	return bodyField, nil
 }
 
-func validateValue(fieldType schema.Type, path path, value any, sch *schema.Schema) error {
+func validateValue(fieldType schema.Type, path path, value any, sch *schema.Schema) error { //nolint:maintidx
 	var typeMatches bool
 	switch fieldType := fieldType.(type) {
 	case *schema.Any:
@@ -222,6 +222,9 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 			if !typeMatches {
 				return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
 			}
+
+		case *schema.Config, *schema.Database, *schema.Secret:
+
 		}
 
 	case *schema.Bytes:

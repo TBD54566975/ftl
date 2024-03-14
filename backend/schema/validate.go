@@ -21,14 +21,14 @@ var (
 	// We don't need Array/Map/Ref here because there are no
 	// keywords associated with these types.
 	primitivesScope = Scope{
-		"Int":    ModuleDecl{Decl: &Int{}},
-		"Float":  ModuleDecl{Decl: &Float{}},
-		"String": ModuleDecl{Decl: &String{}},
-		"Bytes":  ModuleDecl{Decl: &Bytes{}},
-		"Bool":   ModuleDecl{Decl: &Bool{}},
-		"Time":   ModuleDecl{Decl: &Time{}},
-		"Unit":   ModuleDecl{Decl: &Unit{}},
-		"Any":    ModuleDecl{Decl: &Any{}},
+		"Int":    ModuleDecl{Symbol: &Int{}},
+		"Float":  ModuleDecl{Symbol: &Float{}},
+		"String": ModuleDecl{Symbol: &String{}},
+		"Bytes":  ModuleDecl{Symbol: &Bytes{}},
+		"Bool":   ModuleDecl{Symbol: &Bool{}},
+		"Time":   ModuleDecl{Symbol: &Time{}},
+		"Unit":   ModuleDecl{Symbol: &Unit{}},
+		"Any":    ModuleDecl{Symbol: &Any{}},
 	}
 )
 
@@ -100,7 +100,7 @@ func Validate(schema *Schema) (*Schema, error) {
 			switch n := n.(type) {
 			case *Ref:
 				if mdecl := scopes.Resolve(*n); mdecl != nil {
-					switch decl := mdecl.Decl.(type) {
+					switch decl := mdecl.Symbol.(type) {
 					case *Verb, *Enum:
 						if mdecl.Module != nil {
 							n.Module = mdecl.Module.Name
@@ -120,7 +120,7 @@ func Validate(schema *Schema) (*Schema, error) {
 
 					case *TypeParameter:
 					default:
-						merr = append(merr, fmt.Errorf("%s: invalid reference %q at %q", n.Pos, n, mdecl.Decl.Position()))
+						merr = append(merr, fmt.Errorf("%s: invalid reference %q at %q", n.Pos, n, mdecl.Symbol.Position()))
 
 					}
 				} else {
@@ -161,7 +161,7 @@ func Validate(schema *Schema) (*Schema, error) {
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
-				Value, *IntValue, *StringValue, *Config, *Secret:
+				Value, *IntValue, *StringValue, *Config, *Secret, Symbol:
 			}
 			return next()
 		})
@@ -208,7 +208,7 @@ func ValidateModule(module *Module) error {
 		switch n := n.(type) {
 		case *Ref:
 			if mdecl := scopes.Resolve(*n); mdecl != nil {
-				switch decl := mdecl.Decl.(type) {
+				switch decl := mdecl.Symbol.(type) {
 				case *Verb, *Enum:
 					n.Module = mdecl.Module.Name
 					if len(n.TypeParameters) != 0 {
@@ -285,7 +285,7 @@ func ValidateModule(module *Module) error {
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
 
-		case Type, Metadata, Decl, Value: // Union types.
+		case Symbol, Type, Metadata, Decl, Value: // Union types.
 		}
 		return next()
 	})

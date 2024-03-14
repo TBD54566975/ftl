@@ -17,9 +17,11 @@ type Database struct {
 }
 
 var _ Decl = (*Database)(nil)
+var _ Symbol = (*Database)(nil)
 
 func (d *Database) Position() Position     { return d.Pos }
 func (*Database) schemaDecl()              {}
+func (*Database) schemaSymbol()            {}
 func (d *Database) schemaChildren() []Node { return nil }
 func (d *Database) String() string {
 	w := &strings.Builder{}
