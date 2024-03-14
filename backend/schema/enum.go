@@ -68,8 +68,9 @@ func EnumFromProto(s *schemapb.Enum) *Enum {
 type EnumVariant struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Name  string `parser:"@Ident" protobuf:"2"`
-	Value Value  `parser:"'(' @@ ')'" protobuf:"3"`
+	Comments []string `parser:"@Comment*" protobuf:"4"`
+	Name     string   `parser:"@Ident" protobuf:"2"`
+	Value    Value    `parser:"'(' @@ ')'" protobuf:"3"`
 }
 
 func (e *EnumVariant) ToProto() proto.Message {
@@ -85,7 +86,10 @@ func (e *EnumVariant) Position() Position { return e.Pos }
 func (e *EnumVariant) schemaChildren() []Node { return []Node{e.Value} }
 
 func (e *EnumVariant) String() string {
-	return fmt.Sprintf("%s(%s)", e.Name, e.Value)
+	w := &strings.Builder{}
+	fmt.Fprint(w, encodeComments(e.Comments))
+	fmt.Fprintf(w, "%s(%s)", e.Name, e.Value)
+	return w.String()
 }
 
 func enumVariantListToSchema(e []*schemapb.EnumVariant) []*EnumVariant {

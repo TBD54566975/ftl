@@ -490,6 +490,9 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       class InvalidInput(val field: String) : Exception()
 
       enum class Thing {
+       /**
+        * A comment.
+        */
         A,
         B,
         C,
@@ -499,7 +502,13 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
        * Comments.
        */
       enum class StringThing(val value: String) {
+        /**
+         * A comment.
+         */
         A("A"),
+        /**
+         * B comment.
+         */
         B("B"),
         C("C"),
       }
@@ -507,6 +516,9 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       enum class IntThing(val value: Int) {
         A(1),
         B(2),
+        /**
+         * C comment.
+         */
         C(3),
       }
 
@@ -576,7 +588,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
           enum_ = Enum(
             name = "Thing",
             variants = listOf(
-              EnumVariant(name = "A", value_ = Value(intValue = IntValue(value_ = 0))),
+              EnumVariant(name = "A", value_ = Value(intValue = IntValue(value_ = 0)), comments = listOf("A comment.")),
               EnumVariant(name = "B", value_ = Value(intValue = IntValue(value_ = 1))),
               EnumVariant(name = "C", value_ = Value(intValue = IntValue(value_ = 2))),
             ),
@@ -587,8 +599,8 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
             name = "StringThing",
             comments = listOf("Comments."),
             variants = listOf(
-              EnumVariant(name = "A", value_ = Value(stringValue = StringValue(value_ = "A"))),
-              EnumVariant(name = "B", value_ = Value(stringValue = StringValue(value_ = "B"))),
+              EnumVariant(name = "A", value_ = Value(stringValue = StringValue(value_ = "A")), comments = listOf("A comment.")),
+              EnumVariant(name = "B", value_ = Value(stringValue = StringValue(value_ = "B")), comments = listOf("B comment.")),
               EnumVariant(name = "C", value_ = Value(stringValue = StringValue(value_ = "C"))),
             ),
           ),
@@ -599,7 +611,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
             variants = listOf(
               EnumVariant(name = "A", value_ = Value(intValue = IntValue(value_ = 1))),
               EnumVariant(name = "B", value_ = Value(intValue = IntValue(value_ = 2))),
-              EnumVariant(name = "C", value_ = Value(intValue = IntValue(value_ = 3))),
+              EnumVariant(name = "C", value_ = Value(intValue = IntValue(value_ = 3)), comments = listOf("C comment.")),
             ),
           ),
         ),

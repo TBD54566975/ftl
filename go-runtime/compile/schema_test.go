@@ -60,9 +60,12 @@ func TestExtractModuleSchema(t *testing.T) {
     Yellow("Yellow")
   }
 
+  // Comments about ColorInt.
   enum ColorInt(Int) {
+    // RedInt is a color.
     RedInt(0)
     BlueInt(1)
+    // GreenInt is also a color.
     GreenInt(2)
     YellowInt(3)
   }

@@ -503,7 +503,8 @@ class SchemaExtractor(
       variants = this.declarations.filterIsInstance<KtEnumEntry>().map {
         val variant = EnumVariant(
           name = it.name!!,
-          value_ = Value(intValue = IntValue(value_ = ordinal))
+          value_ = Value(intValue = IntValue(value_ = ordinal)),
+          comments = it.comments(),
         )
         ordinal = ordinal.inc()
         return@map variant
@@ -533,6 +534,7 @@ class SchemaExtractor(
           name = name,
           value_ = value,
           pos = pos,
+          comments = entry.comments(),
         )
       }
     }

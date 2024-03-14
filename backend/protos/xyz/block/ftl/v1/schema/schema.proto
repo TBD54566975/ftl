@@ -69,6 +69,7 @@ message EnumVariant {
   optional Position pos = 1;
   string name = 2;
   Value value = 3;
+  repeated string comments = 4;
 }
 
 message Field {

@@ -18,12 +18,16 @@ const (
 	Green Color = "Green"
 )
 
+// Comments about ColorInt.
+//
 //ftl:enum
 type ColorInt int
 
 const (
-	RedInt   ColorInt = 0
-	BlueInt  ColorInt = 1
+	// RedInt is a color.
+	RedInt  ColorInt = 0
+	BlueInt ColorInt = 1
+	// GreenInt is also a color.
 	GreenInt ColorInt = 2
 )
 

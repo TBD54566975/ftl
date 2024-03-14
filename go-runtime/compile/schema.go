@@ -396,9 +396,10 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) error {
 		return err
 	}
 	variant := &schema.EnumVariant{
-		Pos:   goPosToSchemaPos(c.Pos()),
-		Name:  strcase.ToUpperCamel(c.Id()),
-		Value: value,
+		Pos:      goPosToSchemaPos(c.Pos()),
+		Comments: visitComments(node.Doc),
+		Name:     strcase.ToUpperCamel(c.Id()),
+		Value:    value,
 	}
 	enum.Variants = append(enum.Variants, variant)
 	return nil
