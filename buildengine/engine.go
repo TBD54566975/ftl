@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -270,10 +271,12 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 
 			moduleHashes[change.Name] = hash
 			modulesToDeploy := e.getDependentModules(change.Name)
-			logger.Infof("%s's schema changed; redeploying: %+v", change.Name, modulesToDeploy)
-			err = e.buildAndDeploy(ctx, 1, true, modulesToDeploy...)
-			if err != nil {
-				logger.Errorf(err, "deploy %s failed", change.Name)
+			if len(modulesToDeploy) > 0 {
+				logger.Infof("%s's schema changed; redeploying %s", change.Name, strings.Join(modulesToDeploy, ", "))
+				err = e.buildAndDeploy(ctx, 1, true, modulesToDeploy...)
+				if err != nil {
+					logger.Errorf(err, "deploy %s failed", change.Name)
+				}
 			}
 		}
 
