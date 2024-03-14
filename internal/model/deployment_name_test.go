@@ -55,7 +55,6 @@ func TestDeploymentName(t *testing.T) {
 }
 
 func TestZeroDeploymentName(t *testing.T) {
-	parsed, err := ParseDeploymentName("")
-	assert.NoError(t, err)
-	assert.Equal(t, parsed, DeploymentName{}, "expected zero value to be the same as a parsed empty string")
+	_, err := ParseDeploymentName("")
+	assert.Error(t, err, "expected error for empty deployment name")
 }

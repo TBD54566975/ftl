@@ -31,10 +31,6 @@ func NewDeploymentName(module string) DeploymentName {
 }
 
 func ParseDeploymentName(name string) (DeploymentName, error) {
-	if name == "" {
-		return DeploymentName{}, nil
-	}
-
 	parts := strings.Split(name, "-")
 	if len(parts) < 2 {
 		return DeploymentName{}, fmt.Errorf("invalid deployment name %q: does not follow <deployment>-<hash> pattern", name)
@@ -57,9 +53,6 @@ func ParseDeploymentName(name string) (DeploymentName, error) {
 }
 
 func (d *DeploymentName) String() string {
-	if d.module == "" {
-		return ""
-	}
 	return fmt.Sprintf("%s-%s", d.module, d.hash)
 }
 

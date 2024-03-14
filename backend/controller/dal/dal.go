@@ -84,9 +84,12 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 
 func runnerFromDB(row sql.GetRunnerRow) Runner {
 	var deployment optional.Option[model.DeploymentName]
-	var zero model.DeploymentName
-	if row.DeploymentName != zero {
-		deployment = optional.Some(row.DeploymentName)
+	if name, ok := row.DeploymentName.Get(); ok {
+		parsed, err := model.ParseDeploymentName(name)
+		if err != nil {
+			return Runner{}
+		}
+		deployment = optional.Some(parsed)
 	}
 	attrs := model.Labels{}
 	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
@@ -303,9 +306,12 @@ func (d *DAL) GetStatus(
 	}
 	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
 		var deployment optional.Option[model.DeploymentName]
-		var zero model.DeploymentName
-		if in.DeploymentName != zero {
-			deployment = optional.Some(in.DeploymentName)
+		if name, ok := in.DeploymentName.Get(); ok {
+			parsed, err := model.ParseDeploymentName(name)
+			if err != nil {
+				return Runner{}, fmt.Errorf("invalid deployment name %q: %w", name, err)
+			}
+			deployment = optional.Some(parsed)
 		}
 		attrs := model.Labels{}
 		if err := json.Unmarshal(in.Labels, &attrs); err != nil {

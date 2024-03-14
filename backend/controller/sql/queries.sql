@@ -136,7 +136,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.module_name,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.name END, NULL)::deployment_name AS deployment_name
+                                            THEN d.name END, NULL) AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id
 WHERE sqlc.arg('all')::bool = true
@@ -233,7 +233,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.module_name,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.name END, NULL)::deployment_name AS deployment_name
+                                            THEN d.name END, NULL) AS deployment_name
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE r.key = sqlc.arg('key')::runner_key;
