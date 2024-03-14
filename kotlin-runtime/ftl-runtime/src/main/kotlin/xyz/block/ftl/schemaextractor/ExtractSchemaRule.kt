@@ -8,12 +8,19 @@ import io.gitlab.arturbosch.detekt.api.Severity
 import io.gitlab.arturbosch.detekt.api.config
 import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.file.Path
+import java.time.OffsetDateTime
+import kotlin.io.path.createDirectories
 import org.jetbrains.kotlin.cfg.getDeclarationDescriptorIncludingConstructors
 import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.com.intellij.psi.PsiComment
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
+import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.impl.referencedProperty
+import org.jetbrains.kotlin.descriptors.isFinalOrEnum
 import org.jetbrains.kotlin.diagnostics.DiagnosticUtils.getLineAndColumnInPsiFile
 import org.jetbrains.kotlin.diagnostics.PsiDiagnosticUtils.LineAndColumn
 import org.jetbrains.kotlin.name.FqName
@@ -22,15 +29,18 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
+import org.jetbrains.kotlin.psi.KtEnumEntry
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtFunction
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtSuperTypeCallEntry
 import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeParameterList
 import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.kotlin.psi.KtValueArgument
+import org.jetbrains.kotlin.psi.ValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.children
 import org.jetbrains.kotlin.psi.psiUtil.getValueParameters
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
@@ -58,11 +68,8 @@ import xyz.block.ftl.Json
 import xyz.block.ftl.Method
 import xyz.block.ftl.v1.schema.*
 import xyz.block.ftl.v1.schema.Array
-import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Path
-import java.time.OffsetDateTime
-import kotlin.io.path.createDirectories
+import xyz.block.ftl.v1.schema.Enum
+import xyz.block.ftl.v1.schema.Verb
 
 data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
 
@@ -132,7 +139,11 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
 
   private fun Map<String, ModuleData>.toModules(): List<Module> {
     return this.map {
-      xyz.block.ftl.v1.schema.Module(name = it.key, decls = it.value.decls.sortedBy { it.data_ == null }, comments = it.value.comments)
+      xyz.block.ftl.v1.schema.Module(
+        name = it.key,
+        decls = it.value.decls.sortedBy { it.data_ == null },
+        comments = it.value.comments
+      )
     }
   }
 
@@ -157,6 +168,7 @@ class SchemaExtractor(
         *extractVerbs().toTypedArray(),
         *extractDataDeclarations().toTypedArray(),
         *extractDatabases().toTypedArray(),
+        *extractEnums().toTypedArray(),
       ),
       comments = moduleComments
     )
@@ -282,6 +294,15 @@ class SchemaExtractor(
       .mapNotNull {
         val data = (it as? KtClass)?.toSchemaData() ?: (it as? KtTypeAlias)?.toSchemaData()
         data?.let { Decl(data_ = data) }
+      }
+      .toSet()
+  }
+
+  private fun extractEnums(): Set<Decl> {
+    return file.children
+      .filter { it is KtClass && it.isEnum() }
+      .mapNotNull {
+        (it as? KtClass)?.toSchemaEnum()?.let { enum -> Decl(enum_ = enum) }
       }
       .toSet()
   }
@@ -442,10 +463,10 @@ class SchemaExtractor(
       fields = this.getValueParameters().map { param ->
         // Metadata containing JSON alias if present.
         val metadata = param.annotationEntries.firstOrNull {
-            bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Json::class.qualifiedName
-          }?.valueArguments?.single()?.let {
-            listOf(Metadata(alias = MetadataAlias(alias = (it as KtValueArgument).text.trim('"', ' '))))
-          } ?: listOf()
+          bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Json::class.qualifiedName
+        }?.valueArguments?.single()?.let {
+          listOf(Metadata(alias = MetadataAlias(alias = (it as KtValueArgument).text.trim('"', ' '))))
+        } ?: listOf()
         Field(
           name = param.name!!,
           type = param.typeReference?.let {
@@ -463,6 +484,59 @@ class SchemaExtractor(
           pos = getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition(),
         )
       }.toList(),
+      pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(),
+    )
+  }
+
+  private fun KtClass.toSchemaEnum(): Enum {
+    val variants: List<EnumVariant>
+    require(this.getValueParameters().isEmpty() || this.getValueParameters().size == 1) {
+      "${this.getLineAndColumn().toPosition()}: Enums can have at most one value parameter, of type string or number"
+    }
+
+    if (this.getValueParameters().isEmpty()) {
+      var ordinal = 0L
+      variants = this.declarations.filterIsInstance<KtEnumEntry>().map {
+        val variant = EnumVariant(
+          name = it.name!!,
+          value_ = Value(intValue = IntValue(value_ = ordinal))
+        )
+        ordinal = ordinal.inc()
+        return@map variant
+      }
+    } else {
+      variants = this.declarations.filterIsInstance<KtEnumEntry>().map { entry ->
+        val pos: Position = entry.getLineAndColumn().toPosition()
+        val name: String = entry.name!!
+        val arg: ValueArgument = entry.initializerList?.initializers?.single().let {
+          (it as KtSuperTypeCallEntry).valueArguments.single()
+        }
+
+        val value: Value
+        try {
+          value = arg.getArgumentExpression()?.text?.let {
+            if (it.startsWith('"')) {
+              return@let Value(stringValue = StringValue(value_ = it.trim('"')))
+            } else {
+              return@let Value(intValue = IntValue(value_ = it.toLong()))
+            }
+          } ?: throw IllegalArgumentException("${pos}: Could not extract enum variant value")
+        } catch (e: NumberFormatException) {
+          throw IllegalArgumentException("${pos}: Enum variant value must be a string or number")
+        }
+
+        EnumVariant(
+          name = name,
+          value_ = value,
+          pos = pos,
+        )
+      }
+    }
+
+    return Enum(
+      name = this.name!!,
+      variants = variants,
+      comments = this.comments(),
       pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(),
     )
   }
@@ -511,7 +585,11 @@ class SchemaExtractor(
         ?.asString() == OffsetDateTime::class.qualifiedName -> Type(time = xyz.block.ftl.v1.schema.Time())
 
       else -> {
-        require(this.toClassDescriptor().isData || this.isEmptyBuiltin()) {
+        require(
+          this.toClassDescriptor().isData
+            || this.toClassDescriptor().kind == ClassKind.ENUM_CLASS
+            || this.isEmptyBuiltin()
+        ) {
           "(${position.line},${position.column}) Expected type to be a data class or builtin.Empty, but was ${
             this.fqNameOrNull()?.asString()
           }"
