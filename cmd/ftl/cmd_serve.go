@@ -53,7 +53,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		if s.Stop {
 			// allow usage of --background and --stop together to "restart" the background process
 			// ignore error here if the process is not running
-			_ = killBackgroundProcess(logger)
+			_ = KillBackgroundServe(logger)
 		}
 
 		runInBackground(logger)
@@ -67,7 +67,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	}
 
 	if s.Stop {
-		return killBackgroundProcess(logger)
+		return KillBackgroundServe(logger)
 	}
 
 	if s.isRunning(ctx, client) {
@@ -166,7 +166,7 @@ func runInBackground(logger *log.Logger) {
 	logger.Infof("`ftl serve` running in background with pid: %d", cmd.Process.Pid)
 }
 
-func killBackgroundProcess(logger *log.Logger) error {
+func KillBackgroundServe(logger *log.Logger) error {
 	pidFilePath, err := pidFilePath()
 	if err != nil {
 		logger.Infof("No background process found")

@@ -26,9 +26,17 @@ func (d *devCmd) Run(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	if !d.NoServe {
+		if d.ServeCmd.Stop {
+			err := d.ServeCmd.Run(ctx)
+			if err != nil {
+				return err
+			}
+			d.ServeCmd.Stop = false
+		}
 		if d.ServeCmd.isRunning(ctx, client) {
 			return errors.New("FTL is already running")
 		}
+
 		g.Go(func() error {
 			return d.ServeCmd.Run(ctx)
 		})
