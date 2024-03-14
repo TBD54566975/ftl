@@ -36,6 +36,23 @@ func TestGenerateGoModule(t *testing.T) {
 					Request:  &schema.Ref{Name: "EchoRequest"},
 					Response: &schema.Ref{Name: "EchoResponse"},
 				},
+				&schema.Data{Name: "SinkReq"},
+				&schema.Verb{
+					Name:     "sink",
+					Request:  &schema.Ref{Name: "SinkReq"},
+					Response: &schema.Unit{},
+				},
+				&schema.Data{Name: "SourceResp"},
+				&schema.Verb{
+					Name:     "source",
+					Request:  &schema.Unit{},
+					Response: &schema.Ref{Name: "SourceResp"},
+				},
+				&schema.Verb{
+					Name:     "nothing",
+					Request:  &schema.Unit{},
+					Response: &schema.Unit{},
+				},
 			}},
 			{Name: "test"},
 		},
@@ -76,6 +93,27 @@ type EchoResponse struct {
 //ftl:verb
 func Echo(context.Context, EchoRequest) (EchoResponse, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
+}
+
+type SinkReq struct {
+}
+
+//ftl:verb
+func Sink(context.Context, SinkReq) error {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
+}
+
+type SourceResp struct {
+}
+
+//ftl:verb
+func Source(context.Context) (SourceResp, error) {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSource()")
+}
+
+//ftl:verb
+func Nothing(context.Context) error {
+  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")
 }
 `
 	bctx := buildContext{

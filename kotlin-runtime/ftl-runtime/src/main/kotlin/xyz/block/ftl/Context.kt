@@ -28,4 +28,16 @@ class Context(
     val responseJson = routingClient.call(this, Ref(ftlModule, verb.name), requestJson)
     return gson.fromJson(responseJson, R::class.java)
   }
+
+  inline fun <reified R> callSink(verb: KFunction<R>, request: Any) {
+    call(verb, request)
+  }
+
+  inline fun <reified R> callSource(verb: KFunction<R>): R {
+    return call(verb, Unit)
+  }
+
+  inline fun <reified R> callEmpty(verb: KFunction<R>) {
+    call(verb, Unit)
+  }
 }

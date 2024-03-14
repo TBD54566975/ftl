@@ -11,20 +11,19 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
-// Call a Verb through the FTL Controller.
-func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (resp Resp, err error) {
-	callee := VerbToRef(verb)
+func call[Req, Resp any](ctx context.Context, callee *schemapb.Ref, req Req) (resp Resp, err error) {
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	reqData, err := encoding.Marshal(req)
 	if err != nil {
 		return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
 	}
-	cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData}))
+	cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee, Body: reqData}))
 	if err != nil {
 		return resp, fmt.Errorf("%s: failed to call Verb: %w", callee, err)
 	}
@@ -44,19 +43,38 @@ func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (re
 	}
 }
 
-// Call a Sink through the FTL controller.
-// func CallSink[Req any](ctx context.Context, sink Sink[Req]) error {
-// }
+// Call a Verb through the FTL Controller.
+func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (Resp, error) {
+	return call[Req, Resp](ctx, CallToSchemaRef(verb), req)
+}
 
-// VerbToRef returns the FTL reference for a Verb.
-func VerbToRef[Req, Resp any](verb Verb[Req, Resp]) Ref {
-	ref := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
+// CallSink calls a Sink through the FTL controller.
+func CallSink[Req any](ctx context.Context, sink Sink[Req], req Req) error {
+	_, err := call[Req, Unit](ctx, CallToSchemaRef(sink), req)
+	return err
+}
+
+// CallSource calls a Source through the FTL controller.
+func CallSource[Resp any](ctx context.Context, source Source[Resp]) (Resp, error) {
+	return call[Unit, Resp](ctx, CallToSchemaRef(source), Unit{})
+}
+
+// CallEmpty calls a Verb with no request or response through the FTL controller.
+func CallEmpty(ctx context.Context, empty Empty) error {
+	_, err := call[Unit, Unit](ctx, CallToSchemaRef(empty), Unit{})
+	return err
+}
+
+// CallToRef returns the Ref for a Verb, Sink, Source, or Empty.
+func CallToRef(call any) Ref {
+	ref := runtime.FuncForPC(reflect.ValueOf(call).Pointer()).Name()
 	return goRefToFTLRef(ref)
 }
 
-func SinkToRef[Req any](sink Sink[Req]) Ref {
-	ref := runtime.FuncForPC(reflect.ValueOf(sink).Pointer()).Name()
-	return goRefToFTLRef(ref)
+// CallToSchemaRef returns the Ref for a Verb, Sink, Source, or Empty as a Schema Ref.
+func CallToSchemaRef(call any) *schemapb.Ref {
+	ref := CallToRef(call)
+	return ref.ToProto()
 }
 
 func goRefToFTLRef(ref string) Ref {

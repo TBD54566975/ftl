@@ -209,44 +209,48 @@ class SchemaExtractor(
       }
 
       // Validate parameters
-      require(verb.valueParameters.size == 2) { "$verbSourcePos Verbs must have exactly two arguments, ${verb.name} did not" }
+      require(verb.valueParameters.size >= 1) { "$verbSourcePos Verbs must have at least one argument, ${verb.name} did not" }
+      require(verb.valueParameters.size <= 2) { "$verbSourcePos Verbs must have at most two arguments, ${verb.name} did not" }
       val ctxParam = verb.valueParameters.first()
-      val reqParam = verb.valueParameters.last()
+
       require(ctxParam.typeReference?.resolveType()?.fqNameOrNull()?.asString() == Context::class.qualifiedName) {
         "${verb.valueParameters.first().getLineAndColumn()} First argument of verb must be Context"
       }
 
-      require(reqParam.typeReference?.resolveType()
-        ?.let { it.toClassDescriptor().isData || it.isEmptyBuiltin() }
-        ?: false
-      ) {
-        "${verb.valueParameters.last().getLineAndColumn()} Second argument of ${verb.name} must be a data class or " +
-          "builtin.Empty"
+      if (verb.valueParameters.size == 2) {
+        val reqParam = verb.valueParameters.last()
+        require(reqParam.typeReference?.resolveType()
+          ?.let { it.toClassDescriptor().isData || it.isEmptyBuiltin() }
+          ?: false
+        ) {
+          "${verb.valueParameters.last().getLineAndColumn()} Second argument of ${verb.name} must be a data class or " +
+            "builtin.Empty"
+        }
       }
 
       // Validate return type
-      val respClass = verb.createTypeBindingForReturnType(bindingContext)?.type
-        ?: throw IllegalStateException("$verbSourcePos Could not resolve ${verb.name} return type")
-      require(respClass.toClassDescriptor().isData || respClass.isEmptyBuiltin()) {
-        "${verbSourcePos}: return type of ${verb.name} must be a data class or builtin.Empty but is ${
-          respClass.fqNameOrNull()?.asString()
-        }"
+      verb.createTypeBindingForReturnType(bindingContext)?.type?.let {
+        require(it.toClassDescriptor().isData || it.isEmptyBuiltin() || it.isUnit()) {
+          "${verbSourcePos}: return type of ${verb.name} must be a data class or builtin.Empty but is ${
+            it.fqNameOrNull()?.asString()
+          }"
+        }
       }
     }
   }
 
   private fun extractVerb(verb: KtNamedFunction): Verb {
     val verbSourcePos = verb.getLineAndColumn()
-    val requestRef = verb.valueParameters.last()?.let {
+
+    val requestRef = verb.valueParameters.takeIf { it.size > 1 }?.last()?.let {
       val position = it.getLineAndColumn().toPosition()
       return@let it.typeReference?.resolveType()?.toSchemaType(position)
-    }
-    requireNotNull(requestRef) { "$verbSourcePos Could not resolve request type for ${verb.name}" }
+    } ?: Type(unit = xyz.block.ftl.v1.schema.Unit())
+
     val returnRef = verb.createTypeBindingForReturnType(bindingContext)?.let {
       val position = it.psiElement.getLineAndColumn().toPosition()
       return@let it.type.toSchemaType(position)
-    }
-    requireNotNull(returnRef) { "$verbSourcePos Could not resolve response type for ${verb.name}" }
+    } ?: Type(unit = xyz.block.ftl.v1.schema.Unit())
 
     val metadata = mutableListOf<Metadata>()
     extractIngress(verb, requestRef, returnRef)?.apply { metadata.add(Metadata(ingress = this)) }
@@ -671,6 +675,10 @@ class SchemaExtractor(
 
     private fun KotlinType.isEmptyBuiltin(): Boolean {
       return this.fqNameOrNull()?.asString() == "ftl.builtin.Empty"
+    }
+
+    private fun KotlinType.isUnit(): Boolean {
+      return this.fqNameOrNull()?.asString() == "kotlin.Unit"
     }
   }
 }

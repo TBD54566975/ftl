@@ -52,4 +52,7 @@ type Verb[Req, Resp any] func(context.Context, Req) (Resp, error)
 type Sink[Req any] func(context.Context, Req) error
 
 // A Source is a function that does not accept input but returns output.
-type Source[Req any] func(context.Context, Req) error
+type Source[Resp any] func(context.Context) (Resp, error)
+
+// An Empty is a function that does not accept input or return output.
+type Empty func(context.Context) error

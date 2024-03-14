@@ -213,6 +213,22 @@ func TestExternalCalls(t *testing.T) {
 		return tests
 	})
 }
+func TestPubSub(t *testing.T) {
+	runForRuntimes(t, func(modulesDir string, runtime string, rd runtimeData) []test {
+		return []test{
+			{name: fmt.Sprintf("PubSub%s", rd.testSuffix), assertions: assertions{
+				run("ftl", rd.initOpts...),
+				scaffoldTestData(runtime, "pubsub", rd.modulePath),
+				run("ftl", "deploy", rd.moduleRoot),
+				call(rd.moduleName, "echo", obj{}, func(t testing.TB, resp obj) {
+					name, ok := resp["name"].(string)
+					assert.True(t, ok, "name is not a string")
+					assert.Equal(t, "source", name)
+				}),
+			}},
+		}
+	})
+}
 
 func TestSchemaGenerate(t *testing.T) {
 	tests := []test{

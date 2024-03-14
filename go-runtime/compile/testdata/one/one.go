@@ -79,3 +79,22 @@ func Verb(ctx context.Context, req Req) (Resp, error) {
 const Yellow Color = "Yellow"
 
 const YellowInt ColorInt = 3
+
+type SinkReq struct{}
+
+//ftl:verb
+func Sink(ctx context.Context, req SinkReq) error {
+	return nil
+}
+
+type SourceResp struct{}
+
+//ftl:verb
+func Source(ctx context.Context) (SourceResp, error) {
+	return SourceResp{}, nil
+}
+
+//ftl:verb
+func Nothing(ctx context.Context) error {
+	return nil
+}
