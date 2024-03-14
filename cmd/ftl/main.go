@@ -72,9 +72,6 @@ func main() {
 
 	// Set some envars for child processes.
 	os.Setenv("LOG_LEVEL", cli.LogConfig.Level.String())
-	if len(cli.ConfigFlag) > 0 {
-		os.Setenv("FTL_CONFIG", strings.Join(cli.ConfigFlag, ","))
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -85,6 +82,11 @@ func main() {
 	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: cli.ConfigFlag}
 	kctx.BindTo(sr, (*cf.Resolver[cf.Secrets])(nil))
 	kctx.BindTo(cr, (*cf.Resolver[cf.Configuration])(nil))
+
+	// Propagate to runner processes.
+	// TODO: This is a bit of a hack until we get proper configuration
+	// management through the Controller.
+	os.Setenv("FTL_CONFIG", strings.Join(cr.ConfigPaths(), ","))
 
 	// Handle signals.
 	sigch := make(chan os.Signal, 1)

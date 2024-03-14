@@ -22,7 +22,7 @@ import (
 //
 // See the [projectconfig] package for details on the configuration file format.
 type ProjectConfigResolver[R Role] struct {
-	Config []string `help:"Path to project configuration file." placeholder:"FILE" type:"existingfile" env:"FTL_CONFIG"`
+	Config []string `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
 }
 
 var _ Resolver[Configuration] = ProjectConfigResolver[Configuration]{}
@@ -101,7 +101,8 @@ func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
 	return p.setMapping(config, ref.Module, mapping)
 }
 
-func (p ProjectConfigResolver[R]) configPaths() []string {
+// ConfigPaths returns the computed list of configuration paths to load.
+func (p ProjectConfigResolver[R]) ConfigPaths() []string {
 	if len(p.Config) > 0 {
 		return p.Config
 	}
@@ -114,7 +115,7 @@ func (p ProjectConfigResolver[R]) configPaths() []string {
 }
 
 func (p ProjectConfigResolver[R]) loadWritableConfig(ctx context.Context) (pc.Config, error) {
-	configPaths := p.configPaths()
+	configPaths := p.ConfigPaths()
 	if len(configPaths) == 0 {
 		return pc.Config{}, nil
 	}
@@ -125,7 +126,7 @@ func (p ProjectConfigResolver[R]) loadWritableConfig(ctx context.Context) (pc.Co
 
 func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) (pc.Config, error) {
 	logger := log.FromContext(ctx)
-	configPaths := p.configPaths()
+	configPaths := p.ConfigPaths()
 	logger.Tracef("Loading config from %s", strings.Join(configPaths, " "))
 	config, err := pc.Merge(configPaths...)
 	if err != nil {
@@ -156,9 +157,6 @@ func (p ProjectConfigResolver[R]) getMapping(config pc.Config, module optional.O
 	} else {
 		mapping = get(config.Global)
 	}
-	if mapping == nil {
-		return map[string]*pc.URL{}, nil
-	}
 	return mapping, nil
 }
 
@@ -183,6 +181,6 @@ func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.O
 	} else {
 		set(&config.Global, mapping)
 	}
-	configPaths := p.configPaths()
+	configPaths := p.ConfigPaths()
 	return pc.Save(configPaths[len(configPaths)-1], config)
 }

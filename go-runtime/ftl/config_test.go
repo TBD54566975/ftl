@@ -13,6 +13,7 @@ import (
 func TestConfig(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	cr := configuration.ProjectConfigResolver[configuration.Configuration]{Config: []string{"testdata/ftl-project.toml"}}
+	assert.Equal(t, []string{"testdata/ftl-project.toml"}, cr.ConfigPaths())
 	cm, err := configuration.NewConfigurationManager(ctx, cr)
 	assert.NoError(t, err)
 	ctx = configuration.ContextWithConfig(ctx, cm)
