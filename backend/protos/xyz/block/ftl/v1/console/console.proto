@@ -28,7 +28,7 @@ enum LogLevel {
 }
 
 message LogEvent {
-  string deployment_name = 1;
+  string deployment_key = 1;
   optional string request_name = 2;
   google.protobuf.Timestamp time_stamp = 3;
   int32 log_level = 4;
@@ -40,7 +40,7 @@ message LogEvent {
 
 message CallEvent {
   optional string request_name = 1;
-  string deployment_name = 2;
+  string deployment_key = 2;
   google.protobuf.Timestamp time_stamp = 3;
   optional schema.VerbRef source_verb_ref = 4;
   schema.VerbRef destination_verb_ref = 5;
@@ -52,7 +52,7 @@ message CallEvent {
 }
 
 message DeploymentCreatedEvent {
-  string name = 1;
+  string key = 1;
   string language = 2;
   string module_name = 3;
   int32 min_replicas = 4;
@@ -60,7 +60,7 @@ message DeploymentCreatedEvent {
 }
 
 message DeploymentUpdatedEvent {
-  string name = 1;
+  string key = 1;
   int32 min_replicas = 2;
   int32 prev_min_replicas = 3;
 }
@@ -78,7 +78,7 @@ message Data {
 
 message Module {
   string name = 1;
-  string deployment_name = 2;
+  string deployment_key = 2;
   string language = 3;
   string schema = 4;
   repeated Verb verbs = 5;
@@ -100,7 +100,7 @@ message EventsQuery {
   message LogLevelFilter {
     LogLevel log_level = 1;
   }
-  // Filters events by deployment name.
+  // Filters events by deployment key.
   message DeploymentFilter {
     repeated string deployments = 1;
   }

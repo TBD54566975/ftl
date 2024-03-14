@@ -11,11 +11,11 @@ import (
 )
 
 type killCmd struct {
-	Deployment model.DeploymentName `arg:"" help:"Deployment to kill."`
+	Deployment model.DeploymentKey `arg:"" help:"Deployment to kill."`
 }
 
 func (k *killCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
-	_, err := client.UpdateDeploy(ctx, connect.NewRequest(&ftlv1.UpdateDeployRequest{DeploymentName: k.Deployment.String()}))
+	_, err := client.UpdateDeploy(ctx, connect.NewRequest(&ftlv1.UpdateDeployRequest{DeploymentKey: k.Deployment.String()}))
 	if err != nil {
 		return err
 	}

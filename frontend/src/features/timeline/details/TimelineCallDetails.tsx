@@ -89,7 +89,7 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp;
         </>
       )}
 
-      <DeploymentCard className='mt-4' deploymentName={call.deploymentName} />
+      <DeploymentCard className='mt-4' deploymentKey={call.deploymentKey} />
 
       <ul className='pt-4 space-y-2'>
         {selectedCall.requestName && (

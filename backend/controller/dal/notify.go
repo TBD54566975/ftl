@@ -38,7 +38,7 @@ func (n Notification[T, Key, KeyP]) String() string {
 }
 
 // DeploymentNotification is a notification from the database when a deployment changes.
-type DeploymentNotification = Notification[Deployment, model.DeploymentName, *model.DeploymentName]
+type DeploymentNotification = Notification[Deployment, model.DeploymentKey, *model.DeploymentKey]
 
 // See JSON structure in SQL schema
 type event struct {
@@ -94,19 +94,19 @@ func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
 func (d *DAL) publishNotification(ctx context.Context, notification event, logger *log.Logger) error {
 	switch notification.Table {
 	case "deployments":
-		deployment, err := decodeNotification(notification, func(key model.DeploymentName) (Deployment, optional.Option[model.DeploymentName], error) {
+		deployment, err := decodeNotification(notification, func(key model.DeploymentKey) (Deployment, optional.Option[model.DeploymentKey], error) {
 			row, err := d.db.GetDeployment(ctx, key)
 			if err != nil {
-				return Deployment{}, optional.None[model.DeploymentName](), translatePGError(err)
+				return Deployment{}, optional.None[model.DeploymentKey](), translatePGError(err)
 			}
 			return Deployment{
 				CreatedAt:   row.Deployment.CreatedAt,
-				Name:        row.Deployment.Name,
+				Key:         row.Deployment.Key,
 				Module:      row.ModuleName,
 				Schema:      row.Deployment.Schema,
 				MinReplicas: int(row.Deployment.MinReplicas),
 				Language:    row.Language,
-			}, optional.None[model.DeploymentName](), nil
+			}, optional.None[model.DeploymentKey](), nil
 		})
 		if err != nil {
 			return err

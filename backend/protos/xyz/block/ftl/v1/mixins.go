@@ -60,13 +60,13 @@ func (m *Metadata) Delete(key string) {
 	m.Values = out
 }
 
-func (r *RegisterRunnerRequest) DeploymentAsOptional() (optional.Option[model.DeploymentName], error) {
+func (r *RegisterRunnerRequest) DeploymentAsOptional() (optional.Option[model.DeploymentKey], error) {
 	if r.Deployment == nil {
-		return optional.None[model.DeploymentName](), nil
+		return optional.None[model.DeploymentKey](), nil
 	}
-	key, err := model.ParseDeploymentName(*r.Deployment)
+	key, err := model.ParseDeploymentKey(*r.Deployment)
 	if err != nil {
-		return optional.None[model.DeploymentName](), fmt.Errorf("%s: %w", "invalid deployment key", err)
+		return optional.None[model.DeploymentKey](), fmt.Errorf("%s: %w", "invalid deployment key", err)
 	}
 	return optional.Some(key), nil
 }

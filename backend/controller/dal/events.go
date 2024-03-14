@@ -35,32 +35,32 @@ type Event interface {
 }
 
 type LogEvent struct {
-	ID             int64
-	DeploymentName model.DeploymentName
-	RequestName    optional.Option[model.RequestName]
-	Time           time.Time
-	Level          int32
-	Attributes     map[string]string
-	Message        string
-	Error          optional.Option[string]
-	Stack          optional.Option[string]
+	ID            int64
+	DeploymentKey model.DeploymentKey
+	RequestName   optional.Option[model.RequestName]
+	Time          time.Time
+	Level         int32
+	Attributes    map[string]string
+	Message       string
+	Error         optional.Option[string]
+	Stack         optional.Option[string]
 }
 
 func (e *LogEvent) GetID() int64 { return e.ID }
 func (e *LogEvent) event()       {}
 
 type CallEvent struct {
-	ID             int64
-	DeploymentName model.DeploymentName
-	RequestName    optional.Option[model.RequestName]
-	Time           time.Time
-	SourceVerb     optional.Option[schema.VerbRef]
-	DestVerb       schema.VerbRef
-	Duration       time.Duration
-	Request        []byte
-	Response       []byte
-	Error          optional.Option[string]
-	Stack          optional.Option[string]
+	ID            int64
+	DeploymentKey model.DeploymentKey
+	RequestName   optional.Option[model.RequestName]
+	Time          time.Time
+	SourceVerb    optional.Option[schema.VerbRef]
+	DestVerb      schema.VerbRef
+	Duration      time.Duration
+	Request       []byte
+	Response      []byte
+	Error         optional.Option[string]
+	Stack         optional.Option[string]
 }
 
 func (e *CallEvent) GetID() int64 { return e.ID }
@@ -68,12 +68,12 @@ func (e *CallEvent) event()       {}
 
 type DeploymentCreatedEvent struct {
 	ID                 int64
-	DeploymentName     model.DeploymentName
+	DeploymentKey      model.DeploymentKey
 	Time               time.Time
 	Language           string
 	ModuleName         string
 	MinReplicas        int
-	ReplacedDeployment optional.Option[model.DeploymentName]
+	ReplacedDeployment optional.Option[model.DeploymentKey]
 }
 
 func (e *DeploymentCreatedEvent) GetID() int64 { return e.ID }
@@ -81,7 +81,7 @@ func (e *DeploymentCreatedEvent) event()       {}
 
 type DeploymentUpdatedEvent struct {
 	ID              int64
-	DeploymentName  model.DeploymentName
+	DeploymentKey   model.DeploymentKey
 	Time            time.Time
 	MinReplicas     int
 	PrevMinReplicas int
@@ -100,7 +100,7 @@ type eventFilter struct {
 	level        *log.Level
 	calls        []*eventFilterCall
 	types        []EventType
-	deployments  []model.DeploymentName
+	deployments  []model.DeploymentKey
 	requests     []string
 	newerThan    time.Time
 	olderThan    time.Time
@@ -126,9 +126,9 @@ func FilterCall(sourceModule optional.Option[string], destModule string, destVer
 	}
 }
 
-func FilterDeployments(deploymentNames ...model.DeploymentName) EventFilter {
+func FilterDeployments(deploymentKeys ...model.DeploymentKey) EventFilter {
 	return func(query *eventFilter) {
-		query.deployments = append(query.deployments, deploymentNames...)
+		query.deployments = append(query.deployments, deploymentKeys...)
 	}
 }
 
@@ -188,8 +188,8 @@ type eventLogJSON struct {
 }
 
 type eventDeploymentCreatedJSON struct {
-	MinReplicas        int                                   `json:"min_replicas"`
-	ReplacedDeployment optional.Option[model.DeploymentName] `json:"replaced,omitempty"`
+	MinReplicas        int                                  `json:"min_replicas"`
+	ReplacedDeployment optional.Option[model.DeploymentKey] `json:"replaced,omitempty"`
 }
 
 type eventDeploymentUpdatedJSON struct {
@@ -199,8 +199,8 @@ type eventDeploymentUpdatedJSON struct {
 
 type eventRow struct {
 	sql.Event
-	DeploymentName model.DeploymentName
-	RequestName    optional.Option[model.RequestName]
+	DeploymentKey model.DeploymentKey
+	RequestName   optional.Option[model.RequestName]
 }
 
 func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter) ([]Event, error) {
@@ -247,15 +247,15 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	if filter.idLowerThan != 0 {
 		q += fmt.Sprintf(" AND e.id <= $%d::BIGINT", param(filter.idLowerThan))
 	}
-	deploymentNames := map[int64]model.DeploymentName{}
+	deploymentKeys := map[int64]model.DeploymentKey{}
 	// TODO: We should probably make it mandatory to provide at least one deployment.
-	deploymentQuery := `SELECT id, name FROM deployments`
+	deploymentQuery := `SELECT id, key FROM deployments`
 	deploymentArgs := []any{}
 	if len(filter.deployments) != 0 {
 		// Unfortunately, if we use a join here, PG will do a sequential scan on
 		// events and deployments, making a 7ms query into a 700ms query.
 		// https://www.pgexplain.dev/plan/ecd44488-6060-4ad1-a9b4-49d092c3de81
-		deploymentQuery += ` WHERE name = ANY($1::TEXT[])`
+		deploymentQuery += ` WHERE key = ANY($1::TEXT[])`
 		deploymentArgs = append(deploymentArgs, filter.deployments)
 	}
 	rows, err := d.db.Conn().Query(ctx, deploymentQuery, deploymentArgs...)
@@ -265,14 +265,13 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	deploymentIDs := []int64{}
 	for rows.Next() {
 		var id int64
-		var name string
-		if err := rows.Scan(&id, &name); err != nil {
+		var key model.DeploymentKey
+		if err := rows.Scan(&id, &key); err != nil {
 			return nil, err
 		}
-		deploymentName, _ := model.ParseDeploymentName(name)
 
 		deploymentIDs = append(deploymentIDs, id)
-		deploymentNames[id] = deploymentName
+		deploymentKeys[id] = key
 	}
 
 	q += fmt.Sprintf(` AND e.deployment_id = ANY($%d::BIGINT[])`, param(deploymentIDs))
@@ -320,14 +319,14 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 	defer rows.Close()
 
-	events, err := transformRowsToEvents(deploymentNames, rows)
+	events, err := transformRowsToEvents(deploymentKeys, rows)
 	if err != nil {
 		return nil, err
 	}
 	return events, nil
 }
 
-func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows pgx.Rows) ([]Event, error) {
+func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pgx.Rows) ([]Event, error) {
 	var out []Event
 	for rows.Next() {
 		row := eventRow{}
@@ -341,7 +340,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 			return nil, err
 		}
 
-		row.DeploymentName = deploymentNames[deploymentID]
+		row.DeploymentKey = deploymentKeys[deploymentID]
 
 		var requestName optional.Option[model.RequestName]
 		if key, ok := row.RequestName.Get(); ok {
@@ -358,15 +357,15 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 				return nil, fmt.Errorf("invalid log level: %q: %w", row.CustomKey1.MustGet(), err)
 			}
 			out = append(out, &LogEvent{
-				ID:             row.ID,
-				DeploymentName: row.DeploymentName,
-				RequestName:    requestName,
-				Time:           row.TimeStamp,
-				Level:          int32(level),
-				Attributes:     jsonPayload.Attributes,
-				Message:        jsonPayload.Message,
-				Error:          jsonPayload.Error,
-				Stack:          jsonPayload.Stack,
+				ID:            row.ID,
+				DeploymentKey: row.DeploymentKey,
+				RequestName:   requestName,
+				Time:          row.TimeStamp,
+				Level:         int32(level),
+				Attributes:    jsonPayload.Attributes,
+				Message:       jsonPayload.Message,
+				Error:         jsonPayload.Error,
+				Stack:         jsonPayload.Stack,
 			})
 
 		case sql.EventTypeCall:
@@ -381,17 +380,17 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 				sourceVerb = optional.Some(schema.VerbRef{Module: sourceModule, Name: sourceName})
 			}
 			out = append(out, &CallEvent{
-				ID:             row.ID,
-				DeploymentName: row.DeploymentName,
-				RequestName:    requestName,
-				Time:           row.TimeStamp,
-				SourceVerb:     sourceVerb,
-				DestVerb:       schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
-				Duration:       time.Duration(jsonPayload.DurationMS) * time.Millisecond,
-				Request:        jsonPayload.Request,
-				Response:       jsonPayload.Response,
-				Error:          jsonPayload.Error,
-				Stack:          jsonPayload.Stack,
+				ID:            row.ID,
+				DeploymentKey: row.DeploymentKey,
+				RequestName:   requestName,
+				Time:          row.TimeStamp,
+				SourceVerb:    sourceVerb,
+				DestVerb:      schema.VerbRef{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},
+				Duration:      time.Duration(jsonPayload.DurationMS) * time.Millisecond,
+				Request:       jsonPayload.Request,
+				Response:      jsonPayload.Response,
+				Error:         jsonPayload.Error,
+				Stack:         jsonPayload.Stack,
 			})
 
 		case sql.EventTypeDeploymentCreated:
@@ -401,7 +400,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 			}
 			out = append(out, &DeploymentCreatedEvent{
 				ID:                 row.ID,
-				DeploymentName:     row.DeploymentName,
+				DeploymentKey:      row.DeploymentKey,
 				Time:               row.TimeStamp,
 				Language:           row.CustomKey1.MustGet(),
 				ModuleName:         row.CustomKey2.MustGet(),
@@ -416,7 +415,7 @@ func transformRowsToEvents(deploymentNames map[int64]model.DeploymentName, rows 
 			}
 			out = append(out, &DeploymentUpdatedEvent{
 				ID:              row.ID,
-				DeploymentName:  row.DeploymentName,
+				DeploymentKey:   row.DeploymentKey,
 				Time:            row.TimeStamp,
 				MinReplicas:     jsonPayload.MinReplicas,
 				PrevMinReplicas: jsonPayload.PrevMinReplicas,

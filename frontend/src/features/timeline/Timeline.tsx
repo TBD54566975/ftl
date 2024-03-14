@@ -118,16 +118,16 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
     setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
   }
 
-  const deploymentName = (event: Event) => {
+  const deploymentKey = (event: Event) => {
     switch (event.entry?.case) {
       case 'call':
-        return event.entry.value.deploymentName
+        return event.entry.value.deploymentKey
       case 'log':
-        return event.entry.value.deploymentName
+        return event.entry.value.deploymentKey
       case 'deploymentCreated':
-        return event.entry.value.name
+        return event.entry.value.key
       case 'deploymentUpdated':
-        return event.entry.value.name
+        return event.entry.value.key
       default:
         return ''
     }
@@ -165,12 +165,12 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
                   {formatTimestampShort(entry.timeStamp)}
                 </td>
                 <td
-                  title={deploymentName(entry)}
+                  title={deploymentKey(entry)}
                   className={`p-1 pr-2 w-40 items-center flex-none truncate ${deploymentTextColor(
-                    deploymentName(entry),
+                    deploymentKey(entry),
                   )}`}
                 >
-                  {deploymentName(entry)}
+                  {deploymentKey(entry)}
                 </td>
                 <td className='p-1 flex-grow truncate'>
                   {(() => {

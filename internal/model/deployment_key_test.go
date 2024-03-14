@@ -7,7 +7,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestDeploymentName(t *testing.T) {
+func TestDeploymentKey(t *testing.T) {
 	for _, test := range []struct {
 		str       string // when full string is known
 		strPrefix string // when only prefix is known
@@ -23,14 +23,14 @@ func TestDeploymentName(t *testing.T) {
 		{str: "module-with-hyphens-0011223344", module: "module-with-hyphens", hash: "0011223344"},
 		{str: "-", decodeErr: true},
 	} {
-		decoded, decodeErr := ParseDeploymentName(test.str)
+		decoded, decodeErr := ParseDeploymentKey(test.str)
 
 		if test.decodeErr {
-			assert.Error(t, decodeErr, "expected error for deployment name %q", test.str)
+			assert.Error(t, decodeErr, "expected error for deployment key %q", test.str)
 		} else {
-			created := NewDeploymentName(test.module)
+			created := NewDeploymentKey(test.module)
 
-			forceEncoded := DeploymentName{
+			forceEncoded := DeploymentKey{
 				module: test.module,
 				hash:   test.hash,
 			}
@@ -54,7 +54,7 @@ func TestDeploymentName(t *testing.T) {
 	}
 }
 
-func TestZeroDeploymentName(t *testing.T) {
-	_, err := ParseDeploymentName("")
-	assert.Error(t, err, "expected error for empty deployment name")
+func TestZeroDeploymentKey(t *testing.T) {
+	_, err := ParseDeploymentKey("")
+	assert.Error(t, err, "expected error for empty deployment key")
 }

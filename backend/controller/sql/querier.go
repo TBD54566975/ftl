@@ -16,7 +16,7 @@ type Querier interface {
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
-	CreateDeployment(ctx context.Context, moduleName string, schema []byte, name model.DeploymentName) error
+	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRequest(ctx context.Context, origin Origin, name string, sourceAddr string) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
@@ -29,7 +29,7 @@ type Querier interface {
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
 	GetControllers(ctx context.Context, all bool) ([]Controller, error)
-	GetDeployment(ctx context.Context, name model.DeploymentName) (GetDeploymentRow, error)
+	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
@@ -48,7 +48,7 @@ type Querier interface {
 	GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error)
 	GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error)
 	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
-	GetRunnersForDeployment(ctx context.Context, name model.DeploymentName) ([]GetRunnersForDeploymentRow, error)
+	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
 	InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error
 	InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error
@@ -57,14 +57,14 @@ type Querier interface {
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, timeout time.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error)
-	ReplaceDeployment(ctx context.Context, oldDeployment string, newDeployment string, minReplicas int32) (int64, error)
+	ReplaceDeployment(ctx context.Context, oldDeployment model.DeploymentKey, newDeployment model.DeploymentKey, minReplicas int32) (int64, error)
 	// Find an idle runner and reserve it for the given deployment.
-	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentName model.DeploymentName, labels []byte) (Runner, error)
-	SetDeploymentDesiredReplicas(ctx context.Context, name model.DeploymentName, minReplicas int32) error
+	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error)
+	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
-	// If the deployment name is null, then deployment_rel.id will be null,
+	// If the deployment key is null, then deployment_rel.id will be null,
 	// otherwise we try to retrieve the deployments.id using the key. If
 	// there is no corresponding deployment, then the deployment ID is -1
 	// and the parent statement will fail due to a foreign key constraint.

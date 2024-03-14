@@ -112,7 +112,7 @@ var _ ftlv1connect.RunnerServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 
 type deployment struct {
-	key    model.DeploymentName
+	key    model.DeploymentKey
 	plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]
 	// Cancelled when plugin terminates
 	ctx context.Context
@@ -157,7 +157,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("%s: %w", "failed to register runner", err))
 	}
 
-	key, err := model.ParseDeploymentName(req.Msg.DeploymentName)
+	key, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
 	}
@@ -185,7 +185,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		}
 	}()
 
-	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentName: req.Msg.DeploymentName}))
+	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: req.Msg.DeploymentKey}))
 	if err != nil {
 		return nil, err
 	}
@@ -242,11 +242,11 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("no deployment"))
 	}
-	deploymentName, err := model.ParseDeploymentName(c.Msg.DeploymentName)
+	deploymentKey, err := model.ParseDeploymentKey(c.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
 	}
-	if depl.key != deploymentName {
+	if depl.key != deploymentKey {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("deployment key mismatch"))
 	}
 
@@ -275,7 +275,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	}), nil
 }
 
-func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentName, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
+func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
 	return &deployment{
 		ctx:    ctx,
 		key:    key,
@@ -289,11 +289,11 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	// Figure out the appropriate state.
 	state := s.state.Load()
 	var errPtr *string
-	var deploymentName *string
+	var deploymentKey *string
 	depl, ok := s.deployment.Load().Get()
 	if ok {
 		dkey := depl.key.String()
-		deploymentName = &dkey
+		deploymentKey = &dkey
 		select {
 		case <-depl.ctx.Done():
 			state = ftlv1.RunnerState_RUNNER_IDLE
@@ -314,7 +314,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		Key:        s.key.String(),
 		Endpoint:   s.config.Advertise.String(),
 		Labels:     s.labels,
-		Deployment: deploymentName,
+		Deployment: deploymentKey,
 		State:      state,
 		Error:      errPtr,
 	})
@@ -345,7 +345,7 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 
 	select {
 	case entry := <-s.deploymentLogQueue:
-		deploymentName, ok := entry.Attributes["deployment"]
+		deploymentKey, ok := entry.Attributes["deployment"]
 		if !ok {
 			return fmt.Errorf("missing deployment key")
 		}
@@ -361,13 +361,13 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 		}
 
 		err := send(&ftlv1.StreamDeploymentLogsRequest{
-			RequestName:    request,
-			DeploymentName: deploymentName,
-			TimeStamp:      timestamppb.New(entry.Time),
-			LogLevel:       int32(entry.Level.Severity()),
-			Attributes:     entry.Attributes,
-			Message:        entry.Message,
-			Error:          errorString,
+			RequestName:   request,
+			DeploymentKey: deploymentKey,
+			TimeStamp:     timestamppb.New(entry.Time),
+			LogLevel:      int32(entry.Level.Severity()),
+			Attributes:    entry.Attributes,
+			Message:       entry.Message,
+			Error:         errorString,
 		})
 		if err != nil {
 			return err
@@ -381,8 +381,8 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 	return nil
 }
 
-func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.DeploymentName) *log.Logger {
-	attrs := map[string]string{"deployment": deploymentName.String()}
+func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.DeploymentKey) *log.Logger {
+	attrs := map[string]string{"deployment": deploymentKey.String()}
 	if requestName, ok, _ := rpc.RequestNameFromContext(ctx); ok {
 		attrs["request"] = requestName.String()
 	}
