@@ -193,7 +193,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			case *schema.Time:
 				imports["time"] = "stdtime"
 
-			case *schema.Optional:
+			case *schema.Optional, *schema.Unit:
 				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
 
 			default:
