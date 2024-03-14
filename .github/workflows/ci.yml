@@ -19,7 +19,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Test
-        run: mvn test --batch-mode
+        run: mvn -f kotlin-runtime/ftl-runtime -B test
   test:
     name: Test Go
     runs-on: ubuntu-latest
