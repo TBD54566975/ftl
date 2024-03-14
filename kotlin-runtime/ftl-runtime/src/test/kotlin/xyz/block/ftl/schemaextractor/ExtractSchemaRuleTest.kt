@@ -3,6 +3,9 @@ package xyz.block.ftl.schemaextractor
 import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.rules.KotlinCoreEnvironmentTest
 import io.gitlab.arturbosch.detekt.test.compileAndLintWithContext
+import java.io.File
+import kotlin.test.AfterTest
+import kotlin.test.assertContains
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
@@ -10,12 +13,29 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import xyz.block.ftl.schemaextractor.ExtractSchemaRule.Companion.OUTPUT_FILENAME
-import xyz.block.ftl.v1.schema.*
 import xyz.block.ftl.v1.schema.Array
+import xyz.block.ftl.v1.schema.Data
+import xyz.block.ftl.v1.schema.Decl
+import xyz.block.ftl.v1.schema.Enum
+import xyz.block.ftl.v1.schema.EnumVariant
+import xyz.block.ftl.v1.schema.Field
+import xyz.block.ftl.v1.schema.IngressPathComponent
+import xyz.block.ftl.v1.schema.IngressPathLiteral
+import xyz.block.ftl.v1.schema.IntValue
 import xyz.block.ftl.v1.schema.Map
-import java.io.File
-import kotlin.test.AfterTest
-import kotlin.test.assertContains
+import xyz.block.ftl.v1.schema.Metadata
+import xyz.block.ftl.v1.schema.MetadataAlias
+import xyz.block.ftl.v1.schema.MetadataCalls
+import xyz.block.ftl.v1.schema.MetadataIngress
+import xyz.block.ftl.v1.schema.Module
+import xyz.block.ftl.v1.schema.Optional
+import xyz.block.ftl.v1.schema.Position
+import xyz.block.ftl.v1.schema.Ref
+import xyz.block.ftl.v1.schema.StringValue
+import xyz.block.ftl.v1.schema.Type
+import xyz.block.ftl.v1.schema.TypeParameter
+import xyz.block.ftl.v1.schema.Value
+import xyz.block.ftl.v1.schema.Verb
 
 @KotlinCoreEnvironmentTest
 internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
@@ -370,5 +390,142 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
   fun cleanup() {
     val file = File(OUTPUT_FILENAME)
     file.delete()
+  }
+
+  @Test
+  fun `extracts enums`() {
+    val code = """
+      package ftl.things
+
+      import ftl.time.Color
+      import xyz.block.ftl.Json
+      import xyz.block.ftl.Context
+      import xyz.block.ftl.Method
+      import xyz.block.ftl.Verb
+
+      class InvalidInput(val field: String) : Exception()
+
+      enum class Thing {
+        A,
+        B,
+        C,
+      }
+
+      /**
+       * Comments.
+       */
+      enum class StringThing(val value: String) {
+        A("A"),
+        B("B"),
+        C("C"),
+      }
+
+      enum class IntThing(val value: Int) {
+        A(1),
+        B(2),
+        C(3),
+      }
+
+      data class Request(
+        val color: Color,
+        val thing: Thing,
+        val stringThing: StringThing,
+        val intThing: IntThing
+      )
+
+      data class Response(val message: String)
+
+      @Verb
+      fun something(context: Context, req: Request): Response {
+        return Response(message = "response")
+      }
+    """
+    ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
+    val file = File(OUTPUT_FILENAME)
+    val module = Module.ADAPTER.decode(file.inputStream())
+
+    val expected = Module(
+      name = "things",
+      decls = listOf(
+        Decl(
+          data_ = Data(
+            name = "Request",
+            fields = listOf(
+              Field(
+                name = "color",
+                type = Type(ref = Ref(name = "Color", module = "time"))
+              ),
+              Field(
+                name = "thing",
+                type = Type(ref = Ref(name = "Thing", module = "things"))
+              ),
+              Field(
+                name = "stringThing",
+                type = Type(ref = Ref(name = "StringThing", module = "things"))
+              ),
+              Field(
+                name = "intThing",
+                type = Type(ref = Ref(name = "IntThing", module = "things"))
+              ),
+            ),
+          ),
+        ),
+        Decl(
+          data_ = Data(
+            name = "Response",
+            fields = listOf(
+              Field(
+                name = "message",
+                type = Type(string = xyz.block.ftl.v1.schema.String())
+              )
+            ),
+          ),
+        ),
+        Decl(
+          verb = Verb(
+            name = "something",
+            request = Type(ref = Ref(name = "Request", module = "things")),
+            response = Type(ref = Ref(name = "Response", module = "things")),
+          ),
+        ),
+        Decl(
+          enum_ = Enum(
+            name = "Thing",
+            variants = listOf(
+              EnumVariant(name = "A", value_ = Value(intValue = IntValue(value_ = 0))),
+              EnumVariant(name = "B", value_ = Value(intValue = IntValue(value_ = 1))),
+              EnumVariant(name = "C", value_ = Value(intValue = IntValue(value_ = 2))),
+            ),
+          ),
+        ),
+        Decl(
+          enum_ = Enum(
+            name = "StringThing",
+            comments = listOf("Comments."),
+            variants = listOf(
+              EnumVariant(name = "A", value_ = Value(stringValue = StringValue(value_ = "A"))),
+              EnumVariant(name = "B", value_ = Value(stringValue = StringValue(value_ = "B"))),
+              EnumVariant(name = "C", value_ = Value(stringValue = StringValue(value_ = "C"))),
+            ),
+          ),
+        ),
+        Decl(
+          enum_ = Enum(
+            name = "IntThing",
+            variants = listOf(
+              EnumVariant(name = "A", value_ = Value(intValue = IntValue(value_ = 1))),
+              EnumVariant(name = "B", value_ = Value(intValue = IntValue(value_ = 2))),
+              EnumVariant(name = "C", value_ = Value(intValue = IntValue(value_ = 3))),
+            ),
+          ),
+        ),
+      )
+    )
+
+    assertThat(module)
+      .usingRecursiveComparison()
+      .withEqualsForType({ _, _ -> true }, Position::class.java)
+      .ignoringFieldsMatchingRegexes(".*hashCode\$")
+      .isEqualTo(expected)
   }
 }
