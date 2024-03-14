@@ -64,6 +64,7 @@ package other
 
 import (
   "context"
+  "github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 var _ = context.Background
