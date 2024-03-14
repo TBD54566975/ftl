@@ -17,7 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
-func call[Req, Resp any](ctx context.Context, callee *schemapb.VerbRef, req Req) (resp Resp, err error) {
+func call[Req, Resp any](ctx context.Context, callee *schemapb.Ref, req Req) (resp Resp, err error) {
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	reqData, err := encoding.Marshal(req)
 	if err != nil {
@@ -44,58 +44,37 @@ func call[Req, Resp any](ctx context.Context, callee *schemapb.VerbRef, req Req)
 }
 
 // Call a Verb through the FTL Controller.
-func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (resp Resp, err error) {
-	callee := VerbToRef(verb)
-	return call[Req, Resp](ctx, callee.ToProto(), req)
+func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (Resp, error) {
+	return call[Req, Resp](ctx, CallToSchemaRef(verb), req)
 }
 
 // CallSink calls a Sink through the FTL controller.
 func CallSink[Req any](ctx context.Context, sink Sink[Req], req Req) error {
-	callee := SinkToRef(sink)
-	verbRef := &schemapb.VerbRef{Module: callee.Module, Name: callee.Name}
-	_, err := call[Req, Unit](ctx, verbRef, req)
+	_, err := call[Req, Unit](ctx, CallToSchemaRef(sink), req)
 	return err
 }
 
 // CallSource calls a Source through the FTL controller.
 func CallSource[Resp any](ctx context.Context, source Source[Resp]) (Resp, error) {
-	callee := SourceToRef(source)
-	verbRef := &schemapb.VerbRef{Module: callee.Module, Name: callee.Name}
-	fmt.Printf("source ref2: %v\n", verbRef)
-	return call[Unit, Resp](ctx, verbRef, Unit{})
+	return call[Unit, Resp](ctx, CallToSchemaRef(source), Unit{})
 }
 
 // CallEmpty calls a Verb with no request or response through the FTL controller.
 func CallEmpty(ctx context.Context, empty Empty) error {
-	callee := EmptyToRef(empty)
-	verbRef := &schemapb.VerbRef{Module: callee.Module, Name: callee.Name}
-
-	_, err := call[Unit, Unit](ctx, verbRef, Unit{})
+	_, err := call[Unit, Unit](ctx, CallToSchemaRef(empty), Unit{})
 	return err
 }
 
-// VerbToRef returns the FTL reference for a Verb.
-func VerbToRef[Req, Resp any](verb Verb[Req, Resp]) Ref {
-	ref := runtime.FuncForPC(reflect.ValueOf(verb).Pointer()).Name()
+// CallToRef returns the Ref for a Verb, Sink, Source, or Empty.
+func CallToRef(call any) Ref {
+	ref := runtime.FuncForPC(reflect.ValueOf(call).Pointer()).Name()
 	return goRefToFTLRef(ref)
 }
 
-// SinkToRef returns the FTL reference for a Sink.
-func SinkToRef[Req any](sink Sink[Req]) Ref {
-	ref := runtime.FuncForPC(reflect.ValueOf(sink).Pointer()).Name()
-	return goRefToFTLRef(ref)
-}
-
-// SourceToRef returns the FTL reference for a Source.
-func SourceToRef[Resp any](source Source[Resp]) Ref {
-	ref := runtime.FuncForPC(reflect.ValueOf(source).Pointer()).Name()
-	return goRefToFTLRef(ref)
-}
-
-// EmptyToRef returns the FTL reference for an Empty.
-func EmptyToRef(empty Empty) Ref {
-	ref := runtime.FuncForPC(reflect.ValueOf(empty).Pointer()).Name()
-	return goRefToFTLRef(ref)
+// CallToSchemaRef returns the Ref for a Verb, Sink, Source, or Empty as a Schema Ref.
+func CallToSchemaRef(call any) *schemapb.Ref {
+	ref := CallToRef(call)
+	return ref.ToProto()
 }
 
 func goRefToFTLRef(ref string) Ref {

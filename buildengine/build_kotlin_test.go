@@ -323,7 +323,7 @@ func TestGenerateSourcesAndSinks(t *testing.T) {
 						}},
 					&schema.Verb{
 						Name:     "sink",
-						Request:  &schema.DataRef{Name: "SinkReq"},
+						Request:  &schema.Ref{Name: "SinkReq"},
 						Response: &schema.Unit{},
 					},
 					&schema.Data{
@@ -334,7 +334,7 @@ func TestGenerateSourcesAndSinks(t *testing.T) {
 					&schema.Verb{
 						Name:     "source",
 						Request:  &schema.Unit{},
-						Response: &schema.DataRef{Name: "SourceResp"},
+						Response: &schema.Ref{Name: "SourceResp"},
 					},
 					&schema.Verb{
 						Name:     "nothing",

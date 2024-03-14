@@ -34,6 +34,7 @@ import xyz.block.ftl.v1.schema.Ref
 import xyz.block.ftl.v1.schema.StringValue
 import xyz.block.ftl.v1.schema.Type
 import xyz.block.ftl.v1.schema.TypeParameter
+import xyz.block.ftl.v1.schema.Unit
 import xyz.block.ftl.v1.schema.Value
 import xyz.block.ftl.v1.schema.Verb
 
@@ -309,7 +310,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
           verb = Verb(
             name = "sink",
             request = Type(
-              dataRef = DataRef(
+              ref = Ref(
                 name = "Empty",
                 module = "builtin"
               )
@@ -326,7 +327,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
               unit = Unit()
             ),
             response = Type(
-              dataRef = DataRef(
+              ref = Ref(
                 name = "Empty",
                 module = "builtin"
               )
