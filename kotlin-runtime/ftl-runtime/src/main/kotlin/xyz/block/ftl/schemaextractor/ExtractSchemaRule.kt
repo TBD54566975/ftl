@@ -242,22 +242,15 @@ class SchemaExtractor(
   private fun extractVerb(verb: KtNamedFunction): Verb {
     val verbSourcePos = verb.getLineAndColumn()
 
-    var requestRef = Type(unit = xyz.block.ftl.v1.schema.Unit())
-    if (verb.valueParameters.size > 1) {
-      val ref = verb.valueParameters.last()?.let {
-        val position = it.getLineAndColumn().toPosition()
-        return@let it.typeReference?.resolveType()?.toSchemaType(position)
-      }
-      ref?.let { requestRef = it }
+    val requestRef = verb.valueParameters.takeIf { it.size > 1 }?.last()?.let {
+      val position = it.getLineAndColumn().toPosition()
+      return@let it.typeReference?.resolveType()?.toSchemaType(position)
+    } ?: Type(unit = xyz.block.ftl.v1.schema.Unit())
 
-    }
-
-    var returnRef = Type(unit = xyz.block.ftl.v1.schema.Unit())
-    val ref = verb.createTypeBindingForReturnType(bindingContext)?.let {
+    val returnRef = verb.createTypeBindingForReturnType(bindingContext)?.let {
       val position = it.psiElement.getLineAndColumn().toPosition()
       return@let it.type.toSchemaType(position)
-    }
-    ref?.let { returnRef = it }
+    } ?: Type(unit = xyz.block.ftl.v1.schema.Unit())
 
     val metadata = mutableListOf<Metadata>()
     extractIngress(verb, requestRef, returnRef)?.apply { metadata.add(Metadata(ingress = this)) }
