@@ -112,9 +112,9 @@ jobs:
           cache: "maven"
       - name: Publish JARs # Snapshots are published first, then the tagged release
         run: |
-          mvn -U -B clean deploy -P release
-          mvn -B versions:set -DnewVersion="$(git describe --tags --abbrev=0 | cut -c2-)" -DprocessAllModules -DgenerateBackupPoms=false
-          mvn -U -B clean deploy -P release
+          mvn -f kotlin-runtime/ftl-runtime -U -B clean deploy -P release
+          mvn -f kotlin-runtime/ftl-runtime -B versions:set -DnewVersion="$(git describe --tags --abbrev=0 | cut -c2-)" -DprocessAllModules -DgenerateBackupPoms=false
+          mvn -f kotlin-runtime/ftl-runtime -U -B clean deploy -P release
           git clean -f ./*.flattened_pom.xml
         env:
           SIGN_KEY_PASS: ${{ secrets.GPG_PASSPHRASE }}

@@ -27,7 +27,7 @@ PROTO_OUT = backend/protos/xyz/block/ftl/v1/ftlv1connect/ftl.connect.go \
 COMMON_LOG_IN = internal/log/api.go
 COMMON_LOG_OUT = internal/log/log_level_string.go
 
-KT_RUNTIME_IN = kotlin-runtime/ftl-runtime/**/*.{kt,kts} pom.xml kotlin-runtime/ftl-runtime/**/pom.xml
+KT_RUNTIME_IN = kotlin-runtime/ftl-runtime/**/*.{kt,kts} kotlin-runtime/ftl-runtime/**/pom.xml
 KT_RUNTIME_OUT = kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT.jar
 KT_RUNTIME_RUNNER_TEMPLATE_OUT = build/template/ftl/jars/ftl-runtime.jar
 
@@ -113,9 +113,8 @@ kotlin-runtime/external-module-template.zip: kotlin-runtime/external-module-temp
 %{KT_RUNTIME_OUT}: %{KT_RUNTIME_IN} %{PROTO_IN}
   # TODO: Figure out how to make Maven build completely offline. Bizarrely "-o" does not do this.
   build:
-    mvn -B -N install
-    mvn -Dmaven.test.skip=true -B -pl :ftl-runtime install
-  +clean: mvn -B -pl :ftl-runtime clean
+    mvn -f kotlin-runtime/ftl-runtime -Dmaven.test.skip=true -B install
+  +clean: mvn -f kotlin-runtime/ftl-runtime -B clean
 
 %(dirname %{KT_RUNTIME_RUNNER_TEMPLATE_OUT})%:
   build: install -m 0700 -d %{OUT}
