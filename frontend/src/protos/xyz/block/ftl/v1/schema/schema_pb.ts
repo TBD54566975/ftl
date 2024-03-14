@@ -486,6 +486,11 @@ export class EnumVariant extends Message<EnumVariant> {
    */
   value?: Value;
 
+  /**
+   * @generated from field: repeated string comments = 4;
+   */
+  comments: string[] = [];
+
   constructor(data?: PartialMessage<EnumVariant>) {
     super();
     proto3.util.initPartial(data, this);
@@ -497,6 +502,7 @@ export class EnumVariant extends Message<EnumVariant> {
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "value", kind: "message", T: Value },
+    { no: 4, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnumVariant {
