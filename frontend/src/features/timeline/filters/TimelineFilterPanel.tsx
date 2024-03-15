@@ -52,7 +52,7 @@ export const TimelineFilterPanel = ({
     if (modules.modules.length === 0) {
       return
     }
-    const newModules = modules.modules.map((module) => module.deploymentName)
+    const newModules = modules.modules.map((module) => module.deploymentKey)
     const addedModules = newModules.filter((name) => !previousModules.includes(name))
 
     if (addedModules.length > 0) {
@@ -85,11 +85,11 @@ export const TimelineFilterPanel = ({
     }
   }
 
-  const handleModuleChanged = (deploymentName: string, checked: boolean) => {
+  const handleModuleChanged = (deploymentKey: string, checked: boolean) => {
     if (checked) {
-      setSelectedModules((prev) => [...prev, deploymentName])
+      setSelectedModules((prev) => [...prev, deploymentKey])
     } else {
-      setSelectedModules((prev) => prev.filter((filter) => filter !== deploymentName))
+      setSelectedModules((prev) => prev.filter((filter) => filter !== deploymentKey))
     }
   }
 
@@ -155,7 +155,7 @@ export const TimelineFilterPanel = ({
           <FilterPanelSection title='Modules'>
             <div className='relative flex items-center mb-2'>
               <button
-                onClick={() => setSelectedModules(modules.modules.map((module) => module.deploymentName))}
+                onClick={() => setSelectedModules(modules.modules.map((module) => module.deploymentKey))}
                 className='text-indigo-600 cursor-pointer hover:text-indigo-500'
               >
                 Select All
@@ -169,19 +169,19 @@ export const TimelineFilterPanel = ({
               </button>
             </div>
             {modules.modules.map((module) => (
-              <div key={module.deploymentName} className='relative flex items-start'>
+              <div key={module.deploymentKey} className='relative flex items-start'>
                 <div className='flex h-6 items-center'>
                   <input
-                    id={`module-${module.deploymentName}`}
-                    name={`module-${module.deploymentName}`}
+                    id={`module-${module.deploymentKey}`}
+                    name={`module-${module.deploymentKey}`}
                     type='checkbox'
-                    checked={selectedModules.includes(module.deploymentName)}
-                    onChange={(e) => handleModuleChanged(module.deploymentName, e.target.checked)}
+                    checked={selectedModules.includes(module.deploymentKey)}
+                    onChange={(e) => handleModuleChanged(module.deploymentKey, e.target.checked)}
                     className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
                   />
                 </div>
                 <div className='ml-2 text-sm leading-6 w-full'>
-                  <label htmlFor={`module-${module.deploymentName}`} className={`${textColor} flex cursor-pointer`}>
+                  <label htmlFor={`module-${module.deploymentKey}`} className={`${textColor} flex cursor-pointer`}>
                     {module.name}
                   </label>
                 </div>

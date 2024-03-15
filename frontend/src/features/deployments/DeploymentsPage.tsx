@@ -13,7 +13,7 @@ export const DeploymentsPage = () => {
       <Page.Body className='p-4'>
         <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
           {modules.modules.map((module) => (
-            <DeploymentCard key={module.deploymentName} deploymentName={module.deploymentName} />
+            <DeploymentCard key={module.deploymentKey} deploymentKey={module.deploymentKey} />
           ))}
         </div>
       </Page.Body>

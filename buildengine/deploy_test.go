@@ -15,7 +15,7 @@ import (
 
 type mockDeployClient struct {
 	MissingDigests []string
-	DeploymentName string
+	DeploymentKey  string
 }
 
 func (m *mockDeployClient) GetArtefactDiffs(context.Context, *connect.Request[ftlv1.GetArtefactDiffsRequest]) (*connect.Response[ftlv1.GetArtefactDiffsResponse], error) {
@@ -30,7 +30,7 @@ func (m *mockDeployClient) UploadArtefact(ctx context.Context, req *connect.Requ
 }
 
 func (m *mockDeployClient) CreateDeployment(context.Context, *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
-	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentName: m.DeploymentName}), nil
+	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: m.DeploymentKey}), nil
 }
 
 func (m *mockDeployClient) ReplaceDeploy(context.Context, *connect.Request[ftlv1.ReplaceDeployRequest]) (*connect.Response[ftlv1.ReplaceDeployResponse], error) {
@@ -40,7 +40,7 @@ func (m *mockDeployClient) ReplaceDeploy(context.Context, *connect.Request[ftlv1
 func (m *mockDeployClient) Status(context.Context, *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
 	resp := &ftlv1.StatusResponse{
 		Deployments: []*ftlv1.StatusResponse_Deployment{
-			{Key: m.DeploymentName, Replicas: 1},
+			{Key: m.DeploymentKey, Replicas: 1},
 		},
 	}
 	return connect.NewResponse(resp), nil
@@ -76,7 +76,7 @@ func TestDeploy(t *testing.T) {
 
 	client := &mockDeployClient{
 		MissingDigests: []string{sum.String()},
-		DeploymentName: "test-deployment",
+		DeploymentKey:  "test-deployment",
 	}
 
 	err = Deploy(ctx, module, int32(1), true, client)

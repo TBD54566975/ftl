@@ -94,11 +94,11 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		}
 
 		modules = append(modules, &pbconsole.Module{
-			Name:           deployment.Module,
-			DeploymentName: deployment.Name.String(),
-			Language:       deployment.Language,
-			Verbs:          verbs,
-			Data:           data,
+			Name:          deployment.Module,
+			DeploymentKey: deployment.Key.String(),
+			Language:      deployment.Language,
+			Verbs:         verbs,
+			Data:          data,
 		})
 	}
 
@@ -197,15 +197,15 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 	for _, filter := range pb.Filters {
 		switch filter := filter.Filter.(type) {
 		case *pbconsole.EventsQuery_Filter_Deployments:
-			deploymentNames := make([]model.DeploymentName, 0, len(filter.Deployments.Deployments))
+			deploymentKeys := make([]model.DeploymentKey, 0, len(filter.Deployments.Deployments))
 			for _, deployment := range filter.Deployments.Deployments {
-				deploymentName, err := model.ParseDeploymentName(deployment)
+				deploymentKey, err := model.ParseDeploymentKey(deployment)
 				if err != nil {
 					return nil, connect.NewError(connect.CodeInvalidArgument, err)
 				}
-				deploymentNames = append(deploymentNames, deploymentName)
+				deploymentKeys = append(deploymentKeys, deploymentKey)
 			}
-			query = append(query, dal.FilterDeployments(deploymentNames...))
+			query = append(query, dal.FilterDeployments(deploymentKeys...))
 
 		case *pbconsole.EventsQuery_Filter_Requests:
 			requestNames := make([]model.RequestName, 0, len(filter.Requests.Requests))
@@ -297,10 +297,10 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 			Id:        event.ID,
 			Entry: &pbconsole.Event_Call{
 				Call: &pbconsole.CallEvent{
-					RequestName:    requestName,
-					DeploymentName: event.DeploymentName.String(),
-					TimeStamp:      timestamppb.New(event.Time),
-					SourceVerbRef:  sourceVerbRef,
+					RequestName:   requestName,
+					DeploymentKey: event.DeploymentKey.String(),
+					TimeStamp:     timestamppb.New(event.Time),
+					SourceVerbRef: sourceVerbRef,
 					DestinationVerbRef: &schemapb.Ref{
 						Module: event.DestVerb.Module,
 						Name:   event.DestVerb.Name,
@@ -325,14 +325,14 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 			Id:        event.ID,
 			Entry: &pbconsole.Event_Log{
 				Log: &pbconsole.LogEvent{
-					DeploymentName: event.DeploymentName.String(),
-					RequestName:    requestName,
-					TimeStamp:      timestamppb.New(event.Time),
-					LogLevel:       event.Level,
-					Attributes:     event.Attributes,
-					Message:        event.Message,
-					Error:          event.Error.Ptr(),
-					Stack:          event.Stack.Ptr(),
+					DeploymentKey: event.DeploymentKey.String(),
+					RequestName:   requestName,
+					TimeStamp:     timestamppb.New(event.Time),
+					LogLevel:      event.Level,
+					Attributes:    event.Attributes,
+					Message:       event.Message,
+					Error:         event.Error.Ptr(),
+					Stack:         event.Stack.Ptr(),
 				},
 			},
 		}
@@ -348,7 +348,7 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 			Id:        event.ID,
 			Entry: &pbconsole.Event_DeploymentCreated{
 				DeploymentCreated: &pbconsole.DeploymentCreatedEvent{
-					Name:        event.DeploymentName.String(),
+					Key:         event.DeploymentKey.String(),
 					Language:    event.Language,
 					ModuleName:  event.ModuleName,
 					MinReplicas: int32(event.MinReplicas),
@@ -362,7 +362,7 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 			Id:        event.ID,
 			Entry: &pbconsole.Event_DeploymentUpdated{
 				DeploymentUpdated: &pbconsole.DeploymentUpdatedEvent{
-					Name:            event.DeploymentName.String(),
+					Key:             event.DeploymentKey.String(),
 					MinReplicas:     int32(event.MinReplicas),
 					PrevMinReplicas: int32(event.PrevMinReplicas),
 				},

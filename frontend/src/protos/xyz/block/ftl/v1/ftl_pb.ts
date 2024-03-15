@@ -492,9 +492,9 @@ export class PullSchemaRequest extends Message<PullSchemaRequest> {
  */
 export class PullSchemaResponse extends Message<PullSchemaResponse> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: string module_name = 2;
@@ -529,7 +529,7 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.PullSchemaResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "module_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "schema", kind: "message", T: Module, opt: true },
     { no: 3, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
@@ -814,16 +814,16 @@ export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
  */
 export class CreateDeploymentResponse extends Message<CreateDeploymentResponse> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * Currently active deployment for this module, if any.
    *
-   * @generated from field: optional string active_deployment_name = 2;
+   * @generated from field: optional string active_deployment_key = 2;
    */
-  activeDeploymentName?: string;
+  activeDeploymentKey?: string;
 
   constructor(data?: PartialMessage<CreateDeploymentResponse>) {
     super();
@@ -833,8 +833,8 @@ export class CreateDeploymentResponse extends Message<CreateDeploymentResponse> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.CreateDeploymentResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "active_deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "active_deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateDeploymentResponse {
@@ -859,9 +859,9 @@ export class CreateDeploymentResponse extends Message<CreateDeploymentResponse> 
  */
 export class GetDeploymentArtefactsRequest extends Message<GetDeploymentArtefactsRequest> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: repeated xyz.block.ftl.v1.DeploymentArtefact have_artefacts = 2;
@@ -876,7 +876,7 @@ export class GetDeploymentArtefactsRequest extends Message<GetDeploymentArtefact
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.GetDeploymentArtefactsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "have_artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
   ]);
 
@@ -945,9 +945,9 @@ export class GetDeploymentArtefactsResponse extends Message<GetDeploymentArtefac
  */
 export class GetDeploymentRequest extends Message<GetDeploymentRequest> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   constructor(data?: PartialMessage<GetDeploymentRequest>) {
     super();
@@ -957,7 +957,7 @@ export class GetDeploymentRequest extends Message<GetDeploymentRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.GetDeploymentRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDeploymentRequest {
@@ -1125,9 +1125,9 @@ export class RegisterRunnerResponse extends Message<RegisterRunnerResponse> {
  */
 export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: int32 min_replicas = 2;
@@ -1142,7 +1142,7 @@ export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.UpdateDeployRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
@@ -1199,9 +1199,9 @@ export class UpdateDeployResponse extends Message<UpdateDeployResponse> {
  */
 export class ReplaceDeployRequest extends Message<ReplaceDeployRequest> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: int32 min_replicas = 2;
@@ -1216,7 +1216,7 @@ export class ReplaceDeployRequest extends Message<ReplaceDeployRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.ReplaceDeployRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
@@ -1273,9 +1273,9 @@ export class ReplaceDeployResponse extends Message<ReplaceDeployResponse> {
  */
 export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsRequest> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: optional string request_name = 2;
@@ -1315,7 +1315,7 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StreamDeploymentLogsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
@@ -1682,9 +1682,9 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
  */
 export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressRoute> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 5;
@@ -1709,7 +1709,7 @@ export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressR
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse.IngressRoute";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "verb", kind: "message", T: Ref },
     { no: 3, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -1964,9 +1964,9 @@ export class ProcessListResponse_Process extends Message<ProcessListResponse_Pro
  */
 export class DeployRequest extends Message<DeployRequest> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   constructor(data?: PartialMessage<DeployRequest>) {
     super();
@@ -1976,7 +1976,7 @@ export class DeployRequest extends Message<DeployRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.DeployRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeployRequest {
@@ -2032,9 +2032,9 @@ export class DeployResponse extends Message<DeployResponse> {
  */
 export class TerminateRequest extends Message<TerminateRequest> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   constructor(data?: PartialMessage<TerminateRequest>) {
     super();
@@ -2044,7 +2044,7 @@ export class TerminateRequest extends Message<TerminateRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.TerminateRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TerminateRequest {
@@ -2069,9 +2069,9 @@ export class TerminateRequest extends Message<TerminateRequest> {
  */
 export class ReserveRequest extends Message<ReserveRequest> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   constructor(data?: PartialMessage<ReserveRequest>) {
     super();
@@ -2081,7 +2081,7 @@ export class ReserveRequest extends Message<ReserveRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.ReserveRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReserveRequest {

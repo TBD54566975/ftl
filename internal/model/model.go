@@ -13,7 +13,7 @@ import (
 type Deployment struct {
 	Module    string
 	Language  string
-	Name      DeploymentName
+	Key       DeploymentKey
 	Schema    *schema.Module
 	Artefacts []*Artefact
 }

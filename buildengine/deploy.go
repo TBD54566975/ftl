@@ -89,14 +89,14 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 		return err
 	}
 
-	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{DeploymentName: resp.Msg.GetDeploymentName(), MinReplicas: replicas}))
+	_, err = client.ReplaceDeploy(ctx, connect.NewRequest(&ftlv1.ReplaceDeployRequest{DeploymentKey: resp.Msg.GetDeploymentKey(), MinReplicas: replicas}))
 	if err != nil {
 		return err
 	}
 
 	if waitForDeployOnline {
-		logger.Debugf("Waiting for deployment %s to become ready", resp.Msg.DeploymentName)
-		err = checkReadiness(ctx, client, resp.Msg.DeploymentName, replicas)
+		logger.Debugf("Waiting for deployment %s to become ready", resp.Msg.DeploymentKey)
+		err = checkReadiness(ctx, client, resp.Msg.DeploymentKey, replicas)
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func teminateModuleDeployment(ctx context.Context, client ftlv1connect.Controlle
 	}
 
 	logger.Infof("Terminating deployment %s", key)
-	_, err = client.UpdateDeploy(ctx, connect.NewRequest(&ftlv1.UpdateDeployRequest{DeploymentName: key}))
+	_, err = client.UpdateDeploy(ctx, connect.NewRequest(&ftlv1.UpdateDeployRequest{DeploymentKey: key}))
 	return err
 }
 
@@ -229,7 +229,7 @@ func relToCWD(path string) string {
 	return rel
 }
 
-func checkReadiness(ctx context.Context, client DeployClient, deploymentName string, replicas int32) error {
+func checkReadiness(ctx context.Context, client DeployClient, deploymentKey string, replicas int32) error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -245,7 +245,7 @@ func checkReadiness(ctx context.Context, client DeployClient, deploymentName str
 
 			var found bool
 			for _, deployment := range status.Msg.Deployments {
-				if deployment.Key == deploymentName {
+				if deployment.Key == deploymentKey {
 					found = true
 					if deployment.Replicas >= replicas {
 						return nil
@@ -253,7 +253,7 @@ func checkReadiness(ctx context.Context, client DeployClient, deploymentName str
 				}
 			}
 			if !found {
-				return fmt.Errorf("deployment %s not found: %v", deploymentName, status.Msg.Deployments)
+				return fmt.Errorf("deployment %s not found: %v", deploymentKey, status.Msg.Deployments)
 			}
 		case <-ctx.Done():
 			return ctx.Err()

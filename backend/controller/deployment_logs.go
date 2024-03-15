@@ -46,13 +46,13 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 	for {
 		select {
 		case entry := <-d.logQueue:
-			var deployment model.DeploymentName
+			var deployment model.DeploymentKey
 			depStr, ok := entry.Attributes["deployment"]
 			if !ok {
 				continue
 			}
 
-			dep, err := model.ParseDeploymentName(depStr)
+			dep, err := model.ParseDeploymentKey(depStr)
 			if err != nil {
 				continue
 			}
@@ -72,13 +72,13 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 			}
 
 			err = d.dal.InsertLogEvent(ctx, &dal.LogEvent{
-				RequestName:    request,
-				DeploymentName: deployment,
-				Time:           entry.Time,
-				Level:          int32(entry.Level.Severity()),
-				Attributes:     entry.Attributes,
-				Message:        entry.Message,
-				Error:          errorStr,
+				RequestName:   request,
+				DeploymentKey: deployment,
+				Time:          entry.Time,
+				Level:         int32(entry.Level.Severity()),
+				Attributes:    entry.Attributes,
+				Message:       entry.Message,
+				Error:         errorStr,
 			})
 			if err != nil {
 				fmt.Printf("failed to insert log entry: %v :: error: %v\n", entry, err)

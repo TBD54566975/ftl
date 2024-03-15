@@ -17,7 +17,7 @@ const timeSettings = { isTailing: true, isPaused: false }
 
 export const DeploymentPage = () => {
   const navigate = useNavigate()
-  const { deploymentName } = useParams()
+  const { deploymentKey } = useParams()
   const modules = useContext(modulesContext)
   const notification = useContext(NotificationsContext)
   const navgation = useNavigate()
@@ -25,22 +25,22 @@ export const DeploymentPage = () => {
   const [calls, setCalls] = useState<Ref[]>([])
 
   const filters = useMemo(() => {
-    if (!module?.deploymentName) return []
+    if (!module?.deploymentKey) return []
 
-    return [modulesFilter([module.deploymentName])]
-  }, [module?.deploymentName])
+    return [modulesFilter([module.deploymentKey])]
+  }, [module?.deploymentKey])
 
   useEffect(() => {
-    if (modules.modules.length > 0 && deploymentName) {
-      let module = modules.modules.find((module) => module.deploymentName === deploymentName)
+    if (modules.modules.length > 0 && deploymentKey) {
+      let module = modules.modules.find((module) => module.deploymentKey === deploymentKey)
       if (!module) {
-        const lastIndex = deploymentName.lastIndexOf('-')
+        const lastIndex = deploymentKey.lastIndexOf('-')
         if (lastIndex !== -1) {
-          module = modules.modules.find((module) => module.name === deploymentName.substring(0, lastIndex))
-          navgation(`/deployments/${module?.deploymentName}`)
+          module = modules.modules.find((module) => module.name === deploymentKey.substring(0, lastIndex))
+          navgation(`/deployments/${module?.deploymentKey}`)
           notification.showNotification({
             title: 'Showing latest deployment',
-            message: `The previous deployment of ${module?.deploymentName} was not found. Showing the latest deployment of ${module?.name} instead.`,
+            message: `The previous deployment of ${module?.deploymentKey} was not found. Showing the latest deployment of ${module?.name} instead.`,
             type: NotificationType.Info,
           })
           setModule(module)
@@ -49,7 +49,7 @@ export const DeploymentPage = () => {
         setModule(module)
       }
     }
-  }, [modules, deploymentName])
+  }, [modules, deploymentKey])
 
   useEffect(() => {
     if (!module) return
@@ -79,7 +79,7 @@ export const DeploymentPage = () => {
   const handleCallClick = (verb: Ref) => {
     const module = modules?.modules.find((module) => module.name === verb.module)
     if (module) {
-      navigate(`/deployments/${module.deploymentName}/verbs/${verb.name}`)
+      navigate(`/deployments/${module.deploymentKey}/verbs/${verb.name}`)
     }
   }
 
@@ -88,7 +88,7 @@ export const DeploymentPage = () => {
       <Page>
         <Page.Header
           icon={<RocketLaunchIcon />}
-          title={module?.deploymentName || 'Loading...'}
+          title={module?.deploymentKey || 'Loading...'}
           breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]}
         />
 
@@ -100,7 +100,7 @@ export const DeploymentPage = () => {
                   <Card
                     key={verb.verb?.name}
                     topBarColor='bg-green-500'
-                    onClick={() => navigate(`/deployments/${module.deploymentName}/verbs/${verb.verb?.name}`)}
+                    onClick={() => navigate(`/deployments/${module.deploymentKey}/verbs/${verb.verb?.name}`)}
                   >
                     {verb.verb?.name}
                     <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
@@ -118,7 +118,7 @@ export const DeploymentPage = () => {
               </ul>
             </div>
             <div className='flex-1 h-1/2 overflow-y-auto'>
-              {module?.deploymentName && <Timeline timeSettings={timeSettings} filters={filters} />}
+              {module?.deploymentKey && <Timeline timeSettings={timeSettings} filters={filters} />}
             </div>
           </div>
         </Page.Body>

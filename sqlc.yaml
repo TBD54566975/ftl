@@ -36,12 +36,12 @@ sql:
             nullable: true
             go_type: 
               type: "NullRunnerKey"
-          - db_type: "deployment_name"
-            go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentName"
-          - db_type: "deployment_name"
+          - db_type: "deployment_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
+          - db_type: "deployment_key"
             nullable: true
             go_type: 
-              type: "NullDeploymentName"
+              type: "NullDeploymentKey"
           - db_type: "controller_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - db_type: "text"
@@ -72,7 +72,7 @@ sql:
           - column: "controller.key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - column: "deployments.name"
-            go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentName"
+            go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
           - column: "events.payload"
             go_type: "encoding/json.RawMessage"
     rules:

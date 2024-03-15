@@ -94,9 +94,9 @@ proto3.util.setEnumType(LogLevel, "xyz.block.ftl.v1.console.LogLevel", [
  */
 export class LogEvent extends Message<LogEvent> {
   /**
-   * @generated from field: string deployment_name = 1;
+   * @generated from field: string deployment_key = 1;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: optional string request_name = 2;
@@ -141,7 +141,7 @@ export class LogEvent extends Message<LogEvent> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.LogEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
@@ -178,9 +178,9 @@ export class CallEvent extends Message<CallEvent> {
   requestName?: string;
 
   /**
-   * @generated from field: string deployment_name = 2;
+   * @generated from field: string deployment_key = 2;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: google.protobuf.Timestamp time_stamp = 3;
@@ -231,7 +231,7 @@ export class CallEvent extends Message<CallEvent> {
   static readonly typeName = "xyz.block.ftl.v1.console.CallEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 11, name: "source_verb_ref", kind: "message", T: Ref, opt: true },
     { no: 12, name: "destination_verb_ref", kind: "message", T: Ref },
@@ -264,9 +264,9 @@ export class CallEvent extends Message<CallEvent> {
  */
 export class DeploymentCreatedEvent extends Message<DeploymentCreatedEvent> {
   /**
-   * @generated from field: string name = 1;
+   * @generated from field: string key = 1;
    */
-  name = "";
+  key = "";
 
   /**
    * @generated from field: string language = 2;
@@ -296,7 +296,7 @@ export class DeploymentCreatedEvent extends Message<DeploymentCreatedEvent> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.DeploymentCreatedEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "module_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
@@ -325,9 +325,9 @@ export class DeploymentCreatedEvent extends Message<DeploymentCreatedEvent> {
  */
 export class DeploymentUpdatedEvent extends Message<DeploymentUpdatedEvent> {
   /**
-   * @generated from field: string name = 1;
+   * @generated from field: string key = 1;
    */
-  name = "";
+  key = "";
 
   /**
    * @generated from field: int32 min_replicas = 2;
@@ -347,7 +347,7 @@ export class DeploymentUpdatedEvent extends Message<DeploymentUpdatedEvent> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.DeploymentUpdatedEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "prev_min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
@@ -471,9 +471,9 @@ export class Module extends Message<Module> {
   name = "";
 
   /**
-   * @generated from field: string deployment_name = 2;
+   * @generated from field: string deployment_key = 2;
    */
-  deploymentName = "";
+  deploymentKey = "";
 
   /**
    * @generated from field: string language = 3;
@@ -504,7 +504,7 @@ export class Module extends Message<Module> {
   static readonly typeName = "xyz.block.ftl.v1.console.Module";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "deployment_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "verbs", kind: "message", T: Verb, repeated: true },
@@ -746,7 +746,7 @@ export class EventsQuery_LogLevelFilter extends Message<EventsQuery_LogLevelFilt
 }
 
 /**
- * Filters events by deployment name.
+ * Filters events by deployment key.
  *
  * @generated from message xyz.block.ftl.v1.console.EventsQuery.DeploymentFilter
  */
