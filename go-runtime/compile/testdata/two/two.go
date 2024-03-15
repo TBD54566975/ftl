@@ -24,6 +24,10 @@ type Payload[T any] struct {
 	Body T
 }
 
+type UserResponse struct {
+	User User
+}
+
 //ftl:verb
 func Two(ctx context.Context, req Payload[string]) (Payload[string], error) {
 	return Payload[string]{}, nil
@@ -32,4 +36,13 @@ func Two(ctx context.Context, req Payload[string]) (Payload[string], error) {
 //ftl:verb
 func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
 	return ftl.Call(ctx, Two, req)
+}
+
+//ftl:verb
+func ReturnsUser(ctx context.Context) (ftl.Option[UserResponse], error) {
+	return ftl.Some[UserResponse](UserResponse{
+		User: User{
+			Name: "John Doe",
+		},
+	}), nil
 }

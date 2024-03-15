@@ -1,6 +1,7 @@
 package compile
 
 import (
+	"fmt"
 	"go/token"
 	"go/types"
 	"os"
@@ -101,22 +102,33 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module two {
-  data Payload<T> {
-    body T
-  }
-
-  enum TwoEnum(String) {
-    Red("Red")
-    Blue("Blue")
-    Green("Green")
-  }
-
-  verb callsTwo(two.Payload<String>) two.Payload<String>
-      +calls two.two
-
-  verb two(two.Payload<String>) two.Payload<String>
-}
+		data Payload<T> {
+		  body T
+		}
+	  
+		data User {
+		  name String
+		}
+	  
+		data UserResponse {
+		  user two.User
+		}
+	  
+		enum TwoEnum(String) {
+		  Red("Red")
+		  Blue("Blue")
+		  Green("Green")
+		}
+	  
+		verb callsTwo(two.Payload<String>) two.Payload<String>  
+			+calls two.two
+	  
+		verb returnsUser(Unit) two.UserResponse?
+	  
+		verb two(two.Payload<String>) two.Payload<String>
+	  }
 `
+	fmt.Printf("actual: %s\n", actual.String())
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
