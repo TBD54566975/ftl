@@ -321,8 +321,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) error {
 					Comments: visitComments(node.Doc),
 				}
 				if len(node.Specs) != 1 {
-					return fmt.Errorf("%s: error parsing ftl enum %s: expected exactly one type spec",
-						goPosToSchemaPos(node.Pos()), enum.Name)
+					return errorf(node.Pos(), "error parsing ftl enum %s: expected exactly one type spec", enum.Name)
 				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
 					pctx.enums[t.Name.Name] = enum
@@ -388,8 +387,7 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) error {
 	}
 	c, ok := pctx.pkg.TypesInfo.Defs[node.Names[0]].(*types.Const)
 	if !ok {
-		return fmt.Errorf("%s: could not extract enum %s: expected exactly one variant name",
-			goPosToSchemaPos(node.Pos()), enum.Name)
+		return errorf(node.Pos(), "could not extract enum %s: expected exactly one variant name", enum.Name)
 	}
 	value, err := visitConst(c)
 	if err != nil {
@@ -446,7 +444,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		return nil, fmt.Errorf("ftl:verb cannot be a method")
+		return nil, errorf(node.Pos(), "ftl:verb cannot be a method")
 	}
 	params := sig.Params()
 	results := sig.Results()
@@ -511,7 +509,7 @@ func visitComments(doc *ast.CommentGroup) []string {
 func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.Ref, error) {
 	named, ok := tnode.(*types.Named)
 	if !ok {
-		return nil, fmt.Errorf("expected named type but got %s", tnode)
+		return nil, errorf(pos, "expected named type but got %s", tnode)
 	}
 	nodePath := named.Obj().Pkg().Path()
 	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
@@ -526,7 +524,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 			arg := named.TypeArgs().At(i)
 			typeArg, err := visitType(pctx, pos, arg)
 			if err != nil {
-				return nil, fmt.Errorf("type parameter %s: %w", arg.String(), err)
+				return nil, errorf(pos, "type parameter %s: %v", arg.String(), err)
 			}
 
 			// Fully qualify the Ref if needed
@@ -558,7 +556,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 		})
 		typeArg, err := visitType(pctx, pos, named.TypeArgs().At(i))
 		if err != nil {
-			return nil, fmt.Errorf("type parameter %s: %w", param.Obj().Name(), err)
+			return nil, errorf(pos, "type parameter %s: %v", param.Obj().Name(), err)
 		}
 		dataRef.TypeParameters = append(dataRef.TypeParameters, typeArg)
 	}
@@ -592,18 +590,18 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 
 	s, ok := named.Underlying().(*types.Struct)
 	if !ok {
-		return nil, fmt.Errorf("expected struct but got %s", named)
+		return nil, errorf(pos, "expected struct but got %s", named)
 	}
 	for i := 0; i < s.NumFields(); i++ {
 		f := s.Field(i)
 		ft, err := visitType(pctx, f.Pos(), f.Type())
 		if err != nil {
-			return nil, fmt.Errorf("field %s: %w", f.Name(), err)
+			return nil, errorf(pos, "field %s: %v", f.Name(), err)
 		}
 
 		// Check if field is exported
 		if len(f.Name()) > 0 && unicode.IsLower(rune(f.Name()[0])) {
-			return nil, fmt.Errorf("params field %s must be exported by starting with an uppercase letter", f.Name())
+			return nil, errorf(pos, "params field %s must be exported by starting with an uppercase letter", f.Name())
 		}
 
 		// Extract the JSON tag and split it to get just the field name
@@ -650,10 +648,10 @@ func visitConst(cnode *types.Const) (schema.Value, error) {
 			}
 			return &schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)}, nil
 		default:
-			return nil, fmt.Errorf("%s: unsupported basic type %s", goPosToSchemaPos(cnode.Pos()), b)
+			return nil, errorf(cnode.Pos(), "unsupported basic type %s", b)
 		}
 	}
-	return nil, fmt.Errorf("%s: unsupported const type %s", goPosToSchemaPos(cnode.Pos()), cnode.Type())
+	return nil, errorf(cnode.Pos(), "unsupported const type %s", cnode.Type())
 }
 
 func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type, error) {
