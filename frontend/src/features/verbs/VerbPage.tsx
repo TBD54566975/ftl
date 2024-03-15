@@ -11,7 +11,7 @@ import { CallList } from '../calls/CallList'
 import { VerbForm } from './VerbForm'
 
 export const VerbPage = () => {
-  const { deploymentName, verbName } = useParams()
+  const { deploymentKey, verbName } = useParams()
   const modules = useContext(modulesContext)
   const [module, setModule] = useState<Module | undefined>()
   const [verb, setVerb] = useState<Verb | undefined>()
@@ -19,12 +19,12 @@ export const VerbPage = () => {
 
   useEffect(() => {
     if (modules) {
-      const module = modules.modules.find((module) => module.deploymentName === deploymentName?.toLocaleLowerCase())
+      const module = modules.modules.find((module) => module.deploymentKey === deploymentKey?.toLocaleLowerCase())
       setModule(module)
       const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === verbName?.toLocaleLowerCase())
       setVerb(verb)
     }
-  }, [modules, deploymentName])
+  }, [modules, deploymentKey])
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -56,7 +56,7 @@ export const VerbPage = () => {
           title={verb?.verb?.name || ''}
           breadcrumbs={[
             { label: 'Deployments', link: '/deployments' },
-            { label: module?.deploymentName || '', link: `/deployments/${module?.deploymentName}` },
+            { label: module?.deploymentKey || '', link: `/deployments/${module?.deploymentKey}` },
           ]}
         />
         <Page.Body className='p-4'>

@@ -17,11 +17,11 @@ import (
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
-VALUES ((SELECT id FROM deployments WHERE name = $1), $2, $3, $4)
+VALUES ((SELECT id FROM deployments WHERE key = $1::deployment_key), $2, $3, $4)
 `
 
 type AssociateArtefactWithDeploymentParams struct {
-	Name       model.DeploymentName
+	Key        model.DeploymentKey
 	ArtefactID int64
 	Executable bool
 	Path       string
@@ -29,7 +29,7 @@ type AssociateArtefactWithDeploymentParams struct {
 
 func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error {
 	_, err := q.db.Exec(ctx, associateArtefactWithDeployment,
-		arg.Name,
+		arg.Key,
 		arg.ArtefactID,
 		arg.Executable,
 		arg.Path,
@@ -52,12 +52,12 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 }
 
 const createDeployment = `-- name: CreateDeployment :exec
-INSERT INTO deployments (module_id, "schema", "name")
-VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3)
+INSERT INTO deployments (module_id, "schema", "key")
+VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3::deployment_key)
 `
 
-func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema []byte, name model.DeploymentName) error {
-	_, err := q.db.Exec(ctx, createDeployment, moduleName, schema, name)
+func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error {
+	_, err := q.db.Exec(ctx, createDeployment, moduleName, schema, key)
 	return err
 }
 
@@ -73,11 +73,11 @@ func (q *Queries) CreateIngressRequest(ctx context.Context, origin Origin, name 
 
 const createIngressRoute = `-- name: CreateIngressRoute :exec
 INSERT INTO ingress_routes (deployment_id, module, verb, method, path)
-VALUES ((SELECT id FROM deployments WHERE name = $1 LIMIT 1), $2, $3, $4, $5)
+VALUES ((SELECT id FROM deployments WHERE key = $1::deployment_key LIMIT 1), $2, $3, $4, $5)
 `
 
 type CreateIngressRouteParams struct {
-	Name   model.DeploymentName
+	Key    model.DeploymentKey
 	Module string
 	Verb   string
 	Method string
@@ -86,7 +86,7 @@ type CreateIngressRouteParams struct {
 
 func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error {
 	_, err := q.db.Exec(ctx, createIngressRoute,
-		arg.Name,
+		arg.Key,
 		arg.Module,
 		arg.Verb,
 		arg.Method,
@@ -134,11 +134,11 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 }
 
 const getActiveDeploymentSchemas = `-- name: GetActiveDeploymentSchemas :many
-SELECT name, schema FROM deployments WHERE min_replicas > 0
+SELECT key, schema FROM deployments WHERE min_replicas > 0
 `
 
 type GetActiveDeploymentSchemasRow struct {
-	Name   model.DeploymentName
+	Key    model.DeploymentKey
 	Schema *schema.Module
 }
 
@@ -151,7 +151,7 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 	var items []GetActiveDeploymentSchemasRow
 	for rows.Next() {
 		var i GetActiveDeploymentSchemasRow
-		if err := rows.Scan(&i.Name, &i.Schema); err != nil {
+		if err := rows.Scan(&i.Key, &i.Schema); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -163,12 +163,12 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 }
 
 const getActiveDeployments = `-- name: GetActiveDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE $1::bool = true
    OR min_replicas > 0
-ORDER BY d.name
+ORDER BY d.key
 `
 
 type GetActiveDeploymentsRow struct {
@@ -190,7 +190,7 @@ func (q *Queries) GetActiveDeployments(ctx context.Context, all bool) ([]GetActi
 			&i.Deployment.ID,
 			&i.Deployment.CreatedAt,
 			&i.Deployment.ModuleID,
-			&i.Deployment.Name,
+			&i.Deployment.Key,
 			&i.Deployment.Schema,
 			&i.Deployment.Labels,
 			&i.Deployment.MinReplicas,
@@ -216,7 +216,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.module_name,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.name END, NULL) AS deployment_name
+                                            THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id
 WHERE $1::bool = true
@@ -225,13 +225,13 @@ ORDER BY r.key
 `
 
 type GetActiveRunnersRow struct {
-	RunnerKey      model.RunnerKey
-	Endpoint       string
-	State          RunnerState
-	Labels         []byte
-	LastSeen       time.Time
-	ModuleName     optional.Option[string]
-	DeploymentName optional.Option[string]
+	RunnerKey     model.RunnerKey
+	Endpoint      string
+	State         RunnerState
+	Labels        []byte
+	LastSeen      time.Time
+	ModuleName    optional.Option[string]
+	DeploymentKey optional.Option[string]
 }
 
 func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error) {
@@ -250,7 +250,7 @@ func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRu
 			&i.Labels,
 			&i.LastSeen,
 			&i.ModuleName,
-			&i.DeploymentName,
+			&i.DeploymentKey,
 		); err != nil {
 			return nil, err
 		}
@@ -263,7 +263,7 @@ func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRu
 }
 
 const getAllIngressRoutes = `-- name: GetAllIngressRoutes :many
-SELECT d.name AS deployment_name, ir.module, ir.verb, ir.method, ir.path
+SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
 FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
 WHERE $1::bool = true
@@ -271,11 +271,11 @@ WHERE $1::bool = true
 `
 
 type GetAllIngressRoutesRow struct {
-	DeploymentName model.DeploymentName
-	Module         string
-	Verb           string
-	Method         string
-	Path           string
+	DeploymentKey model.DeploymentKey
+	Module        string
+	Verb          string
+	Method        string
+	Path          string
 }
 
 func (q *Queries) GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIngressRoutesRow, error) {
@@ -288,7 +288,7 @@ func (q *Queries) GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIn
 	for rows.Next() {
 		var i GetAllIngressRoutesRow
 		if err := rows.Scan(
-			&i.DeploymentName,
+			&i.DeploymentKey,
 			&i.Module,
 			&i.Verb,
 			&i.Method,
@@ -385,10 +385,10 @@ func (q *Queries) GetControllers(ctx context.Context, all bool) ([]Controller, e
 }
 
 const getDeployment = `-- name: GetDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.name, d.schema, d.labels, d.min_replicas, m.language, m.name AS module_name, d.min_replicas
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.language, m.name AS module_name, d.min_replicas
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
-WHERE d.name = $1
+WHERE d.key = $1::deployment_key
 `
 
 type GetDeploymentRow struct {
@@ -398,14 +398,14 @@ type GetDeploymentRow struct {
 	MinReplicas int32
 }
 
-func (q *Queries) GetDeployment(ctx context.Context, name model.DeploymentName) (GetDeploymentRow, error) {
-	row := q.db.QueryRow(ctx, getDeployment, name)
+func (q *Queries) GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error) {
+	row := q.db.QueryRow(ctx, getDeployment, key)
 	var i GetDeploymentRow
 	err := row.Scan(
 		&i.Deployment.ID,
 		&i.Deployment.CreatedAt,
 		&i.Deployment.ModuleID,
-		&i.Deployment.Name,
+		&i.Deployment.Key,
 		&i.Deployment.Schema,
 		&i.Deployment.Labels,
 		&i.Deployment.MinReplicas,
@@ -461,7 +461,7 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 }
 
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many
-SELECT id, created_at, module_id, name, schema, labels, min_replicas
+SELECT id, created_at, module_id, key, schema, labels, min_replicas
 FROM deployments
 WHERE id = ANY ($1::BIGINT[])
 `
@@ -479,7 +479,7 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 			&i.ID,
 			&i.CreatedAt,
 			&i.ModuleID,
-			&i.Name,
+			&i.Key,
 			&i.Schema,
 			&i.Labels,
 			&i.MinReplicas,
@@ -495,7 +495,7 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 }
 
 const getDeploymentsNeedingReconciliation = `-- name: GetDeploymentsNeedingReconciliation :many
-SELECT d.name                 AS deployment_name,
+SELECT d.key                 AS deployment_key,
        m.name                 AS module_name,
        m.language             AS language,
        COUNT(r.id)            AS assigned_runners_count,
@@ -503,12 +503,12 @@ SELECT d.name                 AS deployment_name,
 FROM deployments d
          LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
          JOIN modules m ON d.module_id = m.id
-GROUP BY d.name, d.min_replicas, m.name, m.language
+GROUP BY d.key, d.min_replicas, m.name, m.language
 HAVING COUNT(r.id) <> d.min_replicas
 `
 
 type GetDeploymentsNeedingReconciliationRow struct {
-	DeploymentName       model.DeploymentName
+	DeploymentKey        model.DeploymentKey
 	ModuleName           string
 	Language             string
 	AssignedRunnersCount int64
@@ -526,7 +526,7 @@ func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Ge
 	for rows.Next() {
 		var i GetDeploymentsNeedingReconciliationRow
 		if err := rows.Scan(
-			&i.DeploymentName,
+			&i.DeploymentKey,
 			&i.ModuleName,
 			&i.Language,
 			&i.AssignedRunnersCount,
@@ -543,7 +543,7 @@ func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Ge
 }
 
 const getDeploymentsWithArtefacts = `-- name: GetDeploymentsWithArtefacts :many
-SELECT d.id, d.created_at, d.name as deployment_name, d.schema, m.name AS module_name
+SELECT d.id, d.created_at, d.key as deployment_key, d.schema, m.name AS module_name
 FROM deployments d
          INNER JOIN modules m ON d.module_id = m.id
 WHERE EXISTS (SELECT 1
@@ -557,11 +557,11 @@ WHERE EXISTS (SELECT 1
 `
 
 type GetDeploymentsWithArtefactsRow struct {
-	ID             int64
-	CreatedAt      time.Time
-	DeploymentName model.DeploymentName
-	Schema         *schema.Module
-	ModuleName     string
+	ID            int64
+	CreatedAt     time.Time
+	DeploymentKey model.DeploymentKey
+	Schema        *schema.Module
+	ModuleName    string
 }
 
 // Get all deployments that have artefacts matching the given digests.
@@ -577,7 +577,7 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
-			&i.DeploymentName,
+			&i.DeploymentKey,
 			&i.Schema,
 			&i.ModuleName,
 		); err != nil {
@@ -592,7 +592,7 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 }
 
 const getExistingDeploymentForModule = `-- name: GetExistingDeploymentForModule :one
-SELECT d.id, created_at, module_id, d.name, schema, labels, min_replicas, m.id, language, m.name
+SELECT d.id, created_at, module_id, key, schema, labels, min_replicas, m.id, language, name
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE m.name = $1
@@ -604,13 +604,13 @@ type GetExistingDeploymentForModuleRow struct {
 	ID          int64
 	CreatedAt   time.Time
 	ModuleID    int64
-	Name        model.DeploymentName
+	Key         model.DeploymentKey
 	Schema      *schema.Module
 	Labels      []byte
 	MinReplicas int32
 	ID_2        int64
 	Language    string
-	Name_2      string
+	Name        string
 }
 
 func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error) {
@@ -620,13 +620,13 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 		&i.ID,
 		&i.CreatedAt,
 		&i.ModuleID,
-		&i.Name,
+		&i.Key,
 		&i.Schema,
 		&i.Labels,
 		&i.MinReplicas,
 		&i.ID_2,
 		&i.Language,
-		&i.Name_2,
+		&i.Name,
 	)
 	return i, err
 }
@@ -671,7 +671,7 @@ func (q *Queries) GetIdleRunners(ctx context.Context, labels []byte, limit int64
 }
 
 const getIngressRoutes = `-- name: GetIngressRoutes :many
-SELECT r.key AS runner_key, d.name AS deployment_name, endpoint, ir.path, ir.module, ir.verb
+SELECT r.key AS runner_key, d.key AS deployment_key, endpoint, ir.path, ir.module, ir.verb
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
          INNER JOIN deployments d ON ir.deployment_id = d.id
@@ -680,12 +680,12 @@ WHERE r.state = 'assigned'
 `
 
 type GetIngressRoutesRow struct {
-	RunnerKey      model.RunnerKey
-	DeploymentName model.DeploymentName
-	Endpoint       string
-	Path           string
-	Module         string
-	Verb           string
+	RunnerKey     model.RunnerKey
+	DeploymentKey model.DeploymentKey
+	Endpoint      string
+	Path          string
+	Module        string
+	Verb          string
 }
 
 // Get the runner endpoints corresponding to the given ingress route.
@@ -700,7 +700,7 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIng
 		var i GetIngressRoutesRow
 		if err := rows.Scan(
 			&i.RunnerKey,
-			&i.DeploymentName,
+			&i.DeploymentKey,
 			&i.Endpoint,
 			&i.Path,
 			&i.Module,
@@ -744,7 +744,7 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 
 const getProcessList = `-- name: GetProcessList :many
 SELECT d.min_replicas,
-       d.name   AS deployment_name,
+       d.key   AS deployment_key,
        d.labels    deployment_labels,
        r.key    AS runner_key,
        r.endpoint,
@@ -752,12 +752,12 @@ SELECT d.min_replicas,
 FROM deployments d
          LEFT JOIN runners r on d.id = r.deployment_id AND r.state != 'dead'
 WHERE d.min_replicas > 0
-ORDER BY d.name
+ORDER BY d.key
 `
 
 type GetProcessListRow struct {
 	MinReplicas      int32
-	DeploymentName   model.DeploymentName
+	DeploymentKey    model.DeploymentKey
 	DeploymentLabels []byte
 	RunnerKey        NullRunnerKey
 	Endpoint         optional.Option[string]
@@ -775,7 +775,7 @@ func (q *Queries) GetProcessList(ctx context.Context) ([]GetProcessListRow, erro
 		var i GetProcessListRow
 		if err := rows.Scan(
 			&i.MinReplicas,
-			&i.DeploymentName,
+			&i.DeploymentKey,
 			&i.DeploymentLabels,
 			&i.RunnerKey,
 			&i.Endpoint,
@@ -792,18 +792,18 @@ func (q *Queries) GetProcessList(ctx context.Context) ([]GetProcessListRow, erro
 }
 
 const getRouteForRunner = `-- name: GetRouteForRunner :one
-SELECT endpoint, r.key AS runner_key, r.module_name, d.name deployment_name, r.state
+SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key, r.state
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
 WHERE r.key = $1::runner_key
 `
 
 type GetRouteForRunnerRow struct {
-	Endpoint       string
-	RunnerKey      model.RunnerKey
-	ModuleName     optional.Option[string]
-	DeploymentName model.DeploymentName
-	State          RunnerState
+	Endpoint      string
+	RunnerKey     model.RunnerKey
+	ModuleName    optional.Option[string]
+	DeploymentKey NullDeploymentKey
+	State         RunnerState
 }
 
 // Retrieve routing information for a runner.
@@ -814,14 +814,14 @@ func (q *Queries) GetRouteForRunner(ctx context.Context, key model.RunnerKey) (G
 		&i.Endpoint,
 		&i.RunnerKey,
 		&i.ModuleName,
-		&i.DeploymentName,
+		&i.DeploymentKey,
 		&i.State,
 	)
 	return i, err
 }
 
 const getRoutingTable = `-- name: GetRoutingTable :many
-SELECT endpoint, r.key AS runner_key, r.module_name, d.name deployment_name
+SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
@@ -830,10 +830,10 @@ WHERE state = 'assigned'
 `
 
 type GetRoutingTableRow struct {
-	Endpoint       string
-	RunnerKey      model.RunnerKey
-	ModuleName     optional.Option[string]
-	DeploymentName model.DeploymentName
+	Endpoint      string
+	RunnerKey     model.RunnerKey
+	ModuleName    optional.Option[string]
+	DeploymentKey NullDeploymentKey
 }
 
 func (q *Queries) GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error) {
@@ -849,7 +849,7 @@ func (q *Queries) GetRoutingTable(ctx context.Context, modules []string) ([]GetR
 			&i.Endpoint,
 			&i.RunnerKey,
 			&i.ModuleName,
-			&i.DeploymentName,
+			&i.DeploymentKey,
 		); err != nil {
 			return nil, err
 		}
@@ -870,20 +870,20 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.module_name,
                            COALESCE(CASE
                                         WHEN r.deployment_id IS NOT NULL
-                                            THEN d.name END, NULL) AS deployment_name
+                                            THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
 WHERE r.key = $1::runner_key
 `
 
 type GetRunnerRow struct {
-	RunnerKey      model.RunnerKey
-	Endpoint       string
-	State          RunnerState
-	Labels         []byte
-	LastSeen       time.Time
-	ModuleName     optional.Option[string]
-	DeploymentName optional.Option[string]
+	RunnerKey     model.RunnerKey
+	Endpoint      string
+	State         RunnerState
+	Labels        []byte
+	LastSeen      time.Time
+	ModuleName    optional.Option[string]
+	DeploymentKey optional.Option[string]
 }
 
 func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error) {
@@ -896,7 +896,7 @@ func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunner
 		&i.Labels,
 		&i.LastSeen,
 		&i.ModuleName,
-		&i.DeploymentName,
+		&i.DeploymentKey,
 	)
 	return i, err
 }
@@ -915,11 +915,11 @@ func (q *Queries) GetRunnerState(ctx context.Context, key model.RunnerKey) (Runn
 }
 
 const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, key, created, last_seen, reservation_timeout, state, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, name, schema, d.labels, min_replicas
+SELECT r.id, r.key, created, last_seen, reservation_timeout, state, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
-  AND d.name = $1
+  AND d.key = $1::deployment_key
 `
 
 type GetRunnersForDeploymentRow struct {
@@ -936,14 +936,14 @@ type GetRunnersForDeploymentRow struct {
 	ID_2               int64
 	CreatedAt          time.Time
 	ModuleID           int64
-	Name               model.DeploymentName
+	Key_2              model.DeploymentKey
 	Schema             *schema.Module
 	Labels_2           []byte
 	MinReplicas        int32
 }
 
-func (q *Queries) GetRunnersForDeployment(ctx context.Context, name model.DeploymentName) ([]GetRunnersForDeploymentRow, error) {
-	rows, err := q.db.Query(ctx, getRunnersForDeployment, name)
+func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error) {
+	rows, err := q.db.Query(ctx, getRunnersForDeployment, key)
 	if err != nil {
 		return nil, err
 	}
@@ -965,7 +965,7 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, name model.Deploy
 			&i.ID_2,
 			&i.CreatedAt,
 			&i.ModuleID,
-			&i.Name,
+			&i.Key_2,
 			&i.Schema,
 			&i.Labels_2,
 			&i.MinReplicas,
@@ -983,7 +983,7 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, name model.Deploy
 const insertCallEvent = `-- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
-VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::deployment_name),
+VALUES ((SELECT id FROM deployments WHERE deployments.key = $1::deployment_key),
         (CASE
              WHEN $2::TEXT IS NULL THEN NULL
              ELSE (SELECT id FROM requests ir WHERE ir.name = $2::TEXT)
@@ -1004,23 +1004,23 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::deployment_name
 `
 
 type InsertCallEventParams struct {
-	DeploymentName model.DeploymentName
-	RequestName    optional.Option[string]
-	TimeStamp      time.Time
-	SourceModule   optional.Option[string]
-	SourceVerb     optional.Option[string]
-	DestModule     string
-	DestVerb       string
-	DurationMs     int64
-	Request        []byte
-	Response       []byte
-	Error          optional.Option[string]
-	Stack          optional.Option[string]
+	DeploymentKey model.DeploymentKey
+	RequestName   optional.Option[string]
+	TimeStamp     time.Time
+	SourceModule  optional.Option[string]
+	SourceVerb    optional.Option[string]
+	DestModule    string
+	DestVerb      string
+	DurationMs    int64
+	Request       []byte
+	Response      []byte
+	Error         optional.Option[string]
+	Stack         optional.Option[string]
 }
 
 func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
 	_, err := q.db.Exec(ctx, insertCallEvent,
-		arg.DeploymentName,
+		arg.DeploymentKey,
 		arg.RequestName,
 		arg.TimeStamp,
 		arg.SourceModule,
@@ -1040,27 +1040,27 @@ const insertDeploymentCreatedEvent = `-- name: InsertDeploymentCreatedEvent :exe
 INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
 VALUES ((SELECT id
          FROM deployments
-         WHERE deployments.name = $1::deployment_name),
+         WHERE deployments.key = $1::deployment_key),
         'deployment_created',
         $2::TEXT,
         $3::TEXT,
         jsonb_build_object(
                 'min_replicas', $4::INT,
-                'replaced', $5::TEXT
+                'replaced', $5::deployment_key
             ))
 `
 
 type InsertDeploymentCreatedEventParams struct {
-	DeploymentName model.DeploymentName
-	Language       string
-	ModuleName     string
-	MinReplicas    int32
-	Replaced       optional.Option[string]
+	DeploymentKey model.DeploymentKey
+	Language      string
+	ModuleName    string
+	MinReplicas   int32
+	Replaced      NullDeploymentKey
 }
 
 func (q *Queries) InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error {
 	_, err := q.db.Exec(ctx, insertDeploymentCreatedEvent,
-		arg.DeploymentName,
+		arg.DeploymentKey,
 		arg.Language,
 		arg.ModuleName,
 		arg.MinReplicas,
@@ -1073,7 +1073,7 @@ const insertDeploymentUpdatedEvent = `-- name: InsertDeploymentUpdatedEvent :exe
 INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
 VALUES ((SELECT id
          FROM deployments
-         WHERE deployments.name = $1::deployment_name),
+         WHERE deployments.key = $1::deployment_key),
         'deployment_updated',
         $2::TEXT,
         $3::TEXT,
@@ -1084,7 +1084,7 @@ VALUES ((SELECT id
 `
 
 type InsertDeploymentUpdatedEventParams struct {
-	DeploymentName  model.DeploymentName
+	DeploymentKey   model.DeploymentKey
 	Language        string
 	ModuleName      string
 	PrevMinReplicas int32
@@ -1093,7 +1093,7 @@ type InsertDeploymentUpdatedEventParams struct {
 
 func (q *Queries) InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error {
 	_, err := q.db.Exec(ctx, insertDeploymentUpdatedEvent,
-		arg.DeploymentName,
+		arg.DeploymentKey,
 		arg.Language,
 		arg.ModuleName,
 		arg.PrevMinReplicas,
@@ -1137,7 +1137,7 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 
 const insertLogEvent = `-- name: InsertLogEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
-VALUES ((SELECT id FROM deployments d WHERE d.name = $1::deployment_name LIMIT 1),
+VALUES ((SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
         (CASE
              WHEN $2::TEXT IS NULL THEN NULL
              ELSE (SELECT id FROM requests ir WHERE ir.name = $2::TEXT LIMIT 1)
@@ -1154,19 +1154,19 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = $1::deployment_name LIMIT 1
 `
 
 type InsertLogEventParams struct {
-	DeploymentName model.DeploymentName
-	RequestName    optional.Option[string]
-	TimeStamp      time.Time
-	Level          int32
-	Message        string
-	Attributes     []byte
-	Error          optional.Option[string]
-	Stack          optional.Option[string]
+	DeploymentKey model.DeploymentKey
+	RequestName   optional.Option[string]
+	TimeStamp     time.Time
+	Level         int32
+	Message       string
+	Attributes    []byte
+	Error         optional.Option[string]
+	Stack         optional.Option[string]
 }
 
 func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
 	_, err := q.db.Exec(ctx, insertLogEvent,
-		arg.DeploymentName,
+		arg.DeploymentKey,
 		arg.RequestName,
 		arg.TimeStamp,
 		arg.Level,
@@ -1218,16 +1218,16 @@ const replaceDeployment = `-- name: ReplaceDeployment :one
 WITH update_container AS (
     UPDATE deployments AS d
         SET min_replicas = update_deployments.min_replicas
-        FROM (VALUES ($1::TEXT, 0),
-                     ($2::TEXT, $3::INT))
-            AS update_deployments(name, min_replicas)
-        WHERE d.name = update_deployments.name
+        FROM (VALUES ($1::deployment_key, 0),
+                     ($2::deployment_key, $3::INT))
+            AS update_deployments(key, min_replicas)
+        WHERE d.key = update_deployments.key
         RETURNING 1)
 SELECT COUNT(*)
 FROM update_container
 `
 
-func (q *Queries) ReplaceDeployment(ctx context.Context, oldDeployment string, newDeployment string, minReplicas int32) (int64, error) {
+func (q *Queries) ReplaceDeployment(ctx context.Context, oldDeployment model.DeploymentKey, newDeployment model.DeploymentKey, minReplicas int32) (int64, error) {
 	row := q.db.QueryRow(ctx, replaceDeployment, oldDeployment, newDeployment, minReplicas)
 	var count int64
 	err := row.Scan(&count)
@@ -1242,7 +1242,7 @@ SET state               = 'reserved',
     -- and the update will fail due to a FK constraint.
     deployment_id       = COALESCE((SELECT id
                                     FROM deployments d
-                                    WHERE d.name = $2::deployment_name
+                                    WHERE d.key = $2::deployment_key
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
@@ -1253,8 +1253,8 @@ RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.r
 `
 
 // Find an idle runner and reserve it for the given deployment.
-func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentName model.DeploymentName, labels []byte) (Runner, error) {
-	row := q.db.QueryRow(ctx, reserveRunner, reservationTimeout, deploymentName, labels)
+func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error) {
+	row := q.db.QueryRow(ctx, reserveRunner, reservationTimeout, deploymentKey, labels)
 	var i Runner
 	err := row.Scan(
 		&i.ID,
@@ -1274,12 +1274,12 @@ func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Tim
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2
-WHERE name = $1
+WHERE key = $1::deployment_key
 RETURNING 1
 `
 
-func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, name model.DeploymentName, minReplicas int32) error {
-	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, name, minReplicas)
+func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error {
+	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
 	return err
 }
 
@@ -1316,11 +1316,11 @@ func (q *Queries) UpsertModule(ctx context.Context, language string, name string
 const upsertRunner = `-- name: UpsertRunner :one
 WITH deployment_rel AS (
     SELECT CASE
-               WHEN $5::deployment_name IS NULL
+               WHEN $5::deployment_key IS NULL
                    THEN NULL
                ELSE COALESCE((SELECT id
                               FROM deployments d
-                              WHERE d.name = $5::deployment_name
+                              WHERE d.key = $5::deployment_key
                               LIMIT 1), -1) END AS id)
 INSERT
 INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
@@ -1339,15 +1339,15 @@ RETURNING deployment_id
 `
 
 type UpsertRunnerParams struct {
-	Key            model.RunnerKey
-	Endpoint       string
-	State          RunnerState
-	Labels         []byte
-	DeploymentName NullDeploymentName
+	Key           model.RunnerKey
+	Endpoint      string
+	State         RunnerState
+	Labels        []byte
+	DeploymentKey NullDeploymentKey
 }
 
 // Upsert a runner and return the deployment ID that it is assigned to, if any.
-// If the deployment name is null, then deployment_rel.id will be null,
+// If the deployment key is null, then deployment_rel.id will be null,
 // otherwise we try to retrieve the deployments.id using the key. If
 // there is no corresponding deployment, then the deployment ID is -1
 // and the parent statement will fail due to a foreign key constraint.
@@ -1357,7 +1357,7 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (opt
 		arg.Endpoint,
 		arg.State,
 		arg.Labels,
-		arg.DeploymentName,
+		arg.DeploymentKey,
 	)
 	var deployment_id optional.Option[int64]
 	err := row.Scan(&deployment_id)

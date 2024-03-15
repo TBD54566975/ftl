@@ -34,11 +34,11 @@ export const TimelineDeploymentUpdatedDetails = ({
           <CloseButton onClick={closePanel} />
         </div>
 
-        <DeploymentCard className='mt-4' deploymentName={deployment.name} />
+        <DeploymentCard className='mt-4' deploymentKey={deployment.key} />
 
         <ul className='pt-4 space-y-2'>
           <li>
-            <AttributeBadge name='Name' value={deployment.name} />
+            <AttributeBadge name='Name' value={deployment.key} />
           </li>
           <li>
             <AttributeBadge name='MinReplicas' value={deployment.minReplicas.toString()} />

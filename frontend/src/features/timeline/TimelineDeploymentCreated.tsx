@@ -3,7 +3,7 @@ import { DeploymentCreatedEvent } from '../../protos/xyz/block/ftl/v1/console/co
 export const TimelineDeploymentCreated = ({ deployment }: { deployment: DeploymentCreatedEvent }) => {
   return (
     <>
-      Created deployment <span className='text-indigo-500 dark:text-indigo-300'>{deployment.name}</span> for language{' '}
+      Created deployment <span className='text-indigo-500 dark:text-indigo-300'>{deployment.key}</span> for language{' '}
       <span className='text-indigo-500 dark:text-indigo-300'>{deployment.language}</span>
     </>
   )

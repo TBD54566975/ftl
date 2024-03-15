@@ -285,14 +285,14 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	deployments, err := slices.MapErr(status.Deployments, func(d dal.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
 		labels, err := structpb.NewStruct(d.Labels)
 		if err != nil {
-			return nil, fmt.Errorf("could not marshal attributes for deployment %s: %w", d.Name, err)
+			return nil, fmt.Errorf("could not marshal attributes for deployment %s: %w", d.Key.String(), err)
 		}
 		return &ftlv1.StatusResponse_Deployment{
-			Key:         d.Name.String(),
+			Key:         d.Key.String(),
 			Language:    d.Language,
 			Name:        d.Module,
 			MinReplicas: int32(d.MinReplicas),
-			Replicas:    replicas[d.Name.String()],
+			Replicas:    replicas[d.Key.String()],
 			Schema:      d.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 			Labels:      labels,
 		}, nil
@@ -312,10 +312,10 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		Deployments: deployments,
 		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
 			return &ftlv1.StatusResponse_IngressRoute{
-				DeploymentName: r.Deployment.String(),
-				Verb:           &schemapb.Ref{Module: r.Module, Name: r.Verb},
-				Method:         r.Method,
-				Path:           r.Path,
+				DeploymentKey: r.Deployment.String(),
+				Verb:          &schemapb.Ref{Module: r.Module, Name: r.Verb},
+				Method:        r.Method,
+				Path:          r.Path,
 			}
 		}),
 		Routes: routes,
@@ -326,7 +326,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {
 	for stream.Receive() {
 		msg := stream.Msg()
-		deploymentName, err := model.ParseDeploymentName(msg.DeploymentName)
+		deploymentKey, err := model.ParseDeploymentKey(msg.DeploymentKey)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
 		}
@@ -340,13 +340,13 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 		}
 
 		err = s.dal.InsertLogEvent(ctx, &dal.LogEvent{
-			RequestName:    requestName,
-			DeploymentName: deploymentName,
-			Time:           msg.TimeStamp.AsTime(),
-			Level:          msg.LogLevel,
-			Attributes:     msg.Attributes,
-			Message:        msg.Message,
-			Error:          optional.Ptr(msg.Error),
+			RequestName:   requestName,
+			DeploymentKey: deploymentKey,
+			Time:          msg.TimeStamp.AsTime(),
+			Level:         msg.LogLevel,
+			Attributes:    msg.Attributes,
+			Message:       msg.Message,
+			Error:         optional.Ptr(msg.Error),
 		})
 		if err != nil {
 			return nil, err
@@ -379,21 +379,21 @@ func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.Pul
 }
 
 func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.UpdateDeployRequest]) (response *connect.Response[ftlv1.UpdateDeployResponse], err error) {
-	deploymentName, err := model.ParseDeploymentName(req.Msg.DeploymentName)
+	deploymentKey, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
 	}
 
-	logger := s.getDeploymentLogger(ctx, deploymentName)
-	logger.Debugf("Update deployment for: %s", deploymentName)
+	logger := s.getDeploymentLogger(ctx, deploymentKey)
+	logger.Debugf("Update deployment for: %s", deploymentKey)
 
-	err = s.dal.SetDeploymentReplicas(ctx, deploymentName, int(req.Msg.MinReplicas))
+	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, int(req.Msg.MinReplicas))
 	if err != nil {
 		if errors.Is(err, dal.ErrNotFound) {
-			logger.Errorf(err, "Deployment not found: %s", deploymentName)
+			logger.Errorf(err, "Deployment not found: %s", deploymentKey)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		}
-		logger.Errorf(err, "Could not set deployment replicas: %s", deploymentName)
+		logger.Errorf(err, "Could not set deployment replicas: %s", deploymentKey)
 		return nil, fmt.Errorf("%s: %w", "could not set deployment replicas", err)
 	}
 
@@ -401,23 +401,23 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 }
 
 func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.ReplaceDeployRequest]) (*connect.Response[ftlv1.ReplaceDeployResponse], error) {
-	newDeploymentName, err := model.ParseDeploymentName(c.Msg.DeploymentName)
+	newDeploymentKey, err := model.ParseDeploymentKey(c.Msg.DeploymentKey)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	logger := s.getDeploymentLogger(ctx, newDeploymentName)
-	logger.Debugf("Replace deployment for: %s", newDeploymentName)
+	logger := s.getDeploymentLogger(ctx, newDeploymentKey)
+	logger.Debugf("Replace deployment for: %s", newDeploymentKey)
 
-	err = s.dal.ReplaceDeployment(ctx, newDeploymentName, int(c.Msg.MinReplicas))
+	err = s.dal.ReplaceDeployment(ctx, newDeploymentKey, int(c.Msg.MinReplicas))
 	if err != nil {
 		if errors.Is(err, dal.ErrNotFound) {
-			logger.Errorf(err, "Deployment not found: %s", newDeploymentName)
+			logger.Errorf(err, "Deployment not found: %s", newDeploymentKey)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		} else if errors.Is(err, dal.ErrConflict) {
-			logger.Debugf("Deployment already exists: %s", newDeploymentName)
+			logger.Debugf("Deployment already exists: %s", newDeploymentKey)
 		} else {
-			logger.Errorf(err, "Could not replace deployment: %s", newDeploymentName)
+			logger.Errorf(err, "Could not replace deployment: %s", newDeploymentKey)
 			return nil, fmt.Errorf("%s: %w", "could not replace deployment", err)
 		}
 	}
@@ -507,13 +507,13 @@ func (s *Service) pingRunner(ctx context.Context, endpoint *url.URL) error {
 }
 
 func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentRequest]) (*connect.Response[ftlv1.GetDeploymentResponse], error) {
-	deployment, err := s.getDeployment(ctx, req.Msg.DeploymentName)
+	deployment, err := s.getDeployment(ctx, req.Msg.DeploymentKey)
 	if err != nil {
 		return nil, err
 	}
 
-	logger := s.getDeploymentLogger(ctx, deployment.Name)
-	logger.Debugf("Get deployment for: %s", deployment.Name)
+	logger := s.getDeploymentLogger(ctx, deployment.Key)
+	logger.Debugf("Get deployment for: %s", deployment.Key.String())
 
 	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
 		Schema:    deployment.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
@@ -522,14 +522,14 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 }
 
 func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentArtefactsRequest], resp *connect.ServerStream[ftlv1.GetDeploymentArtefactsResponse]) error {
-	deployment, err := s.getDeployment(ctx, req.Msg.DeploymentName)
+	deployment, err := s.getDeployment(ctx, req.Msg.DeploymentKey)
 	if err != nil {
 		return err
 	}
 	defer deployment.Close()
 
-	logger := s.getDeploymentLogger(ctx, deployment.Name)
-	logger.Debugf("Get deployment artefacts for: %s", deployment.Name)
+	logger := s.getDeploymentLogger(ctx, deployment.Key)
+	logger.Debugf("Get deployment artefacts for: %s", deployment.Key.String())
 
 	chunk := make([]byte, s.config.ArtefactChunkSize)
 nextArtefact:
@@ -620,14 +620,14 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		maybeResponse = optional.Some(resp.Msg)
 	}
 	s.recordCall(ctx, &Call{
-		deploymentName: route.Deployment,
-		requestName:    requestName,
-		startTime:      start,
-		destVerb:       verbRef,
-		callers:        callers,
-		callError:      optional.Nil(err),
-		request:        req.Msg,
-		response:       maybeResponse,
+		deploymentKey: route.Deployment,
+		requestName:   requestName,
+		startTime:     start,
+		destVerb:      verbRef,
+		callers:       callers,
+		callError:     optional.Nil(err),
+		request:       req.Msg,
+		response:      maybeResponse,
 	})
 	return resp, err
 }
@@ -698,7 +698,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 	deploymentLogger := s.getDeploymentLogger(ctx, dname)
 	deploymentLogger.Debugf("Created deployment %s", dname)
-	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentName: dname.String()}), nil
+	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: dname.String()}), nil
 }
 
 // Load schemas for existing modules, combine with our new one, and validate as a whole.
@@ -717,10 +717,10 @@ func (s *Service) validateWholeSchema(ctx context.Context, module *schema.Module
 	return schema.Module(module.Name).MustGet(), nil
 }
 
-func (s *Service) getDeployment(ctx context.Context, name string) (*model.Deployment, error) {
-	dkey, err := model.ParseDeploymentName(name)
+func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deployment, error) {
+	dkey, err := model.ParseDeploymentKey(key)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment name", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
 	}
 	deployment, err := s.dal.GetDeployment(ctx, dkey)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -790,7 +790,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 		deployment := model.Deployment{
 			Module:   reconcile.Module,
 			Language: reconcile.Language,
-			Name:     reconcile.Deployment,
+			Key:      reconcile.Deployment,
 		}
 
 		delete(oldFailures, reconcile.Deployment.String())
@@ -801,8 +801,8 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 			wg.Go(func(ctx context.Context) error {
 				if err := s.deploy(ctx, deployment); err != nil {
 					lock.Lock()
-					failureCount := s.increaseReplicaFailures[deployment.Name.String()] + 1
-					s.increaseReplicaFailures[deployment.Name.String()] = failureCount
+					failureCount := s.increaseReplicaFailures[deployment.Key.String()] + 1
+					s.increaseReplicaFailures[deployment.Key.String()] = failureCount
 					lock.Unlock()
 
 					if failureCount >= 5 {
@@ -812,7 +812,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 					}
 				} else {
 					lock.Lock()
-					delete(s.increaseReplicaFailures, deployment.Name.String())
+					delete(s.increaseReplicaFailures, deployment.Key.String())
 					lock.Unlock()
 
 					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas+1, reconcile.RequiredReplicas)
@@ -825,7 +825,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 		} else if require < 0 {
 			deploymentLogger.Debugf("Need %d less runners for %s", -require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
-				ok, err := s.terminateRandomRunner(ctx, deployment.Name)
+				ok, err := s.terminateRandomRunner(ctx, deployment.Key)
 				if err != nil {
 					deploymentLogger.Warnf("Failed to terminate runner: %s", err)
 				} else if ok {
@@ -883,7 +883,7 @@ func (s *Service) reconcileRunners(ctx context.Context) (time.Duration, error) {
 	return time.Second, nil
 }
 
-func (s *Service) terminateRandomRunner(ctx context.Context, key model.DeploymentName) (bool, error) {
+func (s *Service) terminateRandomRunner(ctx context.Context, key model.DeploymentKey) (bool, error) {
 	runners, err := s.dal.GetRunnersForDeployment(ctx, key)
 	if err != nil {
 		return false, fmt.Errorf("failed to get runner for %s: %w", key, err)
@@ -893,7 +893,7 @@ func (s *Service) terminateRandomRunner(ctx context.Context, key model.Deploymen
 	}
 	runner := runners[rand.Intn(len(runners))] //nolint:gosec
 	client := s.clientsForEndpoint(runner.Endpoint)
-	resp, err := client.runner.Terminate(ctx, connect.NewRequest(&ftlv1.TerminateRequest{DeploymentName: key.String()}))
+	resp, err := client.runner.Terminate(ctx, connect.NewRequest(&ftlv1.TerminateRequest{DeploymentKey: key.String()}))
 	if err != nil {
 		return false, err
 	}
@@ -912,7 +912,7 @@ func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error 
 		return err
 	}
 
-	_, err = client.runner.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{DeploymentName: reconcile.Name.String()}))
+	_, err = client.runner.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{DeploymentKey: reconcile.Key.String()}))
 	if err != nil {
 		return err
 	}
@@ -923,16 +923,16 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 	// A timeout context applied to the transaction and the Runner.Reserve() Call.
 	reservationCtx, cancel := context.WithTimeout(ctx, s.config.DeploymentReservationTimeout)
 	defer cancel()
-	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Name, s.config.DeploymentReservationTimeout, model.Labels{
+	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Key, s.config.DeploymentReservationTimeout, model.Labels{
 		"languages": []string{reconcile.Language},
 	})
 	if err != nil {
-		return clients{}, fmt.Errorf("failed to claim runners for %s: %w", reconcile.Name, err)
+		return clients{}, fmt.Errorf("failed to claim runners for %s: %w", reconcile.Key, err)
 	}
 
 	err = dal.WithReservation(reservationCtx, claim, func() error {
 		client = s.clientsForEndpoint(claim.Runner().Endpoint)
-		_, err = client.runner.Reserve(reservationCtx, connect.NewRequest(&ftlv1.ReserveRequest{DeploymentName: reconcile.Name.String()}))
+		_, err = client.runner.Reserve(reservationCtx, connect.NewRequest(&ftlv1.ReserveRequest{DeploymentKey: reconcile.Key.String()}))
 		return err
 	})
 	return
@@ -967,7 +967,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		minReplicas int
 	}
 	moduleState := map[string]moduleStateEntry{}
-	moduleByDeploymentName := map[model.DeploymentName]string{}
+	moduleByDeploymentKey := map[model.DeploymentKey]string{}
 
 	// Seed the notification channel with the current deployments.
 	seedDeployments, err := s.dal.GetActiveDeployments(ctx)
@@ -1007,14 +1007,14 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 			var response *ftlv1.PullSchemaResponse
 			// Deleted key
 			if deletion, ok := notification.Deleted.Get(); ok {
-				name := moduleByDeploymentName[deletion]
+				name := moduleByDeploymentKey[deletion]
 				response = &ftlv1.PullSchemaResponse{
-					ModuleName:     name,
-					DeploymentName: deletion.String(),
-					ChangeType:     ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
+					ModuleName:    name,
+					DeploymentKey: deletion.String(),
+					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
 				}
 				delete(moduleState, name)
-				delete(moduleByDeploymentName, deletion)
+				delete(moduleByDeploymentKey, deletion)
 			} else if message, ok := notification.Message.Get(); ok {
 				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 				moduleSchema.Runtime = &schemapb.ModuleRuntime{
@@ -1038,27 +1038,27 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED
 						}
 						response = &ftlv1.PullSchemaResponse{
-							ModuleName:     moduleSchema.Name,
-							DeploymentName: message.Name.String(),
-							Schema:         moduleSchema,
-							ChangeType:     changeType,
+							ModuleName:    moduleSchema.Name,
+							DeploymentKey: message.Key.String(),
+							Schema:        moduleSchema,
+							ChangeType:    changeType,
 						}
 					}
 				} else {
 					response = &ftlv1.PullSchemaResponse{
-						ModuleName:     moduleSchema.Name,
-						DeploymentName: message.Name.String(),
-						Schema:         moduleSchema,
-						ChangeType:     ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
-						More:           initialCount > 1,
+						ModuleName:    moduleSchema.Name,
+						DeploymentKey: message.Key.String(),
+						Schema:        moduleSchema,
+						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+						More:          initialCount > 1,
 					}
 					if initialCount > 0 {
 						initialCount--
 					}
 				}
 				moduleState[message.Schema.Name] = newState
-				delete(moduleByDeploymentName, message.Name) // The deployment may have changed.
-				moduleByDeploymentName[message.Name] = message.Schema.Name
+				delete(moduleByDeploymentKey, message.Key) // The deployment may have changed.
+				moduleByDeploymentKey[message.Key] = message.Schema.Name
 			}
 
 			if response != nil {
@@ -1074,8 +1074,8 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	}
 }
 
-func (s *Service) getDeploymentLogger(ctx context.Context, deploymentName model.DeploymentName) *log.Logger {
-	attrs := map[string]string{"deployment": deploymentName.String()}
+func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.DeploymentKey) *log.Logger {
+	attrs := map[string]string{"deployment": deploymentKey.String()}
 	if requestName, ok, _ := rpc.RequestNameFromContext(ctx); ok {
 		attrs["request"] = requestName.String()
 	}

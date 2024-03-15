@@ -15,8 +15,8 @@ export const App = () => {
         <Route path='events' element={<TimelinePage />} />
 
         <Route path='deployments' element={<DeploymentsPage />} />
-        <Route path='deployments/:deploymentName' element={<DeploymentPage />} />
-        <Route path='deployments/:deploymentName/verbs/:verbName' element={<VerbPage />} />
+        <Route path='deployments/:deploymentKey' element={<DeploymentPage />} />
+        <Route path='deployments/:deploymentKey/verbs/:verbName' element={<VerbPage />} />
 
         <Route path='graph' element={<GraphPage />} />
       </Route>

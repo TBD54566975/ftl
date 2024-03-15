@@ -32,7 +32,7 @@ export const TimelineLogDetails = ({ event, log }: { event: Event; log: LogEvent
         <h2 className='pt-4 text-sm'>Attributes</h2>
         <CodeBlock code={JSON.stringify(log.attributes, null, 2)} language='json' />
 
-        <DeploymentCard className='mt-4' deploymentName={log.deploymentName} />
+        <DeploymentCard className='mt-4' deploymentKey={log.deploymentKey} />
 
         <ul className='pt-4 space-y-2'>
           {log.requestName && (

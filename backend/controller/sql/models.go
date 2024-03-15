@@ -208,7 +208,7 @@ type Deployment struct {
 	ID          int64
 	CreatedAt   time.Time
 	ModuleID    int64
-	Name        model.DeploymentName
+	Key         model.DeploymentKey
 	Schema      *schema.Module
 	Labels      []byte
 	MinReplicas int32
