@@ -5,7 +5,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/TBD54566975/ftl/go-runtime/compile/testdata/two"
+	"ftl/two"
+
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
