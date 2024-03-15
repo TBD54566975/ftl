@@ -1,6 +1,7 @@
 package compile
 
 import (
+	"context"
 	"fmt"
 	"go/token"
 	"go/types"
@@ -13,10 +14,34 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+func prebuildTestModule(t *testing.T, args ...string) {
+	//this is helpful when a test requires another module to be built before running
+	//eg: when module A depends on module B, we need to build module B before building module A
+	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
+
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+
+	ftlArgs := []string{"build"}
+	ftlArgs = append(ftlArgs, args...)
+
+	cmd := exec.Command(ctx, log.Debug, dir, "ftl", ftlArgs...)
+	err = cmd.Run()
+	if err != nil {
+		t.Fatalf("ftl build failed with %s\n", err)
+	}
+}
+
 func TestExtractModuleSchema(t *testing.T) {
+	prebuildTestModule(t, "testdata/one", "testdata/two")
+
 	_, actual, err := ExtractModuleSchema("testdata/one")
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
