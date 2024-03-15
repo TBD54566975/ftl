@@ -55,7 +55,7 @@ func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
 	logger.Debugf("Using build command '%s'", module.Build)
 	err := exec.Command(ctx, log.Debug, module.Dir, "bash", "-c", module.Build).RunBuffered(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to build module: %w", err)
+		return fmt.Errorf("failed to build module %s: %w", module.Module, err)
 	}
 
 	return nil

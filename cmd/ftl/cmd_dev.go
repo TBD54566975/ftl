@@ -34,7 +34,7 @@ func (d *devCmd) Run(ctx context.Context) error {
 			d.ServeCmd.Stop = false
 		}
 		if d.ServeCmd.isRunning(ctx, client) {
-			return errors.New("FTL is already running")
+			return errors.New(ftlRunningErrorMsg)
 		}
 
 		g.Go(func() error {

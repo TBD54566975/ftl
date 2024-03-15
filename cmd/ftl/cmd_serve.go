@@ -44,6 +44,7 @@ type serveCmd struct {
 }
 
 const ftlContainerName = "ftl-db-1"
+const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
 func (s *serveCmd) Run(ctx context.Context) error {
 	logger := log.FromContext(ctx)
@@ -71,7 +72,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	}
 
 	if s.isRunning(ctx, client) {
-		return errors.New("FTL is already running")
+		return errors.New(ftlRunningErrorMsg)
 	}
 
 	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
@@ -131,7 +132,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 func runInBackground(logger *log.Logger) {
 	if running, _ := isServeRunning(logger); running {
-		logger.Warnf("'ftl serve' is already running in the background. Use --stop to stop it.")
+		logger.Warnf(ftlRunningErrorMsg)
 		return
 	}
 

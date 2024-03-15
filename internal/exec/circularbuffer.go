@@ -48,7 +48,6 @@ func (cb *CircularBuffer) Bytes() []byte {
 	defer cb.mu.Unlock()
 
 	if cb.size == 0 {
-		fmt.Println("Buffer is empty.")
 		return []byte{}
 	}
 

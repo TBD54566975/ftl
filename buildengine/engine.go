@@ -429,6 +429,7 @@ func (e *Engine) build(ctx context.Context, name string, built map[string]*schem
 	module := e.modules[name]
 	err := Build(ctx, sch, module)
 	if err != nil {
+
 		return err
 	}
 	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(module.Dir, module.DeployDir, module.Schema))
