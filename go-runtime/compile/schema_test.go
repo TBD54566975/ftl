@@ -1,7 +1,7 @@
 package compile
 
 import (
-	"go/ast"
+	"go/token"
 	"go/types"
 	"os"
 	"path/filepath"
@@ -163,7 +163,7 @@ func TestParseDirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	parsed, err := visitType(nil, &ast.Ident{}, timeRef)
+	parsed, err := visitType(nil, token.NoPos, timeRef)
 	assert.NoError(t, err)
 	_, ok := parsed.(*schema.Time)
 	assert.True(t, ok)
@@ -182,7 +182,7 @@ func TestParseBasicTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := visitType(nil, &ast.Ident{}, tt.input)
+			parsed, err := visitType(nil, token.NoPos, tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, parsed)
 		})

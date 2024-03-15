@@ -154,14 +154,14 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr) error {
 
 func parseCall(pctx *parseContext, node *ast.CallExpr) error {
 	if len(node.Args) != 3 {
-		return errorf(node, "call must have exactly three arguments")
+		return errorf(node.Pos(), "call must have exactly three arguments")
 	}
 	_, verbFn := deref[*types.Func](pctx.pkg, node.Args[1])
 	if verbFn == nil {
 		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
-			return errorf(node.Args[1], "call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel)
+			return errorf(node.Args[1].Pos(), "call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel)
 		}
-		return errorf(node.Args[1], "call first argument must be a function but is %T", node.Args[1])
+		return errorf(node.Args[1].Pos(), "call first argument must be a function but is %T", node.Args[1])
 	}
 	if pctx.activeVerb == nil {
 		return nil
@@ -191,13 +191,13 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) err
 		}
 	}
 	if name == "" {
-		return errorf(node, "config and secret declarations must have a single string literal argument")
+		return errorf(node.Pos(), "config and secret declarations must have a single string literal argument")
 	}
 	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert
 
 	// Type parameter
 	tp := pctx.pkg.TypesInfo.Types[index.Index].Type
-	st, err := visitType(pctx, index.Index, tp)
+	st, err := visitType(pctx, index.Index.Pos(), tp)
 	if err != nil {
 		return err
 	}
@@ -234,12 +234,12 @@ func visitFile(pctx *parseContext, node *ast.File) error {
 		switch dir := dir.(type) {
 		case *directiveModule:
 			if dir.Name != pctx.pkg.Name {
-				return errorf(node, "%s: FTL module name %q does not match Go package name %q", dir, dir.Name, pctx.pkg.Name)
+				return errorf(node.Pos(), "%s: FTL module name %q does not match Go package name %q", dir, dir.Name, pctx.pkg.Name)
 			}
 			pctx.module.Name = dir.Name
 
 		default:
-			return errorf(node, "%s: invalid directive", dir)
+			return errorf(node.Pos(), "%s: invalid directive", dir)
 		}
 	}
 	return nil
@@ -368,7 +368,7 @@ func visitTypeSpec(pctx *parseContext, node *ast.TypeSpec) error {
 	if enum == nil {
 		return nil
 	}
-	typ, err := visitType(pctx, node, pctx.pkg.TypesInfo.TypeOf(node.Type))
+	typ, err := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(node.Type))
 	if err != nil {
 		return err
 	}
@@ -456,7 +456,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	var req schema.Type
 	if reqt != nil {
-		req, err = visitType(pctx, node, params.At(1).Type())
+		req, err = visitType(pctx, node.Pos(), params.At(1).Type())
 		if err != nil {
 			return nil, err
 		}
@@ -465,7 +465,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	}
 	var resp schema.Type
 	if respt != nil {
-		resp, err = visitType(pctx, node, results.At(0).Type())
+		resp, err = visitType(pctx, node.Pos(), results.At(0).Type())
 		if err != nil {
 			return nil, err
 		}
@@ -508,7 +508,7 @@ func visitComments(doc *ast.CommentGroup) []string {
 	return comments
 }
 
-func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.Ref, error) {
+func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.Ref, error) {
 	named, ok := tnode.(*types.Named)
 	if !ok {
 		return nil, fmt.Errorf("expected named type but got %s", tnode)
@@ -518,13 +518,13 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.R
 		base := path.Dir(pctx.pkg.PkgPath)
 		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
 		dataRef := &schema.Ref{
-			Pos:    goPosToSchemaPos(node.Pos()),
+			Pos:    goPosToSchemaPos(pos),
 			Module: destModule,
 			Name:   named.Obj().Name(),
 		}
 		for i := 0; i < named.TypeArgs().Len(); i++ {
 			arg := named.TypeArgs().At(i)
-			typeArg, err := visitType(pctx, node, arg)
+			typeArg, err := visitType(pctx, pos, arg)
 			if err != nil {
 				return nil, fmt.Errorf("type parameter %s: %w", arg.String(), err)
 			}
@@ -542,21 +542,21 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.R
 	}
 
 	out := &schema.Data{
-		Pos:  goPosToSchemaPos(node.Pos()),
+		Pos:  goPosToSchemaPos(pos),
 		Name: strcase.ToUpperCamel(named.Obj().Name()),
 	}
 	pctx.nativeNames[out] = named.Obj().Name()
 	dataRef := &schema.Ref{
-		Pos:  goPosToSchemaPos(node.Pos()),
+		Pos:  goPosToSchemaPos(pos),
 		Name: out.Name,
 	}
 	for i := 0; i < named.TypeParams().Len(); i++ {
 		param := named.TypeParams().At(i)
 		out.TypeParameters = append(out.TypeParameters, &schema.TypeParameter{
-			Pos:  goPosToSchemaPos(node.Pos()),
+			Pos:  goPosToSchemaPos(pos),
 			Name: param.Obj().Name(),
 		})
-		typeArg, err := visitType(pctx, node, named.TypeArgs().At(i))
+		typeArg, err := visitType(pctx, pos, named.TypeArgs().At(i))
 		if err != nil {
 			return nil, fmt.Errorf("type parameter %s: %w", param.Obj().Name(), err)
 		}
@@ -570,8 +570,8 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.R
 	}
 
 	// Find type declaration so we can extract comments.
-	pos := named.Obj().Pos()
-	pkg, path, _ := pctx.pathEnclosingInterval(pos, pos)
+	namedPos := named.Obj().Pos()
+	pkg, path, _ := pctx.pathEnclosingInterval(namedPos, namedPos)
 	if pkg != nil {
 		for i := len(path) - 1; i >= 0; i-- {
 			// We have to check both the type spec and the gen decl because the
@@ -596,7 +596,7 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.R
 	}
 	for i := 0; i < s.NumFields(); i++ {
 		f := s.Field(i)
-		ft, err := visitType(pctx, node, f.Type())
+		ft, err := visitType(pctx, f.Pos(), f.Type())
 		if err != nil {
 			return nil, fmt.Errorf("field %s: %w", f.Name(), err)
 		}
@@ -617,13 +617,13 @@ func visitStruct(pctx *parseContext, node ast.Node, tnode types.Type) (*schema.R
 		var metadata []schema.Metadata
 		if jsonFieldName != "" {
 			metadata = append(metadata, &schema.MetadataAlias{
-				Pos:   goPosToSchemaPos(node.Pos()),
+				Pos:   goPosToSchemaPos(pos),
 				Kind:  schema.AliasKindJSON,
 				Alias: jsonFieldName,
 			})
 		}
 		out.Fields = append(out.Fields, &schema.Field{
-			Pos:      goPosToSchemaPos(node.Pos()),
+			Pos:      goPosToSchemaPos(pos),
 			Name:     strcase.ToLowerCamel(f.Name()),
 			Type:     ft,
 			Metadata: metadata,
@@ -650,16 +650,15 @@ func visitConst(cnode *types.Const) (schema.Value, error) {
 			}
 			return &schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)}, nil
 		default:
-			return nil, fmt.Errorf("%s: unsupported basic type %s", goPosToSchemaPos(cnode.Pos()),
-				b)
+			return nil, fmt.Errorf("%s: unsupported basic type %s", goPosToSchemaPos(cnode.Pos()), b)
 		}
 	}
 	return nil, fmt.Errorf("%s: unsupported const type %s", goPosToSchemaPos(cnode.Pos()), cnode.Type())
 }
 
-func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type, error) {
+func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type, error) {
 	if tparam, ok := tnode.(*types.TypeParam); ok {
-		return &schema.Ref{Pos: goPosToSchemaPos(node.Pos()), Name: tparam.Obj().Id()}, nil
+		return &schema.Ref{Pos: goPosToSchemaPos(pos), Name: tparam.Obj().Id()}, nil
 	}
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
@@ -667,7 +666,7 @@ func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 			nodePath := named.Obj().Pkg().Path()
 			if pctx.enums[named.Obj().Name()] != nil {
 				return &schema.Ref{
-					Pos:  goPosToSchemaPos(node.Pos()),
+					Pos:  goPosToSchemaPos(pos),
 					Name: named.Obj().Name(),
 				}, nil
 			} else if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
@@ -676,7 +675,7 @@ func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 				base := path.Dir(pctx.pkg.PkgPath)
 				destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
 				enumRef := &schema.Ref{
-					Pos:    goPosToSchemaPos(node.Pos()),
+					Pos:    goPosToSchemaPos(pos),
 					Module: destModule,
 					Name:   named.Obj().Name(),
 				}
@@ -686,90 +685,90 @@ func visitType(pctx *parseContext, node ast.Node, tnode types.Type) (schema.Type
 
 		switch underlying.Kind() {
 		case types.String:
-			return &schema.String{Pos: goPosToSchemaPos(node.Pos())}, nil
+			return &schema.String{Pos: goPosToSchemaPos(pos)}, nil
 
 		case types.Int, types.Int64:
-			return &schema.Int{Pos: goPosToSchemaPos(node.Pos())}, nil
+			return &schema.Int{Pos: goPosToSchemaPos(pos)}, nil
 
 		case types.Bool:
-			return &schema.Bool{Pos: goPosToSchemaPos(node.Pos())}, nil
+			return &schema.Bool{Pos: goPosToSchemaPos(pos)}, nil
 
 		case types.Float64:
-			return &schema.Float{Pos: goPosToSchemaPos(node.Pos())}, nil
+			return &schema.Float{Pos: goPosToSchemaPos(pos)}, nil
 
 		default:
-			return nil, errorf(node, "unsupported basic type %s", underlying)
+			return nil, errorf(pos, "unsupported basic type %s", underlying)
 		}
 
 	case *types.Struct:
 		named, ok := tnode.(*types.Named)
 		if !ok {
-			return visitStruct(pctx, node, tnode)
+			return visitStruct(pctx, pos, tnode)
 		}
 
 		// Special-cased types.
 		switch named.Obj().Pkg().Path() + "." + named.Obj().Name() {
 		case "time.Time":
-			return &schema.Time{Pos: goPosToSchemaPos(node.Pos())}, nil
+			return &schema.Time{Pos: goPosToSchemaPos(pos)}, nil
 
 		case "github.com/TBD54566975/ftl/go-runtime/ftl.Unit":
-			return &schema.Unit{Pos: goPosToSchemaPos(node.Pos())}, nil
+			return &schema.Unit{Pos: goPosToSchemaPos(pos)}, nil
 
 		case "github.com/TBD54566975/ftl/go-runtime/ftl.Option":
-			underlying, err := visitType(pctx, node, named.TypeArgs().At(0))
+			underlying, err := visitType(pctx, pos, named.TypeArgs().At(0))
 			if err != nil {
 				return nil, err
 			}
 			return &schema.Optional{Type: underlying}, nil
 
 		default:
-			return visitStruct(pctx, node, tnode)
+			return visitStruct(pctx, pos, tnode)
 		}
 
 	case *types.Map:
-		return visitMap(pctx, node, underlying)
+		return visitMap(pctx, pos, underlying)
 
 	case *types.Slice:
-		return visitSlice(pctx, node, underlying)
+		return visitSlice(pctx, pos, underlying)
 
 	case *types.Interface:
 		if underlying.String() == "any" {
-			return &schema.Any{Pos: goPosToSchemaPos(node.Pos())}, nil
+			return &schema.Any{Pos: goPosToSchemaPos(pos)}, nil
 		}
-		return nil, errorf(node, "unsupported type %T", node)
+		return nil, errorf(pos, "unsupported type %T", tnode)
 
 	default:
-		return nil, errorf(node, "unsupported type %T", node)
+		return nil, errorf(pos, "unsupported type %T", tnode)
 	}
 }
 
-func visitMap(pctx *parseContext, node ast.Node, tnode *types.Map) (*schema.Map, error) {
-	key, err := visitType(pctx, node, tnode.Key())
+func visitMap(pctx *parseContext, pos token.Pos, tnode *types.Map) (*schema.Map, error) {
+	key, err := visitType(pctx, pos, tnode.Key())
 	if err != nil {
 		return nil, err
 	}
-	value, err := visitType(pctx, node, tnode.Elem())
+	value, err := visitType(pctx, pos, tnode.Elem())
 	if err != nil {
 		return nil, err
 	}
 	return &schema.Map{
-		Pos:   goPosToSchemaPos(node.Pos()),
+		Pos:   goPosToSchemaPos(pos),
 		Key:   key,
 		Value: value,
 	}, nil
 }
 
-func visitSlice(pctx *parseContext, node ast.Node, tnode *types.Slice) (schema.Type, error) {
+func visitSlice(pctx *parseContext, pos token.Pos, tnode *types.Slice) (schema.Type, error) {
 	// If it's a []byte, treat it as a Bytes type.
 	if basic, ok := tnode.Elem().Underlying().(*types.Basic); ok && basic.Kind() == types.Byte {
-		return &schema.Bytes{Pos: goPosToSchemaPos(node.Pos())}, nil
+		return &schema.Bytes{Pos: goPosToSchemaPos(pos)}, nil
 	}
-	value, err := visitType(pctx, node, tnode.Elem())
+	value, err := visitType(pctx, pos, tnode.Elem())
 	if err != nil {
 		return nil, err
 	}
 	return &schema.Array{
-		Pos:     goPosToSchemaPos(node.Pos()),
+		Pos:     goPosToSchemaPos(pos),
 		Element: value,
 	}, nil
 }
