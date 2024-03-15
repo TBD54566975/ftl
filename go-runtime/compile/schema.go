@@ -722,8 +722,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type
 			}
 			return &schema.Optional{Type: underlying}, nil
 		default:
-			if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
-				return nil, fmt.Errorf("unsupported external type %s", named.Obj().Pkg().Path()+"."+named.Obj().Name())
+			nodePath := named.Obj().Pkg().Path()
+			if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) && !strings.HasPrefix(nodePath, "ftl/") {
+				return nil, fmt.Errorf("unsupported external type %s", nodePath+"."+named.Obj().Name())
 			}
 			return visitStruct(pctx, pos, tnode)
 		}
