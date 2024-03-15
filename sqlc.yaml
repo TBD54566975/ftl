@@ -36,6 +36,12 @@ sql:
             nullable: true
             go_type: 
               type: "NullRunnerKey"
+          - db_type: "deployment_name"
+            go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentName"
+          - db_type: "deployment_name"
+            nullable: true
+            go_type: 
+              type: "NullDeploymentName"
           - db_type: "controller_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - db_type: "text"

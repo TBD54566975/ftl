@@ -52,12 +52,12 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 }
 
 const createDeployment = `-- name: CreateDeployment :exec
-INSERT INTO deployments (module_id, "schema", name)
-VALUES ((SELECT id FROM modules WHERE name = $2::TEXT LIMIT 1), $3::BYTEA, $1)
+INSERT INTO deployments (module_id, "schema", "name")
+VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3)
 `
 
-func (q *Queries) CreateDeployment(ctx context.Context, name model.DeploymentName, moduleName string, schema []byte) error {
-	_, err := q.db.Exec(ctx, createDeployment, name, moduleName, schema)
+func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema []byte, name model.DeploymentName) error {
+	_, err := q.db.Exec(ctx, createDeployment, moduleName, schema, name)
 	return err
 }
 
@@ -983,7 +983,7 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, name model.Deploy
 const insertCallEvent = `-- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
-VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
+VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::deployment_name),
         (CASE
              WHEN $2::TEXT IS NULL THEN NULL
              ELSE (SELECT id FROM requests ir WHERE ir.name = $2::TEXT)
@@ -1004,7 +1004,7 @@ VALUES ((SELECT id FROM deployments WHERE deployments.name = $1::TEXT),
 `
 
 type InsertCallEventParams struct {
-	DeploymentName string
+	DeploymentName model.DeploymentName
 	RequestName    optional.Option[string]
 	TimeStamp      time.Time
 	SourceModule   optional.Option[string]
@@ -1040,7 +1040,7 @@ const insertDeploymentCreatedEvent = `-- name: InsertDeploymentCreatedEvent :exe
 INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
 VALUES ((SELECT id
          FROM deployments
-         WHERE deployments.name = $1::TEXT),
+         WHERE deployments.name = $1::deployment_name),
         'deployment_created',
         $2::TEXT,
         $3::TEXT,
@@ -1051,7 +1051,7 @@ VALUES ((SELECT id
 `
 
 type InsertDeploymentCreatedEventParams struct {
-	DeploymentName string
+	DeploymentName model.DeploymentName
 	Language       string
 	ModuleName     string
 	MinReplicas    int32
@@ -1073,7 +1073,7 @@ const insertDeploymentUpdatedEvent = `-- name: InsertDeploymentUpdatedEvent :exe
 INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
 VALUES ((SELECT id
          FROM deployments
-         WHERE deployments.name = $1::TEXT),
+         WHERE deployments.name = $1::deployment_name),
         'deployment_updated',
         $2::TEXT,
         $3::TEXT,
@@ -1084,7 +1084,7 @@ VALUES ((SELECT id
 `
 
 type InsertDeploymentUpdatedEventParams struct {
-	DeploymentName  string
+	DeploymentName  model.DeploymentName
 	Language        string
 	ModuleName      string
 	PrevMinReplicas int32
@@ -1137,7 +1137,7 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 
 const insertLogEvent = `-- name: InsertLogEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
-VALUES ((SELECT id FROM deployments d WHERE d.name = $1 LIMIT 1),
+VALUES ((SELECT id FROM deployments d WHERE d.name = $1::deployment_name LIMIT 1),
         (CASE
              WHEN $2::TEXT IS NULL THEN NULL
              ELSE (SELECT id FROM requests ir WHERE ir.name = $2::TEXT LIMIT 1)
@@ -1242,7 +1242,7 @@ SET state               = 'reserved',
     -- and the update will fail due to a FK constraint.
     deployment_id       = COALESCE((SELECT id
                                     FROM deployments d
-                                    WHERE d.name = $2
+                                    WHERE d.name = $2::deployment_name
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
@@ -1316,11 +1316,11 @@ func (q *Queries) UpsertModule(ctx context.Context, language string, name string
 const upsertRunner = `-- name: UpsertRunner :one
 WITH deployment_rel AS (
     SELECT CASE
-               WHEN $5::TEXT IS NULL
+               WHEN $5::deployment_name IS NULL
                    THEN NULL
                ELSE COALESCE((SELECT id
                               FROM deployments d
-                              WHERE d.name = $5
+                              WHERE d.name = $5::deployment_name
                               LIMIT 1), -1) END AS id)
 INSERT
 INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
@@ -1343,7 +1343,7 @@ type UpsertRunnerParams struct {
 	Endpoint       string
 	State          RunnerState
 	Labels         []byte
-	DeploymentName optional.Option[string]
+	DeploymentName NullDeploymentName
 }
 
 // Upsert a runner and return the deployment ID that it is assigned to, if any.

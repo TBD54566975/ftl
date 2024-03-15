@@ -15,8 +15,8 @@ FROM modules
 WHERE id = ANY (@ids::BIGINT[]);
 
 -- name: CreateDeployment :exec
-INSERT INTO deployments (module_id, "schema", name)
-VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, $1);
+INSERT INTO deployments (module_id, "schema", "name")
+VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, sqlc.arg('name'));
 
 -- name: GetArtefactDigests :many
 -- Return the digests that exist in the database.
@@ -86,11 +86,11 @@ WITH deployment_rel AS (
 -- there is no corresponding deployment, then the deployment ID is -1
 -- and the parent statement will fail due to a foreign key constraint.
     SELECT CASE
-               WHEN sqlc.narg('deployment_name')::TEXT IS NULL
+               WHEN sqlc.narg('deployment_name')::deployment_name IS NULL
                    THEN NULL
                ELSE COALESCE((SELECT id
                               FROM deployments d
-                              WHERE d.name = sqlc.narg('deployment_name')
+                              WHERE d.name = sqlc.narg('deployment_name')::deployment_name
                               LIMIT 1), -1) END AS id)
 INSERT
 INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
@@ -210,7 +210,7 @@ SET state               = 'reserved',
     -- and the update will fail due to a FK constraint.
     deployment_id       = COALESCE((SELECT id
                                     FROM deployments d
-                                    WHERE d.name = sqlc.arg('deployment_name')
+                                    WHERE d.name = sqlc.arg('deployment_name')::deployment_name
                                     LIMIT 1), -1)
 WHERE id = (SELECT id
             FROM runners r
@@ -274,7 +274,7 @@ FROM rows;
 
 -- name: InsertLogEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
-VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name') LIMIT 1),
+VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name')::deployment_name LIMIT 1),
         (CASE
              WHEN sqlc.narg('request_name')::TEXT IS NULL THEN NULL
              ELSE (SELECT id FROM requests ir WHERE ir.name = sqlc.narg('request_name')::TEXT LIMIT 1)
@@ -293,7 +293,7 @@ VALUES ((SELECT id FROM deployments d WHERE d.name = sqlc.arg('deployment_name')
 INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
 VALUES ((SELECT id
          FROM deployments
-         WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
+         WHERE deployments.name = sqlc.arg('deployment_name')::deployment_name),
         'deployment_created',
         sqlc.arg('language')::TEXT,
         sqlc.arg('module_name')::TEXT,
@@ -306,7 +306,7 @@ VALUES ((SELECT id
 INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
 VALUES ((SELECT id
          FROM deployments
-         WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
+         WHERE deployments.name = sqlc.arg('deployment_name')::deployment_name),
         'deployment_updated',
         sqlc.arg('language')::TEXT,
         sqlc.arg('module_name')::TEXT,
@@ -318,7 +318,7 @@ VALUES ((SELECT id
 -- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
-VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deployment_name')::TEXT),
+VALUES ((SELECT id FROM deployments WHERE deployments.name = sqlc.arg('deployment_name')::deployment_name),
         (CASE
              WHEN sqlc.narg('request_name')::TEXT IS NULL THEN NULL
              ELSE (SELECT id FROM requests ir WHERE ir.name = sqlc.narg('request_name')::TEXT)

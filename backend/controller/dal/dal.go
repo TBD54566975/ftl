@@ -85,7 +85,11 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 func runnerFromDB(row sql.GetRunnerRow) Runner {
 	var deployment optional.Option[model.DeploymentName]
 	if name, ok := row.DeploymentName.Get(); ok {
-		deployment = optional.Some(model.DeploymentName(name))
+		parsed, err := model.ParseDeploymentName(name)
+		if err != nil {
+			return Runner{}
+		}
+		deployment = optional.Some(parsed)
 	}
 	attrs := model.Labels{}
 	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
@@ -303,7 +307,11 @@ func (d *DAL) GetStatus(
 	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
 		var deployment optional.Option[model.DeploymentName]
 		if name, ok := in.DeploymentName.Get(); ok {
-			deployment = optional.Some(model.DeploymentName(name))
+			parsed, err := model.ParseDeploymentName(name)
+			if err != nil {
+				return Runner{}, fmt.Errorf("invalid deployment name %q: %w", name, err)
+			}
+			deployment = optional.Some(parsed)
 		}
 		attrs := model.Labels{}
 		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
@@ -408,15 +416,16 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", "could not start transaction", err)
+		return model.DeploymentName{}, fmt.Errorf("%s: %w", "could not start transaction", err)
 	}
 
 	defer tx.CommitOrRollback(ctx, &err)
 
 	existingDeployment, err := d.checkForExistingDeployments(ctx, tx, moduleSchema, artefacts)
+	var zero model.DeploymentName
 	if err != nil {
-		return "", err
-	} else if existingDeployment != "" {
+		return model.DeploymentName{}, err
+	} else if existingDeployment != zero {
 		logger.Tracef("Returning existing deployment %s", existingDeployment)
 		return existingDeployment, nil
 	}
@@ -427,30 +436,31 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 
 	schemaBytes, err := proto.Marshal(moduleSchema.ToProto())
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", "failed to marshal schema", err)
+		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to marshal schema", err)
 	}
 
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, moduleSchema.Name)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", "failed to upsert module", translatePGError(err))
+		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to upsert module", translatePGError(err))
 	}
 
 	deploymentName := model.NewDeploymentName(moduleSchema.Name)
+
 	// Create the deployment
-	err = tx.CreateDeployment(ctx, deploymentName, moduleSchema.Name, schemaBytes)
+	err = tx.CreateDeployment(ctx, moduleSchema.Name, schemaBytes, deploymentName)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", "failed to create deployment", translatePGError(err))
+		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to create deployment", translatePGError(err))
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
 	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", "failed to get artefact digests", err)
+		return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to get artefact digests", err)
 	}
 	if len(artefactDigests) != len(artefacts) {
 		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return "", fmt.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+		return model.DeploymentName{}, fmt.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
 	}
 
 	// Associate the artefacts with the deployment
@@ -463,7 +473,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return "", fmt.Errorf("%s: %w", "failed to associate artefact with deployment", translatePGError(err))
+			return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to associate artefact with deployment", translatePGError(err))
 		}
 	}
 
@@ -476,7 +486,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
-			return "", fmt.Errorf("%s: %w", "failed to create ingress route", translatePGError(err))
+			return model.DeploymentName{}, fmt.Errorf("%s: %w", "failed to create ingress route", translatePGError(err))
 		}
 	}
 
@@ -496,10 +506,6 @@ func (d *DAL) GetDeployment(ctx context.Context, name model.DeploymentName) (*mo
 // ErrConflict will be returned if a runner with the same endpoint and a
 // different key already exists.
 func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
-	var pgDeploymentName optional.Option[string]
-	if dkey, ok := runner.Deployment.Get(); ok {
-		pgDeploymentName = optional.Some(dkey.String())
-	}
 	attrBytes, err := json.Marshal(runner.Labels)
 	if err != nil {
 		return fmt.Errorf("%s: %w", "failed to JSON encode runner labels", err)
@@ -508,7 +514,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 		Key:            runner.Key,
 		Endpoint:       runner.Endpoint,
 		State:          sql.RunnerState(runner.State),
-		DeploymentName: pgDeploymentName,
+		DeploymentName: runner.Deployment,
 		Labels:         attrBytes,
 	})
 	if err != nil {
@@ -609,7 +615,7 @@ func (p *postgresClaim) Rollback(ctx context.Context) error {
 func (p *postgresClaim) Runner() Runner { return p.runner }
 
 // SetDeploymentReplicas activates the given deployment.
-func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentName, minReplicas int) error {
+func (d *DAL) SetDeploymentReplicas(ctx context.Context, name model.DeploymentName, minReplicas int) error {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -618,18 +624,18 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentNam
 
 	defer tx.CommitOrRollback(ctx, &err)
 
-	deployment, err := d.db.GetDeployment(ctx, key)
+	deployment, err := d.db.GetDeployment(ctx, name)
 	if err != nil {
 		return translatePGError(err)
 	}
 
-	err = d.db.SetDeploymentDesiredReplicas(ctx, key, int32(minReplicas))
+	err = d.db.SetDeploymentDesiredReplicas(ctx, name, int32(minReplicas))
 	if err != nil {
 		return translatePGError(err)
 	}
 
 	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
-		DeploymentName:  string(key),
+		DeploymentName:  name,
 		MinReplicas:     int32(minReplicas),
 		PrevMinReplicas: deployment.MinReplicas,
 	})
@@ -678,7 +684,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentName model.Dep
 	}
 
 	err = tx.InsertDeploymentCreatedEvent(ctx, sql.InsertDeploymentCreatedEventParams{
-		DeploymentName: newDeploymentName.String(),
+		DeploymentName: newDeploymentName,
 		Language:       newDeployment.Language,
 		ModuleName:     newDeployment.ModuleName,
 		MinReplicas:    int32(minReplicas),
@@ -955,7 +961,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 		requestName = optional.Some(string(rn))
 	}
 	return translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
-		DeploymentName: call.DeploymentName.String(),
+		DeploymentName: call.DeploymentName,
 		RequestName:    requestName,
 		TimeStamp:      call.Time,
 		SourceModule:   sourceModule,
@@ -984,7 +990,7 @@ func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
 func (*DAL) checkForExistingDeployments(ctx context.Context, tx *sql.Tx, moduleSchema *schema.Module, artefacts []DeploymentArtefact) (model.DeploymentName, error) {
 	schemaBytes, err := schema.ModuleToBytes(moduleSchema)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal schema: %w", err)
+		return model.DeploymentName{}, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 	existing, err := tx.GetDeploymentsWithArtefacts(ctx,
 		sha256esToBytes(slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return in.Digest })),
@@ -992,12 +998,12 @@ func (*DAL) checkForExistingDeployments(ctx context.Context, tx *sql.Tx, moduleS
 		int64(len(artefacts)),
 	)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", "couldn't check for existing deployment", err)
+		return model.DeploymentName{}, fmt.Errorf("%s: %w", "couldn't check for existing deployment", err)
 	}
 	if len(existing) > 0 {
 		return existing[0].DeploymentName, nil
 	}
-	return "", nil
+	return model.DeploymentName{}, nil
 }
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
