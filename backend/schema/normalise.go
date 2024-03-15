@@ -130,7 +130,7 @@ func Normalise[T Node](n T) T {
 		c.Pos = zero
 		c.Type = Normalise(c.Type)
 
-	case Symbol, Decl, Metadata, IngressPathComponent, Type, Value: // Can never occur in reality, but here to satisfy the sum-type check.
+	case Named, Symbol, Decl, Metadata, IngressPathComponent, Type, Value: // Can never occur in reality, but here to satisfy the sum-type check.
 		panic("??")
 	}
 	return ni.(T) //nolint:forcetypeassert

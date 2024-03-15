@@ -21,4 +21,4 @@ func (*Int) schemaChildren() []Node   { return nil }
 func (*Int) schemaType()              {}
 func (*Int) String() string           { return "Int" }
 func (i *Int) ToProto() proto.Message { return &schemapb.Int{Pos: posToProto(i.Pos)} }
-func (*Int) GetName() string          { return "" }
+func (*Int) GetName() string          { return "Int" }

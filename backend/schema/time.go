@@ -21,4 +21,4 @@ func (*Time) schemaType()              {}
 func (*Time) schemaSymbol()            {}
 func (*Time) String() string           { return "Time" }
 func (t *Time) ToProto() proto.Message { return &schemapb.Time{Pos: posToProto(t.Pos)} }
-func (*Time) GetName() string          { return "" }
+func (*Time) GetName() string          { return "Time" }

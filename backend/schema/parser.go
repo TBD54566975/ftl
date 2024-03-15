@@ -127,8 +127,13 @@ type Value interface {
 //sumtype:decl
 type Symbol interface {
 	Node
-	GetName() string
 	schemaSymbol()
+}
+
+// A Named symbol in the grammar.
+type Named interface {
+	Symbol
+	GetName() string
 }
 
 // Decl represents user-defined data types in the schema grammar.

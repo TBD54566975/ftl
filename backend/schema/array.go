@@ -13,10 +13,12 @@ type Array struct {
 }
 
 var _ Type = (*Array)(nil)
+var _ Symbol = (*Array)(nil)
 
 func (a *Array) Position() Position     { return a.Pos }
 func (a *Array) schemaChildren() []Node { return []Node{a.Element} }
-func (*Array) schemaType()              {}
+func (a *Array) schemaType()            {}
+func (a *Array) schemaSymbol()          {}
 func (a *Array) String() string         { return "[" + a.Element.String() + "]" }
 
 func (a *Array) ToProto() proto.Message {

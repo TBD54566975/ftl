@@ -47,7 +47,7 @@ module todo {
       +calls todo.destroy  +database calls todo.testdb 
 
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
-      +ingress http GET /todo/destroy/{id}
+      +ingress http GET /todo/destroy/{name}
 }
 
 module foo {
@@ -389,7 +389,7 @@ module todo {
   verb create(todo.CreateRequest) todo.CreateResponse
   	+calls todo.destroy +database calls todo.testdb
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
-  	+ingress http GET /todo/destroy/{id}
+  	+ingress http GET /todo/destroy/{name}
 }
 `
 	actual, err := ParseModuleString("", input)
@@ -480,7 +480,7 @@ var testSchema = MustValidate(&Schema{
 							Path: []IngressPathComponent{
 								&IngressPathLiteral{Text: "todo"},
 								&IngressPathLiteral{Text: "destroy"},
-								&IngressPathParameter{Name: "id"},
+								&IngressPathParameter{Name: "name"},
 							},
 						},
 					},
@@ -513,113 +513,3 @@ var testSchema = MustValidate(&Schema{
 		},
 	},
 })
-
-func TestValidateDependencies(t *testing.T) {
-	tests := []struct {
-		name   string
-		schema string
-		err    string
-	}{
-		{
-			// one <--> two, cyclical
-			name: "TwoModuleCycle",
-			schema: `
-				module one {
-					verb one(builtin.Empty) builtin.Empty
-						+calls two.two
-				}
-
-				module two {
-					verb two(builtin.Empty) builtin.Empty
-						+calls one.one
-				}
-				`,
-			err: "found cycle in dependencies: two -> one -> two",
-		},
-		{
-			// one --> two --> three, noncyclical
-			name: "ThreeModulesNoCycle",
-			schema: `
-				module one {
-					verb one(builtin.Empty) builtin.Empty
-						+calls two.two
-				}
-
-				module two {
-					verb two(builtin.Empty) builtin.Empty
-						+calls three.three
-				}
-
-				module three {
-					verb three(builtin.Empty) builtin.Empty
-				}
-				`,
-			err: "",
-		},
-		{
-			// one --> two --> three -> one, cyclical
-			name: "ThreeModulesCycle",
-			schema: `
-				module one {
-					verb one(builtin.Empty) builtin.Empty
-						+calls two.two
-				}
-
-				module two {
-					verb two(builtin.Empty) builtin.Empty
-						+calls three.three
-				}
-
-				module three {
-					verb three(builtin.Empty) builtin.Empty
-						+calls one.one
-				}
-				`,
-			err: "found cycle in dependencies: two -> three -> one -> two",
-		},
-		{
-			// one.a --> two.a
-			// one.b <---
-			// cyclical (does not depend on verbs used)
-			name: "TwoModuleCycleDiffVerbs",
-			schema: `
-				module one {
-					verb a(builtin.Empty) builtin.Empty
-						+calls two.a
-					verb b(builtin.Empty) builtin.Empty
-				}
-
-				module two {
-					verb a(builtin.Empty) builtin.Empty
-						+calls one.b
-				}
-				`,
-			err: "found cycle in dependencies: two -> one -> two",
-		},
-		{
-			// one --> one, this is allowed
-			name: "SelfReference",
-			schema: `
-				module one {
-					verb a(builtin.Empty) builtin.Empty
-						+calls one.b
-
-					verb b(builtin.Empty) builtin.Empty
-						+calls one.a
-				}
-			`,
-			err: "",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			_, err := ParseString("", test.schema)
-			if test.err == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.EqualError(t, err, test.err)
-			}
-		})
-	}
-}

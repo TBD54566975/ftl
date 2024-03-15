@@ -21,4 +21,4 @@ func (*Float) schemaType()              {}
 func (*Float) schemaSymbol()            {}
 func (*Float) String() string           { return "Float" }
 func (f *Float) ToProto() proto.Message { return &schemapb.Float{Pos: posToProto(f.Pos)} }
-func (*Float) GetName() string          { return "" }
+func (*Float) GetName() string          { return "Float" }
