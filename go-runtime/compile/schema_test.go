@@ -19,24 +19,22 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+// this is helpful when a test requires another module to be built before running
+// eg: when module A depends on module B, we need to build module B before building module A
 func prebuildTestModule(t *testing.T, args ...string) {
-	//this is helpful when a test requires another module to be built before running
-	//eg: when module A depends on module B, we need to build module B before building module A
-	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
+	t.Helper()
+
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Failed to get current directory: %v", err)
-	}
+	assert.NoError(t, err, "Failed to get current directory: %v", err)
 
 	ftlArgs := []string{"build"}
 	ftlArgs = append(ftlArgs, args...)
 
 	cmd := exec.Command(ctx, log.Debug, dir, "ftl", ftlArgs...)
 	err = cmd.Run()
-	if err != nil {
-		t.Fatalf("ftl build failed with %s\n", err)
-	}
+	assert.NoError(t, err, "ftl build failed with %s\n", err)
 }
 
 func TestExtractModuleSchema(t *testing.T) {
