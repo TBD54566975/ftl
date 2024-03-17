@@ -2,7 +2,6 @@ package compile
 
 import (
 	"context"
-	"fmt"
 	"go/token"
 	"go/types"
 	"os"
@@ -151,7 +150,6 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		verb two(two.Payload<String>) two.Payload<String>
 	  }
 `
-	fmt.Printf("actual: %s\n", actual.String())
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
