@@ -33,7 +33,7 @@ func prebuildTestModule(t *testing.T, args ...string) {
 	ftlArgs = append(ftlArgs, args...)
 
 	cmd := exec.Command(ctx, log.Debug, dir, "ftl", ftlArgs...)
-	err = cmd.Run()
+	err = cmd.RunBuffered(ctx)
 	assert.NoError(t, err, "ftl build failed with %s\n", err)
 }
 
