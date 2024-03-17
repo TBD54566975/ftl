@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/token"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 )
@@ -17,8 +18,8 @@ type Error struct {
 func (e Error) Error() string { return fmt.Sprintf("%s: %s", e.Pos, e.Msg) }
 func (e Error) Unwrap() error { return e.Err }
 
-func errorf(node ast.Node, format string, args ...any) Error {
-	return Error{Msg: fmt.Sprintf(format, args...), Pos: goPosToSchemaPos(node.Pos())}
+func errorf(pos token.Pos, format string, args ...any) Error {
+	return Error{Msg: fmt.Sprintf(format, args...), Pos: goPosToSchemaPos(pos)}
 }
 
 func wrapf(node ast.Node, err error, format string, args ...any) Error {

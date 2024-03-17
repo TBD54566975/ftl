@@ -1,7 +1,9 @@
 package compile
 
 import (
-	"go/ast"
+	"context"
+	"fmt"
+	"go/token"
 	"go/types"
 	"os"
 	"path/filepath"
@@ -12,10 +14,32 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+// this is helpful when a test requires another module to be built before running
+// eg: when module A depends on module B, we need to build module B before building module A
+func prebuildTestModule(t *testing.T, args ...string) {
+	t.Helper()
+
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+
+	dir, err := os.Getwd()
+	assert.NoError(t, err, "Failed to get current directory: %v", err)
+
+	ftlArgs := []string{"build"}
+	ftlArgs = append(ftlArgs, args...)
+
+	cmd := exec.Command(ctx, log.Debug, dir, "ftl", ftlArgs...)
+	err = cmd.RunBuffered(ctx)
+	assert.NoError(t, err, "ftl build failed with %s\n", err)
+}
+
 func TestExtractModuleSchema(t *testing.T) {
+	prebuildTestModule(t, "testdata/one", "testdata/two")
+
 	_, actual, err := ExtractModuleSchema("testdata/one")
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
@@ -101,22 +125,33 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module two {
-  data Payload<T> {
-    body T
-  }
-
-  enum TwoEnum(String) {
-    Red("Red")
-    Blue("Blue")
-    Green("Green")
-  }
-
-  verb callsTwo(two.Payload<String>) two.Payload<String>
-      +calls two.two
-
-  verb two(two.Payload<String>) two.Payload<String>
-}
+		data Payload<T> {
+		  body T
+		}
+	  
+		data User {
+		  name String
+		}
+	  
+		data UserResponse {
+		  user two.User
+		}
+	  
+		enum TwoEnum(String) {
+		  Red("Red")
+		  Blue("Blue")
+		  Green("Green")
+		}
+	  
+		verb callsTwo(two.Payload<String>) two.Payload<String>  
+			+calls two.two
+	  
+		verb returnsUser(Unit) two.UserResponse?
+	  
+		verb two(two.Payload<String>) two.Payload<String>
+	  }
 `
+	fmt.Printf("actual: %s\n", actual.String())
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
@@ -163,7 +198,7 @@ func TestParseDirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	parsed, err := visitType(nil, &ast.Ident{}, timeRef)
+	parsed, err := visitType(nil, token.NoPos, timeRef)
 	assert.NoError(t, err)
 	_, ok := parsed.(*schema.Time)
 	assert.True(t, ok)
@@ -182,7 +217,7 @@ func TestParseBasicTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := visitType(nil, &ast.Ident{}, tt.input)
+			parsed, err := visitType(nil, token.NoPos, tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, parsed)
 		})
