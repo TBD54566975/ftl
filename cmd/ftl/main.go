@@ -43,6 +43,7 @@ type CLI struct {
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
+	Stub     stubCmd     `cmd:"" help:"Stub FTL types for non-FTL module."` //TODO: update help
 }
 
 var cli CLI

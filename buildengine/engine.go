@@ -401,7 +401,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		if err != nil {
 			return err
 		}
-		// Now this group is built, collect al the schemas.
+		// Now this group is built, collect all the schemas.
 		close(schemas)
 		for sch := range schemas {
 			built[sch.Name] = sch
@@ -419,12 +419,20 @@ func (e *Engine) mustSchema(ctx context.Context, name string, built map[string]*
 	return e.build(ctx, name, built, schemas)
 }
 
+func (e *Engine) LoadSchemaFromController(name string) (*schema.Module, error) {
+
+	if sch, ok := e.controllerSchema.Load(name); ok {
+		return sch, nil
+	}
+	return nil, fmt.Errorf("schema for %s not found", name)
+}
+
 // Build a module and publish its schema.
 //
 // Assumes that all dependencies have been built and are available in "built".
 func (e *Engine) build(ctx context.Context, name string, built map[string]*schema.Module, schemas chan<- *schema.Module) error {
 	combined := map[string]*schema.Module{}
-	gatherShemas(built, e.modules, e.modules[name], combined)
+	gatherSchemas(built, e.modules, e.modules[name], combined)
 	sch := &schema.Schema{Modules: maps.Values(combined)}
 	module := e.modules[name]
 	err := Build(ctx, sch, module)
@@ -441,7 +449,7 @@ func (e *Engine) build(ctx context.Context, name string, built map[string]*schem
 }
 
 // Construct a combined schema for a module and its transitive dependencies.
-func gatherShemas(
+func gatherSchemas(
 	moduleSchemas map[string]*schema.Module,
 	modules map[string]Module,
 	module Module,
@@ -449,6 +457,6 @@ func gatherShemas(
 ) {
 	for _, dep := range modules[module.Module].Dependencies {
 		out[dep] = moduleSchemas[dep]
-		gatherShemas(moduleSchemas, modules, modules[dep], out)
+		gatherSchemas(moduleSchemas, modules, modules[dep], out)
 	}
 }

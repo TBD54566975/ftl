@@ -25,7 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-type externalModuleContext struct {
+type ExternalModuleContext struct {
 	ModuleDir string
 	*schema.Schema
 	GoVersion    string
@@ -48,7 +48,7 @@ type mainModuleContext struct {
 	Replacements []*modfile.Replace
 }
 
-func (b externalModuleContext) NonMainModules() []*schema.Module {
+func (b ExternalModuleContext) NonMainModules() []*schema.Module {
 	modules := make([]*schema.Module, 0, len(b.Modules))
 	for _, module := range b.Modules {
 		if module.Name == b.Main {
@@ -87,16 +87,14 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	_ = os.RemoveAll(filepath.Join(buildDir, "go", "modules"))
 
 	logger.Debugf("Generating external modules")
-	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), moduleDir, externalModuleContext{
+	GenerateExternalModules(ExternalModuleContext{
 		ModuleDir:    moduleDir,
 		GoVersion:    goModVersion,
 		FTLVersion:   ftlVersion,
 		Schema:       sch,
 		Main:         config.Module,
 		Replacements: replacements,
-	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
-		return err
-	}
+	})
 
 	logger.Debugf("Extracting schema")
 	nativeNames, main, err := ExtractModuleSchema(moduleDir)
@@ -170,6 +168,14 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 
 	logger.Debugf("Compiling")
 	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
+}
+
+func GenerateExternalModules(context ExternalModuleContext) error {
+	funcs := maps.Clone(scaffoldFuncs)
+	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
+		return err
+	}
+	return nil
 }
 
 func online() bool {
@@ -295,16 +301,10 @@ func updateGoModule(goModPath string) (replacements []*modfile.Replace, goVersio
 		return nil, "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
 	}
 
-	// Propagate any replace directives.
-	replacements = reflect.DeepCopy(goModFile.Replace)
-	for i, r := range replacements {
-		if strings.HasPrefix(r.New.Path, ".") {
-			abs, err := filepath.Abs(filepath.Join(filepath.Dir(goModPath), r.New.Path))
-			if err != nil {
-				return nil, "", err
-			}
-			replacements[i].New.Path = abs
-		}
+	// Propagate any replace directives
+	replacements, err = PropogatedReplacements(goModFile, goModPath)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
 	}
 
 	// Early return if we're not updating anything.
@@ -340,4 +340,18 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 		}
 	}
 	return true
+}
+
+func PropogatedReplacements(f *modfile.File, goModPath string) ([]*modfile.Replace, error) {
+	replacements := reflect.DeepCopy(f.Replace)
+	for i, r := range replacements {
+		if strings.HasPrefix(r.New.Path, ".") {
+			abs, err := filepath.Abs(filepath.Join(filepath.Dir(goModPath), r.New.Path))
+			if err != nil {
+				return nil, err
+			}
+			replacements[i].New.Path = abs
+		}
+	}
+	return replacements, nil
 }

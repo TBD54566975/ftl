@@ -39,7 +39,7 @@ func UpdateAllDependencies(ctx context.Context, modules ...moduleconfig.ModuleCo
 func UpdateDependencies(ctx context.Context, config moduleconfig.ModuleConfig) (Module, error) {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Extracting dependencies for module %s", config.Module)
-	dependencies, err := extractDependencies(config)
+	dependencies, err := ExtractDependencies(config)
 	if err != nil {
 		return Module{}, err
 	}
@@ -57,7 +57,7 @@ func UpdateDependencies(ctx context.Context, config moduleconfig.ModuleConfig) (
 	return Module{ModuleConfig: out, Dependencies: dependencies}, nil
 }
 
-func extractDependencies(config moduleconfig.ModuleConfig) ([]string, error) {
+func ExtractDependencies(config moduleconfig.ModuleConfig) ([]string, error) {
 	switch config.Language {
 	case "go":
 		return extractGoFTLImports(config.Module, config.Dir)
