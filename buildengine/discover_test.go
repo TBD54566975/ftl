@@ -56,6 +56,43 @@ func TestDiscoverModules(t *testing.T) {
 			},
 		},
 		{
+			Dir:      "testdata/modules/external",
+			Language: "go",
+			Realm:    "home",
+			Module:   "external",
+			Build:    "",
+			Deploy: []string{
+				"main",
+			},
+			DeployDir: "_ftl",
+			Schema:    "schema.pb",
+			Watch: []string{
+				"**/*.go",
+				"go.mod",
+				"go.sum",
+			},
+		},
+		{
+			Dir:      "testdata/modules/externalkotlin",
+			Language: "kotlin",
+			Realm:    "home",
+			Module:   "externalkotlin",
+			Build:    "mvn -B compile",
+			Deploy: []string{
+				"main",
+				"classes",
+				"dependency",
+				"classpath.txt",
+			},
+			DeployDir: "target",
+			Schema:    "schema.pb",
+			Watch: []string{
+				"pom.xml",
+				"src/**",
+				"target/generated-sources",
+			},
+		},
+		{
 			Dir:       "testdata/modules/other",
 			Language:  "go",
 			Realm:     "home",
