@@ -52,7 +52,7 @@ func ParseDeploymentKey(input string) (DeploymentKey, error) {
 	}, nil
 }
 
-func (d *DeploymentKey) String() string {
+func (d DeploymentKey) String() string {
 	return fmt.Sprintf("%s-%s", d.module, d.hash)
 }
 
