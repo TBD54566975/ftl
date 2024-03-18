@@ -23,7 +23,7 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/gofrs/flock v0.8.1
 	github.com/golang/protobuf v1.5.4
-	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
+	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/jellydator/ttlcache/v3 v3.2.0
 	github.com/jpillora/backoff v1.0.0
