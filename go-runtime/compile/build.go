@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/scaffolder"
 	"golang.design/x/reflect"
 	"golang.org/x/mod/modfile"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl"
@@ -97,11 +98,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
-	logger.Debugf("Tidying go.mod")
-	if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
-		return fmt.Errorf("failed to tidy go.mod: %w", err)
-	}
-
 	logger.Debugf("Extracting schema")
 	nativeNames, main, err := ExtractModuleSchema(moduleDir)
 	if err != nil {
@@ -145,12 +141,34 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
-	logger.Debugf("Compiling")
+	wg, wgctx := errgroup.WithContext(ctx)
+
+	logger.Debugf("Tidying go.mod files")
+	wg.Go(func() error {
+		if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+			return fmt.Errorf("%s: failed to tidy go.mod: %w", moduleDir, err)
+		}
+		return nil
+	})
 	mainDir := filepath.Join(buildDir, "go", "main")
-	if err := exec.Command(ctx, log.Debug, mainDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
-		return fmt.Errorf("failed to tidy go.mod: %w", err)
+	wg.Go(func() error {
+		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
+			return fmt.Errorf("%s: failed to tidy go.mod: %w", mainDir, err)
+		}
+		return nil
+	})
+	wg.Go(func() error {
+		modulesDir := filepath.Join(buildDir, "go", "modules")
+		if err := exec.Command(wgctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
+			return fmt.Errorf("%s: failed to tidy go.mod: %w", modulesDir, err)
+		}
+		return nil
+	})
+	if err := wg.Wait(); err != nil {
+		return err
 	}
 
+	logger.Debugf("Compiling")
 	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
