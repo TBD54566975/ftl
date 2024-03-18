@@ -1,6 +1,6 @@
 module github.com/TBD54566975/ftl
 
-go 1.22.0
+go 1.22.1
 
 require (
 	connectrpc.com/connect v1.15.0
@@ -16,7 +16,7 @@ require (
 	github.com/alecthomas/kong-toml v0.1.0
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.13.0
-	github.com/amacneil/dbmate/v2 v2.12.0
+	github.com/amacneil/dbmate/v2 v2.13.0
 	github.com/beevik/etree v1.3.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/deckarep/golang-set/v2 v2.6.0
@@ -33,10 +33,10 @@ require (
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.10.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/swaggest/jsonschema-go v0.3.69
+	github.com/swaggest/jsonschema-go v0.3.70
 	github.com/titanous/json5 v1.0.0
 	github.com/tmc/langchaingo v0.1.5
-	github.com/zalando/go-keyring v0.2.3
+	github.com/zalando/go-keyring v0.2.4
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.24.0
@@ -52,7 +52,7 @@ require (
 	golang.org/x/term v0.18.0
 	golang.org/x/tools v0.19.0
 	google.golang.org/protobuf v1.33.0
-	modernc.org/sqlite v1.29.3
+	modernc.org/sqlite v1.29.5
 )
 
 require (
