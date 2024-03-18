@@ -19,42 +19,40 @@ func DataToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, error) {
 		return nil, fmt.Errorf("unknown data type %s", ref)
 	}
 
-	// Collect all data types.
-	dataTypes := sch.DataMap()
-
 	// Encode root, and collect all data types reachable from the root.
 	refs := map[RefKey]*Ref{}
-	root := nodeToJSSchema(sch, data, refs)
+	root := nodeToJSSchema(data, refs)
 	if len(refs) == 0 {
 		return root, nil
 	}
 
-	// Resolve and encode all data types reachable from the root.
+	// Resolve and encode all types reachable from the root.
 	root.Definitions = map[string]jsonschema.SchemaOrBool{}
-	for key, r := range refs {
-		data, ok := dataTypes[RefKey{Module: key.Module, Name: key.Name}]
-		if !ok {
-			return nil, fmt.Errorf("unknown data type %s", key)
-		}
+	for _, r := range refs {
+		decl := sch.ResolveRef(r)
+		switch n := decl.(type) {
+		case *Data:
+			if len(r.TypeParameters) > 0 {
+				monomorphisedData, err := n.Monomorphise(r)
+				if err != nil {
+					return nil, err
+				}
 
-		if len(r.TypeParameters) > 0 {
-			monomorphisedData, err := data.Monomorphise(r)
-			if err != nil {
-				return nil, err
+				ref := fmt.Sprintf("%s.%s", r.Module, refName(r))
+				root.Definitions[ref] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(monomorphisedData, refs)}
+			} else {
+				root.Definitions[r.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(n, refs)}
 			}
-			data = monomorphisedData
-
-			ref := fmt.Sprintf("%s.%s", r.Module, refName(r))
-			root.Definitions[ref] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(sch, data, refs)}
-		} else {
-			root.Definitions[r.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(sch, data, refs)}
+		case *Enum:
+			root.Definitions[r.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(n, refs)}
+		case *Config, *Database, *Secret, *Verb:
+			return nil, fmt.Errorf("reference to unsupported node type %T", decl)
 		}
-
 	}
 	return root, nil
 }
 
-func nodeToJSSchema(sch *Schema, node Node, dataRefs map[RefKey]*Ref) *jsonschema.Schema {
+func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 	switch node := node.(type) {
 	case *Any:
 		return &jsonschema.Schema{}
@@ -72,7 +70,7 @@ func nodeToJSSchema(sch *Schema, node Node, dataRefs map[RefKey]*Ref) *jsonschem
 			AdditionalProperties: jsBool(false),
 		}
 		for _, field := range node.Fields {
-			jsField := nodeToJSSchema(sch, field.Type, dataRefs)
+			jsField := nodeToJSSchema(field.Type, refs)
 			jsField.Description = jsComments(field.Comments)
 			if _, ok := field.Type.(*Optional); !ok {
 				schema.Required = append(schema.Required, field.Name)
@@ -80,6 +78,16 @@ func nodeToJSSchema(sch *Schema, node Node, dataRefs map[RefKey]*Ref) *jsonschem
 			schema.Properties[field.Name] = jsonschema.SchemaOrBool{TypeObject: jsField}
 		}
 		return schema
+
+	case *Enum:
+		schema := &jsonschema.Schema{
+			Description: jsComments(node.Comments),
+		}
+		values := make([]any, len(node.Variants))
+		for i, v := range node.Variants {
+			values[i] = v.Value.GetValue()
+		}
+		return schema.WithEnum(values...)
 
 	case *Int:
 		st := jsonschema.Integer
@@ -118,7 +126,7 @@ func nodeToJSSchema(sch *Schema, node Node, dataRefs map[RefKey]*Ref) *jsonschem
 			Type: &jsonschema.Type{SimpleTypes: &st},
 			Items: &jsonschema.Items{
 				SchemaOrBool: &jsonschema.SchemaOrBool{
-					TypeObject: nodeToJSSchema(sch, node.Element, dataRefs),
+					TypeObject: nodeToJSSchema(node.Element, refs),
 				},
 			},
 		}
@@ -128,8 +136,8 @@ func nodeToJSSchema(sch *Schema, node Node, dataRefs map[RefKey]*Ref) *jsonschem
 		// JSON schema generic map of key type to value type
 		return &jsonschema.Schema{
 			Type:                 &jsonschema.Type{SimpleTypes: &st},
-			PropertyNames:        &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(sch, node.Key, dataRefs)},
-			AdditionalProperties: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(sch, node.Value, dataRefs)},
+			PropertyNames:        &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Key, refs)},
+			AdditionalProperties: &jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(node.Value, refs)},
 		}
 
 	case *Ref:
@@ -140,22 +148,13 @@ func nodeToJSSchema(sch *Schema, node Node, dataRefs map[RefKey]*Ref) *jsonschem
 		} else {
 			ref = fmt.Sprintf("#/definitions/%s", node.String())
 		}
-
-		decl := sch.ResolveRef(node)
-		if decl != nil {
-			if _, ok := decl.(*Data); ok {
-				dataRefs[node.ToRefKey()] = node
-			}
-		}
-
-		schema := &jsonschema.Schema{Ref: &ref}
-
-		return schema
+		refs[node.ToRefKey()] = node
+		return &jsonschema.Schema{Ref: &ref}
 
 	case *Optional:
 		null := jsonschema.Null
 		return &jsonschema.Schema{AnyOf: []jsonschema.SchemaOrBool{
-			{TypeObject: nodeToJSSchema(sch, node.Type, dataRefs)},
+			{TypeObject: nodeToJSSchema(node.Type, refs)},
 			{TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &null}}},
 		}}
 
@@ -164,7 +163,7 @@ func nodeToJSSchema(sch *Schema, node Node, dataRefs map[RefKey]*Ref) *jsonschem
 
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
 		*MetadataAlias, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module,
-		*Schema, Type, *Database, *Verb, *Enum, *EnumVariant,
+		*Schema, Type, *Database, *Verb, *EnumVariant,
 		Value, *StringValue, *IntValue, *Config, *Secret, Symbol:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 

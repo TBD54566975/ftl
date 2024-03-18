@@ -31,4 +31,6 @@ func (s *StringValue) String() string {
 	return fmt.Sprintf("\"%s\"", s.Value)
 }
 
+func (s *StringValue) GetValue() any { return s.Value }
+
 func (*StringValue) schemaValueType() Type { return &String{} }

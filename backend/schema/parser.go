@@ -115,6 +115,7 @@ type Metadata interface {
 //sumtype:decl
 type Value interface {
 	Node
+	GetValue() any
 	schemaValueType() Type
 }
 
