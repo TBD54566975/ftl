@@ -103,18 +103,6 @@ func (s *Schema) Module(name string) optional.Option[*Module] {
 	return optional.None[*Module]()
 }
 
-func (s *Schema) DataMap() map[RefKey]*Data {
-	dataTypes := map[RefKey]*Data{}
-	for _, module := range s.Modules {
-		for _, decl := range module.Decls {
-			if data, ok := decl.(*Data); ok {
-				dataTypes[RefKey{Module: module.Name, Name: data.Name}] = data
-			}
-		}
-	}
-	return dataTypes
-}
-
 // Upsert inserts or replaces a module.
 func (s *Schema) Upsert(module *Module) {
 	for i, m := range s.Modules {
