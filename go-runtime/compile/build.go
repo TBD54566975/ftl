@@ -292,19 +292,9 @@ func genType(module *schema.Module, t schema.Type) string {
 
 // Update go.mod file to include the FTL version and return the Go version and any replace directives.
 func updateGoModule(goModPath string) (replacements []*modfile.Replace, goVersion string, err error) {
-	goModBytes, err := os.ReadFile(goModPath)
+	goModFile, replacements, err := GoModFileWithReplacements(goModPath)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to read %s: %w", goModPath, err)
-	}
-	goModFile, err := modfile.Parse(goModPath, goModBytes, nil)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
-	}
-
-	// Propagate any replace directives
-	replacements, err = PropogatedReplacements(goModFile, goModPath)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to parse %s: %w", goModPath, err)
+		return nil, "", fmt.Errorf("failed to update %s: %w", goModPath, err)
 	}
 
 	// Early return if we're not updating anything.
@@ -323,7 +313,7 @@ func updateGoModule(goModPath string) (replacements []*modfile.Replace, goVersio
 	}
 	defer os.Remove(tmpFile.Name()) // Delete the temp file if we error.
 	defer tmpFile.Close()
-	goModBytes = modfile.Format(goModFile.Syntax)
+	goModBytes := modfile.Format(goModFile.Syntax)
 	if _, err := tmpFile.Write(goModBytes); err != nil {
 		return nil, "", fmt.Errorf("update %s: %w", goModPath, err)
 	}
@@ -333,6 +323,29 @@ func updateGoModule(goModPath string) (replacements []*modfile.Replace, goVersio
 	return replacements, goModFile.Go.Version, nil
 }
 
+func GoModFileWithReplacements(goModPath string) (*modfile.File, []*modfile.Replace, error) {
+	goModBytes, err := os.ReadFile(goModPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read %s: %w", goModPath, err)
+	}
+	goModFile, err := modfile.Parse(goModPath, goModBytes, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse %s: %w", goModPath, err)
+	}
+
+	replacements := reflect.DeepCopy(goModFile.Replace)
+	for i, r := range replacements {
+		if strings.HasPrefix(r.New.Path, ".") {
+			abs, err := filepath.Abs(filepath.Join(filepath.Dir(goModPath), r.New.Path))
+			if err != nil {
+				return nil, nil, err
+			}
+			replacements[i].New.Path = abs
+		}
+	}
+	return goModFile, replacements, nil
+}
+
 func shouldUpdateVersion(goModfile *modfile.File) bool {
 	for _, require := range goModfile.Require {
 		if require.Mod.Path == "github.com/TBD54566975/ftl" && require.Mod.Version == ftl.Version {
@@ -340,18 +353,4 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 		}
 	}
 	return true
-}
-
-func PropogatedReplacements(f *modfile.File, goModPath string) ([]*modfile.Replace, error) {
-	replacements := reflect.DeepCopy(f.Replace)
-	for i, r := range replacements {
-		if strings.HasPrefix(r.New.Path, ".") {
-			abs, err := filepath.Abs(filepath.Join(filepath.Dir(goModPath), r.New.Path))
-			if err != nil {
-				return nil, err
-			}
-			replacements[i].New.Path = abs
-		}
-	}
-	return replacements, nil
 }

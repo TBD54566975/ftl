@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -15,11 +16,15 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/exp/maps"
+	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/common/moduleconfig"
+	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -33,7 +38,9 @@ type schemaChange struct {
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
 	modules          map[string]Module
+	externalLibs     []Module
 	dirs             []string
+	externalDirs     []string
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
@@ -55,12 +62,14 @@ func Parallelism(n int) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs []string, externalDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
 		dirs:             dirs,
+		externalDirs:     externalDirs,
 		modules:          map[string]Module{},
+		externalLibs:     []Module{},
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
 		parallelism:      runtime.NumCPU(),
@@ -82,6 +91,24 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	for _, module := range modules {
 		e.modules[module.Module] = module
 	}
+
+	externalLibs := []Module{}
+	for _, dir := range externalDirs {
+		externalLib, err := moduleconfig.LoadExternalLibraryConfig(dir)
+		if err != nil {
+			return nil, err
+		}
+		deps, err := ExtractDependencies(externalLib)
+		if err != nil {
+			return nil, err
+		}
+		externalLibs = append(externalLibs, Module{
+			ModuleConfig: externalLib,
+			Dependencies: deps,
+		})
+	}
+	e.externalLibs = externalLibs
+
 	if client == nil {
 		return e, nil
 	}
@@ -407,6 +434,14 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 			built[sch.Name] = sch
 		}
 	}
+
+	// Build stubs for external libraries.
+	for _, lib := range e.externalLibs {
+		if err := e.generateStubsForExternalLib(ctx, lib, built); err != nil {
+			return fmt.Errorf("could not build stubs for external library %s: %w", lib.Dir, err)
+		}
+	}
+
 	return nil
 }
 
@@ -419,20 +454,12 @@ func (e *Engine) mustSchema(ctx context.Context, name string, built map[string]*
 	return e.build(ctx, name, built, schemas)
 }
 
-func (e *Engine) LoadSchemaFromController(name string) (*schema.Module, error) {
-
-	if sch, ok := e.controllerSchema.Load(name); ok {
-		return sch, nil
-	}
-	return nil, fmt.Errorf("schema for %s not found", name)
-}
-
 // Build a module and publish its schema.
 //
 // Assumes that all dependencies have been built and are available in "built".
 func (e *Engine) build(ctx context.Context, name string, built map[string]*schema.Module, schemas chan<- *schema.Module) error {
 	combined := map[string]*schema.Module{}
-	gatherSchemas(built, e.modules, e.modules[name], combined)
+	e.gatherSchemas(built, e.modules[name], combined)
 	sch := &schema.Schema{Modules: maps.Values(combined)}
 	module := e.modules[name]
 	err := Build(ctx, sch, module)
@@ -448,15 +475,62 @@ func (e *Engine) build(ctx context.Context, name string, built map[string]*schem
 	return nil
 }
 
+func (e *Engine) generateStubsForExternalLib(ctx context.Context, lib Module, built map[string]*schema.Module) error {
+	//TODO: support kotlin
+	logger := log.FromContext(ctx)
+
+	goModPath := filepath.Join(lib.Dir, "go.mod")
+	goModBytes, err := os.ReadFile(goModPath)
+	if err != nil {
+		return fmt.Errorf("failed to read %s: %w", goModPath, err)
+	}
+	goModFile, err := modfile.Parse(goModPath, goModBytes, nil)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s: %w", goModPath, err)
+	}
+
+	goModFile, replacements, err := compile.GoModFileWithReplacements(filepath.Join(lib.Dir, "go.mod"))
+	if err != nil {
+		return fmt.Errorf("failed to propogate replacements %s: %w", goModPath, err)
+	}
+
+	ftlVersion := ""
+	if ftl.IsRelease(ftl.Version) {
+		ftlVersion = ftl.Version
+	}
+
+	combined := map[string]*schema.Module{}
+	e.gatherSchemas(built, lib, combined)
+	sch := &schema.Schema{Modules: maps.Values(combined)}
+
+	err = compile.GenerateExternalModules(compile.ExternalModuleContext{
+		ModuleDir:    lib.Dir,
+		GoVersion:    goModFile.Go.Version,
+		FTLVersion:   ftlVersion,
+		Schema:       sch,
+		Replacements: replacements,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to generate external modules: %w", err)
+	}
+	logger.Infof("Generated stubs %v for %s", lib.Dependencies, lib.Dir)
+	return nil
+}
+
 // Construct a combined schema for a module and its transitive dependencies.
-func gatherSchemas(
+func (e *Engine) gatherSchemas(
 	moduleSchemas map[string]*schema.Module,
-	modules map[string]Module,
 	module Module,
 	out map[string]*schema.Module,
 ) {
-	for _, dep := range modules[module.Module].Dependencies {
+	var latestModule Module
+	if module.ModuleConfig.Type == moduleconfig.FTLModule {
+		latestModule = e.modules[module.Module]
+	} else {
+		latestModule = module
+	}
+	for _, dep := range latestModule.Dependencies {
 		out[dep] = moduleSchemas[dep]
-		gatherSchemas(moduleSchemas, modules, modules[dep], out)
+		e.gatherSchemas(moduleSchemas, e.modules[dep], out)
 	}
 }

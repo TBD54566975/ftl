@@ -2,6 +2,7 @@ package moduleconfig
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,12 +15,21 @@ type ModuleGoConfig struct{}
 // ModuleKotlinConfig is language-specific configuration for Kotlin modules.
 type ModuleKotlinConfig struct{}
 
+// ModuleType represents the type of the module.
+type ModuleType int
+
+const (
+	FTLModule ModuleType = iota
+	ExternalLibrary
+)
+
 // ModuleConfig is the configuration for an FTL module.
 //
 // Module config files are currently TOML.
 type ModuleConfig struct {
 	// Dir is the root of the module.
-	Dir string `toml:"-"`
+	Dir  string     `toml:"-"`
+	Type ModuleType `toml:"-"`
 
 	Language string `toml:"language"`
 	Realm    string `toml:"realm"`
@@ -50,7 +60,36 @@ func LoadModuleConfig(dir string) (ModuleConfig, error) {
 	if err := setConfigDefaults(dir, &config); err != nil {
 		return config, fmt.Errorf("%s: %w", path, err)
 	}
+	config.Type = FTLModule
 	config.Dir = dir
+	return config, nil
+}
+
+func LoadExternalLibraryConfig(dir string) (ModuleConfig, error) {
+	config := ModuleConfig{
+		Type: ExternalLibrary,
+		Dir:  dir,
+	}
+
+	goModPath := filepath.Join(dir, "go.mod")
+	pomPath := filepath.Join(dir, "pom.xml")
+	if _, err := os.Stat(goModPath); err == nil {
+		config.Language = "go"
+		config.Watch = []string{"**/*.go", "go.mod", "go.sum"}
+	} else if !os.IsNotExist(err) {
+		return ModuleConfig{}, err
+	} else {
+		if _, err = os.Stat(pomPath); err == nil {
+			config.Language = "kotlin"
+			config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
+		} else if !os.IsNotExist(err) {
+			return ModuleConfig{}, err
+		}
+	}
+	if config.Language == "" {
+		return ModuleConfig{}, fmt.Errorf("could not autodetect language: no go.mod or pom.xml found in %s", dir)
+	}
+
 	return config, nil
 }
 

@@ -48,7 +48,7 @@ func (d *devCmd) Run(ctx context.Context) error {
 	}
 
 	g.Go(func() error {
-		engine, err := buildengine.New(ctx, client, d.Dirs, buildengine.Parallelism(d.Parallelism))
+		engine, err := buildengine.New(ctx, client, d.Dirs, []string{}, buildengine.Parallelism(d.Parallelism))
 		if err != nil {
 			return err
 		}
