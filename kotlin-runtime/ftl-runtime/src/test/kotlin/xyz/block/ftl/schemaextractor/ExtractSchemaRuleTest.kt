@@ -3,9 +3,6 @@ package xyz.block.ftl.schemaextractor
 import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.rules.KotlinCoreEnvironmentTest
 import io.gitlab.arturbosch.detekt.test.compileAndLintWithContext
-import java.io.File
-import kotlin.test.AfterTest
-import kotlin.test.assertContains
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
@@ -31,12 +28,16 @@ import xyz.block.ftl.v1.schema.Module
 import xyz.block.ftl.v1.schema.Optional
 import xyz.block.ftl.v1.schema.Position
 import xyz.block.ftl.v1.schema.Ref
+import xyz.block.ftl.v1.schema.String
 import xyz.block.ftl.v1.schema.StringValue
 import xyz.block.ftl.v1.schema.Type
 import xyz.block.ftl.v1.schema.TypeParameter
 import xyz.block.ftl.v1.schema.Unit
 import xyz.block.ftl.v1.schema.Value
 import xyz.block.ftl.v1.schema.Verb
+import java.io.File
+import kotlin.test.AfterTest
+import kotlin.test.assertContains
 
 @KotlinCoreEnvironmentTest
 internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
@@ -599,8 +600,16 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
             name = "StringThing",
             comments = listOf("Comments."),
             variants = listOf(
-              EnumVariant(name = "A", value_ = Value(stringValue = StringValue(value_ = "A")), comments = listOf("A comment.")),
-              EnumVariant(name = "B", value_ = Value(stringValue = StringValue(value_ = "B")), comments = listOf("B comment.")),
+              EnumVariant(
+                name = "A",
+                value_ = Value(stringValue = StringValue(value_ = "A")),
+                comments = listOf("A comment.")
+              ),
+              EnumVariant(
+                name = "B",
+                value_ = Value(stringValue = StringValue(value_ = "B")),
+                comments = listOf("B comment.")
+              ),
               EnumVariant(name = "C", value_ = Value(stringValue = StringValue(value_ = "C"))),
             ),
           ),
@@ -613,6 +622,118 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
               EnumVariant(name = "B", value_ = Value(intValue = IntValue(value_ = 2))),
               EnumVariant(name = "C", value_ = Value(intValue = IntValue(value_ = 3)), comments = listOf("C comment.")),
             ),
+          ),
+        ),
+      )
+    )
+
+    assertThat(module)
+      .usingRecursiveComparison()
+      .withEqualsForType({ _, _ -> true }, Position::class.java)
+      .ignoringFieldsMatchingRegexes(".*hashCode\$")
+      .isEqualTo(expected)
+  }
+
+
+  @Test
+  fun `extracts secrets and configs`() {
+    val code = """
+      package ftl.test
+
+      import ftl.time.Color
+      import xyz.block.ftl.Json
+      import xyz.block.ftl.Context
+      import xyz.block.ftl.Method
+      import xyz.block.ftl.Verb
+      import xyz.block.ftl.config.Config
+      import xyz.block.ftl.secrets.Secret
+
+      val secret = Secret.new<String>("secret")
+      val anotherSecret = Secret(String::class.java, "anotherSecret")
+
+      val config = Config.new<ConfigData>("config")
+      val anotherConfig = Config(ConfigData::class.java, "anotherConfig")
+
+      data class ConfigData(val field: String)
+
+      data class Request(val message: String)
+
+      data class Response(val message: String)
+
+      @Verb
+      fun something(context: Context, req: Request): Response {
+        return Response(message = "response")
+      }
+    """
+    ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
+    val file = File(OUTPUT_FILENAME)
+    val module = Module.ADAPTER.decode(file.inputStream())
+
+    val expected = Module(
+      name = "test",
+      decls = listOf(
+        Decl(
+          data_ = Data(
+            name = "ConfigData",
+            fields = listOf(
+              Field(
+                name = "field",
+                type = Type(string = String())
+              )
+            ),
+          ),
+        ),
+        Decl(
+          data_ = Data(
+            name = "Request",
+            fields = listOf(
+              Field(
+                name = "message",
+                type = Type(string = String())
+              ),
+            ),
+          ),
+        ),
+        Decl(
+          data_ = Data(
+            name = "Response",
+            fields = listOf(
+              Field(
+                name = "message",
+                type = Type(string = String())
+              )
+            ),
+          ),
+        ),
+        Decl(
+          verb = Verb(
+            name = "something",
+            request = Type(ref = Ref(name = "Request", module = "test")),
+            response = Type(ref = Ref(name = "Response", module = "test")),
+          ),
+        ),
+        Decl(
+          config = xyz.block.ftl.v1.schema.Config(
+            name = "config",
+            type = Type(ref = Ref(name = "ConfigData", module = "test")),
+          ),
+        ),
+        Decl(
+          config = xyz.block.ftl.v1.schema.Config(
+            name = "anotherConfig",
+            type = Type(ref = Ref(name = "ConfigData", module = "test")),
+          ),
+        ),
+        Decl(
+          secret = xyz.block.ftl.v1.schema.Secret(
+            name = "secret",
+            type = Type(string = String())
+          ),
+        ),
+        Decl(
+          secret = xyz.block.ftl.v1.schema.Secret(
+            name = "anotherSecret",
+            type = Type(string = String())
           ),
         ),
       )
