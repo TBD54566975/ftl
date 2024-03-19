@@ -190,7 +190,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"imports": func(m *schema.Module) map[string]string {
 		imports := map[string]string{}
-		_ = schema.Visit(m, func(n schema.Node, next func() error) error {
+		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error {
 			switch n := n.(type) {
 			case *schema.Ref:
 				if n.Module == "" || n.Module == m.Name {
