@@ -15,6 +15,7 @@ import (
 type devCmd struct {
 	Parallelism int           `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
 	Dirs        []string      `arg:"" help:"Base directories containing modules." type:"existingdir" required:""`
+	External    []string      `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
 	Watch       time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
 	NoServe     bool          `help:"Do not start the FTL server." default:"false"`
 	ServeCmd    serveCmd      `embed:""`
@@ -48,7 +49,7 @@ func (d *devCmd) Run(ctx context.Context) error {
 	}
 
 	g.Go(func() error {
-		engine, err := buildengine.New(ctx, client, d.Dirs, []string{}, buildengine.Parallelism(d.Parallelism))
+		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, buildengine.Parallelism(d.Parallelism))
 		if err != nil {
 			return err
 		}

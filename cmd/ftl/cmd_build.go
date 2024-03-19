@@ -11,7 +11,7 @@ import (
 type buildCmd struct {
 	Parallelism int      `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
 	Dirs        []string `arg:"" help:"Base directories containing modules." type:"existingdir" required:""`
-	External    []string `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:"true"`
+	External    []string `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
 }
 
 func (b *buildCmd) Run(ctx context.Context) error {

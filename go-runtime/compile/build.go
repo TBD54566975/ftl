@@ -61,6 +61,10 @@ func (b ExternalModuleContext) NonMainModules() []*schema.Module {
 
 const buildDirName = "_ftl"
 
+func buildDir(moduleDir string) string {
+	return filepath.Join(moduleDir, buildDirName)
+}
+
 // Build the given module.
 func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	replacements, goModVersion, err := updateGoModule(filepath.Join(moduleDir, "go.mod"))
@@ -81,11 +85,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 
 	funcs := maps.Clone(scaffoldFuncs)
 
-	buildDir := filepath.Join(moduleDir, buildDirName)
-
-	// Wipe the modules directory to ensure we don't have any stale modules.
-	_ = os.RemoveAll(filepath.Join(buildDir, "go", "modules"))
-
 	logger.Debugf("Generating external modules")
 	GenerateExternalModules(ExternalModuleContext{
 		ModuleDir:    moduleDir,
@@ -105,6 +104,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
+	buildDir := buildDir(moduleDir)
 	err = os.WriteFile(filepath.Join(buildDir, "schema.pb"), schemaBytes, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write schema: %w", err)
@@ -171,6 +171,12 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 }
 
 func GenerateExternalModules(context ExternalModuleContext) error {
+	// Wipe the modules directory to ensure we don't have any stale modules.
+	err := os.RemoveAll(filepath.Join(buildDir(context.ModuleDir), "go", "modules"))
+	if err != nil {
+		return err
+	}
+
 	funcs := maps.Clone(scaffoldFuncs)
 	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
