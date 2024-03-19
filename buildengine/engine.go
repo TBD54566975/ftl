@@ -98,7 +98,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 		if err != nil {
 			return nil, err
 		}
-		deps, err := ExtractDependencies(externalLib)
+		deps, err := extractDependencies(externalLib)
 		if err != nil {
 			return nil, err
 		}
