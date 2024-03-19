@@ -22,6 +22,6 @@ jobs:
         # New version of "sqlc generate" needs the DB up for some unknown reason
         run: docker compose up -d --wait
       - name: Init DB
-        run: ftl-initdb
+        run: just init-db
       - name: Rebuild All
         run: just build-all

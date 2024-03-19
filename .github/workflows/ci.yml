@@ -47,7 +47,7 @@ jobs:
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Initialise database
-        run: ftl-initdb --recreate
+        run: just init-db
       - name: Vet SQL
         run: sqlc vet
   lint:
