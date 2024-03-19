@@ -19,16 +19,18 @@ errtrace:
 
 # Build everything
 build-all: build-frontend build-generate build-kt-runtime build-protos build-sqlc build-zips
-  just build ftl
+  @just build ftl ftl-controller ftl-runner ftl-initdb
 
 # Run "go generate" on all packages
 build-generate:
-  mk backend/schema/aliaskind_enumer.go : backend/schema/metadataalias.go -- go generate -x backend/schema
-  mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x internal/log
+  @mk backend/schema/aliaskind_enumer.go : backend/schema/metadataalias.go -- go generate -x backend/schema
+  @mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x internal/log
 
 # Build command-line tools
 build +tools: build-protos build-sqlc build-zips build-frontend
-  for tool in $@; do go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
+  #!/bin/bash
+  shopt -s extglob
+  for tool in $@; do mk "{{RELEASE}}/$tool" : !(build) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable"
 
@@ -40,27 +42,26 @@ init-db:
 
 # Regenerate SQLC code
 build-sqlc:
-  mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema -- sqlc generate --experimental
+  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema -- sqlc generate --experimental
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips: build-kt-runtime
-  for dir in {{ZIP_DIRS}}; do (cd $dir && rm -f $(basename ${dir}.zip) && zip -q --symlinks -r ../$(basename ${dir}).zip .); done
+  @for dir in {{ZIP_DIRS}}; do (cd $dir && mk ../$(basename ${dir}).zip : . -- "rm -f $(basename ${dir}.zip) && zip -q --symlinks -r ../$(basename ${dir}).zip ."); done
 
 # Rebuild frontend
 build-frontend: npm-install
-  mk {{FRONTEND_OUT}} : frontend/src -- "cd frontend && npm run build"
+  @mk {{FRONTEND_OUT}} : frontend/src -- "cd frontend && npm run build"
 
 # Build the Kotlin runtime (if necessary)
 build-kt-runtime:
-  mkdir -p $(dirname {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}})
-  mk {{KT_RUNTIME_OUT}} : kotlin-runtime/ftl-runtime -- mvn -f kotlin-runtime/ftl-runtime -Dmaven.test.skip=true -B install
-  install -m 0600 {{KT_RUNTIME_OUT}} {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}}
-  mk {{RUNNER_TEMPLATE_ZIP}} : {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}} -- "cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} ."
+  @mk {{KT_RUNTIME_OUT}} : kotlin-runtime/ftl-runtime -- mvn -f kotlin-runtime/ftl-runtime -Dmaven.test.skip=true -B install
+  @mk {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}} : {{KT_RUNTIME_OUT}} -- "mkdir -p $(dirname {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}}) && install -m 0600 {{KT_RUNTIME_OUT}} {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}}"
+  @mk {{RUNNER_TEMPLATE_ZIP}} : {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}} -- "cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} ."
 
 # Install Node dependencies
 npm-install:
-  mk frontend/node_modules : frontend/package.json frontend/src -- "cd frontend && npm install"
+  @mk frontend/node_modules : frontend/package.json frontend/src -- "cd frontend && npm install"
 
 # Regenerate protos
 build-protos: npm-install
-  mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint && cd backend/protos && buf generate"
+  @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint && cd backend/protos && buf generate"
