@@ -67,8 +67,9 @@ func LoadModuleConfig(dir string) (ModuleConfig, error) {
 
 func LoadExternalLibraryConfig(dir string) (ModuleConfig, error) {
 	config := ModuleConfig{
-		Type: ExternalLibrary,
-		Dir:  dir,
+		Type:   ExternalLibrary,
+		Dir:    dir,
+		Module: dir,
 	}
 
 	goModPath := filepath.Join(dir, "go.mod")
