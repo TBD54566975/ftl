@@ -1,4 +1,5 @@
 set positional-arguments
+set shell := ["bash", "-c"]
 
 RELEASE := "build/release"
 VERSION := `git describe --tags --always --dirty | sed -e 's/^v//'`
@@ -47,7 +48,7 @@ init-db:
   dbmate create
   dbmate --migrations-dir backend/controller/sql/schema up
 
-# Regenerate SQLC code
+# Regenerate SQLC code (requires init-db to be run first)
 build-sqlc:
   @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema -- sqlc generate --experimental
 

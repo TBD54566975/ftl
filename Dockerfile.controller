@@ -11,6 +11,7 @@ WORKDIR /src
 # Seed some of the most common tools - this will be cached
 RUN go version
 RUN mvn -f kotlin-runtime/ftl-runtime -B --version
+RUN node --version
 
 # Download Go dependencies separately so Docker will cache them
 COPY go.mod go.sum ./
@@ -20,6 +21,8 @@ RUN go mod download -x
 # Build
 COPY . /src/
 RUN just errtrace
+# Reset timestamps so that the build state is reset
+RUN git ls-files -z | xargs -0 touch -r go.mod
 RUN just build ftl-controller
 RUN just build ftl-initdb
 RUN just build ftl
