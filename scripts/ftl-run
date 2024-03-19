@@ -6,9 +6,7 @@ cd "${top}"
 
 
 build() {
-  bit build/template/ftl/jars/ftl-runtime.jar \
-    build/release/ftl-controller \
-    build/release/ftl-runner 
+  just build ftl-controller ftl-runner
 }
 
 build

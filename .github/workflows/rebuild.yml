@@ -23,7 +23,5 @@ jobs:
         run: docker compose up -d --wait
       - name: Init DB
         run: ftl-initdb
-      - name: Clean All
-        run: bit -c
       - name: Rebuild All
-        run: bit
+        run: just build-all
