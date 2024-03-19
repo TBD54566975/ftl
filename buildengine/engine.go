@@ -21,7 +21,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -76,23 +75,23 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
-	configs, err := DiscoverModules(ctx, dirs...)
+	modules, err := DiscoverModules(ctx, dirs...)
 	if err != nil {
 		return nil, err
 	}
 	for _, dir := range externalDirs {
-		externalLib, err := moduleconfig.LoadExternalLibraryConfig(dir)
+		module, err := LoadExternalLibrary(ctx, dir)
 		if err != nil {
 			return nil, err
 		}
-		configs = append(configs, externalLib)
-	}
-	modules, err := UpdateAllDependencies(ctx, configs...)
-	if err != nil {
-		return nil, err
+		modules = append(modules, module)
 	}
 	for _, module := range modules {
-		e.modules[module.Module] = module
+		module, err = UpdateDependencies(ctx, module)
+		if err != nil {
+			return nil, err
+		}
+		e.modules[module.Key()] = module
 	}
 
 	if client == nil {
@@ -246,25 +245,29 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		case event := <-watchEvents:
 			switch event := event.(type) {
 			case WatchEventModuleAdded:
-				if _, exists := e.modules[event.Module.Module]; !exists {
-					e.modules[event.Module.Module] = event.Module
-					err := e.buildAndDeploy(ctx, 1, true, event.Module.Module)
+				if _, exists := e.modules[event.Module.Key()]; !exists {
+					e.modules[event.Module.Key()] = event.Module
+					err := e.buildAndDeploy(ctx, 1, true, event.Module.Key())
 					if err != nil {
-						logger.Errorf(err, "deploy %s failed", event.Module.Module)
+						logger.Errorf(err, "deploy %s failed", event.Module.Key())
 					}
 				}
 			case WatchEventModuleRemoved:
-				//TODO: no need to terminate if ext lib
-				err := teminateModuleDeployment(ctx, e.client, event.Module.Module)
-				if err != nil {
-					logger.Errorf(err, "terminate %s failed", event.Module.Module)
+				if _, ok := event.Module.ModuleConfig(); ok {
+					err := teminateModuleDeployment(ctx, e.client, event.Module.Key())
+					if err != nil {
+						logger.Errorf(err, "terminate %s failed", event.Module.Key())
+					}
 				}
-				delete(e.modules, event.Module.Module)
+				delete(e.modules, event.Module.Key())
 			case WatchEventModuleChanged:
-				err := e.buildAndDeploy(ctx, 1, true, event.Module.Module)
+				err := e.buildAndDeploy(ctx, 1, true, event.Module.Key())
 				if err != nil {
-					//TODO: log message inaccurate for ext libs
-					logger.Errorf(err, "deploy %s failed", event.Module.Module)
+					if _, ok := event.Module.ModuleConfig(); ok {
+						logger.Errorf(err, "deploy %s failed", event.Module.Key())
+					} else {
+						logger.Errorf(err, "stub generation for %s failed", event.Module.Key())
+					}
 				}
 			}
 		case change := <-schemaChanges:
@@ -336,16 +339,13 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 
 		//TODO: don't always include external libs
 		return e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
-			switch module.Type {
-			case moduleconfig.FTL:
+			if _, ok := module.ModuleConfig(); ok {
 				select {
 				case deployQueue <- module:
 					return nil
 				case <-ctx.Done():
 					return ctx.Err()
 				}
-			case moduleconfig.ExternalLibrary:
-
 			}
 			return nil
 		}, modules...)
@@ -360,12 +360,10 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 					if !ok {
 						return nil
 					}
-					switch module.Type {
-					case moduleconfig.FTL:
+					if _, ok = module.ModuleConfig(); ok {
 						if err := Deploy(ctx, module, replicas, waitForDeployOnline, e.client); err != nil {
 							return err
 						}
-					case moduleconfig.ExternalLibrary:
 					}
 				case <-ctx.Done():
 					return ctx.Err()
@@ -391,7 +389,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		}
 		// Update dependencies before building.
 		var err error
-		module, err = UpdateDependencies(ctx, module.ModuleConfig)
+		module, err = UpdateDependencies(ctx, module)
 		if err != nil {
 			return err
 		}
@@ -412,22 +410,21 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		schemas := make(chan *schema.Module, len(group))
 		wg, ctx := errgroup.WithContext(ctx)
 		wg.SetLimit(e.parallelism)
-		for _, name := range group {
+		for _, key := range group {
 			wg.Go(func() error {
-				if !mustBuild[name] {
-					return e.mustSchema(ctx, name, built, schemas)
+				if !mustBuild[key] {
+					return e.mustSchema(ctx, key, built, schemas)
 				}
 
-				switch e.modules[name].Type {
-				case moduleconfig.FTL:
-					err := e.build(ctx, name, built, schemas)
+				if _, ok := e.modules[key].ModuleConfig(); ok {
+					err := e.build(ctx, key, built, schemas)
 					if err == nil && callback != nil {
-						return callback(ctx, e.modules[name])
+						return callback(ctx, e.modules[key])
 					}
 					return err
-				case moduleconfig.ExternalLibrary:
-					if err := e.generateStubsForExternalLib(ctx, name, built); err != nil {
-						return fmt.Errorf("could not build stubs for external library %s: %w", name, err)
+				} else if _, ok := e.modules[key].ExternalLibrary(); ok {
+					if err := e.generateStubsForExternalLib(ctx, key, built); err != nil {
+						return fmt.Errorf("could not build stubs for external library %s: %w", key, err)
 					}
 				}
 				return nil
@@ -459,29 +456,44 @@ func (e *Engine) mustSchema(ctx context.Context, name string, built map[string]*
 // Build a module and publish its schema.
 //
 // Assumes that all dependencies have been built and are available in "built".
-func (e *Engine) build(ctx context.Context, name string, built map[string]*schema.Module, schemas chan<- *schema.Module) error {
+func (e *Engine) build(ctx context.Context, key string, built map[string]*schema.Module, schemas chan<- *schema.Module) error {
+	module, ok := e.modules[key]
+	if !ok {
+		return fmt.Errorf("module %q not found", key)
+	}
+	moduleConfig, ok := module.ModuleConfig()
+	if !ok {
+		return fmt.Errorf("can not build module %q as it is not a FTL module", key)
+	}
+
 	combined := map[string]*schema.Module{}
-	e.gatherSchemas(built, e.modules[name], combined)
+	if err := e.gatherSchemas(built, module, combined); err != nil {
+		return err
+	}
 	sch := &schema.Schema{Modules: maps.Values(combined)}
-	module := e.modules[name]
+
 	err := Build(ctx, sch, module)
 	if err != nil {
 
 		return err
 	}
-	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(module.Dir, module.DeployDir, module.Schema))
+	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(moduleConfig.Dir, moduleConfig.DeployDir, moduleConfig.Schema))
 	if err != nil {
-		return fmt.Errorf("load schema %s: %w", name, err)
+		return fmt.Errorf("load schema %s: %w", key, err)
 	}
 	schemas <- moduleSchema
 	return nil
 }
 
-func (e *Engine) generateStubsForExternalLib(ctx context.Context, dir string, built map[string]*schema.Module) error {
+func (e *Engine) generateStubsForExternalLib(ctx context.Context, key string, built map[string]*schema.Module) error {
 	//TODO: support kotlin
-	lib, ok := e.modules[dir]
+	module, ok := e.modules[key]
 	if !ok {
-		return fmt.Errorf("external library %q not found", dir)
+		return fmt.Errorf("library %q not found", key)
+	}
+	lib, ok := module.ExternalLibrary()
+	if !ok {
+		return fmt.Errorf("module %q is not a library", key)
 	}
 
 	logger := log.FromContext(ctx)
@@ -496,9 +508,10 @@ func (e *Engine) generateStubsForExternalLib(ctx context.Context, dir string, bu
 		ftlVersion = ftl.Version
 	}
 
-	//TODO: does gather schemas need to be able to check for missing dependencies?
 	combined := map[string]*schema.Module{}
-	e.gatherSchemas(built, lib, combined)
+	if err := e.gatherSchemas(built, module, combined); err != nil {
+		return err
+	}
 	sch := &schema.Schema{Modules: maps.Values(combined)}
 
 	err = compile.GenerateExternalModules(compile.ExternalModuleContext{
@@ -511,7 +524,7 @@ func (e *Engine) generateStubsForExternalLib(ctx context.Context, dir string, bu
 	if err != nil {
 		return fmt.Errorf("failed to generate external modules: %w", err)
 	}
-	logger.Infof("Generated stubs %v for %s", lib.Dependencies, lib.Dir)
+	logger.Infof("Generated stubs %v for %s", module.Dependencies, lib.Dir)
 	return nil
 }
 
@@ -520,15 +533,20 @@ func (e *Engine) gatherSchemas(
 	moduleSchemas map[string]*schema.Module,
 	module Module,
 	out map[string]*schema.Module,
-) {
-	var latestModule Module
-	if module.ModuleConfig.Type == moduleconfig.FTL {
-		latestModule = e.modules[module.Module]
-	} else {
+) error {
+	latestModule, ok := e.modules[module.Key()]
+	if !ok {
 		latestModule = module
 	}
 	for _, dep := range latestModule.Dependencies {
 		out[dep] = moduleSchemas[dep]
-		e.gatherSchemas(moduleSchemas, e.modules[dep], out)
+		if dep != "builtin" {
+			depModule, ok := e.modules[dep]
+			if !ok {
+				return fmt.Errorf("dependency %q not found", dep)
+			}
+			e.gatherSchemas(moduleSchemas, depModule, out)
+		}
 	}
+	return nil
 }

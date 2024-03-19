@@ -6,7 +6,6 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 )
@@ -56,35 +55,39 @@ func Watch(ctx context.Context, period time.Duration, dirs []string, externalLib
 			}
 
 			// Find all modules in the given directories.
-			moduleConfigs, err := DiscoverModules(ctx, dirs...)
+			modules, err := DiscoverModules(ctx, dirs...)
 			if err != nil {
 				logger.Tracef("error discovering modules: %v", err)
 				continue
 			}
 			for _, dir := range externalLibDirs {
-				if moduleConfig, err := moduleconfig.LoadExternalLibraryConfig(dir); err == nil {
-					moduleConfigs = append(moduleConfigs, moduleConfig)
+				if module, err := LoadExternalLibrary(ctx, dir); err == nil {
+					modules = append(modules, module)
 				}
 			}
-			moduleConfigsByDir := maps.FromSlice(moduleConfigs, func(config moduleconfig.ModuleConfig) (string, moduleconfig.ModuleConfig) {
-				return config.Module, config
+			modulesByDir := maps.FromSlice(modules, func(module Module) (string, Module) {
+				return module.Dir(), module
 			})
 
 			// Trigger events for removed modules.
 			for _, existingModule := range existingModules {
-				if _, haveModule := moduleConfigsByDir[existingModule.Module.Module]; !haveModule {
-					logger.Debugf("module %s removed: %s", existingModule.Module.Module, existingModule.Module.Dir)
+				if _, haveModule := modulesByDir[existingModule.Module.Dir()]; !haveModule {
+					if _, ok := existingModule.Module.ModuleConfig(); ok {
+						logger.Debugf("%s %s removed: %s", existingModule.Module.Kind(), existingModule.Module.Key(), existingModule.Module.Dir())
+					} else {
+						logger.Debugf("%s removed: %s", existingModule.Module.Kind(), existingModule.Module.Dir())
+					}
 					topic.Publish(WatchEventModuleRemoved{Module: existingModule.Module})
-					delete(existingModules, existingModule.Module.ModuleConfig.Dir)
+					delete(existingModules, existingModule.Module.Dir())
 				}
 			}
 
 			// Compare the modules to the existing modules.
-			for _, config := range moduleConfigs {
-				existingModule, haveExistingModule := existingModules[config.Dir]
-				hashes, err := ComputeFileHashes(config)
+			for _, module := range modulesByDir {
+				existingModule, haveExistingModule := existingModules[module.Dir()]
+				hashes, err := ComputeFileHashes(module)
 				if err != nil {
-					logger.Tracef("error computing file hashes for %s: %v", config.Dir, err)
+					logger.Tracef("error computing file hashes for %s: %v", module.Dir(), err)
 					continue
 				}
 
@@ -93,19 +96,19 @@ func Watch(ctx context.Context, period time.Duration, dirs []string, externalLib
 					if equal {
 						continue
 					}
-					logger.Debugf("module %s changed: %c%s", existingModule.Module.Module, changeType, path)
+					logger.Debugf("%s %s changed: %c%s", module.Kind(), module.Key(), changeType, path)
 					topic.Publish(WatchEventModuleChanged{Module: existingModule.Module, Change: changeType, Path: path})
-					existingModules[config.Dir] = moduleHashes{Hashes: hashes, Module: existingModule.Module}
+					existingModules[module.Dir()] = moduleHashes{Hashes: hashes, Module: existingModule.Module}
 					continue
+				}
+				if _, ok := module.ModuleConfig(); ok {
+					logger.Debugf("%s %s added: %s", module.Kind(), module.Key(), module.Dir())
+				} else {
+					logger.Debugf("%s added: %s", module.Kind(), module.Dir())
 				}
 
-				module, err := UpdateDependencies(ctx, config)
-				if err != nil {
-					continue
-				}
-				logger.Debugf("module %s added: %s", module.Module, module.Dir)
 				topic.Publish(WatchEventModuleAdded{Module: module})
-				existingModules[config.Dir] = moduleHashes{Hashes: hashes, Module: module}
+				existingModules[module.Dir()] = moduleHashes{Hashes: hashes, Module: module}
 			}
 		}
 	}()

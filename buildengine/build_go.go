@@ -9,8 +9,12 @@ import (
 )
 
 func buildGo(ctx context.Context, sch *schema.Schema, module Module) error {
-	if err := compile.Build(ctx, module.Dir, sch); err != nil {
-		return fmt.Errorf("failed to build module %s: %w", module.Module, err)
+	moduleConfig, ok := module.ModuleConfig()
+	if !ok {
+		return fmt.Errorf("module %s is not a FTL module", module.Key())
+	}
+	if err := compile.Build(ctx, moduleConfig.Dir, sch); err != nil {
+		return fmt.Errorf("failed to build module %s: %w", moduleConfig.Module, err)
 	}
 	return nil
 }

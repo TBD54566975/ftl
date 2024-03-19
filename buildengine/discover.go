@@ -6,14 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 )
 
 // DiscoverModules recursively loads all modules under the given directories.
 //
 // If no directories are provided, the current working directory is used.
-func DiscoverModules(ctx context.Context, dirs ...string) ([]moduleconfig.ModuleConfig, error) {
+func DiscoverModules(ctx context.Context, dirs ...string) ([]Module, error) {
 	if len(dirs) == 0 {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -21,18 +19,18 @@ func DiscoverModules(ctx context.Context, dirs ...string) ([]moduleconfig.Module
 		}
 		dirs = []string{cwd}
 	}
-	out := []moduleconfig.ModuleConfig{}
+	out := []Module{}
 	for _, dir := range dirs {
 		err := WalkDir(dir, func(path string, d fs.DirEntry) error {
 			if filepath.Base(path) != "ftl.toml" {
 				return nil
 			}
 			moduleDir := filepath.Dir(path)
-			config, err := moduleconfig.LoadModuleConfig(moduleDir)
+			module, err := LoadModule(ctx, moduleDir)
 			if err != nil {
 				return err
 			}
-			out = append(out, config)
+			out = append(out, module)
 			return ErrSkip
 		})
 		if err != nil {
@@ -40,7 +38,7 @@ func DiscoverModules(ctx context.Context, dirs ...string) ([]moduleconfig.Module
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
-		return out[i].Module < out[j].Module
+		return out[i].Key() < out[j].Key()
 	})
 	return out, nil
 }
