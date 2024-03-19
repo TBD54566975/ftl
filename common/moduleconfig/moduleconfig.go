@@ -19,7 +19,7 @@ type ModuleKotlinConfig struct{}
 type ModuleType int
 
 const (
-	FTLModule ModuleType = iota
+	FTL ModuleType = iota
 	ExternalLibrary
 )
 
@@ -60,7 +60,7 @@ func LoadModuleConfig(dir string) (ModuleConfig, error) {
 	if err := setConfigDefaults(dir, &config); err != nil {
 		return config, fmt.Errorf("%s: %w", path, err)
 	}
-	config.Type = FTLModule
+	config.Type = FTL
 	config.Dir = dir
 	return config, nil
 }

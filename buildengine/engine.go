@@ -337,7 +337,7 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 		//TODO: don't always include external libs
 		return e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
 			switch module.Type {
-			case moduleconfig.FTLModule:
+			case moduleconfig.FTL:
 				select {
 				case deployQueue <- module:
 					return nil
@@ -361,7 +361,7 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 						return nil
 					}
 					switch module.Type {
-					case moduleconfig.FTLModule:
+					case moduleconfig.FTL:
 						if err := Deploy(ctx, module, replicas, waitForDeployOnline, e.client); err != nil {
 							return err
 						}
@@ -419,7 +419,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 				}
 
 				switch e.modules[name].Type {
-				case moduleconfig.FTLModule:
+				case moduleconfig.FTL:
 					err := e.build(ctx, name, built, schemas)
 					if err == nil && callback != nil {
 						return callback(ctx, e.modules[name])
@@ -522,7 +522,7 @@ func (e *Engine) gatherSchemas(
 	out map[string]*schema.Module,
 ) {
 	var latestModule Module
-	if module.ModuleConfig.Type == moduleconfig.FTLModule {
+	if module.ModuleConfig.Type == moduleconfig.FTL {
 		latestModule = e.modules[module.Module]
 	} else {
 		latestModule = module
