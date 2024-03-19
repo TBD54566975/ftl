@@ -157,7 +157,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"imports": func(m *schema.Module) []string {
 		imports := sets.NewSet[string]()
-		_ = schema.Visit(m, func(n schema.Node, next func() error) error {
+		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error {
 			switch n.(type) {
 			case *schema.Verb:
 				imports.Append("xyz.block.ftl.Context", "xyz.block.ftl.Ignore", "xyz.block.ftl.Verb")
