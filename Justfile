@@ -17,6 +17,13 @@ _help:
 errtrace:
   git ls-files -z -- '*.go' | grep -zv /_ | xargs -0 errtrace -w && go mod tidy
 
+# Clean the build directory
+clean:
+  rm -rf build
+  rm -rf frontend/node_modules
+  find . -name '*.zip' -exec rm {} \;
+  mvn -f kotlin-runtime/ftl-runtime clean
+
 # Build everything
 build-all: build-frontend build-generate build-kt-runtime build-protos build-sqlc build-zips
   @just build ftl ftl-controller ftl-runner ftl-initdb
