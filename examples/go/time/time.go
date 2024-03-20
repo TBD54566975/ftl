@@ -1,4 +1,3 @@
-//ftl:module time
 package time
 
 import (
@@ -13,7 +12,7 @@ type TimeResponse struct {
 
 // Time returns the current time.
 //
-//ftl:verb
+//ftl:export
 func Time(ctx context.Context, req TimeRequest) (TimeResponse, error) {
 	return TimeResponse{Time: time.Now()}, nil
 }

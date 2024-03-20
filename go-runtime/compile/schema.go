@@ -84,9 +84,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 					}
 
 				case *ast.File:
-					if err := visitFile(pctx, node); err != nil {
-						return err
-					}
+					visitFile(pctx, node)
 
 				case *ast.FuncDecl:
 					verb, err := visitFuncDecl(pctx, node)
@@ -123,9 +121,6 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 	}
 	if len(merr) > 0 {
 		return nil, nil, errors.Join(merr...)
-	}
-	if module.Name == "" {
-		return nil, nil, fmt.Errorf("//ftl:module directive is required")
 	}
 	return nativeNames, module, schema.ValidateModule(module)
 }
@@ -221,28 +216,11 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) err
 	return nil
 }
 
-func visitFile(pctx *parseContext, node *ast.File) error {
+func visitFile(pctx *parseContext, node *ast.File) {
 	if node.Doc == nil {
-		return nil
-	}
-	directives, err := parseDirectives(fset, node.Doc)
-	if err != nil {
-		return err
+		return
 	}
 	pctx.module.Comments = visitComments(node.Doc)
-	for _, dir := range directives {
-		switch dir := dir.(type) {
-		case *directiveModule:
-			if dir.Name != pctx.pkg.Name {
-				return errorf(node.Pos(), "%s: FTL module name %q does not match Go package name %q", dir, dir.Name, pctx.pkg.Name)
-			}
-			pctx.module.Name = dir.Name
-
-		default:
-			return errorf(node.Pos(), "%s: invalid directive", dir)
-		}
-	}
-	return nil
 }
 
 func isType[T types.Type](t types.Type) bool {
@@ -315,23 +293,31 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) error {
 		}
 		for _, dir := range directives {
 			switch dir.(type) {
-			case *directiveEnum:
-				enum := &schema.Enum{
-					Pos:      goPosToSchemaPos(node.Pos()),
-					Comments: visitComments(node.Doc),
-				}
+			case *directiveExport:
 				if len(node.Specs) != 1 {
-					return errorf(node.Pos(), "error parsing ftl enum %s: expected exactly one type spec", enum.Name)
+					return errorf(node.Pos(), "error parsing ftl export directive: expected exactly one type "+
+						"declaration")
+				}
+				if pctx.module.Name == "" {
+					pctx.module.Name = pctx.pkg.Name
+				} else if pctx.module.Name != pctx.pkg.Name {
+					return errorf(node.Pos(), "type export directive must be in the module package")
 				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
-					pctx.enums[t.Name.Name] = enum
+					if _, ok := pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying().(*types.Basic); ok {
+						enum := &schema.Enum{
+							Pos:      goPosToSchemaPos(node.Pos()),
+							Comments: visitComments(node.Doc),
+						}
+						pctx.enums[t.Name.Name] = enum
+					}
 					err := visitTypeSpec(pctx, t)
 					if err != nil {
 						return err
 					}
 				}
 
-			case *directiveIngress, *directiveModule, *directiveVerb:
+			case *directiveIngress:
 			}
 		}
 		return nil
@@ -363,17 +349,21 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) error {
 }
 
 func visitTypeSpec(pctx *parseContext, node *ast.TypeSpec) error {
-	enum := pctx.enums[node.Name.Name]
-	if enum == nil {
-		return nil
+	if enum, ok := pctx.enums[node.Name.Name]; ok {
+		typ, err := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(node.Type))
+		if err != nil {
+			return err
+		}
+
+		enum.Name = strcase.ToUpperCamel(node.Name.Name)
+		enum.Type = typ
+		pctx.nativeNames[enum] = node.Name.Name
+	} else {
+		_, err := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[node.Name].Type())
+		if err != nil {
+			return err
+		}
 	}
-	typ, err := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(node.Type))
-	if err != nil {
-		return err
-	}
-	enum.Name = strcase.ToUpperCamel(node.Name.Name)
-	enum.Type = typ
-	pctx.nativeNames[enum] = node.Name.Name
 	return nil
 }
 
@@ -415,12 +405,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	isVerb := false
 	for _, dir := range directives {
 		switch dir := dir.(type) {
-		case *directiveEnum:
-
-		case *directiveModule:
-
-		case *directiveVerb:
+		case *directiveExport:
 			isVerb = true
+			if pctx.module.Name == "" {
+				pctx.module.Name = pctx.pkg.Name
+			} else if pctx.module.Name != pctx.pkg.Name {
+				return nil, errorf(node.Pos(), "function export directive must be in the module package")
+			}
 
 		case *directiveIngress:
 			typ := dir.Type
@@ -433,9 +424,6 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 				Method: dir.Method,
 				Path:   dir.Path,
 			})
-
-		default:
-			panic(fmt.Sprintf("unsupported directive %T", dir))
 		}
 	}
 	if !isVerb {
@@ -444,7 +432,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		return nil, errorf(node.Pos(), "ftl:verb cannot be a method")
+		return nil, errorf(node.Pos(), "ftl:export cannot be a method")
 	}
 	params := sig.Params()
 	results := sig.Results()

@@ -1,4 +1,3 @@
-//ftl:module echo
 package echo
 
 import (
@@ -18,12 +17,12 @@ type EchoResponse struct {
 	Message string `json:"message"`
 }
 
-//ftl:verb
+//ftl:export
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name.Default("anonymous"))}, nil
 }
 
-//ftl:verb
+//ftl:export
 func Call(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	res, err := ftl.Call(ctx, echo2.Echo, echo2.EchoRequest{Name: req.Name})
 	if err != nil {

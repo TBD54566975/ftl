@@ -1,4 +1,3 @@
-//ftl:module one
 package one
 
 import (
@@ -10,7 +9,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-//ftl:enum
+//ftl:export
 type Color string
 
 const (
@@ -21,7 +20,7 @@ const (
 
 // Comments about ColorInt.
 //
-//ftl:enum
+//ftl:export
 type ColorInt int
 
 const (
@@ -32,7 +31,7 @@ const (
 	GreenInt ColorInt = 2
 )
 
-//ftl:enum
+//ftl:export
 type SimpleIota int
 
 const (
@@ -41,7 +40,7 @@ const (
 	Two
 )
 
-//ftl:enum
+//ftl:export
 type IotaExpr int
 
 const (
@@ -76,7 +75,7 @@ type Config struct {
 var configValue = ftl.Config[Config]("configValue")
 var secretValue = ftl.Secret[string]("secretValue")
 
-//ftl:verb
+//ftl:export
 func Verb(ctx context.Context, req Req) (Resp, error) {
 	return Resp{}, nil
 }
@@ -87,19 +86,19 @@ const YellowInt ColorInt = 3
 
 type SinkReq struct{}
 
-//ftl:verb
+//ftl:export
 func Sink(ctx context.Context, req SinkReq) error {
 	return nil
 }
 
 type SourceResp struct{}
 
-//ftl:verb
+//ftl:export
 func Source(ctx context.Context) (SourceResp, error) {
 	return SourceResp{}, nil
 }
 
-//ftl:verb
+//ftl:export
 func Nothing(ctx context.Context) error {
 	return nil
 }

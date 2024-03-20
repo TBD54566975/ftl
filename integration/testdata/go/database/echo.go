@@ -1,4 +1,3 @@
-//ftl:module echo
 package echo
 
 import (
@@ -15,7 +14,7 @@ type InsertRequest struct {
 
 type InsertResponse struct{}
 
-//ftl:verb
+//ftl:export
 func Insert(ctx context.Context, req InsertRequest) (InsertResponse, error) {
 	err := persistRequest(req)
 	if err != nil {

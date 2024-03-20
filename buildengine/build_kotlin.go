@@ -170,8 +170,14 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		imports := sets.NewSet[string]()
 		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error {
 			switch n.(type) {
+			case *schema.Data:
+				imports.Add("xyz.block.ftl.Export")
+
+			case *schema.Enum:
+				imports.Add("xyz.block.ftl.Export")
+
 			case *schema.Verb:
-				imports.Append("xyz.block.ftl.Context", "xyz.block.ftl.Ignore", "xyz.block.ftl.Verb")
+				imports.Append("xyz.block.ftl.Context", "xyz.block.ftl.Ignore", "xyz.block.ftl.Export")
 
 			case *schema.Time:
 				imports.Add("java.time.OffsetDateTime")

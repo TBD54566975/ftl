@@ -9,7 +9,7 @@ import xyz.block.ftl.Json
 import xyz.block.ftl.Context
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method
-import xyz.block.ftl.Verb
+import xyz.block.ftl.Export
 
 data class GetRequest(
   @Json("userId") val userID: String,
@@ -47,7 +47,7 @@ data class ArrayType(
   @Json("item") val item: String,
 )
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/users/{userID}/posts/{postID}")
 fun `get`(context: Context, req: HttpRequest<GetRequest>): HttpResponse<GetResponse, String> {
   return HttpResponse(
@@ -60,7 +60,7 @@ fun `get`(context: Context, req: HttpRequest<GetRequest>): HttpResponse<GetRespo
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.POST, "/users")
 fun post(context: Context, req: HttpRequest<PostRequest>): HttpResponse<PostResponse, String> {
   return HttpResponse(
@@ -70,7 +70,7 @@ fun post(context: Context, req: HttpRequest<PostRequest>): HttpResponse<PostResp
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.PUT, "/users/{userId}")
 fun put(context: Context, req: HttpRequest<PutRequest>): HttpResponse<Empty, String> {
   return HttpResponse(
@@ -80,7 +80,7 @@ fun put(context: Context, req: HttpRequest<PutRequest>): HttpResponse<Empty, Str
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.DELETE, "/users/{userId}")
 fun delete(context: Context, req: HttpRequest<DeleteRequest>): HttpResponse<Empty, String> {
   return HttpResponse(
@@ -90,7 +90,7 @@ fun delete(context: Context, req: HttpRequest<DeleteRequest>): HttpResponse<Empt
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/html")
 fun html(context: Context, req: HttpRequest<Empty>): HttpResponse<String, String> {
   return HttpResponse(
@@ -100,7 +100,7 @@ fun html(context: Context, req: HttpRequest<Empty>): HttpResponse<String, String
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.POST, "/bytes")
 fun bytes(context: Context, req: HttpRequest<ByteArray>): HttpResponse<ByteArray, String> {
   return HttpResponse(
@@ -110,7 +110,7 @@ fun bytes(context: Context, req: HttpRequest<ByteArray>): HttpResponse<ByteArray
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/empty")
 fun empty(context: Context, req: HttpRequest<Unit>): HttpResponse<Unit, String> {
   return HttpResponse(
@@ -120,7 +120,7 @@ fun empty(context: Context, req: HttpRequest<Unit>): HttpResponse<Unit, String> 
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/string")
 fun string(context: Context, req: HttpRequest<String>): HttpResponse<String, String> {
   return HttpResponse(
@@ -130,7 +130,7 @@ fun string(context: Context, req: HttpRequest<String>): HttpResponse<String, Str
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/int")
 fun int(context: Context, req: HttpRequest<Int>): HttpResponse<Int, String> {
   return HttpResponse(
@@ -140,7 +140,7 @@ fun int(context: Context, req: HttpRequest<Int>): HttpResponse<Int, String> {
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/float")
 fun float(context: Context, req: HttpRequest<Double>): HttpResponse<Double, String> {
   return HttpResponse(
@@ -150,7 +150,7 @@ fun float(context: Context, req: HttpRequest<Double>): HttpResponse<Double, Stri
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/bool")
 fun bool(context: Context, req: HttpRequest<Boolean>): HttpResponse<Boolean, String> {
   return HttpResponse(
@@ -160,7 +160,7 @@ fun bool(context: Context, req: HttpRequest<Boolean>): HttpResponse<Boolean, Str
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/error")
 fun error(context: Context, req: HttpRequest<Unit>): HttpResponse<Boolean, String> {
   return HttpResponse(
@@ -170,7 +170,7 @@ fun error(context: Context, req: HttpRequest<Unit>): HttpResponse<Boolean, Strin
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/array/string")
 fun arrayString(context: Context, req: HttpRequest<List<String>>): HttpResponse<List<String>, String> {
   return HttpResponse(
@@ -180,7 +180,7 @@ fun arrayString(context: Context, req: HttpRequest<List<String>>): HttpResponse<
   )
 }
 
-@Verb
+@Export
 @HttpIngress(Method.POST, "/array/data")
 fun arrayData(context: Context, req: HttpRequest<List<ArrayType>>): HttpResponse<List<ArrayType>, String> {
   return HttpResponse(

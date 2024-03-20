@@ -128,6 +128,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  Red("Red")
 		  Blue("Blue")
 		  Green("Green")
+        }
+
+		data Exported {
 		}
 
 		data Payload<T> {
@@ -159,8 +162,7 @@ func TestParseDirectives(t *testing.T) {
 		input    string
 		expected directive
 	}{
-		{name: "Module", input: "ftl:module foo", expected: &directiveModule{Name: "foo"}},
-		{name: "Verb", input: "ftl:verb", expected: &directiveVerb{Verb: true}},
+		{name: "Export", input: "ftl:export", expected: &directiveExport{Export: true}},
 		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
 			Method: "GET",
 			Path: []schema.IngressPathComponent{
@@ -229,5 +231,5 @@ func normaliseString(s string) string {
 func TestErrorReporting(t *testing.T) {
 	pwd, _ := os.Getwd()
 	_, _, err := ExtractModuleSchema("testdata/failing")
-	assert.EqualError(t, err, filepath.Join(pwd, `testdata/failing/failing.go`)+`:15:2: call must have exactly three arguments`)
+	assert.EqualError(t, err, filepath.Join(pwd, `testdata/failing/failing.go`)+`:14:2: call must have exactly three arguments`)
 }

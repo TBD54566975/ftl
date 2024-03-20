@@ -8,7 +8,7 @@ import java.time.OffsetDateTime
 data class EchoRequest(val user: String)
 data class EchoResponse(val text: String)
 
-@Verb
+@Export
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   val time = context.call(::time, Empty())
   return EchoResponse("Hello ${req.user}, the time is ${time.time}!")
@@ -18,7 +18,7 @@ data class TimeResponse(val time: OffsetDateTime)
 
 val staticTime = OffsetDateTime.now()
 
-@Verb
+@Export
 fun time(context: Context, req: Empty): TimeResponse {
   return TimeResponse(staticTime)
 }
@@ -26,14 +26,14 @@ fun time(context: Context, req: Empty): TimeResponse {
 data class VerbRequest(val text: String = "")
 data class VerbResponse(val text: String = "")
 
-@Verb
+@Export
 @HttpIngress(Method.GET, "/test")
 fun verb(context: Context, req: VerbRequest): VerbResponse {
   return VerbResponse("test")
 }
 
 
-@Verb
+@Export
 @Ignore
 fun anotherVerb(context: Context, req: VerbRequest): VerbResponse {
   return VerbResponse("ignored")

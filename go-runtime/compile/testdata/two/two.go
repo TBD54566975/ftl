@@ -1,4 +1,3 @@
-//ftl:module two
 package two
 
 import (
@@ -7,7 +6,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-//ftl:enum
+//ftl:export
 type TwoEnum string
 
 const (
@@ -15,6 +14,10 @@ const (
 	Blue  TwoEnum = "Blue"
 	Green TwoEnum = "Green"
 )
+
+//ftl:export
+type Exported struct {
+}
 
 type User struct {
 	Name string
@@ -28,17 +31,17 @@ type UserResponse struct {
 	User User
 }
 
-//ftl:verb
+//ftl:export
 func Two(ctx context.Context, req Payload[string]) (Payload[string], error) {
 	return Payload[string]{}, nil
 }
 
-//ftl:verb
+//ftl:export
 func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
 	return ftl.Call(ctx, Two, req)
 }
 
-//ftl:verb
+//ftl:export
 func ReturnsUser(ctx context.Context) (ftl.Option[UserResponse], error) {
 	return ftl.Some[UserResponse](UserResponse{
 		User: User{

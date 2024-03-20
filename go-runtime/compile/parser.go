@@ -24,14 +24,14 @@ type directiveWrapper struct {
 //sumtype:decl
 type directive interface{ directive() }
 
-type directiveVerb struct {
+type directiveExport struct {
 	Pos lexer.Position
 
-	Verb bool `parser:"@'verb'"`
+	Export bool `parser:"@'export'"`
 }
 
-func (*directiveVerb) directive()       {}
-func (d *directiveVerb) String() string { return "ftl:verb" }
+func (*directiveExport) directive()       {}
+func (d *directiveExport) String() string { return "ftl:export" }
 
 type directiveIngress struct {
 	Pos schema.Position
@@ -51,30 +51,12 @@ func (d *directiveIngress) String() string {
 	return w.String()
 }
 
-type directiveModule struct {
-	Pos lexer.Position
-
-	Name string `parser:"'module' @Ident"`
-}
-
-func (*directiveModule) directive()       {}
-func (d *directiveModule) String() string { return "ftl:module" }
-
-type directiveEnum struct {
-	Pos lexer.Position
-
-	Enum bool `parser:"@'enum'"`
-}
-
-func (*directiveEnum) directive()       {}
-func (d *directiveEnum) String() string { return "ftl:enum" }
-
 var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
-	participle.Union[directive](&directiveVerb{}, &directiveIngress{}, &directiveModule{}, &directiveEnum{}),
+	participle.Union[directive](&directiveExport{}, &directiveIngress{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 

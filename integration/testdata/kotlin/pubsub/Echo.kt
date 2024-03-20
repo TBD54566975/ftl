@@ -2,11 +2,11 @@ package ftl.echo
 
 import ftl.builtin.Empty
 import xyz.block.ftl.Context
-import xyz.block.ftl.Verb
+import xyz.block.ftl.Export
 
 data class EchoResponse(val name: String)
 
-@Verb
+@Export
 fun echo(context: Context, req: Empty): EchoResponse {
   context.callSink(::sink, Empty())
   val resp = context.callSource(::source)
@@ -15,11 +15,11 @@ fun echo(context: Context, req: Empty): EchoResponse {
 
 data class SourceResponse(val name: String)
 
-@Verb
+@Export
 fun source(context: Context): EchoResponse {
   return EchoResponse(name = "source")
 }
 
-@Verb
+@Export
 fun sink(context: Context, req: Empty) {
 }
