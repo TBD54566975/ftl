@@ -54,7 +54,7 @@ func Watch(ctx context.Context, period time.Duration, dirs []string, externalLib
 				return
 			}
 
-			projects := projectsIn(logger, dirs, externalLibDirs)
+			projects, _ := DiscoverProjects(ctx, dirs, externalLibDirs, false)
 
 			projectsByDir := maps.FromSlice(projects, func(project Project) (string, Project) {
 				return project.Dir(), project
@@ -104,25 +104,4 @@ func Watch(ctx context.Context, period time.Duration, dirs []string, externalLib
 		}
 	}()
 	return topic
-}
-
-func projectsIn(logger *log.Logger, dirs []string, externalLibDirs []string) []Project {
-	out := []Project{}
-
-	modules, err := DiscoverModules(context.Background(), dirs...)
-	if err != nil {
-		logger.Tracef("error discovering modules: %v", err)
-	} else {
-		for _, module := range modules {
-			out = append(out, Project(&module))
-		}
-	}
-
-	for _, dir := range externalLibDirs {
-		if lib, err := LoadExternalLibrary(dir); err == nil {
-			out = append(out, Project(&lib))
-		}
-	}
-
-	return out
 }

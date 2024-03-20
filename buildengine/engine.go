@@ -76,24 +76,12 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
 
-	modules, err := DiscoverModules(ctx, dirs...)
+	projects, err := DiscoverProjects(ctx, dirs, externalDirs, true)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not find projects: %w", err)
 	}
-	for _, module := range modules {
-		project, err := UpdateDependencies(ctx, Project(&module))
-		if err != nil {
-			return nil, err
-		}
-		e.projects[module.Key()] = project
-	}
-
-	for _, dir := range externalDirs {
-		lib, err := LoadExternalLibrary(dir)
-		if err != nil {
-			return nil, err
-		}
-		project, err := UpdateDependencies(ctx, Project(&lib))
+	for _, project := range projects {
+		project, err := UpdateDependencies(ctx, project)
 		if err != nil {
 			return nil, err
 		}
@@ -421,7 +409,6 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 					return e.mustSchema(ctx, key, built, schemas)
 				}
 
-				fmt.Printf("building/generating %s\n", key)
 				switch e.projects[key].(type) {
 				case Module:
 					err := e.build(ctx, key, built, schemas)

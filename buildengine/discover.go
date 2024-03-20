@@ -6,12 +6,46 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// DiscoverModules recursively loads all modules under the given directories.
+// DiscoverProjects recursivley loads all modules under the given directories
+// (or if none provided, the current working directory is used) and external
+// libraries in externalLibDirs.
+func DiscoverProjects(ctx context.Context, dirs []string, externalLibDirs []string, stopOnError bool) ([]Project, error) {
+	out := []Project{}
+	logger := log.FromContext(ctx)
+
+	modules, err := discoverModules(context.Background(), dirs...)
+	if err != nil {
+		logger.Tracef("error discovering modules: %v", err)
+		if stopOnError {
+			return nil, err
+		}
+	} else {
+		for _, module := range modules {
+			out = append(out, Project(&module))
+		}
+	}
+	for _, dir := range externalLibDirs {
+		lib, err := LoadExternalLibrary(dir)
+		if err != nil {
+			logger.Tracef("error discovering external library: %v", err)
+			if stopOnError {
+				return nil, err
+			}
+		} else {
+			out = append(out, Project(&lib))
+		}
+	}
+	return out, nil
+}
+
+// discoverModules recursively loads all modules under the given directories.
 //
 // If no directories are provided, the current working directory is used.
-func DiscoverModules(ctx context.Context, dirs ...string) ([]Module, error) {
+func discoverModules(ctx context.Context, dirs ...string) ([]Module, error) {
 	if len(dirs) == 0 {
 		cwd, err := os.Getwd()
 		if err != nil {
