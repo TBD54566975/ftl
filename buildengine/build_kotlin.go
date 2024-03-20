@@ -44,7 +44,7 @@ func (e externalModuleContext) ExternalModules() []*schema.Module {
 
 func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
 	logger := log.FromContext(ctx)
-	if err := SetPOMProperties(ctx, module.Dir()); err != nil {
+	if err := SetPOMProperties(ctx, module.Dir); err != nil {
 		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Dir, err)
 	}
 
@@ -57,7 +57,7 @@ func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
 	}
 
 	logger.Debugf("Using build command '%s'", module.Build)
-	err := exec.Command(ctx, log.Debug, module.Dir(), "bash", "-c", module.Build).RunBuffered(ctx)
+	err := exec.Command(ctx, log.Debug, module.Dir, "bash", "-c", module.Build).RunBuffered(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to build module %s: %w", module.Module, err)
 	}
@@ -128,12 +128,13 @@ exec java -cp "classes:$(cat classpath.txt)" xyz.block.ftl.main.MainKt
 func generateExternalModules(ctx context.Context, project Project, sch *schema.Schema) error {
 	logger := log.FromContext(ctx)
 	funcs := maps.Clone(scaffoldFuncs)
+	config := project.Config()
 
 	// Wipe the modules directory to ensure we don't have any stale modules.
-	_ = os.RemoveAll(filepath.Join(project.Dir(), "target", "generated-sources", "ftl"))
+	_ = os.RemoveAll(filepath.Join(config.Dir, "target", "generated-sources", "ftl"))
 
 	logger.Debugf("Generating external modules")
-	return internal.ScaffoldZip(kotlinruntime.ExternalModuleTemplates(), project.Dir(), externalModuleContext{
+	return internal.ScaffoldZip(kotlinruntime.ExternalModuleTemplates(), config.Dir, externalModuleContext{
 		project: project,
 		Schema:  sch,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))

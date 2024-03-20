@@ -72,7 +72,7 @@ func discoverModules(ctx context.Context, dirs ...string) ([]Module, error) {
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
-		return out[i].Key() < out[j].Key()
+		return out[i].Config().Key < out[j].Config().Key
 	})
 	return out, nil
 }

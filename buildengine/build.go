@@ -13,7 +13,7 @@ func Build(ctx context.Context, sch *schema.Schema, module Module) error {
 	logger := log.FromContext(ctx).Scope(module.Module)
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Building module")
-	switch module.Language() {
+	switch module.Language {
 	case "go":
 		return buildGo(ctx, sch, module)
 
@@ -21,6 +21,6 @@ func Build(ctx context.Context, sch *schema.Schema, module Module) error {
 		return buildKotlin(ctx, sch, module)
 
 	default:
-		return fmt.Errorf("unknown language %q", module.Language())
+		return fmt.Errorf("unknown language %q", module.Language)
 	}
 }

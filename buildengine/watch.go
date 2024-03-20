@@ -57,28 +57,26 @@ func Watch(ctx context.Context, period time.Duration, dirs []string, externalLib
 			projects, _ := DiscoverProjects(ctx, dirs, externalLibDirs, false)
 
 			projectsByDir := maps.FromSlice(projects, func(project Project) (string, Project) {
-				return project.Dir(), project
+				return project.Config().Dir, project
 			})
 
 			// Trigger events for removed projects.
 			for _, existingProject := range existingProjects {
-				if _, haveProject := projectsByDir[existingProject.Project.Dir()]; !haveProject {
-					if _, ok := existingProject.Project.(Module); ok {
-						logger.Debugf("%s %s removed: %s", existingProject.Project.Kind(), existingProject.Project.Key(), existingProject.Project.Dir())
-					} else {
-						logger.Debugf("%s removed: %s", existingProject.Project.Kind(), existingProject.Project.Dir())
-					}
+				existingConfig := existingProject.Project.Config()
+				if _, haveProject := projectsByDir[existingConfig.Dir]; !haveProject {
+					logger.Debugf("removed %s", existingProject.Project)
 					topic.Publish(WatchEventProjectRemoved{Project: existingProject.Project})
-					delete(existingProjects, existingProject.Project.Dir())
+					delete(existingProjects, existingConfig.Dir)
 				}
 			}
 
 			// Compare the projects to the existing projects.
 			for _, project := range projectsByDir {
-				existingProject, haveExistingProject := existingProjects[project.Dir()]
+				config := project.Config()
+				existingProject, haveExistingProject := existingProjects[config.Dir]
 				hashes, err := ComputeFileHashes(project)
 				if err != nil {
-					logger.Tracef("error computing file hashes for %s: %v", project.Dir(), err)
+					logger.Tracef("error computing file hashes for %s: %v", config.Dir, err)
 					continue
 				}
 
@@ -87,19 +85,14 @@ func Watch(ctx context.Context, period time.Duration, dirs []string, externalLib
 					if equal {
 						continue
 					}
-					logger.Debugf("%s %s changed: %c%s", project.Kind(), project.Key(), changeType, path)
+					logger.Debugf("changed %s: %c%s", project, changeType, path)
 					topic.Publish(WatchEventProjectChanged{Project: existingProject.Project, Change: changeType, Path: path})
-					existingProjects[project.Dir()] = projectHashes{Hashes: hashes, Project: existingProject.Project}
+					existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: existingProject.Project}
 					continue
 				}
-				if _, ok := project.(Module); ok {
-					logger.Debugf("%s %s added: %s", project.Kind(), project.Key(), project.Dir())
-				} else {
-					logger.Debugf("%s added: %s", project.Kind(), project.Dir())
-				}
-
+				logger.Debugf("added %s", project)
 				topic.Publish(WatchEventProjectAdded{Project: project})
-				existingProjects[project.Dir()] = projectHashes{Hashes: hashes, Project: project}
+				existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: project}
 			}
 		}
 	}()

@@ -23,7 +23,7 @@ import (
 // Project with those dependencies populated.
 func UpdateDependencies(ctx context.Context, project Project) (Project, error) {
 	logger := log.FromContext(ctx)
-	logger.Debugf("Extracting dependencies for module %s", project.Key())
+	logger.Debugf("Extracting dependencies for %s", project)
 	dependencies, err := extractDependencies(project)
 	if err != nil {
 		return Project(&Module{}), err
@@ -43,24 +43,25 @@ func UpdateDependencies(ctx context.Context, project Project) (Project, error) {
 	return out, nil
 }
 
-func extractDependencies(project Project) ([]string, error) {
+func extractDependencies(project Project) ([]ProjectKey, error) {
+	config := project.Config()
 	name := ""
 	if config, ok := project.(Module); ok {
 		name = config.Module
 	}
-	switch project.Language() {
+	switch config.Language {
 	case "go":
-		return extractGoFTLImports(name, project.Dir())
+		return extractGoFTLImports(name, config.Dir)
 
 	case "kotlin":
-		return extractKotlinFTLImports(name, project.Dir())
+		return extractKotlinFTLImports(name, config.Dir)
 
 	default:
-		return nil, fmt.Errorf("unsupported language: %s", project.Language())
+		return nil, fmt.Errorf("unsupported language: %s", config.Language)
 	}
 }
 
-func extractGoFTLImports(self, dir string) ([]string, error) {
+func extractGoFTLImports(self, dir string) ([]ProjectKey, error) {
 	dependencies := map[string]bool{}
 	fset := token.NewFileSet()
 	err := WalkDir(dir, func(path string, d fs.DirEntry) error {
@@ -99,10 +100,10 @@ func extractGoFTLImports(self, dir string) ([]string, error) {
 	}
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
-	return modules, nil
+	return ProjectKeysFromModuleNames(modules), nil
 }
 
-func extractKotlinFTLImports(self, dir string) ([]string, error) {
+func extractKotlinFTLImports(self, dir string) ([]ProjectKey, error) {
 	dependencies := map[string]bool{}
 	kotlinImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
 
@@ -138,5 +139,5 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	}
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
-	return modules, nil
+	return ProjectKeysFromModuleNames(modules), nil
 }

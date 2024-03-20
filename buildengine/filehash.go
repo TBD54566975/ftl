@@ -64,10 +64,12 @@ func CompareFileHashes(oldFiles, newFiles FileHashes) (FileChangeType, string, b
 // ComputeFileHashes computes the SHA256 hash of all (non-git-ignored) files in
 // the given directory.
 func ComputeFileHashes(module Project) (FileHashes, error) {
+	config := module.Config()
+
 	fileHashes := make(FileHashes)
-	err := WalkDir(module.Dir(), func(srcPath string, entry fs.DirEntry) error {
-		for _, pattern := range module.Watch() {
-			relativePath, err := filepath.Rel(module.Dir(), srcPath)
+	err := WalkDir(config.Dir, func(srcPath string, entry fs.DirEntry) error {
+		for _, pattern := range config.Watch {
+			relativePath, err := filepath.Rel(config.Dir, srcPath)
 			if err != nil {
 				return err
 			}

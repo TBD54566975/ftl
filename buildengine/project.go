@@ -10,96 +10,111 @@ import (
 	"github.com/TBD54566975/ftl/common/moduleconfig"
 )
 
+// Project models FTL modules and external libraries and is used to manage dependencies within the build engine
 type Project interface {
-	Dir() string
-	Key() string
-	Language() string
-	Watch() []string
-	Dependencies() []string
-	Kind() string
+	Config() ProjectConfig
+	CopyWithDependencies([]ProjectKey) Project
+	String() string
+}
 
-	CopyWithDependencies([]string) Project
+type ProjectConfig struct {
+	Key          ProjectKey
+	Dir          string
+	Language     string
+	Watch        []string
+	Dependencies []ProjectKey
 }
 
 var _ = (Project)(Module{})
 var _ = (Project)(ExternalLibrary{})
 
+// Module represents an FTL module in the build engine
 type Module struct {
 	moduleconfig.ModuleConfig
-	Deps []string
+	Dependencies []string
 }
 
-func (m Module) Dir() string {
-	return m.ModuleConfig.Dir
-}
-
-func (m Module) Key() string {
-	return m.ModuleConfig.Module
-}
-
-func (m Module) Language() string {
-	return m.ModuleConfig.Language
-}
-
-func (m Module) Watch() []string {
-	return m.ModuleConfig.Watch
-}
-
-func (m Module) Dependencies() []string {
-	return m.Deps
-}
-
-func (m Module) CopyWithDependencies(dependencies []string) Project {
-	module := reflect.DeepCopy(m)
-	module.Deps = dependencies
-	return Project(module)
-}
-
-func (m Module) Kind() string {
-	return "module"
-}
-
-type ExternalLibrary struct {
-	Directory string
-	Lang      string
-	Deps      []string
-}
-
-func (e ExternalLibrary) Dir() string {
-	return e.Directory
-}
-
-func (e ExternalLibrary) Key() string {
-	return e.Dir()
-}
-
-func (e ExternalLibrary) Language() string {
-	return e.Lang
-}
-
-func (e ExternalLibrary) Watch() []string {
-	switch e.Lang {
-	case "go":
-		return []string{"**/*.go", "go.mod", "go.sum"}
-	case "kotlin":
-		return []string{"pom.xml", "src/**", "target/generated-sources"}
-	default:
-		panic(fmt.Sprintf("unknown language %T", e.Lang))
+func (m Module) Config() ProjectConfig {
+	return ProjectConfig{
+		Key:          ProjectKey(m.ModuleConfig.Module),
+		Dir:          m.ModuleConfig.Dir,
+		Language:     m.ModuleConfig.Language,
+		Watch:        m.ModuleConfig.Watch,
+		Dependencies: ProjectKeysFromModuleNames(m.Dependencies),
 	}
 }
 
-func (e ExternalLibrary) Dependencies() []string {
-	return e.Deps
+func (m Module) CopyWithDependencies(dependencies []ProjectKey) Project {
+	module := reflect.DeepCopy(m)
+	module.Dependencies = StringsFromProjectKeys(dependencies)
+	return Project(module)
 }
 
-func (e ExternalLibrary) CopyWithDependencies(dependencies []string) Project {
+func (m Module) String() string {
+	return "module:" + m.ModuleConfig.Module
+}
+
+// ExternalLibrary represents a library that makes use of FTL modules, but is not itself an FTL module
+type ExternalLibrary struct {
+	Dir          string
+	Language     string
+	Dependencies []string
+}
+
+func (e ExternalLibrary) Config() ProjectConfig {
+	var watch []string
+	switch e.Language {
+	case "go":
+		watch = []string{"**/*.go", "go.mod", "go.sum"}
+	case "kotlin":
+		watch = []string{"pom.xml", "src/**", "target/generated-sources"}
+	default:
+		panic(fmt.Sprintf("unknown language %T", e.Language))
+	}
+
+	return ProjectConfig{
+		Key:          ProjectKey("lib:" + e.Dir),
+		Dir:          e.Dir,
+		Language:     e.Language,
+		Watch:        watch,
+		Dependencies: ProjectKeysFromModuleNames(e.Dependencies),
+	}
+}
+
+func (e ExternalLibrary) CopyWithDependencies(dependencies []ProjectKey) Project {
 	lib := reflect.DeepCopy(e)
-	lib.Deps = dependencies
+	lib.Dependencies = StringsFromProjectKeys(dependencies)
 	return Project(lib)
 }
 
-func (e ExternalLibrary) Kind() string {
-	return "library"
+func (e ExternalLibrary) String() string {
+	return "library:" + e.Dir
+}
+
+// Key is a unique identifier for the project (ie: a module name or a library path)
+// It is used to:
+// - build the dependency graph
+// - map changes in the file system to the project
+type ProjectKey string
+
+func ProjectKeyForModuleName(name string) ProjectKey {
+	return ProjectKey(name)
+}
+
+func StringsFromProjectKeys(keys []ProjectKey) []string {
+	strs := make([]string, len(keys))
+	for i, key := range keys {
+		strs[i] = string(key)
+	}
+	return strs
+}
+
+func ProjectKeysFromModuleNames(names []string) []ProjectKey {
+	keys := make([]ProjectKey, len(names))
+	for i, str := range names {
+		keys[i] = ProjectKey(str)
+	}
+	return keys
 }
 
 // LoadModule loads a module from the given directory.
@@ -114,23 +129,23 @@ func LoadModule(dir string) (Module, error) {
 
 func LoadExternalLibrary(dir string) (ExternalLibrary, error) {
 	lib := ExternalLibrary{
-		Directory: dir,
+		Dir: dir,
 	}
 
 	goModPath := filepath.Join(dir, "go.mod")
 	pomPath := filepath.Join(dir, "pom.xml")
 	if _, err := os.Stat(goModPath); err == nil {
-		lib.Lang = "go"
+		lib.Language = "go"
 	} else if !os.IsNotExist(err) {
 		return ExternalLibrary{}, err
 	} else {
 		if _, err = os.Stat(pomPath); err == nil {
-			lib.Lang = "kotlin"
+			lib.Language = "kotlin"
 		} else if !os.IsNotExist(err) {
 			return ExternalLibrary{}, err
 		}
 	}
-	if lib.Lang == "" {
+	if lib.Language == "" {
 		return ExternalLibrary{}, fmt.Errorf("could not autodetect language: no go.mod or pom.xml found in %s", dir)
 	}
 
