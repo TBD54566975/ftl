@@ -5,8 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"golang.design/x/reflect"
+
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 )
 
 type Project interface {
