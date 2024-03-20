@@ -26,7 +26,7 @@ func DiscoverModules(ctx context.Context, dirs ...string) ([]Module, error) {
 				return nil
 			}
 			moduleDir := filepath.Dir(path)
-			module, err := LoadModule(ctx, moduleDir)
+			module, err := LoadModule(moduleDir)
 			if err != nil {
 				return err
 			}

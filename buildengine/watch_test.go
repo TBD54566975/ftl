@@ -57,18 +57,18 @@ func TestWatch(t *testing.T) {
 	found := 0
 	for _, event := range allEvents {
 		switch event := event.(type) {
-		case WatchEventModuleAdded:
-			if event.Module.Module == "one" || event.Module.Module == "two" {
+		case WatchEventProjectAdded:
+			if event.Project.Module == "one" || event.Project.Module == "two" {
 				found++
 			}
 
-		case WatchEventModuleRemoved:
-			if event.Module.Module == "two" {
+		case WatchEventProjectRemoved:
+			if event.Project.Module == "two" {
 				found++
 			}
 
-		case WatchEventModuleChanged:
-			if event.Module.Module == "one" {
+		case WatchEventProjectChanged:
+			if event.Project.Module == "one" {
 				found++
 			}
 		}

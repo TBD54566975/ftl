@@ -36,17 +36,12 @@ type DeployClient interface {
 
 // Deploy a module to the FTL controller with the given number of replicas. Optionally wait for the deployment to become ready.
 func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnline bool, client DeployClient) error {
-	moduleConfig, ok := module.ModuleConfig()
-	if !ok {
-		return fmt.Errorf("can not deploy non-FTL module %s", module.Key())
-	}
-
-	logger := log.FromContext(ctx).Scope(moduleConfig.Module)
+	logger := log.FromContext(ctx).Scope(module.Module)
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Deploying module")
 
-	deployDir := moduleConfig.AbsDeployDir()
-	files, err := findFiles(deployDir, moduleConfig.Deploy)
+	deployDir := module.AbsDeployDir()
+	files, err := findFiles(deployDir, module.Deploy)
 	if err != nil {
 		logger.Errorf(err, "failed to find files in %s", deployDir)
 		return err
@@ -62,9 +57,9 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 		return err
 	}
 
-	moduleSchema, err := loadProtoSchema(deployDir, moduleConfig, replicas)
+	moduleSchema, err := loadProtoSchema(deployDir, module.ModuleConfig, replicas)
 	if err != nil {
-		return fmt.Errorf("failed to load protobuf schema from %q: %w", moduleConfig.Schema, err)
+		return fmt.Errorf("failed to load protobuf schema from %q: %w", module.Schema, err)
 	}
 
 	logger.Debugf("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))

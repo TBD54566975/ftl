@@ -10,37 +10,37 @@ import (
 	"github.com/TBD54566975/ftl/internal/maps"
 )
 
-// A WatchEvent is an event that occurs when a module is added, removed, or
+// A WatchEvent is an event that occurs when a project is added, removed, or
 // changed.
 type WatchEvent interface{ watchEvent() }
 
-type WatchEventModuleAdded struct{ Module Module }
+type WatchEventProjectAdded struct{ Project Project }
 
-func (WatchEventModuleAdded) watchEvent() {}
+func (WatchEventProjectAdded) watchEvent() {}
 
-type WatchEventModuleRemoved struct{ Module Module }
+type WatchEventProjectRemoved struct{ Project Project }
 
-func (WatchEventModuleRemoved) watchEvent() {}
+func (WatchEventProjectRemoved) watchEvent() {}
 
-type WatchEventModuleChanged struct {
-	Module Module
-	Change FileChangeType
-	Path   string
+type WatchEventProjectChanged struct {
+	Project Project
+	Change  FileChangeType
+	Path    string
 }
 
-func (WatchEventModuleChanged) watchEvent() {}
+func (WatchEventProjectChanged) watchEvent() {}
 
-// Watch the given directories for new modules, deleted modules, and changes to
-// existing modules, publishing a change event for each.
+// Watch the given directories for new projects, deleted projects, and changes to
+// existing projects, publishing a change event for each.
 func Watch(ctx context.Context, period time.Duration, dirs []string, externalLibDirs []string) *pubsub.Topic[WatchEvent] {
 	logger := log.FromContext(ctx)
 	topic := pubsub.New[WatchEvent]()
 	go func() {
-		type moduleHashes struct {
-			Hashes FileHashes
-			Module Module
+		type projectHashes struct {
+			Hashes  FileHashes
+			Project Project
 		}
-		existingModules := map[string]moduleHashes{}
+		existingProjects := map[string]projectHashes{}
 		wait := topic.Wait()
 		for {
 			select {
@@ -54,63 +54,75 @@ func Watch(ctx context.Context, period time.Duration, dirs []string, externalLib
 				return
 			}
 
-			// Find all modules in the given directories.
-			modules, err := DiscoverModules(ctx, dirs...)
-			if err != nil {
-				logger.Tracef("error discovering modules: %v", err)
-				continue
-			}
-			for _, dir := range externalLibDirs {
-				if module, err := LoadExternalLibrary(ctx, dir); err == nil {
-					modules = append(modules, module)
-				}
-			}
-			modulesByDir := maps.FromSlice(modules, func(module Module) (string, Module) {
-				return module.Dir(), module
+			projects := projectsIn(logger, dirs, externalLibDirs)
+
+			projectsByDir := maps.FromSlice(projects, func(project Project) (string, Project) {
+				return project.Dir(), project
 			})
 
-			// Trigger events for removed modules.
-			for _, existingModule := range existingModules {
-				if _, haveModule := modulesByDir[existingModule.Module.Dir()]; !haveModule {
-					if _, ok := existingModule.Module.ModuleConfig(); ok {
-						logger.Debugf("%s %s removed: %s", existingModule.Module.Kind(), existingModule.Module.Key(), existingModule.Module.Dir())
+			// Trigger events for removed projects.
+			for _, existingProject := range existingProjects {
+				if _, haveProject := projectsByDir[existingProject.Project.Dir()]; !haveProject {
+					if _, ok := existingProject.Project.(Module); ok {
+						logger.Debugf("%s %s removed: %s", existingProject.Project.Kind(), existingProject.Project.Key(), existingProject.Project.Dir())
 					} else {
-						logger.Debugf("%s removed: %s", existingModule.Module.Kind(), existingModule.Module.Dir())
+						logger.Debugf("%s removed: %s", existingProject.Project.Kind(), existingProject.Project.Dir())
 					}
-					topic.Publish(WatchEventModuleRemoved{Module: existingModule.Module})
-					delete(existingModules, existingModule.Module.Dir())
+					topic.Publish(WatchEventProjectRemoved{Project: existingProject.Project})
+					delete(existingProjects, existingProject.Project.Dir())
 				}
 			}
 
-			// Compare the modules to the existing modules.
-			for _, module := range modulesByDir {
-				existingModule, haveExistingModule := existingModules[module.Dir()]
-				hashes, err := ComputeFileHashes(module)
+			// Compare the projects to the existing projects.
+			for _, project := range projectsByDir {
+				existingProject, haveExistingProject := existingProjects[project.Dir()]
+				hashes, err := ComputeFileHashes(project)
 				if err != nil {
-					logger.Tracef("error computing file hashes for %s: %v", module.Dir(), err)
+					logger.Tracef("error computing file hashes for %s: %v", project.Dir(), err)
 					continue
 				}
 
-				if haveExistingModule {
-					changeType, path, equal := CompareFileHashes(existingModule.Hashes, hashes)
+				if haveExistingProject {
+					changeType, path, equal := CompareFileHashes(existingProject.Hashes, hashes)
 					if equal {
 						continue
 					}
-					logger.Debugf("%s %s changed: %c%s", module.Kind(), module.Key(), changeType, path)
-					topic.Publish(WatchEventModuleChanged{Module: existingModule.Module, Change: changeType, Path: path})
-					existingModules[module.Dir()] = moduleHashes{Hashes: hashes, Module: existingModule.Module}
+					logger.Debugf("%s %s changed: %c%s", project.Kind(), project.Key(), changeType, path)
+					topic.Publish(WatchEventProjectChanged{Project: existingProject.Project, Change: changeType, Path: path})
+					existingProjects[project.Dir()] = projectHashes{Hashes: hashes, Project: existingProject.Project}
 					continue
 				}
-				if _, ok := module.ModuleConfig(); ok {
-					logger.Debugf("%s %s added: %s", module.Kind(), module.Key(), module.Dir())
+				if _, ok := project.(Module); ok {
+					logger.Debugf("%s %s added: %s", project.Kind(), project.Key(), project.Dir())
 				} else {
-					logger.Debugf("%s added: %s", module.Kind(), module.Dir())
+					logger.Debugf("%s added: %s", project.Kind(), project.Dir())
 				}
 
-				topic.Publish(WatchEventModuleAdded{Module: module})
-				existingModules[module.Dir()] = moduleHashes{Hashes: hashes, Module: module}
+				topic.Publish(WatchEventProjectAdded{Project: project})
+				existingProjects[project.Dir()] = projectHashes{Hashes: hashes, Project: project}
 			}
 		}
 	}()
 	return topic
+}
+
+func projectsIn(logger *log.Logger, dirs []string, externalLibDirs []string) []Project {
+	out := []Project{}
+
+	modules, err := DiscoverModules(context.Background(), dirs...)
+	if err != nil {
+		logger.Tracef("error discovering modules: %v", err)
+	} else {
+		for _, module := range modules {
+			out = append(out, Project(&module))
+		}
+	}
+
+	for _, dir := range externalLibDirs {
+		if lib, err := LoadExternalLibrary(dir); err == nil {
+			out = append(out, Project(&lib))
+		}
+	}
+
+	return out
 }
