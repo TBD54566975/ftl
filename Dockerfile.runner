@@ -27,6 +27,8 @@ RUN just build-kt-runtime
 
 # Build runner
 RUN just errtrace
+# Reset timestamps so that the build state is reset
+RUN git ls-files -z | xargs -0 touch -r go.mod
 RUN just build ftl-runner
 RUN just build ftl
 

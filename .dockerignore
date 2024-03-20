@@ -4,6 +4,7 @@
 **/.gradle
 **/.idea
 **/.vscode
+!.vscode/tasks.json
 **/*.sw*
 frontend/dist
 **/.DS_Store
