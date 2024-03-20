@@ -30,8 +30,8 @@ build-all: build-frontend build-generate build-kt-runtime build-protos build-sql
 
 # Run "go generate" on all packages
 build-generate:
-  @mk backend/schema/aliaskind_enumer.go : backend/schema/metadataalias.go -- go generate -x backend/schema
-  @mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x internal/log
+  @mk backend/schema/aliaskind_enumer.go : backend/schema/metadataalias.go -- go generate -x ./backend/schema
+  @mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x ./internal/log
 
 # Build command-line tools
 build +tools: build-protos build-sqlc build-zips build-frontend
