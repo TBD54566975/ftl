@@ -329,7 +329,6 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 	wg.Go(func() error {
 		defer close(deployQueue)
 
-		//TODO: don't always include external libs
 		return e.buildWithCallback(ctx, func(ctx context.Context, project Project) error {
 			if _, ok := project.(Module); ok {
 				select {
