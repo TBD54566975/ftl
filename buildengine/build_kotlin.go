@@ -42,7 +42,7 @@ func (e externalModuleContext) ExternalModules() []*schema.Module {
 	return modules
 }
 
-func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
+func buildKotlinModule(ctx context.Context, sch *schema.Schema, module Module) error {
 	logger := log.FromContext(ctx)
 	if err := SetPOMProperties(ctx, module.Dir); err != nil {
 		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Dir, err)
@@ -63,6 +63,10 @@ func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
 	}
 
 	return nil
+}
+
+func buildKotlinLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {
+	panic("Implement me")
 }
 
 // SetPOMProperties updates the ftl.version properties in the

@@ -51,7 +51,7 @@ func (m Module) CopyWithDependencies(dependencies []ProjectKey) Project {
 }
 
 func (m Module) String() string {
-	return "module:" + m.ModuleConfig.Module
+	return "module " + m.ModuleConfig.Module
 }
 
 // ExternalLibrary represents a library that makes use of FTL modules, but is not itself an FTL module
@@ -88,7 +88,7 @@ func (e ExternalLibrary) CopyWithDependencies(dependencies []ProjectKey) Project
 }
 
 func (e ExternalLibrary) String() string {
-	return "library:" + e.Dir
+	return "library " + e.Dir
 }
 
 // Key is a unique identifier for the project (ie: a module name or a library path)

@@ -86,7 +86,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	funcs := maps.Clone(scaffoldFuncs)
 
 	logger.Debugf("Generating external modules")
-	GenerateExternalModules(ExternalModuleContext{
+	generateExternalModules(ExternalModuleContext{
 		ModuleDir:    moduleDir,
 		GoVersion:    goModVersion,
 		FTLVersion:   ftlVersion,
@@ -170,7 +170,28 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
-func GenerateExternalModules(context ExternalModuleContext) error {
+func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *schema.Schema) error {
+	goModFile, replacements, err := goModFileWithReplacements(filepath.Join(dir, "go.mod"))
+	if err != nil {
+		return fmt.Errorf("failed to propogate replacements for library %s: %w", dir, err)
+	}
+
+	ftlVersion := ""
+	if ftl.IsRelease(ftl.Version) {
+		ftlVersion = ftl.Version
+	}
+
+	return generateExternalModules(ExternalModuleContext{
+		ModuleDir:    dir,
+		GoVersion:    goModFile.Go.Version,
+		FTLVersion:   ftlVersion,
+		Schema:       schema,
+		Replacements: replacements,
+	})
+
+}
+
+func generateExternalModules(context ExternalModuleContext) error {
 	// Wipe the modules directory to ensure we don't have any stale modules.
 	err := os.RemoveAll(filepath.Join(buildDir(context.ModuleDir), "go", "modules"))
 	if err != nil {
@@ -298,7 +319,7 @@ func genType(module *schema.Module, t schema.Type) string {
 
 // Update go.mod file to include the FTL version and return the Go version and any replace directives.
 func updateGoModule(goModPath string) (replacements []*modfile.Replace, goVersion string, err error) {
-	goModFile, replacements, err := GoModFileWithReplacements(goModPath)
+	goModFile, replacements, err := goModFileWithReplacements(goModPath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to update %s: %w", goModPath, err)
 	}
@@ -329,7 +350,7 @@ func updateGoModule(goModPath string) (replacements []*modfile.Replace, goVersio
 	return replacements, goModFile.Go.Version, nil
 }
 
-func GoModFileWithReplacements(goModPath string) (*modfile.File, []*modfile.Replace, error) {
+func goModFileWithReplacements(goModPath string) (*modfile.File, []*modfile.Replace, error) {
 	goModBytes, err := os.ReadFile(goModPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read %s: %w", goModPath, err)

@@ -17,11 +17,9 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/TBD54566975/ftl"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -406,21 +404,11 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 					return e.mustSchema(ctx, key, built, schemas)
 				}
 
-				switch e.projects[key].(type) {
-				case Module:
-					err := e.build(ctx, key, built, schemas)
-					if err == nil && callback != nil {
-						return callback(ctx, e.projects[key])
-					}
-					return err
-				case ExternalLibrary:
-					if err := e.generateStubsForExternalLib(ctx, key, built); err != nil {
-						return fmt.Errorf("could not build stubs for %q: %w", key, err)
-					}
-					return nil
-				default:
-					panic("unknown project type")
+				err := e.build(ctx, key, built, schemas)
+				if err == nil && callback != nil {
+					return callback(ctx, e.projects[key])
 				}
+				return err
 			})
 		}
 		err := wg.Wait()
@@ -454,10 +442,6 @@ func (e *Engine) build(ctx context.Context, key ProjectKey, built map[ProjectKey
 	if !ok {
 		return fmt.Errorf("project %q not found", key)
 	}
-	module, ok := project.(Module)
-	if !ok {
-		return fmt.Errorf("can not build project %q as it is not a module", key)
-	}
 
 	combined := map[ProjectKey]*schema.Module{}
 	if err := e.gatherSchemas(built, project, combined); err != nil {
@@ -465,59 +449,18 @@ func (e *Engine) build(ctx context.Context, key ProjectKey, built map[ProjectKey
 	}
 	sch := &schema.Schema{Modules: maps.Values(combined)}
 
-	err := Build(ctx, sch, module)
+	err := Build(ctx, sch, project)
 	if err != nil {
 
 		return err
 	}
-	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(module.Dir, module.DeployDir, module.Schema))
-	if err != nil {
-		return fmt.Errorf("could not load schema for %s: %w", module, err)
+	if module, ok := project.(Module); ok {
+		moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(module.Dir, module.DeployDir, module.Schema))
+		if err != nil {
+			return fmt.Errorf("could not load schema for %s: %w", module, err)
+		}
+		schemas <- moduleSchema
 	}
-	schemas <- moduleSchema
-	return nil
-}
-
-func (e *Engine) generateStubsForExternalLib(ctx context.Context, key ProjectKey, built map[ProjectKey]*schema.Module) error {
-	//TODO: support kotlin
-	project, ok := e.projects[key]
-	if !ok {
-		return fmt.Errorf("project %q not found", key)
-	}
-	lib, ok := project.(ExternalLibrary)
-	if !ok {
-		return fmt.Errorf("project %q is not a library", key)
-	}
-
-	logger := log.FromContext(ctx)
-
-	goModFile, replacements, err := compile.GoModFileWithReplacements(filepath.Join(lib.Dir, "go.mod"))
-	if err != nil {
-		return fmt.Errorf("failed to propogate replacements for %s: %w", lib, err)
-	}
-
-	ftlVersion := ""
-	if ftl.IsRelease(ftl.Version) {
-		ftlVersion = ftl.Version
-	}
-
-	combined := map[ProjectKey]*schema.Module{}
-	if err := e.gatherSchemas(built, project, combined); err != nil {
-		return err
-	}
-	sch := &schema.Schema{Modules: maps.Values(combined)}
-
-	err = compile.GenerateExternalModules(compile.ExternalModuleContext{
-		ModuleDir:    lib.Dir,
-		GoVersion:    goModFile.Go.Version,
-		FTLVersion:   ftlVersion,
-		Schema:       sch,
-		Replacements: replacements,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to generate external modules for %s: %w", lib, err)
-	}
-	logger.Infof("Generated stubs %v for %s", lib.Dependencies, lib.Dir)
 	return nil
 }
 
