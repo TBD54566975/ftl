@@ -8,11 +8,6 @@ import io.gitlab.arturbosch.detekt.api.Severity
 import io.gitlab.arturbosch.detekt.api.config
 import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
-import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Path
-import java.time.OffsetDateTime
-import kotlin.io.path.createDirectories
 import org.jetbrains.kotlin.cfg.getDeclarationDescriptorIncludingConstructors
 import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.com.intellij.psi.PsiComment
@@ -20,7 +15,6 @@ import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.impl.referencedProperty
-import org.jetbrains.kotlin.descriptors.isFinalOrEnum
 import org.jetbrains.kotlin.diagnostics.DiagnosticUtils.getLineAndColumnInPsiFile
 import org.jetbrains.kotlin.diagnostics.PsiDiagnosticUtils.LineAndColumn
 import org.jetbrains.kotlin.name.FqName
@@ -28,6 +22,7 @@ import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtDeclaration
+import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtEnumEntry
 import org.jetbrains.kotlin.psi.KtExpression
@@ -66,10 +61,14 @@ import xyz.block.ftl.Database
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Json
 import xyz.block.ftl.Method
+import xyz.block.ftl.secrets.Secret
 import xyz.block.ftl.v1.schema.*
-import xyz.block.ftl.v1.schema.Array
 import xyz.block.ftl.v1.schema.Enum
-import xyz.block.ftl.v1.schema.Verb
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.file.Path
+import java.time.OffsetDateTime
+import kotlin.io.path.createDirectories
 
 data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
 
@@ -169,6 +168,8 @@ class SchemaExtractor(
         *extractDataDeclarations().toTypedArray(),
         *extractDatabases().toTypedArray(),
         *extractEnums().toTypedArray(),
+        *extractConfigs().toTypedArray(),
+        *extractSecrets().toTypedArray(),
       ),
       comments = moduleComments
     )
@@ -290,6 +291,70 @@ class SchemaExtractor(
         )
       }
       .toSet()
+  }
+
+  private fun extractConfigs(): Set<Decl> {
+    return extractSecretsOrConfigs(xyz.block.ftl.config.Config::class.qualifiedName!!).map {
+      Decl(
+        config = Config(
+          pos = it.position,
+          name = it.name,
+          type = it.type
+        )
+      )
+    }.toSet()
+  }
+
+  private fun extractSecrets(): Set<Decl> {
+    return extractSecretsOrConfigs(Secret::class.qualifiedName!!).map {
+      Decl(
+        secret = Secret(
+          pos = it.position,
+          name = it.name,
+          type = it.type
+        )
+      )
+    }.toSet()
+  }
+
+  data class SecretConfigData(val name: String, val type: Type, val position: Position)
+
+  private fun extractSecretsOrConfigs(qualifiedPropertyName: String): List<SecretConfigData> {
+    return file.declarations
+      .filter {
+        (it as? KtProperty)
+          ?.getDeclarationDescriptorIncludingConstructors(bindingContext)?.referencedProperty?.returnType
+          ?.fqNameOrNull()?.asString() == qualifiedPropertyName
+      }.flatMap { it.children.asSequence() }
+      .map {
+        val position = it.getLineAndColumn().toPosition()
+        var type: KotlinType? = null
+        var name = ""
+        when (it) {
+          is KtCallExpression -> {
+            it.getResolvedCall(bindingContext)?.valueArguments?.entries?.forEach { arg ->
+              if (arg.key.name.asString() == "name") {
+                name = arg.value.toString().trim('"')
+              } else if (arg.key.name.asString() == "cls") {
+                type = (arg.key.varargElementType ?: arg.key.type).arguments.single().type
+              }
+            }
+          }
+
+          is KtDotQualifiedExpression -> {
+            it.getResolvedCall(bindingContext)?.let { call ->
+              name = call.valueArguments.entries.single().value.toString().trim('"')
+              type = call.typeArguments.values.single()
+            }
+          }
+
+          else -> {
+            throw IllegalArgumentException("$position: Could not extract secret or config")
+          }
+        }
+
+        SecretConfigData(name, type!!.toSchemaType(position), position)
+      }
   }
 
   private fun extractDataDeclarations(): Set<Decl> {
