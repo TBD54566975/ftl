@@ -21,6 +21,10 @@ func TestSchemaString(t *testing.T) {
 module todo {
   config configValue String
 
+  secret secretValue String
+
+  database testdb
+
   data CreateRequest {
     name {String: String}? +alias json "rqn"
   }
@@ -39,10 +43,8 @@ module todo {
     when Time
   }
 
-  secret secretValue String
-
   verb create(todo.CreateRequest) todo.CreateResponse
-      +calls todo.destroy
+      +calls todo.destroy  +database calls todo.testdb 
 
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{id}
@@ -95,6 +97,9 @@ func TestVisit(t *testing.T) {
 Module
   Config
     String
+  Secret
+    String
+  Database
   Data
     Field
       Optional
@@ -115,12 +120,12 @@ Module
       String
     Field
       Time
-  Secret
-    String
   Verb
     Ref
     Ref
     MetadataCalls
+      Ref
+    MetadataDatabases
       Ref
   Verb
     Ref
@@ -365,6 +370,7 @@ func TestParseModule(t *testing.T) {
 module todo {
   config configValue String
   secret secretValue String
+  database testdb
 
   data CreateRequest {
     name {String: String}? +alias json "rqn"
@@ -381,7 +387,7 @@ module todo {
 	when Time
   }
   verb create(todo.CreateRequest) todo.CreateResponse
-  	+calls todo.destroy
+  	+calls todo.destroy +database calls todo.testdb
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
   	+ingress http GET /todo/destroy/{id}
 }
@@ -429,6 +435,9 @@ var testSchema = MustValidate(&Schema{
 					Name: "configValue",
 					Type: &String{},
 				},
+				&Database{
+					Name: "testdb",
+				},
 				&Data{
 					Name: "CreateRequest",
 					Fields: []*Field{
@@ -457,7 +466,10 @@ var testSchema = MustValidate(&Schema{
 				&Verb{Name: "create",
 					Request:  &Ref{Module: "todo", Name: "CreateRequest"},
 					Response: &Ref{Module: "todo", Name: "CreateResponse"},
-					Metadata: []Metadata{&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "destroy"}}}}},
+					Metadata: []Metadata{
+						&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "destroy"}}},
+						&MetadataDatabases{Calls: []*Ref{{Module: "todo", Name: "testdb"}}},
+					}},
 				&Verb{Name: "destroy",
 					Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyRequest"}}},
 					Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyResponse"}, &String{}}},

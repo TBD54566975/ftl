@@ -45,6 +45,37 @@ func TestExtractModuleSchema(t *testing.T) {
 	expected := `module one {
   config configValue one.Config
 
+  secret secretValue String
+
+  enum Color(String) {
+    Red("Red")
+    Blue("Blue")
+    Green("Green")
+    Yellow("Yellow")
+  }
+
+  // Comments about ColorInt.
+  enum ColorInt(Int) {
+    // RedInt is a color.
+    RedInt(0)
+    BlueInt(1)
+    // GreenInt is also a color.
+    GreenInt(2)
+    YellowInt(3)
+  }
+
+  enum IotaExpr(Int) {
+    First(1)
+    Second(3)
+    Third(5)
+  }
+
+  enum SimpleIota(Int) {
+    Zero(0)
+    One(1)
+    Two(2)
+  }
+
   data Config {
     field String
   }
@@ -76,37 +107,6 @@ func TestExtractModuleSchema(t *testing.T) {
   data SourceResp {
   }
 
-  enum Color(String) {
-    Red("Red")
-    Blue("Blue")
-    Green("Green")
-    Yellow("Yellow")
-  }
-
-  // Comments about ColorInt.
-  enum ColorInt(Int) {
-    // RedInt is a color.
-    RedInt(0)
-    BlueInt(1)
-    // GreenInt is also a color.
-    GreenInt(2)
-    YellowInt(3)
-  }
-
-  enum IotaExpr(Int) {
-    First(1)
-    Second(3)
-    Third(5)
-  }
-
-  enum SimpleIota(Int) {
-    Zero(0)
-    One(1)
-    Two(2)
-  }
-
-  secret secretValue String
-
   verb nothing(Unit) Unit
 
   verb sink(one.SinkReq) Unit
@@ -124,6 +124,12 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module two {
+		enum TwoEnum(String) {
+		  Red("Red")
+		  Blue("Blue")
+		  Green("Green")
+		}
+
 		data Payload<T> {
 		  body T
 		}
@@ -134,12 +140,6 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	  
 		data UserResponse {
 		  user two.User
-		}
-	  
-		enum TwoEnum(String) {
-		  Red("Red")
-		  Blue("Blue")
-		  Green("Green")
 		}
 	  
 		verb callsTwo(two.Payload<String>) two.Payload<String>  

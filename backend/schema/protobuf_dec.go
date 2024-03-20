@@ -103,7 +103,7 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 	case *schemapb.Metadata_Databases:
 		return &MetadataDatabases{
 			Pos:   posFromProto(s.Databases.Pos),
-			Calls: databaseListToSchema(s.Databases.Calls),
+			Calls: refListToSchema(s.Databases.Calls),
 		}
 
 	case *schemapb.Metadata_Ingress:

@@ -138,7 +138,7 @@ message MetadataCalls {
 
 message MetadataDatabases {
   optional Position pos = 1;
-  repeated Database calls = 2;
+  repeated Ref calls = 2;
 }
 
 message MetadataIngress {

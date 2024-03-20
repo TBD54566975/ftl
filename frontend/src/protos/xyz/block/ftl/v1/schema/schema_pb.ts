@@ -1051,9 +1051,9 @@ export class MetadataDatabases extends Message<MetadataDatabases> {
   pos?: Position;
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Database calls = 2;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref calls = 2;
    */
-  calls: Database[] = [];
+  calls: Ref[] = [];
 
   constructor(data?: PartialMessage<MetadataDatabases>) {
     super();
@@ -1064,7 +1064,7 @@ export class MetadataDatabases extends Message<MetadataDatabases> {
   static readonly typeName = "xyz.block.ftl.v1.schema.MetadataDatabases";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "calls", kind: "message", T: Database, repeated: true },
+    { no: 2, name: "calls", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataDatabases {

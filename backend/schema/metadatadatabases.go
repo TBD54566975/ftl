@@ -12,7 +12,7 @@ import (
 type MetadataDatabases struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Calls []*Database `parser:"'+' 'database' 'calls' @@ (',' @@)*" protobuf:"2"`
+	Calls []*Ref `parser:"'+' 'database' 'calls' @@ (',' @@)*" protobuf:"2"`
 }
 
 var _ Metadata = (*MetadataDatabases)(nil)
@@ -35,7 +35,7 @@ func (m *MetadataDatabases) String() string {
 		w += len(str)
 		fmt.Fprint(out, str)
 	}
-	fmt.Fprintln(out)
+	fmt.Fprint(out)
 	return out.String()
 }
 
@@ -51,6 +51,6 @@ func (*MetadataDatabases) schemaMetadata() {}
 func (m *MetadataDatabases) ToProto() proto.Message {
 	return &schemapb.MetadataDatabases{
 		Pos:   posToProto(m.Pos),
-		Calls: nodeListToProto[*schemapb.Database](m.Calls),
+		Calls: nodeListToProto[*schemapb.Ref](m.Calls),
 	}
 }
