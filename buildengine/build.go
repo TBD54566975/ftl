@@ -3,9 +3,12 @@ package buildengine
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // Build a module in the given directory given the schema and project config.
@@ -36,17 +39,27 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module) error {
 }
 
 func buildExternalLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).Scope(filepath.Base(lib.Dir))
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	logger.Infof("Generating stubs for %v", lib)
+	imported := slices.Map(sch.Modules, func(m *schema.Module) string {
+		return m.Name
+	})
+	logger.Infof("Generating stubs [%s] for %v", strings.Join(imported, ", "), lib)
+
 	switch lib.Language {
 	case "go":
-		return buildGoLibrary(ctx, sch, lib)
+		if err := buildGoLibrary(ctx, sch, lib); err != nil {
+			return err
+		}
 	case "kotlin":
-		return buildKotlinLibrary(ctx, sch, lib)
-
+		if err := buildKotlinLibrary(ctx, sch, lib); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unknown language %q for %s", lib.Language, lib)
 	}
+
+	logger.Infof("Generated stubs [%s] for %v", strings.Join(imported, ", "), lib)
+	return nil
 }

@@ -66,7 +66,10 @@ func buildKotlinModule(ctx context.Context, sch *schema.Schema, module Module) e
 }
 
 func buildKotlinLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {
-	panic("Implement me")
+	if err := generateExternalModules(ctx, &lib, sch); err != nil {
+		return fmt.Errorf("unable to generate external modules for %v: %w", lib, err)
+	}
+	return nil
 }
 
 // SetPOMProperties updates the ftl.version properties in the
