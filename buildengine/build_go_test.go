@@ -122,7 +122,7 @@ func Nothing(context.Context) error {
 }
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/another",
+		moduleDir: "testdata/projects/another",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
@@ -172,7 +172,7 @@ func Call(context.Context, Req) (Resp, error) {
 }
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/another",
+		moduleDir: "testdata/projects/another",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}

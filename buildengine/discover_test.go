@@ -1,20 +1,23 @@
 package buildengine
 
 import (
+	"context"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/common/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestDiscoverModules(t *testing.T) {
-	modules, err := discoverModules("testdata/modules")
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	projects, err := DiscoverProjects(ctx, []string{"testdata/projects"}, []string{"testdata/projects/lib", "testdata/projects/libkotlin"}, true)
 	assert.NoError(t, err)
-	expected := []Module{
-		{
+	expected := []Project{
+		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/modules/alpha",
+				Dir:       "testdata/projects/alpha",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "alpha",
@@ -24,9 +27,9 @@ func TestDiscoverModules(t *testing.T) {
 				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
 			},
 		},
-		{
+		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/modules/another",
+				Dir:       "testdata/projects/another",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "another",
@@ -36,9 +39,9 @@ func TestDiscoverModules(t *testing.T) {
 				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
 			},
 		},
-		{
+		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:      "testdata/modules/echokotlin",
+				Dir:      "testdata/projects/echokotlin",
 				Language: "kotlin",
 				Realm:    "home",
 				Module:   "echo",
@@ -58,7 +61,7 @@ func TestDiscoverModules(t *testing.T) {
 				},
 			},
 		},
-		{
+		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
 				Dir:      "testdata/modules/external",
 				Language: "go",
@@ -77,9 +80,9 @@ func TestDiscoverModules(t *testing.T) {
 				},
 			},
 		},
-		{
+		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/modules/other",
+				Dir:       "testdata/projects/other",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "other",
@@ -89,7 +92,7 @@ func TestDiscoverModules(t *testing.T) {
 				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
 			},
 		},
-		{
+		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
 				Dir:      "testdata/modules/externalkotlin",
 				Language: "kotlin",
@@ -111,6 +114,14 @@ func TestDiscoverModules(t *testing.T) {
 				},
 			},
 		},
+		ExternalLibrary{
+			Dir:      "testdata/projects/lib",
+			Language: "go",
+		},
+		ExternalLibrary{
+			Dir:      "testdata/projects/libkotlin",
+			Language: "kotlin",
+		},
 	}
-	assert.Equal(t, expected, modules)
+	assert.Equal(t, expected, projects)
 }

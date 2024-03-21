@@ -26,7 +26,7 @@ package ftl.test
 
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/echokotlin",
+		moduleDir: "testdata/projects/echokotlin",
 		buildDir:  "target",
 		sch:       sch,
 	}
@@ -149,7 +149,7 @@ data class TestResponse(
 
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/echokotlin",
+		moduleDir: "testdata/projects/echokotlin",
 		buildDir:  "target",
 		sch:       sch,
 	}
@@ -209,7 +209,7 @@ fun testVerb(context: Context, req: Request): ftl.builtin.Empty = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.call(::testVerb, ...)")
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/echokotlin",
+		moduleDir: "testdata/projects/echokotlin",
 		buildDir:  "target",
 		sch:       sch,
 	}
@@ -258,7 +258,7 @@ data class HttpResponse<Body, Error>(
 class Empty
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/echokotlin",
+		moduleDir: "testdata/projects/echokotlin",
 		buildDir:  "target",
 		sch:       sch,
 	}
@@ -302,7 +302,7 @@ fun emptyVerb(context: Context, req: ftl.builtin.Empty): ftl.builtin.Empty = thr
     NotImplementedError("Verb stubs should not be called directly, instead use context.call(::emptyVerb, ...)")
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/echokotlin",
+		moduleDir: "testdata/projects/echokotlin",
 		buildDir:  "target",
 		sch:       sch,
 	}
@@ -380,7 +380,7 @@ fun nothing(context: Context): Unit = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.callEmpty(::nothing, ...)")
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/echokotlin",
+		moduleDir: "testdata/projects/echokotlin",
 		buildDir:  "target",
 		sch:       sch,
 	}
