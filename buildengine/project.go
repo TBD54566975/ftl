@@ -91,7 +91,7 @@ func (e ExternalLibrary) String() string {
 	return "library " + e.Dir
 }
 
-// Key is a unique identifier for the project (ie: a module name or a library path)
+// ProjectKey is a unique identifier for the project (ie: a module name or a library path)
 // It is used to:
 // - build the dependency graph
 // - map changes in the file system to the project
