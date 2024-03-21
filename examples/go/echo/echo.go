@@ -32,16 +32,3 @@ func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default(defaultName.Get(ctx)), tresp.Time)}, nil
 }
-
-/*
-
-verb cronJob(Unit) Unit
-	+cron "0 0 * * *"
-
-*/
-
-//ftl:cron <schedule>
-func CronJob(ctx context.Context) error {
-	_, err := ftl.Call(ctx, Echo, EchoRequest{})
-	return err
-}

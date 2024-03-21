@@ -11,6 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/lsp"
 )
 
 type devCmd struct {
@@ -52,6 +53,11 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		})
 	}
 
+	languageServer := lsp.NewServer(ctx)
+	g.Go(func() error {
+		return languageServer.Run()
+	})
+
 	err := d.ServeCmd.pollControllerOnine(ctx, client)
 	if err != nil {
 		return err
@@ -62,7 +68,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		if err != nil {
 			return err
 		}
-		return engine.Dev(ctx, d.Watch)
+		return engine.Dev(ctx, d.Watch, languageServer)
 	})
 
 	return g.Wait()

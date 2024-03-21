@@ -22,6 +22,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/lsp"
 )
 
 type schemaChange struct {
@@ -190,22 +191,23 @@ func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline
 }
 
 // Dev builds and deploys all local modules and watches for changes, redeploying as necessary.
-func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
+func (e *Engine) Dev(ctx context.Context, period time.Duration, languageServer *lsp.Server) error {
 	logger := log.FromContext(ctx)
 
 	// Build and deploy all modules first.
 	err := e.buildAndDeploy(ctx, 1, true)
 	if err != nil {
 		logger.Errorf(err, "initial deploy failed")
+		languageServer.Post(err)
 	}
 
 	logger.Infof("All modules deployed, watching for changes...")
 
 	// Then watch for changes and redeploy.
-	return e.watchForModuleChanges(ctx, period)
+	return e.watchForModuleChanges(ctx, period, languageServer)
 }
 
-func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration) error {
+func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration, languageServer *lsp.Server) error {
 	logger := log.FromContext(ctx)
 
 	moduleHashes := map[string][]byte{}
@@ -243,6 +245,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					err := e.buildAndDeploy(ctx, 1, true, config.Key)
 					if err != nil {
 						logger.Errorf(err, "deploy %s failed", config.Key)
+						languageServer.Post(err)
 					}
 				}
 			case WatchEventProjectRemoved:
@@ -258,6 +261,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				config := event.Project.Config()
 				err := e.buildAndDeploy(ctx, 1, true, config.Key)
 				if err != nil {
+					languageServer.Post(err)
 					switch project := event.Project.(type) {
 					case Module:
 						logger.Errorf(err, "build and deploy failed for module %q: %v", project.Config().Key, err)
