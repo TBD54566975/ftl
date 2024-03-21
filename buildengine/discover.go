@@ -17,7 +17,7 @@ func DiscoverProjects(ctx context.Context, dirs []string, externalLibDirs []stri
 	out := []Project{}
 	logger := log.FromContext(ctx)
 
-	modules, err := discoverModules(context.Background(), dirs...)
+	modules, err := discoverModules(dirs...)
 	if err != nil {
 		logger.Tracef("error discovering modules: %v", err)
 		if stopOnError {
@@ -25,7 +25,7 @@ func DiscoverProjects(ctx context.Context, dirs []string, externalLibDirs []stri
 		}
 	} else {
 		for _, module := range modules {
-			out = append(out, Project(&module))
+			out = append(out, Project(module))
 		}
 	}
 	for _, dir := range externalLibDirs {
@@ -36,7 +36,7 @@ func DiscoverProjects(ctx context.Context, dirs []string, externalLibDirs []stri
 				return nil, err
 			}
 		} else {
-			out = append(out, Project(&lib))
+			out = append(out, Project(lib))
 		}
 	}
 	return out, nil
@@ -45,7 +45,7 @@ func DiscoverProjects(ctx context.Context, dirs []string, externalLibDirs []stri
 // discoverModules recursively loads all modules under the given directories.
 //
 // If no directories are provided, the current working directory is used.
-func discoverModules(ctx context.Context, dirs ...string) ([]Module, error) {
+func discoverModules(dirs ...string) ([]Module, error) {
 	if len(dirs) == 0 {
 		cwd, err := os.Getwd()
 		if err != nil {

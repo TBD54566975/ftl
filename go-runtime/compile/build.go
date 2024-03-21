@@ -86,14 +86,16 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	funcs := maps.Clone(scaffoldFuncs)
 
 	logger.Debugf("Generating external modules")
-	generateExternalModules(ExternalModuleContext{
+	if err := generateExternalModules(ExternalModuleContext{
 		ModuleDir:    moduleDir,
 		GoVersion:    goModVersion,
 		FTLVersion:   ftlVersion,
 		Schema:       sch,
 		Main:         config.Module,
 		Replacements: replacements,
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to generate external modules: %w", err)
+	}
 
 	logger.Debugf("Extracting schema")
 	nativeNames, main, err := ExtractModuleSchema(moduleDir)
@@ -173,7 +175,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *schema.Schema) error {
 	goModFile, replacements, err := goModFileWithReplacements(filepath.Join(dir, "go.mod"))
 	if err != nil {
-		return fmt.Errorf("failed to propogate replacements for library %s: %w", dir, err)
+		return fmt.Errorf("failed to propagate replacements for library %s: %w", dir, err)
 	}
 
 	ftlVersion := ""
@@ -199,10 +201,7 @@ func generateExternalModules(context ExternalModuleContext) error {
 	}
 
 	funcs := maps.Clone(scaffoldFuncs)
-	if err := internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
-		return err
-	}
-	return nil
+	return internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
 }
 
 func online() bool {

@@ -79,7 +79,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 		return nil, fmt.Errorf("could not find projects: %w", err)
 	}
 	for _, project := range projects {
-		project, err := UpdateDependencies(ctx, project)
+		project, err = UpdateDependencies(ctx, project)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +157,7 @@ func (e *Engine) Graph(projects ...ProjectKey) (map[ProjectKey][]ProjectKey, err
 
 func (e *Engine) buildGraph(key ProjectKey, out map[ProjectKey][]ProjectKey) error {
 	var deps []ProjectKey
-	if project, ok := e.projects[ProjectKey(key)]; ok {
+	if project, ok := e.projects[key]; ok {
 		deps = project.Config().Dependencies
 	} else if sch, ok := e.controllerSchema.Load(string(key)); ok {
 		deps = ProjectKeysFromModuleNames(sch.Imports())
@@ -282,7 +282,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			dependentProjectKeys := e.getDependentProjectKeys(ProjectKeyForModuleName(change.Name))
 			if len(dependentProjectKeys) > 0 {
 				//TODO: inaccurate log message for ext libs
-				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join([]string(StringsFromProjectKeys(dependentProjectKeys)), ", "))
+				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join(StringsFromProjectKeys(dependentProjectKeys), ", "))
 				err = e.buildAndDeploy(ctx, 1, true, dependentProjectKeys...)
 				if err != nil {
 					logger.Errorf(err, "deploy %s failed", change.Name)
@@ -305,10 +305,10 @@ func computeModuleHash(module *schema.Module) ([]byte, error) {
 
 func (e *Engine) getDependentProjectKeys(key ProjectKey) []ProjectKey {
 	dependentProjectKeys := map[ProjectKey]bool{}
-	for key, project := range e.projects {
+	for k, project := range e.projects {
 		for _, dep := range project.Config().Dependencies {
 			if dep == key {
-				dependentProjectKeys[key] = true
+				dependentProjectKeys[k] = true
 			}
 		}
 	}
@@ -481,7 +481,9 @@ func (e *Engine) gatherSchemas(
 			// TODO: should we be gathering schemas from dependencies without a project?
 			// This can happen if the schema is loaded from the controller
 			if ok {
-				e.gatherSchemas(moduleSchemas, depModule, out)
+				if err := e.gatherSchemas(moduleSchemas, depModule, out); err != nil {
+					return err
+				}
 			}
 		}
 	}
