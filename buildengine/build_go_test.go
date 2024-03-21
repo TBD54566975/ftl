@@ -122,7 +122,7 @@ func Nothing(context.Context) error {
 }
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/another",
+		moduleDir: "testdata/projects/another",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
@@ -172,7 +172,7 @@ func Call(context.Context, Req) (Resp, error) {
 }
 `
 	bctx := buildContext{
-		moduleDir: "testdata/modules/another",
+		moduleDir: "testdata/projects/another",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
@@ -182,11 +182,11 @@ func Call(context.Context, Req) (Resp, error) {
 }
 
 func TestExternalType(t *testing.T) {
-	moduleDir := "testdata/modules/external"
+	moduleDir := "testdata/projects/external"
 	buildDir := "_ftl"
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
-	module, err := LoadModule(ctx, moduleDir)
+	module, err := LoadModule(moduleDir)
 	assert.NoError(t, err)
 
 	sch := &schema.Schema{}

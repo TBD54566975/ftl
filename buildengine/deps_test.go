@@ -6,14 +6,26 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestExtractDepsGo(t *testing.T) {
-	deps, err := extractGoFTLImports("test", "testdata/modules/alpha")
+func TestExtractModuleDepsGo(t *testing.T) {
+	deps, err := extractGoFTLImports("test", "testdata/projects/alpha")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"another", "other"}, deps)
 }
 
-func TestExtractDepsKotlin(t *testing.T) {
-	deps, err := extractKotlinFTLImports("test", "testdata/modules/alphakotlin")
+func TestExtractModuleDepsKotlin(t *testing.T) {
+	deps, err := extractKotlinFTLImports("test", "testdata/projects/alphakotlin")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"builtin", "other"}, deps)
+}
+
+func TestExtractLibraryDepsGo(t *testing.T) {
+	deps, err := extractGoFTLImports("test", "testdata/projects/lib")
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"alpha"}, deps)
+}
+
+func TestExtractLibraryDepsKotlin(t *testing.T) {
+	deps, err := extractKotlinFTLImports("test", "testdata/projects/libkotlin")
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"builtin", "echo"}, deps)
 }

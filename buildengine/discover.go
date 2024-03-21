@@ -7,13 +7,45 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/TBD54566975/ftl/common/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// DiscoverModules recursively loads all modules under the given directories.
+// DiscoverProjects recursively loads all modules under the given directories
+// (or if none provided, the current working directory is used) and external
+// libraries in externalLibDirs.
+func DiscoverProjects(ctx context.Context, moduleDirs []string, externalLibDirs []string, stopOnError bool) ([]Project, error) {
+	out := []Project{}
+	logger := log.FromContext(ctx)
+
+	modules, err := discoverModules(moduleDirs...)
+	if err != nil {
+		logger.Tracef("error discovering modules: %v", err)
+		if stopOnError {
+			return nil, err
+		}
+	} else {
+		for _, module := range modules {
+			out = append(out, Project(module))
+		}
+	}
+	for _, dir := range externalLibDirs {
+		lib, err := LoadExternalLibrary(dir)
+		if err != nil {
+			logger.Tracef("error discovering external library: %v", err)
+			if stopOnError {
+				return nil, err
+			}
+		} else {
+			out = append(out, Project(lib))
+		}
+	}
+	return out, nil
+}
+
+// discoverModules recursively loads all modules under the given directories.
 //
 // If no directories are provided, the current working directory is used.
-func DiscoverModules(ctx context.Context, dirs ...string) ([]moduleconfig.ModuleConfig, error) {
+func discoverModules(dirs ...string) ([]Module, error) {
 	if len(dirs) == 0 {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -21,18 +53,18 @@ func DiscoverModules(ctx context.Context, dirs ...string) ([]moduleconfig.Module
 		}
 		dirs = []string{cwd}
 	}
-	out := []moduleconfig.ModuleConfig{}
+	out := []Module{}
 	for _, dir := range dirs {
 		err := WalkDir(dir, func(path string, d fs.DirEntry) error {
 			if filepath.Base(path) != "ftl.toml" {
 				return nil
 			}
 			moduleDir := filepath.Dir(path)
-			config, err := moduleconfig.LoadModuleConfig(moduleDir)
+			module, err := LoadModule(moduleDir)
 			if err != nil {
 				return err
 			}
-			out = append(out, config)
+			out = append(out, module)
 			return ErrSkip
 		})
 		if err != nil {
@@ -40,7 +72,7 @@ func DiscoverModules(ctx context.Context, dirs ...string) ([]moduleconfig.Module
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
-		return out[i].Module < out[j].Module
+		return out[i].Config().Key < out[j].Config().Key
 	})
 	return out, nil
 }

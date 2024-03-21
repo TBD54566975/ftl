@@ -23,14 +23,18 @@ import (
 )
 
 type externalModuleContext struct {
-	module Module
+	project Project
 	*schema.Schema
 }
 
 func (e externalModuleContext) ExternalModules() []*schema.Module {
+	name := ""
+	if module, ok := e.project.(Module); ok {
+		name = module.Module
+	}
 	modules := make([]*schema.Module, 0, len(e.Modules))
 	for _, module := range e.Modules {
-		if module.Name == e.module.Module {
+		if module.Name == name {
 			continue
 		}
 		modules = append(modules, module)
@@ -38,13 +42,13 @@ func (e externalModuleContext) ExternalModules() []*schema.Module {
 	return modules
 }
 
-func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
+func buildKotlinModule(ctx context.Context, sch *schema.Schema, module Module) error {
 	logger := log.FromContext(ctx)
 	if err := SetPOMProperties(ctx, module.Dir); err != nil {
 		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Dir, err)
 	}
 
-	if err := generateExternalModules(ctx, module, sch); err != nil {
+	if err := generateExternalModules(ctx, &module, sch); err != nil {
 		return fmt.Errorf("unable to generate external modules for %s: %w", module.Module, err)
 	}
 
@@ -58,6 +62,13 @@ func buildKotlin(ctx context.Context, sch *schema.Schema, module Module) error {
 		return fmt.Errorf("failed to build module %s: %w", module.Module, err)
 	}
 
+	return nil
+}
+
+func buildKotlinLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {
+	if err := generateExternalModules(ctx, &lib, sch); err != nil {
+		return fmt.Errorf("unable to generate external modules for %v: %w", lib, err)
+	}
 	return nil
 }
 
@@ -121,18 +132,18 @@ exec java -cp "classes:$(cat classpath.txt)" xyz.block.ftl.main.MainKt
 	return nil
 }
 
-func generateExternalModules(ctx context.Context, module Module, sch *schema.Schema) error {
+func generateExternalModules(ctx context.Context, project Project, sch *schema.Schema) error {
 	logger := log.FromContext(ctx)
-	config := module.ModuleConfig
 	funcs := maps.Clone(scaffoldFuncs)
+	config := project.Config()
 
 	// Wipe the modules directory to ensure we don't have any stale modules.
 	_ = os.RemoveAll(filepath.Join(config.Dir, "target", "generated-sources", "ftl"))
 
 	logger.Debugf("Generating external modules")
 	return internal.ScaffoldZip(kotlinruntime.ExternalModuleTemplates(), config.Dir, externalModuleContext{
-		module: module,
-		Schema: sch,
+		project: project,
+		Schema:  sch,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
 }
 

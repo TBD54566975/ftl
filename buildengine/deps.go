@@ -14,34 +14,19 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.design/x/reflect"
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// UpdateAllDependencies calls UpdateDependencies on each module in the list.
-func UpdateAllDependencies(ctx context.Context, modules ...moduleconfig.ModuleConfig) ([]Module, error) {
-	out := []Module{}
-	for _, module := range modules {
-		updated, err := UpdateDependencies(ctx, module)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, updated)
-	}
-	return out, nil
-}
-
-// UpdateDependencies finds the dependencies for an FTL module and returns a
-// Module with those dependencies populated.
-func UpdateDependencies(ctx context.Context, config moduleconfig.ModuleConfig) (Module, error) {
+// UpdateDependencies finds the dependencies for a project and returns a
+// Project with those dependencies populated.
+func UpdateDependencies(ctx context.Context, project Project) (Project, error) {
 	logger := log.FromContext(ctx)
-	logger.Debugf("Extracting dependencies for module %s", config.Module)
-	dependencies, err := extractDependencies(config)
+	logger.Debugf("Extracting dependencies for %s", project)
+	dependencies, err := extractDependencies(project)
 	if err != nil {
-		return Module{}, err
+		return Project(&Module{}), err
 	}
 	containsBuiltin := false
 	for _, dep := range dependencies {
@@ -53,17 +38,23 @@ func UpdateDependencies(ctx context.Context, config moduleconfig.ModuleConfig) (
 	if !containsBuiltin {
 		dependencies = append(dependencies, "builtin")
 	}
-	out := reflect.DeepCopy(config)
-	return Module{ModuleConfig: out, Dependencies: dependencies}, nil
+
+	out := project.CopyWithDependencies(dependencies)
+	return out, nil
 }
 
-func extractDependencies(config moduleconfig.ModuleConfig) ([]string, error) {
+func extractDependencies(project Project) ([]string, error) {
+	config := project.Config()
+	name := ""
+	if config, ok := project.(Module); ok {
+		name = config.Module
+	}
 	switch config.Language {
 	case "go":
-		return extractGoFTLImports(config.Module, config.Dir)
+		return extractGoFTLImports(name, config.Dir)
 
 	case "kotlin":
-		return extractKotlinFTLImports(config.Module, config.Dir)
+		return extractKotlinFTLImports(name, config.Dir)
 
 	default:
 		return nil, fmt.Errorf("unsupported language: %s", config.Language)

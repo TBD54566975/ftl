@@ -59,7 +59,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 
 	moduleSchema, err := loadProtoSchema(deployDir, module.ModuleConfig, replicas)
 	if err != nil {
-		return fmt.Errorf("failed to load protobuf schema from %q: %w", module.ModuleConfig.Schema, err)
+		return fmt.Errorf("failed to load protobuf schema from %q: %w", module.Schema, err)
 	}
 
 	logger.Debugf("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))

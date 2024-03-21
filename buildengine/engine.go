@@ -32,8 +32,9 @@ type schemaChange struct {
 // Engine for building a set of modules.
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
-	modules          map[string]Module
-	dirs             []string
+	projects         map[ProjectKey]Project
+	moduleDirs       []string
+	externalDirs     []string
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
@@ -55,12 +56,13 @@ func Parallelism(n int) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
-		dirs:             dirs,
-		modules:          map[string]Module{},
+		moduleDirs:       moduleDirs,
+		externalDirs:     externalDirs,
+		projects:         map[ProjectKey]Project{},
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
 		parallelism:      runtime.NumCPU(),
@@ -71,17 +73,19 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
-	configs, err := DiscoverModules(ctx, dirs...)
+
+	projects, err := DiscoverProjects(ctx, moduleDirs, externalDirs, true)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not find projects: %w", err)
 	}
-	modules, err := UpdateAllDependencies(ctx, configs...)
-	if err != nil {
-		return nil, err
+	for _, project := range projects {
+		project, err = UpdateDependencies(ctx, project)
+		if err != nil {
+			return nil, err
+		}
+		e.projects[project.Config().Key] = project
 	}
-	for _, module := range modules {
-		e.modules[module.Module] = module
-	}
+
 	if client == nil {
 		return e, nil
 	}
@@ -138,29 +142,29 @@ func (e *Engine) Close() error {
 //
 // If no modules are provided, the entire graph is returned. An error is returned if
 // any dependencies are missing.
-func (e *Engine) Graph(modules ...string) (map[string][]string, error) {
+func (e *Engine) Graph(projects ...ProjectKey) (map[string][]string, error) {
 	out := map[string][]string{}
-	if len(modules) == 0 {
-		modules = maps.Keys(e.modules)
+	if len(projects) == 0 {
+		projects = maps.Keys(e.projects)
 	}
-	for _, name := range modules {
-		if err := e.buildGraph(name, out); err != nil {
+	for _, key := range projects {
+		if err := e.buildGraph(string(key), out); err != nil {
 			return nil, err
 		}
 	}
 	return out, nil
 }
 
-func (e *Engine) buildGraph(name string, out map[string][]string) error {
+func (e *Engine) buildGraph(key string, out map[string][]string) error {
 	var deps []string
-	if module, ok := e.modules[name]; ok {
-		deps = module.Dependencies
-	} else if sch, ok := e.controllerSchema.Load(name); ok {
+	if project, ok := e.projects[ProjectKey(key)]; ok {
+		deps = project.Config().Dependencies
+	} else if sch, ok := e.controllerSchema.Load(key); ok {
 		deps = sch.Imports()
 	} else {
-		return fmt.Errorf("module %q not found", name)
+		return fmt.Errorf("module %q not found", key)
 	}
-	out[name] = deps
+	out[key] = deps
 	for _, dep := range deps {
 		if err := e.buildGraph(dep, out); err != nil {
 			return err
@@ -220,7 +224,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	defer e.schemaChanges.Unsubscribe(schemaChanges)
 
 	watchEvents := make(chan WatchEvent, 128)
-	watch := Watch(ctx, period, e.dirs...)
+	watch := Watch(ctx, period, e.moduleDirs, e.externalDirs)
 	watch.Subscribe(watchEvents)
 	defer watch.Unsubscribe(watchEvents)
 	defer watch.Close()
@@ -232,25 +236,29 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			return ctx.Err()
 		case event := <-watchEvents:
 			switch event := event.(type) {
-			case WatchEventModuleAdded:
-				if _, exists := e.modules[event.Module.Module]; !exists {
-					e.modules[event.Module.Module] = event.Module
-					err := e.buildAndDeploy(ctx, 1, true, event.Module.Module)
+			case WatchEventProjectAdded:
+				config := event.Project.Config()
+				if _, exists := e.projects[config.Key]; !exists {
+					e.projects[config.Key] = event.Project
+					err := e.buildAndDeploy(ctx, 1, true, config.Key)
 					if err != nil {
-						logger.Errorf(err, "deploy %s failed", event.Module.Module)
+						logger.Errorf(err, "deploy %s failed", config.Key)
 					}
 				}
-			case WatchEventModuleRemoved:
-				err := teminateModuleDeployment(ctx, e.client, event.Module.Module)
-				if err != nil {
-					logger.Errorf(err, "terminate %s failed", event.Module.Module)
+			case WatchEventProjectRemoved:
+				config := event.Project.Config()
+				if module, ok := event.Project.(Module); ok {
+					err := teminateModuleDeployment(ctx, e.client, module.Module)
+					if err != nil {
+						logger.Errorf(err, "terminate %s failed", module.Module)
+					}
 				}
-				delete(e.modules, event.Module.Module)
-
-			case WatchEventModuleChanged:
-				err := e.buildAndDeploy(ctx, 1, true, event.Module.Module)
+				delete(e.projects, config.Key)
+			case WatchEventProjectChanged:
+				config := event.Project.Config()
+				err := e.buildAndDeploy(ctx, 1, true, config.Key)
 				if err != nil {
-					logger.Errorf(err, "deploy %s failed", event.Module.Module)
+					logger.Errorf(err, "build and deploy failed for %v: %v", event.Project, err)
 				}
 			}
 		case change := <-schemaChanges:
@@ -270,10 +278,12 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			}
 
 			moduleHashes[change.Name] = hash
-			modulesToDeploy := e.getDependentModules(change.Name)
-			if len(modulesToDeploy) > 0 {
-				logger.Infof("%s's schema changed; redeploying %s", change.Name, strings.Join(modulesToDeploy, ", "))
-				err = e.buildAndDeploy(ctx, 1, true, modulesToDeploy...)
+
+			dependentProjectKeys := e.getDependentProjectKeys(change.Name)
+			if len(dependentProjectKeys) > 0 {
+				//TODO: inaccurate log message for ext libs
+				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join(StringsFromProjectKeys(dependentProjectKeys), ", "))
+				err = e.buildAndDeploy(ctx, 1, true, dependentProjectKeys...)
 				if err != nil {
 					logger.Errorf(err, "deploy %s failed", change.Name)
 				}
@@ -293,52 +303,56 @@ func computeModuleHash(module *schema.Module) ([]byte, error) {
 	return hasher.Sum(nil), nil
 }
 
-func (e *Engine) getDependentModules(moduleName string) []string {
-	dependentModules := map[string]bool{}
-	for key, module := range e.modules {
-		for _, dep := range module.Dependencies {
-			if dep == moduleName {
-				dependentModules[key] = true
+func (e *Engine) getDependentProjectKeys(name string) []ProjectKey {
+	dependentProjectKeys := map[ProjectKey]bool{}
+	for k, project := range e.projects {
+		for _, dep := range project.Config().Dependencies {
+			if dep == name {
+				dependentProjectKeys[k] = true
 			}
 		}
 	}
-
-	return maps.Keys(dependentModules)
+	return maps.Keys(dependentProjectKeys)
 }
 
-func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDeployOnline bool, modules ...string) error {
-	if len(modules) == 0 {
-		modules = maps.Keys(e.modules)
+func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDeployOnline bool, projects ...ProjectKey) error {
+	if len(projects) == 0 {
+		projects = maps.Keys(e.projects)
 	}
 
-	deployQueue := make(chan Module, len(modules))
+	deployQueue := make(chan Project, len(projects))
 	wg, ctx := errgroup.WithContext(ctx)
 
-	// Build all modules and enqueue them for deployment.
+	// Build all projects and enqueue the modules for deployment.
 	wg.Go(func() error {
 		defer close(deployQueue)
 
-		return e.buildWithCallback(ctx, func(ctx context.Context, module Module) error {
-			select {
-			case deployQueue <- module:
-				return nil
-			case <-ctx.Done():
-				return ctx.Err()
+		return e.buildWithCallback(ctx, func(ctx context.Context, project Project) error {
+			if _, ok := project.(Module); ok {
+				select {
+				case deployQueue <- project:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
 			}
-		}, modules...)
+			return nil
+		}, projects...)
 	})
 
 	// Process deployment queue.
-	for i := 0; i < len(modules); i++ {
+	for i := 0; i < len(projects); i++ {
 		wg.Go(func() error {
 			for {
 				select {
-				case module, ok := <-deployQueue:
+				case project, ok := <-deployQueue:
 					if !ok {
 						return nil
 					}
-					if err := Deploy(ctx, module, replicas, waitForDeployOnline, e.client); err != nil {
-						return err
+					if module, ok := project.(Module); ok {
+						if err := Deploy(ctx, module, replicas, waitForDeployOnline, e.client); err != nil {
+							return err
+						}
 					}
 				case <-ctx.Done():
 					return ctx.Err()
@@ -346,36 +360,35 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 			}
 		})
 	}
-
 	return wg.Wait()
 }
 
-type buildCallback func(ctx context.Context, module Module) error
+type buildCallback func(ctx context.Context, project Project) error
 
-func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, modules ...string) error {
-	mustBuild := map[string]bool{}
-	if len(modules) == 0 {
-		modules = maps.Keys(e.modules)
+func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, projects ...ProjectKey) error {
+	mustBuild := map[ProjectKey]bool{}
+	if len(projects) == 0 {
+		projects = maps.Keys(e.projects)
 	}
-	for _, name := range modules {
-		module, ok := e.modules[name]
+	for _, key := range projects {
+		project, ok := e.projects[key]
 		if !ok {
-			return fmt.Errorf("module %q not found", module)
+			return fmt.Errorf("project %q not found", key)
 		}
 		// Update dependencies before building.
 		var err error
-		module, err = UpdateDependencies(ctx, module.ModuleConfig)
+		project, err = UpdateDependencies(ctx, project)
 		if err != nil {
 			return err
 		}
-		e.modules[name] = module
-		mustBuild[name] = true
+		e.projects[key] = project
+		mustBuild[key] = true
 	}
-	graph, err := e.Graph(modules...)
+	graph, err := e.Graph(projects...)
 	if err != nil {
 		return err
 	}
-	built := map[string]*schema.Module{
+	builtModules := map[string]*schema.Module{
 		"builtin": schema.Builtins(),
 	}
 
@@ -385,70 +398,95 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		schemas := make(chan *schema.Module, len(group))
 		wg, ctx := errgroup.WithContext(ctx)
 		wg.SetLimit(e.parallelism)
-		for _, name := range group {
+		for _, keyStr := range group {
+			key := ProjectKey(keyStr)
 			wg.Go(func() error {
-				if mustBuild[name] {
-					err := e.build(ctx, name, built, schemas)
-					if err == nil && callback != nil {
-						return callback(ctx, e.modules[name])
-					}
-					return err
+				if !mustBuild[key] {
+					return e.mustSchema(ctx, key, builtModules, schemas)
 				}
-				return e.mustSchema(ctx, name, built, schemas)
+
+				err := e.build(ctx, key, builtModules, schemas)
+				if err == nil && callback != nil {
+					return callback(ctx, e.projects[key])
+				}
+				return err
 			})
 		}
 		err := wg.Wait()
 		if err != nil {
 			return err
 		}
-		// Now this group is built, collect al the schemas.
+		// Now this group is built, collect all the schemas.
 		close(schemas)
 		for sch := range schemas {
-			built[sch.Name] = sch
+			builtModules[sch.Name] = sch
 		}
 	}
+
 	return nil
 }
 
 // Publish either the schema from the FTL controller, or from a local build.
-func (e *Engine) mustSchema(ctx context.Context, name string, built map[string]*schema.Module, schemas chan<- *schema.Module) error {
-	if sch, ok := e.controllerSchema.Load(name); ok {
+func (e *Engine) mustSchema(ctx context.Context, key ProjectKey, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
+	if sch, ok := e.controllerSchema.Load(string(key)); ok {
 		schemas <- sch
 		return nil
 	}
-	return e.build(ctx, name, built, schemas)
+	return e.build(ctx, key, builtModules, schemas)
 }
 
 // Build a module and publish its schema.
 //
 // Assumes that all dependencies have been built and are available in "built".
-func (e *Engine) build(ctx context.Context, name string, built map[string]*schema.Module, schemas chan<- *schema.Module) error {
+func (e *Engine) build(ctx context.Context, key ProjectKey, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
+	project, ok := e.projects[key]
+	if !ok {
+		return fmt.Errorf("project %q not found", key)
+	}
+
 	combined := map[string]*schema.Module{}
-	gatherShemas(built, e.modules, e.modules[name], combined)
+	if err := e.gatherSchemas(builtModules, project, combined); err != nil {
+		return err
+	}
 	sch := &schema.Schema{Modules: maps.Values(combined)}
-	module := e.modules[name]
-	err := Build(ctx, sch, module)
+
+	err := Build(ctx, sch, project)
 	if err != nil {
 
 		return err
 	}
-	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(module.Dir, module.DeployDir, module.Schema))
-	if err != nil {
-		return fmt.Errorf("load schema %s: %w", name, err)
+	if module, ok := project.(Module); ok {
+		moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(module.Dir, module.DeployDir, module.Schema))
+		if err != nil {
+			return fmt.Errorf("could not load schema for %s: %w", module, err)
+		}
+		schemas <- moduleSchema
 	}
-	schemas <- moduleSchema
 	return nil
 }
 
-// Construct a combined schema for a module and its transitive dependencies.
-func gatherShemas(
+// Construct a combined schema for a project and its transitive dependencies.
+func (e *Engine) gatherSchemas(
 	moduleSchemas map[string]*schema.Module,
-	modules map[string]Module,
-	module Module,
+	project Project,
 	out map[string]*schema.Module,
-) {
-	for _, dep := range modules[module.Module].Dependencies {
-		out[dep] = moduleSchemas[dep]
-		gatherShemas(moduleSchemas, modules, modules[dep], out)
+) error {
+	latestModule, ok := e.projects[project.Config().Key]
+	if !ok {
+		latestModule = project
 	}
+	for _, dep := range latestModule.Config().Dependencies {
+		out[dep] = moduleSchemas[dep]
+		if dep != "builtin" {
+			depModule, ok := e.projects[ProjectKey(dep)]
+			// TODO: should we be gathering schemas from dependencies without a project?
+			// This can happen if the schema is loaded from the controller
+			if ok {
+				if err := e.gatherSchemas(moduleSchemas, depModule, out); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }

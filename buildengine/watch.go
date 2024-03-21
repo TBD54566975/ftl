@@ -6,42 +6,41 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 )
 
-// A WatchEvent is an event that occurs when a module is added, removed, or
+// A WatchEvent is an event that occurs when a project is added, removed, or
 // changed.
 type WatchEvent interface{ watchEvent() }
 
-type WatchEventModuleAdded struct{ Module Module }
+type WatchEventProjectAdded struct{ Project Project }
 
-func (WatchEventModuleAdded) watchEvent() {}
+func (WatchEventProjectAdded) watchEvent() {}
 
-type WatchEventModuleRemoved struct{ Module Module }
+type WatchEventProjectRemoved struct{ Project Project }
 
-func (WatchEventModuleRemoved) watchEvent() {}
+func (WatchEventProjectRemoved) watchEvent() {}
 
-type WatchEventModuleChanged struct {
-	Module Module
-	Change FileChangeType
-	Path   string
+type WatchEventProjectChanged struct {
+	Project Project
+	Change  FileChangeType
+	Path    string
 }
 
-func (WatchEventModuleChanged) watchEvent() {}
+func (WatchEventProjectChanged) watchEvent() {}
 
-// Watch the given directories for new modules, deleted modules, and changes to
-// existing modules, publishing a change event for each.
-func Watch(ctx context.Context, period time.Duration, dirs ...string) *pubsub.Topic[WatchEvent] {
+// Watch the given directories for new projects, deleted projects, and changes to
+// existing projects, publishing a change event for each.
+func Watch(ctx context.Context, period time.Duration, moduleDirs []string, externalLibDirs []string) *pubsub.Topic[WatchEvent] {
 	logger := log.FromContext(ctx)
 	topic := pubsub.New[WatchEvent]()
 	go func() {
-		type moduleHashes struct {
-			Hashes FileHashes
-			Module Module
+		type projectHashes struct {
+			Hashes  FileHashes
+			Project Project
 		}
-		existingModules := map[string]moduleHashes{}
+		existingProjects := map[string]projectHashes{}
 		wait := topic.Wait()
 		for {
 			select {
@@ -55,52 +54,45 @@ func Watch(ctx context.Context, period time.Duration, dirs ...string) *pubsub.To
 				return
 			}
 
-			// Find all modules in the given directories.
-			moduleConfigs, err := DiscoverModules(ctx, dirs...)
-			if err != nil {
-				logger.Tracef("error discovering modules: %v", err)
-				continue
-			}
-			moduleConfigsByDir := maps.FromSlice(moduleConfigs, func(config moduleconfig.ModuleConfig) (string, moduleconfig.ModuleConfig) {
-				return config.Module, config
+			projects, _ := DiscoverProjects(ctx, moduleDirs, externalLibDirs, false)
+
+			projectsByDir := maps.FromSlice(projects, func(project Project) (string, Project) {
+				return project.Config().Dir, project
 			})
 
-			// Trigger events for removed modules.
-			for _, existingModule := range existingModules {
-				if _, haveModule := moduleConfigsByDir[existingModule.Module.Module]; !haveModule {
-					logger.Debugf("module %s removed: %s", existingModule.Module.Module, existingModule.Module.Dir)
-					topic.Publish(WatchEventModuleRemoved{Module: existingModule.Module})
-					delete(existingModules, existingModule.Module.ModuleConfig.Dir)
+			// Trigger events for removed projects.
+			for _, existingProject := range existingProjects {
+				existingConfig := existingProject.Project.Config()
+				if _, haveProject := projectsByDir[existingConfig.Dir]; !haveProject {
+					logger.Debugf("removed %s", existingProject.Project)
+					topic.Publish(WatchEventProjectRemoved{Project: existingProject.Project})
+					delete(existingProjects, existingConfig.Dir)
 				}
 			}
 
-			// Compare the modules to the existing modules.
-			for _, config := range moduleConfigs {
-				existingModule, haveExistingModule := existingModules[config.Dir]
-				hashes, err := ComputeFileHashes(config)
+			// Compare the projects to the existing projects.
+			for _, project := range projectsByDir {
+				config := project.Config()
+				existingProject, haveExistingProject := existingProjects[config.Dir]
+				hashes, err := ComputeFileHashes(project)
 				if err != nil {
 					logger.Tracef("error computing file hashes for %s: %v", config.Dir, err)
 					continue
 				}
 
-				if haveExistingModule {
-					changeType, path, equal := CompareFileHashes(existingModule.Hashes, hashes)
+				if haveExistingProject {
+					changeType, path, equal := CompareFileHashes(existingProject.Hashes, hashes)
 					if equal {
 						continue
 					}
-					logger.Debugf("module %s changed: %c%s", existingModule.Module.Module, changeType, path)
-					topic.Publish(WatchEventModuleChanged{Module: existingModule.Module, Change: changeType, Path: path})
-					existingModules[config.Dir] = moduleHashes{Hashes: hashes, Module: existingModule.Module}
+					logger.Debugf("changed %s: %c%s", project, changeType, path)
+					topic.Publish(WatchEventProjectChanged{Project: existingProject.Project, Change: changeType, Path: path})
+					existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: existingProject.Project}
 					continue
 				}
-
-				module, err := UpdateDependencies(ctx, config)
-				if err != nil {
-					continue
-				}
-				logger.Debugf("module %s added: %s", module.Module, module.Dir)
-				topic.Publish(WatchEventModuleAdded{Module: module})
-				existingModules[config.Dir] = moduleHashes{Hashes: hashes, Module: module}
+				logger.Debugf("added %s", project)
+				topic.Publish(WatchEventProjectAdded{Project: project})
+				existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: project}
 			}
 		}
 	}()

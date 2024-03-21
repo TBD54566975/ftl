@@ -2,10 +2,11 @@ package buildengine
 
 import (
 	"context"
-	"github.com/alecthomas/assert/v2"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -26,7 +27,7 @@ func testBuild(
 ) {
 	t.Helper()
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
-	module, err := LoadModule(ctx, bctx.moduleDir)
+	module, err := LoadModule(bctx.moduleDir)
 	assert.NoError(t, err)
 
 	err = Build(ctx, bctx.sch, module)

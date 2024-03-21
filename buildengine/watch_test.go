@@ -21,7 +21,7 @@ func TestWatch(t *testing.T) {
 
 	// Start the watch
 	events := make(chan WatchEvent, 128)
-	watch := Watch(ctx, time.Millisecond*500, dir)
+	watch := Watch(ctx, time.Millisecond*500, []string{dir}, nil)
 	watch.Subscribe(events)
 
 	// Initiate a bunch of changes.
@@ -57,18 +57,18 @@ func TestWatch(t *testing.T) {
 	found := 0
 	for _, event := range allEvents {
 		switch event := event.(type) {
-		case WatchEventModuleAdded:
-			if event.Module.Module == "one" || event.Module.Module == "two" {
+		case WatchEventProjectAdded:
+			if event.Project.Config().Key == "one" || event.Project.Config().Key == "two" {
 				found++
 			}
 
-		case WatchEventModuleRemoved:
-			if event.Module.Module == "two" {
+		case WatchEventProjectRemoved:
+			if event.Project.Config().Key == "two" {
 				found++
 			}
 
-		case WatchEventModuleChanged:
-			if event.Module.Module == "one" {
+		case WatchEventProjectChanged:
+			if event.Project.Config().Key == "one" {
 				found++
 			}
 		}
