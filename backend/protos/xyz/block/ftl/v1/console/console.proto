@@ -78,6 +78,18 @@ message Data {
   string schema = 2;
 }
 
+message Secret {
+  schema.Secret data = 1;
+  string name = 2;
+  // schema.Type type = 3;
+}
+
+message Config {
+  schema.Config data = 1;
+  string name = 2;
+  // schema.Type type = 3;
+}
+
 message Module {
   string name = 1;
   string deployment_key = 2;

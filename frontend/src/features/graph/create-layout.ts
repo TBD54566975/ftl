@@ -49,10 +49,38 @@ const calculateModuleDepths = (modules: Module[]): Record<string, number> => {
   return depths
 }
 
+const nodeGraph = (modules: Module[]) => {
+  const out: Record<string, string[]> = {}
+
+  for (const module of modules) {
+    out[module.name ?? ''] = []
+    const verbs = module.verbs
+    verbs.forEach((verb) => {
+      const calls = verb?.verb?.metadata
+        .filter((meta) => meta.value.case === 'calls')
+        .map((meta) => meta.value.value as MetadataCalls)
+
+      calls?.map((call) =>
+        call.calls.forEach((call) => {
+          if (out[module.name ?? ''] === undefined) {
+            out[module.name ?? ''] = []
+          }
+          out[module.name ?? ''].push(call.module)
+        }),
+      )
+    })
+  }
+
+  return out
+}
+
 export const layoutNodes = (modules: Module[]) => {
   const nodes: Node[] = []
   const edges: Edge[] = []
   const xCounters: Record<number, number> = {}
+
+  const ng = nodeGraph(modules)
+  console.log(ng)
 
   const moduleDepths = calculateModuleDepths(modules)
 

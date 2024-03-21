@@ -46,6 +46,8 @@ export const GraphPage: React.FC<GraphPageProps> = ({ onTapped }) => {
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          maxZoom={2}
+          minZoom={0.1}
           onNodeClick={(_, node) => {
             setSelectedNode(node.data.item)
             onTapped?.(node.data.item)

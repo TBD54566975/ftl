@@ -56,6 +56,8 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	for _, deployment := range deployments {
 		var verbs []*pbconsole.Verb
 		var data []*pbconsole.Data
+		var secrets []*pbconsole.Secret
+		var configs []*pbconsole.Config
 
 		for _, decl := range deployment.Schema.Decls {
 			switch decl := decl.(type) {
