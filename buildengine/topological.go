@@ -9,9 +9,9 @@ import (
 // TopologicalSort returns a sequence of groups of modules in topological order
 // that may be built in parallel.
 func TopologicalSort(graph map[string][]string) [][]string {
-	modulesByKey := map[string]bool{}
+	modulesByName := map[string]bool{}
 	for module := range graph {
-		modulesByKey[module] = true
+		modulesByName[module] = true
 	}
 	// Order of modules to build.
 	// Each element is a list of modules that can be built in parallel.
@@ -20,11 +20,11 @@ func TopologicalSort(graph map[string][]string) [][]string {
 	// Modules that have already been "built"
 	built := map[string]bool{"builtin": true}
 
-	for len(modulesByKey) > 0 {
+	for len(modulesByName) > 0 {
 		// Current group of modules that can be built in parallel.
 		group := map[string]bool{}
 	nextModule:
-		for module := range modulesByKey {
+		for module := range modulesByName {
 			// Check that all dependencies have been built.
 			for _, dep := range graph[module] {
 				if !built[dep] {
@@ -32,13 +32,10 @@ func TopologicalSort(graph map[string][]string) [][]string {
 				}
 			}
 			group[module] = true
-			delete(modulesByKey, module)
+			delete(modulesByName, module)
 		}
 		orderedGroup := maps.Keys(group)
-
-		sort.Slice(orderedGroup, func(i, j int) bool {
-			return orderedGroup[i] < orderedGroup[j]
-		})
+		sort.Strings(orderedGroup)
 		for _, module := range orderedGroup {
 			built[module] = true
 		}
