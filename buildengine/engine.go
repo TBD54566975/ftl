@@ -279,7 +279,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 
 			moduleHashes[change.Name] = hash
 
-			dependentProjectKeys := e.getDependentProjectKeys(ProjectKeyForModuleName(change.Name))
+			dependentProjectKeys := e.getDependentProjectKeys(ProjectKey(change.Name))
 			if len(dependentProjectKeys) > 0 {
 				//TODO: inaccurate log message for ext libs
 				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join(StringsFromProjectKeys(dependentProjectKeys), ", "))
@@ -389,7 +389,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		return err
 	}
 	built := map[ProjectKey]*schema.Module{
-		ProjectKeyForModuleName("builtin"): schema.Builtins(),
+		ProjectKey("builtin"): schema.Builtins(),
 	}
 
 	topology := TopologicalSort(graph)
@@ -418,7 +418,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		// Now this group is built, collect all the schemas.
 		close(schemas)
 		for sch := range schemas {
-			built[ProjectKeyForModuleName(sch.Name)] = sch
+			built[ProjectKey(sch.Name)] = sch
 		}
 	}
 

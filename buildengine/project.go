@@ -99,10 +99,6 @@ func (e ExternalLibrary) String() string {
 // - map changes in the file system to the project
 type ProjectKey string
 
-func ProjectKeyForModuleName(name string) ProjectKey {
-	return ProjectKey(name)
-}
-
 func StringsFromProjectKeys(keys []ProjectKey) []string {
 	strs := make([]string, len(keys))
 	for i, key := range keys {
