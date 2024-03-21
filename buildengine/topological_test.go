@@ -7,7 +7,7 @@ import (
 )
 
 func TestTopologicalSort(t *testing.T) {
-	graph := map[string][]string{
+	graph := map[ProjectKey][]ProjectKey{
 		"alpha": {"beta", "gamma"},
 		"beta":  {"kappa"},
 		"gamma": {"kappa"},
@@ -15,7 +15,7 @@ func TestTopologicalSort(t *testing.T) {
 		"delta": {},
 	}
 	topo := TopologicalSort(graph)
-	expected := [][]string{
+	expected := [][]ProjectKey{
 		{"delta", "kappa"},
 		{"beta", "gamma"},
 		{"alpha"},

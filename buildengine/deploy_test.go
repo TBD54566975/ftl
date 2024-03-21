@@ -64,7 +64,7 @@ func TestDeploy(t *testing.T) {
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
 
 	modulePath := "testdata/modules/another"
-	module, err := LoadModule(ctx, modulePath)
+	module, err := LoadModule(modulePath)
 	assert.NoError(t, err)
 
 	// Build first to make sure the files are there.

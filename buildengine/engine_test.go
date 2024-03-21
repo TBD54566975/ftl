@@ -13,7 +13,7 @@ import (
 
 func TestEngine(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, []string{"testdata/modules/alpha", "testdata/modules/another"})
+	engine, err := buildengine.New(ctx, nil, []string{"testdata/modules/alpha", "testdata/modules/another"}, nil)
 	assert.NoError(t, err)
 
 	defer engine.Close()
@@ -43,7 +43,7 @@ func TestEngine(t *testing.T) {
 	}
 	engine.Import(ctx, otherSchema)
 
-	expected := map[string][]string{
+	expected := map[buildengine.ProjectKey][]buildengine.ProjectKey{
 		"alpha":   {"another", "other", "builtin"},
 		"another": {"builtin"},
 		"other":   {},

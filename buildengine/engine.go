@@ -260,7 +260,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				config := event.Project.Config()
 				err := e.buildAndDeploy(ctx, 1, true, config.Key)
 				if err != nil {
-					logger.Errorf(err, "build and deploy failed for %v: %w", event.Project, err)
+					logger.Errorf(err, "build and deploy failed for %v: %v", event.Project, err)
 				}
 			}
 		case change := <-schemaChanges:
@@ -536,10 +536,11 @@ func (e *Engine) gatherSchemas(
 		out[dep] = moduleSchemas[dep]
 		if dep != "builtin" {
 			depModule, ok := e.projects[dep]
-			if !ok {
-				return fmt.Errorf("dependency %q not found", dep)
+			// TODO: should we be gathering schemas from dependencies without a project?
+			// This can happen if the schema is loaded from the controller
+			if ok {
+				e.gatherSchemas(moduleSchemas, depModule, out)
 			}
-			e.gatherSchemas(moduleSchemas, depModule, out)
 		}
 	}
 	return nil

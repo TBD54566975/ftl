@@ -186,7 +186,7 @@ func TestExternalType(t *testing.T) {
 	buildDir := "_ftl"
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
-	module, err := LoadModule(ctx, moduleDir)
+	module, err := LoadModule(moduleDir)
 	assert.NoError(t, err)
 
 	sch := &schema.Schema{}
