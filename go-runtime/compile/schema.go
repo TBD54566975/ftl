@@ -670,6 +670,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type
 			} else if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
 				// If this type is named and declared in another module, it's a reference.
 				// The only basic-typed references supported are enums.
+				if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
+					return nil, fmt.Errorf("unsupported external type %s", named.Obj().Pkg().Path()+"."+named.Obj().Name())
+				}
 				base := path.Dir(pctx.pkg.PkgPath)
 				destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
 				enumRef := &schema.Ref{
@@ -718,8 +721,11 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type
 				return nil, err
 			}
 			return &schema.Optional{Type: underlying}, nil
-
 		default:
+			nodePath := named.Obj().Pkg().Path()
+			if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) && !strings.HasPrefix(nodePath, "ftl/") {
+				return nil, fmt.Errorf("unsupported external type %s", nodePath+"."+named.Obj().Name())
+			}
 			return visitStruct(pctx, pos, tnode)
 		}
 

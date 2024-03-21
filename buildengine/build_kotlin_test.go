@@ -1,9 +1,14 @@
 package buildengine
 
 import (
+	"bytes"
+	"context"
+	"os"
 	"testing"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestGenerateBasicModule(t *testing.T) {
@@ -382,4 +387,26 @@ fun nothing(context: Context): Unit = throw
 	testBuild(t, bctx, []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
+}
+
+func TestKotlinExternalType(t *testing.T) {
+	moduleDir := "testdata/modules/externalkotlin"
+	buildDir := "_ftl"
+
+	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
+	module, err := LoadModule(ctx, moduleDir)
+	assert.NoError(t, err)
+
+	//create a logger that writes to a buffer.Bytes
+	logBuffer := bytes.Buffer{}
+	logger := log.Configure(&logBuffer, log.Config{})
+	ctx = log.ContextWithLogger(ctx, logger)
+
+	sch := &schema.Schema{}
+	err = Build(ctx, sch, module)
+	assert.Error(t, err)
+	assert.Contains(t, logBuffer.String(), "Expected module name to be in the form ftl.<module>, but was com.google.type.DayOfWeek")
+
+	err = os.RemoveAll(buildDir)
+	assert.NoError(t, err, "Error removing build directory")
 }
