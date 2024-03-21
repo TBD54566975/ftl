@@ -2,7 +2,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 concurrency:
   group: ${{ github.ref }}-writecache
   cancel-in-progress: true
