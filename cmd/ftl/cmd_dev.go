@@ -11,6 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/lsp"
 )
 
 type devCmd struct {
@@ -50,6 +51,11 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		g.Go(func() error { return d.ServeCmd.Run(ctx) })
 	}
 
+	languageServer := lsp.NewServer(ctx)
+	g.Go(func() error {
+		return languageServer.Run()
+	})
+
 	g.Go(func() error {
 		err := d.ServeCmd.waitForControllerOnline(ctx, client)
 		if err != nil {
@@ -60,7 +66,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		if err != nil {
 			return err
 		}
-		return engine.Dev(ctx, d.Watch)
+		return engine.Dev(ctx, d.Watch, languageServer)
 	})
 
 	return g.Wait()
