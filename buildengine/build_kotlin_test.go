@@ -1,6 +1,7 @@
 package buildengine
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"testing"
@@ -396,10 +397,15 @@ func TestKotlinExternalType(t *testing.T) {
 	module, err := LoadModule(ctx, moduleDir)
 	assert.NoError(t, err)
 
+	//create a logger that writes to a buffer.Bytes
+	logBuffer := bytes.Buffer{}
+	logger := log.Configure(&logBuffer, log.Config{})
+	ctx = log.ContextWithLogger(ctx, logger)
+
 	sch := &schema.Schema{}
 	err = Build(ctx, sch, module)
-	//Expects: Expected module name to be in the form ftl.<module>, but was com.google.type.DayOfWeek"
 	assert.Error(t, err)
+	assert.Contains(t, logBuffer.String(), "Expected module name to be in the form ftl.<module>, but was com.google.type.DayOfWeek")
 
 	err = os.RemoveAll(buildDir)
 	assert.NoError(t, err, "Error removing build directory")
