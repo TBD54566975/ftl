@@ -10,14 +10,14 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// DiscoverProjects recursivley loads all modules under the given directories
+// DiscoverProjects recursively loads all modules under the given directories
 // (or if none provided, the current working directory is used) and external
 // libraries in externalLibDirs.
-func DiscoverProjects(ctx context.Context, dirs []string, externalLibDirs []string, stopOnError bool) ([]Project, error) {
+func DiscoverProjects(ctx context.Context, moduleDirs []string, externalLibDirs []string, stopOnError bool) ([]Project, error) {
 	out := []Project{}
 	logger := log.FromContext(ctx)
 
-	modules, err := discoverModules(dirs...)
+	modules, err := discoverModules(moduleDirs...)
 	if err != nil {
 		logger.Tracef("error discovering modules: %v", err)
 		if stopOnError {

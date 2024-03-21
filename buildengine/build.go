@@ -11,7 +11,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-// Build a module in the given directory given the schema and project config.
+// Build a project in the given directory given the schema and project config.
+// For a module, this will build the module. For an external library, this will build stubs for imported modules.
 func Build(ctx context.Context, sch *schema.Schema, project Project) error {
 	switch project := project.(type) {
 	case Module:
@@ -45,7 +46,7 @@ func buildExternalLibrary(ctx context.Context, sch *schema.Schema, lib ExternalL
 	imported := slices.Map(sch.Modules, func(m *schema.Module) string {
 		return m.Name
 	})
-	logger.Infof("Generating stubs [%s] for %v", strings.Join(imported, ", "), lib)
+	logger.Debugf("Generating stubs [%s] for %v", strings.Join(imported, ", "), lib)
 
 	switch lib.Language {
 	case "go":

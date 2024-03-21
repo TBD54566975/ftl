@@ -32,7 +32,7 @@ func (WatchEventProjectChanged) watchEvent() {}
 
 // Watch the given directories for new projects, deleted projects, and changes to
 // existing projects, publishing a change event for each.
-func Watch(ctx context.Context, period time.Duration, dirs []string, externalLibDirs []string) *pubsub.Topic[WatchEvent] {
+func Watch(ctx context.Context, period time.Duration, moduleDirs []string, externalLibDirs []string) *pubsub.Topic[WatchEvent] {
 	logger := log.FromContext(ctx)
 	topic := pubsub.New[WatchEvent]()
 	go func() {
@@ -54,7 +54,7 @@ func Watch(ctx context.Context, period time.Duration, dirs []string, externalLib
 				return
 			}
 
-			projects, _ := DiscoverProjects(ctx, dirs, externalLibDirs, false)
+			projects, _ := DiscoverProjects(ctx, moduleDirs, externalLibDirs, false)
 
 			projectsByDir := maps.FromSlice(projects, func(project Project) (string, Project) {
 				return project.Config().Dir, project

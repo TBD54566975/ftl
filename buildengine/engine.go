@@ -33,7 +33,7 @@ type schemaChange struct {
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
 	projects         map[ProjectKey]Project
-	dirs             []string
+	moduleDirs       []string
 	externalDirs     []string
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
@@ -56,11 +56,11 @@ func Parallelism(n int) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs []string, externalDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
-		dirs:             dirs,
+		moduleDirs:       moduleDirs,
 		externalDirs:     externalDirs,
 		projects:         map[ProjectKey]Project{},
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
@@ -74,7 +74,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, dirs 
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
 
-	projects, err := DiscoverProjects(ctx, dirs, externalDirs, true)
+	projects, err := DiscoverProjects(ctx, moduleDirs, externalDirs, true)
 	if err != nil {
 		return nil, fmt.Errorf("could not find projects: %w", err)
 	}
@@ -224,7 +224,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	defer e.schemaChanges.Unsubscribe(schemaChanges)
 
 	watchEvents := make(chan WatchEvent, 128)
-	watch := Watch(ctx, period, e.dirs, e.externalDirs)
+	watch := Watch(ctx, period, e.moduleDirs, e.externalDirs)
 	watch.Subscribe(watchEvents)
 	defer watch.Unsubscribe(watchEvents)
 	defer watch.Close()
