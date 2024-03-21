@@ -66,15 +66,17 @@ export const layoutNodes = (modules: Module[]) => {
     const yOffset = depth * 300
 
     const verbs = module.verbs
+
     nodes.push({
       id: module.name ?? '',
       position: { x: x, y: yOffset },
-      data: { title: module.name },
+      data: { title: module.name, item: module },
       type: 'groupNode',
+      draggable: true,
       style: {
         width: groupWidth,
         height: (verbs?.length ?? 1) * 50 + 50,
-        zIndex: -1,
+        zIndex: 1,
       },
     })
     let y = 40
@@ -84,28 +86,30 @@ export const layoutNodes = (modules: Module[]) => {
         .map((meta) => meta.value.value as MetadataCalls)
 
       nodes.push({
-        id: `${module.name}-${verb.verb?.name}`,
+        id: `${module.name}.${verb.verb?.name}`,
         position: { x: 20, y: y },
         connectable: false,
-        data: { title: verb.verb?.name },
+        data: { title: verb.verb?.name, item: verb },
         type: 'verbNode',
         parentNode: module.name,
         style: {
           width: groupWidth - 40,
           height: 40,
         },
+        draggable: false,
+        zIndex: 2,
       })
 
       const uniqueEdgeIds = new Set<string>()
       calls?.map((call) =>
         call.calls.forEach((call) => {
-          const edgeId = `${module.name}-${verb.verb?.name}-${call.module}-${call.name}`
+          const edgeId = `${module.name}.${verb.verb?.name}-${call.module}.${call.name}`
           if (!uniqueEdgeIds.has(edgeId)) {
             uniqueEdgeIds.add(edgeId)
             edges.push({
               id: edgeId,
-              source: `${module.name}-${verb.verb?.name}`,
-              target: `${call.module}-${call.name}`,
+              source: `${module.name}.${verb.verb?.name}`,
+              target: `${call.module}.${call.name}`,
               style: { stroke: 'rgb(251 113 133)' },
               animated: true,
             })
