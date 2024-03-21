@@ -43,7 +43,7 @@ func UpdateDependencies(ctx context.Context, project Project) (Project, error) {
 	return out, nil
 }
 
-func extractDependencies(project Project) ([]ProjectKey, error) {
+func extractDependencies(project Project) ([]string, error) {
 	config := project.Config()
 	name := ""
 	if config, ok := project.(Module); ok {
@@ -61,7 +61,7 @@ func extractDependencies(project Project) ([]ProjectKey, error) {
 	}
 }
 
-func extractGoFTLImports(self, dir string) ([]ProjectKey, error) {
+func extractGoFTLImports(self, dir string) ([]string, error) {
 	dependencies := map[string]bool{}
 	fset := token.NewFileSet()
 	err := WalkDir(dir, func(path string, d fs.DirEntry) error {
@@ -100,10 +100,10 @@ func extractGoFTLImports(self, dir string) ([]ProjectKey, error) {
 	}
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
-	return ProjectKeysFromModuleNames(modules), nil
+	return modules, nil
 }
 
-func extractKotlinFTLImports(self, dir string) ([]ProjectKey, error) {
+func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	dependencies := map[string]bool{}
 	kotlinImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
 
@@ -139,5 +139,5 @@ func extractKotlinFTLImports(self, dir string) ([]ProjectKey, error) {
 	}
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
-	return ProjectKeysFromModuleNames(modules), nil
+	return modules, nil
 }

@@ -15,7 +15,7 @@ import (
 //sumtype:decl
 type Project interface {
 	Config() ProjectConfig
-	CopyWithDependencies([]ProjectKey) Project
+	CopyWithDependencies([]string) Project
 	String() string
 }
 
@@ -24,7 +24,7 @@ type ProjectConfig struct {
 	Dir          string
 	Language     string
 	Watch        []string
-	Dependencies []ProjectKey
+	Dependencies []string
 }
 
 var _ = (Project)(Module{})
@@ -42,13 +42,13 @@ func (m Module) Config() ProjectConfig {
 		Dir:          m.ModuleConfig.Dir,
 		Language:     m.ModuleConfig.Language,
 		Watch:        m.ModuleConfig.Watch,
-		Dependencies: ProjectKeysFromModuleNames(m.Dependencies),
+		Dependencies: m.Dependencies,
 	}
 }
 
-func (m Module) CopyWithDependencies(dependencies []ProjectKey) Project {
+func (m Module) CopyWithDependencies(dependencies []string) Project {
 	module := reflect.DeepCopy(m)
-	module.Dependencies = StringsFromProjectKeys(dependencies)
+	module.Dependencies = dependencies
 	return Project(module)
 }
 
@@ -79,13 +79,13 @@ func (e ExternalLibrary) Config() ProjectConfig {
 		Dir:          e.Dir,
 		Language:     e.Language,
 		Watch:        watch,
-		Dependencies: ProjectKeysFromModuleNames(e.Dependencies),
+		Dependencies: e.Dependencies,
 	}
 }
 
-func (e ExternalLibrary) CopyWithDependencies(dependencies []ProjectKey) Project {
+func (e ExternalLibrary) CopyWithDependencies(dependencies []string) Project {
 	lib := reflect.DeepCopy(e)
-	lib.Dependencies = StringsFromProjectKeys(dependencies)
+	lib.Dependencies = dependencies
 	return Project(lib)
 }
 

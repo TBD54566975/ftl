@@ -142,25 +142,25 @@ func (e *Engine) Close() error {
 //
 // If no modules are provided, the entire graph is returned. An error is returned if
 // any dependencies are missing.
-func (e *Engine) Graph(projects ...ProjectKey) (map[ProjectKey][]ProjectKey, error) {
-	out := map[ProjectKey][]ProjectKey{}
+func (e *Engine) Graph(projects ...ProjectKey) (map[string][]string, error) {
+	out := map[string][]string{}
 	if len(projects) == 0 {
 		projects = maps.Keys(e.projects)
 	}
 	for _, key := range projects {
-		if err := e.buildGraph(key, out); err != nil {
+		if err := e.buildGraph(string(key), out); err != nil {
 			return nil, err
 		}
 	}
 	return out, nil
 }
 
-func (e *Engine) buildGraph(key ProjectKey, out map[ProjectKey][]ProjectKey) error {
-	var deps []ProjectKey
-	if project, ok := e.projects[key]; ok {
+func (e *Engine) buildGraph(key string, out map[string][]string) error {
+	var deps []string
+	if project, ok := e.projects[ProjectKey(key)]; ok {
 		deps = project.Config().Dependencies
-	} else if sch, ok := e.controllerSchema.Load(string(key)); ok {
-		deps = ProjectKeysFromModuleNames(sch.Imports())
+	} else if sch, ok := e.controllerSchema.Load(key); ok {
+		deps = sch.Imports()
 	} else {
 		return fmt.Errorf("module %q not found", key)
 	}
@@ -279,7 +279,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 
 			moduleHashes[change.Name] = hash
 
-			dependentProjectKeys := e.getDependentProjectKeys(ProjectKey(change.Name))
+			dependentProjectKeys := e.getDependentProjectKeys(change.Name)
 			if len(dependentProjectKeys) > 0 {
 				//TODO: inaccurate log message for ext libs
 				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join(StringsFromProjectKeys(dependentProjectKeys), ", "))
@@ -303,11 +303,11 @@ func computeModuleHash(module *schema.Module) ([]byte, error) {
 	return hasher.Sum(nil), nil
 }
 
-func (e *Engine) getDependentProjectKeys(key ProjectKey) []ProjectKey {
+func (e *Engine) getDependentProjectKeys(name string) []ProjectKey {
 	dependentProjectKeys := map[ProjectKey]bool{}
 	for k, project := range e.projects {
 		for _, dep := range project.Config().Dependencies {
-			if dep == key {
+			if dep == name {
 				dependentProjectKeys[k] = true
 			}
 		}
@@ -388,8 +388,8 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 	if err != nil {
 		return err
 	}
-	built := map[ProjectKey]*schema.Module{
-		ProjectKey("builtin"): schema.Builtins(),
+	builtModules := map[string]*schema.Module{
+		"builtin": schema.Builtins(),
 	}
 
 	topology := TopologicalSort(graph)
@@ -398,13 +398,14 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		schemas := make(chan *schema.Module, len(group))
 		wg, ctx := errgroup.WithContext(ctx)
 		wg.SetLimit(e.parallelism)
-		for _, key := range group {
+		for _, keyStr := range group {
+			key := ProjectKey(keyStr)
 			wg.Go(func() error {
 				if !mustBuild[key] {
-					return e.mustSchema(ctx, key, built, schemas)
+					return e.mustSchema(ctx, key, builtModules, schemas)
 				}
 
-				err := e.build(ctx, key, built, schemas)
+				err := e.build(ctx, key, builtModules, schemas)
 				if err == nil && callback != nil {
 					return callback(ctx, e.projects[key])
 				}
@@ -418,7 +419,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		// Now this group is built, collect all the schemas.
 		close(schemas)
 		for sch := range schemas {
-			built[ProjectKey(sch.Name)] = sch
+			builtModules[sch.Name] = sch
 		}
 	}
 
@@ -426,25 +427,25 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 }
 
 // Publish either the schema from the FTL controller, or from a local build.
-func (e *Engine) mustSchema(ctx context.Context, key ProjectKey, built map[ProjectKey]*schema.Module, schemas chan<- *schema.Module) error {
+func (e *Engine) mustSchema(ctx context.Context, key ProjectKey, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
 	if sch, ok := e.controllerSchema.Load(string(key)); ok {
 		schemas <- sch
 		return nil
 	}
-	return e.build(ctx, key, built, schemas)
+	return e.build(ctx, key, builtModules, schemas)
 }
 
 // Build a module and publish its schema.
 //
 // Assumes that all dependencies have been built and are available in "built".
-func (e *Engine) build(ctx context.Context, key ProjectKey, built map[ProjectKey]*schema.Module, schemas chan<- *schema.Module) error {
+func (e *Engine) build(ctx context.Context, key ProjectKey, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
 	project, ok := e.projects[key]
 	if !ok {
 		return fmt.Errorf("project %q not found", key)
 	}
 
-	combined := map[ProjectKey]*schema.Module{}
-	if err := e.gatherSchemas(built, project, combined); err != nil {
+	combined := map[string]*schema.Module{}
+	if err := e.gatherSchemas(builtModules, project, combined); err != nil {
 		return err
 	}
 	sch := &schema.Schema{Modules: maps.Values(combined)}
@@ -464,11 +465,11 @@ func (e *Engine) build(ctx context.Context, key ProjectKey, built map[ProjectKey
 	return nil
 }
 
-// Construct a combined schema for a module and its transitive dependencies.
+// Construct a combined schema for a project and its transitive dependencies.
 func (e *Engine) gatherSchemas(
-	moduleSchemas map[ProjectKey]*schema.Module,
+	moduleSchemas map[string]*schema.Module,
 	project Project,
-	out map[ProjectKey]*schema.Module,
+	out map[string]*schema.Module,
 ) error {
 	latestModule, ok := e.projects[project.Config().Key]
 	if !ok {
@@ -477,7 +478,7 @@ func (e *Engine) gatherSchemas(
 	for _, dep := range latestModule.Config().Dependencies {
 		out[dep] = moduleSchemas[dep]
 		if dep != "builtin" {
-			depModule, ok := e.projects[dep]
+			depModule, ok := e.projects[ProjectKey(dep)]
 			// TODO: should we be gathering schemas from dependencies without a project?
 			// This can happen if the schema is loaded from the controller
 			if ok {

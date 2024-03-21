@@ -43,7 +43,7 @@ func TestEngine(t *testing.T) {
 	}
 	engine.Import(ctx, otherSchema)
 
-	expected := map[buildengine.ProjectKey][]buildengine.ProjectKey{
+	expected := map[string][]string{
 		"alpha":   {"another", "other", "builtin"},
 		"another": {"builtin"},
 		"other":   {},
