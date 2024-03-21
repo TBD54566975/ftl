@@ -14,6 +14,8 @@ import (
 //
 //sumtype:decl
 type Project interface {
+	sealed()
+
 	Config() ProjectConfig
 	CopyWithDependencies([]string) Project
 	String() string
@@ -35,6 +37,8 @@ type Module struct {
 	moduleconfig.ModuleConfig
 	Dependencies []string
 }
+
+func (m Module) sealed() {}
 
 func (m Module) Config() ProjectConfig {
 	return ProjectConfig{
@@ -62,6 +66,8 @@ type ExternalLibrary struct {
 	Language     string
 	Dependencies []string
 }
+
+func (e ExternalLibrary) sealed() {}
 
 func (e ExternalLibrary) Config() ProjectConfig {
 	var watch []string
