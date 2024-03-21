@@ -19,7 +19,7 @@ func Build(ctx context.Context, sch *schema.Schema, project Project) error {
 	case ExternalLibrary:
 		return buildExternalLibrary(ctx, sch, project)
 	default:
-		return fmt.Errorf("unsupported project type: %T", project)
+		panic(fmt.Sprintf("unsupported project type: %T", project))
 	}
 }
 

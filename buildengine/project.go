@@ -11,6 +11,8 @@ import (
 )
 
 // Project models FTL modules and external libraries and is used to manage dependencies within the build engine
+//
+//sumtype:decl
 type Project interface {
 	Config() ProjectConfig
 	CopyWithDependencies([]ProjectKey) Project
