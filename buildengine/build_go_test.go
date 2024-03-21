@@ -1,9 +1,13 @@
 package buildengine
 
 import (
+	"context"
+	"os"
 	"testing"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestGenerateGoModule(t *testing.T) {
@@ -175,4 +179,20 @@ func Call(context.Context, Req) (Resp, error) {
 	testBuild(t, bctx, []assertion{
 		assertGeneratedModule("go/modules/test/external_module.go", expected),
 	})
+}
+
+func TestExternalType(t *testing.T) {
+	moduleDir := "testdata/modules/external"
+	buildDir := "_ftl"
+
+	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
+	module, err := LoadModule(ctx, moduleDir)
+	assert.NoError(t, err)
+
+	sch := &schema.Schema{}
+	err = Build(ctx, sch, module)
+	assert.Contains(t, err.Error(), "field Month: unsupported external type time.Month")
+
+	err = os.RemoveAll(buildDir)
+	assert.NoError(t, err, "Error removing build directory")
 }
