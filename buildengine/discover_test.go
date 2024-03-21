@@ -63,7 +63,7 @@ func TestDiscoverModules(t *testing.T) {
 		},
 		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:      "testdata/modules/external",
+				Dir:      "testdata/projects/external",
 				Language: "go",
 				Realm:    "home",
 				Module:   "external",
@@ -82,19 +82,7 @@ func TestDiscoverModules(t *testing.T) {
 		},
 		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/projects/other",
-				Language:  "go",
-				Realm:     "home",
-				Module:    "other",
-				Deploy:    []string{"main"},
-				DeployDir: "_ftl",
-				Schema:    "schema.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
-			},
-		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:      "testdata/modules/externalkotlin",
+				Dir:      "testdata/projects/externalkotlin",
 				Language: "kotlin",
 				Realm:    "home",
 				Module:   "externalkotlin",
@@ -112,6 +100,18 @@ func TestDiscoverModules(t *testing.T) {
 					"src/**",
 					"target/generated-sources",
 				},
+			},
+		},
+		Module{
+			ModuleConfig: moduleconfig.ModuleConfig{
+				Dir:       "testdata/projects/other",
+				Language:  "go",
+				Realm:     "home",
+				Module:    "other",
+				Deploy:    []string{"main"},
+				DeployDir: "_ftl",
+				Schema:    "schema.pb",
+				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
 			},
 		},
 		ExternalLibrary{

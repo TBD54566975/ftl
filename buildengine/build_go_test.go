@@ -182,7 +182,7 @@ func Call(context.Context, Req) (Resp, error) {
 }
 
 func TestExternalType(t *testing.T) {
-	moduleDir := "testdata/modules/external"
+	moduleDir := "testdata/projects/external"
 	buildDir := "_ftl"
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))

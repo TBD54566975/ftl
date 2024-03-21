@@ -390,14 +390,13 @@ fun nothing(context: Context): Unit = throw
 }
 
 func TestKotlinExternalType(t *testing.T) {
-	moduleDir := "testdata/modules/externalkotlin"
+	moduleDir := "testdata/projects/externalkotlin"
 	buildDir := "_ftl"
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
 	module, err := LoadModule(moduleDir)
 	assert.NoError(t, err)
 
-	//create a logger that writes to a buffer.Bytes
 	logBuffer := bytes.Buffer{}
 	logger := log.Configure(&logBuffer, log.Config{})
 	ctx = log.ContextWithLogger(ctx, logger)
