@@ -79,15 +79,11 @@ message Data {
 }
 
 message Secret {
-  schema.Secret data = 1;
-  string name = 2;
-  // schema.Type type = 3;
+  schema.Secret secret = 1;
 }
 
 message Config {
-  schema.Config data = 1;
-  string name = 2;
-  // schema.Type type = 3;
+  schema.Config config = 1;
 }
 
 message Module {
@@ -97,6 +93,8 @@ message Module {
   string schema = 4;
   repeated Verb verbs = 5;
   repeated Data data = 6;
+  repeated Secret secrets = 7;
+  repeated Config configs = 8;
 }
 
 message GetModulesRequest {}

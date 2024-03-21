@@ -91,7 +91,21 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 					Schema: schema.DataFromProto(d).String(),
 				})
 
-			case *schema.Database, *schema.Enum, *schema.Config, *schema.Secret:
+			case *schema.Secret:
+				//nolint:forcetypeassert
+				s := decl.ToProto().(*schemapb.Secret)
+				secrets = append(secrets, &pbconsole.Secret{
+					Secret: s,
+				})
+
+			case *schema.Config:
+				//nolint:forcetypeassert
+				c := decl.ToProto().(*schemapb.Config)
+				configs = append(configs, &pbconsole.Config{
+					Config: c,
+				})
+
+			case *schema.Database, *schema.Enum:
 			}
 		}
 
@@ -101,6 +115,8 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			Language:      deployment.Language,
 			Verbs:         verbs,
 			Data:          data,
+			Secrets:       secrets,
+			Configs:       configs,
 		})
 	}
 
