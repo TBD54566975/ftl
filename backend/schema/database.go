@@ -47,11 +47,3 @@ func DatabaseFromProto(s *schemapb.Database) *Database {
 		Comments: s.Comments,
 	}
 }
-
-func databaseListToSchema(s []*schemapb.Database) []*Database {
-	var out []*Database
-	for _, n := range s {
-		out = append(out, DatabaseFromProto(n))
-	}
-	return out
-}

@@ -101,7 +101,7 @@ func Validate(schema *Schema) (*Schema, error) {
 			case *Ref:
 				if mdecl := scopes.Resolve(*n); mdecl != nil {
 					switch decl := mdecl.Symbol.(type) {
-					case *Verb, *Enum:
+					case *Verb, *Enum, *Database, *Config, *Secret:
 						if mdecl.Module != nil {
 							n.Module = mdecl.Module.Name
 						}
@@ -121,7 +121,6 @@ func Validate(schema *Schema) (*Schema, error) {
 					case *TypeParameter:
 					default:
 						merr = append(merr, fmt.Errorf("%s: invalid reference %q at %q", n.Pos, n, mdecl.Symbol.Position()))
-
 					}
 				} else {
 					merr = append(merr, fmt.Errorf("%s: unknown reference %q", n.Pos, n))
@@ -209,8 +208,10 @@ func ValidateModule(module *Module) error {
 		case *Ref:
 			if mdecl := scopes.Resolve(*n); mdecl != nil {
 				switch decl := mdecl.Symbol.(type) {
-				case *Verb, *Enum:
-					n.Module = mdecl.Module.Name
+				case *Verb, *Enum, *Database, *Config, *Secret:
+					if n.Module == "" {
+						n.Module = mdecl.Module.Name
+					}
 					if len(n.TypeParameters) != 0 {
 						merr = append(merr, fmt.Errorf("%s: reference to %s %q cannot have type parameters",
 							n.Pos, reflect.TypeOf(decl).Elem().Name(), n.Name))
@@ -224,7 +225,6 @@ func ValidateModule(module *Module) error {
 							n.Pos, n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
 					}
 				case *TypeParameter:
-
 				default:
 					if n.Module == "" {
 						merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid %s %q", n.Pos, reflect.TypeOf(decl).Elem().Name(), n))
@@ -293,14 +293,35 @@ func ValidateModule(module *Module) error {
 	sort.SliceStable(module.Decls, func(i, j int) bool {
 		iDecl := module.Decls[i]
 		jDecl := module.Decls[j]
-		iType := reflect.TypeOf(iDecl).String()
-		jType := reflect.TypeOf(jDecl).String()
-		if iType == jType {
+		iPriority := getDeclSortingPriority(iDecl)
+		jPriority := getDeclSortingPriority(jDecl)
+		if iPriority == jPriority {
 			return iDecl.GetName() < jDecl.GetName()
 		}
-		return iType < jType
+		return iPriority < jPriority
 	})
 	return errors.Join(merr...)
+}
+
+// getDeclSortingPriority (used for schema sorting) is pulled out into it's own switch so the Go sumtype check will fail
+// if a new Decl is added but not explicitly prioritized
+func getDeclSortingPriority(decl Decl) int {
+	priority := 0
+	switch decl.(type) {
+	case *Config:
+		priority = 1
+	case *Secret:
+		priority = 2
+	case *Database:
+		priority = 3
+	case *Enum:
+		priority = 4
+	case *Data:
+		priority = 5
+	case *Verb:
+		priority = 6
+	}
+	return priority
 }
 
 // Sort and de-duplicate errors.
