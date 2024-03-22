@@ -34,6 +34,34 @@ func (s Scope) String() string {
 	return out.String()
 }
 
+// ResolveTypeAs resolves a [Type] to a concrete symbol and declaration.
+func ResolveTypeAs[S Symbol](scopes Scopes, t Type) (symbol S, decl *ModuleDecl) {
+	decl = scopes.ResolveType(t)
+	if decl == nil {
+		return
+	}
+	var ok bool
+	symbol, ok = decl.Symbol.(S)
+	if !ok {
+		return
+	}
+	return symbol, decl
+}
+
+// ResolveAs resolves a [Ref] to a concrete symbol and declaration.
+func ResolveAs[S Symbol](scopes Scopes, ref Ref) (symbol S, decl *ModuleDecl) {
+	decl = scopes.Resolve(ref)
+	if decl == nil {
+		return
+	}
+	var ok bool
+	symbol, ok = decl.Symbol.(S)
+	if !ok {
+		return
+	}
+	return symbol, decl
+}
+
 // Scopes to search during type resolution.
 type Scopes []Scope
 
@@ -95,6 +123,22 @@ func (s *Scopes) Add(owner *Module, name string, symbol Symbol) error {
 	return nil
 }
 
+func (s Scopes) ResolveType(t Type) *ModuleDecl {
+	switch t := t.(type) {
+	case Named:
+		return s.Resolve(Ref{Name: t.GetName()})
+
+	case *Ref:
+		return s.Resolve(*t)
+
+	case Symbol:
+		return &ModuleDecl{nil, t}
+
+	default:
+		return nil
+	}
+}
+
 // Resolve a reference to a symbol declaration or nil.
 func (s Scopes) Resolve(ref Ref) *ModuleDecl {
 	if ref.Module == "" {
@@ -114,6 +158,12 @@ func (s Scopes) Resolve(ref Ref) *ModuleDecl {
 				if decl := resolver.Resolve(ref); decl != nil {
 					// Holy nested if statement Batman.
 					return decl
+				}
+			} else {
+				for _, d := range mdecl.Module.Decls {
+					if d.GetName() == ref.Name {
+						return &ModuleDecl{mdecl.Module, d}
+					}
 				}
 			}
 		}

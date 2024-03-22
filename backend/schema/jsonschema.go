@@ -164,7 +164,7 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
 		*MetadataAlias, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module,
 		*Schema, Type, *Database, *Verb, *EnumVariant,
-		Value, *StringValue, *IntValue, *Config, *Secret, Symbol:
+		Value, *StringValue, *IntValue, *Config, *Secret, Symbol, Named:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 
 	default:

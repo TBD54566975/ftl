@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 	xreflect "golang.design/x/reflect"
 	"golang.org/x/exp/maps"
 
@@ -81,7 +82,7 @@ func Validate(schema *Schema) (*Schema, error) {
 		}
 
 		if _, seen := modules[module.Name]; seen {
-			merr = append(merr, fmt.Errorf("%s: duplicate module %q", module.Pos, module.Name))
+			merr = append(merr, errorf(module, "duplicate module %q", module.Name))
 		}
 		modules[module.Name] = true
 		if err := ValidateModule(module); err != nil {
@@ -106,38 +107,44 @@ func Validate(schema *Schema) (*Schema, error) {
 							n.Module = mdecl.Module.Name
 						}
 						if len(n.TypeParameters) != 0 {
-							merr = append(merr, fmt.Errorf("%s: reference to %s %q cannot have type parameters",
-								n.Pos, reflect.TypeOf(decl).Elem().Name(), n.Name))
+							merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters",
+								reflect.TypeOf(decl).Elem().Name(), n.Name))
 						}
 					case *Data:
 						if mdecl.Module != nil {
 							n.Module = mdecl.Module.Name
 						}
 						if len(n.TypeParameters) != len(decl.TypeParameters) {
-							merr = append(merr, fmt.Errorf("%s: reference to data structure %s has %d type parameters, but %d were expected",
-								n.Pos, n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
+							merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
+								n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
 						}
 
 					case *TypeParameter:
 					default:
-						merr = append(merr, fmt.Errorf("%s: invalid reference %q at %q", n.Pos, n, mdecl.Symbol.Position()))
+						merr = append(merr, errorf(n, "invalid reference %q at %q", n, mdecl.Symbol.Position()))
 					}
 				} else {
-					merr = append(merr, fmt.Errorf("%s: unknown reference %q", n.Pos, n))
+					merr = append(merr, errorf(n, "unknown reference %q", n))
 				}
 
 			case *Verb:
 				for _, md := range n.Metadata {
 					if md, ok := md.(*MetadataIngress); ok {
-						if existing, ok := ingress[md.String()]; ok {
-							merr = append(merr, fmt.Errorf("%s: duplicate %q for %s:%q and %s:%q", md.Pos, md.String(), existing.Pos, existing.Name, n.Pos, n.Name))
-						}
+						// Check for duplicate ingress keys
+						key := md.Method + " "
+						for _, path := range md.Path {
+							switch path := path.(type) {
+							case *IngressPathLiteral:
+								key += "/" + path.Text
 
-						if md.Type == "http" && (!strings.HasPrefix(n.Request.String(), "builtin.HttpRequest") || !strings.HasPrefix(n.Response.String(), "builtin.HttpResponse")) {
-							merr = append(merr, fmt.Errorf("%s: HTTP ingress verb %s(%s) %s must have the signature %s(builtin.HttpRequest) builtin.HttpResponse",
-								md.Pos, n.Name, n.Request, n.Response, n.Name))
+							case *IngressPathParameter:
+								key += "/{}"
+							}
 						}
-						ingress[md.String()] = n
+						if existing, ok := ingress[key]; ok {
+							merr = append(merr, errorf(md, "duplicate %s ingress %s for %s:%q and %s:%q", md.Type, key, existing.Pos, existing.Name, n.Pos, n.Name))
+						}
+						ingress[key] = n
 					}
 				}
 
@@ -146,13 +153,12 @@ func Validate(schema *Schema) (*Schema, error) {
 				case *String, *Int:
 					for _, v := range n.Variants {
 						if reflect.TypeOf(v.Value.schemaValueType()) != reflect.TypeOf(t) {
-							merr = append(merr, fmt.Errorf("%s: enum variant %q of type %s cannot have a "+
-								"value of type %s", v.Pos, v.Name, t, v.Value.schemaValueType()))
+							merr = append(merr, errorf(v, "enum variant %q of type %s cannot have a value of type %s", v.Name, t, v.Value.schemaValueType()))
 						}
 					}
 					return next()
 				default:
-					merr = append(merr, fmt.Errorf("%s: enum type must be String or Int, not %s", n.Pos, n.Type))
+					merr = append(merr, errorf(n, "enum type must be String or Int, not %s", n.Type))
 				}
 
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
@@ -160,7 +166,7 @@ func Validate(schema *Schema) (*Schema, error) {
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
-				Value, *IntValue, *StringValue, *Config, *Secret, Symbol:
+				Value, *IntValue, *StringValue, *Config, *Secret, Symbol, Named:
 			}
 			return next()
 		})
@@ -189,10 +195,10 @@ func ValidateModule(module *Module) error {
 	scopes := NewScopes()
 
 	if !ValidateName(module.Name) {
-		merr = append(merr, fmt.Errorf("%s: module name %q is invalid", module.Pos, module.Name))
+		merr = append(merr, errorf(module, "module name %q is invalid", module.Name))
 	}
 	if module.Builtin && module.Name != "builtin" {
-		merr = append(merr, fmt.Errorf("%s: only the \"ftl\" module can be marked as builtin", module.Pos))
+		merr = append(merr, errorf(module, "only the \"ftl\" module can be marked as builtin"))
 	}
 	if err := scopes.Add(nil, module.Name, module); err != nil {
 		merr = append(merr, err)
@@ -213,69 +219,71 @@ func ValidateModule(module *Module) error {
 						n.Module = mdecl.Module.Name
 					}
 					if len(n.TypeParameters) != 0 {
-						merr = append(merr, fmt.Errorf("%s: reference to %s %q cannot have type parameters",
-							n.Pos, reflect.TypeOf(decl).Elem().Name(), n.Name))
+						merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters",
+							reflect.TypeOf(decl).Elem().Name(), n.Name))
 					}
 				case *Data:
 					if n.Module == "" {
 						n.Module = mdecl.Module.Name
 					}
 					if len(n.TypeParameters) != len(decl.TypeParameters) {
-						merr = append(merr, fmt.Errorf("%s: reference to data structure %s has %d type parameters, but %d were expected",
-							n.Pos, n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
+						merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
+							n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
 					}
 				case *TypeParameter:
 				default:
 					if n.Module == "" {
-						merr = append(merr, fmt.Errorf("%s: unqualified reference to invalid %s %q", n.Pos, reflect.TypeOf(decl).Elem().Name(), n))
+						merr = append(merr, errorf(n, "unqualified reference to invalid %s %q", reflect.TypeOf(decl).Elem().Name(), n))
 					}
 					n.Module = mdecl.Module.Name
 				}
 			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
-				merr = append(merr, fmt.Errorf("%s: unknown reference %q", n.Pos, n))
+				merr = append(merr, errorf(n, "unknown reference %q", n))
 			}
 
 		case *Verb:
 			if !ValidateName(n.Name) {
-				merr = append(merr, fmt.Errorf("%s: Verb name %q is invalid", n.Pos, n.Name))
+				merr = append(merr, errorf(n, "Verb name %q is invalid", n.Name))
 			}
 			if _, ok := primitivesScope[n.Name]; ok {
-				merr = append(merr, fmt.Errorf("%s: Verb name %q is a reserved word", n.Pos, n.Name))
+				merr = append(merr, errorf(n, "Verb name %q is a reserved word", n.Name))
 			}
+
+			merr = append(merr, validateVerbMetadata(scopes, n)...)
 
 		case *Data:
 			if !ValidateName(n.Name) {
-				merr = append(merr, fmt.Errorf("%s: data structure name %q is invalid", n.Pos, n.Name))
+				merr = append(merr, errorf(n, "data structure name %q is invalid", n.Name))
 			}
 			if _, ok := primitivesScope[n.Name]; ok {
-				merr = append(merr, fmt.Errorf("%s: data structure name %q is a reserved word", n.Pos, n.Name))
+				merr = append(merr, errorf(n, "data structure name %q is a reserved word", n.Name))
 			}
 			for _, md := range n.Metadata {
 				if md, ok := md.(*MetadataCalls); ok {
-					merr = append(merr, fmt.Errorf("%s: metadata %q is not valid on data structures", md.Pos, strings.TrimSpace(md.String())))
+					merr = append(merr, errorf(md, "metadata %q is not valid on data structures", strings.TrimSpace(md.String())))
 				}
 			}
 
 		case *Config:
 			if !ValidateName(n.Name) {
-				merr = append(merr, fmt.Errorf("%s: config name %q is invalid", n.Pos, n.Name))
+				merr = append(merr, errorf(n, "config name %q is invalid", n.Name))
 			}
 			if _, ok := primitivesScope[n.Name]; ok {
-				merr = append(merr, fmt.Errorf("%s: config name %q is a reserved word", n.Pos, n.Name))
+				merr = append(merr, errorf(n, "config name %q is a reserved word", n.Name))
 			}
 
 		case *Secret:
 			if !ValidateName(n.Name) {
-				merr = append(merr, fmt.Errorf("%s: secret name %q is invalid", n.Pos, n.Name))
+				merr = append(merr, errorf(n, "secret name %q is invalid", n.Name))
 			}
 			if _, ok := primitivesScope[n.Name]; ok {
-				merr = append(merr, fmt.Errorf("%s: secret name %q is a reserved word", n.Pos, n.Name))
+				merr = append(merr, errorf(n, "secret name %q is a reserved word", n.Name))
 			}
 
 		case *Field:
 			for _, md := range n.Metadata {
 				if _, ok := md.(*MetadataAlias); !ok {
-					merr = append(merr, fmt.Errorf("%s: metadata %q is not valid on fields", md.Position(), strings.TrimSpace(md.String())))
+					merr = append(merr, errorf(md, "metadata %q is not valid on fields", strings.TrimSpace(md.String())))
 				}
 			}
 
@@ -285,7 +293,7 @@ func ValidateModule(module *Module) error {
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
 
-		case Symbol, Type, Metadata, Decl, Value: // Union types.
+		case Named, Symbol, Type, Metadata, Decl, Value: // Union types.
 		}
 		return next()
 	})
@@ -421,4 +429,70 @@ func dfsForDependencyCycle(imports map[string][]string, vertexStates map[depende
 	}
 
 	return nil
+}
+
+func errorf(pos interface{ Position() Position }, format string, args ...interface{}) error {
+	return participle.Errorf(lexer.Position(pos.Position()), format, args...)
+}
+
+func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
+	// Validate metadata
+	for _, md := range n.Metadata {
+		switch md := md.(type) {
+		case *MetadataIngress:
+			reqBodyType, reqBody, errs := validateIngressRequestOrResponse(scopes, n, "request", n.Request)
+			merr = append(merr, errs...)
+			_, _, errs = validateIngressRequestOrResponse(scopes, n, "response", n.Response)
+			merr = append(merr, errs...)
+
+			// Validate path
+			for _, path := range md.Path {
+				switch path := path.(type) {
+				case *IngressPathParameter:
+					reqBodyData, ok := reqBody.(*Data)
+					if !ok {
+						merr = append(merr, errorf(path, "ingress verb %s: cannot use path parameter %q with request type %s, expected Data type", n.Name, path.Name, reqBodyType))
+					} else if reqBodyData.FieldByName(path.Name) == nil {
+						merr = append(merr, errorf(path, "ingress verb %s: request type %s does not contain a field corresponding to the parameter %q", n.Name, reqBodyType, path.Name))
+					}
+
+				case *IngressPathLiteral:
+				}
+			}
+
+		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:
+		}
+	}
+	return
+}
+
+func validateIngressRequestOrResponse(scopes Scopes, n *Verb, reqOrResp string, r Type) (fieldType Type, body Symbol, merr []error) {
+	rref, _ := r.(*Ref)
+	resp, sym := ResolveTypeAs[*Data](scopes, r)
+	if sym == nil || sym.Module == nil || sym.Module.Name != "builtin" || resp.Name != "Http"+strings.Title(reqOrResp) {
+		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpRequest", n.Name, reqOrResp, r))
+	} else {
+		resp, err := resp.Monomorphise(rref) //nolint:govet
+		if err != nil {
+			merr = append(merr, errorf(r, "ingress verb %s: %s type %s could not be monomorphised: %v", n.Name, reqOrResp, r, err))
+		} else {
+			scopes = scopes.PushScope(resp.Scope())
+			fieldType = resp.FieldByName("body").Type
+			if opt, ok := fieldType.(*Optional); ok {
+				fieldType = opt.Type
+			}
+			bodySym := scopes.ResolveType(fieldType)
+			if bodySym == nil {
+				merr = append(merr, errorf(resp, "ingress verb %s: couldn't resolve %s body type %s", n.Name, reqOrResp, fieldType))
+			} else {
+				body = bodySym.Symbol
+				switch bodySym.Symbol.(type) {
+				case *Bytes, *String, *Data: // Valid HTTP response payload types.
+				default:
+					merr = append(merr, errorf(r, "ingress verb %s: %s type %s must have a body of type Bytes, String or Data, not %s", n.Name, reqOrResp, r, bodySym.Symbol))
+				}
+			}
+		}
+	}
+	return
 }

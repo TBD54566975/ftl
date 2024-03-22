@@ -21,4 +21,4 @@ func (u *Unit) schemaSymbol()                      {}
 func (u *Unit) String() string                     { return "Unit" }
 func (u *Unit) ToProto() protoreflect.ProtoMessage { return &schemapb.Unit{Pos: posToProto(u.Pos)} }
 func (u *Unit) schemaChildren() []Node             { return nil }
-func (u *Unit) GetName() string                    { return "" }
+func (u *Unit) GetName() string                    { return "Unit" }
