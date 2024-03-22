@@ -124,7 +124,7 @@ func (p ProjectConfigResolver[R]) loadWritableConfig(ctx context.Context) (pc.Co
 	return pc.Load(target)
 }
 
-func (p ProjectConfigResolver[R]) LoadConfig(ctx context.Context) (pc.Config, error) {
+func LoadConfig(ctx context.Context, Config []string) (pc.Config, error) {
 	logger := log.FromContext(ctx)
 	configPaths := p.ConfigPaths()
 	logger.Tracef("Loading config from %s", strings.Join(configPaths, " "))
@@ -133,6 +133,10 @@ func (p ProjectConfigResolver[R]) LoadConfig(ctx context.Context) (pc.Config, er
 		return pc.Config{}, err
 	}
 	return config, nil
+}
+
+func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) {
+	return LoadConfig(ctx, p.Config)
 }
 
 func (p ProjectConfigResolver[R]) getMapping(config pc.Config, module optional.Option[string]) (map[string]*pc.URL, error) {

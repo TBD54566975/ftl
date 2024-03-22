@@ -78,13 +78,13 @@ func main() {
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
 
+	config, _ := cf.LoadConfig(ctx, cli.ConfigFlag)
+	kctx.Bind(config)
+
 	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: cli.ConfigFlag}
 	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: cli.ConfigFlag}
 	kctx.BindTo(sr, (*cf.Resolver[cf.Secrets])(nil))
 	kctx.BindTo(cr, (*cf.Resolver[cf.Configuration])(nil))
-
-	config, _ := cr.LoadConfig(ctx)
-	kctx.Bind(config)
 
 	// Propagate to runner processes.
 	// TODO: This is a bit of a hack until we get proper configuration
