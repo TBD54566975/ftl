@@ -14,9 +14,15 @@ type ConfigAndSecrets struct {
 	Secrets map[string]*URL `toml:"secrets"`
 }
 
+type Directories struct {
+	Modules  []string `toml:"modules"`
+	External []string `toml:"external"`
+}
+
 type Config struct {
-	Global  ConfigAndSecrets            `toml:"global"`
-	Modules map[string]ConfigAndSecrets `toml:"modules"`
+	Global      ConfigAndSecrets            `toml:"global"`
+	Modules     map[string]ConfigAndSecrets `toml:"modules"`
+	Directories Directories                 `toml:"directories"`
 }
 
 // Load project config from a file.

@@ -1,3 +1,7 @@
+[directories]
+  modules = ["examples/go"]
+  external = []
+
 [global]
 
 [modules]
