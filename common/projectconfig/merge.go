@@ -44,11 +44,11 @@ func mergeConfigAndSecrets(a, b ConfigAndSecrets) ConfigAndSecrets {
 }
 
 func mergeRootKeys(a, b Config) Config {
-	if a.Directories.Modules == nil {
-		a.Directories.Modules = b.Directories.Modules
+	if a.ModuleDirs == nil {
+		a.ModuleDirs = b.ModuleDirs
 	}
-	if a.Directories.External == nil {
-		a.Directories.External = b.Directories.External
+	if a.ExternalDirs == nil {
+		a.ExternalDirs = b.ExternalDirs
 	}
 	return a
 }

@@ -25,8 +25,8 @@ type devCmd struct {
 
 func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
 	if len(d.Dirs) == 0 && len(d.External) == 0 {
-		d.Dirs = projConfig.Directories.Modules
-		d.External = projConfig.Directories.External
+		d.Dirs = projConfig.ModuleDirs
+		d.External = projConfig.ExternalDirs
 	}
 	if len(d.Dirs) == 0 && len(d.External) == 0 {
 		return fmt.Errorf("no directories specified")

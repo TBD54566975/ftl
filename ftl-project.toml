@@ -1,6 +1,5 @@
-[directories]
-  modules = ["examples/go"]
-  external = []
+module-dirs = ["examples/go"]
+external-dirs = []
 
 [global]
 
