@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 	"os/signal"
@@ -82,6 +83,9 @@ func main() {
 	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: cli.ConfigFlag}
 	kctx.BindTo(sr, (*cf.Resolver[cf.Secrets])(nil))
 	kctx.BindTo(cr, (*cf.Resolver[cf.Configuration])(nil))
+
+	config, _ := cr.LoadConfig(ctx)
+	kctx.Bind(config)
 
 	// Propagate to runner processes.
 	// TODO: This is a bit of a hack until we get proper configuration

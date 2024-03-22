@@ -31,7 +31,7 @@ var _ Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
 func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
 
 func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
-	config, err := p.loadConfig(ctx)
+	config, err := p.LoadConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, e
 }
 
 func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
-	config, err := p.loadConfig(ctx)
+	config, err := p.LoadConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (p ProjectConfigResolver[R]) loadWritableConfig(ctx context.Context) (pc.Co
 	return pc.Load(target)
 }
 
-func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) (pc.Config, error) {
+func (p ProjectConfigResolver[R]) LoadConfig(ctx context.Context) (pc.Config, error) {
 	logger := log.FromContext(ctx)
 	configPaths := p.ConfigPaths()
 	logger.Tracef("Loading config from %s", strings.Join(configPaths, " "))

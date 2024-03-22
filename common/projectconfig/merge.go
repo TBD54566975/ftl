@@ -16,6 +16,7 @@ func Merge(paths ...string) (Config, error) {
 }
 
 func merge(a, b Config) Config {
+	a = mergeRootKeys(a, b)
 	a.Global = mergeConfigAndSecrets(a.Global, b.Global)
 	for k, v := range b.Modules {
 		if a.Modules == nil {
@@ -38,6 +39,16 @@ func mergeConfigAndSecrets(a, b ConfigAndSecrets) ConfigAndSecrets {
 			a.Secrets = map[string]*URL{}
 		}
 		a.Secrets[k] = v
+	}
+	return a
+}
+
+func mergeRootKeys(a, b Config) Config {
+	if a.Directories.Modules == nil {
+		a.Directories.Modules = b.Directories.Modules
+	}
+	if a.Directories.External == nil {
+		a.Directories.External = b.Directories.External
 	}
 	return a
 }

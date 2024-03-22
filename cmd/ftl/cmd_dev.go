@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -24,18 +23,10 @@ type devCmd struct {
 	ServeCmd    serveCmd      `embed:""`
 }
 
-func (d *devCmd) Run(ctx context.Context) error {
+func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
 	if len(d.Dirs) == 0 && len(d.External) == 0 {
-		// TODO: is there a way to read this from ProjectConfigResolver?
-		config := projectconfig.Config{}
-		path := "ftl-project.toml"
-		_, err := toml.DecodeFile(path, &config)
-		if err != nil {
-			return err
-		}
-
-		d.Dirs = config.Directories.Modules
-		d.External = config.Directories.External
+		d.Dirs = projConfig.Directories.Modules
+		d.External = projConfig.Directories.External
 	}
 	if len(d.Dirs) == 0 && len(d.External) == 0 {
 		return fmt.Errorf("no directories specified")
