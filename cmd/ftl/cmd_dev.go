@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -29,7 +28,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		d.External = projConfig.ExternalDirs
 	}
 	if len(d.Dirs) == 0 && len(d.External) == 0 {
-		return fmt.Errorf("no directories specified")
+		return errors.New("no directories specified")
 	}
 
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
