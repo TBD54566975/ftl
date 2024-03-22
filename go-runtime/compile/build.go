@@ -175,7 +175,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *schema.Schema) error {
 	goModFile, replacements, err := goModFileWithReplacements(filepath.Join(dir, "go.mod"))
 	if err != nil {
-		return fmt.Errorf("failed to propagate replacements for library %s: %w", dir, err)
+		return fmt.Errorf("failed to propagate replacements for library %q: %w", dir, err)
 	}
 
 	ftlVersion := ""

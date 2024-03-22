@@ -18,7 +18,7 @@ type Project interface {
 
 	Config() ProjectConfig
 	CopyWithDependencies([]string) Project
-	String() string
+	TypeString() string
 }
 
 type ProjectConfig struct {
@@ -56,8 +56,8 @@ func (m Module) CopyWithDependencies(dependencies []string) Project {
 	return Project(module)
 }
 
-func (m Module) String() string {
-	return "module " + m.ModuleConfig.Module
+func (m Module) TypeString() string {
+	return "module"
 }
 
 // ExternalLibrary represents a library that makes use of FTL modules, but is not itself an FTL module
@@ -95,8 +95,8 @@ func (e ExternalLibrary) CopyWithDependencies(dependencies []string) Project {
 	return Project(lib)
 }
 
-func (e ExternalLibrary) String() string {
-	return "library " + e.Dir
+func (e ExternalLibrary) TypeString() string {
+	return "library"
 }
 
 // ProjectKey is a unique identifier for the project (ie: a module name or a library path)

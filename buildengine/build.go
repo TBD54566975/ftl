@@ -58,7 +58,7 @@ func buildExternalLibrary(ctx context.Context, sch *schema.Schema, lib ExternalL
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown language %q for %s", lib.Language, lib)
+		return fmt.Errorf("unknown language %q for library %q", lib.Language, lib.Config().Key)
 	}
 
 	logger.Infof("Generated stubs [%s] for %v", strings.Join(imported, ", "), lib)

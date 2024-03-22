@@ -23,7 +23,7 @@ import (
 // Project with those dependencies populated.
 func UpdateDependencies(ctx context.Context, project Project) (Project, error) {
 	logger := log.FromContext(ctx)
-	logger.Debugf("Extracting dependencies for %s", project)
+	logger.Debugf("Extracting dependencies for %s %q", project.TypeString(), project.Config().Key)
 	dependencies, err := extractDependencies(project)
 	if err != nil {
 		return Project(&Module{}), err
