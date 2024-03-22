@@ -19,7 +19,7 @@ export const VerbNode = ({ data }: Props) => {
       />
 
       <div className={`grid h-full w-full bg-indigo-600 rounded-md ${data.selected ? 'bg-pink-600' : ''}`}>
-        <div className='place-self-center text-xs text-gray-100'>{data.title}</div>
+        <div className='place-self-center text-xs text-gray-100 truncate max-w-[90%]'>{data.title}</div>
       </div>
 
       <Handle

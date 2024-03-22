@@ -117,6 +117,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			Data:          data,
 			Secrets:       secrets,
 			Configs:       configs,
+			Schema:        deployment.Schema.String(),
 		})
 	}
 

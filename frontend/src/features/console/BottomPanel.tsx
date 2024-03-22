@@ -10,7 +10,7 @@ const BottomPanel: React.FC<BottomPanelProps> = ({ height }) => {
     return []
   }, [])
   return (
-    <div style={{ height: `${height}px` }} className='overflow-auto bg-gray-800'>
+    <div style={{ height: `${height}px` }} className='overflow-auto '>
       {<Timeline timeSettings={timeSettings} filters={filters} />}
     </div>
   )

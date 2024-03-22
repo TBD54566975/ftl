@@ -49,38 +49,10 @@ const calculateModuleDepths = (modules: Module[]): Record<string, number> => {
   return depths
 }
 
-const nodeGraph = (modules: Module[]) => {
-  const out: Record<string, string[]> = {}
-
-  for (const module of modules) {
-    out[module.name ?? ''] = []
-    const verbs = module.verbs
-    verbs.forEach((verb) => {
-      const calls = verb?.verb?.metadata
-        .filter((meta) => meta.value.case === 'calls')
-        .map((meta) => meta.value.value as MetadataCalls)
-
-      calls?.map((call) =>
-        call.calls.forEach((call) => {
-          if (out[module.name ?? ''] === undefined) {
-            out[module.name ?? ''] = []
-          }
-          out[module.name ?? ''].push(call.module)
-        }),
-      )
-    })
-  }
-
-  return out
-}
-
 export const layoutNodes = (modules: Module[]) => {
   const nodes: Node[] = []
   const edges: Edge[] = []
   const xCounters: Record<number, number> = {}
-
-  const ng = nodeGraph(modules)
-  console.log(ng)
 
   const moduleDepths = calculateModuleDepths(modules)
 
@@ -94,6 +66,11 @@ export const layoutNodes = (modules: Module[]) => {
     const yOffset = depth * 300
 
     const verbs = module.verbs
+    const secrets = module.secrets
+    const configs = module.configs
+
+    const items = (verbs?.length ?? 0) + (secrets?.length ?? 0) + (configs?.length ?? 0)
+    const height = items * 50 + 50
 
     nodes.push({
       id: module.name ?? '',
@@ -103,11 +80,48 @@ export const layoutNodes = (modules: Module[]) => {
       draggable: true,
       style: {
         width: groupWidth,
-        height: (verbs?.length ?? 1) * 50 + 50,
+        height: height,
         zIndex: 1,
       },
     })
+
     let y = 40
+    secrets.forEach((secret) => {
+      nodes.push({
+        id: `secret-${module.name}.${secret.secret?.name}`,
+        position: { x: 20, y: y },
+        connectable: false,
+        data: { title: secret.secret?.name, item: secret },
+        type: 'secretNode',
+        parentNode: module.name,
+        style: {
+          width: groupWidth - 40,
+          height: 40,
+        },
+        draggable: false,
+        zIndex: 2,
+      })
+      y += 50
+    })
+
+    configs.forEach((config) => {
+      nodes.push({
+        id: `config-${module.name}.${config.config?.name}`,
+        position: { x: 20, y: y },
+        connectable: false,
+        data: { title: config.config?.name, item: config },
+        type: 'configNode',
+        parentNode: module.name,
+        style: {
+          width: groupWidth - 40,
+          height: 40,
+        },
+        draggable: false,
+        zIndex: 2,
+      })
+      y += 50
+    })
+
     verbs.forEach((verb) => {
       const calls = verb?.verb?.metadata
         .filter((meta) => meta.value.case === 'calls')
