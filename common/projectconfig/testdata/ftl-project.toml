@@ -1,3 +1,6 @@
+module-dirs = ["a/b/c", "d"]
+external-dirs = ["e/f", "g/h"]
+
 [modules.module.configuration]
 githubAccessToken = "keychain://githubAccessToken"
 

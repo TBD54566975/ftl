@@ -21,6 +21,8 @@ func TestProjectConfig(t *testing.T) {
 				},
 			},
 		},
+		ModuleDirs:   []string{"a/b/c", "d"},
+		ExternalDirs: []string{"e/f", "g/h"},
 	}
 
 	assert.Equal(t, expected, actual)
