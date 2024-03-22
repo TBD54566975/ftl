@@ -66,46 +66,92 @@ export const layoutNodes = (modules: Module[]) => {
     const yOffset = depth * 300
 
     const verbs = module.verbs
+    const secrets = module.secrets
+    const configs = module.configs
+
+    const items = (verbs?.length ?? 0) + (secrets?.length ?? 0) + (configs?.length ?? 0)
+    const height = items * 50 + 50
+
     nodes.push({
       id: module.name ?? '',
       position: { x: x, y: yOffset },
-      data: { title: module.name },
+      data: { title: module.name, item: module },
       type: 'groupNode',
+      draggable: true,
       style: {
         width: groupWidth,
-        height: (verbs?.length ?? 1) * 50 + 50,
-        zIndex: -1,
+        height: height,
+        zIndex: 1,
       },
     })
+
     let y = 40
+    secrets.forEach((secret) => {
+      nodes.push({
+        id: `secret-${module.name}.${secret.secret?.name}`,
+        position: { x: 20, y: y },
+        connectable: false,
+        data: { title: secret.secret?.name, item: secret },
+        type: 'secretNode',
+        parentNode: module.name,
+        style: {
+          width: groupWidth - 40,
+          height: 40,
+        },
+        draggable: false,
+        zIndex: 2,
+      })
+      y += 50
+    })
+
+    configs.forEach((config) => {
+      nodes.push({
+        id: `config-${module.name}.${config.config?.name}`,
+        position: { x: 20, y: y },
+        connectable: false,
+        data: { title: config.config?.name, item: config },
+        type: 'configNode',
+        parentNode: module.name,
+        style: {
+          width: groupWidth - 40,
+          height: 40,
+        },
+        draggable: false,
+        zIndex: 2,
+      })
+      y += 50
+    })
+
     verbs.forEach((verb) => {
       const calls = verb?.verb?.metadata
         .filter((meta) => meta.value.case === 'calls')
         .map((meta) => meta.value.value as MetadataCalls)
 
       nodes.push({
-        id: `${module.name}-${verb.verb?.name}`,
+        id: `${module.name}.${verb.verb?.name}`,
         position: { x: 20, y: y },
         connectable: false,
-        data: { title: verb.verb?.name },
+        data: { title: verb.verb?.name, item: verb },
         type: 'verbNode',
         parentNode: module.name,
         style: {
           width: groupWidth - 40,
           height: 40,
         },
+        draggable: false,
+        zIndex: 2,
       })
 
       const uniqueEdgeIds = new Set<string>()
       calls?.map((call) =>
         call.calls.forEach((call) => {
-          const edgeId = `${module.name}-${verb.verb?.name}-${call.module}-${call.name}`
+          const edgeId = `${module.name}.${verb.verb?.name}-${call.module}.${call.name}`
           if (!uniqueEdgeIds.has(edgeId)) {
             uniqueEdgeIds.add(edgeId)
             edges.push({
               id: edgeId,
-              source: `${module.name}-${verb.verb?.name}`,
-              target: `${call.module}-${call.name}`,
+              source: `${module.name}.${verb.verb?.name}`,
+              target: `${call.module}.${call.name}`,
               style: { stroke: 'rgb(251 113 133)' },
               animated: true,
             })

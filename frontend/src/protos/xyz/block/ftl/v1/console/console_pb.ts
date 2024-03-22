@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-import { Data as Data$1, Ref, Verb as Verb$1 } from "../schema/schema_pb.js";
+import { Config as Config$1, Data as Data$1, Ref, Secret as Secret$1, Verb as Verb$1 } from "../schema/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.console.EventType
@@ -462,6 +462,80 @@ export class Data extends Message<Data> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.console.Secret
+ */
+export class Secret extends Message<Secret> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Secret secret = 1;
+   */
+  secret?: Secret$1;
+
+  constructor(data?: PartialMessage<Secret>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Secret";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "secret", kind: "message", T: Secret$1 },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Secret {
+    return new Secret().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Secret {
+    return new Secret().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Secret {
+    return new Secret().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Secret | PlainMessage<Secret> | undefined, b: Secret | PlainMessage<Secret> | undefined): boolean {
+    return proto3.util.equals(Secret, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.Config
+ */
+export class Config extends Message<Config> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Config config = 1;
+   */
+  config?: Config$1;
+
+  constructor(data?: PartialMessage<Config>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Config";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "config", kind: "message", T: Config$1 },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Config {
+    return new Config().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Config {
+    return new Config().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Config {
+    return new Config().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Config | PlainMessage<Config> | undefined, b: Config | PlainMessage<Config> | undefined): boolean {
+    return proto3.util.equals(Config, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.console.Module
  */
 export class Module extends Message<Module> {
@@ -495,6 +569,16 @@ export class Module extends Message<Module> {
    */
   data: Data[] = [];
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Secret secrets = 7;
+   */
+  secrets: Secret[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Config configs = 8;
+   */
+  configs: Config[] = [];
+
   constructor(data?: PartialMessage<Module>) {
     super();
     proto3.util.initPartial(data, this);
@@ -509,6 +593,8 @@ export class Module extends Message<Module> {
     { no: 4, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "verbs", kind: "message", T: Verb, repeated: true },
     { no: 6, name: "data", kind: "message", T: Data, repeated: true },
+    { no: 7, name: "secrets", kind: "message", T: Secret, repeated: true },
+    { no: 8, name: "configs", kind: "message", T: Config, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {

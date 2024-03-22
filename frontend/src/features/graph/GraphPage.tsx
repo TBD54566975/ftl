@@ -1,40 +1,16 @@
 import { CubeTransparentIcon } from '@heroicons/react/24/outline'
-import { useContext, useEffect } from 'react'
-import ReactFlow, { Controls, MiniMap, useEdgesState, useNodesState } from 'reactflow'
-import 'reactflow/dist/style.css'
-import { modulesContext } from '../../providers/modules-provider'
-import { GroupNode } from './GroupNode'
-import { VerbNode } from './VerbNode'
-import { layoutNodes } from './create-layout'
 import { Page } from '../../layout'
-const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode }
+import { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { GraphPane } from './GraphPane'
+
+export type FTLNode = Module | Verb | Secret | Config
 
 export const GraphPage = () => {
-  const modules = useContext(modulesContext)
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
-
-  useEffect(() => {
-    const { nodes, edges } = layoutNodes(modules.modules)
-    setNodes(nodes)
-    setEdges(edges)
-  }, [modules, setEdges, setNodes])
-
   return (
     <Page>
       <Page.Header icon={<CubeTransparentIcon />} title='Graph' />
-      <Page.Body className='flex h-full'>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          fitView
-        >
-          <Controls />
-          <MiniMap />
-        </ReactFlow>
+      <Page.Body className='flex h-full bg-slate-800'>
+        <GraphPane />
       </Page.Body>
     </Page>
   )

@@ -56,6 +56,8 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	for _, deployment := range deployments {
 		var verbs []*pbconsole.Verb
 		var data []*pbconsole.Data
+		var secrets []*pbconsole.Secret
+		var configs []*pbconsole.Config
 
 		for _, decl := range deployment.Schema.Decls {
 			switch decl := decl.(type) {
@@ -89,7 +91,21 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 					Schema: schema.DataFromProto(d).String(),
 				})
 
-			case *schema.Database, *schema.Enum, *schema.Config, *schema.Secret:
+			case *schema.Secret:
+				//nolint:forcetypeassert
+				s := decl.ToProto().(*schemapb.Secret)
+				secrets = append(secrets, &pbconsole.Secret{
+					Secret: s,
+				})
+
+			case *schema.Config:
+				//nolint:forcetypeassert
+				c := decl.ToProto().(*schemapb.Config)
+				configs = append(configs, &pbconsole.Config{
+					Config: c,
+				})
+
+			case *schema.Database, *schema.Enum:
 			}
 		}
 
@@ -99,6 +115,9 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			Language:      deployment.Language,
 			Verbs:         verbs,
 			Data:          data,
+			Secrets:       secrets,
+			Configs:       configs,
+			Schema:        deployment.Schema.String(),
 		})
 	}
 

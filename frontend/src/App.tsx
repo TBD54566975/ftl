@@ -1,11 +1,12 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { DeploymentPage } from './features/deployments/DeploymentPage.tsx'
 import { DeploymentsPage } from './features/deployments/DeploymentsPage.tsx'
-import { GraphPage } from './features/graph/GraphPage.tsx'
 import { TimelinePage } from './features/timeline/TimelinePage.tsx'
 import { VerbPage } from './features/verbs/VerbPage.tsx'
 import { Layout } from './layout/Layout.tsx'
 import { NotFoundPage } from './layout/NotFoundPage.tsx'
+import ConsolePage from './features/console/ConsolePage.tsx'
+import { GraphPage } from './features/graph/GraphPage.tsx'
 
 export const App = () => {
   return (
@@ -19,6 +20,7 @@ export const App = () => {
         <Route path='deployments/:deploymentKey/verbs/:verbName' element={<VerbPage />} />
 
         <Route path='graph' element={<GraphPage />} />
+        <Route path='console' element={<ConsolePage />} />
       </Route>
       <Route path='*' element={<NotFoundPage />} />
     </Routes>
