@@ -16,7 +16,6 @@ import (
 )
 
 type devCmd struct {
-	//cf.DefaultConfigMixin
 	Parallelism int           `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
 	Dirs        []string      `arg:"" help:"Base directories containing modules." type:"existingdir" optional:""`
 	External    []string      `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
