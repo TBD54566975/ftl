@@ -17,8 +17,8 @@ class Context(
 
   /// Class method with Context.
   inline fun <reified R> call(verb: KFunction<R>, request: Any): R {
-    if (!verb.hasAnnotation<Verb>()) throw InvalidParameterException(
-      "verb must be annotated with @Verb"
+    if (!verb.hasAnnotation<Export>()) throw InvalidParameterException(
+      "verb must be annotated with @Export"
     )
     if (verb !is CallableReference) {
       throw InvalidParameterException("could not determine module from verb name")

@@ -1,4 +1,3 @@
-//ftl:module failing
 package failing
 
 import (
@@ -10,7 +9,7 @@ import (
 type Request struct{}
 type Response struct{}
 
-//ftl:verb
+//ftl:export
 func FailingVerb(ctx context.Context, req Request) (Response, error) {
 	ftl.Call(ctx, "failing", "failingVerb", req)
 	return Response{}, nil

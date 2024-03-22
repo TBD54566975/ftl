@@ -66,7 +66,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       import xyz.block.ftl.HttpIngress
       import xyz.block.ftl.Method
       import xyz.block.ftl.Module
-      import xyz.block.ftl.Verb
+      import xyz.block.ftl.Export
 
       class InvalidInput(val field: String) : Exception()
 
@@ -89,7 +89,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
        * Echoes the given message.
        */
       @Throws(InvalidInput::class)
-      @Verb
+      @Export
       @HttpIngress(Method.GET, "/echo")
       fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse, String> {
         callTime(context)
@@ -101,7 +101,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         )
       }
 
-      @Verb
+      @Export
       fun empty(context: Context, req: Empty): Empty {
         return builtin.Empty()
       }
@@ -114,13 +114,13 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         return context.call(::verb, builtin.Empty())
       }
 
-      @Verb
+      @Export
       fun sink(context: Context, req: Empty) {}
 
-      @Verb
+      @Export
       fun source(context: Context): Empty {}
 
-      @Verb
+      @Export
       fun emptyVerb(context: Context) {}
     """
     ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
@@ -131,6 +131,32 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       name = "echo",
       comments = listOf("Echo module."),
       decls = listOf(
+        Decl(
+          data_ = Data(
+            name = "EchoRequest",
+            fields = listOf(
+              Field(
+                name = "t",
+                type = Type(ref = Ref(name = "T"))
+              ),
+              Field(
+                name = "name",
+                type = Type(string = xyz.block.ftl.v1.schema.String())
+              ),
+              Field(
+                name = "stuff",
+                type = Type(any = xyz.block.ftl.v1.schema.Any()),
+                metadata = listOf(Metadata(alias = MetadataAlias(alias = "stf"))),
+              )
+            ),
+            comments = listOf(
+              "Request to echo a message.", "", "More comments."
+            ),
+            typeParameters = listOf(
+              TypeParameter(name = "T")
+            )
+          ),
+        ),
         Decl(
           data_ = Data(
             name = "MapValue",
@@ -169,32 +195,6 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
                 )
               ),
             ),
-          ),
-        ),
-        Decl(
-          data_ = Data(
-            name = "EchoRequest",
-            fields = listOf(
-              Field(
-                name = "t",
-                type = Type(ref = Ref(name = "T"))
-              ),
-              Field(
-                name = "name",
-                type = Type(string = xyz.block.ftl.v1.schema.String())
-              ),
-              Field(
-                name = "stuff",
-                type = Type(any = xyz.block.ftl.v1.schema.Any()),
-                metadata = listOf(Metadata(alias = MetadataAlias(alias = "stf"))),
-              )
-            ),
-            comments = listOf(
-              "Request to echo a message.", "", "More comments."
-            ),
-            typeParameters = listOf(
-              TypeParameter(name = "T")
-            )
           ),
         ),
         Decl(
@@ -369,7 +369,7 @@ import ftl.time.TimeRequest
 import ftl.time.TimeResponse
 import xyz.block.ftl.Context
 import xyz.block.ftl.Method
-import xyz.block.ftl.Verb
+import xyz.block.ftl.Export
 
 class InvalidInput(val field: String) : Exception()
 
@@ -385,7 +385,7 @@ data class EchoResponse(val messages: List<EchoMessage>)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Verb
+@Export
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   callTime(context)
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -412,7 +412,7 @@ package ftl.echo
 import xyz.block.ftl.Context
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method
-import xyz.block.ftl.Verb
+import xyz.block.ftl.Export
 
 /**
  * Request to echo a message.
@@ -424,7 +424,7 @@ data class EchoResponse(val message: String)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Verb
+@Export
 @HttpIngress(Method.GET, "/echo")
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -447,7 +447,7 @@ package ftl.echo
 import xyz.block.ftl.Context
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method
-import xyz.block.ftl.Verb
+import xyz.block.ftl.Export
 
 /**
  * Request to echo a message.
@@ -459,7 +459,7 @@ data class EchoResponse(val message: String)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Verb
+@Export
 @HttpIngress(Method.GET, "/echo")
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -486,10 +486,11 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       import xyz.block.ftl.Json
       import xyz.block.ftl.Context
       import xyz.block.ftl.Method
-      import xyz.block.ftl.Verb
+      import xyz.block.ftl.Export
 
       class InvalidInput(val field: String) : Exception()
 
+      @Export
       enum class Thing {
        /**
         * A comment.
@@ -502,6 +503,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       /**
        * Comments.
        */
+      @Export
       enum class StringThing(val value: String) {
         /**
          * A comment.
@@ -514,6 +516,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
         C("C"),
       }
 
+      @Export
       enum class IntThing(val value: Int) {
         A(1),
         B(2),
@@ -532,7 +535,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 
       data class Response(val message: String)
 
-      @Verb
+      @Export
       fun something(context: Context, req: Request): Response {
         return Response(message = "response")
       }
@@ -579,13 +582,6 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
           ),
         ),
         Decl(
-          verb = Verb(
-            name = "something",
-            request = Type(ref = Ref(name = "Request", module = "things")),
-            response = Type(ref = Ref(name = "Response", module = "things")),
-          ),
-        ),
-        Decl(
           enum_ = Enum(
             name = "Thing",
             variants = listOf(
@@ -624,6 +620,13 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
             ),
           ),
         ),
+        Decl(
+          verb = Verb(
+            name = "something",
+            request = Type(ref = Ref(name = "Request", module = "things")),
+            response = Type(ref = Ref(name = "Response", module = "things")),
+          ),
+        ),
       )
     )
 
@@ -644,7 +647,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       import xyz.block.ftl.Json
       import xyz.block.ftl.Context
       import xyz.block.ftl.Method
-      import xyz.block.ftl.Verb
+      import xyz.block.ftl.Export
       import xyz.block.ftl.config.Config
       import xyz.block.ftl.secrets.Secret
 
@@ -660,7 +663,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 
       data class Response(val message: String)
 
-      @Verb
+      @Export
       fun something(context: Context, req: Request): Response {
         return Response(message = "response")
       }
@@ -706,10 +709,16 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
           ),
         ),
         Decl(
-          verb = Verb(
-            name = "something",
-            request = Type(ref = Ref(name = "Request", module = "test")),
-            response = Type(ref = Ref(name = "Response", module = "test")),
+          secret = xyz.block.ftl.v1.schema.Secret(
+            name = "secret",
+            type = Type(string = String())
+          ),
+        ),
+
+        Decl(
+          secret = xyz.block.ftl.v1.schema.Secret(
+            name = "anotherSecret",
+            type = Type(string = String())
           ),
         ),
         Decl(
@@ -725,15 +734,10 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
           ),
         ),
         Decl(
-          secret = xyz.block.ftl.v1.schema.Secret(
-            name = "secret",
-            type = Type(string = String())
-          ),
-        ),
-        Decl(
-          secret = xyz.block.ftl.v1.schema.Secret(
-            name = "anotherSecret",
-            type = Type(string = String())
+          verb = Verb(
+            name = "something",
+            request = Type(ref = Ref(name = "Request", module = "test")),
+            response = Type(ref = Ref(name = "Response", module = "test")),
           ),
         ),
       )

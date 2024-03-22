@@ -1,6 +1,5 @@
 package xyz.block.ftl.schemaextractor
 
-import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.api.Debt
 import io.gitlab.arturbosch.detekt.api.Issue
 import io.gitlab.arturbosch.detekt.api.Rule
@@ -8,6 +7,7 @@ import io.gitlab.arturbosch.detekt.api.Severity
 import io.gitlab.arturbosch.detekt.api.config
 import io.gitlab.arturbosch.detekt.api.internal.RequiresTypeResolution
 import io.gitlab.arturbosch.detekt.rules.fqNameOrNull
+import org.jetbrains.kotlin.backend.jvm.ir.psiElement
 import org.jetbrains.kotlin.cfg.getDeclarationDescriptorIncludingConstructors
 import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.com.intellij.psi.PsiComment
@@ -31,7 +31,6 @@ import org.jetbrains.kotlin.psi.KtFunction
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtSuperTypeCallEntry
-import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeParameterList
 import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.kotlin.psi.KtValueArgument
@@ -61,25 +60,50 @@ import xyz.block.ftl.Database
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Json
 import xyz.block.ftl.Method
-import xyz.block.ftl.secrets.Secret
-import xyz.block.ftl.v1.schema.*
+import xyz.block.ftl.schemaextractor.SchemaExtractor.Companion.extractModuleName
+import xyz.block.ftl.v1.schema.Array
+import xyz.block.ftl.v1.schema.Config
+import xyz.block.ftl.v1.schema.Data
+import xyz.block.ftl.v1.schema.Decl
 import xyz.block.ftl.v1.schema.Enum
+import xyz.block.ftl.v1.schema.EnumVariant
+import xyz.block.ftl.v1.schema.Field
+import xyz.block.ftl.v1.schema.IngressPathComponent
+import xyz.block.ftl.v1.schema.IngressPathLiteral
+import xyz.block.ftl.v1.schema.IngressPathParameter
+import xyz.block.ftl.v1.schema.IntValue
+import xyz.block.ftl.v1.schema.Metadata
+import xyz.block.ftl.v1.schema.MetadataAlias
+import xyz.block.ftl.v1.schema.MetadataCalls
+import xyz.block.ftl.v1.schema.MetadataIngress
+import xyz.block.ftl.v1.schema.Module
+import xyz.block.ftl.v1.schema.Optional
+import xyz.block.ftl.v1.schema.Position
+import xyz.block.ftl.v1.schema.Ref
+import xyz.block.ftl.v1.schema.Secret
+import xyz.block.ftl.v1.schema.StringValue
+import xyz.block.ftl.v1.schema.Type
+import xyz.block.ftl.v1.schema.TypeParameter
+import xyz.block.ftl.v1.schema.Unit
+import xyz.block.ftl.v1.schema.Value
+import xyz.block.ftl.v1.schema.Verb
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Path
 import java.time.OffsetDateTime
 import kotlin.io.path.createDirectories
+import io.gitlab.arturbosch.detekt.api.Config as DetektConfig
 
-data class ModuleData(val comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
+data class ModuleData(var comments: List<String> = emptyList(), val decls: MutableSet<Decl> = mutableSetOf())
 
 // Helpers
 private fun Ref.compare(module: String, name: String): Boolean = this.name == name && this.module == module
 
 @RequiresTypeResolution
-class ExtractSchemaRule(config: Config) : Rule(config) {
+class ExtractSchemaRule(config: DetektConfig) : Rule(config) {
   private val output: String by config(defaultValue = ".")
-  private val visited: MutableSet<KtFile> = mutableSetOf()
   private val modules: MutableMap<String, ModuleData> = mutableMapOf()
+  private var extractor = SchemaExtractor(modules)
 
   override val issue = Issue(
     javaClass.simpleName,
@@ -88,17 +112,22 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
     Debt.FIVE_MINS,
   )
 
+  override fun preVisit(root: KtFile) {
+    extractor.setBindingContext(bindingContext)
+    extractor.addModuleComments(root)
+  }
+
   override fun visitAnnotationEntry(annotationEntry: KtAnnotationEntry) {
     if (
       bindingContext.get(
         BindingContext.ANNOTATION,
         annotationEntry
-      )?.fqName?.asString() != xyz.block.ftl.Verb::class.qualifiedName
+      )?.fqName?.asString() != xyz.block.ftl.Export::class.qualifiedName
     ) {
       return
     }
 
-    // Skip if the verb is annotated with @Ignore
+    // Skip if annotated with @Ignore
     if (
       annotationEntry.containingNonLocalDeclaration()!!.annotationEntries.any {
         bindingContext.get(
@@ -110,41 +139,44 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
       return
     }
 
-    runCatching {
-      val file = annotationEntry.containingKtFile
-      if (!visited.contains(file)) {
-        SchemaExtractor(this.bindingContext, modules, file).extract()
-        visited.add(file)
+    when (val element = annotationEntry.parent.parent) {
+      is KtNamedFunction -> extractor.addVerbToSchema(element)
+      is KtClass -> {
+        when {
+          element.isData() -> extractor.addDataToSchema(element)
+          element.isEnum() -> extractor.addEnumToSchema(element)
+        }
       }
-    }.onFailure {
-      throw it
+    }
+  }
+
+  override fun visitProperty(property: KtProperty) {
+    when (property.getDeclarationDescriptorIncludingConstructors(bindingContext)?.referencedProperty?.returnType
+      ?.fqNameOrNull()?.asString()) {
+      Database::class.qualifiedName -> extractor.addDatabaseToSchema(property)
+      xyz.block.ftl.secrets.Secret::class.qualifiedName -> extractor.addSecretToSchema(property)
+      xyz.block.ftl.config.Config::class.qualifiedName -> extractor.addConfigToSchema(property)
     }
   }
 
   override fun postVisit(root: KtFile) {
-    modules.toModules().ifNotEmpty {
-      require(modules.size == 1) {
-        "Each FTL module must define its own pom.xml; cannot be shared across" +
-          " multiple modules"
-      }
-      val outputDirectory = File(output).also { Path.of(it.absolutePath).createDirectories() }
+    val moduleName = root.extractModuleName()
+    modules[moduleName]?.let {
+      val module = it.toModule(moduleName)
+      val outputDirectory = File(output).also { f -> Path.of(f.absolutePath).createDirectories() }
       val file = File(outputDirectory.absolutePath, OUTPUT_FILENAME)
       file.createNewFile()
       val os = FileOutputStream(file)
-      os.write(this.single().encode())
+      os.write(module.encode())
       os.close()
     }
   }
 
-  private fun Map<String, ModuleData>.toModules(): List<Module> {
-    return this.map {
-      xyz.block.ftl.v1.schema.Module(
-        name = it.key,
-        decls = it.value.decls.sortedBy { it.data_ == null },
-        comments = it.value.comments
-      )
-    }
-  }
+  private fun ModuleData.toModule(moduleName: String): Module = Module(
+    name = moduleName,
+    decls = this.decls.sortedBy { it.data_ == null },
+    comments = this.comments
+  )
 
   companion object {
     const val OUTPUT_FILENAME = "schema.pb"
@@ -152,52 +184,89 @@ class ExtractSchemaRule(config: Config) : Rule(config) {
 }
 
 class SchemaExtractor(
-  private val bindingContext: BindingContext,
   private val modules: MutableMap<String, ModuleData>,
-  private val file: KtFile
 ) {
-  private val currentModuleName = file.packageFqName.extractModuleName()
-  fun extract() {
-    val moduleComments = file.children
+  private var bindingContext = BindingContext.EMPTY
+
+  fun setBindingContext(bindingContext: BindingContext) {
+    this.bindingContext = bindingContext
+  }
+
+  fun addModuleComments(file: KtFile) {
+    val module = file.extractModuleName()
+    val comments = file.children
       .filterIsInstance<PsiComment>()
       .flatMap { it.text.normalizeFromDocComment() }
-
-    val moduleData = ModuleData(
-      decls = mutableSetOf(
-        *extractVerbs().toTypedArray(),
-        *extractDataDeclarations().toTypedArray(),
-        *extractDatabases().toTypedArray(),
-        *extractEnums().toTypedArray(),
-        *extractConfigs().toTypedArray(),
-        *extractSecrets().toTypedArray(),
-      ),
-      comments = moduleComments
-    )
-    modules[currentModuleName]?.decls?.addAll(moduleData.decls) ?: run {
-      modules[currentModuleName] = moduleData
+    modules[module]?.let { it.comments = comments } ?: run {
+      modules[module] = ModuleData(comments = comments)
     }
   }
 
-  private fun extractVerbs(): Set<Decl> {
-    val verbs = file.children.mapNotNull { c ->
-      (c as? KtNamedFunction)?.takeIf { verb ->
-        verb.annotationEntries.any {
-          bindingContext.get(
-            BindingContext.ANNOTATION,
-            it
-          )?.fqName?.asString() == xyz.block.ftl.Verb::class.qualifiedName
-        } && verb.annotationEntries.none {
-          bindingContext.get(
-            BindingContext.ANNOTATION,
-            it
-          )?.fqName?.asString() == xyz.block.ftl.Ignore::class.qualifiedName
-        }
-      }
+  fun addVerbToSchema(verb: KtNamedFunction) {
+    validateVerb(verb)
+    addDecl(verb.extractModuleName(), Decl(verb = extractVerb(verb)))
+  }
+
+  fun addDataToSchema(data: KtClass) {
+    addDecl(data.extractModuleName(), Decl(data_ = data.toSchemaData()))
+  }
+
+  fun addEnumToSchema(enum: KtClass) {
+    addDecl(enum.extractModuleName(), Decl(enum_ = enum.toSchemaEnum()))
+  }
+
+  fun addConfigToSchema(config: KtProperty) {
+    extractSecretOrConfig(config).let {
+      val decl = Decl(
+        config = Config(
+          pos = it.position,
+          name = it.name,
+          type = it.type
+        )
+      )
+
+      addDecl(config.extractModuleName(), decl)
     }
-    return verbs.map {
-      validateVerb(it)
-      Decl(verb = extractVerb(it))
-    }.toSet()
+  }
+
+  fun addSecretToSchema(secret: KtProperty) {
+    extractSecretOrConfig(secret).let {
+      val decl = Decl(
+        secret = Secret(
+          pos = it.position,
+          name = it.name,
+          type = it.type
+        )
+      )
+
+      addDecl(secret.extractModuleName(), decl)
+    }
+  }
+
+  fun addDatabaseToSchema(database: KtProperty) {
+    val decl = database.children.single().let {
+      val sourcePos = it.getPosition()
+      val dbName = (it as? KtCallExpression).getResolvedCall(bindingContext)?.valueArguments?.entries?.single { e ->
+        e.key.name.asString() == "name"
+      }
+        ?.value?.toString()
+        ?.trim('"')
+      requireNotNull(dbName) { "$sourcePos $dbName Could not extract database name" }
+
+      Decl(
+        database = xyz.block.ftl.v1.schema.Database(
+          pos = sourcePos,
+          name = dbName
+        )
+      )
+    }
+    addDecl(database.extractModuleName(), decl)
+  }
+
+  private fun addDecl(module: String, decl: Decl) {
+    modules[module]?.decls?.add(decl) ?: run {
+      modules[module] = ModuleData(decls = mutableSetOf(decl))
+    }
   }
 
   private fun validateVerb(verb: KtNamedFunction) {
@@ -206,7 +275,7 @@ class SchemaExtractor(
       "Verbs must be defined in a package"
     }.let { fqName ->
       require(fqName.split(".").let { it.size >= 2 && it.first() == "ftl" }) {
-        "$verbSourcePos Expected @Verb to be in package ftl.<module>, but was $fqName"
+        "$verbSourcePos Expected exported function to be in package ftl.<module>, but was $fqName"
       }
 
       // Validate parameters
@@ -244,14 +313,14 @@ class SchemaExtractor(
     val verbSourcePos = verb.getLineAndColumn()
 
     val requestRef = verb.valueParameters.takeIf { it.size > 1 }?.last()?.let {
-      val position = it.getLineAndColumn().toPosition()
+      val position = it.getPosition()
       return@let it.typeReference?.resolveType()?.toSchemaType(position)
     } ?: Type(unit = xyz.block.ftl.v1.schema.Unit())
 
     val returnRef = verb.createTypeBindingForReturnType(bindingContext)?.let {
-      val position = it.psiElement.getLineAndColumn().toPosition()
+      val position = it.psiElement.getPosition()
       return@let it.type.toSchemaType(position)
-    } ?: Type(unit = xyz.block.ftl.v1.schema.Unit())
+    } ?: Type(unit = Unit())
 
     val metadata = mutableListOf<Metadata>()
     extractIngress(verb, requestRef, returnRef)?.apply { metadata.add(Metadata(ingress = this)) }
@@ -266,114 +335,38 @@ class SchemaExtractor(
     )
   }
 
-  private fun extractDatabases(): Set<Decl> {
-    return file.declarations
-      .filter {
-        (it as? KtProperty)
-          ?.getDeclarationDescriptorIncludingConstructors(bindingContext)?.referencedProperty?.returnType
-          ?.fqNameOrNull()?.asString() == Database::class.qualifiedName
-      }
-      .flatMap { it.children.asSequence() }
-      .map {
-        val sourcePos = it.getLineAndColumn()
-        val dbName = (it as? KtCallExpression).getResolvedCall(bindingContext)?.valueArguments?.entries?.single { e ->
-          e.key.name.asString() == "name"
-        }
-          ?.value?.toString()
-          ?.trim('"')
-        requireNotNull(dbName) { "$sourcePos $dbName Could not extract database name" }
-
-        Decl(
-          database = xyz.block.ftl.v1.schema.Database(
-            pos = sourcePos.toPosition(),
-            name = dbName
-          )
-        )
-      }
-      .toSet()
-  }
-
-  private fun extractConfigs(): Set<Decl> {
-    return extractSecretsOrConfigs(xyz.block.ftl.config.Config::class.qualifiedName!!).map {
-      Decl(
-        config = Config(
-          pos = it.position,
-          name = it.name,
-          type = it.type
-        )
-      )
-    }.toSet()
-  }
-
-  private fun extractSecrets(): Set<Decl> {
-    return extractSecretsOrConfigs(Secret::class.qualifiedName!!).map {
-      Decl(
-        secret = Secret(
-          pos = it.position,
-          name = it.name,
-          type = it.type
-        )
-      )
-    }.toSet()
-  }
-
   data class SecretConfigData(val name: String, val type: Type, val position: Position)
 
-  private fun extractSecretsOrConfigs(qualifiedPropertyName: String): List<SecretConfigData> {
-    return file.declarations
-      .filter {
-        (it as? KtProperty)
-          ?.getDeclarationDescriptorIncludingConstructors(bindingContext)?.referencedProperty?.returnType
-          ?.fqNameOrNull()?.asString() == qualifiedPropertyName
-      }.flatMap { it.children.asSequence() }
-      .map {
-        val position = it.getLineAndColumn().toPosition()
-        var type: KotlinType? = null
-        var name = ""
-        when (it) {
-          is KtCallExpression -> {
-            it.getResolvedCall(bindingContext)?.valueArguments?.entries?.forEach { arg ->
-              if (arg.key.name.asString() == "name") {
-                name = arg.value.toString().trim('"')
-              } else if (arg.key.name.asString() == "cls") {
-                type = (arg.key.varargElementType ?: arg.key.type).arguments.single().type
-              }
+  private fun extractSecretOrConfig(property: KtProperty): SecretConfigData {
+    return property.children.single().let {
+      val position = it.getPosition()
+      var type: KotlinType? = null
+      var name = ""
+      when (it) {
+        is KtCallExpression -> {
+          it.getResolvedCall(bindingContext)?.valueArguments?.entries?.forEach { arg ->
+            if (arg.key.name.asString() == "name") {
+              name = arg.value.toString().trim('"')
+            } else if (arg.key.name.asString() == "cls") {
+              type = (arg.key.varargElementType ?: arg.key.type).arguments.single().type
             }
-          }
-
-          is KtDotQualifiedExpression -> {
-            it.getResolvedCall(bindingContext)?.let { call ->
-              name = call.valueArguments.entries.single().value.toString().trim('"')
-              type = call.typeArguments.values.single()
-            }
-          }
-
-          else -> {
-            throw IllegalArgumentException("$position: Could not extract secret or config")
           }
         }
 
-        SecretConfigData(name, type!!.toSchemaType(position), position)
-      }
-  }
+        is KtDotQualifiedExpression -> {
+          it.getResolvedCall(bindingContext)?.let { call ->
+            name = call.valueArguments.entries.single().value.toString().trim('"')
+            type = call.typeArguments.values.single()
+          }
+        }
 
-  private fun extractDataDeclarations(): Set<Decl> {
-    return file.children
-      .filter { (it is KtClass && it.isData()) || it is KtTypeAlias }
-      .mapNotNull {
-        val data = (it as? KtClass)?.toSchemaData() ?: (it as? KtTypeAlias)?.toSchemaData()
-        data?.let { Decl(data_ = data) }
+        else -> {
+          throw IllegalArgumentException("$position: Could not extract secret or config")
+        }
       }
-      .toSet()
-  }
 
-  private fun extractEnums(): Set<Decl> {
-    return file.children
-      .filter { it is KtClass && it.isEnum() }
-      .mapNotNull {
-        (it as? KtClass)?.toSchemaEnum()?.let { enum -> Decl(enum_ = enum) }
-      }
-      .toSet()
+      SecretConfigData(name, type!!.toSchemaType(position), position)
+    }
   }
 
   private fun extractIngress(verb: KtNamedFunction, requestType: Type, responseType: Type): MetadataIngress? {
@@ -418,7 +411,7 @@ class SchemaExtractor(
         type = "http",
         path = pathArg,
         method = methodArg,
-        pos = sourcePos.toPosition(),
+        pos = sourcePos.toPosition(verb.containingFile.name),
       )
     }
   }
@@ -482,19 +475,19 @@ class SchemaExtractor(
               ?: import.importedFqName?.asString()?.split(".")?.last()) == verbCall
           }?.let { import ->
             val moduleRefName = import.importedFqName?.asString()?.extractModuleName()
-              .takeIf { refModule -> refModule != currentModuleName }
+              .takeIf { refModule -> refModule != element.extractModuleName() }
             Ref(
               name = import.importedFqName!!.asString().split(".").last(),
               module = moduleRefName ?: "",
             )
           } ?: let {
             // if no matching import, validate that the referenced verb is in the same module
-            element.containingKtFile.children.singleOrNull {
+            element.containingFile.children.singleOrNull {
               (it is KtNamedFunction) && it.name == verbCall && it.annotationEntries.any {
                 bindingContext.get(
                   BindingContext.ANNOTATION,
                   it
-                )?.fqName?.asString() == xyz.block.ftl.Verb::class.qualifiedName
+                )?.fqName?.asString() == xyz.block.ftl.Export::class.qualifiedName
               }
             } ?: throw IllegalArgumentException(
               "Error processing function defined at $funcSourcePos: Could not resolve outgoing verb call"
@@ -502,7 +495,7 @@ class SchemaExtractor(
 
             Ref(
               name = verbCall,
-              module = currentModuleName,
+              module = element.extractModuleName(),
             )
           }
         }
@@ -518,14 +511,6 @@ class SchemaExtractor(
       }
   }
 
-  private fun KtTypeAlias.toSchemaData(): Data {
-    return Data(
-      name = this.name!!,
-      comments = this.comments(),
-      pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(),
-    )
-  }
-
   private fun KtClass.toSchemaData(): Data {
     return Data(
       name = this.name!!,
@@ -539,9 +524,7 @@ class SchemaExtractor(
         Field(
           name = param.name!!,
           type = param.typeReference?.let {
-            return@let it.resolveType().toSchemaType(
-              getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition()
-            )
+            return@let it.resolveType().toSchemaType(it.getPosition())
           },
           metadata = metadata,
         )
@@ -550,17 +533,17 @@ class SchemaExtractor(
       typeParameters = this.children.flatMap { (it as? KtTypeParameterList)?.parameters ?: emptyList() }.map {
         TypeParameter(
           name = it.name!!,
-          pos = getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition(),
+          pos = getLineAndColumnInPsiFile(it.containingFile, it.textRange).toPosition(this.containingFile.name),
         )
       }.toList(),
-      pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(),
+      pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(this.containingFile.name),
     )
   }
 
   private fun KtClass.toSchemaEnum(): Enum {
     val variants: List<EnumVariant>
     require(this.getValueParameters().isEmpty() || this.getValueParameters().size == 1) {
-      "${this.getLineAndColumn().toPosition()}: Enums can have at most one value parameter, of type string or number"
+      "${this.getLineAndColumn()}: Enums can have at most one value parameter, of type string or number"
     }
 
     if (this.getValueParameters().isEmpty()) {
@@ -576,7 +559,7 @@ class SchemaExtractor(
       }
     } else {
       variants = this.declarations.filterIsInstance<KtEnumEntry>().map { entry ->
-        val pos: Position = entry.getLineAndColumn().toPosition()
+        val pos: Position = entry.getPosition()
         val name: String = entry.name!!
         val arg: ValueArgument = entry.initializerList?.initializers?.single().let {
           (it as KtSuperTypeCallEntry).valueArguments.single()
@@ -608,7 +591,7 @@ class SchemaExtractor(
       name = this.name!!,
       variants = variants,
       comments = this.comments(),
-      pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(),
+      pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(this.containingFile.name),
     )
   }
 
@@ -627,6 +610,7 @@ class SchemaExtractor(
       type.isSubtypeOf(builtIns.stringType) -> Type(string = xyz.block.ftl.v1.schema.String())
       type.isSubtypeOf(builtIns.intType) -> Type(int = xyz.block.ftl.v1.schema.Int())
       type.isSubtypeOf(builtIns.longType) -> Type(int = xyz.block.ftl.v1.schema.Int())
+      type.isSubtypeOf(builtIns.floatType) -> Type(float = xyz.block.ftl.v1.schema.Float())
       type.isSubtypeOf(builtIns.doubleType) -> Type(float = xyz.block.ftl.v1.schema.Float())
       type.isSubtypeOf(builtIns.booleanType) -> Type(bool = xyz.block.ftl.v1.schema.Bool())
       type.isSubtypeOf(builtIns.unitType) -> Type(unit = xyz.block.ftl.v1.schema.Unit())
@@ -656,9 +640,10 @@ class SchemaExtractor(
         ?.asString() == OffsetDateTime::class.qualifiedName -> Type(time = xyz.block.ftl.v1.schema.Time())
 
       else -> {
+        val descriptor = this.toClassDescriptor()
         require(
-          this.toClassDescriptor().isData
-            || this.toClassDescriptor().kind == ClassKind.ENUM_CLASS
+          descriptor.isData
+            || descriptor.kind == ClassKind.ENUM_CLASS
             || this.isEmptyBuiltin()
         ) {
           "(${position.line},${position.column}) Expected type to be a data class or builtin.Empty, but was ${
@@ -666,11 +651,20 @@ class SchemaExtractor(
           }"
         }
 
-        val refName = this.toClassDescriptor().name.asString()
+        val refName = descriptor.name.asString()
         val fqName = this.fqNameOrNull()!!.asString()
         require(fqName.startsWith("ftl.")) {
           "(${position.line},${position.column}) Expected module name to be in the form ftl.<module>, " +
             "but was ${this.fqNameOrNull()?.asString()}"
+        }
+
+        // add all referenced types to the schema
+        // TODO: remove once we require explicit exporting of types
+        (descriptor.psiElement as? KtClass)?.let {
+          when {
+            it.isData() -> addDecl(it.extractModuleName(), Decl(data_ = it.toSchemaData()))
+            it.isEnum() -> addDecl(it.extractModuleName(), Decl(enum_ = it.toSchemaEnum()))
+          }
         }
 
         Type(
@@ -696,16 +690,19 @@ class SchemaExtractor(
     bindingContext.get(BindingContext.TYPE, this)
       ?: throw IllegalStateException("${this.getLineAndColumn()} Could not resolve type ${this.text}")
 
-  private fun LineAndColumn.toPosition() =
-    Position(
-      filename = file.name,
-      line = this.line.toLong(),
-      column = this.column.toLong(),
-    )
-
   companion object {
+    private fun KtElement.getPosition() = this.getLineAndColumn().toPosition(this.containingFile.name)
+
+    private fun PsiElement.getPosition() = this.getLineAndColumn().toPosition(this.containingFile.name)
     private fun PsiElement.getLineAndColumn(): LineAndColumn =
       getLineAndColumnInPsiFile(this.containingFile, this.textRange)
+
+    private fun LineAndColumn.toPosition(filename: String) =
+      Position(
+        filename = filename,
+        line = this.line.toLong(),
+        column = this.column.toLong(),
+      )
 
     private fun getCallMatcher(ctxVarName: String): Regex {
       return """${ctxVarName}\.call\((?<fn>[^,]+),\s*(?<req>[^,]+?)\s*[()]""".toRegex(RegexOption.IGNORE_CASE)
@@ -714,6 +711,10 @@ class SchemaExtractor(
     private fun KotlinType.toClassDescriptor(): ClassDescriptor =
       this.unwrap().constructor.declarationDescriptor as? ClassDescriptor
         ?: throw IllegalStateException("Could not resolve KotlinType to class")
+
+    fun KtElement.extractModuleName(): String {
+      return this.containingKtFile.packageFqName.extractModuleName()
+    }
 
     fun FqName.extractModuleName(): String {
       return this.asString().extractModuleName()

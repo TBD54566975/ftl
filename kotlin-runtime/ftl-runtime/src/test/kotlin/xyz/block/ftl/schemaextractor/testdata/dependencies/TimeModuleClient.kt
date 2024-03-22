@@ -4,7 +4,7 @@ import ftl.builtin.Empty
 import xyz.block.ftl.Context
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method.GET
-import xyz.block.ftl.Verb
+import xyz.block.ftl.Export
 import java.time.OffsetDateTime
 
 data class TimeResponse(
@@ -20,7 +20,7 @@ enum class Color {
 /**
  * Time returns the current time.
  */
-@Verb
+@Export
 @HttpIngress(
   GET,
   "/time",
@@ -28,6 +28,6 @@ enum class Color {
 fun time(context: Context, req: Empty): TimeResponse =
   throw NotImplementedError("Verb stubs should not be called directly, instead use context.call(TimeModuleClient::time, ...)")
 
-@Verb
+@Export
 fun other(context: Context, req: Empty): TimeResponse =
   throw NotImplementedError("Verb stubs should not be called directly, instead use context.call(TimeModuleClient::time, ...)")

@@ -1,6 +1,4 @@
 // This is the echo module.
-//
-//ftl:module echo
 package echo
 
 import (
@@ -25,7 +23,7 @@ type EchoResponse struct {
 
 // Echo returns a greeting with the current time.
 //
-//ftl:verb
+//ftl:export
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	tresp, err := ftl.Call(ctx, time.Time, time.TimeRequest{})
 	if err != nil {
