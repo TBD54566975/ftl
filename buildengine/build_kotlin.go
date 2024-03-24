@@ -59,7 +59,7 @@ func buildKotlinModule(ctx context.Context, sch *schema.Schema, module Module) e
 	logger.Debugf("Using build command '%s'", module.Build)
 	err := exec.Command(ctx, log.Debug, module.Dir, "bash", "-c", module.Build).RunBuffered(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to build module %s: %w", module.Module, err)
+		return fmt.Errorf("failed to build module %q: %w", module.Module, err)
 	}
 
 	return nil
@@ -67,7 +67,7 @@ func buildKotlinModule(ctx context.Context, sch *schema.Schema, module Module) e
 
 func buildKotlinLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {
 	if err := generateExternalModules(ctx, &lib, sch); err != nil {
-		return fmt.Errorf("unable to generate external modules for %v: %w", lib, err)
+		return fmt.Errorf("unable to generate external modules for %q: %w", lib.Config().Key, err)
 	}
 	return nil
 }

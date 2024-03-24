@@ -258,7 +258,13 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				config := event.Project.Config()
 				err := e.buildAndDeploy(ctx, 1, true, config.Key)
 				if err != nil {
-					logger.Errorf(err, "build and deploy failed for %v: %v", event.Project, err)
+					switch project := event.Project.(type) {
+					case Module:
+						logger.Errorf(err, "build and deploy failed for module %q: %v", project.Config().Key, err)
+					case ExternalLibrary:
+						logger.Errorf(err, "build failed for library %q: %v", project.Config().Key, err)
+					}
+
 				}
 			}
 		case change := <-schemaChanges:
@@ -458,7 +464,7 @@ func (e *Engine) build(ctx context.Context, key ProjectKey, builtModules map[str
 	if module, ok := project.(Module); ok {
 		moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(module.Dir, module.DeployDir, module.Schema))
 		if err != nil {
-			return fmt.Errorf("could not load schema for %s: %w", module, err)
+			return fmt.Errorf("could not load schema for module %q: %w", module.Config().Key, err)
 		}
 		schemas <- moduleSchema
 	}

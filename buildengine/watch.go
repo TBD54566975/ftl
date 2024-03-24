@@ -64,7 +64,7 @@ func Watch(ctx context.Context, period time.Duration, moduleDirs []string, exter
 			for _, existingProject := range existingProjects {
 				existingConfig := existingProject.Project.Config()
 				if _, haveProject := projectsByDir[existingConfig.Dir]; !haveProject {
-					logger.Debugf("removed %s", existingProject.Project)
+					logger.Debugf("removed %s %q", existingProject.Project.TypeString(), existingProject.Project.Config().Key)
 					topic.Publish(WatchEventProjectRemoved{Project: existingProject.Project})
 					delete(existingProjects, existingConfig.Dir)
 				}
@@ -85,12 +85,12 @@ func Watch(ctx context.Context, period time.Duration, moduleDirs []string, exter
 					if equal {
 						continue
 					}
-					logger.Debugf("changed %s: %c%s", project, changeType, path)
+					logger.Debugf("changed %s %q: %c%s", project.TypeString(), project.Config().Key, changeType, path)
 					topic.Publish(WatchEventProjectChanged{Project: existingProject.Project, Change: changeType, Path: path})
 					existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: existingProject.Project}
 					continue
 				}
-				logger.Debugf("added %s", project)
+				logger.Debugf("added %s %q", project.TypeString(), project.Config().Key)
 				topic.Publish(WatchEventProjectAdded{Project: project})
 				existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: project}
 			}

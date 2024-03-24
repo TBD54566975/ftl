@@ -10,14 +10,14 @@ import (
 
 func buildGoModule(ctx context.Context, sch *schema.Schema, module Module) error {
 	if err := compile.Build(ctx, module.Dir, sch); err != nil {
-		return fmt.Errorf("failed to build %q: %w", module, err)
+		return fmt.Errorf("failed to build module %q: %w", module.Config().Key, err)
 	}
 	return nil
 }
 
 func buildGoLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {
 	if err := compile.GenerateStubsForExternalLibrary(ctx, lib.Dir, sch); err != nil {
-		return fmt.Errorf("failed to generate stubs for %q: %w", lib, err)
+		return fmt.Errorf("failed to generate stubs for library %q: %w", lib.Config().Key, err)
 	}
 	return nil
 }
