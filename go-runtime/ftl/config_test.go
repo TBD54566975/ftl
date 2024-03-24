@@ -7,13 +7,14 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestConfig(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	cr := configuration.ProjectConfigResolver[configuration.Configuration]{Config: []string{"testdata/ftl-project.toml"}}
-	assert.Equal(t, []string{"testdata/ftl-project.toml"}, cr.ConfigPaths())
+	assert.Equal(t, []string{"testdata/ftl-project.toml"}, projectconfig.ConfigPaths(cr.Config))
 	cm, err := configuration.NewConfigurationManager(ctx, cr)
 	assert.NoError(t, err)
 	ctx = configuration.ContextWithConfig(ctx, cm)

@@ -6,7 +6,7 @@ package projectconfig
 func Merge(paths ...string) (Config, error) {
 	config := Config{}
 	for _, path := range paths {
-		partial, err := Load(path)
+		partial, err := loadFile(path)
 		if err != nil {
 			return config, err
 		}
@@ -16,6 +16,7 @@ func Merge(paths ...string) (Config, error) {
 }
 
 func merge(a, b Config) Config {
+	a = mergeRootKeys(a, b)
 	a.Global = mergeConfigAndSecrets(a.Global, b.Global)
 	for k, v := range b.Modules {
 		if a.Modules == nil {
@@ -38,6 +39,16 @@ func mergeConfigAndSecrets(a, b ConfigAndSecrets) ConfigAndSecrets {
 			a.Secrets = map[string]*URL{}
 		}
 		a.Secrets[k] = v
+	}
+	return a
+}
+
+func mergeRootKeys(a, b Config) Config {
+	if a.ModuleDirs == nil {
+		a.ModuleDirs = b.ModuleDirs
+	}
+	if a.ExternalDirs == nil {
+		a.ExternalDirs = b.ExternalDirs
 	}
 	return a
 }

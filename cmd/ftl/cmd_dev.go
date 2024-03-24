@@ -9,19 +9,28 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type devCmd struct {
 	Parallelism int           `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
-	Dirs        []string      `arg:"" help:"Base directories containing modules." type:"existingdir" required:""`
+	Dirs        []string      `arg:"" help:"Base directories containing modules." type:"existingdir" optional:""`
 	External    []string      `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
 	Watch       time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
 	NoServe     bool          `help:"Do not start the FTL server." default:"false"`
 	ServeCmd    serveCmd      `embed:""`
 }
 
-func (d *devCmd) Run(ctx context.Context) error {
+func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
+	if len(d.Dirs) == 0 && len(d.External) == 0 {
+		d.Dirs = projConfig.ModuleDirs
+		d.External = projConfig.ExternalDirs
+	}
+	if len(d.Dirs) == 0 && len(d.External) == 0 {
+		return errors.New("no directories specified")
+	}
+
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
 	g, ctx := errgroup.WithContext(ctx)
