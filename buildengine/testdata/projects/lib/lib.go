@@ -7,5 +7,5 @@ import (
 )
 
 func CreateEchoResponse(ctx context.Context, req alpha.EchoRequest) alpha.EchoResponse {
-	return alpha.EchoResponse{Message: fmt.Sprintf("Hello, %s!!!", req.Name)}, nil
+	return alpha.EchoResponse{Message: fmt.Sprintf("Hello, %s!!!", req.Name)}
 }
