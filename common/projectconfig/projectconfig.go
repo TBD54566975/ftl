@@ -49,6 +49,7 @@ func LoadConfig(ctx context.Context, input []string) (Config, error) {
 	return config, nil
 }
 
+// LoadWritableConfig loads the last config file in the list of paths, or an empty config if none are found.
 func LoadWritableConfig(ctx context.Context, input []string) (Config, error) {
 	configPaths := ConfigPaths(input)
 	if len(configPaths) == 0 {
