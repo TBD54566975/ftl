@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -78,7 +79,7 @@ func main() {
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	config, _ := cf.LoadConfig(ctx, cli.ConfigFlag)
+	config, _ := projectconfig.LoadConfig(ctx, cli.ConfigFlag)
 	kctx.Bind(config)
 
 	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: cli.ConfigFlag}
@@ -89,7 +90,7 @@ func main() {
 	// Propagate to runner processes.
 	// TODO: This is a bit of a hack until we get proper configuration
 	// management through the Controller.
-	os.Setenv("FTL_CONFIG", strings.Join(cr.ConfigPaths(), ","))
+	os.Setenv("FTL_CONFIG", strings.Join(projectconfig.ConfigPaths(cli.ConfigFlag), ","))
 
 	// Handle signals.
 	sigch := make(chan os.Signal, 1)

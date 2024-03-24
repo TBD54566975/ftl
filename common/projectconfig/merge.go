@@ -6,7 +6,7 @@ package projectconfig
 func Merge(paths ...string) (Config, error) {
 	config := Config{}
 	for _, path := range paths {
-		partial, err := Load(path)
+		partial, err := loadFile(path)
 		if err != nil {
 			return config, err
 		}

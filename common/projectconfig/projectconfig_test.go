@@ -7,7 +7,7 @@ import (
 )
 
 func TestProjectConfig(t *testing.T) {
-	actual, err := Load("testdata/ftl-project.toml")
+	actual, err := loadFile("testdata/ftl-project.toml")
 	assert.NoError(t, err)
 	expected := Config{
 		Modules: map[string]ConfigAndSecrets{

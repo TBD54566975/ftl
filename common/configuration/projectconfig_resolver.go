@@ -4,17 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
 	pc "github.com/TBD54566975/ftl/common/projectconfig"
-	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // ProjectConfigResolver is parametric Resolver that loads values from either a
@@ -31,7 +26,7 @@ var _ Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
 func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
 
 func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
-	config, err := p.loadConfig(ctx)
+	config, err := pc.LoadConfig(ctx, p.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +42,7 @@ func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, e
 }
 
 func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
-	config, err := p.loadConfig(ctx)
+	config, err := pc.LoadConfig(ctx, p.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +71,7 @@ func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
-	config, err := p.loadWritableConfig(ctx)
+	config, err := pc.LoadWritableConfig(ctx, p.Config)
 	if err != nil {
 		return err
 	}
@@ -89,7 +84,7 @@ func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL
 }
 
 func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
-	config, err := p.loadWritableConfig(ctx)
+	config, err := pc.LoadWritableConfig(ctx, p.Config)
 	if err != nil {
 		return err
 	}
@@ -99,48 +94,6 @@ func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
 	}
 	delete(mapping, ref.Name)
 	return p.setMapping(config, ref.Module, mapping)
-}
-
-// ConfigPaths returns the computed list of configuration paths to load.
-func ConfigPaths(config []string) []string {
-	if len(config) > 0 {
-		return config
-	}
-	path := filepath.Join(internal.GitRoot(""), "ftl-project.toml")
-	_, err := os.Stat(path)
-	if err == nil {
-		return []string{path}
-	}
-	return []string{}
-}
-
-func (p ProjectConfigResolver[R]) ConfigPaths() []string {
-	return ConfigPaths(p.Config)
-}
-
-func (p ProjectConfigResolver[R]) loadWritableConfig(ctx context.Context) (pc.Config, error) {
-	configPaths := p.ConfigPaths()
-	if len(configPaths) == 0 {
-		return pc.Config{}, nil
-	}
-	target := configPaths[len(configPaths)-1]
-	log.FromContext(ctx).Tracef("Loading config from %s", target)
-	return pc.Load(target)
-}
-
-func LoadConfig(ctx context.Context, input []string) (pc.Config, error) {
-	logger := log.FromContext(ctx)
-	configPaths := ConfigPaths(input)
-	logger.Tracef("Loading config from %s", strings.Join(configPaths, " "))
-	config, err := pc.Merge(configPaths...)
-	if err != nil {
-		return pc.Config{}, err
-	}
-	return config, nil
-}
-
-func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) (pc.Config, error) {
-	return LoadConfig(ctx, p.Config)
 }
 
 func (p ProjectConfigResolver[R]) getMapping(config pc.Config, module optional.Option[string]) (map[string]*pc.URL, error) {
@@ -189,6 +142,6 @@ func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.O
 	} else {
 		set(&config.Global, mapping)
 	}
-	configPaths := p.ConfigPaths()
+	configPaths := pc.ConfigPaths(p.Config)
 	return pc.Save(configPaths[len(configPaths)-1], config)
 }
