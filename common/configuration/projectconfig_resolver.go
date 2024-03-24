@@ -31,7 +31,7 @@ var _ Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
 func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
 
 func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
-	config, err := p.LoadConfig(ctx)
+	config, err := p.loadConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, e
 }
 
 func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
-	config, err := p.LoadConfig(ctx)
+	config, err := p.loadConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -102,9 +102,9 @@ func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
 }
 
 // ConfigPaths returns the computed list of configuration paths to load.
-func (p ProjectConfigResolver[R]) ConfigPaths() []string {
-	if len(p.Config) > 0 {
-		return p.Config
+func ConfigPaths(config []string) []string {
+	if len(config) > 0 {
+		return config
 	}
 	path := filepath.Join(internal.GitRoot(""), "ftl-project.toml")
 	_, err := os.Stat(path)
@@ -112,6 +112,10 @@ func (p ProjectConfigResolver[R]) ConfigPaths() []string {
 		return []string{path}
 	}
 	return []string{}
+}
+
+func (p ProjectConfigResolver[R]) ConfigPaths() []string {
+	return ConfigPaths(p.Config)
 }
 
 func (p ProjectConfigResolver[R]) loadWritableConfig(ctx context.Context) (pc.Config, error) {
@@ -124,9 +128,9 @@ func (p ProjectConfigResolver[R]) loadWritableConfig(ctx context.Context) (pc.Co
 	return pc.Load(target)
 }
 
-func LoadConfig(ctx context.Context, Config []string) (pc.Config, error) {
+func LoadConfig(ctx context.Context, input []string) (pc.Config, error) {
 	logger := log.FromContext(ctx)
-	configPaths := p.ConfigPaths()
+	configPaths := ConfigPaths(input)
 	logger.Tracef("Loading config from %s", strings.Join(configPaths, " "))
 	config, err := pc.Merge(configPaths...)
 	if err != nil {
@@ -135,7 +139,7 @@ func LoadConfig(ctx context.Context, Config []string) (pc.Config, error) {
 	return config, nil
 }
 
-func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) {
+func (p ProjectConfigResolver[R]) loadConfig(ctx context.Context) (pc.Config, error) {
 	return LoadConfig(ctx, p.Config)
 }
 
