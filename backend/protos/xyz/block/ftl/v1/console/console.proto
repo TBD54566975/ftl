@@ -97,9 +97,18 @@ message Module {
   repeated Config configs = 8;
 }
 
+message TopologyGroup {
+  repeated string modules = 1;
+}
+
+message Topology {
+  repeated TopologyGroup levels = 1;
+}
+
 message GetModulesRequest {}
 message GetModulesResponse {
   repeated Module modules = 1;
+  Topology topology = 2;
 }
 
 // Query for events.

@@ -7,14 +7,12 @@ export const configPanels = (config: Config) => {
       title: config.config?.name,
       expanded: true,
       children: (
-        <>
-          <div className='flex justify-between items-center text-sm'>
-            <span>Type</span>
-            <span>
-              <pre>{config.config?.type?.value?.case}</pre>
-            </span>
-          </div>
-        </>
+        <div className='flex justify-between items-center text-sm'>
+          <span>Type</span>
+          <span>
+            <pre>{config.config?.type?.value?.case}</pre>
+          </span>
+        </div>
       ),
     },
   ] as ExpandablePanelProps[]

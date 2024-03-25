@@ -7,14 +7,12 @@ export const secretPanels = (secret: Secret) => {
       title: 'Details',
       expanded: true,
       children: (
-        <>
-          <div className='flex justify-between items-center text-sm'>
-            <span>Type</span>
-            <span>
-              <pre>{secret.secret?.type?.value?.case}</pre>
-            </span>
-          </div>
-        </>
+        <div className='flex justify-between items-center text-sm'>
+          <span>Type</span>
+          <span>
+            <pre>{secret.secret?.type?.value?.case}</pre>
+          </span>
+        </div>
       ),
     },
   ] as ExpandablePanelProps[]

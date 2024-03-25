@@ -615,6 +615,80 @@ export class Module extends Message<Module> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.console.TopologyGroup
+ */
+export class TopologyGroup extends Message<TopologyGroup> {
+  /**
+   * @generated from field: repeated string modules = 1;
+   */
+  modules: string[] = [];
+
+  constructor(data?: PartialMessage<TopologyGroup>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.TopologyGroup";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "modules", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TopologyGroup {
+    return new TopologyGroup().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TopologyGroup {
+    return new TopologyGroup().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TopologyGroup {
+    return new TopologyGroup().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TopologyGroup | PlainMessage<TopologyGroup> | undefined, b: TopologyGroup | PlainMessage<TopologyGroup> | undefined): boolean {
+    return proto3.util.equals(TopologyGroup, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.Topology
+ */
+export class Topology extends Message<Topology> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.TopologyGroup levels = 1;
+   */
+  levels: TopologyGroup[] = [];
+
+  constructor(data?: PartialMessage<Topology>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Topology";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "levels", kind: "message", T: TopologyGroup, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Topology {
+    return new Topology().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Topology {
+    return new Topology().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Topology {
+    return new Topology().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Topology | PlainMessage<Topology> | undefined, b: Topology | PlainMessage<Topology> | undefined): boolean {
+    return proto3.util.equals(Topology, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.console.GetModulesRequest
  */
 export class GetModulesRequest extends Message<GetModulesRequest> {
@@ -654,6 +728,11 @@ export class GetModulesResponse extends Message<GetModulesResponse> {
    */
   modules: Module[] = [];
 
+  /**
+   * @generated from field: xyz.block.ftl.v1.console.Topology topology = 2;
+   */
+  topology?: Topology;
+
   constructor(data?: PartialMessage<GetModulesResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -663,6 +742,7 @@ export class GetModulesResponse extends Message<GetModulesResponse> {
   static readonly typeName = "xyz.block.ftl.v1.console.GetModulesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "modules", kind: "message", T: Module, repeated: true },
+    { no: 2, name: "topology", kind: "message", T: Topology },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetModulesResponse {

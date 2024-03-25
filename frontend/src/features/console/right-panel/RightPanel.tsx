@@ -12,7 +12,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ width, header, panels }) => {
     <div style={{ width: `${width}px` }} className='overflow-y-auto flex flex-col'>
       {header}
       {panels.map((panel, index) => (
-        <ExpandablePanel key={index} {...panel}>
+        <ExpandablePanel key={`panel-${index}`} {...panel}>
           {panel.children}
         </ExpandablePanel>
       ))}
