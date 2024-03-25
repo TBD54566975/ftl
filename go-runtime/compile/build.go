@@ -245,6 +245,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 
 			case *schema.Optional, *schema.Unit:
 				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
+
 			default:
 			}
 			return next()
