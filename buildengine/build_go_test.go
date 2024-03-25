@@ -5,9 +5,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestGenerateGoModule(t *testing.T) {
@@ -179,6 +180,9 @@ func Call(context.Context, Req) (Resp, error) {
 }
 
 func TestExternalType(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	moduleDir := "testdata/projects/external"
 	buildDir := "_ftl"
 

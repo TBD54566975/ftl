@@ -13,6 +13,7 @@ import (
 	"sync"
 	"unicode"
 
+	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -57,9 +58,15 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 		return nil, nil, fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
 	}
 	nativeNames := NativeNames{}
+	// Find module name
 	module := &schema.Module{}
 	merr := []error{}
 	for _, pkg := range pkgs {
+		moduleName, ok := ftlModuleFromGoModule(pkg.PkgPath).Get()
+		if !ok {
+			return nil, nil, fmt.Errorf("package %q is not in the ftl namespace", pkg.PkgPath)
+		}
+		module.Name = moduleName
 		if len(pkg.Errors) > 0 {
 			for _, perr := range pkg.Errors {
 				if len(pkg.Syntax) > 0 {
@@ -161,9 +168,9 @@ func parseCall(pctx *parseContext, node *ast.CallExpr) error {
 	if pctx.activeVerb == nil {
 		return nil
 	}
-	moduleName := verbFn.Pkg().Name()
-	if moduleName == pctx.pkg.Name {
-		moduleName = ""
+	moduleName, ok := ftlModuleFromGoModule(verbFn.Pkg().Path()).Get()
+	if !ok {
+		return errorf(node.Args[1].Pos(), "call first argument must be a function in an ftl module")
 	}
 	ref := &schema.Ref{
 		Pos:    goPosToSchemaPos(node.Pos()),
@@ -494,6 +501,14 @@ func visitComments(doc *ast.CommentGroup) []string {
 	return comments
 }
 
+func ftlModuleFromGoModule(pkgPath string) optional.Option[string] {
+	parts := strings.Split(pkgPath, "/")
+	if parts[0] != "ftl" {
+		return optional.None[string]()
+	}
+	return optional.Some(strings.TrimSuffix(parts[1], "_test"))
+}
+
 func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.Ref, error) {
 	named, ok := tnode.(*types.Named)
 	if !ok {
@@ -501,8 +516,10 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 	}
 	nodePath := named.Obj().Pkg().Path()
 	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
-		base := path.Dir(pctx.pkg.PkgPath)
-		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
+		destModule, ok := ftlModuleFromGoModule(nodePath).Get()
+		if !ok {
+			return nil, errorf(pos, "struct declared in non-FTL module %s", nodePath)
+		}
 		dataRef := &schema.Ref{
 			Pos:    goPosToSchemaPos(pos),
 			Module: destModule,
@@ -518,7 +535,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 			// Fully qualify the Ref if needed
 			if arg, okArg := typeArg.(*schema.Ref); okArg {
 				if arg.Module == "" {
-					arg.Module = strings.TrimPrefix(pctx.pkg.PkgPath, base+"/")
+					arg.Module = destModule
 				}
 				typeArg = arg
 			}
@@ -533,8 +550,9 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 	}
 	pctx.nativeNames[out] = named.Obj().Name()
 	dataRef := &schema.Ref{
-		Pos:  goPosToSchemaPos(pos),
-		Name: out.Name,
+		Pos:    goPosToSchemaPos(pos),
+		Module: pctx.module.Name,
+		Name:   out.Name,
 	}
 	for i := 0; i < named.TypeParams().Len(); i++ {
 		param := named.TypeParams().At(i)

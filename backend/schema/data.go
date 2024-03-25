@@ -199,7 +199,7 @@ func maybeMonomorphiseType(t Type, typeParameters map[string]Type) (Type, error)
 		if tp, ok := typeParameters[t.Name]; ok {
 			return tp, nil
 		}
-		return nil, fmt.Errorf("%s: unknown type parameter %q", t.Position(), t.Name)
+		return nil, fmt.Errorf("%s: unknown type parameter %q", t.Position(), t)
 	}
 	return t, nil
 }

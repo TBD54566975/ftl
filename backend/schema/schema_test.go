@@ -44,7 +44,7 @@ module todo {
   }
 
   verb create(todo.CreateRequest) todo.CreateResponse
-      +calls todo.destroy  +database calls todo.testdb 
+      +calls todo.destroy  +database calls todo.testdb
 
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{name}
@@ -81,7 +81,7 @@ func TestImports(t *testing.T) {
 		data Data {
 			ref other.Data
 			ref another.Data
-			ref Generic<new.Data>
+			ref test.Generic<new.Data>
 		}
 		verb myVerb(test.Data) test.Data
 			+calls verbose.verb
@@ -174,8 +174,8 @@ func TestParsing(t *testing.T) {
 					data CreateListResponse {}
 
 					// Create a new list
-					verb createList(todo.CreateListRequest) CreateListResponse
-						+calls createList
+					verb createList(todo.CreateListRequest) todo.CreateListResponse
+						+calls todo.createList
 				}
 			`,
 			expected: &Schema{
@@ -305,7 +305,7 @@ func TestParsing(t *testing.T) {
 						value T
 					}
 
-					verb test(Data<String>) Data<String>
+					verb test(test.Data<String>) test.Data<String>
 				}
 				`,
 			expected: &Schema{

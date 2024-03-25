@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/assert/v2"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/sha256"
-	"github.com/alecthomas/assert/v2"
 )
 
 type mockDeployClient struct {
@@ -47,6 +48,9 @@ func (m *mockDeployClient) Status(context.Context, *connect.Request[ftlv1.Status
 }
 
 func TestDeploy(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),

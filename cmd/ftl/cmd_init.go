@@ -102,7 +102,7 @@ func scaffold(hermit bool, source *zip.Reader, destination string, ctx any, opti
 	}
 	opts = append(opts, options...)
 	if err := internal.ScaffoldZip(source, destination, ctx, opts...); err != nil {
-		return fmt.Errorf("%s: %w", "failed to scaffold", err)
+		return fmt.Errorf("failed to scaffold: %w", err)
 	}
 	return nil
 }

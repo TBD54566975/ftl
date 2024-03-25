@@ -1,4 +1,0 @@
-#!/bin/bash
-set -euo pipefail
-testName=${1:-}
-go test -count 1 -v -tags integration -run "$testName" ./integration

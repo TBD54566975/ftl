@@ -2,8 +2,9 @@ package schema
 
 import (
 	"fmt"
-	"runtime/debug"
 	"strings"
+
+	"github.com/alecthomas/types/optional"
 )
 
 // Resolver may be implemented be a node in the AST to resolve references within itself.
@@ -22,7 +23,7 @@ type Scope map[string]ModuleDecl
 
 // ModuleDecl is a declaration associated with a module.
 type ModuleDecl struct {
-	Module *Module // May be nil.
+	Module optional.Option[*Module]
 	Symbol Symbol
 }
 
@@ -70,10 +71,14 @@ func NewScopes() Scopes {
 	builtins := Builtins()
 	// Empty scope tail for builtins.
 	scopes := Scopes{primitivesScope, Scope{}}
-	if err := scopes.Add(nil, builtins.Name, builtins); err != nil {
+	if err := scopes.Add(optional.None[*Module](), builtins.Name, builtins); err != nil {
 		panic(err)
 	}
-	scopes = scopes.PushScope(builtins.Scope())
+	for _, decl := range builtins.Decls {
+		if err := scopes.Add(optional.Some(builtins), decl.GetName(), decl); err != nil {
+			panic(err)
+		}
+	}
 	// Push an empty scope for other modules to be added to.
 	scopes = scopes.Push()
 	return scopes
@@ -111,11 +116,8 @@ func (s Scopes) Push() Scopes {
 }
 
 // Add a declaration to the current scope.
-func (s *Scopes) Add(owner *Module, name string, symbol Symbol) error {
+func (s *Scopes) Add(owner optional.Option[*Module], name string, symbol Symbol) error {
 	end := len(*s) - 1
-	if name == "destroy" {
-		debug.PrintStack()
-	}
 	if prev, ok := (*s)[end][name]; ok {
 		return fmt.Errorf("%s: duplicate declaration of %q at %s", symbol.Position(), name, prev.Symbol.Position())
 	}
@@ -132,7 +134,7 @@ func (s Scopes) ResolveType(t Type) *ModuleDecl {
 		return s.Resolve(*t)
 
 	case Symbol:
-		return &ModuleDecl{nil, t}
+		return &ModuleDecl{optional.None[*Module](), t}
 
 	default:
 		return nil
@@ -160,9 +162,11 @@ func (s Scopes) Resolve(ref Ref) *ModuleDecl {
 					return decl
 				}
 			} else {
-				for _, d := range mdecl.Module.Decls {
-					if d.GetName() == ref.Name {
-						return &ModuleDecl{mdecl.Module, d}
+				if module, ok := mdecl.Module.Get(); ok {
+					for _, d := range module.Decls {
+						if d.GetName() == ref.Name {
+							return &ModuleDecl{mdecl.Module, d}
+						}
 					}
 				}
 			}
