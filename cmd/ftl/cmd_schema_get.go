@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 
 	"connectrpc.com/connect"
+	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -45,10 +47,15 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerSe
 			break
 		}
 	}
-	for name := range remainingNames {
-		fmt.Fprintf(os.Stderr, "module %s not found\n", name)
+	if err := resp.Err(); err != nil {
+		return resp.Err()
 	}
-	return resp.Err()
+	missingNames := maps.Keys(remainingNames)
+	slices.Sort(missingNames)
+	if len(missingNames) > 0 {
+		return fmt.Errorf("missing modules: %v", missingNames)
+	}
+	return nil
 }
 
 func (g *getSchemaCmd) generateProto(resp *connect.ServerStreamForClient[ftlv1.PullSchemaResponse]) error {
