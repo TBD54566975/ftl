@@ -148,7 +148,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		verb callsTwo(two.Payload<String>) two.Payload<String>  
 			+calls two.two
 	  
-		verb returnsUser(Unit) two.UserResponse?
+		verb returnsUser(Unit) two.UserResponse
 	  
 		verb two(two.Payload<String>) two.Payload<String>
 	  }
