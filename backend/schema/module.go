@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type Module struct {
@@ -99,11 +101,34 @@ func (m *Module) String() string {
 		fmt.Fprint(w, "builtin ")
 	}
 	fmt.Fprintf(w, "module %s {\n", m.Name)
-	for i, s := range m.Decls {
-		if i > 0 {
-			fmt.Fprintln(w)
+
+	// print decls in groups
+	groupedTypes := []struct {
+		types               []interface{}
+		blankLineSeparation bool
+	}{
+		{[]interface{}{&Config{}, &Secret{}}, false},
+		{[]interface{}{&Database{}}, false},
+		{[]interface{}{&Enum{}}, true},
+		{[]interface{}{&Data{}}, true},
+		{[]interface{}{&Verb{}}, true},
+	}
+	hasPrintedDecl := false
+	for _, group := range groupedTypes {
+		hasPrintedDeclInGroup := false
+		for _, t := range group.types {
+			reflected := reflect.TypeOf(t)
+			decls := slices.Filter(m.Decls, func(decl Decl) bool { return reflect.TypeOf(decl) == reflected })
+			for _, decl := range decls {
+				if hasPrintedDecl && (!hasPrintedDeclInGroup || group.blankLineSeparation) {
+					fmt.Fprintln(w)
+				}
+				fmt.Fprintln(w, indent(decl.String()))
+
+				hasPrintedDecl = true
+				hasPrintedDeclInGroup = true
+			}
 		}
-		fmt.Fprintln(w, indent(s.String()))
 	}
 	fmt.Fprintln(w, "}")
 	return w.String()

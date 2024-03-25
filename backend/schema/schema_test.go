@@ -20,7 +20,6 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   config configValue String
-
   secret secretValue String
 
   database testdb
