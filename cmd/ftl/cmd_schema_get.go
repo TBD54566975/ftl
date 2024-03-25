@@ -59,15 +59,16 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerSe
 }
 
 func (g *getSchemaCmd) generateProto(resp *connect.ServerStreamForClient[ftlv1.PullSchemaResponse]) error {
-	filterMap := make(map[string]bool)
+	remainingNames := make(map[string]bool)
 	for _, name := range g.Modules {
-		filterMap[name] = true
+		remainingNames[name] = true
 	}
 	schema := &schemapb.Schema{}
 	for resp.Receive() {
 		msg := resp.Msg()
-		if len(g.Modules) == 0 || filterMap[msg.Schema.Name] {
+		if len(g.Modules) == 0 || remainingNames[msg.Schema.Name] {
 			schema.Modules = append(schema.Modules, msg.Schema)
+			delete(remainingNames, msg.Schema.Name)
 		}
 		if !msg.More {
 			break
@@ -81,5 +82,13 @@ func (g *getSchemaCmd) generateProto(resp *connect.ServerStreamForClient[ftlv1.P
 		return err
 	}
 	_, err = os.Stdout.Write(pb)
-	return err
+	if err != nil {
+		return err
+	}
+	missingNames := maps.Keys(remainingNames)
+	slices.Sort(missingNames)
+	if len(missingNames) > 0 {
+		return fmt.Errorf("missing modules: %v", missingNames)
+	}
+	return nil
 }
