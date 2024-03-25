@@ -44,7 +44,6 @@ func TestExtractModuleSchema(t *testing.T) {
 	actual = schema.Normalise(actual)
 	expected := `module one {
   config configValue one.Config
-
   secret secretValue String
 
   enum Color(String) {
