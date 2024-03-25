@@ -15,7 +15,8 @@ import (
 )
 
 type getSchemaCmd struct {
-	Protobuf bool `help:"Output the schema as binary protobuf."`
+	Protobuf bool     `help:"Output the schema as binary protobuf."`
+	Modules  []string `arg:"" help:"Modules to include" type:"string" optional:""`
 }
 
 func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
@@ -26,25 +27,41 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerSe
 	if g.Protobuf {
 		return g.generateProto(resp)
 	}
+	remainingNames := make(map[string]bool)
+	for _, name := range g.Modules {
+		remainingNames[name] = true
+	}
 	for resp.Receive() {
 		msg := resp.Msg()
 		module, err := schema.ModuleFromProto(msg.Schema)
-		if err != nil {
-			return fmt.Errorf("%s: %w", "invalid module schema", err)
+		if len(g.Modules) == 0 || remainingNames[msg.Schema.Name] {
+			if err != nil {
+				return fmt.Errorf("%s: %w", "invalid module schema", err)
+			}
+			fmt.Println(module)
+			delete(remainingNames, msg.Schema.Name)
 		}
-		fmt.Println(module)
 		if !msg.More {
 			break
 		}
+	}
+	for name := range remainingNames {
+		fmt.Fprintf(os.Stderr, "module %s not found\n", name)
 	}
 	return resp.Err()
 }
 
 func (g *getSchemaCmd) generateProto(resp *connect.ServerStreamForClient[ftlv1.PullSchemaResponse]) error {
+	filterMap := make(map[string]bool)
+	for _, name := range g.Modules {
+		filterMap[name] = true
+	}
 	schema := &schemapb.Schema{}
 	for resp.Receive() {
 		msg := resp.Msg()
-		schema.Modules = append(schema.Modules, msg.Schema)
+		if len(g.Modules) == 0 || filterMap[msg.Schema.Name] {
+			schema.Modules = append(schema.Modules, msg.Schema)
+		}
 		if !msg.More {
 			break
 		}
