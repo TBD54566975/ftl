@@ -1,22 +1,26 @@
-import React, { useState } from 'react'
-import RightPanel from './right_panel/RightPanel'
+import React, { useContext, useState } from 'react'
+import RightPanel from './right-panel/RightPanel'
 import BottomPanel from './BottomPanel'
 import { FTLNode } from '../graph/GraphPage'
 import { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { ExpandablePanelProps } from './ExpandablePanel'
-import { headerForNode } from './right_panel/RightPanelHeader'
-import { modulePanels } from './right_panel/ModulePanels'
+import { headerForNode } from './right-panel/RightPanelHeader'
+import { modulePanels } from './right-panel/ModulePanels'
 import { GraphPane } from '../graph/GraphPane'
 import { Page } from '../../layout'
 import { CubeTransparentIcon } from '@heroicons/react/24/outline'
-import { verbPanels } from './right_panel/VerbPanels'
-import { secretPanels } from './right_panel/SecretPanels'
-import { configPanels } from './right_panel/ConfigPanels'
+import { verbPanels } from './right-panel/VerbPanels'
+import { secretPanels } from './right-panel/SecretPanels'
+import { configPanels } from './right-panel/ConfigPanels'
+import { modulesContext } from '../../providers/modules-provider'
+import { NavigateFunction, useNavigate } from 'react-router-dom'
 
 const MIN_RIGHT_PANEL_WIDTH = 200
 const MIN_BOTTOM_PANEL_HEIGHT = 200
 
 const ConsolePage = () => {
+  const modules = useContext(modulesContext)
+  const navigate = useNavigate()
   const [rightPanelWidth, setRightPanelWidth] = useState(300)
   const [bottomPanelHeight, setBottomPanelHeight] = useState(250)
   const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false)
@@ -77,7 +81,7 @@ const ConsolePage = () => {
             <RightPanel
               width={rightPanelWidth}
               header={headerForNode(selectedNode)}
-              panels={panelsForNode(selectedNode)}
+              panels={panelsForNode(modules.modules, selectedNode, navigate)}
             />
           </div>
           <div
@@ -92,9 +96,9 @@ const ConsolePage = () => {
   )
 }
 
-const panelsForNode = (node: FTLNode | null) => {
+const panelsForNode = (modules: Module[], node: FTLNode | null, navigate: NavigateFunction) => {
   if (node instanceof Module) {
-    return modulePanels(node)
+    return modulePanels(modules, node, navigate)
   } else if (node instanceof Verb) {
     return verbPanels(node)
   } else if (node instanceof Secret) {

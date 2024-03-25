@@ -1,5 +1,7 @@
 import { NodeProps } from 'reactflow'
 
+export const groupPadding = 40
+
 interface Props extends NodeProps {
   data: {
     title: string

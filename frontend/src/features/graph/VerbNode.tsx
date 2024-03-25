@@ -1,5 +1,7 @@
 import { Handle, NodeProps, Position } from 'reactflow'
 
+export const verbHeight = 40
+
 interface Props extends NodeProps {
   data: {
     title: string

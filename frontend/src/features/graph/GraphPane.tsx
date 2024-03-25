@@ -24,7 +24,7 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
   const [selectedNode, setSelectedNode] = React.useState<FTLNode | null>(null)
 
   useEffect(() => {
-    const { nodes, edges } = layoutNodes(modules.modules)
+    const { nodes, edges } = layoutNodes(modules.modules, modules.topology)
     setNodes(nodes)
     setEdges(edges)
   }, [modules])

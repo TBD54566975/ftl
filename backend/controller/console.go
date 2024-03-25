@@ -18,6 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -64,7 +65,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			case *schema.Verb:
 				//nolint:forcetypeassert
 				v := decl.ToProto().(*schemapb.Verb)
-				verbSchema := schema.VerbFromProto(v) // TODO: include all of the types  that the verb references
+				verbSchema := schema.VerbFromProto(v) // TODO: include all of the types that the verb references
 				var jsonRequestSchema string
 				if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
 					jsonSchema, err := schema.DataToJSONSchema(sch, *requestData)
@@ -121,8 +122,20 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		})
 	}
 
+	sorted := buildengine.TopologicalSort(graph(sch))
+	topology := &pbconsole.Topology{
+		Levels: make([]*pbconsole.TopologyGroup, len(sorted)),
+	}
+	for i, level := range sorted {
+		group := &pbconsole.TopologyGroup{
+			Modules: level,
+		}
+		topology.Levels[i] = group
+	}
+
 	return connect.NewResponse(&pbconsole.GetModulesResponse{
-		Modules: modules,
+		Modules:  modules,
+		Topology: topology,
 	}), nil
 }
 
@@ -390,5 +403,30 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 
 	default:
 		panic(fmt.Errorf("unknown event type %T", event))
+	}
+}
+
+func graph(sch *schema.Schema) map[string][]string {
+	out := make(map[string][]string)
+	for _, module := range sch.Modules {
+		buildGraph(sch, module, out)
+	}
+	return out
+}
+
+// buildGraph recursively builds the dependency graph
+func buildGraph(sch *schema.Schema, module *schema.Module, out map[string][]string) {
+	out[module.Name] = module.Imports()
+	for _, dep := range module.Imports() {
+		var depModule *schema.Module
+		for _, m := range sch.Modules {
+			if m.String() == dep {
+				depModule = m
+				break
+			}
+		}
+		if depModule != nil {
+			buildGraph(sch, module, out)
+		}
 	}
 }

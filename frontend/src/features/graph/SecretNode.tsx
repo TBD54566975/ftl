@@ -1,5 +1,7 @@
 import { NodeProps } from 'reactflow'
 
+export const secretHeight = 24
+
 interface Props extends NodeProps {
   data: {
     title: string

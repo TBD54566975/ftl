@@ -1,169 +1,137 @@
 import { Edge, Node } from 'reactflow'
-import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Module, Topology } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { MetadataCalls } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { groupPadding } from './GroupNode'
+import { verbHeight } from './VerbNode'
+import { secretHeight } from './SecretNode'
+import { configHeight } from './ConfigNode'
 
 const groupWidth = 200
+const ITEM_SPACING = 10
 
-const calculateModuleDepths = (modules: Module[]): Record<string, number> => {
-  const depths: Record<string, number> = {}
-  const adjList: Record<string, string[]> = {}
-  const visitedInCurrentPath: Set<string> = new Set() // For cycle detection
-
-  modules.forEach((module) => {
-    adjList[module.name ?? ''] = []
-    ;(module.verbs ?? []).forEach((verb) => {
-      const calls = verb?.verb?.metadata
-        .filter((meta) => meta.value.case === 'calls')
-        .map((meta) => meta.value.value as MetadataCalls)
-
-      calls?.forEach((call) => {
-        call.calls.forEach((c) => {
-          adjList[module.name ?? ''].push(c.module)
-        })
-      })
-    })
-  })
-
-  // Depth-first search to calculate depths
-  const dfs = (node: string, depth: number) => {
-    if (visitedInCurrentPath.has(node)) {
-      // Detected a cycle
-      return
-    }
-    visitedInCurrentPath.add(node)
-
-    depths[node] = Math.max(depths[node] ?? 0, depth)
-    adjList[node].forEach((neighbor) => {
-      dfs(neighbor, depth + 1)
-    })
-
-    visitedInCurrentPath.delete(node) // Remove the node from the current path after exploring all neighbors
-  }
-
-  // Initialize DFS from each node
-  Object.keys(adjList).forEach((node) => {
-    visitedInCurrentPath.clear() // Clear the path before starting a new DFS
-    dfs(node, 0)
-  })
-
-  return depths
-}
-
-export const layoutNodes = (modules: Module[]) => {
+export const layoutNodes = (modules: Module[], topology: Topology | undefined) => {
   const nodes: Node[] = []
   const edges: Edge[] = []
-  const xCounters: Record<number, number> = {}
 
-  const moduleDepths = calculateModuleDepths(modules)
+  topology?.levels.reverse().forEach((level, index) => {
+    let groupY = 0
 
-  modules.forEach((module) => {
-    const depth = moduleDepths[module.name ?? ''] ?? 0
-    if (xCounters[depth] === undefined) {
-      xCounters[depth] = 0
-    }
+    level.modules.forEach((moduleName) => {
+      const module = modules.find((m) => m.name === moduleName)
+      if (!module) {
+        return
+      }
 
-    const x = xCounters[depth]
-    const yOffset = depth * 300
+      const verbs = module.verbs
+      const secrets = module.secrets
+      const configs = module.configs
 
-    const verbs = module.verbs
-    const secrets = module.secrets
-    const configs = module.configs
-
-    const items = (verbs?.length ?? 0) + (secrets?.length ?? 0) + (configs?.length ?? 0)
-    const height = items * 50 + 50
-
-    nodes.push({
-      id: module.name ?? '',
-      position: { x: x, y: yOffset },
-      data: { title: module.name, item: module },
-      type: 'groupNode',
-      draggable: true,
-      style: {
-        width: groupWidth,
-        height: height,
-        zIndex: 1,
-      },
-    })
-
-    let y = 40
-    secrets.forEach((secret) => {
+      const x = index * 400
       nodes.push({
-        id: `secret-${module.name}.${secret.secret?.name}`,
-        position: { x: 20, y: y },
-        connectable: false,
-        data: { title: secret.secret?.name, item: secret },
-        type: 'secretNode',
-        parentNode: module.name,
+        id: module.name ?? '',
+        position: { x: x, y: groupY },
+        data: { title: module.name, item: module },
+        type: 'groupNode',
+        draggable: true,
         style: {
-          width: groupWidth - 40,
-          height: 40,
+          width: groupWidth,
+          height: moduleHeight(module),
+          zIndex: 1,
         },
-        draggable: false,
-        zIndex: 2,
-      })
-      y += 50
-    })
-
-    configs.forEach((config) => {
-      nodes.push({
-        id: `config-${module.name}.${config.config?.name}`,
-        position: { x: 20, y: y },
-        connectable: false,
-        data: { title: config.config?.name, item: config },
-        type: 'configNode',
-        parentNode: module.name,
-        style: {
-          width: groupWidth - 40,
-          height: 40,
-        },
-        draggable: false,
-        zIndex: 2,
-      })
-      y += 50
-    })
-
-    verbs.forEach((verb) => {
-      const calls = verb?.verb?.metadata
-        .filter((meta) => meta.value.case === 'calls')
-        .map((meta) => meta.value.value as MetadataCalls)
-
-      nodes.push({
-        id: `${module.name}.${verb.verb?.name}`,
-        position: { x: 20, y: y },
-        connectable: false,
-        data: { title: verb.verb?.name, item: verb },
-        type: 'verbNode',
-        parentNode: module.name,
-        style: {
-          width: groupWidth - 40,
-          height: 40,
-        },
-        draggable: false,
-        zIndex: 2,
       })
 
-      const uniqueEdgeIds = new Set<string>()
-      calls?.map((call) =>
-        call.calls.forEach((call) => {
-          const edgeId = `${module.name}.${verb.verb?.name}-${call.module}.${call.name}`
-          if (!uniqueEdgeIds.has(edgeId)) {
-            uniqueEdgeIds.add(edgeId)
-            edges.push({
-              id: edgeId,
-              source: `${module.name}.${verb.verb?.name}`,
-              target: `${call.module}.${call.name}`,
-              style: { stroke: 'rgb(251 113 133)' },
-              animated: true,
-            })
-            call.name
-            call.module
-          }
-        }),
-      )
+      let y = 40
+      secrets.forEach((secret) => {
+        nodes.push({
+          id: `secret-${module.name}.${secret.secret?.name}`,
+          position: { x: 20, y: y },
+          connectable: false,
+          data: { title: secret.secret?.name, item: secret },
+          type: 'secretNode',
+          parentNode: module.name,
+          style: {
+            width: groupWidth - 40,
+            height: secretHeight,
+          },
+          draggable: false,
+          zIndex: 2,
+        })
+        y += secretHeight + ITEM_SPACING
+      })
 
-      y += 50
+      configs.forEach((config) => {
+        nodes.push({
+          id: `config-${module.name}.${config.config?.name}`,
+          position: { x: 20, y: y },
+          connectable: false,
+          data: { title: config.config?.name, item: config },
+          type: 'configNode',
+          parentNode: module.name,
+          style: {
+            width: groupWidth - 40,
+            height: configHeight,
+          },
+          draggable: false,
+          zIndex: 2,
+        })
+        y += configHeight + ITEM_SPACING
+      })
+
+      verbs.forEach((verb) => {
+        const calls = verb?.verb?.metadata
+          .filter((meta) => meta.value.case === 'calls')
+          .map((meta) => meta.value.value as MetadataCalls)
+
+        nodes.push({
+          id: `${module.name}.${verb.verb?.name}`,
+          position: { x: 20, y: y },
+          connectable: false,
+          data: { title: verb.verb?.name, item: verb },
+          type: 'verbNode',
+          parentNode: module.name,
+          style: {
+            width: groupWidth - 40,
+            height: verbHeight,
+          },
+          draggable: false,
+          zIndex: 2,
+        })
+
+        const uniqueEdgeIds = new Set<string>()
+        calls?.map((call) =>
+          call.calls.forEach((call) => {
+            const edgeId = `${module.name}.${verb.verb?.name}-${call.module}.${call.name}`
+            if (!uniqueEdgeIds.has(edgeId)) {
+              uniqueEdgeIds.add(edgeId)
+              edges.push({
+                id: edgeId,
+                source: `${module.name}.${verb.verb?.name}`,
+                target: `${call.module}.${call.name}`,
+                style: { stroke: 'rgb(251 113 133)' },
+                animated: true,
+              })
+              call.name
+              call.module
+            }
+          }),
+        )
+
+        y += verbHeight + ITEM_SPACING
+      })
+      groupY += y + 40
     })
-    xCounters[depth] += 300
   })
+
   return { nodes, edges }
+}
+
+const moduleHeight = (module: Module) => {
+  let height = groupPadding
+  height += (module.secrets?.length ?? 0) * (secretHeight + ITEM_SPACING)
+  height += (module.configs?.length ?? 0) * (configHeight + ITEM_SPACING)
+  height += (module.verbs?.length ?? 0) * (verbHeight + ITEM_SPACING)
+  if (height > groupPadding) {
+    height += ITEM_SPACING
+  }
+  return height
 }
