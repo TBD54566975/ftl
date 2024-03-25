@@ -108,7 +108,7 @@ message Topology {
 message GetModulesRequest {}
 message GetModulesResponse {
   repeated Module modules = 1;
-  Topology topology = 2; 
+  Topology topology = 2;
 }
 
 // Query for events.
