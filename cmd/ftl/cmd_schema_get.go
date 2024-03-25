@@ -18,7 +18,7 @@ import (
 
 type getSchemaCmd struct {
 	Protobuf bool     `help:"Output the schema as binary protobuf."`
-	Modules  []string `arg:"" help:"Modules to include" type:"string" optional:""`
+	Modules  []string `help:"Modules to include" type:"string" optional:""`
 }
 
 func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
