@@ -42,10 +42,10 @@ func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error)
 }
 
 //ftl:export
-func ReturnsUser(ctx context.Context) (ftl.Option[UserResponse], error) {
-	return ftl.Some[UserResponse](UserResponse{
+func ReturnsUser(ctx context.Context) (UserResponse, error) {
+	return UserResponse{
 		User: User{
 			Name: "John Doe",
 		},
-	}), nil
+	}, nil
 }

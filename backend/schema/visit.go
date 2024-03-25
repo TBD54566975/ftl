@@ -19,6 +19,12 @@ func VisitExcludingMetadataChildren(n Node, visit func(n Node, next func() error
 	return visit(n, func() error {
 		if _, ok := n.(Metadata); !ok {
 			for _, child := range n.schemaChildren() {
+				_, isParentVerb := n.(*Verb)
+				_, isChildUnit := child.(*Unit)
+				if isParentVerb && isChildUnit {
+					// Skip visiting children of a verb that are units as the scaffolded code will not inclue them
+					continue
+				}
 				if err := VisitExcludingMetadataChildren(child, visit); err != nil {
 					return err
 				}
