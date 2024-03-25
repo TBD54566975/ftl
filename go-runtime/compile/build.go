@@ -222,7 +222,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"imports": func(m *schema.Module) map[string]string {
 		imports := map[string]string{}
-		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, parents []schema.Node, next func() error) error {
+		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error {
 			switch n := n.(type) {
 			case *schema.Ref:
 				if n.Module == "" || n.Module == m.Name {
@@ -243,17 +243,8 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			case *schema.Time:
 				imports["time"] = "stdtime"
 
-			case *schema.Optional:
+			case *schema.Optional, *schema.Unit:
 				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
-
-			case *schema.Unit:
-				switch parents[len(parents)-1].(type) {
-				case *schema.Verb:
-					// Go verbs do not include Unit parameters in the signature, so should not cause an ftl import
-					break
-				default:
-					imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
-				}
 			default:
 			}
 			return next()

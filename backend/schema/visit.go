@@ -15,16 +15,17 @@ func Visit(n Node, visit func(n Node, next func() error) error) error {
 // VisitExcludingMetadataChildren visits all nodes in the schema except the children of metadata nodes.
 // This is used when generating external modules to avoid adding imports only referenced in the bodies of
 // stubbed verbs.
-func VisitExcludingMetadataChildren(n Node, visit func(n Node, parents []Node, next func() error) error) error {
-	return innerVisitExcludingMetadataChildren(n, []Node{}, visit)
-}
-
-func innerVisitExcludingMetadataChildren(n Node, parents []Node, visit func(n Node, parents []Node, next func() error) error) error {
-	return visit(n, parents, func() error {
+func VisitExcludingMetadataChildren(n Node, visit func(n Node, next func() error) error) error {
+	return visit(n, func() error {
 		if _, ok := n.(Metadata); !ok {
-			parents = append(parents, n)
 			for _, child := range n.schemaChildren() {
-				if err := innerVisitExcludingMetadataChildren(child, parents, visit); err != nil {
+				_, isParentVerb := n.(*Verb)
+				_, isChildUnit := child.(*Unit)
+				if isParentVerb && isChildUnit {
+					// Skip visiting children of a verb that are units as the scaffolded code will not inclue them
+					continue
+				}
+				if err := VisitExcludingMetadataChildren(child, visit); err != nil {
 					return err
 				}
 			}

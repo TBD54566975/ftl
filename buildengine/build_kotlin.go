@@ -168,7 +168,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"imports": func(m *schema.Module) []string {
 		imports := sets.NewSet[string]()
-		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, parents []schema.Node, next func() error) error {
+		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error {
 			switch n.(type) {
 			case *schema.Data:
 				imports.Add("xyz.block.ftl.Export")
