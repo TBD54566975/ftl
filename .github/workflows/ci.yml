@@ -1,7 +1,5 @@
 on:
-  workflow_run:
-    workflows: ["Auto-format"]
-    types: [completed]
+  workflow_dispatch:
 name: CI
 concurrency:
   group: ${{ github.ref }}-ci
