@@ -53,7 +53,7 @@ export const modulePanels = (
       expanded: false,
       children: module.secrets.map((s, index) => (
         <div key={`secret-${s.secret?.name}-${index}`} className='flex justify-between items-center text-sm'>
-          <span>{s.secret?.name}</span>
+          <span className='truncate pr-2'>{s.secret?.name}</span>
           <span>
             <pre>{s.secret?.type?.value?.case}</pre>
           </span>
@@ -69,7 +69,7 @@ export const modulePanels = (
       expanded: false,
       children: module.configs.map((c) => (
         <div key={c.config?.name} className='flex justify-between items-center text-sm'>
-          <span>{c.config?.name}</span>
+          <span className='truncate pr-2'>{c.config?.name}</span>
           <span>
             <pre>{c.config?.type?.value?.case}</pre>
           </span>

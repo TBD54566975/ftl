@@ -27,7 +27,7 @@ export const ExpandablePanel: React.FC<ExpandablePanelProps> = ({ icon: Icon, ti
         {Icon ? <Icon className='h-4 w-4 mr-2' /> : null}
         <span className='text-xs py-1'>{title}</span>
       </div>
-      {isExpanded && <div className={`overflow-auto max-h-64 ${padding ? padding : 'p-2'}`}>{children}</div>}
+      {isExpanded && <div className={`${padding ? padding : 'p-2'}`}>{children}</div>}
     </div>
   )
 }
