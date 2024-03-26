@@ -34,7 +34,6 @@ jobs:
           git commit -am "chore(autofmt): Automated formatting"
           git push
       - name: Trigger CI
-        if: steps.git-check.outputs.modified == 'true'
         env:
           HEAD_REF: ${{ github.head_ref }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
