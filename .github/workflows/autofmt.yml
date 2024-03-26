@@ -35,13 +35,9 @@ jobs:
           git push
       - name: Trigger CI
         if: steps.git-check.outputs.modified == 'true'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.FTL_AUTOFMT_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ci.yml',
-              ref: '${{ github.head_ref }}'
-            });
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          GITHUB_TOKEN: ${{ secrets.FTL_AUTOFMT_TOKEN }}
+        run: |
+          gh workflow run ci.yml --ref $HEAD_REF
+         
