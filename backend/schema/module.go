@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type Module struct {
@@ -94,6 +95,12 @@ func (m *Module) schemaChildren() []Node {
 	}
 	return children
 }
+
+type spacingRule struct {
+	gapWithinType     bool
+	skipGapAfterTypes []reflect.Type
+}
+
 func (m *Module) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(m.Comments))
@@ -102,33 +109,32 @@ func (m *Module) String() string {
 	}
 	fmt.Fprintf(w, "module %s {\n", m.Name)
 
-	// print decls in groups
-	groupedTypes := []struct {
-		types               []interface{}
-		blankLineSeparation bool
-	}{
-		{[]interface{}{&Config{}, &Secret{}}, false},
-		{[]interface{}{&Database{}}, false},
-		{[]interface{}{&Enum{}}, true},
-		{[]interface{}{&Data{}}, true},
-		{[]interface{}{&Verb{}}, true},
+	// print decls with spacing rules
+	typeSpacingRules := map[reflect.Type]spacingRule{
+		reflect.TypeOf(&Config{}):   {gapWithinType: false},
+		reflect.TypeOf(&Secret{}):   {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Secret{})}},
+		reflect.TypeOf(&Database{}): {gapWithinType: false},
+		reflect.TypeOf(&Enum{}):     {gapWithinType: true},
+		reflect.TypeOf(&Data{}):     {gapWithinType: true},
+		reflect.TypeOf(&Verb{}):     {gapWithinType: true},
 	}
-	hasPrintedDecl := false
-	for _, group := range groupedTypes {
-		hasPrintedDeclInGroup := false
-		for _, t := range group.types {
-			reflected := reflect.TypeOf(t)
-			decls := slices.Filter(m.Decls, func(decl Decl) bool { return reflect.TypeOf(decl) == reflected })
-			for _, decl := range decls {
-				if hasPrintedDecl && (!hasPrintedDeclInGroup || group.blankLineSeparation) {
-					fmt.Fprintln(w)
-				}
-				fmt.Fprintln(w, indent(decl.String()))
 
-				hasPrintedDecl = true
-				hasPrintedDeclInGroup = true
+	lastTypePrinted := optional.None[reflect.Type]()
+	for _, decl := range m.Decls {
+		t := reflect.TypeOf(decl)
+		rules, ok := typeSpacingRules[t]
+		if !ok {
+			rules = spacingRule{gapWithinType: true}
+		}
+		if lastType, ok := lastTypePrinted.Get(); ok {
+			if lastType == t && rules.gapWithinType {
+				fmt.Fprintln(w)
+			} else if !slices.Contains(rules.skipGapAfterTypes, lastType) {
+				fmt.Fprintln(w)
 			}
 		}
+		fmt.Fprintln(w, indent(decl.String()))
+		lastTypePrinted = optional.Some[reflect.Type](t)
 	}
 	fmt.Fprintln(w, "}")
 	return w.String()
