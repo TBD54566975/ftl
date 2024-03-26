@@ -1,19 +1,18 @@
 import React, { useContext, useState } from 'react'
 import RightPanel from './right-panel/RightPanel'
 import BottomPanel from './BottomPanel'
-import { FTLNode } from '../graph/GraphPage'
 import { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { ExpandablePanelProps } from './ExpandablePanel'
-import { headerForNode } from './right-panel/RightPanelHeader'
-import { modulePanels } from './right-panel/ModulePanels'
-import { GraphPane } from '../graph/GraphPane'
+import { FTLNode, GraphPane } from '../graph/GraphPane'
 import { Page } from '../../layout'
 import { CubeTransparentIcon } from '@heroicons/react/24/outline'
 import { verbPanels } from './right-panel/VerbPanels'
-import { secretPanels } from './right-panel/SecretPanels'
-import { configPanels } from './right-panel/ConfigPanels'
 import { modulesContext } from '../../providers/modules-provider'
 import { NavigateFunction, useNavigate } from 'react-router-dom'
+import { headerForNode } from './right-panel/RightPanelHeader'
+import { modulePanels } from './right-panel/ModulePanels'
+import { secretPanels } from './right-panel/SecretPanels'
+import { configPanels } from './right-panel/ConfigPanels'
 
 const MIN_RIGHT_PANEL_WIDTH = 200
 const MIN_BOTTOM_PANEL_HEIGHT = 200
@@ -58,7 +57,7 @@ const ConsolePage = () => {
 
   return (
     <Page>
-      <Page.Header icon={<CubeTransparentIcon />} title='Graph' />
+      <Page.Header icon={<CubeTransparentIcon />} title='Console' />
       <Page.Body className='flex h-full'>
         <div
           className='flex flex-col h-screen'
@@ -70,7 +69,7 @@ const ConsolePage = () => {
           onMouseLeave={stopDragging}
         >
           <div className='flex flex-1'>
-            <div className='flex-1 bg-gray-800 text-white'>
+            <div className='flex-1 dark:bg-gray-800 '>
               <GraphPane onTapped={setSelectedNode} />
             </div>
             <div

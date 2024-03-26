@@ -6,7 +6,6 @@ import { VerbPage } from './features/verbs/VerbPage.tsx'
 import { Layout } from './layout/Layout.tsx'
 import { NotFoundPage } from './layout/NotFoundPage.tsx'
 import ConsolePage from './features/console/ConsolePage.tsx'
-import { GraphPage } from './features/graph/GraphPage.tsx'
 
 export const App = () => {
   return (
@@ -18,8 +17,6 @@ export const App = () => {
         <Route path='deployments' element={<DeploymentsPage />} />
         <Route path='deployments/:deploymentKey' element={<DeploymentPage />} />
         <Route path='deployments/:deploymentKey/verbs/:verbName' element={<VerbPage />} />
-
-        <Route path='graph' element={<GraphPage />} />
         <Route path='console' element={<ConsolePage />} />
       </Route>
       <Route path='*' element={<NotFoundPage />} />

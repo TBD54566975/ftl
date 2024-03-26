@@ -13,9 +13,11 @@ export const GroupNode = ({ data }: Props) => {
   return (
     <>
       <div
-        className={`h-full rounded-md ${data.selected ? 'bg-opacity-80 bg-pink-600' : 'bg-indigo-900 bg-opacity-30'}`}
+        className={`h-full rounded-md ${data.selected ? 'bg-pink-200 dark:bg-pink-600 bg-opacity-80' : 'bg-indigo-200 dark:bg-indigo-900 bg-opacity-30'}`}
       >
-        <div className='flex justify-center text-xs text-gray-100 pt-3 pl-5 truncate max-w-[90%]'>{data.title}</div>
+        <div className='flex justify-center text-xs dark:text-gray-100 pt-3 pl-5 truncate max-w-[90%]'>
+          {data.title}
+        </div>
       </div>
     </>
   )
