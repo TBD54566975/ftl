@@ -14,7 +14,7 @@ const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode, secretNode: Secret
 export type FTLNode = Module | Verb | Secret | Config
 
 interface GraphPaneProps {
-  onTapped?: (item: FTLNode) => void
+  onTapped?: (item: FTLNode | null) => void
 }
 
 export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
@@ -24,14 +24,16 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
   const [selectedNode, setSelectedNode] = React.useState<FTLNode | null>(null)
 
   useEffect(() => {
-    const { nodes, edges } = layoutNodes(modules.modules, modules.topology)
-    setNodes(nodes)
-    setEdges(edges)
-  }, [modules])
+    const { nodes: newNodes, edges: newEdges } = layoutNodes(modules.modules, modules.topology)
+
+    // Need to update after render loop for ReactFlow to pick up the changes
+    setTimeout(() => {
+      setNodes(newNodes)
+      setEdges(newEdges)
+    }, 0)
+  }, [modules.modules])
 
   useEffect(() => {
-    if (!selectedNode) return
-
     const currentNodes = nodes.map((node) => {
       return { ...node, data: { ...node.data, selected: node.data.item === selectedNode } }
     })
@@ -40,6 +42,8 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
 
   return (
     <ReactFlow
+      key={`${nodes.length}-${edges.length}`}
+      proOptions={{ hideAttribution: true }}
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
@@ -47,6 +51,7 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
       onEdgesChange={onEdgesChange}
       maxZoom={2}
       minZoom={0.1}
+      nodeDragThreshold={2}
       onNodeClick={(_, node) => {
         setSelectedNode(node.data.item)
         onTapped?.(node.data.item)
@@ -54,6 +59,10 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
       onNodeDragStart={(_, node) => {
         setSelectedNode(node.data.item)
         onTapped?.(node.data.item)
+      }}
+      onPaneClick={() => {
+        setSelectedNode(null)
+        onTapped?.(null)
       }}
       fitView
     >
