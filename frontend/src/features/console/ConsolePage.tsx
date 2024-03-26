@@ -16,6 +16,7 @@ import { configPanels } from './right-panel/ConfigPanels'
 
 const MIN_RIGHT_PANEL_WIDTH = 200
 const MIN_BOTTOM_PANEL_HEIGHT = 200
+const TOP_BAR_APPROX_HEIGHT = 44
 
 const ConsolePage = () => {
   const modules = useContext(modulesContext)
@@ -50,7 +51,7 @@ const ConsolePage = () => {
 
   const onDragVertical = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isDraggingVertical) {
-      const newHeight = Math.max(window.innerHeight - e.clientY, MIN_BOTTOM_PANEL_HEIGHT)
+      const newHeight = Math.max(window.innerHeight - e.clientY + TOP_BAR_APPROX_HEIGHT, MIN_BOTTOM_PANEL_HEIGHT)
       setBottomPanelHeight(newHeight > 0 ? newHeight : 0)
     }
   }
@@ -79,6 +80,7 @@ const ConsolePage = () => {
             />
             <RightPanel
               width={rightPanelWidth}
+              bottomPanelHeight={bottomPanelHeight}
               header={headerForNode(selectedNode)}
               panels={panelsForNode(modules.modules, selectedNode, navigate)}
             />
