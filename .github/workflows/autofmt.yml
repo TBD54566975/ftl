@@ -33,3 +33,15 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.FTL_AUTOFMT_TOKEN }}@github.com/${{ github.repository }}
           git commit -am "chore(autofmt): Automated formatting"
           git push
+      - name: Trigger CI
+        if: steps.git-check.outputs.modified == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.FTL_AUTOFMT_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              ref: '${{ github.head_ref }}'
+            });
