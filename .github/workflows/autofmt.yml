@@ -39,5 +39,5 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           GITHUB_TOKEN: ${{ secrets.FTL_AUTOFMT_TOKEN }}
         run: |
-          gh workflow run ci.yml --ref $HEAD_REF
+          gh workflow run ci.yml --ref "$HEAD_REF"
          
