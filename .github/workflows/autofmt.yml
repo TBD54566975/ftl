@@ -37,7 +37,7 @@ jobs:
         if: steps.git-check.outputs.modified == 'true'
         env:
           HEAD_REF: ${{ github.head_ref }}
-          GH_TOKEN: ${{ secrets.FTL_AUTOFMT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run ci.yml --ref "$HEAD_REF"
          
