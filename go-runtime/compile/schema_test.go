@@ -97,7 +97,8 @@ func TestExtractModuleSchema(t *testing.T) {
     time Time
     user two.User +alias json "u"
     bytes Bytes
-    enumRef two.TwoEnum
+    localEnumRef one.Color
+    externalEnumRef two.TwoEnum
   }
 
   data Resp {

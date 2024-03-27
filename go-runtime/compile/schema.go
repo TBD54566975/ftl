@@ -670,8 +670,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type
 			nodePath := named.Obj().Pkg().Path()
 			if pctx.enums[named.Obj().Name()] != nil {
 				return &schema.Ref{
-					Pos:  goPosToSchemaPos(pos),
-					Name: named.Obj().Name(),
+					Pos:    goPosToSchemaPos(pos),
+					Module: pctx.module.Name,
+					Name:   named.Obj().Name(),
 				}, nil
 			} else if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
 				// If this type is named and declared in another module, it's a reference.
