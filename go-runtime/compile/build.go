@@ -12,12 +12,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"golang.design/x/reflect"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
-
-	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
