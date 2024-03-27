@@ -525,7 +525,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 			Module: destModule,
 			Name:   named.Obj().Name(),
 		}
-		for i := 0; i < named.TypeArgs().Len(); i++ {
+		for i := range named.TypeArgs().Len() {
 			arg := named.TypeArgs().At(i)
 			typeArg, err := visitType(pctx, pos, arg)
 			if err != nil {
@@ -554,7 +554,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 		Module: pctx.module.Name,
 		Name:   out.Name,
 	}
-	for i := 0; i < named.TypeParams().Len(); i++ {
+	for i := range named.TypeParams().Len() {
 		param := named.TypeParams().At(i)
 		out.TypeParameters = append(out.TypeParameters, &schema.TypeParameter{
 			Pos:  goPosToSchemaPos(pos),
@@ -598,7 +598,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 	if !ok {
 		return nil, errorf(pos, "expected struct but got %s", named)
 	}
-	for i := 0; i < s.NumFields(); i++ {
+	for i := range s.NumFields() {
 		f := s.Field(i)
 		ft, err := visitType(pctx, f.Pos(), f.Type())
 		if err != nil {

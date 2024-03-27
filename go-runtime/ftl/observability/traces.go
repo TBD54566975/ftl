@@ -18,5 +18,5 @@ func TracerWithVerb(ctx context.Context) trace.Tracer {
 }
 
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return TracerWithVerb(ctx).Start(ctx, name, opts...)
+	return TracerWithVerb(ctx).Start(ctx, name, opts...) //nolint:spancheck
 }

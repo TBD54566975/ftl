@@ -25,7 +25,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Po
 	noDBDSN := config.Copy()
 	noDBDSN.Database = ""
 	var conn *pgx.Conn
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		conn, err = pgx.ConnectConfig(ctx, noDBDSN)
 		if err == nil {
 			defer conn.Close(ctx)

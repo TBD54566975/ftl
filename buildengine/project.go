@@ -17,7 +17,7 @@ type Project interface {
 	sealed()
 
 	Config() ProjectConfig
-	CopyWithDependencies([]string) Project
+	CopyWithDependencies(deps []string) Project
 	TypeString() string
 }
 

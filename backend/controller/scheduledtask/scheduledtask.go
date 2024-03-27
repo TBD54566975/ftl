@@ -137,7 +137,6 @@ func (s *Scheduler) run(ctx context.Context) {
 				if job.next.After(s.clock.Now()) {
 					continue
 				}
-				job := job
 				hashring := s.hashring.Load()
 
 				// If the job is singly homed, check that we are the active controller.

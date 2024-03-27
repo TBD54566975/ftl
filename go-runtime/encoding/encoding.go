@@ -111,7 +111,7 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 func encodeStruct(v reflect.Value, w *bytes.Buffer) error {
 	w.WriteRune('{')
 	afterFirst := false
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		ft := v.Type().Field(i)
 		t := ft.Type
 		fv := v.Field(i)
@@ -146,7 +146,7 @@ func encodeBytes(v reflect.Value, w *bytes.Buffer) error {
 
 func encodeSlice(v reflect.Value, w *bytes.Buffer) error {
 	w.WriteRune('[')
-	for i := 0; i < v.Len(); i++ {
+	for i := range v.Len() {
 		if i > 0 {
 			w.WriteRune(',')
 		}

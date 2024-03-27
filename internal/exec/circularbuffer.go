@@ -54,7 +54,7 @@ func (cb *CircularBuffer) Bytes() []byte {
 	var buf bytes.Buffer
 	start := cb.r.Move(-cb.size) // Correctly calculate the starting position
 
-	for i := 0; i < cb.size; i++ {
+	for range cb.size {
 		if str, ok := start.Value.(string); ok {
 			buf.WriteString(str)
 		} else {

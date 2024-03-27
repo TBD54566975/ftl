@@ -40,7 +40,6 @@ func TestCron(t *testing.T) {
 	clock := clock.NewMock()
 
 	for _, c := range controllers {
-		c := c
 		c.cron = NewForTesting(ctx, c.controller.Key, DALFunc(func(ctx context.Context, all bool) ([]dal.Controller, error) {
 			return slices.Map(controllers, func(c *controller) dal.Controller { return c.controller }), nil
 		}), clock)

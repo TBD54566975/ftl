@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/ollama"
@@ -142,7 +143,7 @@ func (s *schemaImportCmd) setup(ctx context.Context) error {
 		return err
 	}
 
-	port := fmt.Sprintf("%d", s.OllamaPort)
+	port := strconv.Itoa(s.OllamaPort)
 
 	if len(output) == 0 {
 		logger.Debugf("Creating docker container '%s' for ollama", ollamaContainerName)
@@ -157,7 +158,7 @@ func (s *schemaImportCmd) setup(ctx context.Context) error {
 		err = exec.Command(ctx, log.Debug, "./", "docker", "run",
 			"-d", // run detached so we can follow with other commands
 			"-v", ollamaVolume,
-			"-p", fmt.Sprintf("%s:11434", port),
+			"-p", port+":11434",
 			"--name", ollamaContainerName,
 			"ollama/ollama").RunBuffered(ctx)
 		if err != nil {
