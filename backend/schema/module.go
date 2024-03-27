@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 
@@ -43,33 +44,6 @@ func (m *Module) Scan(src any) error {
 	}
 }
 
-// Scope returns a scope containing all the declarations in this module.
-func (m *Module) Scope() Scope {
-	scope := Scope{}
-	for _, d := range m.Decls {
-		switch d := d.(type) {
-		case *Data:
-			scope[d.Name] = ModuleDecl{m, d}
-
-		case *Verb:
-			scope[d.Name] = ModuleDecl{m, d}
-
-		case *Enum:
-			scope[d.Name] = ModuleDecl{m, d}
-
-		case *Config:
-			scope[d.Name] = ModuleDecl{m, d}
-
-		case *Secret:
-			scope[d.Name] = ModuleDecl{m, d}
-
-		case *Database:
-			scope[d.Name] = ModuleDecl{m, d}
-		}
-	}
-	return scope
-}
-
 // Resolve returns the declaration in this module with the given name, or nil
 func (m *Module) Resolve(ref Ref) *ModuleDecl {
 	if ref.Module != "" && ref.Module != m.Name {
@@ -77,7 +51,7 @@ func (m *Module) Resolve(ref Ref) *ModuleDecl {
 	}
 	for _, d := range m.Decls {
 		if d.GetName() == ref.Name {
-			return &ModuleDecl{m, d}
+			return &ModuleDecl{optional.Some(m), d}
 		}
 	}
 	return nil

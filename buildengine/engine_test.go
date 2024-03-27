@@ -12,6 +12,9 @@ import (
 )
 
 func TestEngine(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	engine, err := buildengine.New(ctx, nil, []string{"testdata/projects/alpha", "testdata/projects/another"}, nil)
 	assert.NoError(t, err)

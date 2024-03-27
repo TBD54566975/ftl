@@ -37,6 +37,9 @@ func prebuildTestModule(t *testing.T, args ...string) {
 }
 
 func TestExtractModuleSchema(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	prebuildTestModule(t, "testdata/one", "testdata/two")
 
 	_, actual, err := ExtractModuleSchema("testdata/one")
@@ -120,6 +123,9 @@ func TestExtractModuleSchema(t *testing.T) {
 }
 
 func TestExtractModuleSchemaTwo(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	_, actual, err := ExtractModuleSchema("testdata/two")
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
@@ -136,16 +142,16 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		data Payload<T> {
 		  body T
 		}
-	  
+
 		data User {
 		  name String
 		}
-	  
+
 		data UserResponse {
 		  user two.User
 		}
-	  
-		verb callsTwo(two.Payload<String>) two.Payload<String>  
+
+		verb callsTwo(two.Payload<String>) two.Payload<String>
 			+calls two.two
 	  
 		verb returnsUser(Unit) two.UserResponse
@@ -229,6 +235,9 @@ func normaliseString(s string) string {
 }
 
 func TestErrorReporting(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	pwd, _ := os.Getwd()
 	_, _, err := ExtractModuleSchema("testdata/failing")
 	assert.EqualError(t, err, filepath.Join(pwd, `testdata/failing/failing.go`)+`:14:2: call must have exactly three arguments`)

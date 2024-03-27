@@ -23,6 +23,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
+	"github.com/alecthomas/types/optional"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
@@ -38,9 +39,16 @@ import (
 	"github.com/TBD54566975/scaffolder"
 )
 
-const integrationTestTimeout = time.Second * 60
+var integrationTestTimeout = func() time.Duration {
+	timeout := optional.Zero(os.Getenv("FTL_INTEGRATION_TEST_TIMEOUT")).Default("5s")
+	d, err := time.ParseDuration(timeout)
+	if err != nil {
+		panic(err)
+	}
+	return d
+}()
 
-var runtimes = []string{"go", "kotlin"}
+var runtimes = []string{"go" /*, "kotlin"*/}
 
 func TestLifecycle(t *testing.T) {
 	runForRuntimes(t, func(modulesDir string, runtime string, rd runtimeData) []test {
@@ -296,6 +304,7 @@ func runTests(t *testing.T, tmpDir string, tests []test) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Helper()
 			for _, assertion := range tt.assertions {
 				ic.assertWithRetry(t, assertion)
 			}

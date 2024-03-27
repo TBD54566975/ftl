@@ -15,6 +15,9 @@ import (
 )
 
 func TestWatch(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	dir := t.TempDir()
