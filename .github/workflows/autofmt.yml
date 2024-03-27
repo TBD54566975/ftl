@@ -7,7 +7,7 @@ concurrency:
 jobs:
   format:
     # Check if the PR is not from a fork
-    if: ${{ !contains(github.event.head_commit.message, 'Automated formatting') }}
+    if: ${{ !contains(github.event.head_commit.message, 'Automated formatting by bot') }}
     #if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
@@ -28,8 +28,8 @@ jobs:
       - name: Push changes
         if: steps.git-check.outputs.modified == 'true'
         run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
+          git config --global user.email "bot@tbd.email"
+          git config --global user.name "format-bot"
           git remote set-url origin https://x-access-token:${{ secrets.FTL_AUTOFMT_TOKEN }}@github.com/${{ github.repository }}
-          git commit -am "Automated formatting"
+          git commit -am "Automated formatting by bot"
           git push
