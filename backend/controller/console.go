@@ -1,11 +1,6 @@
 package controller
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
@@ -22,6 +17,13 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
+
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
 )
 
 type ConsoleService struct {
