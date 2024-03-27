@@ -3,13 +3,20 @@ on:
     branches:
       - main
   pull_request:
+
 name: Rebuild All
 concurrency:
   group: ${{ github.ref }}-rebuild-all
   cancel-in-progress: true
+
 jobs:
+  autofmt:
+    name: Auto Format
+    uses: ./.github/workflows/autofmt.yml
+
   build-all:
     name: Rebuild All
+    needs: autofmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

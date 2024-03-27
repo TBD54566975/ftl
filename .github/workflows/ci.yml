@@ -3,13 +3,20 @@ on:
     branches:
       - main
   pull_request:
+
 name: CI
 concurrency:
   group: ${{ github.ref }}-ci
   cancel-in-progress: true
+
 jobs:
+  autofmt:
+    name: Auto Format
+    uses: ./.github/workflows/autofmt.yml
+
   kotlin-runtime:
     name: Test Kotlin
+    needs: autofmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,8 +27,10 @@ jobs:
         uses: ./.github/actions/build-cache
       - name: Test
         run: mvn -f kotlin-runtime/ftl-runtime -B test
+        
   test:
     name: Test Go
+    needs: autofmt  
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -33,11 +42,13 @@ jobs:
       - name: Build Kotlin
         run: just build-kt-runtime
       - name: Docker Compose
-        run: docker compose up -d --wait
+        run: docker compose up -d --wait  
       - name: Test
         run: go-test-annotate
+
   sql:
     name: SQL
+    needs: autofmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -52,8 +63,10 @@ jobs:
         run: just init-db
       - name: Vet SQL
         run: sqlc vet
+
   lint:
     name: Lint
+    needs: autofmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -76,8 +89,10 @@ jobs:
       - name: shellcheck
         shell: bash
         run: shellcheck -f gcc -e SC2016 scripts/* | to-annotation
+        
   proto-breaking:
-    name: Proto Breaking Change Check
+    name: Proto Breaking Change Check  
+    needs: autofmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -89,8 +104,10 @@ jobs:
       - name: Proto Breaking Change Check
         shell: bash
         run: buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation
+        
   console:
     name: Console
+    needs: autofmt  
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -111,10 +128,12 @@ jobs:
       - name: Console Test
         working-directory: frontend
         run: npm run test
+        
   integration:
     name: Integration Tests
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/integration.yml
+    
   autoversion:
     name: Auto Version
     secrets: inherit

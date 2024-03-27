@@ -1,13 +1,21 @@
 on:
   workflow_call:
   workflow_dispatch:
+
 concurrency:
   group: ${{ github.ref }}-integration
   cancel-in-progress: true
+
 name: Integration
+
 jobs:
+  autofmt:
+    name: Auto Format
+    uses: ./.github/workflows/autofmt.yml
+
   prepare:
-    runs-on: ubuntu-latest
+    needs: autofmt
+    runs-on: ubuntu-latest 
     outputs:
       matrix: ${{ steps.extract-tests.outputs.matrix }}
     steps:
@@ -20,19 +28,20 @@ jobs:
         run: |
           # shellcheck disable=SC2046
           echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(grep '^func Test' integration/*_test.go | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
+
   integration:
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
+      matrix: ${{fromJson(needs.prepare.outputs.matrix)}}  
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
         with:
-          cache: true
+          cache: true  
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose
@@ -40,6 +49,6 @@ jobs:
       - name: Create DB
         run: just init-db
       - name: Download Go Modules
-        run: go mod download
+        run: go mod download  
       - name: Run ${{ matrix.test }}
         run: go test -v -tags integration -run ${{ matrix.test }} ./integration
