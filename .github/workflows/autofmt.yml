@@ -28,8 +28,8 @@ jobs:
       - name: Push changes
         if: steps.git-check.outputs.modified == 'true'
         run: |
-          git config --global user.email "bot@tbd.email"
-          git config --global user.name "format-bot"
+          git config --global user.email "formatter@tbd.email"
+          git config --global user.name "format"
           git remote set-url origin https://x-access-token:${{ secrets.FTL_AUTOFMT_TOKEN }}@github.com/${{ github.repository }}
           git commit -am "Automated formatting by bot"
           git push
