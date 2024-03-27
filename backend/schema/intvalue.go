@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"fmt"
+	"strconv"
 
 	"google.golang.org/protobuf/proto"
 
@@ -28,7 +28,7 @@ func (i *IntValue) Position() Position { return i.Pos }
 func (i *IntValue) schemaChildren() []Node { return nil }
 
 func (i *IntValue) String() string {
-	return fmt.Sprintf("%d", i.Value)
+	return strconv.Itoa(i.Value)
 }
 
 func (i *IntValue) GetValue() any { return i.Value }

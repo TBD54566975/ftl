@@ -97,7 +97,8 @@ func TestExtractModuleSchema(t *testing.T) {
     time Time
     user two.User +alias json "u"
     bytes Bytes
-    enumRef two.TwoEnum
+    localEnumRef one.Color
+    externalEnumRef two.TwoEnum
   }
 
   data Resp {
@@ -152,9 +153,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 
 		verb callsTwo(two.Payload<String>) two.Payload<String>
 			+calls two.two
-	  
+
 		verb returnsUser(Unit) two.UserResponse
-	  
+
 		verb two(two.Payload<String>) two.Payload<String>
 	  }
 `
@@ -192,7 +193,6 @@ func TestParseDirectives(t *testing.T) {
 		}},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := directiveParser.ParseString("", tt.input)
 			assert.NoError(t, err)

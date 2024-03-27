@@ -90,7 +90,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	}
 
 	controllerAddresses := make([]*url.URL, 0, s.Controllers)
-	for i := 0; i < s.Controllers; i++ {
+	for range s.Controllers {
 		controllerAddresses = append(controllerAddresses, bindAllocator.Next())
 	}
 
@@ -99,8 +99,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	for i := 0; i < s.Controllers; i++ {
-		i := i
+	for i := range s.Controllers {
 		config := controller.Config{
 			Bind:         controllerAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
@@ -159,7 +158,7 @@ func runInBackground(logger *log.Logger) {
 		return
 	}
 
-	if err := os.WriteFile(pidFilePath, []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0600); err != nil {
+	if err := os.WriteFile(pidFilePath, []byte(strconv.Itoa(cmd.Process.Pid)), 0600); err != nil {
 		logger.Errorf(err, "failed to write pid file")
 		return
 	}
@@ -269,7 +268,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			"--user", "postgres",
 			"--restart", "always",
 			"-e", "POSTGRES_PASSWORD=secret",
-			"-p", fmt.Sprintf("%s:5432", port),
+			"-p", port+":5432",
 			"--health-cmd=pg_isready",
 			"--health-interval=1s",
 			"--health-timeout=60s",

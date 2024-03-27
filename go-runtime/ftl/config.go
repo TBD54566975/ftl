@@ -56,7 +56,7 @@ func callerModule() string {
 		return "testing"
 	}
 	if !strings.HasPrefix(module, "ftl/") {
-		panic(fmt.Sprintf("must be called from an FTL module not %s", module))
+		panic("must be called from an FTL module not " + module)
 	}
 	return strings.Split(strings.Split(module, "/")[1], ".")[0]
 }

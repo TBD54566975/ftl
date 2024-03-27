@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	stdreflect "reflect"
+	"strconv"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
@@ -257,7 +258,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		case *schema.StringValue:
 			return fmt.Sprintf("%q", t.Value)
 		case *schema.IntValue:
-			return fmt.Sprintf("%d", t.Value)
+			return strconv.Itoa(t.Value)
 		}
 		panic(fmt.Sprintf("unsupported value %T", v))
 	},

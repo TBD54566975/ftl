@@ -347,7 +347,7 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 	})
 
 	// Process deployment queue.
-	for i := 0; i < len(projects); i++ {
+	for range len(projects) {
 		wg.Go(func() error {
 			for {
 				select {

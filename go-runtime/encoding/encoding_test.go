@@ -4,9 +4,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+
 	. "github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestMarshal(t *testing.T) {

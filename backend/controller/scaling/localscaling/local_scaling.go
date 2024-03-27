@@ -57,7 +57,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 	if replicasToAdd <= 0 {
 		replicasToRemove := -replicasToAdd
 
-		for i := 0; i < replicasToRemove; i++ {
+		for range replicasToRemove {
 			if len(idleRunners) == 0 {
 				return nil
 			}
@@ -74,7 +74,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 	}
 
 	logger.Debugf("Adding %d replicas", replicasToAdd)
-	for i := 0; i < replicasToAdd; i++ {
+	for range replicasToAdd {
 		controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 
 		bind := l.portAllocator.Next()

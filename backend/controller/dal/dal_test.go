@@ -361,7 +361,7 @@ func TestControllerStateFromProto(t *testing.T) {
 }
 
 func normaliseEvents(events []Event) []Event {
-	for i := 0; i < len(events); i++ {
+	for i := range len(events) {
 		event := events[i]
 		re := reflect.Indirect(reflect.ValueOf(event))
 		f := re.FieldByName("Time")
