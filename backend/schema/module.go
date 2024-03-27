@@ -5,6 +5,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"os"
+	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -66,6 +68,12 @@ func (m *Module) schemaChildren() []Node {
 	}
 	return children
 }
+
+type spacingRule struct {
+	gapWithinType     bool
+	skipGapAfterTypes []reflect.Type
+}
+
 func (m *Module) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(m.Comments))
@@ -73,11 +81,33 @@ func (m *Module) String() string {
 		fmt.Fprint(w, "builtin ")
 	}
 	fmt.Fprintf(w, "module %s {\n", m.Name)
-	for i, s := range m.Decls {
-		if i > 0 {
-			fmt.Fprintln(w)
+
+	// print decls with spacing rules
+	typeSpacingRules := map[reflect.Type]spacingRule{
+		reflect.TypeOf(&Config{}):   {gapWithinType: false},
+		reflect.TypeOf(&Secret{}):   {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Config{})}},
+		reflect.TypeOf(&Database{}): {gapWithinType: false},
+		reflect.TypeOf(&Enum{}):     {gapWithinType: true},
+		reflect.TypeOf(&Data{}):     {gapWithinType: true},
+		reflect.TypeOf(&Verb{}):     {gapWithinType: true},
+	}
+
+	lastTypePrinted := optional.None[reflect.Type]()
+	for _, decl := range m.Decls {
+		t := reflect.TypeOf(decl)
+		rules, ok := typeSpacingRules[t]
+		if !ok {
+			rules = spacingRule{gapWithinType: true}
 		}
-		fmt.Fprintln(w, indent(s.String()))
+		if lastType, ok := lastTypePrinted.Get(); ok {
+			if lastType == t && rules.gapWithinType {
+				fmt.Fprintln(w)
+			} else if !slices.Contains(rules.skipGapAfterTypes, lastType) {
+				fmt.Fprintln(w)
+			}
+		}
+		fmt.Fprintln(w, indent(decl.String()))
+		lastTypePrinted = optional.Some[reflect.Type](t)
 	}
 	fmt.Fprintln(w, "}")
 	return w.String()
