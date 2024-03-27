@@ -158,7 +158,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 			return fmt.Errorf("%s is not a slice", path)
 		}
 		elementType := fieldType.Element
-		for i := 0; i < rv.Len(); i++ {
+		for i := range rv.Len() {
 			elemPath := append(path, fmt.Sprintf("[%d]", i)) //nolint:gocritic
 			elem := rv.Index(i).Interface()
 			if err := validateValue(elementType, elemPath, elem, sch); err != nil {

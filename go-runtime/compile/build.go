@@ -9,13 +9,15 @@ import (
 	"path"
 	"path/filepath"
 	stdreflect "reflect"
+	"strconv"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
 	"golang.design/x/reflect"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -257,7 +259,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		case *schema.StringValue:
 			return fmt.Sprintf("%q", t.Value)
 		case *schema.IntValue:
-			return fmt.Sprintf("%d", t.Value)
+			return strconv.Itoa(t.Value)
 		}
 		panic(fmt.Sprintf("unsupported value %T", v))
 	},

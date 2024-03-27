@@ -72,6 +72,7 @@ linters:
     - tagalign
     - nolintlint
     - wrapcheck # We might want to re-enable this if we manually wrap all the existing errors with fmt.Errorf
+    - protogetter
 
 linters-settings:
   exhaustive:
@@ -135,3 +136,6 @@ issues:
     - "^loopclosure:"
     - 'shadow: declaration of "ctx" shadows declaration at'
     - 'shadow: declaration of "ok" shadows declaration'
+    - "^dot-imports:"
+    - "fmt.Errorf can be replaced with errors.New"
+    - "fmt.Sprintf can be replaced with string concatenation"
