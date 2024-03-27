@@ -1,8 +1,10 @@
 on:
   push:
     branches:
-      - main
+      - '**'
   pull_request:
+    branches:
+      - '**'
 name: CI
 concurrency:
   group: ${{ github.ref }}-ci

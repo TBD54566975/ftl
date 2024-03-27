@@ -1,8 +1,10 @@
 on:
   push:
     branches:
-      - main
+      - '**'
   pull_request:
+    branches:
+      - '**'
 name: Rebuild All
 concurrency:
   group: ${{ github.ref }}-rebuild-all
