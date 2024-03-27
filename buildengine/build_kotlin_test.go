@@ -6,9 +6,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestGenerateBasicModule(t *testing.T) {
@@ -402,6 +403,9 @@ fun nothing(context: Context): Unit = throw
 }
 
 func TestKotlinExternalType(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	moduleDir := "testdata/projects/externalkotlin"
 	buildDir := "_ftl"
 

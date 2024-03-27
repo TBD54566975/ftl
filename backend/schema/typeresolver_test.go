@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 )
 
 func TestTypeResolver(t *testing.T) {
@@ -12,12 +13,13 @@ func TestTypeResolver(t *testing.T) {
 			data Request<T> {
 				t T
 			}
-			verb test(Request<String>) Empty
+			verb test(test.Request<String>) Empty
 		}
 	`)
 	assert.NoError(t, err)
 	scopes := NewScopes()
-	scopes = scopes.PushScope(module.Scope())
+	err = scopes.Add(optional.None[*Module](), module.Name, module)
+	assert.NoError(t, err)
 
 	// Resolve a builtin.
 	actualInt, _ := ResolveAs[*Int](scopes, Ref{Name: "Int"})

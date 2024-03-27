@@ -134,3 +134,4 @@ issues:
     - unused-parameter
     - "^loopclosure:"
     - 'shadow: declaration of "ctx" shadows declaration at'
+    - 'shadow: declaration of "ok" shadows declaration'

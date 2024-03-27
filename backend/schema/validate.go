@@ -1,3 +1,4 @@
+//nolint:nakedret
 package schema
 
 import (
@@ -10,6 +11,7 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/alecthomas/types/optional"
 	xreflect "golang.design/x/reflect"
 	"golang.org/x/exp/maps"
 
@@ -69,7 +71,7 @@ func Validate(schema *Schema) (*Schema, error) {
 		if module == builtins {
 			continue
 		}
-		if err := scopes.Add(nil, module.Name, module); err != nil {
+		if err := scopes.Add(optional.None[*Module](), module.Name, module); err != nil {
 			merr = append(merr, err)
 		}
 	}
@@ -103,16 +105,15 @@ func Validate(schema *Schema) (*Schema, error) {
 				if mdecl := scopes.Resolve(*n); mdecl != nil {
 					switch decl := mdecl.Symbol.(type) {
 					case *Verb, *Enum, *Database, *Config, *Secret:
-						if mdecl.Module != nil {
-							n.Module = mdecl.Module.Name
+						if module, ok := mdecl.Module.Get(); ok {
+							n.Module = module.Name
 						}
 						if len(n.TypeParameters) != 0 {
-							merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters",
-								reflect.TypeOf(decl).Elem().Name(), n.Name))
+							merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters", typeName(decl), n.Name))
 						}
 					case *Data:
-						if mdecl.Module != nil {
-							n.Module = mdecl.Module.Name
+						if module, ok := mdecl.Module.Get(); ok {
+							n.Module = module.Name
 						}
 						if len(n.TypeParameters) != len(decl.TypeParameters) {
 							merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
@@ -198,9 +199,9 @@ func ValidateModule(module *Module) error {
 		merr = append(merr, errorf(module, "module name %q is invalid", module.Name))
 	}
 	if module.Builtin && module.Name != "builtin" {
-		merr = append(merr, errorf(module, "only the \"ftl\" module can be marked as builtin"))
+		merr = append(merr, errorf(module, "the \"builtin\" module is reserved"))
 	}
-	if err := scopes.Add(nil, module.Name, module); err != nil {
+	if err := scopes.Add(optional.None[*Module](), module.Name, module); err != nil {
 		merr = append(merr, err)
 	}
 	scopes = scopes.Push()
@@ -212,19 +213,25 @@ func ValidateModule(module *Module) error {
 		}
 		switch n := n.(type) {
 		case *Ref:
+			if scopes.Resolve(*n) == nil && n.Module == "" {
+				merr = append(merr, errorf(n, "unknown reference %q", n))
+			}
 			if mdecl := scopes.Resolve(*n); mdecl != nil {
+				moduleName := ""
+				if m, ok := mdecl.Module.Get(); ok {
+					moduleName = m.Name
+				}
 				switch decl := mdecl.Symbol.(type) {
 				case *Verb, *Enum, *Database, *Config, *Secret:
 					if n.Module == "" {
-						n.Module = mdecl.Module.Name
+						n.Module = moduleName
 					}
 					if len(n.TypeParameters) != 0 {
-						merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters",
-							reflect.TypeOf(decl).Elem().Name(), n.Name))
+						merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters", typeName(decl), n.Name))
 					}
 				case *Data:
 					if n.Module == "" {
-						n.Module = mdecl.Module.Name
+						n.Module = moduleName
 					}
 					if len(n.TypeParameters) != len(decl.TypeParameters) {
 						merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
@@ -233,9 +240,8 @@ func ValidateModule(module *Module) error {
 				case *TypeParameter:
 				default:
 					if n.Module == "" {
-						merr = append(merr, errorf(n, "unqualified reference to invalid %s %q", reflect.TypeOf(decl).Elem().Name(), n))
+						merr = append(merr, errorf(n, "unqualified reference to invalid %s %q", typeName(decl), n))
 					}
-					n.Module = mdecl.Module.Name
 				}
 			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
 				merr = append(merr, errorf(n, "unknown reference %q", n))
@@ -469,30 +475,38 @@ func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 func validateIngressRequestOrResponse(scopes Scopes, n *Verb, reqOrResp string, r Type) (fieldType Type, body Symbol, merr []error) {
 	rref, _ := r.(*Ref)
 	resp, sym := ResolveTypeAs[*Data](scopes, r)
-	if sym == nil || sym.Module == nil || sym.Module.Name != "builtin" || resp.Name != "Http"+strings.Title(reqOrResp) {
+	module, _ := sym.Module.Get()
+	if sym == nil || module == nil || module.Name != "builtin" || resp.Name != "Http"+strings.Title(reqOrResp) {
 		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpRequest", n.Name, reqOrResp, r))
-	} else {
-		resp, err := resp.Monomorphise(rref) //nolint:govet
-		if err != nil {
-			merr = append(merr, errorf(r, "ingress verb %s: %s type %s could not be monomorphised: %v", n.Name, reqOrResp, r, err))
-		} else {
-			scopes = scopes.PushScope(resp.Scope())
-			fieldType = resp.FieldByName("body").Type
-			if opt, ok := fieldType.(*Optional); ok {
-				fieldType = opt.Type
-			}
-			bodySym := scopes.ResolveType(fieldType)
-			if bodySym == nil {
-				merr = append(merr, errorf(resp, "ingress verb %s: couldn't resolve %s body type %s", n.Name, reqOrResp, fieldType))
-			} else {
-				body = bodySym.Symbol
-				switch bodySym.Symbol.(type) {
-				case *Bytes, *String, *Data: // Valid HTTP response payload types.
-				default:
-					merr = append(merr, errorf(r, "ingress verb %s: %s type %s must have a body of type Bytes, String or Data, not %s", n.Name, reqOrResp, r, bodySym.Symbol))
-				}
-			}
-		}
+		return
+	}
+
+	resp, err := resp.Monomorphise(rref) //nolint:govet
+	if err != nil {
+		merr = append(merr, errorf(r, "ingress verb %s: %s type %s: %v", n.Name, reqOrResp, r, err))
+		return
+	}
+
+	scopes = scopes.PushScope(resp.Scope())
+	fieldType = resp.FieldByName("body").Type
+	if opt, ok := fieldType.(*Optional); ok {
+		fieldType = opt.Type
+	}
+	bodySym := scopes.ResolveType(fieldType)
+	if bodySym == nil {
+		merr = append(merr, errorf(resp, "ingress verb %s: couldn't resolve %s body type %s", n.Name, reqOrResp, fieldType))
+		return
+	}
+	body = bodySym.Symbol
+	switch bodySym.Symbol.(type) {
+	case *Bytes, *String, *Data, *Unit, *Float, *Int, *Bool, *Map, *Array: // Valid HTTP response payload types.
+	default:
+		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not %s", n.Name, reqOrResp, r, bodySym.Symbol))
 	}
 	return
+}
+
+// Give a type a human-readable name.
+func typeName(v any) string {
+	return reflect.Indirect(reflect.ValueOf(v)).Type().Name()
 }

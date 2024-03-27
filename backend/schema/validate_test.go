@@ -115,17 +115,13 @@ func TestValidate(t *testing.T) {
 						+ingress http GET /data
 
 					// Invalid types.
-					verb int(HttpRequest<Int>) HttpResponse<Int, Int>
-						+ingress http GET /int
-					verb bool(HttpRequest<Bool>) HttpResponse<Bool, Bool>
-						+ingress http GET /bool
 					verb any(HttpRequest<Any>) HttpResponse<Any, Any>
 						+ingress http GET /any
 					verb path(HttpRequest<String>) HttpResponse<String, String>
 						+ingress http GET /path/{invalid}
-					verb pathMissing(HttpRequest<Path>) HttpResponse<String, String>
+					verb pathMissing(HttpRequest<one.Path>) HttpResponse<String, String>
 						+ingress http GET /path/{missing}
-					verb pathFound(HttpRequest<Path>) HttpResponse<String, String>
+					verb pathFound(HttpRequest<one.Path>) HttpResponse<String, String>
 						+ingress http GET /path/{parameter}
 
 					data Path {
@@ -134,17 +130,21 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"11:15: ingress verb int: request type HttpRequest<Int> must have a body of type Bytes, String or Data, not Int",
-				"11:33: ingress verb int: response type HttpResponse<Int, Int> must have a body of type Bytes, String or Data, not Int",
-				"13:16: ingress verb bool: request type HttpRequest<Bool> must have a body of type Bytes, String or Data, not Bool",
-				"13:35: ingress verb bool: response type HttpResponse<Bool, Bool> must have a body of type Bytes, String or Data, not Bool",
-				"15:15: ingress verb any: request type HttpRequest<Any> must have a body of type Bytes, String or Data, not Any",
-				"15:33: ingress verb any: response type HttpResponse<Any, Any> must have a body of type Bytes, String or Data, not Any",
-				"18:31: ingress verb path: cannot use path parameter \"invalid\" with request type String, expected Data type",
-				"20:7: duplicate http ingress GET /path/{} for 21:6:\"pathFound\" and 19:6:\"pathMissing\"",
-				"20:31: ingress verb pathMissing: request type Path does not contain a field corresponding to the parameter \"missing\"",
-				"22:7: duplicate http ingress GET /path/{} for 17:6:\"path\" and 21:6:\"pathFound\"",
-			},
+				"11:15: ingress verb any: request type HttpRequest<Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
+				"11:33: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
+				"14:31: ingress verb path: cannot use path parameter \"invalid\" with request type String, expected Data type",
+				"16:7: duplicate http ingress GET /path/{} for 17:6:\"pathFound\" and 15:6:\"pathMissing\"",
+				"16:31: ingress verb pathMissing: request type one.Path does not contain a field corresponding to the parameter \"missing\"",
+				"18:7: duplicate http ingress GET /path/{} for 13:6:\"path\" and 17:6:\"pathFound\"",
+			}},
+		{name: "Array",
+			schema: `
+				module one {
+					data Data {}
+					verb one(HttpRequest<[one.Data]>) HttpResponse<[one.Data], Empty>
+						+ingress http GET /one
+				}
+			`,
 		},
 	}
 

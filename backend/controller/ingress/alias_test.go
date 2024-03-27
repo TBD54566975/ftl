@@ -17,10 +17,10 @@ func TestTransformFromAliasedFields(t *testing.T) {
 
 			data Test {
 				scalar String +alias json "bar"
-				inner Inner
-				array [Inner]
-				map {String: Inner}
-				optional Inner
+				inner test.Inner
+				array [test.Inner]
+				map {String: test.Inner}
+				optional test.Inner
 			}
 		}
 		`
@@ -77,10 +77,10 @@ func TestTransformToAliasedFields(t *testing.T) {
 
 			data Test {
 				scalar String +alias json "bar"
-				inner Inner
-				array [Inner]
-				map {String: Inner}
-				optional Inner
+				inner test.Inner
+				array [test.Inner]
+				map {String: test.Inner}
+				optional test.Inner
 			}
 		}
 		`

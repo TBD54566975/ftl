@@ -73,3 +73,9 @@ npm-install:
 # Regenerate protos
 build-protos: npm-install
   @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint && cd backend/protos && buf generate"
+
+integration-tests *test:
+  #!/bin/bash
+  set -euo pipefail
+  testName=${1:-}
+  go test -fullpath -count 1 -v -tags integration -run "$testName" ./integration
