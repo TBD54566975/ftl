@@ -59,7 +59,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 		runInBackground(logger)
 
-		err := s.pollControllerOnine(ctx, client)
+		err := s.waitForControllerOnline(ctx, client)
 		if err != nil {
 			return err
 		}
@@ -330,7 +330,7 @@ func pollContainerHealth(ctx context.Context, containerName string, timeout time
 	for {
 		select {
 		case <-pollCtx.Done():
-			return errors.New("timed out waiting for container to be healthy")
+			return fmt.Errorf("timed out waiting for container to be healthy: %w", pollCtx.Err())
 
 		case <-time.After(1 * time.Millisecond):
 			output, err := exec.Capture(pollCtx, ".", "docker", "inspect", "--format", "{{.State.Health.Status}}", containerName)
@@ -346,7 +346,8 @@ func pollContainerHealth(ctx context.Context, containerName string, timeout time
 	}
 }
 
-func (s *serveCmd) pollControllerOnine(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+// waitForControllerOnline polls the controller service until it is online.
+func (s *serveCmd) waitForControllerOnline(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
 
 	ctx, cancel := context.WithTimeout(ctx, s.StartupTimeout)
@@ -372,7 +373,6 @@ func (s *serveCmd) pollControllerOnine(ctx context.Context, client ftlv1connect.
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				logger.Errorf(ctx.Err(), "Timeout reached while polling for controller status")
 			}
-
 			return ctx.Err()
 		}
 	}
