@@ -1,6 +1,12 @@
 package ftl
 
 import (
+	"context"
+	"fmt"
+	"reflect"
+	"runtime"
+	"strings"
+
 	"connectrpc.com/connect"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -9,12 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/internal/rpc"
-
-	"context"
-	"fmt"
-	"reflect"
-	"runtime"
-	"strings"
 )
 
 func call[Req, Resp any](ctx context.Context, callee *schemapb.Ref, req Req) (resp Resp, err error) {
