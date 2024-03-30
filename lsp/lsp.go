@@ -11,18 +11,20 @@ import (
 	glspServer "github.com/tliron/glsp/server"
 	"github.com/tliron/kutil/version"
 
-	"github.com/TBD54566975/ftl/go-runtime/compile"
+	"github.com/TBD54566975/ftl/backend/schema"
 	ftlErrors "github.com/TBD54566975/ftl/internal/errors"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 const lsName = "ftl-language-server"
 
 // Server is a language server.
 type Server struct {
-	Server      *glspServer.Server
-	GlspLogger  *GLSPLogger
+	server      *glspServer.Server
+	glspLogger  *GLSPLogger
 	glspContext *glsp.Context
 	handler     protocol.Handler
+	logger      log.Logger
 }
 
 // NewServer creates a new language server.
@@ -35,8 +37,9 @@ func NewServer(ctx context.Context) *Server {
 	}
 	s := glspServer.NewServer(&handler, lsName, false)
 	server := &Server{
-		Server:     s,
-		GlspLogger: NewGLSPLogger(s.Log),
+		server:     s,
+		glspLogger: NewGLSPLogger(s.Log),
+		logger:     *log.FromContext(ctx),
 	}
 	handler.Initialize = server.initialize()
 	// handler.TextDocumentDidOpen = server.textDocumentDidOpen()
@@ -45,23 +48,24 @@ func NewServer(ctx context.Context) *Server {
 }
 
 func (s *Server) Run() error {
-	return errors.Wrap(s.Server.RunStdio(), "lsp")
+	return errors.Wrap(s.server.RunStdio(), "lsp")
 }
 
-type errSet map[string]compile.Error
+type errSet map[string]schema.Error
 
+// Post sends diagnostics to the client. err must be joined schema.Errors.
 func (s *Server) Post(err error) {
 	errByFilename := make(map[string]errSet)
 
 	// Deduplicate and associate by filename.
 	for _, subErr := range ftlErrors.UnwrapAll(err) {
-		var ce compile.Error
+		var ce schema.Error
 		if errors.As(subErr, &ce) {
-			cp := ce.Pos
-			if errByFilename[cp.Filename] == nil {
-				errByFilename[cp.Filename] = errSet{}
+			filename := ce.Pos.Filename
+			if _, exists := errByFilename[filename]; !exists {
+				errByFilename[filename] = make(errSet)
 			}
-			errByFilename[cp.Filename][strings.TrimSpace(ce.Error())] = ce
+			errByFilename[filename][strings.TrimSpace(ce.Error())] = ce
 		}
 	}
 
@@ -74,14 +78,17 @@ func (s *Server) Post(err error) {
 				severity := protocol.DiagnosticSeverityError
 				diagnostics = append(diagnostics, protocol.Diagnostic{
 					Range: protocol.Range{
-						Start: protocol.Position{Line: protocol.UInteger(pp.Line), Character: protocol.UInteger(pp.Column + pp.Offset)},
-						End:   protocol.Position{Line: protocol.UInteger(pp.Line), Character: protocol.UInteger(pp.Column + pp.Offset + 10)}, //todo: fix
+						Start: protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column - 1)},
+						End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column + 10 - 1)}, //todo: fix
 					},
 					Severity: &severity,
 					Source:   &sourceName,
 					Message:  e.Msg,
 				})
-				break
+			}
+
+			if s.glspContext == nil {
+				return
 			}
 
 			go s.glspContext.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
@@ -111,13 +118,6 @@ func (s *Server) initialize() protocol.InitializeFunc {
 	}
 }
 
-func (s *Server) textDocumentDidOpen() protocol.TextDocumentDidOpenFunc {
-	return func(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
-		// s.refreshDiagnosticsOfDocument(params.TextDocument.URI)
-		return nil
-	}
-}
-
 func (s *Server) textDocumentDidChange() protocol.TextDocumentDidChangeFunc {
 	return func(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
 		// s.refreshDiagnosticsOfDocument(params.TextDocument.URI)
@@ -125,7 +125,7 @@ func (s *Server) textDocumentDidChange() protocol.TextDocumentDidChangeFunc {
 	}
 }
 
-func (s *Server) refreshDiagnosticsOfDocument(uri protocol.DocumentUri) {
+func (s *Server) clearDiagnosticsOfDocument(uri protocol.DocumentUri) {
 	go func() {
 		go s.glspContext.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
 			URI:         uri,
