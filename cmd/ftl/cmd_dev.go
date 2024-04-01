@@ -20,6 +20,7 @@ type devCmd struct {
 	External    []string      `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
 	Watch       time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
 	NoServe     bool          `help:"Do not start the FTL server." default:"false"`
+	RunLsp      bool          `help:"Run the language server." default:"false"`
 	ServeCmd    serveCmd      `embed:""`
 }
 
@@ -52,9 +53,11 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	}
 
 	languageServer := lsp.NewServer(ctx)
-	g.Go(func() error {
-		return languageServer.Run()
-	})
+	if d.RunLsp {
+		g.Go(func() error {
+			return languageServer.Run()
+		})
+	}
 
 	g.Go(func() error {
 		err := d.ServeCmd.waitForControllerOnline(ctx, client)

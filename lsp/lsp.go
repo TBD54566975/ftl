@@ -2,9 +2,10 @@ package lsp
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	_ "github.com/tliron/commonlog/simple"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -48,7 +49,11 @@ func NewServer(ctx context.Context) *Server {
 }
 
 func (s *Server) Run() error {
-	return errors.Wrap(s.server.RunStdio(), "lsp")
+	err := s.server.RunStdio()
+	if err != nil {
+		return fmt.Errorf("lsp: %w", err)
+	}
+	return nil
 }
 
 type errSet map[string]schema.Error
@@ -69,34 +74,36 @@ func (s *Server) Post(err error) {
 		}
 	}
 
-	go func() {
-		for filename, errs := range errByFilename {
-			var diagnostics []protocol.Diagnostic
-			for _, e := range errs {
-				pp := e.Pos
-				sourceName := "ftl"
-				severity := protocol.DiagnosticSeverityError
-				diagnostics = append(diagnostics, protocol.Diagnostic{
-					Range: protocol.Range{
-						Start: protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column - 1)},
-						End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column + 10 - 1)}, //todo: fix
-					},
-					Severity: &severity,
-					Source:   &sourceName,
-					Message:  e.Msg,
-				})
-			}
+	go publishErrors(errByFilename, s)
+}
 
-			if s.glspContext == nil {
-				return
-			}
-
-			go s.glspContext.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
-				URI:         "file://" + filename,
-				Diagnostics: diagnostics,
+func publishErrors(errByFilename map[string]errSet, s *Server) {
+	for filename, errs := range errByFilename {
+		var diagnostics []protocol.Diagnostic
+		for _, e := range errs {
+			pp := e.Pos
+			sourceName := "ftl"
+			severity := protocol.DiagnosticSeverityError
+			diagnostics = append(diagnostics, protocol.Diagnostic{
+				Range: protocol.Range{
+					Start: protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column - 1)},
+					End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column + 10 - 1)},
+				},
+				Severity: &severity,
+				Source:   &sourceName,
+				Message:  e.Msg,
 			})
 		}
-	}()
+
+		if s.glspContext == nil {
+			return
+		}
+
+		go s.glspContext.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
+			URI:         "file://" + filename,
+			Diagnostics: diagnostics,
+		})
+	}
 }
 
 func (s *Server) initialize() protocol.InitializeFunc {
