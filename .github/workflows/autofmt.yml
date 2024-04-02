@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - autofmt_main
+      - main
 
 name: Auto-format
 concurrency:
