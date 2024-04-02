@@ -47,17 +47,15 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return errors.New(ftlRunningErrorMsg)
 		}
 
-		g.Go(func() error {
-			return d.ServeCmd.Run(ctx)
-		})
-	}
-
-	err := d.ServeCmd.pollControllerOnine(ctx, client)
-	if err != nil {
-		return err
+		g.Go(func() error { return d.ServeCmd.Run(ctx) })
 	}
 
 	g.Go(func() error {
+		err := d.ServeCmd.waitForControllerOnline(ctx, client)
+		if err != nil {
+			return err
+		}
+
 		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, buildengine.Parallelism(d.Parallelism))
 		if err != nil {
 			return err
