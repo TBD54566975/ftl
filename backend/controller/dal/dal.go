@@ -2,15 +2,6 @@
 package dal
 
 import (
-	"context"
-	stdsql "database/sql"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"strings"
-	"time"
-
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	sets "github.com/deckarep/golang-set/v2"
@@ -28,6 +19,15 @@ import (
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
+
+	"context"
+	stdsql "database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+	"time"
 )
 
 var (
