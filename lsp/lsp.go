@@ -58,12 +58,25 @@ func (s *Server) Run() error {
 
 type errSet map[string]schema.Error
 
+func (s *Server) BuildComplete(dir string, err error) {
+	if err != nil {
+		s.post(err)
+	}
+}
+
+func (s *Server) DeployComplete(dir string, err error) {
+	if err != nil {
+		s.post(err)
+	}
+}
+
 // Post sends diagnostics to the client. err must be joined schema.Errors.
-func (s *Server) Post(err error) {
+func (s *Server) post(err error) {
 	errByFilename := make(map[string]errSet)
 
 	// Deduplicate and associate by filename.
 	for _, subErr := range ftlErrors.UnwrapAll(err) {
+		//TODO: Need a way to pass structured errors from other runtimes like kotlin. This won't work for them.
 		var ce schema.Error
 		if errors.As(subErr, &ce) {
 			filename := ce.Pos.Filename

@@ -22,12 +22,16 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/lsp"
 )
 
 type schemaChange struct {
 	ChangeType ftlv1.DeploymentChangeType
 	*schema.Module
+}
+
+type Listener struct {
+	OnBuildComplete  func(project Project, err error)
+	OnDeployComplete func(project Project, err error)
 }
 
 // Engine for building a set of modules.
@@ -40,6 +44,7 @@ type Engine struct {
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
 	parallelism      int
+	listener         *Listener
 }
 
 type Option func(o *Engine)
@@ -47,6 +52,13 @@ type Option func(o *Engine)
 func Parallelism(n int) Option {
 	return func(o *Engine) {
 		o.parallelism = n
+	}
+}
+
+// WithListener sets the event listener for the Engine.
+func WithListener(listener *Listener) Option {
+	return func(o *Engine) {
+		o.listener = listener
 	}
 }
 
@@ -191,23 +203,22 @@ func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline
 }
 
 // Dev builds and deploys all local modules and watches for changes, redeploying as necessary.
-func (e *Engine) Dev(ctx context.Context, period time.Duration, languageServer *lsp.Server) error {
+func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 	logger := log.FromContext(ctx)
 
 	// Build and deploy all modules first.
 	err := e.buildAndDeploy(ctx, 1, true)
 	if err != nil {
 		logger.Errorf(err, "initial deploy failed")
-		languageServer.Post(err)
 	}
 
 	logger.Infof("All modules deployed, watching for changes...")
 
 	// Then watch for changes and redeploy.
-	return e.watchForModuleChanges(ctx, period, languageServer)
+	return e.watchForModuleChanges(ctx, period)
 }
 
-func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration, languageServer *lsp.Server) error {
+func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration) error {
 	logger := log.FromContext(ctx)
 
 	moduleHashes := map[string][]byte{}
@@ -245,7 +256,6 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					err := e.buildAndDeploy(ctx, 1, true, config.Key)
 					if err != nil {
 						logger.Errorf(err, "deploy %s failed", config.Key)
-						languageServer.Post(err)
 					}
 				}
 			case WatchEventProjectRemoved:
@@ -261,7 +271,6 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				config := event.Project.Config()
 				err := e.buildAndDeploy(ctx, 1, true, config.Key)
 				if err != nil {
-					languageServer.Post(err)
 					switch project := event.Project.(type) {
 					case Module:
 						logger.Errorf(err, "build and deploy failed for module %q: %v", project.Config().Key, err)
@@ -360,7 +369,11 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 						return nil
 					}
 					if module, ok := project.(Module); ok {
-						if err := Deploy(ctx, module, replicas, waitForDeployOnline, e.client); err != nil {
+						err := Deploy(ctx, module, replicas, waitForDeployOnline, e.client)
+						if e.listener != nil && e.listener.OnDeployComplete != nil {
+							e.listener.OnDeployComplete(project, err)
+						}
+						if err != nil {
 							return err
 						}
 					}
@@ -461,8 +474,10 @@ func (e *Engine) build(ctx context.Context, key ProjectKey, builtModules map[str
 	sch := &schema.Schema{Modules: maps.Values(combined)}
 
 	err := Build(ctx, sch, project)
+	if e.listener != nil && e.listener.OnBuildComplete != nil {
+		e.listener.OnBuildComplete(project, err)
+	}
 	if err != nil {
-
 		return err
 	}
 	if module, ok := project.(Module); ok {
