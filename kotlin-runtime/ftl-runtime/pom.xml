@@ -51,11 +51,11 @@
     <properties>
         <rootDir>${basedir}/../..</rootDir>
         <maven.deploy.skip>false</maven.deploy.skip>
-        <detekt.version>1.23.5</detekt.version>
+        <detekt.version>1.23.6</detekt.version>
         <java.version>17</java.version>
         <kotlin.version>1.9.23</kotlin.version>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
-        <wire.version>4.9.7</wire.version>
+        <wire.version>4.9.8</wire.version>
         <grpc.version>1.62.2</grpc.version>
         <logback.version>1.5.3</logback.version>
         <junit.version>5.10.2</junit.version>
@@ -390,7 +390,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.12.1</version>
+                <version>3.13.0</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
@@ -456,7 +456,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.1.0</version>
+                        <version>3.2.2</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
