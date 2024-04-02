@@ -610,12 +610,12 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 		f := s.Field(i)
 		ft, err := visitType(pctx, f.Pos(), f.Type())
 		if err != nil {
-			return nil, wrapf(pos, err, "field %s", f.Name())
+			return nil, errorf(f.Pos(), "field %s: %v", f.Name(), err)
 		}
 
 		// Check if field is exported
 		if len(f.Name()) > 0 && unicode.IsLower(rune(f.Name()[0])) {
-			return nil, errorf(pos, "params field %s must be exported by starting with an uppercase letter", f.Name())
+			return nil, errorf(f.Pos(), "params field %s must be exported by starting with an uppercase letter", f.Name())
 		}
 
 		// Extract the JSON tag and split it to get just the field name
@@ -629,13 +629,13 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 		var metadata []schema.Metadata
 		if jsonFieldName != "" {
 			metadata = append(metadata, &schema.MetadataAlias{
-				Pos:   goPosToSchemaPos(pos),
+				Pos:   goPosToSchemaPos(f.Pos()),
 				Kind:  schema.AliasKindJSON,
 				Alias: jsonFieldName,
 			})
 		}
 		out.Fields = append(out.Fields, &schema.Field{
-			Pos:      goPosToSchemaPos(pos),
+			Pos:      goPosToSchemaPos(f.Pos()),
 			Name:     strcase.ToLowerCamel(f.Name()),
 			Type:     ft,
 			Metadata: metadata,
