@@ -11,15 +11,18 @@ import (
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/lsp"
 )
 
 type devCmd struct {
-	Parallelism int           `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
-	Dirs        []string      `arg:"" help:"Base directories containing modules." type:"existingdir" optional:""`
-	External    []string      `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
-	Watch       time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
-	NoServe     bool          `help:"Do not start the FTL server." default:"false"`
-	ServeCmd    serveCmd      `embed:""`
+	Parallelism    int           `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
+	Dirs           []string      `arg:"" help:"Base directories containing modules." type:"existingdir" optional:""`
+	External       []string      `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
+	Watch          time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
+	NoServe        bool          `help:"Do not start the FTL server." default:"false"`
+	RunLsp         bool          `help:"Run the language server." default:"false"`
+	ServeCmd       serveCmd      `embed:""`
+	languageServer *lsp.Server
 }
 
 func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
@@ -56,7 +59,19 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return err
 		}
 
-		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, buildengine.Parallelism(d.Parallelism))
+		var listener *buildengine.Listener
+		if d.RunLsp {
+			d.languageServer = lsp.NewServer(ctx)
+			listener = &buildengine.Listener{
+				OnBuildComplete:  d.OnBuildComplete,
+				OnDeployComplete: d.OnDeployComplete,
+			}
+			g.Go(func() error {
+				return d.languageServer.Run()
+			})
+		}
+
+		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, buildengine.Parallelism(d.Parallelism), buildengine.WithListener(listener))
 		if err != nil {
 			return err
 		}
@@ -64,4 +79,12 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	})
 
 	return g.Wait()
+}
+
+func (d *devCmd) OnBuildComplete(project buildengine.Project, err error) {
+	d.languageServer.BuildComplete(project.Config().Dir, err)
+}
+
+func (d *devCmd) OnDeployComplete(project buildengine.Project, err error) {
+	d.languageServer.DeployComplete(project.Config().Dir, err)
 }

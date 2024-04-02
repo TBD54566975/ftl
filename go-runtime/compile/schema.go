@@ -44,6 +44,14 @@ type NativeNames map[schema.Decl]string
 
 type enums map[string]*schema.Enum
 
+func errorf(pos token.Pos, format string, args ...interface{}) schema.Error {
+	return schema.Errorf(goPosToSchemaPos(pos), format, args...)
+}
+
+func wrapf(pos token.Pos, err error, format string, args ...interface{}) schema.Error {
+	return schema.Wrapf(goPosToSchemaPos(pos), err, format, args...)
+}
+
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
 func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 	pkgs, err := packages.Load(&packages.Config{
@@ -70,7 +78,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 		if len(pkg.Errors) > 0 {
 			for _, perr := range pkg.Errors {
 				if len(pkg.Syntax) > 0 {
-					merr = append(merr, wrapf(pkg.Syntax[0], perr, "%s", pkg.PkgPath))
+					merr = append(merr, wrapf(pkg.Syntax[0].Pos(), perr, "%s", pkg.PkgPath))
 				} else {
 					merr = append(merr, fmt.Errorf("%s: %w", pkg.PkgPath, perr))
 				}
@@ -81,7 +89,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				defer func() {
 					if err != nil {
-						err = wrapf(node, err, "")
+						err = wrapf(node.Pos(), err, "")
 					}
 				}()
 				switch node := node.(type) {
@@ -188,7 +196,7 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) err
 			var err error
 			name, err = strconv.Unquote(literal.Value)
 			if err != nil {
-				return wrapf(node, err, "")
+				return wrapf(node.Pos(), err, "")
 			}
 		}
 	}
@@ -445,7 +453,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	results := sig.Results()
 	reqt, respt, err := checkSignature(sig)
 	if err != nil {
-		return nil, wrapf(node, err, "")
+		return nil, wrapf(node.Pos(), err, "")
 	}
 	var req schema.Type
 	if reqt != nil {
@@ -602,12 +610,12 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 		f := s.Field(i)
 		ft, err := visitType(pctx, f.Pos(), f.Type())
 		if err != nil {
-			return nil, errorf(pos, "field %s: %v", f.Name(), err)
+			return nil, errorf(f.Pos(), "field %s: %v", f.Name(), err)
 		}
 
 		// Check if field is exported
 		if len(f.Name()) > 0 && unicode.IsLower(rune(f.Name()[0])) {
-			return nil, errorf(pos, "params field %s must be exported by starting with an uppercase letter", f.Name())
+			return nil, errorf(f.Pos(), "params field %s must be exported by starting with an uppercase letter", f.Name())
 		}
 
 		// Extract the JSON tag and split it to get just the field name
@@ -621,13 +629,13 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 		var metadata []schema.Metadata
 		if jsonFieldName != "" {
 			metadata = append(metadata, &schema.MetadataAlias{
-				Pos:   goPosToSchemaPos(pos),
+				Pos:   goPosToSchemaPos(f.Pos()),
 				Kind:  schema.AliasKindJSON,
 				Alias: jsonFieldName,
 			})
 		}
 		out.Fields = append(out.Fields, &schema.Field{
-			Pos:      goPosToSchemaPos(pos),
+			Pos:      goPosToSchemaPos(f.Pos()),
 			Name:     strcase.ToLowerCamel(f.Name()),
 			Type:     ft,
 			Metadata: metadata,
@@ -746,7 +754,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type
 		if underlying.String() == "any" {
 			return &schema.Any{Pos: goPosToSchemaPos(pos)}, nil
 		}
-		return nil, errorf(pos, "unsupported type %T", tnode)
+		return nil, errorf(pos, "unsupported type %q", tnode)
 
 	default:
 		return nil, errorf(pos, "unsupported type %T", tnode)

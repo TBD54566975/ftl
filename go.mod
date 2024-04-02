@@ -35,6 +35,9 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/swaggest/jsonschema-go v0.3.70
 	github.com/titanous/json5 v1.0.0
+	github.com/tliron/commonlog v0.2.17
+	github.com/tliron/glsp v0.2.2
+	github.com/tliron/kutil v0.3.24
 	github.com/tmc/langchaingo v0.1.8
 	github.com/zalando/go-keyring v0.2.4
 	go.opentelemetry.io/otel v1.24.0
@@ -56,10 +59,22 @@ require (
 )
 
 require (
+	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/iancoleman/strcase v0.3.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/sasha-s/go-deadlock v0.3.1 // indirect
+	github.com/segmentio/ksuid v1.0.4 // indirect
+	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 )
