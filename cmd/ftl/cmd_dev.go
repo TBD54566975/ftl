@@ -10,6 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/lsp"
 )
@@ -59,19 +60,14 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return err
 		}
 
-		var listener *buildengine.Listener
 		if d.RunLsp {
 			d.languageServer = lsp.NewServer(ctx)
-			listener = &buildengine.Listener{
-				OnBuildComplete:  d.OnBuildComplete,
-				OnDeployComplete: d.OnDeployComplete,
-			}
+			ctx = log.ContextWithLogger(ctx, log.FromContext(ctx).AddSink(lsp.NewLogSink(d.languageServer)))
 			g.Go(func() error {
 				return d.languageServer.Run()
 			})
 		}
-
-		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, buildengine.Parallelism(d.Parallelism), buildengine.WithListener(listener))
+		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, buildengine.Parallelism(d.Parallelism))
 		if err != nil {
 			return err
 		}
@@ -79,12 +75,4 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	})
 
 	return g.Wait()
-}
-
-func (d *devCmd) OnBuildComplete(project buildengine.Project, err error) {
-	d.languageServer.BuildComplete(project.Config().Dir, err)
-}
-
-func (d *devCmd) OnDeployComplete(project buildengine.Project, err error) {
-	d.languageServer.DeployComplete(project.Config().Dir, err)
 }

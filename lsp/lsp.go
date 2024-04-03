@@ -43,8 +43,6 @@ func NewServer(ctx context.Context) *Server {
 		logger:     *log.FromContext(ctx),
 	}
 	handler.Initialize = server.initialize()
-	// handler.TextDocumentDidOpen = server.textDocumentDidOpen()
-	handler.TextDocumentDidChange = server.textDocumentDidChange()
 	return server
 }
 
@@ -57,18 +55,6 @@ func (s *Server) Run() error {
 }
 
 type errSet map[string]schema.Error
-
-func (s *Server) BuildComplete(dir string, err error) {
-	if err != nil {
-		s.post(err)
-	}
-}
-
-func (s *Server) DeployComplete(dir string, err error) {
-	if err != nil {
-		s.post(err)
-	}
-}
 
 // Post sends diagnostics to the client. err must be joined schema.Errors.
 func (s *Server) post(err error) {
@@ -137,14 +123,6 @@ func (s *Server) initialize() protocol.InitializeFunc {
 		}, nil
 	}
 }
-
-func (s *Server) textDocumentDidChange() protocol.TextDocumentDidChangeFunc {
-	return func(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
-		// s.refreshDiagnosticsOfDocument(params.TextDocument.URI)
-		return nil
-	}
-}
-
 func (s *Server) clearDiagnosticsOfDocument(uri protocol.DocumentUri) {
 	go func() {
 		go s.glspContext.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
