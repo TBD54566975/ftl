@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -60,14 +61,17 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return err
 		}
 
+		opts := []buildengine.Option{buildengine.Parallelism(d.Parallelism)}
 		if d.RunLsp {
 			d.languageServer = lsp.NewServer(ctx)
+			opts = append(opts, buildengine.WithListener(buildengine.BuildStartedListenerFunc(d.OnBuildStarted)))
 			ctx = log.ContextWithLogger(ctx, log.FromContext(ctx).AddSink(lsp.NewLogSink(d.languageServer)))
 			g.Go(func() error {
 				return d.languageServer.Run()
 			})
 		}
-		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, buildengine.Parallelism(d.Parallelism))
+
+		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, opts...)
 		if err != nil {
 			return err
 		}
@@ -75,4 +79,8 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	})
 
 	return g.Wait()
+}
+
+func (d *devCmd) OnBuildStarted(project buildengine.Project) {
+	d.languageServer.BuildStarted(project.Config().Dir)
 }
