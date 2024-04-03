@@ -29,6 +29,14 @@ type schemaChange struct {
 	*schema.Module
 }
 
+type Listener interface {
+	OnBuildStarted(project Project)
+}
+
+type BuildStartedListenerFunc func(project Project)
+
+func (b BuildStartedListenerFunc) OnBuildStarted(project Project) { b(project) }
+
 // Engine for building a set of modules.
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
@@ -39,6 +47,7 @@ type Engine struct {
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
 	parallelism      int
+	listener         Listener
 }
 
 type Option func(o *Engine)
@@ -46,6 +55,13 @@ type Option func(o *Engine)
 func Parallelism(n int) Option {
 	return func(o *Engine) {
 		o.parallelism = n
+	}
+}
+
+// WithListener sets the event listener for the Engine.
+func WithListener(listener Listener) Option {
+	return func(o *Engine) {
+		o.listener = listener
 	}
 }
 
@@ -457,6 +473,9 @@ func (e *Engine) build(ctx context.Context, key ProjectKey, builtModules map[str
 	}
 	sch := &schema.Schema{Modules: maps.Values(combined)}
 
+	if e.listener != nil {
+		e.listener.OnBuildStarted(project)
+	}
 	err := Build(ctx, sch, project)
 	if err != nil {
 		return err

@@ -1,11 +1,15 @@
 package lsp
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"unicode"
 
+	"github.com/puzpuzpuz/xsync/v3"
 	_ "github.com/tliron/commonlog/simple"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -22,10 +26,10 @@ const lsName = "ftl-language-server"
 // Server is a language server.
 type Server struct {
 	server      *glspServer.Server
-	glspLogger  *GLSPLogger
 	glspContext *glsp.Context
 	handler     protocol.Handler
 	logger      log.Logger
+	diagnostics *xsync.MapOf[protocol.DocumentUri, []protocol.Diagnostic]
 }
 
 // NewServer creates a new language server.
@@ -38,9 +42,9 @@ func NewServer(ctx context.Context) *Server {
 	}
 	s := glspServer.NewServer(&handler, lsName, false)
 	server := &Server{
-		server:     s,
-		glspLogger: NewGLSPLogger(s.Log),
-		logger:     *log.FromContext(ctx),
+		server:      s,
+		logger:      *log.FromContext(ctx).Scope("lsp"),
+		diagnostics: xsync.NewMapOf[protocol.DocumentUri, []protocol.Diagnostic](),
 	}
 	handler.Initialize = server.initialize()
 	return server
@@ -55,6 +59,19 @@ func (s *Server) Run() error {
 }
 
 type errSet map[string]schema.Error
+
+// BuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
+func (s *Server) BuildStarted(dir string) {
+	dirURI := "file://" + dir
+
+	s.diagnostics.Range(func(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) bool {
+		if strings.HasPrefix(uri, dirURI) {
+			s.diagnostics.Delete(uri)
+			s.publishDiagnostics(uri, []protocol.Diagnostic{})
+		}
+		return true
+	})
+}
 
 // Post sends diagnostics to the client. err must be joined schema.Errors.
 func (s *Server) post(err error) {
@@ -83,10 +100,18 @@ func publishErrors(errByFilename map[string]errSet, s *Server) {
 			pp := e.Pos
 			sourceName := "ftl"
 			severity := protocol.DiagnosticSeverityError
+
+			length, err := getLineOrWordLength(filename, pp.Line, pp.Column, false)
+			if err != nil {
+				s.logger.Errorf(err, "Failed to get line or word length")
+				continue
+			}
+			endColumn := pp.Column + length
+
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: protocol.Range{
 					Start: protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column - 1)},
-					End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column + 10 - 1)},
+					End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(endColumn - 1)},
 				},
 				Severity: &severity,
 				Source:   &sourceName,
@@ -94,15 +119,22 @@ func publishErrors(errByFilename map[string]errSet, s *Server) {
 			})
 		}
 
-		if s.glspContext == nil {
-			return
-		}
-
-		go s.glspContext.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
-			URI:         "file://" + filename,
-			Diagnostics: diagnostics,
-		})
+		uri := "file://" + filename
+		s.diagnostics.Store(uri, diagnostics)
+		s.publishDiagnostics(uri, diagnostics)
 	}
+}
+
+func (s *Server) publishDiagnostics(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) {
+	s.logger.Debugf("Publishing diagnostics for %s\n", uri)
+	if s.glspContext == nil {
+		return
+	}
+
+	go s.glspContext.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
+		URI:         uri,
+		Diagnostics: diagnostics,
+	})
 }
 
 func (s *Server) initialize() protocol.InitializeFunc {
@@ -123,14 +155,6 @@ func (s *Server) initialize() protocol.InitializeFunc {
 		}, nil
 	}
 }
-func (s *Server) clearDiagnosticsOfDocument(uri protocol.DocumentUri) {
-	go func() {
-		go s.glspContext.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
-			URI:         uri,
-			Diagnostics: []protocol.Diagnostic{},
-		})
-	}()
-}
 
 func initialized(context *glsp.Context, params *protocol.InitializedParams) error {
 	return nil
@@ -148,4 +172,37 @@ func logTrace(context *glsp.Context, params *protocol.LogTraceParams) error {
 func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
 	protocol.SetTraceValue(params.Value)
 	return nil
+}
+
+// getLineOrWordLength returns the length of the line or the length of the word starting at the given column.
+// If wholeLine is true, it returns the length of the entire line.
+// If wholeLine is false, it returns the length of the word starting at the column.
+func getLineOrWordLength(filePath string, lineNum, column int, wholeLine bool) (int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	currentLine := 1
+	for scanner.Scan() {
+		if currentLine == lineNum {
+			lineText := scanner.Text()
+			if wholeLine {
+				return len(lineText), nil
+			}
+			start := column - 1
+			end := start
+			for end < len(lineText) && !unicode.IsSpace(rune(lineText[end])) {
+				end++
+			}
+			return end - start, nil
+		}
+		currentLine++
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+	return 0, os.ErrNotExist
 }
