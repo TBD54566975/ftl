@@ -1,15 +1,9 @@
 package buildengine
 
 import (
-	"bytes"
-	"context"
-	"os"
 	"testing"
 
-	"github.com/alecthomas/assert/v2"
-
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestGenerateBasicModule(t *testing.T) {
@@ -31,7 +25,7 @@ package ftl.test
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, []assertion{
+	testBuild(t, bctx, false, []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -158,7 +152,7 @@ data class TestResponse(
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, []assertion{
+	testBuild(t, bctx, false, []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -219,7 +213,7 @@ fun testVerb(context: Context, req: Request): ftl.builtin.Empty = throw
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, []assertion{
+	testBuild(t, bctx, false, []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -273,7 +267,7 @@ class Empty
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, []assertion{
+	testBuild(t, bctx, false, []assertion{
 		assertGeneratedModule("generated-sources/ftl/builtin/Builtin.kt", expected),
 	})
 }
@@ -317,7 +311,7 @@ fun emptyVerb(context: Context, req: ftl.builtin.Empty): ftl.builtin.Empty = thr
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, []assertion{
+	testBuild(t, bctx, false, []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -397,7 +391,7 @@ fun nothing(context: Context): Unit = throw
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, []assertion{
+	testBuild(t, bctx, false, []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -406,22 +400,12 @@ func TestKotlinExternalType(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	moduleDir := "testdata/projects/externalkotlin"
-	buildDir := "_ftl"
-
-	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
-	module, err := LoadModule(moduleDir)
-	assert.NoError(t, err)
-
-	logBuffer := bytes.Buffer{}
-	logger := log.Configure(&logBuffer, log.Config{})
-	ctx = log.ContextWithLogger(ctx, logger)
-
-	sch := &schema.Schema{}
-	err = Build(ctx, sch, module)
-	assert.Error(t, err)
-	assert.Contains(t, logBuffer.String(), "Expected module name to be in the form ftl.<module>, but was com.google.type.DayOfWeek")
-
-	err = os.RemoveAll(buildDir)
-	assert.NoError(t, err, "Error removing build directory")
+	bctx := buildContext{
+		moduleDir: "testdata/projects/externalkotlin",
+		buildDir:  "target",
+		sch:       &schema.Schema{},
+	}
+	testBuild(t, bctx, true, []assertion{
+		assertBuildProtoErrors("expected module name to be in the form ftl.<module>, but was com.google.type.DayOfWeek"),
+	})
 }

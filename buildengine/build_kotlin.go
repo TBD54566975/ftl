@@ -2,6 +2,7 @@ package buildengine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,8 +14,10 @@ import (
 	"github.com/beevik/etree"
 	sets "github.com/deckarep/golang-set/v2"
 	"golang.org/x/exp/maps"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -59,7 +62,16 @@ func buildKotlinModule(ctx context.Context, sch *schema.Schema, module Module) e
 	logger.Debugf("Using build command '%s'", module.Build)
 	err := exec.Command(ctx, log.Debug, module.Dir, "bash", "-c", module.Build).RunBuffered(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to build module %q: %w", module.Module, err)
+		// read runtime-specific build errors from the build directory
+		errorList, err := loadProtoErrors(module.AbsDeployDir())
+		if err != nil {
+			return fmt.Errorf("failed to read build errors for module: %w", err)
+		}
+		errs := make([]error, 0, len(errorList.Errors))
+		for _, e := range errorList.Errors {
+			errs = append(errs, *e)
+		}
+		return errors.Join(errs...)
 	}
 
 	return nil
@@ -248,4 +260,22 @@ func genType(module *schema.Module, t schema.Type) string {
 		return t.String()
 	}
 	panic(fmt.Sprintf("unsupported type %T", t))
+}
+
+func loadProtoErrors(buildDir string) (*schema.ErrorList, error) {
+	f := filepath.Join(buildDir, "errors.pb")
+	if _, err := os.Stat(f); errors.Is(err, os.ErrNotExist) {
+		return &schema.ErrorList{Errors: make([]*schema.Error, 0)}, nil
+	}
+
+	content, err := os.ReadFile(f)
+	if err != nil {
+		return nil, err
+	}
+	errorspb := &schemapb.ErrorList{}
+	err = proto.Unmarshal(content, errorspb)
+	if err != nil {
+		return nil, err
+	}
+	return schema.ErrorListFromProto(errorspb), nil
 }

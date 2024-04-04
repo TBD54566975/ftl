@@ -79,7 +79,6 @@ func (s *Server) post(err error) {
 
 	// Deduplicate and associate by filename.
 	for _, subErr := range ftlErrors.UnwrapAll(err) {
-		//TODO: Need a way to pass structured errors from other runtimes like kotlin. This won't work for them.
 		var ce schema.Error
 		if errors.As(subErr, &ce) {
 			filename := ce.Pos.Filename

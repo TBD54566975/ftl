@@ -125,7 +125,7 @@ func Nothing(context.Context) error {
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
-	testBuild(t, bctx, []assertion{
+	testBuild(t, bctx, false, []assertion{
 		assertGeneratedModule("go/modules/other/external_module.go", expected),
 	})
 }
@@ -174,7 +174,7 @@ func Call(context.Context, Req) (Resp, error) {
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
-	testBuild(t, bctx, []assertion{
+	testBuild(t, bctx, false, []assertion{
 		assertGeneratedModule("go/modules/test/external_module.go", expected),
 	})
 }
