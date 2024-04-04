@@ -10,6 +10,8 @@ TIMESTAMP := `date +%s`
 SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/scaffolding kotlin-runtime/scaffolding kotlin-runtime/external-module-template"
 FRONTEND_OUT := "frontend/dist/index.html"
+PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
+PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go frontend/src/protos/xyz/block/ftl/v1/console/console_pb.ts frontend/src/protos/xyz/block/ftl/v1/ftl_pb.ts frontend/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts frontend/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
 
 _help:
   @just -l
@@ -72,10 +74,16 @@ npm-install:
 
 # Regenerate protos
 build-protos: npm-install
-  @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint && cd backend/protos && buf generate"
+  @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint"
+  @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
 
+# Run integration test(s)
 integration-tests *test:
   #!/bin/bash
   set -euo pipefail
   testName=${1:-}
   go test -fullpath -count 1 -v -tags integration -run "$testName" ./integration
+
+# Run README doc tests
+test-readme:
+  rm -rf readme-tests && mdcode extract --dir readme-tests && (cd readme-tests && bash test.sh)

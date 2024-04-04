@@ -163,22 +163,24 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 }
 
 const getActiveDeployments = `-- name: GetActiveDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language, COUNT(r.id) AS replicas
 FROM deployments d
-         INNER JOIN modules m on d.module_id = m.id
-WHERE $1::bool = true
-   OR min_replicas > 0
-ORDER BY d.key
+  JOIN modules m ON d.module_id = m.id
+  JOIN runners r ON d.id = r.deployment_id
+WHERE min_replicas > 0 AND r.state = 'assigned'
+GROUP BY d.id, m.name, m.language
+HAVING COUNT(r.id) > 0
 `
 
 type GetActiveDeploymentsRow struct {
 	Deployment Deployment
 	ModuleName string
 	Language   string
+	Replicas   int64
 }
 
-func (q *Queries) GetActiveDeployments(ctx context.Context, all bool) ([]GetActiveDeploymentsRow, error) {
-	rows, err := q.db.Query(ctx, getActiveDeployments, all)
+func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error) {
+	rows, err := q.db.Query(ctx, getActiveDeployments)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +198,7 @@ func (q *Queries) GetActiveDeployments(ctx context.Context, all bool) ([]GetActi
 			&i.Deployment.MinReplicas,
 			&i.ModuleName,
 			&i.Language,
+			&i.Replicas,
 		); err != nil {
 			return nil, err
 		}

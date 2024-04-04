@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -56,7 +55,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	}
 
 	g.Go(func() error {
-		err := d.ServeCmd.waitForControllerOnline(ctx, client)
+		err := waitForControllerOnline(ctx, d.ServeCmd.StartupTimeout, client)
 		if err != nil {
 			return err
 		}

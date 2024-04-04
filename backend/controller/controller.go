@@ -47,19 +47,25 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+// CommonConfig between the production controller and development server.
+type CommonConfig struct {
+	AllowOrigins []*url.URL `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
+	NoConsole    bool       `help:"Disable the console."`
+	IdleRunners  int        `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
+	WaitFor      []string   `help:"Wait for these modules to be deployed before becoming ready." placeholder:"MODULE"`
+}
+
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
-	NoConsole                    bool                `help:"Disable the console."`
-	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
-	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
-	AllowOrigins                 []*url.URL          `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
-	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
 	Key                          model.ControllerKey `help:"Controller key (auto)."`
 	DSN                          string              `help:"DAL DSN." default:"postgres://localhost:54320/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
+	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
+	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
+	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	IdleRunners                  int                 `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
+	CommonConfig
 }
 
 func (c *Config) SetDefaults() {
@@ -241,7 +247,7 @@ func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.Pr
 }
 
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers, req.Msg.AllRunners, req.Msg.AllDeployments, req.Msg.AllIngressRoutes)
+	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers, req.Msg.AllRunners, req.Msg.AllIngressRoutes)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", "could not get status", err)
 	}
@@ -560,7 +566,32 @@ nextArtefact:
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	return connect.NewResponse(&ftlv1.PingResponse{}), nil
+	if len(s.config.WaitFor) == 0 {
+		return connect.NewResponse(&ftlv1.PingResponse{}), nil
+	}
+
+	// Check if all required deployments are active.
+	modules, err := s.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var missing []string
+nextModule:
+	for _, module := range s.config.WaitFor {
+		for _, m := range modules {
+			replicas, ok := m.Replicas.Get()
+			if ok && replicas > 0 && m.Module == module {
+				continue nextModule
+			}
+		}
+		missing = append(missing, module)
+	}
+	if len(missing) == 0 {
+		return connect.NewResponse(&ftlv1.PingResponse{}), nil
+	}
+
+	msg := fmt.Sprintf("waiting for deployments: %s", strings.Join(missing, ", "))
+	return connect.NewResponse(&ftlv1.PingResponse{NotReady: &msg}), nil
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {

@@ -32,15 +32,13 @@ import (
 
 type serveCmd struct {
 	Bind           *url.URL      `help:"Starting endpoint to bind to and advertise to. Each controller and runner will increment the port by 1" default:"http://localhost:8892"`
-	AllowOrigins   []*url.URL    `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
-	NoConsole      bool          `help:"Disable the console."`
 	DBPort         int           `help:"Port to use for the database." default:"54320"`
 	Recreate       bool          `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers    int           `short:"c" help:"Number of controllers to start." default:"1"`
 	Background     bool          `help:"Run in the background." default:"false"`
 	Stop           bool          `help:"Stop the running FTL instance. Can be used to --background to restart the server" default:"false"`
-	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"20s"`
-	IdleRunners    int           `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
+	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"1m"`
+	controller.CommonConfig
 }
 
 const ftlContainerName = "ftl-db-1"
@@ -59,7 +57,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 		runInBackground(logger)
 
-		err := s.waitForControllerOnline(ctx, client)
+		err := waitForControllerOnline(ctx, s.StartupTimeout, client)
 		if err != nil {
 			return err
 		}
@@ -101,12 +99,10 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 	for i := range s.Controllers {
 		config := controller.Config{
+			CommonConfig: s.CommonConfig,
 			Bind:         controllerAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
-			AllowOrigins: s.AllowOrigins,
-			NoConsole:    s.NoConsole,
-			IdleRunners:  s.IdleRunners,
 		}
 		if err := kong.ApplyDefaults(&config); err != nil {
 			return err
@@ -347,10 +343,10 @@ func pollContainerHealth(ctx context.Context, containerName string, timeout time
 }
 
 // waitForControllerOnline polls the controller service until it is online.
-func (s *serveCmd) waitForControllerOnline(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+func waitForControllerOnline(ctx context.Context, startupTimeout time.Duration, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
 
-	ctx, cancel := context.WithTimeout(ctx, s.StartupTimeout)
+	ctx, cancel := context.WithTimeout(ctx, startupTimeout)
 	defer cancel()
 
 	ticker := time.NewTicker(time.Second)
