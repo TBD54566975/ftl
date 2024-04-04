@@ -75,6 +75,7 @@ message EnumVariant {
 message Error {
   string msg = 1;
   Position pos = 2;
+  int64 endColumn = 3;
 }
 
 message ErrorList {

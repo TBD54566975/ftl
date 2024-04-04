@@ -239,5 +239,5 @@ func TestErrorReporting(t *testing.T) {
 	}
 	pwd, _ := os.Getwd()
 	_, _, err := ExtractModuleSchema("testdata/failing")
-	assert.EqualError(t, err, filepath.Join(pwd, `testdata/failing/failing.go`)+`:14:2: call must have exactly three arguments`)
+	assert.EqualError(t, err, filepath.Join(pwd, `testdata/failing/failing.go`)+`:14:2-46: call must have exactly three arguments`)
 }

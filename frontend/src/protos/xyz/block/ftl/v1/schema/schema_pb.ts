@@ -536,6 +536,11 @@ export class Error extends Message<Error> {
    */
   pos?: Position;
 
+  /**
+   * @generated from field: int64 endColumn = 3;
+   */
+  endColumn = protoInt64.zero;
+
   constructor(data?: PartialMessage<Error>) {
     super();
     proto3.util.initPartial(data, this);
@@ -546,6 +551,7 @@ export class Error extends Message<Error> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "msg", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "pos", kind: "message", T: Position },
+    { no: 3, name: "endColumn", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Error {
