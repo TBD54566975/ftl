@@ -20,7 +20,7 @@ ftl init kotlin . alice
 
 ### Deploy and test the module
 ```sh
-ftl deploy ftl-module-alice
+ftl deploy alice
 ftl call alice.echo '{"name": "Mic"}'
 ```
 
