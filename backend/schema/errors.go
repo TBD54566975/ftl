@@ -6,9 +6,13 @@ import (
 )
 
 type Error struct {
-	Msg string
-	Pos Position
-	Err error // Wrapped error, if any
+	Msg string   `json:"msg" protobuf:"1"`
+	Pos Position `json:"pos" protobuf:"2"`
+	Err error    `protobuf:"-"` // Wrapped error, if any
+}
+
+type ErrorList struct {
+	Errors []Error `json:"errors" protobuf:"1"`
 }
 
 func (e Error) Error() string { return fmt.Sprintf("%s: %s", e.Pos, e.Msg) }

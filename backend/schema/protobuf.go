@@ -22,6 +22,7 @@ var typesWithRuntime = map[string]bool{
 func ProtobufSchema() string {
 	messages := map[string]string{}
 	generateMessage(reflect.TypeOf(Schema{}), messages)
+	generateMessage(reflect.TypeOf(ErrorList{}), messages)
 	keys := maps.Keys(messages)
 	slices.Sort(keys)
 	w := &strings.Builder{}
