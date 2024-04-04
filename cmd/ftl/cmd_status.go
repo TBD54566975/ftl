@@ -14,7 +14,6 @@ import (
 type statusCmd struct {
 	All              bool `help:"Show all controllers, deployments, and runners, even those that are not running."`
 	AllControllers   bool `help:"Show all controllers, even those that are not running."`
-	AllDeployments   bool `help:"Show all deployments, even those that are not running."`
 	AllRunners       bool `help:"Show all runners, even those that are not running."`
 	AllIngressRoutes bool `help:"Show all ingress routes, even those that are not running."`
 	Schema           bool `help:"Show schema."`
@@ -23,7 +22,6 @@ type statusCmd struct {
 func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
 		AllControllers:   s.All || s.AllControllers,
-		AllDeployments:   s.All || s.AllDeployments,
 		AllRunners:       s.All || s.AllRunners,
 		AllIngressRoutes: s.All || s.AllIngressRoutes,
 	}))

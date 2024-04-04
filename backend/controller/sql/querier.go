@@ -22,7 +22,7 @@ type Querier interface {
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
-	GetActiveDeployments(ctx context.Context, all bool) ([]GetActiveDeploymentsRow, error)
+	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
 	GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error)
 	GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIngressRoutesRow, error)
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)

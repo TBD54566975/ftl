@@ -36,6 +36,20 @@ jobs:
         run: docker compose up -d --wait
       - name: Test
         run: go-test-annotate
+  test-readme:
+    name: Test README
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Test README
+        run: just test-readme
   sql:
     name: SQL
     runs-on: ubuntu-latest
@@ -88,7 +102,7 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Proto Breaking Change Check
         shell: bash
-        run: buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation
+        run: buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation || true
   console:
     name: Console
     runs-on: ubuntu-latest

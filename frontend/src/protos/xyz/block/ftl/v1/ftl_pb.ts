@@ -1377,22 +1377,17 @@ export class StreamDeploymentLogsResponse extends Message<StreamDeploymentLogsRe
  */
 export class StatusRequest extends Message<StatusRequest> {
   /**
-   * @generated from field: bool all_deployments = 1;
-   */
-  allDeployments = false;
-
-  /**
-   * @generated from field: bool all_runners = 2;
+   * @generated from field: bool all_runners = 1;
    */
   allRunners = false;
 
   /**
-   * @generated from field: bool all_controllers = 3;
+   * @generated from field: bool all_controllers = 2;
    */
   allControllers = false;
 
   /**
-   * @generated from field: bool all_ingress_routes = 4;
+   * @generated from field: bool all_ingress_routes = 3;
    */
   allIngressRoutes = false;
 
@@ -1404,10 +1399,9 @@ export class StatusRequest extends Message<StatusRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StatusRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "all_deployments", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 2, name: "all_runners", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "all_controllers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "all_ingress_routes", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 1, name: "all_runners", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "all_controllers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "all_ingress_routes", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {

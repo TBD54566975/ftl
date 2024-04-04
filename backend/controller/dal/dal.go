@@ -174,6 +174,7 @@ type Deployment struct {
 	Language    string
 	Module      string
 	MinReplicas int
+	Replicas    optional.Option[int] // Depending on the query this may or may not be populated.
 	Schema      *schema.Module
 	CreatedAt   time.Time
 	Labels      model.Labels
@@ -264,7 +265,7 @@ func (d *DAL) GetControllers(ctx context.Context, allControllers bool) ([]Contro
 
 func (d *DAL) GetStatus(
 	ctx context.Context,
-	allControllers, allRunners, allDeployments, allIngressRoutes bool,
+	allControllers, allRunners, allIngressRoutes bool,
 ) (Status, error) {
 	controllers, err := d.GetControllers(ctx, allControllers)
 	if err != nil {
@@ -274,7 +275,7 @@ func (d *DAL) GetStatus(
 	if err != nil {
 		return Status{}, fmt.Errorf("%s: %w", "could not get active runners", translatePGError(err))
 	}
-	deployments, err := d.db.GetActiveDeployments(ctx, allDeployments)
+	deployments, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
 		return Status{}, fmt.Errorf("%s: %w", "could not get active deployments", translatePGError(err))
 	}
@@ -720,7 +721,7 @@ func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconc
 
 // GetActiveDeployments returns all active deployments.
 func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
-	rows, err := d.db.GetActiveDeployments(ctx, false)
+	rows, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
 		if isNotFound(err) {
 			return nil, nil
@@ -733,6 +734,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 			Module:      in.ModuleName,
 			Language:    in.Language,
 			MinReplicas: int(in.Deployment.MinReplicas),
+			Replicas:    optional.Some(int(in.Replicas)),
 			Schema:      in.Deployment.Schema,
 			CreatedAt:   in.Deployment.CreatedAt,
 		}, nil

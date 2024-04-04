@@ -236,25 +236,19 @@ func checkReadiness(ctx context.Context, client DeployClient, deploymentKey stri
 	for {
 		select {
 		case <-ticker.C:
-			status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
-				AllDeployments: true,
-			}))
+			status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
 			if err != nil {
 				return err
 			}
 
-			var found bool
 			for _, deployment := range status.Msg.Deployments {
 				if deployment.Key == deploymentKey {
-					found = true
 					if deployment.Replicas >= replicas {
 						return nil
 					}
 				}
 			}
-			if !found {
-				return fmt.Errorf("deployment %s not found: %v", deploymentKey, status.Msg.Deployments)
-			}
+
 		case <-ctx.Done():
 			return ctx.Err()
 		}

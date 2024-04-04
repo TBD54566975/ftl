@@ -144,12 +144,13 @@ WHERE sqlc.arg('all')::bool = true
 ORDER BY r.key;
 
 -- name: GetActiveDeployments :many
-SELECT sqlc.embed(d), m.name AS module_name, m.language
+SELECT sqlc.embed(d), m.name AS module_name, m.language, COUNT(r.id) AS replicas
 FROM deployments d
-         INNER JOIN modules m on d.module_id = m.id
-WHERE sqlc.arg('all')::bool = true
-   OR min_replicas > 0
-ORDER BY d.key;
+  JOIN modules m ON d.module_id = m.id
+  JOIN runners r ON d.id = r.deployment_id
+WHERE min_replicas > 0 AND r.state = 'assigned'
+GROUP BY d.id, m.name, m.language
+HAVING COUNT(r.id) > 0;
 
 -- name: GetActiveDeploymentSchemas :many
 SELECT key, schema FROM deployments WHERE min_replicas > 0;
