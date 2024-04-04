@@ -72,6 +72,15 @@ message EnumVariant {
   repeated string comments = 4;
 }
 
+message Error {
+  string msg = 1;
+  Position pos = 2;
+}
+
+message ErrorList {
+  repeated Error errors = 1;
+}
+
 message Field {
   optional Position pos = 1;
   string name = 2;
