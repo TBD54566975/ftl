@@ -86,4 +86,4 @@ integration-tests *test:
 
 # Run README doc tests
 test-readme:
-  rm -rf readme-tests && mdcode extract --dir readme-tests && (cd readme-tests && bash test.sh)
+  mdcode run README.md -- bash test.sh
