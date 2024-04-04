@@ -207,33 +207,11 @@ func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline
 
 // Dev builds and deploys all local modules and watches for changes, redeploying as necessary.
 func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
-	logger := log.FromContext(ctx)
-
-	// Build and deploy all modules first.
-	err := e.buildAndDeploy(ctx, 1, true)
-	if err != nil {
-		logger.Errorf(err, "initial deploy failed")
-	}
-
-	logger.Infof("All modules deployed, watching for changes...")
-
-	// Then watch for changes and redeploy.
 	return e.watchForModuleChanges(ctx, period)
 }
 
 func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration) error {
 	logger := log.FromContext(ctx)
-
-	moduleHashes := map[string][]byte{}
-	e.controllerSchema.Range(func(name string, sch *schema.Module) bool {
-		hash, err := computeModuleHash(sch)
-		if err != nil {
-			logger.Errorf(err, "compute hash for %s failed", name)
-			return false
-		}
-		moduleHashes[name] = hash
-		return true
-	})
 
 	schemaChanges := make(chan schemaChange, 128)
 	e.schemaChanges.Subscribe(schemaChanges)
@@ -244,6 +222,23 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	watch.Subscribe(watchEvents)
 	defer watch.Unsubscribe(watchEvents)
 	defer watch.Close()
+
+	// Build and deploy all modules first.
+	err := e.buildAndDeploy(ctx, 1, true)
+	if err != nil {
+		logger.Errorf(err, "initial deploy failed")
+	}
+	logger.Infof("All modules deployed, watching for changes...")
+	moduleHashes := map[string][]byte{}
+	e.controllerSchema.Range(func(name string, sch *schema.Module) bool {
+		hash, err := computeModuleHash(sch)
+		if err != nil {
+			logger.Errorf(err, "compute hash for %s failed", name)
+			return false
+		}
+		moduleHashes[name] = hash
+		return true
+	})
 
 	// Watch for file and schema changes
 	for {
