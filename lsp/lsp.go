@@ -101,17 +101,20 @@ func publishErrors(errByFilename map[string]errSet, s *Server) {
 			sourceName := "ftl"
 			severity := protocol.DiagnosticSeverityError
 
-			length, err := getLineOrWordLength(filename, pp.Line, pp.Column, false)
-			if err != nil {
-				s.logger.Errorf(err, "Failed to get line or word length")
-				continue
+			// If the end column is not set, set it to the length of the word.
+			if e.EndColumn-1 == pp.Column {
+				length, err := getLineOrWordLength(filename, pp.Line, pp.Column, false)
+				if err != nil {
+					s.logger.Errorf(err, "Failed to get line or word length")
+					continue
+				}
+				e.EndColumn = pp.Column + length
 			}
-			endColumn := pp.Column + length
 
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: protocol.Range{
 					Start: protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column - 1)},
-					End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(endColumn - 1)},
+					End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(e.EndColumn - 1)},
 				},
 				Severity: &severity,
 				Source:   &sourceName,
