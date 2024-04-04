@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
