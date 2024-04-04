@@ -14,7 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.FTL_AUTOFMT_TOKEN }}
       - name: Init Hermit
         run: ./bin/hermit env -r >> "$GITHUB_ENV"
       - name: Auto format
