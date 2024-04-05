@@ -21,7 +21,7 @@ type devCmd struct {
 	External       []string      `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
 	Watch          time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
 	NoServe        bool          `help:"Do not start the FTL server." default:"false"`
-	RunLsp         bool          `help:"Run the language server." default:"false"`
+	Lsp            bool          `help:"Run the language server." default:"false"`
 	ServeCmd       serveCmd      `embed:""`
 	languageServer *lsp.Server
 }
@@ -61,7 +61,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		}
 
 		opts := []buildengine.Option{buildengine.Parallelism(d.Parallelism)}
-		if d.RunLsp {
+		if d.Lsp {
 			d.languageServer = lsp.NewServer(ctx)
 			opts = append(opts, buildengine.WithListener(buildengine.BuildStartedListenerFunc(d.OnBuildStarted)))
 			ctx = log.ContextWithLogger(ctx, log.FromContext(ctx).AddSink(lsp.NewLogSink(d.languageServer)))
