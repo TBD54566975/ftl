@@ -3,6 +3,8 @@ package schema
 import (
 	"errors"
 	"fmt"
+
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
 type Error struct {
@@ -12,8 +14,32 @@ type Error struct {
 	Err       error    `protobuf:"-"` // Wrapped error, if any
 }
 
+func errorFromProto(e *schemapb.Error) *Error {
+	return &Error{
+		Pos:       posFromProto(e.Pos),
+		Msg:       e.Msg,
+		EndColumn: int(e.EndColumn),
+	}
+}
+
+func errorsFromProto(errs []*schemapb.Error) []*Error {
+	var out []*Error
+	for _, pb := range errs {
+		s := errorFromProto(pb)
+		out = append(out, s)
+	}
+	return out
+}
+
 type ErrorList struct {
-	Errors []Error `json:"errors" protobuf:"1"`
+	Errors []*Error `json:"errors" protobuf:"1"`
+}
+
+// ErrorListFromProto converts a protobuf ErrorList to an ErrorList.
+func ErrorListFromProto(e *schemapb.ErrorList) *ErrorList {
+	return &ErrorList{
+		Errors: errorsFromProto(e.Errors),
+	}
 }
 
 func (e Error) Error() string { return fmt.Sprintf("%s-%d: %s", e.Pos, e.EndColumn, e.Msg) }

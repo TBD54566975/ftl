@@ -9,12 +9,15 @@ import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import xyz.block.ftl.schemaextractor.ExtractSchemaRule.Companion.OUTPUT_FILENAME
+import xyz.block.ftl.schemaextractor.ExtractSchemaRule.Companion.ERRORS_OUT
+import xyz.block.ftl.schemaextractor.ExtractSchemaRule.Companion.SCHEMA_OUT
 import xyz.block.ftl.v1.schema.Array
 import xyz.block.ftl.v1.schema.Data
 import xyz.block.ftl.v1.schema.Decl
 import xyz.block.ftl.v1.schema.Enum
 import xyz.block.ftl.v1.schema.EnumVariant
+import xyz.block.ftl.v1.schema.Error
+import xyz.block.ftl.v1.schema.ErrorList
 import xyz.block.ftl.v1.schema.Field
 import xyz.block.ftl.v1.schema.IngressPathComponent
 import xyz.block.ftl.v1.schema.IngressPathLiteral
@@ -46,6 +49,12 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
     val dependenciesDir = File("src/test/kotlin/xyz/block/ftl/schemaextractor/testdata/dependencies")
     val dependencies = dependenciesDir.listFiles { file -> file.extension == "kt" }?.toList() ?: emptyList()
     env.configuration.addJvmClasspathRoots(dependencies)
+  }
+
+  @AfterTest
+  fun cleanup() {
+    File(SCHEMA_OUT).delete()
+    File(ERRORS_OUT).delete()
   }
 
   @Test
@@ -124,7 +133,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       fun emptyVerb(context: Context) {}
     """
     ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
-    val file = File(OUTPUT_FILENAME)
+    val file = File(SCHEMA_OUT)
     val module = Module.ADAPTER.decode(file.inputStream())
 
     val expected = Module(
@@ -395,10 +404,16 @@ fun callTime(context: Context): TimeResponse {
   return context.call(::time, Empty())
 }
 """
-    val message = assertThrows<IllegalArgumentException> {
+    val message = assertThrows<IllegalStateException> {
       ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
     }.message!!
-    assertContains(message, "Expected type to be a data class or builtin.Empty, but was kotlin.Char")
+    assertContains(message, "could not extract schema")
+
+    assertErrorsFileContainsExactly(
+      Error(
+        msg = "expected type to be a data class or builtin.Empty, but was kotlin.Char",
+      )
+    )
   }
 
   @Test
@@ -430,10 +445,19 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
 }
         """
-    val message = assertThrows<java.lang.IllegalArgumentException> {
+    val message = assertThrows<java.lang.IllegalStateException> {
       ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
     }.message!!
-    assertContains(message, "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest")
+    assertContains(message, "could not extract schema")
+
+    assertErrorsFileContainsExactly(
+      Error(
+        msg = "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest",
+      ),
+      Error(
+        msg = "@HttpIngress-annotated echo response must be ftl.builtin.HttpResponse",
+      )
+    )
   }
 
   @Test
@@ -465,16 +489,19 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
 }
         """
-    val message = assertThrows<java.lang.IllegalArgumentException> {
+    val message = assertThrows<java.lang.IllegalStateException> {
       ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
     }.message!!
-    assertContains(message, "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest")
-  }
+    assertContains(message, "could not extract schema")
 
-  @AfterTest
-  fun cleanup() {
-    val file = File(OUTPUT_FILENAME)
-    file.delete()
+    assertErrorsFileContainsExactly(
+      Error(
+        msg = "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest",
+      ),
+      Error(
+        msg = "@HttpIngress-annotated echo response must be ftl.builtin.HttpResponse",
+      )
+    )
   }
 
   @Test
@@ -541,7 +568,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       }
     """
     ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
-    val file = File(OUTPUT_FILENAME)
+    val file = File(SCHEMA_OUT)
     val module = Module.ADAPTER.decode(file.inputStream())
 
     val expected = Module(
@@ -669,7 +696,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       }
     """
     ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
-    val file = File(OUTPUT_FILENAME)
+    val file = File(SCHEMA_OUT)
     val module = Module.ADAPTER.decode(file.inputStream())
 
     val expected = Module(
@@ -748,5 +775,18 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       .withEqualsForType({ _, _ -> true }, Position::class.java)
       .ignoringFieldsMatchingRegexes(".*hashCode\$")
       .isEqualTo(expected)
+  }
+
+  private fun assertErrorsFileContainsExactly(vararg expected: Error) {
+    val file = File(ERRORS_OUT)
+    val actual = ErrorList.ADAPTER.decode(file.inputStream())
+
+    assertThat(actual.errors)
+      .usingRecursiveComparison()
+      .withEqualsForType({ _, _ -> true }, Position::class.java)
+      .ignoringFieldsMatchingRegexes(".*hashCode\$")
+      .ignoringFields("endColumn")
+      .ignoringCollectionOrder()
+      .isEqualTo(expected.toList())
   }
 }

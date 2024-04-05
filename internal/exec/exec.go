@@ -2,7 +2,6 @@ package exec
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec" //nolint:depguard
 	"syscall"
@@ -59,7 +58,7 @@ func (c *Cmd) RunBuffered(ctx context.Context) error {
 
 	err := c.Run()
 	if err != nil {
-		fmt.Printf("%s", outputBuffer.Bytes())
+		log.FromContext(ctx).Infof("%s", outputBuffer.Bytes())
 		return err
 	}
 

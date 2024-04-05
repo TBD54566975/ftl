@@ -67,6 +67,8 @@ import xyz.block.ftl.v1.schema.Data
 import xyz.block.ftl.v1.schema.Decl
 import xyz.block.ftl.v1.schema.Enum
 import xyz.block.ftl.v1.schema.EnumVariant
+import xyz.block.ftl.v1.schema.Error
+import xyz.block.ftl.v1.schema.ErrorList
 import xyz.block.ftl.v1.schema.Field
 import xyz.block.ftl.v1.schema.IngressPathComponent
 import xyz.block.ftl.v1.schema.IngressPathLiteral
@@ -160,16 +162,25 @@ class ExtractSchemaRule(config: DetektConfig) : Rule(config) {
   }
 
   override fun postVisit(root: KtFile) {
+    val errors = extractor.getErrors()
+    if (errors.errors.isNotEmpty()) {
+      writeFile(errors.encode(), ERRORS_OUT)
+      throw IllegalStateException("could not extract schema")
+    }
+
     val moduleName = root.extractModuleName()
     modules[moduleName]?.let {
-      val module = it.toModule(moduleName)
-      val outputDirectory = File(output).also { f -> Path.of(f.absolutePath).createDirectories() }
-      val file = File(outputDirectory.absolutePath, OUTPUT_FILENAME)
-      file.createNewFile()
-      val os = FileOutputStream(file)
-      os.write(module.encode())
-      os.close()
+      writeFile(it.toModule(moduleName).encode(), SCHEMA_OUT)
     }
+  }
+
+  private fun writeFile(content: ByteArray, filename: String) {
+    val outputDirectory = File(output).also { f -> Path.of(f.absolutePath).createDirectories() }
+    val file = File(outputDirectory.absolutePath, filename)
+    file.createNewFile()
+    val os = FileOutputStream(file)
+    os.write(content)
+    os.close()
   }
 
   private fun ModuleData.toModule(moduleName: String): Module = Module(
@@ -179,7 +190,8 @@ class ExtractSchemaRule(config: DetektConfig) : Rule(config) {
   )
 
   companion object {
-    const val OUTPUT_FILENAME = "schema.pb"
+    const val SCHEMA_OUT = "schema.pb"
+    const val ERRORS_OUT = "errors.pb"
   }
 }
 
@@ -187,10 +199,13 @@ class SchemaExtractor(
   private val modules: MutableMap<String, ModuleData>,
 ) {
   private var bindingContext = BindingContext.EMPTY
+  private val errors = mutableListOf<Error>()
 
   fun setBindingContext(bindingContext: BindingContext) {
     this.bindingContext = bindingContext
   }
+
+  fun getErrors(): ErrorList = ErrorList(errors = errors)
 
   fun addModuleComments(file: KtFile) {
     val module = file.extractModuleName()
@@ -245,18 +260,17 @@ class SchemaExtractor(
 
   fun addDatabaseToSchema(database: KtProperty) {
     val decl = database.children.single().let {
-      val sourcePos = it.getPosition()
       val dbName = (it as? KtCallExpression).getResolvedCall(bindingContext)?.valueArguments?.entries?.single { e ->
         e.key.name.asString() == "name"
       }
         ?.value?.toString()
         ?.trim('"')
-      requireNotNull(dbName) { "$sourcePos $dbName Could not extract database name" }
+      require(dbName != null) { it.errorAtPosition("could not extract database name") }
 
       Decl(
         database = xyz.block.ftl.v1.schema.Database(
-          pos = sourcePos,
-          name = dbName
+          pos = it.getPosition(),
+          name = dbName ?: ""
         )
       )
     }
@@ -270,64 +284,56 @@ class SchemaExtractor(
   }
 
   private fun validateVerb(verb: KtNamedFunction) {
-    val verbSourcePos = verb.getLineAndColumn()
-    requireNotNull(verb.fqName?.asString()) {
-      "Verbs must be defined in a package"
-    }.let { fqName ->
+    require(verb.fqName?.asString() != null) { verb.errorAtPosition("verbs must be defined in a package") }
+    verb.fqName?.asString()!!.let { fqName ->
       require(fqName.split(".").let { it.size >= 2 && it.first() == "ftl" }) {
-        "$verbSourcePos Expected exported function to be in package ftl.<module>, but was $fqName"
+        verb.errorAtPosition("expected exported function to be in package ftl.<module>, but was $fqName")
       }
 
       // Validate parameters
-      require(verb.valueParameters.size >= 1) { "$verbSourcePos Verbs must have at least one argument, ${verb.name} did not" }
-      require(verb.valueParameters.size <= 2) { "$verbSourcePos Verbs must have at most two arguments, ${verb.name} did not" }
+      require(verb.valueParameters.size >= 1) { verb.errorAtPosition("verbs must have at least one argument") }
+      require(verb.valueParameters.size <= 2) { verb.errorAtPosition("verbs must have at most two arguments") }
       val ctxParam = verb.valueParameters.first()
-
       require(ctxParam.typeReference?.resolveType()?.fqNameOrNull()?.asString() == Context::class.qualifiedName) {
-        "${verb.valueParameters.first().getLineAndColumn()} First argument of verb must be Context"
+        ctxParam.errorAtPosition("first argument of verb must be Context")
       }
 
       if (verb.valueParameters.size == 2) {
         val reqParam = verb.valueParameters.last()
         require(reqParam.typeReference?.resolveType()
-          ?.let { it.toClassDescriptor().isData || it.isEmptyBuiltin() }
-          ?: false
+          ?.let { it.toClassDescriptor().isData || it.isEmptyBuiltin() } == true
         ) {
-          "${verb.valueParameters.last().getLineAndColumn()} Second argument of ${verb.name} must be a data class or " +
-            "builtin.Empty"
+          verb.valueParameters.last().errorAtPosition("request type must be a data class or builtin.Empty")
         }
       }
 
       // Validate return type
       verb.createTypeBindingForReturnType(bindingContext)?.type?.let {
         require(it.toClassDescriptor().isData || it.isEmptyBuiltin() || it.isUnit()) {
-          "${verbSourcePos}: return type of ${verb.name} must be a data class or builtin.Empty but is ${
-            it.fqNameOrNull()?.asString()
-          }"
+          verb.errorAtPosition("if present, return type must be a data class or builtin.Empty")
         }
       }
     }
   }
 
   private fun extractVerb(verb: KtNamedFunction): Verb {
-    val verbSourcePos = verb.getLineAndColumn()
-
     val requestRef = verb.valueParameters.takeIf { it.size > 1 }?.last()?.let {
-      val position = it.getPosition()
-      return@let it.typeReference?.resolveType()?.toSchemaType(position)
-    } ?: Type(unit = xyz.block.ftl.v1.schema.Unit())
+      return@let it.typeReference?.resolveType()?.toSchemaType(it.getPosition(), it.textLength)
+    } ?: Type(unit = Unit())
 
     val returnRef = verb.createTypeBindingForReturnType(bindingContext)?.let {
-      val position = it.psiElement.getPosition()
-      return@let it.type.toSchemaType(position)
+      return@let it.type.toSchemaType(it.psiElement.getPosition(), it.psiElement.textLength)
     } ?: Type(unit = Unit())
 
     val metadata = mutableListOf<Metadata>()
     extractIngress(verb, requestRef, returnRef)?.apply { metadata.add(Metadata(ingress = this)) }
     extractCalls(verb)?.apply { metadata.add(Metadata(calls = this)) }
+    require(verb.name != null) {
+      verb.errorAtPosition("verbs must be named")
+    }
 
     return Verb(
-      name = requireNotNull(verb.name) { "$verbSourcePos Verbs must be named" },
+      name = verb.name ?: "",
       request = requestRef,
       response = returnRef,
       metadata = metadata,
@@ -339,7 +345,6 @@ class SchemaExtractor(
 
   private fun extractSecretOrConfig(property: KtProperty): SecretConfigData {
     return property.children.single().let {
-      val position = it.getPosition()
       var type: KotlinType? = null
       var name = ""
       when (it) {
@@ -361,11 +366,12 @@ class SchemaExtractor(
         }
 
         else -> {
-          throw IllegalArgumentException("$position: Could not extract secret or config")
+          errors.add(it.errorAtPosition("could not extract secret or config"))
         }
       }
 
-      SecretConfigData(name, type!!.toSchemaType(position), position)
+      val position = it.getPosition()
+      SecretConfigData(name, type!!.toSchemaType(position, it.textLength), position)
     }
   }
 
@@ -373,21 +379,20 @@ class SchemaExtractor(
     return verb.annotationEntries.firstOrNull {
       bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == HttpIngress::class.qualifiedName
     }?.let { annotationEntry ->
-      val sourcePos = annotationEntry.getLineAndColumn()
       require(requestType.ref != null) {
-        "$sourcePos ingress ${verb.name} request must be a data class"
+        annotationEntry.errorAtPosition("ingress ${verb.name} request must be a data class")
       }
       require(responseType.ref != null) {
-        "$sourcePos ingress ${verb.name} response must be a data class"
+        annotationEntry.errorAtPosition("ingress ${verb.name} response must be a data class")
       }
-      require(requestType.ref.compare("builtin", "HttpRequest")) {
-        "$sourcePos @HttpIngress-annotated ${verb.name} request must be ftl.builtin.HttpRequest"
+      require(requestType.ref?.compare("builtin", "HttpRequest") == true) {
+        annotationEntry.errorAtPosition("@HttpIngress-annotated ${verb.name} request must be ftl.builtin.HttpRequest")
       }
-      require(responseType.ref.compare("builtin", "HttpResponse")) {
-        "$sourcePos @HttpIngress-annotated ${verb.name} response must be ftl.builtin.HttpResponse"
+      require(responseType.ref?.compare("builtin", "HttpResponse") == true) {
+        annotationEntry.errorAtPosition("@HttpIngress-annotated ${verb.name} response must be ftl.builtin.HttpResponse")
       }
       require(annotationEntry.valueArguments.size >= 2) {
-        "$sourcePos ${verb.name} @HttpIngress annotation requires at least 2 arguments"
+        annotationEntry.errorAtPosition("@HttpIngress annotation requires at least 2 arguments")
       }
 
       val args = annotationEntry.valueArguments.partition { arg ->
@@ -398,20 +403,23 @@ class SchemaExtractor(
           ?.asString() == Method::class.qualifiedName
       }
 
-      val methodArg = requireNotNull(args.first.single().getArgumentExpression()?.text?.substringAfter(".")) {
-        "Could not extract method from ${verb.name} @HttpIngress annotation"
+      val methodArg = args.first.single().getArgumentExpression()?.text?.substringAfter(".")
+      require(methodArg != null) {
+        annotationEntry.errorAtPosition("could not extract method from ${verb.name} @HttpIngress annotation")
       }
-      val pathArg = requireNotNull(args.second.single().getArgumentExpression()?.text?.let {
+
+      val pathArg = args.second.single().getArgumentExpression()?.text?.let {
         extractPathComponents(it.trim('\"'))
-      }) {
-        "Could not extract path from ${verb.name} @HttpIngress annotation"
+      }
+      require(pathArg != null) {
+        annotationEntry.errorAtPosition("could not extract path from ${verb.name} @HttpIngress annotation")
       }
 
       MetadataIngress(
         type = "http",
-        path = pathArg,
-        method = methodArg,
-        pos = sourcePos.toPosition(verb.containingFile.name),
+        path = pathArg ?: emptyList(),
+        method = methodArg ?: "",
+        pos = annotationEntry.getPosition(),
       )
     }
   }
@@ -444,13 +452,14 @@ class SchemaExtractor(
 
     val func = element as? KtNamedFunction
     if (func != null) {
-      val funcSourcePos = func.getLineAndColumn()
-      val body =
-        requireNotNull(func.bodyExpression) { "$funcSourcePos Function body cannot be empty; was in ${func.name}" }
+      val body = func.bodyExpression
+      require(body != null) {
+        func.errorAtPosition("function body cannot be empty")
+      }
 
-      val commentRanges = body.node.children()
-        .filterIsInstance<PsiComment>()
-        .map { it.textRange.shiftLeft(it.startOffset).shiftRight(it.startOffsetInParent) }
+      val commentRanges = body?.node?.children()
+        ?.filterIsInstance<PsiComment>()
+        ?.map { it.textRange.shiftLeft(it.startOffset).shiftRight(it.startOffsetInParent) }
 
       val imports = func.containingKtFile.importList?.imports ?: emptyList()
 
@@ -461,12 +470,15 @@ class SchemaExtractor(
       }.map { ctxParam -> getCallMatcher(ctxParam.text.split(":")[0].trim()) }
 
       val refs = callMatchers.flatMap { matcher ->
-        matcher.findAll(body.text).mapNotNull { match ->
+        matcher.findAll(body?.text ?: "").mapNotNull { match ->
           // ignore commented out matches
-          if (commentRanges.any { it.contains(TextRange(match.range.first, match.range.last)) }) return@mapNotNull null
+          if (commentRanges?.any { it.contains(TextRange(match.range.first, match.range.last)) } ?: false) {
+            return@mapNotNull null
+          }
 
-          val verbCall = requireNotNull(match.groups["fn"]?.value?.substringAfter("::")?.trim()) {
-            "Error processing function defined at $funcSourcePos: Could not extract outgoing verb call"
+          val verbCall = match.groups["fn"]?.value?.substringAfter("::")?.trim()
+          require(verbCall != null) {
+            func.errorAtPosition("could not extract outgoing verb call")
           }
           imports.firstOrNull { import ->
             // if aliased import, match the alias
@@ -489,12 +501,12 @@ class SchemaExtractor(
                   it
                 )?.fqName?.asString() == xyz.block.ftl.Export::class.qualifiedName
               }
-            } ?: throw IllegalArgumentException(
-              "Error processing function defined at $funcSourcePos: Could not resolve outgoing verb call"
+            } ?: errors.add(
+              func.errorAtPosition("could not resolve outgoing verb call")
             )
 
             Ref(
-              name = verbCall,
+              name = verbCall ?: "",
               module = element.extractModuleName(),
             )
           }
@@ -524,7 +536,7 @@ class SchemaExtractor(
         Field(
           name = param.name!!,
           type = param.typeReference?.let {
-            return@let it.resolveType().toSchemaType(it.getPosition())
+            return@let it.resolveType()?.toSchemaType(it.getPosition(), it.textLength)
           },
           metadata = metadata,
         )
@@ -543,7 +555,7 @@ class SchemaExtractor(
   private fun KtClass.toSchemaEnum(): Enum {
     val variants: List<EnumVariant>
     require(this.getValueParameters().isEmpty() || this.getValueParameters().size == 1) {
-      "${this.getLineAndColumn()}: Enums can have at most one value parameter, of type string or number"
+      this.errorAtPosition("enums can have at most one value parameter, of type string or number")
     }
 
     if (this.getValueParameters().isEmpty()) {
@@ -559,13 +571,12 @@ class SchemaExtractor(
       }
     } else {
       variants = this.declarations.filterIsInstance<KtEnumEntry>().map { entry ->
-        val pos: Position = entry.getPosition()
         val name: String = entry.name!!
         val arg: ValueArgument = entry.initializerList?.initializers?.single().let {
           (it as KtSuperTypeCallEntry).valueArguments.single()
         }
 
-        val value: Value
+        var value: Value? = null
         try {
           value = arg.getArgumentExpression()?.text?.let {
             if (it.startsWith('"')) {
@@ -573,15 +584,18 @@ class SchemaExtractor(
             } else {
               return@let Value(intValue = IntValue(value_ = it.toLong()))
             }
-          } ?: throw IllegalArgumentException("${pos}: Could not extract enum variant value")
+          }
+          if (value == null) {
+            entry.errorAtPosition("could not extract enum variant value")
+          }
         } catch (e: NumberFormatException) {
-          throw IllegalArgumentException("${pos}: Enum variant value must be a string or number")
+          errors.add(entry.errorAtPosition("enum variant value must be a string or number"))
         }
 
         EnumVariant(
           name = name,
           value_ = value,
-          pos = pos,
+          pos = entry.getPosition(),
           comments = entry.comments(),
         )
       }
@@ -595,7 +609,7 @@ class SchemaExtractor(
     )
   }
 
-  private fun KotlinType.toSchemaType(position: Position): Type {
+  private fun KotlinType.toSchemaType(position: Position, tokenLength: Int): Type {
     if (this.unwrap().constructor.isTypeParameterTypeConstructor()) {
       return Type(
         ref = Ref(
@@ -613,7 +627,7 @@ class SchemaExtractor(
       type.isSubtypeOf(builtIns.floatType) -> Type(float = xyz.block.ftl.v1.schema.Float())
       type.isSubtypeOf(builtIns.doubleType) -> Type(float = xyz.block.ftl.v1.schema.Float())
       type.isSubtypeOf(builtIns.booleanType) -> Type(bool = xyz.block.ftl.v1.schema.Bool())
-      type.isSubtypeOf(builtIns.unitType) -> Type(unit = xyz.block.ftl.v1.schema.Unit())
+      type.isSubtypeOf(builtIns.unitType) -> Type(unit = Unit())
       type.anySuperTypeConstructor {
         it.getClassFqNameUnsafe().asString() == ByteArray::class.qualifiedName
       } -> Type(bytes = xyz.block.ftl.v1.schema.Bytes())
@@ -622,7 +636,7 @@ class SchemaExtractor(
         it.getClassFqNameUnsafe().asString() == builtIns.list.fqNameSafe.asString()
       } -> Type(
         array = Array(
-          element = this.arguments.first().type.toSchemaType(position)
+          element = this.arguments.first().type.toSchemaType(position, tokenLength)
         )
       )
 
@@ -630,8 +644,8 @@ class SchemaExtractor(
         it.getClassFqNameUnsafe().asString() == builtIns.map.fqNameSafe.asString()
       } -> Type(
         map = xyz.block.ftl.v1.schema.Map(
-          key = this.arguments.first().type.toSchemaType(position),
-          value_ = this.arguments.last().type.toSchemaType(position),
+          key = this.arguments.first().type.toSchemaType(position, tokenLength),
+          value_ = this.arguments.last().type.toSchemaType(position, tokenLength),
         )
       )
 
@@ -641,21 +655,25 @@ class SchemaExtractor(
 
       else -> {
         val descriptor = this.toClassDescriptor()
-        require(
-          descriptor.isData
-            || descriptor.kind == ClassKind.ENUM_CLASS
-            || this.isEmptyBuiltin()
-        ) {
-          "(${position.line},${position.column}) Expected type to be a data class or builtin.Empty, but was ${
-            this.fqNameOrNull()?.asString()
-          }"
+        if (!(descriptor.isData || descriptor.kind == ClassKind.ENUM_CLASS || this.isEmptyBuiltin())) {
+          errors.add(
+            Error(
+              msg = "expected type to be a data class or builtin.Empty, but was ${this.fqNameOrNull()?.asString()}",
+              pos = position,
+              endColumn = position.column + tokenLength
+            )
+          )
+          return Type()
         }
 
         val refName = descriptor.name.asString()
         val fqName = this.fqNameOrNull()!!.asString()
         require(fqName.startsWith("ftl.")) {
-          "(${position.line},${position.column}) Expected module name to be in the form ftl.<module>, " +
-            "but was ${this.fqNameOrNull()?.asString()}"
+          Error(
+            msg = "expected module name to be in the form ftl.<module>, but was $fqName",
+            pos = position,
+            endColumn = position.column + tokenLength
+          )
         }
 
         // add all referenced types to the schema
@@ -669,10 +687,10 @@ class SchemaExtractor(
 
         Type(
           ref = Ref(
-            name = refName,
+            name = refName ?: "",
             module = fqName.extractModuleName(),
             pos = position,
-            typeParameters = this.arguments.map { it.type.toSchemaType(position) }.toList(),
+            typeParameters = this.arguments.map { it.type.toSchemaType(position, tokenLength) }.toList(),
           )
         )
       }
@@ -686,14 +704,37 @@ class SchemaExtractor(
     return schemaType
   }
 
-  private fun KtTypeReference.resolveType(): KotlinType =
-    bindingContext.get(BindingContext.TYPE, this)
-      ?: throw IllegalStateException("${this.getLineAndColumn()} Could not resolve type ${this.text}")
+  private fun KtTypeReference.resolveType(): KotlinType? {
+    val type = bindingContext.get(BindingContext.TYPE, this)
+    require(type != null) { this.errorAtPosition("could not resolve type ${this.text}") }
+    return type
+  }
+
+  private fun KotlinType.toClassDescriptor(): ClassDescriptor =
+    requireNotNull(this.unwrap().constructor.declarationDescriptor as? ClassDescriptor)
+
+  private fun require(condition: Boolean, error: () -> Error) {
+    try {
+      require(condition)
+    } catch (e: IllegalArgumentException) {
+      errors.add(error())
+    }
+  }
 
   companion object {
     private fun KtElement.getPosition() = this.getLineAndColumn().toPosition(this.containingFile.name)
 
     private fun PsiElement.getPosition() = this.getLineAndColumn().toPosition(this.containingFile.name)
+
+    private fun PsiElement.errorAtPosition(message: String): Error {
+      val pos = this.getPosition()
+      return Error(
+        msg = message,
+        pos = pos,
+        endColumn = pos.column + this.textLength
+      )
+    }
+
     private fun PsiElement.getLineAndColumn(): LineAndColumn =
       getLineAndColumnInPsiFile(this.containingFile, this.textRange)
 
@@ -707,10 +748,6 @@ class SchemaExtractor(
     private fun getCallMatcher(ctxVarName: String): Regex {
       return """${ctxVarName}\.call\((?<fn>[^,]+),\s*(?<req>[^,]+?)\s*[()]""".toRegex(RegexOption.IGNORE_CASE)
     }
-
-    private fun KotlinType.toClassDescriptor(): ClassDescriptor =
-      this.unwrap().constructor.declarationDescriptor as? ClassDescriptor
-        ?: throw IllegalStateException("Could not resolve KotlinType to class")
 
     fun KtElement.extractModuleName(): String {
       return this.containingKtFile.packageFqName.extractModuleName()
