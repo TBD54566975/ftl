@@ -57,15 +57,19 @@ func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
 
 	// Wait for the notification channel to be ready.
 	retry := backoff.Backoff{}
-	for {
-		_, err := conn.Exec(ctx, "LISTEN notify_events")
-		if err == nil {
-			break
+	channels := []string{"deployments_events", "topics_events", "topic_events_events"}
+	for _, channel := range channels {
+		for {
+			_, err := conn.Exec(ctx, "LISTEN "+channel)
+			if err == nil {
+				logger.Debugf("Listening to channel: %s", channel)
+				retry.Reset()
+				break
+			}
+			logger.Errorf(err, "Failed to LISTEN to %s", channel)
+			time.Sleep(retry.Duration())
 		}
-		logger.Errorf(err, "failed to LISTEN notify_events")
-		time.Sleep(retry.Duration())
 	}
-	retry.Reset()
 
 	// Main loop for listening to notifications.
 	for {
