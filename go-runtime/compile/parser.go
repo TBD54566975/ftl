@@ -76,11 +76,11 @@ func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]directive, 
 			// Adjust the Participle-reported position relative to the AST node.
 			var perr participle.Error
 			if errors.As(err, &perr) {
-				ppos := perr.Position()
+				ppos := schema.Position{}
 				ppos.Filename = pos.Filename
 				ppos.Column += pos.Column + 2
 				ppos.Line = pos.Line
-				err = participle.Errorf(ppos, "%s", perr.Message())
+				err = schema.Errorf(ppos, ppos.Column, "%s", perr.Message())
 			} else {
 				err = fmt.Errorf("%s: %w", pos, err)
 			}

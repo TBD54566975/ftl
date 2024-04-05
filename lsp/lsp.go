@@ -78,14 +78,17 @@ func (s *Server) post(err error) {
 	errByFilename := make(map[string]errSet)
 
 	// Deduplicate and associate by filename.
-	for _, subErr := range ftlErrors.UnwrapAll(err) {
-		var ce schema.Error
-		if errors.As(subErr, &ce) {
-			filename := ce.Pos.Filename
-			if _, exists := errByFilename[filename]; !exists {
-				errByFilename[filename] = make(errSet)
+	errs := ftlErrors.UnwrapAll(err)
+	for _, err := range errs {
+		if ftlErrors.Innermost(err) {
+			var ce schema.Error
+			if errors.As(err, &ce) {
+				filename := ce.Pos.Filename
+				if _, exists := errByFilename[filename]; !exists {
+					errByFilename[filename] = make(errSet)
+				}
+				errByFilename[filename][strings.TrimSpace(ce.Error())] = ce
 			}
-			errByFilename[filename][strings.TrimSpace(ce.Error())] = ce
 		}
 	}
 
@@ -101,7 +104,7 @@ func publishErrors(errByFilename map[string]errSet, s *Server) {
 			severity := protocol.DiagnosticSeverityError
 
 			// If the end column is not set, set it to the length of the word.
-			if e.EndColumn-1 == pp.Column {
+			if e.EndColumn <= pp.Column {
 				length, err := getLineOrWordLength(filename, pp.Line, pp.Column, false)
 				if err != nil {
 					s.logger.Errorf(err, "Failed to get line or word length")
