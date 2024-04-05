@@ -101,8 +101,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"3:13: ingress verb a: request type Empty must be builtin.HttpRequest",
-				"3:20: ingress verb a: response type Empty must be builtin.HttpRequest",
+				"3:13-13: ingress verb a: request type Empty must be builtin.HttpRequest",
+				"3:20-20: ingress verb a: response type Empty must be builtin.HttpRequest",
 			}},
 		{name: "IngressBodyTypes",
 			schema: `
@@ -130,12 +130,12 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"11:15: ingress verb any: request type HttpRequest<Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
-				"11:33: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
-				"14:31: ingress verb path: cannot use path parameter \"invalid\" with request type String, expected Data type",
-				"16:7: duplicate http ingress GET /path/{} for 17:6:\"pathFound\" and 15:6:\"pathMissing\"",
-				"16:31: ingress verb pathMissing: request type one.Path does not contain a field corresponding to the parameter \"missing\"",
-				"18:7: duplicate http ingress GET /path/{} for 13:6:\"path\" and 17:6:\"pathFound\"",
+				"11:15-15: ingress verb any: request type HttpRequest<Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
+				"11:33-33: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
+				"14:31-31: ingress verb path: cannot use path parameter \"invalid\" with request type String, expected Data type",
+				"16:31-31: ingress verb pathMissing: request type one.Path does not contain a field corresponding to the parameter \"missing\"",
+				"16:7-7: duplicate http ingress GET /path/{} for 17:6:\"pathFound\" and 15:6:\"pathMissing\"",
+				"18:7-7: duplicate http ingress GET /path/{} for 13:6:\"path\" and 17:6:\"pathFound\"",
 			}},
 		{name: "Array",
 			schema: `

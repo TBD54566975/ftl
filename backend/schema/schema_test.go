@@ -199,12 +199,12 @@ func TestParsing(t *testing.T) {
 		{name: "InvalidRequestRef",
 			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
 			errors: []string{
-				"1:25: unknown reference \"InvalidRequest\"",
-				"1:41: unknown reference \"InvalidResponse\""}},
+				"1:25-25: unknown reference \"InvalidRequest\"",
+				"1:41-41: unknown reference \"InvalidResponse\""}},
 		{name: "InvalidRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
-				"1:32: unknown reference \"user.User\""}},
+				"1:32-32: unknown reference \"user.User\""}},
 		{name: "InvalidMetadataSyntax",
 			input: `module test { data Data {} calls }`,
 			errors: []string{
@@ -214,12 +214,12 @@ func TestParsing(t *testing.T) {
 		{name: "InvalidDataMetadata",
 			input: `module test { data Data {} +calls verb }`,
 			errors: []string{
-				"1:28: metadata \"+calls verb\" is not valid on data structures",
-				"1:35: unknown reference \"verb\"",
+				"1:28-28: metadata \"+calls verb\" is not valid on data structures",
+				"1:35-35: unknown reference \"verb\"",
 			}},
 		{name: "KeywordAsName",
 			input:  `module int { data String { name String } verb verb(String) String }`,
-			errors: []string{"1:14: data structure name \"String\" is a reserved word"}},
+			errors: []string{"1:14-14: data structure name \"String\" is a reserved word"}},
 		{name: "BuiltinRef",
 			input: `module test { verb myIngress(HttpRequest<String>) HttpResponse<String, String> }`,
 			expected: &Schema{

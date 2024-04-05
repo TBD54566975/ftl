@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
-	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/alecthomas/types/optional"
 	xreflect "golang.design/x/reflect"
 	"golang.org/x/exp/maps"
@@ -438,7 +437,7 @@ func dfsForDependencyCycle(imports map[string][]string, vertexStates map[depende
 }
 
 func errorf(pos interface{ Position() Position }, format string, args ...interface{}) error {
-	return participle.Errorf(lexer.Position(pos.Position()), format, args...)
+	return Errorf(pos.Position(), pos.Position().Column, format, args...)
 }
 
 func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {

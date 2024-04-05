@@ -59,6 +59,15 @@ func errorf(node ast.Node, format string, args ...interface{}) schema.Error {
 	return schema.Errorf(pos, endCol, format, args...)
 }
 
+func tokenWrapf(pos token.Pos, tokenText string, err error, format string, args ...interface{}) schema.Error {
+	goPos := goPosToSchemaPos(pos)
+	endColumn := goPos.Column
+	if len(tokenText) > 0 {
+		endColumn += utf8.RuneCountInString(tokenText)
+	}
+	return schema.Wrapf(goPos, endColumn, err, format, args...)
+}
+
 func wrapf(node ast.Node, err error, format string, args ...interface{}) schema.Error {
 	pos, endCol := goNodePosToSchemaPos(node)
 	return schema.Wrapf(pos, endCol, err, format, args...)
@@ -554,7 +563,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 			arg := named.TypeArgs().At(i)
 			typeArg, err := visitType(pctx, pos, arg)
 			if err != nil {
-				return nil, tokenErrorf(pos, arg.String(), "type parameter %s: %v", arg.String(), err)
+				return nil, tokenWrapf(pos, arg.String(), err, "type parameter %s", arg.String())
 			}
 
 			// Fully qualify the Ref if needed
@@ -587,7 +596,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 		})
 		typeArg, err := visitType(pctx, pos, named.TypeArgs().At(i))
 		if err != nil {
-			return nil, tokenErrorf(pos, param.Obj().Name(), "type parameter %s: %v", param.Obj().Name(), err)
+			return nil, tokenWrapf(pos, param.Obj().Name(), err, "type parameter %s", param.Obj().Name())
 		}
 		dataRef.TypeParameters = append(dataRef.TypeParameters, typeArg)
 	}
@@ -627,7 +636,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) (*schema.R
 		f := s.Field(i)
 		ft, err := visitType(pctx, f.Pos(), f.Type())
 		if err != nil {
-			return nil, tokenErrorf(f.Pos(), f.Name(), "field %s: %v", f.Name(), err)
+			return nil, tokenWrapf(f.Pos(), f.Name(), err, "field %s", f.Name())
 		}
 
 		// Check if field is exported
@@ -771,10 +780,10 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type
 		if underlying.String() == "any" {
 			return &schema.Any{Pos: goPosToSchemaPos(pos)}, nil
 		}
-		return nil, tokenErrorf(pos, tnode.String(), "unsupported type %q", tnode)
+		return nil, tokenErrorf(pos, "", "unsupported type %q", tnode)
 
 	default:
-		return nil, tokenErrorf(pos, tnode.String(), "unsupported type %T", tnode)
+		return nil, tokenErrorf(pos, "", "unsupported type %q", tnode)
 	}
 }
 
