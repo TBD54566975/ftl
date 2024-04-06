@@ -114,17 +114,32 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Console NPM Install
-        working-directory: frontend
-        run: npm install
-      - name: Console Type Check
-        working-directory: frontend
-        run: tsc
+        run: just npm-install
       - name: Console Lint
         working-directory: frontend
         run: npm run lint
+      - name: Console Build
+        run: just build-frontend
       - name: Console Test
         working-directory: frontend
         run: npm run test
+  extension:
+    name: VSCode Extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: VSCode Extension NPM Install
+        run: just npm-install
+      - name: VSCode Extension Lint
+        working-directory: extensions/vscode
+        run: npm run lint
+      - name: VSCode Extension NPM Build
+        run: just build-extension
   integration:
     name: Integration Tests
     if: github.ref == 'refs/heads/main'
