@@ -29,6 +29,14 @@ func TestDAL(t *testing.T) {
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
 
+	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
+	deploymentChanges := []DeploymentNotification{}
+	go func() {
+		for change := range deploymentChangesCh {
+			deploymentChanges = append(deploymentChanges, change)
+		}
+	}()
+
 	t.Run("UpsertModule", func(t *testing.T) {
 		err = dal.UpsertModule(ctx, "go", "test")
 		assert.NoError(t, err)
@@ -335,6 +343,15 @@ func TestDAL(t *testing.T) {
 	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
 		err = dal.DeregisterRunner(ctx, model.NewRunnerKey("localhost", "8080"))
 		assert.IsError(t, err, ErrNotFound)
+	})
+
+	t.Run("VerifyDeploymentNotifications", func(t *testing.T) {
+		expectedDeploymentChanges := []DeploymentNotification{
+			{Message: optional.Some(Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},
+			{Message: optional.Some(Deployment{Language: "go", Module: "test", MinReplicas: 1, Schema: &schema.Module{Name: "test"}})},
+		}
+		assert.Equal(t, expectedDeploymentChanges, deploymentChanges,
+			assert.Exclude[model.DeploymentKey](), assert.Exclude[time.Time](), assert.IgnoreGoStringer())
 	})
 }
 

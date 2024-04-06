@@ -51,6 +51,7 @@ type event struct {
 }
 
 func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {
+	defer conn.Close(ctx)
 	logger := log.FromContext(ctx)
 
 	logger.Debugf("Starting DB listener")
