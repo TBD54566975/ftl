@@ -29,6 +29,10 @@
 			"name": "CLI"
 		},
 		{
+			"path": "extensions/vscode",
+			"name": "VSCode Extension"
+		},
+		{
 			"path": "."
 		}
 	],
@@ -46,6 +50,7 @@
 			"**/go.work.sum": true,
 			".hermit": true,
 			"**/*.zip": true,
+			"**/*.map": true,
 		}
 	}
 }

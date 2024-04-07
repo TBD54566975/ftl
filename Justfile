@@ -10,6 +10,7 @@ TIMESTAMP := `date +%s`
 SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/scaffolding kotlin-runtime/scaffolding kotlin-runtime/external-module-template"
 FRONTEND_OUT := "frontend/dist/index.html"
+EXTENSION_OUT := "extensions/vscode/dist/extension.js"
 PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go frontend/src/protos/xyz/block/ftl/v1/console/console_pb.ts frontend/src/protos/xyz/block/ftl/v1/ftl_pb.ts frontend/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts frontend/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
 
@@ -62,6 +63,16 @@ build-zips: build-kt-runtime
 build-frontend: npm-install
   @mk {{FRONTEND_OUT}} : frontend/src -- "cd frontend && npm run build"
 
+# Rebuild VSCode extension
+build-extension: npm-install
+  @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && npm run compile" 
+
+package-extension: build-extension
+  @cd extensions/vscode && vsce package
+
+publish-extension: package-extension
+  @cd extensions/vscode && vsce publish
+
 # Build the Kotlin runtime (if necessary)
 build-kt-runtime:
   @mk {{KT_RUNTIME_OUT}} : kotlin-runtime/ftl-runtime -- mvn -f kotlin-runtime/ftl-runtime -Dmaven.test.skip=true -B install
@@ -71,6 +82,7 @@ build-kt-runtime:
 # Install Node dependencies
 npm-install:
   @mk frontend/node_modules : frontend/package.json frontend/src -- "cd frontend && npm install"
+  @mk extensions/vscode/node_modules : extensions/vscode/package.json extensions/vscode/src -- "cd extensions/vscode && npm install"
 
 # Regenerate protos
 build-protos: npm-install
