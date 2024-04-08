@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"golang.design/x/reflect"
+	"github.com/TBD54566975/ftl/internal/reflect"
 
 	"github.com/TBD54566975/ftl/common/moduleconfig"
 )
