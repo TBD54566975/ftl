@@ -76,7 +76,7 @@
     "@typescript-eslint/parser": "^7.5.0",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
-    "eslint": "^8.57.0",
+    "eslint": "^9.0.0",
     "ts-loader": "^9.5.1",
     "typescript": "^5.3.3",
     "webpack": "^5.90.3",
