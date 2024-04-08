@@ -1,6 +1,7 @@
 package cron
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,13 +32,15 @@ func TestParsingAndValidationErrors(t *testing.T) {
 		{"* * * * * * 1999", "could not find next time for pattern \"* * * * * * 1999\""},
 		{"* * * 29 2 * 2021", "could not find next time for pattern \"* * * 29 2 * 2021\""},
 	} {
-		pattern, err := Parse(tt.str)
-		if err != nil {
-			assert.EqualError(t, err, tt.err, "Parse(%q)")
-			continue
-		}
-		err = Validate(pattern)
-		assert.EqualError(t, err, tt.err, "Validate(%q)")
+		t.Run(fmt.Sprintf("CronValidation:%s", tt.str), func(t *testing.T) {
+			pattern, err := Parse(tt.str)
+			if err != nil {
+				assert.EqualError(t, err, tt.err, "Parse(%q)", tt.str)
+				return
+			}
+			err = Validate(pattern)
+			assert.EqualError(t, err, tt.err, "Validate(%q)", tt.str)
+		})
 	}
 }
 
@@ -91,34 +94,40 @@ func TestNext(t *testing.T) {
 				time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
 			},
 		}},
-		// 6 components, should be treates as year
+		// 6 components, should be treated as "every 10 seconds:
 		{"*/10 * * * * *", [][]time.Time{
 			{
 				time.Date(2020, 1, 1, 0, 0, 17, 0, time.UTC),
 				time.Date(2020, 1, 1, 0, 0, 20, 0, time.UTC),
 			},
 		}},
-		// 6 components, should be treates as year
+		// 6 components, should be treated as "every 10 minutes, every second year"
 		{"*/10 * * * * 2022/2", [][]time.Time{
 			{
 				time.Date(2023, 6, 9, 18, 12, 2, 300, time.UTC),
 				time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
+			{
+				time.Date(2024, 6, 9, 18, 12, 2, 300, time.UTC),
+				time.Date(2024, 6, 9, 18, 20, 0, 0, time.UTC),
+			},
 		}},
 	} {
-		pattern, err := Parse(tt.str)
-		assert.NoError(t, err)
-		for _, inputAndOutput := range tt.inputsAndOutputs {
-			input := inputAndOutput[0]
-			output := inputAndOutput[1]
-			next, err := NextAfter(pattern, input, false)
+		t.Run(fmt.Sprintf("CronSeries:%s", tt.str), func(t *testing.T) {
+			pattern, err := Parse(tt.str)
 			assert.NoError(t, err)
-			assert.Equal(t, output, next, "NextAfter(%q, %v) = %v; want %v", tt.str, input, next, output)
+			for _, inputAndOutput := range tt.inputsAndOutputs {
+				input := inputAndOutput[0]
+				output := inputAndOutput[1]
+				next, err := NextAfter(pattern, input, false)
+				assert.NoError(t, err)
+				assert.Equal(t, output, next, "NextAfter(%q, %v) = %v; want %v", tt.str, input, next, output)
 
-			outputAsInput, err := NextAfter(pattern, output, true)
-			assert.NoError(t, err)
-			assert.Equal(t, outputAsInput, output, "output of Next() should also satisfy NextAfter() with inclusive=true")
-		}
+				outputAsInput, err := NextAfter(pattern, output, true)
+				assert.NoError(t, err)
+				assert.Equal(t, outputAsInput, output, "output of Next() should also satisfy NextAfter() with inclusive=true")
+			}
+		})
 	}
 }
 
@@ -202,20 +211,22 @@ func TestSeries(t *testing.T) {
 			31,
 		},
 	} {
-		pattern, err := Parse(tt.str)
-		assert.NoError(t, err)
-
-		value, err := NextAfter(pattern, tt.input, false)
-		assert.NoError(t, err)
-
-		count := 0
-		for !value.After(tt.end) {
-			count++
-
-			value, err = NextAfter(pattern, value, false)
+		t.Run(fmt.Sprintf("CronSeries:%s", tt.str), func(t *testing.T) {
+			pattern, err := Parse(tt.str)
 			assert.NoError(t, err)
-		}
 
-		assert.Equal(t, tt.expectedCount, count, "Count of %q between %v - %v) = %v; want %v", tt.str, tt.input, tt.end, count, tt.expectedCount)
+			value, err := NextAfter(pattern, tt.input, false)
+			assert.NoError(t, err)
+
+			count := 0
+			for !value.After(tt.end) {
+				count++
+
+				value, err = NextAfter(pattern, value, false)
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedCount, count, "Count of %q between %v - %v) = %v; want %v", tt.str, tt.input, tt.end, count, tt.expectedCount)
+		})
 	}
 }
