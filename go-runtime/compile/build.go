@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/scaffolder"
-	"golang.design/x/reflect"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"

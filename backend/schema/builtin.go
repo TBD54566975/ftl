@@ -1,6 +1,6 @@
 package schema
 
-import "golang.design/x/reflect"
+import "github.com/TBD54566975/ftl/internal/reflect"
 
 // BuiltinsSource is the schema source code for built-in types.
 const BuiltinsSource = `

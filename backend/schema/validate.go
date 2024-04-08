@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
+	dc "github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/optional"
-	xreflect "golang.design/x/reflect"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/internal/errors"
@@ -47,7 +47,7 @@ func MustValidate(schema *Schema) *Schema {
 
 // Validate clones, normalises and semantically valies a schema.
 func Validate(schema *Schema) (*Schema, error) {
-	schema = xreflect.DeepCopy(schema)
+	schema = dc.DeepCopy(schema)
 	modules := map[string]bool{}
 	merr := []error{}
 	ingress := map[string]*Verb{}

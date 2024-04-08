@@ -104,6 +104,8 @@ linters-settings:
             desc: "use fmt.Errorf or errors.New"
           - pkg: os/exec
             desc: "use github.com/TBD54566975/ftl/internal/exec"
+          - pkg: golang.design/x/reflect
+            desc: "use github.com/TBD54566975/ftl/internal/reflect"
   # wrapcheck:
   #   ignorePackageGlobs:
   #     - github.com/TBD54566975/ftl/*
