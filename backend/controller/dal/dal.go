@@ -741,6 +741,26 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 	})
 }
 
+func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]Deployment, error) {
+	rows, err := d.db.GetDeploymentsWithMinReplicas(ctx)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, nil
+		}
+		return nil, translatePGError(err)
+	}
+	return slices.MapErr(rows, func(in sql.GetDeploymentsWithMinReplicasRow) (Deployment, error) {
+		return Deployment{
+			Key:         in.Deployment.Key,
+			Module:      in.ModuleName,
+			Language:    in.Language,
+			MinReplicas: int(in.Deployment.MinReplicas),
+			Schema:      in.Deployment.Schema,
+			CreatedAt:   in.Deployment.CreatedAt,
+		}, nil
+	})
+}
+
 func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module, error) {
 	rows, err := d.db.GetActiveDeploymentSchemas(ctx)
 	if err != nil {

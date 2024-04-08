@@ -41,7 +41,7 @@ func (*ConsoleService) Ping(context.Context, *connect.Request[ftlv1.PingRequest]
 }
 
 func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pbconsole.GetModulesRequest]) (*connect.Response[pbconsole.GetModulesResponse], error) {
-	deployments, err := c.dal.GetActiveDeployments(ctx)
+	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -594,6 +594,50 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 	return items, nil
 }
 
+const getDeploymentsWithMinReplicas = `-- name: GetDeploymentsWithMinReplicas :many
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
+FROM deployments d
+  INNER JOIN modules m on d.module_id = m.id
+WHERE min_replicas > 0
+ORDER BY d.key
+`
+
+type GetDeploymentsWithMinReplicasRow struct {
+	Deployment Deployment
+	ModuleName string
+	Language   string
+}
+
+func (q *Queries) GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error) {
+	rows, err := q.db.Query(ctx, getDeploymentsWithMinReplicas)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDeploymentsWithMinReplicasRow
+	for rows.Next() {
+		var i GetDeploymentsWithMinReplicasRow
+		if err := rows.Scan(
+			&i.Deployment.ID,
+			&i.Deployment.CreatedAt,
+			&i.Deployment.ModuleID,
+			&i.Deployment.Key,
+			&i.Deployment.Schema,
+			&i.Deployment.Labels,
+			&i.Deployment.MinReplicas,
+			&i.ModuleName,
+			&i.Language,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getExistingDeploymentForModule = `-- name: GetExistingDeploymentForModule :one
 SELECT d.id, created_at, module_id, key, schema, labels, min_replicas, m.id, language, name
 FROM deployments d

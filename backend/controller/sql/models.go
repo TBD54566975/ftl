@@ -271,6 +271,7 @@ type Runner struct {
 
 type Topic struct {
 	ID        int64
+	Key       interface{}
 	CreatedAt time.Time
 	ModuleID  int64
 	Name      string
@@ -286,6 +287,7 @@ type TopicEvent struct {
 
 type TopicSubscriber struct {
 	ID                   int64
+	Key                  interface{}
 	CreatedAt            time.Time
 	TopicSubscriptionsID int64
 	DeploymentID         int64
@@ -294,6 +296,7 @@ type TopicSubscriber struct {
 
 type TopicSubscription struct {
 	ID        int64
+	Key       interface{}
 	CreatedAt time.Time
 	TopicID   int64
 	Name      string
