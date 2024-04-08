@@ -37,7 +37,7 @@ func TestMarshal(t *testing.T) {
 		{name: "UnitField", input: struct {
 			String string
 			Unit   ftl.Unit
-		}{String: "something", Unit: ftl.Unit{}}, expected: `{"string":"something"}`},
+		}{String: "something", Unit: ftl.Unit{}}, expected: `{"string":"something","unit":{}}`},
 	}
 
 	for _, tt := range tests {

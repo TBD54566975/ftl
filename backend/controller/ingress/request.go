@@ -291,8 +291,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 
 		var field *schema.Field
 		for _, f := range data.Fields {
-			jsonAlias := f.Alias(schema.AliasKindJSON)
-			if (jsonAlias != "" && jsonAlias == key) || f.Name == key {
+			if jsonAlias, ok := f.Alias(schema.AliasKindJSON).Get(); (ok && jsonAlias == key) || f.Name == key {
 				field = f
 			}
 			for _, typeParam := range data.TypeParameters {
