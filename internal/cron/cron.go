@@ -383,35 +383,36 @@ func validateComponent(component Component, t componentType) error {
 		if step.ValueRange.IsFullRange && (step.ValueRange.Start != nil || step.ValueRange.End != nil) {
 			return fmt.Errorf("range can not have start/end if it is a full range")
 		}
-		if !step.ValueRange.IsFullRange {
-			min, max := rangeForComponentType(t)
+		min, max := rangeForComponentType(t)
 
-			if step.ValueRange.Start == nil {
-				return fmt.Errorf("missing value in %s", stringForComponentType(t))
+		if step.Step != nil {
+			if *step.Step <= 0 {
+				return fmt.Errorf("step must be positive")
 			}
-			if *step.ValueRange.Start < min || *step.ValueRange.Start > max {
-				return fmt.Errorf("value %d out of allowed %s range of %d-%d", *step.ValueRange.Start, stringForComponentType(t), min, max)
+			if *step.Step > max-min {
+				return fmt.Errorf("step %d is larger than allowed range of %d-%d", *step.Step, max, min)
 			}
-			if step.ValueRange.End != nil {
-				if *step.ValueRange.End < min || *step.ValueRange.End > max {
-					return fmt.Errorf("value %d out of allowed %s range of %d-%d", *step.ValueRange.End, stringForComponentType(t), min, max)
-				}
-				if *step.ValueRange.End < *step.ValueRange.Start {
-					return fmt.Errorf("range end %d is less than start %d", *step.ValueRange.End, *step.ValueRange.Start)
-				}
+			if t == year && step.ValueRange.IsFullRange {
+				// This may be supported in other cron implementations, but will require more research as to the correct behavior
+				return fmt.Errorf("asterix with a step value is not allowed for year component")
 			}
+		}
 
-			if step.Step != nil {
-				if *step.Step <= 0 {
-					return fmt.Errorf("step must be positive")
-				}
-				if *step.Step > max-min {
-					return fmt.Errorf("step %d is larger than allowed range of %d-%d", *step.Step, max, min)
-				}
-				if t == year && step.ValueRange.IsFullRange {
-					// This may be supported in other cron implementations, but will require more research as to the correct behavior
-					return fmt.Errorf("asterix with a step value is not allowed for year component")
-				}
+		if step.ValueRange.IsFullRange {
+			continue
+		}
+		if step.ValueRange.Start == nil {
+			return fmt.Errorf("missing value in %s", stringForComponentType(t))
+		}
+		if *step.ValueRange.Start < min || *step.ValueRange.Start > max {
+			return fmt.Errorf("value %d out of allowed %s range of %d-%d", *step.ValueRange.Start, stringForComponentType(t), min, max)
+		}
+		if step.ValueRange.End != nil {
+			if *step.ValueRange.End < min || *step.ValueRange.End > max {
+				return fmt.Errorf("value %d out of allowed %s range of %d-%d", *step.ValueRange.End, stringForComponentType(t), min, max)
+			}
+			if *step.ValueRange.End < *step.ValueRange.Start {
+				return fmt.Errorf("range end %d is less than start %d", *step.ValueRange.End, *step.ValueRange.Start)
 			}
 		}
 	}
