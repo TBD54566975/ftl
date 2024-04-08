@@ -3,7 +3,7 @@
 **/build
 **/.gradle
 **/.idea
-**/.vscode
+/.vscode
 !.vscode/tasks.json
 **/*.sw*
 frontend/dist
