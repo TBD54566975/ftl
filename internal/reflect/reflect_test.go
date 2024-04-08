@@ -72,11 +72,13 @@ func TestCopyStructOfPointers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := DeepCopy(tt.input)
 			testEqualityOfStruct(t, &tt.input, &output)
+			// #nosec G601
 		})
 	}
 }
 
 func testEqualityOfStruct(t *testing.T, expected, actual *structOfPointers) {
+	t.Helper()
 	if expected == nil || actual == nil {
 		if expected != actual {
 			t.Errorf("struct point does not match nil struct pointer. expected %v, got %v", expected, actual)
@@ -90,6 +92,7 @@ func testEqualityOfStruct(t *testing.T, expected, actual *structOfPointers) {
 }
 
 func testEqualityOfInt(t *testing.T, expected, actual *int) {
+	t.Helper()
 	if expected == nil || actual == nil {
 		if expected != actual {
 			t.Errorf("int point does not match nil int pointer. expected %v, got %v", expected, actual)
@@ -99,6 +102,7 @@ func testEqualityOfInt(t *testing.T, expected, actual *int) {
 }
 
 func testEqualityOfFloat64(t *testing.T, expected, actual *float64) {
+	t.Helper()
 	if expected == nil || actual == nil {
 		if expected != actual {
 			t.Errorf("float point does not match nil float pointer. expected %v, got %v", expected, actual)
