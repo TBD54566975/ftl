@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 var (
