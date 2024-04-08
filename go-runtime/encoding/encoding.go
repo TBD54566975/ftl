@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 )
@@ -113,16 +112,21 @@ func encodeStruct(v reflect.Value, w *bytes.Buffer) error {
 	afterFirst := false
 	for i := range v.NumField() {
 		ft := v.Type().Field(i)
-		t := ft.Type
 		fv := v.Field(i)
-		// Types that can be skipped if they're zero.
-		if (t.Kind() == reflect.Slice && fv.Len() == 0) ||
-			(t.Kind() == reflect.Map && fv.Len() == 0) ||
-			(t.String() == "ftl.Unit" && fv.IsZero()) ||
-			(strings.HasPrefix(t.String(), "ftl.Option[") && fv.IsZero()) ||
-			(t == reflect.TypeOf((*any)(nil)).Elem() && fv.IsZero()) {
-			continue
-		}
+		// TODO: If these fields are skipped, the ingress encoder will not include
+		// them in the output. There should ideally be no relationship between
+		// the ingress encoder and the encoding package, but for now this is the
+		// simplest solution.
+
+		// t := ft.Type
+		// // Types that can be skipped if they're zero.
+		// if (t.Kind() == reflect.Slice && fv.Len() == 0) ||
+		// 	(t.Kind() == reflect.Map && fv.Len() == 0) ||
+		// 	(t.String() == "ftl.Unit" && fv.IsZero()) ||
+		// 	(strings.HasPrefix(t.String(), "ftl.Option[") && fv.IsZero()) ||
+		// 	(t == reflect.TypeOf((*any)(nil)).Elem() && fv.IsZero()) {
+		// 	continue
+		// }
 		if afterFirst {
 			w.WriteRune(',')
 		}

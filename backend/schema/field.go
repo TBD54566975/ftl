@@ -6,6 +6,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/alecthomas/types/optional"
+
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
@@ -49,14 +51,14 @@ func (f *Field) ToProto() proto.Message {
 	}
 }
 
-// Alias returns the alias for the given kind, or "" if not found.
-func (f *Field) Alias(kind AliasKind) string {
+// Alias returns the alias for the given kind.
+func (f *Field) Alias(kind AliasKind) optional.Option[string] {
 	for _, md := range f.Metadata {
 		if a, ok := md.(*MetadataAlias); ok && a.Kind == kind {
-			return a.Alias
+			return optional.Some(a.Alias)
 		}
 	}
-	return ""
+	return optional.None[string]()
 }
 
 func fieldListToSchema(s []*schemapb.Field) []*Field {
