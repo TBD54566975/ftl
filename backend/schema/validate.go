@@ -9,12 +9,12 @@ import (
 	"sort"
 	"strings"
 
-	dc "github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/internal/errors"
+	dc "github.com/TBD54566975/ftl/internal/reflect"
 )
 
 var (

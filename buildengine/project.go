@@ -5,9 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/TBD54566975/ftl/internal/reflect"
-
 	"github.com/TBD54566975/ftl/common/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/reflect"
 )
 
 // Project models FTL modules and external libraries and is used to manage dependencies within the build engine

@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/scaffolder"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/sync/errgroup"
@@ -24,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/reflect"
 )
 
 type ExternalModuleContext struct {
