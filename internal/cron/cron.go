@@ -55,7 +55,7 @@ func Next(pattern Pattern, allowCurrentTime bool) (time.Time, error) {
 	return NextAfter(pattern, time.Now().UTC(), allowCurrentTime)
 }
 
-// Next calculcates the next time that matches the pattern after the origin time
+// NextAfter calculcates the next time that matches the pattern after the origin time
 // If inclusive is true, the origin time is considered a valid match
 // All calculations are done in UTC, and the result is returned in UTC
 func NextAfter(pattern Pattern, origin time.Time, inclusive bool) (time.Time, error) {
@@ -110,8 +110,8 @@ func NextAfter(pattern Pattern, origin time.Time, inclusive bool) (time.Time, er
 		couldNotFindValueForIdx := -1
 		for ii := i + 1; ii < len(processingOrder); ii++ {
 			tt := processingOrder[ii]
-			first, error := firstValueForComponents(components, values, tt)
-			if error != nil {
+			first, err := firstValueForComponents(components, values, tt)
+			if err != nil {
 				couldNotFindValueForIdx = ii
 				break
 			}
@@ -271,7 +271,7 @@ func nextValueForStep(step Step, values componentValues, t componentType) (int, 
 	start, end, incr := rangeParametersForStep(step, t)
 
 	current := values[t]
-	next := -1
+	var next int
 	if current < start {
 		next = start
 	} else {
@@ -326,10 +326,9 @@ func nextValueForDayOfStandardizedWeekStep(step Step, values componentValues, t 
 	currentDate := time.Date(values[year], time.Month(values[month]), valueForCurrentWeekday, 0, 0, 0, 0, time.UTC)
 	currentWeekday := int(currentDate.Weekday())
 
-	startOfWeekInMonth := valueForCurrentWeekday - currentWeekday //Sunday
+	startOfWeekInMonth := valueForCurrentWeekday - currentWeekday // Sunday
 
-	nextDayOfWeek := -1
-
+	var nextDayOfWeek int
 	// try current week
 	if currentWeekday < start {
 		nextDayOfWeek = start
@@ -343,7 +342,6 @@ func nextValueForDayOfStandardizedWeekStep(step Step, values componentValues, t 
 	}
 
 	next := startOfWeekInMonth + nextDayOfWeek
-
 	date := time.Date(values[year], time.Month(values[month]), next, 0, 0, 0, 0, time.UTC)
 	if date.Day() != next {
 		// This month does not not have this day in this particular year (eg Feb 30th)
@@ -370,7 +368,7 @@ func timeFromValues(values componentValues) time.Time {
 		time.UTC)
 }
 
-// Validite makes sure that a pattern has no mistakes in the cron format, and that there is a valid next value from a set point in time
+// Validate makes sure that a pattern has no mistakes in the cron format, and that there is a valid next value from a set point in time
 // Validity checks are done while calculating a next date to ensure that we never calculate a next date for an invalid pattern
 func Validate(pattern Pattern) error {
 	_, err := NextAfter(pattern, time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), true)

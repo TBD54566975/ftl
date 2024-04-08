@@ -210,7 +210,7 @@ func TestSeries(t *testing.T) {
 
 		count := 0
 		for !value.After(tt.end) {
-			count += 1
+			count++
 
 			value, err = NextAfter(pattern, value, false)
 			assert.NoError(t, err)
