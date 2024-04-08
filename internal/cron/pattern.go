@@ -34,7 +34,7 @@ var (
 )
 
 type Pattern struct {
-	Components []Component `parser:"@@ @@ @@ @@ @@ @@? @@?"`
+	Components []Component `parser:"@@*"`
 }
 
 func (p Pattern) String() string {

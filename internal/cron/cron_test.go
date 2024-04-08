@@ -19,11 +19,11 @@ func TestParsingAndValidationErrors(t *testing.T) {
 		str string
 		err string
 	}{
-		{"* * * *", "1:8: unexpected token \"<EOF>\" (expected Component Component? Component?)"},
-		{"* * * * * * * *", "1:15: unexpected token \"*\""},
+		{"* * * *", "expected 5-7 components, got 4"},
+		{"* * * * * * * *", "expected 5-7 components, got 8"},
 		{"1-10,4-5/1,59-61 * * * *", "value 61 out of allowed minute range of 0-59"},
 		{"4-5 * * 13 *", "value 13 out of allowed month range of 1-12"},
-		{"4-5 * * -1 *", "1:9: unexpected token \"-\" (expected Component Component Component? Component?)"},
+		{"4-5 * * -1 *", "1:9: unexpected token \"-\""},
 		{"4-5 * * 0 *", "value 0 out of allowed month range of 1-12"},
 		{"* * * * * 9999", "value 9999 out of allowed year range of 0-3000"},
 		{"* * 30 2 *", "could not find next time for pattern \"* * 30 2 *\""},
