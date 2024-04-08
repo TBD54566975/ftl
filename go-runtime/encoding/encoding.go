@@ -141,10 +141,8 @@ func encodeStruct(v reflect.Value, w *bytes.Buffer) error {
 }
 
 func encodeBytes(v reflect.Value, w *bytes.Buffer) error {
-	w.WriteRune('"')
 	data := base64.StdEncoding.EncodeToString(v.Bytes())
-	w.WriteString(data)
-	w.WriteRune('"')
+	fmt.Fprintf(w, "%q", data)
 	return nil
 }
 
@@ -199,9 +197,7 @@ func encodeFloat(v reflect.Value, w *bytes.Buffer) error {
 }
 
 func encodeString(v reflect.Value, w *bytes.Buffer) error {
-	w.WriteRune('"')
-	fmt.Fprintf(w, "%s", v.String())
-	w.WriteRune('"')
+	fmt.Fprintf(w, "%q", v.String())
 	return nil
 }
 
