@@ -74,7 +74,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		if err != nil {
 			return err
 		}
-		return engine.Dev(ctx, d.Watch)
+		return engine.Dev(ctx, d.Watch, projConfig.Commands)
 	})
 
 	return g.Wait()

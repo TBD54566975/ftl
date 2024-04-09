@@ -27,6 +27,14 @@ func TestMerge(t *testing.T) {
 				},
 			},
 		},
+		ModuleDirs:   []string{"a/b/c"},
+		ExternalDirs: []string{"e/f"},
+		Executables: Executables{
+			FTL: "ftl",
+		},
+		Commands: Commands{
+			Startup: []string{"echo 'Before'"},
+		},
 	}
 	b := Config{
 		Global: ConfigAndSecrets{
@@ -50,6 +58,14 @@ func TestMerge(t *testing.T) {
 					"key8": MustParseURL("inline://qux8"),
 				},
 			},
+		},
+		ModuleDirs:   []string{"d"},
+		ExternalDirs: []string{"g/h"},
+		Executables: Executables{
+			FTL: "./bin/ftl",
+		},
+		Commands: Commands{
+			Startup: []string{"echo 'After'"},
 		},
 	}
 	a = merge(a, b)
@@ -76,6 +92,14 @@ func TestMerge(t *testing.T) {
 					"key10": MustParseURL("inline://qux10"),
 				},
 			},
+		},
+		ModuleDirs:   []string{"d"},
+		ExternalDirs: []string{"g/h"},
+		Executables: Executables{
+			FTL: "./bin/ftl",
+		},
+		Commands: Commands{
+			Startup: []string{"echo 'After'"},
 		},
 	}
 	assert.Equal(t, expected, a)
