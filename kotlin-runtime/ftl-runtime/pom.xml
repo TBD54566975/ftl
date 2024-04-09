@@ -55,9 +55,9 @@
         <java.version>17</java.version>
         <kotlin.version>1.9.23</kotlin.version>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
-        <wire.version>4.9.8</wire.version>
-        <grpc.version>1.62.2</grpc.version>
-        <logback.version>1.5.3</logback.version>
+        <wire.version>4.9.9</wire.version>
+        <grpc.version>1.63.0</grpc.version>
+        <logback.version>1.5.4</logback.version>
         <junit.version>5.10.2</junit.version>
         <logstash.version>7.4</logstash.version>
     </properties>
@@ -90,7 +90,7 @@
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.168</version>
+            <version>4.8.170</version>
         </dependency>
 
         <!-- Gson -->
@@ -422,7 +422,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
-                        <version>3.3.0</version>
+                        <version>3.3.1</version>
                         <executions>
                             <execution>
                                 <id>attach-sources</id>
