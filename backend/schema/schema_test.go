@@ -47,6 +47,10 @@ module todo {
 
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{name}
+
+  verb scheduled(Unit) Unit
+      +cron */10 * * 1-10,11-31 * * *
+
 }
 
 module foo {
@@ -136,6 +140,10 @@ Module
       IngressPathLiteral
       IngressPathLiteral
       IngressPathParameter
+  Verb
+    Unit
+    Unit
+    MetadataCronJob
 `
 	actual := &strings.Builder{}
 	i := 0
@@ -389,6 +397,8 @@ module todo {
   	+calls todo.destroy +database calls todo.testdb
   verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
   	+ingress http GET /todo/destroy/{name}
+  verb scheduled(Unit) Unit
+    +cron */10 * * 1-10,11-31 * * *
 }
 `
 	actual, err := ParseModuleString("", input)
@@ -481,6 +491,15 @@ var testSchema = MustValidate(&Schema{
 								&IngressPathLiteral{Text: "destroy"},
 								&IngressPathParameter{Name: "name"},
 							},
+						},
+					},
+				},
+				&Verb{Name: "scheduled",
+					Request:  &Unit{Unit: true},
+					Response: &Unit{Unit: true},
+					Metadata: []Metadata{
+						&MetadataCronJob{
+							Cron: "*/10 * * 1-10,11-31 * * *",
 						},
 					},
 				},

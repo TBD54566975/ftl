@@ -54,7 +54,7 @@ func (d *directiveIngress) String() string {
 type directiveCronJob struct {
 	Pos schema.Position
 
-	Cron string `parser:"'cron' Whitespace @((Whitespace | Number | Punct)+)"`
+	Cron string `parser:"'cron' Whitespace @((' ' | Number | '-' | '/' | '*' | ',')+)"`
 }
 
 func (*directiveCronJob) directive() {}

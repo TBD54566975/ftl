@@ -146,6 +146,18 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 		},
+		{name: "DoubleCron",
+			schema: `
+				module one {
+					verb cronjob(Unit) Unit
+						+cron * */2 0-23/2,4-5 * * * *
+						+cron * * * * * * *
+				}
+			`,
+			errs: []string{
+				"5:7-7: only a single cron schedule is allowed per verb",
+			},
+		},
 	}
 
 	for _, test := range tests {
