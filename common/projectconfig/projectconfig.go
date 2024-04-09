@@ -13,6 +13,14 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
+type Executables struct {
+	FTL string `toml:"ftl"`
+}
+
+type Commands struct {
+	Startup []string `toml:"startup"`
+}
+
 type ConfigAndSecrets struct {
 	Config  map[string]*URL `toml:"configuration"`
 	Secrets map[string]*URL `toml:"secrets"`
@@ -23,6 +31,8 @@ type Config struct {
 	Modules      map[string]ConfigAndSecrets `toml:"modules"`
 	ModuleDirs   []string                    `toml:"module-dirs"`
 	ExternalDirs []string                    `toml:"external-dirs"`
+	Executables  Executables                 `toml:"executables"`
+	Commands     Commands                    `toml:"commands"`
 }
 
 // ConfigPaths returns the computed list of configuration paths to load.

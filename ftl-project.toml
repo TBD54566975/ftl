@@ -7,3 +7,6 @@ external-dirs = []
   [modules.echo]
     [modules.echo.configuration]
       default = "inline://ImFub255bW91cyI"
+
+[commands]
+  startup = ["echo 'FTL startup command ⚡️'"]

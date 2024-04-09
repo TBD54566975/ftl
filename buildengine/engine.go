@@ -20,6 +20,8 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/common/projectconfig"
+	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -43,6 +45,7 @@ type Engine struct {
 	projects         map[ProjectKey]Project
 	moduleDirs       []string
 	externalDirs     []string
+	commands         map[string]string
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
@@ -206,7 +209,17 @@ func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline
 }
 
 // Dev builds and deploys all local modules and watches for changes, redeploying as necessary.
-func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
+func (e *Engine) Dev(ctx context.Context, period time.Duration, commands projectconfig.Commands) error {
+	logger := log.FromContext(ctx)
+	if len(commands.Startup) > 0 {
+		for _, cmd := range commands.Startup {
+			logger.Debugf("Executing startup command: %s", cmd)
+			if err := exec.Command(ctx, log.Info, ".", "bash", "-c", cmd).Run(); err != nil {
+				return fmt.Errorf("startup command failed: %w", err)
+			}
+		}
+	}
+
 	return e.watchForModuleChanges(ctx, period)
 }
 
