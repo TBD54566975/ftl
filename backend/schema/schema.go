@@ -141,5 +141,5 @@ func FromProto(s *schemapb.Schema) (*Schema, error) {
 	schema := &Schema{
 		Modules: modules,
 	}
-	return Validate(schema)
+	return ValidateSchema(schema)
 }

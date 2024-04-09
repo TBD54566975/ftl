@@ -715,7 +715,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		logger.Errorf(err, "Invalid module schema")
 		return nil, fmt.Errorf("%s: %w", "invalid module schema", err)
 	}
-	module, err = s.validateWholeSchema(ctx, module)
+	module, err = s.validateModuleSchema(ctx, module)
 	if err != nil {
 		logger.Errorf(err, "Invalid module schema")
 		return nil, fmt.Errorf("%s: %w", "invalid module schema", err)
@@ -732,8 +732,9 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: dname.String()}), nil
 }
 
-// Load schemas for existing modules, combine with our new one, and validate as a whole.
-func (s *Service) validateWholeSchema(ctx context.Context, module *schema.Module) (*schema.Module, error) {
+// Load schemas for existing modules, combine with our new one, and validate the new module in the context
+// of the whole schema.
+func (s *Service) validateModuleSchema(ctx context.Context, module *schema.Module) (*schema.Module, error) {
 	existingModules, err := s.dal.GetActiveDeploymentSchemas(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", "could not get existing schemas", err)
@@ -741,7 +742,7 @@ func (s *Service) validateWholeSchema(ctx context.Context, module *schema.Module
 	schemaMap := ftlmaps.FromSlice(existingModules, func(el *schema.Module) (string, *schema.Module) { return el.Name, el })
 	schemaMap[module.Name] = module
 	fullSchema := &schema.Schema{Modules: maps.Values(schemaMap)}
-	schema, err := schema.Validate(fullSchema)
+	schema, err := schema.ValidateModuleInSchema(fullSchema, optional.Some[*schema.Module](module))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", "invalid schema", err)
 	}
@@ -1133,7 +1134,7 @@ func (s *Service) getActiveSchema(ctx context.Context) (*schema.Schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	return schema.Validate(&schema.Schema{
+	return schema.ValidateSchema(&schema.Schema{
 		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
 			return d.Schema
 		}),
