@@ -241,3 +241,12 @@ func TestErrorReporting(t *testing.T) {
 	_, _, err := ExtractModuleSchema("testdata/failing")
 	assert.EqualError(t, err, filepath.Join(pwd, `testdata/failing/failing.go`)+`:14:2-46: call must have exactly three arguments`)
 }
+
+func TestDuplicateVerbNames(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	pwd, _ := os.Getwd()
+	_, _, err := ExtractModuleSchema("testdata/duplicateverbs")
+	assert.EqualError(t, err, filepath.Join(pwd, `testdata/duplicateverbs/duplicateverbs.go`)+`:23:1-2: verb "Time" already exported`)
+}

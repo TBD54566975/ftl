@@ -470,6 +470,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 	if !isVerb {
 		return nil, nil
 	}
+
+	for _, name := range pctx.nativeNames {
+		if name == node.Name.Name {
+			return nil, errorf(node, "verb %q already exported", node.Name.Name)
+		}
+	}
+
 	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
 	if sig.Recv() != nil {
