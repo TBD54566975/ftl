@@ -29,14 +29,15 @@ func TestDiscoverModules(t *testing.T) {
 		},
 		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/projects/another",
-				Language:  "go",
-				Realm:     "home",
-				Module:    "another",
-				Deploy:    []string{"main"},
-				DeployDir: "_ftl",
-				Schema:    "schema.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
+				Dir:           "testdata/projects/another",
+				Language:      "go",
+				Realm:         "home",
+				Module:        "another",
+				MinFTLVersion: "1.2.3",
+				Deploy:        []string{"main"},
+				DeployDir:     "_ftl",
+				Schema:        "schema.pb",
+				Watch:         []string{"**/*.go", "go.mod", "go.sum"},
 			},
 		},
 		Module{
