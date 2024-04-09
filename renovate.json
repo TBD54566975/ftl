@@ -10,7 +10,7 @@
   ],
   "packageRules": [
     {
-      "matchPackageNames": ["jbr", "ktfmt", "golangci-lint"],
+      "matchPackageNames": ["jbr", "ktfmt", "golangci-lint", "eslint"],
       "matchManagers": ["hermit"],
       "enabled": false
     },
