@@ -84,6 +84,10 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	}
 	logger := log.FromContext(ctx)
 
+	if !ftl.IsVersionAtLeastMin(ftl.Version, config.MinFTLVersion) {
+		return fmt.Errorf("FTL version '%w' predates the minimum version '%w'", ftl.Version, config.MinFTLVersion)
+	}
+
 	funcs := maps.Clone(scaffoldFuncs)
 
 	logger.Debugf("Generating external modules")

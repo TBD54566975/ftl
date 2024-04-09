@@ -21,9 +21,10 @@ type ModuleConfig struct {
 	// Dir is the root of the module.
 	Dir string `toml:"-"`
 
-	Language string `toml:"language"`
-	Realm    string `toml:"realm"`
-	Module   string `toml:"module"`
+	Language      string `toml:"language"`
+	Realm         string `toml:"realm"`
+	Module        string `toml:"module"`
+	MinFTLVersion string `toml:"min-ftl-version"`
 	// Build is the command to build the module.
 	Build string `toml:"build"`
 	// Deploy is the list of files to deploy relative to the DeployDir.
