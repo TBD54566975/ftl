@@ -38,15 +38,21 @@ var (
 //
 // This is useful for testing.
 func MustValidate(schema *Schema) *Schema {
-	clone, err := Validate(schema)
+	clone, err := ValidateSchema(schema)
 	if err != nil {
 		panic(err)
 	}
 	return clone
 }
 
-// Validate clones, normalises and semantically valies a schema.
-func Validate(schema *Schema) (*Schema, error) {
+// ValidateSchema clones, normalises and semantically validates a schema.
+func ValidateSchema(schema *Schema) (*Schema, error) {
+	return ValidateModuleInSchema(schema, optional.None[*Module]())
+}
+
+// ValidateModuleInSchema clones and normalises a schema and semantically validates a single module within it.
+// If no module is provided, all modules in the schema are validated.
+func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema, error) {
 	schema = dc.DeepCopy(schema)
 	modules := map[string]bool{}
 	merr := []error{}
@@ -79,6 +85,10 @@ func Validate(schema *Schema) (*Schema, error) {
 	for _, module := range schema.Modules {
 		// Skip builtin module, it's already been validated.
 		if module.Name == "builtin" {
+			continue
+		}
+		if v, ok := m.Get(); ok && v.Name != module.Name {
+			// Don't validate other modules when validating a single module.
 			continue
 		}
 
