@@ -2,8 +2,6 @@
 
 There are many ways to be an open source contributor, and we're here to help you on your way! You may:
 
-- Propose ideas in our
-  [discussion forums](https://forums.tbd.website)
 - Raise an issue or feature request in our [issue tracker](https://github.com/TBD54566975/ftl/issues)
 - Help another contributor with one of their questions, or a code review
 - Suggest improvements to our Getting Started documentation by supplying a Pull Request
