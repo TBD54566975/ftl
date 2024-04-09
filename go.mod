@@ -9,7 +9,7 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/TBD54566975/scaffolder v0.8.0
 	github.com/TBD54566975/scaffolder/extensions/javascript v0.8.0
-	github.com/alecthomas/assert/v2 v2.8.0
+	github.com/alecthomas/assert/v2 v2.8.1
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/kong v0.9.0
@@ -29,6 +29,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-isatty v0.0.20
+	github.com/multiformats/go-base36 v0.2.0
 	github.com/otiai10/copy v1.14.0
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.10.1

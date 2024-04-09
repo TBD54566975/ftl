@@ -57,15 +57,17 @@ func IsDirectRouted(ctx context.Context) bool {
 }
 
 // RequestNameFromContext returns the request Key from the context, if any.
+//
+// TODO: Return an Option here instead of a bool.
 func RequestNameFromContext(ctx context.Context) (model.RequestName, bool, error) {
 	value := ctx.Value(requestIDKey{})
 	keyStr, ok := value.(string)
 	if !ok {
-		return "", false, nil
+		return model.RequestName{}, false, nil
 	}
-	_, key, err := model.ParseRequestName(keyStr)
+	key, err := model.ParseRequestName(keyStr)
 	if err != nil {
-		return "", false, fmt.Errorf("%s: %w", "invalid request Key", err)
+		return model.RequestName{}, false, fmt.Errorf("%s: %w", "invalid request Key", err)
 	}
 	return key, true, nil
 }

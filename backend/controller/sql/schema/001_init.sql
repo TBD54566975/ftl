@@ -193,6 +193,8 @@ CREATE TYPE origin AS ENUM (
     'pubsub'
     );
 
+CREATE DOMAIN request_key AS VARCHAR;
+
 -- Requests originating from outside modules, either from external sources or from
 -- events within the system.
 CREATE TABLE requests
@@ -204,7 +206,7 @@ CREATE TABLE requests
     -- ingress: ingress-<method>-<path>-<hash> (eg. ingress-GET-foo-bar-<hash>)
     -- cron: cron-<name>-<hash>                (eg. cron-poll-news-sources-<hash>)
     -- pubsub: pubsub-<subscription>-<hash>    (eg. pubsub-articles-<hash>)
-    name        VARCHAR UNIQUE NOT NULL,
+    name        request_key UNIQUE NOT NULL,
     source_addr VARCHAR        NOT NULL
 );
 

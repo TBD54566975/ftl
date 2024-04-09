@@ -423,10 +423,9 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	defer tx.CommitOrRollback(ctx, &err)
 
 	existingDeployment, err := d.checkForExistingDeployments(ctx, tx, moduleSchema, artefacts)
-	var zero model.DeploymentKey
 	if err != nil {
 		return model.DeploymentKey{}, err
-	} else if existingDeployment != zero {
+	} else if !existingDeployment.IsZero() {
 		logger.Tracef("Returning existing deployment %s", existingDeployment)
 		return existingDeployment, nil
 	}
@@ -907,7 +906,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	}
 	var requestName optional.Option[string]
 	if name, ok := log.RequestName.Get(); ok {
-		requestName = optional.Some(string(name))
+		requestName = optional.Some(name.String())
 	}
 	return translatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
 		DeploymentKey: log.DeploymentKey,
@@ -945,7 +944,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 
 func (d *DAL) CreateIngressRequest(ctx context.Context, route, addr string) (model.RequestName, error) {
 	name := model.NewRequestName(model.OriginIngress, route)
-	err := d.db.CreateIngressRequest(ctx, sql.OriginIngress, string(name), addr)
+	err := d.db.CreateIngressRequest(ctx, sql.OriginIngress, name, addr)
 	return name, err
 }
 
@@ -981,7 +980,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	}
 	var requestName optional.Option[string]
 	if rn, ok := call.RequestName.Get(); ok {
-		requestName = optional.Some(string(rn))
+		requestName = optional.Some(rn.String())
 	}
 	return translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
 		DeploymentKey: call.DeploymentKey,

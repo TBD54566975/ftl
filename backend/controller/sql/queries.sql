@@ -16,7 +16,7 @@ WHERE id = ANY (@ids::BIGINT[]);
 
 -- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
-VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, sqlc.arg('key')::deployment_key);
+VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, @key::deployment_key);
 
 -- name: GetArtefactDigests :many
 -- Return the digests that exist in the database.
@@ -39,7 +39,7 @@ RETURNING id;
 
 -- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
-VALUES ((SELECT id FROM deployments WHERE key = sqlc.arg('key')::deployment_key), $2, $3, $4);
+VALUES ((SELECT id FROM deployments WHERE key = @key::deployment_key), $2, $3, $4);
 
 -- name: ReplaceDeployment :one
 WITH update_container AS (
