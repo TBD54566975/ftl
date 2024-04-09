@@ -12,6 +12,9 @@ func TestIsVersionAtLeastMin(t *testing.T) {
 		minVersion string
 		want       bool
 	}{
+		// Test case for minFTLVersion being undefined
+		{"1.2.3", "", true},
+
 		// Test cases for !IsRelease
 		{"dev", "dev", true},
 		{"dev", "1.2.3", true},

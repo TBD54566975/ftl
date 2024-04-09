@@ -12,8 +12,14 @@ func IsRelease(v string) bool {
 	return regexp.MustCompile(`^\d+\.\d+\.\d+$`).MatchString(v)
 }
 
-// IsVersionAtLeastMin returns true if either v or minVersion is not a release version, or if v > minVersion when both v and minVersion are release versions
+// IsVersionAtLeastMin returns true if any of the following are true:
+//   - minVersion is not defined (i.e. is emptystring)
+//   - v or minVersion is not a release version
+//   - v > minVersion when both v and minVersion are release versions
 func IsVersionAtLeastMin(v string, minVersion string) (bool, error) {
+	if minVersion == "" {
+		return true, nil
+	}
 	if !IsRelease(v) || !IsRelease(minVersion) {
 		return true, nil
 	}
