@@ -1,6 +1,6 @@
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { CodeBlock } from '../../components/CodeBlock'
 import { Page } from '../../layout'
 import { CallEvent, EventType, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
@@ -9,21 +9,37 @@ import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { callFilter, eventTypesFilter, streamEvents } from '../../services/console.service'
 import { CallList } from '../calls/CallList'
 import { VerbForm } from './VerbForm'
+import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 
 export const VerbPage = () => {
   const { deploymentKey, verbName } = useParams()
+  const notification = useContext(NotificationsContext)
+  const navgation = useNavigate()
   const modules = useContext(modulesContext)
   const [module, setModule] = useState<Module | undefined>()
   const [verb, setVerb] = useState<Verb | undefined>()
   const [calls, setCalls] = useState<CallEvent[]>([])
 
   useEffect(() => {
-    if (modules) {
-      const module = modules.modules.find((module) => module.deploymentKey === deploymentKey?.toLocaleLowerCase())
-      setModule(module)
-      const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === verbName?.toLocaleLowerCase())
-      setVerb(verb)
+    if (modules.modules.length == 0 || !deploymentKey || !verbName) return
+
+    let module = modules.modules.find((module) => module.deploymentKey === deploymentKey)
+    if (!module) {
+      const lastIndex = deploymentKey.lastIndexOf('-')
+      if (lastIndex !== -1) {
+        module = modules.modules.find((module) => module.name === deploymentKey.substring(0, lastIndex))
+        navgation(`/deployments/${module?.deploymentKey}/verbs/${verbName}`)
+        notification.showNotification({
+          title: 'Showing latest deployment',
+          message: `The previous deployment of ${module?.deploymentKey} was not found. Showing the latest deployment of ${module?.name}.${verbName} instead.`,
+          type: NotificationType.Info,
+        })
+        setModule(module)
+      }
     }
+    setModule(module)
+    const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === verbName?.toLocaleLowerCase())
+    setVerb(verb)
   }, [modules, deploymentKey])
 
   useEffect(() => {
