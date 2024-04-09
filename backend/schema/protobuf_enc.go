@@ -63,6 +63,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataIngress:
 			v = &schemapb.Metadata_Ingress{Ingress: n.ToProto().(*schemapb.MetadataIngress)}
 
+		case *MetadataCronJob:
+			v = &schemapb.Metadata_CronJob{CronJob: n.ToProto().(*schemapb.MetadataCronJob)}
+
 		case *MetadataAlias:
 			v = &schemapb.Metadata_Alias{Alias: n.ToProto().(*schemapb.MetadataAlias)}
 

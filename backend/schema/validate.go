@@ -13,6 +13,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
+	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/errors"
 	dc "github.com/TBD54566975/ftl/internal/reflect"
 )
@@ -163,7 +164,7 @@ func Validate(schema *Schema) (*Schema, error) {
 
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
-				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
+				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataCronJob,
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
 				Value, *IntValue, *StringValue, *Config, *Secret, Symbol, Named:
@@ -294,7 +295,7 @@ func ValidateModule(module *Module) error {
 
 		case *Array, *Bool, *Database, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
-			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataAlias,
+			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
 
@@ -442,6 +443,7 @@ func errorf(pos interface{ Position() Position }, format string, args ...interfa
 
 func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 	// Validate metadata
+	hasCron := false
 	for _, md := range n.Metadata {
 		switch md := md.(type) {
 		case *MetadataIngress:
@@ -464,7 +466,19 @@ func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 				case *IngressPathLiteral:
 				}
 			}
+		case *MetadataCronJob:
+			if hasCron {
+				merr = append(merr, errorf(md, "only a single cron schedule is allowed per verb"))
+				continue
+			}
+			hasCron = true
 
+			schedule, err := cron.Parse(md.Cron)
+			if err != nil {
+				merr = append(merr, err)
+			} else if err := cron.Validate(schedule); err != nil {
+				merr = append(merr, err)
+			}
 		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:
 		}
 	}

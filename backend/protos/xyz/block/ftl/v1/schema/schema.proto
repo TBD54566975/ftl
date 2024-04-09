@@ -130,8 +130,9 @@ message Metadata {
   oneof value {
     MetadataCalls calls = 1;
     MetadataIngress ingress = 2;
-    MetadataDatabases databases = 3;
-    MetadataAlias alias = 4;
+    MetadataCronJob cronJob = 3;
+    MetadataDatabases databases = 4;
+    MetadataAlias alias = 5;
   }
 }
 
@@ -144,6 +145,11 @@ message MetadataAlias {
 message MetadataCalls {
   optional Position pos = 1;
   repeated Ref calls = 2;
+}
+
+message MetadataCronJob {
+  optional Position pos = 1;
+  string cron = 2;
 }
 
 message MetadataDatabases {

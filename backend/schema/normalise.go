@@ -122,6 +122,9 @@ func Normalise[T Node](n T) T {
 	case *IngressPathParameter:
 		c.Pos = zero
 
+	case *MetadataCronJob:
+		c.Pos = zero
+
 	case *Config:
 		c.Pos = zero
 		c.Type = Normalise(c.Type)

@@ -51,12 +51,24 @@ func (d *directiveIngress) String() string {
 	return w.String()
 }
 
+type directiveCronJob struct {
+	Pos schema.Position
+
+	Cron string `parser:"'cron' Whitespace @((Whitespace | Number | Punct)+)"`
+}
+
+func (*directiveCronJob) directive() {}
+
+func (d *directiveCronJob) String() string {
+	return fmt.Sprintf("cron %s", d.Cron)
+}
+
 var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
-	participle.Union[directive](&directiveExport{}, &directiveIngress{}),
+	participle.Union[directive](&directiveExport{}, &directiveIngress{}, &directiveCronJob{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
