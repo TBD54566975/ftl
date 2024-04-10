@@ -7,6 +7,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -193,6 +194,41 @@ func TestExternalType(t *testing.T) {
 	sch := &schema.Schema{}
 	err = Build(ctx, sch, module)
 	assert.Contains(t, err.Error(), "field Month: unsupported external type time.Month")
+
+	err = os.RemoveAll(buildDir)
+	assert.NoError(t, err, "Error removing build directory")
+}
+
+func TestBuildChecksMinFTLVersion(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	moduleDir := "testdata/projects/another"
+	buildDir := "_ftl"
+
+	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
+	module, err := LoadModule(moduleDir)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		v       string
+		wantErr bool
+	}{
+		{"dev", false},
+		{"1.3.0", false},
+		{"0.129.2", true},
+	}
+
+	for _, test := range tests {
+		sch := &schema.Schema{}
+		ftl.Version = test.v
+		err = Build(ctx, sch, module)
+		if test.wantErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+	}
 
 	err = os.RemoveAll(buildDir)
 	assert.NoError(t, err, "Error removing build directory")
