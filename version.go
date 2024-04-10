@@ -2,7 +2,8 @@ package ftl
 
 import (
 	"regexp"
-	"strconv"
+
+	"golang.org/x/mod/semver"
 )
 
 const VersionNumberParts int = 3
@@ -23,26 +24,11 @@ func IsVersionAtLeastMin(v string, minVersion string) (bool, error) {
 	if !IsRelease(v) || !IsRelease(minVersion) {
 		return true, nil
 	}
-	vParsed := regexp.MustCompile(`\d+`).FindAllString(v, VersionNumberParts)
-	minVParsed := regexp.MustCompile(`\d+`).FindAllString(minVersion, VersionNumberParts)
-	for i := range VersionNumberParts {
-		vInt, err := strconv.Atoi(vParsed[i])
-		if err != nil {
-			return false, err
-		}
-		minVInt, err := strconv.Atoi(minVParsed[i])
-		if err != nil {
-			return false, err
-		}
-		if vInt > minVInt {
-			return true, nil
-		}
-		if vInt < minVInt {
-			return false, nil
-		}
-	}
-	return true, nil
+	return semver.Compare("v"+v, "v"+minVersion) >= 0, nil
 }
+
+// VersionIsMock is set by tests and used to block evaluation of versions that look like release versions but are not real.
+var VersionIsMock = false
 
 // Version of FTL binary (set by linker).
 var Version = "dev"
