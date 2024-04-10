@@ -114,19 +114,6 @@ func TestDiscoverModules(t *testing.T) {
 				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:           "testdata/projects/yetanother",
-				Language:      "go",
-				Realm:         "home",
-				Module:        "yetanother",
-				MinFTLVersion: "0.129.2",
-				Deploy:        []string{"main"},
-				DeployDir:     "_ftl",
-				Schema:        "schema.pb",
-				Watch:         []string{"**/*.go", "go.mod", "go.sum"},
-			},
-		},
 		ExternalLibrary{
 			Dir:      "testdata/projects/lib",
 			Language: "go",
