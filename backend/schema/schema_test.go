@@ -154,7 +154,7 @@ Module
 func TestParserRoundTrip(t *testing.T) {
 	actual, err := ParseString("", testSchema.String())
 	assert.NoError(t, err, "%s", testSchema.String())
-	actual, err = Validate(actual)
+	actual, err = ValidateSchema(actual)
 	assert.NoError(t, err)
 	assert.Equal(t, Normalise(testSchema), Normalise(actual))
 }
