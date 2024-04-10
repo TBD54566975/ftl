@@ -443,8 +443,15 @@ func errorf(pos interface{ Position() Position }, format string, args ...interfa
 
 func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 	// Validate metadata
-	hasCron := false
+	metadataTypes := map[reflect.Type]bool{}
 	for _, md := range n.Metadata {
+		reflected := reflect.TypeOf(md)
+		if _, seen := metadataTypes[reflected]; seen {
+			merr = append(merr, errorf(md, "verb can not have multiple instances of %s", strings.ToLower(strings.TrimPrefix(reflected.String(), "*schema.Metadata"))))
+			continue
+		}
+		metadataTypes[reflected] = true
+
 		switch md := md.(type) {
 		case *MetadataIngress:
 			reqBodyType, reqBody, errs := validateIngressRequestOrResponse(scopes, n, "request", n.Request)
@@ -467,12 +474,6 @@ func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 				}
 			}
 		case *MetadataCronJob:
-			if hasCron {
-				merr = append(merr, errorf(md, "only a single cron schedule is allowed per verb"))
-				continue
-			}
-			hasCron = true
-
 			_, err := cron.Parse(md.Cron)
 			if err != nil {
 				merr = append(merr, err)
