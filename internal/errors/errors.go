@@ -1,6 +1,10 @@
 package errors
 
-import "errors"
+import (
+	"errors"
+	"golang.org/x/exp/maps"
+	"strings"
+)
 
 // UnwrapAll recursively unwraps all errors in err, including all intermediate errors.
 //
@@ -42,3 +46,14 @@ func As(err error, target interface{}) bool { return errors.As(err, target) }
 func Is(err, target error) bool { return errors.Is(err, target) }
 
 func Unwrap(err error) error { return errors.Unwrap(err) }
+
+// DeduplicateErrors de-duplicates equivalent errors.
+func DeduplicateErrors(merr []error) []error {
+	set := map[string]error{}
+	for _, err := range merr {
+		for _, subErr := range UnwrapAll(err) {
+			set[strings.TrimSpace(subErr.Error())] = subErr
+		}
+	}
+	return maps.Values(set)
+}

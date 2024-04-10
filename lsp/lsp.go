@@ -77,18 +77,16 @@ func (s *Server) post(err error) {
 	errByFilename := make(map[string]errSet)
 
 	// Deduplicate and associate by filename.
-	errs := ftlErrors.UnwrapAll(err)
-	for _, err := range errs {
-		if ftlErrors.Innermost(err) {
-			var ce schema.Error
-			if errors.As(err, &ce) {
-				filename := ce.Pos.Filename
-				if _, exists := errByFilename[filename]; !exists {
-					errByFilename[filename] = make(errSet)
-				}
-				errByFilename[filename][strings.TrimSpace(ce.Error())] = ce
+	for _, err := range ftlErrors.DeduplicateErrors(ftlErrors.UnwrapAll(err)) {
+		var ce schema.Error
+		if errors.As(err, &ce) {
+			filename := ce.Pos.Filename
+			if _, exists := errByFilename[filename]; !exists {
+				errByFilename[filename] = make(errSet)
 			}
+			errByFilename[filename][strings.TrimSpace(ce.Error())] = ce
 		}
+
 	}
 
 	go publishErrors(errByFilename, s)
