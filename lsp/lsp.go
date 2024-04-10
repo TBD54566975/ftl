@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"unicode"
 
 	"github.com/puzpuzpuz/xsync/v3"
 	_ "github.com/tliron/commonlog/simple"
@@ -198,10 +197,27 @@ func getLineOrWordLength(filePath string, lineNum, column int, wholeLine bool) (
 				return len(lineText), nil
 			}
 			start := column - 1
+
+			// Define a custom function to check for spaces or special characters
+			isDelimiter := func(char rune) bool {
+				switch char {
+				case ' ', '\t', '[', ']', '{', '}', '(', ')':
+					return true
+				default:
+					return false
+				}
+			}
+
 			end := start
-			for end < len(lineText) && !unicode.IsSpace(rune(lineText[end])) {
+			for end < len(lineText) && !isDelimiter(rune(lineText[end])) {
 				end++
 			}
+
+			// If starting column is out of range, return 0
+			if start >= len(lineText) {
+				return 0, nil
+			}
+
 			return end - start, nil
 		}
 		currentLine++
