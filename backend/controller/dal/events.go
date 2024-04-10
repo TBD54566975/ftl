@@ -37,7 +37,7 @@ type Event interface {
 type LogEvent struct {
 	ID            int64
 	DeploymentKey model.DeploymentKey
-	RequestName   optional.Option[model.RequestName]
+	RequestKey    optional.Option[model.RequestKey]
 	Time          time.Time
 	Level         int32
 	Attributes    map[string]string
@@ -52,7 +52,7 @@ func (e *LogEvent) event()       {}
 type CallEvent struct {
 	ID            int64
 	DeploymentKey model.DeploymentKey
-	RequestName   optional.Option[model.RequestName]
+	RequestKey    optional.Option[model.RequestKey]
 	Time          time.Time
 	SourceVerb    optional.Option[schema.Ref]
 	DestVerb      schema.Ref
@@ -132,9 +132,9 @@ func FilterDeployments(deploymentKeys ...model.DeploymentKey) EventFilter {
 	}
 }
 
-func FilterRequests(requestNames ...model.RequestName) EventFilter {
+func FilterRequests(requestKeys ...model.RequestKey) EventFilter {
 	return func(query *eventFilter) {
-		for _, request := range requestNames {
+		for _, request := range requestKeys {
 			query.requests = append(query.requests, request.String())
 		}
 	}
@@ -200,7 +200,7 @@ type eventDeploymentUpdatedJSON struct {
 type eventRow struct {
 	sql.Event
 	DeploymentKey model.DeploymentKey
-	RequestName   optional.Option[model.RequestName]
+	RequestKey    optional.Option[model.RequestKey]
 }
 
 func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter) ([]Event, error) {
@@ -211,7 +211,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	// Build query.
 	q := `SELECT e.id AS id,
 				e.deployment_id,
-				ir.name AS request_name,
+				ir.key AS request_key,
 				e.time_stamp,
 				e.custom_key_1,
 				e.custom_key_2,
@@ -332,7 +332,7 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 		row := eventRow{}
 		var deploymentID int64
 		err := rows.Scan(
-			&row.ID, &deploymentID, &row.RequestName, &row.TimeStamp,
+			&row.ID, &deploymentID, &row.RequestKey, &row.TimeStamp,
 			&row.CustomKey1, &row.CustomKey2, &row.CustomKey3, &row.CustomKey4,
 			&row.Type, &row.Payload,
 		)
@@ -342,10 +342,6 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 
 		row.DeploymentKey = deploymentKeys[deploymentID]
 
-		var requestName optional.Option[model.RequestName]
-		if key, ok := row.RequestName.Get(); ok {
-			requestName = optional.Some(key)
-		}
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
@@ -359,7 +355,7 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 			out = append(out, &LogEvent{
 				ID:            row.ID,
 				DeploymentKey: row.DeploymentKey,
-				RequestName:   requestName,
+				RequestKey:    row.RequestKey,
 				Time:          row.TimeStamp,
 				Level:         int32(level),
 				Attributes:    jsonPayload.Attributes,
@@ -382,7 +378,7 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 			out = append(out, &CallEvent{
 				ID:            row.ID,
 				DeploymentKey: row.DeploymentKey,
-				RequestName:   requestName,
+				RequestKey:    row.RequestKey,
 				Time:          row.TimeStamp,
 				SourceVerb:    sourceVerb,
 				DestVerb:      schema.Ref{Module: row.CustomKey3.MustGet(), Name: row.CustomKey4.MustGet()},

@@ -423,10 +423,9 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	defer tx.CommitOrRollback(ctx, &err)
 
 	existingDeployment, err := d.checkForExistingDeployments(ctx, tx, moduleSchema, artefacts)
-	var zero model.DeploymentKey
 	if err != nil {
 		return model.DeploymentKey{}, err
-	} else if existingDeployment != zero {
+	} else if !existingDeployment.IsZero() {
 		logger.Tracef("Returning existing deployment %s", existingDeployment)
 		return existingDeployment, nil
 	}
@@ -905,13 +904,13 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	if err != nil {
 		return err
 	}
-	var requestName optional.Option[string]
-	if name, ok := log.RequestName.Get(); ok {
-		requestName = optional.Some(string(name))
+	var requestKey optional.Option[string]
+	if name, ok := log.RequestKey.Get(); ok {
+		requestKey = optional.Some(name.String())
 	}
 	return translatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
 		DeploymentKey: log.DeploymentKey,
-		RequestName:   requestName,
+		RequestKey:    requestKey,
 		TimeStamp:     log.Time,
 		Level:         log.Level,
 		Attributes:    attributes,
@@ -943,9 +942,9 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	return out, nil
 }
 
-func (d *DAL) CreateIngressRequest(ctx context.Context, route, addr string) (model.RequestName, error) {
-	name := model.NewRequestName(model.OriginIngress, route)
-	err := d.db.CreateIngressRequest(ctx, sql.OriginIngress, string(name), addr)
+func (d *DAL) CreateIngressRequest(ctx context.Context, route, addr string) (model.RequestKey, error) {
+	name := model.NewRequestKey(model.OriginIngress, route)
+	err := d.db.CreateIngressRequest(ctx, sql.OriginIngress, name, addr)
 	return name, err
 }
 
@@ -979,13 +978,13 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if sr, ok := call.SourceVerb.Get(); ok {
 		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
 	}
-	var requestName optional.Option[string]
-	if rn, ok := call.RequestName.Get(); ok {
-		requestName = optional.Some(string(rn))
+	var requestKey optional.Option[string]
+	if rn, ok := call.RequestKey.Get(); ok {
+		requestKey = optional.Some(rn.String())
 	}
 	return translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
 		DeploymentKey: call.DeploymentKey,
-		RequestName:   requestName,
+		RequestKey:    requestKey,
 		TimeStamp:     call.Time,
 		SourceModule:  sourceModule,
 		SourceVerb:    sourceVerb,

@@ -252,7 +252,7 @@ type Module struct {
 type Request struct {
 	ID         int64
 	Origin     Origin
-	Name       string
+	Key        model.RequestKey
 	SourceAddr string
 }
 

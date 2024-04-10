@@ -17,6 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 func TestIngress(t *testing.T) {
@@ -94,7 +95,8 @@ func TestIngress(t *testing.T) {
 			}
 			req := httptest.NewRequest(test.method, test.path, bytes.NewBuffer(test.payload)).WithContext(ctx)
 			req.URL.RawQuery = test.query.Encode()
-			ingress.Handle(sch, "test", routes, rec, req, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+			reqKey := model.NewRequestKey(model.OriginIngress, "test")
+			ingress.Handle(sch, reqKey, routes, rec, req, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 				body, err := encoding.Marshal(test.response)
 				assert.NoError(t, err)
 				return connect.NewResponse(&ftlv1.CallResponse{Response: &ftlv1.CallResponse_Body{Body: body}}), nil

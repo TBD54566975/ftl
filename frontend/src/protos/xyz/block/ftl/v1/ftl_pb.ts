@@ -1278,9 +1278,9 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
   deploymentKey = "";
 
   /**
-   * @generated from field: optional string request_name = 2;
+   * @generated from field: optional string request_key = 2;
    */
-  requestName?: string;
+  requestKey?: string;
 
   /**
    * @generated from field: google.protobuf.Timestamp time_stamp = 3;
@@ -1316,7 +1316,7 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
   static readonly typeName = "xyz.block.ftl.v1.StreamDeploymentLogsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },

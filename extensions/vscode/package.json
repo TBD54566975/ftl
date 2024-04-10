@@ -53,6 +53,10 @@
       {
         "command": "ftl.showPanel",
         "title": "Show Panel"
+      },
+      {
+        "command": "ftl.statusItemClicked",
+        "title": "FTL: Show Commands"
       }
     ]
   },

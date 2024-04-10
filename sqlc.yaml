@@ -34,16 +34,22 @@ sql:
             go_type: "github.com/TBD54566975/ftl/internal/model.RunnerKey"
           - db_type: "runner_key"
             nullable: true
-            go_type: 
+            go_type:
               type: "NullRunnerKey"
           - db_type: "deployment_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
           - db_type: "deployment_key"
             nullable: true
-            go_type: 
+            go_type:
               type: "NullDeploymentKey"
           - db_type: "controller_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
+          - db_type: "request_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.RequestKey"
+          - db_type: "request_key"
+            nullable: true
+            go_type:
+              type: "NullRequestKey"
           - db_type: "text"
             go_type: "string"
           - db_type: "text"
@@ -61,14 +67,6 @@ sql:
           - db_type: "bool"
             nullable: true
             go_type: "github.com/alecthomas/types/optional.Option[bool]"
-          # Can't use until https://github.com/sqlc-dev/sqlc/issues/2632 is fixed, if it ever is...
-          #          - column: "ingress_requests.key"
-          #            go_type: "github.com/TBD54566975/ftl/internal/model.RequestName"
-          #          - column: "ingress_requests.key"
-          #            nullable: true
-          #            go_type: "github.com/TBD54566975/ftl/internal/model.NullRequestName"
-          #          - column: "runners.key"
-          #            go_type: "github.com/TBD54566975/ftl/internal/model.RunnerKey"
           - column: "controller.key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - column: "deployments.name"

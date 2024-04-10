@@ -75,7 +75,7 @@ func Start(ctx context.Context, config Config) error {
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
 	key := config.Key
-	if key == (model.RunnerKey{}) {
+	if key.IsZero() {
 		key = model.NewRunnerKey(config.Bind.Hostname(), config.Bind.Port())
 	}
 	labels, err := structpb.NewStruct(map[string]any{
@@ -246,7 +246,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
 	}
-	if depl.key != deploymentKey {
+	if !depl.key.Equal(deploymentKey) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("deployment key mismatch"))
 	}
 
@@ -361,7 +361,7 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 		}
 
 		err := send(&ftlv1.StreamDeploymentLogsRequest{
-			RequestName:   request,
+			RequestKey:    request,
 			DeploymentKey: deploymentKey,
 			TimeStamp:     timestamppb.New(entry.Time),
 			LogLevel:      int32(entry.Level.Severity()),
@@ -383,8 +383,8 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 
 func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.DeploymentKey) *log.Logger {
 	attrs := map[string]string{"deployment": deploymentKey.String()}
-	if requestName, ok, _ := rpc.RequestNameFromContext(ctx); ok {
-		attrs["request"] = requestName.String()
+	if requestKey, _ := rpc.RequestKeyFromContext(ctx); requestKey.Ok() {
+		attrs["request"] = requestKey.MustGet().String()
 	}
 
 	sink := newDeploymentLogsSink(s.deploymentLogQueue)

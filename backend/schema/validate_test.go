@@ -146,6 +146,31 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 		},
+		{name: "DoubleCron",
+			schema: `
+				module one {
+					verb cronjob(Unit) Unit
+						+cron * */2 0-23/2,4-5 * * * *
+						+cron * * * * * * *
+				}
+			`,
+			errs: []string{
+				"5:7-7: verb can not have multiple instances of cronjob",
+			},
+		},
+		{name: "DoubleIngress",
+			schema: `
+				module one {
+					data Data {}
+					verb one(HttpRequest<[one.Data]>) HttpResponse<[one.Data], Empty>
+					    +ingress http GET /one
+					    +ingress http GET /two
+				}
+			`,
+			errs: []string{
+				"6:10-10: verb can not have multiple instances of ingress",
+			},
+		},
 	}
 
 	for _, test := range tests {

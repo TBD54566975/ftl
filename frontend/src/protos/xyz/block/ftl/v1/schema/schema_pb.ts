@@ -992,13 +992,19 @@ export class Metadata extends Message<Metadata> {
     case: "ingress";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.MetadataDatabases databases = 3;
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataCronJob cronJob = 3;
+     */
+    value: MetadataCronJob;
+    case: "cronJob";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataDatabases databases = 4;
      */
     value: MetadataDatabases;
     case: "databases";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.MetadataAlias alias = 4;
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataAlias alias = 5;
      */
     value: MetadataAlias;
     case: "alias";
@@ -1014,8 +1020,9 @@ export class Metadata extends Message<Metadata> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "calls", kind: "message", T: MetadataCalls, oneof: "value" },
     { no: 2, name: "ingress", kind: "message", T: MetadataIngress, oneof: "value" },
-    { no: 3, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
-    { no: 4, name: "alias", kind: "message", T: MetadataAlias, oneof: "value" },
+    { no: 3, name: "cronJob", kind: "message", T: MetadataCronJob, oneof: "value" },
+    { no: 4, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
+    { no: 5, name: "alias", kind: "message", T: MetadataAlias, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Metadata {
@@ -1124,6 +1131,49 @@ export class MetadataCalls extends Message<MetadataCalls> {
 
   static equals(a: MetadataCalls | PlainMessage<MetadataCalls> | undefined, b: MetadataCalls | PlainMessage<MetadataCalls> | undefined): boolean {
     return proto3.util.equals(MetadataCalls, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataCronJob
+ */
+export class MetadataCronJob extends Message<MetadataCronJob> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string cron = 2;
+   */
+  cron = "";
+
+  constructor(data?: PartialMessage<MetadataCronJob>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataCronJob";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "cron", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataCronJob {
+    return new MetadataCronJob().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataCronJob {
+    return new MetadataCronJob().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataCronJob {
+    return new MetadataCronJob().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataCronJob | PlainMessage<MetadataCronJob> | undefined, b: MetadataCronJob | PlainMessage<MetadataCronJob> | undefined): boolean {
+    return proto3.util.equals(MetadataCronJob, a, b);
   }
 }
 

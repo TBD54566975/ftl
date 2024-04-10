@@ -36,11 +36,24 @@ export async function activate(context: ExtensionContext) {
     outputChannel.show()
   })
 
+  let showCommands = vscode.commands.registerCommand('ftl.statusItemClicked', () => {
+    const ftlCommands = [
+      { label: 'FTL: Restart Service', command: 'ftl.restart' },
+      { label: 'FTL: Stop Service', command: 'ftl.stop' },
+    ]
+
+    vscode.window.showQuickPick(ftlCommands, { placeHolder: 'Select an FTL command' }).then(selected => {
+      if (selected) {
+        vscode.commands.executeCommand(selected.command)
+      }
+    })
+  })
+
   statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
     100
   )
-  statusBarItem.command = "ftl.showLogs"
+  statusBarItem.command = "ftl.statusItemClicked"
   statusBarItem.show()
 
   startClient(context)
@@ -49,6 +62,7 @@ export async function activate(context: ExtensionContext) {
     restartCmd,
     stopCmd,
     statusBarItem,
+    showCommands,
     showLogsCommand
   )
 }
@@ -81,11 +95,13 @@ function startClient(context: ExtensionContext) {
   let serverOptions: ServerOptions = {
     run: {
       command: `${ftlPath}`,
-      args: ["dev", `.`, ...flags],
+      args: ["dev", ".", ...flags],
+      options: { cwd: workspaceRootPath },
     },
     debug: {
       command: `${ftlPath}`,
-      args: ["dev", `.`, ...flags],
+      args: ["dev", ".", ...flags],
+      options: { cwd: workspaceRootPath },
     },
   }
 

@@ -16,7 +16,7 @@ WHERE id = ANY (@ids::BIGINT[]);
 
 -- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
-VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, sqlc.arg('key')::deployment_key);
+VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, @key::deployment_key);
 
 -- name: GetArtefactDigests :many
 -- Return the digests that exist in the database.
@@ -39,7 +39,7 @@ RETURNING id;
 
 -- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
-VALUES ((SELECT id FROM deployments WHERE key = sqlc.arg('key')::deployment_key), $2, $3, $4);
+VALUES ((SELECT id FROM deployments WHERE key = @key::deployment_key), $2, $3, $4);
 
 -- name: ReplaceDeployment :one
 WITH update_container AS (
@@ -284,8 +284,8 @@ FROM rows;
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
 VALUES ((SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
         (CASE
-             WHEN sqlc.narg('request_name')::TEXT IS NULL THEN NULL
-             ELSE (SELECT id FROM requests ir WHERE ir.name = sqlc.narg('request_name')::TEXT LIMIT 1)
+             WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
+             ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT LIMIT 1)
             END),
         sqlc.arg('time_stamp')::TIMESTAMPTZ,
         sqlc.arg('level')::INT,
@@ -328,8 +328,8 @@ INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
 VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment_key')::deployment_key),
         (CASE
-             WHEN sqlc.narg('request_name')::TEXT IS NULL THEN NULL
-             ELSE (SELECT id FROM requests ir WHERE ir.name = sqlc.narg('request_name')::TEXT)
+             WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
+             ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT)
             END),
         sqlc.arg('time_stamp')::TIMESTAMPTZ,
         'call',
@@ -346,7 +346,7 @@ VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment
             ));
 
 -- name: CreateIngressRequest :exec
-INSERT INTO requests (origin, name, source_addr)
+INSERT INTO requests (origin, "key", source_addr)
 VALUES ($1, $2, $3);
 
 -- name: UpsertController :one

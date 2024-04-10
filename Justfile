@@ -51,9 +51,9 @@ init-db:
   dbmate create
   dbmate --migrations-dir backend/controller/sql/schema up
 
-# Regenerate SQLC code (requires init-db to be run first)
-build-sqlc:
-  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema -- sqlc generate
+# Regenerate SQLC code
+build-sqlc: init-db
+  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- sqlc generate
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips: build-kt-runtime
@@ -65,7 +65,12 @@ build-frontend: npm-install
 
 # Rebuild VSCode extension
 build-extension: npm-install
-  @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && npm run compile" 
+  @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && npm run compile"
+
+# Install development version of VSCode extension
+install-extension: build-extension
+  @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && npm run compile"
+  @cd extensions/vscode && vsce package && code --install-extension ftl-*.vsix 
 
 package-extension: build-extension
   @cd extensions/vscode && vsce package
@@ -97,5 +102,5 @@ integration-tests *test:
   go test -fullpath -count 1 -v -tags integration -run "$testName" ./integration
 
 # Run README doc tests
-test-readme:
-  mdcode run README.md -- bash test.sh
+test-readme *args:
+  mdcode run {{args}} README.md -- bash test.sh

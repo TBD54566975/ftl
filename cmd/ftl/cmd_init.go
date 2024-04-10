@@ -30,7 +30,7 @@ type initCmd struct {
 }
 
 type initGoCmd struct {
-	Replace map[string]string `short:"r" help:"Replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..."`
+	Replace map[string]string `short:"r" help:"Replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..." env:"FTL_INIT_GO_REPLACE"`
 	Dir     string            `arg:"" help:"Directory to initialize the module in."`
 	Name    string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }

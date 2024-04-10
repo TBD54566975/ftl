@@ -1,60 +1,57 @@
 package model
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 )
 
 func TestDeploymentKey(t *testing.T) {
+	ensureDeterministicRand(t)
 	for _, test := range []struct {
-		str       string // when full string is known
-		strPrefix string // when only prefix is known
-		module    string
-		hash      string
-		decodeErr bool
+		key         DeploymentKey
+		str         string
+		expected    DeploymentKey
+		expectedErr string
 	}{
-		{module: "time", strPrefix: "time-"},
-		{str: "time-00112233", decodeErr: true},
-		{str: "time-001122334455", decodeErr: true},
-		{str: "time-0011223344", module: "time", hash: "0011223344"},
-		{str: "-0011223344", decodeErr: true},
-		{str: "module-with-hyphens-0011223344", module: "module-with-hyphens", hash: "0011223344"},
-		{str: "-", decodeErr: true},
+		{key: NewDeploymentKey("time"),
+			expected: DeploymentKey{
+				Payload: DeploymentPayload{Module: "time"},
+				Suffix:  []byte("\x01\x94\xfd\xc2\xfa/\xfc\xc0A\xd3"),
+			},
+		},
+		{key: NewDeploymentKey("time"),
+			expected: DeploymentKey{
+				Payload: DeploymentPayload{Module: "time"},
+				Suffix:  []byte("\xff\x12\x04[s\xc8nO\xf9_"),
+			},
+		},
+		{str: "-0011223344", expectedErr: `expected prefix "dpl" for key "-0011223344"`},
+		{key: NewDeploymentKey("module-with-hyphens"), expected: DeploymentKey{
+			Payload: DeploymentPayload{Module: "module-with-hyphens"},
+			Suffix:  []byte("\xf6b\xa5\xee\xe8*\xbd\xf4J-"),
+		},
+		},
+		// {str: "-", decodeErr: true},
 	} {
-		decoded, decodeErr := ParseDeploymentKey(test.str)
-
-		if test.decodeErr {
-			assert.Error(t, decodeErr, "expected error for deployment key %q", test.str)
-		} else {
-			created := NewDeploymentKey(test.module)
-
-			forceEncoded := DeploymentKey{
-				module: test.module,
-				hash:   test.hash,
-			}
-
-			if test.str != "" && test.module != "" {
-				assert.Equal(t, test.module, decoded.module, "expected module %q for %q", test.module, decoded.module)
-			}
-
-			if test.str != "" && test.hash != "" {
-				assert.Equal(t, test.hash, decoded.hash, "expected hash %q for %q", test.hash, decoded.hash)
-			}
-
-			if test.module != "" && test.strPrefix != "" {
-				assert.True(t, strings.HasPrefix(created.String(), test.strPrefix), "expected string prefix %q for %q", test.strPrefix, created.String())
-			}
-
-			if test.module != "" && test.hash != "" && test.str != "" {
-				assert.Equal(t, test.str, forceEncoded.String(), "expected string %q for %q", test.str, forceEncoded.String())
-			}
+		keyStr := test.str
+		if keyStr == "" {
+			keyStr = test.key.String()
 		}
+		t.Run(keyStr, func(t *testing.T) {
+			decoded, err := ParseDeploymentKey(keyStr)
+			if test.expectedErr != "" {
+				assert.EqualError(t, err, test.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, test.expected, decoded)
+		})
 	}
 }
 
 func TestZeroDeploymentKey(t *testing.T) {
 	_, err := ParseDeploymentKey("")
-	assert.Error(t, err, "expected error for empty deployment key")
+	assert.EqualError(t, err, "expected prefix \"dpl\" for key \"\"")
 }

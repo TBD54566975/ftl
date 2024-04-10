@@ -358,7 +358,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) error {
 					}
 				}
 
-			case *directiveIngress:
+			case *directiveIngress, *directiveCronJob:
 			}
 		}
 		return nil
@@ -455,6 +455,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 			}
 
 		case *directiveIngress:
+			isVerb = true
 			typ := dir.Type
 			if typ == "" {
 				typ = "http"
@@ -464,6 +465,12 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 				Type:   typ,
 				Method: dir.Method,
 				Path:   dir.Path,
+			})
+		case *directiveCronJob:
+			isVerb = true
+			metadata = append(metadata, &schema.MetadataCronJob{
+				Pos:  dir.Pos,
+				Cron: dir.Cron,
 			})
 		}
 	}
@@ -695,7 +702,7 @@ func visitConst(cnode *types.Const) (schema.Value, error) {
 			}
 			return &schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)}, nil
 		default:
-			return nil, tokenErrorf(cnode.Pos(), b.Name(), "unsupported basic type %s", b)
+			return nil, tokenErrorf(cnode.Pos(), "", "unsupported basic type %s", b)
 		}
 	}
 	return nil, tokenErrorf(cnode.Pos(), cnode.Type().String(), "unsupported const type %s", cnode.Type())
@@ -746,7 +753,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type
 			return &schema.Float{Pos: goPosToSchemaPos(pos)}, nil
 
 		default:
-			return nil, tokenErrorf(pos, underlying.Name(), "unsupported basic type %s", underlying)
+			return nil, tokenErrorf(pos, "", "unsupported basic type %s", underlying)
 		}
 
 	case *types.Struct:

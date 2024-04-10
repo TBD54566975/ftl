@@ -118,7 +118,7 @@ func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 
 		case *Any, *Bool, *Bytes, *Data, *Ref, *Database, Decl, *Float,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Int,
-			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
+			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob,
 			*MetadataAlias, *Module, *Schema, *String, *Time, Type, *TypeParameter,
 			*Unit, *Verb, *Enum, *EnumVariant,
 			Value, *IntValue, *StringValue, Symbol, Named:

@@ -174,7 +174,7 @@ message ReplaceDeployResponse {}
 
 message StreamDeploymentLogsRequest {
   string deployment_key = 1;
-  optional string request_name = 2;
+  optional string request_key = 2;
   google.protobuf.Timestamp time_stamp = 3;
   int32 log_level = 4;
   map<string, string> attributes = 5;

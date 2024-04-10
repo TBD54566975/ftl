@@ -62,12 +62,12 @@ func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schem
 }
 
 const createIngressRequest = `-- name: CreateIngressRequest :exec
-INSERT INTO requests (origin, name, source_addr)
+INSERT INTO requests (origin, "key", source_addr)
 VALUES ($1, $2, $3)
 `
 
-func (q *Queries) CreateIngressRequest(ctx context.Context, origin Origin, name string, sourceAddr string) error {
-	_, err := q.db.Exec(ctx, createIngressRequest, origin, name, sourceAddr)
+func (q *Queries) CreateIngressRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error {
+	_, err := q.db.Exec(ctx, createIngressRequest, origin, key, sourceAddr)
 	return err
 }
 
@@ -1033,7 +1033,7 @@ INSERT INTO events (deployment_id, request_id, time_stamp, type,
 VALUES ((SELECT id FROM deployments WHERE deployments.key = $1::deployment_key),
         (CASE
              WHEN $2::TEXT IS NULL THEN NULL
-             ELSE (SELECT id FROM requests ir WHERE ir.name = $2::TEXT)
+             ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT)
             END),
         $3::TIMESTAMPTZ,
         'call',
@@ -1052,7 +1052,7 @@ VALUES ((SELECT id FROM deployments WHERE deployments.key = $1::deployment_key),
 
 type InsertCallEventParams struct {
 	DeploymentKey model.DeploymentKey
-	RequestName   optional.Option[string]
+	RequestKey    optional.Option[string]
 	TimeStamp     time.Time
 	SourceModule  optional.Option[string]
 	SourceVerb    optional.Option[string]
@@ -1068,7 +1068,7 @@ type InsertCallEventParams struct {
 func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
 	_, err := q.db.Exec(ctx, insertCallEvent,
 		arg.DeploymentKey,
-		arg.RequestName,
+		arg.RequestKey,
 		arg.TimeStamp,
 		arg.SourceModule,
 		arg.SourceVerb,
@@ -1187,7 +1187,7 @@ INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, p
 VALUES ((SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
         (CASE
              WHEN $2::TEXT IS NULL THEN NULL
-             ELSE (SELECT id FROM requests ir WHERE ir.name = $2::TEXT LIMIT 1)
+             ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT LIMIT 1)
             END),
         $3::TIMESTAMPTZ,
         $4::INT,
@@ -1202,7 +1202,7 @@ VALUES ((SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
 
 type InsertLogEventParams struct {
 	DeploymentKey model.DeploymentKey
-	RequestName   optional.Option[string]
+	RequestKey    optional.Option[string]
 	TimeStamp     time.Time
 	Level         int32
 	Message       string
@@ -1214,7 +1214,7 @@ type InsertLogEventParams struct {
 func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
 	_, err := q.db.Exec(ctx, insertLogEvent,
 		arg.DeploymentKey,
-		arg.RequestName,
+		arg.RequestKey,
 		arg.TimeStamp,
 		arg.Level,
 		arg.Message,
