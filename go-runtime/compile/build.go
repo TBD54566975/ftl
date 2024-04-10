@@ -191,6 +191,7 @@ func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *sc
 		Schema:       schema,
 		Replacements: replacements,
 	})
+
 }
 
 func generateExternalModules(context ExternalModuleContext) error {
