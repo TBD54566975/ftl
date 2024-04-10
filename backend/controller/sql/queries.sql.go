@@ -66,7 +66,7 @@ INSERT INTO requests (origin, name, source_addr)
 VALUES ($1, $2, $3)
 `
 
-func (q *Queries) CreateIngressRequest(ctx context.Context, origin Origin, name string, sourceAddr string) error {
+func (q *Queries) CreateIngressRequest(ctx context.Context, origin Origin, name model.RequestName, sourceAddr string) error {
 	_, err := q.db.Exec(ctx, createIngressRequest, origin, name, sourceAddr)
 	return err
 }

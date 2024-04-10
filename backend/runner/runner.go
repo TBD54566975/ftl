@@ -75,7 +75,7 @@ func Start(ctx context.Context, config Config) error {
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
 	key := config.Key
-	if key == (model.RunnerKey{}) {
+	if key.IsZero() {
 		key = model.NewRunnerKey(config.Bind.Hostname(), config.Bind.Port())
 	}
 	labels, err := structpb.NewStruct(map[string]any{
@@ -246,7 +246,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
 	}
-	if depl.key != deploymentKey {
+	if !depl.key.Equal(deploymentKey) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("deployment key mismatch"))
 	}
 

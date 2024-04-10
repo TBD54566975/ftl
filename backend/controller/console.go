@@ -242,7 +242,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 		case *pbconsole.EventsQuery_Filter_Requests:
 			requestNames := make([]model.RequestName, 0, len(filter.Requests.Requests))
 			for _, request := range filter.Requests.Requests {
-				_, requestName, err := model.ParseRequestName(request)
+				requestName, err := model.ParseRequestName(request)
 				if err != nil {
 					return nil, connect.NewError(connect.CodeInvalidArgument, err)
 				}

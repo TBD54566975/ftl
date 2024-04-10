@@ -23,7 +23,7 @@ var _ scaling.RunnerScaling = (*LocalScaling)(nil)
 type LocalScaling struct {
 	lock     sync.Mutex
 	cacheDir string
-	runners  map[model.RunnerKey]context.CancelFunc
+	runners  map[string]context.CancelFunc
 
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
@@ -39,7 +39,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 	return &LocalScaling{
 		lock:                sync.Mutex{},
 		cacheDir:            cacheDir,
-		runners:             map[model.RunnerKey]context.CancelFunc{},
+		runners:             map[string]context.CancelFunc{},
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
 		prevRunnerSuffix:    -1,
@@ -99,7 +99,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
 
 		runnerCtx, cancel := context.WithCancel(runnerCtx)
-		l.runners[config.Key] = cancel
+		l.runners[config.Key.String()] = cancel
 
 		go func() {
 			logger.Debugf("Starting runner: %s", config.Key)
@@ -117,13 +117,13 @@ func (l *LocalScaling) remove(ctx context.Context, runner model.RunnerKey) error
 	log := log.FromContext(ctx)
 	log.Debugf("Removing runner: %s", runner)
 
-	cancel, ok := l.runners[runner]
+	cancel, ok := l.runners[runner.String()]
 	if !ok {
 		return fmt.Errorf("runner %s not found", runner)
 	}
 
 	cancel()
-	delete(l.runners, runner)
+	delete(l.runners, runner.String())
 
 	return nil
 }

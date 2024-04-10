@@ -65,7 +65,7 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 
 			var request optional.Option[model.RequestName]
 			if reqStr, ok := entry.Attributes["request"]; ok {
-				_, req, err := model.ParseRequestName(reqStr)
+				req, err := model.ParseRequestName(reqStr)
 				if err == nil {
 					request = optional.Some(req)
 				}

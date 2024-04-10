@@ -83,7 +83,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("GetMissingDeployment", func(t *testing.T) {
-		_, err := dal.GetDeployment(ctx, model.NewDeploymentKey("test"))
+		_, err := dal.GetDeployment(ctx, model.NewDeploymentKey("invalid"))
 		assert.IsError(t, err, ErrNotFound)
 	})
 
@@ -162,7 +162,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
-		_, err := dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey("test"), time.Second, labels)
+		_, err := dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey("invalid"), time.Second, labels)
 		assert.Error(t, err)
 		assert.IsError(t, err, ErrNotFound)
 		assert.EqualError(t, err, "deployment: not found")

@@ -39,12 +39,12 @@ func SetRequestName(header http.Header, key model.RequestName) {
 func GetRequestName(header http.Header) (model.RequestName, bool, error) {
 	keyStr := header.Get(RequestIDHeader)
 	if keyStr == "" {
-		return "", false, nil
+		return model.RequestName{}, false, nil
 	}
 
-	var _, key, err = model.ParseRequestName(keyStr)
+	key, err := model.ParseRequestName(keyStr)
 	if err != nil {
-		return "", false, err
+		return model.RequestName{}, false, err
 	}
 	return key, true, nil
 }

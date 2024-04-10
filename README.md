@@ -18,7 +18,9 @@ brew tap TBD54566975/ftl && brew install ftl
 set -Eeuxo pipefail
 
 just build ftl
-export PATH="$(git rev-parse --show-toplevel)/build/release:$PATH"
+export FTL_ROOT="$(git rev-parse --show-toplevel)"
+export PATH="$FTL_ROOT/build/release:$PATH"
+export FTL_INIT_GO_REPLACE="github.com/TBD54566975/ftl=$FTL_ROOT"
 
 pwd
 
