@@ -18,7 +18,6 @@ var _ Metadata = (*MetadataCronJob)(nil)
 
 func (m *MetadataCronJob) Position() Position { return m.Pos }
 func (m *MetadataCronJob) String() string {
-
 	return fmt.Sprintf("+cron %s", m.Cron)
 }
 
@@ -29,9 +28,8 @@ func (m *MetadataCronJob) schemaChildren() []Node {
 func (*MetadataCronJob) schemaMetadata() {}
 
 func (m *MetadataCronJob) ToProto() proto.Message {
-	out := &schemapb.MetadataCronJob{
+	return &schemapb.MetadataCronJob{
 		Pos:  posToProto(m.Pos),
 		Cron: m.Cron,
 	}
-	return out
 }
