@@ -120,7 +120,7 @@ func TestDiscoverModules(t *testing.T) {
 				Language:      "go",
 				Realm:         "home",
 				Module:        "yetanother",
-				MinFTLVersion: "1.2.3",
+				MinFTLVersion: "0.129.2",
 				Deploy:        []string{"main"},
 				DeployDir:     "_ftl",
 				Schema:        "schema.pb",

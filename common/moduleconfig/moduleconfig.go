@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/TBD54566975/ftl"
 )
 
 // ModuleGoConfig is language-specific configuration for Go modules.
@@ -108,6 +110,10 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 			return fmt.Errorf("watch files must be relative to the module directory")
 		}
 	}
+	if !ftl.IsVersionAtLeastMin(ftl.Version, config.MinFTLVersion) {
+		return fmt.Errorf("FTL version '%v' predates the minimum version '%v'", ftl.Version, config.MinFTLVersion)
+	}
+
 	return nil
 }
 

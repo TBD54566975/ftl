@@ -6,8 +6,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const VersionNumberParts int = 3
-
 // IsRelease returns true if the version is a release version.
 func IsRelease(v string) bool {
 	return regexp.MustCompile(`^\d+\.\d+\.\d+$`).MatchString(v)
@@ -17,18 +15,15 @@ func IsRelease(v string) bool {
 //   - minVersion is not defined (i.e. is emptystring)
 //   - v or minVersion is not a release version
 //   - v > minVersion when both v and minVersion are release versions
-func IsVersionAtLeastMin(v string, minVersion string) (bool, error) {
+func IsVersionAtLeastMin(v string, minVersion string) bool {
 	if minVersion == "" {
-		return true, nil
+		return true
 	}
 	if !IsRelease(v) || !IsRelease(minVersion) {
-		return true, nil
+		return true
 	}
-	return semver.Compare("v"+v, "v"+minVersion) >= 0, nil
+	return semver.Compare("v"+v, "v"+minVersion) >= 0
 }
-
-// VersionIsMock is set by tests and used to block evaluation of versions that look like release versions but are not real.
-var VersionIsMock = false
 
 // Version of FTL binary (set by linker).
 var Version = "dev"

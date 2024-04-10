@@ -84,14 +84,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	}
 	logger := log.FromContext(ctx)
 
-	meetsMinVerReq, err := ftl.IsVersionAtLeastMin(ftl.Version, config.MinFTLVersion)
-	if err != nil {
-		return fmt.Errorf("failed to compare FTL version against minimum version: %w", err)
-	}
-	if !meetsMinVerReq {
-		return fmt.Errorf("FTL version '%v' predates the minimum version '%v'", ftl.Version, config.MinFTLVersion)
-	}
-
 	funcs := maps.Clone(scaffoldFuncs)
 
 	logger.Debugf("Generating external modules")
@@ -199,7 +191,6 @@ func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *sc
 		Schema:       schema,
 		Replacements: replacements,
 	})
-
 }
 
 func generateExternalModules(context ExternalModuleContext) error {
