@@ -368,13 +368,6 @@ func timeFromValues(values componentValues) time.Time {
 		time.UTC)
 }
 
-// Validate makes sure that a pattern has no mistakes in the cron format, and that there is a valid next value from a set point in time
-// Validity checks are done while calculating a next date to ensure that we never calculate a next date for an invalid pattern
-func Validate(pattern Pattern) error {
-	_, err := NextAfter(pattern, time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), true)
-	return err
-}
-
 func validateComponent(component Component, t componentType) error {
 	if len(component.List) == 0 {
 		return fmt.Errorf("%s must have at least value", stringForComponentType(t))

@@ -114,6 +114,12 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Path:   ingressPathComponentListToSchema(s.Ingress.Path),
 		}
 
+	case *schemapb.Metadata_CronJob:
+		return &MetadataCronJob{
+			Pos:  posFromProto(s.CronJob.Pos),
+			Cron: s.CronJob.Cron,
+		}
+
 	case *schemapb.Metadata_Alias:
 		return &MetadataAlias{
 			Pos:   posFromProto(s.Alias.Pos),

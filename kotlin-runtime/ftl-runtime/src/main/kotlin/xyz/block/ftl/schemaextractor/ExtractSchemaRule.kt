@@ -41,6 +41,7 @@ import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.util.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.util.getType
+import org.jetbrains.kotlin.resolve.calls.util.getValueArgumentsInParentheses
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
@@ -60,6 +61,7 @@ import xyz.block.ftl.Database
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Json
 import xyz.block.ftl.Method
+import xyz.block.ftl.Cron
 import xyz.block.ftl.schemaextractor.SchemaExtractor.Companion.extractModuleName
 import xyz.block.ftl.v1.schema.Array
 import xyz.block.ftl.v1.schema.Config
@@ -78,6 +80,7 @@ import xyz.block.ftl.v1.schema.Metadata
 import xyz.block.ftl.v1.schema.MetadataAlias
 import xyz.block.ftl.v1.schema.MetadataCalls
 import xyz.block.ftl.v1.schema.MetadataIngress
+import xyz.block.ftl.v1.schema.MetadataCronJob
 import xyz.block.ftl.v1.schema.Module
 import xyz.block.ftl.v1.schema.Optional
 import xyz.block.ftl.v1.schema.Position
@@ -169,6 +172,9 @@ class ExtractSchemaRule(config: DetektConfig) : Rule(config) {
     }
 
     val moduleName = root.extractModuleName()
+    if (moduleName == "builtin") {
+      throw IllegalArgumentException("Why does this fix it?")
+    }
     modules[moduleName]?.let {
       writeFile(it.toModule(moduleName).encode(), SCHEMA_OUT)
     }
@@ -327,6 +333,7 @@ class SchemaExtractor(
 
     val metadata = mutableListOf<Metadata>()
     extractIngress(verb, requestRef, returnRef)?.apply { metadata.add(Metadata(ingress = this)) }
+    extractCron(verb, requestRef, returnRef)?.apply { metadata.add(Metadata(cronJob = this)) }
     extractCalls(verb)?.apply { metadata.add(Metadata(calls = this)) }
     require(verb.name != null) {
       verb.errorAtPosition("verbs must be named")
@@ -424,6 +431,24 @@ class SchemaExtractor(
     }
   }
 
+  private fun extractCron(verb: KtNamedFunction, requestType: Type, responseType: Type): MetadataCronJob? {
+    return verb.annotationEntries.firstOrNull {
+      bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Cron::class.qualifiedName
+    }?.let { annotationEntry ->
+      require(annotationEntry.valueArguments.size == 1) {
+        annotationEntry.errorAtPosition("@Cron annotation requires 1 argument")
+      }
+      val patternArg = annotationEntry.valueArguments.firstOrNull()
+      require(patternArg != null) {
+        annotationEntry.errorAtPosition("could not find cron pattern for @Cron annotation")
+      }
+      val patternVal = patternArg?.getArgumentExpression()?.text
+      MetadataCronJob(
+        cron = patternVal ?: "",
+        pos = annotationEntry.getPosition(),
+      )
+    }
+  }
 
   private fun extractPathComponents(path: String): List<IngressPathComponent> {
     return path.split("/").filter { it.isNotEmpty() }.map { part ->

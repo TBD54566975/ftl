@@ -66,6 +66,15 @@ func (v *Verb) GetMetadataIngress() optional.Option[*MetadataIngress] {
 	return optional.None[*MetadataIngress]()
 }
 
+func (v *Verb) GetMetadataCronJob() optional.Option[*MetadataCronJob] {
+	for _, m := range v.Metadata {
+		if m, ok := m.(*MetadataCronJob); ok {
+			return optional.Some(m)
+		}
+	}
+	return optional.None[*MetadataCronJob]()
+}
+
 func (v *Verb) ToProto() proto.Message {
 	return &schemapb.Verb{
 		Pos:      posToProto(v.Pos),

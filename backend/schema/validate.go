@@ -13,6 +13,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
+	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/errors"
 	dc "github.com/TBD54566975/ftl/internal/reflect"
 )
@@ -173,7 +174,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
-				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases,
+				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataCronJob,
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
 				Value, *IntValue, *StringValue, *Config, *Secret, Symbol, Named:
@@ -304,7 +305,7 @@ func ValidateModule(module *Module) error {
 
 		case *Array, *Bool, *Database, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
-			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataAlias,
+			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
 
@@ -452,7 +453,15 @@ func errorf(pos interface{ Position() Position }, format string, args ...interfa
 
 func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 	// Validate metadata
+	metadataTypes := map[reflect.Type]bool{}
 	for _, md := range n.Metadata {
+		reflected := reflect.TypeOf(md)
+		if _, seen := metadataTypes[reflected]; seen {
+			merr = append(merr, errorf(md, "verb can not have multiple instances of %s", strings.ToLower(strings.TrimPrefix(reflected.String(), "*schema.Metadata"))))
+			continue
+		}
+		metadataTypes[reflected] = true
+
 		switch md := md.(type) {
 		case *MetadataIngress:
 			reqBodyType, reqBody, errs := validateIngressRequestOrResponse(scopes, n, "request", n.Request)
@@ -474,7 +483,11 @@ func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 				case *IngressPathLiteral:
 				}
 			}
-
+		case *MetadataCronJob:
+			_, err := cron.Parse(md.Cron)
+			if err != nil {
+				merr = append(merr, err)
+			}
 		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:
 		}
 	}

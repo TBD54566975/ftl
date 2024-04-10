@@ -358,7 +358,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) error {
 					}
 				}
 
-			case *directiveIngress:
+			case *directiveIngress, *directiveCronJob:
 			}
 		}
 		return nil
@@ -455,6 +455,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 			}
 
 		case *directiveIngress:
+			isVerb = true
 			typ := dir.Type
 			if typ == "" {
 				typ = "http"
@@ -464,6 +465,12 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb, e
 				Type:   typ,
 				Method: dir.Method,
 				Path:   dir.Path,
+			})
+		case *directiveCronJob:
+			isVerb = true
+			metadata = append(metadata, &schema.MetadataCronJob{
+				Pos:  dir.Pos,
+				Cron: dir.Cron,
 			})
 		}
 	}
