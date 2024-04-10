@@ -224,9 +224,9 @@ func TestBuildChecksMinFTLVersion(t *testing.T) {
 		ftl.Version = test.v
 		err = Build(ctx, sch, module)
 		if test.wantErr {
-			assert.Error(t, err)
+			assert.Error(t, err, "when version=%v, we expected an error but did not receive one", test.v)
 		} else {
-			assert.NoError(t, err)
+			assert.NoError(t, err, "when version=%v, we received an unexpected error", test.v)
 		}
 	}
 
