@@ -35,8 +35,7 @@ func TestIsVersionAtLeastMin(t *testing.T) {
 		{"1.2.3", "1.2.4", false},
 	}
 	for _, test := range tests {
-		got, err := IsVersionAtLeastMin(test.v, test.minVersion)
+		got := IsVersionAtLeastMin(test.v, test.minVersion)
 		assert.Equal(t, test.want, got, "With v=%v and minVersion=%v, got %t, but want %t", test.v, test.minVersion, got, test.want)
-		assert.NoError(t, err)
 	}
 }
