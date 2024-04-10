@@ -1,3 +1,2 @@
 module = "another"
 language = "go"
-min-ftl-version = "1.2.3"

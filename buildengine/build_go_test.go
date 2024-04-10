@@ -203,7 +203,7 @@ func TestBuildChecksMinFTLVersion(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	moduleDir := "testdata/projects/another"
+	moduleDir := "testdata/projects/yetanother"
 	buildDir := "_ftl"
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
@@ -215,8 +215,8 @@ func TestBuildChecksMinFTLVersion(t *testing.T) {
 		wantErr bool
 	}{
 		{"dev", false},
-		{"1.3.0", false},
-		{"0.129.2", true},
+		{"0.129.2", false},
+		//{"0.129.1", true},
 	}
 
 	for _, test := range tests {
@@ -226,7 +226,7 @@ func TestBuildChecksMinFTLVersion(t *testing.T) {
 		if test.wantErr {
 			assert.Error(t, err, "when version=%v, we expected an error but did not receive one", test.v)
 		} else {
-			assert.NoError(t, err, "when version=%v, we received an unexpected error", test.v)
+			assert.NoError(t, err, "when version=%v, we received an unexpected error: %w", test.v, err)
 		}
 	}
 

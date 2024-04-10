@@ -1,0 +1,3 @@
+module = "yetanother"
+language = "go"
+min-ftl-version = "0.129.1"
