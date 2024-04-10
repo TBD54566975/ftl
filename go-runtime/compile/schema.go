@@ -702,7 +702,7 @@ func visitConst(cnode *types.Const) (schema.Value, error) {
 			}
 			return &schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)}, nil
 		default:
-			return nil, tokenErrorf(cnode.Pos(), b.Name(), "unsupported basic type %s", b)
+			return nil, tokenErrorf(cnode.Pos(), "", "unsupported basic type %s", b)
 		}
 	}
 	return nil, tokenErrorf(cnode.Pos(), cnode.Type().String(), "unsupported const type %s", cnode.Type())
@@ -753,7 +753,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) (schema.Type
 			return &schema.Float{Pos: goPosToSchemaPos(pos)}, nil
 
 		default:
-			return nil, tokenErrorf(pos, underlying.Name(), "unsupported basic type %s", underlying)
+			return nil, tokenErrorf(pos, "", "unsupported basic type %s", underlying)
 		}
 
 	case *types.Struct:
