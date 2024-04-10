@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
+	"github.com/alecthomas/types/optional"
 )
 
 type ftlDirectRoutingKey struct{}
@@ -56,24 +57,24 @@ func IsDirectRouted(ctx context.Context) bool {
 	return ctx.Value(ftlDirectRoutingKey{}) != nil
 }
 
-// RequestNameFromContext returns the request Key from the context, if any.
+// RequestKeyFromContext returns the request Key from the context, if any.
 //
 // TODO: Return an Option here instead of a bool.
-func RequestNameFromContext(ctx context.Context) (model.RequestName, bool, error) {
+func RequestKeyFromContext(ctx context.Context) (optional.Option[model.RequestKey], error) {
 	value := ctx.Value(requestIDKey{})
 	keyStr, ok := value.(string)
 	if !ok {
-		return model.RequestName{}, false, nil
+		return optional.None[model.RequestKey](), nil
 	}
-	key, err := model.ParseRequestName(keyStr)
+	key, err := model.ParseRequestKey(keyStr)
 	if err != nil {
-		return model.RequestName{}, false, fmt.Errorf("%s: %w", "invalid request Key", err)
+		return optional.None[model.RequestKey](), fmt.Errorf("%s: %w", "invalid request Key", err)
 	}
-	return key, true, nil
+	return optional.Some(key), nil
 }
 
 // WithRequestName adds the request Key to the context.
-func WithRequestName(ctx context.Context, key model.RequestName) context.Context {
+func WithRequestName(ctx context.Context, key model.RequestKey) context.Context {
 	return context.WithValue(ctx, requestIDKey{}, key.String())
 }
 
@@ -187,13 +188,10 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if verbs, ok := VerbsFromContext(ctx); ok {
 			headers.SetCallers(header, verbs)
 		}
-		if key, ok, err := RequestNameFromContext(ctx); ok {
-			if err != nil {
-				return nil, err
-			}
-			if ok {
-				headers.SetRequestName(header, key)
-			}
+		if key, err := RequestKeyFromContext(ctx); err != nil {
+			return nil, err
+		} else if key, ok := key.Get(); ok {
+			headers.SetRequestName(header, key)
 		}
 	} else {
 		if headers.IsDirectRouted(header) {

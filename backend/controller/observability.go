@@ -15,7 +15,7 @@ import (
 
 type Call struct {
 	deploymentKey model.DeploymentKey
-	requestName   model.RequestName
+	requestKey    model.RequestKey
 	startTime     time.Time
 	destVerb      *schema.Ref
 	callers       []*schema.Ref
@@ -48,7 +48,7 @@ func (s *Service) recordCall(ctx context.Context, call *Call) {
 	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{
 		Time:          call.startTime,
 		DeploymentKey: call.deploymentKey,
-		RequestName:   optional.Some(call.requestName),
+		RequestKey:    optional.Some(call.requestKey),
 		Duration:      time.Since(call.startTime),
 		SourceVerb:    sourceVerb,
 		DestVerb:      *call.destVerb,

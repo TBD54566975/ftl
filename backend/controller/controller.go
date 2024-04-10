@@ -202,12 +202,12 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	requestName, err := s.dal.CreateIngressRequest(r.Context(), fmt.Sprintf("%s %s", r.Method, r.URL.Path), r.RemoteAddr)
+	requestKey, err := s.dal.CreateIngressRequest(r.Context(), fmt.Sprintf("%s %s", r.Method, r.URL.Path), r.RemoteAddr)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	ingress.Handle(sch, requestName, routes, w, r, s.Call)
+	ingress.Handle(sch, requestKey, routes, w, r, s.Call)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
@@ -335,17 +335,17 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
 		}
-		var requestName optional.Option[model.RequestName]
-		if msg.RequestName != nil {
-			rkey, err := model.ParseRequestName(*msg.RequestName)
+		var requestKey optional.Option[model.RequestKey]
+		if msg.RequestKey != nil {
+			rkey, err := model.ParseRequestKey(*msg.RequestKey)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid request key: %w", err))
 			}
-			requestName = optional.Some(rkey)
+			requestKey = optional.Some(rkey)
 		}
 
 		err = s.dal.InsertLogEvent(ctx, &dal.LogEvent{
-			RequestName:   requestName,
+			RequestKey:    requestKey,
 			DeploymentKey: deploymentKey,
 			Time:          msg.TimeStamp.AsTime(),
 			Level:         msg.LogLevel,
@@ -628,17 +628,17 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, err
 	}
 
-	requestName, ok, err := headers.GetRequestName(req.Header())
+	requestKey, ok, err := headers.GetRequestName(req.Header())
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
 		// Inject the request key if this is an ingress call.
-		requestName, err = s.dal.CreateIngressRequest(ctx, "grpc", req.Peer().Addr)
+		requestKey, err = s.dal.CreateIngressRequest(ctx, "grpc", req.Peer().Addr)
 		if err != nil {
 			return nil, err
 		}
-		headers.SetRequestName(req.Header(), requestName)
+		headers.SetRequestName(req.Header(), requestKey)
 	}
 
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
@@ -651,7 +651,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 	s.recordCall(ctx, &Call{
 		deploymentKey: route.Deployment,
-		requestName:   requestName,
+		requestKey:    requestKey,
 		startTime:     start,
 		destVerb:      verbRef,
 		callers:       callers,
@@ -1107,8 +1107,8 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 
 func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.DeploymentKey) *log.Logger {
 	attrs := map[string]string{"deployment": deploymentKey.String()}
-	if requestName, ok, _ := rpc.RequestNameFromContext(ctx); ok {
-		attrs["request"] = requestName.String()
+	if requestKey, _ := rpc.RequestKeyFromContext(ctx); requestKey.Ok() {
+		attrs["request"] = requestKey.MustGet().String()
 	}
 
 	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Attrs(attrs)

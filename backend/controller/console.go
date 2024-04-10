@@ -240,15 +240,15 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 			query = append(query, dal.FilterDeployments(deploymentKeys...))
 
 		case *pbconsole.EventsQuery_Filter_Requests:
-			requestNames := make([]model.RequestName, 0, len(filter.Requests.Requests))
+			requestKeys := make([]model.RequestKey, 0, len(filter.Requests.Requests))
 			for _, request := range filter.Requests.Requests {
-				requestName, err := model.ParseRequestName(request)
+				requestKey, err := model.ParseRequestKey(request)
 				if err != nil {
 					return nil, connect.NewError(connect.CodeInvalidArgument, err)
 				}
-				requestNames = append(requestNames, requestName)
+				requestKeys = append(requestKeys, requestKey)
 			}
-			query = append(query, dal.FilterRequests(requestNames...))
+			query = append(query, dal.FilterRequests(requestKeys...))
 
 		case *pbconsole.EventsQuery_Filter_EventTypes:
 			eventTypes := make([]dal.EventType, 0, len(filter.EventTypes.EventTypes))
@@ -315,10 +315,10 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 func eventDALToProto(event dal.Event) *pbconsole.Event {
 	switch event := event.(type) {
 	case *dal.CallEvent:
-		var requestName *string
-		if r, ok := event.RequestName.Get(); ok {
+		var requestKey *string
+		if r, ok := event.RequestKey.Get(); ok {
 			rstr := r.String()
-			requestName = &rstr
+			requestKey = &rstr
 		}
 		var sourceVerbRef *schemapb.Ref
 		if sourceVerb, ok := event.SourceVerb.Get(); ok {
@@ -329,7 +329,7 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 			Id:        event.ID,
 			Entry: &pbconsole.Event_Call{
 				Call: &pbconsole.CallEvent{
-					RequestName:   requestName,
+					RequestKey:    requestKey,
 					DeploymentKey: event.DeploymentKey.String(),
 					TimeStamp:     timestamppb.New(event.Time),
 					SourceVerbRef: sourceVerbRef,
@@ -347,10 +347,10 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 		}
 
 	case *dal.LogEvent:
-		var requestName *string
-		if r, ok := event.RequestName.Get(); ok {
+		var requestKey *string
+		if r, ok := event.RequestKey.Get(); ok {
 			rstr := r.String()
-			requestName = &rstr
+			requestKey = &rstr
 		}
 		return &pbconsole.Event{
 			TimeStamp: timestamppb.New(event.Time),
@@ -358,7 +358,7 @@ func eventDALToProto(event dal.Event) *pbconsole.Event {
 			Entry: &pbconsole.Event_Log{
 				Log: &pbconsole.LogEvent{
 					DeploymentKey: event.DeploymentKey.String(),
-					RequestName:   requestName,
+					RequestKey:    requestKey,
 					TimeStamp:     timestamppb.New(event.Time),
 					LogLevel:      event.Level,
 					Attributes:    event.Attributes,

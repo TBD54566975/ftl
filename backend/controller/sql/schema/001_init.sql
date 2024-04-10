@@ -206,12 +206,12 @@ CREATE TABLE requests
     -- ingress: ingress-<method>-<path>-<hash> (eg. ingress-GET-foo-bar-<hash>)
     -- cron: cron-<name>-<hash>                (eg. cron-poll-news-sources-<hash>)
     -- pubsub: pubsub-<subscription>-<hash>    (eg. pubsub-articles-<hash>)
-    name        request_key UNIQUE NOT NULL,
+    "key"       request_key UNIQUE NOT NULL,
     source_addr VARCHAR        NOT NULL
 );
 
 CREATE INDEX requests_origin_idx ON requests (origin);
-CREATE UNIQUE INDEX ingress_requests_key_idx ON requests (name);
+CREATE UNIQUE INDEX ingress_requests_key_idx ON requests ("key");
 
 CREATE TYPE controller_state AS ENUM (
     'live',

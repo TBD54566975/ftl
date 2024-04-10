@@ -95,7 +95,7 @@ func TestIngress(t *testing.T) {
 			}
 			req := httptest.NewRequest(test.method, test.path, bytes.NewBuffer(test.payload)).WithContext(ctx)
 			req.URL.RawQuery = test.query.Encode()
-			reqKey := model.NewRequestName(model.OriginIngress, "test")
+			reqKey := model.NewRequestKey(model.OriginIngress, "test")
 			ingress.Handle(sch, reqKey, routes, rec, req, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 				body, err := encoding.Marshal(test.response)
 				assert.NoError(t, err)
