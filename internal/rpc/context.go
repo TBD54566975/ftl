@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
+	"github.com/alecthomas/types/optional"
 	"golang.org/x/mod/semver"
 
 	"github.com/TBD54566975/ftl"
@@ -14,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
-	"github.com/alecthomas/types/optional"
 )
 
 type ftlDirectRoutingKey struct{}
