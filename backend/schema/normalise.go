@@ -16,6 +16,7 @@ func Normalise[T Node](n T) T {
 		c.Pos = zero
 
 	case *Unit:
+		c.Unit = true
 		c.Pos = zero
 
 	case *Schema:

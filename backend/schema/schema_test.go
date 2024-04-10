@@ -50,7 +50,6 @@ module todo {
 
   verb scheduled(Unit) Unit
       +cron */10 * * 1-10,11-31 * * *
-
 }
 
 module foo {
