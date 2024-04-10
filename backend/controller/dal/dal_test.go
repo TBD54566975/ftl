@@ -220,16 +220,16 @@ func TestDAL(t *testing.T) {
 		}}, runners)
 	})
 
-	var requestName model.RequestName
+	var requestKey model.RequestKey
 	t.Run("CreateIngressRequest", func(t *testing.T) {
-		requestName, err = dal.CreateIngressRequest(ctx, "GET /test", "127.0.0.1:1234")
+		requestKey, err = dal.CreateIngressRequest(ctx, "GET /test", "127.0.0.1:1234")
 		assert.NoError(t, err)
 	})
 
 	callEvent := &CallEvent{
 		Time:          time.Now().Round(time.Millisecond),
 		DeploymentKey: deploymentKey,
-		RequestName:   optional.Some(requestName),
+		RequestKey:    optional.Some(requestKey),
 		Request:       []byte("{}"),
 		Response:      []byte(`{"time": "now"}`),
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
@@ -242,7 +242,7 @@ func TestDAL(t *testing.T) {
 	logEvent := &LogEvent{
 		Time:          time.Now().Round(time.Millisecond),
 		DeploymentKey: deploymentKey,
-		RequestName:   optional.Some(requestName),
+		RequestKey:    optional.Some(requestKey),
 		Level:         int32(log.Warn),
 		Attributes:    map[string]string{"attr": "value"},
 		Message:       "A log entry",

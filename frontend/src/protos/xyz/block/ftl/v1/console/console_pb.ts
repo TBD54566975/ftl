@@ -99,9 +99,9 @@ export class LogEvent extends Message<LogEvent> {
   deploymentKey = "";
 
   /**
-   * @generated from field: optional string request_name = 2;
+   * @generated from field: optional string request_key = 2;
    */
-  requestName?: string;
+  requestKey?: string;
 
   /**
    * @generated from field: google.protobuf.Timestamp time_stamp = 3;
@@ -142,7 +142,7 @@ export class LogEvent extends Message<LogEvent> {
   static readonly typeName = "xyz.block.ftl.v1.console.LogEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
@@ -173,9 +173,9 @@ export class LogEvent extends Message<LogEvent> {
  */
 export class CallEvent extends Message<CallEvent> {
   /**
-   * @generated from field: optional string request_name = 1;
+   * @generated from field: optional string request_key = 1;
    */
-  requestName?: string;
+  requestKey?: string;
 
   /**
    * @generated from field: string deployment_key = 2;
@@ -230,7 +230,7 @@ export class CallEvent extends Message<CallEvent> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.console.CallEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "request_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 11, name: "source_verb_ref", kind: "message", T: Ref, opt: true },

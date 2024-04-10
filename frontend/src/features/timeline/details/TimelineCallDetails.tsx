@@ -27,12 +27,12 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp;
   useEffect(() => {
     const abortController = new AbortController()
     const fetchRequestCalls = async () => {
-      if (selectedCall.requestName === undefined) {
+      if (selectedCall.requestKey === undefined) {
         return
       }
       const calls = await getRequestCalls({
         abortControllerSignal: abortController.signal,
-        requestKey: selectedCall.requestName,
+        requestKey: selectedCall.requestKey,
       })
       setRequestCalls(calls.reverse())
     }
@@ -92,9 +92,9 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp;
       <DeploymentCard className='mt-4' deploymentKey={call.deploymentKey} />
 
       <ul className='pt-4 space-y-2'>
-        {selectedCall.requestName && (
+        {selectedCall.requestKey && (
           <li>
-            <AttributeBadge name='Request' value={selectedCall.requestName} />
+            <AttributeBadge name='Request' value={selectedCall.requestKey} />
           </li>
         )}
         <li>

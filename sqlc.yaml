@@ -45,7 +45,7 @@ sql:
           - db_type: "controller_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - db_type: "request_key"
-            go_type: "github.com/TBD54566975/ftl/internal/model.RequestName"
+            go_type: "github.com/TBD54566975/ftl/internal/model.RequestKey"
           - db_type: "request_key"
             nullable: true
             go_type:

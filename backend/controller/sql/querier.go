@@ -17,7 +17,7 @@ type Querier interface {
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
-	CreateIngressRequest(ctx context.Context, origin Origin, name model.RequestName, sourceAddr string) error
+	CreateIngressRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)

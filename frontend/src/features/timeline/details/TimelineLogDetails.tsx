@@ -35,9 +35,9 @@ export const TimelineLogDetails = ({ event, log }: { event: Event; log: LogEvent
         <DeploymentCard className='mt-4' deploymentKey={log.deploymentKey} />
 
         <ul className='pt-4 space-y-2'>
-          {log.requestName && (
+          {log.requestKey && (
             <li>
-              <AttributeBadge name='Request' value={log.requestName} />
+              <AttributeBadge name='Request' value={log.requestKey} />
             </li>
           )}
           {log.error && (

@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-// A RequestName represents an inbound request into the cluster.
-type RequestName = KeyType[RequestKeyPayload, *RequestKeyPayload]
+// A RequestKey represents an inbound request into the cluster.
+type RequestKey = KeyType[RequestKeyPayload, *RequestKeyPayload]
 
-func NewRequestName(origin Origin, key string) RequestName {
+func NewRequestKey(origin Origin, key string) RequestKey {
 	return newKey[RequestKeyPayload](string(origin), key)
 }
 
-func ParseRequestName(name string) (RequestName, error) {
+func ParseRequestKey(name string) (RequestKey, error) {
 	return parseKey[RequestKeyPayload](name)
 }
 
@@ -39,7 +39,7 @@ func ParseOrigin(origin string) (Origin, error) {
 	}
 }
 
-var requestNameNormaliserRe = regexp.MustCompile("[^a-zA-Z0-9]+")
+var requestKeyNormaliserRe = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 type RequestKeyPayload struct {
 	Origin Origin
@@ -58,7 +58,7 @@ func (r *RequestKeyPayload) Parse(parts []string) error {
 	}
 	r.Origin = origin
 	key := strings.Join(parts[1:], "-")
-	r.Key = requestNameNormaliserRe.ReplaceAllString(key, "-")
+	r.Key = requestKeyNormaliserRe.ReplaceAllString(key, "-")
 	return nil
 }
 func (r *RequestKeyPayload) RandomBytes() int { return 10 }

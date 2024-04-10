@@ -20,7 +20,7 @@ import (
 // Handle HTTP ingress routes.
 func Handle(
 	sch *schema.Schema,
-	requestName model.RequestName,
+	requestKey model.RequestKey,
 	routes []dal.IngressRoute,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -50,7 +50,7 @@ func Handle(
 		Body:     body,
 	})
 
-	headers.SetRequestName(creq.Header(), requestName)
+	headers.SetRequestName(creq.Header(), requestKey)
 	resp, err := call(r.Context(), creq)
 	if err != nil {
 		if connectErr := new(connect.Error); errors.As(err, &connectErr) {
