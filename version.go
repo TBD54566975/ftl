@@ -34,6 +34,9 @@ func IsVersionAtLeastMin(v string, minVersion string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+		if vInt > minVInt {
+			return true, nil
+		}
 		if vInt < minVInt {
 			return false, nil
 		}
