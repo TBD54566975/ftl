@@ -33,13 +33,8 @@ func TestParsingAndValidationErrors(t *testing.T) {
 		{"* * * 29 2 * 2021", "could not find next time for pattern \"* * * 29 2 * 2021\""},
 	} {
 		t.Run(fmt.Sprintf("CronValidation:%s", tt.str), func(t *testing.T) {
-			pattern, err := Parse(tt.str)
-			if err != nil {
-				assert.EqualError(t, err, tt.err, "Parse(%q)", tt.str)
-				return
-			}
-			err = Validate(pattern)
-			assert.EqualError(t, err, tt.err, "Validate(%q)", tt.str)
+			_, err := Parse(tt.str)
+			assert.EqualError(t, err, tt.err, "Parse(%q)", tt.str)
 		})
 	}
 }

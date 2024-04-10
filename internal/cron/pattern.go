@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -155,6 +156,11 @@ func (r *ValueRange) String() string {
 
 func Parse(text string) (Pattern, error) {
 	pattern, err := parser.ParseString("", text)
+	if err != nil {
+		return Pattern{}, err
+	}
+	// Validate to make sure that a pattern has no mistakes in the cron format, and that there is a valid next value from a set point in time
+	_, err = NextAfter(*pattern, time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), true)
 	if err != nil {
 		return Pattern{}, err
 	}

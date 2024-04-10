@@ -473,10 +473,8 @@ func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 			}
 			hasCron = true
 
-			schedule, err := cron.Parse(md.Cron)
+			_, err := cron.Parse(md.Cron)
 			if err != nil {
-				merr = append(merr, err)
-			} else if err := cron.Validate(schedule); err != nil {
 				merr = append(merr, err)
 			}
 		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:
