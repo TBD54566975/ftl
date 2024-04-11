@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"os"
 	"os/signal"
@@ -81,8 +82,8 @@ func main() {
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	config, err := projectconfig.LoadConfig(ctx, cli.ConfigFlag)
-	if verr, ok := err.(*ftl.VersionNotSupportedError); ok {
-		kctx.Fatalf(verr.Error())
+	if !errors.Is(err, os.ErrNotExist) {
+		kctx.Fatalf(err.Error())
 	}
 	kctx.Bind(config)
 

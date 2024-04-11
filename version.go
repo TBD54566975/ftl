@@ -1,7 +1,6 @@
 package ftl
 
 import (
-	"fmt"
 	"regexp"
 
 	"golang.org/x/mod/semver"
@@ -24,15 +23,6 @@ func IsVersionAtLeastMin(v string, minVersion string) bool {
 		return true
 	}
 	return semver.Compare("v"+v, "v"+minVersion) >= 0
-}
-
-type VersionNotSupportedError struct {
-	FTLVersion    string
-	MinFTLVersion string
-}
-
-func (e *VersionNotSupportedError) Error() string {
-	return fmt.Sprintf("FTL version '%v' predates the minimum version '%v'", e.FTLVersion, e.MinFTLVersion)
 }
 
 // Version of FTL binary (set by linker).

@@ -60,7 +60,7 @@ func LoadConfig(ctx context.Context, input []string) (Config, error) {
 	}
 	minFTLVersion := config.Global.Config["ftlMinVersion"]
 	if minFTLVersion != nil && !ftl.IsVersionAtLeastMin(ftl.Version, (*url.URL)(minFTLVersion).String()) {
-		return config, &ftl.VersionNotSupportedError{ftl.Version, (*url.URL)(minFTLVersion).String()}
+		return config, fmt.Errorf("FTL version '%v' predates the minimum version '%v'", ftl.Version, (*url.URL)(minFTLVersion).String())
 	}
 	return config, nil
 }

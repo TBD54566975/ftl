@@ -59,8 +59,6 @@ func TestProjectConfigChecksMinVersion(t *testing.T) {
 			assert.NoError(t, err)
 		} else {
 			assert.Error(t, err)
-			_, ok := err.(*ftl.VersionNotSupportedError)
-			assert.True(t, ok, "Error should of been of type ftl.VersionNotSupportedError, but instead was: %w", err)
 		}
 	}
 }
