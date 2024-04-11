@@ -972,7 +972,7 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs 
 		return nil, translatePGError(err)
 	}
 
-	attemptedJobs = make([]AttemptedCronJob, len(rows))
+	attemptedJobs = []AttemptedCronJob{}
 	for _, row := range rows {
 		job := AttemptedCronJob{
 			CronJob: CronJob{
