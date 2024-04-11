@@ -3,6 +3,7 @@ package projectconfig
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,9 +58,9 @@ func LoadConfig(ctx context.Context, input []string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	minFTLVersion := config.Global.Config["minFTLVersion"]
-	if minFTLVersion != nil && !ftl.IsVersionAtLeastMin(ftl.Version, minFTLVersion.GoString()) {
-		return config, &ftl.VersionNotSupportedError{ftl.Version, minFTLVersion.GoString()}
+	minFTLVersion := config.Global.Config["ftlMinVersion"]
+	if minFTLVersion != nil && !ftl.IsVersionAtLeastMin(ftl.Version, (*url.URL)(minFTLVersion).String()) {
+		return config, &ftl.VersionNotSupportedError{ftl.Version, (*url.URL)(minFTLVersion).String()}
 	}
 	return config, nil
 }

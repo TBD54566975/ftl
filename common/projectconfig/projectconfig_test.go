@@ -1,9 +1,13 @@
 package projectconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestProjectConfig(t *testing.T) {
@@ -32,4 +36,27 @@ func TestProjectConfig(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, actual)
+}
+
+func TestProjectConfigChecksMinVersion(t *testing.T) {
+	tests := []struct {
+		v       string
+		wantErr bool
+	}{
+		{"dev", false},
+		{"1.0.0", false},
+		{"0.0.1", true},
+	}
+
+	for _, test := range tests {
+		ftl.Version = test.v
+		_, err := LoadConfig(log.ContextWithNewDefaultLogger(context.Background()), []string{"testdata/withMinVersion/ftl-project.toml"})
+		if !test.wantErr {
+			assert.NoError(t, err)
+		} else {
+			assert.Error(t, err)
+			_, ok := err.(*ftl.VersionNotSupportedError)
+			assert.True(t, ok, "Error should of been of type ftl.VersionNotSupportedError, but instead was: %w", err)
+		}
+	}
 }
