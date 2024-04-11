@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"github.com/alecthomas/kong"
-	"github.com/alecthomas/repr"
 
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -16,7 +15,6 @@ func Context() context.Context {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	cr := &cf.ProjectConfigResolver[cf.Configuration]{Config: []string{}}
 	_ = kong.ApplyDefaults(cr)
-	repr.Println(cr)
 	cm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		panic(err)
