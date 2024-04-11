@@ -51,9 +51,9 @@ init-db:
   dbmate create
   dbmate --migrations-dir backend/controller/sql/schema up
 
-# Regenerate SQLC code
-build-sqlc: init-db
-  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- sqlc generate
+# Regenerate SQLC code (requires init-db to be run first)
+build-sqlc:
+  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema -- sqlc generate
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips: build-kt-runtime
