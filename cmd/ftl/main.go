@@ -80,7 +80,10 @@ func main() {
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	config, _ := projectconfig.LoadConfig(ctx, cli.ConfigFlag)
+	config, err := projectconfig.LoadConfig(ctx, cli.ConfigFlag)
+	if verr, ok := err.(*ftl.VersionNotSupportedError); ok {
+		kctx.Fatalf(verr.Error())
+	}
 	kctx.Bind(config)
 
 	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: cli.ConfigFlag}
@@ -115,6 +118,6 @@ func main() {
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
 
-	err := kctx.Run(ctx)
+	err = kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
 }

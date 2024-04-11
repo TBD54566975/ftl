@@ -9,6 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -55,6 +56,10 @@ func LoadConfig(ctx context.Context, input []string) (Config, error) {
 	config, err := Merge(configPaths...)
 	if err != nil {
 		return Config{}, err
+	}
+	minFTLVersion := config.Global.Config["minFTLVersion"]
+	if minFTLVersion != nil && !ftl.IsVersionAtLeastMin(ftl.Version, minFTLVersion.GoString()) {
+		return config, &ftl.VersionNotSupportedError{ftl.Version, minFTLVersion.GoString()}
 	}
 	return config, nil
 }
