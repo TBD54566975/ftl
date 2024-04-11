@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 *.vsix
+**/*.map
 
 # Editor directories and files
 .vscode/*
