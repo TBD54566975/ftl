@@ -9,13 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alecthomas/participle/v2"
-	"github.com/alecthomas/types/optional"
-	"golang.org/x/exp/maps"
-
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/errors"
 	dc "github.com/TBD54566975/ftl/internal/reflect"
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/types/optional"
 )
 
 var (
@@ -353,14 +351,7 @@ func cleanErrors(merr []error) []error {
 	if len(merr) == 0 {
 		return nil
 	}
-	// Deduplicate.
-	set := map[string]error{}
-	for _, err := range merr {
-		for _, subErr := range errors.UnwrapAll(err) {
-			set[strings.TrimSpace(subErr.Error())] = subErr
-		}
-	}
-	merr = maps.Values(set)
+	merr = errors.DeduplicateErrors(merr)
 	// Sort by position.
 	sort.Slice(merr, func(i, j int) bool {
 		var ipe, jpe participle.Error
