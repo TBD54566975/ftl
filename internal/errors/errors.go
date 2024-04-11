@@ -2,8 +2,9 @@ package errors
 
 import (
 	"errors"
-	"golang.org/x/exp/maps"
 	"strings"
+
+	"golang.org/x/exp/maps"
 )
 
 // UnwrapAll recursively unwraps all errors in err, including all intermediate errors.

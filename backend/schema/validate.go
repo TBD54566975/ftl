@@ -9,11 +9,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/errors"
 	dc "github.com/TBD54566975/ftl/internal/reflect"
-	"github.com/alecthomas/participle/v2"
-	"github.com/alecthomas/types/optional"
 )
 
 var (
