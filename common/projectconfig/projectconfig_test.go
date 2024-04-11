@@ -40,17 +40,21 @@ func TestProjectConfig(t *testing.T) {
 
 func TestProjectConfigChecksMinVersion(t *testing.T) {
 	tests := []struct {
+		path    string
 		v       string
 		wantErr bool
 	}{
-		{"dev", false},
-		{"1.0.0", false},
-		{"0.0.1", true},
+		{"testdata/withMinVersion/ftl-project.toml", "dev", false},
+		{"testdata/withMinVersion/ftl-project.toml", "1.0.0", false},
+		{"testdata/withMinVersion/ftl-project.toml", "0.0.1", true},
+		{"testdata/ftl-project.toml", "dev", false},
+		{"testdata/ftl-project.toml", "1.0.0", false},
+		{"testdata/ftl-project.toml", "0.0.1", false},
 	}
 
 	for _, test := range tests {
 		ftl.Version = test.v
-		_, err := LoadConfig(log.ContextWithNewDefaultLogger(context.Background()), []string{"testdata/withMinVersion/ftl-project.toml"})
+		_, err := LoadConfig(log.ContextWithNewDefaultLogger(context.Background()), []string{test.path})
 		if !test.wantErr {
 			assert.NoError(t, err)
 		} else {
