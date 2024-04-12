@@ -184,6 +184,6 @@ func TestExternalType(t *testing.T) {
 		sch:       &schema.Schema{},
 	}
 	testBuild(t, bctx, true, []assertion{
-		assertBuildProtoErrors("field Month: unsupported external type time.Month"),
+		assertBuildProtoErrors("unsupported external type \"time.Month\""),
 	})
 }

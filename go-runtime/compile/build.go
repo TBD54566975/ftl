@@ -105,9 +105,9 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	if originalErr := err; err != nil {
 		var schemaErrs []*schema.Error
 		for _, e := range errors.DeduplicateErrors(errors.UnwrapAll(err)) {
-			var ce schema.Error
+			var ce *schema.Error
 			if errors.As(e, &ce) {
-				schemaErrs = append(schemaErrs, &ce)
+				schemaErrs = append(schemaErrs, ce)
 			}
 		}
 		el := schema.ErrorList{

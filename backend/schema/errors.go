@@ -3,6 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
@@ -66,11 +67,12 @@ func ErrorListFromProto(e *schemapb.ErrorList) *ErrorList {
 	}
 }
 
-func Errorf(pos Position, endColumn int, format string, args ...any) Error {
-	return Error{Msg: fmt.Sprintf(format, args...), Pos: pos, EndColumn: endColumn}
+func Errorf(pos Position, endColumn int, format string, args ...any) *Error {
+	err := Error{Msg: fmt.Sprintf(format, args...), Pos: pos, EndColumn: endColumn}
+	return &err
 }
 
-func Wrapf(pos Position, endColumn int, err error, format string, args ...any) Error {
+func Wrapf(pos Position, endColumn int, err error, format string, args ...any) *Error {
 	if format == "" {
 		format = "%s"
 	} else {
@@ -88,5 +90,18 @@ func Wrapf(pos Position, endColumn int, err error, format string, args ...any) E
 		newEndColumn = endColumn
 		args = append(args, err)
 	}
-	return Error{Msg: fmt.Sprintf(format, args...), Pos: newPos, EndColumn: newEndColumn}
+	e := Error{Msg: fmt.Sprintf(format, args...), Pos: newPos, EndColumn: newEndColumn}
+	return &e
+}
+
+func SortErrorsByPosition(merr []error) {
+	sort.Slice(merr, func(i, j int) bool {
+		var ipe, jpe Error
+		if errors.As(merr[i], &ipe) && errors.As(merr[j], &jpe) {
+			ipp := ipe.Pos
+			jpp := jpe.Pos
+			return ipp.Line < jpp.Line || (ipp.Line == jpp.Line && ipp.Column < jpp.Column)
+		}
+		return merr[i].Error() < merr[j].Error()
+	})
 }
