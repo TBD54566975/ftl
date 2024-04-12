@@ -3,23 +3,43 @@ package ftl
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
+	"sync"
 
-	"github.com/TBD54566975/ftl/common/configuration"
+	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// ConfigType is a type that can be used as a configuration value.
-type ConfigType interface{ any }
+var globalConfigurationManagerOnce sync.Once
 
-// Config declares a typed configuration key for the current module.
-func Config[T ConfigType](name string) ConfigValue[T] {
+// globalConfigurationManager returns a global configuration manager instance.
+func globalConfigurationManager() (manager *cf.Manager[cf.Configuration]) {
+	globalConfigurationManagerOnce.Do(func() {
+		var configs []string
+		if envar, ok := os.LookupEnv("FTL_CONFIG"); ok {
+			configs = strings.Split(envar, ",")
+		}
+		config := cf.DefaultConfigMixin{}
+		var err error
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		manager, err = config.NewConfigurationManager(ctx, cf.ProjectConfigResolver[cf.Configuration]{Config: configs})
+		if err != nil {
+			panic("failed to create global configuration manager: " + err.Error())
+		}
+	})
+	return manager
+}
+
+// Config loads a typed configuration value for the current module.
+func Config[T any](name string) ConfigValue[T] {
 	module := callerModule()
 	return ConfigValue[T]{module, name}
 }
 
 // ConfigValue is a typed configuration key for the current module.
-type ConfigValue[T ConfigType] struct {
+type ConfigValue[T any] struct {
 	module string
 	name   string
 }
@@ -32,12 +52,11 @@ func (c ConfigValue[T]) GoString() string {
 }
 
 // Get returns the value of the configuration key from FTL.
-func (c ConfigValue[T]) Get(ctx context.Context) (out T) {
-	cm := configuration.ConfigFromContext(ctx)
-	ref := configuration.NewRef(c.module, c.name)
-	err := cm.Get(ctx, ref, &out)
-	if err != nil {
-		panic(fmt.Errorf("failed to get %s: %w", c, err))
+func (c ConfigValue[T]) Get() (out T) {
+	cm := globalConfigurationManager()
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	if err := cm.Get(ctx, cf.NewRef(c.module, c.name), &out); err != nil {
+		panic(fmt.Errorf("failed to get configuration %s.%s: %w", c.module, c.name, err))
 	}
 	return
 }

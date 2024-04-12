@@ -30,5 +30,5 @@ func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 		return EchoResponse{}, err
 	}
 
-	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default(defaultName.Get(ctx)), tresp.Time)}, nil
+	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default(defaultName.Get()), tresp.Time)}, nil
 }
