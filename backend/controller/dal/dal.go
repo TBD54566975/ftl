@@ -943,7 +943,10 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 }
 
 func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr string) error {
-	return d.db.CreateRequest(ctx, sql.Origin(key.Payload.Origin), key, addr)
+	if err := d.db.CreateRequest(ctx, sql.Origin(key.Payload.Origin), key, addr); err != nil {
+		return translatePGError(err)
+	}
+	return nil
 }
 
 func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRoute, error) {
