@@ -151,6 +151,7 @@ func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context, newDeploymentK
 	_ = s.resetJobsWithNewDeploymentKey(ctx, optional.Some(newDeploymentKey))
 }
 
+// resetJobs is run periodically via a scheduled task
 func (s *Service) resetJobs(ctx context.Context) (time.Duration, error) {
 	err := s.resetJobsWithNewDeploymentKey(ctx, optional.None[model.DeploymentKey]())
 	if err != nil {
@@ -220,6 +221,8 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	}
 }
 
+// killOldJobs looks for jobs that have been executing for too long
+// This is the hard timout which happens after the usual timeout plus a grace period for the soft timeout to occur (context's timeout which cancel the call)
 func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 	logger := log.FromContext(ctx)
 	staleJobs, err := s.dal.GetStaleCronJobs(ctx, s.config.Timeout+time.Minute)
@@ -259,7 +262,7 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 }
 
 // watchForUpdates is the centralized place that handles:
-// - list of known jobs and their state
+// - the list of known jobs and their state
 // - executing jobs when they are due
 // - reacting to events that change the list of jobs, deployments or hash ring
 func (s *Service) watchForUpdates(ctx context.Context) {
@@ -439,6 +442,8 @@ func (s *Service) UpdatedControllerList(ctx context.Context, controllers []dal.C
 	})
 }
 
+// isResponsibleForJob indicates whether a this service should be responsible for attempting jobs,
+// or if enough other controllers will handle it. This allows us to spread the job load across controllers.
 func (s *Service) isResponsibleForJob(job dal.CronJob, state *State) bool {
 	if state.isJobTooNewForHashRing(job) {
 		return true

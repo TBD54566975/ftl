@@ -19,6 +19,7 @@ type State struct {
 	// have a chance to reset their job lists and share responsibilities through the hash ring
 	newJobs map[string]time.Time
 
+	// We delay any job attempts in case of db errors to avoid hammering the db in a tight loop
 	blockedUntil time.Time
 }
 
@@ -58,7 +59,6 @@ func (s *State) updateJobs(jobs []dal.CronJob) {
 	updatedJobMap := jobMap(jobs)
 	for idx, old := range s.jobs {
 		if updated, exists := updatedJobMap[old.Key.String()]; exists {
-			//TODO: compare to see if outdated
 			s.jobs[idx] = updated
 			if updated.State != dal.JobStateExecuting {
 				delete(s.executing, updated.Key.String())
