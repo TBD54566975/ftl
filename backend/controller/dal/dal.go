@@ -502,7 +502,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			NextExecution: job.NextExecution,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("%s: %w", "failed to create cron job", translatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", translatePGError(err))
 		}
 	}
 

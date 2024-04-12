@@ -287,13 +287,13 @@ FROM cron_jobs j
 WHERE d.min_replicas > 0;
 
 -- name: CreateCronJob :exec
-  INSERT INTO cron_jobs (deployment_id, module_name, verb, schedule, start_time, next_execution)
-    VALUES ((SELECT id FROM deployments WHERE key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
-      sqlc.arg('module_name')::TEXT,
-      sqlc.arg('verb')::TEXT,
-      sqlc.arg('schedule')::TEXT,
-      sqlc.arg('start_time')::TIMESTAMPTZ,
-      sqlc.arg('next_execution')::TIMESTAMPTZ);
+INSERT INTO cron_jobs (deployment_id, module_name, verb, schedule, start_time, next_execution)
+  VALUES ((SELECT id FROM deployments WHERE key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
+    sqlc.arg('module_name')::TEXT,
+    sqlc.arg('verb')::TEXT,
+    sqlc.arg('schedule')::TEXT,
+    sqlc.arg('start_time')::TIMESTAMPTZ,
+    sqlc.arg('next_execution')::TIMESTAMPTZ);
 
 -- name: StartCronJobs :many
 WITH updates AS (
