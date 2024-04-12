@@ -732,14 +732,14 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 
 	ingressRoutes := extractIngressRoutingEntries(req.Msg)
-	dname, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes)
+	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes, nil)
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment")
 		return nil, fmt.Errorf("could not create deployment: %w", err)
 	}
-	deploymentLogger := s.getDeploymentLogger(ctx, dname)
-	deploymentLogger.Debugf("Created deployment %s", dname)
-	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: dname.String()}), nil
+	deploymentLogger := s.getDeploymentLogger(ctx, dkey)
+	deploymentLogger.Debugf("Created deployment %s", dkey)
+	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: dkey.String()}), nil
 }
 
 // Load schemas for existing modules, combine with our new one, and validate the new module in the context
