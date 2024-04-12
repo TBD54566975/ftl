@@ -29,9 +29,6 @@ func TestMerge(t *testing.T) {
 		},
 		ModuleDirs:   []string{"a/b/c"},
 		ExternalDirs: []string{"e/f"},
-		Executables: Executables{
-			FTL: "ftl",
-		},
 		Commands: Commands{
 			Startup: []string{"echo 'Before'"},
 		},
@@ -61,9 +58,6 @@ func TestMerge(t *testing.T) {
 		},
 		ModuleDirs:   []string{"d"},
 		ExternalDirs: []string{"g/h"},
-		Executables: Executables{
-			FTL: "./bin/ftl",
-		},
 		Commands: Commands{
 			Startup: []string{"echo 'After'"},
 		},
@@ -95,9 +89,6 @@ func TestMerge(t *testing.T) {
 		},
 		ModuleDirs:   []string{"d"},
 		ExternalDirs: []string{"g/h"},
-		Executables: Executables{
-			FTL: "./bin/ftl",
-		},
 		Commands: Commands{
 			Startup: []string{"echo 'After'"},
 		},

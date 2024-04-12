@@ -13,10 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-type Executables struct {
-	FTL string `toml:"ftl"`
-}
-
 type Commands struct {
 	Startup []string `toml:"startup"`
 }
@@ -31,7 +27,6 @@ type Config struct {
 	Modules      map[string]ConfigAndSecrets `toml:"modules"`
 	ModuleDirs   []string                    `toml:"module-dirs"`
 	ExternalDirs []string                    `toml:"external-dirs"`
-	Executables  Executables                 `toml:"executables"`
 	Commands     Commands                    `toml:"commands"`
 }
 
