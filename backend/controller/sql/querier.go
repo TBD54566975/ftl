@@ -22,7 +22,7 @@ type Querier interface {
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
-	EndCronJob(ctx context.Context, nextExecution time.Time, iD int64, startTime time.Time) (EndCronJobRow, error)
+	EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
@@ -67,7 +67,7 @@ type Querier interface {
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
-	StartCronJobs(ctx context.Context, ids []int64) ([]StartCronJobsRow, error)
+	StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error)
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.

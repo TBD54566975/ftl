@@ -248,6 +248,7 @@ type Controller struct {
 
 type CronJob struct {
 	ID            int64
+	Key           model.CronJobKey
 	DeploymentID  int64
 	Verb          string
 	Schedule      string
