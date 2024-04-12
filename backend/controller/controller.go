@@ -202,12 +202,8 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	requestKey, err := s.dal.CreateIngressRequest(r.Context(), fmt.Sprintf("%s %s", r.Method, r.URL.Path), r.RemoteAddr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	ingress.Handle(sch, requestKey, routes, w, r, s.Call)
+	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
+	ingress.Handle(sch, requestKey, routes, w, r, s.CallWithRequest)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
@@ -594,6 +590,10 @@ nextModule:
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+	return s.CallWithRequest(ctx, req, optional.None[model.RequestKey](), "")
+}
+
+func (s *Service) CallWithRequest(ctx context.Context, req *connect.Request[ftlv1.CallRequest], key optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
 	if req.Msg.Verb == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("verb is required"))
@@ -628,17 +628,28 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		return nil, err
 	}
 
-	requestKey, ok, err := headers.GetRequestName(req.Header())
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		// Inject the request key if this is an ingress call.
-		requestKey, err = s.dal.CreateIngressRequest(ctx, "grpc", req.Peer().Addr)
+	var requestKey model.RequestKey
+	isNewRequestKey := false
+	if k, ok := key.Get(); ok {
+		requestKey = k
+		isNewRequestKey = true
+	} else {
+		k, ok, err := headers.GetRequestKey(req.Header())
 		if err != nil {
 			return nil, err
+		} else if !ok {
+			requestKey = model.NewRequestKey(model.OriginIngress, "grpc")
+			requestSource = req.Peer().Addr
+			isNewRequestKey = true
+		} else {
+			requestKey = k
 		}
-		headers.SetRequestName(req.Header(), requestKey)
+	}
+	if isNewRequestKey {
+		headers.SetRequestKey(req.Header(), requestKey)
+		if err = s.dal.CreateRequest(ctx, requestKey, requestSource); err != nil {
+			return nil, err
+		}
 	}
 
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))

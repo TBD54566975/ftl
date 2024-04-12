@@ -942,10 +942,8 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	return out, nil
 }
 
-func (d *DAL) CreateIngressRequest(ctx context.Context, route, addr string) (model.RequestKey, error) {
-	name := model.NewRequestKey(model.OriginIngress, route)
-	err := d.db.CreateIngressRequest(ctx, sql.OriginIngress, name, addr)
-	return name, err
+func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr string) error {
+	return d.db.CreateRequest(ctx, sql.Origin(key.Payload.Origin), key, addr)
 }
 
 func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRoute, error) {
