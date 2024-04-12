@@ -203,7 +203,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-	ingress.Handle(sch, requestKey, routes, w, r, s.CallWithRequest)
+	ingress.Handle(sch, requestKey, routes, w, r, s.callWithRequest)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
@@ -590,10 +590,10 @@ nextModule:
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
-	return s.CallWithRequest(ctx, req, optional.None[model.RequestKey](), "")
+	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), "")
 }
 
-func (s *Service) CallWithRequest(ctx context.Context, req *connect.Request[ftlv1.CallRequest], key optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
+func (s *Service) callWithRequest(ctx context.Context, req *connect.Request[ftlv1.CallRequest], key optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
 	if req.Msg.Verb == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("verb is required"))
