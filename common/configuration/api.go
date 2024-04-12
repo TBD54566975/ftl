@@ -34,7 +34,6 @@ type Entry struct {
 
 // A Ref is a reference to a configuration value.
 type Ref struct {
-	// If not present, the Ref is considered to be global.
 	Module optional.Option[string]
 	Name   string
 }
