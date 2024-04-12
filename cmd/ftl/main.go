@@ -82,7 +82,7 @@ func main() {
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	config, err := projectconfig.LoadConfig(ctx, cli.ConfigFlag)
-	if !errors.Is(err, os.ErrNotExist) {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		kctx.Fatalf(err.Error())
 	}
 	kctx.Bind(config)

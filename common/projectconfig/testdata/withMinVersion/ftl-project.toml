@@ -1,8 +1,6 @@
 module-dirs = ["a/b/c", "d"]
 external-dirs = ["e/f", "g/h"]
-
-[global.configuration]
-  ftlMinVersion = "0.129.2"
+ftl-min-version = "0.129.2"
 
 [modules.module.configuration]
   githubAccessToken = "keychain://githubAccessToken"

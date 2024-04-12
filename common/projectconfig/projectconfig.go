@@ -3,7 +3,6 @@ package projectconfig
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,12 +28,13 @@ type ConfigAndSecrets struct {
 }
 
 type Config struct {
-	Global       ConfigAndSecrets            `toml:"global"`
-	Modules      map[string]ConfigAndSecrets `toml:"modules"`
-	ModuleDirs   []string                    `toml:"module-dirs"`
-	ExternalDirs []string                    `toml:"external-dirs"`
-	Executables  Executables                 `toml:"executables"`
-	Commands     Commands                    `toml:"commands"`
+	Global        ConfigAndSecrets            `toml:"global"`
+	Modules       map[string]ConfigAndSecrets `toml:"modules"`
+	ModuleDirs    []string                    `toml:"module-dirs"`
+	ExternalDirs  []string                    `toml:"external-dirs"`
+	Executables   Executables                 `toml:"executables"`
+	Commands      Commands                    `toml:"commands"`
+	FTLMinVersion string                      `toml:"ftl-min-version"`
 }
 
 // ConfigPaths returns the computed list of configuration paths to load.
@@ -58,9 +58,8 @@ func LoadConfig(ctx context.Context, input []string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	minFTLVersion := config.Global.Config["ftlMinVersion"]
-	if minFTLVersion != nil && !ftl.IsVersionAtLeastMin(ftl.Version, (*url.URL)(minFTLVersion).String()) {
-		return config, fmt.Errorf("FTL version '%v' predates the minimum version '%v'", ftl.Version, (*url.URL)(minFTLVersion).String())
+	if config.FTLMinVersion != "" && !ftl.IsVersionAtLeastMin(ftl.Version, config.FTLMinVersion) {
+		return config, fmt.Errorf("FTL version '%v' predates the minimum version '%v'", ftl.Version, config.FTLMinVersion)
 	}
 	return config, nil
 }
