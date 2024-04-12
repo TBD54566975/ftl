@@ -495,8 +495,8 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		// This ensures that nextExecution is after start time, otherwise the job will never be triggered
 		err := tx.CreateCronJob(ctx, sql.CreateCronJobParams{
 			DeploymentKey: deploymentKey,
-			ModuleName:    job.Module,
-			Verb:          job.Verb,
+			ModuleName:    job.Ref.Module,
+			Verb:          job.Ref.Name,
 			StartTime:     job.StartTime,
 			Schedule:      job.Schedule,
 			NextExecution: job.NextExecution,
@@ -925,8 +925,7 @@ const (
 type CronJob struct {
 	id            int64
 	DeploymentKey model.DeploymentKey
-	Module        string
-	Verb          string
+	Ref           schema.Ref
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
@@ -943,8 +942,7 @@ func cronJobFromRow(row sql.GetCronJobsRow) CronJob {
 	return CronJob{
 		id:            row.ID,
 		DeploymentKey: row.DeploymentKey,
-		Module:        row.Module,
-		Verb:          row.Verb,
+		Ref:           schema.Ref{Module: row.Module, Name: row.Verb},
 		Schedule:      row.Schedule,
 		StartTime:     row.StartTime,
 		NextExecution: row.NextExecution,
@@ -978,8 +976,7 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs 
 			CronJob: CronJob{
 				id:            row.ID,
 				DeploymentKey: row.DeploymentKey,
-				Module:        row.Module,
-				Verb:          row.Verb,
+				Ref:           schema.Ref{Module: row.Module, Name: row.Verb},
 				Schedule:      row.Schedule,
 				StartTime:     row.StartTime,
 				NextExecution: row.NextExecution,
