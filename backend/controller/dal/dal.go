@@ -918,8 +918,8 @@ func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 type JobState string
 
 const (
-	JobStateIdle      = JobState(sql.JobStateIdle)
-	JobStateExecuting = JobState(sql.JobStateExecuting)
+	JobStateIdle      = JobState(sql.CronJobStateIdle)
+	JobStateExecuting = JobState(sql.CronJobStateExecuting)
 )
 
 type CronJob struct {

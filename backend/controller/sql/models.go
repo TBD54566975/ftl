@@ -57,6 +57,48 @@ func (ns NullControllerState) Value() (driver.Value, error) {
 	return string(ns.ControllerState), nil
 }
 
+type CronJobState string
+
+const (
+	CronJobStateIdle      CronJobState = "idle"
+	CronJobStateExecuting CronJobState = "executing"
+)
+
+func (e *CronJobState) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CronJobState(s)
+	case string:
+		*e = CronJobState(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CronJobState: %T", src)
+	}
+	return nil
+}
+
+type NullCronJobState struct {
+	CronJobState CronJobState
+	Valid        bool // Valid is true if CronJobState is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCronJobState) Scan(value interface{}) error {
+	if value == nil {
+		ns.CronJobState, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CronJobState.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCronJobState) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CronJobState), nil
+}
+
 type EventType string
 
 const (
@@ -99,48 +141,6 @@ func (ns NullEventType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.EventType), nil
-}
-
-type JobState string
-
-const (
-	JobStateIdle      JobState = "idle"
-	JobStateExecuting JobState = "executing"
-)
-
-func (e *JobState) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = JobState(s)
-	case string:
-		*e = JobState(s)
-	default:
-		return fmt.Errorf("unsupported scan type for JobState: %T", src)
-	}
-	return nil
-}
-
-type NullJobState struct {
-	JobState JobState
-	Valid    bool // Valid is true if JobState is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullJobState) Scan(value interface{}) error {
-	if value == nil {
-		ns.JobState, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.JobState.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullJobState) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.JobState), nil
 }
 
 type Origin string
@@ -253,7 +253,7 @@ type CronJob struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         JobState
+	State         CronJobState
 	ModuleName    string
 }
 

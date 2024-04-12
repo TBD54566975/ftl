@@ -232,7 +232,7 @@ CREATE TABLE controller
 
 CREATE UNIQUE INDEX controller_endpoint_not_dead_idx ON controller (endpoint) WHERE state <> 'dead';
 
-CREATE TYPE job_state AS ENUM (
+CREATE TYPE cron_job_state AS ENUM (
     'idle',
     'executing'
 );
@@ -245,7 +245,7 @@ CREATE TABLE cron_jobs
     schedule       VARCHAR	   NOT NULL,
     start_time     TIMESTAMPTZ NOT NULL,
     next_execution TIMESTAMPTZ NOT NULL,
-    state          job_state   NOT NULL DEFAULT 'idle',
+    state          cron_job_state   NOT NULL DEFAULT 'idle',
 
     -- Some denormalisation for performance. Without this we need to do a two table join.
     module_name    VARCHAR     NOT NULL
