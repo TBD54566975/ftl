@@ -752,7 +752,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	cronJobs, err := s.cronJobs.NewCronJobsForModule(ctx, req.Msg.Schema)
 	if err != nil {
 		logger.Errorf(err, "Could not generate cron jobs for new deployment")
-		return nil, fmt.Errorf("%s: %w", "could not generate cron jobs for new deployment", err)
+		return nil, fmt.Errorf("could not generate cron jobs for new deployment: %w", err)
 	}
 
 	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes, cronJobs)

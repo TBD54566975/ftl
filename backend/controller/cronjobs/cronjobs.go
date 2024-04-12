@@ -167,7 +167,7 @@ func (s *Service) resetJobsWithNewDeploymentKey(ctx context.Context, deploymentK
 	jobs, err := s.dal.GetCronJobs(ctx)
 	if err != nil {
 		logger.Errorf(err, "failed to get cron jobs")
-		return fmt.Errorf("%s: %w", "failed to get cron jobs", err)
+		return fmt.Errorf("failed to get cron jobs: %w", err)
 	}
 	s.jobChanges.Publish(jobChange{
 		changeType:         resetJobs,
