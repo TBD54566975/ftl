@@ -182,8 +182,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"4:7-7: verb verbWithWrongInput: cronjob can not have a request type",
-				"6:7-7: verb verbWithWrongOutput: cronjob can not have a response type",
+				"4:7-7: verb verbWithWrongInput: cron job can not have a request type",
+				"6:7-7: verb verbWithWrongOutput: cron job can not have a response type",
 			},
 		},
 	}

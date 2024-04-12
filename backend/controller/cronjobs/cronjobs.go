@@ -147,7 +147,7 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 }
 
 func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context, newDeploymentKey model.DeploymentKey) {
-	// Rather than finding old/new cronjobs and updating our state, we can just reset the list of jobs
+	// Rather than finding old/new cron jobs and updating our state, we can just reset the list of jobs
 	_ = s.resetJobsWithNewDeploymentKey(ctx, optional.Some(newDeploymentKey))
 }
 
@@ -182,7 +182,7 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	requestBody := map[string]any{}
 	requestJSON, err := json.Marshal(requestBody)
 	if err != nil {
-		logger.Errorf(err, "could not build cron job body %v:%v", job.DeploymentKey, job.Ref.String())
+		logger.Errorf(err, "could not build body for cron job: %v", job.Key)
 		return
 	}
 
@@ -197,7 +197,7 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	defer cancel()
 	_, err = s.call(callCtx, req, optional.Some(requestKey), s.originURL.Host)
 	if err != nil {
-		logger.Errorf(err, "failed to execute cron job %s", job.Ref.String())
+		logger.Errorf(err, "failed to execute cron job %v", job.Key)
 	}
 
 	schedule, err := cron.Parse(job.Schedule)
@@ -207,12 +207,12 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	}
 	next, err := cron.NextAfter(schedule, s.clock.Now().UTC(), false)
 	if err != nil {
-		logger.Errorf(err, "failed to calculate next execution for cron job %s with schedule %q", job.Ref.String(), job.Schedule)
+		logger.Errorf(err, "failed to calculate next execution for cron job %v with schedule %q", job.Key, job.Schedule)
 	}
 
 	updatedJob, err := s.dal.EndCronJob(ctx, job, next)
 	if err != nil {
-		logger.Errorf(err, "failed to end cronjob %s", job.Ref.String())
+		logger.Errorf(err, "failed to end cron job %v", job.Key)
 	} else {
 		s.jobChanges.Publish(jobChange{
 			changeType: finishedJobs,
@@ -221,13 +221,17 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	}
 }
 
-// killOldJobs looks for jobs that have been executing for too long
-// This is the hard timout which happens after the usual timeout plus a grace period for the soft timeout to occur (context's timeout which cancel the call)
+// killOldJobs looks for jobs that have been executing for too long.
+// A soft timeout should normally occur from the job's context timing out, but there are cases where this does not happen (eg: unresponsive or dead controller)
+// In these cases we need a hard timout after an additional grace period.
+// To do this, this function resets these job's state to idle and updates the next execution time in the db so the job can be picked up again next time.
 func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 	logger := log.FromContext(ctx)
 	staleJobs, err := s.dal.GetStaleCronJobs(ctx, s.config.Timeout+time.Minute)
 	if err != nil {
 		return 0, err
+	} else if len(staleJobs) == 0 {
+		return time.Minute, nil
 	}
 
 	updatedJobs := []dal.CronJob{}
@@ -235,21 +239,21 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 		start := s.clock.Now().UTC()
 		pattern, err := cron.Parse(stale.Schedule)
 		if err != nil {
-			logger.Errorf(err, "Could not kill stale cron job %s because schedule could not be parsed: %q", stale.Ref.String(), stale.Schedule)
+			logger.Errorf(err, "Could not kill stale cron job %q because schedule could not be parsed: %q", stale.Key, stale.Schedule)
 			continue
 		}
 		next, err := cron.NextAfter(pattern, start, false)
 		if err != nil {
-			logger.Errorf(err, "Could not kill stale cron job %s because next date could not be calculated: %q", stale.Ref.String(), stale.Schedule)
+			logger.Errorf(err, "Could not kill stale cron job %q because next date could not be calculated: %q", stale.Key, stale.Schedule)
 			continue
 		}
 
 		updated, err := s.dal.EndCronJob(ctx, stale, next)
 		if err != nil {
-			logger.Errorf(err, "Could not kill stale cron job %s because: %v", stale.Ref.String(), err)
+			logger.Errorf(err, "Could not kill stale cron job %s because: %v", stale.Key, err)
 			continue
 		}
-		logger.Warnf("Killed stale cron job %s", stale.Ref.String())
+		logger.Warnf("Killed stale cron job %s", stale.Key)
 		updatedJobs = append(updatedJobs, updated)
 	}
 
@@ -265,6 +269,8 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 // - the list of known jobs and their state
 // - executing jobs when they are due
 // - reacting to events that change the list of jobs, deployments or hash ring
+//
+// State is private to this function to ensure thread safety.
 func (s *Service) watchForUpdates(ctx context.Context) {
 	logger := log.FromContext(ctx)
 
@@ -280,7 +286,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 
 	for {
 		sl.SortFunc(state.jobs, func(i, j dal.CronJob) int {
-			return s.sortJobs(state, i, j)
+			return s.compareJobs(state, i, j)
 		})
 
 		now := s.clock.Now()
@@ -294,7 +300,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 
 		if next.Before(state.blockedUntil) {
 			next = state.blockedUntil
-			logger.Tracef("loop blocked for %vs", next.Sub(now))
+			logger.Tracef("loop blocked for %v", next.Sub(now))
 		} else if next.Sub(now) < time.Second {
 			next = now.Add(time.Second)
 			logger.Tracef("loop while gated for 1s")
@@ -337,11 +343,11 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 					removedDeploymentKeys[job.DeploymentKey.String()] = job.DeploymentKey
 					_, err := s.dal.EndCronJob(ctx, job.CronJob, next)
 					if err != nil {
-						logger.Errorf(err, "failed to end cronjob %s", job.Ref.String())
+						logger.Errorf(err, "failed to end cron job %s", job.Key.String())
 					}
 					continue
 				}
-				logger.Infof("executing job %s", job.Ref.String())
+				logger.Infof("executing job %v", job.Key)
 				state.startedExecutingJob(job.CronJob)
 				go s.executeJob(ctx, job.CronJob)
 			}
@@ -366,7 +372,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 	}
 }
 
-func (s *Service) sortJobs(state *State, i, j dal.CronJob) int {
+func (s *Service) compareJobs(state *State, i, j dal.CronJob) int {
 	iNext, err := s.nextAttemptForJob(i, state, false)
 	if err != nil {
 		return 1
@@ -384,11 +390,11 @@ func (s *Service) nextAttemptForJob(job dal.CronJob, state *State, allowsNow boo
 	}
 	if job.State == dal.JobStateExecuting {
 		if state.isExecutingInCurrentController(job) {
-			// return a time in the future, meaning don't schedule at this time
+			// no need to schedule this job until it finishes
 			return s.clock.Now(), fmt.Errorf("controller is already waiting for job to finish")
 		}
-		// We don't know when the other controller will finish this job
-		// We should check again when the next execution date is assuming the job finishes
+		// We don't know when the other controller that is executing this job will finish it
+		// So we should optimistically attempt it when the next execution date is due assuming the job finishes
 		pattern, err := cron.Parse(job.Schedule)
 		if err != nil {
 			return s.clock.Now(), fmt.Errorf("failed to parse cron schedule %q", job.Schedule)

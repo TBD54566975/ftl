@@ -56,7 +56,7 @@ func (d *mockDAL) createCronJob(deploymentKey model.DeploymentKey, module string
 
 func (d *mockDAL) indexForJob(job dal.CronJob) (int, error) {
 	for i, j := range d.jobs {
-		if j.DeploymentKey.String() == job.DeploymentKey.String() && j.Ref.Name == job.Ref.Name {
+		if j.Key.String() == job.Key.String() {
 			return i, nil
 		}
 	}
@@ -92,7 +92,7 @@ func (d *mockDAL) StartCronJobs(ctx context.Context, jobs []dal.CronJob) (attemp
 				HasMinReplicas:    true,
 			})
 		}
-		d.attemptCountMap[job.Ref.String()]++
+		d.attemptCountMap[job.Key.String()]++
 	}
 	return attemptedJobs, nil
 }
@@ -216,5 +216,10 @@ func TestService(t *testing.T) {
 	for _, j := range mockDal.jobs {
 		count := verbCallCount[j.Ref.Name]
 		assert.Equal(t, count, 3, "expected verb %s to be called 3 times", j.Ref.Name)
+
+		// Make sure each job is not attempted by all controllers, or the responsibility of only one controller
+		// Target is for 2 controllers to attempt each job
+		attemptCount := mockDal.attemptCountMap[j.Key.String()]
+		assert.True(t, attemptCount > 1*count && attemptCount <= 3*attemptCount, "job %v was attempted %d times, expected between > 1 and <= 3 to be attempted", j.Key)
 	}
 }
