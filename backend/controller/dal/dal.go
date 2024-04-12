@@ -951,6 +951,7 @@ func cronJobFromRow(row sql.GetCronJobsRow) CronJob {
 	}
 }
 
+// GetCronJobs returns all cron jobs for deployments with min replicas > 0
 func (d *DAL) GetCronJobs(ctx context.Context) ([]CronJob, error) {
 	rows, err := d.db.GetCronJobs(ctx)
 	if err != nil {
@@ -960,8 +961,6 @@ func (d *DAL) GetCronJobs(ctx context.Context) ([]CronJob, error) {
 }
 
 // StartCronJobs returns a full list of results so that the caller can update their list of jobs whether or not they successfully updated the row
-// Also returns a map of deployment keys that have no replicas, so the caller can remove them from the list of jobs
-// Note: jobs that were started may overlap with deployments that have no replicas, and this must be handled specially.
 func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs []AttemptedCronJob, err error) {
 	if len(jobs) == 0 {
 		return nil, nil
@@ -991,6 +990,8 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs 
 	return attemptedJobs, nil
 }
 
+// EndCronJob sets the status from executing to idle and updates the next execution time
+// Can be called on the successful completion of a job, or if the job failed to execute (error or timeout)
 func (d *DAL) EndCronJob(ctx context.Context, job CronJob, next time.Time) (CronJob, error) {
 	row, err := d.db.EndCronJob(ctx, next, job.Key, job.StartTime)
 	if err != nil {
@@ -999,6 +1000,7 @@ func (d *DAL) EndCronJob(ctx context.Context, job CronJob, next time.Time) (Cron
 	return cronJobFromRow(sql.GetCronJobsRow(row)), nil
 }
 
+// GetStaleCronJobs returns a list of cron jobs that have been executing longer than the duration
 func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]CronJob, error) {
 	rows, err := d.db.GetStaleCronJobs(ctx, duration)
 	if err != nil {
