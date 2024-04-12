@@ -16,10 +16,13 @@ type Querier interface {
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
+	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
+	CreateCronRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
+	EndCronJob(ctx context.Context, nextExecution time.Time, iD int64, startTime time.Time) (EndCronJobRow, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
@@ -29,6 +32,7 @@ type Querier interface {
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
 	GetControllers(ctx context.Context, all bool) ([]Controller, error)
+	GetCronJobs(ctx context.Context) ([]GetCronJobsRow, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
@@ -50,6 +54,7 @@ type Querier interface {
 	GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error)
 	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
+	GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) ([]GetStaleCronJobsRow, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
 	InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error
 	InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error
@@ -62,6 +67,7 @@ type Querier interface {
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
+	StartCronJobs(ctx context.Context, ids []int64) ([]StartCronJobsRow, error)
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.

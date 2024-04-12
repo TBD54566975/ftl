@@ -56,7 +56,7 @@ func TestDAL(t *testing.T) {
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
-		}}, nil)
+		}}, nil, nil, time.Now())
 		assert.NoError(t, err)
 	})
 
