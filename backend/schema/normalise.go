@@ -111,6 +111,9 @@ func Normalise[T Node](n T) T {
 		c.Pos = zero
 		c.Path = normaliseSlice(c.Path)
 
+	case *MetadataCronJob:
+		c.Pos = zero
+
 	case *MetadataAlias:
 		c.Pos = zero
 
@@ -121,9 +124,6 @@ func Normalise[T Node](n T) T {
 		c.Pos = zero
 
 	case *IngressPathParameter:
-		c.Pos = zero
-
-	case *MetadataCronJob:
 		c.Pos = zero
 
 	case *Config:

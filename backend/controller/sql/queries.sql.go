@@ -86,16 +86,6 @@ func (q *Queries) CreateCronJob(ctx context.Context, arg CreateCronJobParams) er
 	return err
 }
 
-const createCronRequest = `-- name: CreateCronRequest :exec
-INSERT INTO requests (origin, "key", source_addr)
-VALUES ($1, $2, $3)
-`
-
-func (q *Queries) CreateCronRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error {
-	_, err := q.db.Exec(ctx, createCronRequest, origin, key, sourceAddr)
-	return err
-}
-
 const createDeployment = `-- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
 VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3::deployment_key)

@@ -35,15 +35,7 @@ type descriptor struct {
 // run.
 type Job func(ctx context.Context) (time.Duration, error)
 
-type DAL interface {
-	GetControllers(ctx context.Context, all bool) ([]dal.Controller, error)
-}
-
 type DALFunc func(ctx context.Context, all bool) ([]dal.Controller, error)
-
-func (f DALFunc) GetControllers(ctx context.Context, all bool) ([]dal.Controller, error) {
-	return f(ctx, all)
-}
 
 // Scheduler is a task scheduler for the controller.
 //
@@ -54,28 +46,25 @@ func (f DALFunc) GetControllers(ctx context.Context, all bool) ([]dal.Controller
 // as the hash ring is only updated periodically and controllers may have
 // inconsistent views of the hash ring.
 type Scheduler struct {
-	controller DAL
-	key        model.ControllerKey
-	jobs       chan *descriptor
-	clock      clock.Clock
+	key   model.ControllerKey
+	jobs  chan *descriptor
+	clock clock.Clock
 
 	hashring atomic.Value[*hashring.HashRing]
 }
 
 // New creates a new [Scheduler].
-func New(ctx context.Context, id model.ControllerKey, controller DAL) *Scheduler {
-	return NewForTesting(ctx, id, controller, clock.New())
+func New(ctx context.Context, id model.ControllerKey) *Scheduler {
+	return NewForTesting(ctx, id, clock.New())
 }
 
-func NewForTesting(ctx context.Context, id model.ControllerKey, controller DAL, clock clock.Clock) *Scheduler {
+func NewForTesting(ctx context.Context, id model.ControllerKey, clock clock.Clock) *Scheduler {
 	s := &Scheduler{
-		controller: controller,
-		key:        id,
-		jobs:       make(chan *descriptor),
-		clock:      clock,
+		key:   id,
+		jobs:  make(chan *descriptor),
+		clock: clock,
 	}
-	_ = s.updateHashring(ctx)
-	go s.syncHashRing(ctx)
+	s.UpdatedControllerList(ctx, nil)
 	go s.run(ctx)
 	return s
 }
@@ -107,7 +96,7 @@ func (s *Scheduler) schedule(retry backoff.Backoff, job Job, singlyHomed bool) {
 }
 
 func (s *Scheduler) run(ctx context.Context) {
-	logger := log.FromContext(ctx).Scope("cron")
+	logger := log.FromContext(ctx).Scope("scheduler")
 	// List of jobs to run.
 	// For singleton jobs running on a different host, this can include jobs
 	// scheduled in the past. These are skipped on each run.
@@ -147,7 +136,7 @@ func (s *Scheduler) run(ctx context.Context) {
 					}
 				}
 				jobs[i] = nil // Zero out scheduled jobs.
-				logger.Scope(job.name).Tracef("Running cron job")
+				logger.Scope(job.name).Tracef("Running scheduled task")
 				go func() {
 					if delay, err := job.job(ctx); err != nil {
 						logger.Scope(job.name).Warnf("%s", err)
@@ -168,28 +157,8 @@ func (s *Scheduler) run(ctx context.Context) {
 	}
 }
 
-// Synchronise the hash ring with the active controllers.
-func (s *Scheduler) syncHashRing(ctx context.Context) {
-	logger := log.FromContext(ctx).Scope("cron")
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-s.clock.After(time.Second * 5):
-			if err := s.updateHashring(ctx); err != nil {
-				logger.Warnf("Failed to get controllers: %s", err)
-			}
-		}
-	}
-}
-
-func (s *Scheduler) updateHashring(ctx context.Context) error {
-	controllers, err := s.controller.GetControllers(ctx, false)
-	if err != nil {
-		return err
-	}
+// UpdatedControllerList synchronises the hash ring with the active controllers.
+func (s *Scheduler) UpdatedControllerList(ctx context.Context, controllers []dal.Controller) {
 	hashring := hashring.New(slices.Map(controllers, func(c dal.Controller) string { return c.Key.String() }))
 	s.hashring.Store(hashring)
-	return nil
 }

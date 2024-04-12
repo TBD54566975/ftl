@@ -171,6 +171,21 @@ func TestValidate(t *testing.T) {
 				"6:10-10: verb can not have multiple instances of ingress",
 			},
 		},
+
+		{name: "CronOnNonEmptyVerb",
+			schema: `
+				module one {
+					verb verbWithWrongInput(Empty) Unit
+						+cron * * * * * * *
+					verb verbWithWrongOutput(Unit) Empty
+						+cron * * * * * * *
+				}
+			`,
+			errs: []string{
+				"4:7-7: verb verbWithWrongInput: cronjob can not have a request type",
+				"6:7-7: verb verbWithWrongOutput: cronjob can not have a response type",
+			},
+		},
 	}
 
 	for _, test := range tests {
