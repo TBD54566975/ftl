@@ -345,7 +345,7 @@ VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment
                 'stack', sqlc.narg('stack')::TEXT
             ));
 
--- name: CreateIngressRequest :exec
+-- name: CreateRequest :exec
 INSERT INTO requests (origin, "key", source_addr)
 VALUES ($1, $2, $3);
 

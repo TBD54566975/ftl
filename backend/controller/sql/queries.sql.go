@@ -61,16 +61,6 @@ func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schem
 	return err
 }
 
-const createIngressRequest = `-- name: CreateIngressRequest :exec
-INSERT INTO requests (origin, "key", source_addr)
-VALUES ($1, $2, $3)
-`
-
-func (q *Queries) CreateIngressRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error {
-	_, err := q.db.Exec(ctx, createIngressRequest, origin, key, sourceAddr)
-	return err
-}
-
 const createIngressRoute = `-- name: CreateIngressRoute :exec
 INSERT INTO ingress_routes (deployment_id, module, verb, method, path)
 VALUES ((SELECT id FROM deployments WHERE key = $1::deployment_key LIMIT 1), $2, $3, $4, $5)
@@ -92,6 +82,16 @@ func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRoute
 		arg.Method,
 		arg.Path,
 	)
+	return err
+}
+
+const createRequest = `-- name: CreateRequest :exec
+INSERT INTO requests (origin, "key", source_addr)
+VALUES ($1, $2, $3)
+`
+
+func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error {
+	_, err := q.db.Exec(ctx, createRequest, origin, key, sourceAddr)
 	return err
 }
 
