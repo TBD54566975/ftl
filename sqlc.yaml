@@ -36,6 +36,12 @@ sql:
             nullable: true
             go_type:
               type: "NullRunnerKey"
+          - db_type: "cron_job_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.CronJobKey"
+          - db_type: "cron_job_key"
+            nullable: true
+            go_type:
+              type: "NullCronJobKey"
           - db_type: "deployment_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
           - db_type: "deployment_key"

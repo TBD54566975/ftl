@@ -11,8 +11,17 @@ type Error struct {
 	Msg       string   `json:"msg" protobuf:"1"`
 	Pos       Position `json:"pos" protobuf:"2"`
 	EndColumn int      `json:"endCol" protobuf:"3"`
-	Err       error    `protobuf:"-"` // Wrapped error, if any
 }
+
+func (e Error) ToProto() *schemapb.Error {
+	return &schemapb.Error{
+		Msg:       e.Msg,
+		Pos:       posToProto(e.Pos),
+		EndColumn: int64(e.EndColumn),
+	}
+}
+
+func (e Error) Error() string { return fmt.Sprintf("%s-%d: %s", e.Pos, e.EndColumn, e.Msg) }
 
 func errorFromProto(e *schemapb.Error) *Error {
 	return &Error{
@@ -20,6 +29,15 @@ func errorFromProto(e *schemapb.Error) *Error {
 		Msg:       e.Msg,
 		EndColumn: int(e.EndColumn),
 	}
+}
+
+func errorsToProto(errs []*Error) []*schemapb.Error {
+	var out []*schemapb.Error
+	for _, s := range errs {
+		pb := s.ToProto()
+		out = append(out, pb)
+	}
+	return out
 }
 
 func errorsFromProto(errs []*schemapb.Error) []*Error {
@@ -35,15 +53,18 @@ type ErrorList struct {
 	Errors []*Error `json:"errors" protobuf:"1"`
 }
 
+func (e *ErrorList) ToProto() *schemapb.ErrorList {
+	return &schemapb.ErrorList{
+		Errors: errorsToProto(e.Errors),
+	}
+}
+
 // ErrorListFromProto converts a protobuf ErrorList to an ErrorList.
 func ErrorListFromProto(e *schemapb.ErrorList) *ErrorList {
 	return &ErrorList{
 		Errors: errorsFromProto(e.Errors),
 	}
 }
-
-func (e Error) Error() string { return fmt.Sprintf("%s-%d: %s", e.Pos, e.EndColumn, e.Msg) }
-func (e Error) Unwrap() error { return e.Err }
 
 func Errorf(pos Position, endColumn int, format string, args ...any) Error {
 	return Error{Msg: fmt.Sprintf(format, args...), Pos: pos, EndColumn: endColumn}
@@ -67,5 +88,5 @@ func Wrapf(pos Position, endColumn int, err error, format string, args ...any) E
 		newEndColumn = endColumn
 		args = append(args, err)
 	}
-	return Error{Msg: fmt.Sprintf(format, args...), Pos: newPos, EndColumn: newEndColumn, Err: err}
+	return Error{Msg: fmt.Sprintf(format, args...), Pos: newPos, EndColumn: newEndColumn}
 }

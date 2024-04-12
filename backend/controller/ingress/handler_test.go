@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
@@ -96,7 +97,7 @@ func TestIngress(t *testing.T) {
 			req := httptest.NewRequest(test.method, test.path, bytes.NewBuffer(test.payload)).WithContext(ctx)
 			req.URL.RawQuery = test.query.Encode()
 			reqKey := model.NewRequestKey(model.OriginIngress, "test")
-			ingress.Handle(sch, reqKey, routes, rec, req, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+			ingress.Handle(sch, reqKey, routes, rec, req, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], requestKey optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
 				body, err := encoding.Marshal(test.response)
 				assert.NoError(t, err)
 				return connect.NewResponse(&ftlv1.CallResponse{Response: &ftlv1.CallResponse_Body{Body: body}}), nil

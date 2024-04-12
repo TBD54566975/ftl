@@ -29,14 +29,14 @@ func SetDirectRouted(header http.Header) {
 	header.Set(DirectRoutingHeader, "1")
 }
 
-func SetRequestName(header http.Header, key model.RequestKey) {
+func SetRequestKey(header http.Header, key model.RequestKey) {
 	header.Set(RequestIDHeader, key.String())
 }
 
-// GetRequestName from an incoming request.
+// GetRequestKey from an incoming request.
 //
 // Will return ("", false, nil) if no request key is present.
-func GetRequestName(header http.Header) (model.RequestKey, bool, error) {
+func GetRequestKey(header http.Header) (model.RequestKey, bool, error) {
 	keyStr := header.Get(RequestIDHeader)
 	if keyStr == "" {
 		return model.RequestKey{}, false, nil

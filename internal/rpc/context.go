@@ -191,7 +191,7 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if key, err := RequestKeyFromContext(ctx); err != nil {
 			return nil, err
 		} else if key, ok := key.Get(); ok {
-			headers.SetRequestName(header, key)
+			headers.SetRequestKey(header, key)
 		}
 	} else {
 		if headers.IsDirectRouted(header) {
@@ -202,7 +202,7 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		} else { //nolint:revive
 			ctx = WithVerbs(ctx, verbs)
 		}
-		if key, ok, err := headers.GetRequestName(header); err != nil {
+		if key, ok, err := headers.GetRequestKey(header); err != nil {
 			return nil, err
 		} else if ok {
 			ctx = WithRequestName(ctx, key)

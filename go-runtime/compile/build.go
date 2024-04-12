@@ -21,6 +21,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/reflect"
@@ -98,16 +99,36 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return fmt.Errorf("failed to generate external modules: %w", err)
 	}
 
+	buildDir := buildDir(moduleDir)
 	logger.Debugf("Extracting schema")
 	nativeNames, main, err := ExtractModuleSchema(moduleDir)
-	if err != nil {
-		return fmt.Errorf("failed to extract module schema: %w", err)
+	if originalErr := err; err != nil {
+		var schemaErrs []*schema.Error
+		for _, e := range errors.DeduplicateErrors(errors.UnwrapAll(err)) {
+			var ce schema.Error
+			if errors.As(e, &ce) {
+				schemaErrs = append(schemaErrs, &ce)
+			}
+		}
+		el := schema.ErrorList{
+			Errors: schemaErrs,
+		}
+		elBytes, err := proto.Marshal(el.ToProto())
+		if err != nil {
+			return fmt.Errorf("failed to marshal errors: %w", err)
+		}
+
+		err = os.WriteFile(filepath.Join(buildDir, "errors.pb"), elBytes, 0600)
+		if err != nil {
+			return fmt.Errorf("failed to write errors: %w", err)
+		}
+
+		return fmt.Errorf("failed to extract module schema: %w", originalErr)
 	}
 	schemaBytes, err := proto.Marshal(main.ToProto())
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	buildDir := buildDir(moduleDir)
 	err = os.WriteFile(filepath.Join(buildDir, "schema.pb"), schemaBytes, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write schema: %w", err)

@@ -56,7 +56,7 @@ func TestDAL(t *testing.T) {
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
-		}}, nil)
+		}}, nil, nil)
 		assert.NoError(t, err)
 	})
 
@@ -220,9 +220,9 @@ func TestDAL(t *testing.T) {
 		}}, runners)
 	})
 
-	var requestKey model.RequestKey
+	requestKey := model.NewRequestKey(model.OriginIngress, "GET /test")
 	t.Run("CreateIngressRequest", func(t *testing.T) {
-		requestKey, err = dal.CreateIngressRequest(ctx, "GET /test", "127.0.0.1:1234")
+		err = dal.CreateRequest(ctx, requestKey, "127.0.0.1:1234")
 		assert.NoError(t, err)
 	})
 

@@ -7,6 +7,7 @@ import {
 } from "vscode-languageclient/node"
 import * as vscode from "vscode"
 import { FTLStatus } from "./status"
+import { getProjectOrWorkspaceRoot } from "./config"
 
 const clientName = "ftl languge server"
 const clientId = "ftl"
@@ -56,7 +57,7 @@ export async function activate(context: ExtensionContext) {
   statusBarItem.command = "ftl.statusItemClicked"
   statusBarItem.show()
 
-  startClient(context)
+  await startClient(context)
 
   context.subscriptions.push(
     restartCmd,
@@ -71,43 +72,34 @@ export async function deactivate() {
   await stopClient()
 }
 
-function startClient(context: ExtensionContext) {
+
+async function startClient(context: ExtensionContext) {
   console.log("Starting client")
   FTLStatus.starting(statusBarItem)
+  outputChannel = vscode.window.createOutputChannel("FTL", 'log')
+
   const ftlConfig = vscode.workspace.getConfiguration("ftl")
-  const ftlPath = ftlConfig.get("executablePath") ?? "ftl"
+  const ftlPath = ftlConfig.get<string>("executablePath") ?? "ftl"
   const userFlags = ftlConfig.get<string[]>("devCommandFlags") ?? []
 
-  let workspaceRootPath =
-    vscode.workspace.workspaceFolders &&
-      vscode.workspace.workspaceFolders.length > 0
-      ? vscode.workspace.workspaceFolders[0].uri.fsPath
-      : null
-
-  if (!workspaceRootPath) {
-    vscode.window.showErrorMessage(
-      "FTL extension requires an open folder to work correctly."
-    )
-    return
-  }
-
+  const root = await getProjectOrWorkspaceRoot()
   const flags = ["--lsp", ...userFlags]
   let serverOptions: ServerOptions = {
     run: {
       command: `${ftlPath}`,
       args: ["dev", ".", ...flags],
-      options: { cwd: workspaceRootPath },
+      options: { cwd: root }
     },
     debug: {
       command: `${ftlPath}`,
       args: ["dev", ".", ...flags],
-      options: { cwd: workspaceRootPath },
+      options: { cwd: root }
     },
   }
 
+  outputChannel.appendLine(`Running ${ftlPath} with flags: ${flags.join(" ")}`)
   console.log(serverOptions.debug.args)
 
-  outputChannel = vscode.window.createOutputChannel("FTL Logs")
   let clientOptions: LanguageClientOptions = {
     documentSelector: [
       { scheme: "file", language: "kotlin" },
