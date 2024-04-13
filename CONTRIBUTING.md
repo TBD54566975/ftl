@@ -40,7 +40,17 @@ hot-reloading ftl agent:
 $ ftl dev ./examples/go
 ```
 
+## Development workflow
+
+Because we're a widely distributed team, we use a review-after-merge development flow. That is, if a PR is urgent, minor, or the developer has high confidence, we encourage merging without waiting for review in order to decrease friction. Conversely, if a change is more complex, or needs more eyes, we encourage developers to wait for review if it will make them feel more comfortable. Use your best judgement.
+
+We discourage bike-shedding. Code and documentation is easy to change, we can always adjust it later.
+
 ## Best practices
+
+### Optional
+
+We prefer to use [types.Optional\[T\]](https://pkg.go.dev/github.com/alecthomas/types/optional) as opposed to `nil` pointers for expressing that a value may be missing. This is because pointers are semantically ambiguous and error prone. They can mean, variously: "this value may or may not be present", "this value just happens to be a pointer", or "this value is a pointer because it's mutable". Using a `types.Optional[T]`, even for pointers, expresses the intent much very clearly.
 
 ### Sum types
 
@@ -74,19 +84,25 @@ TL;DR Don't do the above, do this:
 ```go
 switch t := t.(type) {
   case *schema.Int:
+    // Handle Int
 
-  // All other cases
-  default:
-    panic(fmt.Sprintf("unsupported type %T"))
+  // For all cases you don't want to handle, enumerate them with an
+  // empty case.
+  case *schema.String, *schema.Bool /* etc. */:
+    // Do nothing
 }
 ```
+
+Then when a new case is added to the sum type, `go-check-sumtype` will detect the missing case statically.
 
 ## Communications
 
 ### Issues
 
 Anyone from the community is welcome (and encouraged!) to raise issues via
-[GitHub Issues](https://github.com/TBD54566975/ftl/issues)
+[GitHub Issues](https://github.com/TBD54566975/ftl/issues).
+
+We have an [automated aggregation issue](https://github.com/TBD54566975/ftl/issues/728) that lists all the PRs and issues people are working on.
 
 ### Discussions
 
