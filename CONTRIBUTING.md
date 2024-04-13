@@ -50,7 +50,7 @@ We discourage bike-shedding. Code and documentation is easy to change, we can al
 
 ### Optional
 
-We prefer to use [types.Optional\[T\]](https://pkg.go.dev/github.com/alecthomas/types/optional) as opposed to `nil` pointers for expressing that a value may be missing. This is because pointers are semantically ambiguous and error prone. They can mean, variously: "this value may or may not be present", "this value just happens to be a pointer", or "this value is a pointer because it's mutable". Using a `types.Optional[T]`, even for pointers, expresses the intent much very clearly.
+We prefer to use [types.Optional\[T\]](https://pkg.go.dev/github.com/alecthomas/types/optional) as opposed to `nil` pointers for expressing that a value may be missing. This is because pointers are semantically ambiguous and error prone. They can mean, variously: "this value may or may not be present", "this value just happens to be a pointer", or "this value is a pointer because it's mutable". Using a `types.Optional[T]`, even for pointers, expresses the intent much more clearly.
 
 ### Sum types
 
