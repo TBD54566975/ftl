@@ -1,8 +1,13 @@
 on:
-  workflow_call:
+  workflow_run:
+    workflows: ["CI"]
+    branches: ["main"]
+    types:
+      - completed
 name: Auto-version
 jobs:
   semver-tag:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Conventional Commits Auto-version
     runs-on: ubuntu-latest
     steps:

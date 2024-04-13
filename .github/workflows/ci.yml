@@ -144,15 +144,19 @@ jobs:
     name: Integration Tests
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/integration.yml
-  autoversion:
-    name: Auto Version
-    secrets: inherit
-    if: github.ref == 'refs/heads/main'
-    needs:
-      - kotlin-runtime
-      - test
-      - lint
-      - console
-      - integration
-      - sql
-    uses: ./.github/workflows/autoversion.yml
+  build-all:
+    name: Rebuild All
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Init DB
+        run: just init-db
+      - name: Rebuild All
+        run: just build-all
