@@ -1,39 +1,40 @@
-# FTL VSCode extension
+# FTL for Visual Studio Code
 
-## Getting started
+[The VS Code FTL extension](https://marketplace.visualstudio.com/items?itemName=FTL.ftl)
+provides support for
+[FTL](https://github.com/TBD54566975/ftl) within VSCode including LSP integration and useful commands for manageing FTL projects.
 
-Within the FTL.vscode-workspace, select the `VSCode Extensions` workspace. Select "Run and Debug" on the activity bar, then select `Run Extension`. This will open a new VSCode window with the extension running.
+## Requirements
 
-In the extension development host, open an FTL project (with `ftl-project.toml` or `ftl.toml` files).
+- FTL 0.169.0 or newer
 
-If you get any errors, you might need to build the extension first (see below).
+## Quick Start
 
-## Building the extension
+1.  Install [FTL](https://github.com/TBD54566975/ftl) 0.169.0 or newer.
 
-We use `just` for our command line tasks. To build the extension, run:
-```bash
-just build-extension
+2.  Install this extension.
+
+3.  Open any FTL project with a `ftl-project.toml` or `ftl.toml` file.
+
+4.  The extension will automatically activate and provide support for FTL projects.
+
+> [!IMPORTANT]
+> If you have installed FTL with hermit (or other dependency management tools), you may need to specify the path to the FTL binary in the extension settings.
+
+Example:
+
+```json
+{
+  "ftl.executablePath": "bin/ftl"
+}
 ```
 
-## Packaging the extension
+You can also configure additional command line arguments for the FTL binary in the settings.
 
-To package the extension, run:
-```bash
-just package-extension
+Example:
+
+```json
+{
+  "ftl.devCommandFlags": ["--recreate", "--parallelism=4"]
+}
 ```
-
-This will create a `.vsix` file in the `extensions/vscode` directory.
-
-## Publishing the extension
-
-To publish the extension, run:
-```bash
-just publish-extension
-```
-
-This will publish the extension to the FTL marketplace. This command will require you to have a Personal Access Token (PAT) with the `Marketplace` scope. You can create a PAT [here](https://dev.azure.com/ftl-org/_usersSettings/tokens).
-
-## Useful links
-
-- [VSCode extension samples](https://github.com/microsoft/vscode-extension-samples)
-- [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)

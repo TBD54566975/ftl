@@ -3,7 +3,7 @@
   "displayName": "FTL",
   "publisher": "ftl",
   "description": "VSCode extension for FTL",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/TBD54566975/ftl-vscode"
