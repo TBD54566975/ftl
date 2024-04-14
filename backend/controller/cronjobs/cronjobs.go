@@ -205,6 +205,7 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	_, err = s.call(callCtx, req, optional.Some(requestKey), s.originURL.Host)
 	if err != nil {
 		logger.Errorf(err, "failed to execute cron job %v", job.Key)
+		// Do not return, continue to end the job and schedule the next execution
 	}
 
 	schedule, err := cron.Parse(job.Schedule)
@@ -215,6 +216,7 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	next, err := cron.NextAfter(schedule, s.clock.Now().UTC(), false)
 	if err != nil {
 		logger.Errorf(err, "failed to calculate next execution for cron job %v with schedule %q", job.Key, job.Schedule)
+		return
 	}
 
 	updatedJob, err := s.dal.EndCronJob(ctx, job, next)
