@@ -181,14 +181,14 @@ func Spawn[Client PingableClient](
 
 	select {
 	case <-dialCtx.Done():
-		return nil, nil, fmt.Errorf("%s: %w", "plugin timed out while starting", dialCtx.Err())
+		return nil, nil, fmt.Errorf("plugin timed out while starting: %w", dialCtx.Err())
 
 	case <-cmdCtx.Done():
-		return nil, nil, fmt.Errorf("%s: %w", "plugin process died", cmdCtx.Err())
+		return nil, nil, fmt.Errorf("plugin process died: %w", cmdCtx.Err())
 
 	case err := <-pingErr:
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", "plugin failed to respond to ping", err)
+			return nil, nil, fmt.Errorf("plugin failed to respond to ping: %w", err)
 		}
 	}
 

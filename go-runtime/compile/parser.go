@@ -96,7 +96,7 @@ func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]directive, 
 			} else {
 				err = fmt.Errorf("%s: %w", pos, err)
 			}
-			return nil, fmt.Errorf("%s: %w", "invalid directive", err)
+			return nil, fmt.Errorf("invalid directive: %w", err)
 		}
 		directives = append(directives, directive.Directive)
 	}

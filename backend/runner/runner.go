@@ -55,7 +55,7 @@ func Start(ctx context.Context, config Config) error {
 	}
 	hostname, err := os.Hostname()
 	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to get hostname", err)
+		return fmt.Errorf("failed to get hostname: %w", err)
 	}
 	pid := os.Getpid()
 
@@ -67,7 +67,7 @@ func Start(ctx context.Context, config Config) error {
 	logger.Debugf("Deployment directory: %s", config.DeploymentDir)
 	err = os.MkdirAll(config.DeploymentDir, 0700)
 	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to create deployment directory", err)
+		return fmt.Errorf("failed to create deployment directory: %w", err)
 	}
 	logger.Debugf("Using FTL endpoint: %s", config.ControllerEndpoint)
 	logger.Debugf("Listening on %s", config.Bind)
@@ -86,7 +86,7 @@ func Start(ctx context.Context, config Config) error {
 		"languages": slices.Map(config.Language, func(t string) any { return t }),
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to marshal labels", err)
+		return fmt.Errorf("failed to marshal labels: %w", err)
 	}
 
 	svc := &Service{
@@ -154,12 +154,12 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
 	if err, ok := s.registrationFailure.Load().Get(); ok {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("%s: %w", "failed to register runner", err))
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to register runner: %w", err))
 	}
 
 	key, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
 	}
 
 	deploymentLogger := s.getDeploymentLogger(ctx, key)
@@ -191,23 +191,23 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	}
 	module, err := schema.ModuleFromProto(gdResp.Msg.Schema)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "invalid module", err)
+		return nil, fmt.Errorf("invalid module: %w", err)
 	}
 	deploymentDir := filepath.Join(s.config.DeploymentDir, module.Name, key.String())
 	if s.config.TemplateDir != "" {
 		err = copy.Copy(s.config.TemplateDir, deploymentDir)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", "failed to copy template directory", err)
+			return nil, fmt.Errorf("failed to copy template directory: %w", err)
 		}
 	} else {
 		err = os.MkdirAll(deploymentDir, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", "failed to create deployment directory", err)
+			return nil, fmt.Errorf("failed to create deployment directory: %w", err)
 		}
 	}
 	err = download.Artefacts(ctx, s.controllerClient, key, deploymentDir)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "failed to download artefacts", err)
+		return nil, fmt.Errorf("failed to download artefacts: %w", err)
 	}
 
 	verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Attrs(map[string]string{"module": module.Name}))
@@ -225,7 +225,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "failed to spawn plugin", err)
+		return nil, fmt.Errorf("failed to spawn plugin: %w", err)
 	}
 
 	dep := s.makeDeployment(cmdCtx, key, deployment)
@@ -244,7 +244,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	}
 	deploymentKey, err := model.ParseDeploymentKey(c.Msg.DeploymentKey)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", "invalid deployment key", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
 	}
 	if !depl.key.Equal(deploymentKey) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("deployment key mismatch"))
@@ -253,7 +253,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 	// Soft kill.
 	err = depl.plugin.Cmd.Kill(syscall.SIGTERM)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "failed to kill plugin", err)
+		return nil, fmt.Errorf("failed to kill plugin: %w", err)
 	}
 	// Hard kill after 10 seconds.
 	select {
@@ -262,7 +262,7 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 		err := depl.plugin.Cmd.Kill(syscall.SIGKILL)
 		if err != nil {
 			// Should we os.Exit(1) here?
-			return nil, fmt.Errorf("%s: %w", "failed to kill plugin", err)
+			return nil, fmt.Errorf("failed to kill plugin: %w", err)
 		}
 	}
 	s.deployment.Store(optional.None[*deployment]())
@@ -320,7 +320,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	})
 	if err != nil {
 		s.registrationFailure.Store(optional.Some(err))
-		return fmt.Errorf("%s: %w", "failed to register with Controller", err)
+		return fmt.Errorf("failed to register with Controller: %w", err)
 	}
 	s.registrationFailure.Store(optional.None[error]())
 

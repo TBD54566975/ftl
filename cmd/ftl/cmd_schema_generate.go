@@ -91,7 +91,7 @@ func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.C
 				case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
 					module, err := schema.ModuleFromProto(msg.Schema)
 					if err != nil {
-						return fmt.Errorf("%s: %w", "invalid module schema", err)
+						return fmt.Errorf("invalid module schema: %w", err)
 					}
 					modules[module.Name] = module
 
