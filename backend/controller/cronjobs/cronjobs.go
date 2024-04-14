@@ -37,19 +37,28 @@ type Config struct {
 	Timeout time.Duration
 }
 
-type jobChangeType int
+//sumtype:decl
+type event interface {
+	// cronJobEvent is a marker to ensure that all events implement the interface.
+	cronJobEvent()
+}
 
-const (
-	resetJobs jobChangeType = iota
-	finishedJobs
-	updatedHashring
-)
-
-type jobChange struct {
-	changeType         jobChangeType
+type resetEvent struct {
 	jobs               []dal.CronJob
 	addedDeploymentKey optional.Option[model.DeploymentKey]
 }
+
+func (resetEvent) cronJobEvent() {}
+
+type endedJobsEvent struct {
+	jobs []dal.CronJob
+}
+
+func (endedJobsEvent) cronJobEvent() {}
+
+type updatedHashRingEvent struct{}
+
+func (updatedHashRingEvent) cronJobEvent() {}
 
 type hashRingState struct {
 	hashRing    *hashring.HashRing
@@ -80,8 +89,8 @@ type Service struct {
 	scheduler Scheduler
 	call      ExecuteCallFunc
 
-	clock      clock.Clock
-	jobChanges *pubsub.Topic[jobChange]
+	clock  clock.Clock
+	events *pubsub.Topic[event]
 
 	hashRingState atomic.Value[*hashRingState]
 }
@@ -92,14 +101,14 @@ func New(ctx context.Context, key model.ControllerKey, originURL *url.URL, confi
 
 func NewForTesting(ctx context.Context, key model.ControllerKey, originURL *url.URL, config Config, dal DAL, scheduler Scheduler, call ExecuteCallFunc, clock clock.Clock) *Service {
 	svc := &Service{
-		config:     config,
-		key:        key,
-		originURL:  originURL,
-		dal:        dal,
-		scheduler:  scheduler,
-		call:       call,
-		clock:      clock,
-		jobChanges: pubsub.New[jobChange](),
+		config:    config,
+		key:       key,
+		originURL: originURL,
+		dal:       dal,
+		scheduler: scheduler,
+		call:      call,
+		clock:     clock,
+		events:    pubsub.New[event](),
 	}
 	svc.UpdatedControllerList(ctx, nil)
 
@@ -176,8 +185,7 @@ func (s *Service) resetJobsWithNewDeploymentKey(ctx context.Context, deploymentK
 		logger.Errorf(err, "failed to get cron jobs")
 		return fmt.Errorf("failed to get cron jobs: %w", err)
 	}
-	s.jobChanges.Publish(jobChange{
-		changeType:         resetJobs,
+	s.events.Publish(resetEvent{
 		jobs:               jobs,
 		addedDeploymentKey: deploymentKey,
 	})
@@ -223,9 +231,8 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	if err != nil {
 		logger.Errorf(err, "failed to end cron job %v", job.Key)
 	} else {
-		s.jobChanges.Publish(jobChange{
-			changeType: finishedJobs,
-			jobs:       []dal.CronJob{updatedJob},
+		s.events.Publish(endedJobsEvent{
+			jobs: []dal.CronJob{updatedJob},
 		})
 	}
 }
@@ -266,9 +273,8 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 		updatedJobs = append(updatedJobs, updated)
 	}
 
-	s.jobChanges.Publish(jobChange{
-		changeType: finishedJobs,
-		jobs:       updatedJobs,
+	s.events.Publish(endedJobsEvent{
+		jobs: updatedJobs,
 	})
 
 	return time.Minute, nil
@@ -283,9 +289,9 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 func (s *Service) watchForUpdates(ctx context.Context) {
 	logger := log.FromContext(ctx)
 
-	jobChanges := make(chan jobChange, 128)
-	s.jobChanges.Subscribe(jobChanges)
-	defer s.jobChanges.Unsubscribe(jobChanges)
+	events := make(chan event, 128)
+	s.events.Subscribe(events)
+	defer s.events.Unsubscribe(events)
 
 	state := &State{
 		executing:    map[string]bool{},
@@ -366,15 +372,15 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 			for _, key := range removedDeploymentKeys {
 				state.removeDeploymentKey(key)
 			}
-		case event := <-jobChanges:
-			switch event.changeType {
-			case resetJobs:
+		case e := <-events:
+			switch event := e.(type) {
+			case resetEvent:
 				logger.Tracef("resetting job list: %d jobs", len(event.jobs))
 				state.reset(event.jobs, event.addedDeploymentKey)
-			case finishedJobs:
+			case endedJobsEvent:
 				logger.Tracef("updating %d jobs", len(event.jobs))
 				state.updateJobs(event.jobs)
-			case updatedHashring:
+			case updatedHashRingEvent:
 				// do another cycle through the loop to see if new jobs need to be scheduled
 			}
 		}
@@ -452,9 +458,7 @@ func (s *Service) UpdatedControllerList(ctx context.Context, controllers []dal.C
 		idx:         controllerIdx,
 	})
 
-	s.jobChanges.Publish(jobChange{
-		changeType: updatedHashring,
-	})
+	s.events.Publish(updatedHashRingEvent{})
 }
 
 // isResponsibleForJob indicates whether a this service should be responsible for attempting jobs,
