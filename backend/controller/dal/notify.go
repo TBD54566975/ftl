@@ -142,20 +142,20 @@ func decodeNotification[K any, T NotificationPayload, KP interface {
 		var deletedKey K
 		var deletedKeyP KP = &deletedKey
 		if err := deletedKeyP.UnmarshalText([]byte(notification.Old)); err != nil {
-			return Notification[T, K, KP]{}, fmt.Errorf("%s: %w", "failed to unmarshal notification key", err)
+			return Notification[T, K, KP]{}, fmt.Errorf("failed to unmarshal notification key: %w", err)
 		}
 		deleted = optional.Some(deletedKey)
 	} else {
 		var newKey K
 		var newKeyP KP = &newKey
 		if err := newKeyP.UnmarshalText([]byte(notification.New)); err != nil {
-			return Notification[T, K, KP]{}, fmt.Errorf("%s: %w", "failed to unmarshal notification key", err)
+			return Notification[T, K, KP]{}, fmt.Errorf("failed to unmarshal notification key: %w", err)
 		}
 		var msg T
 		var err error
 		msg, deleted, err = translate(newKey)
 		if err != nil {
-			return Notification[T, K, KP]{}, fmt.Errorf("%s: %w", "failed to translate database notification", err)
+			return Notification[T, K, KP]{}, fmt.Errorf("failed to translate database notification: %w", err)
 		}
 
 		if !deleted.Ok() {

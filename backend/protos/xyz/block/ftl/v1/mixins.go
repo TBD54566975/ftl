@@ -66,7 +66,7 @@ func (r *RegisterRunnerRequest) DeploymentAsOptional() (optional.Option[model.De
 	}
 	key, err := model.ParseDeploymentKey(*r.Deployment)
 	if err != nil {
-		return optional.None[model.DeploymentKey](), fmt.Errorf("%s: %w", "invalid deployment key", err)
+		return optional.None[model.DeploymentKey](), fmt.Errorf("invalid deployment key: %w", err)
 	}
 	return optional.Some(key), nil
 }

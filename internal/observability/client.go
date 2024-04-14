@@ -53,12 +53,12 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 			semconv.ServiceVersion(serviceVersion),
 		))
 	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to create OTEL resource", err)
+		return fmt.Errorf("failed to create OTEL resource: %w", err)
 	}
 
 	otelMetricExporter, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to create OTEL metric exporter", err)
+		return fmt.Errorf("failed to create OTEL metric exporter: %w", err)
 	}
 
 	meterProvider := metric.NewMeterProvider(metric.WithReader(metric.NewPeriodicReader(otelMetricExporter)), metric.WithResource(res))
@@ -66,7 +66,7 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 
 	otelTraceExporter, err := otlptracegrpc.New(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to create OTEL trace exporter", err)
+		return fmt.Errorf("failed to create OTEL trace exporter: %w", err)
 	}
 	traceProvider := trace.NewTracerProvider(trace.WithBatcher(otelTraceExporter), trace.WithResource(res))
 	otel.SetTracerProvider(traceProvider)

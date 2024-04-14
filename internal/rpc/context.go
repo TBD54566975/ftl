@@ -57,7 +57,7 @@ func IsDirectRouted(ctx context.Context) bool {
 	return ctx.Value(ftlDirectRoutingKey{}) != nil
 }
 
-// RequestKeyFromContext returns the request Key from the context, if any.
+// RequestKeyFromContext returns the request key from the context, if any.
 //
 // TODO: Return an Option here instead of a bool.
 func RequestKeyFromContext(ctx context.Context) (optional.Option[model.RequestKey], error) {
@@ -68,12 +68,12 @@ func RequestKeyFromContext(ctx context.Context) (optional.Option[model.RequestKe
 	}
 	key, err := model.ParseRequestKey(keyStr)
 	if err != nil {
-		return optional.None[model.RequestKey](), fmt.Errorf("%s: %w", "invalid request Key", err)
+		return optional.None[model.RequestKey](), fmt.Errorf("invalid request key: %w", err)
 	}
 	return optional.Some(key), nil
 }
 
-// WithRequestName adds the request Key to the context.
+// WithRequestName adds the request key to the context.
 func WithRequestName(ctx context.Context, key model.RequestKey) context.Context {
 	return context.WithValue(ctx, requestIDKey{}, key.String())
 }
