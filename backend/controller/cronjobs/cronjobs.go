@@ -3,6 +3,7 @@ package cronjobs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -110,38 +111,44 @@ func NewForTesting(ctx context.Context, key model.ControllerKey, originURL *url.
 	return svc
 }
 
-func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Module) (jobs []dal.CronJob, err error) {
-	logger := log.FromContext(ctx)
-
+func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Module) ([]dal.CronJob, error) {
 	start := s.clock.Now().UTC()
 	newJobs := []dal.CronJob{}
+	merr := []error{}
 	for _, decl := range module.Decls {
-		if verb, ok := decl.Value.(*schemapb.Decl_Verb); ok {
-			for _, metadata := range verb.Verb.Metadata {
-				if cronMetadata, ok := metadata.Value.(*schemapb.Metadata_CronJob); ok {
-					cronStr := cronMetadata.CronJob.Cron
-					schedule, err := cron.Parse(cronStr)
-					if err != nil {
-						logger.Errorf(err, "failed to parse cron schedule %q", cronStr)
-						continue
-					}
-					next, err := cron.NextAfter(schedule, start, false)
-					if err != nil {
-						logger.Errorf(err, "failed to calculate next execution for cron job %v:%v with schedule %q", module.Name, verb.Verb.Name, schedule)
-						continue
-					}
-					newJobs = append(newJobs, dal.CronJob{
-						Key:           model.NewCronJobKey(module.Name, verb.Verb.Name),
-						Ref:           schema.Ref{Module: module.Name, Name: verb.Verb.Name},
-						Schedule:      cronStr,
-						StartTime:     start,
-						NextExecution: next,
-						State:         dal.JobStateIdle,
-						// DeploymentKey: Filled in by DAL
-					})
-				}
-			}
+		verb, ok := decl.Value.(*schemapb.Decl_Verb)
+		if !ok {
+			continue
 		}
+		for _, metadata := range verb.Verb.Metadata {
+			cronMetadata, ok := metadata.Value.(*schemapb.Metadata_CronJob)
+			if !ok {
+				continue
+			}
+			cronStr := cronMetadata.CronJob.Cron
+			schedule, err := cron.Parse(cronStr)
+			if err != nil {
+				merr = append(merr, fmt.Errorf("failed to parse cron schedule %q: %w", cronStr, err))
+				continue
+			}
+			next, err := cron.NextAfter(schedule, start, false)
+			if err != nil {
+				merr = append(merr, fmt.Errorf("failed to calculate next execution for cron job %v:%v with schedule %q: %w", module.Name, verb.Verb.Name, schedule, err))
+				continue
+			}
+			newJobs = append(newJobs, dal.CronJob{
+				Key:           model.NewCronJobKey(module.Name, verb.Verb.Name),
+				Ref:           schema.Ref{Module: module.Name, Name: verb.Verb.Name},
+				Schedule:      cronStr,
+				StartTime:     start,
+				NextExecution: next,
+				State:         dal.JobStateIdle,
+				// DeploymentKey: Filled in by DAL
+			})
+		}
+	}
+	if len(merr) > 0 {
+		return nil, errors.Join(merr...)
 	}
 	return newJobs, nil
 }
