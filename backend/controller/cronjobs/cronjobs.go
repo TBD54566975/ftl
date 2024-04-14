@@ -43,12 +43,12 @@ type event interface {
 	cronJobEvent()
 }
 
-type resetEvent struct {
+type syncEvent struct {
 	jobs               []dal.CronJob
 	addedDeploymentKey optional.Option[model.DeploymentKey]
 }
 
-func (resetEvent) cronJobEvent() {}
+func (syncEvent) cronJobEvent() {}
 
 type endedJobsEvent struct {
 	jobs []dal.CronJob
@@ -112,7 +112,7 @@ func NewForTesting(ctx context.Context, key model.ControllerKey, originURL *url.
 	}
 	svc.UpdatedControllerList(ctx, nil)
 
-	svc.scheduler.Parallel(backoff.Backoff{Min: time.Second, Max: jobResetInterval}, svc.resetJobs)
+	svc.scheduler.Parallel(backoff.Backoff{Min: time.Second, Max: jobResetInterval}, svc.syncJobs)
 	svc.scheduler.Singleton(backoff.Backoff{Min: time.Second, Max: time.Minute}, svc.killOldJobs)
 
 	go svc.watchForUpdates(ctx)
@@ -162,22 +162,24 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 	return newJobs, nil
 }
 
+// CreatedOrReplacedDeloyment: When a controller creates/replaces a deployment, its cron job service is responsible for
+// the newly created cron jobs until other controllers have a chance to resync their list of jobs and start sharing responsibility of the new cron jobs.
 func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context, newDeploymentKey model.DeploymentKey) {
-	// Rather than finding old/new cron jobs and updating our state, we can just reset the list of jobs
-	_ = s.resetJobsWithNewDeploymentKey(ctx, optional.Some(newDeploymentKey))
+	// Rather than finding old/new cron jobs and updating our state, we can just resync the list of jobs
+	_ = s.syncJobsWithNewDeploymentKey(ctx, optional.Some(newDeploymentKey))
 }
 
-// resetJobs is run periodically via a scheduled task
-func (s *Service) resetJobs(ctx context.Context) (time.Duration, error) {
-	err := s.resetJobsWithNewDeploymentKey(ctx, optional.None[model.DeploymentKey]())
+// syncJobs is run periodically via a scheduled task
+func (s *Service) syncJobs(ctx context.Context) (time.Duration, error) {
+	err := s.syncJobsWithNewDeploymentKey(ctx, optional.None[model.DeploymentKey]())
 	if err != nil {
 		return 0, err
 	}
 	return jobResetInterval, nil
 }
 
-// resetJobsWithNewDeploymentKey resets the list of jobs and marks the deployment key as added so that it can overrule the hash ring for a short time.
-func (s *Service) resetJobsWithNewDeploymentKey(ctx context.Context, deploymentKey optional.Option[model.DeploymentKey]) error {
+// syncJobsWithNewDeploymentKey resyncs the list of jobs and marks the deployment key as added so that it can overrule the hash ring for a short time.
+func (s *Service) syncJobsWithNewDeploymentKey(ctx context.Context, deploymentKey optional.Option[model.DeploymentKey]) error {
 	logger := log.FromContext(ctx)
 
 	jobs, err := s.dal.GetCronJobs(ctx)
@@ -185,7 +187,7 @@ func (s *Service) resetJobsWithNewDeploymentKey(ctx context.Context, deploymentK
 		logger.Errorf(err, "failed to get cron jobs")
 		return fmt.Errorf("failed to get cron jobs: %w", err)
 	}
-	s.events.Publish(resetEvent{
+	s.events.Publish(syncEvent{
 		jobs:               jobs,
 		addedDeploymentKey: deploymentKey,
 	})
@@ -374,9 +376,9 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 			}
 		case e := <-events:
 			switch event := e.(type) {
-			case resetEvent:
-				logger.Tracef("resetting job list: %d jobs", len(event.jobs))
-				state.reset(event.jobs, event.addedDeploymentKey)
+			case syncEvent:
+				logger.Tracef("syncing job list: %d jobs", len(event.jobs))
+				state.sync(event.jobs, event.addedDeploymentKey)
 			case endedJobsEvent:
 				logger.Tracef("updating %d jobs", len(event.jobs))
 				state.updateJobs(event.jobs)

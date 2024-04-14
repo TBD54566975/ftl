@@ -202,7 +202,7 @@ func TestService(t *testing.T) {
 					Key: ctrl.key,
 				}
 			}))
-			_, _ = c.cronJobs.resetJobs(ctx)
+			_, _ = c.cronJobs.syncJobs(ctx)
 		}()
 	}
 

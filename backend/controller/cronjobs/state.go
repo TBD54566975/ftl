@@ -16,7 +16,7 @@ type State struct {
 	executing map[string]bool
 
 	// Newly created jobs should be attempted by the controller that created them until other controllers
-	// have a chance to reset their job lists and share responsibilities through the hash ring
+	// have a chance to resync their job lists and share responsibilities through the hash ring
 	newJobs map[string]time.Time
 
 	// We delay any job attempts in case of db errors to avoid hammering the db in a tight loop
@@ -41,7 +41,7 @@ func (s *State) isJobTooNewForHashRing(job dal.CronJob) bool {
 	return false
 }
 
-func (s *State) reset(jobs []dal.CronJob, newDeploymentKey optional.Option[model.DeploymentKey]) {
+func (s *State) sync(jobs []dal.CronJob, newDeploymentKey optional.Option[model.DeploymentKey]) {
 	s.jobs = make([]dal.CronJob, len(jobs))
 	copy(s.jobs, jobs)
 	for _, job := range s.jobs {
