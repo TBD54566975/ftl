@@ -41,6 +41,7 @@ export async function activate(context: ExtensionContext) {
     const ftlCommands = [
       { label: 'FTL: Restart Service', command: 'ftl.restart' },
       { label: 'FTL: Stop Service', command: 'ftl.stop' },
+      { label: 'FTL: Show Logs', command: 'ftl.showLogs' },
     ]
 
     vscode.window.showQuickPick(ftlCommands, { placeHolder: 'Select an FTL command' }).then(selected => {
