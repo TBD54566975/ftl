@@ -146,5 +146,8 @@ func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.O
 		set(&config.Global, mapping)
 	}
 	configPaths := pc.ConfigPaths(p.Config)
+	if len(configPaths) == 0 {
+		return fmt.Errorf("no ftl-project.toml files can be found")
+	}
 	return pc.Save(configPaths[len(configPaths)-1], config)
 }
