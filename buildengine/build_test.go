@@ -73,6 +73,12 @@ func assertBuildProtoErrors(msgs ...string) assertion {
 		}
 
 		// normalize results
+		errs := make([]error, 0, len(errorList.Errors))
+		for _, e := range errorList.Errors {
+			errs = append(errs, *e)
+		}
+		schema.SortErrorsByPosition(errs)
+		
 		for _, e := range errorList.Errors {
 			e.EndColumn = 0
 		}
