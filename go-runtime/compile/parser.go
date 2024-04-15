@@ -72,7 +72,7 @@ var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
-func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]directive, error) {
+func parseDirectives(node ast.Node, fset *token.FileSet, docs *ast.CommentGroup) ([]directive, *schema.Error) {
 	if docs == nil {
 		return nil, nil
 	}
@@ -86,17 +86,18 @@ func parseDirectives(fset *token.FileSet, docs *ast.CommentGroup) ([]directive, 
 		directive, err := directiveParser.ParseString(pos.Filename, line.Text[2:])
 		if err != nil {
 			// Adjust the Participle-reported position relative to the AST node.
+			var scerr *schema.Error
 			var perr participle.Error
 			if errors.As(err, &perr) {
 				ppos := schema.Position{}
 				ppos.Filename = pos.Filename
 				ppos.Column += pos.Column + 2
 				ppos.Line = pos.Line
-				err = schema.Errorf(ppos, ppos.Column, "%s", perr.Message())
+				scerr = schema.Errorf(ppos, ppos.Column, "%s", perr.Message())
 			} else {
-				err = fmt.Errorf("%s: %w", pos, err)
+				scerr = wrapf(node, err, "")
 			}
-			return nil, fmt.Errorf("invalid directive: %w", err)
+			return nil, scerr
 		}
 		directives = append(directives, directive.Directive)
 	}
