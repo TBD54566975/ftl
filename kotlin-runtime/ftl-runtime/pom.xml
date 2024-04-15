@@ -57,7 +57,7 @@
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <wire.version>4.9.9</wire.version>
         <grpc.version>1.63.0</grpc.version>
-        <logback.version>1.5.4</logback.version>
+        <logback.version>1.5.5</logback.version>
         <junit.version>5.10.2</junit.version>
         <logstash.version>7.4</logstash.version>
     </properties>
@@ -456,7 +456,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.2.2</version>
+                        <version>3.2.3</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
