@@ -21,6 +21,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
+	xslices "golang.org/x/exp/slices"
 )
 
 type mockDAL struct {
@@ -140,6 +141,7 @@ func (s *mockScheduler) Parallel(retry backoff.Backoff, job scheduledtask.Job) {
 type controller struct {
 	key      model.ControllerKey
 	DAL      DAL
+	clock    *clock.Mock
 	cronJobs *Service
 }
 
@@ -177,8 +179,9 @@ func TestService(t *testing.T) {
 	for i := range 5 {
 		key := model.NewControllerKey("localhost", strconv.Itoa(8080+i))
 		controller := &controller{
-			key: key,
-			DAL: mockDal,
+			key:   key,
+			DAL:   mockDal,
+			clock: clock,
 			cronJobs: NewForTesting(ctx, key, "test.com", config, mockDal, scheduler, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
 				verbRef := schema.RefFromProto(r.Msg.Verb)
 
@@ -215,10 +218,116 @@ func TestService(t *testing.T) {
 	for _, j := range mockDal.jobs {
 		count := verbCallCount[j.Verb.Name]
 		assert.Equal(t, count, 3, "expected verb %s to be called 3 times", j.Verb.Name)
-
-		// Make sure each job is not attempted by all controllers, or the responsibility of only one controller
-		// Target is for 2 controllers to attempt each job
-		attemptCount := mockDal.attemptCountMap[j.Key.String()]
-		assert.True(t, attemptCount > 1*count && attemptCount <= 3*attemptCount, "job %v was attempted %d times, expected between > 1 and <= 3 to be attempted", j.Key)
 	}
+}
+
+func TestHashRing(t *testing.T) {
+	// This test uses multiple mock clocks to progress time for each controller individually
+	// This allows us to compare attempts for each cron job and know which controller attempted it
+	t.Parallel()
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
+	t.Cleanup(cancel)
+
+	config := Config{Timeout: time.Minute * 5}
+	mockDal := &mockDAL{
+		clock:           clock.NewMock(),
+		lock:            sync.Mutex{},
+		attemptCountMap: map[string]int{},
+	}
+	scheduler := &mockScheduler{}
+
+	verbCallCount := map[string]int{}
+	verbCallCountLock := sync.Mutex{}
+
+	// initial jobs
+	for i := range 100 {
+		deploymentKey := model.NewDeploymentKey("initial")
+		now := mockDal.clock.Now()
+		cronStr := "*/10 * * * * * *"
+		pattern, err := cron.Parse(cronStr)
+		assert.NoError(t, err)
+		next, err := cron.NextAfter(pattern, now, false)
+		assert.NoError(t, err)
+		mockDal.createCronJob(deploymentKey, "initial", fmt.Sprintf("verb%d", i), cronStr, now, next)
+	}
+
+	controllers := []*controller{}
+	for i := range 20 {
+		key := model.NewControllerKey("localhost", strconv.Itoa(8080+i))
+		clock := clock.NewMock()
+		controller := &controller{
+			key:   key,
+			DAL:   mockDal,
+			clock: clock,
+			cronJobs: NewForTesting(ctx, key, "test.com", config, mockDal, scheduler, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
+				verbRef := schema.RefFromProto(r.Msg.Verb)
+
+				verbCallCountLock.Lock()
+				verbCallCount[verbRef.Name]++
+				verbCallCountLock.Unlock()
+
+				return &connect.Response[ftlv1.CallResponse]{}, nil
+			}, clock),
+		}
+		controllers = append(controllers, controller)
+	}
+
+	time.Sleep(time.Millisecond * 100)
+
+	for _, c := range controllers {
+		go func() {
+			c.cronJobs.UpdatedControllerList(ctx, slices.Map(controllers, func(ctrl *controller) dal.Controller {
+				return dal.Controller{
+					Key: ctrl.key,
+				}
+			}))
+			_, _ = c.cronJobs.syncJobs(ctx)
+		}()
+	}
+	time.Sleep(time.Millisecond * 100)
+
+	// progress time for each controller one at a time, noting which verbs got attempted each time
+	// to build a map of verb to controller keys
+	controllersForVerbs := map[string][]model.ControllerKey{}
+	for _, c := range controllers {
+		beforeAttemptCount := map[string]int{}
+		for k, v := range mockDal.attemptCountMap {
+			beforeAttemptCount[k] = v
+		}
+
+		c.clock.Add(time.Second * 15)
+		time.Sleep(time.Millisecond * 100)
+
+		for k, v := range mockDal.attemptCountMap {
+			if beforeAttemptCount[k] == v {
+				continue
+			}
+			controllersForVerbs[k] = append(controllersForVerbs[k], c.key)
+		}
+	}
+
+	// Check if each job has the same key list
+	// Theoretically this is is possible for all jobs to have the same assigned controllers, but with 100 jobs and 20 controllers, this is unlikely
+	keys := []string{}
+	hasFoundNonMatchingKeys := false
+	for v, k := range controllersForVerbs {
+		assert.Equal(t, len(k), 2, "expected verb %s to be attempted by 2 controllers", v)
+
+		kStrs := slices.Map(k, func(k model.ControllerKey) string { return k.String() })
+		xslices.Sort(kStrs)
+		if len(keys) == 0 {
+			keys = kStrs
+			continue
+		}
+
+		if hasFoundNonMatchingKeys == false {
+			for keyIdx, keyStr := range kStrs {
+				if keys[keyIdx] != keyStr {
+					hasFoundNonMatchingKeys = true
+				}
+			}
+		}
+	}
+	assert.True(t, hasFoundNonMatchingKeys, "expected at least one verb to have different controllers assigned")
 }
