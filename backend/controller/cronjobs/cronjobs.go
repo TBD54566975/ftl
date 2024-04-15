@@ -168,7 +168,7 @@ func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context, newDeploymentK
 	_ = s.syncJobsWithNewDeploymentKey(ctx, optional.Some(newDeploymentKey))
 }
 
-// syncJobs is run periodically via a scheduled task
+// SyncJobs is run periodically via a scheduled task
 func (s *Service) SyncJobs(ctx context.Context) (time.Duration, error) {
 	err := s.syncJobsWithNewDeploymentKey(ctx, optional.None[model.DeploymentKey]())
 	if err != nil {
