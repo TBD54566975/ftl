@@ -41,7 +41,7 @@ func (s *mockScheduler) Parallel(retry backoff.Backoff, job scheduledtask.Job) {
 type controller struct {
 	key      model.ControllerKey
 	dal      *db.DAL
-	clock    *clock.Mock
+	clock    clock.Clock
 	cronJobs *cronjobs.Service
 }
 
@@ -56,17 +56,25 @@ func TestServiceWithDB(t *testing.T) {
 	assert.NoError(t, err)
 
 	config := cronjobs.Config{Timeout: time.Minute * 5}
-	clock := clock.NewMock()
+	clock := clock.New()
 	scheduler := &mockScheduler{}
 
 	verbCallCount := map[string]int{}
 	verbCallCountLock := sync.Mutex{}
 
+	// Using a real clock because real db queries use db clock
+	// delay until we are on an odd second
+	if clock.Now().Second()%2 == 0 {
+		time.Sleep(time.Second - time.Duration(clock.Now().Nanosecond())*time.Nanosecond)
+	} else {
+		time.Sleep(2*time.Second - time.Duration(clock.Now().Nanosecond())*time.Nanosecond)
+	}
+
 	// initial jobs
 	jobsToCreate := []model.CronJob{}
 	for i := range 20 {
 		now := clock.Now()
-		cronStr := "*/10 * * * * * *"
+		cronStr := "*/2 * * * * * *"
 		pattern, err := cron.Parse(cronStr)
 		assert.NoError(t, err)
 		next, err := cron.NextAfter(pattern, now, false)
@@ -81,9 +89,12 @@ func TestServiceWithDB(t *testing.T) {
 		})
 	}
 
-	_, err = dal.CreateDeployment(ctx, "go", &schema.Module{
+	deploymentKey, err := dal.CreateDeployment(ctx, "go", &schema.Module{
 		Name: "initial",
 	}, []db.DeploymentArtefact{}, []db.IngressRoutingEntry{}, jobsToCreate)
+	assert.NoError(t, err)
+
+	err = dal.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
 
 	controllers := []*controller{}
@@ -106,7 +117,7 @@ func TestServiceWithDB(t *testing.T) {
 		controllers = append(controllers, controller)
 	}
 
-	time.Sleep(time.Millisecond * 1000)
+	// clock.Sleep(time.Millisecond * 1000)
 
 	for _, c := range controllers {
 		go func() {
@@ -119,11 +130,8 @@ func TestServiceWithDB(t *testing.T) {
 		}()
 	}
 
-	clock.Add(time.Second * 5)
-	time.Sleep(time.Millisecond * 100)
 	for range 3 {
-		clock.Add(time.Second * 10)
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Second * 2)
 	}
 
 	for _, j := range jobsToCreate {
