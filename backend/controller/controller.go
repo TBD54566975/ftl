@@ -140,6 +140,8 @@ type clients struct {
 	runner ftlv1connect.RunnerServiceClient
 }
 
+// ControllerListListener is regularly notified of the current list of controllers
+// This is often used to update a hash ring to distribute work.
 type ControllerListListener interface {
 	UpdatedControllerList(ctx context.Context, controllers []dal.Controller)
 }
