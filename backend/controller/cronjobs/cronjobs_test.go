@@ -3,7 +3,6 @@ package cronjobs
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strconv"
 	"sync"
 	"testing"
@@ -180,7 +179,7 @@ func TestService(t *testing.T) {
 		controller := &controller{
 			key: key,
 			DAL: mockDal,
-			cronJobs: NewForTesting(ctx, key, &url.URL{Host: "test.com"}, config, mockDal, scheduler, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
+			cronJobs: NewForTesting(ctx, key, "test.com", config, mockDal, scheduler, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
 				verbRef := schema.RefFromProto(r.Msg.Verb)
 
 				verbCallCountLock.Lock()

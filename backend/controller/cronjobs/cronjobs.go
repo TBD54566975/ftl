@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"time"
 
 	"connectrpc.com/connect"
@@ -79,9 +78,9 @@ type Scheduler interface {
 type ExecuteCallFunc func(context.Context, *connect.Request[ftlv1.CallRequest], optional.Option[model.RequestKey], string) (*connect.Response[ftlv1.CallResponse], error)
 
 type Service struct {
-	config    Config
-	key       model.ControllerKey
-	originURL *url.URL
+	config        Config
+	key           model.ControllerKey
+	requestSource string
 
 	dal       DAL
 	scheduler Scheduler
@@ -93,20 +92,20 @@ type Service struct {
 	hashRingState atomic.Value[*hashRingState]
 }
 
-func New(ctx context.Context, key model.ControllerKey, originURL *url.URL, config Config, dal DAL, scheduler Scheduler, call ExecuteCallFunc) *Service {
-	return NewForTesting(ctx, key, originURL, config, dal, scheduler, call, clock.New())
+func New(ctx context.Context, key model.ControllerKey, requestSource string, config Config, dal DAL, scheduler Scheduler, call ExecuteCallFunc) *Service {
+	return NewForTesting(ctx, key, requestSource, config, dal, scheduler, call, clock.New())
 }
 
-func NewForTesting(ctx context.Context, key model.ControllerKey, originURL *url.URL, config Config, dal DAL, scheduler Scheduler, call ExecuteCallFunc, clock clock.Clock) *Service {
+func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, config Config, dal DAL, scheduler Scheduler, call ExecuteCallFunc, clock clock.Clock) *Service {
 	svc := &Service{
-		config:    config,
-		key:       key,
-		originURL: originURL,
-		dal:       dal,
-		scheduler: scheduler,
-		call:      call,
-		clock:     clock,
-		events:    pubsub.New[event](),
+		config:        config,
+		key:           key,
+		requestSource: requestSource,
+		dal:           dal,
+		scheduler:     scheduler,
+		call:          call,
+		clock:         clock,
+		events:        pubsub.New[event](),
 	}
 	svc.UpdatedControllerList(ctx, nil)
 
@@ -210,7 +209,7 @@ func (s *Service) executeJob(ctx context.Context, job model.CronJob) {
 
 	callCtx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
-	_, err = s.call(callCtx, req, optional.Some(requestKey), s.originURL.Host)
+	_, err = s.call(callCtx, req, optional.Some(requestKey), s.requestSource)
 	if err != nil {
 		logger.Errorf(err, "failed to execute cron job %v", job.Key)
 		// Do not return, continue to end the job and schedule the next execution

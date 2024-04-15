@@ -184,7 +184,7 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 		increaseReplicaFailures: map[string]int{},
 	}
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise, cronjobs.Config{Timeout: config.CronJobTimeout}, db, svc.tasks, svc.callWithRequest)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, db, svc.tasks, svc.callWithRequest)
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, svc.tasks, cronSvc)
 	_, _ = svc.updateControllersList(ctx)
