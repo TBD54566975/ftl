@@ -159,7 +159,8 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 	return newJobs, nil
 }
 
-// CreatedOrReplacedDeloyment: When a controller creates/replaces a deployment, its cron job service is responsible for
+// CreatedOrReplacedDeloyment is only called by the responsible controller to its cron service, and will not be received by the other cron services.
+// When a controller creates/replaces a deployment, its cron job service is responsible for
 // the newly created cron jobs until other controllers have a chance to resync their list of jobs and start sharing responsibility of the new cron jobs.
 func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context, newDeploymentKey model.DeploymentKey) {
 	// Rather than finding old/new cron jobs and updating our state, we can just resync the list of jobs

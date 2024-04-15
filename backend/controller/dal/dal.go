@@ -924,7 +924,7 @@ func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
 		Schedule:      row.Schedule,
 		StartTime:     row.StartTime,
 		NextExecution: row.NextExecution,
-		State:         model.CronJobState(row.State),
+		State:         row.State,
 	}
 }
 
@@ -963,7 +963,7 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attempte
 				Schedule:      row.Schedule,
 				StartTime:     row.StartTime,
 				NextExecution: row.NextExecution,
-				State:         model.CronJobState(row.State),
+				State:         row.State,
 			},
 			DidStartExecution: row.Updated,
 			HasMinReplicas:    row.HasMinReplicas,
