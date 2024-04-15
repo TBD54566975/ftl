@@ -1,6 +1,11 @@
 import * as vscode from "vscode"
 import * as fs from 'fs'
 import * as path from 'path'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+import semver from 'semver'
+
+const execAsync = promisify(exec)
 
 export const getProjectOrWorkspaceRoot = async (): Promise<string> => {
   const workspaceFolders = vscode.workspace.workspaceFolders
@@ -38,4 +43,35 @@ export const findFileInWorkspace = async (rootPath: string, fileName: string): P
     console.error('Failed to read directory:', rootPath)
   }
   return null
+}
+
+export const getFTLVersion = async (ftlPath: string): Promise<string> => {
+  try {
+    const { stdout } = await execAsync(`${ftlPath} --version`)
+    const version = stdout.trim()
+    return version
+  } catch (error) {
+    throw new Error(`Failed to get FTL version\n${error}`)
+  }
+}
+
+export const checkMinimumVersion = (version: string, minimumVersion: string): boolean => {
+  // Always pass if the version is 'dev'
+  if (version === 'dev') {
+    return true
+  }
+
+  // Strip any pre-release suffixes for comparison
+  const cleanVersion = version.split('-')[0]
+  return semver.valid(cleanVersion) ? semver.gte(cleanVersion, minimumVersion) : false
+}
+
+
+export const isFTLRunning = async (ftlPath: string): Promise<boolean> => {
+  try {
+    await execAsync(`${ftlPath} ping`)
+    return true
+  } catch (error) {
+    return false
+  }
 }

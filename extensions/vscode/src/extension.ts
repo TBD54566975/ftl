@@ -7,7 +7,10 @@ import {
 } from "vscode-languageclient/node"
 import * as vscode from "vscode"
 import { FTLStatus } from "./status"
-import { getProjectOrWorkspaceRoot } from "./config"
+import { checkMinimumVersion, getFTLVersion, getProjectOrWorkspaceRoot, isFTLRunning } from "./config"
+import path from "path"
+
+export const MIN_FTL_VERSION = '0.169.0'
 
 const clientName = "ftl languge server"
 const clientId = "ftl"
@@ -73,32 +76,40 @@ export async function deactivate() {
   await stopClient()
 }
 
-
 async function startClient(context: ExtensionContext) {
   console.log("Starting client")
-  FTLStatus.starting(statusBarItem)
-  outputChannel = vscode.window.createOutputChannel("FTL", 'log')
 
   const ftlConfig = vscode.workspace.getConfiguration("ftl")
   const ftlPath = ftlConfig.get<string>("executablePath") ?? "ftl"
+  const workspaceRootPath = await getProjectOrWorkspaceRoot()
+  const ftlAbsolutePath = path.isAbsolute(ftlPath) ? ftlPath : path.resolve(workspaceRootPath, ftlPath)
+
+  const ftlOK = await FTLPreflightCheck(ftlAbsolutePath)
+  if (!ftlOK) {
+    FTLStatus.disabled(statusBarItem)
+    return
+  }
+
+  FTLStatus.starting(statusBarItem)
+  outputChannel = vscode.window.createOutputChannel("FTL", 'log')
+
   const userFlags = ftlConfig.get<string[]>("devCommandFlags") ?? []
 
-  const root = await getProjectOrWorkspaceRoot()
   const flags = ["--lsp", ...userFlags]
   let serverOptions: ServerOptions = {
     run: {
-      command: `${ftlPath}`,
+      command: `${ftlAbsolutePath}`,
       args: ["dev", ".", ...flags],
-      options: { cwd: root }
+      options: { cwd: workspaceRootPath }
     },
     debug: {
-      command: `${ftlPath}`,
+      command: `${ftlAbsolutePath}`,
       args: ["dev", ".", ...flags],
-      options: { cwd: root }
+      options: { cwd: workspaceRootPath }
     },
   }
 
-  outputChannel.appendLine(`Running ${ftlPath} with flags: ${flags.join(" ")}`)
+  outputChannel.appendLine(`Running ${ftlAbsolutePath} with flags: ${flags.join(" ")}`)
   console.log(serverOptions.debug.args)
 
   let clientOptions: LanguageClientOptions = {
@@ -150,4 +161,32 @@ async function stopClient() {
   client.outputChannel.dispose()
   console.log("Output channel disposed")
   FTLStatus.stopped(statusBarItem)
+}
+
+async function FTLPreflightCheck(ftlPath: string) {
+  const ftlRunning = await isFTLRunning(ftlPath)
+  if (ftlRunning) {
+    vscode.window.showErrorMessage(
+      "FTL is already running. Please stop the other instance and restart the service."
+    )
+    return false
+  }
+
+  let version: string
+  try {
+    version = await getFTLVersion(ftlPath)
+  } catch (error: any) {
+    vscode.window.showErrorMessage(`${error.message}`)
+    return false
+  }
+
+  const versionOK = checkMinimumVersion(version, MIN_FTL_VERSION)
+  if (!versionOK) {
+    vscode.window.showErrorMessage(
+      `FTL version ${version} is not supported. Please upgrade to at least ${MIN_FTL_VERSION}.`
+    )
+    return false
+  }
+
+  return true
 }
