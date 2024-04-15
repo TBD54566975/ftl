@@ -40,9 +40,7 @@ func TestCron(t *testing.T) {
 	clock := clock.NewMock()
 
 	for _, c := range controllers {
-		c.cron = NewForTesting(ctx, c.controller.Key, DALFunc(func(ctx context.Context, all bool) ([]dal.Controller, error) {
-			return slices.Map(controllers, func(c *controller) dal.Controller { return c.controller }), nil
-		}), clock)
+		c.cron = NewForTesting(ctx, c.controller.Key, clock)
 		c.cron.Singleton(backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
 			singletonCount.Add(1)
 			return time.Second, nil
@@ -51,6 +49,11 @@ func TestCron(t *testing.T) {
 			multiCount.Add(1)
 			return time.Second, nil
 		})
+		c.cron.UpdatedControllerList(ctx, slices.Map(controllers, func(ctrl *controller) dal.Controller {
+			return dal.Controller{
+				Key: ctrl.controller.Key,
+			}
+		}))
 	}
 
 	clock.Add(time.Second * 6)

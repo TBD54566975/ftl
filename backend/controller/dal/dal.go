@@ -411,7 +411,7 @@ type IngressRoutingEntry struct {
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry, cronJobs []CronJob) (key model.DeploymentKey, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry, cronJobs []model.CronJob) (key model.DeploymentKey, err error) {
 	logger := log.FromContext(ctx)
 
 	// Start the transaction
@@ -496,8 +496,8 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		err := tx.CreateCronJob(ctx, sql.CreateCronJobParams{
 			Key:           job.Key,
 			DeploymentKey: deploymentKey,
-			ModuleName:    job.Ref.Module,
-			Verb:          job.Ref.Name,
+			ModuleName:    job.Verb.Module,
+			Verb:          job.Verb.Name,
 			StartTime:     job.StartTime,
 			Schedule:      job.Schedule,
 			NextExecution: job.NextExecution,
@@ -916,43 +916,20 @@ func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	return count, translatePGError(err)
 }
 
-type JobState string
-
-const (
-	JobStateIdle      = JobState(sql.CronJobStateIdle)
-	JobStateExecuting = JobState(sql.CronJobStateExecuting)
-)
-
-type CronJob struct {
-	Key           model.CronJobKey
-	DeploymentKey model.DeploymentKey
-	Ref           schema.Ref
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	State         JobState
-}
-
-type AttemptedCronJob struct {
-	DidStartExecution bool
-	HasMinReplicas    bool
-	CronJob
-}
-
-func cronJobFromRow(row sql.GetCronJobsRow) CronJob {
-	return CronJob{
+func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
+	return model.CronJob{
 		Key:           row.Key,
 		DeploymentKey: row.DeploymentKey,
-		Ref:           schema.Ref{Module: row.Module, Name: row.Verb},
+		Verb:          model.VerbRef{Module: row.Module, Name: row.Verb},
 		Schedule:      row.Schedule,
 		StartTime:     row.StartTime,
 		NextExecution: row.NextExecution,
-		State:         JobState(row.State),
+		State:         row.State,
 	}
 }
 
 // GetCronJobs returns all cron jobs for deployments with min replicas > 0
-func (d *DAL) GetCronJobs(ctx context.Context) ([]CronJob, error) {
+func (d *DAL) GetCronJobs(ctx context.Context) ([]model.CronJob, error) {
 	rows, err := d.db.GetCronJobs(ctx)
 	if err != nil {
 		return nil, translatePGError(err)
@@ -960,12 +937,18 @@ func (d *DAL) GetCronJobs(ctx context.Context) ([]CronJob, error) {
 	return slices.Map(rows, cronJobFromRow), nil
 }
 
+type AttemptedCronJob struct {
+	DidStartExecution bool
+	HasMinReplicas    bool
+	model.CronJob
+}
+
 // StartCronJobs returns a full list of results so that the caller can update their list of jobs whether or not they successfully updated the row
-func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs []AttemptedCronJob, err error) {
+func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attemptedJobs []AttemptedCronJob, err error) {
 	if len(jobs) == 0 {
 		return nil, nil
 	}
-	rows, err := d.db.StartCronJobs(ctx, slices.Map(jobs, func(job CronJob) string { return job.Key.String() }))
+	rows, err := d.db.StartCronJobs(ctx, slices.Map(jobs, func(job model.CronJob) string { return job.Key.String() }))
 	if err != nil {
 		return nil, translatePGError(err)
 	}
@@ -973,14 +956,14 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs 
 	attemptedJobs = []AttemptedCronJob{}
 	for _, row := range rows {
 		job := AttemptedCronJob{
-			CronJob: CronJob{
+			CronJob: model.CronJob{
 				Key:           row.Key,
 				DeploymentKey: row.DeploymentKey,
-				Ref:           schema.Ref{Module: row.Module, Name: row.Verb},
+				Verb:          model.VerbRef{Module: row.Module, Name: row.Verb},
 				Schedule:      row.Schedule,
 				StartTime:     row.StartTime,
 				NextExecution: row.NextExecution,
-				State:         JobState(row.State),
+				State:         row.State,
 			},
 			DidStartExecution: row.Updated,
 			HasMinReplicas:    row.HasMinReplicas,
@@ -992,21 +975,21 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs 
 
 // EndCronJob sets the status from executing to idle and updates the next execution time
 // Can be called on the successful completion of a job, or if the job failed to execute (error or timeout)
-func (d *DAL) EndCronJob(ctx context.Context, job CronJob, next time.Time) (CronJob, error) {
+func (d *DAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time) (model.CronJob, error) {
 	row, err := d.db.EndCronJob(ctx, next, job.Key, job.StartTime)
 	if err != nil {
-		return CronJob{}, translatePGError(err)
+		return model.CronJob{}, translatePGError(err)
 	}
 	return cronJobFromRow(sql.GetCronJobsRow(row)), nil
 }
 
 // GetStaleCronJobs returns a list of cron jobs that have been executing longer than the duration
-func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]CronJob, error) {
+func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]model.CronJob, error) {
 	rows, err := d.db.GetStaleCronJobs(ctx, duration)
 	if err != nil {
 		return nil, translatePGError(err)
 	}
-	return slices.Map(rows, func(row sql.GetStaleCronJobsRow) CronJob {
+	return slices.Map(rows, func(row sql.GetStaleCronJobsRow) model.CronJob {
 		return cronJobFromRow(sql.GetCronJobsRow(row))
 	}), nil
 }

@@ -480,6 +480,12 @@ func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 			if err != nil {
 				merr = append(merr, err)
 			}
+			if _, ok := n.Request.(*Unit); !ok {
+				merr = append(merr, errorf(md, "verb %s: cron job can not have a request type", n.Name))
+			}
+			if _, ok := n.Response.(*Unit); !ok {
+				merr = append(merr, errorf(md, "verb %s: cron job can not have a response type", n.Name))
+			}
 		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:
 		}
 	}
