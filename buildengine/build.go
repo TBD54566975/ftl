@@ -54,6 +54,7 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module) error {
 		for _, e := range errorList.Errors {
 			errs = append(errs, *e)
 		}
+		schema.SortErrorsByPosition(errs)
 		return errors.Join(errs...)
 	}
 

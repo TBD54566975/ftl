@@ -170,7 +170,7 @@ func Start[Impl any, Iface any, Config any](
 func allocatePort() (*net.TCPAddr, error) {
 	l, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1)})
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "failed to allocate port", err)
+		return nil, fmt.Errorf("failed to allocate port: %w", err)
 	}
 	_ = l.Close()
 	return l.Addr().(*net.TCPAddr), nil //nolint:forcetypeassert

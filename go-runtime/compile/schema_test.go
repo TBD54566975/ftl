@@ -13,6 +13,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -203,9 +204,9 @@ func TestParseDirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	parsed, err := visitType(nil, token.NoPos, timeRef)
-	assert.NoError(t, err)
-	_, ok := parsed.(*schema.Time)
+	parsed, ok := visitType(nil, token.NoPos, timeRef).Get()
+	assert.True(t, ok)
+	_, ok = parsed.(*schema.Time)
 	assert.True(t, ok)
 }
 
@@ -222,8 +223,8 @@ func TestParseBasicTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := visitType(nil, token.NoPos, tt.input)
-			assert.NoError(t, err)
+			parsed, ok := visitType(nil, token.NoPos, tt.input).Get()
+			assert.True(t, ok)
 			assert.Equal(t, tt.expected, parsed)
 		})
 	}
@@ -239,7 +240,32 @@ func TestErrorReporting(t *testing.T) {
 	}
 	pwd, _ := os.Getwd()
 	_, _, err := ExtractModuleSchema("testdata/failing")
-	assert.EqualError(t, err, filepath.Join(pwd, `testdata/failing/failing.go`)+`:14:2-46: call must have exactly three arguments`)
+	merr := errors.DeduplicateErrors(errors.UnwrapAll(err))
+	schema.SortErrorsByPosition(merr)
+
+	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
+	assert.EqualError(t, errors.Join(merr...),
+		filename+":10:13-35: config and secret declarations must have a single string literal argument\n"+
+			filename+":13:2-2: unsupported type \"error\"\n"+
+			filename+":16:2-2: unsupported basic type \"uint64\"\n"+
+			filename+":19:3-3: unexpected token \"verb\" (expected Directive)\n"+
+			filename+":26:16-29: call first argument must be a function in an ftl module\n"+
+			filename+":27:2-46: call must have exactly three arguments\n"+
+			filename+":28:16-25: call first argument must be a function\n"+
+			filename+":33:1-2: must have at most two parameters (context.Context, struct)\n"+
+			filename+":38:1-2: first parameter must be of type context.Context but is ftl/failing.Request\n"+
+			filename+":38:1-2: second parameter must be a struct but is string\n"+
+			filename+":43:1-2: second parameter must not be ftl.Unit\n"+
+			filename+":48:1-2: first parameter must be context.Context\n"+
+			filename+":53:1-2: must have at most two results (struct, error)\n"+
+			filename+":58:1-2: must at least return an error\n"+
+			filename+":62:1-2: must return an error but is ftl/failing.Response\n"+
+			filename+":67:1-2: first result must be a struct but is string\n"+
+			filename+":67:1-2: must return an error but is string\n"+
+			filename+":67:1-2: second result must not be ftl.Unit\n"+
+			filename+":74:1-2: verb \"WrongResponse\" already exported\n"+
+			filename+":80:2-12: struct field unexported must be exported by starting with an uppercase letter",
+	)
 }
 
 func TestDuplicateVerbNames(t *testing.T) {

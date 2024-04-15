@@ -409,10 +409,6 @@ VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment
 INSERT INTO requests (origin, "key", source_addr)
 VALUES ($1, $2, $3);
 
--- name: CreateCronRequest :exec
-INSERT INTO requests (origin, "key", source_addr)
-VALUES ($1, $2, $3);
-
 -- name: UpsertController :one
 INSERT INTO controller (key, endpoint)
 VALUES ($1, $2)

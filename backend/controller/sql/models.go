@@ -254,7 +254,7 @@ type CronJob struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         CronJobState
+	State         model.CronJobState
 	ModuleName    string
 }
 

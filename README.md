@@ -1,3 +1,5 @@
+<img width="15%" align="right" src="https://www.wtamu.edu/~cbaird/sq/images/fasterthanlight.png" alt="Public Domain Image, source: Christopher S. Baird"/>
+
 # FTL README [![CI](https://github.com/TBD54566975/ftl/actions/workflows/ci.yml/badge.svg)](https://github.com/TBD54566975/ftl/actions/workflows/ci.yml)
 
 ## Getting started

@@ -231,7 +231,7 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "failed to acquire PG PubSub connection", err)
+		return nil, fmt.Errorf("failed to acquire PG PubSub connection: %w", err)
 	}
 	dal := &DAL{
 		db:                sql.NewDB(pool),
@@ -269,23 +269,23 @@ func (d *DAL) GetStatus(
 ) (Status, error) {
 	controllers, err := d.GetControllers(ctx, allControllers)
 	if err != nil {
-		return Status{}, fmt.Errorf("%s: %w", "could not get control planes", translatePGError(err))
+		return Status{}, fmt.Errorf("could not get control planes: %w", translatePGError(err))
 	}
 	runners, err := d.db.GetActiveRunners(ctx, allRunners)
 	if err != nil {
-		return Status{}, fmt.Errorf("%s: %w", "could not get active runners", translatePGError(err))
+		return Status{}, fmt.Errorf("could not get active runners: %w", translatePGError(err))
 	}
 	deployments, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("%s: %w", "could not get active deployments", translatePGError(err))
+		return Status{}, fmt.Errorf("could not get active deployments: %w", translatePGError(err))
 	}
 	ingressRoutes, err := d.db.GetAllIngressRoutes(ctx, allIngressRoutes)
 	if err != nil {
-		return Status{}, fmt.Errorf("%s: %w", "could not get ingress routes", translatePGError(err))
+		return Status{}, fmt.Errorf("could not get ingress routes: %w", translatePGError(err))
 	}
 	routes, err := d.db.GetRoutingTable(ctx, nil)
 	if err != nil {
-		return Status{}, fmt.Errorf("%s: %w", "could not get routing table", translatePGError(err))
+		return Status{}, fmt.Errorf("could not get routing table: %w", translatePGError(err))
 	}
 	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
 		labels := model.Labels{}
@@ -411,13 +411,13 @@ type IngressRoutingEntry struct {
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry, cronJobs []CronJob) (key model.DeploymentKey, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []DeploymentArtefact, ingressRoutes []IngressRoutingEntry, cronJobs []model.CronJob) (key model.DeploymentKey, err error) {
 	logger := log.FromContext(ctx)
 
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("%s: %w", "could not start transaction", err)
+		return model.DeploymentKey{}, fmt.Errorf("could not start transaction: %w", err)
 	}
 
 	defer tx.CommitOrRollback(ctx, &err)
@@ -436,13 +436,13 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 
 	schemaBytes, err := proto.Marshal(moduleSchema.ToProto())
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("%s: %w", "failed to marshal schema", err)
+		return model.DeploymentKey{}, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, moduleSchema.Name)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("%s: %w", "failed to upsert module", translatePGError(err))
+		return model.DeploymentKey{}, fmt.Errorf("failed to upsert module: %w", translatePGError(err))
 	}
 
 	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
@@ -450,13 +450,13 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	// Create the deployment
 	err = tx.CreateDeployment(ctx, moduleSchema.Name, schemaBytes, deploymentKey)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("%s: %w", "failed to create deployment", translatePGError(err))
+		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", translatePGError(err))
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
 	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("%s: %w", "failed to get artefact digests", err)
+		return model.DeploymentKey{}, fmt.Errorf("failed to get artefact digests: %w", err)
 	}
 	if len(artefactDigests) != len(artefacts) {
 		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
@@ -473,7 +473,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("%s: %w", "failed to associate artefact with deployment", translatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to associate artefact with deployment: %w", translatePGError(err))
 		}
 	}
 
@@ -486,7 +486,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("%s: %w", "failed to create ingress route", translatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to create ingress route: %w", translatePGError(err))
 		}
 	}
 
@@ -496,8 +496,8 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		err := tx.CreateCronJob(ctx, sql.CreateCronJobParams{
 			Key:           job.Key,
 			DeploymentKey: deploymentKey,
-			ModuleName:    job.Ref.Module,
-			Verb:          job.Ref.Name,
+			ModuleName:    job.Verb.Module,
+			Verb:          job.Verb.Name,
 			StartTime:     job.StartTime,
 			Schedule:      job.Schedule,
 			NextExecution: job.NextExecution,
@@ -525,7 +525,7 @@ func (d *DAL) GetDeployment(ctx context.Context, key model.DeploymentKey) (*mode
 func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 	attrBytes, err := json.Marshal(runner.Labels)
 	if err != nil {
-		return fmt.Errorf("%s: %w", "failed to JSON encode runner labels", err)
+		return fmt.Errorf("failed to JSON encode runner labels: %w", err)
 	}
 	deploymentID, err := d.db.UpsertRunner(ctx, sql.UpsertRunnerParams{
 		Key:           runner.Key,
@@ -573,7 +573,7 @@ func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.DeploymentKey, reservationTimeout time.Duration, labels model.Labels) (Reservation, error) {
 	jsonLabels, err := json.Marshal(labels)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "failed to JSON encode labels", err)
+		return nil, fmt.Errorf("failed to JSON encode labels: %w", err)
 	}
 	ctx, cancel := context.WithTimeout(ctx, reservationTimeout)
 	tx, err := d.db.Begin(ctx)
@@ -687,7 +687,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 			return translatePGError(err)
 		}
 		if count == 1 {
-			return fmt.Errorf("%s: %w", "deployment already exists", ErrConflict)
+			return fmt.Errorf("deployment already exists: %w", ErrConflict)
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !isNotFound(err) {
@@ -780,7 +780,7 @@ func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]Deployment, 
 func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module, error) {
 	rows, err := d.db.GetActiveDeploymentSchemas(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "could not get active deployments", translatePGError(err))
+		return nil, fmt.Errorf("could not get active deployments: %w", translatePGError(err))
 	}
 	return slices.MapErr(rows, func(in sql.GetActiveDeploymentSchemasRow) (*schema.Module, error) { return in.Schema, nil })
 }
@@ -844,7 +844,7 @@ func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels) ([]Runner, error) {
 	jsonb, err := json.Marshal(labels)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", "could not marshal labels", err)
+		return nil, fmt.Errorf("could not marshal labels: %w", err)
 	}
 	runners, err := d.db.GetIdleRunners(ctx, jsonb, int64(limit))
 	if isNotFound(err) {
@@ -856,7 +856,7 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 		rowLabels := model.Labels{}
 		err := json.Unmarshal(row.Labels, &rowLabels)
 		if err != nil {
-			return Runner{}, fmt.Errorf("%s: %w", "could not unmarshal labels", err)
+			return Runner{}, fmt.Errorf("could not unmarshal labels: %w", err)
 		}
 
 		return Runner{
@@ -878,7 +878,7 @@ func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string
 		return nil, translatePGError(err)
 	}
 	if len(routes) == 0 {
-		return nil, fmt.Errorf("%s: %w", "no routes found", ErrNotFound)
+		return nil, fmt.Errorf("no routes found: %w", ErrNotFound)
 	}
 	out := make(map[string][]Route, len(routes))
 	for _, route := range routes {
@@ -916,43 +916,20 @@ func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	return count, translatePGError(err)
 }
 
-type JobState string
-
-const (
-	JobStateIdle      = JobState(sql.CronJobStateIdle)
-	JobStateExecuting = JobState(sql.CronJobStateExecuting)
-)
-
-type CronJob struct {
-	Key           model.CronJobKey
-	DeploymentKey model.DeploymentKey
-	Ref           schema.Ref
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	State         JobState
-}
-
-type AttemptedCronJob struct {
-	DidStartExecution bool
-	HasMinReplicas    bool
-	CronJob
-}
-
-func cronJobFromRow(row sql.GetCronJobsRow) CronJob {
-	return CronJob{
+func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
+	return model.CronJob{
 		Key:           row.Key,
 		DeploymentKey: row.DeploymentKey,
-		Ref:           schema.Ref{Module: row.Module, Name: row.Verb},
+		Verb:          model.VerbRef{Module: row.Module, Name: row.Verb},
 		Schedule:      row.Schedule,
 		StartTime:     row.StartTime,
 		NextExecution: row.NextExecution,
-		State:         JobState(row.State),
+		State:         row.State,
 	}
 }
 
 // GetCronJobs returns all cron jobs for deployments with min replicas > 0
-func (d *DAL) GetCronJobs(ctx context.Context) ([]CronJob, error) {
+func (d *DAL) GetCronJobs(ctx context.Context) ([]model.CronJob, error) {
 	rows, err := d.db.GetCronJobs(ctx)
 	if err != nil {
 		return nil, translatePGError(err)
@@ -960,12 +937,18 @@ func (d *DAL) GetCronJobs(ctx context.Context) ([]CronJob, error) {
 	return slices.Map(rows, cronJobFromRow), nil
 }
 
+type AttemptedCronJob struct {
+	DidStartExecution bool
+	HasMinReplicas    bool
+	model.CronJob
+}
+
 // StartCronJobs returns a full list of results so that the caller can update their list of jobs whether or not they successfully updated the row
-func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs []AttemptedCronJob, err error) {
+func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attemptedJobs []AttemptedCronJob, err error) {
 	if len(jobs) == 0 {
 		return nil, nil
 	}
-	rows, err := d.db.StartCronJobs(ctx, slices.Map(jobs, func(job CronJob) string { return job.Key.String() }))
+	rows, err := d.db.StartCronJobs(ctx, slices.Map(jobs, func(job model.CronJob) string { return job.Key.String() }))
 	if err != nil {
 		return nil, translatePGError(err)
 	}
@@ -973,14 +956,14 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs 
 	attemptedJobs = []AttemptedCronJob{}
 	for _, row := range rows {
 		job := AttemptedCronJob{
-			CronJob: CronJob{
+			CronJob: model.CronJob{
 				Key:           row.Key,
 				DeploymentKey: row.DeploymentKey,
-				Ref:           schema.Ref{Module: row.Module, Name: row.Verb},
+				Verb:          model.VerbRef{Module: row.Module, Name: row.Verb},
 				Schedule:      row.Schedule,
 				StartTime:     row.StartTime,
 				NextExecution: row.NextExecution,
-				State:         JobState(row.State),
+				State:         row.State,
 			},
 			DidStartExecution: row.Updated,
 			HasMinReplicas:    row.HasMinReplicas,
@@ -992,21 +975,21 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []CronJob) (attemptedJobs 
 
 // EndCronJob sets the status from executing to idle and updates the next execution time
 // Can be called on the successful completion of a job, or if the job failed to execute (error or timeout)
-func (d *DAL) EndCronJob(ctx context.Context, job CronJob, next time.Time) (CronJob, error) {
+func (d *DAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time) (model.CronJob, error) {
 	row, err := d.db.EndCronJob(ctx, next, job.Key, job.StartTime)
 	if err != nil {
-		return CronJob{}, translatePGError(err)
+		return model.CronJob{}, translatePGError(err)
 	}
 	return cronJobFromRow(sql.GetCronJobsRow(row)), nil
 }
 
 // GetStaleCronJobs returns a list of cron jobs that have been executing longer than the duration
-func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]CronJob, error) {
+func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]model.CronJob, error) {
 	rows, err := d.db.GetStaleCronJobs(ctx, duration)
 	if err != nil {
 		return nil, translatePGError(err)
 	}
-	return slices.Map(rows, func(row sql.GetStaleCronJobsRow) CronJob {
+	return slices.Map(rows, func(row sql.GetStaleCronJobsRow) model.CronJob {
 		return cronJobFromRow(sql.GetCronJobsRow(row))
 	}), nil
 }
@@ -1133,7 +1116,7 @@ func (*DAL) checkForExistingDeployments(ctx context.Context, tx *sql.Tx, moduleS
 		int64(len(artefacts)),
 	)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("%s: %w", "couldn't check for existing deployment", err)
+		return model.DeploymentKey{}, fmt.Errorf("couldn't check for existing deployment: %w", err)
 	}
 	if len(existing) > 0 {
 		return existing[0].DeploymentKey, nil

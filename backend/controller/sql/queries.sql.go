@@ -86,16 +86,6 @@ func (q *Queries) CreateCronJob(ctx context.Context, arg CreateCronJobParams) er
 	return err
 }
 
-const createCronRequest = `-- name: CreateCronRequest :exec
-INSERT INTO requests (origin, "key", source_addr)
-VALUES ($1, $2, $3)
-`
-
-func (q *Queries) CreateCronRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error {
-	_, err := q.db.Exec(ctx, createCronRequest, origin, key, sourceAddr)
-	return err
-}
-
 const createDeployment = `-- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
 VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3::deployment_key)
@@ -182,7 +172,7 @@ type EndCronJobRow struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         CronJobState
+	State         model.CronJobState
 }
 
 func (q *Queries) EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error) {
@@ -490,7 +480,7 @@ type GetCronJobsRow struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         CronJobState
+	State         model.CronJobState
 }
 
 func (q *Queries) GetCronJobs(ctx context.Context) ([]GetCronJobsRow, error) {
@@ -1178,7 +1168,7 @@ type GetStaleCronJobsRow struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         CronJobState
+	State         model.CronJobState
 }
 
 func (q *Queries) GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) ([]GetStaleCronJobsRow, error) {
@@ -1543,7 +1533,7 @@ type StartCronJobsRow struct {
 	Schedule       string
 	StartTime      time.Time
 	NextExecution  time.Time
-	State          CronJobState
+	State          model.CronJobState
 	HasMinReplicas bool
 	Updated        bool
 }
