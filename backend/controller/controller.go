@@ -431,7 +431,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 			logger.Errorf(err, "Deployment not found: %s", newDeploymentKey)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		} else if errors.Is(err, dal.ErrConflict) {
-			logger.Debugf("Deployment already exists: %s", newDeploymentKey)
+			logger.Infof("Reusing deployment: %s", newDeploymentKey)
 		} else {
 			logger.Errorf(err, "Could not replace deployment: %s", newDeploymentKey)
 			return nil, fmt.Errorf("could not replace deployment: %w", err)
