@@ -187,7 +187,6 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, db, svc.tasks, svc.callWithRequest)
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, svc.tasks, cronSvc)
-	_, _ = svc.updateControllersList(ctx)
 
 	svc.tasks.Parallel(backoff.Backoff{Min: time.Second, Max: time.Second * 5}, svc.syncRoutes)
 	svc.tasks.Parallel(backoff.Backoff{Min: time.Second * 3, Max: time.Second * 3}, svc.heartbeatController)
