@@ -35,6 +35,7 @@ func TestMerge(t *testing.T) {
 		Commands: Commands{
 			Startup: []string{"echo 'Before'"},
 		},
+		FTLMinVersion: "0.0.1",
 	}
 	b := Config{
 		Global: ConfigAndSecrets{
@@ -67,6 +68,7 @@ func TestMerge(t *testing.T) {
 		Commands: Commands{
 			Startup: []string{"echo 'After'"},
 		},
+		FTLMinVersion: "0.0.2",
 	}
 	a = merge(a, b)
 	expected := Config{
@@ -101,6 +103,7 @@ func TestMerge(t *testing.T) {
 		Commands: Commands{
 			Startup: []string{"echo 'After'"},
 		},
+		FTLMinVersion: "0.0.2",
 	}
 	assert.Equal(t, expected, a)
 }

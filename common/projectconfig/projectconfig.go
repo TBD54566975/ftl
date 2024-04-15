@@ -9,6 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -27,12 +28,13 @@ type ConfigAndSecrets struct {
 }
 
 type Config struct {
-	Global       ConfigAndSecrets            `toml:"global"`
-	Modules      map[string]ConfigAndSecrets `toml:"modules"`
-	ModuleDirs   []string                    `toml:"module-dirs"`
-	ExternalDirs []string                    `toml:"external-dirs"`
-	Executables  Executables                 `toml:"executables"`
-	Commands     Commands                    `toml:"commands"`
+	Global        ConfigAndSecrets            `toml:"global"`
+	Modules       map[string]ConfigAndSecrets `toml:"modules"`
+	ModuleDirs    []string                    `toml:"module-dirs"`
+	ExternalDirs  []string                    `toml:"external-dirs"`
+	Executables   Executables                 `toml:"executables"`
+	Commands      Commands                    `toml:"commands"`
+	FTLMinVersion string                      `toml:"ftl-min-version"`
 }
 
 // ConfigPaths returns the computed list of configuration paths to load.
@@ -55,6 +57,9 @@ func LoadConfig(ctx context.Context, input []string) (Config, error) {
 	config, err := Merge(configPaths...)
 	if err != nil {
 		return Config{}, err
+	}
+	if config.FTLMinVersion != "" && !ftl.IsVersionAtLeastMin(ftl.Version, config.FTLMinVersion) {
+		return config, fmt.Errorf("FTL version %q predates the minimum version %q", ftl.Version, config.FTLMinVersion)
 	}
 	return config, nil
 }

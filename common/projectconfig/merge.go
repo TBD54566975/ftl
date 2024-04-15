@@ -56,5 +56,8 @@ func mergeRootKeys(a, b Config) Config {
 	if len(b.Commands.Startup) > 0 {
 		a.Commands.Startup = b.Commands.Startup
 	}
+	if b.FTLMinVersion != "" {
+		a.FTLMinVersion = b.FTLMinVersion
+	}
 	return a
 }
