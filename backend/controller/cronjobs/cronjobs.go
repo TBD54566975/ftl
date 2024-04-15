@@ -110,7 +110,7 @@ func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource s
 	}
 	svc.UpdatedControllerList(ctx, nil)
 
-	svc.scheduler.Parallel(backoff.Backoff{Min: time.Second, Max: jobResetInterval}, svc.syncJobs)
+	svc.scheduler.Parallel(backoff.Backoff{Min: time.Second, Max: jobResetInterval}, svc.SyncJobs)
 	svc.scheduler.Singleton(backoff.Backoff{Min: time.Second, Max: time.Minute}, svc.killOldJobs)
 
 	go svc.watchForUpdates(ctx)
@@ -169,7 +169,7 @@ func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context, newDeploymentK
 }
 
 // syncJobs is run periodically via a scheduled task
-func (s *Service) syncJobs(ctx context.Context) (time.Duration, error) {
+func (s *Service) SyncJobs(ctx context.Context) (time.Duration, error) {
 	err := s.syncJobsWithNewDeploymentKey(ctx, optional.None[model.DeploymentKey]())
 	if err != nil {
 		return 0, err

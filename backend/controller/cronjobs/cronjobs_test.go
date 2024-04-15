@@ -204,7 +204,7 @@ func TestService(t *testing.T) {
 					Key: ctrl.key,
 				}
 			}))
-			_, _ = c.cronJobs.syncJobs(ctx)
+			_, _ = c.cronJobs.SyncJobs(ctx)
 		}()
 	}
 
@@ -282,7 +282,7 @@ func TestHashRing(t *testing.T) {
 					Key: ctrl.key,
 				}
 			}))
-			_, _ = c.cronJobs.syncJobs(ctx)
+			_, _ = c.cronJobs.SyncJobs(ctx)
 		}()
 	}
 	time.Sleep(time.Millisecond * 100)
