@@ -293,7 +293,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 	s.events.Subscribe(events)
 	defer s.events.Unsubscribe(events)
 
-	state := &State{
+	state := &state{
 		executing:    map[string]bool{},
 		newJobs:      map[string]time.Time{},
 		blockedUntil: s.clock.Now(),
@@ -382,7 +382,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 	}
 }
 
-func (s *Service) nextAttemptForJob(job model.CronJob, state *State, allowsNow bool) (time.Time, error) {
+func (s *Service) nextAttemptForJob(job model.CronJob, state *state, allowsNow bool) (time.Time, error) {
 	if !s.isResponsibleForJob(job, state) {
 		return s.clock.Now(), fmt.Errorf("controller is not responsible for job")
 	}
@@ -446,7 +446,7 @@ func (s *Service) UpdatedControllerList(ctx context.Context, controllers []dal.C
 
 // isResponsibleForJob indicates whether a this service should be responsible for attempting jobs,
 // or if enough other controllers will handle it. This allows us to spread the job load across controllers.
-func (s *Service) isResponsibleForJob(job model.CronJob, state *State) bool {
+func (s *Service) isResponsibleForJob(job model.CronJob, state *state) bool {
 	if state.isJobTooNewForHashRing(job) {
 		return true
 	}

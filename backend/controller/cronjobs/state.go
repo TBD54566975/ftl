@@ -8,7 +8,8 @@ import (
 	"github.com/alecthomas/types/optional"
 )
 
-type State struct {
+// state models the state of the cron job service's private state for scheduling jobs and reacting to events
+type state struct {
 	jobs []model.CronJob
 
 	// Used to determine if this controller is currently executing a job
@@ -22,15 +23,15 @@ type State struct {
 	blockedUntil time.Time
 }
 
-func (s *State) isExecutingInCurrentController(job model.CronJob) bool {
+func (s *state) isExecutingInCurrentController(job model.CronJob) bool {
 	return s.executing[job.Key.String()]
 }
 
-func (s *State) startedExecutingJob(job model.CronJob) {
+func (s *state) startedExecutingJob(job model.CronJob) {
 	s.executing[job.Key.String()] = true
 }
 
-func (s *State) isJobTooNewForHashRing(job model.CronJob) bool {
+func (s *state) isJobTooNewForHashRing(job model.CronJob) bool {
 	if t, ok := s.newJobs[job.Key.String()]; ok {
 		if time.Since(t) < newJobHashRingOverrideInterval {
 			return true
@@ -40,7 +41,7 @@ func (s *State) isJobTooNewForHashRing(job model.CronJob) bool {
 	return false
 }
 
-func (s *State) sync(jobs []model.CronJob, newDeploymentKey optional.Option[model.DeploymentKey]) {
+func (s *state) sync(jobs []model.CronJob, newDeploymentKey optional.Option[model.DeploymentKey]) {
 	s.jobs = make([]model.CronJob, len(jobs))
 	copy(s.jobs, jobs)
 	for _, job := range s.jobs {
@@ -54,7 +55,7 @@ func (s *State) sync(jobs []model.CronJob, newDeploymentKey optional.Option[mode
 	}
 }
 
-func (s *State) updateJobs(jobs []model.CronJob) {
+func (s *state) updateJobs(jobs []model.CronJob) {
 	updatedJobMap := jobMap(jobs)
 	for idx, old := range s.jobs {
 		if updated, exists := updatedJobMap[old.Key.String()]; exists {
@@ -66,7 +67,7 @@ func (s *State) updateJobs(jobs []model.CronJob) {
 	}
 }
 
-func (s *State) removeDeploymentKey(key model.DeploymentKey) {
+func (s *state) removeDeploymentKey(key model.DeploymentKey) {
 	s.jobs = slices.Filter(s.jobs, func(j model.CronJob) bool {
 		return j.DeploymentKey.String() != key.String()
 	})
