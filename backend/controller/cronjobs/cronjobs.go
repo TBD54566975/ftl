@@ -8,6 +8,13 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/atomic"
+	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/pubsub"
+	"github.com/benbjohnson/clock"
+	"github.com/jpillora/backoff"
+	"github.com/serialx/hashring"
+
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -16,12 +23,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/atomic"
-	"github.com/alecthomas/types/optional"
-	"github.com/alecthomas/types/pubsub"
-	"github.com/benbjohnson/clock"
-	"github.com/jpillora/backoff"
-	"github.com/serialx/hashring"
 )
 
 const (

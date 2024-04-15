@@ -3,9 +3,10 @@ package cronjobs
 import (
 	"time"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/types/optional"
 )
 
 // state models the state of the cron job service's private state for scheduling jobs and reacting to events
