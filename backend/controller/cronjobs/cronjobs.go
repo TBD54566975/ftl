@@ -287,7 +287,7 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 //
 // State is private to this function to ensure thread safety.
 func (s *Service) watchForUpdates(ctx context.Context) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).Scope("cron")
 
 	events := make(chan event, 128)
 	s.events.Subscribe(events)
