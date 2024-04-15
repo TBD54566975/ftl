@@ -172,7 +172,7 @@ type EndCronJobRow struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         CronJobState
+	State         model.CronJobState
 }
 
 func (q *Queries) EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error) {
@@ -480,7 +480,7 @@ type GetCronJobsRow struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         CronJobState
+	State         model.CronJobState
 }
 
 func (q *Queries) GetCronJobs(ctx context.Context) ([]GetCronJobsRow, error) {
@@ -1168,7 +1168,7 @@ type GetStaleCronJobsRow struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         CronJobState
+	State         model.CronJobState
 }
 
 func (q *Queries) GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) ([]GetStaleCronJobsRow, error) {
@@ -1533,7 +1533,7 @@ type StartCronJobsRow struct {
 	Schedule       string
 	StartTime      time.Time
 	NextExecution  time.Time
-	State          CronJobState
+	State          model.CronJobState
 	HasMinReplicas bool
 	Updated        bool
 }

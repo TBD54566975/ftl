@@ -13,7 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -24,7 +23,6 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 	"github.com/serialx/hashring"
-	sl "golang.org/x/exp/slices"
 )
 
 const (
@@ -44,14 +42,14 @@ type event interface {
 }
 
 type syncEvent struct {
-	jobs               []dal.CronJob
+	jobs               []model.CronJob
 	addedDeploymentKey optional.Option[model.DeploymentKey]
 }
 
 func (syncEvent) cronJobEvent() {}
 
 type endedJobsEvent struct {
-	jobs []dal.CronJob
+	jobs []model.CronJob
 }
 
 func (endedJobsEvent) cronJobEvent() {}
@@ -67,10 +65,10 @@ type hashRingState struct {
 }
 
 type DAL interface {
-	GetCronJobs(ctx context.Context) ([]dal.CronJob, error)
-	StartCronJobs(ctx context.Context, jobs []dal.CronJob) (attemptedJobs []dal.AttemptedCronJob, err error)
-	EndCronJob(ctx context.Context, job dal.CronJob, next time.Time) (dal.CronJob, error)
-	GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]dal.CronJob, error)
+	GetCronJobs(ctx context.Context) ([]model.CronJob, error)
+	StartCronJobs(ctx context.Context, jobs []model.CronJob) (attemptedJobs []dal.AttemptedCronJob, err error)
+	EndCronJob(ctx context.Context, job model.CronJob, next time.Time) (model.CronJob, error)
+	GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]model.CronJob, error)
 }
 
 type Scheduler interface {
@@ -120,9 +118,9 @@ func NewForTesting(ctx context.Context, key model.ControllerKey, originURL *url.
 	return svc
 }
 
-func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Module) ([]dal.CronJob, error) {
+func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Module) ([]model.CronJob, error) {
 	start := s.clock.Now().UTC()
-	newJobs := []dal.CronJob{}
+	newJobs := []model.CronJob{}
 	merr := []error{}
 	for _, decl := range module.Decls {
 		verb, ok := decl.Value.(*schemapb.Decl_Verb)
@@ -145,13 +143,13 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 				merr = append(merr, fmt.Errorf("failed to calculate next execution for cron job %v:%v with schedule %q: %w", module.Name, verb.Verb.Name, schedule, err))
 				continue
 			}
-			newJobs = append(newJobs, dal.CronJob{
+			newJobs = append(newJobs, model.CronJob{
 				Key:           model.NewCronJobKey(module.Name, verb.Verb.Name),
-				Ref:           schema.Ref{Module: module.Name, Name: verb.Verb.Name},
+				Verb:          model.VerbRef{Module: module.Name, Name: verb.Verb.Name},
 				Schedule:      cronStr,
 				StartTime:     start,
 				NextExecution: next,
-				State:         dal.JobStateIdle,
+				State:         model.CronJobStateIdle,
 				// DeploymentKey: Filled in by DAL
 			})
 		}
@@ -194,7 +192,7 @@ func (s *Service) syncJobsWithNewDeploymentKey(ctx context.Context, deploymentKe
 	return nil
 }
 
-func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
+func (s *Service) executeJob(ctx context.Context, job model.CronJob) {
 	logger := log.FromContext(ctx)
 	requestBody := map[string]any{}
 	requestJSON, err := json.Marshal(requestBody)
@@ -204,11 +202,11 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 	}
 
 	req := connect.NewRequest(&ftlv1.CallRequest{
-		Verb: &schemapb.Ref{Module: job.Ref.Module, Name: job.Ref.Name},
+		Verb: &schemapb.Ref{Module: job.Verb.Module, Name: job.Verb.Name},
 		Body: requestJSON,
 	})
 
-	requestKey := model.NewRequestKey(model.OriginCron, fmt.Sprintf("%s-%s", job.Ref.Module, job.Ref.Name))
+	requestKey := model.NewRequestKey(model.OriginCron, fmt.Sprintf("%s-%s", job.Verb.Module, job.Verb.Name))
 
 	callCtx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
@@ -234,7 +232,7 @@ func (s *Service) executeJob(ctx context.Context, job dal.CronJob) {
 		logger.Errorf(err, "failed to end cron job %v", job.Key)
 	} else {
 		s.events.Publish(endedJobsEvent{
-			jobs: []dal.CronJob{updatedJob},
+			jobs: []model.CronJob{updatedJob},
 		})
 	}
 }
@@ -252,7 +250,7 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 		return time.Minute, nil
 	}
 
-	updatedJobs := []dal.CronJob{}
+	updatedJobs := []model.CronJob{}
 	for _, stale := range staleJobs {
 		start := s.clock.Now().UTC()
 		pattern, err := cron.Parse(stale.Schedule)
@@ -302,16 +300,11 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 	}
 
 	for {
-		sl.SortFunc(state.jobs, func(i, j dal.CronJob) int {
-			return s.compareJobs(state, i, j)
-		})
-
 		now := s.clock.Now()
 		next := now.Add(time.Hour) // should never be reached, expect a different signal long beforehand
 		for _, j := range state.jobs {
-			if possibleNext, err := s.nextAttemptForJob(j, state, false); err == nil {
+			if possibleNext, err := s.nextAttemptForJob(j, state, false); err == nil && possibleNext.Before(next) {
 				next = possibleNext
-				break
 			}
 		}
 
@@ -332,7 +325,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 			return
 		case <-s.clock.After(next.Sub(now)):
 			// Try starting jobs in db
-			jobsToAttempt := slices.Filter(state.jobs, func(j dal.CronJob) bool {
+			jobsToAttempt := slices.Filter(state.jobs, func(j model.CronJob) bool {
 				if n, err := s.nextAttemptForJob(j, state, true); err == nil {
 					return !n.After(s.clock.Now().UTC())
 				}
@@ -346,7 +339,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 			}
 
 			// Start jobs that were successfully updated
-			updatedJobs := []dal.CronJob{}
+			updatedJobs := []model.CronJob{}
 			removedDeploymentKeys := map[string]model.DeploymentKey{}
 
 			for _, job := range jobResults {
@@ -389,23 +382,11 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 	}
 }
 
-func (s *Service) compareJobs(state *State, i, j dal.CronJob) int {
-	iNext, err := s.nextAttemptForJob(i, state, false)
-	if err != nil {
-		return 1
-	}
-	jNext, err := s.nextAttemptForJob(j, state, false)
-	if err != nil {
-		return -1
-	}
-	return iNext.Compare(jNext)
-}
-
-func (s *Service) nextAttemptForJob(job dal.CronJob, state *State, allowsNow bool) (time.Time, error) {
+func (s *Service) nextAttemptForJob(job model.CronJob, state *State, allowsNow bool) (time.Time, error) {
 	if !s.isResponsibleForJob(job, state) {
 		return s.clock.Now(), fmt.Errorf("controller is not responsible for job")
 	}
-	if job.State == dal.JobStateExecuting {
+	if job.State == model.CronJobStateExecuting {
 		if state.isExecutingInCurrentController(job) {
 			// no need to schedule this job until it finishes
 			return s.clock.Now(), fmt.Errorf("controller is already waiting for job to finish")
@@ -465,7 +446,7 @@ func (s *Service) UpdatedControllerList(ctx context.Context, controllers []dal.C
 
 // isResponsibleForJob indicates whether a this service should be responsible for attempting jobs,
 // or if enough other controllers will handle it. This allows us to spread the job load across controllers.
-func (s *Service) isResponsibleForJob(job dal.CronJob, state *State) bool {
+func (s *Service) isResponsibleForJob(job model.CronJob, state *State) bool {
 	if state.isJobTooNewForHashRing(job) {
 		return true
 	}

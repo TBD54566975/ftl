@@ -27,11 +27,11 @@ import (
 type mockDAL struct {
 	lock            sync.Mutex
 	clock           *clock.Mock
-	jobs            []dal.CronJob
+	jobs            []model.CronJob
 	attemptCountMap map[string]int
 }
 
-func (d *mockDAL) GetCronJobs(ctx context.Context) ([]dal.CronJob, error) {
+func (d *mockDAL) GetCronJobs(ctx context.Context) ([]model.CronJob, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -42,19 +42,19 @@ func (d *mockDAL) createCronJob(deploymentKey model.DeploymentKey, module string
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	job := dal.CronJob{
+	job := model.CronJob{
 		Key:           model.NewCronJobKey(module, verb),
 		DeploymentKey: deploymentKey,
-		Ref:           schema.Ref{Module: module, Name: verb},
+		Verb:          model.VerbRef{Module: module, Name: verb},
 		Schedule:      schedule,
 		StartTime:     startTime,
 		NextExecution: nextExecution,
-		State:         dal.JobStateIdle,
+		State:         model.CronJobStateIdle,
 	}
 	d.jobs = append(d.jobs, job)
 }
 
-func (d *mockDAL) indexForJob(job dal.CronJob) (int, error) {
+func (d *mockDAL) indexForJob(job model.CronJob) (int, error) {
 	for i, j := range d.jobs {
 		if j.Key.String() == job.Key.String() {
 			return i, nil
@@ -63,7 +63,7 @@ func (d *mockDAL) indexForJob(job dal.CronJob) (int, error) {
 	return -1, fmt.Errorf("job not found")
 }
 
-func (d *mockDAL) StartCronJobs(ctx context.Context, jobs []dal.CronJob) (attemptedJobs []dal.AttemptedCronJob, err error) {
+func (d *mockDAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attemptedJobs []dal.AttemptedCronJob, err error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -76,8 +76,8 @@ func (d *mockDAL) StartCronJobs(ctx context.Context, jobs []dal.CronJob) (attemp
 			return nil, err
 		}
 		job := d.jobs[i]
-		if !job.NextExecution.After(now) && job.State == dal.JobStateIdle {
-			job.State = dal.JobStateExecuting
+		if !job.NextExecution.After(now) && job.State == model.CronJobStateIdle {
+			job.State = model.CronJobStateExecuting
 			job.StartTime = (*d.clock).Now()
 			d.jobs[i] = job
 			attemptedJobs = append(attemptedJobs, dal.AttemptedCronJob{
@@ -97,32 +97,32 @@ func (d *mockDAL) StartCronJobs(ctx context.Context, jobs []dal.CronJob) (attemp
 	return attemptedJobs, nil
 }
 
-func (d *mockDAL) EndCronJob(ctx context.Context, job dal.CronJob, next time.Time) (dal.CronJob, error) {
+func (d *mockDAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time) (model.CronJob, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
 	i, err := d.indexForJob(job)
 	if err != nil {
-		return dal.CronJob{}, err
+		return model.CronJob{}, err
 	}
 	internalJob := d.jobs[i]
-	if internalJob.State != dal.JobStateExecuting {
-		return dal.CronJob{}, fmt.Errorf("job can not be stopped, it isnt running")
+	if internalJob.State != model.CronJobStateExecuting {
+		return model.CronJob{}, fmt.Errorf("job can not be stopped, it isnt running")
 	}
 	if internalJob.StartTime != job.StartTime {
-		return dal.CronJob{}, fmt.Errorf("job can not be stopped, start time does not match")
+		return model.CronJob{}, fmt.Errorf("job can not be stopped, start time does not match")
 	}
-	internalJob.State = dal.JobStateIdle
+	internalJob.State = model.CronJobStateIdle
 	internalJob.NextExecution = next
 	d.jobs[i] = internalJob
 	return internalJob, nil
 }
 
-func (d *mockDAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]dal.CronJob, error) {
+func (d *mockDAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]model.CronJob, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	return slices.Filter(d.jobs, func(job dal.CronJob) bool {
+	return slices.Filter(d.jobs, func(job model.CronJob) bool {
 		return (*d.clock).Now().After(job.StartTime.Add(duration))
 	}), nil
 }
@@ -214,8 +214,8 @@ func TestService(t *testing.T) {
 	}
 
 	for _, j := range mockDal.jobs {
-		count := verbCallCount[j.Ref.Name]
-		assert.Equal(t, count, 3, "expected verb %s to be called 3 times", j.Ref.Name)
+		count := verbCallCount[j.Verb.Name]
+		assert.Equal(t, count, 3, "expected verb %s to be called 3 times", j.Verb.Name)
 
 		// Make sure each job is not attempted by all controllers, or the responsibility of only one controller
 		// Target is for 2 controllers to attempt each job

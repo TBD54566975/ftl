@@ -3,14 +3,13 @@ package cronjobs
 import (
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/types/optional"
 )
 
 type State struct {
-	jobs []dal.CronJob
+	jobs []model.CronJob
 
 	// Used to determine if this controller is currently executing a job
 	executing map[string]bool
@@ -23,15 +22,15 @@ type State struct {
 	blockedUntil time.Time
 }
 
-func (s *State) isExecutingInCurrentController(job dal.CronJob) bool {
+func (s *State) isExecutingInCurrentController(job model.CronJob) bool {
 	return s.executing[job.Key.String()]
 }
 
-func (s *State) startedExecutingJob(job dal.CronJob) {
+func (s *State) startedExecutingJob(job model.CronJob) {
 	s.executing[job.Key.String()] = true
 }
 
-func (s *State) isJobTooNewForHashRing(job dal.CronJob) bool {
+func (s *State) isJobTooNewForHashRing(job model.CronJob) bool {
 	if t, ok := s.newJobs[job.Key.String()]; ok {
 		if time.Since(t) < newJobHashRingOverrideInterval {
 			return true
@@ -41,11 +40,11 @@ func (s *State) isJobTooNewForHashRing(job dal.CronJob) bool {
 	return false
 }
 
-func (s *State) sync(jobs []dal.CronJob, newDeploymentKey optional.Option[model.DeploymentKey]) {
-	s.jobs = make([]dal.CronJob, len(jobs))
+func (s *State) sync(jobs []model.CronJob, newDeploymentKey optional.Option[model.DeploymentKey]) {
+	s.jobs = make([]model.CronJob, len(jobs))
 	copy(s.jobs, jobs)
 	for _, job := range s.jobs {
-		if job.State != dal.JobStateExecuting {
+		if job.State != model.CronJobStateExecuting {
 			delete(s.executing, job.Key.String())
 		}
 		if newKey, ok := newDeploymentKey.Get(); ok && job.DeploymentKey.String() == newKey.String() {
@@ -55,12 +54,12 @@ func (s *State) sync(jobs []dal.CronJob, newDeploymentKey optional.Option[model.
 	}
 }
 
-func (s *State) updateJobs(jobs []dal.CronJob) {
+func (s *State) updateJobs(jobs []model.CronJob) {
 	updatedJobMap := jobMap(jobs)
 	for idx, old := range s.jobs {
 		if updated, exists := updatedJobMap[old.Key.String()]; exists {
 			s.jobs[idx] = updated
-			if updated.State != dal.JobStateExecuting {
+			if updated.State != model.CronJobStateExecuting {
 				delete(s.executing, updated.Key.String())
 			}
 		}
@@ -68,13 +67,13 @@ func (s *State) updateJobs(jobs []dal.CronJob) {
 }
 
 func (s *State) removeDeploymentKey(key model.DeploymentKey) {
-	s.jobs = slices.Filter(s.jobs, func(j dal.CronJob) bool {
+	s.jobs = slices.Filter(s.jobs, func(j model.CronJob) bool {
 		return j.DeploymentKey.String() != key.String()
 	})
 }
 
-func jobMap(jobs []dal.CronJob) map[string]dal.CronJob {
-	m := map[string]dal.CronJob{}
+func jobMap(jobs []model.CronJob) map[string]model.CronJob {
+	m := map[string]model.CronJob{}
 	for _, job := range jobs {
 		m[job.Key.String()] = job
 	}
