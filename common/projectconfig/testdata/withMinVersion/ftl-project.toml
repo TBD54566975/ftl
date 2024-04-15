@@ -11,6 +11,3 @@ ftl-min-version = "0.129.2"
 
 [commands]
   startup = ["echo 'Executing global pre-build command'"]
-
-[executables]
-  ftl = "ftl"

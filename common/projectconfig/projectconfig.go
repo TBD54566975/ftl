@@ -59,7 +59,7 @@ func LoadConfig(ctx context.Context, input []string) (Config, error) {
 		return Config{}, err
 	}
 	if config.FTLMinVersion != "" && !ftl.IsVersionAtLeastMin(ftl.Version, config.FTLMinVersion) {
-		return config, fmt.Errorf("FTL version '%v' predates the minimum version '%v'", ftl.Version, config.FTLMinVersion)
+		return config, fmt.Errorf("FTL version %q predates the minimum version %q", ftl.Version, config.FTLMinVersion)
 	}
 	return config, nil
 }
