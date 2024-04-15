@@ -79,6 +79,9 @@ func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL
 	if err != nil {
 		return err
 	}
+	if mapping == nil {
+		return fmt.Errorf("module %q is not defined in ftl-project.toml", ref.Module)
+	}
 	mapping[ref.Name] = (*pc.URL)(key)
 	return p.setMapping(config, ref.Module, mapping)
 }
