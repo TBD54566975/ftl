@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 	"github.com/zalando/go-keyring"
 
 	"github.com/TBD54566975/ftl/internal/log"
@@ -54,6 +55,7 @@ func TestManager(t *testing.T) {
 			{Ref: Ref{Name: "baz"}, Accessor: URL("envar://baz")},
 			{Ref: Ref{Name: "foo"}, Accessor: URL("inline://ImJhciI")},
 			{Ref: Ref{Name: "mutable"}, Accessor: URL("inline://ImhlbGxvIg")},
+			{Ref: Ref{Module: optional.Some[string]("echo"), Name: "default"}, Accessor: URL("inline://ImFub255bW91cyI")},
 		})
 	})
 }

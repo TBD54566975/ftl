@@ -42,12 +42,16 @@ func ConfigPaths(input []string) []string {
 	if len(input) > 0 {
 		return input
 	}
-	path := filepath.Join(internal.GitRoot(""), "ftl-project.toml")
+	path := GetDefaultConfigPath()
 	_, err := os.Stat(path)
 	if err == nil {
 		return []string{path}
 	}
 	return []string{}
+}
+
+func GetDefaultConfigPath() string {
+	return filepath.Join(internal.GitRoot(""), "ftl-project.toml")
 }
 
 func LoadConfig(ctx context.Context, input []string) (Config, error) {
