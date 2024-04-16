@@ -79,9 +79,6 @@ func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL
 	if err != nil {
 		return err
 	}
-	if mapping == nil {
-		return fmt.Errorf("module %q is not defined in ftl-project.toml", ref.Module)
-	}
 	mapping[ref.Name] = (*pc.URL)(key)
 	return p.setMapping(config, ref.Module, mapping)
 }
@@ -104,9 +101,9 @@ func (p ProjectConfigResolver[R]) getMapping(config pc.Config, module optional.O
 	get := func(dest pc.ConfigAndSecrets) map[string]*pc.URL {
 		switch any(k).(type) {
 		case Configuration:
-			return dest.Config
+			return emptyMapIfNil(dest.Config)
 		case Secrets:
-			return dest.Secrets
+			return emptyMapIfNil(dest.Secrets)
 		default:
 			panic("unsupported kind")
 		}
@@ -122,6 +119,13 @@ func (p ProjectConfigResolver[R]) getMapping(config pc.Config, module optional.O
 		mapping = get(config.Global)
 	}
 	return mapping, nil
+}
+
+func emptyMapIfNil(mapping map[string]*pc.URL) map[string]*pc.URL {
+	if mapping == nil {
+		return map[string]*pc.URL{}
+	}
+	return mapping
 }
 
 func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.Option[string], mapping map[string]*pc.URL) error {
@@ -147,7 +151,7 @@ func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.O
 	}
 	configPaths := pc.ConfigPaths(p.Config)
 	if len(configPaths) == 0 {
-		return fmt.Errorf("no ftl-project.toml files can be found")
+		return pc.CreateAndSave(config)
 	}
 	return pc.Save(configPaths[len(configPaths)-1], config)
 }
