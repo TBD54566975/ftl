@@ -150,8 +150,5 @@ func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.O
 		set(&config.Global, mapping)
 	}
 	configPaths := pc.ConfigPaths(p.Config)
-	if len(configPaths) == 0 {
-		return pc.Save(pc.GetDefaultConfigPath(), config)
-	}
 	return pc.Save(configPaths[len(configPaths)-1], config)
 }
