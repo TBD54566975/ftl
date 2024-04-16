@@ -9,7 +9,6 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
-	"github.com/zalando/go-keyring"
 
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -19,8 +18,6 @@ func TestSet(t *testing.T) {
 	defaultPath := projectconfig.GetDefaultConfigPath()
 	origConfigBytes, err := os.ReadFile(defaultPath)
 	assert.NoError(t, err)
-
-	keyring.MockInit() // There's still no way to undo this :\
 
 	config := filepath.Join(t.TempDir(), "ftl-project.toml")
 	existing, err := os.ReadFile("testdata/ftl-project.toml")
