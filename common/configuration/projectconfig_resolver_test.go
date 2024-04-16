@@ -11,10 +11,15 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/zalando/go-keyring"
 
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestSet(t *testing.T) {
+	defaultPath := projectconfig.GetDefaultConfigPath()
+	origConfigBytes, err := os.ReadFile(defaultPath)
+	assert.NoError(t, err)
+
 	keyring.MockInit() // There's still no way to undo this :\
 
 	config := filepath.Join(t.TempDir(), "ftl-project.toml")
@@ -24,24 +29,25 @@ func TestSet(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("ExistingModule", func(t *testing.T) {
-		setAndAssert(t, "echo", config)
+		setAndAssert(t, "echo", []string{config})
 	})
-
 	t.Run("NewModule", func(t *testing.T) {
-		setAndAssert(t, "echooo", config)
+		setAndAssert(t, "echooo", []string{config})
 	})
 	t.Run("MissingTOMLFile", func(t *testing.T) {
 		err := os.Remove(config)
 		assert.NoError(t, err)
-		//setAndAssert(t, "echooooo", config) // fix
+		setAndAssert(t, "echooooo", []string{})
+		err = os.WriteFile(defaultPath, origConfigBytes, 0600)
+		assert.NoError(t, err)
 	})
 }
 
-func setAndAssert(t *testing.T, module string, config string) {
+func setAndAssert(t *testing.T, module string, config []string) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	cf, err := New(ctx,
-		ProjectConfigResolver[Configuration]{Config: []string{config}},
+		ProjectConfigResolver[Configuration]{Config: config},
 		[]Provider[Configuration]{
 			EnvarProvider[Configuration]{},
 			InlineProvider[Configuration]{Inline: true}, // Writer

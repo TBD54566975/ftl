@@ -43,7 +43,7 @@ func ConfigPaths(input []string) []string {
 	if len(input) > 0 {
 		return input
 	}
-	path := getDefaultConfigPath()
+	path := GetDefaultConfigPath()
 	_, err := os.Stat(path)
 	if err == nil {
 		return []string{path}
@@ -51,7 +51,7 @@ func ConfigPaths(input []string) []string {
 	return []string{}
 }
 
-func getDefaultConfigPath() string {
+func GetDefaultConfigPath() string {
 	return filepath.Join(internal.GitRoot(""), "ftl-project.toml")
 }
 
@@ -98,7 +98,7 @@ func loadFile(path string) (Config, error) {
 }
 
 func CreateAndSave(config Config) error {
-	path := getDefaultConfigPath()
+	path := GetDefaultConfigPath()
 	_, err := os.Stat(path)
 	// Only create a new file if there isn't one already defined at this location
 	if err != nil && errors.Is(err, os.ErrNotExist) {
