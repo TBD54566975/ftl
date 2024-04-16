@@ -100,7 +100,7 @@ func SortErrorsByPosition(merr []error) {
 		if errors.As(merr[i], &ipe) && errors.As(merr[j], &jpe) {
 			ipp := ipe.Pos
 			jpp := jpe.Pos
-			return ipp.Line < jpp.Line || (ipp.Line == jpp.Line && ipp.Column < jpp.Column)
+			return ipp.Line < jpp.Line || (ipp.Line == jpp.Line && ipp.Column < jpp.Column) || (ipp.Line == jpp.Line && ipp.Column == jpp.Column && ipe.EndColumn < jpe.EndColumn)
 		}
 		return merr[i].Error() < merr[j].Error()
 	})

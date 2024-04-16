@@ -78,7 +78,7 @@ func assertBuildProtoErrors(msgs ...string) assertion {
 			errs = append(errs, *e)
 		}
 		schema.SortErrorsByPosition(errs)
-		
+
 		for _, e := range errorList.Errors {
 			e.EndColumn = 0
 		}
