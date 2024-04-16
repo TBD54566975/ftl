@@ -67,23 +67,23 @@ func assertBuildProtoErrors(msgs ...string) assertion {
 		errorList, err := loadProtoErrors(filepath.Join(bctx.moduleDir, bctx.buildDir))
 		assert.NoError(t, err, "Error loading proto errors")
 
-		expected := make([]*schema.Error, 0, len(msgs))
+		expected := make([]error, 0, len(msgs))
 		for _, msg := range msgs {
 			expected = append(expected, &schema.Error{Msg: msg})
 		}
 
 		// normalize results
-		errs := make([]error, 0, len(errorList.Errors))
-		for _, e := range errorList.Errors {
-			errs = append(errs, *e)
-		}
-		schema.SortErrorsByPosition(errs)
-
 		for _, e := range errorList.Errors {
 			e.EndColumn = 0
 		}
 
-		assert.Equal(t, errorList.Errors, expected, assert.Exclude[schema.Position]())
+		errs := make([]error, 0, len(errorList.Errors))
+		for _, e := range errorList.Errors {
+			errs = append(errs, e)
+		}
+		schema.SortErrorsByPosition(errs)
+
+		assert.Equal(t, errs, expected, assert.Exclude[schema.Position]())
 		return nil
 	}
 }
