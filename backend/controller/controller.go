@@ -291,7 +291,7 @@ func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.Pr
 }
 
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers)
+	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers, req.Msg.AllRunners, req.Msg.AllIngressRoutes)
 	if err != nil {
 		return nil, fmt.Errorf("could not get status: %w", err)
 	}
@@ -310,6 +310,28 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	})
 	s.routesMu.RUnlock()
 	replicas := map[string]int32{}
+	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
+		var deployment *string
+		if d, ok := r.Deployment.Get(); ok {
+			asString := d.String()
+			deployment = &asString
+			replicas[asString]++
+		}
+		labels, err := structpb.NewStruct(r.Labels)
+		if err != nil {
+			return nil, fmt.Errorf("could not marshal attributes for runner %s: %w", r.Key, err)
+		}
+		return &ftlv1.StatusResponse_Runner{
+			Key:        r.Key.String(),
+			Endpoint:   r.Endpoint,
+			State:      r.State.ToProto(),
+			Deployment: deployment,
+			Labels:     labels,
+		}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	deployments, err := slices.MapErr(status.Deployments, func(d dal.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
 		labels, err := structpb.NewStruct(d.Labels)
 		if err != nil {
@@ -336,8 +358,17 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 				State:    c.State.ToProto(),
 			}
 		}),
+		Runners:     protoRunners,
 		Deployments: deployments,
-		Routes:      routes,
+		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
+			return &ftlv1.StatusResponse_IngressRoute{
+				DeploymentKey: r.Deployment.String(),
+				Verb:          &schemapb.Ref{Module: r.Module, Name: r.Verb},
+				Method:        r.Method,
+				Path:          r.Path,
+			}
+		}),
+		Routes: routes,
 	}
 	return connect.NewResponse(resp), nil
 }
