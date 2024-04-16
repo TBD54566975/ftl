@@ -230,6 +230,7 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 	tp := pctx.pkg.TypesInfo.Types[index.Index].Type
 	st, ok := visitType(pctx, index.Index.Pos(), tp).Get()
 	if !ok {
+		pctx.errors = append(pctx.errors, errorf(index.Index, "unsupported type %q", tp))
 		return
 	}
 
@@ -276,15 +277,15 @@ func checkSignature(pctx *parseContext, node *ast.FuncDecl, sig *types.Signature
 	if params.Len() == 0 {
 		pctx.errors = append(pctx.errors, errorf(node, "first parameter must be context.Context"))
 	} else if !types.AssertableTo(contextIfaceType(), params.At(0).Type()) {
-		pctx.errors = append(pctx.errors, errorf(node, "first parameter must be of type context.Context but is %s", params.At(0).Type()))
+		pctx.errors = append(pctx.errors, tokenErrorf(params.At(0).Pos(), params.At(0).Name(), "first parameter must be of type context.Context but is %s", params.At(0).Type()))
 	}
 
 	if params.Len() == 2 {
 		if !isType[*types.Struct](params.At(1).Type()) {
-			pctx.errors = append(pctx.errors, errorf(node, "second parameter must be a struct but is %s", params.At(1).Type()))
+			pctx.errors = append(pctx.errors, tokenErrorf(params.At(1).Pos(), params.At(1).Name(), "second parameter must be a struct but is %s", params.At(1).Type()))
 		}
 		if params.At(1).Type().String() == ftlUnitTypePath {
-			pctx.errors = append(pctx.errors, errorf(node, "second parameter must not be ftl.Unit"))
+			pctx.errors = append(pctx.errors, tokenErrorf(params.At(1).Pos(), params.At(1).Name(), "second parameter must not be ftl.Unit"))
 		}
 
 		req = optional.Some(params.At(1))
@@ -296,14 +297,14 @@ func checkSignature(pctx *parseContext, node *ast.FuncDecl, sig *types.Signature
 	if results.Len() == 0 {
 		pctx.errors = append(pctx.errors, errorf(node, "must at least return an error"))
 	} else if !types.AssertableTo(errorIFaceType(), results.At(results.Len()-1).Type()) {
-		pctx.errors = append(pctx.errors, errorf(node, "must return an error but is %s", results.At(0).Type()))
+		pctx.errors = append(pctx.errors, tokenErrorf(results.At(results.Len()-1).Pos(), results.At(results.Len()-1).Name(), "must return an error but is %s", results.At(0).Type()))
 	}
 	if results.Len() == 2 {
 		if !isType[*types.Struct](results.At(0).Type()) {
-			pctx.errors = append(pctx.errors, errorf(node, "first result must be a struct but is %s", results.At(0).Type()))
+			pctx.errors = append(pctx.errors, tokenErrorf(results.At(0).Pos(), results.At(0).Name(), "first result must be a struct but is %s", results.At(0).Type()))
 		}
 		if results.At(1).Type().String() == ftlUnitTypePath {
-			pctx.errors = append(pctx.errors, errorf(node, "second result must not be ftl.Unit"))
+			pctx.errors = append(pctx.errors, tokenErrorf(results.At(1).Pos(), results.At(1).Name(), "second result must not be ftl.Unit"))
 		}
 		resp = optional.Some(results.At(0))
 	}
@@ -389,6 +390,9 @@ func visitTypeSpec(pctx *parseContext, node *ast.TypeSpec) {
 			enum.Name = strcase.ToUpperCamel(node.Name.Name)
 			enum.Type = typ
 			pctx.nativeNames[enum] = node.Name.Name
+		} else {
+			pctx.errors = append(pctx.errors, errorf(node, "unsupported type %q",
+				pctx.pkg.TypesInfo.TypeOf(node.Type).Underlying()))
 		}
 	} else {
 		visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[node.Name].Type())
@@ -416,6 +420,8 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 			Value:    value,
 		}
 		enum.Variants = append(enum.Variants, variant)
+	} else {
+		pctx.errors = append(pctx.errors, errorf(node, "unsupported type %q for enum variant %q", c.Type(), c.Name()))
 	}
 }
 
@@ -465,7 +471,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 
 	for _, name := range pctx.nativeNames {
 		if name == node.Name.Name {
-			pctx.errors = append(pctx.errors, errorf(node, "verb %q already exported", node.Name.Name))
+			pctx.errors = append(pctx.errors, noEndColumnErrorf(node.Pos(), "verb %q already exported", node.Name.Name))
 			return nil
 		}
 	}
@@ -494,10 +500,14 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	}
 	reqV, reqOk := req.Get()
 	resV, respOk := resp.Get()
-	if !reqOk || !respOk {
-		return nil
+	if !reqOk {
+		pctx.errors = append(pctx.errors, tokenErrorf(params.At(1).Pos(), params.At(1).Name(),
+			"unsupported request type %q", params.At(1).Type()))
 	}
-
+	if !respOk {
+		pctx.errors = append(pctx.errors, tokenErrorf(results.At(0).Pos(), results.At(0).Name(),
+			"unsupported response type %q", results.At(0).Type()))
+	}
 	verb = &schema.Verb{
 		Pos:      goPosToSchemaPos(node.Pos()),
 		Comments: visitComments(node.Doc),
@@ -613,6 +623,8 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 		pctx.errors = append(pctx.errors, tokenErrorf(pos, named.String(), "expected struct but got %s", named))
 		return optional.None[*schema.Ref]()
 	}
+
+	fieldErrors := false
 	for i := range s.NumFields() {
 		f := s.Field(i)
 		if ft, ok := visitType(pctx, f.Pos(), f.Type()).Get(); ok {
@@ -620,6 +632,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 			if len(f.Name()) > 0 && unicode.IsLower(rune(f.Name()[0])) {
 				pctx.errors = append(pctx.errors,
 					tokenErrorf(f.Pos(), f.Name(), "struct field %s must be exported by starting with an uppercase letter", f.Name()))
+				fieldErrors = true
 			}
 
 			// Extract the JSON tag and split it to get just the field name
@@ -644,8 +657,15 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 				Type:     ft,
 				Metadata: metadata,
 			})
+		} else {
+			pctx.errors = append(pctx.errors, tokenErrorf(f.Pos(), f.Name(), "unsupported type %q for field %q", f.Type(), f.Name()))
+			fieldErrors = true
 		}
 	}
+	if fieldErrors {
+		return optional.None[*schema.Ref]()
+	}
+
 	pctx.module.AddData(out)
 	return optional.Some[*schema.Ref](dataRef)
 }
@@ -656,7 +676,7 @@ func visitConst(pctx *parseContext, cnode *types.Const) optional.Option[schema.V
 		case types.String:
 			value, err := strconv.Unquote(cnode.Val().String())
 			if err != nil {
-				pctx.errors = append(pctx.errors, tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "error parsing string constant"))
+				pctx.errors = append(pctx.errors, tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported string constant"))
 				return optional.None[schema.Value]()
 			}
 			return optional.Some[schema.Value](&schema.StringValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: value})
@@ -664,15 +684,14 @@ func visitConst(pctx *parseContext, cnode *types.Const) optional.Option[schema.V
 		case types.Int, types.Int64:
 			value, err := strconv.ParseInt(cnode.Val().String(), 10, 64)
 			if err != nil {
-				pctx.errors = append(pctx.errors, tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "error parsing int constant"))
+				pctx.errors = append(pctx.errors, tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported int constant"))
 				return optional.None[schema.Value]()
 			}
 			return optional.Some[schema.Value](&schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)})
 		default:
-			pctx.errors = append(pctx.errors, noEndColumnErrorf(cnode.Pos(), "unsupported basic type %q", b))
+			return optional.None[schema.Value]()
 		}
 	}
-	pctx.errors = append(pctx.errors, noEndColumnErrorf(cnode.Pos(), "unsupported const type %q", cnode.Type()))
 	return optional.None[schema.Value]()
 }
 
@@ -683,6 +702,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		if named, ok := tnode.(*types.Named); ok {
+			if _, ok := visitType(pctx, pos, named.Underlying()).Get(); !ok {
+				return optional.None[schema.Type]()
+			}
 			nodePath := named.Obj().Pkg().Path()
 			if pctx.enums[named.Obj().Name()] != nil {
 				return optional.Some[schema.Type](&schema.Ref{
@@ -723,7 +745,6 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 			return optional.Some[schema.Type](&schema.Float{Pos: goPosToSchemaPos(pos)})
 
 		default:
-			pctx.errors = append(pctx.errors, noEndColumnErrorf(pos, "unsupported basic type %q", underlying))
 			return optional.None[schema.Type]()
 		}
 

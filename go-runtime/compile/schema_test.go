@@ -246,24 +246,35 @@ func TestErrorReporting(t *testing.T) {
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
 	assert.EqualError(t, errors.Join(merr...),
 		filename+":10:13-35: config and secret declarations must have a single string literal argument\n"+
+			filename+":13:2-10: unsupported type \"error\" for field \"BadParam\"\n"+
 			filename+":13:2-2: unsupported type \"error\"\n"+
-			filename+":16:2-2: unsupported basic type \"uint64\"\n"+
+			filename+":16:2-17: unsupported type \"uint64\" for field \"AnotherBadParam\"\n"+
 			filename+":19:3-3: unexpected token \"verb\" (expected Directive)\n"+
+			filename+":25:36-39: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":25:50-50: unsupported response type \"ftl/failing.Response\"\n"+
 			filename+":26:16-29: call first argument must be a function in an ftl module\n"+
 			filename+":27:2-46: call must have exactly three arguments\n"+
 			filename+":28:16-25: call first argument must be a function\n"+
 			filename+":33:1-2: must have at most two parameters (context.Context, struct)\n"+
-			filename+":38:1-2: first parameter must be of type context.Context but is ftl/failing.Request\n"+
-			filename+":38:1-2: second parameter must be a struct but is string\n"+
-			filename+":43:1-2: second parameter must not be ftl.Unit\n"+
+			filename+":33:69-69: unsupported response type \"ftl/failing.Response\"\n"+
+			filename+":38:22-27: first parameter must be of type context.Context but is ftl/failing.Request\n"+
+			filename+":38:37-43: second parameter must be a struct but is string\n"+
+			filename+":38:53-53: unsupported response type \"ftl/failing.Response\"\n"+
+			filename+":43:43-47: second parameter must not be ftl.Unit\n"+
+			filename+":43:59-59: unsupported response type \"ftl/failing.Response\"\n"+
 			filename+":48:1-2: first parameter must be context.Context\n"+
+			filename+":48:18-18: unsupported response type \"ftl/failing.Response\"\n"+
 			filename+":53:1-2: must have at most two results (struct, error)\n"+
+			filename+":53:41-44: unsupported request type \"ftl/failing.Request\"\n"+
 			filename+":58:1-2: must at least return an error\n"+
-			filename+":62:1-2: must return an error but is ftl/failing.Response\n"+
-			filename+":67:1-2: first result must be a struct but is string\n"+
-			filename+":67:1-2: must return an error but is string\n"+
-			filename+":67:1-2: second result must not be ftl.Unit\n"+
-			filename+":74:1-2: verb \"WrongResponse\" already exported\n"+
+			filename+":58:36-39: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":62:35-38: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":62:48-48: must return an error but is ftl/failing.Response\n"+
+			filename+":67:41-44: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":67:55-55: first result must be a struct but is string\n"+
+			filename+":67:63-63: must return an error but is string\n"+
+			filename+":67:63-63: second result must not be ftl.Unit\n"+
+			filename+":74:1-1: verb \"WrongResponse\" already exported\n"+
 			filename+":80:2-12: struct field unexported must be exported by starting with an uppercase letter",
 	)
 }
@@ -274,5 +285,5 @@ func TestDuplicateVerbNames(t *testing.T) {
 	}
 	pwd, _ := os.Getwd()
 	_, _, err := ExtractModuleSchema("testdata/duplicateverbs")
-	assert.EqualError(t, err, filepath.Join(pwd, `testdata/duplicateverbs/duplicateverbs.go`)+`:23:1-2: verb "Time" already exported`)
+	assert.EqualError(t, err, filepath.Join(pwd, `testdata/duplicateverbs/duplicateverbs.go`)+`:23:1-1: verb "Time" already exported`)
 }
