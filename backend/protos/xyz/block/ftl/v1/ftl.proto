@@ -184,9 +184,9 @@ message StreamDeploymentLogsRequest {
 message StreamDeploymentLogsResponse {}
 
 message StatusRequest {
+  bool all_runners = 1;
   bool all_controllers = 2;
-
-  reserved 1, 3;
+  bool all_ingress_routes = 3;
 }
 message StatusResponse {
   message Controller {
@@ -195,6 +195,16 @@ message StatusResponse {
     ControllerState state = 4;
   }
   repeated Controller controllers = 1;
+
+  message Runner {
+    string key = 1;
+    repeated string languages = 2;
+    string endpoint = 3;
+    RunnerState state = 4;
+    optional string deployment = 5;
+    google.protobuf.Struct labels = 6;
+  }
+  repeated Runner runners = 2;
 
   message Deployment {
     string key = 1;
@@ -207,6 +217,16 @@ message StatusResponse {
   }
   repeated Deployment deployments = 3;
 
+  message IngressRoute {
+    string deployment_key = 1;
+    schema.Ref verb = 5;
+    string method = 3;
+    string path = 4;
+
+    reserved 2;
+  }
+  repeated IngressRoute ingress_routes = 4;
+
   message Route {
     string module = 1;
     string runner = 2;
@@ -214,8 +234,6 @@ message StatusResponse {
     string endpoint = 4;
   }
   repeated Route routes = 5;
-
-  reserved 2, 4;
 }
 
 message ProcessListRequest {}
