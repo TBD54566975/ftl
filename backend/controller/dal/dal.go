@@ -191,11 +191,9 @@ type Controller struct {
 }
 
 type Status struct {
-	Controllers   []Controller
-	Runners       []Runner
-	Deployments   []Deployment
-	IngressRoutes []IngressRouteEntry
-	Routes        []Route
+	Controllers []Controller
+	Deployments []Deployment
+	Routes      []Route
 }
 
 // A Reservation of a Runner.
@@ -263,25 +261,14 @@ func (d *DAL) GetControllers(ctx context.Context, allControllers bool) ([]Contro
 	}), nil
 }
 
-func (d *DAL) GetStatus(
-	ctx context.Context,
-	allControllers, allRunners, allIngressRoutes bool,
-) (Status, error) {
+func (d *DAL) GetStatus(ctx context.Context, allControllers bool) (Status, error) {
 	controllers, err := d.GetControllers(ctx, allControllers)
 	if err != nil {
 		return Status{}, fmt.Errorf("could not get control planes: %w", translatePGError(err))
 	}
-	runners, err := d.db.GetActiveRunners(ctx, allRunners)
-	if err != nil {
-		return Status{}, fmt.Errorf("could not get active runners: %w", translatePGError(err))
-	}
 	deployments, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
 		return Status{}, fmt.Errorf("could not get active deployments: %w", translatePGError(err))
-	}
-	ingressRoutes, err := d.db.GetAllIngressRoutes(ctx, allIngressRoutes)
-	if err != nil {
-		return Status{}, fmt.Errorf("could not get ingress routes: %w", translatePGError(err))
 	}
 	routes, err := d.db.GetRoutingTable(ctx, nil)
 	if err != nil {
@@ -305,44 +292,9 @@ func (d *DAL) GetStatus(
 	if err != nil {
 		return Status{}, err
 	}
-	domainRunners, err := slices.MapErr(runners, func(in sql.GetActiveRunnersRow) (Runner, error) {
-		var deployment optional.Option[model.DeploymentKey]
-		if keyStr, ok := in.DeploymentKey.Get(); ok {
-			key, err := model.ParseDeploymentKey(keyStr)
-			if err != nil {
-				return Runner{}, fmt.Errorf("invalid deployment key %q: %w", keyStr, err)
-			}
-			deployment = optional.Some(key)
-		}
-		attrs := model.Labels{}
-		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
-			return Runner{}, fmt.Errorf("invalid attributes JSON for runner %s: %w", in.RunnerKey, err)
-		}
-
-		return Runner{
-			Key:        in.RunnerKey,
-			Endpoint:   in.Endpoint,
-			State:      RunnerState(in.State),
-			Deployment: deployment,
-			Labels:     attrs,
-		}, nil
-	})
-	if err != nil {
-		return Status{}, err
-	}
 	return Status{
 		Controllers: controllers,
 		Deployments: statusDeployments,
-		Runners:     domainRunners,
-		IngressRoutes: slices.Map(ingressRoutes, func(in sql.GetAllIngressRoutesRow) IngressRouteEntry {
-			return IngressRouteEntry{
-				Deployment: in.DeploymentKey,
-				Module:     in.Module,
-				Verb:       in.Verb,
-				Method:     in.Method,
-				Path:       in.Path,
-			}
-		}),
 		Routes: slices.Map(routes, func(row sql.GetRoutingTableRow) Route {
 			return Route{
 				Module:     row.ModuleName.MustGet(),
