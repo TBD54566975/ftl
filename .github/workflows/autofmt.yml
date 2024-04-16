@@ -1,7 +1,7 @@
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    # Run daily
+    - cron: "0 22 * * *"
 
 name: Auto-format
 concurrency:
