@@ -123,7 +123,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			matches := kotlinImportRegex.FindStringSubmatch(scanner.Text())
-			if matches != nil && len(matches) > 1 {
+			if len(matches) > 1 {
 				module := strings.Split(matches[1], ".")[0]
 				if module == self {
 					continue
