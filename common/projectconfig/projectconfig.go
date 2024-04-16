@@ -2,7 +2,6 @@ package projectconfig
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -95,21 +94,6 @@ func loadFile(path string) (Config, error) {
 		return Config{}, fmt.Errorf("unknown configuration keys: %s", strings.Join(keys, ", "))
 	}
 	return config, nil
-}
-
-func CreateAndSave(config Config) error {
-	path := GetDefaultConfigPath()
-	_, err := os.Stat(path)
-	// Only create a new file if there isn't one already defined at this location
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		if err = os.WriteFile(path, []byte{}, 0600); err != nil {
-			return fmt.Errorf("failed to create file at path %q due to error: %w", path, err)
-		}
-	}
-	if err != nil {
-		return fmt.Errorf("failed to create file at path %q due to error: %w", path, err)
-	}
-	return Save(path, config)
 }
 
 // Save project config atomically to a file.

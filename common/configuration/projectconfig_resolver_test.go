@@ -41,6 +41,8 @@ func TestSet(t *testing.T) {
 }
 
 func setAndAssert(t *testing.T, module string, config []string) {
+	t.Helper()
+
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	cf, err := New(ctx,
@@ -53,7 +55,8 @@ func setAndAssert(t *testing.T, module string, config []string) {
 
 	var got *url.URL
 	want := URL("inline://asdfasdf")
-	cf.Set(ctx, Ref{Module: optional.Some[string](module), Name: "default"}, want)
+	err = cf.Set(ctx, Ref{Module: optional.Some[string](module), Name: "default"}, want)
+	assert.NoError(t, err)
 	err = cf.Get(ctx, Ref{Module: optional.Some[string](module), Name: "default"}, &got)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
