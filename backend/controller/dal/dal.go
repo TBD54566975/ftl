@@ -249,8 +249,8 @@ type DAL struct {
 	// RouteChanges is a Topic that receives changes to the routing table.
 }
 
-func (d *DAL) GetControllers(ctx context.Context, allControllers bool) ([]Controller, error) {
-	controllers, err := d.db.GetControllers(ctx, allControllers)
+func (d *DAL) GetActiveControllers(ctx context.Context) ([]Controller, error) {
+	controllers, err := d.db.GetActiveControllers(ctx)
 	if err != nil {
 		return nil, translatePGError(err)
 	}
@@ -258,20 +258,16 @@ func (d *DAL) GetControllers(ctx context.Context, allControllers bool) ([]Contro
 		return Controller{
 			Key:      in.Key,
 			Endpoint: in.Endpoint,
-			State:    ControllerState(in.State),
 		}
 	}), nil
 }
 
-func (d *DAL) GetStatus(
-	ctx context.Context,
-	allControllers, allRunners, allIngressRoutes bool,
-) (Status, error) {
-	controllers, err := d.GetControllers(ctx, allControllers)
+func (d *DAL) GetStatus(ctx context.Context) (Status, error) {
+	controllers, err := d.GetActiveControllers(ctx)
 	if err != nil {
 		return Status{}, fmt.Errorf("could not get control planes: %w", translatePGError(err))
 	}
-	runners, err := d.db.GetActiveRunners(ctx, allRunners)
+	runners, err := d.db.GetActiveRunners(ctx)
 	if err != nil {
 		return Status{}, fmt.Errorf("could not get active runners: %w", translatePGError(err))
 	}
@@ -279,7 +275,7 @@ func (d *DAL) GetStatus(
 	if err != nil {
 		return Status{}, fmt.Errorf("could not get active deployments: %w", translatePGError(err))
 	}
-	ingressRoutes, err := d.db.GetAllIngressRoutes(ctx, allIngressRoutes)
+	ingressRoutes, err := d.db.GetActiveIngressRoutes(ctx)
 	if err != nil {
 		return Status{}, fmt.Errorf("could not get ingress routes: %w", translatePGError(err))
 	}
@@ -334,7 +330,7 @@ func (d *DAL) GetStatus(
 		Controllers: controllers,
 		Deployments: statusDeployments,
 		Runners:     domainRunners,
-		IngressRoutes: slices.Map(ingressRoutes, func(in sql.GetAllIngressRoutesRow) IngressRouteEntry {
+		IngressRoutes: slices.Map(ingressRoutes, func(in sql.GetActiveIngressRoutesRow) IngressRouteEntry {
 			return IngressRouteEntry{
 				Deployment: in.DeploymentKey,
 				Module:     in.Module,

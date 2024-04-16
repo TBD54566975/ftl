@@ -131,11 +131,6 @@ message GetDeploymentResponse {
   repeated DeploymentArtefact artefacts = 2;
 }
 
-enum ControllerState {
-  CONTROLLER_LIVE = 0;
-  CONTROLLER_DEAD = 1;
-}
-
 enum RunnerState {
   // The Runner is waiting for a deployment.
   RUNNER_IDLE = 0;
@@ -184,15 +179,11 @@ message StreamDeploymentLogsRequest {
 message StreamDeploymentLogsResponse {}
 
 message StatusRequest {
-  bool all_runners = 1;
-  bool all_controllers = 2;
-  bool all_ingress_routes = 3;
 }
 message StatusResponse {
   message Controller {
     string key = 1;
     string endpoint = 2;
-    ControllerState state = 4;
   }
   repeated Controller controllers = 1;
 
