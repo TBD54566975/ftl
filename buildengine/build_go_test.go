@@ -186,8 +186,8 @@ func TestExternalType(t *testing.T) {
 	testBuild(t, bctx, true, []assertion{
 		assertBuildProtoErrors(
 			"unsupported external type \"time.Month\"",
-			"invalid type \"ftl/external.ExternalResponse\"",
-			"invalid response type \"ftl/external.ExternalResponse\"",
+			"unsupported type \"time.Month\" for field \"Month\"",
+			"unsupported response type \"ftl/external.ExternalResponse\"",
 		),
 	})
 }
