@@ -1377,19 +1377,9 @@ export class StreamDeploymentLogsResponse extends Message<StreamDeploymentLogsRe
  */
 export class StatusRequest extends Message<StatusRequest> {
   /**
-   * @generated from field: bool all_runners = 1;
-   */
-  allRunners = false;
-
-  /**
    * @generated from field: bool all_controllers = 2;
    */
   allControllers = false;
-
-  /**
-   * @generated from field: bool all_ingress_routes = 3;
-   */
-  allIngressRoutes = false;
 
   constructor(data?: PartialMessage<StatusRequest>) {
     super();
@@ -1399,9 +1389,7 @@ export class StatusRequest extends Message<StatusRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StatusRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "all_runners", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "all_controllers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "all_ingress_routes", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {
@@ -1431,19 +1419,9 @@ export class StatusResponse extends Message<StatusResponse> {
   controllers: StatusResponse_Controller[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Runner runners = 2;
-   */
-  runners: StatusResponse_Runner[] = [];
-
-  /**
    * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Deployment deployments = 3;
    */
   deployments: StatusResponse_Deployment[] = [];
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.IngressRoute ingress_routes = 4;
-   */
-  ingressRoutes: StatusResponse_IngressRoute[] = [];
 
   /**
    * @generated from field: repeated xyz.block.ftl.v1.StatusResponse.Route routes = 5;
@@ -1459,9 +1437,7 @@ export class StatusResponse extends Message<StatusResponse> {
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "controllers", kind: "message", T: StatusResponse_Controller, repeated: true },
-    { no: 2, name: "runners", kind: "message", T: StatusResponse_Runner, repeated: true },
     { no: 3, name: "deployments", kind: "message", T: StatusResponse_Deployment, repeated: true },
-    { no: 4, name: "ingress_routes", kind: "message", T: StatusResponse_IngressRoute, repeated: true },
     { no: 5, name: "routes", kind: "message", T: StatusResponse_Route, repeated: true },
   ]);
 
@@ -1528,73 +1504,6 @@ export class StatusResponse_Controller extends Message<StatusResponse_Controller
 
   static equals(a: StatusResponse_Controller | PlainMessage<StatusResponse_Controller> | undefined, b: StatusResponse_Controller | PlainMessage<StatusResponse_Controller> | undefined): boolean {
     return proto3.util.equals(StatusResponse_Controller, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.StatusResponse.Runner
- */
-export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
-  /**
-   * @generated from field: string key = 1;
-   */
-  key = "";
-
-  /**
-   * @generated from field: repeated string languages = 2;
-   */
-  languages: string[] = [];
-
-  /**
-   * @generated from field: string endpoint = 3;
-   */
-  endpoint = "";
-
-  /**
-   * @generated from field: xyz.block.ftl.v1.RunnerState state = 4;
-   */
-  state = RunnerState.RUNNER_IDLE;
-
-  /**
-   * @generated from field: optional string deployment = 5;
-   */
-  deployment?: string;
-
-  /**
-   * @generated from field: google.protobuf.Struct labels = 6;
-   */
-  labels?: Struct;
-
-  constructor(data?: PartialMessage<StatusResponse_Runner>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.Runner";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "languages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
-    { no: 5, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "labels", kind: "message", T: Struct },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Runner {
-    return new StatusResponse_Runner().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_Runner {
-    return new StatusResponse_Runner().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_Runner {
-    return new StatusResponse_Runner().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StatusResponse_Runner | PlainMessage<StatusResponse_Runner> | undefined, b: StatusResponse_Runner | PlainMessage<StatusResponse_Runner> | undefined): boolean {
-    return proto3.util.equals(StatusResponse_Runner, a, b);
   }
 }
 
@@ -1668,61 +1577,6 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
 
   static equals(a: StatusResponse_Deployment | PlainMessage<StatusResponse_Deployment> | undefined, b: StatusResponse_Deployment | PlainMessage<StatusResponse_Deployment> | undefined): boolean {
     return proto3.util.equals(StatusResponse_Deployment, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.StatusResponse.IngressRoute
- */
-export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressRoute> {
-  /**
-   * @generated from field: string deployment_key = 1;
-   */
-  deploymentKey = "";
-
-  /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 5;
-   */
-  verb?: Ref;
-
-  /**
-   * @generated from field: string method = 3;
-   */
-  method = "";
-
-  /**
-   * @generated from field: string path = 4;
-   */
-  path = "";
-
-  constructor(data?: PartialMessage<StatusResponse_IngressRoute>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.StatusResponse.IngressRoute";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "verb", kind: "message", T: Ref },
-    { no: 3, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_IngressRoute {
-    return new StatusResponse_IngressRoute().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_IngressRoute {
-    return new StatusResponse_IngressRoute().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_IngressRoute {
-    return new StatusResponse_IngressRoute().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StatusResponse_IngressRoute | PlainMessage<StatusResponse_IngressRoute> | undefined, b: StatusResponse_IngressRoute | PlainMessage<StatusResponse_IngressRoute> | undefined): boolean {
-    return proto3.util.equals(StatusResponse_IngressRoute, a, b);
   }
 }
 
