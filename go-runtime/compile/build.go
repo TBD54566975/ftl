@@ -197,12 +197,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	}
 
 	logger.Debugf("Compiling")
-	err = exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
 func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *schema.Schema) error {
