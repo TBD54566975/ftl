@@ -76,10 +76,10 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
-	/*goVersion := runtime.Version()
-	if semver.Compare(goVersion, goModVersion) >= 0 {
-		return fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q)", goVersion, goModVersion)
-	}*/
+	goVersion := runtime.Version()[2:]
+	if semver.Compare("v"+goVersion, "v"+goModVersion) < 0 {
+		return fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
+	}
 
 	ftlVersion := ""
 	if ftl.IsRelease(ftl.Version) {
