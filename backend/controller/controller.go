@@ -355,7 +355,6 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 			return &ftlv1.StatusResponse_Controller{
 				Key:      c.Key.String(),
 				Endpoint: c.Endpoint,
-				State:    c.State.ToProto(),
 			}
 		}),
 		Runners:     protoRunners,
