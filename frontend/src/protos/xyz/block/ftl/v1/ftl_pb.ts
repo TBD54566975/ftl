@@ -34,26 +34,6 @@ proto3.util.setEnumType(DeploymentChangeType, "xyz.block.ftl.v1.DeploymentChange
 ]);
 
 /**
- * @generated from enum xyz.block.ftl.v1.ControllerState
- */
-export enum ControllerState {
-  /**
-   * @generated from enum value: CONTROLLER_LIVE = 0;
-   */
-  CONTROLLER_LIVE = 0,
-
-  /**
-   * @generated from enum value: CONTROLLER_DEAD = 1;
-   */
-  CONTROLLER_DEAD = 1,
-}
-// Retrieve enum metadata with: proto3.getEnumType(ControllerState)
-proto3.util.setEnumType(ControllerState, "xyz.block.ftl.v1.ControllerState", [
-  { no: 0, name: "CONTROLLER_LIVE" },
-  { no: 1, name: "CONTROLLER_DEAD" },
-]);
-
-/**
  * @generated from enum xyz.block.ftl.v1.RunnerState
  */
 export enum RunnerState {
@@ -1376,21 +1356,6 @@ export class StreamDeploymentLogsResponse extends Message<StreamDeploymentLogsRe
  * @generated from message xyz.block.ftl.v1.StatusRequest
  */
 export class StatusRequest extends Message<StatusRequest> {
-  /**
-   * @generated from field: bool all_runners = 1;
-   */
-  allRunners = false;
-
-  /**
-   * @generated from field: bool all_controllers = 2;
-   */
-  allControllers = false;
-
-  /**
-   * @generated from field: bool all_ingress_routes = 3;
-   */
-  allIngressRoutes = false;
-
   constructor(data?: PartialMessage<StatusRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1399,9 +1364,6 @@ export class StatusRequest extends Message<StatusRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.StatusRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "all_runners", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 2, name: "all_controllers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "all_ingress_routes", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {
@@ -1496,11 +1458,6 @@ export class StatusResponse_Controller extends Message<StatusResponse_Controller
    */
   endpoint = "";
 
-  /**
-   * @generated from field: xyz.block.ftl.v1.ControllerState state = 4;
-   */
-  state = ControllerState.CONTROLLER_LIVE;
-
   constructor(data?: PartialMessage<StatusResponse_Controller>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1511,7 +1468,6 @@ export class StatusResponse_Controller extends Message<StatusResponse_Controller
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(ControllerState) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Controller {
