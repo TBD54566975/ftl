@@ -23,7 +23,7 @@ type assertion func(t testing.TB, bctx buildContext) error
 func testBuild(
 	t *testing.T,
 	bctx buildContext,
-	expectFail bool,
+	expectedBuildErrMsg string, // emptystr if no error expected
 	assertions []assertion,
 ) {
 	t.Helper()
@@ -33,8 +33,9 @@ func testBuild(
 	module, err := LoadModule(abs)
 	assert.NoError(t, err)
 	err = Build(ctx, bctx.sch, module)
-	if expectFail {
+	if len(expectedBuildErrMsg) > 0 {
 		assert.Error(t, err)
+		assert.Contains(t, err.Error(), expectedBuildErrMsg)
 	} else {
 		assert.NoError(t, err)
 	}

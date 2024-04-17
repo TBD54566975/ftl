@@ -25,7 +25,7 @@ package ftl.test
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, false, []assertion{
+	testBuild(t, bctx, "", []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -152,7 +152,7 @@ data class TestResponse(
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, false, []assertion{
+	testBuild(t, bctx, "", []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -213,7 +213,7 @@ fun testVerb(context: Context, req: Request): ftl.builtin.Empty = throw
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, false, []assertion{
+	testBuild(t, bctx, "", []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -267,7 +267,7 @@ class Empty
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, false, []assertion{
+	testBuild(t, bctx, "", []assertion{
 		assertGeneratedModule("generated-sources/ftl/builtin/Builtin.kt", expected),
 	})
 }
@@ -311,7 +311,7 @@ fun emptyVerb(context: Context, req: ftl.builtin.Empty): ftl.builtin.Empty = thr
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, false, []assertion{
+	testBuild(t, bctx, "", []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -391,7 +391,7 @@ fun nothing(context: Context): Unit = throw
 		buildDir:  "target",
 		sch:       sch,
 	}
-	testBuild(t, bctx, false, []assertion{
+	testBuild(t, bctx, "", []assertion{
 		assertGeneratedModule("generated-sources/ftl/test/Test.kt", expected),
 	})
 }
@@ -405,7 +405,8 @@ func TestKotlinExternalType(t *testing.T) {
 		buildDir:  "target",
 		sch:       &schema.Schema{},
 	}
-	testBuild(t, bctx, true, []assertion{
-		assertBuildProtoErrors("expected module name to be in the form ftl.<module>, but was com.google.type.DayOfWeek"),
+	expectedErrMsg := "expected module name to be in the form ftl.<module>, but was com.google.type.DayOfWeek"
+	testBuild(t, bctx, expectedErrMsg, []assertion{
+		assertBuildProtoErrors(expectedErrMsg),
 	})
 }

@@ -1,6 +1,8 @@
 package buildengine
 
 import (
+	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -120,7 +122,7 @@ func Nothing(context.Context) error {
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
-	testBuild(t, bctx, false, []assertion{
+	testBuild(t, bctx, "", []assertion{
 		assertGeneratedModule("go/modules/other/external_module.go", expected),
 	})
 }
@@ -169,7 +171,7 @@ func Call(context.Context, Req) (Resp, error) {
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
-	testBuild(t, bctx, false, []assertion{
+	testBuild(t, bctx, "", []assertion{
 		assertGeneratedModule("go/modules/test/external_module.go", expected),
 	})
 }
@@ -183,11 +185,37 @@ func TestExternalType(t *testing.T) {
 		buildDir:  "_ftl",
 		sch:       &schema.Schema{},
 	}
-	testBuild(t, bctx, true, []assertion{
+	testBuild(t, bctx, "unsupported external type", []assertion{
 		assertBuildProtoErrors(
 			"unsupported external type \"time.Month\"",
 			"unsupported type \"time.Month\" for field \"Month\"",
 			"unsupported response type \"ftl/external.ExternalResponse\"",
 		),
 	})
+}
+
+func TestGoModVersion(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	sch := &schema.Schema{
+		Modules: []*schema.Module{
+			schema.Builtins(),
+			{Name: "highgoversion", Decls: []schema.Decl{
+				&schema.Data{Name: "EchoReq"},
+				&schema.Data{Name: "EchoResp"},
+				&schema.Verb{
+					Name:     "echo",
+					Request:  &schema.Ref{Name: "EchoRequest"},
+					Response: &schema.Ref{Name: "EchoResponse"},
+				},
+			}},
+		},
+	}
+	bctx := buildContext{
+		moduleDir: "testdata/projects/highgoversion",
+		buildDir:  "_ftl",
+		sch:       sch,
+	}
+	testBuild(t, bctx, fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version()[2:]), []assertion{})
 }
