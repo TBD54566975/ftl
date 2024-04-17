@@ -559,7 +559,7 @@ func (e *Engine) build(ctx context.Context, key ProjectKey, builtModules map[str
 	if e.listener != nil {
 		e.listener.OnBuildStarted(meta.project)
 	}
-	err := Build(ctx, sch, meta.project, e.watcher.GetTransaction(project.Config().Dir))
+	err := Build(ctx, sch, meta.project, e.watcher.GetTransaction(meta.project.Config().Dir))
 	if err != nil {
 		return err
 	}
