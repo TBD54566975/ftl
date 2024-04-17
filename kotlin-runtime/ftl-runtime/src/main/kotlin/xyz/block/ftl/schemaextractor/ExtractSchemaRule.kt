@@ -172,9 +172,6 @@ class ExtractSchemaRule(config: DetektConfig) : Rule(config) {
     }
 
     val moduleName = root.extractModuleName()
-    if (moduleName == "builtin") {
-      throw IllegalArgumentException("Why does this fix it?")
-    }
     modules[moduleName]?.let {
       writeFile(it.toModule(moduleName).encode(), SCHEMA_OUT)
     }
