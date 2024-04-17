@@ -139,7 +139,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 			return fmt.Errorf("failed to write errors: %w", err)
 		}
 
-		return originalErr
+		return fmt.Errorf("failed to extract module schema: %w", originalErr)
 	}
 	schemaBytes, err := proto.Marshal(main.ToProto())
 	if err != nil {
@@ -417,4 +417,12 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 		}
 	}
 	return true
+}
+
+type ExtractModuleSchemaErr struct {
+	OriginalError error
+}
+
+func (e *ExtractModuleSchemaErr) Error() string {
+	return fmt.Sprintf("failed to extract module schema: %w", e.OriginalError)
 }
