@@ -45,15 +45,16 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module) error {
 	}
 
 	if err != nil {
+		errs := errors.UnwrapAllExcludingIntermediaries(err)
 		// read runtime-specific build errors from the build directory
 		errorList, err := loadProtoErrors(module.AbsDeployDir())
 		if err != nil {
 			return fmt.Errorf("failed to read build errors for module: %w", err)
 		}
-		errs := make([]error, 0, len(errorList.Errors))
 		for _, e := range errorList.Errors {
-			errs = append(errs, *e)
+			errs = append(errs, e)
 		}
+		errs = errors.DeduplicateErrors(errs)
 		schema.SortErrorsByPosition(errs)
 		return errors.Join(errs...)
 	}
