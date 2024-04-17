@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	db "github.com/TBD54566975/ftl/backend/controller/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -20,49 +21,22 @@ import (
 	xslices "golang.org/x/exp/slices"
 )
 
-func TestService(t *testing.T) {
+func TestServiceWithMockDal(t *testing.T) {
 	t.Parallel()
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
 
 	clk := clock.NewMock()
+	clk.Add(time.Second) // half way between cron job executions
+
 	mockDal := &mockDAL{
 		clock:           clk,
 		lock:            sync.Mutex{},
 		attemptCountMap: map[string]int{},
 	}
 
-	verbCallCount := map[string]int{}
-	verbCallCountLock := sync.Mutex{}
-
-	moduleName := "initial"
-	deploymentKey := model.NewDeploymentKey(moduleName)
-	for _, job := range newJobs(t, moduleName, "*/10 * * * * * *", clk, 20) {
-		mockDal.createCronJob(deploymentKey, moduleName, job.Verb.Name, job.Schedule, job.StartTime, job.NextExecution)
-	}
-
-	_ = newControllers(ctx, 5, mockDal, func() clock.Clock { return clk }, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
-		verbRef := schema.RefFromProto(r.Msg.Verb)
-
-		verbCallCountLock.Lock()
-		verbCallCount[verbRef.Name]++
-		verbCallCountLock.Unlock()
-
-		return &connect.Response[ftlv1.CallResponse]{}, nil
-	})
-
-	clk.Add(time.Second * 5)
-	time.Sleep(time.Millisecond * 100)
-	for range 3 {
-		clk.Add(time.Second * 10)
-		time.Sleep(time.Millisecond * 100)
-	}
-
-	for _, j := range mockDal.jobs {
-		count := verbCallCount[j.Verb.Name]
-		assert.Equal(t, count, 3, "expected verb %s to be called 3 times", j.Verb.Name)
-	}
+	testServiceWithDal(ctx, t, mockDal, clk)
 }
 
 func TestHashRing(t *testing.T) {
@@ -83,10 +57,15 @@ func TestHashRing(t *testing.T) {
 	verbCallCountLock := sync.Mutex{}
 
 	moduleName := "initial"
-	deploymentKey := model.NewDeploymentKey(moduleName)
-	for _, job := range newJobs(t, moduleName, "*/10 * * * * * *", mockDal.clock, 100) {
-		mockDal.createCronJob(deploymentKey, moduleName, job.Verb.Name, job.Schedule, job.StartTime, job.NextExecution)
-	}
+	jobsToCreate := newJobs(t, moduleName, "*/10 * * * * * *", mockDal.clock, 100)
+
+	deploymentKey, err := mockDal.CreateDeployment(ctx, "go", &schema.Module{
+		Name: moduleName,
+	}, []db.DeploymentArtefact{}, []db.IngressRoutingEntry{}, jobsToCreate)
+	assert.NoError(t, err)
+
+	err = mockDal.ReplaceDeployment(ctx, deploymentKey, 1)
+	assert.NoError(t, err)
 
 	controllers := newControllers(ctx, 20, mockDal, func() clock.Clock { return clock.NewMock() }, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
 		verbRef := schema.RefFromProto(r.Msg.Verb)
