@@ -1,14 +1,9 @@
 package buildengine
 
 import (
-	"bytes"
 	"fmt"
-	"log"
-	"os"
 	"runtime"
 	"testing"
-
-	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 )
@@ -222,15 +217,7 @@ func TestGoModVersion(t *testing.T) {
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	t.Cleanup(func() {
-		log.SetOutput(os.Stderr)
-	})
-	testBuild(t, bctx, false, []assertion{
-		func(t testing.TB, bctx buildContext) error {
-			assert.Contains(t, buf.String(), fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version()))
-			return nil
-		},
+	testBuild(t, bctx, true, []assertion{
+		assertBuildProtoErrors(fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version()))
 	})
 }
