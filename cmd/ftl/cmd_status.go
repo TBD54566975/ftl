@@ -20,11 +20,7 @@ type statusCmd struct {
 }
 
 func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
-	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
-		AllControllers:   s.All || s.AllControllers,
-		AllRunners:       s.All || s.AllRunners,
-		AllIngressRoutes: s.All || s.AllIngressRoutes,
-	}))
+	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
 	if err != nil {
 		return err
 	}

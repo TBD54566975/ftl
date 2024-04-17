@@ -355,9 +355,7 @@ func waitForControllerOnline(ctx context.Context, startupTimeout time.Duration, 
 	for {
 		select {
 		case <-ticker.C:
-			_, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{
-				AllControllers: true,
-			}))
+			_, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
 			if err != nil {
 				logger.Tracef("Error getting status, retrying...: %v", err)
 				continue // retry
