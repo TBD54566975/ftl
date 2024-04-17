@@ -153,14 +153,6 @@ const (
 	ControllerStateDead = ControllerState(sql.ControllerStateDead)
 )
 
-func ControllerStateFromProto(state ftlv1.ControllerState) ControllerState {
-	return ControllerState(strings.ToLower(strings.TrimPrefix(state.String(), "CONTROLLER_")))
-}
-
-func (s ControllerState) ToProto() ftlv1.ControllerState {
-	return ftlv1.ControllerState(ftlv1.ControllerState_value["CONTROLLER_"+strings.ToUpper(string(s))])
-}
-
 type RequestOrigin string
 
 const (
