@@ -108,7 +108,7 @@ jobs:
           server-username: OSSRH_USERNAME
           server-password: OSSRH_PASSWORD
           gpg-passphrase: SIGN_KEY_PASS
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           cache: "maven"
       - name: Publish JARs # Snapshots are published first, then the tagged release
         run: |
@@ -117,7 +117,7 @@ jobs:
           mvn -f kotlin-runtime/ftl-runtime -U -B clean deploy -P release
           git clean -f ./*.flattened_pom.xml
         env:
-          SIGN_KEY_PASS: ${{ secrets.GPG_PASSPHRASE }}
+          SIGN_KEY_PASS: ${{ secrets.GPG_SECRET_PASSPHRASE }}
           OSSRH_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GITHUB_TOKEN: ${{ github.token }}
