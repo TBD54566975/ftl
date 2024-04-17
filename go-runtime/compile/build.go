@@ -9,11 +9,13 @@ import (
 	"path"
 	"path/filepath"
 	stdreflect "reflect"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
 	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 
@@ -73,6 +75,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 	if err != nil {
 		return err
 	}
+
+	/*goVersion := runtime.Version()
+	if semver.Compare(goVersion, goModVersion) >= 0 {
+		return fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q)", goVersion, goModVersion)
+	}*/
 
 	ftlVersion := ""
 	if ftl.IsRelease(ftl.Version) {
