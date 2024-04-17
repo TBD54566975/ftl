@@ -78,9 +78,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 
 	goVersion := runtime.Version()[2:]
 	if semver.Compare("v"+goVersion, "v"+goModVersion) < 0 {
-		// The only way this error message makes it back to the end user is if we panic.
-		// Otherwise, the error gets swallowed. See below.
-		//panic(fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion))
 		return fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
 	}
 
@@ -128,12 +125,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 			return fmt.Errorf("failed to marshal errors: %w", err)
 		}
 
-		// If we return an error at the top of this function before we get to this line,
-		// then the error we return will never be written to errors.pb because we'll never
-		// make it to this line. Then, buildengine/build.go will swallow the error because
-		// upon identifying that err != nil, it will ignore that original error and instead
-		// load only the errors written to errors.pb. Is this intentional? Is the appropriate
-		// solution to change `return error` call into a `panic`?
 		err = os.WriteFile(filepath.Join(buildDir, "errors.pb"), elBytes, 0600)
 		if err != nil {
 			return fmt.Errorf("failed to write errors: %w", err)
@@ -417,12 +408,4 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 		}
 	}
 	return true
-}
-
-type ExtractModuleSchemaErr struct {
-	OriginalError error
-}
-
-func (e *ExtractModuleSchemaErr) Error() string {
-	return fmt.Sprintf("failed to extract module schema: %w", e.OriginalError)
 }
