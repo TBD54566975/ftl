@@ -218,6 +218,6 @@ func TestGoModVersion(t *testing.T) {
 		sch:       sch,
 	}
 	testBuild(t, bctx, true, []assertion{
-		assertBuildProtoErrors(fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version()))
+		assertBuildProtoErrors(fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version())),
 	})
 }
