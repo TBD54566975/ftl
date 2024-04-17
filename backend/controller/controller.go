@@ -291,7 +291,7 @@ func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.Pr
 }
 
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx, req.Msg.AllControllers, req.Msg.AllRunners, req.Msg.AllIngressRoutes)
+	status, err := s.dal.GetStatus(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get status: %w", err)
 	}
@@ -1061,7 +1061,7 @@ func (s *Service) heartbeatController(ctx context.Context) (time.Duration, error
 }
 
 func (s *Service) updateControllersList(ctx context.Context) (time.Duration, error) {
-	controllers, err := s.dal.GetControllers(ctx, false)
+	controllers, err := s.dal.GetActiveControllers(ctx)
 	if err != nil {
 		return 0, err
 	}

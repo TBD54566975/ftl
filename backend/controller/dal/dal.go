@@ -1091,7 +1091,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 }
 
 func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
-	rows, err := d.db.GetActiveRunners(ctx, false)
+	rows, err := d.db.GetActiveRunners(ctx)
 	if err != nil {
 		return nil, translatePGError(err)
 	}
