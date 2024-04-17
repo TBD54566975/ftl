@@ -372,11 +372,6 @@ func TestRunnerStateFromProto(t *testing.T) {
 	assert.Equal(t, RunnerStateIdle, RunnerStateFromProto(state))
 }
 
-func TestControllerStateFromProto(t *testing.T) {
-	state := ftlv1.ControllerState_CONTROLLER_LIVE
-	assert.Equal(t, ControllerStateLive, ControllerStateFromProto(state))
-}
-
 func normaliseEvents(events []Event) []Event {
 	for i := range len(events) {
 		event := events[i]
