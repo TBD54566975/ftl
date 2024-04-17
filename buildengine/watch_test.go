@@ -24,7 +24,7 @@ func TestWatch(t *testing.T) {
 
 	// Start the watch
 	events := make(chan WatchEvent, 128)
-	watch := Watch(ctx, time.Millisecond*500, []string{dir}, nil)
+	watch := Watch(ctx, time.Millisecond*200, []string{dir}, nil)
 	watch.Subscribe(events)
 
 	// Initiate a bunch of changes.
