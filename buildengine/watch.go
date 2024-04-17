@@ -26,6 +26,7 @@ type WatchEventProjectChanged struct {
 	Project Project
 	Change  FileChangeType
 	Path    string
+	Time    time.Time
 }
 
 func (WatchEventProjectChanged) watchEvent() {}
@@ -86,7 +87,7 @@ func Watch(ctx context.Context, period time.Duration, moduleDirs []string, exter
 						continue
 					}
 					logger.Debugf("changed %s %q: %c%s", project.TypeString(), project.Config().Key, changeType, path)
-					topic.Publish(WatchEventProjectChanged{Project: existingProject.Project, Change: changeType, Path: path})
+					topic.Publish(WatchEventProjectChanged{Project: existingProject.Project, Change: changeType, Path: path, Time: time.Now()})
 					existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: existingProject.Project}
 					continue
 				}
