@@ -139,8 +139,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                                             THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id
-WHERE sqlc.arg('all')::bool = true
-   OR r.state <> 'dead'
+WHERE r.state <> 'dead'
 ORDER BY r.key;
 
 -- name: GetActiveDeployments :many
@@ -427,11 +426,10 @@ WITH matches AS (
 SELECT COUNT(*)
 FROM matches;
 
--- name: GetControllers :many
+-- name: GetActiveControllers :many
 SELECT *
 FROM controller c
-WHERE sqlc.arg('all')::bool = true
-   OR c.state <> 'dead'
+WHERE c.state <> 'dead'
 ORDER BY c.key;
 
 -- name: CreateIngressRoute :exec
@@ -447,12 +445,11 @@ FROM ingress_routes ir
 WHERE r.state = 'assigned'
   AND ir.method = $1;
 
--- name: GetAllIngressRoutes :many
+-- name: GetActiveIngressRoutes :many
 SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
 FROM ingress_routes ir
          INNER JOIN deployments d ON ir.deployment_id = d.id
-WHERE sqlc.arg('all')::bool = true
-   OR d.min_replicas > 0;
+WHERE d.min_replicas > 0;
 
 
 -- name: InsertEvent :exec

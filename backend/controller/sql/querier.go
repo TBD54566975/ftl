@@ -23,14 +23,14 @@ type Querier interface {
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
+	GetActiveControllers(ctx context.Context) ([]Controller, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
-	GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error)
-	GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIngressRoutesRow, error)
+	GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngressRoutesRow, error)
+	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
-	GetControllers(ctx context.Context, all bool) ([]Controller, error)
 	GetCronJobs(ctx context.Context) ([]GetCronJobsRow, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.

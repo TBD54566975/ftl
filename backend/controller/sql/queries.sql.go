@@ -211,6 +211,40 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getActiveControllers = `-- name: GetActiveControllers :many
+SELECT id, key, created, last_seen, state, endpoint
+FROM controller c
+WHERE c.state <> 'dead'
+ORDER BY c.key
+`
+
+func (q *Queries) GetActiveControllers(ctx context.Context) ([]Controller, error) {
+	rows, err := q.db.Query(ctx, getActiveControllers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Controller
+	for rows.Next() {
+		var i Controller
+		if err := rows.Scan(
+			&i.ID,
+			&i.Key,
+			&i.Created,
+			&i.LastSeen,
+			&i.State,
+			&i.Endpoint,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getActiveDeploymentSchemas = `-- name: GetActiveDeploymentSchemas :many
 SELECT key, schema FROM deployments WHERE min_replicas > 0
 `
@@ -288,6 +322,47 @@ func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeployme
 	return items, nil
 }
 
+const getActiveIngressRoutes = `-- name: GetActiveIngressRoutes :many
+SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
+FROM ingress_routes ir
+         INNER JOIN deployments d ON ir.deployment_id = d.id
+WHERE d.min_replicas > 0
+`
+
+type GetActiveIngressRoutesRow struct {
+	DeploymentKey model.DeploymentKey
+	Module        string
+	Verb          string
+	Method        string
+	Path          string
+}
+
+func (q *Queries) GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngressRoutesRow, error) {
+	rows, err := q.db.Query(ctx, getActiveIngressRoutes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveIngressRoutesRow
+	for rows.Next() {
+		var i GetActiveIngressRoutesRow
+		if err := rows.Scan(
+			&i.DeploymentKey,
+			&i.Module,
+			&i.Verb,
+			&i.Method,
+			&i.Path,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getActiveRunners = `-- name: GetActiveRunners :many
 SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
                            r.endpoint,
@@ -300,8 +375,7 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                                             THEN d.key END, NULL) AS deployment_key
 FROM runners r
          LEFT JOIN deployments d on d.id = r.deployment_id
-WHERE $1::bool = true
-   OR r.state <> 'dead'
+WHERE r.state <> 'dead'
 ORDER BY r.key
 `
 
@@ -315,8 +389,8 @@ type GetActiveRunnersRow struct {
 	DeploymentKey optional.Option[string]
 }
 
-func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRunnersRow, error) {
-	rows, err := q.db.Query(ctx, getActiveRunners, all)
+func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error) {
+	rows, err := q.db.Query(ctx, getActiveRunners)
 	if err != nil {
 		return nil, err
 	}
@@ -332,48 +406,6 @@ func (q *Queries) GetActiveRunners(ctx context.Context, all bool) ([]GetActiveRu
 			&i.LastSeen,
 			&i.ModuleName,
 			&i.DeploymentKey,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getAllIngressRoutes = `-- name: GetAllIngressRoutes :many
-SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
-FROM ingress_routes ir
-         INNER JOIN deployments d ON ir.deployment_id = d.id
-WHERE $1::bool = true
-   OR d.min_replicas > 0
-`
-
-type GetAllIngressRoutesRow struct {
-	DeploymentKey model.DeploymentKey
-	Module        string
-	Verb          string
-	Method        string
-	Path          string
-}
-
-func (q *Queries) GetAllIngressRoutes(ctx context.Context, all bool) ([]GetAllIngressRoutesRow, error) {
-	rows, err := q.db.Query(ctx, getAllIngressRoutes, all)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetAllIngressRoutesRow
-	for rows.Next() {
-		var i GetAllIngressRoutesRow
-		if err := rows.Scan(
-			&i.DeploymentKey,
-			&i.Module,
-			&i.Verb,
-			&i.Method,
-			&i.Path,
 		); err != nil {
 			return nil, err
 		}
@@ -420,41 +452,6 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	for rows.Next() {
 		var i GetArtefactDigestsRow
 		if err := rows.Scan(&i.ID, &i.Digest); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getControllers = `-- name: GetControllers :many
-SELECT id, key, created, last_seen, state, endpoint
-FROM controller c
-WHERE $1::bool = true
-   OR c.state <> 'dead'
-ORDER BY c.key
-`
-
-func (q *Queries) GetControllers(ctx context.Context, all bool) ([]Controller, error) {
-	rows, err := q.db.Query(ctx, getControllers, all)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Controller
-	for rows.Next() {
-		var i Controller
-		if err := rows.Scan(
-			&i.ID,
-			&i.Key,
-			&i.Created,
-			&i.LastSeen,
-			&i.State,
-			&i.Endpoint,
-		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
