@@ -31,7 +31,7 @@ func TestWatch(t *testing.T) {
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "two")
 	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 750)
+	time.Sleep(time.Millisecond * 750) // midway between file scans
 
 	// Delete a module
 	err = os.RemoveAll(filepath.Join(dir, "two"))
@@ -39,6 +39,7 @@ func TestWatch(t *testing.T) {
 
 	// Change a module.
 	updateModFile(t, filepath.Join(dir, "one"))
+
 	time.Sleep(time.Millisecond * 500)
 	topic.Close()
 
@@ -88,7 +89,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 
 	events, topic := startWatching(ctx, t, w, dir)
 
-	time.Sleep(time.Millisecond * 750)
+	time.Sleep(time.Millisecond * 750) // midway between file scans
 
 	// Change a file in a module, within a transaction
 	transaction := w.GetTransaction(filepath.Join(dir, "one"))
@@ -97,6 +98,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	updateModFile(t, filepath.Join(dir, "one"))
 	err = transaction.ModifiedFiles(filepath.Join(dir, "one", "go.mod"))
 	assert.NoError(t, err)
+
 	err = transaction.End()
 	assert.NoError(t, err)
 
@@ -128,7 +130,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	w := NewWatcher()
 	events, topic := startWatching(ctx, t, w, dir)
 
-	time.Sleep(time.Millisecond * 750)
+	time.Sleep(time.Millisecond * 750) // midway between file scans
 
 	// Change a file in a module, within a transaction
 	transaction := w.GetTransaction(filepath.Join(dir, "one"))
@@ -143,6 +145,9 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
+	assert.NoError(t, err)
+
+	err = transaction.End()
 	assert.NoError(t, err)
 
 	time.Sleep(time.Millisecond * 500)
