@@ -57,7 +57,7 @@ func (s *Server) Run() error {
 	return nil
 }
 
-type errSet map[string]schema.Error
+type errSet []*schema.Error
 
 // BuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
 func (s *Server) BuildStarted(dir string) {
@@ -78,15 +78,14 @@ func (s *Server) post(err error) {
 
 	// Deduplicate and associate by filename.
 	for _, err := range ftlErrors.DeduplicateErrors(ftlErrors.UnwrapAll(err)) {
-		var ce schema.Error
+		var ce *schema.Error
 		if errors.As(err, &ce) {
 			filename := ce.Pos.Filename
 			if _, exists := errByFilename[filename]; !exists {
-				errByFilename[filename] = make(errSet)
+				errByFilename[filename] = errSet{}
 			}
-			errByFilename[filename][strings.TrimSpace(ce.Error())] = ce
+			errByFilename[filename] = append(errByFilename[filename], ce)
 		}
-
 	}
 
 	go publishErrors(errByFilename, s)

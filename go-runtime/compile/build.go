@@ -123,7 +123,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 			return fmt.Errorf("failed to write errors: %w", err)
 		}
 
-		return fmt.Errorf("failed to extract module schema: %w", originalErr)
+		return originalErr
 	}
 	schemaBytes, err := proto.Marshal(main.ToProto())
 	if err != nil {

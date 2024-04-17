@@ -308,7 +308,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				if err != nil {
 					switch project := event.Project.(type) {
 					case Module:
-						logger.Errorf(err, "build and deploy failed for module %q: %v", project.Config().Key, err)
+						logger.Errorf(err, "build and deploy failed for module %q", project.Config().Key)
 					case ExternalLibrary:
 						logger.Errorf(err, "build failed for library %q: %v", project.Config().Key, err)
 					}
