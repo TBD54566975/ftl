@@ -58,7 +58,7 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module) error {
 		return errors.Join(errs...)
 	}
 
-	return nil
+	return err
 }
 
 func buildExternalLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {

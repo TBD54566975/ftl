@@ -409,3 +409,11 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 	}
 	return true
 }
+
+type ExtractModuleSchemaErr struct {
+	OriginalError error
+}
+
+func (e *ExtractModuleSchemaErr) Error() string {
+	return fmt.Sprintf("failed to extract module schema: %w", e.OriginalError)
+}
