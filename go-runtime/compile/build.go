@@ -75,13 +75,13 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction) error {
+func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction) (err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return err
 	}
 	defer func() {
-		if err := filesTransaction.End(); err != nil {
-			log.FromContext(ctx).Errorf(err, "failed to end file transaction")
+		if terr := filesTransaction.End(); terr != nil {
+			err = fmt.Errorf("failed to end file transaction: %w", terr)
 		}
 	}()
 
