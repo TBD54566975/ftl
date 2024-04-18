@@ -61,7 +61,7 @@ export async function activate(context: ExtensionContext) {
   statusBarItem.command = "ftl.statusItemClicked"
   statusBarItem.show()
 
-  await startClient(context)
+  await promptStartClient(context)
 
   context.subscriptions.push(
     restartCmd,
@@ -74,6 +74,71 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate() {
   await stopClient()
+}
+
+async function FTLPreflightCheck(ftlPath: string) {
+  const ftlRunning = await isFTLRunning(ftlPath)
+  if (ftlRunning) {
+    vscode.window.showErrorMessage(
+      "FTL is already running. Please stop the other instance and restart the service."
+    )
+    return false
+  }
+
+  let version: string
+  try {
+    version = await getFTLVersion(ftlPath)
+  } catch (error: any) {
+    vscode.window.showErrorMessage(`${error.message}`)
+    return false
+  }
+
+  const versionOK = checkMinimumVersion(version, MIN_FTL_VERSION)
+  if (!versionOK) {
+    vscode.window.showErrorMessage(
+      `FTL version ${version} is not supported. Please upgrade to at least ${MIN_FTL_VERSION}.`
+    )
+    return false
+  }
+
+  return true
+}
+
+async function promptStartClient(context: vscode.ExtensionContext): Promise<void> {
+  const configuration = vscode.workspace.getConfiguration('ftl')
+  const startClientOption = configuration.get<string>('startClientOption')
+
+  if (startClientOption === 'always') {
+    await startClient(context)
+    return
+  } else if (startClientOption === 'never') {
+    FTLStatus.disabled(statusBarItem)
+    return
+  }
+
+
+  const options = ['Always', 'Yes', 'No', 'Never']
+  const result = await vscode.window.showInformationMessage(
+    'FTL project detected. Would you like to start the FTL development server?',
+    ...options
+  )
+
+  switch (result) {
+    case 'Always':
+      configuration.update('startClientOption', 'always', vscode.ConfigurationTarget.Global)
+      await startClient(context)
+      break
+    case 'Yes':
+      await startClient(context)
+      break
+    case 'No':
+      FTLStatus.disabled(statusBarItem)
+      break
+    case 'Never':
+      configuration.update('startClientOption', 'never', vscode.ConfigurationTarget.Global)
+      FTLStatus.disabled(statusBarItem)
+      break
+  }
 }
 
 async function startClient(context: ExtensionContext) {
@@ -150,6 +215,7 @@ async function stopClient() {
   }
   console.log("Disposing client")
 
+  client.diagnostics?.clear()
   if (client["_serverProcess"]) {
     process.kill(client["_serverProcess"].pid, "SIGINT")
   }
@@ -161,32 +227,4 @@ async function stopClient() {
   client.outputChannel.dispose()
   console.log("Output channel disposed")
   FTLStatus.stopped(statusBarItem)
-}
-
-async function FTLPreflightCheck(ftlPath: string) {
-  const ftlRunning = await isFTLRunning(ftlPath)
-  if (ftlRunning) {
-    vscode.window.showErrorMessage(
-      "FTL is already running. Please stop the other instance and restart the service."
-    )
-    return false
-  }
-
-  let version: string
-  try {
-    version = await getFTLVersion(ftlPath)
-  } catch (error: any) {
-    vscode.window.showErrorMessage(`${error.message}`)
-    return false
-  }
-
-  const versionOK = checkMinimumVersion(version, MIN_FTL_VERSION)
-  if (!versionOK) {
-    vscode.window.showErrorMessage(
-      `FTL version ${version} is not supported. Please upgrade to at least ${MIN_FTL_VERSION}.`
-    )
-    return false
-  }
-
-  return true
 }

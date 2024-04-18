@@ -16,25 +16,34 @@ provides support for
 
 3.  Open any FTL project with a `ftl-project.toml` or `ftl.toml` file.
 
-4.  The extension will automatically activate and provide support for FTL projects.
+4.  The extension will prompt to start the FTL development server.
 
-> [!IMPORTANT]
-> If you have installed FTL with hermit (or other dependency management tools), you may need to specify the path to the FTL binary in the extension settings.
+## Settings
 
-Example:
+Configure the FTL extension by setting the following options in your Visual Studio Code settings.json:
 
-```json
-{
-  "ftl.executablePath": "bin/ftl"
-}
-```
+- `ftl.executablePath`: Specifies the path to the FTL executable. The default is "ftl", which uses the system's PATH to find the executable.
 
-You can also configure additional command line arguments for the FTL binary in the settings.
+  > [!IMPORTANT]
+  > If you have installed FTL with hermit (or other dependency management tools), you may need to specify the path to the FTL binary in the extension settings.
 
-Example:
+  ```json
+  {
+    "ftl.executablePath": "bin/ftl"`
+  }
+  ```
 
-```json
-{
-  "ftl.devCommandFlags": ["--recreate", "--parallelism=4"]
-}
-```
+- `ftl.devCommandFlags`: Defines flags to pass to the FTL executable when starting the development environment. The default is ["--recreate"].
+
+  ```json
+  {
+    "ftl.devCommandFlags": ["--recreate", "--parallelism=4"]
+  }
+  ```
+
+- `ftl.startClientOption`: Controls if and when to automatically start the FTL development server. Available options are "always" and "never". If not set, the extension will prompt to start the server when opening a FTL project.
+  ```json
+  {
+    "ftl.startClientOption": "always"
+  }
+  ```
