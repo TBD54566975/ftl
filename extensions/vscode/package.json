@@ -3,7 +3,8 @@
   "displayName": "FTL",
   "publisher": "ftl",
   "description": "VSCode extension for FTL",
-  "version": "0.0.3",
+  "icon": "images/icon.png",
+  "version": "0.0.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/TBD54566975/ftl-vscode"
@@ -36,6 +37,15 @@
             "type": "string"
           },
           "description": "Flags to pass to the FTL executable when starting ftl dev"
+        },
+        "ftl.startClientOption": {
+          "type": "string",
+          "enum": [
+            "always",
+            "never"
+          ],
+          "default": null,
+          "description": "Control if and when to automatically start the FTL client."
         }
       }
     },
