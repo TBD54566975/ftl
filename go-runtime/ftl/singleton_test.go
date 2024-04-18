@@ -2,6 +2,7 @@ package ftl
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -12,7 +13,7 @@ func TestSingletonBaseCase(t *testing.T) {
 
 	ctx := context.Background()
 	once := Singleton[string](func(ctx context.Context) (string, error) {
-		incrementer += 1
+		incrementer++
 		return "only once", nil
 	})
 
@@ -24,8 +25,7 @@ func TestSingletonBaseCase(t *testing.T) {
 func TestSingletonPanic(t *testing.T) {
 	ctx := context.Background()
 	once := Singleton[string](func(ctx context.Context) (string, error) {
-		panic("test panic")
-		return "only once", nil
+		return "", fmt.Errorf("test error")
 	})
 	assert.Panics(t, func() {
 		once.Get(ctx)

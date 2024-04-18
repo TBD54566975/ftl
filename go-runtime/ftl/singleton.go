@@ -5,25 +5,23 @@ import (
 	"sync"
 )
 
-type InputLambda[T any] func(context.Context) (T, error)
-
-type SingletonConstructor[T any] struct {
-	Fn   InputLambda[T]
-	Out  T
-	Once sync.Once
+type SingletonHandle[T any] struct {
+	fn   func(context.Context) (T, error)
+	out  T
+	once *sync.Once
 }
 
-func (sf *SingletonConstructor[T]) Get(ctx context.Context) T {
-	sf.Once.Do(func() {
-		t, err := sf.Fn(ctx)
+func (sh *SingletonHandle[T]) Get(ctx context.Context) T {
+	sh.once.Do(func() {
+		t, err := sh.fn(ctx)
 		if err != nil {
 			panic(err)
 		}
-		sf.Out = t
+		sh.out = t
 	})
-	return sf.Out
+	return sh.out
 }
 
-func Singleton[T any](fn InputLambda[T]) SingletonConstructor[T] {
-    return SingletonConstructor[T]{Fn: fn}
+func Singleton[T any](fn func(context.Context) (T, error)) SingletonHandle[T] {
+	return SingletonHandle[T]{fn: fn, once: &sync.Once{}}
 }
