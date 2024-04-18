@@ -8,6 +8,11 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+// Handle represents a resource that can be retrieved such as a database connection, secret, etc.
+type Handle[T any] interface {
+	Get(ctx context.Context) T
+}
+
 // Unit is a type that has no value.
 //
 // It can be used as a parameter or return value to indicate that a function
