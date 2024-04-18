@@ -13,7 +13,7 @@ type SingletonConstructor[T any] struct {
 	Once sync.Once
 }
 
-func (sf SingletonConstructor[T]) Get(ctx context.Context) T {
+func (sf *SingletonConstructor[T]) Get(ctx context.Context) T {
 	sf.Once.Do(func() {
 		t, err := sf.Fn(ctx)
 		if err != nil {
