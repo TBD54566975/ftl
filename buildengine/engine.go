@@ -452,7 +452,6 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 	}
 
 	topology := TopologicalSort(graph)
-
 	errCh := make(chan error, 1024)
 	for _, group := range topology {
 		// Collect schemas to be inserted into "built" map for subsequent groups.
@@ -464,6 +463,8 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 			key := ProjectKey(keyStr)
 
 			wg.Go(func() error {
+				logger := log.FromContext(ctx).Scope(string(key))
+				ctx = log.ContextWithLogger(ctx, logger)
 				err := e.tryBuild(ctx, mustBuild, key, builtModules, schemas, callback)
 				if err != nil {
 					errCh <- err
@@ -499,6 +500,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 
 func (e *Engine) tryBuild(ctx context.Context, mustBuild map[ProjectKey]bool, key ProjectKey, builtModules map[string]*schema.Module, schemas chan *schema.Module, callback buildCallback) error {
 	logger := log.FromContext(ctx)
+
 	if !mustBuild[key] {
 		return e.mustSchema(ctx, key, builtModules, schemas)
 	}
@@ -510,7 +512,7 @@ func (e *Engine) tryBuild(ctx context.Context, mustBuild map[ProjectKey]bool, ke
 
 	for _, dep := range meta.project.Config().Dependencies {
 		if _, ok := builtModules[dep]; !ok {
-			logger.Warnf("%q build skipped because its dependency %q failed to build", key, dep)
+			logger.Warnf("build skipped because dependency %q failed to build", dep)
 			return nil
 		}
 	}

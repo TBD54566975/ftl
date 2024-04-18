@@ -178,8 +178,7 @@ message StreamDeploymentLogsRequest {
 }
 message StreamDeploymentLogsResponse {}
 
-message StatusRequest {
-}
+message StatusRequest {}
 message StatusResponse {
   message Controller {
     string key = 1;
