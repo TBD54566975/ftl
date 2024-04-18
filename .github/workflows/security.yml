@@ -1,7 +1,7 @@
 name: Security and License Scans
 
 on:
-  pull_request: # TODO-BEFORE-MERGE: _target:
+  pull_request_target:
     branches:
       - main
 
