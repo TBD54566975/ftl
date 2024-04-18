@@ -25,27 +25,6 @@ func UnwrapAll(err error) []error {
 	return out
 }
 
-// UnwrapAllExcludingIntermediaries recursively unwraps all errors in err, excluding all intermediate errors.
-//
-//nolint:errorlint
-func UnwrapAllExcludingIntermediaries(err error) []error {
-	out := []error{}
-	if inner, ok := err.(interface{ Unwrap() []error }); ok {
-		for _, e := range inner.Unwrap() {
-			out = append(out, UnwrapAllExcludingIntermediaries(e)...)
-		}
-		return out
-	}
-	if inner, ok := err.(interface{ Unwrap() error }); ok && inner.Unwrap() != nil {
-		out = append(out, UnwrapAllExcludingIntermediaries(inner.Unwrap())...)
-	}
-	// only add the error if it is not an intermediary error
-	if len(out) == 0 {
-		out = append(out, err)
-	}
-	return out
-}
-
 // Innermost returns true if err cannot be further unwrapped.
 //
 //nolint:errorlint
