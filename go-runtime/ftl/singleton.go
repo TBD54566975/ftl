@@ -25,7 +25,5 @@ func (sf *SingletonConstructor[T]) Get(ctx context.Context) T {
 }
 
 func Singleton[T any](fn InputLambda[T]) SingletonConstructor[T] {
-	var sf SingletonConstructor[T]
-	sf.Fn = fn
-	return sf
+    return SingletonConstructor[T]{Fn: fn}
 }
