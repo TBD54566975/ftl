@@ -194,7 +194,10 @@ to your valuable work:
   [here](https://medium.com/@slamflipstrom/a-beginners-guide-to-squashing-commits-with-git-rebase-8185cf6e62ec), and if you're
   having trouble - feel free to ask a member or the community for help or leave the commits as-is, and flag that you'd like
   rebasing assistance in your PR! We're here to support you.
-- Open a PR in the project to bring in the code from your feature branch.
+- Open a PR in the project to bring in the code from your feature branch. We use
+  [Conventional Commits](https://www.conventionalcommits.org/), so prefix your PR title
+  with `feat:`, `fix:`, or `chore:` appropriately. `feat` will result in a minor version
+  bump, and `fix` will result in a patch version bump.
 - The maintainers noted in the `CODEOWNERS` file will review your PR and optionally
   open a discussion about its contents before moving forward.
 - Remain responsive to follow-up questions, be open to making requested changes, and...
