@@ -99,7 +99,7 @@ integration-tests *test:
   #!/bin/bash
   set -euo pipefail
   testName=${1:-}
-  go test -fullpath -count 1 -v -tags integration -run "$testName" ./integration
+  go test -fullpath -count 1 -v -tags integration -run "$testName" ./integration ./backend/controller/cronjobs
 
 # Run README doc tests
 test-readme *args:
