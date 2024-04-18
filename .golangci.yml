@@ -1,11 +1,6 @@
 run:
   tests: true
   timeout: 5m
-  skip-dirs:
-    - resources
-    - old
-  skip-files:
-    - cmd/protopkg/main.go
 
 output:
   print-issued-lines: false
@@ -78,8 +73,8 @@ linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
   govet:
-    check-shadowing: true
-    use-installed-packages: true
+    enable:
+      - 'shadow'
   dupl:
     threshold: 100
   goconst:
@@ -113,6 +108,11 @@ linters-settings:
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0
+  exclude-dirs:
+    - resources
+    - old
+  exclude-files:
+    - cmd/protopkg/main.go
   exclude-use-default: false
   exclude:
     # Captured by errcheck.
