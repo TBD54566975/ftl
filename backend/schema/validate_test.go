@@ -171,7 +171,6 @@ func TestValidate(t *testing.T) {
 				"6:10-10: verb can not have multiple instances of ingress",
 			},
 		},
-
 		{name: "CronOnNonEmptyVerb",
 			schema: `
 				module one {
@@ -186,6 +185,16 @@ func TestValidate(t *testing.T) {
 				"6:7-7: verb verbWithWrongOutput: cron job can not have a response type",
 			},
 		},
+		{name: "IngressBodyExternalType",
+			schema: `
+				module two {
+					data Data {}
+				}
+				module one {
+					verb a(HttpRequest<two.Data>) HttpResponse<two.Data, Empty>
+						+ingress http GET /a
+				}
+			`},
 	}
 
 	for _, test := range tests {

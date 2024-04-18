@@ -264,7 +264,7 @@ func ValidateModule(module *Module) error {
 				merr = append(merr, errorf(n, "Verb name %q is a reserved word", n.Name))
 			}
 
-			merr = append(merr, validateVerbMetadata(scopes, n)...)
+			merr = append(merr, validateVerbMetadata(scopes, module, n)...)
 
 		case *Data:
 			if !ValidateName(n.Name) {
@@ -443,7 +443,7 @@ func errorf(pos interface{ Position() Position }, format string, args ...interfa
 	return Errorf(pos.Position(), pos.Position().Column, format, args...)
 }
 
-func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
+func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error) {
 	// Validate metadata
 	metadataTypes := map[reflect.Type]bool{}
 	for _, md := range n.Metadata {
@@ -456,9 +456,9 @@ func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 
 		switch md := md.(type) {
 		case *MetadataIngress:
-			reqBodyType, reqBody, errs := validateIngressRequestOrResponse(scopes, n, "request", n.Request)
+			reqBodyType, reqBody, errs := validateIngressRequestOrResponse(scopes, module, n, "request", n.Request)
 			merr = append(merr, errs...)
-			_, _, errs = validateIngressRequestOrResponse(scopes, n, "response", n.Response)
+			_, _, errs = validateIngressRequestOrResponse(scopes, module, n, "response", n.Response)
 			merr = append(merr, errs...)
 
 			// Validate path
@@ -492,11 +492,11 @@ func validateVerbMetadata(scopes Scopes, n *Verb) (merr []error) {
 	return
 }
 
-func validateIngressRequestOrResponse(scopes Scopes, n *Verb, reqOrResp string, r Type) (fieldType Type, body Symbol, merr []error) {
+func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, reqOrResp string, r Type) (fieldType Type, body Symbol, merr []error) {
 	rref, _ := r.(*Ref)
 	resp, sym := ResolveTypeAs[*Data](scopes, r)
-	module, _ := sym.Module.Get()
-	if sym == nil || module == nil || module.Name != "builtin" || resp.Name != "Http"+strings.Title(reqOrResp) {
+	m, _ := sym.Module.Get()
+	if sym == nil || m == nil || m.Name != "builtin" || resp.Name != "Http"+strings.Title(reqOrResp) {
 		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpRequest", n.Name, reqOrResp, r))
 		return
 	}
@@ -512,9 +512,16 @@ func validateIngressRequestOrResponse(scopes Scopes, n *Verb, reqOrResp string, 
 	if opt, ok := fieldType.(*Optional); ok {
 		fieldType = opt.Type
 	}
+
+	if ref, err := ParseRef(fieldType.String()); err == nil {
+		if ref.Module != "" && ref.Module != module.Name {
+			return // ignores references to other modules.
+		}
+	}
+
 	bodySym := scopes.ResolveType(fieldType)
 	if bodySym == nil {
-		merr = append(merr, errorf(resp, "ingress verb %s: couldn't resolve %s body type %s", n.Name, reqOrResp, fieldType))
+		merr = append(merr, errorf(r, "ingress verb %s: couldn't resolve %s body type %s", n.Name, reqOrResp, fieldType))
 		return
 	}
 	body = bodySym.Symbol
