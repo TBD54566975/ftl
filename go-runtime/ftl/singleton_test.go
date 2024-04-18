@@ -20,3 +20,14 @@ func TestSingletonBaseCase(t *testing.T) {
 	assert.Equal(t, once.Get(ctx), "only once")
 	assert.Equal(t, incrementer, 1)
 }
+
+func TestSingletonPanic(t *testing.T) {
+	ctx := context.Background()
+	once := Singleton[string](func(ctx context.Context) (string, error) {
+		panic("test panic")
+		return "only once", nil
+	})
+	assert.Panics(t, func() {
+		once.Get(ctx)
+	})
+}
