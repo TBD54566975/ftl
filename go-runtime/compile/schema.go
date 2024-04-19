@@ -77,46 +77,50 @@ func wrapf(node ast.Node, err error, format string, args ...interface{}) *schema
 	return schema.Wrapf(pos, endCol, err, format, args...)
 }
 
+type errorSet map[string]*schema.Error
+
+func (e errorSet) add(err *schema.Error) {
+	e[err.Error()] = err
+}
+
+func (e errorSet) addAll(errs ...*schema.Error) {
+	for _, err := range errs {
+		e.add(err)
+	}
+}
+
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
-func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
+func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, []*schema.Error /*schema errors*/, error /*exceptions*/) {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
 	}, "./...")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if len(pkgs) == 0 {
-		return nil, nil, fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
+		return nil, nil, nil, fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
 	}
 	nativeNames := NativeNames{}
 	// Find module name
 	module := &schema.Module{}
 	merr := []error{}
+	schemaErrs := []*schema.Error{}
 	for _, pkg := range pkgs {
 		moduleName, ok := ftlModuleFromGoModule(pkg.PkgPath).Get()
 		if !ok {
-			return nil, nil, fmt.Errorf("package %q is not in the ftl namespace", pkg.PkgPath)
+			return nil, nil, nil, fmt.Errorf("package %q is not in the ftl namespace", pkg.PkgPath)
 		}
 		module.Name = moduleName
 		if len(pkg.Errors) > 0 {
 			for _, perr := range pkg.Errors {
-				if len(pkg.Syntax) > 0 {
-					merr = append(merr, wrapf(pkg.Syntax[0], perr, "%s", pkg.PkgPath))
-				} else {
-					merr = append(merr, fmt.Errorf("%s: %w", pkg.PkgPath, perr))
-				}
+				merr = append(merr, perr)
 			}
 		}
-		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}, errors: []*schema.Error{}}
+		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}, errors: errorSet{}}
 		for _, file := range pkg.Syntax {
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
-				defer func() {
-					if err != nil {
-						err = wrapf(node, err, "")
-					}
-				}()
 				switch node := node.(type) {
 				case *ast.CallExpr:
 					visitCallExpr(pctx, node)
@@ -142,7 +146,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 				return next()
 			})
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 		}
 		for decl, nativeName := range pctx.nativeNames {
@@ -152,17 +156,17 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, error) {
 			pctx.module.Decls = append(pctx.module.Decls, e)
 		}
 		if len(pctx.errors) > 0 {
-			var errs []error
-			for _, e := range pctx.errors {
-				errs = append(errs, e)
-			}
-			return nil, nil, errors.Join(errs...)
+			schemaErrs = append(schemaErrs, maps.Values(pctx.errors)...)
 		}
 	}
-	if len(merr) > 0 {
-		return nil, nil, errors.Join(merr...)
+	if len(schemaErrs) > 0 {
+		schema.SortErrorsByPosition(schemaErrs)
+		return nil, nil, schemaErrs, nil
 	}
-	return nativeNames, module, schema.ValidateModule(module)
+	if len(merr) > 0 {
+		return nil, nil, nil, errors.Join(merr...)
+	}
+	return nativeNames, module, nil, schema.ValidateModule(module)
 }
 
 func visitCallExpr(pctx *parseContext, node *ast.CallExpr) {
@@ -182,15 +186,15 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr) {
 
 func parseCall(pctx *parseContext, node *ast.CallExpr) {
 	if len(node.Args) != 3 {
-		pctx.errors = append(pctx.errors, errorf(node, "call must have exactly three arguments"))
+		pctx.errors.add(errorf(node, "call must have exactly three arguments"))
 		return
 	}
 	_, verbFn := deref[*types.Func](pctx.pkg, node.Args[1])
 	if verbFn == nil {
 		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
-			pctx.errors = append(pctx.errors, errorf(node.Args[1], "call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel))
+			pctx.errors.add(errorf(node.Args[1], "call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel))
 		}
-		pctx.errors = append(pctx.errors, errorf(node.Args[1], "call first argument must be a function"))
+		pctx.errors.add(errorf(node.Args[1], "call first argument must be a function"))
 		return
 	}
 	if pctx.activeVerb == nil {
@@ -198,7 +202,7 @@ func parseCall(pctx *parseContext, node *ast.CallExpr) {
 	}
 	moduleName, ok := ftlModuleFromGoModule(verbFn.Pkg().Path()).Get()
 	if !ok {
-		pctx.errors = append(pctx.errors, errorf(node.Args[1], "call first argument must be a function in an ftl module"))
+		pctx.errors.add(errorf(node.Args[1], "call first argument must be a function in an ftl module"))
 		return
 	}
 	ref := &schema.Ref{
@@ -216,13 +220,13 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 			var err error
 			name, err = strconv.Unquote(literal.Value)
 			if err != nil {
-				pctx.errors = append(pctx.errors, wrapf(node, err, ""))
+				pctx.errors.add(wrapf(node, err, ""))
 				return
 			}
 		}
 	}
 	if name == "" {
-		pctx.errors = append(pctx.errors, errorf(node, "config and secret declarations must have a single string literal argument"))
+		pctx.errors.add(errorf(node, "config and secret declarations must have a single string literal argument"))
 	}
 	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert
 
@@ -230,7 +234,7 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 	tp := pctx.pkg.TypesInfo.Types[index.Index].Type
 	st, ok := visitType(pctx, index.Index.Pos(), tp).Get()
 	if !ok {
-		pctx.errors = append(pctx.errors, errorf(index.Index, "unsupported type %q", tp))
+		pctx.errors.add(errorf(index.Index, "unsupported type %q", tp))
 		return
 	}
 
@@ -272,39 +276,39 @@ func checkSignature(pctx *parseContext, node *ast.FuncDecl, sig *types.Signature
 	results := sig.Results()
 
 	if params.Len() > 2 {
-		pctx.errors = append(pctx.errors, errorf(node, "must have at most two parameters (context.Context, struct)"))
+		pctx.errors.add(errorf(node, "must have at most two parameters (context.Context, struct)"))
 	}
 	if params.Len() == 0 {
-		pctx.errors = append(pctx.errors, errorf(node, "first parameter must be context.Context"))
+		pctx.errors.add(errorf(node, "first parameter must be context.Context"))
 	} else if !types.AssertableTo(contextIfaceType(), params.At(0).Type()) {
-		pctx.errors = append(pctx.errors, tokenErrorf(params.At(0).Pos(), params.At(0).Name(), "first parameter must be of type context.Context but is %s", params.At(0).Type()))
+		pctx.errors.add(tokenErrorf(params.At(0).Pos(), params.At(0).Name(), "first parameter must be of type context.Context but is %s", params.At(0).Type()))
 	}
 
 	if params.Len() == 2 {
 		if !isType[*types.Struct](params.At(1).Type()) {
-			pctx.errors = append(pctx.errors, tokenErrorf(params.At(1).Pos(), params.At(1).Name(), "second parameter must be a struct but is %s", params.At(1).Type()))
+			pctx.errors.add(tokenErrorf(params.At(1).Pos(), params.At(1).Name(), "second parameter must be a struct but is %s", params.At(1).Type()))
 		}
 		if params.At(1).Type().String() == ftlUnitTypePath {
-			pctx.errors = append(pctx.errors, tokenErrorf(params.At(1).Pos(), params.At(1).Name(), "second parameter must not be ftl.Unit"))
+			pctx.errors.add(tokenErrorf(params.At(1).Pos(), params.At(1).Name(), "second parameter must not be ftl.Unit"))
 		}
 
 		req = optional.Some(params.At(1))
 	}
 
 	if results.Len() > 2 {
-		pctx.errors = append(pctx.errors, errorf(node, "must have at most two results (struct, error)"))
+		pctx.errors.add(errorf(node, "must have at most two results (struct, error)"))
 	}
 	if results.Len() == 0 {
-		pctx.errors = append(pctx.errors, errorf(node, "must at least return an error"))
+		pctx.errors.add(errorf(node, "must at least return an error"))
 	} else if !types.AssertableTo(errorIFaceType(), results.At(results.Len()-1).Type()) {
-		pctx.errors = append(pctx.errors, tokenErrorf(results.At(results.Len()-1).Pos(), results.At(results.Len()-1).Name(), "must return an error but is %s", results.At(0).Type()))
+		pctx.errors.add(tokenErrorf(results.At(results.Len()-1).Pos(), results.At(results.Len()-1).Name(), "must return an error but is %s", results.At(0).Type()))
 	}
 	if results.Len() == 2 {
 		if !isType[*types.Struct](results.At(0).Type()) {
-			pctx.errors = append(pctx.errors, tokenErrorf(results.At(0).Pos(), results.At(0).Name(), "first result must be a struct but is %s", results.At(0).Type()))
+			pctx.errors.add(tokenErrorf(results.At(0).Pos(), results.At(0).Name(), "first result must be a struct but is %s", results.At(0).Type()))
 		}
 		if results.At(1).Type().String() == ftlUnitTypePath {
-			pctx.errors = append(pctx.errors, tokenErrorf(results.At(1).Pos(), results.At(1).Name(), "second result must not be ftl.Unit"))
+			pctx.errors.add(tokenErrorf(results.At(1).Pos(), results.At(1).Name(), "second result must not be ftl.Unit"))
 		}
 		resp = optional.Some(results.At(0))
 	}
@@ -329,20 +333,20 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 		}
 		directives, err := parseDirectives(node, fset, node.Doc)
 		if err != nil {
-			pctx.errors = append(pctx.errors, err)
+			pctx.errors.add(err)
 		}
 		for _, dir := range directives {
 			switch dir.(type) {
 			case *directiveExport:
 				if len(node.Specs) != 1 {
-					pctx.errors = append(pctx.errors, errorf(node, "error parsing ftl export directive: expected "+
+					pctx.errors.add(errorf(node, "error parsing ftl export directive: expected "+
 						"exactly one type declaration"))
 					return
 				}
 				if pctx.module.Name == "" {
 					pctx.module.Name = pctx.pkg.Name
 				} else if pctx.module.Name != pctx.pkg.Name && strings.TrimPrefix(pctx.pkg.Name, "ftl/") != pctx.module.Name {
-					pctx.errors = append(pctx.errors, errorf(node, "type export directive must be in the module package"))
+					pctx.errors.add(errorf(node, "type export directive must be in the module package"))
 					return
 				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
@@ -391,7 +395,7 @@ func visitTypeSpec(pctx *parseContext, node *ast.TypeSpec) {
 			enum.Type = typ
 			pctx.nativeNames[enum] = node.Name.Name
 		} else {
-			pctx.errors = append(pctx.errors, errorf(node, "unsupported type %q",
+			pctx.errors.add(errorf(node, "unsupported type %q",
 				pctx.pkg.TypesInfo.TypeOf(node.Type).Underlying()))
 		}
 	} else {
@@ -409,7 +413,7 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 	}
 	c, ok := pctx.pkg.TypesInfo.Defs[node.Names[0]].(*types.Const)
 	if !ok {
-		pctx.errors = append(pctx.errors, errorf(node, "could not extract enum %s: expected exactly one variant name", enum.Name))
+		pctx.errors.add(errorf(node, "could not extract enum %s: expected exactly one variant name", enum.Name))
 		return
 	}
 	if value, ok := visitConst(pctx, c).Get(); ok {
@@ -421,7 +425,7 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 		}
 		enum.Variants = append(enum.Variants, variant)
 	} else {
-		pctx.errors = append(pctx.errors, errorf(node, "unsupported type %q for enum variant %q", c.Type(), c.Name()))
+		pctx.errors.add(errorf(node, "unsupported type %q for enum variant %q", c.Type(), c.Name()))
 	}
 }
 
@@ -431,7 +435,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	}
 	directives, err := parseDirectives(node, fset, node.Doc)
 	if err != nil {
-		pctx.errors = append(pctx.errors, err)
+		pctx.errors.add(err)
 	}
 	var metadata []schema.Metadata
 	isVerb := false
@@ -442,7 +446,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 			if pctx.module.Name == "" {
 				pctx.module.Name = pctx.pkg.Name
 			} else if pctx.module.Name != pctx.pkg.Name {
-				pctx.errors = append(pctx.errors, errorf(node, "function export directive must be in the module package"))
+				pctx.errors.add(errorf(node, "function export directive must be in the module package"))
 			}
 
 		case *directiveIngress:
@@ -471,7 +475,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 
 	for _, name := range pctx.nativeNames {
 		if name == node.Name.Name {
-			pctx.errors = append(pctx.errors, noEndColumnErrorf(node.Pos(), "verb %q already exported", node.Name.Name))
+			pctx.errors.add(noEndColumnErrorf(node.Pos(), "verb %q already exported", node.Name.Name))
 			return nil
 		}
 	}
@@ -479,7 +483,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		pctx.errors = append(pctx.errors, errorf(node, "ftl:export cannot be a method"))
+		pctx.errors.add(errorf(node, "ftl:export cannot be a method"))
 		return nil
 	}
 	params := sig.Params()
@@ -501,11 +505,11 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	reqV, reqOk := req.Get()
 	resV, respOk := resp.Get()
 	if !reqOk {
-		pctx.errors = append(pctx.errors, tokenErrorf(params.At(1).Pos(), params.At(1).Name(),
+		pctx.errors.add(tokenErrorf(params.At(1).Pos(), params.At(1).Name(),
 			"unsupported request type %q", params.At(1).Type()))
 	}
 	if !respOk {
-		pctx.errors = append(pctx.errors, tokenErrorf(results.At(0).Pos(), results.At(0).Name(),
+		pctx.errors.add(tokenErrorf(results.At(0).Pos(), results.At(0).Name(),
 			"unsupported response type %q", results.At(0).Type()))
 	}
 	verb = &schema.Verb{
@@ -540,14 +544,14 @@ func ftlModuleFromGoModule(pkgPath string) optional.Option[string] {
 func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Option[*schema.Ref] {
 	named, ok := tnode.(*types.Named)
 	if !ok {
-		pctx.errors = append(pctx.errors, noEndColumnErrorf(pos, "expected named type but got %s", tnode))
+		pctx.errors.add(noEndColumnErrorf(pos, "expected named type but got %s", tnode))
 		return optional.None[*schema.Ref]()
 	}
 	nodePath := named.Obj().Pkg().Path()
 	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
 		destModule, ok := ftlModuleFromGoModule(nodePath).Get()
 		if !ok {
-			pctx.errors = append(pctx.errors, tokenErrorf(pos, nodePath, "struct declared in non-FTL module %s", nodePath))
+			pctx.errors.add(tokenErrorf(pos, nodePath, "struct declared in non-FTL module %s", nodePath))
 			return optional.None[*schema.Ref]()
 		}
 		dataRef := &schema.Ref{
@@ -620,7 +624,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 
 	s, ok := named.Underlying().(*types.Struct)
 	if !ok {
-		pctx.errors = append(pctx.errors, tokenErrorf(pos, named.String(), "expected struct but got %s", named))
+		pctx.errors.add(tokenErrorf(pos, named.String(), "expected struct but got %s", named))
 		return optional.None[*schema.Ref]()
 	}
 
@@ -630,8 +634,8 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 		if ft, ok := visitType(pctx, f.Pos(), f.Type()).Get(); ok {
 			// Check if field is exported
 			if len(f.Name()) > 0 && unicode.IsLower(rune(f.Name()[0])) {
-				pctx.errors = append(pctx.errors,
-					tokenErrorf(f.Pos(), f.Name(), "struct field %s must be exported by starting with an uppercase letter", f.Name()))
+				pctx.errors.add(tokenErrorf(f.Pos(), f.Name(),
+					"struct field %s must be exported by starting with an uppercase letter", f.Name()))
 				fieldErrors = true
 			}
 
@@ -658,7 +662,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 				Metadata: metadata,
 			})
 		} else {
-			pctx.errors = append(pctx.errors, tokenErrorf(f.Pos(), f.Name(), "unsupported type %q for field %q", f.Type(), f.Name()))
+			pctx.errors.add(tokenErrorf(f.Pos(), f.Name(), "unsupported type %q for field %q", f.Type(), f.Name()))
 			fieldErrors = true
 		}
 	}
@@ -676,7 +680,7 @@ func visitConst(pctx *parseContext, cnode *types.Const) optional.Option[schema.V
 		case types.String:
 			value, err := strconv.Unquote(cnode.Val().String())
 			if err != nil {
-				pctx.errors = append(pctx.errors, tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported string constant"))
+				pctx.errors.add(tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported string constant"))
 				return optional.None[schema.Value]()
 			}
 			return optional.Some[schema.Value](&schema.StringValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: value})
@@ -684,7 +688,7 @@ func visitConst(pctx *parseContext, cnode *types.Const) optional.Option[schema.V
 		case types.Int, types.Int64:
 			value, err := strconv.ParseInt(cnode.Val().String(), 10, 64)
 			if err != nil {
-				pctx.errors = append(pctx.errors, tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported int constant"))
+				pctx.errors.add(tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported int constant"))
 				return optional.None[schema.Value]()
 			}
 			return optional.Some[schema.Value](&schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)})
@@ -716,8 +720,8 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 				// If this type is named and declared in another module, it's a reference.
 				// The only basic-typed references supported are enums.
 				if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
-					pctx.errors = append(pctx.errors,
-						noEndColumnErrorf(pos, "unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
+					pctx.errors.add(noEndColumnErrorf(pos,
+						"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
 					return optional.None[schema.Type]()
 				}
 				base := path.Dir(pctx.pkg.PkgPath)
@@ -774,7 +778,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 		default:
 			nodePath := named.Obj().Pkg().Path()
 			if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) && !strings.HasPrefix(nodePath, "ftl/") {
-				pctx.errors = append(pctx.errors, noEndColumnErrorf(pos, "unsupported external type %s", nodePath+"."+named.Obj().Name()))
+				pctx.errors.add(noEndColumnErrorf(pos, "unsupported external type %s", nodePath+"."+named.Obj().Name()))
 				return optional.None[schema.Type]()
 			}
 			if ref, ok := visitStruct(pctx, pos, tnode).Get(); ok {
@@ -793,11 +797,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 		if underlying.String() == "any" {
 			return optional.Some[schema.Type](&schema.Any{Pos: goPosToSchemaPos(pos)})
 		}
-		pctx.errors = append(pctx.errors, noEndColumnErrorf(pos, "unsupported type %q", tnode))
 		return optional.None[schema.Type]()
 
 	default:
-		pctx.errors = append(pctx.errors, noEndColumnErrorf(pos, "unsupported type %q", tnode))
 		return optional.None[schema.Type]()
 	}
 }
@@ -891,7 +893,7 @@ type parseContext struct {
 	nativeNames NativeNames
 	enums       enums
 	activeVerb  *schema.Verb
-	errors      []*schema.Error
+	errors      errorSet
 }
 
 // pathEnclosingInterval returns the PackageInfo and ast.Node that

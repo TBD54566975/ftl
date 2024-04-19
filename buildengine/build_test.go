@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -65,10 +66,12 @@ func assertGeneratedModule(generatedModulePath string, expectedContent string) a
 func assertBuildProtoErrors(msgs ...string) assertion {
 	return func(t testing.TB, bctx buildContext) error {
 		t.Helper()
-		errorList, err := loadProtoErrors(filepath.Join(bctx.moduleDir, bctx.buildDir))
+		config, err := moduleconfig.LoadModuleConfig(bctx.moduleDir)
+		assert.NoError(t, err, "Error loading module config")
+		errorList, err := loadProtoErrors(config)
 		assert.NoError(t, err, "Error loading proto errors")
 
-		expected := make([]error, 0, len(msgs))
+		expected := make([]*schema.Error, 0, len(msgs))
 		for _, msg := range msgs {
 			expected = append(expected, &schema.Error{Msg: msg})
 		}
@@ -78,13 +81,7 @@ func assertBuildProtoErrors(msgs ...string) assertion {
 			e.EndColumn = 0
 		}
 
-		errs := make([]error, 0, len(errorList.Errors))
-		for _, e := range errorList.Errors {
-			errs = append(errs, e)
-		}
-		schema.SortErrorsByPosition(errs)
-
-		assert.Equal(t, errs, expected, assert.Exclude[schema.Position]())
+		assert.Equal(t, errorList.Errors, expected, assert.Exclude[schema.Position]())
 		return nil
 	}
 }

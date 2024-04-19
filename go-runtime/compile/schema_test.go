@@ -43,7 +43,7 @@ func TestExtractModuleSchema(t *testing.T) {
 	}
 	prebuildTestModule(t, "testdata/one", "testdata/two")
 
-	_, actual, err := ExtractModuleSchema("testdata/one")
+	_, actual, _, err := ExtractModuleSchema("testdata/one")
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module one {
@@ -127,7 +127,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	_, actual, err := ExtractModuleSchema("testdata/two")
+	_, actual, _, err := ExtractModuleSchema("testdata/two")
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module two {
@@ -239,15 +239,13 @@ func TestErrorReporting(t *testing.T) {
 		t.SkipNow()
 	}
 	pwd, _ := os.Getwd()
-	_, _, err := ExtractModuleSchema("testdata/failing")
-	merr := errors.DeduplicateErrors(errors.UnwrapAll(err))
-	schema.SortErrorsByPosition(merr)
+	_, _, schemaErrs, err := ExtractModuleSchema("testdata/failing")
+	assert.NoError(t, err)
 
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
-	assert.EqualError(t, errors.Join(merr...),
+	assert.EqualError(t, errors.Join(genericizeErrors(schemaErrs)...),
 		filename+":10:13-35: config and secret declarations must have a single string literal argument\n"+
 			filename+":13:2-10: unsupported type \"error\" for field \"BadParam\"\n"+
-			filename+":13:2-2: unsupported type \"error\"\n"+
 			filename+":16:2-17: unsupported type \"uint64\" for field \"AnotherBadParam\"\n"+
 			filename+":19:3-3: unexpected token \"verb\" (expected Directive)\n"+
 			filename+":25:36-39: unsupported request type \"ftl/failing.Request\"\n"+
@@ -284,6 +282,15 @@ func TestDuplicateVerbNames(t *testing.T) {
 		t.SkipNow()
 	}
 	pwd, _ := os.Getwd()
-	_, _, err := ExtractModuleSchema("testdata/duplicateverbs")
-	assert.EqualError(t, err, filepath.Join(pwd, `testdata/duplicateverbs/duplicateverbs.go`)+`:23:1-1: verb "Time" already exported`)
+	_, _, schemaErrs, err := ExtractModuleSchema("testdata/duplicateverbs")
+	assert.NoError(t, err)
+	assert.EqualError(t, errors.Join(genericizeErrors(schemaErrs)...), filepath.Join(pwd, `testdata/duplicateverbs/duplicateverbs.go`)+`:23:1-1: verb "Time" already exported`)
+}
+
+func genericizeErrors(schemaErrs []*schema.Error) []error {
+	errs := make([]error, len(schemaErrs))
+	for i, schemaErr := range schemaErrs {
+		errs[i] = schemaErr
+	}
+	return errs
 }
