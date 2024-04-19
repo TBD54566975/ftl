@@ -53,6 +53,9 @@ module todo {
 }
 
 module foo {
+  // SumType comment
+  sumtype IntOrBool = Int | Bool
+
   // A comment
   enum Color(String) {
 	Red("Red")
@@ -421,9 +424,6 @@ module foo {
     Blue(1)
     Green(2)
   }
-
-  // SumType comment
-  sumtype IntOrBool = Int | Bool
 }
 `
 	actual, err := ParseModuleString("", input)
@@ -532,7 +532,10 @@ var testSchema = MustValidate(&Schema{
 				&SumType{
 					Comments: []string{"SumType comment"},
 					Name:     "IntOrBool",
-					Types:    []Type{&Int{}, &Bool{}},
+					Variants: []*SumTypeVariant{
+						{Type: &Int{}},
+						{Type: &Bool{}},
+					},
 				},
 			},
 		},
