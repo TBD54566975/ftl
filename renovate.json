@@ -22,6 +22,10 @@
       "matchPackageNames": ["eslint"],
       "enabled": false,
       "paths": ["frontend/**", "extensions/**"]
+    },
+    {
+      "matchPackageNames": ["connectrpc.com/connect"],
+      "enabled": false
     }
   ]
 }

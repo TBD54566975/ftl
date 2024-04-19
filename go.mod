@@ -3,7 +3,7 @@ module github.com/TBD54566975/ftl
 go 1.22.2
 
 require (
-	connectrpc.com/connect v1.16.0
+	connectrpc.com/connect v1.14.0
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/otelconnect v0.7.0
 	github.com/BurntSushi/toml v1.3.2
