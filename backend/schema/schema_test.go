@@ -423,11 +423,7 @@ module foo {
   }
 
   // SumType comment
-  sumtype BoundedCardinality {
-    Bool
-    // AddendType comment
-    Enum
-  }
+  sumtype IntOrBool = Int | Bool
 }
 `
 	actual, err := ParseModuleString("", input)
@@ -535,11 +531,8 @@ var testSchema = MustValidate(&Schema{
 				},
 				&SumType{
 					Comments: []string{"SumType comment"},
-					Namme:    "BoundedCardinality",
-					AddendTypes: []*AddendType{
-						{Type: &Bool{}},
-						{Type: &Enum{}, Comments: []string{"AddendType comment"}},
-					}
+					Name:     "IntOrBool",
+					Types:    []Type{&Int{}, &Bool{}},
 				},
 			},
 		},
