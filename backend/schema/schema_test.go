@@ -19,6 +19,9 @@ func TestSchemaString(t *testing.T) {
 	expected := Builtins().String() + `
 // A comment
 module todo {
+  // SumType comment
+  sumtype IntOrBool = Int | Bool
+
   config configValue String
   secret secretValue String
 
@@ -53,9 +56,6 @@ module todo {
 }
 
 module foo {
-  // SumType comment
-  sumtype IntOrBool = Int | Bool
-
   // A comment
   enum Color(String) {
 	Red("Red")
@@ -100,6 +100,11 @@ func TestImports(t *testing.T) {
 func TestVisit(t *testing.T) {
 	expected := `
 Module
+  SumType
+    SumTypeVariant
+      Int
+    SumTypeVariant
+      Bool
   Config
     String
   Secret
@@ -438,6 +443,14 @@ var testSchema = MustValidate(&Schema{
 			Name:     "todo",
 			Comments: []string{"A comment"},
 			Decls: []Decl{
+				/*&SumType{
+					Comments: []string{"SumType comment"},
+					Name: "IntOrBool",
+					Variants: []*SumTypeVariant{
+						{Type: &Int{}},
+						{Type: &Bool{}},
+					},
+				},*/
 				&Secret{
 					Name: "secretValue",
 					Type: &String{},
@@ -527,14 +540,6 @@ var testSchema = MustValidate(&Schema{
 						{Name: "Red", Value: &IntValue{Value: 0}},
 						{Name: "Blue", Value: &IntValue{Value: 1}},
 						{Name: "Green", Value: &IntValue{Value: 2}},
-					},
-				},
-				&SumType{
-					Comments: []string{"SumType comment"},
-					Name:     "IntOrBool",
-					Variants: []*SumTypeVariant{
-						{Type: &Int{}},
-						{Type: &Bool{}},
 					},
 				},
 			},

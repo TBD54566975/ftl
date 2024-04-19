@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"google.golang.org/protobuf/proto"
-	//schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
 type SumType struct {
@@ -43,35 +43,29 @@ func (s *SumType) schemaChildren() []Node {
 	return children
 }
 func (s *SumType) ToProto() proto.Message {
-	/*protoTypes := make([]schemapb.Type, len(s.Variants))
-	for i, v := range s.Variants {
-		protoTypes[i] = *typeToProto(v)
-	}
 	return &schemapb.SumType{
-		Pos:         posToProto(s.Pos),
-		Comments:    s.Comments,
-		Name:        s.Name,
-		Types: protoTypes,
-	}*/
-	return nil
+		Pos:      posToProto(s.Pos),
+		Comments: s.Comments,
+		Name:     s.Name,
+		Variants: nodeListToProto[*schemapb.SumTypeVariant](s.Variants),
+	}
 }
 
 func (s *SumType) GetName() string { return s.Name }
 
-/*func SumTypeFromProto(s *schemapb.SumType) *SumType {
-	types := make([]Type, len(s.Variants))
+func SumTypeFromProto(s *schemapb.SumType) *SumType {
+	variants := make([]*SumTypeVariant, len(s.Variants))
 	for i, v := range s.Variants {
-		t := typeToSchema(v)
-		types[i] = t
+		t := sumTypeVariantFromProto(v)
+		variants[i] = t
 	}
 	return &SumType{
-		Pos:         posFromProto(s.Pos),
-		Name:        s.Name,
-		Comments:    s.Comments,
-		Types:       types,
+		Pos:      posFromProto(s.Pos),
+		Name:     s.Name,
+		Comments: s.Comments,
+		Variants: variants,
 	}
 }
-*/
 
 type SumTypeVariant struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
@@ -80,11 +74,10 @@ type SumTypeVariant struct {
 }
 
 func (s *SumTypeVariant) ToProto() proto.Message {
-	/*return &schemapb.EnumVariant{
-		Pos:  posToProto(e.Pos),
-		Type: typeToProto(v),
-	}*/
-	return nil
+	return &schemapb.SumTypeVariant{
+		Pos:  posToProto(s.Pos),
+		Type: typeToProto(s.Type),
+	}
 }
 
 func (s *SumTypeVariant) Position() Position { return s.Pos }
@@ -93,4 +86,9 @@ func (s *SumTypeVariant) schemaChildren() []Node { return []Node{s.Type} }
 
 func (s *SumTypeVariant) String() string { return s.Type.String() }
 
-// todo pb converters
+func sumTypeVariantFromProto(v *schemapb.SumTypeVariant) *SumTypeVariant {
+	return &SumTypeVariant{
+		Pos:  posFromProto(v.Pos),
+		Type: typeToSchema(v.Type),
+	}
+}
