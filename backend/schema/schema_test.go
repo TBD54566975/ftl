@@ -421,6 +421,13 @@ module foo {
     Blue(1)
     Green(2)
   }
+
+  // SumType comment
+  sumtype BoundedCardinality {
+    Bool
+    // AddendType comment
+    Enum
+  }
 }
 `
 	actual, err := ParseModuleString("", input)
@@ -525,6 +532,14 @@ var testSchema = MustValidate(&Schema{
 						{Name: "Blue", Value: &IntValue{Value: 1}},
 						{Name: "Green", Value: &IntValue{Value: 2}},
 					},
+				},
+				&SumType{
+					Comments: []string{"SumType comment"},
+					Namme:    "BoundedCardinality",
+					AddendTypes: []*AddendType{
+						{Type: &Bool{}},
+						{Type: &Enum{}, Comments: []string{"AddendType comment"}},
+					}
 				},
 			},
 		},
