@@ -152,6 +152,10 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
+func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
 	if err, ok := s.registrationFailure.Load().Get(); ok {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to register runner: %w", err))

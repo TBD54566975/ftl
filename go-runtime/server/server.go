@@ -164,6 +164,10 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	}), nil
 }
 
+func (m *moduleServer) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }

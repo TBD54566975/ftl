@@ -16,6 +16,41 @@ message PingResponse {
   optional string not_ready = 1;
 }
 
+message ModuleContextRequest {
+  string module = 1;
+}
+
+message ModuleContextResponse {
+  message Ref {
+    optional string module = 1;
+    string name = 2;
+  }
+
+  message Config {
+    Ref ref = 1;
+    bytes data = 2;
+  }
+
+  message Secret {
+    Ref ref = 1;
+    bytes data = 2;
+  }
+  
+  enum DBType {
+      POSTGRES = 0;
+  }
+
+  message DSN {
+    string name = 1;
+    DBType type = 2;
+    string dsn = 3;
+  }
+
+  repeated Config configs = 1;
+  repeated Secret secrets = 2;
+  repeated DSN databases = 3;
+}
+
 message Metadata {
   message Pair {
     string key = 1;
@@ -50,6 +85,11 @@ message CallResponse {
 service VerbService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Get configuration state for the module
+  rpc GetModuleContext(ModuleContextRequest) returns (ModuleContextResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
