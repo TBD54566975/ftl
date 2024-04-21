@@ -15,6 +15,9 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
+const pollFrequency = time.Millisecond * 500
+const halfPollFrequency = time.Millisecond * 250
+
 func TestWatch(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
@@ -26,12 +29,14 @@ func TestWatch(t *testing.T) {
 	w := NewWatcher()
 	events, topic := startWatching(ctx, t, w, dir)
 
+	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
+
 	// Initiate a bunch of changes.
 	err := ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "two")
 	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 750) // midway between file scans
+	time.Sleep(pollFrequency)
 
 	// Delete a module
 	err = os.RemoveAll(filepath.Join(dir, "two"))
@@ -40,7 +45,7 @@ func TestWatch(t *testing.T) {
 	// Change a module.
 	updateModFile(t, filepath.Join(dir, "one"))
 
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(pollFrequency)
 	topic.Close()
 
 	allEvents := []WatchEvent{}
@@ -70,7 +75,7 @@ func TestWatch(t *testing.T) {
 			}
 		}
 	}
-	assert.True(t, found >= 4, "expected at least 4 events, got %d", found)
+	assert.True(t, found >= 4, "expected at least 4 events, got %d:\n%v", found, allEvents)
 }
 
 func TestWatchWithBuildModifyingFiles(t *testing.T) {
@@ -89,7 +94,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 
 	events, topic := startWatching(ctx, t, w, dir)
 
-	time.Sleep(time.Millisecond * 750) // midway between file scans
+	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
 
 	// Change a file in a module, within a transaction
 	transaction := w.GetTransaction(filepath.Join(dir, "one"))
@@ -102,7 +107,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	err = transaction.End()
 	assert.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(pollFrequency)
 	topic.Close()
 
 	allEvents := []WatchEvent{}
@@ -130,7 +135,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	w := NewWatcher()
 	events, topic := startWatching(ctx, t, w, dir)
 
-	time.Sleep(time.Millisecond * 750) // midway between file scans
+	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
 
 	// Change a file in a module, within a transaction
 	transaction := w.GetTransaction(filepath.Join(dir, "one"))
@@ -150,7 +155,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	err = transaction.End()
 	assert.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(pollFrequency)
 	topic.Close()
 
 	allEvents := []WatchEvent{}
@@ -176,7 +181,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 func startWatching(ctx context.Context, t *testing.T, w *Watcher, dir string) (chan WatchEvent, *pubsub.Topic[WatchEvent]) {
 	t.Helper()
 	events := make(chan WatchEvent, 128)
-	topic, err := w.Watch(ctx, time.Millisecond*500, []string{dir}, nil)
+	topic, err := w.Watch(ctx, pollFrequency, []string{dir}, nil)
 	assert.NoError(t, err)
 	topic.Subscribe(events)
 
