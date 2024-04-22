@@ -57,7 +57,7 @@
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <wire.version>4.9.9</wire.version>
         <grpc.version>1.63.0</grpc.version>
-        <logback.version>1.5.5</logback.version>
+        <logback.version>1.5.6</logback.version>
         <junit.version>5.10.2</junit.version>
         <logstash.version>7.4</logstash.version>
     </properties>
@@ -90,7 +90,7 @@
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.170</version>
+            <version>4.8.172</version>
         </dependency>
 
         <!-- Gson -->
@@ -456,7 +456,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.2.3</version>
+                        <version>3.2.4</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
