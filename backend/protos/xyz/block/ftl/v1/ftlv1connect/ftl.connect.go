@@ -39,6 +39,9 @@ const (
 const (
 	// VerbServicePingProcedure is the fully-qualified name of the VerbService's Ping RPC.
 	VerbServicePingProcedure = "/xyz.block.ftl.v1.VerbService/Ping"
+	// VerbServiceGetModuleContextProcedure is the fully-qualified name of the VerbService's
+	// GetModuleContext RPC.
+	VerbServiceGetModuleContextProcedure = "/xyz.block.ftl.v1.VerbService/GetModuleContext"
 	// VerbServiceCallProcedure is the fully-qualified name of the VerbService's Call RPC.
 	VerbServiceCallProcedure = "/xyz.block.ftl.v1.VerbService/Call"
 	// ControllerServicePingProcedure is the fully-qualified name of the ControllerService's Ping RPC.
@@ -96,6 +99,8 @@ const (
 type VerbServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// Get configuration state for the module
+	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
@@ -116,6 +121,12 @@ func NewVerbServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
+		getModuleContext: connect.NewClient[v1.ModuleContextRequest, v1.ModuleContextResponse](
+			httpClient,
+			baseURL+VerbServiceGetModuleContextProcedure,
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
 		call: connect.NewClient[v1.CallRequest, v1.CallResponse](
 			httpClient,
 			baseURL+VerbServiceCallProcedure,
@@ -126,13 +137,19 @@ func NewVerbServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // verbServiceClient implements VerbServiceClient.
 type verbServiceClient struct {
-	ping *connect.Client[v1.PingRequest, v1.PingResponse]
-	call *connect.Client[v1.CallRequest, v1.CallResponse]
+	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
+	getModuleContext *connect.Client[v1.ModuleContextRequest, v1.ModuleContextResponse]
+	call             *connect.Client[v1.CallRequest, v1.CallResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.VerbService.Ping.
 func (c *verbServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
+}
+
+// GetModuleContext calls xyz.block.ftl.v1.VerbService.GetModuleContext.
+func (c *verbServiceClient) GetModuleContext(ctx context.Context, req *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error) {
+	return c.getModuleContext.CallUnary(ctx, req)
 }
 
 // Call calls xyz.block.ftl.v1.VerbService.Call.
@@ -144,6 +161,8 @@ func (c *verbServiceClient) Call(ctx context.Context, req *connect.Request[v1.Ca
 type VerbServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// Get configuration state for the module
+	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
@@ -160,6 +179,12 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
+	verbServiceGetModuleContextHandler := connect.NewUnaryHandler(
+		VerbServiceGetModuleContextProcedure,
+		svc.GetModuleContext,
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
 	verbServiceCallHandler := connect.NewUnaryHandler(
 		VerbServiceCallProcedure,
 		svc.Call,
@@ -169,6 +194,8 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 		switch r.URL.Path {
 		case VerbServicePingProcedure:
 			verbServicePingHandler.ServeHTTP(w, r)
+		case VerbServiceGetModuleContextProcedure:
+			verbServiceGetModuleContextHandler.ServeHTTP(w, r)
 		case VerbServiceCallProcedure:
 			verbServiceCallHandler.ServeHTTP(w, r)
 		default:
@@ -182,6 +209,10 @@ type UnimplementedVerbServiceHandler struct{}
 
 func (UnimplementedVerbServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.Ping is not implemented"))
+}
+
+func (UnimplementedVerbServiceHandler) GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.GetModuleContext is not implemented"))
 }
 
 func (UnimplementedVerbServiceHandler) Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error) {
