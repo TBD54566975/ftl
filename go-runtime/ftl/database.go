@@ -1,25 +1,34 @@
 package ftl
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
-	"os"
-	"strings"
+
+	"github.com/TBD54566975/ftl/common/modulecontext"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Register Postgres driver
 )
 
-// PostgresDatabase returns a Postgres database connection for the named database.
-func PostgresDatabase(name string) *sql.DB {
-	module := strings.ToUpper(callerModule())
-	key := fmt.Sprintf("FTL_POSTGRES_DSN_%s_%s", module, strings.ToUpper(name))
-	dsn, ok := os.LookupEnv(key)
-	if !ok {
-		panic(fmt.Sprintf("missing DSN environment variable %s", key))
+type Database struct {
+	Name string
+}
+
+// PostgresDatabase returns a handler for the named database.
+func PostgresDatabase(name string) Database {
+	return Database{
+		Name: name,
 	}
-	db, err := sql.Open("pgx", dsn)
+}
+
+func (d Database) String() string { return fmt.Sprintf("database %q", d.Name) }
+
+// Get returns the sql db connection for the database.
+func (d Database) Get(ctx context.Context) *sql.DB {
+	provider := modulecontext.DBProviderFromContext(ctx)
+	db, err := provider.GetDB(d.Name)
 	if err != nil {
-		panic(fmt.Sprintf("failed to open database: %s", err))
+		panic(err.Error())
 	}
 	return db
 }

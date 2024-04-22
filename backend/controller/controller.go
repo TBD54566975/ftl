@@ -38,6 +38,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/common/modulecontext"
 	frontend "github.com/TBD54566975/ftl/frontend"
 	"github.com/TBD54566975/ftl/internal/cors"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -642,7 +644,33 @@ nextModule:
 
 // GetModuleContext retrieves config, secrets and DSNs for a module.
 func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
-	return nil, fmt.Errorf("not implemented")
+	// get module schema
+	schemas, err := s.dal.GetActiveDeploymentSchemas(ctx)
+	if err != nil {
+		return nil, err
+	}
+	schemas = slices.Filter(schemas, func(s *schema.Module) bool {
+		return s.Name == req.Msg.Module
+	})
+	if len(schemas) == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no schema found for module %q", req.Msg.Module))
+	} else if len(schemas) > 1 {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("multiple schemas found for module %q", req.Msg.Module))
+	}
+
+	b := modulecontext.NewBuilder(req.Msg.Module)
+	b = b.AddConfigFromManager(configuration.ConfigFromContext(ctx))
+	b = b.AddSecretsFromManager(configuration.SecretsFromContext(ctx))
+	b = b.AddDSNsFromEnvarsForModule(schemas[0])
+	moduleCtx, err := b.Build(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out, err := moduleCtx.ToProto(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(out), nil
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {

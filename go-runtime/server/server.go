@@ -10,7 +10,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/common/modulecontext"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
@@ -34,21 +34,17 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
-		// Add config manager to context.
-		cr := &cf.ProjectConfigResolver[cf.Configuration]{Config: uc.Config}
-		cm, err := cf.NewConfigurationManager(ctx, cr)
+		resp, err := verbServiceClient.GetModuleContext(ctx, connect.NewRequest(&ftlv1.ModuleContextRequest{
+			Module: moduleName,
+		}))
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get config: %w", err)
+		}
+		moduleCtx, err := modulecontext.NewBuilderFromProto(moduleName, resp.Msg).Build(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
-		ctx = cf.ContextWithConfig(ctx, cm)
-
-		// Add secrets manager to context.
-		sr := &cf.ProjectConfigResolver[cf.Secrets]{Config: uc.Config}
-		sm, err := cf.NewSecretsManager(ctx, sr)
-		if err != nil {
-			return nil, nil, err
-		}
-		ctx = cf.ContextWithSecrets(ctx, sm)
+		ctx = moduleCtx.ApplyToContext(ctx)
 
 		err = observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
