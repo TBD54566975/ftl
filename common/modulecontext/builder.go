@@ -66,8 +66,8 @@ type Builder struct {
 	dsns       []dsnEntry
 }
 
-func NewBuilder(moduleName string) Builder {
-	return Builder{
+func NewBuilder(moduleName string) *Builder {
+	return &Builder{
 		moduleName: moduleName,
 		configs:    []configOrSecretItem{},
 		secrets:    []configOrSecretItem{},
@@ -75,8 +75,8 @@ func NewBuilder(moduleName string) Builder {
 	}
 }
 
-func NewBuilderFromProto(moduleName string, response *ftlv1.ModuleContextResponse) Builder {
-	return Builder{
+func NewBuilderFromProto(moduleName string, response *ftlv1.ModuleContextResponse) *Builder {
+	return &Builder{
 		moduleName: moduleName,
 		configs: slices.Map(response.Configs, func(c *ftlv1.ModuleContextResponse_Config) configOrSecretItem {
 			return refValuePair{ref: refFromProto(c.Ref), resolver: dataResolver{data: c.Data}}
@@ -90,7 +90,7 @@ func NewBuilderFromProto(moduleName string, response *ftlv1.ModuleContextRespons
 	}
 }
 
-func (b Builder) Build(ctx context.Context) (*ModuleContext, error) {
+func (b *Builder) Build(ctx context.Context) (*ModuleContext, error) {
 	cm, err := newInMemoryConfigManager[cf.Configuration](ctx)
 	if err != nil {
 		return nil, err
@@ -135,7 +135,7 @@ func newInMemoryConfigManager[R cf.Role](ctx context.Context) (*cf.Manager[R], e
 	return manager, nil
 }
 
-func buildConfigOrSecrets[R cf.Role](ctx context.Context, b Builder, manager cf.Manager[R], items []configOrSecretItem) error {
+func buildConfigOrSecrets[R cf.Role](ctx context.Context, b *Builder, manager cf.Manager[R], items []configOrSecretItem) error {
 	for _, item := range items {
 		switch item := item.(type) {
 		case refValuePair:
@@ -174,7 +174,7 @@ func buildConfigOrSecrets[R cf.Role](ctx context.Context, b Builder, manager cf.
 	return nil
 }
 
-func (b Builder) AddDSNsFromEnvarsForModule(module *schema.Module) Builder {
+func (b *Builder) AddDSNsFromEnvarsForModule(module *schema.Module) *Builder {
 	// remove in favor of a non-envar approach once it is available
 	for _, decl := range module.Decls {
 		dbDecl, ok := decl.(*schema.Database)
@@ -192,12 +192,12 @@ func (b Builder) AddDSNsFromEnvarsForModule(module *schema.Module) Builder {
 	return b
 }
 
-func (b Builder) AddConfigFromManager(cm *cf.Manager[cf.Configuration]) Builder {
+func (b *Builder) AddConfigFromManager(cm *cf.Manager[cf.Configuration]) *Builder {
 	b.configs = append(b.configs, configManager[cf.Configuration]{manager: cm})
 	return b
 }
 
-func (b Builder) AddSecretsFromManager(sm *cf.Manager[cf.Secrets]) Builder {
+func (b *Builder) AddSecretsFromManager(sm *cf.Manager[cf.Secrets]) *Builder {
 	b.secrets = append(b.secrets, configManager[cf.Secrets]{manager: sm})
 	return b
 }

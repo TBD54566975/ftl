@@ -659,9 +659,9 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	}
 
 	b := modulecontext.NewBuilder(req.Msg.Module)
-	b = b.AddConfigFromManager(configuration.ConfigFromContext(ctx))
-	b = b.AddSecretsFromManager(configuration.SecretsFromContext(ctx))
-	b = b.AddDSNsFromEnvarsForModule(schemas[0])
+	b.AddConfigFromManager(configuration.ConfigFromContext(ctx))
+	b.AddSecretsFromManager(configuration.SecretsFromContext(ctx))
+	b.AddDSNsFromEnvarsForModule(schemas[0])
 	moduleCtx, err := b.Build(ctx)
 	if err != nil {
 		return nil, err
