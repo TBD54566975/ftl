@@ -33,6 +33,8 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 			out = append(out, ConfigFromProto(n.Config))
 		case *schemapb.Decl_Secret:
 			out = append(out, SecretFromProto(n.Secret))
+		case *schemapb.Decl_SumType:
+			out = append(out, SumTypeFromProto(n.SumType))
 		}
 	}
 	return out

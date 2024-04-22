@@ -1688,9 +1688,9 @@ export class SumType extends Message<SumType> {
   name = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.SumTypeVariant variants = 4;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Type types = 4;
    */
-  variants: SumTypeVariant[] = [];
+  types: Type[] = [];
 
   constructor(data?: PartialMessage<SumType>) {
     super();
@@ -1703,7 +1703,7 @@ export class SumType extends Message<SumType> {
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "variants", kind: "message", T: SumTypeVariant, repeated: true },
+    { no: 4, name: "types", kind: "message", T: Type, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SumType {
@@ -1720,49 +1720,6 @@ export class SumType extends Message<SumType> {
 
   static equals(a: SumType | PlainMessage<SumType> | undefined, b: SumType | PlainMessage<SumType> | undefined): boolean {
     return proto3.util.equals(SumType, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.schema.SumTypeVariant
- */
-export class SumTypeVariant extends Message<SumTypeVariant> {
-  /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
-   */
-  pos?: Position;
-
-  /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type type = 2;
-   */
-  type?: Type;
-
-  constructor(data?: PartialMessage<SumTypeVariant>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.schema.SumTypeVariant";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "type", kind: "message", T: Type },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SumTypeVariant {
-    return new SumTypeVariant().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SumTypeVariant {
-    return new SumTypeVariant().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SumTypeVariant {
-    return new SumTypeVariant().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SumTypeVariant | PlainMessage<SumTypeVariant> | undefined, b: SumTypeVariant | PlainMessage<SumTypeVariant> | undefined): boolean {
-    return proto3.util.equals(SumTypeVariant, a, b);
   }
 }
 

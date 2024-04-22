@@ -217,12 +217,7 @@ message SumType {
   optional Position pos = 1;
   repeated string comments = 2;
   string name = 3;
-  repeated SumTypeVariant variants = 4;
-}
-
-message SumTypeVariant {
-  optional Position pos = 1;
-  Type type = 2;
+  repeated Type types = 4;
 }
 
 message Time {

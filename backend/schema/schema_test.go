@@ -20,7 +20,10 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   // SumType comment
-  sumtype IntOrBool = Int | Bool
+  sumtype IntOrBool {
+    Int
+    Bool
+  }
 
   config configValue String
   secret secretValue String
@@ -101,10 +104,8 @@ func TestVisit(t *testing.T) {
 	expected := `
 Module
   SumType
-    SumTypeVariant
-      Int
-    SumTypeVariant
-      Bool
+    Int
+    Bool
   Config
     String
   Secret
@@ -382,6 +383,12 @@ func TestParseModule(t *testing.T) {
 	input := `
 // A comment
 module todo {
+  // SumType comment
+  sumtype IntOrBool {
+    Int
+    Bool
+  }
+
   config configValue String
   secret secretValue String
   database testdb
@@ -443,14 +450,15 @@ var testSchema = MustValidate(&Schema{
 			Name:     "todo",
 			Comments: []string{"A comment"},
 			Decls: []Decl{
-				/*&SumType{
+				&SumType{
 					Comments: []string{"SumType comment"},
-					Name: "IntOrBool",
-					Variants: []*SumTypeVariant{
+					Name:     "IntOrBool",
+					Types:    []Type{&Int{}, &Bool{}},
+					/*Variants: []*SumTypeVariant{
 						{Type: &Int{}},
 						{Type: &Bool{}},
-					},
-				},*/
+					},*/
+				},
 				&Secret{
 					Name: "secretValue",
 					Type: &String{},
