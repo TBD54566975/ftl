@@ -5,6 +5,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/alecthomas/types/optional"
 )
 
 type dsnEntry struct {
@@ -92,7 +93,7 @@ func newInMemoryConfigManager[R cf.Role](ctx context.Context) (*cf.Manager[R], e
 
 func buildConfigOrSecrets[R cf.Role](ctx context.Context, manager cf.Manager[R], valueMap map[string][]byte, moduleName string) error {
 	for name, data := range valueMap {
-		if err := manager.SetData(ctx, cf.Ref(cf.Ref{Name: name}), data); err != nil {
+		if err := manager.SetData(ctx, cf.Ref{Module: optional.Some(moduleName), Name: name}, data); err != nil {
 			return err
 		}
 	}

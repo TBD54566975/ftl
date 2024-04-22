@@ -37,8 +37,8 @@ func TestModuleContextProto(t *testing.T) {
 
 		strValue := "HelloWorld"
 		globalStrValue := "GlobalHelloWorld"
-		cm.Set(ctx, cf.Ref{Module: optional.Some(moduleName), Name: key}, strValue)
-		cm.Set(ctx, cf.Ref{Module: optional.None[string](), Name: key}, globalStrValue)
+		assert.NoError(t, cm.Set(ctx, cf.Ref{Module: optional.Some(moduleName), Name: key}, strValue))
+		assert.NoError(t, cm.Set(ctx, cf.Ref{Module: optional.None[string](), Name: key}, globalStrValue))
 	}
 
 	response, err := moduleContextToProto(ctx, moduleName, []*schema.Module{
