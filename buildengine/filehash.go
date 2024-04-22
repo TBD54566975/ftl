@@ -63,42 +63,22 @@ func CompareFileHashes(oldFiles, newFiles FileHashes) (FileChangeType, string, b
 
 // ComputeFileHashes computes the SHA256 hash of all (non-git-ignored) files in
 // the given directory.
-func ComputeFileHashes(module Project) (FileHashes, error) {
-	config := module.Config()
+func ComputeFileHashes(project Project) (FileHashes, error) {
+	config := project.Config()
 
 	fileHashes := make(FileHashes)
 	err := WalkDir(config.Dir, func(srcPath string, entry fs.DirEntry) error {
-		for _, pattern := range config.Watch {
-			relativePath, err := filepath.Rel(config.Dir, srcPath)
-			if err != nil {
-				return err
-			}
-
-			match, err := doublestar.PathMatch(pattern, relativePath)
-			if err != nil {
-				return err
-			}
-
-			if match && !entry.IsDir() {
-				file, err := os.Open(srcPath)
-				if err != nil {
-					return err
-				}
-
-				hasher := sha256.New()
-				if _, err := io.Copy(hasher, file); err != nil {
-					_ = file.Close()
-					return err
-				}
-
-				fileHashes[srcPath] = hasher.Sum(nil)
-
-				if err := file.Close(); err != nil {
-					return err
-				}
-			}
+		if entry.IsDir() {
+			return nil
 		}
-
+		hash, matched, err := ComputeFileHash(project, srcPath)
+		if err != nil {
+			return err
+		}
+		if !matched {
+			return nil
+		}
+		fileHashes[srcPath] = hash
 		return nil
 	})
 	if err != nil {
@@ -106,4 +86,39 @@ func ComputeFileHashes(module Project) (FileHashes, error) {
 	}
 
 	return fileHashes, err
+}
+
+func ComputeFileHash(project Project, srcPath string) (hash []byte, matched bool, err error) {
+	config := project.Config()
+
+	for _, pattern := range config.Watch {
+		relativePath, err := filepath.Rel(config.Dir, srcPath)
+		if err != nil {
+			return nil, true, err
+		}
+		match, err := doublestar.PathMatch(pattern, relativePath)
+		if err != nil {
+			return nil, true, err
+		}
+		if match {
+			file, err := os.Open(srcPath)
+			if err != nil {
+				return nil, true, err
+			}
+
+			hasher := sha256.New()
+			if _, err := io.Copy(hasher, file); err != nil {
+				_ = file.Close()
+				return nil, true, err
+			}
+
+			hash := hasher.Sum(nil)
+
+			if err := file.Close(); err != nil {
+				return nil, true, err
+			}
+			return hash, true, nil
+		}
+	}
+	return nil, false, nil
 }

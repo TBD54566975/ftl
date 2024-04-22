@@ -51,6 +51,12 @@ type mainModuleContext struct {
 	Replacements []*modfile.Replace
 }
 
+type ModifyFilesTransaction interface {
+	Begin() error
+	ModifiedFiles(paths ...string) error
+	End() error
+}
+
 func (b ExternalModuleContext) NonMainModules() []*schema.Module {
 	modules := make([]*schema.Module, 0, len(b.Modules))
 	for _, module := range b.Modules {
@@ -69,7 +75,16 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
+func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction) error {
+	if err := filesTransaction.Begin(); err != nil {
+		return err
+	}
+	defer func() {
+		if err := filesTransaction.End(); err != nil {
+			log.FromContext(ctx).Errorf(err, "failed to end file transaction")
+		}
+	}()
+
 	replacements, goModVersion, err := updateGoModule(filepath.Join(moduleDir, "go.mod"))
 	if err != nil {
 		return err
@@ -155,35 +170,39 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema) error {
 		return err
 	}
 
-	wg, wgctx := errgroup.WithContext(ctx)
-
 	logger.Debugf("Tidying go.mod files")
+	wg, wgctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
 		if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", moduleDir, err)
 		}
-		return nil
+		return filesTransaction.ModifiedFiles(filepath.Join(moduleDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
 	mainDir := filepath.Join(buildDir, "go", "main")
 	wg.Go(func() error {
 		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", mainDir, err)
 		}
-		return nil
+		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
 	wg.Go(func() error {
 		modulesDir := filepath.Join(buildDir, "go", "modules")
 		if err := exec.Command(wgctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", modulesDir, err)
 		}
-		return nil
+		return filesTransaction.ModifiedFiles(filepath.Join(modulesDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
 	if err := wg.Wait(); err != nil {
 		return err
 	}
 
 	logger.Debugf("Compiling")
-	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
+	err = exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *schema.Schema) error {

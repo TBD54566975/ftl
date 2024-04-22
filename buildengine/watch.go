@@ -2,6 +2,8 @@ package buildengine
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/types/pubsub"
@@ -31,17 +33,42 @@ type WatchEventProjectChanged struct {
 
 func (WatchEventProjectChanged) watchEvent() {}
 
+type projectHashes struct {
+	Hashes  FileHashes
+	Project Project
+}
+
+type WatchService struct {
+	isWatching bool
+
+	// use mutex whenever accessing / modifying existingProjects or moduleTransactions
+	mutex              sync.Mutex
+	existingProjects   map[string]projectHashes
+	moduleTransactions map[string][]*ModifyFilesTransaction
+}
+
+func NewWatchService(ctx context.Context) *WatchService {
+	svc := &WatchService{
+		mutex:              sync.Mutex{},
+		existingProjects:   map[string]projectHashes{},
+		moduleTransactions: map[string][]*ModifyFilesTransaction{},
+	}
+
+	return svc
+}
+
 // Watch the given directories for new projects, deleted projects, and changes to
 // existing projects, publishing a change event for each.
-func Watch(ctx context.Context, period time.Duration, moduleDirs []string, externalLibDirs []string) *pubsub.Topic[WatchEvent] {
+func (s *WatchService) Watch(ctx context.Context, period time.Duration, moduleDirs []string, externalLibDirs []string) (*pubsub.Topic[WatchEvent], error) {
+	if s.isWatching {
+		return nil, fmt.Errorf("file watch service is already watching")
+	}
+	s.isWatching = true
+
 	logger := log.FromContext(ctx)
 	topic := pubsub.New[WatchEvent]()
+
 	go func() {
-		type projectHashes struct {
-			Hashes  FileHashes
-			Project Project
-		}
-		existingProjects := map[string]projectHashes{}
 		wait := topic.Wait()
 		for {
 			select {
@@ -61,20 +88,29 @@ func Watch(ctx context.Context, period time.Duration, moduleDirs []string, exter
 				return project.Config().Dir, project
 			})
 
+			s.mutex.Lock()
 			// Trigger events for removed projects.
-			for _, existingProject := range existingProjects {
+			for _, existingProject := range s.existingProjects {
+				if transactions, ok := s.moduleTransactions[existingProject.Project.Config().Dir]; ok && len(transactions) > 0 {
+					// Skip projects that currently have transactions
+					continue
+				}
 				existingConfig := existingProject.Project.Config()
 				if _, haveProject := projectsByDir[existingConfig.Dir]; !haveProject {
 					logger.Debugf("removed %s %q", existingProject.Project.TypeString(), existingProject.Project.Config().Key)
 					topic.Publish(WatchEventProjectRemoved{Project: existingProject.Project})
-					delete(existingProjects, existingConfig.Dir)
+					delete(s.existingProjects, existingConfig.Dir)
 				}
 			}
 
 			// Compare the projects to the existing projects.
 			for _, project := range projectsByDir {
+				if transactions, ok := s.moduleTransactions[project.Config().Dir]; ok && len(transactions) > 0 {
+					// Skip projects that currently have transactions
+					continue
+				}
 				config := project.Config()
-				existingProject, haveExistingProject := existingProjects[config.Dir]
+				existingProject, haveExistingProject := s.existingProjects[config.Dir]
 				hashes, err := ComputeFileHashes(project)
 				if err != nil {
 					logger.Tracef("error computing file hashes for %s: %v", config.Dir, err)
@@ -88,14 +124,92 @@ func Watch(ctx context.Context, period time.Duration, moduleDirs []string, exter
 					}
 					logger.Debugf("changed %s %q: %c%s", project.TypeString(), project.Config().Key, changeType, path)
 					topic.Publish(WatchEventProjectChanged{Project: existingProject.Project, Change: changeType, Path: path, Time: time.Now()})
-					existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: existingProject.Project}
+					s.existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: existingProject.Project}
 					continue
 				}
 				logger.Debugf("added %s %q", project.TypeString(), project.Config().Key)
 				topic.Publish(WatchEventProjectAdded{Project: project})
-				existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: project}
+				s.existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: project}
 			}
+			s.mutex.Unlock()
 		}
 	}()
-	return topic
+	return topic, nil
+}
+
+type ModifyFilesTransaction struct {
+	service   *WatchService
+	ModuleDir string
+	IsActive  bool
+}
+
+func (s *WatchService) GetTransaction(moduleDir string) *ModifyFilesTransaction {
+	return &ModifyFilesTransaction{
+		service:   s,
+		ModuleDir: moduleDir,
+	}
+}
+
+func (t *ModifyFilesTransaction) Begin() error {
+	if t.IsActive {
+		return fmt.Errorf("transaction is already active")
+	}
+
+	t.IsActive = true
+
+	t.service.mutex.Lock()
+	defer t.service.mutex.Unlock()
+
+	t.service.moduleTransactions[t.ModuleDir] = append(t.service.moduleTransactions[t.ModuleDir], t)
+
+	return nil
+}
+
+func (t *ModifyFilesTransaction) End() error {
+	if !t.IsActive {
+		return fmt.Errorf("transaction is not active")
+	}
+
+	t.service.mutex.Lock()
+	defer t.service.mutex.Unlock()
+
+	for idx, transaction := range t.service.moduleTransactions[t.ModuleDir] {
+		if transaction != t {
+			continue
+		}
+		t.IsActive = false
+		t.service.moduleTransactions[t.ModuleDir] = append(t.service.moduleTransactions[t.ModuleDir][:idx], t.service.moduleTransactions[t.ModuleDir][idx+1:]...)
+		return nil
+	}
+	return fmt.Errorf("could not end transaction because it was not found")
+}
+
+func (t *ModifyFilesTransaction) ModifiedFiles(paths ...string) error {
+	if !t.IsActive {
+		return fmt.Errorf("can not modify file because transaction is not active: %v", paths)
+	}
+
+	t.service.mutex.Lock()
+	defer t.service.mutex.Unlock()
+
+	projectHashes, ok := t.service.existingProjects[t.ModuleDir]
+	if !ok {
+		// skip updating hashes because we have not discovered this project yet
+		return nil
+	}
+
+	for _, path := range paths {
+		hash, matched, err := ComputeFileHash(projectHashes.Project, path)
+		if err != nil {
+			return err
+		}
+		if !matched {
+			continue
+		}
+
+		projectHashes.Hashes[path] = hash
+	}
+	t.service.existingProjects[t.ModuleDir] = projectHashes
+
+	return nil
 }

@@ -21,6 +21,20 @@ type buildContext struct {
 
 type assertion func(t testing.TB, bctx buildContext) error
 
+type mockModifyFilesTransaction struct{}
+
+func (t *mockModifyFilesTransaction) Begin() error {
+	return nil
+}
+
+func (t *mockModifyFilesTransaction) ModifiedFiles(paths ...string) error {
+	return nil
+}
+
+func (t *mockModifyFilesTransaction) End() error {
+	return nil
+}
+
 func testBuild(
 	t *testing.T,
 	bctx buildContext,
@@ -33,7 +47,7 @@ func testBuild(
 	assert.NoError(t, err, "Error getting absolute path for module directory")
 	module, err := LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module)
+	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
 	if len(expectedBuildErrMsg) > 0 {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), expectedBuildErrMsg)
