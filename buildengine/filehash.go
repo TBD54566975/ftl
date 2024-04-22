@@ -94,28 +94,28 @@ func ComputeFileHash(project Project, srcPath string) (hash []byte, matched bool
 	for _, pattern := range config.Watch {
 		relativePath, err := filepath.Rel(config.Dir, srcPath)
 		if err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		match, err := doublestar.PathMatch(pattern, relativePath)
 		if err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		if match {
 			file, err := os.Open(srcPath)
 			if err != nil {
-				return nil, true, err
+				return nil, false, err
 			}
 
 			hasher := sha256.New()
 			if _, err := io.Copy(hasher, file); err != nil {
 				_ = file.Close()
-				return nil, true, err
+				return nil, false, err
 			}
 
 			hash := hasher.Sum(nil)
 
 			if err := file.Close(); err != nil {
-				return nil, true, err
+				return nil, false, err
 			}
 			return hash, true, nil
 		}

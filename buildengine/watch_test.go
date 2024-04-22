@@ -22,7 +22,7 @@ func TestWatch(t *testing.T) {
 
 	dir := t.TempDir()
 
-	s := NewWatchService(ctx)
+	s := NewWatcher()
 
 	// Start the watch
 	events := make(chan WatchEvent, 128)
@@ -89,7 +89,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 
 	dir := t.TempDir()
 
-	s := NewWatchService(ctx)
+	s := NewWatcher()
 
 	// Initiate a module
 	err := ftl("init", "go", dir, "one")
@@ -139,7 +139,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 
 	dir := t.TempDir()
 
-	s := NewWatchService(ctx)
+	s := NewWatcher()
 
 	// Initiate a module
 	err := ftl("init", "go", dir, "one")

@@ -51,7 +51,7 @@ type Engine struct {
 	projectMetas     *xsync.MapOf[ProjectKey, projectMeta]
 	moduleDirs       []string
 	externalDirs     []string
-	watcher          *WatchService
+	watcher          *Watcher
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
@@ -89,7 +89,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 		moduleDirs:       moduleDirs,
 		externalDirs:     externalDirs,
 		projectMetas:     xsync.NewMapOf[ProjectKey, projectMeta](),
-		watcher:          NewWatchService(ctx),
+		watcher:          NewWatcher(),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
 		parallelism:      runtime.NumCPU(),

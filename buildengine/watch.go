@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
+	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 )
@@ -38,7 +39,7 @@ type projectHashes struct {
 	Project Project
 }
 
-type WatchService struct {
+type Watcher struct {
 	isWatching bool
 
 	// use mutex whenever accessing / modifying existingProjects or moduleTransactions
@@ -47,9 +48,8 @@ type WatchService struct {
 	moduleTransactions map[string][]*ModifyFilesTransaction
 }
 
-func NewWatchService(ctx context.Context) *WatchService {
-	svc := &WatchService{
-		mutex:              sync.Mutex{},
+func NewWatcher() *Watcher {
+	svc := &Watcher{
 		existingProjects:   map[string]projectHashes{},
 		moduleTransactions: map[string][]*ModifyFilesTransaction{},
 	}
@@ -57,9 +57,16 @@ func NewWatchService(ctx context.Context) *WatchService {
 	return svc
 }
 
+func (s *Watcher) GetTransaction(moduleDir string) *ModifyFilesTransaction {
+	return &ModifyFilesTransaction{
+		service:   s,
+		moduleDir: moduleDir,
+	}
+}
+
 // Watch the given directories for new projects, deleted projects, and changes to
 // existing projects, publishing a change event for each.
-func (s *WatchService) Watch(ctx context.Context, period time.Duration, moduleDirs []string, externalLibDirs []string) (*pubsub.Topic[WatchEvent], error) {
+func (s *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []string, externalLibDirs []string) (*pubsub.Topic[WatchEvent], error) {
 	if s.isWatching {
 		return nil, fmt.Errorf("file watch service is already watching")
 	}
@@ -137,62 +144,59 @@ func (s *WatchService) Watch(ctx context.Context, period time.Duration, moduleDi
 	return topic, nil
 }
 
+// ModifyFilesTransaction allows builds to modify files in a module without triggering a watch event.
+// This helps us avoid infinite loops with builds changing files, and those changes triggering new builds.
 type ModifyFilesTransaction struct {
-	service   *WatchService
-	ModuleDir string
-	IsActive  bool
+	service   *Watcher
+	moduleDir string
+	isActive  bool
 }
 
-func (s *WatchService) GetTransaction(moduleDir string) *ModifyFilesTransaction {
-	return &ModifyFilesTransaction{
-		service:   s,
-		ModuleDir: moduleDir,
-	}
-}
+var _ compile.ModifyFilesTransaction = (*ModifyFilesTransaction)(nil)
 
 func (t *ModifyFilesTransaction) Begin() error {
-	if t.IsActive {
+	if t.isActive {
 		return fmt.Errorf("transaction is already active")
 	}
 
-	t.IsActive = true
+	t.isActive = true
 
 	t.service.mutex.Lock()
 	defer t.service.mutex.Unlock()
 
-	t.service.moduleTransactions[t.ModuleDir] = append(t.service.moduleTransactions[t.ModuleDir], t)
+	t.service.moduleTransactions[t.moduleDir] = append(t.service.moduleTransactions[t.moduleDir], t)
 
 	return nil
 }
 
 func (t *ModifyFilesTransaction) End() error {
-	if !t.IsActive {
+	if !t.isActive {
 		return fmt.Errorf("transaction is not active")
 	}
 
 	t.service.mutex.Lock()
 	defer t.service.mutex.Unlock()
 
-	for idx, transaction := range t.service.moduleTransactions[t.ModuleDir] {
+	for idx, transaction := range t.service.moduleTransactions[t.moduleDir] {
 		if transaction != t {
 			continue
 		}
-		t.IsActive = false
-		t.service.moduleTransactions[t.ModuleDir] = append(t.service.moduleTransactions[t.ModuleDir][:idx], t.service.moduleTransactions[t.ModuleDir][idx+1:]...)
+		t.isActive = false
+		t.service.moduleTransactions[t.moduleDir] = append(t.service.moduleTransactions[t.moduleDir][:idx], t.service.moduleTransactions[t.moduleDir][idx+1:]...)
 		return nil
 	}
 	return fmt.Errorf("could not end transaction because it was not found")
 }
 
 func (t *ModifyFilesTransaction) ModifiedFiles(paths ...string) error {
-	if !t.IsActive {
+	if !t.isActive {
 		return fmt.Errorf("can not modify file because transaction is not active: %v", paths)
 	}
 
 	t.service.mutex.Lock()
 	defer t.service.mutex.Unlock()
 
-	projectHashes, ok := t.service.existingProjects[t.ModuleDir]
+	projectHashes, ok := t.service.existingProjects[t.moduleDir]
 	if !ok {
 		// skip updating hashes because we have not discovered this project yet
 		return nil
@@ -209,7 +213,7 @@ func (t *ModifyFilesTransaction) ModifiedFiles(paths ...string) error {
 
 		projectHashes.Hashes[path] = hash
 	}
-	t.service.existingProjects[t.ModuleDir] = projectHashes
+	t.service.existingProjects[t.moduleDir] = projectHashes
 
 	return nil
 }
