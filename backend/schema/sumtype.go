@@ -13,7 +13,7 @@ type SumType struct {
 
 	Comments []string          `parser:"@Comment*" protobuf:"2"`
 	Name     string            `parser:"'sumtype' @Ident '='" protobuf:"3"`
-	Variants []*SumTypeVariant `parser:"@@" protobuf:"4"`
+	Variants []*SumTypeVariant `parser:"@@*" protobuf:"4"`
 }
 
 var _ Decl = (*SumType)(nil)
@@ -70,6 +70,7 @@ func SumTypeFromProto(s *schemapb.SumType) *SumType {
 type SumTypeVariant struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
+	// Question about lookahead buffers?
 	Type Type `parser:"@@ '|'?" protobuf:"2"`
 }
 
