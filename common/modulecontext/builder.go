@@ -3,11 +3,8 @@ package modulecontext
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/types/optional"
@@ -22,8 +19,6 @@ type refValuePair struct {
 	ref      ref
 	resolver resolver
 }
-
-func (r refValuePair) configOrSecretItem() {}
 
 type dsnEntry struct {
 	name     string
@@ -43,34 +38,19 @@ type stringResolver interface {
 }
 
 var _ stringResolver = valueResolver{}
-var _ stringResolver = envarResolver{}
-
-type configManager[R cf.Role] struct {
-	manager *cf.Manager[R]
-}
-
-func (m configManager[R]) configOrSecretItem() {}
-
-// sumtype:decl
-type configOrSecretItem interface {
-	configOrSecretItem()
-}
-
-var _ configOrSecretItem = refValuePair{}
-var _ configOrSecretItem = configManager[cf.Configuration]{}
 
 type Builder struct {
 	moduleName string
-	configs    []configOrSecretItem
-	secrets    []configOrSecretItem
+	configs    []refValuePair
+	secrets    []refValuePair
 	dsns       []dsnEntry
 }
 
 func NewBuilder(moduleName string) *Builder {
 	return &Builder{
 		moduleName: moduleName,
-		configs:    []configOrSecretItem{},
-		secrets:    []configOrSecretItem{},
+		configs:    []refValuePair{},
+		secrets:    []refValuePair{},
 		dsns:       []dsnEntry{},
 	}
 }
@@ -78,10 +58,10 @@ func NewBuilder(moduleName string) *Builder {
 func NewBuilderFromProto(moduleName string, response *ftlv1.ModuleContextResponse) *Builder {
 	return &Builder{
 		moduleName: moduleName,
-		configs: slices.Map(response.Configs, func(c *ftlv1.ModuleContextResponse_Config) configOrSecretItem {
+		configs: slices.Map(response.Configs, func(c *ftlv1.ModuleContextResponse_Config) refValuePair {
 			return refValuePair{ref: refFromProto(c.Ref), resolver: dataResolver{data: c.Data}}
 		}),
-		secrets: slices.Map(response.Secrets, func(s *ftlv1.ModuleContextResponse_Secret) configOrSecretItem {
+		secrets: slices.Map(response.Secrets, func(s *ftlv1.ModuleContextResponse_Secret) refValuePair {
 			return refValuePair{ref: refFromProto(s.Ref), resolver: dataResolver{data: s.Data}}
 		}),
 		dsns: slices.Map(response.Databases, func(d *ftlv1.ModuleContextResponse_DSN) dsnEntry {
@@ -105,10 +85,10 @@ func (b *Builder) Build(ctx context.Context) (*ModuleContext, error) {
 		dbProvider:     NewDBProvider(),
 	}
 
-	if err := buildConfigOrSecrets[cf.Configuration](ctx, b, *moduleCtx.configManager, b.configs); err != nil {
+	if err := buildConfigOrSecrets[cf.Configuration](ctx, *moduleCtx.configManager, b.configs); err != nil {
 		return nil, err
 	}
-	if err := buildConfigOrSecrets[cf.Secrets](ctx, b, *moduleCtx.secretsManager, b.secrets); err != nil {
+	if err := buildConfigOrSecrets[cf.Secrets](ctx, *moduleCtx.secretsManager, b.secrets); err != nil {
 		return nil, err
 	}
 
@@ -135,71 +115,23 @@ func newInMemoryConfigManager[R cf.Role](ctx context.Context) (*cf.Manager[R], e
 	return manager, nil
 }
 
-func buildConfigOrSecrets[R cf.Role](ctx context.Context, b *Builder, manager cf.Manager[R], items []configOrSecretItem) error {
+func buildConfigOrSecrets[R cf.Role](ctx context.Context, manager cf.Manager[R], items []refValuePair) error {
 	for _, item := range items {
-		switch item := item.(type) {
-		case refValuePair:
-			isData, value, data, err := item.resolver.Resolve()
-			if err != nil {
+		isData, value, data, err := item.resolver.Resolve()
+		if err != nil {
+			return err
+		}
+		if isData {
+			if err := manager.SetData(ctx, cf.Ref(item.ref), data); err != nil {
 				return err
 			}
-			if isData {
-				if err := manager.SetData(ctx, cf.Ref(item.ref), data); err != nil {
-					return err
-				}
-			} else {
-				if err := manager.Set(ctx, cf.Ref(item.ref), value); err != nil {
-					return err
-				}
-			}
-		case configManager[R]:
-			list, err := item.manager.List(ctx)
-			if err != nil {
+		} else {
+			if err := manager.Set(ctx, cf.Ref(item.ref), value); err != nil {
 				return err
-			}
-			for _, e := range list {
-				if m, isModuleSpecific := e.Module.Get(); isModuleSpecific && b.moduleName != m {
-					continue
-				}
-				data, err := item.manager.GetData(ctx, e.Ref)
-				if err != nil {
-					return err
-				}
-				if err := manager.SetData(ctx, e.Ref, data); err != nil {
-					return err
-				}
 			}
 		}
 	}
 	return nil
-}
-
-func (b *Builder) AddDSNsFromEnvarsForModule(module *schema.Module) *Builder {
-	// remove in favor of a non-envar approach once it is available
-	for _, decl := range module.Decls {
-		dbDecl, ok := decl.(*schema.Database)
-		if !ok {
-			continue
-		}
-		b.dsns = append(b.dsns, dsnEntry{
-			name:   dbDecl.Name,
-			dbType: DBTypePostgres,
-			resolver: envarResolver{
-				name: fmt.Sprintf("FTL_POSTGRES_DSN_%s_%s", strings.ToUpper(module.Name), strings.ToUpper(dbDecl.Name)),
-			},
-		})
-	}
-	return b
-}
-
-func (b *Builder) AddConfigFromManager(cm *cf.Manager[cf.Configuration]) *Builder {
-	b.configs = append(b.configs, configManager[cf.Configuration]{manager: cm})
-	return b
-}
-
-func (b *Builder) AddSecretsFromManager(sm *cf.Manager[cf.Secrets]) *Builder {
-	b.secrets = append(b.secrets, configManager[cf.Secrets]{manager: sm})
-	return b
 }
 
 func refFromProto(r *ftlv1.ModuleContextResponse_Ref) ref {
@@ -231,24 +163,4 @@ type dataResolver struct {
 
 func (r dataResolver) Resolve() (isData bool, value any, data []byte, err error) {
 	return true, nil, r.data, nil
-}
-
-type envarResolver struct {
-	name string
-}
-
-func (r envarResolver) Resolve() (isData bool, value any, data []byte, err error) {
-	value, err = r.ResolveString()
-	if err != nil {
-		return false, nil, nil, err
-	}
-	return false, value, nil, nil
-}
-
-func (r envarResolver) ResolveString() (string, error) {
-	value, ok := os.LookupEnv(r.name)
-	if !ok {
-		return "", fmt.Errorf("missing environment variable %q", r.name)
-	}
-	return value, nil
 }
