@@ -26,7 +26,7 @@ func (d Database) String() string { return fmt.Sprintf("database %q", d.Name) }
 // Get returns the sql db connection for the database.
 func (d Database) Get(ctx context.Context) *sql.DB {
 	provider := modulecontext.DBProviderFromContext(ctx)
-	db, err := provider.GetDB(d.Name)
+	db, err := provider.Get(d.Name)
 	if err != nil {
 		panic(err.Error())
 	}

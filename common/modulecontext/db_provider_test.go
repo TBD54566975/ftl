@@ -11,7 +11,7 @@ import (
 func TestValidDSN(t *testing.T) {
 	dbProvider := NewDBProvider()
 	dsn := "postgres://localhost:54320/echo?sslmode=disable&user=postgres&password=secret"
-	err := dbProvider.AddDSN("test", DBTypePostgres, dsn)
+	err := dbProvider.Add("test", DBTypePostgres, dsn)
 	assert.NoError(t, err, "expected no error for valid DSN")
 	assert.Equal(t, dbProvider.entries["test"].dsn, dsn, "expected DSN to be set and unmodified")
 }

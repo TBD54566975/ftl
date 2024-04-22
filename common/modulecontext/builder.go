@@ -73,7 +73,7 @@ func (b *Builder) Build(ctx context.Context) (*ModuleContext, error) {
 		return nil, err
 	}
 	for name, entry := range b.dsns {
-		if err = moduleCtx.dbProvider.AddDSN(name, entry.dbType, entry.dsn); err != nil {
+		if err = moduleCtx.dbProvider.Add(name, entry.dbType, entry.dsn); err != nil {
 			return nil, err
 		}
 	}

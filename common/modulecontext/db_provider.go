@@ -60,7 +60,7 @@ func DBProviderFromContext(ctx context.Context) *DBProvider {
 	return m
 }
 
-func (d *DBProvider) AddDSN(name string, dbType DBType, dsn string) error {
+func (d *DBProvider) Add(name string, dbType DBType, dsn string) error {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (d *DBProvider) AddDSN(name string, dbType DBType, dsn string) error {
 	return nil
 }
 
-func (d *DBProvider) GetDB(name string) (*sql.DB, error) {
+func (d *DBProvider) Get(name string) (*sql.DB, error) {
 	if entry, ok := d.entries[name]; ok {
 		return entry.db, nil
 	}
