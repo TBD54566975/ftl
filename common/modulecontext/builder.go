@@ -12,6 +12,8 @@ type dsnEntry struct {
 	dsn    string
 }
 
+// Builder is used to set up a ModuleContext with configs, secrets and DSNs
+// It is able to parse a ModuleContextResponse
 type Builder struct {
 	moduleName string
 	configs    map[string][]byte
