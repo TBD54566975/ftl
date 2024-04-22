@@ -25,16 +25,6 @@ message ModuleContextResponse {
     optional string module = 1;
     string name = 2;
   }
-
-  message Config {
-    Ref ref = 1;
-    bytes data = 2;
-  }
-
-  message Secret {
-    Ref ref = 1;
-    bytes data = 2;
-  }
   
   enum DBType {
       POSTGRES = 0;
@@ -46,8 +36,8 @@ message ModuleContextResponse {
     string dsn = 3;
   }
 
-  repeated Config configs = 1;
-  repeated Secret secrets = 2;
+  map<string, bytes> configs = 1;
+  map<string, bytes>  secrets = 2;
   repeated DSN databases = 3;
 }
 
