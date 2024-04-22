@@ -186,14 +186,14 @@ export class ModuleContextRequest extends Message<ModuleContextRequest> {
  */
 export class ModuleContextResponse extends Message<ModuleContextResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.ModuleContextResponse.Config configs = 1;
+   * @generated from field: map<string, bytes> configs = 1;
    */
-  configs: ModuleContextResponse_Config[] = [];
+  configs: { [key: string]: Uint8Array } = {};
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.ModuleContextResponse.Secret secrets = 2;
+   * @generated from field: map<string, bytes> secrets = 2;
    */
-  secrets: ModuleContextResponse_Secret[] = [];
+  secrets: { [key: string]: Uint8Array } = {};
 
   /**
    * @generated from field: repeated xyz.block.ftl.v1.ModuleContextResponse.DSN databases = 3;
@@ -208,8 +208,8 @@ export class ModuleContextResponse extends Message<ModuleContextResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.ModuleContextResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "configs", kind: "message", T: ModuleContextResponse_Config, repeated: true },
-    { no: 2, name: "secrets", kind: "message", T: ModuleContextResponse_Secret, repeated: true },
+    { no: 1, name: "configs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
+    { no: 2, name: "secrets", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
     { no: 3, name: "databases", kind: "message", T: ModuleContextResponse_DSN, repeated: true },
   ]);
 
@@ -284,92 +284,6 @@ export class ModuleContextResponse_Ref extends Message<ModuleContextResponse_Ref
 
   static equals(a: ModuleContextResponse_Ref | PlainMessage<ModuleContextResponse_Ref> | undefined, b: ModuleContextResponse_Ref | PlainMessage<ModuleContextResponse_Ref> | undefined): boolean {
     return proto3.util.equals(ModuleContextResponse_Ref, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.ModuleContextResponse.Config
- */
-export class ModuleContextResponse_Config extends Message<ModuleContextResponse_Config> {
-  /**
-   * @generated from field: xyz.block.ftl.v1.ModuleContextResponse.Ref ref = 1;
-   */
-  ref?: ModuleContextResponse_Ref;
-
-  /**
-   * @generated from field: bytes data = 2;
-   */
-  data = new Uint8Array(0);
-
-  constructor(data?: PartialMessage<ModuleContextResponse_Config>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ModuleContextResponse.Config";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "ref", kind: "message", T: ModuleContextResponse_Ref },
-    { no: 2, name: "data", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleContextResponse_Config {
-    return new ModuleContextResponse_Config().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleContextResponse_Config {
-    return new ModuleContextResponse_Config().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleContextResponse_Config {
-    return new ModuleContextResponse_Config().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ModuleContextResponse_Config | PlainMessage<ModuleContextResponse_Config> | undefined, b: ModuleContextResponse_Config | PlainMessage<ModuleContextResponse_Config> | undefined): boolean {
-    return proto3.util.equals(ModuleContextResponse_Config, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.ModuleContextResponse.Secret
- */
-export class ModuleContextResponse_Secret extends Message<ModuleContextResponse_Secret> {
-  /**
-   * @generated from field: xyz.block.ftl.v1.ModuleContextResponse.Ref ref = 1;
-   */
-  ref?: ModuleContextResponse_Ref;
-
-  /**
-   * @generated from field: bytes data = 2;
-   */
-  data = new Uint8Array(0);
-
-  constructor(data?: PartialMessage<ModuleContextResponse_Secret>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ModuleContextResponse.Secret";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "ref", kind: "message", T: ModuleContextResponse_Ref },
-    { no: 2, name: "data", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleContextResponse_Secret {
-    return new ModuleContextResponse_Secret().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleContextResponse_Secret {
-    return new ModuleContextResponse_Secret().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleContextResponse_Secret {
-    return new ModuleContextResponse_Secret().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ModuleContextResponse_Secret | PlainMessage<ModuleContextResponse_Secret> | undefined, b: ModuleContextResponse_Secret | PlainMessage<ModuleContextResponse_Secret> | undefined): boolean {
-    return proto3.util.equals(ModuleContextResponse_Secret, a, b);
   }
 }
 
