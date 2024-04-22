@@ -51,6 +51,7 @@ type Engine struct {
 	projectMetas     *xsync.MapOf[ProjectKey, projectMeta]
 	moduleDirs       []string
 	externalDirs     []string
+	watcher          *Watcher
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
@@ -88,6 +89,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 		moduleDirs:       moduleDirs,
 		externalDirs:     externalDirs,
 		projectMetas:     xsync.NewMapOf[ProjectKey, projectMeta](),
+		watcher:          NewWatcher(),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
 		parallelism:      runtime.NumCPU(),
@@ -242,13 +244,16 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	defer e.schemaChanges.Unsubscribe(schemaChanges)
 
 	watchEvents := make(chan WatchEvent, 128)
-	watch := Watch(ctx, period, e.moduleDirs, e.externalDirs)
-	watch.Subscribe(watchEvents)
-	defer watch.Unsubscribe(watchEvents)
-	defer watch.Close()
+	topic, err := e.watcher.Watch(ctx, period, e.moduleDirs, e.externalDirs)
+	if err != nil {
+		return err
+	}
+	topic.Subscribe(watchEvents)
+	defer topic.Unsubscribe(watchEvents)
+	defer topic.Close()
 
 	// Build and deploy all modules first.
-	err := e.buildAndDeploy(ctx, 1, true)
+	err = e.buildAndDeploy(ctx, 1, true)
 	if err != nil {
 		logger.Errorf(err, "initial deploy failed")
 	} else {
@@ -554,7 +559,7 @@ func (e *Engine) build(ctx context.Context, key ProjectKey, builtModules map[str
 	if e.listener != nil {
 		e.listener.OnBuildStarted(meta.project)
 	}
-	err := Build(ctx, sch, meta.project)
+	err := Build(ctx, sch, meta.project, e.watcher.GetTransaction(meta.project.Config().Dir))
 	if err != nil {
 		return err
 	}

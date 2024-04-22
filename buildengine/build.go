@@ -19,10 +19,10 @@ import (
 
 // Build a project in the given directory given the schema and project config.
 // For a module, this will build the module. For an external library, this will build stubs for imported modules.
-func Build(ctx context.Context, sch *schema.Schema, project Project) error {
+func Build(ctx context.Context, sch *schema.Schema, project Project, filesTransaction ModifyFilesTransaction) error {
 	switch project := project.(type) {
 	case Module:
-		return buildModule(ctx, sch, project)
+		return buildModule(ctx, sch, project, filesTransaction)
 	case ExternalLibrary:
 		return buildExternalLibrary(ctx, sch, project)
 	default:
@@ -30,7 +30,7 @@ func Build(ctx context.Context, sch *schema.Schema, project Project) error {
 	}
 }
 
-func buildModule(ctx context.Context, sch *schema.Schema, module Module) error {
+func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx).Scope(module.Module)
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -43,7 +43,7 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module) error {
 	var err error
 	switch module.Language {
 	case "go":
-		err = buildGoModule(ctx, sch, module)
+		err = buildGoModule(ctx, sch, module, filesTransaction)
 	case "kotlin":
 		err = buildKotlinModule(ctx, sch, module)
 	default:
