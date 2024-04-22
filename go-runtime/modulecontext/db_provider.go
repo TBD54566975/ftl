@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strconv"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
+
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 )
 
 type DBType int32

@@ -3,9 +3,10 @@ package modulecontext
 import (
 	"context"
 
+	"github.com/alecthomas/types/optional"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	cf "github.com/TBD54566975/ftl/common/configuration"
-	"github.com/alecthomas/types/optional"
 )
 
 // ModuleContext holds the context needed for a module, including configs, secrets and DSNs
