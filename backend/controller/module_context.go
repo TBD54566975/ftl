@@ -9,7 +9,6 @@ import (
 	"connectrpc.com/connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/common/configuration"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -25,39 +24,17 @@ func moduleContextToProto(ctx context.Context, name string, schemas []*schema.Mo
 	}
 
 	// configs
-	configManager := configuration.ConfigFromContext(ctx)
-	configList, err := configManager.List(ctx)
+	configManager := cf.ConfigFromContext(ctx)
+	configMap, err := bytesMapFromConfigManager(ctx, configManager, name)
 	if err != nil {
 		return nil, err
-	}
-	configProtos := []*ftlv1.ModuleContextResponse_Config{}
-	for _, entry := range configList {
-		data, err := configManager.GetData(ctx, entry.Ref)
-		if err != nil {
-			return nil, err
-		}
-		configProtos = append(configProtos, &ftlv1.ModuleContextResponse_Config{
-			Ref:  configRefToProto(entry.Ref),
-			Data: data,
-		})
 	}
 
 	// secrets
-	secretsManager := configuration.SecretsFromContext(ctx)
-	secretsList, err := secretsManager.List(ctx)
+	secretsManager := cf.SecretsFromContext(ctx)
+	secretsMap, err := bytesMapFromConfigManager(ctx, secretsManager, name)
 	if err != nil {
 		return nil, err
-	}
-	secretProtos := []*ftlv1.ModuleContextResponse_Secret{}
-	for _, entry := range secretsList {
-		data, err := secretsManager.GetData(ctx, entry.Ref)
-		if err != nil {
-			return nil, err
-		}
-		secretProtos = append(secretProtos, &ftlv1.ModuleContextResponse_Secret{
-			Ref:  configRefToProto(entry.Ref),
-			Data: data,
-		})
 	}
 
 	// DSNs
@@ -80,18 +57,41 @@ func moduleContextToProto(ctx context.Context, name string, schemas []*schema.Mo
 	}
 
 	return connect.NewResponse(&ftlv1.ModuleContextResponse{
-		Configs:   configProtos,
-		Secrets:   secretProtos,
+		Configs:   configMap,
+		Secrets:   secretsMap,
 		Databases: dsnProtos,
 	}), nil
 }
 
-func configRefToProto(r cf.Ref) *ftlv1.ModuleContextResponse_Ref {
-	protoRef := &ftlv1.ModuleContextResponse_Ref{
-		Name: r.Name,
+func bytesMapFromConfigManager[R cf.Role](ctx context.Context, manager *cf.Manager[R], moduleName string) (map[string][]byte, error) {
+	configList, err := manager.List(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if module, ok := r.Module.Get(); ok {
-		protoRef.Module = &module
+
+	// module specific values must override global values
+	// put module specific values into moduleConfigMap, then merge with configMap
+	configMap := map[string][]byte{}
+	moduleConfigMap := map[string][]byte{}
+
+	for _, entry := range configList {
+		refModule, isModuleSpecific := entry.Module.Get()
+		if isModuleSpecific && refModule != moduleName {
+			continue
+		}
+		data, err := manager.GetData(ctx, entry.Ref)
+		if err != nil {
+			return nil, err
+		}
+		if !isModuleSpecific {
+			configMap[entry.Ref.Name] = data
+		} else {
+			moduleConfigMap[entry.Ref.Name] = data
+		}
 	}
-	return protoRef
+
+	for name, data := range moduleConfigMap {
+		configMap[name] = data
+	}
+	return configMap, nil
 }
