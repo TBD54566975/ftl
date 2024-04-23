@@ -166,7 +166,15 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 	case *SumType:
 		variants := make([]jsonschema.SchemaOrBool, len(node.Variants))
 		for i, v := range node.Variants {
-			variants[i] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(v, refs)}
+			sch := nodeToJSSchema(v, refs)
+			st := jsonschema.String
+			if sch.Properties == nil {
+				sch.Properties = make(map[string]jsonschema.SchemaOrBool)
+			}
+			sch.Properties["@_kind"] = jsonschema.SchemaOrBool{
+				TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}},
+			}
+			variants[i] = jsonschema.SchemaOrBool{TypeObject: sch}
 		}
 		return &jsonschema.Schema{OneOf: variants}
 

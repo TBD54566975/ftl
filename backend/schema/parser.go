@@ -40,8 +40,7 @@ var (
 		{Name: "Comment", Pattern: `//.*`},
 		{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
 		{Name: "Number", Pattern: `[0-9]+(?:\.[0-9]+)?`},
-		{Name: "Punct", Pattern: `[%/\-\_:[\]{}<>()*+?.,\\^$|#~!\'@]`},
-		{Name: "Equals", Pattern: `=`},
+		{Name: "Punct", Pattern: `[%/\-\_:[\]{}<>()*+?.,\\^$|#~!\'@=]`},
 	})
 
 	commonParserOptions = []participle.Option{

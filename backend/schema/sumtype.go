@@ -13,7 +13,7 @@ type SumType struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Name     string   `parser:"'sumtype' @Ident Equals" protobuf:"3"`
+	Name     string   `parser:"'sumtype' @Ident '='" protobuf:"3"`
 	Variants []Type   `parser:"@@ ('|' @@)*" protobuf:"4"`
 }
 
