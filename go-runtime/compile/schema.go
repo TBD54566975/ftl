@@ -33,11 +33,12 @@ var (
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
 
-	ftlCallFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
-	ftlConfigFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
-	ftlSecretFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
-	ftlUnitTypePath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
-	aliasFieldTag     = "json"
+	ftlCallFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
+	ftlConfigFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
+	ftlSecretFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
+	ftlDatabaseFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
+	ftlUnitTypePath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
+	aliasFieldTag       = "json"
 )
 
 // NativeNames is a map of top-level declarations to their native Go names.
@@ -181,6 +182,8 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr) {
 	case ftlConfigFuncPath, ftlSecretFuncPath:
 		// Secret/config declaration: ftl.Config[<type>](<name>)
 		parseConfigDecl(pctx, node, fn)
+	case ftlDatabaseFuncPath:
+		parseDatabaseDecl(pctx, node)
 	}
 }
 
@@ -252,6 +255,28 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 			Name: name,
 			Type: st,
 		}
+	}
+	pctx.module.Decls = append(pctx.module.Decls, decl)
+}
+
+func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr) {
+	var name string
+	if len(node.Args) == 1 {
+		if literal, ok := node.Args[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
+			var err error
+			name, err = strconv.Unquote(literal.Value)
+			if err != nil {
+				pctx.errors.add(wrapf(node, err, ""))
+				return
+			}
+		}
+	}
+	if name == "" {
+		pctx.errors.add(errorf(node, "config and secret declarations must have a single string literal argument"))
+	}
+	decl := &schema.Database{
+		Pos:  goPosToSchemaPos(node.Pos()),
+		Name: name,
 	}
 	pctx.module.Decls = append(pctx.module.Decls, decl)
 }
