@@ -11,6 +11,7 @@ import (
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -18,10 +19,10 @@ import (
 
 // Build a project in the given directory given the schema and project config.
 // For a module, this will build the module. For an external library, this will build stubs for imported modules.
-func Build(ctx context.Context, sch *schema.Schema, project Project) error {
+func Build(ctx context.Context, sch *schema.Schema, project Project, filesTransaction ModifyFilesTransaction) error {
 	switch project := project.(type) {
 	case Module:
-		return buildModule(ctx, sch, project)
+		return buildModule(ctx, sch, project, filesTransaction)
 	case ExternalLibrary:
 		return buildExternalLibrary(ctx, sch, project)
 	default:
@@ -29,33 +30,41 @@ func Build(ctx context.Context, sch *schema.Schema, project Project) error {
 	}
 }
 
-func buildModule(ctx context.Context, sch *schema.Schema, module Module) error {
+func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx).Scope(module.Module)
 	ctx = log.ContextWithLogger(ctx, logger)
+
+	// clear stale module errors before extracting schema
+	if err := os.RemoveAll(filepath.Join(module.AbsDeployDir(), module.Errors)); err != nil {
+		return fmt.Errorf("failed to clear errors: %w", err)
+	}
 
 	logger.Infof("Building module")
 	var err error
 	switch module.Language {
 	case "go":
-		err = buildGoModule(ctx, sch, module)
+		err = buildGoModule(ctx, sch, module, filesTransaction)
 	case "kotlin":
 		err = buildKotlinModule(ctx, sch, module)
 	default:
 		return fmt.Errorf("unknown language %q", module.Language)
 	}
 
+	var errs []error
 	if err != nil {
-		errs := errors.UnwrapAllExcludingIntermediaries(err)
-		// read runtime-specific build errors from the build directory
-		errorList, err := loadProtoErrors(module.AbsDeployDir())
-		if err != nil {
-			return fmt.Errorf("failed to read build errors for module: %w", err)
-		}
-		for _, e := range errorList.Errors {
-			errs = append(errs, e)
-		}
-		errs = errors.DeduplicateErrors(errs)
-		schema.SortErrorsByPosition(errs)
+		errs = append(errs, err)
+	}
+	// read runtime-specific build errors from the build directory
+	errorList, err := loadProtoErrors(module.ModuleConfig)
+	if err != nil {
+		return fmt.Errorf("failed to read build errors for module: %w", err)
+	}
+	schema.SortErrorsByPosition(errorList.Errors)
+	for _, e := range errorList.Errors {
+		errs = append(errs, e)
+	}
+
+	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
 
@@ -88,8 +97,8 @@ func buildExternalLibrary(ctx context.Context, sch *schema.Schema, lib ExternalL
 	return nil
 }
 
-func loadProtoErrors(buildDir string) (*schema.ErrorList, error) {
-	f := filepath.Join(buildDir, "errors.pb")
+func loadProtoErrors(module moduleconfig.ModuleConfig) (*schema.ErrorList, error) {
+	f := filepath.Join(module.AbsDeployDir(), module.Errors)
 	if _, err := os.Stat(f); errors.Is(err, os.ErrNotExist) {
 		return &schema.ErrorList{Errors: make([]*schema.Error, 0)}, nil
 	}

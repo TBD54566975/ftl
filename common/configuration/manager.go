@@ -64,10 +64,9 @@ func (m *Manager[R]) Mutable() error {
 	return fmt.Errorf("no writeable configuration provider available, specify one of %s", strings.Join(writers, ", "))
 }
 
-// Get a configuration value from the active providers.
-//
-// "value" must be a pointer to a Go type that can be unmarshalled from JSON.
-func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
+// GetData returns a data value for a configuration from the active providers.
+// The data can be unmarshalled from JSON.
+func (m *Manager[R]) GetData(ctx context.Context, ref Ref) ([]byte, error) {
 	key, err := m.resolver.Get(ctx, ref)
 	// Try again at the global scope if the value is not found in module scope.
 	if ref.Module.Ok() && errors.Is(err, ErrNotFound) {
@@ -75,31 +74,38 @@ func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
 		gref.Module = optional.None[string]()
 		key, err = m.resolver.Get(ctx, gref)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else if err != nil {
-		return err
+		return nil, err
 	}
 	provider, ok := m.providers[key.Scheme]
 	if !ok {
-		return fmt.Errorf("no provider for scheme %q", key.Scheme)
+		return nil, fmt.Errorf("no provider for scheme %q", key.Scheme)
 	}
 	data, err := provider.Load(ctx, ref, key)
 	if err != nil {
-		return fmt.Errorf("%s: %w", ref, err)
+		return nil, fmt.Errorf("%s: %w", ref, err)
+	}
+	return data, nil
+}
+
+// Get a configuration value from the active providers.
+//
+// "value" must be a pointer to a Go type that can be unmarshalled from JSON.
+func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
+	data, err := m.GetData(ctx, ref)
+	if err != nil {
+		return err
 	}
 	return json.Unmarshal(data, value)
 }
 
-// Set a configuration value in the active writing provider.
+// SetData updates the configuration value in the active writing provider as raw bytes.
 //
-// "value" must be a Go type that can be marshalled to JSON.
-func (m *Manager[R]) Set(ctx context.Context, ref Ref, value any) error {
+// "data" must be bytes that can be unmarshalled into a Go type.
+func (m *Manager[R]) SetData(ctx context.Context, ref Ref, data []byte) error {
 	if err := m.Mutable(); err != nil {
-		return err
-	}
-	data, err := json.Marshal(value)
-	if err != nil {
 		return err
 	}
 	key, err := m.writer.Store(ctx, ref, data)
@@ -107,6 +113,17 @@ func (m *Manager[R]) Set(ctx context.Context, ref Ref, value any) error {
 		return err
 	}
 	return m.resolver.Set(ctx, ref, key)
+}
+
+// Set a configuration value in the active writing provider.
+//
+// "value" must be a Go type that can be marshalled to JSON.
+func (m *Manager[R]) Set(ctx context.Context, ref Ref, value any) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return m.SetData(ctx, ref, data)
 }
 
 // Unset a configuration value in all providers.

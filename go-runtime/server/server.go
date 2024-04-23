@@ -10,10 +10,10 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -34,21 +34,17 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
-		// Add config manager to context.
-		cr := &cf.ProjectConfigResolver[cf.Configuration]{Config: uc.Config}
-		cm, err := cf.NewConfigurationManager(ctx, cr)
+		resp, err := verbServiceClient.GetModuleContext(ctx, connect.NewRequest(&ftlv1.ModuleContextRequest{
+			Module: moduleName,
+		}))
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get config: %w", err)
+		}
+		moduleCtx, err := modulecontext.NewFromProto(ctx, moduleName, resp.Msg)
 		if err != nil {
 			return nil, nil, err
 		}
-		ctx = cf.ContextWithConfig(ctx, cm)
-
-		// Add secrets manager to context.
-		sr := &cf.ProjectConfigResolver[cf.Secrets]{Config: uc.Config}
-		sm, err := cf.NewSecretsManager(ctx, sr)
-		if err != nil {
-			return nil, nil, err
-		}
-		ctx = cf.ContextWithSecrets(ctx, sm)
+		ctx = moduleCtx.ApplyToContext(ctx)
 
 		err = observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
@@ -162,6 +158,10 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	return connect.NewResponse(&ftlv1.CallResponse{
 		Response: &ftlv1.CallResponse_Body{Body: respdata},
 	}), nil
+}
+
+func (m *moduleServer) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {

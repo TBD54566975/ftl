@@ -16,7 +16,7 @@ type InsertResponse struct{}
 
 //ftl:export
 func Insert(ctx context.Context, req InsertRequest) (InsertResponse, error) {
-	err := persistRequest(req)
+	err := persistRequest(ctx, req)
 	if err != nil {
 		return InsertResponse{}, err
 	}
@@ -24,8 +24,8 @@ func Insert(ctx context.Context, req InsertRequest) (InsertResponse, error) {
 	return InsertResponse{}, nil
 }
 
-func persistRequest(req InsertRequest) error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS requests
+func persistRequest(ctx context.Context, req InsertRequest) error {
+	_, err := db.Get(ctx).Exec(`CREATE TABLE IF NOT EXISTS requests
 	       (
 	         data TEXT,
 	         created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
@@ -34,7 +34,7 @@ func persistRequest(req InsertRequest) error {
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec("INSERT INTO requests (data) VALUES ($1);", req.Data)
+	_, err = db.Get(ctx).Exec("INSERT INTO requests (data) VALUES ($1);", req.Data)
 	if err != nil {
 		return err
 	}

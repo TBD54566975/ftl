@@ -75,6 +75,7 @@ type Config struct {
 
 var configValue = ftl.Config[Config]("configValue")
 var secretValue = ftl.Secret[string]("secretValue")
+var testDb = ftl.PostgresDatabase("testDb")
 
 //ftl:export
 func Verb(ctx context.Context, req Req) (Resp, error) {

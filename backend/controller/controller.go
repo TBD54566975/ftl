@@ -640,6 +640,16 @@ nextModule:
 	return connect.NewResponse(&ftlv1.PingResponse{NotReady: &msg}), nil
 }
 
+// GetModuleContext retrieves config, secrets and DSNs for a module.
+func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
+	// get module schema
+	schemas, err := s.dal.GetActiveDeploymentSchemas(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return moduleContextToProto(ctx, req.Msg.Module, schemas)
+}
+
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), "")
 }

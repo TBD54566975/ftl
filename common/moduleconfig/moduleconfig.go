@@ -32,6 +32,8 @@ type ModuleConfig struct {
 	DeployDir string `toml:"deploy-dir"`
 	// Schema is the name of the schema file relative to the DeployDir.
 	Schema string `toml:"schema"`
+	// Errors is the name of the error file relative to the DeployDir.
+	Errors string `toml:"errors"`
 	// Watch is the list of files to watch for changes.
 	Watch []string `toml:"watch"`
 
@@ -65,6 +67,9 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	}
 	if config.Schema == "" {
 		config.Schema = "schema.pb"
+	}
+	if config.Errors == "" {
+		config.Errors = "errors.pb"
 	}
 	switch config.Language {
 	case "kotlin":

@@ -9,10 +9,14 @@ import (
 	"time"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/pubsub"
 
 	. "github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 )
+
+const pollFrequency = time.Millisecond * 500
+const halfPollFrequency = time.Millisecond * 250
 
 func TestWatch(t *testing.T) {
 	if testing.Short() {
@@ -22,32 +26,27 @@ func TestWatch(t *testing.T) {
 
 	dir := t.TempDir()
 
-	// Start the watch
-	events := make(chan WatchEvent, 128)
-	watch := Watch(ctx, time.Millisecond*200, []string{dir}, nil)
-	watch.Subscribe(events)
+	w := NewWatcher()
+	events, topic := startWatching(ctx, t, w, dir)
+
+	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
 
 	// Initiate a bunch of changes.
 	err := ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "two")
 	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(pollFrequency)
 
 	// Delete a module
 	err = os.RemoveAll(filepath.Join(dir, "two"))
 	assert.NoError(t, err)
 
 	// Change a module.
-	cmd := exec.Command("go", "mod", "edit", "-replace=github.com/TBD54566975/ftl=..")
-	cmd.Dir = filepath.Join(dir, "one")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	assert.NoError(t, err)
+	updateModFile(t, filepath.Join(dir, "one"))
 
-	time.Sleep(time.Millisecond * 500)
-	watch.Close()
+	time.Sleep(pollFrequency)
+	topic.Close()
 
 	allEvents := []WatchEvent{}
 	for event := range events {
@@ -76,7 +75,117 @@ func TestWatch(t *testing.T) {
 			}
 		}
 	}
-	assert.True(t, found >= 4, "expected at least 4 events, got %d", found)
+	assert.True(t, found >= 4, "expected at least 4 events, got %d:\n%v", found, allEvents)
+}
+
+func TestWatchWithBuildModifyingFiles(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+
+	dir := t.TempDir()
+
+	w := NewWatcher()
+
+	// Initiate a module
+	err := ftl("init", "go", dir, "one")
+	assert.NoError(t, err)
+
+	events, topic := startWatching(ctx, t, w, dir)
+
+	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
+
+	// Change a file in a module, within a transaction
+	transaction := w.GetTransaction(filepath.Join(dir, "one"))
+	err = transaction.Begin()
+	assert.NoError(t, err)
+	updateModFile(t, filepath.Join(dir, "one"))
+	err = transaction.ModifiedFiles(filepath.Join(dir, "one", "go.mod"))
+	assert.NoError(t, err)
+
+	err = transaction.End()
+	assert.NoError(t, err)
+
+	time.Sleep(pollFrequency)
+	topic.Close()
+
+	allEvents := []WatchEvent{}
+	for event := range events {
+		allEvents = append(allEvents, event)
+	}
+	for _, event := range allEvents {
+		event, wasAdded := event.(WatchEventProjectAdded)
+		assert.True(t, wasAdded, "expected only project added events, got %v", event)
+	}
+}
+
+func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+
+	dir := t.TempDir()
+
+	// Initiate a module
+	err := ftl("init", "go", dir, "one")
+	assert.NoError(t, err)
+
+	w := NewWatcher()
+	events, topic := startWatching(ctx, t, w, dir)
+
+	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
+
+	// Change a file in a module, within a transaction
+	transaction := w.GetTransaction(filepath.Join(dir, "one"))
+	err = transaction.Begin()
+	assert.NoError(t, err)
+
+	updateModFile(t, filepath.Join(dir, "one"))
+
+	// Change a file in a module, without a transaction (user change)
+	cmd := exec.Command("mv", "one.go", "one_.go")
+	cmd.Dir = filepath.Join(dir, "one")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	assert.NoError(t, err)
+
+	err = transaction.End()
+	assert.NoError(t, err)
+
+	time.Sleep(pollFrequency)
+	topic.Close()
+
+	allEvents := []WatchEvent{}
+	for event := range events {
+		allEvents = append(allEvents, event)
+	}
+	foundChange := false
+	for _, event := range allEvents {
+		switch event := event.(type) {
+		case WatchEventProjectAdded:
+			// expected
+		case WatchEventProjectRemoved:
+			assert.False(t, true, "unexpected project removed event")
+		case WatchEventProjectChanged:
+			if event.Project.Config().Key == "one" {
+				foundChange = true
+			}
+		}
+	}
+	assert.True(t, foundChange, "expected project changed event")
+}
+
+func startWatching(ctx context.Context, t *testing.T, w *Watcher, dir string) (chan WatchEvent, *pubsub.Topic[WatchEvent]) {
+	t.Helper()
+	events := make(chan WatchEvent, 128)
+	topic, err := w.Watch(ctx, pollFrequency, []string{dir}, nil)
+	assert.NoError(t, err)
+	topic.Subscribe(events)
+
+	return events, topic
 }
 
 func ftl(args ...string) error {
@@ -84,4 +193,14 @@ func ftl(args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func updateModFile(t *testing.T, dir string) {
+	t.Helper()
+	cmd := exec.Command("go", "mod", "edit", "-replace=github.com/TBD54566975/ftl=..")
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	assert.NoError(t, err)
 }

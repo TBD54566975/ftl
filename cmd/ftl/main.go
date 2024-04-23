@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -92,10 +91,19 @@ func main() {
 	kctx.BindTo(sr, (*cf.Resolver[cf.Secrets])(nil))
 	kctx.BindTo(cr, (*cf.Resolver[cf.Configuration])(nil))
 
-	// Propagate to runner processes.
-	// TODO: This is a bit of a hack until we get proper configuration
-	// management through the Controller.
-	os.Setenv("FTL_CONFIG", strings.Join(projectconfig.ConfigPaths(cli.ConfigFlag), ","))
+	// Add config manager to context.
+	cm, err := cf.NewConfigurationManager(ctx, cr)
+	if err != nil {
+		kctx.Fatalf(err.Error())
+	}
+	ctx = cf.ContextWithConfig(ctx, cm)
+
+	// Add secrets manager to context.
+	sm, err := cf.NewSecretsManager(ctx, sr)
+	if err != nil {
+		kctx.Fatalf(err.Error())
+	}
+	ctx = cf.ContextWithSecrets(ctx, sm)
 
 	// Handle signals.
 	sigch := make(chan os.Signal, 1)
