@@ -136,8 +136,8 @@ func Normalise[T Node](n T) T {
 
 	case *SumType:
 		c.Pos = zero
-		for i, v := range c.Types {
-			c.Types[i] = Normalise(v)
+		for i, v := range c.Variants {
+			c.Variants[i] = Normalise(v)
 		}
 
 	case Named, Symbol, Decl, Metadata, IngressPathComponent, Type, Value: // Can never occur in reality, but here to satisfy the sum-type check.

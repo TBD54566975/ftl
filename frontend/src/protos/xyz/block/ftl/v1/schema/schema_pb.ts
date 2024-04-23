@@ -1688,9 +1688,9 @@ export class SumType extends Message<SumType> {
   name = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Type types = 4;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Type variants = 4;
    */
-  types: Type[] = [];
+  variants: Type[] = [];
 
   constructor(data?: PartialMessage<SumType>) {
     super();
@@ -1703,7 +1703,7 @@ export class SumType extends Message<SumType> {
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "types", kind: "message", T: Type, repeated: true },
+    { no: 4, name: "variants", kind: "message", T: Type, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SumType {

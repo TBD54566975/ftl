@@ -162,11 +162,11 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 		return &jsonschema.Schema{}
 
 	case *SumType:
-		types := make([]jsonschema.SchemaOrBool, len(node.Types))
-		for i, v := range node.Types {
-			types[i] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(v, refs)}
+		variants := make([]jsonschema.SchemaOrBool, len(node.Variants))
+		for i, v := range node.Variants {
+			variants[i] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(v, refs)}
 		}
-		return &jsonschema.Schema{OneOf: types}
+		return &jsonschema.Schema{OneOf: variants}
 
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
 		*MetadataAlias, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module,

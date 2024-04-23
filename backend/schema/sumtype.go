@@ -13,7 +13,7 @@ type SumType struct {
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
 	Name     string   `parser:"'sumtype' @Ident Equals" protobuf:"3"`
-	Types    []Type   `parser:"@@ ('|' @@)*" protobuf:"4"`
+	Variants []Type   `parser:"@@ ('|' @@)*" protobuf:"4"`
 }
 
 var _ Decl = (*SumType)(nil)
@@ -24,8 +24,8 @@ func (s *SumType) Position() Position { return s.Pos }
 func (s *SumType) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(s.Comments))
-	typeNames := make([]string, len(s.Types))
-	for i, v := range s.Types {
+	typeNames := make([]string, len(s.Variants))
+	for i, v := range s.Variants {
 		typeNames[i] = v.String()
 	}
 	fmt.Fprintf(w, "sumtype %s = %s", s.Name, strings.Join(typeNames, " | "))
@@ -35,36 +35,36 @@ func (s *SumType) String() string {
 func (s *SumType) schemaDecl() {}
 func (*SumType) schemaSymbol() {}
 func (s *SumType) schemaChildren() []Node {
-	children := make([]Node, len(s.Types))
-	for i, v := range s.Types {
+	children := make([]Node, len(s.Variants))
+	for i, v := range s.Variants {
 		children[i] = v
 	}
 	return children
 }
 func (s *SumType) ToProto() proto.Message {
-	types := make([]*schemapb.Type, len(s.Types))
-	for i, v := range s.Types {
-		types[i] = typeToProto(v)
+	variants := make([]*schemapb.Type, len(s.Variants))
+	for i, v := range s.Variants {
+		variants[i] = typeToProto(v)
 	}
 	return &schemapb.SumType{
 		Pos:      posToProto(s.Pos),
 		Comments: s.Comments,
 		Name:     s.Name,
-		Types:    types,
+		Variants: variants,
 	}
 }
 
 func (s *SumType) GetName() string { return s.Name }
 
 func SumTypeFromProto(s *schemapb.SumType) *SumType {
-	types := make([]Type, len(s.Types))
-	for i, v := range s.Types {
-		types[i] = typeToSchema(v)
+	variants := make([]Type, len(s.Variants))
+	for i, v := range s.Variants {
+		variants[i] = typeToSchema(v)
 	}
 	return &SumType{
 		Pos:      posFromProto(s.Pos),
 		Name:     s.Name,
 		Comments: s.Comments,
-		Types:    types,
+		Variants: variants,
 	}
 }
