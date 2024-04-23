@@ -19,13 +19,13 @@ func TestSchemaString(t *testing.T) {
 	expected := Builtins().String() + `
 // A comment
 module todo {
-  // SumType comment
-  sumtype IntOrBool = Int | Bool
-
   config configValue String
   secret secretValue String
 
   database testdb
+
+  // SumType comment
+  sumtype IntOrBool = Int | Bool
 
   data CreateRequest {
     name {String: String}? +alias json "rqn"
@@ -100,14 +100,14 @@ func TestImports(t *testing.T) {
 func TestVisit(t *testing.T) {
 	expected := `
 Module
-  SumType
-    Int
-    Bool
   Config
     String
   Secret
     String
   Database
+  SumType
+    Int
+    Bool
   Data
     Field
       Optional
@@ -380,12 +380,12 @@ func TestParseModule(t *testing.T) {
 	input := `
 // A comment
 module todo {
-  // SumType comment
-  sumtype IntOrBool = Int | Bool
-
   config configValue String
   secret secretValue String
   database testdb
+
+  // SumType comment
+  sumtype IntOrBool = Int | Bool
 
   data CreateRequest {
     name {String: String}? +alias json "rqn"

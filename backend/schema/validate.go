@@ -339,10 +339,12 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 3
 	case *Enum:
 		priority = 4
-	case *Data:
+	case *SumType:
 		priority = 5
-	case *Verb:
+	case *Data:
 		priority = 6
+	case *Verb:
+		priority = 7
 	}
 	return priority
 }
