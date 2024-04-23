@@ -230,6 +230,7 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 	}
 	if name == "" {
 		pctx.errors.add(errorf(node, "config and secret declarations must have a single string literal argument"))
+		return
 	}
 	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert
 
@@ -273,6 +274,7 @@ func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr) {
 	}
 	if name == "" {
 		pctx.errors.add(errorf(node, "config and secret declarations must have a single string literal argument"))
+		return
 	}
 	decl := &schema.Database{
 		Pos:  goPosToSchemaPos(node.Pos()),
