@@ -41,6 +41,7 @@ var (
 		{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
 		{Name: "Number", Pattern: `[0-9]+(?:\.[0-9]+)?`},
 		{Name: "Punct", Pattern: `[%/\-\_:[\]{}<>()*+?.,\\^$|#~!\'@]`},
+		{Name: "Equals", Pattern: `=`},
 	})
 
 	commonParserOptions = []participle.Option{

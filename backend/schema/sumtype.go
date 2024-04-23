@@ -12,8 +12,8 @@ type SumType struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Name     string   `parser:"'sumtype' @Ident" protobuf:"3"`
-	Types    []Type   `parser:"'{' @@* '}'" protobuf:"4"`
+	Name     string   `parser:"'sumtype' @Ident Equals" protobuf:"3"`
+	Types    []Type   `parser:"@@ ('|' @@)*" protobuf:"4"`
 }
 
 var _ Decl = (*SumType)(nil)
@@ -24,12 +24,11 @@ func (s *SumType) Position() Position { return s.Pos }
 func (s *SumType) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(s.Comments))
-
-	fmt.Fprintf(w, "sumtype %s {\n", s.Name)
-	for _, v := range s.Types {
-		fmt.Fprintln(w, indent(v.String()))
+	typeNames := make([]string, len(s.Types))
+	for i, v := range s.Types {
+		typeNames[i] = v.String()
 	}
-	fmt.Fprintf(w, "}")
+	fmt.Fprintf(w, "sumtype %s = %s", s.Name, strings.Join(typeNames, " | "))
 	return w.String()
 }
 
@@ -52,7 +51,6 @@ func (s *SumType) ToProto() proto.Message {
 		Comments: s.Comments,
 		Name:     s.Name,
 		Types:    types,
-		//Types:    nodeListToProto[*schemapb.Type](s.Types),
 	}
 }
 

@@ -20,10 +20,7 @@ func TestSchemaString(t *testing.T) {
 // A comment
 module todo {
   // SumType comment
-  sumtype IntOrBool {
-    Int
-    Bool
-  }
+  sumtype IntOrBool = Int | Bool
 
   config configValue String
   secret secretValue String
@@ -384,10 +381,7 @@ func TestParseModule(t *testing.T) {
 // A comment
 module todo {
   // SumType comment
-  sumtype IntOrBool {
-    Int
-    Bool
-  }
+  sumtype IntOrBool = Int | Bool
 
   config configValue String
   secret secretValue String
