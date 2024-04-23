@@ -223,6 +223,18 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 				return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
 			}
 
+		case *schema.SumType:
+			for _, v := range d.Variants {
+				err := validateValue(v, path, value, sch)
+				if err == nil {
+					typeMatches = true
+					break
+				}
+			}
+			if !typeMatches {
+				return fmt.Errorf("%v is not a valid variant of sumtype %s", value, fieldType)
+			}
+
 		case *schema.Config, *schema.Database, *schema.Secret:
 
 		}

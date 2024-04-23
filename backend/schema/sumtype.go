@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -42,15 +43,11 @@ func (s *SumType) schemaChildren() []Node {
 	return children
 }
 func (s *SumType) ToProto() proto.Message {
-	variants := make([]*schemapb.Type, len(s.Variants))
-	for i, v := range s.Variants {
-		variants[i] = typeToProto(v)
-	}
 	return &schemapb.SumType{
 		Pos:      posToProto(s.Pos),
 		Comments: s.Comments,
 		Name:     s.Name,
-		Variants: variants,
+		Variants: slices.Map(s.Variants, typeToProto),
 	}
 }
 
