@@ -454,10 +454,6 @@ var testSchema = MustValidate(&Schema{
 					Comments: []string{"SumType comment"},
 					Name:     "IntOrBool",
 					Types:    []Type{&Int{}, &Bool{}},
-					/*Variants: []*SumTypeVariant{
-						{Type: &Int{}},
-						{Type: &Bool{}},
-					},*/
 				},
 				&Secret{
 					Name: "secretValue",
