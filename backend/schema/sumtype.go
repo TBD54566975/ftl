@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"google.golang.org/protobuf/proto"
+
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"google.golang.org/protobuf/proto"
 )
 
 type SumType struct {
