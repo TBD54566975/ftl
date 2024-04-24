@@ -67,32 +67,35 @@ func ComputeFileHashes(project Project) (FileHashes, error) {
 	config := project.Config()
 
 	fileHashes := make(FileHashes)
-	err := WalkDir(config.Dir, func(srcPath string, entry fs.DirEntry) error {
-		if entry.IsDir() {
+	rootDirs := computeRootDirs(config.Dir, config.Watch)
+
+	for _, rootDir := range rootDirs {
+		err := WalkDir(rootDir, func(srcPath string, entry fs.DirEntry) error {
+			if entry.IsDir() {
+				return nil
+			}
+			hash, matched, err := ComputeFileHash(rootDir, srcPath, config.Watch)
+			if err != nil {
+				return err
+			}
+			if !matched {
+				return nil
+			}
+			fileHashes[srcPath] = hash
 			return nil
-		}
-		hash, matched, err := ComputeFileHash(project, srcPath)
+		})
+
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if !matched {
-			return nil
-		}
-		fileHashes[srcPath] = hash
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
-	return fileHashes, err
+	return fileHashes, nil
 }
 
-func ComputeFileHash(project Project, srcPath string) (hash []byte, matched bool, err error) {
-	config := project.Config()
-
-	for _, pattern := range config.Watch {
-		relativePath, err := filepath.Rel(config.Dir, srcPath)
+func ComputeFileHash(baseDir, srcPath string, watch []string) (hash []byte, matched bool, err error) {
+	for _, pattern := range watch {
+		relativePath, err := filepath.Rel(baseDir, srcPath)
 		if err != nil {
 			return nil, false, err
 		}
@@ -121,4 +124,27 @@ func ComputeFileHash(project Project, srcPath string) (hash []byte, matched bool
 		}
 	}
 	return nil, false, nil
+}
+
+// computeRootDirs computes the unique root directories for the given baseDir and patterns.
+func computeRootDirs(baseDir string, patterns []string) []string {
+	uniqueRoots := make(map[string]struct{})
+	uniqueRoots[baseDir] = struct{}{}
+
+	for _, pattern := range patterns {
+		fullPath := filepath.Join(baseDir, pattern)
+		dirPath, _ := doublestar.SplitPattern(fullPath)
+		cleanedPath := filepath.Clean(dirPath)
+
+		if _, err := os.Stat(cleanedPath); err == nil {
+			uniqueRoots[cleanedPath] = struct{}{}
+		}
+	}
+
+	roots := make([]string, 0, len(uniqueRoots))
+	for root := range uniqueRoots {
+		roots = append(roots, root)
+	}
+
+	return roots
 }

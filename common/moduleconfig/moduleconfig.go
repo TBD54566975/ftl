@@ -2,10 +2,14 @@ package moduleconfig
 
 import (
 	"fmt"
+	"go/parser"
+	"go/token"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"golang.org/x/mod/modfile"
 )
 
 // ModuleGoConfig is language-specific configuration for Go modules.
@@ -95,6 +99,11 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		}
 		if len(config.Watch) == 0 {
 			config.Watch = []string{"**/*.go", "go.mod", "go.sum"}
+			watches, err := replacementWatches(moduleDir, config.DeployDir)
+			if err != nil {
+				return err
+			}
+			config.Watch = append(config.Watch, watches...)
 		}
 	}
 
@@ -107,15 +116,99 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 			return fmt.Errorf("deploy files must be relative to the module directory")
 		}
 	}
-	for _, watch := range config.Watch {
-		if !isBeneath(moduleDir, watch) {
-			return fmt.Errorf("watch files must be relative to the module directory")
-		}
-	}
+
 	return nil
 }
 
 func isBeneath(moduleDir, path string) bool {
 	resolved := filepath.Clean(filepath.Join(moduleDir, path))
 	return strings.HasPrefix(resolved, strings.TrimSuffix(moduleDir, "/")+"/")
+}
+
+func replacementWatches(moduleDir, deployDir string) ([]string, error) {
+	goModPath := filepath.Join(moduleDir, "go.mod")
+	goModBytes, err := os.ReadFile(goModPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s: %w", goModPath, err)
+	}
+	goModFile, err := modfile.Parse(goModPath, goModBytes, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %s: %w", goModPath, err)
+	}
+
+	replacements := make(map[string]string)
+	for _, r := range goModFile.Replace {
+		replacements[r.Old.Path] = r.New.Path
+		if strings.HasPrefix(r.New.Path, ".") {
+			relPath, err := filepath.Rel(filepath.Dir(goModPath), filepath.Join(filepath.Dir(goModPath), r.New.Path))
+			if err != nil {
+				return nil, err
+			}
+			replacements[r.Old.Path] = relPath
+		}
+	}
+
+	files, err := findReplacedImports(moduleDir, deployDir, replacements)
+	if err != nil {
+		return nil, err
+	}
+
+	uniquePatterns := make(map[string]struct{})
+	for _, file := range files {
+		pattern := filepath.Join(file, "**/*.go")
+		uniquePatterns[pattern] = struct{}{}
+	}
+
+	patterns := make([]string, 0, len(uniquePatterns))
+	for pattern := range uniquePatterns {
+		patterns = append(patterns, pattern)
+	}
+
+	return patterns, nil
+}
+
+// findReplacedImports finds Go files with imports that are specified in the replacements.
+func findReplacedImports(moduleDir, deployDir string, replacements map[string]string) ([]string, error) {
+	var libPaths []string
+
+	err := filepath.WalkDir(moduleDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && !strings.Contains(path, deployDir) && strings.HasSuffix(path, ".go") {
+			imports, err := parseImports(path)
+			if err != nil {
+				return err
+			}
+
+			for _, imp := range imports {
+				for oldPath, newPath := range replacements {
+					if strings.HasPrefix(imp, oldPath) {
+						resolvedPath := filepath.Join(newPath, strings.TrimPrefix(imp, oldPath))
+						libPaths = append(libPaths, resolvedPath)
+						break // Only add the library path once for each import match
+					}
+				}
+			}
+		}
+		return nil
+	})
+
+	return libPaths, err
+}
+
+func parseImports(filePath string) ([]string, error) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, filePath, nil, parser.ImportsOnly)
+	if err != nil {
+		return nil, err
+	}
+
+	var imports []string
+	for _, imp := range file.Imports {
+		// Trim the quotes from the import path value
+		trimmedPath := strings.Trim(imp.Path.Value, `"`)
+		imports = append(imports, trimmedPath)
+	}
+	return imports, nil
 }

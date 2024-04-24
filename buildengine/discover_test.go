@@ -25,7 +25,7 @@ func TestDiscoverModules(t *testing.T) {
 				DeployDir: "_ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
 			},
 		},
 		Module{
@@ -38,7 +38,7 @@ func TestDiscoverModules(t *testing.T) {
 				DeployDir: "_ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
 			},
 		},
 		Module{
@@ -117,7 +117,7 @@ func TestDiscoverModules(t *testing.T) {
 				DeployDir: "_ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
 			},
 		},
 		Module{
@@ -130,7 +130,7 @@ func TestDiscoverModules(t *testing.T) {
 				DeployDir: "_ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
 			},
 		},
 		ExternalLibrary{

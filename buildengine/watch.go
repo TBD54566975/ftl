@@ -210,7 +210,7 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 	}
 
 	for _, path := range paths {
-		hash, matched, err := ComputeFileHash(projectHashes.Project, path)
+		hash, matched, err := ComputeFileHash(projectHashes.Project.Config().Dir, path, projectHashes.Project.Config().Watch)
 		if err != nil {
 			return err
 		}
