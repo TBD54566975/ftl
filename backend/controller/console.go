@@ -106,7 +106,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 					Config: c,
 				})
 
-			case *schema.Database, *schema.Enum:
+			case *schema.Database, *schema.Enum, *schema.SumType:
 			}
 		}
 

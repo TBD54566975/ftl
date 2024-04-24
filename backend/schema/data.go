@@ -120,7 +120,7 @@ func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Int,
 			Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob,
 			*MetadataAlias, *Module, *Schema, *String, *Time, Type, *TypeParameter,
-			*Unit, *Verb, *Enum, *EnumVariant,
+			*Unit, *Verb, *Enum, *EnumVariant, *SumType,
 			Value, *IntValue, *StringValue, Symbol, Named:
 		}
 		return next()

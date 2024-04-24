@@ -176,7 +176,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataCronJob,
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
-				Value, *IntValue, *StringValue, *Config, *Secret, Symbol, Named:
+				Value, *IntValue, *StringValue, *Config, *Secret, *SumType, Symbol, Named:
 			}
 			return next()
 		})
@@ -306,7 +306,7 @@ func ValidateModule(module *Module) error {
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
-			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue:
+			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *SumType:
 
 		case Named, Symbol, Type, Metadata, Decl, Value: // Union types.
 		}
@@ -339,10 +339,12 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 3
 	case *Enum:
 		priority = 4
-	case *Data:
+	case *SumType:
 		priority = 5
-	case *Verb:
+	case *Data:
 		priority = 6
+	case *Verb:
+		priority = 7
 	}
 	return priority
 }

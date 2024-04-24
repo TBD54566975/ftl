@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &Config{}, &Secret{}}
+	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &Config{}, &Secret{}, &SumType{}}
 	nonOptionalTypeUnion = []Type{
 		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
 		&Map{}, &Any{}, &Unit{},
@@ -40,7 +40,7 @@ var (
 		{Name: "Comment", Pattern: `//.*`},
 		{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
 		{Name: "Number", Pattern: `[0-9]+(?:\.[0-9]+)?`},
-		{Name: "Punct", Pattern: `[%/\-\_:[\]{}<>()*+?.,\\^$|#~!\'@]`},
+		{Name: "Punct", Pattern: `[%/\-\_:[\]{}<>()*+?.,\\^$|#~!\'@=]`},
 	})
 
 	commonParserOptions = []participle.Option{

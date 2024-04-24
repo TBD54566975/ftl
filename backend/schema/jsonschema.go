@@ -45,6 +45,8 @@ func DataToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, error) {
 			}
 		case *Enum:
 			root.Definitions[r.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(n, refs)}
+		case *SumType:
+			root.Definitions[r.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(n, refs)}
 		case *Config, *Database, *Secret, *Verb:
 			return nil, fmt.Errorf("reference to unsupported node type %T", decl)
 		}
@@ -160,6 +162,21 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 
 	case *TypeParameter:
 		return &jsonschema.Schema{}
+
+	case *SumType:
+		variants := make([]jsonschema.SchemaOrBool, len(node.Variants))
+		for i, v := range node.Variants {
+			variants[i] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(v, refs)}
+		}
+		st := jsonschema.String
+		properties := make(map[string]jsonschema.SchemaOrBool)
+		properties["@_kind"] = jsonschema.SchemaOrBool{
+			TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &st}},
+		}
+		return &jsonschema.Schema{
+			Properties: properties,
+			OneOf:      variants,
+		}
 
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
 		*MetadataAlias, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module,
