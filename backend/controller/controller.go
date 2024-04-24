@@ -645,9 +645,17 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	// get module schema
 	schemas, err := s.dal.GetActiveDeploymentSchemas(ctx)
 	if err != nil {
-		return nil, err
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get active schemas: %w", err))
 	}
-	return moduleContextToProto(ctx, req.Msg.Module, schemas)
+	schema, ok := slices.Find(schemas, func(s *schema.Module) bool { return s.Name == req.Msg.Module })
+	if !ok {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("module %q not found", req.Msg.Module))
+	}
+	response, err := moduleContextToProto(ctx, schema)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get module context: %w", err))
+	}
+	return connect.NewResponse(response), nil
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {

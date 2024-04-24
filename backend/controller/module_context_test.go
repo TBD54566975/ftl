@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 )
 
 func TestModuleContextProto(t *testing.T) {
@@ -41,15 +42,11 @@ func TestModuleContextProto(t *testing.T) {
 		assert.NoError(t, cm.Set(ctx, cf.Ref{Module: optional.None[string](), Name: key}, globalStrValue))
 	}
 
-	response, err := moduleContextToProto(ctx, moduleName, []*schema.Module{
-		{
-			Name: moduleName,
-		},
-	})
+	response, err := moduleContextToProto(ctx, &schema.Module{Name: moduleName})
 	assert.NoError(t, err)
 
 	for i := range 50 {
 		key := fmt.Sprintf("key%d", i)
-		assert.Equal(t, "\"HelloWorld\"", string(response.Msg.Configs[key]), "module configs should beat global configs")
+		assert.Equal(t, "\"HelloWorld\"", string(response.Configs[key]), "module configs should beat global configs")
 	}
 }

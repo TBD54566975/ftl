@@ -68,3 +68,13 @@ func FlatMap[T, U any](slice []T, fn func(T) []U) []U {
 	}
 	return result
 }
+
+func Find[T any](slice []T, fn func(T) bool) (T, bool) {
+	for _, v := range slice {
+		if fn(v) {
+			return v, true
+		}
+	}
+	var zero T
+	return zero, false
+}
