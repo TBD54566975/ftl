@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
+	"github.com/google/uuid"
 )
 
 type ControllerState string
@@ -295,6 +297,14 @@ type IngressRoute struct {
 	DeploymentID int64
 	Module       string
 	Verb         string
+}
+
+type Lease struct {
+	ID             int64
+	IdempotencyKey uuid.UUID
+	Key            leases.Key
+	CreatedAt      time.Time
+	ExpiresAt      time.Time
 }
 
 type Module struct {

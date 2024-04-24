@@ -6,10 +6,14 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/google/uuid"
 
+	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
+type NullUUID = optional.Option[uuid.UUID]
+type NullLeaseKey = optional.Option[leases.Key]
 type NullTime = optional.Option[time.Time]
 type NullDuration = optional.Option[time.Duration]
 type NullRunnerKey = optional.Option[model.RunnerKey]

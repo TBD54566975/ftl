@@ -3,6 +3,7 @@ package scheduledtask
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -10,12 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/atomic"
 	clock "github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
-	"github.com/serialx/hashring"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -27,6 +27,7 @@ type descriptor struct {
 	retry       backoff.Backoff
 	job         Job
 	singlyHomed bool
+	lease       leases.Lease
 }
 
 // A Job is a function that is scheduled to run periodically.
@@ -46,25 +47,24 @@ type DALFunc func(ctx context.Context, all bool) ([]dal.Controller, error)
 // as the hash ring is only updated periodically and controllers may have
 // inconsistent views of the hash ring.
 type Scheduler struct {
-	key   model.ControllerKey
-	jobs  chan *descriptor
-	clock clock.Clock
-
-	hashring atomic.Value[*hashring.HashRing]
+	key    model.ControllerKey
+	jobs   chan *descriptor
+	clock  clock.Clock
+	leaser leases.Leaser
 }
 
 // New creates a new [Scheduler].
-func New(ctx context.Context, id model.ControllerKey) *Scheduler {
-	return NewForTesting(ctx, id, clock.New())
+func New(ctx context.Context, id model.ControllerKey, leaser leases.Leaser) *Scheduler {
+	return NewForTesting(ctx, id, clock.New(), leaser)
 }
 
-func NewForTesting(ctx context.Context, id model.ControllerKey, clock clock.Clock) *Scheduler {
+func NewForTesting(ctx context.Context, id model.ControllerKey, clock clock.Clock, leaser leases.Leaser) *Scheduler {
 	s := &Scheduler{
-		key:   id,
-		jobs:  make(chan *descriptor),
-		clock: clock,
+		key:    id,
+		jobs:   make(chan *descriptor),
+		clock:  clock,
+		leaser: leaser,
 	}
-	s.UpdatedControllerList(ctx, nil)
 	go s.run(ctx)
 	return s
 }
@@ -126,14 +126,19 @@ func (s *Scheduler) run(ctx context.Context) {
 				if job.next.After(s.clock.Now()) {
 					continue
 				}
-				hashring := s.hashring.Load()
-
-				// If the job is singly homed, check that we are the active controller.
-				if job.singlyHomed {
-					if node, ok := hashring.GetNode(job.name); !ok || node != s.key.String() {
-						job.next = time.Time{}
+				// If the job is singly homed, see if we can acquire the lease.
+				if job.singlyHomed && job.lease == nil {
+					lease, err := s.leaser.AcquireLease(ctx, leases.SystemKey("scheduledtask", job.name), time.Second*10)
+					if err != nil {
+						if errors.Is(err, leases.ErrConflict) {
+							logger.Scope(job.name).Tracef("Lease is held by another controller, will try again shortly.")
+						} else {
+							logger.Scope(job.name).Warnf("Failed to acquire lease: %s", err)
+						}
+						job.next = s.clock.Now().Add(job.retry.Duration())
 						continue
 					}
+					job.lease = lease
 				}
 				jobs[i] = nil // Zero out scheduled jobs.
 				logger.Scope(job.name).Tracef("Running scheduled task")
@@ -155,10 +160,4 @@ func (s *Scheduler) run(ctx context.Context) {
 			jobs = append(jobs, job)
 		}
 	}
-}
-
-// UpdatedControllerList synchronises the hash ring with the active controllers.
-func (s *Scheduler) UpdatedControllerList(ctx context.Context, controllers []dal.Controller) {
-	hashring := hashring.New(slices.Map(controllers, func(c dal.Controller) string { return c.Key.String() }))
-	s.hashring.Store(hashring)
 }

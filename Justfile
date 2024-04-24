@@ -42,7 +42,7 @@ build-generate:
   @mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x ./internal/log
 
 # Build command-line tools
-build +tools: build-protos build-sqlc build-zips build-frontend
+build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
   for tool in $@; do mk "{{RELEASE}}/$tool" : !(build) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
@@ -56,8 +56,8 @@ init-db:
   dbmate --migrations-dir backend/controller/sql/schema up
 
 # Regenerate SQLC code (requires init-db to be run first)
-build-sqlc:
-  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema -- sqlc generate
+build-sqlc: init-db
+  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- sqlc generate
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips: build-kt-runtime

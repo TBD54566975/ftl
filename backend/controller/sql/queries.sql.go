@@ -10,9 +10,11 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
+	"github.com/google/uuid"
 )
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
@@ -189,6 +191,23 @@ func (q *Queries) EndCronJob(ctx context.Context, nextExecution time.Time, key m
 		&i.State,
 	)
 	return i, err
+}
+
+const expireLeases = `-- name: ExpireLeases :one
+WITH expired AS (
+    DELETE FROM leases
+    WHERE expires_at < NOW() AT TIME ZONE 'utc'
+    RETURNING 1
+)
+SELECT COUNT(*)
+FROM expired
+`
+
+func (q *Queries) ExpireLeases(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, expireLeases)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const expireRunnerReservations = `-- name: ExpireRunnerReservations :one
@@ -1431,6 +1450,46 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 	return count, err
 }
 
+const newLease = `-- name: NewLease :one
+INSERT INTO leases (idempotency_key, key, expires_at)
+VALUES (gen_random_uuid(), $1, $2::timestamptz)
+RETURNING idempotency_key
+`
+
+func (q *Queries) NewLease(ctx context.Context, key leases.Key, expiresAt time.Time) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, newLease, key, expiresAt)
+	var idempotency_key uuid.UUID
+	err := row.Scan(&idempotency_key)
+	return idempotency_key, err
+}
+
+const releaseLease = `-- name: ReleaseLease :one
+DELETE FROM leases
+WHERE idempotency_key = $1 AND key = $2
+RETURNING true
+`
+
+func (q *Queries) ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
+	row := q.db.QueryRow(ctx, releaseLease, idempotencyKey, key)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const renewLease = `-- name: RenewLease :one
+UPDATE leases
+SET expires_at = (NOW() AT TIME ZONE 'utc') + $1::interval
+WHERE idempotency_key = $2 AND key = $3
+RETURNING true
+`
+
+func (q *Queries) RenewLease(ctx context.Context, expiresIn time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
+	row := q.db.QueryRow(ctx, renewLease, expiresIn, idempotencyKey, key)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const replaceDeployment = `-- name: ReplaceDeployment :one
 WITH update_container AS (
     UPDATE deployments AS d
@@ -1511,8 +1570,8 @@ WITH updates AS (
     AND (next_execution AT TIME ZONE 'utc') < (NOW() AT TIME ZONE 'utc')::TIMESTAMPTZ
   RETURNING id, key, state, start_time, next_execution)
 SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule,
-  COALESCE(u.start_time, j.start_time) as start_time, 
-  COALESCE(u.next_execution, j.next_execution) as next_execution, 
+  COALESCE(u.start_time, j.start_time) as start_time,
+  COALESCE(u.next_execution, j.next_execution) as next_execution,
   COALESCE(u.state, j.state) as state,
   d.min_replicas > 0 as has_min_replicas,
   CASE WHEN u.key IS NULL THEN FALSE ELSE TRUE END as updated
