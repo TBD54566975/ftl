@@ -134,21 +134,16 @@ func TestDataToJSONSchema(t *testing.T) {
       ]
     },
     "foo.IntOrBool": {
+      "properties": {
+        "@_kind": {
+          "type": "string"
+        }
+      },
       "oneOf": [
         {
-          "properties": {
-            "@_kind": {
-              "type": "string"
-            }
-          },
           "type": "integer"
         },
         {
-          "properties": {
-            "@_kind": {
-              "type": "string"
-            }
-          },
           "type": "boolean"
         }
       ]
