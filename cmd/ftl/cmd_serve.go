@@ -36,7 +36,7 @@ type serveCmd struct {
 	Recreate       bool          `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers    int           `short:"c" help:"Number of controllers to start." default:"1"`
 	Background     bool          `help:"Run in the background." default:"false"`
-	Stop           bool          `help:"Stop the running FTL instance. Can be used to --background to restart the server" default:"false"`
+	Stop           bool          `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
 	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"1m"`
 	controller.CommonConfig
 }
