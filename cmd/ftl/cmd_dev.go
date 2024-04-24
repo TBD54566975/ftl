@@ -39,6 +39,10 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 
 	g, ctx := errgroup.WithContext(ctx)
 
+	if d.NoServe && d.ServeCmd.Stop {
+		logger := log.FromContext(ctx)
+		return KillBackgroundServe(logger)
+	}
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
 			err := d.ServeCmd.Run(ctx)
