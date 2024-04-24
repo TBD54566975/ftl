@@ -262,8 +262,9 @@ message Verb {
 
   optional Position pos = 1;
   string name = 2;
-  repeated string comments = 3;
-  Type request = 4;
-  Type response = 5;
-  repeated Metadata metadata = 6;
+  string visibility = 3;
+  repeated string comments = 4;
+  Type request = 5;
+  Type response = 6;
+  repeated Metadata metadata = 7;
 }

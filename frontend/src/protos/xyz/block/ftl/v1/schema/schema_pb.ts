@@ -2030,22 +2030,27 @@ export class Verb extends Message<Verb> {
   name = "";
 
   /**
-   * @generated from field: repeated string comments = 3;
+   * @generated from field: string visibility = 3;
+   */
+  visibility = "";
+
+  /**
+   * @generated from field: repeated string comments = 4;
    */
   comments: string[] = [];
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type request = 4;
+   * @generated from field: xyz.block.ftl.v1.schema.Type request = 5;
    */
   request?: Type;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type response = 5;
+   * @generated from field: xyz.block.ftl.v1.schema.Type response = 6;
    */
   response?: Type;
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 6;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 7;
    */
   metadata: Metadata[] = [];
 
@@ -2060,10 +2065,11 @@ export class Verb extends Message<Verb> {
     { no: 31634, name: "runtime", kind: "message", T: VerbRuntime, opt: true },
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "request", kind: "message", T: Type },
-    { no: 5, name: "response", kind: "message", T: Type },
-    { no: 6, name: "metadata", kind: "message", T: Metadata, repeated: true },
+    { no: 3, name: "visibility", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "request", kind: "message", T: Type },
+    { no: 6, name: "response", kind: "message", T: Type },
+    { no: 7, name: "metadata", kind: "message", T: Metadata, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {

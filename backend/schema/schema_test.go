@@ -45,13 +45,13 @@ module todo {
     when Time
   }
 
-  verb create(todo.CreateRequest) todo.CreateResponse
+  internal verb create(todo.CreateRequest) todo.CreateResponse
       +calls todo.destroy  +database calls todo.testdb
 
-  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
+  public verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{name}
 
-  verb scheduled(Unit) Unit
+  internal verb scheduled(Unit) Unit
       +cron */10 * * 1-10,11-31 * * *
 }
 
@@ -186,7 +186,7 @@ func TestParsing(t *testing.T) {
 					data CreateListResponse {}
 
 					// Create a new list
-					verb createList(todo.CreateListRequest) todo.CreateListResponse
+					internal verb createList(todo.CreateListRequest) todo.CreateListResponse
 						+calls todo.createList
 				}
 			`,
@@ -198,9 +198,10 @@ func TestParsing(t *testing.T) {
 							&Data{Name: "CreateListRequest"},
 							&Data{Name: "CreateListResponse"},
 							&Verb{Name: "createList",
-								Comments: []string{"Create a new list"},
-								Request:  &Ref{Module: "todo", Name: "CreateListRequest"},
-								Response: &Ref{Module: "todo", Name: "CreateListResponse"},
+								Visibility: "internal",
+								Comments:   []string{"Create a new list"},
+								Request:    &Ref{Module: "todo", Name: "CreateListRequest"},
+								Response:   &Ref{Module: "todo", Name: "CreateListResponse"},
 								Metadata: []Metadata{
 									&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "createList"}}},
 								},
@@ -210,10 +211,10 @@ func TestParsing(t *testing.T) {
 				},
 			}},
 		{name: "InvalidRequestRef",
-			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
+			input: `module test { internal verb test(InvalidRequest) InvalidResponse}`,
 			errors: []string{
-				"1:25-25: unknown reference \"InvalidRequest\"",
-				"1:41-41: unknown reference \"InvalidResponse\""}},
+				"1:34-34: unknown reference \"InvalidRequest\"",
+				"1:50-50: unknown reference \"InvalidResponse\""}},
 		{name: "InvalidRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
@@ -231,18 +232,19 @@ func TestParsing(t *testing.T) {
 				"1:35-35: unknown reference \"verb\"",
 			}},
 		{name: "KeywordAsName",
-			input:  `module int { data String { name String } verb verb(String) String }`,
+			input:  `module int { data String { name String } internal verb verb(String) String }`,
 			errors: []string{"1:14-14: data structure name \"String\" is a reserved word"}},
 		{name: "BuiltinRef",
-			input: `module test { verb myIngress(HttpRequest<String>) HttpResponse<String, String> }`,
+			input: `module test { public verb myIngress(HttpRequest<String>) HttpResponse<String, String> }`,
 			expected: &Schema{
 				Modules: []*Module{{
 					Name: "test",
 					Decls: []Decl{
 						&Verb{
-							Name:     "myIngress",
-							Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&String{}}},
-							Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&String{}, &String{}}},
+							Name:       "myIngress",
+							Visibility: "public",
+							Request:    &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&String{}}},
+							Response:   &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&String{}, &String{}}},
 						},
 					},
 				}},
@@ -401,11 +403,11 @@ module todo {
     name String
 	when Time
   }
-  verb create(todo.CreateRequest) todo.CreateResponse
+  internal verb create(todo.CreateRequest) todo.CreateResponse
   	+calls todo.destroy +database calls todo.testdb
-  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
+  public verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
   	+ingress http GET /todo/destroy/{name}
-  verb scheduled(Unit) Unit
+  internal verb scheduled(Unit) Unit
     +cron */10 * * 1-10,11-31 * * *
 }
 `
@@ -486,15 +488,17 @@ var testSchema = MustValidate(&Schema{
 					},
 				},
 				&Verb{Name: "create",
-					Request:  &Ref{Module: "todo", Name: "CreateRequest"},
-					Response: &Ref{Module: "todo", Name: "CreateResponse"},
+					Visibility: "internal",
+					Request:    &Ref{Module: "todo", Name: "CreateRequest"},
+					Response:   &Ref{Module: "todo", Name: "CreateResponse"},
 					Metadata: []Metadata{
 						&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "destroy"}}},
 						&MetadataDatabases{Calls: []*Ref{{Module: "todo", Name: "testdb"}}},
 					}},
 				&Verb{Name: "destroy",
-					Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyRequest"}}},
-					Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyResponse"}, &String{}}},
+					Visibility: "public",
+					Request:    &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyRequest"}}},
+					Response:   &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyResponse"}, &String{}}},
 					Metadata: []Metadata{
 						&MetadataIngress{
 							Type:   "http",
@@ -508,8 +512,9 @@ var testSchema = MustValidate(&Schema{
 					},
 				},
 				&Verb{Name: "scheduled",
-					Request:  &Unit{Unit: true},
-					Response: &Unit{Unit: true},
+					Visibility: "internal",
+					Request:    &Unit{Unit: true},
+					Response:   &Unit{Unit: true},
 					Metadata: []Metadata{
 						&MetadataCronJob{
 							Cron: "*/10 * * 1-10,11-31 * * *",

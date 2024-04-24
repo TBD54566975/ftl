@@ -34,26 +34,30 @@ func TestGenerateGoModule(t *testing.T) {
 				&schema.Data{Name: "EchoRequest"},
 				&schema.Data{Name: "EchoResponse"},
 				&schema.Verb{
-					Name:     "echo",
-					Request:  &schema.Ref{Name: "EchoRequest"},
-					Response: &schema.Ref{Name: "EchoResponse"},
+					Name:       "echo",
+					Visibility: "internal",
+					Request:    &schema.Ref{Name: "EchoRequest"},
+					Response:   &schema.Ref{Name: "EchoResponse"},
 				},
 				&schema.Data{Name: "SinkReq"},
 				&schema.Verb{
-					Name:     "sink",
-					Request:  &schema.Ref{Name: "SinkReq"},
-					Response: &schema.Unit{},
+					Name:       "sink",
+					Visibility: "internal",
+					Request:    &schema.Ref{Name: "SinkReq"},
+					Response:   &schema.Unit{},
 				},
 				&schema.Data{Name: "SourceResp"},
 				&schema.Verb{
-					Name:     "source",
-					Request:  &schema.Unit{},
-					Response: &schema.Ref{Name: "SourceResp"},
+					Name:       "source",
+					Visibility: "internal",
+					Request:    &schema.Unit{},
+					Response:   &schema.Ref{Name: "SourceResp"},
 				},
 				&schema.Verb{
-					Name:     "nothing",
-					Request:  &schema.Unit{},
-					Response: &schema.Unit{},
+					Name:       "nothing",
+					Visibility: "internal",
+					Request:    &schema.Unit{},
+					Response:   &schema.Unit{},
 				},
 			}},
 			{Name: "test"},
@@ -69,7 +73,7 @@ import (
 
 var _ = context.Background
 
-//ftl:export
+//ftl:internal
 type Color string
 const (
   Red Color = "Red"
@@ -77,7 +81,7 @@ const (
   Green Color = "Green"
 )
 
-//ftl:export
+//ftl:internal
 type ColorInt int
 const (
   RedInt ColorInt = 0
@@ -91,7 +95,7 @@ type EchoRequest struct {
 type EchoResponse struct {
 }
 
-//ftl:export
+//ftl:internal
 func Echo(context.Context, EchoRequest) (EchoResponse, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }
@@ -99,7 +103,7 @@ func Echo(context.Context, EchoRequest) (EchoResponse, error) {
 type SinkReq struct {
 }
 
-//ftl:export
+//ftl:internal
 func Sink(context.Context, SinkReq) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
 }
@@ -107,12 +111,12 @@ func Sink(context.Context, SinkReq) error {
 type SourceResp struct {
 }
 
-//ftl:export
+//ftl:internal
 func Source(context.Context) (SourceResp, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSource()")
 }
 
-//ftl:export
+//ftl:internal
 func Nothing(context.Context) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")
 }
@@ -161,7 +165,7 @@ type Req struct {
 type Resp struct {
 }
 
-//ftl:export
+//ftl:internal
 func Call(context.Context, Req) (Resp, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }

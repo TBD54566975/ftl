@@ -14,7 +14,7 @@ var _ = context.Background
 {{- range .Decls }}
 {{if is "Enum" . }}
 {{$enumName := .Name -}}
-//ftl:export
+//ftl:internal
 type {{.Name|title}} {{ type $ .Type }}
 const (
   {{- range .Variants }}
@@ -36,7 +36,7 @@ type {{.Name|title}}
 {{.Comments|comment }}
 {{if .Comments}}//
 {{end -}}
-//ftl:export
+//ftl:internal
 {{- if and (eq (type $ .Request) "ftl.Unit") (eq (type $ .Response) "ftl.Unit")}}
 func {{.Name|title}}(context.Context) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")

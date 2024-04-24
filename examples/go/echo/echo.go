@@ -23,7 +23,7 @@ type EchoResponse struct {
 
 // Echo returns a greeting with the current time.
 //
-//ftl:export
+//ftl:internal
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	tresp, err := ftl.Call(ctx, time.Time, time.TimeRequest{})
 	if err != nil {

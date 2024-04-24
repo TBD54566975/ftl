@@ -364,16 +364,16 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 		}
 		for _, dir := range directives {
 			switch dir.(type) {
-			case *directiveExport:
+			case *directiveVisibility:
 				if len(node.Specs) != 1 {
-					pctx.errors.add(errorf(node, "error parsing ftl export directive: expected "+
+					pctx.errors.add(errorf(node, "error parsing ftl visibility directive: expected "+
 						"exactly one type declaration"))
 					return
 				}
 				if pctx.module.Name == "" {
 					pctx.module.Name = pctx.pkg.Name
 				} else if pctx.module.Name != pctx.pkg.Name && strings.TrimPrefix(pctx.pkg.Name, "ftl/") != pctx.module.Name {
-					pctx.errors.add(errorf(node, "type export directive must be in the module package"))
+					pctx.errors.add(errorf(node, "type visibility directive must be in the module package"))
 					return
 				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
@@ -387,7 +387,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					visitTypeSpec(pctx, t)
 				}
 
-			case *directiveIngress, *directiveCronJob:
+			case *directiveCronJob:
 			}
 		}
 		return
@@ -465,29 +465,27 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 		pctx.errors.add(err)
 	}
 	var metadata []schema.Metadata
+	var visibility string
 	isVerb := false
 	for _, dir := range directives {
 		switch dir := dir.(type) {
-		case *directiveExport:
+		case *directiveVisibility:
 			isVerb = true
 			if pctx.module.Name == "" {
 				pctx.module.Name = pctx.pkg.Name
 			} else if pctx.module.Name != pctx.pkg.Name {
-				pctx.errors.add(errorf(node, "function export directive must be in the module package"))
+				pctx.errors.add(errorf(node, "function visibility directive must be in the module package"))
+			}
+			visibility = string(dir.Visibility)
+			if dir.Type != "" {
+				metadata = append(metadata, &schema.MetadataIngress{
+					Pos:    dir.Pos,
+					Type:   dir.Type,
+					Method: dir.Method,
+					Path:   dir.Path,
+				})
 			}
 
-		case *directiveIngress:
-			isVerb = true
-			typ := dir.Type
-			if typ == "" {
-				typ = "http"
-			}
-			metadata = append(metadata, &schema.MetadataIngress{
-				Pos:    dir.Pos,
-				Type:   typ,
-				Method: dir.Method,
-				Path:   dir.Path,
-			})
 		case *directiveCronJob:
 			isVerb = true
 			metadata = append(metadata, &schema.MetadataCronJob{
@@ -510,7 +508,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		pctx.errors.add(errorf(node, "ftl:export cannot be a method"))
+		pctx.errors.add(errorf(node, "ftl:<visibility> cannot be a method"))
 		return nil
 	}
 	params := sig.Params()
@@ -540,12 +538,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 			"unsupported response type %q", results.At(0).Type()))
 	}
 	verb = &schema.Verb{
-		Pos:      goPosToSchemaPos(node.Pos()),
-		Comments: visitComments(node.Doc),
-		Name:     strcase.ToLowerCamel(node.Name.Name),
-		Request:  reqV,
-		Response: resV,
-		Metadata: metadata,
+		Pos:        goPosToSchemaPos(node.Pos()),
+		Comments:   visitComments(node.Doc),
+		Name:       strcase.ToLowerCamel(node.Name.Name),
+		Visibility: visibility,
+		Request:    reqV,
+		Response:   resV,
+		Metadata:   metadata,
 	}
 	pctx.nativeNames[verb] = node.Name.Name
 	pctx.module.Decls = append(pctx.module.Decls, verb)

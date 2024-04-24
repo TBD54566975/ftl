@@ -72,10 +72,11 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       import ftl.time.TimeResponse
       import xyz.block.ftl.Json
       import xyz.block.ftl.Context
-      import xyz.block.ftl.HttpIngress
+      import xyz.block.ftl.Visibility
       import xyz.block.ftl.Method
       import xyz.block.ftl.Module
       import xyz.block.ftl.Export
+
 
       class InvalidInput(val field: String) : Exception()
 
@@ -98,8 +99,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
        * Echoes the given message.
        */
       @Throws(InvalidInput::class)
-      @Export
-      @HttpIngress(Method.GET, "/echo")
+      @Export(Visibility.PUBLIC, Ingress.HTTP, Method.GET, "/echo")
       fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse, String> {
         callTime(context)
 
@@ -110,7 +110,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         )
       }
 
-      @Export
+      @Export(Visibility.INTERNAL)
       fun empty(context: Context, req: Empty): Empty {
         return builtin.Empty()
       }
@@ -123,13 +123,13 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         return context.call(::verb, builtin.Empty())
       }
 
-      @Export
+      @Export(Visibility.INTERNAL)
       fun sink(context: Context, req: Empty) {}
 
-      @Export
+      @Export(Visibility.INTERNAL)
       fun source(context: Context): Empty {}
 
-      @Export
+      @Export(Visibility.INTERNAL)
       fun emptyVerb(context: Context) {}
     """
     ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
@@ -229,6 +229,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         Decl(
           verb = Verb(
             name = "echo",
+            visibility = "public",
             comments = listOf(
               """Echoes the given message."""
             ),
@@ -302,6 +303,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         Decl(
           verb = Verb(
             name = "empty",
+            visibility = "internal",
             request = Type(
               ref = Ref(
                 name = "Empty",
@@ -319,6 +321,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         Decl(
           verb = Verb(
             name = "sink",
+            visibility = "internal",
             request = Type(
               ref = Ref(
                 name = "Empty",
@@ -333,6 +336,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         Decl(
           verb = Verb(
             name = "source",
+            visibility = "internal",
             request = Type(
               unit = Unit()
             ),
@@ -347,6 +351,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         Decl(
           verb = Verb(
             name = "emptyVerb",
+            visibility = "internal",
             request = Type(
               unit = Unit()
             ),
@@ -394,7 +399,7 @@ data class EchoResponse(val messages: List<EchoMessage>)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Export
+@Export(Visibility.INTERNAL)
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   callTime(context)
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -425,8 +430,6 @@ fun callTime(context: Context): TimeResponse {
 package ftl.echo
 
 import xyz.block.ftl.Context
-import xyz.block.ftl.HttpIngress
-import xyz.block.ftl.Method
 import xyz.block.ftl.Export
 
 /**
@@ -439,8 +442,7 @@ data class EchoResponse(val message: String)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Export
-@HttpIngress(Method.GET, "/echo")
+@Export(Visibility.INTERNAL, Ingress.HTTP, Method.GET, "/echo")
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
 }
@@ -452,10 +454,10 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 
     assertErrorsFileContainsExactly(
       Error(
-        msg = "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest",
+        msg = "@Export http ingress echo request must be ftl.builtin.HttpRequest",
       ),
       Error(
-        msg = "@HttpIngress-annotated echo response must be ftl.builtin.HttpResponse",
+        msg = "@Export http ingress echo response must be ftl.builtin.HttpResponse",
       )
     )
   }
@@ -469,7 +471,6 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 package ftl.echo
 
 import xyz.block.ftl.Context
-import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method
 import xyz.block.ftl.Export
 
@@ -483,8 +484,7 @@ data class EchoResponse(val message: String)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Export
-@HttpIngress(Method.GET, "/echo")
+@Export(Visibility.INTERNAL, Ingress.HTTP, Method.GET, "/echo")
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
 }
@@ -496,10 +496,10 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 
     assertErrorsFileContainsExactly(
       Error(
-        msg = "@HttpIngress-annotated echo request must be ftl.builtin.HttpRequest",
+        msg = "@Export http ingress echo request must be ftl.builtin.HttpRequest",
       ),
       Error(
-        msg = "@HttpIngress-annotated echo response must be ftl.builtin.HttpResponse",
+        msg = "@Export http ingress echo response must be ftl.builtin.HttpResponse",
       )
     )
   }
@@ -530,7 +530,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       /**
        * Comments.
        */
-      @Export
+      @Export(Visibility.INTERNAL)
       enum class StringThing(val value: String) {
         /**
          * A comment.
@@ -543,7 +543,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
         C("C"),
       }
 
-      @Export
+      @Export(Visibility.INTERNAL)
       enum class IntThing(val value: Int) {
         A(1),
         B(2),
@@ -562,7 +562,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 
       data class Response(val message: String)
 
-      @Export
+      @Export(Visibility.INTERNAL)
       fun something(context: Context, req: Request): Response {
         return Response(message = "response")
       }
@@ -650,6 +650,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
         Decl(
           verb = Verb(
             name = "something",
+            visibility = "internal",
             request = Type(ref = Ref(name = "Request", module = "things")),
             response = Type(ref = Ref(name = "Response", module = "things")),
           ),
@@ -690,7 +691,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 
       data class Response(val message: String)
 
-      @Export
+      @Export(Visibility.INTERNAL)
       fun something(context: Context, req: Request): Response {
         return Response(message = "response")
       }
@@ -763,6 +764,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
         Decl(
           verb = Verb(
             name = "something",
+            visibility = "internal",
             request = Type(ref = Ref(name = "Request", module = "test")),
             response = Type(ref = Ref(name = "Response", module = "test")),
           ),

@@ -14,7 +14,7 @@ type InsertRequest struct {
 
 type InsertResponse struct{}
 
-//ftl:export
+//ftl:internal
 func Insert(ctx context.Context, req InsertRequest) (InsertResponse, error) {
 	err := persistRequest(ctx, req)
 	if err != nil {

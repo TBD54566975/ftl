@@ -8,14 +8,13 @@ import (
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
-	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 // This file contains a parser for Go FTL directives.
 //
-// eg. //ftl:ingress GET /foo/bar
+// eg. //ftl:public http GET /foo/bar
 
 type directiveWrapper struct {
 	Directive directive `parser:"'ftl' ':' @@"`
@@ -24,27 +23,25 @@ type directiveWrapper struct {
 //sumtype:decl
 type directive interface{ directive() }
 
-type directiveExport struct {
-	Pos lexer.Position
+type directiveVisibility struct {
+	Pos schema.Position `parser:"" protobuf:"1,optional"`
 
-	Export bool `parser:"@'export'"`
+	Visibility schema.Visibility             `parser:"@('public' | 'internal' | 'private')"`
+	Type       string                        `parser:"@('http')?"`
+	Method     string                        `parser:"@('GET' | 'POST' | 'PUT' | 'DELETE')?"`
+	Path       []schema.IngressPathComponent `parser:"('/' @@)*"`
 }
 
-func (*directiveExport) directive()       {}
-func (d *directiveExport) String() string { return "ftl:export" }
-
-type directiveIngress struct {
-	Pos schema.Position
-
-	Type   string                        `parser:"'ingress' @('http')?"`
-	Method string                        `parser:"@('GET' | 'POST' | 'PUT' | 'DELETE')"`
-	Path   []schema.IngressPathComponent `parser:"('/' @@)+"`
-}
-
-func (*directiveIngress) directive() {}
-func (d *directiveIngress) String() string {
+func (*directiveVisibility) directive() {}
+func (d *directiveVisibility) String() string {
 	w := &strings.Builder{}
-	fmt.Fprintf(w, "ftl:ingress %s", d.Method)
+	fmt.Fprintf(w, "ftl:%s", d.Visibility)
+	if d.Type != "" {
+		fmt.Fprintf(w, " %s", d.Type)
+	}
+	if d.Method != "" {
+		fmt.Fprintf(w, " %s", d.Method)
+	}
 	for _, p := range d.Path {
 		fmt.Fprintf(w, "/%s", p)
 	}
@@ -68,7 +65,7 @@ var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
-	participle.Union[directive](&directiveExport{}, &directiveIngress{}, &directiveCronJob{}),
+	participle.Union[directive](&directiveVisibility{}, &directiveCronJob{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 

@@ -110,13 +110,14 @@ package ftl.test
 
 import java.time.OffsetDateTime
 import xyz.block.ftl.Export
+import xyz.block.ftl.Visibility
 
-@Export
+@Export(Visibility.INTERNAL)
 data class ParamTestData<T>(
   val t: T,
 )
 
-@Export
+@Export(Visibility.INTERNAL)
 data class TestRequest(
   val field: Long,
 )
@@ -124,7 +125,7 @@ data class TestRequest(
 /**
  * Response comments
  */
-@Export
+@Export(Visibility.INTERNAL)
 data class TestResponse(
   val int: Long,
   val float: Float,
@@ -194,8 +195,9 @@ package ftl.test
 import xyz.block.ftl.Context
 import xyz.block.ftl.Export
 import xyz.block.ftl.Ignore
+import xyz.block.ftl.Visibility
 
-@Export
+@Export(Visibility.INTERNAL)
 data class Request(
   val data: Long,
 )
@@ -203,7 +205,7 @@ data class Request(
 /**
  * TestVerb comments
  */
-@Export
+@Export(Visibility.INTERNAL)
 @Ignore
 fun testVerb(context: Context, req: Request): ftl.builtin.Empty = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.call(::testVerb, ...)")
@@ -234,11 +236,12 @@ func TestGenerateBuiltins(t *testing.T) {
 package ftl.builtin
 
 import xyz.block.ftl.Export
+import xyz.block.ftl.Visibility
 
 /**
  * HTTP request structure used for HTTP ingress verbs.
  */
-@Export
+@Export(Visibility.INTERNAL)
 data class HttpRequest<Body>(
   val method: String,
   val path: String,
@@ -251,7 +254,7 @@ data class HttpRequest<Body>(
 /**
  * HTTP response structure used for HTTP ingress verbs.
  */
-@Export
+@Export(Visibility.INTERNAL)
 data class HttpResponse<Body, Error>(
   val status: Long,
   val headers: Map<String, List<String>>,
@@ -259,7 +262,7 @@ data class HttpResponse<Body, Error>(
   val error: Error? = null,
 )
 
-@Export
+@Export(Visibility.INTERNAL)
 class Empty
 `
 	bctx := buildContext{
@@ -300,8 +303,9 @@ package ftl.test
 import xyz.block.ftl.Context
 import xyz.block.ftl.Export
 import xyz.block.ftl.Ignore
+import xyz.block.ftl.Visibility
 
-@Export
+@Export(Visibility.INTERNAL)
 @Ignore
 fun emptyVerb(context: Context, req: ftl.builtin.Empty): ftl.builtin.Empty = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.call(::emptyVerb, ...)")
@@ -362,26 +366,27 @@ package ftl.test
 import xyz.block.ftl.Context
 import xyz.block.ftl.Export
 import xyz.block.ftl.Ignore
+import xyz.block.ftl.Visibility
 
-@Export
+@Export(Visibility.INTERNAL)
 data class SinkReq(
   val data: Long,
 )
 
-@Export
+@Export(Visibility.INTERNAL)
 @Ignore
 fun sink(context: Context, req: SinkReq): Unit = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.callSink(::sink, ...)")
-@Export
+@Export(Visibility.INTERNAL)
 data class SourceResp(
   val data: Long,
 )
 
-@Export
+@Export(Visibility.INTERNAL)
 @Ignore
 fun source(context: Context): SourceResp = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.callSource(::source, ...)")
-@Export
+@Export(Visibility.INTERNAL)
 @Ignore
 fun nothing(context: Context): Unit = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.callEmpty(::nothing, ...)")

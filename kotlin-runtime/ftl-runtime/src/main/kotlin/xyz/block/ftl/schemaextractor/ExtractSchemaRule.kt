@@ -58,10 +58,13 @@ import org.jetbrains.kotlin.util.containingNonLocalDeclaration
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import xyz.block.ftl.Context
 import xyz.block.ftl.Database
-import xyz.block.ftl.HttpIngress
+import xyz.block.ftl.Export
+import xyz.block.ftl.Visibility
+import xyz.block.ftl.Ingress
 import xyz.block.ftl.Json
 import xyz.block.ftl.Method
 import xyz.block.ftl.Cron
+import xyz.block.ftl.schemaextractor.SchemaExtractor.Companion.errorAtPosition
 import xyz.block.ftl.schemaextractor.SchemaExtractor.Companion.extractModuleName
 import xyz.block.ftl.v1.schema.Array
 import xyz.block.ftl.v1.schema.Config
@@ -145,7 +148,7 @@ class ExtractSchemaRule(config: DetektConfig) : Rule(config) {
     }
 
     when (val element = annotationEntry.parent.parent) {
-      is KtNamedFunction -> extractor.addVerbToSchema(element)
+      is KtNamedFunction -> extractor.addVerbToSchema(element, annotationEntry)
       is KtClass -> {
         when {
           element.isData() -> extractor.addDataToSchema(element)
@@ -220,9 +223,9 @@ class SchemaExtractor(
     }
   }
 
-  fun addVerbToSchema(verb: KtNamedFunction) {
+  fun addVerbToSchema(verb: KtNamedFunction, exportAnnotation: KtAnnotationEntry) {
     validateVerb(verb)
-    addDecl(verb.extractModuleName(), Decl(verb = extractVerb(verb)))
+    addDecl(verb.extractModuleName(), Decl(verb = extractVerb(verb, exportAnnotation)))
   }
 
   fun addDataToSchema(data: KtClass) {
@@ -319,7 +322,50 @@ class SchemaExtractor(
     }
   }
 
-  private fun extractVerb(verb: KtNamedFunction): Verb {
+  private data class ExportAnnotation(
+    val visibility: Visibility?,
+    val ingress: Ingress?,
+    val method: Method?,
+    val path: String?
+  )
+
+  private fun extractExportAnnotation(verb: KtNamedFunction, bindingContext: BindingContext): ExportAnnotation {
+    val exportAnnotation = verb.annotationEntries.firstOrNull {
+      bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Export::class.qualifiedName
+    }
+
+    var visibility: Visibility? = null
+    var ingress: Ingress? = null
+    var method: Method? = null
+    var path: String? = null
+
+    exportAnnotation?.valueArguments?.forEach { arg ->
+      when {
+        arg.getArgumentName()?.asName?.asString() == "visibility" || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()?.asString() == Visibility::class.qualifiedName -> {
+          visibility = kotlin.runCatching { Visibility.valueOf(arg.getArgumentExpression()?.text?.substringAfterLast('.') ?: "") }.getOrNull()
+        }
+        arg.getArgumentName()?.asName?.asString() == "ingress" || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()?.asString() == Ingress::class.qualifiedName -> {
+          ingress = kotlin.runCatching { Ingress.valueOf(arg.getArgumentExpression()?.text?.substringAfterLast('.') ?: "") }.getOrNull()
+        }
+        arg.getArgumentName()?.asName?.asString() == "method" || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()?.asString() == Method::class.qualifiedName -> {
+          method = kotlin.runCatching { Method.valueOf(arg.getArgumentExpression()?.text?.substringAfterLast('.') ?: "") }.getOrNull()
+        }
+        arg.getArgumentName()?.asName?.asString() == "path" || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()?.asString() == String::class.qualifiedName -> {
+          path = arg.getArgumentExpression()?.text?.trim('"')
+        }
+      }
+    }
+
+    return ExportAnnotation(visibility, ingress, method, path)
+  }
+
+  private fun extractVerb(verb: KtNamedFunction, exportAnnotation: KtAnnotationEntry): Verb {
+    val exportFields = extractExportAnnotation(verb, bindingContext)
+
+    requireNotNull(exportFields.visibility) {
+      verb.errorAtPosition("${verb.name} must have a valid visibility argument.")
+    }
+
     val requestRef = verb.valueParameters.takeIf { it.size > 1 }?.last()?.let {
       return@let it.typeReference?.resolveType()?.toSchemaType(it.getPosition(), it.textLength)
     } ?: Type(unit = Unit())
@@ -329,8 +375,8 @@ class SchemaExtractor(
     } ?: Type(unit = Unit())
 
     val metadata = mutableListOf<Metadata>()
-    extractIngress(verb, requestRef, returnRef)?.apply { metadata.add(Metadata(ingress = this)) }
-    extractCron(verb, requestRef, returnRef)?.apply { metadata.add(Metadata(cronJob = this)) }
+    extractIngress(verb, requestRef, returnRef, exportFields)?.apply { metadata.add(Metadata(ingress = this)) }
+    extractCron(verb)?.apply { metadata.add(Metadata(cronJob = this)) }
     extractCalls(verb)?.apply { metadata.add(Metadata(calls = this)) }
     require(verb.name != null) {
       verb.errorAtPosition("verbs must be named")
@@ -342,6 +388,7 @@ class SchemaExtractor(
       response = returnRef,
       metadata = metadata,
       comments = verb.comments(),
+      visibility = exportFields.visibility.toString().lowercase(),
     )
   }
 
@@ -379,56 +426,51 @@ class SchemaExtractor(
     }
   }
 
-  private fun extractIngress(verb: KtNamedFunction, requestType: Type, responseType: Type): MetadataIngress? {
+  private fun extractIngress(verb: KtNamedFunction, requestType: Type, responseType: Type, exportFields: ExportAnnotation): MetadataIngress? {
     return verb.annotationEntries.firstOrNull {
-      bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == HttpIngress::class.qualifiedName
+      bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Export::class.qualifiedName
     }?.let { annotationEntry ->
-      require(requestType.ref != null) {
+      requireNotNull(exportFields.ingress) {
+        return null
+      }
+
+      require(exportFields.ingress == Ingress.HTTP) {
+        annotationEntry.errorAtPosition("ingress must be HTTP")
+      }
+
+      // Validate the request and response types
+      requireNotNull(requestType.ref) {
         annotationEntry.errorAtPosition("ingress ${verb.name} request must be a data class")
       }
-      require(responseType.ref != null) {
+      requireNotNull(responseType.ref) {
         annotationEntry.errorAtPosition("ingress ${verb.name} response must be a data class")
       }
       require(requestType.ref?.compare("builtin", "HttpRequest") == true) {
-        annotationEntry.errorAtPosition("@HttpIngress-annotated ${verb.name} request must be ftl.builtin.HttpRequest")
+        annotationEntry.errorAtPosition("@Export http ingress ${verb.name} request must be ftl.builtin.HttpRequest")
       }
       require(responseType.ref?.compare("builtin", "HttpResponse") == true) {
-        annotationEntry.errorAtPosition("@HttpIngress-annotated ${verb.name} response must be ftl.builtin.HttpResponse")
-      }
-      require(annotationEntry.valueArguments.size >= 2) {
-        annotationEntry.errorAtPosition("@HttpIngress annotation requires at least 2 arguments")
+        annotationEntry.errorAtPosition("@Export http ingress ${verb.name} response must be ftl.builtin.HttpResponse")
       }
 
-      val args = annotationEntry.valueArguments.partition { arg ->
-        // Method arg is named "method" or is of type xyz.block.ftl.Method (in the case where args are
-        // positional rather than named).
-        arg.getArgumentName()?.asName?.asString() == "method"
-          || arg.getArgumentExpression()?.getType(bindingContext)?.fqNameOrNull()
-          ?.asString() == Method::class.qualifiedName
+      requireNotNull(exportFields.method) {
+        annotationEntry.errorAtPosition("HTTP ingress must specify METHOD")
       }
 
-      val methodArg = args.first.single().getArgumentExpression()?.text?.substringAfter(".")
-      require(methodArg != null) {
-        annotationEntry.errorAtPosition("could not extract method from ${verb.name} @HttpIngress annotation")
-      }
-
-      val pathArg = args.second.single().getArgumentExpression()?.text?.let {
-        extractPathComponents(it.trim('\"'))
-      }
-      require(pathArg != null) {
-        annotationEntry.errorAtPosition("could not extract path from ${verb.name} @HttpIngress annotation")
+      val pathArgText = annotationEntry.valueArguments.getOrNull(3)?.getArgumentExpression()?.text?.substringAfterLast(".")
+      val pathArg = pathArgText?.let {
+        extractPathComponents(it.trim('"') ?: "")
       }
 
       MetadataIngress(
-        type = "http",
+        type = exportFields.ingress.toString().lowercase(),
         path = pathArg ?: emptyList(),
-        method = methodArg ?: "",
+        method = exportFields.method.toString(),
         pos = annotationEntry.getPosition(),
       )
     }
   }
 
-  private fun extractCron(verb: KtNamedFunction, requestType: Type, responseType: Type): MetadataCronJob? {
+  private fun extractCron(verb: KtNamedFunction): MetadataCronJob? {
     return verb.annotationEntries.firstOrNull {
       bindingContext.get(BindingContext.ANNOTATION, it)?.fqName?.asString() == Cron::class.qualifiedName
     }?.let { annotationEntry ->
@@ -709,7 +751,7 @@ class SchemaExtractor(
 
         Type(
           ref = Ref(
-            name = refName ?: "",
+            name = refName,
             module = fqName.extractModuleName(),
             pos = position,
             typeParameters = this.arguments.map { it.type.toSchemaType(position, tokenLength) }.toList(),
@@ -730,6 +772,12 @@ class SchemaExtractor(
     val type = bindingContext.get(BindingContext.TYPE, this)
     require(type != null) { this.errorAtPosition("could not resolve type ${this.text}") }
     return type
+  }
+
+  private fun KtAnnotationEntry.findArgument(name: String): ValueArgument? {
+    return this.valueArguments.find {
+      it.getArgumentName()?.asName?.asString() == name
+    }
   }
 
   private fun KotlinType.toClassDescriptor(): ClassDescriptor =

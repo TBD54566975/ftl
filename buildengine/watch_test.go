@@ -16,7 +16,6 @@ import (
 )
 
 const pollFrequency = time.Millisecond * 500
-const halfPollFrequency = time.Millisecond * 250
 
 func TestWatch(t *testing.T) {
 	if testing.Short() {
@@ -29,14 +28,14 @@ func TestWatch(t *testing.T) {
 	w := NewWatcher()
 	events, topic := startWatching(ctx, t, w, dir)
 
-	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
+	time.Sleep(pollFrequency * 2) // double the poll frequency
 
 	// Initiate a bunch of changes.
 	err := ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "two")
 	assert.NoError(t, err)
-	time.Sleep(pollFrequency)
+	time.Sleep(pollFrequency * 2)
 
 	// Delete a module
 	err = os.RemoveAll(filepath.Join(dir, "two"))
@@ -45,7 +44,7 @@ func TestWatch(t *testing.T) {
 	// Change a module.
 	updateModFile(t, filepath.Join(dir, "one"))
 
-	time.Sleep(pollFrequency)
+	time.Sleep(pollFrequency * 2)
 	topic.Close()
 
 	allEvents := []WatchEvent{}
@@ -94,7 +93,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 
 	events, topic := startWatching(ctx, t, w, dir)
 
-	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
+	time.Sleep(pollFrequency * 2) // double the poll frequency
 
 	// Change a file in a module, within a transaction
 	transaction := w.GetTransaction(filepath.Join(dir, "one"))
@@ -107,7 +106,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	err = transaction.End()
 	assert.NoError(t, err)
 
-	time.Sleep(pollFrequency)
+	time.Sleep(pollFrequency * 2)
 	topic.Close()
 
 	allEvents := []WatchEvent{}
@@ -135,7 +134,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	w := NewWatcher()
 	events, topic := startWatching(ctx, t, w, dir)
 
-	time.Sleep(pollFrequency + halfPollFrequency) // midway between file scans
+	time.Sleep(pollFrequency * 2) // double the poll frequency
 
 	// Change a file in a module, within a transaction
 	transaction := w.GetTransaction(filepath.Join(dir, "one"))
@@ -155,7 +154,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	err = transaction.End()
 	assert.NoError(t, err)
 
-	time.Sleep(pollFrequency)
+	time.Sleep(pollFrequency * 2)
 	topic.Close()
 
 	allEvents := []WatchEvent{}

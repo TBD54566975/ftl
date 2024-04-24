@@ -113,13 +113,13 @@ func TestExtractModuleSchema(t *testing.T) {
   data SourceResp {
   }
 
-  verb nothing(Unit) Unit
+  internal verb nothing(Unit) Unit
 
-  verb sink(one.SinkReq) Unit
+  internal verb sink(one.SinkReq) Unit
 
-  verb source(Unit) one.SourceResp
+  internal verb source(Unit) one.SourceResp
 
-  verb verb(one.Req) one.Resp
+  internal verb verb(one.Req) one.Resp
 }
 `
 	assert.Equal(t, expected, actual.String())
@@ -154,12 +154,12 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  user two.User
 		}
 
-		verb callsTwo(two.Payload<String>) two.Payload<String>
+		internal verb callsTwo(two.Payload<String>) two.Payload<String>
 			+calls two.two
 
-		verb returnsUser(Unit) two.UserResponse
+		internal verb returnsUser(Unit) two.UserResponse
 
-		verb two(two.Payload<String>) two.Payload<String>
+		internal verb two(two.Payload<String>) two.Payload<String>
 	  }
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
@@ -171,17 +171,23 @@ func TestParseDirectives(t *testing.T) {
 		input    string
 		expected directive
 	}{
-		{name: "Export", input: "ftl:export", expected: &directiveExport{Export: true}},
-		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
-			Method: "GET",
+		{name: "Private", input: "ftl:private", expected: &directiveVisibility{Visibility: schema.Private}},
+		{name: "Internal", input: "ftl:internal", expected: &directiveVisibility{Visibility: schema.Internal}},
+		{name: "Public", input: "ftl:public", expected: &directiveVisibility{Visibility: schema.Public}},
+		{name: "Public Ingress Foo", input: "ftl:public http GET /foo", expected: &directiveVisibility{
+			Visibility: schema.Public,
+			Type:       "http",
+			Method:     "GET",
 			Path: []schema.IngressPathComponent{
 				&schema.IngressPathLiteral{
 					Text: "foo",
 				},
 			},
 		}},
-		{name: "Ingress", input: `ftl:ingress GET /test_path/{something}/987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz`, expected: &directiveIngress{
-			Method: "GET",
+		{name: "Public Ingress TestPath", input: `ftl:public http GET /test_path/{something}/987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz`, expected: &directiveVisibility{
+			Visibility: schema.Public,
+			Type:       "http",
+			Method:     "GET",
 			Path: []schema.IngressPathComponent{
 				&schema.IngressPathLiteral{
 					Text: "test_path",
@@ -277,16 +283,6 @@ func TestErrorReporting(t *testing.T) {
 			filename+":74:1-1: verb \"WrongResponse\" already exported\n"+
 			filename+":80:2-12: struct field unexported must be exported by starting with an uppercase letter",
 	)
-}
-
-func TestDuplicateVerbNames(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	pwd, _ := os.Getwd()
-	_, _, schemaErrs, err := ExtractModuleSchema("testdata/duplicateverbs")
-	assert.NoError(t, err)
-	assert.EqualError(t, errors.Join(genericizeErrors(schemaErrs)...), filepath.Join(pwd, `testdata/duplicateverbs/duplicateverbs.go`)+`:23:1-1: verb "Time" already exported`)
 }
 
 func genericizeErrors(schemaErrs []*schema.Error) []error {
