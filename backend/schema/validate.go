@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/errors"
 	dc "github.com/TBD54566975/ftl/internal/reflect"
+	ftlslices "github.com/TBD54566975/ftl/internal/slices"
 )
 
 var (
@@ -312,6 +313,10 @@ func ValidateModule(module *Module) error {
 		}
 		return next()
 	})
+
+	// Scan declarations for duplicates
+	merr = append(merr, findDuplicateDecls(module.Decls)...)
+
 	merr = cleanErrors(merr)
 	sort.SliceStable(module.Decls, func(i, j int) bool {
 		iDecl := module.Decls[i]
@@ -324,6 +329,65 @@ func ValidateModule(module *Module) error {
 		return iPriority < jPriority
 	})
 	return errors.Join(merr...)
+}
+
+func findDuplicateDecls(decls []Decl) []error {
+	merr := []error{}
+
+	configs := make(map[string][]int)
+	secrets := make(map[string][]int)
+	dbs := make(map[string]int)
+
+	for i, d := range decls {
+		c, ok := d.(*Config)
+		if ok { // found a config
+			if _, ok := configs[c.Name]; !ok { // no matches possible
+				configs[c.Name] = []int{i}
+				continue
+			}
+			matchIdx, foundMatch := ftlslices.Find(configs[c.Name], func(j int) bool {
+				maybeMatch, _ := decls[j].(*Config)
+				return maybeMatch.Type.String() == c.Type.String()
+			})
+			if foundMatch {
+				match, _ := decls[matchIdx].(*Config)
+				merr = append(merr, errorf(d, "duplicate config declaration at %d:%d", match.Pos.Line, match.Pos.Column))
+			} else {
+				configs[c.Name] = append(configs[c.Name], i)
+			}
+			continue
+		}
+
+		s, ok := d.(*Secret)
+		if ok { // found a secret
+			if _, ok := secrets[s.Name]; !ok { // no matches possible
+				secrets[s.Name] = []int{i}
+				continue
+			}
+			matchIdx, foundMatch := ftlslices.Find(secrets[s.Name], func(j int) bool {
+				maybeMatch, _ := decls[j].(*Secret)
+				return maybeMatch.Type.String() == s.Type.String()
+			})
+			if foundMatch {
+				match, _ := decls[matchIdx].(*Secret)
+				merr = append(merr, errorf(d, "duplicate secret declaration at %d:%d", match.Pos.Line, match.Pos.Column))
+			} else {
+				secrets[s.Name] = append(secrets[s.Name], i)
+			}
+			continue
+		}
+
+		db, ok := d.(*Database)
+		if ok { // found a database
+			if _, ok := dbs[db.Name]; !ok { // no matches
+				dbs[db.Name] = i
+				continue
+			}
+			match, _ := decls[dbs[db.Name]].(*Database)
+			merr = append(merr, errorf(d, "duplicate database declaration at %d:%d", match.Pos.Line, match.Pos.Column))
+		}
+	}
+	return merr
 }
 
 // getDeclSortingPriority (used for schema sorting) is pulled out into it's own switch so the Go sumtype check will fail

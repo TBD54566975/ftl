@@ -194,7 +194,85 @@ func TestValidate(t *testing.T) {
 					verb a(HttpRequest<two.Data>) HttpResponse<two.Data, Empty>
 						+ingress http GET /a
 				}
-			`},
+			`,
+		},
+		{name: "DuplicateConfigsSimple",
+			schema: `
+				module one {
+                                        config FTL_ENDPOINT String
+                                        config FTL_ENDPOINT String
+				}
+			`,
+			errs: []string{
+				"4:41-41: duplicate config declaration at 3:41",
+			},
+		},
+		{name: "DuplicateConfigsDiffTypes",
+			schema: `
+				module one {
+                                        config FTL_ENDPOINT String
+                                        config FTL_ENDPOINT Any
+				}
+			`,
+		},
+		{name: "DuplicateConfigsMultiple",
+			schema: `
+				module one {
+                                        config FTL_ENDPOINT String
+                                        config FTL_ENDPOINT Any
+                                        config FTL_ENDPOINT String
+                                        config FTL_ENDPOINT String
+				}
+			`,
+			errs: []string{
+				"5:41-41: duplicate config declaration at 3:41",
+				"6:41-41: duplicate config declaration at 3:41",
+			},
+		},
+		{name: "DuplicateSecretsSimple",
+			schema: `
+				module one {
+                                        secret MY_SECRET String
+                                        secret MY_SECRET String
+				}
+			`,
+			errs: []string{
+				"4:41-41: duplicate secret declaration at 3:41",
+			},
+		},
+		{name: "DuplicateSecretsDiffTypes",
+			schema: `
+				module one {
+                                        secret MY_SECRET String
+                                        secret MY_SECRET Any
+				}
+			`,
+		},
+		{name: "DuplicateSecretsMultiple",
+			schema: `
+				module one {
+                                        secret MY_SECRET String
+                                        secret MY_SECRET Any
+                                        secret MY_SECRET String
+                                        secret MY_SECRET String
+				}
+			`,
+			errs: []string{
+				"5:41-41: duplicate secret declaration at 3:41",
+				"6:41-41: duplicate secret declaration at 3:41",
+			},
+		},
+		{name: "DuplicateDatabasesSimple",
+			schema: `
+				module one {
+                                        database MY_DB
+                                        database MY_DB
+				}
+			`,
+			errs: []string{
+				"4:41-41: duplicate database declaration at 3:41",
+			},
+		},
 	}
 
 	for _, test := range tests {
