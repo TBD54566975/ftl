@@ -186,17 +186,22 @@ export class ModuleContextRequest extends Message<ModuleContextRequest> {
  */
 export class ModuleContextResponse extends Message<ModuleContextResponse> {
   /**
-   * @generated from field: map<string, bytes> configs = 1;
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  /**
+   * @generated from field: map<string, bytes> configs = 2;
    */
   configs: { [key: string]: Uint8Array } = {};
 
   /**
-   * @generated from field: map<string, bytes> secrets = 2;
+   * @generated from field: map<string, bytes> secrets = 3;
    */
   secrets: { [key: string]: Uint8Array } = {};
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.ModuleContextResponse.DSN databases = 3;
+   * @generated from field: repeated xyz.block.ftl.v1.ModuleContextResponse.DSN databases = 4;
    */
   databases: ModuleContextResponse_DSN[] = [];
 
@@ -208,9 +213,10 @@ export class ModuleContextResponse extends Message<ModuleContextResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.ModuleContextResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "configs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
-    { no: 2, name: "secrets", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
-    { no: 3, name: "databases", kind: "message", T: ModuleContextResponse_DSN, repeated: true },
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "configs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
+    { no: 3, name: "secrets", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
+    { no: 4, name: "databases", kind: "message", T: ModuleContextResponse_DSN, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleContextResponse {
