@@ -7,15 +7,13 @@
 package ftlv1
 
 import (
-	reflect "reflect"
-	sync "sync"
-
+	schema "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-
-	schema "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -313,8 +311,8 @@ type ModuleContextResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	Module    string                       `protobuf:"bytes,1,opt,name=module,proto3" json:"module,omitempty"`
-	Configs   map[string][]byte
-	Secrets   map[string][]byte
+	Configs   map[string][]byte            `protobuf:"bytes,2,rep,name=configs,proto3" json:"configs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Secrets   map[string][]byte            `protobuf:"bytes,3,rep,name=secrets,proto3" json:"secrets,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	Databases []*ModuleContextResponse_DSN `protobuf:"bytes,4,rep,name=databases,proto3" json:"databases,omitempty"`
 }
 
