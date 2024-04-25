@@ -247,8 +247,8 @@ func TestErrorReporting(t *testing.T) {
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
 	assert.EqualError(t, errors.Join(genericizeErrors(schemaErrs)...),
 		filename+":10:13-35: config and secret declarations must have a single string literal argument\n"+
-			filename+":13:18-52: duplicate config declaration\n"+
-			filename+":16:18-49: duplicate secret declaration\n"+
+			filename+":13:18-52: duplicate config declaration at 12:18-52\n"+
+			filename+":16:18-49: duplicate secret declaration at 15:18-49\n"+
 			filename+":19:2-10: unsupported type \"error\" for field \"BadParam\"\n"+
 			filename+":22:2-17: unsupported type \"uint64\" for field \"AnotherBadParam\"\n"+
 			filename+":25:3-3: unexpected token \"verb\" (expected Directive)\n"+

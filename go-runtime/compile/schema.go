@@ -262,12 +262,14 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 	for _, d := range pctx.module.Decls {
 		c, ok := d.(*schema.Config)
 		if ok && c.Name == name && c.Type.String() == st.String() {
-			pctx.errors.add(errorf(node, "duplicate config declaration"))
+			_, endCol := goNodePosToSchemaPos(node)
+			pctx.errors.add(errorf(node, "duplicate config declaration at %d:%d-%d", c.Pos.Line, c.Pos.Column, endCol))
 			return
 		}
 		s, ok := d.(*schema.Secret)
 		if ok && s.Name == name && s.Type.String() == st.String() {
-			pctx.errors.add(errorf(node, "duplicate secret declaration"))
+			_, endCol := goNodePosToSchemaPos(node)
+			pctx.errors.add(errorf(node, "duplicate secret declaration at %d:%d-%d", s.Pos.Line, s.Pos.Column, endCol))
 			return
 		}
 	}
