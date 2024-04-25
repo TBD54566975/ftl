@@ -40,7 +40,7 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get config: %w", err)
 		}
-		moduleCtx, err := modulecontext.NewFromProto(ctx, moduleName, resp.Msg)
+		moduleCtx, err := modulecontext.FromProto(ctx, resp.Msg)
 		if err != nil {
 			return nil, nil, err
 		}

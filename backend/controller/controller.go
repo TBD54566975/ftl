@@ -39,6 +39,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	frontend "github.com/TBD54566975/ftl/frontend"
+	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
 	"github.com/TBD54566975/ftl/internal/cors"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
@@ -647,13 +648,17 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get active schemas: %w", err))
 	}
-	schema, ok := slices.Find(schemas, func(s *schema.Module) bool { return s.Name == req.Msg.Module })
+	module, ok := slices.Find(schemas, func(s *schema.Module) bool { return s.Name == req.Msg.Module })
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("module %q not found", req.Msg.Module))
 	}
-	response, err := moduleContextToProto(ctx, schema)
+	moduleContext, err := modulecontext.FromEnvironment(ctx, module.Name)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get module context: %w", err))
+	}
+	response, err := moduleContext.ToProto(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not marshal module context: %w", err))
 	}
 	return connect.NewResponse(response), nil
 }

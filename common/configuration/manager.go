@@ -31,6 +31,20 @@ type Manager[R Role] struct {
 	resolver  Resolver[R]
 }
 
+// NewDefaultSecretsManagerFromEnvironment creates a new secrets manager from
+// the default ftl-project.toml.
+func NewDefaultSecretsManagerFromEnvironment(ctx context.Context) (*Manager[Secrets], error) {
+	var cr Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
+	return (DefaultSecretsMixin{}).NewSecretsManager(ctx, cr)
+}
+
+// NewDefaultConfigurationManagerFromEnvironment creates a new configuration
+// manager from the default ftl-project.toml.
+func NewDefaultConfigurationManagerFromEnvironment(ctx context.Context) (*Manager[Configuration], error) {
+	cr := ProjectConfigResolver[Configuration]{}
+	return (DefaultConfigMixin{}).NewConfigurationManager(ctx, cr)
+}
+
 // New configuration manager.
 func New[R Role](ctx context.Context, resolver Resolver[R], providers []Provider[R]) (*Manager[R], error) {
 	m := &Manager[R]{

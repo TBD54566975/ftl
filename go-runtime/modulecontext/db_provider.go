@@ -4,14 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 )
 
-type DBType int32
+type DBType ftlv1.ModuleContextResponse_DBType
 
 const (
 	DBTypePostgres = DBType(ftlv1.ModuleContextResponse_POSTGRES)
@@ -46,6 +48,39 @@ func NewDBProvider() *DBProvider {
 	return &DBProvider{
 		entries: map[string]dbEntry{},
 	}
+}
+
+// NewDBProviderFromEnvironment creates a new DBProvider from environment variables.
+//
+// This is a temporary measure until we have a way to load DSNs from the ftl-project.toml file.
+func NewDBProviderFromEnvironment(module string) (*DBProvider, error) {
+	// TODO: Replace this with loading DSNs from ftl-project.toml.
+	dbProvider := NewDBProvider()
+	for _, entry := range os.Environ() {
+		if !strings.HasPrefix(entry, "FTL_POSTGRES_DSN_") {
+			continue
+		}
+		parts := strings.SplitN(entry, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid DSN environment variable: %s", entry)
+		}
+		key := parts[0]
+		value := parts[1]
+		// FTL_POSTGRES_DSN_MODULE_DBNAME
+		parts = strings.Split(key, "_")
+		if len(parts) != 5 {
+			return nil, fmt.Errorf("invalid DSN environment variable: %s", entry)
+		}
+		moduleName := parts[3]
+		dbName := parts[4]
+		if !strings.EqualFold(moduleName, module) {
+			continue
+		}
+		if err := dbProvider.Add(strings.ToLower(dbName), DBTypePostgres, value); err != nil {
+			return nil, err
+		}
+	}
+	return dbProvider, nil
 }
 
 func ContextWithDBProvider(ctx context.Context, provider *DBProvider) context.Context {

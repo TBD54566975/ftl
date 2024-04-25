@@ -36,9 +36,10 @@ message ModuleContextResponse {
     string dsn = 3;
   }
 
-  map<string, bytes> configs = 1;
-  map<string, bytes> secrets = 2;
-  repeated DSN databases = 3;
+  string module = 1;
+  map<string, bytes> configs = 2;
+  map<string, bytes> secrets = 3;
+  repeated DSN databases = 4;
 }
 
 message Metadata {

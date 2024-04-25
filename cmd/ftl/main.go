@@ -26,7 +26,7 @@ type CLI struct {
 	Version    kong.VersionFlag `help:"Show version."`
 	LogConfig  log.Config       `embed:"" prefix:"log-" group:"Logging:"`
 	Endpoint   *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
-	ConfigFlag []string         `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
+	ConfigFlag []string         `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]"`
 
 	Authenticators map[string]string `help:"Authenticators to use for FTL endpoints." mapsep:"," env:"FTL_AUTHENTICATORS" placeholder:"HOST=EXE,…"`
 
