@@ -13,15 +13,13 @@ import (
 
 func moduleContextToProto(ctx context.Context, module *schema.Module) (*ftlv1.ModuleContextResponse, error) {
 	// configs
-	configManager := cf.ConfigFromContext(ctx)
-	configMap, err := bytesMapFromConfigManager(ctx, configManager, module.Name)
+	configMap, err := cf.ConfigFromContext(ctx).MapForModule(ctx, module.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	// secrets
-	secretsManager := cf.SecretsFromContext(ctx)
-	secretsMap, err := bytesMapFromConfigManager(ctx, secretsManager, module.Name)
+	secretsMap, err := cf.SecretsFromContext(ctx).MapForModule(ctx, module.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -50,37 +48,4 @@ func moduleContextToProto(ctx context.Context, module *schema.Module) (*ftlv1.Mo
 		Secrets:   secretsMap,
 		Databases: dsnProtos,
 	}, nil
-}
-
-func bytesMapFromConfigManager[R cf.Role](ctx context.Context, manager *cf.Manager[R], moduleName string) (map[string][]byte, error) {
-	configList, err := manager.List(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// module specific values must override global values
-	// put module specific values into moduleConfigMap, then merge with configMap
-	configMap := map[string][]byte{}
-	moduleConfigMap := map[string][]byte{}
-
-	for _, entry := range configList {
-		refModule, isModuleSpecific := entry.Module.Get()
-		if isModuleSpecific && refModule != moduleName {
-			continue
-		}
-		data, err := manager.GetData(ctx, entry.Ref)
-		if err != nil {
-			return nil, err
-		}
-		if !isModuleSpecific {
-			configMap[entry.Ref.Name] = data
-		} else {
-			moduleConfigMap[entry.Ref.Name] = data
-		}
-	}
-
-	for name, data := range moduleConfigMap {
-		configMap[name] = data
-	}
-	return configMap, nil
 }

@@ -64,9 +64,9 @@ func (m *Manager[R]) Mutable() error {
 	return fmt.Errorf("no writeable configuration provider available, specify one of %s", strings.Join(writers, ", "))
 }
 
-// GetData returns a data value for a configuration from the active providers.
+// getData returns a data value for a configuration from the active providers.
 // The data can be unmarshalled from JSON.
-func (m *Manager[R]) GetData(ctx context.Context, ref Ref) ([]byte, error) {
+func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	key, err := m.resolver.Get(ctx, ref)
 	// Try again at the global scope if the value is not found in module scope.
 	if ref.Module.Ok() && errors.Is(err, ErrNotFound) {
@@ -94,18 +94,20 @@ func (m *Manager[R]) GetData(ctx context.Context, ref Ref) ([]byte, error) {
 //
 // "value" must be a pointer to a Go type that can be unmarshalled from JSON.
 func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
-	data, err := m.GetData(ctx, ref)
+	data, err := m.getData(ctx, ref)
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(data, value)
 }
 
-// SetData updates the configuration value in the active writing provider as raw bytes.
-//
-// "data" must be bytes that can be unmarshalled into a Go type.
-func (m *Manager[R]) SetData(ctx context.Context, ref Ref, data []byte) error {
+// Set a configuration value.
+func (m *Manager[R]) Set(ctx context.Context, ref Ref, value any) error {
 	if err := m.Mutable(); err != nil {
+		return err
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
 		return err
 	}
 	key, err := m.writer.Store(ctx, ref, data)
@@ -115,15 +117,35 @@ func (m *Manager[R]) SetData(ctx context.Context, ref Ref, data []byte) error {
 	return m.resolver.Set(ctx, ref, key)
 }
 
-// Set a configuration value in the active writing provider.
-//
-// "value" must be a Go type that can be marshalled to JSON.
-func (m *Manager[R]) Set(ctx context.Context, ref Ref, value any) error {
-	data, err := json.Marshal(value)
+// MapForModule combines all configuration values visible to the module. Local
+// values take precedence.
+func (m *Manager[R]) MapForModule(ctx context.Context, module string) (map[string][]byte, error) {
+	entries, err := m.List(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return m.SetData(ctx, ref, data)
+	combined := map[string][]byte{}
+	locals := map[string][]byte{}
+	for _, entry := range entries {
+		mod, ok := entry.Module.Get()
+		if ok && mod == module {
+			data, err := m.getData(ctx, entry.Ref)
+			if err != nil {
+				return nil, err
+			}
+			locals[entry.Ref.Name] = data
+		} else if !ok {
+			data, err := m.getData(ctx, entry.Ref)
+			if err != nil {
+				return nil, err
+			}
+			combined[entry.Ref.Name] = data
+		}
+	}
+	for k, v := range locals {
+		combined[k] = v
+	}
+	return combined, nil
 }
 
 // Unset a configuration value in all providers.
