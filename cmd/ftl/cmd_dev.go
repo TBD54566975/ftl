@@ -74,7 +74,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			})
 		}
 
-		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, opts...)
+		engine, err := buildengine.New(ctx, client, &projConfig, d.Dirs, d.External, opts...)
 		if err != nil {
 			return err
 		}
