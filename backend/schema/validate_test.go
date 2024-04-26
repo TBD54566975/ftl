@@ -222,6 +222,14 @@ func TestValidate(t *testing.T) {
 				"5:41-41: duplicate secret declaration at 3:41",
 			},
 		},
+		{name: "ConfigAndSecretsWithSameName",
+			schema: `
+				module one {
+                                        config FTL_ENDPOINT String
+                                        secret FTL_ENDPOINT String
+				}
+			`,
+		},
 		{name: "DuplicateDatabases",
 			schema: `
 				module one {

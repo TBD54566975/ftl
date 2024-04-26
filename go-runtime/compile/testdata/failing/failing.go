@@ -12,8 +12,8 @@ var empty = ftl.Config[string]("")
 var goodConfig = ftl.Config[string]("FTL_ENDPOINT")
 var duplConfig = ftl.Config[string]("FTL_ENDPOINT")
 
-var goodSecret = ftl.Secret[string]("MY_SECRET")
-var duplSecret = ftl.Secret[string]("MY_SECRET")
+var goodSecret = ftl.Secret[string]("FTL_ENDPOINT")
+var duplSecret = ftl.Secret[string]("FTL_ENDPOINT")
 
 var goodDB = ftl.PostgresDatabase("testDb")
 var duplDB = ftl.PostgresDatabase("testDb")
