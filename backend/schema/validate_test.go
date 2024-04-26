@@ -196,73 +196,33 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 		},
-		{name: "DuplicateConfigsSimple",
+		{name: "DuplicateConfigs",
 			schema: `
 				module one {
                                         config FTL_ENDPOINT String
+                                        config FTL_ENDPOINT Any
                                         config FTL_ENDPOINT String
 				}
 			`,
 			errs: []string{
 				"4:41-41: duplicate config declaration at 3:41",
-			},
-		},
-		{name: "DuplicateConfigsDiffTypes",
-			schema: `
-				module one {
-                                        config FTL_ENDPOINT String
-                                        config FTL_ENDPOINT Any
-				}
-			`,
-		},
-		{name: "DuplicateConfigsMultiple",
-			schema: `
-				module one {
-                                        config FTL_ENDPOINT String
-                                        config FTL_ENDPOINT Any
-                                        config FTL_ENDPOINT String
-                                        config FTL_ENDPOINT String
-				}
-			`,
-			errs: []string{
 				"5:41-41: duplicate config declaration at 3:41",
-				"6:41-41: duplicate config declaration at 3:41",
 			},
 		},
-		{name: "DuplicateSecretsSimple",
+		{name: "DuplicateSecrets",
 			schema: `
 				module one {
                                         secret MY_SECRET String
+                                        secret MY_SECRET Any
                                         secret MY_SECRET String
 				}
 			`,
 			errs: []string{
 				"4:41-41: duplicate secret declaration at 3:41",
-			},
-		},
-		{name: "DuplicateSecretsDiffTypes",
-			schema: `
-				module one {
-                                        secret MY_SECRET String
-                                        secret MY_SECRET Any
-				}
-			`,
-		},
-		{name: "DuplicateSecretsMultiple",
-			schema: `
-				module one {
-                                        secret MY_SECRET String
-                                        secret MY_SECRET Any
-                                        secret MY_SECRET String
-                                        secret MY_SECRET String
-				}
-			`,
-			errs: []string{
 				"5:41-41: duplicate secret declaration at 3:41",
-				"6:41-41: duplicate secret declaration at 3:41",
 			},
 		},
-		{name: "DuplicateDatabasesSimple",
+		{name: "DuplicateDatabases",
 			schema: `
 				module one {
                                         database MY_DB

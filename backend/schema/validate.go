@@ -15,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/errors"
 	dc "github.com/TBD54566975/ftl/internal/reflect"
-	ftlslices "github.com/TBD54566975/ftl/internal/slices"
 )
 
 var (
@@ -334,57 +333,37 @@ func ValidateModule(module *Module) error {
 func findDuplicateDecls(decls []Decl) []error {
 	merr := []error{}
 
-	configs := make(map[string][]int)
-	secrets := make(map[string][]int)
-	dbs := make(map[string]int)
+	configs := make(map[string]*Config)
+	secrets := make(map[string]*Secret)
+	dbs := make(map[string]*Database)
 
-	for i, d := range decls {
-		c, ok := d.(*Config)
-		if ok { // found a config
-			if _, ok := configs[c.Name]; !ok { // no matches possible
-				configs[c.Name] = []int{i}
+	for _, d := range decls {
+		switch d := d.(type) {
+		case *Config:
+			if _, ok := configs[d.Name]; !ok {
+				configs[d.Name] = d
 				continue
 			}
-			matchIdx, foundMatch := ftlslices.Find(configs[c.Name], func(j int) bool {
-				maybeMatch, _ := decls[j].(*Config)
-				return maybeMatch.Type.String() == c.Type.String()
-			})
-			if foundMatch {
-				match, _ := decls[matchIdx].(*Config)
-				merr = append(merr, errorf(d, "duplicate config declaration at %d:%d", match.Pos.Line, match.Pos.Column))
-			} else {
-				configs[c.Name] = append(configs[c.Name], i)
-			}
-			continue
-		}
+			match := configs[d.Name]
+			merr = append(merr, errorf(d, "duplicate config declaration at %d:%d", match.Pos.Line, match.Pos.Column))
 
-		s, ok := d.(*Secret)
-		if ok { // found a secret
-			if _, ok := secrets[s.Name]; !ok { // no matches possible
-				secrets[s.Name] = []int{i}
+		case *Secret:
+			if _, ok := secrets[d.Name]; !ok {
+				secrets[d.Name] = d
 				continue
 			}
-			matchIdx, foundMatch := ftlslices.Find(secrets[s.Name], func(j int) bool {
-				maybeMatch, _ := decls[j].(*Secret)
-				return maybeMatch.Type.String() == s.Type.String()
-			})
-			if foundMatch {
-				match, _ := decls[matchIdx].(*Secret)
-				merr = append(merr, errorf(d, "duplicate secret declaration at %d:%d", match.Pos.Line, match.Pos.Column))
-			} else {
-				secrets[s.Name] = append(secrets[s.Name], i)
-			}
-			continue
-		}
+			match := secrets[d.Name]
+			merr = append(merr, errorf(d, "duplicate secret declaration at %d:%d", match.Pos.Line, match.Pos.Column))
 
-		db, ok := d.(*Database)
-		if ok { // found a database
-			if _, ok := dbs[db.Name]; !ok { // no matches
-				dbs[db.Name] = i
+		case *Database:
+			if _, ok := dbs[d.Name]; !ok { // no matches
+				dbs[d.Name] = d
 				continue
 			}
-			match, _ := decls[dbs[db.Name]].(*Database)
+			match := dbs[d.Name]
 			merr = append(merr, errorf(d, "duplicate database declaration at %d:%d", match.Pos.Line, match.Pos.Column))
+
+		default:
 		}
 	}
 	return merr
