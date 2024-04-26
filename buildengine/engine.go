@@ -48,6 +48,7 @@ func (b BuildStartedListenerFunc) OnBuildStarted(project Project) { b(project) }
 // Engine for building a set of modules.
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
+	projectConfig    *projectconfig.Config
 	projectMetas     *xsync.MapOf[ProjectKey, projectMeta]
 	moduleDirs       []string
 	externalDirs     []string
@@ -82,10 +83,11 @@ func WithListener(listener Listener) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig *projectconfig.Config, moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
+		projectConfig:    projConfig,
 		moduleDirs:       moduleDirs,
 		externalDirs:     externalDirs,
 		projectMetas:     xsync.NewMapOf[ProjectKey, projectMeta](),
@@ -496,11 +498,106 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		allErrors = append(allErrors, err)
 	}
 
+	allErrors = append(allErrors, e.validateConfigsAndSecretsMatch(ctx, builtModules)...)
+
 	if len(allErrors) > 0 {
 		return errors.Join(allErrors...)
 	}
 
 	return nil
+}
+
+func (e *Engine) validateConfigsAndSecretsMatch(ctx context.Context, builtModules map[string]*schema.Module) []error {
+	errs := []error{}
+	logger := log.FromContext(ctx)
+
+	configsProvidedGlobally := make(map[string]bool)
+	for configName, _ := range e.projectConfig.Global.Config {
+		configsProvidedGlobally[configName] = true
+	}
+	secretsProvidedGlobally := make(map[string]bool)
+	for secretName, _ := range e.projectConfig.Global.Secrets {
+		secretsProvidedGlobally[secretName] = true
+	}
+
+	configsUsed := make(map[string]bool)
+	secretsUsed := make(map[string]bool)
+	for moduleName, module := range builtModules {
+		configsUsedInModule, secretsUsedInModule, moduleErrs := e.validateConfigsAndSecretsMatchForModule(ctx, moduleName, module, configsProvidedGlobally, secretsProvidedGlobally)
+		errs = append(errs, moduleErrs...)
+		for configName, _ := range configsUsedInModule {
+			configsUsed[configName] = true
+		}
+		for secretName, _ := range secretsUsedInModule {
+			secretsUsed[secretName] = true
+		}
+	}
+
+	for configName, _ := range e.projectConfig.Global.Config {
+		if _, isUsed := configsUsed[configName]; !isUsed {
+			logger.Warnf("config %q is provided globally in ftl-project.toml, but is not required by any modules", configName)
+		}
+	}
+	for secretName, _ := range e.projectConfig.Global.Secrets {
+		if _, isUsed := secretsUsed[secretName]; !isUsed {
+			logger.Warnf("secret %q is provided globally in ftl-project.toml, but is not required by any modules", secretName)
+		}
+	}
+
+	return errs
+}
+
+// validateConfigsAndSecretsMatchForModule is a helper function for validateConfigsMatch. It takes a
+// built module and maps whose keys are the names of all the configs/secrets defined globally in
+// ftl-project.toml, logs warnings for any module-level configs/secrets that are provided but not
+// used, and returns maps whose keys are all the configs/secrets used by this module.
+func (e *Engine) validateConfigsAndSecretsMatchForModule(ctx context.Context, moduleName string, module *schema.Module, globalConfig map[string]bool, globalSecrets map[string]bool) (map[string]bool, map[string]bool, []error) {
+	errs := []error{}
+	logger := log.FromContext(ctx)
+
+	configsUsed := make(map[string]bool)
+	secretsUsed := make(map[string]bool)
+	for _, d := range module.Decls {
+		switch d := d.(type) {
+		case *schema.Config:
+			configsUsed[d.Name] = true
+		case *schema.Secret:
+			secretsUsed[d.Name] = true
+		default:
+		}
+	}
+
+	// Index all provided configs into configsProvided and warn for unused configs
+	configsProvided := maps.Clone(globalConfig)
+	secretsProvided := maps.Clone(globalSecrets)
+	moduleConfigAndSecrets, moduleConfigAndSecretsExists := e.projectConfig.Modules[moduleName]
+	if moduleConfigAndSecretsExists {
+		for configName, _ := range moduleConfigAndSecrets.Config {
+			configsProvided[configName] = true
+			if _, isUsed := configsUsed[configName]; !isUsed {
+				logger.Warnf("config %q is provided for module %q in ftl-project.toml, but is not required", configName, moduleName)
+			}
+		}
+		for secretName, _ := range moduleConfigAndSecrets.Secrets {
+			secretsProvided[secretName] = true
+			if _, isUsed := secretsUsed[secretName]; !isUsed {
+				logger.Warnf("secret %q is provided for module %q in ftl-project.toml, but is not required", secretName, moduleName)
+			}
+		}
+	}
+
+	for configName, _ := range configsUsed {
+		if _, isProvided := configsProvided[configName]; !isProvided {
+			errs = append(errs, fmt.Errorf("config %q is not provided in ftl-project.toml, but is required by module %q", configName, moduleName))
+		}
+	}
+	for secretName, _ := range secretsUsed {
+		if _, isProvided := secretsProvided[secretName]; !isProvided {
+			errs = append(errs, fmt.Errorf("secret %q is not provided in ftl-project.toml, but is required by module %q", secretName, moduleName))
+		}
+	}
+
+	return configsUsed, secretsUsed, errs
 }
 
 func (e *Engine) tryBuild(ctx context.Context, mustBuild map[ProjectKey]bool, key ProjectKey, builtModules map[string]*schema.Module, schemas chan *schema.Module, callback buildCallback) error {

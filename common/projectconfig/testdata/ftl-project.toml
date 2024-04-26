@@ -1,8 +1,13 @@
 module-dirs = ["a/b/c", "d"]
 external-dirs = ["e/f", "g/h"]
 
+[global.configuration]
+  ftlEndpoint = "http://ftlEndpoint"
+  ftlEndpointAlternate = "http://ftlEndpointAlternate"
+
 [modules.module.configuration]
   githubAccessToken = "keychain://githubAccessToken"
+  someServiceAccessToken = "keychain://someServiceAccessToken"
 
 [modules.module.secrets]
   encryptionKey = "inline://notASensitiveSecret"
