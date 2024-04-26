@@ -2,7 +2,6 @@ package configuration
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 )
 
@@ -18,13 +17,13 @@ func NewInMemoryProvider[R Role]() *InMemoryProvider[R] {
 }
 
 func (p *InMemoryProvider[R]) Role() R     { var r R; return r }
-func (p *InMemoryProvider[R]) Key() string { return "grpc" }
+func (p *InMemoryProvider[R]) Key() string { return "inmemory" }
 
 func (p *InMemoryProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	if bytes, found := p.values[ref]; found {
 		return bytes, nil
 	}
-	return nil, fmt.Errorf("key %q not found", ref.Name)
+	return nil, ErrNotFound
 }
 
 func (p *InMemoryProvider[R]) Writer() bool {
