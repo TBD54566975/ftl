@@ -32,21 +32,24 @@ type Manager[R Role] struct {
 	resolver  Resolver[R]
 }
 
+func configFromEnvironment() []string {
+	if envar, ok := os.LookupEnv("FTL_CONFIG"); ok {
+		return strings.Split(envar, ",")
+	}
+	return nil
+}
+
 // NewDefaultSecretsManagerFromEnvironment creates a new secrets manager from
 // the default ftl-project.toml.
 func NewDefaultSecretsManagerFromEnvironment(ctx context.Context) (*Manager[Secrets], error) {
-	var cr Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
+	var cr Resolver[Secrets] = ProjectConfigResolver[Secrets]{Config: configFromEnvironment()}
 	return (DefaultSecretsMixin{}).NewSecretsManager(ctx, cr)
 }
 
 // NewDefaultConfigurationManagerFromEnvironment creates a new configuration
 // manager from the default ftl-project.toml.
 func NewDefaultConfigurationManagerFromEnvironment(ctx context.Context) (*Manager[Configuration], error) {
-	var configs []string
-	if envar, ok := os.LookupEnv("FTL_CONFIG"); ok {
-		configs = strings.Split(envar, ",")
-	}
-	cr := ProjectConfigResolver[Configuration]{Config: configs}
+	cr := ProjectConfigResolver[Configuration]{Config: configFromEnvironment()}
 	return (DefaultConfigMixin{}).NewConfigurationManager(ctx, cr)
 }
 
