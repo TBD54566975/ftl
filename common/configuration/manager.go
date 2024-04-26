@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/types/optional"
@@ -41,7 +42,11 @@ func NewDefaultSecretsManagerFromEnvironment(ctx context.Context) (*Manager[Secr
 // NewDefaultConfigurationManagerFromEnvironment creates a new configuration
 // manager from the default ftl-project.toml.
 func NewDefaultConfigurationManagerFromEnvironment(ctx context.Context) (*Manager[Configuration], error) {
-	cr := ProjectConfigResolver[Configuration]{}
+	var configs []string
+	if envar, ok := os.LookupEnv("FTL_CONFIG"); ok {
+		configs = strings.Split(envar, ",")
+	}
+	cr := ProjectConfigResolver[Configuration]{Config: configs}
 	return (DefaultConfigMixin{}).NewConfigurationManager(ctx, cr)
 }
 
