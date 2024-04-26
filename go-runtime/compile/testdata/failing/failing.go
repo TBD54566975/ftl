@@ -15,6 +15,9 @@ var duplConfig = ftl.Config[string]("FTL_ENDPOINT")
 var goodSecret = ftl.Secret[string]("MY_SECRET")
 var duplSecret = ftl.Secret[string]("MY_SECRET")
 
+var goodDB = ftl.PostgresDatabase("testDb")
+var duplDB = ftl.PostgresDatabase("testDb")
+
 type Request struct {
 	BadParam error
 }
