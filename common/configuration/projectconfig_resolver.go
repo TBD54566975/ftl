@@ -2,7 +2,6 @@ package configuration
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"sort"
 
@@ -36,7 +35,7 @@ func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, e
 	}
 	key, ok := mapping[ref.Name]
 	if !ok {
-		return nil, fmt.Errorf("no such key %q: %w", ref.Name, ErrNotFound)
+		return nil, ErrNotFound
 	}
 	return (*url.URL)(key), nil
 }
