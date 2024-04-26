@@ -84,9 +84,8 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	key, err := m.resolver.Get(ctx, ref)
 	// Try again at the global scope if the value is not found in module scope.
 	if ref.Module.Ok() && errors.Is(err, ErrNotFound) {
-		gref := ref
-		gref.Module = optional.None[string]()
-		key, err = m.resolver.Get(ctx, gref)
+		ref.Module = optional.None[string]()
+		key, err = m.resolver.Get(ctx, ref)
 		if err != nil {
 			return nil, err
 		}

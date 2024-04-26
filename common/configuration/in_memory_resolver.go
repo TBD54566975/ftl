@@ -2,7 +2,6 @@ package configuration
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 )
 
@@ -23,7 +22,7 @@ func (k InMemoryResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error)
 	if key, found := k.keyMap[ref]; found {
 		return key, nil
 	}
-	return nil, fmt.Errorf("key %q not found", ref.Name)
+	return nil, ErrNotFound
 }
 
 func (k InMemoryResolver[R]) List(ctx context.Context) ([]Entry, error) {
