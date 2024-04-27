@@ -28,6 +28,10 @@ clean:
   find . -name '*.zip' -exec rm {} \;
   mvn -f kotlin-runtime/ftl-runtime clean
 
+# Live rebuild the ftl binary whenever source changes.
+live-rebuild:
+  watchexec -e go -- just build ftl
+
 # Build everything
 build-all: build-frontend build-generate build-kt-runtime build-protos build-sqlc build-zips
   @just build ftl ftl-controller ftl-runner ftl-initdb
@@ -70,7 +74,7 @@ build-extension: npm-install
 # Install development version of VSCode extension
 install-extension: build-extension
   @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && npm run compile"
-  @cd extensions/vscode && vsce package && code --install-extension ftl-*.vsix 
+  @cd extensions/vscode && vsce package && code --install-extension ftl-*.vsix
 
 package-extension: build-extension
   @cd extensions/vscode && vsce package
