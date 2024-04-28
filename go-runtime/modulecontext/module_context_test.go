@@ -21,13 +21,17 @@ func TestConfigPriority(t *testing.T) {
 
 	moduleName := "test"
 
-	cp := cf.NewInMemoryProvider[cf.Configuration]()
+	cp := cf.InlineProvider[cf.Configuration]{
+		Inline: true,
+	}
 	cr := cf.NewInMemoryResolver[cf.Configuration]()
 	cm, err := cf.New(ctx, cr, []cf.Provider[cf.Configuration]{cp})
 	assert.NoError(t, err)
 	ctx = cf.ContextWithConfig(ctx, cm)
 
-	sp := cf.NewInMemoryProvider[cf.Secrets]()
+	sp := cf.InlineProvider[cf.Secrets]{
+		Inline: true,
+	}
 	sr := cf.NewInMemoryResolver[cf.Secrets]()
 	sm, err := cf.New(ctx, sr, []cf.Provider[cf.Secrets]{sp})
 	assert.NoError(t, err)
