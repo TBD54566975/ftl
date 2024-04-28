@@ -33,7 +33,9 @@ func FromProto(ctx context.Context, response *ftlv1.ModuleContextResponse) (*Mod
 }
 
 func newInMemoryConfigManager[R cf.Role](ctx context.Context, config map[string][]byte) (*cf.Manager[R], error) {
-	provider := cf.InlineProvider[R]{}
+	provider := cf.InlineProvider[R]{
+		Inline: true,
+	}
 	refs := map[cf.Ref]*url.URL{}
 	for name, data := range config {
 		ref := cf.Ref{Name: name}
