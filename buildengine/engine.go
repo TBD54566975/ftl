@@ -547,10 +547,11 @@ func (e *Engine) validateConfigsAndSecretsMatch(ctx context.Context, builtModule
 	return errs
 }
 
-// validateConfigsAndSecretsMatchForModule is a helper function for validateConfigsMatch. It takes a
-// built module and maps whose keys are the names of all the configs/secrets defined globally in
-// ftl-project.toml, logs warnings for any module-level configs/secrets that are provided but not
-// used, and returns maps whose keys are all the configs/secrets used by this module.
+// validateConfigsAndSecretsMatchForModule is a helper function for validateConfigsAndSecretsMatch.
+// `globalConfig` and `globalSecrets` store the names of all the configs/secrets defined globally in
+// ftl-project.toml, with O(1) `contains` checks. This function logs warnings for any module-level
+// configs/secrets that are provided but not used, then returns maps whose keys are all the
+// configs/secrets used by this module.
 func (e *Engine) validateConfigsAndSecretsMatchForModule(ctx context.Context, moduleName string, module *schema.Module, globalConfig map[string]bool, globalSecrets map[string]bool) (map[string]bool, map[string]bool, []error) {
 	errs := []error{}
 	logger := log.FromContext(ctx)
