@@ -29,6 +29,9 @@ func leaseExists(t *testing.T, conn sql.DBI, idempotencyKey uuid.UUID, key lease
 }
 
 func TestLease(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal, err := New(ctx, conn)
@@ -57,6 +60,9 @@ func TestLease(t *testing.T) {
 }
 
 func TestExpireLeases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal, err := New(ctx, conn)
