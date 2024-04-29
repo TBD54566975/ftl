@@ -1,7 +1,5 @@
 package ftl
 
-//TODO: should not be public in ftl package...
-
 import (
 	"context"
 )

@@ -180,6 +180,10 @@ func ClientFromContext[Client Pingable](ctx context.Context) Client {
 	return value.(Client) //nolint:forcetypeassert
 }
 
+func IsClientAvailableInContext[Client Pingable](ctx context.Context) bool {
+	return ctx.Value(clientKey[Client]{}) != nil
+}
+
 func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (context.Context, error) {
 	if isClient {
 		if IsDirectRouted(ctx) {
