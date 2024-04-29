@@ -4,10 +4,7 @@ go 1.22.2
 
 replace github.com/TBD54566975/ftl => ../../..
 
-require (
-	github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
-	github.com/alecthomas/assert/v2 v2.8.1
-)
+require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 
 require (
 	connectrpc.com/connect v1.16.0 // indirect
@@ -18,14 +15,12 @@ require (
 	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/kong v0.9.0 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
-	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/alecthomas/types v0.14.0 // indirect
 	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
-	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgx/v5 v5.5.5 // indirect

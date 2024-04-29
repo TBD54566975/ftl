@@ -23,16 +23,18 @@ func call[Req, Resp any](ctx context.Context, callee Ref, req Req) (resp Resp, e
 	}
 
 	if overrider, ok := CallOverriderFromContext(ctx); ok {
-		if override, overridden_resp, err := overrider.OverrideCall(ctx, callee, req); override {
-			if err != nil {
-				return resp, fmt.Errorf("%s: %w", callee, err)
-			}
-			if resp, ok = overridden_resp.(Resp); ok {
+		override, uncheckedResp, err := overrider.OverrideCall(ctx, callee, req)
+		if err != nil {
+			return resp, fmt.Errorf("%s: %w", callee, err)
+		}
+		if override {
+			if resp, ok = uncheckedResp.(Resp); ok {
 				return resp, nil
 			}
-			return resp, fmt.Errorf("%s: overridden verb had invalid response type %T, expected %v", callee, overridden_resp, reflect.TypeFor[Resp]())
+			return resp, fmt.Errorf("%s: overridden verb had invalid response type %T, expected %v", callee, uncheckedResp, reflect.TypeFor[Resp]())
 		}
 	}
+
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData}))
 	if err != nil {
