@@ -54,16 +54,16 @@ module todo {
 
 module foo {
   // A comment
-  enum Color(String) {
-	Red("Red")
-	Blue("Blue")
-	Green("Green")
+  enum Color {
+	Red String = "Red"
+	Blue String = "Blue"
+	Green String = "Green"
   }
 
-  enum ColorInt(Int) {
-	Red(0)
-	Blue(1)
-	Green(2)
+  enum ColorInt {
+	Red Int = 0
+	Blue Int = 1
+	Green Int = 2
   }
 }
 `
@@ -410,16 +410,16 @@ func TestParseEnum(t *testing.T) {
 	input := `
 module foo {
   // A comment
-  enum Color(String) {
-    Red("Red")
-    Blue("Blue")
-    Green("Green")
+  enum Color {
+	Red String = "Red"
+	Blue String = "Blue"
+	Green String = "Green"
   }
 
-  enum ColorInt(Int) {
-    Red(0)
-    Blue(1)
-    Green(2)
+  enum ColorInt {
+	Red Int = 0
+	Blue Int = 1
+	Green Int = 2
   }
 }
 `
@@ -510,20 +510,18 @@ var testSchema = MustValidate(&Schema{
 				&Enum{
 					Comments: []string{"A comment"},
 					Name:     "Color",
-					Type:     &String{},
 					Variants: []*EnumVariant{
-						{Name: "Red", Value: &StringValue{Value: "Red"}},
-						{Name: "Blue", Value: &StringValue{Value: "Blue"}},
-						{Name: "Green", Value: &StringValue{Value: "Green"}},
+						{Name: "Red", Value: &StringValue{Value: "Red"}, Type: &String{}},
+						{Name: "Blue", Value: &StringValue{Value: "Blue"}, Type: &String{}},
+						{Name: "Green", Value: &StringValue{Value: "Green"}, Type: &String{}},
 					},
 				},
 				&Enum{
 					Name: "ColorInt",
-					Type: &Int{},
 					Variants: []*EnumVariant{
-						{Name: "Red", Value: &IntValue{Value: 0}},
-						{Name: "Blue", Value: &IntValue{Value: 1}},
-						{Name: "Green", Value: &IntValue{Value: 2}},
+						{Name: "Red", Value: &IntValue{Value: 0}, Type: &Int{}},
+						{Name: "Blue", Value: &IntValue{Value: 1}, Type: &Int{}},
+						{Name: "Green", Value: &IntValue{Value: 2}, Type: &Int{}},
 					},
 				},
 			},

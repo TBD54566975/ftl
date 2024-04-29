@@ -12,10 +12,10 @@ import (
 var _ = context.Background
 
 {{- range .Decls }}
-{{if is "Enum" . }}
+{{if valueEnum .}}
 {{$enumName := .Name -}}
 //ftl:enum
-type {{.Name|title}} {{ type $ .Type }}
+type {{.Name|title}} {{enumType $ .}}
 const (
   {{- range .Variants }}
   {{.Name|title}} {{$enumName}} = {{.Value|value}}

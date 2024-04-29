@@ -303,20 +303,18 @@ func TestEnumValidation(t *testing.T) {
 			{Name: "test", Decls: []schema.Decl{
 				&schema.Enum{
 					Name: "Color",
-					Type: &schema.String{},
 					Variants: []*schema.EnumVariant{
-						{Name: "Red", Value: &schema.StringValue{Value: "Red"}},
-						{Name: "Blue", Value: &schema.StringValue{Value: "Blue"}},
-						{Name: "Green", Value: &schema.StringValue{Value: "Green"}},
+						{Name: "Red", Value: &schema.StringValue{Value: "Red"}, Type: &schema.String{}},
+						{Name: "Blue", Value: &schema.StringValue{Value: "Blue"}, Type: &schema.String{}},
+						{Name: "Green", Value: &schema.StringValue{Value: "Green"}, Type: &schema.String{}},
 					},
 				},
 				&schema.Enum{
 					Name: "ColorInt",
-					Type: &schema.Int{},
 					Variants: []*schema.EnumVariant{
-						{Name: "RedInt", Value: &schema.IntValue{Value: 0}},
-						{Name: "BlueInt", Value: &schema.IntValue{Value: 1}},
-						{Name: "GreenInt", Value: &schema.IntValue{Value: 2}},
+						{Name: "RedInt", Value: &schema.IntValue{Value: 0}, Type: &schema.Int{}},
+						{Name: "BlueInt", Value: &schema.IntValue{Value: 1}, Type: &schema.Int{}},
+						{Name: "GreenInt", Value: &schema.IntValue{Value: 2}, Type: &schema.Int{}},
 					},
 				},
 				&schema.Data{
