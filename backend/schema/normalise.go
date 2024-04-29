@@ -50,12 +50,14 @@ func Normalise[T Node](n T) T {
 
 	case *Enum:
 		c.Pos = zero
-		c.Type = Normalise(c.Type)
 		c.Variants = normaliseSlice(c.Variants)
 
 	case *EnumVariant:
 		c.Pos = zero
-		c.Value = Normalise(c.Value)
+		c.Type = Normalise(c.Type)
+		if c.Value != nil {
+			c.Value = Normalise(c.Value)
+		}
 
 	case *Field:
 		c.Pos = zero

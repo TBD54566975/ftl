@@ -609,9 +609,21 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
           enum_ = Enum(
             name = "Thing",
             variants = listOf(
-              EnumVariant(name = "A", value_ = Value(intValue = IntValue(value_ = 0)), comments = listOf("A comment.")),
-              EnumVariant(name = "B", value_ = Value(intValue = IntValue(value_ = 1))),
-              EnumVariant(name = "C", value_ = Value(intValue = IntValue(value_ = 2))),
+              EnumVariant(
+                name = "A", value_ = Value(intValue = IntValue(value_ = 0)),
+                type = Type(int = xyz.block.ftl.v1.schema.Int()),
+                comments = listOf("A comment.")
+              ),
+              EnumVariant(
+                name = "B",
+                value_ = Value(intValue = IntValue(value_ = 1)),
+                type = Type(int = xyz.block.ftl.v1.schema.Int())
+              ),
+              EnumVariant(
+                name = "C",
+                value_ = Value(intValue = IntValue(value_ = 2)),
+                type = Type(int = xyz.block.ftl.v1.schema.Int())
+              ),
             ),
           ),
         ),
@@ -623,14 +635,20 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
               EnumVariant(
                 name = "A",
                 value_ = Value(stringValue = StringValue(value_ = "A")),
+                type = Type(string = String()),
                 comments = listOf("A comment.")
               ),
               EnumVariant(
                 name = "B",
                 value_ = Value(stringValue = StringValue(value_ = "B")),
+                type = Type(string = String()),
                 comments = listOf("B comment.")
               ),
-              EnumVariant(name = "C", value_ = Value(stringValue = StringValue(value_ = "C"))),
+              EnumVariant(
+                name = "C",
+                value_ = Value(stringValue = StringValue(value_ = "C")),
+                type = Type(string = String()),
+              ),
             ),
           ),
         ),
@@ -638,9 +656,22 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
           enum_ = Enum(
             name = "IntThing",
             variants = listOf(
-              EnumVariant(name = "A", value_ = Value(intValue = IntValue(value_ = 1))),
-              EnumVariant(name = "B", value_ = Value(intValue = IntValue(value_ = 2))),
-              EnumVariant(name = "C", value_ = Value(intValue = IntValue(value_ = 3)), comments = listOf("C comment.")),
+              EnumVariant(
+                name = "A",
+                value_ = Value(intValue = IntValue(value_ = 1)),
+                type = Type(int = xyz.block.ftl.v1.schema.Int())
+              ),
+              EnumVariant(
+                name = "B",
+                value_ = Value(intValue = IntValue(value_ = 2)),
+                type = Type(int = xyz.block.ftl.v1.schema.Int())
+              ),
+              EnumVariant(
+                name = "C",
+                value_ = Value(intValue = IntValue(value_ = 3)),
+                type = Type(int = xyz.block.ftl.v1.schema.Int()),
+                comments = listOf("C comment.")
+              ),
             ),
           ),
         ),

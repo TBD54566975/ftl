@@ -586,6 +586,7 @@ class SchemaExtractor(
         val variant = EnumVariant(
           name = it.name!!,
           value_ = Value(intValue = IntValue(value_ = ordinal)),
+          type = Type(int = xyz.block.ftl.v1.schema.Int()),
           comments = it.comments(),
         )
         ordinal = ordinal.inc()
@@ -599,12 +600,15 @@ class SchemaExtractor(
         }
 
         var value: Value? = null
+        var type: Type? = null
         try {
-          value = arg.getArgumentExpression()?.text?.let {
-            if (it.startsWith('"')) {
-              return@let Value(stringValue = StringValue(value_ = it.trim('"')))
+          arg.getArgumentExpression()?.let { expr ->
+            if (expr.text.startsWith('"')) {
+              type = Type(string = xyz.block.ftl.v1.schema.String())
+              value = Value(stringValue = StringValue(value_ = expr.text.trim('"')))
             } else {
-              return@let Value(intValue = IntValue(value_ = it.toLong()))
+              type = Type(int = xyz.block.ftl.v1.schema.Int())
+              value = Value(intValue = IntValue(value_ = expr.text.toLong()))
             }
           }
           if (value == null) {
@@ -617,6 +621,7 @@ class SchemaExtractor(
         EnumVariant(
           name = name,
           value_ = value,
+          type = type,
           pos = entry.getPosition(),
           comments = entry.comments(),
         )

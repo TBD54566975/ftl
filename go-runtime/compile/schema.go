@@ -413,10 +413,12 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						enum := &schema.Enum{
 							Pos:      goPosToSchemaPos(node.Pos()),
 							Comments: visitComments(node.Doc),
+							Name:     strcase.ToUpperCamel(t.Name.Name),
 						}
 						pctx.enums[t.Name.Name] = enum
+						pctx.nativeNames[enum] = t.Name.Name
 					}
-					visitTypeSpec(pctx, t)
+					visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type())
 				}
 
 			case *directiveIngress, *directiveCronJob:
@@ -447,21 +449,6 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	}
 }
 
-func visitTypeSpec(pctx *parseContext, node *ast.TypeSpec) {
-	if enum, ok := pctx.enums[node.Name.Name]; ok {
-		if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(node.Type)).Get(); ok {
-			enum.Name = strcase.ToUpperCamel(node.Name.Name)
-			enum.Type = typ
-			pctx.nativeNames[enum] = node.Name.Name
-		} else {
-			pctx.errors.add(errorf(node, "unsupported type %q",
-				pctx.pkg.TypesInfo.TypeOf(node.Type).Underlying()))
-		}
-	} else {
-		visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[node.Name].Type())
-	}
-}
-
 func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 	var enum *schema.Enum
 	if i, ok := node.Type.(*ast.Ident); ok {
@@ -475,11 +462,17 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 		pctx.errors.add(errorf(node, "could not extract enum %s: expected exactly one variant name", enum.Name))
 		return
 	}
+
+	var typ schema.Type
+	if typ, ok = visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Types[node.Type].Type.Underlying()).Get(); !ok {
+		pctx.errors.add(errorf(node, "unsupported type %q for enum variant %q", node.Type, node.Names[0]))
+	}
 	if value, ok := visitConst(pctx, c).Get(); ok {
 		variant := &schema.EnumVariant{
 			Pos:      goPosToSchemaPos(c.Pos()),
 			Comments: visitComments(node.Doc),
 			Name:     strcase.ToUpperCamel(c.Id()),
+			Type:     typ,
 			Value:    value,
 		}
 		enum.Variants = append(enum.Variants, variant)

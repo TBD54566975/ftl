@@ -69,6 +69,9 @@ func typeToSchema(s *schemapb.Type) Type {
 }
 
 func valueToSchema(v *schemapb.Value) Value {
+	if v == nil {
+		return nil
+	}
 	switch s := v.Value.(type) {
 	case *schemapb.Value_IntValue:
 		return &IntValue{

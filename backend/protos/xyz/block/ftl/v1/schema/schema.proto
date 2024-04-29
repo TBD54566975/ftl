@@ -61,15 +61,15 @@ message Enum {
   optional Position pos = 1;
   repeated string comments = 2;
   string name = 3;
-  Type type = 4;
-  repeated EnumVariant variants = 5;
+  repeated EnumVariant variants = 4;
 }
 
 message EnumVariant {
   optional Position pos = 1;
-  string name = 2;
-  Value value = 3;
-  repeated string comments = 4;
+  repeated string comments = 2;
+  string name = 3;
+  Type type = 4;
+  optional Value value = 5;
 }
 
 message Error {

@@ -241,6 +241,16 @@ func TestValidate(t *testing.T) {
 				"4:41-41: duplicate database declaration at 3:41",
 			},
 		},
+		{name: "ValueEnumMismatchedVariantTypes",
+			schema: `
+				module one {
+					enum Enum {
+						A String = "A"
+						B Int = 1
+					}
+				}
+				`,
+			errs: []string{"3:6-6: all value enum variants must have the same type, \"Enum\" fails this requirement"}},
 	}
 
 	for _, test := range tests {

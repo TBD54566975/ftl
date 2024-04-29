@@ -289,6 +289,17 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		panic(fmt.Sprintf("unsupported value %T", v))
 	},
+	"valueEnum": func(d schema.Decl) bool {
+		if e, ok := d.(*schema.Enum); ok {
+			if len(e.Variants) > 0 && e.Variants[0].Value != nil {
+				return true
+			}
+		}
+		return false
+	},
+	"enumType": func(module *schema.Module, v schema.Enum) string {
+		return genType(module, v.Variants[0].Type)
+	},
 }
 
 func genType(module *schema.Module, t schema.Type) string {

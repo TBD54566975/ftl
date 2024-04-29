@@ -159,16 +159,32 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				}
 
 			case *Enum:
-				switch t := n.Type.(type) {
-				case *String, *Int:
-					for _, v := range n.Variants {
+				var value Value
+				for _, v := range n.Variants {
+					if v.Value != nil {
+						value = v.Value
+					}
+					switch t := v.Type.(type) {
+					case *String, *Int:
 						if reflect.TypeOf(v.Value.schemaValueType()) != reflect.TypeOf(t) {
-							merr = append(merr, errorf(v, "enum variant %q of type %s cannot have a value of type %s", v.Name, t, v.Value.schemaValueType()))
+							merr = append(merr, errorf(v, "enum variant %q of type %s cannot have a value of "+
+								"type %s", v.Name, v.Type, v.Value.schemaValueType()))
+						}
+					default:
+						merr = append(merr, errorf(n, "enum type must be String or Int, not %s", t))
+					}
+				}
+				// if any variant has a value, all variants must have a value. all values must be of the same type.
+				if value != nil {
+					for _, v := range n.Variants {
+						if v.Value == nil {
+							merr = append(merr, errorf(v, "all value enum variants must have a value, "+
+								"%q does not", v.Name))
+						} else if reflect.TypeOf(v.Value.schemaValueType()) != reflect.TypeOf(value.schemaValueType()) {
+							merr = append(merr, errorf(n, "all value enum variants must have the same type, "+
+								"%q fails this requirement", n.Name))
 						}
 					}
-					return next()
-				default:
-					merr = append(merr, errorf(n, "enum type must be String or Int, not %s", n.Type))
 				}
 
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,

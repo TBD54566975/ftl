@@ -52,33 +52,33 @@ func TestExtractModuleSchema(t *testing.T) {
 
   database testDb
 
-  enum Color(String) {
-    Red("Red")
-    Blue("Blue")
-    Green("Green")
-    Yellow("Yellow")
+  enum Color {
+    Red String = "Red"
+    Blue String = "Blue"
+    Green String = "Green"
+    Yellow String = "Yellow"
   }
 
   // Comments about ColorInt.
-  enum ColorInt(Int) {
+  enum ColorInt {
     // RedInt is a color.
-    RedInt(0)
-    BlueInt(1)
+    RedInt Int = 0
+    BlueInt Int = 1
     // GreenInt is also a color.
-    GreenInt(2)
-    YellowInt(3)
+    GreenInt Int = 2
+    YellowInt Int = 3
   }
 
-  enum IotaExpr(Int) {
-    First(1)
-    Second(3)
-    Third(5)
+  enum IotaExpr {
+    First Int = 1
+    Second Int = 3
+    Third Int = 5
   }
 
-  enum SimpleIota(Int) {
-    Zero(0)
-    One(1)
-    Two(2)
+  enum SimpleIota {
+    Zero Int = 0
+    One Int = 1
+    Two Int = 2
   }
 
   data Config {
@@ -133,10 +133,10 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module two {
-		enum TwoEnum(String) {
-		  Red("Red")
-		  Blue("Blue")
-		  Green("Green")
+		enum TwoEnum {
+		  Red String = "Red"
+		  Blue String = "Blue"
+		  Green String = "Green"
         }
 
 		data Exported {
