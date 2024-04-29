@@ -24,9 +24,6 @@ module todo {
 
   database testdb
 
-  // SumType comment
-  sumtype IntOrBool = Int | Bool
-
   data CreateRequest {
     name {String: String}? +alias json "rqn"
   }
@@ -105,9 +102,6 @@ Module
   Secret
     String
   Database
-  SumType
-    Int
-    Bool
   Data
     Field
       Optional
@@ -384,9 +378,6 @@ module todo {
   secret secretValue String
   database testdb
 
-  // SumType comment
-  sumtype IntOrBool = Int | Bool
-
   data CreateRequest {
     name {String: String}? +alias json "rqn"
   }
@@ -444,11 +435,6 @@ var testSchema = MustValidate(&Schema{
 			Name:     "todo",
 			Comments: []string{"A comment"},
 			Decls: []Decl{
-				&SumType{
-					Comments: []string{"SumType comment"},
-					Name:     "IntOrBool",
-					Variants: []Type{&Int{}, &Bool{}},
-				},
 				&Secret{
 					Name: "secretValue",
 					Type: &String{},

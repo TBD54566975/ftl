@@ -54,7 +54,6 @@ message Decl {
     Enum enum = 4;
     Config config = 5;
     Secret secret = 6;
-    SumType sumType = 7;
   }
 }
 
@@ -211,13 +210,6 @@ message String {
 message StringValue {
   optional Position pos = 1;
   string value = 2;
-}
-
-message SumType {
-  optional Position pos = 1;
-  repeated string comments = 2;
-  string name = 3;
-  repeated Type variants = 4;
 }
 
 message Time {
