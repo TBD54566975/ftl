@@ -205,6 +205,10 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	svc.tasks.Parallel(maybeDevelBackoff(time.Second, time.Second*5), svc.syncRoutes)
 	svc.tasks.Parallel(maybeDevelBackoff(time.Second*3, time.Second*5, makeBackoff(time.Second*2, time.Second*2)), svc.heartbeatController)
 	svc.tasks.Parallel(maybeDevelBackoff(time.Second*5, time.Second*5), svc.updateControllersList)
+	// This should be a singleton task, but because this is the task that
+	// actually expires the leases used to run singleton tasks, it must be
+	// parallel.
+	svc.tasks.Parallel(maybeDevelBackoff(time.Second, time.Second*5), svc.expireStaleLeases)
 
 	// Singleton tasks use leases to only run on a single controller.
 	svc.tasks.Singleton(maybeDevelBackoff(time.Second*20, time.Second*20), svc.reapStaleControllers)
@@ -212,7 +216,6 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*20), svc.releaseExpiredReservations)
 	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*5), svc.reconcileDeployments)
 	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*5), svc.reconcileRunners)
-	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*5), svc.expireStaleLeases)
 	return svc, nil
 }
 
