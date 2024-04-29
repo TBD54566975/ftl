@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:24.04 AS builder
 RUN apt-get update
 RUN apt-get install -y curl git zip
 
@@ -28,7 +28,7 @@ RUN just build ftl-initdb
 RUN just build ftl
 
 # Finally create the runtime image.
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 RUN apt-get update
 RUN apt-get install -y curl postgresql-client iputils-ping vim
