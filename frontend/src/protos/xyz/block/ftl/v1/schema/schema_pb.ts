@@ -371,12 +371,6 @@ export class Decl extends Message<Decl> {
      */
     value: Secret;
     case: "secret";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.schema.SumType sumType = 7;
-     */
-    value: SumType;
-    case: "sumType";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Decl>) {
@@ -393,7 +387,6 @@ export class Decl extends Message<Decl> {
     { no: 4, name: "enum", kind: "message", T: Enum, oneof: "value" },
     { no: 5, name: "config", kind: "message", T: Config, oneof: "value" },
     { no: 6, name: "secret", kind: "message", T: Secret, oneof: "value" },
-    { no: 7, name: "sumType", kind: "message", T: SumType, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Decl {
@@ -1665,61 +1658,6 @@ export class StringValue extends Message<StringValue> {
 
   static equals(a: StringValue | PlainMessage<StringValue> | undefined, b: StringValue | PlainMessage<StringValue> | undefined): boolean {
     return proto3.util.equals(StringValue, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.schema.SumType
- */
-export class SumType extends Message<SumType> {
-  /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
-   */
-  pos?: Position;
-
-  /**
-   * @generated from field: repeated string comments = 2;
-   */
-  comments: string[] = [];
-
-  /**
-   * @generated from field: string name = 3;
-   */
-  name = "";
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Type variants = 4;
-   */
-  variants: Type[] = [];
-
-  constructor(data?: PartialMessage<SumType>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.schema.SumType";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "variants", kind: "message", T: Type, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SumType {
-    return new SumType().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SumType {
-    return new SumType().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SumType {
-    return new SumType().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SumType | PlainMessage<SumType> | undefined, b: SumType | PlainMessage<SumType> | undefined): boolean {
-    return proto3.util.equals(SumType, a, b);
   }
 }
 

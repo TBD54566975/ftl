@@ -43,9 +43,6 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 
 		case *Secret:
 			v = &schemapb.Decl_Secret{Secret: n.ToProto().(*schemapb.Secret)}
-
-		case *SumType:
-			v = &schemapb.Decl_SumType{SumType: n.ToProto().(*schemapb.SumType)}
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}

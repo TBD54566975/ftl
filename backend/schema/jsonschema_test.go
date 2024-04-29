@@ -32,7 +32,6 @@ var jsonSchemaSample = &Schema{
 					{Name: "keyValue", Type: &Ref{Module: "foo", Name: "Generic", TypeParameters: []Type{&String{}, &Int{}}}},
 					{Name: "stringEnumRef", Type: &Ref{Module: "foo", Name: "StringEnum"}},
 					{Name: "intEnumRef", Type: &Ref{Module: "foo", Name: "IntEnum"}},
-					{Name: "sumTypeRef", Type: &Ref{Module: "foo", Name: "IntOrBool"}},
 				},
 			},
 			&Data{
@@ -59,10 +58,6 @@ var jsonSchemaSample = &Schema{
 					{Name: "Zero", Value: &IntValue{Value: 0}},
 					{Name: "One", Value: &IntValue{Value: 1}},
 				},
-			},
-			&SumType{
-				Name:     "IntOrBool",
-				Variants: []Type{&Int{}, &Bool{}},
 			},
 		}},
 		{Name: "bar", Decls: []Decl{
@@ -94,8 +89,7 @@ func TestDataToJSONSchema(t *testing.T) {
     "any",
     "keyValue",
     "stringEnumRef",
-    "intEnumRef",
-    "sumTypeRef"
+    "intEnumRef"
   ],
   "additionalProperties": false,
   "definitions": {
@@ -131,21 +125,6 @@ func TestDataToJSONSchema(t *testing.T) {
       "enum": [
         0,
         1
-      ]
-    },
-    "foo.IntOrBool": {
-      "properties": {
-        "@_kind": {
-          "type": "string"
-        }
-      },
-      "oneOf": [
-        {
-          "type": "integer"
-        },
-        {
-          "type": "boolean"
-        }
       ]
     },
     "foo.Item": {
@@ -263,9 +242,6 @@ func TestDataToJSONSchema(t *testing.T) {
     "stringEnumRef": {
       "$ref": "#/definitions/foo.StringEnum"
     },
-    "sumTypeRef": {
-      "$ref": "#/definitions/foo.IntOrBool"
-    },
     "time": {
       "type": "string",
       "format": "date-time"
@@ -294,8 +270,7 @@ func TestJSONSchemaValidation(t *testing.T) {
     "any": [{"name": "Name"}, "string", 1, 1.23, true, "2018-11-13T20:20:39+00:00", ["one"], {"one": 2}, null],
     "keyValue": {"key": "string", "value": 1},
 	"stringEnumRef": "A",
-	"intEnumRef": 0,
-        "sumTypeRef": 10
+	"intEnumRef": 0
   }
    `
 
@@ -332,8 +307,7 @@ func TestInvalidEnumValidation(t *testing.T) {
     "any": [{"name": "Name"}, "string", 1, 1.23, true, "2018-11-13T20:20:39+00:00", ["one"], {"one": 2}, null],
     "keyValue": {"key": "string", "value": 1},
 	"stringEnumRef": "B",
-	"intEnumRef": 3,
-        "sumTypeRef": 10
+	"intEnumRef": 3
   }
    `
 
