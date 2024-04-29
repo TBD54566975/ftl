@@ -1,11 +1,11 @@
 package xyz.block.ftl.registry
 
 import io.github.classgraph.ClassGraph
-import xyz.block.ftl.Context
-import xyz.block.ftl.Ignore
-import xyz.block.ftl.Export
+import xyz.block.ftl.*
 import xyz.block.ftl.logging.Logging
+import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod
 import kotlin.reflect.jvm.kotlinFunction
@@ -47,7 +47,7 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
         scanResult.allClasses.flatMap {
           it.loadClass().kotlin.java.declaredMethods.asSequence()
         }.filter {
-          it.isAnnotationPresent(Export::class.java) && !it.isAnnotationPresent(Ignore::class.java)
+          it.hasVerbAnnotation() && !it.isAnnotationPresent(Ignore::class.java)
         }.forEach {
           val verb = it.kotlinFunction!!
           maybeRegisterVerb(verb)
@@ -56,6 +56,14 @@ class Registry(val jvmModuleName: String = defaultJvmModuleName) {
   }
 
   val refs get() = verbs.keys.toList()
+
+  private fun Method.hasVerbAnnotation(): Boolean {
+    return arrayOf(
+      Verb::class,
+      HttpIngress::class,
+      Cron::class
+    ).any { this.isAnnotationPresent(it.java) }
+  }
 
   private fun maybeRegisterVerb(function: KFunction<*>) {
     if (ftlModuleName == null) {

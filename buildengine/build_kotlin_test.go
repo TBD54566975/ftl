@@ -109,14 +109,14 @@ func TestGenerateAllTypes(t *testing.T) {
 package ftl.test
 
 import java.time.OffsetDateTime
-import xyz.block.ftl.Export
+import xyz.block.ftl.Data
 
-@Export
+@Data
 data class ParamTestData<T>(
   val t: T,
 )
 
-@Export
+@Data
 data class TestRequest(
   val field: Long,
 )
@@ -124,7 +124,7 @@ data class TestRequest(
 /**
  * Response comments
  */
-@Export
+@Data
 data class TestResponse(
   val int: Long,
   val float: Float,
@@ -192,10 +192,11 @@ func TestGenerateAllVerbs(t *testing.T) {
 package ftl.test
 
 import xyz.block.ftl.Context
-import xyz.block.ftl.Export
+import xyz.block.ftl.Data
 import xyz.block.ftl.Ignore
+import xyz.block.ftl.Verb
 
-@Export
+@Data
 data class Request(
   val data: Long,
 )
@@ -203,7 +204,7 @@ data class Request(
 /**
  * TestVerb comments
  */
-@Export
+@Verb
 @Ignore
 fun testVerb(context: Context, req: Request): ftl.builtin.Empty = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.call(::testVerb, ...)")
@@ -233,12 +234,12 @@ func TestGenerateBuiltins(t *testing.T) {
  */
 package ftl.builtin
 
-import xyz.block.ftl.Export
+import xyz.block.ftl.Data
 
 /**
  * HTTP request structure used for HTTP ingress verbs.
  */
-@Export
+@Data
 data class HttpRequest<Body>(
   val method: String,
   val path: String,
@@ -251,7 +252,7 @@ data class HttpRequest<Body>(
 /**
  * HTTP response structure used for HTTP ingress verbs.
  */
-@Export
+@Data
 data class HttpResponse<Body, Error>(
   val status: Long,
   val headers: Map<String, List<String>>,
@@ -259,7 +260,7 @@ data class HttpResponse<Body, Error>(
   val error: Error? = null,
 )
 
-@Export
+@Data
 class Empty
 `
 	bctx := buildContext{
@@ -298,10 +299,11 @@ func TestGenerateEmptyRefs(t *testing.T) {
 package ftl.test
 
 import xyz.block.ftl.Context
-import xyz.block.ftl.Export
+import xyz.block.ftl.Data
 import xyz.block.ftl.Ignore
+import xyz.block.ftl.Verb
 
-@Export
+@Verb
 @Ignore
 fun emptyVerb(context: Context, req: ftl.builtin.Empty): ftl.builtin.Empty = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.call(::emptyVerb, ...)")
@@ -360,28 +362,29 @@ func TestGenerateSourcesAndSinks(t *testing.T) {
 package ftl.test
 
 import xyz.block.ftl.Context
-import xyz.block.ftl.Export
+import xyz.block.ftl.Data
 import xyz.block.ftl.Ignore
+import xyz.block.ftl.Verb
 
-@Export
+@Data
 data class SinkReq(
   val data: Long,
 )
 
-@Export
+@Verb
 @Ignore
 fun sink(context: Context, req: SinkReq): Unit = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.callSink(::sink, ...)")
-@Export
+@Data
 data class SourceResp(
   val data: Long,
 )
 
-@Export
+@Verb
 @Ignore
 fun source(context: Context): SourceResp = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.callSource(::source, ...)")
-@Export
+@Verb
 @Ignore
 fun nothing(context: Context): Unit = throw
     NotImplementedError("Verb stubs should not be called directly, instead use context.callEmpty(::nothing, ...)")

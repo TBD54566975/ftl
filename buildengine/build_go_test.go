@@ -69,7 +69,7 @@ import (
 
 var _ = context.Background
 
-//ftl:export
+//ftl:enum
 type Color string
 const (
   Red Color = "Red"
@@ -77,7 +77,7 @@ const (
   Green Color = "Green"
 )
 
-//ftl:export
+//ftl:enum
 type ColorInt int
 const (
   RedInt ColorInt = 0
@@ -91,7 +91,7 @@ type EchoRequest struct {
 type EchoResponse struct {
 }
 
-//ftl:export
+//ftl:verb
 func Echo(context.Context, EchoRequest) (EchoResponse, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }
@@ -99,7 +99,7 @@ func Echo(context.Context, EchoRequest) (EchoResponse, error) {
 type SinkReq struct {
 }
 
-//ftl:export
+//ftl:verb
 func Sink(context.Context, SinkReq) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
 }
@@ -107,12 +107,12 @@ func Sink(context.Context, SinkReq) error {
 type SourceResp struct {
 }
 
-//ftl:export
+//ftl:verb
 func Source(context.Context) (SourceResp, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSource()")
 }
 
-//ftl:export
+//ftl:verb
 func Nothing(context.Context) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")
 }
@@ -161,7 +161,7 @@ type Req struct {
 type Resp struct {
 }
 
-//ftl:export
+//ftl:verb
 func Call(context.Context, Req) (Resp, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }

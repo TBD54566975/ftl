@@ -17,12 +17,12 @@ type EchoResponse struct {
 	Message string `json:"message"`
 }
 
-//ftl:export
+//ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name.Default("anonymous"))}, nil
 }
 
-//ftl:export
+//ftl:verb
 func Call(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	res, err := ftl.Call(ctx, echo2.Echo, echo2.EchoRequest{Name: req.Name})
 	if err != nil {

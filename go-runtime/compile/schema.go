@@ -396,16 +396,16 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 		}
 		for _, dir := range directives {
 			switch dir.(type) {
-			case *directiveExport:
+			case *directiveVerb, *directiveData, *directiveEnum:
 				if len(node.Specs) != 1 {
-					pctx.errors.add(errorf(node, "error parsing ftl export directive: expected "+
+					pctx.errors.add(errorf(node, "error parsing ftl directive: expected "+
 						"exactly one type declaration"))
 					return
 				}
 				if pctx.module.Name == "" {
 					pctx.module.Name = pctx.pkg.Name
 				} else if pctx.module.Name != pctx.pkg.Name && strings.TrimPrefix(pctx.pkg.Name, "ftl/") != pctx.module.Name {
-					pctx.errors.add(errorf(node, "type export directive must be in the module package"))
+					pctx.errors.add(errorf(node, "ftl directive must be in the module package"))
 					return
 				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
@@ -500,14 +500,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	isVerb := false
 	for _, dir := range directives {
 		switch dir := dir.(type) {
-		case *directiveExport:
+		case *directiveVerb:
 			isVerb = true
 			if pctx.module.Name == "" {
 				pctx.module.Name = pctx.pkg.Name
 			} else if pctx.module.Name != pctx.pkg.Name {
-				pctx.errors.add(errorf(node, "function export directive must be in the module package"))
+				pctx.errors.add(errorf(node, "function verb directive must be in the module package"))
 			}
-
 		case *directiveIngress:
 			isVerb = true
 			typ := dir.Type
@@ -526,6 +525,8 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 				Pos:  dir.Pos,
 				Cron: dir.Cron,
 			})
+		case *directiveData, *directiveEnum:
+			pctx.errors.add(errorf(node, "unexpected directive %T", dir))
 		}
 	}
 	if !isVerb {
@@ -534,7 +535,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 
 	for _, name := range pctx.nativeNames {
 		if name == node.Name.Name {
-			pctx.errors.add(noEndColumnErrorf(node.Pos(), "verb %q already exported", node.Name.Name))
+			pctx.errors.add(noEndColumnErrorf(node.Pos(), "duplicate verb name %q", node.Name.Name))
 			return nil
 		}
 	}
@@ -542,7 +543,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		pctx.errors.add(errorf(node, "ftl:export cannot be a method"))
+		pctx.errors.add(errorf(node, "ftl:verb cannot be a method"))
 		return nil
 	}
 	params := sig.Params()

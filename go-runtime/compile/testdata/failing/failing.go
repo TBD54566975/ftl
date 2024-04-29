@@ -25,12 +25,12 @@ type Response struct {
 	AnotherBadParam uint64
 }
 
-//ftl:verb
+//ftl:export
 func WrongDirective(ctx context.Context, req Request) (Response, error) {
 	return Response{}, nil
 }
 
-//ftl:export
+//ftl:verb
 func BadCalls(ctx context.Context, req Request) (Response, error) {
 	ftl.Call(ctx, lib.OtherFunc, lib.Request{})
 	ftl.Call(ctx, "failing", "failingVerb", req)
@@ -38,53 +38,53 @@ func BadCalls(ctx context.Context, req Request) (Response, error) {
 	return Response{}, nil
 }
 
-//ftl:export
+//ftl:verb
 func TooManyParams(ctx context.Context, req Request, req2 Request) (Response, error) {
 	return Response{}, nil
 }
 
-//ftl:export
+//ftl:verb
 func WrongParamOrder(first Request, second string) (Response, error) {
 	return Response{}, nil
 }
 
-//ftl:export
+//ftl:verb
 func UnitSecondParam(ctx context.Context, unit ftl.Unit) (Response, error) {
 	return Response{}, nil
 }
 
-//ftl:export
+//ftl:verb
 func NoParams() (Response, error) {
 	return Response{}, nil
 }
 
-//ftl:export
+//ftl:verb
 func TooManyReturn(ctx context.Context, req Request) (Response, Response, error) {
 	return "", Response{}, nil
 }
 
-//ftl:export
+//ftl:verb
 func NoReturn(ctx context.Context, req Request) {
 }
 
-//ftl:export
+//ftl:verb
 func NoError(ctx context.Context, req Request) Response {
 	return Response{}
 }
 
-//ftl:export
+//ftl:verb
 func WrongResponse(ctx context.Context, req Request) (string, ftl.Unit) {
 	return "", ftl.Unit{}
 }
 
 // Duplicate
 //
-//ftl:export
+//ftl:verb
 func WrongResponse(ctx context.Context, req Request) (string, ftl.Unit) {
 	return "", ftl.Unit{}
 }
 
-//ftl:export
+//ftl:verb
 type BadStruct struct {
 	unexported string
 }

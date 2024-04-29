@@ -9,7 +9,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-//ftl:export
+//ftl:enum
 type Color string
 
 const (
@@ -20,7 +20,7 @@ const (
 
 // Comments about ColorInt.
 //
-//ftl:export
+//ftl:enum
 type ColorInt int
 
 const (
@@ -31,7 +31,7 @@ const (
 	GreenInt ColorInt = 2
 )
 
-//ftl:export
+//ftl:enum
 type SimpleIota int
 
 const (
@@ -40,7 +40,7 @@ const (
 	Two
 )
 
-//ftl:export
+//ftl:enum
 type IotaExpr int
 
 const (
@@ -77,7 +77,7 @@ var configValue = ftl.Config[Config]("configValue")
 var secretValue = ftl.Secret[string]("secretValue")
 var testDb = ftl.PostgresDatabase("testDb")
 
-//ftl:export
+//ftl:verb
 func Verb(ctx context.Context, req Req) (Resp, error) {
 	return Resp{}, nil
 }
@@ -88,19 +88,19 @@ const YellowInt ColorInt = 3
 
 type SinkReq struct{}
 
-//ftl:export
+//ftl:verb
 func Sink(ctx context.Context, req SinkReq) error {
 	return nil
 }
 
 type SourceResp struct{}
 
-//ftl:export
+//ftl:verb
 func Source(ctx context.Context) (SourceResp, error) {
 	return SourceResp{}, nil
 }
 
-//ftl:export
+//ftl:verb
 func Nothing(ctx context.Context) error {
 	return nil
 }

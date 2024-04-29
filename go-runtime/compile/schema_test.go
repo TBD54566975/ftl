@@ -171,7 +171,12 @@ func TestParseDirectives(t *testing.T) {
 		input    string
 		expected directive
 	}{
-		{name: "Export", input: "ftl:export", expected: &directiveExport{Export: true}},
+		{name: "Verb", input: "ftl:verb", expected: &directiveVerb{Verb: true}},
+		{name: "Verb export", input: "ftl:verb export", expected: &directiveVerb{Verb: true, Export: true}},
+		{name: "Data", input: "ftl:data", expected: &directiveData{Data: true}},
+		{name: "Data export", input: "ftl:data export", expected: &directiveData{Data: true, Export: true}},
+		{name: "Enum", input: "ftl:enum", expected: &directiveEnum{Enum: true}},
+		{name: "Enum export", input: "ftl:enum export", expected: &directiveEnum{Enum: true, Export: true}},
 		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
 			Method: "GET",
 			Path: []schema.IngressPathComponent{
@@ -252,7 +257,7 @@ func TestErrorReporting(t *testing.T) {
 			filename+":19:14-44: duplicate database declaration at 18:14-44\n"+
 			filename+":22:2-10: unsupported type \"error\" for field \"BadParam\"\n"+
 			filename+":25:2-17: unsupported type \"uint64\" for field \"AnotherBadParam\"\n"+
-			filename+":28:3-3: unexpected token \"verb\" (expected Directive)\n"+
+			filename+":28:3-3: unexpected token \"export\" (expected Directive)\n"+
 			filename+":34:36-39: unsupported request type \"ftl/failing.Request\"\n"+
 			filename+":34:50-50: unsupported response type \"ftl/failing.Response\"\n"+
 			filename+":35:16-29: call first argument must be a function in an ftl module\n"+
@@ -277,19 +282,9 @@ func TestErrorReporting(t *testing.T) {
 			filename+":76:55-55: first result must be a struct but is string\n"+
 			filename+":76:63-63: must return an error but is string\n"+
 			filename+":76:63-63: second result must not be ftl.Unit\n"+
-			filename+":83:1-1: verb \"WrongResponse\" already exported\n"+
+			filename+":83:1-1: duplicate verb name \"WrongResponse\"\n"+
 			filename+":89:2-12: struct field unexported must be exported by starting with an uppercase letter",
 	)
-}
-
-func TestDuplicateVerbNames(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	pwd, _ := os.Getwd()
-	_, _, schemaErrs, err := ExtractModuleSchema("testdata/duplicateverbs")
-	assert.NoError(t, err)
-	assert.EqualError(t, errors.Join(genericizeErrors(schemaErrs)...), filepath.Join(pwd, `testdata/duplicateverbs/duplicateverbs.go`)+`:23:1-1: verb "Time" already exported`)
 }
 
 func genericizeErrors(schemaErrs []*schema.Error) []error {

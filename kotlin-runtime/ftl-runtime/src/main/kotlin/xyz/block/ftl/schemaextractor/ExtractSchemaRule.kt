@@ -41,7 +41,6 @@ import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.util.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.util.getType
-import org.jetbrains.kotlin.resolve.calls.util.getValueArgumentsInParentheses
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.resolve.typeBinding.createTypeBindingForReturnType
@@ -104,6 +103,15 @@ data class ModuleData(var comments: List<String> = emptyList(), val decls: Mutab
 // Helpers
 private fun Ref.compare(module: String, name: String): Boolean = this.name == name && this.module == module
 
+private fun isVerbAnnotation(annotationEntry: KtAnnotationEntry, bindingContext: BindingContext): Boolean {
+  val fqName = bindingContext.get(BindingContext.ANNOTATION, annotationEntry)?.fqName?.asString()
+  return fqName in setOf(
+    xyz.block.ftl.Verb::class.qualifiedName,
+    xyz.block.ftl.HttpIngress::class.qualifiedName,
+    xyz.block.ftl.Cron::class.qualifiedName,
+  )
+}
+
 @RequiresTypeResolution
 class ExtractSchemaRule(config: DetektConfig) : Rule(config) {
   private val output: String by config(defaultValue = ".")
@@ -123,12 +131,7 @@ class ExtractSchemaRule(config: DetektConfig) : Rule(config) {
   }
 
   override fun visitAnnotationEntry(annotationEntry: KtAnnotationEntry) {
-    if (
-      bindingContext.get(
-        BindingContext.ANNOTATION,
-        annotationEntry
-      )?.fqName?.asString() != xyz.block.ftl.Export::class.qualifiedName
-    ) {
+    if (!isVerbAnnotation(annotationEntry, bindingContext)) {
       return
     }
 
@@ -517,11 +520,8 @@ class SchemaExtractor(
           } ?: let {
             // if no matching import, validate that the referenced verb is in the same module
             element.containingFile.children.singleOrNull {
-              (it is KtNamedFunction) && it.name == verbCall && it.annotationEntries.any {
-                bindingContext.get(
-                  BindingContext.ANNOTATION,
-                  it
-                )?.fqName?.asString() == xyz.block.ftl.Export::class.qualifiedName
+              (it is KtNamedFunction) && it.name == verbCall && it.annotationEntries.any { annotationEntry ->
+                isVerbAnnotation(annotationEntry, bindingContext)
               }
             } ?: errors.add(
               func.errorAtPosition("could not resolve outgoing verb call")

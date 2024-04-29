@@ -23,7 +23,6 @@ type GetResponse struct {
 	Nested  Nested `json:"nested"`
 }
 
-//ftl:export
 //ftl:ingress http GET /users/{userId}/posts/{postId}
 func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[GetResponse, string], error) {
 	return builtin.HttpResponse[GetResponse, string]{
@@ -46,7 +45,6 @@ type PostResponse struct {
 	Success bool `json:"success"`
 }
 
-//ftl:export
 //ftl:ingress http POST /users
 func Post(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse, string], error) {
 	return builtin.HttpResponse[PostResponse, string]{
@@ -63,7 +61,6 @@ type PutRequest struct {
 
 type PutResponse struct{}
 
-//ftl:export
 //ftl:ingress http PUT /users/{userId}
 func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[builtin.Empty, string], error) {
 	return builtin.HttpResponse[builtin.Empty, string]{
@@ -78,7 +75,6 @@ type DeleteRequest struct {
 
 type DeleteResponse struct{}
 
-//ftl:export
 //ftl:ingress http DELETE /users/{userId}
 func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[builtin.Empty, string], error) {
 	return builtin.HttpResponse[builtin.Empty, string]{
@@ -90,7 +86,6 @@ func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builti
 
 type HtmlRequest struct{}
 
-//ftl:export
 //ftl:ingress http GET /html
 func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.HttpResponse[string, string], error) {
 	return builtin.HttpResponse[string, string]{
@@ -99,43 +94,36 @@ func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.Ht
 	}, nil
 }
 
-//ftl:export
 //ftl:ingress http POST /bytes
 func Bytes(ctx context.Context, req builtin.HttpRequest[[]byte]) (builtin.HttpResponse[[]byte, string], error) {
 	return builtin.HttpResponse[[]byte, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-//ftl:export
 //ftl:ingress http GET /empty
 func Empty(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.HttpResponse[ftl.Unit, string], error) {
 	return builtin.HttpResponse[ftl.Unit, string]{Body: ftl.Some(ftl.Unit{})}, nil
 }
 
-//ftl:export
 //ftl:ingress http GET /string
 func String(ctx context.Context, req builtin.HttpRequest[string]) (builtin.HttpResponse[string, string], error) {
 	return builtin.HttpResponse[string, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-//ftl:export
 //ftl:ingress http GET /int
 func Int(ctx context.Context, req builtin.HttpRequest[int]) (builtin.HttpResponse[int, string], error) {
 	return builtin.HttpResponse[int, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-//ftl:export
 //ftl:ingress http GET /float
 func Float(ctx context.Context, req builtin.HttpRequest[float64]) (builtin.HttpResponse[float64, string], error) {
 	return builtin.HttpResponse[float64, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-//ftl:export
 //ftl:ingress http GET /bool
 func Bool(ctx context.Context, req builtin.HttpRequest[bool]) (builtin.HttpResponse[bool, string], error) {
 	return builtin.HttpResponse[bool, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-//ftl:export
 //ftl:ingress http GET /error
 func Error(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.HttpResponse[ftl.Unit, string], error) {
 	return builtin.HttpResponse[ftl.Unit, string]{
@@ -144,7 +132,6 @@ func Error(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.Http
 	}, nil
 }
 
-//ftl:export
 //ftl:ingress http GET /array/string
 func ArrayString(ctx context.Context, req builtin.HttpRequest[[]string]) (builtin.HttpResponse[[]string, string], error) {
 	return builtin.HttpResponse[[]string, string]{
@@ -156,7 +143,6 @@ type ArrayType struct {
 	Item string `json:"item"`
 }
 
-//ftl:export
 //ftl:ingress http POST /array/data
 func ArrayData(ctx context.Context, req builtin.HttpRequest[[]ArrayType]) (builtin.HttpResponse[[]ArrayType, string], error) {
 	return builtin.HttpResponse[[]ArrayType, string]{
