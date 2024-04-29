@@ -16,11 +16,11 @@ import {{$import}}
 {{- if is "Data" . }}
 {{- if and (eq $moduleName "builtin") (eq .Name "Empty")}}
 {{.Comments|comment -}}
-@Export
+@Data
 class Empty
 {{- else if .Fields}}
 {{.Comments|comment -}}
-@Export
+@Data
 data class {{.Name|title}}
 {{- if .TypeParameters}}<
 {{- range $i, $tp := .TypeParameters}}
@@ -34,7 +34,7 @@ data class {{.Name|title}}
 {{end}}
 
 {{- else if is "Verb" . }}
-{{.Comments|comment -}}@Export
+{{.Comments|comment -}}@Verb
 @Ignore
 {{- if and (eq (type $ .Request) "Unit") (eq (type $ .Response) "Unit")}}
 fun {{.Name|lowerCamel}}(context: Context): Unit = throw

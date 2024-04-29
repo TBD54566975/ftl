@@ -75,7 +75,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
       import xyz.block.ftl.HttpIngress
       import xyz.block.ftl.Method
       import xyz.block.ftl.Module
-      import xyz.block.ftl.Export
+      import xyz.block.ftl.Verb
 
       class InvalidInput(val field: String) : Exception()
 
@@ -98,7 +98,6 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
        * Echoes the given message.
        */
       @Throws(InvalidInput::class)
-      @Export
       @HttpIngress(Method.GET, "/echo")
       fun echo(context: Context, req: HttpRequest<EchoRequest<String>>): HttpResponse<EchoResponse, String> {
         callTime(context)
@@ -110,7 +109,7 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         )
       }
 
-      @Export
+      @Verb
       fun empty(context: Context, req: Empty): Empty {
         return builtin.Empty()
       }
@@ -123,13 +122,13 @@ internal class ExtractSchemaRuleTest(private val env: KotlinCoreEnvironment) {
         return context.call(::verb, builtin.Empty())
       }
 
-      @Export
+      @Verb
       fun sink(context: Context, req: Empty) {}
 
-      @Export
+      @Verb
       fun source(context: Context): Empty {}
 
-      @Export
+      @Verb
       fun emptyVerb(context: Context) {}
     """
     ExtractSchemaRule(Config.empty).compileAndLintWithContext(env, code)
@@ -378,7 +377,7 @@ import ftl.time.TimeRequest
 import ftl.time.TimeResponse
 import xyz.block.ftl.Context
 import xyz.block.ftl.Method
-import xyz.block.ftl.Export
+import xyz.block.ftl.Verb
 
 class InvalidInput(val field: String) : Exception()
 
@@ -394,7 +393,7 @@ data class EchoResponse(val messages: List<EchoMessage>)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Export
+@Verb
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   callTime(context)
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -427,7 +426,6 @@ package ftl.echo
 import xyz.block.ftl.Context
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method
-import xyz.block.ftl.Export
 
 /**
  * Request to echo a message.
@@ -439,7 +437,6 @@ data class EchoResponse(val message: String)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Export
 @HttpIngress(Method.GET, "/echo")
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -471,7 +468,7 @@ package ftl.echo
 import xyz.block.ftl.Context
 import xyz.block.ftl.HttpIngress
 import xyz.block.ftl.Method
-import xyz.block.ftl.Export
+import xyz.block.ftl.Verb
 
 /**
  * Request to echo a message.
@@ -483,7 +480,6 @@ data class EchoResponse(val message: String)
  * Echoes the given message.
  */
 @Throws(InvalidInput::class)
-@Export
 @HttpIngress(Method.GET, "/echo")
 fun echo(context: Context, req: EchoRequest): EchoResponse {
   return EchoResponse(messages = listOf(EchoMessage(message = "Hello!")))
@@ -513,11 +509,12 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       import xyz.block.ftl.Json
       import xyz.block.ftl.Context
       import xyz.block.ftl.Method
-      import xyz.block.ftl.Export
+      import xyz.block.ftl.Verb
+      import xyz.block.ftl.Enum
 
       class InvalidInput(val field: String) : Exception()
 
-      @Export
+      @Enum
       enum class Thing {
        /**
         * A comment.
@@ -530,7 +527,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       /**
        * Comments.
        */
-      @Export
+      @Enum
       enum class StringThing(val value: String) {
         /**
          * A comment.
@@ -543,7 +540,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
         C("C"),
       }
 
-      @Export
+      @Enum
       enum class IntThing(val value: Int) {
         A(1),
         B(2),
@@ -562,7 +559,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 
       data class Response(val message: String)
 
-      @Export
+      @Verb
       fun something(context: Context, req: Request): Response {
         return Response(message = "response")
       }
@@ -674,7 +671,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
       import xyz.block.ftl.Json
       import xyz.block.ftl.Context
       import xyz.block.ftl.Method
-      import xyz.block.ftl.Export
+      import xyz.block.ftl.Verb
       import xyz.block.ftl.config.Config
       import xyz.block.ftl.secrets.Secret
 
@@ -690,7 +687,7 @@ fun echo(context: Context, req: EchoRequest): EchoResponse {
 
       data class Response(val message: String)
 
-      @Export
+      @Verb
       fun something(context: Context, req: Request): Response {
         return Response(message = "response")
       }

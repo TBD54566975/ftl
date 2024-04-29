@@ -12,7 +12,7 @@ type EchoResponse struct {
 	Name string
 }
 
-//ftl:export
+//ftl:verb
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	err := ftl.CallSink(ctx, Sink, SinkRequest{})
 	if err != nil {
@@ -33,7 +33,7 @@ type SourceResponse struct {
 	Name string
 }
 
-//ftl:export
+//ftl:verb
 func Source(ctx context.Context) (SourceResponse, error) {
 	return SourceResponse{
 		Name: "source",
@@ -42,7 +42,7 @@ func Source(ctx context.Context) (SourceResponse, error) {
 
 type SinkRequest struct{}
 
-//ftl:export
+//ftl:verb
 func Sink(ctx context.Context, req SinkRequest) error {
 	return nil
 }

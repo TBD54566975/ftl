@@ -13,7 +13,7 @@ type ExternalResponse struct {
 
 // External returns the current month as an external type.
 //
-//ftl:export
+//ftl:verb
 func Time(ctx context.Context, req ExternalRequest) (ExternalResponse, error) {
 	return ExternalResponse{Month: time.Now().Month()}, nil
 }

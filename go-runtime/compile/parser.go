@@ -15,7 +15,7 @@ import (
 
 // This file contains a parser for Go FTL directives.
 //
-// eg. //ftl:ingress GET /foo/bar
+// eg. //ftl:ingress http GET /foo/bar
 
 type directiveWrapper struct {
 	Directive directive `parser:"'ftl' ':' @@"`
@@ -24,14 +24,50 @@ type directiveWrapper struct {
 //sumtype:decl
 type directive interface{ directive() }
 
-type directiveExport struct {
+type directiveVerb struct {
 	Pos lexer.Position
 
-	Export bool `parser:"@'export'"`
+	Verb   bool `parser:"@'verb'"`
+	Export bool `parser:"@'export'?"`
 }
 
-func (*directiveExport) directive()       {}
-func (d *directiveExport) String() string { return "ftl:export" }
+func (*directiveVerb) directive() {}
+func (d *directiveVerb) String() string {
+	if d.Export {
+		return "ftl:verb export"
+	}
+	return "ftl:verb"
+}
+
+type directiveData struct {
+	Pos lexer.Position
+
+	Data   bool `parser:"@'data'"`
+	Export bool `parser:"@'export'?"`
+}
+
+func (*directiveData) directive() {}
+func (d *directiveData) String() string {
+	if d.Export {
+		return "ftl:data export"
+	}
+	return "ftl:data"
+}
+
+type directiveEnum struct {
+	Pos lexer.Position
+
+	Enum   bool `parser:"@'enum'"`
+	Export bool `parser:"@'export'?"`
+}
+
+func (*directiveEnum) directive() {}
+func (d *directiveEnum) String() string {
+	if d.Export {
+		return "ftl:enum export"
+	}
+	return "ftl:enum"
+}
 
 type directiveIngress struct {
 	Pos schema.Position
@@ -68,7 +104,7 @@ var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
-	participle.Union[directive](&directiveExport{}, &directiveIngress{}, &directiveCronJob{}),
+	participle.Union[directive](&directiveVerb{}, &directiveData{}, &directiveEnum{}, &directiveIngress{}, &directiveCronJob{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
