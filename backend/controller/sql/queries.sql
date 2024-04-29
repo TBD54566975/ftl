@@ -307,8 +307,8 @@ WITH updates AS (
     AND (next_execution AT TIME ZONE 'utc') < (NOW() AT TIME ZONE 'utc')::TIMESTAMPTZ
   RETURNING id, key, state, start_time, next_execution)
 SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule,
-  COALESCE(u.start_time, j.start_time) as start_time, 
-  COALESCE(u.next_execution, j.next_execution) as next_execution, 
+  COALESCE(u.start_time, j.start_time) as start_time,
+  COALESCE(u.next_execution, j.next_execution) as next_execution,
   COALESCE(u.state, j.state) as state,
   d.min_replicas > 0 as has_min_replicas,
   CASE WHEN u.key IS NULL THEN FALSE ELSE TRUE END as updated
@@ -458,3 +458,28 @@ INSERT INTO events (deployment_id, request_id, type,
                     payload)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id;
+
+-- name: NewLease :one
+INSERT INTO leases (idempotency_key, key, expires_at)
+VALUES (gen_random_uuid(), @key, @expires_at::timestamptz)
+RETURNING idempotency_key;
+
+-- name: RenewLease :one
+UPDATE leases
+SET expires_at = (NOW() AT TIME ZONE 'utc') + @expires_in::interval
+WHERE idempotency_key = @idempotency_key AND key = @key
+RETURNING true;
+
+-- name: ReleaseLease :one
+DELETE FROM leases
+WHERE idempotency_key = @idempotency_key AND key = @key
+RETURNING true;
+
+-- name: ExpireLeases :one
+WITH expired AS (
+    DELETE FROM leases
+    WHERE expires_at < NOW() AT TIME ZONE 'utc'
+    RETURNING 1
+)
+SELECT COUNT(*)
+FROM expired;

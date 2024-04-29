@@ -23,6 +23,8 @@ type RefKey struct {
 	Name   string
 }
 
+func (r RefKey) String() string { return makeRef(r.Module, r.Name) }
+
 func (r Ref) ToRefKey() RefKey {
 	return RefKey{Module: r.Module, Name: r.Name}
 }

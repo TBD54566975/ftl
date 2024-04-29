@@ -168,26 +168,6 @@ type Service struct {
 	increaseReplicaFailures map[string]int
 }
 
-type jobConfig struct {
-	job          scheduledtask.Job
-	backoff      backoff.Backoff
-	develBackoff optional.Option[backoff.Backoff]
-}
-
-func (j jobConfig) getBackoff(devel bool) backoff.Backoff {
-	var bo backoff.Backoff
-	if devel {
-		var ok bool
-		if bo, ok = j.develBackoff.Get(); !ok {
-			// if in devel and develBackoff is empty, use 1s for min/max
-			bo = backoff.Backoff{Min: time.Second, Max: time.Second}
-		}
-	} else {
-		bo = j.backoff
-	}
-	return bo
-}
-
 func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
@@ -195,7 +175,7 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	}
 	config.SetDefaults()
 	svc := &Service{
-		tasks:                   scheduledtask.New(ctx, key),
+		tasks:                   scheduledtask.New(ctx, key, db),
 		dal:                     db,
 		key:                     key,
 		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
@@ -208,32 +188,31 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, db, svc.tasks, svc.callWithRequest)
 	svc.cronJobs = cronSvc
-	svc.controllerListListeners = append(svc.controllerListListeners, svc.tasks, cronSvc)
+	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 
-	parallelJobs := []jobConfig{
-		{svc.syncRoutes, backoff.Backoff{Min: time.Second, Max: time.Second * 5}, optional.None[backoff.Backoff]()},
-		{svc.heartbeatController, backoff.Backoff{Min: time.Second * 3, Max: time.Second * 3}, optional.Some[backoff.Backoff](backoff.Backoff{Min: time.Second * 2, Max: time.Second * 2})},
-		{svc.updateControllersList, backoff.Backoff{Min: time.Second * 5, Max: time.Second * 5}, optional.None[backoff.Backoff]()},
-		// This should only run on one controller, but because dead controllers
-		// might be selected by the hash ring, we have to run it on all controllers.
-		// We should use a DB lock at some point.
-		{svc.reapStaleControllers, backoff.Backoff{Min: time.Second * 20, Max: time.Second * 20}, optional.None[backoff.Backoff]()},
-	}
-
-	singletonJobs := []jobConfig{
-		{svc.reapStaleRunners, backoff.Backoff{Min: time.Second, Max: time.Second * 10}, optional.None[backoff.Backoff]()},
-		{svc.releaseExpiredReservations, backoff.Backoff{Min: time.Second, Max: time.Second * 20}, optional.None[backoff.Backoff]()},
-		{svc.reconcileDeployments, backoff.Backoff{Min: time.Second, Max: time.Second * 5}, optional.None[backoff.Backoff]()},
-		{svc.reconcileRunners, backoff.Backoff{Min: time.Second, Max: time.Second * 5}, optional.None[backoff.Backoff]()},
+	// Use min, max backoff if we are running in production, otherwise use develBackoff if available.
+	maybeDevelBackoff := func(min, max time.Duration, develBackoff ...backoff.Backoff) backoff.Backoff {
+		if len(develBackoff) > 1 {
+			panic("too many devel backoffs")
+		}
+		if _, devel := runnerScaling.(*localscaling.LocalScaling); devel && len(develBackoff) == 1 {
+			return develBackoff[0]
+		}
+		return makeBackoff(min, max)
 	}
 
-	_, devel := runnerScaling.(*localscaling.LocalScaling)
-	for _, j := range parallelJobs {
-		svc.tasks.Parallel(j.getBackoff(devel), j.job)
-	}
-	for _, j := range singletonJobs {
-		svc.tasks.Singleton(j.getBackoff(devel), j.job)
-	}
+	// Parallel tasks.
+	svc.tasks.Parallel(maybeDevelBackoff(time.Second, time.Second*5), svc.syncRoutes)
+	svc.tasks.Parallel(maybeDevelBackoff(time.Second*3, time.Second*5, makeBackoff(time.Second*2, time.Second*2)), svc.heartbeatController)
+	svc.tasks.Parallel(maybeDevelBackoff(time.Second*5, time.Second*5), svc.updateControllersList)
+
+	// Singleton tasks use leases to only run on a single controller.
+	svc.tasks.Singleton(maybeDevelBackoff(time.Second*20, time.Second*20), svc.reapStaleControllers)
+	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*10), svc.reapStaleRunners)
+	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*20), svc.releaseExpiredReservations)
+	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*5), svc.reconcileDeployments)
+	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*5), svc.reconcileRunners)
+	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*5), svc.expireStaleLeases)
 	return svc, nil
 }
 
@@ -1006,6 +985,14 @@ func (s *Service) reconcileRunners(ctx context.Context) (time.Duration, error) {
 	return time.Second, nil
 }
 
+func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {
+	err := s.dal.ExpireLeases(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to expire leases: %w", err)
+	}
+	return time.Second * 1, nil
+}
+
 func (s *Service) terminateRandomRunner(ctx context.Context, key model.DeploymentKey) (bool, error) {
 	runners, err := s.dal.GetRunnersForDeployment(ctx, key)
 	if err != nil {
@@ -1311,4 +1298,13 @@ func ingressPathString(path []*schemapb.IngressPathComponent) string {
 		}
 	}
 	return "/" + strings.Join(pathString, "/")
+}
+
+func makeBackoff(min, max time.Duration) backoff.Backoff {
+	return backoff.Backoff{
+		Min:    min,
+		Max:    max,
+		Jitter: true,
+		Factor: 2,
+	}
 }

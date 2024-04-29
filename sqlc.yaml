@@ -13,6 +13,12 @@ sql:
         emit_interface: true
         query_parameter_limit: 3
         overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              type: "NullUUID"
           - db_type: "timestamptz"
             go_type: "time.Time"
           - db_type: "pg_catalog.interval"
@@ -81,6 +87,12 @@ sql:
             go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
           - column: "events.payload"
             go_type: "encoding/json.RawMessage"
+          - column: "leases.key"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/leases.Key"
+          - column: "leases.key"
+            nullable: true
+            go_type:
+              type: "NullLeaseKey"
     rules:
       - sqlc/db-prepare
       # - postgresql-query-too-costly
