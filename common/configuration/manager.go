@@ -43,14 +43,22 @@ func configFromEnvironment() []string {
 // the default ftl-project.toml.
 func NewDefaultSecretsManagerFromEnvironment(ctx context.Context) (*Manager[Secrets], error) {
 	var cr Resolver[Secrets] = ProjectConfigResolver[Secrets]{Config: configFromEnvironment()}
-	return (DefaultSecretsMixin{}).NewSecretsManager(ctx, cr)
+	return DefaultSecretsMixin{
+		InlineProvider: InlineProvider[Secrets]{
+			Inline: true,
+		},
+	}.NewSecretsManager(ctx, cr)
 }
 
 // NewDefaultConfigurationManagerFromEnvironment creates a new configuration
 // manager from the default ftl-project.toml.
 func NewDefaultConfigurationManagerFromEnvironment(ctx context.Context) (*Manager[Configuration], error) {
 	cr := ProjectConfigResolver[Configuration]{Config: configFromEnvironment()}
-	return (DefaultConfigMixin{}).NewConfigurationManager(ctx, cr)
+	return DefaultConfigMixin{
+		InlineProvider: InlineProvider[Configuration]{
+			Inline: true,
+		},
+	}.NewConfigurationManager(ctx, cr)
 }
 
 // New configuration manager.

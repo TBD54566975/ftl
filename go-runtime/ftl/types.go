@@ -43,8 +43,8 @@ func (v *Ref) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (v *Ref) String() string { return v.Module + "." + v.Name }
-func (v *Ref) ToProto() *schemapb.Ref {
+func (v Ref) String() string { return v.Module + "." + v.Name }
+func (v Ref) ToProto() *schemapb.Ref {
 	return &schemapb.Ref{Module: v.Module, Name: v.Name}
 }
 
