@@ -28,7 +28,7 @@ func Context(options ...func(context.Context) error) context.Context {
 	}
 	ctx = context.ApplyToContext(ctx)
 
-	mockProvider := newMockProvider()
+	mockProvider := newMockVerbProvider()
 	ctx = ftl.ApplyCallOverriderToContext(ctx, mockProvider)
 
 	for _, option := range options {
@@ -80,7 +80,7 @@ func WithFakeVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx con
 		if !ok {
 			return fmt.Errorf("could not override %v with a fake, context not set up with call overrider", ref)
 		}
-		mockProvider, ok := overrider.(*mockProvider)
+		mockProvider, ok := overrider.(*mockVerbProvider)
 		if !ok {
 			return fmt.Errorf("could not override %v with a fake, call overrider is not a MockProvider", ref)
 		}
