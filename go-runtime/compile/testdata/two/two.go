@@ -15,6 +15,17 @@ const (
 	Green TwoEnum = "Green"
 )
 
+//ftl:enum
+type TwoTypeEnum interface{ twoTypeEnum() }
+
+type Scalar string
+
+func (Scalar) twoTypeEnum() {}
+
+type List []string
+
+func (List) twoTypeEnum() {}
+
 //ftl:data
 type Exported struct {
 }

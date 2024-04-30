@@ -81,6 +81,11 @@ func TestExtractModuleSchema(t *testing.T) {
     Two = 2
   }
 
+  enum ScalarOrList {
+    Scalar String
+    List [String]
+  }
+
   data Config {
     field String
   }
@@ -145,6 +150,11 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  Blue = "Blue"
 		  Green = "Green"
         }
+
+		enum TwoTypeEnum {
+		  Scalar String
+		  List [String]
+		}
 
 		data Exported {
 		}

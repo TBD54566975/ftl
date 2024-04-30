@@ -45,6 +45,7 @@ var (
 type NativeNames map[schema.Decl]string
 
 type enums map[string]*schema.Enum
+type enumInterfaces map[string]*types.Interface
 
 func noEndColumnErrorf(pos token.Pos, format string, args ...interface{}) *schema.Error {
 	return tokenErrorf(pos, "", format, args...)
@@ -119,7 +120,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, []*schema.Err
 				merr = append(merr, perr)
 			}
 		}
-		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}, errors: errorSet{}}
+		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}, enumInterfaces: enumInterfaces{}, errors: errorSet{}}
 		for _, file := range pkg.Syntax {
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				switch node := node.(type) {
@@ -385,15 +386,49 @@ func goNodePosToSchemaPos(node ast.Node) (schema.Position, int) {
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}, fset.Position(node.End()).Column
 }
 
+func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl) {
+	if len(node.Specs) != 1 {
+		return
+	}
+	// `type NAME TYPE` e.g. type Scalar string
+	if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
+		enumVariant := &schema.EnumVariant{
+			Pos:      goPosToSchemaPos(node.Pos()),
+			Comments: visitComments(node.Doc),
+			Name:     strcase.ToUpperCamel(t.Name.Name),
+		}
+		if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type)).Get(); ok {
+			enumVariant.Type = typ
+			for enumName, interfaceNode := range pctx.enumInterfaces {
+				// If the type declared is an enum variant, then it must implement
+				// the interface of a type enum we've already read into pctx.enums
+				// and pctx.enumInterfaces.
+				if types.Implements(pctx.pkg.TypesInfo.TypeOf(t.Type), interfaceNode) {
+					pctx.enums[enumName].Variants = append(pctx.enums[enumName].Variants)
+				}
+			}
+		} else {
+			pctx.errors.add(errorf(node, "unsupported type %q", pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
+		}
+		visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type())
+	}
+}
+
 func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	switch node.Tok {
 	case token.TYPE:
 		if node.Doc == nil {
+			maybeVisitTypeEnumVariant(pctx, node)
 			return
 		}
 		directives, err := parseDirectives(node, fset, node.Doc)
 		if err != nil {
 			pctx.errors.add(err)
+		}
+		// Catch case where the enum variant has a comment, but it is not a directive
+		if len(directives) == 0 {
+			maybeVisitTypeEnumVariant(pctx, node)
+			return
 		}
 		for _, dir := range directives {
 			switch dir.(type) {
@@ -414,7 +449,8 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					isExported = exportableDir.IsExported()
 				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
-					if _, ok := pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying().(*types.Basic); ok {
+					switch tNode := pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying().(type) {
+					case *types.Basic, *types.Interface:
 						enum := &schema.Enum{
 							Pos:      goPosToSchemaPos(node.Pos()),
 							Comments: visitComments(node.Doc),
@@ -429,6 +465,8 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						}
 						pctx.enums[t.Name.Name] = enum
 						pctx.nativeNames[enum] = t.Name.Name
+					case *types.Interface:
+						pctx.enumInterfaces[t.Name.Name] = tNode
 					}
 					visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
 				}
@@ -953,13 +991,14 @@ func deref[T types.Object](pkg *packages.Package, node ast.Expr) (string, T) {
 }
 
 type parseContext struct {
-	pkg         *packages.Package
-	pkgs        []*packages.Package
-	module      *schema.Module
-	nativeNames NativeNames
-	enums       enums
-	activeVerb  *schema.Verb
-	errors      errorSet
+	pkg            *packages.Package
+	pkgs           []*packages.Package
+	module         *schema.Module
+	nativeNames    NativeNames
+	enums          enums
+	enumInterfaces enumInterfaces
+	activeVerb     *schema.Verb
+	errors         errorSet
 }
 
 // pathEnclosingInterval returns the PackageInfo and ast.Node that

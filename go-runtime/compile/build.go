@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/TBD54566975/scaffolder"
 	"golang.org/x/mod/modfile"
@@ -298,6 +299,28 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			}
 		}
 		return false
+	},
+	"typeEnum": func(d schema.Decl) bool {
+		if e, ok := d.(*schema.Enum); ok {
+			if len(e.Variants) > 0 && e.Variants[0].Value == nil {
+				return true
+			}
+		}
+		return false
+	},
+	"enumType": func(module *schema.Module, v schema.Enum) string {
+		return genType(module, v.Variants[0].Type)
+	},
+	"enumInterfaceFunc": func(v schema.Enum) string {
+		r := []rune(v.Name)
+		for i, c := range r {
+			if unicode.IsUpper(c) {
+				r[i] = unicode.ToLower(c)
+			} else {
+				break
+			}
+		}
+		return string(r)
 	},
 }
 
