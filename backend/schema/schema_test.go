@@ -54,16 +54,27 @@ module todo {
 
 module foo {
   // A comment
-  enum Color {
-	Red String = "Red"
-	Blue String = "Blue"
-	Green String = "Green"
+  enum Color: String {
+	Red = "Red"
+	Blue = "Blue"
+	Green = "Green"
   }
 
-  enum ColorInt {
-	Red Int = 0
-	Blue Int = 1
-	Green Int = 2
+  enum ColorInt: Int {
+	Red = 0
+	Blue = 1
+	Green = 2
+  }
+
+  enum StringTypeEnum {
+	A String
+	B String
+  }
+
+  enum TypeEnum {
+	A String
+	B [String]
+	C Int
   }
 }
 `
@@ -408,21 +419,32 @@ module todo {
 
 func TestParseEnum(t *testing.T) {
 	input := `
-module foo {
-  // A comment
-  enum Color {
-	Red String = "Red"
-	Blue String = "Blue"
-	Green String = "Green"
-  }
-
-  enum ColorInt {
-	Red Int = 0
-	Blue Int = 1
-	Green Int = 2
-  }
-}
-`
+	module foo {
+	 // A comment
+	 enum Color: String {
+		Red = "Red"
+		Blue = "Blue"
+		Green = "Green"
+	 }
+	
+	 enum ColorInt: Int {
+		Red = 0
+		Blue = 1
+		Green = 2
+	 }
+	
+	 enum TypeEnum {
+		A String
+		B [String]
+		C Int
+	 }
+	
+	 enum StringTypeEnum {
+		A String
+		B String
+	 }
+	}
+	`
 	actual, err := ParseModuleString("", input)
 	assert.NoError(t, err)
 	actual = Normalise(actual)
@@ -510,18 +532,35 @@ var testSchema = MustValidate(&Schema{
 				&Enum{
 					Comments: []string{"A comment"},
 					Name:     "Color",
+					Type:     &String{},
 					Variants: []*EnumVariant{
-						{Name: "Red", Value: &StringValue{Value: "Red"}, Type: &String{}},
-						{Name: "Blue", Value: &StringValue{Value: "Blue"}, Type: &String{}},
-						{Name: "Green", Value: &StringValue{Value: "Green"}, Type: &String{}},
+						{Name: "Red", Value: &StringValue{Value: "Red"}},
+						{Name: "Blue", Value: &StringValue{Value: "Blue"}},
+						{Name: "Green", Value: &StringValue{Value: "Green"}},
 					},
 				},
 				&Enum{
 					Name: "ColorInt",
+					Type: &Int{},
 					Variants: []*EnumVariant{
-						{Name: "Red", Value: &IntValue{Value: 0}, Type: &Int{}},
-						{Name: "Blue", Value: &IntValue{Value: 1}, Type: &Int{}},
-						{Name: "Green", Value: &IntValue{Value: 2}, Type: &Int{}},
+						{Name: "Red", Value: &IntValue{Value: 0}},
+						{Name: "Blue", Value: &IntValue{Value: 1}},
+						{Name: "Green", Value: &IntValue{Value: 2}},
+					},
+				},
+				&Enum{
+					Name: "TypeEnum",
+					Variants: []*EnumVariant{
+						{Name: "A", Value: &TypeValue{Value: Type(&String{})}},
+						{Name: "B", Value: &TypeValue{Value: Type(&Array{Element: &String{}})}},
+						{Name: "C", Value: &TypeValue{Value: Type(&Int{})}},
+					},
+				},
+				&Enum{
+					Name: "StringTypeEnum",
+					Variants: []*EnumVariant{
+						{Name: "A", Value: &TypeValue{Value: Type(&String{})}},
+						{Name: "B", Value: &TypeValue{Value: Type(&String{})}},
 					},
 				},
 			},

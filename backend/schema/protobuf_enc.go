@@ -142,6 +142,9 @@ func valueToProto(v Value) *schemapb.Value {
 
 	case *IntValue:
 		return &schemapb.Value{Value: &schemapb.Value_IntValue{IntValue: t.ToProto().(*schemapb.IntValue)}}
+
+	case *TypeValue:
+		return &schemapb.Value{Value: &schemapb.Value_TypeValue{TypeValue: t.ToProto().(*schemapb.TypeValue)}}
 	}
 	panic(fmt.Sprintf("unhandled value type: %T", v))
 }

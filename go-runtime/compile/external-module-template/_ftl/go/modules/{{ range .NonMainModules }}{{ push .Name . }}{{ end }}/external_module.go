@@ -15,7 +15,7 @@ var _ = context.Background
 {{if valueEnum .}}
 {{$enumName := .Name -}}
 //ftl:enum
-type {{.Name|title}} {{enumType $ .}}
+type {{.Name|title}} {{type $ .Type}}
 const (
   {{- range .Variants }}
   {{.Name|title}} {{$enumName}} = {{.Value|value}}

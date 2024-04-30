@@ -586,7 +586,6 @@ class SchemaExtractor(
         val variant = EnumVariant(
           name = it.name!!,
           value_ = Value(intValue = IntValue(value_ = ordinal)),
-          type = Type(int = xyz.block.ftl.v1.schema.Int()),
           comments = it.comments(),
         )
         ordinal = ordinal.inc()
@@ -600,14 +599,11 @@ class SchemaExtractor(
         }
 
         var value: Value? = null
-        var type: Type? = null
         try {
           arg.getArgumentExpression()?.let { expr ->
             if (expr.text.startsWith('"')) {
-              type = Type(string = xyz.block.ftl.v1.schema.String())
               value = Value(stringValue = StringValue(value_ = expr.text.trim('"')))
             } else {
-              type = Type(int = xyz.block.ftl.v1.schema.Int())
               value = Value(intValue = IntValue(value_ = expr.text.toLong()))
             }
           }
@@ -621,7 +617,6 @@ class SchemaExtractor(
         EnumVariant(
           name = name,
           value_ = value,
-          type = type,
           pos = entry.getPosition(),
           comments = entry.comments(),
         )
@@ -632,6 +627,7 @@ class SchemaExtractor(
       name = this.name!!,
       variants = variants,
       comments = this.comments(),
+      type = variants.map { it.value_?.schemaValueType() }.distinct().singleOrNull(),
       pos = getLineAndColumnInPsiFile(this.containingFile, this.textRange).toPosition(this.containingFile.name),
     )
   }
@@ -811,6 +807,15 @@ class SchemaExtractor(
 
     private fun KotlinType.isUnit(): Boolean {
       return this.fqNameOrNull()?.asString() == "kotlin.Unit"
+    }
+
+    private fun Value.schemaValueType(): Type? {
+      return when {
+        this.stringValue != null -> return Type(string = xyz.block.ftl.v1.schema.String())
+        this.intValue != null -> return Type(int = xyz.block.ftl.v1.schema.Int())
+        this.typeValue != null -> return this.typeValue.value_
+        else -> null
+      }
     }
   }
 }

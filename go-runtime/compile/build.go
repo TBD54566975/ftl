@@ -286,6 +286,8 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			return fmt.Sprintf("%q", t.Value)
 		case *schema.IntValue:
 			return strconv.Itoa(t.Value)
+		case *schema.TypeValue:
+			return t.Value.String()
 		}
 		panic(fmt.Sprintf("unsupported value %T", v))
 	},
@@ -296,9 +298,6 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			}
 		}
 		return false
-	},
-	"enumType": func(module *schema.Module, v schema.Enum) string {
-		return genType(module, v.Variants[0].Type)
 	},
 }
 
