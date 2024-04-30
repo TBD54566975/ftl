@@ -469,7 +469,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 
 			wg.Go(func() error {
 				logger := log.FromContext(ctx).Scope(string(key))
-				ctx = log.ContextWithLogger(ctx, logger)
+				ctx := log.ContextWithLogger(ctx, logger)
 				err := e.tryBuild(ctx, mustBuild, key, builtModules, schemas, callback)
 				if err != nil {
 					errCh <- err
