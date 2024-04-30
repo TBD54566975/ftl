@@ -23,11 +23,11 @@ type ConfigValue[T ConfigType] struct {
 	Ref
 }
 
-func (c ConfigValue[T]) String() string { return fmt.Sprintf("config \"%s.%s\"", c.Module, c.Name) }
+func (c ConfigValue[T]) String() string { return fmt.Sprintf("config \"%s\"", c.Ref) }
 
 func (c ConfigValue[T]) GoString() string {
 	var t T
-	return fmt.Sprintf("ftl.ConfigValue[%T](\"%s.%s\")", t, c.Module, c.Name)
+	return fmt.Sprintf("ftl.ConfigValue[%T](\"%s\")", t, c.Ref)
 }
 
 // Get returns the value of the configuration key from FTL.

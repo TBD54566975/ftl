@@ -21,11 +21,11 @@ type SecretValue[T SecretType] struct {
 	Ref
 }
 
-func (s SecretValue[T]) String() string { return fmt.Sprintf("secret \"%s.%s\"", s.Module, s.Name) }
+func (s SecretValue[T]) String() string { return fmt.Sprintf("secret \"%s\"", s.Ref) }
 
 func (s SecretValue[T]) GoString() string {
 	var t T
-	return fmt.Sprintf("ftl.SecretValue[%T](\"%s.%s\")", t, s.Module, s.Name)
+	return fmt.Sprintf("ftl.SecretValue[%T](\"%s\")", t, s.Ref)
 }
 
 // Get returns the value of the secret from FTL.
