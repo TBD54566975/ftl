@@ -426,7 +426,12 @@ export class Enum extends Message<Enum> {
   name = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.EnumVariant variants = 4;
+   * @generated from field: optional xyz.block.ftl.v1.schema.Type type = 4;
+   */
+  type?: Type;
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.EnumVariant variants = 5;
    */
   variants: EnumVariant[] = [];
 
@@ -441,7 +446,8 @@ export class Enum extends Message<Enum> {
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "variants", kind: "message", T: EnumVariant, repeated: true },
+    { no: 4, name: "type", kind: "message", T: Type, opt: true },
+    { no: 5, name: "variants", kind: "message", T: EnumVariant, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Enum {
@@ -481,12 +487,7 @@ export class EnumVariant extends Message<EnumVariant> {
   name = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type type = 4;
-   */
-  type?: Type;
-
-  /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.Value value = 5;
+   * @generated from field: xyz.block.ftl.v1.schema.Value value = 4;
    */
   value?: Value;
 
@@ -501,8 +502,7 @@ export class EnumVariant extends Message<EnumVariant> {
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "type", kind: "message", T: Type },
-    { no: 5, name: "value", kind: "message", T: Value, opt: true },
+    { no: 4, name: "value", kind: "message", T: Value },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnumVariant {
@@ -1862,6 +1862,49 @@ export class TypeParameter extends Message<TypeParameter> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.TypeValue
+ */
+export class TypeValue extends Message<TypeValue> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type value = 2;
+   */
+  value?: Type;
+
+  constructor(data?: PartialMessage<TypeValue>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.TypeValue";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "value", kind: "message", T: Type },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeValue {
+    return new TypeValue().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypeValue {
+    return new TypeValue().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypeValue {
+    return new TypeValue().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TypeValue | PlainMessage<TypeValue> | undefined, b: TypeValue | PlainMessage<TypeValue> | undefined): boolean {
+    return proto3.util.equals(TypeValue, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Unit
  */
 export class Unit extends Message<Unit> {
@@ -1917,6 +1960,12 @@ export class Value extends Message<Value> {
      */
     value: IntValue;
     case: "intValue";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.TypeValue typeValue = 3;
+     */
+    value: TypeValue;
+    case: "typeValue";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Value>) {
@@ -1929,6 +1978,7 @@ export class Value extends Message<Value> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "stringValue", kind: "message", T: StringValue, oneof: "value" },
     { no: 2, name: "intValue", kind: "message", T: IntValue, oneof: "value" },
+    { no: 3, name: "typeValue", kind: "message", T: TypeValue, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Value {

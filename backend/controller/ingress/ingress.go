@@ -217,6 +217,8 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 							break
 						}
 					}
+				case *schema.TypeValue:
+					//TODO: Implement
 				}
 			}
 			if !typeMatches {

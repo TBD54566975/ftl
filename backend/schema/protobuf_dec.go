@@ -69,9 +69,6 @@ func typeToSchema(s *schemapb.Type) Type {
 }
 
 func valueToSchema(v *schemapb.Value) Value {
-	if v == nil {
-		return nil
-	}
 	switch s := v.Value.(type) {
 	case *schemapb.Value_IntValue:
 		return &IntValue{
@@ -82,6 +79,11 @@ func valueToSchema(v *schemapb.Value) Value {
 		return &StringValue{
 			Pos:   posFromProto(s.StringValue.Pos),
 			Value: s.StringValue.GetValue(),
+		}
+	case *schemapb.Value_TypeValue:
+		return &TypeValue{
+			Pos:   posFromProto(s.TypeValue.Pos),
+			Value: typeToSchema(s.TypeValue.Value),
 		}
 	}
 	panic(fmt.Sprintf("unhandled schema value: %T", v.Value))

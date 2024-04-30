@@ -61,15 +61,15 @@ message Enum {
   optional Position pos = 1;
   repeated string comments = 2;
   string name = 3;
-  repeated EnumVariant variants = 4;
+  optional Type type = 4;
+  repeated EnumVariant variants = 5;
 }
 
 message EnumVariant {
   optional Position pos = 1;
   repeated string comments = 2;
   string name = 3;
-  Type type = 4;
-  optional Value value = 5;
+  Value value = 4;
 }
 
 message Error {
@@ -238,6 +238,11 @@ message TypeParameter {
   string name = 2;
 }
 
+message TypeValue {
+  optional Position pos = 1;
+  Type value = 2;
+}
+
 message Unit {
   optional Position pos = 1;
 }
@@ -246,6 +251,7 @@ message Value {
   oneof value {
     StringValue stringValue = 1;
     IntValue intValue = 2;
+    TypeValue typeValue = 3;
   }
 }
 

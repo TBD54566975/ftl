@@ -244,13 +244,13 @@ func TestValidate(t *testing.T) {
 		{name: "ValueEnumMismatchedVariantTypes",
 			schema: `
 				module one {
-					enum Enum {
-						A String = "A"
-						B Int = 1
+					enum Enum: Int {
+						A = "A"
+						B = 1
 					}
 				}
 				`,
-			errs: []string{"3:6-6: all value enum variants must have the same type, \"Enum\" fails this requirement"}},
+			errs: []string{"4:7-7: enum variant \"A\" of type Int cannot have a value of type \"String\""}},
 	}
 
 	for _, test := range tests {

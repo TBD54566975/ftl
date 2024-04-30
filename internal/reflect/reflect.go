@@ -118,7 +118,6 @@ func DeepCopy[T any](src T, opts ...DeepCopyOption) (dst T) {
 }
 
 func copyAny(src any, ptrs map[uintptr]any, copyConf *copyConfig) (dst any) {
-
 	if len(copyConf.disallowCopyTypes) != 0 {
 		for i := range copyConf.disallowCopyTypes {
 			if reflect.TypeOf(src) == copyConf.disallowCopyTypes[i] {
@@ -269,7 +268,9 @@ func copyStruct(x any, ptrs map[uintptr]any, copyConf *copyConfig) any {
 			dc.Elem().Field(i).Set(reflect.ValueOf(item))
 		} else {
 			item := copyAny(valueInterfaceUnsafe(v.Field(i)), ptrs, copyConf)
-			setField(dc.Elem().Field(i), reflect.ValueOf(item))
+			if iv := reflect.ValueOf(item); iv.IsValid() {
+				setField(dc.Elem().Field(i), iv)
+			}
 		}
 	}
 	return dc.Elem().Interface()
