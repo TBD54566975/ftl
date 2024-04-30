@@ -386,9 +386,9 @@ func goNodePosToSchemaPos(node ast.Node) (schema.Position, int) {
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}, fset.Position(node.End()).Column
 }
 
-func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl) {
+func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl) bool {
 	if len(node.Specs) != 1 {
-		return
+		return false
 	}
 	// `type NAME TYPE` e.g. type Scalar string
 	if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
@@ -397,37 +397,38 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl) {
 			Comments: visitComments(node.Doc),
 			Name:     strcase.ToUpperCamel(t.Name.Name),
 		}
-		if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type)).Get(); ok {
-			enumVariant.Value = &schema.TypeValue{Value: typ}
-			for enumName, interfaceNode := range pctx.enumInterfaces {
-				// If the type declared is an enum variant, then it must implement
-				// the interface of a type enum we've already read into pctx.enums
-				// and pctx.enumInterfaces.
-				if types.Implements(pctx.pkg.TypesInfo.TypeOf(t.Type), interfaceNode) {
-					pctx.enums[enumName].Variants = append(pctx.enums[enumName].Variants)
+		for enumName, interfaceNode := range pctx.enumInterfaces {
+			// If the type declared is an enum variant, then it must implement
+			// the interface of a type enum we've already read into pctx.enums
+			// and pctx.enumInterfaces.
+			if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
+				if types.Implements(named, interfaceNode) {
+					if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type)).Get(); ok {
+						enumVariant.Value = &schema.TypeValue{Value: typ}
+					} else {
+						pctx.errors.add(errorf(node, "unsupported type %q", pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
+					}
+					pctx.enums[enumName].Variants = append(pctx.enums[enumName].Variants, enumVariant)
+					return true
 				}
 			}
-		} else {
-			pctx.errors.add(errorf(node, "unsupported type %q", pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
 		}
 	}
+	return false
 }
 
 func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	switch node.Tok {
 	case token.TYPE:
+		if maybeVisitTypeEnumVariant(pctx, node) {
+			return
+		}
 		if node.Doc == nil {
-			maybeVisitTypeEnumVariant(pctx, node)
 			return
 		}
 		directives, err := parseDirectives(node, fset, node.Doc)
 		if err != nil {
 			pctx.errors.add(err)
-		}
-		// Catch case where the enum variant has a comment, but it is not a directive
-		if len(directives) == 0 {
-			maybeVisitTypeEnumVariant(pctx, node)
-			return
 		}
 		for _, dir := range directives {
 			switch dir.(type) {
@@ -448,8 +449,9 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					isExported = exportableDir.IsExported()
 				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
-					switch tNode := pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying().(type) {
-					case *types.Basic, *types.Interface:
+					typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
+					switch typ.Underlying().(type) {
+					case *types.Basic:
 						enum := &schema.Enum{
 							Pos:      goPosToSchemaPos(node.Pos()),
 							Comments: visitComments(node.Doc),
@@ -464,8 +466,18 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						}
 						pctx.enums[t.Name.Name] = enum
 						pctx.nativeNames[enum] = t.Name.Name
-						if typeNode, ok := tNode.(*types.Interface); ok {
-							pctx.enumInterfaces[t.Name.Name] = typeNode
+					case *types.Interface:
+						enum := &schema.Enum{
+							Pos:      goPosToSchemaPos(node.Pos()),
+							Comments: visitComments(node.Doc),
+							Name:     strcase.ToUpperCamel(t.Name.Name),
+						}
+						pctx.enums[t.Name.Name] = enum
+						pctx.nativeNames[enum] = t.Name.Name
+						if typ, ok := typ.(*types.Interface); ok {
+							pctx.enumInterfaces[t.Name.Name] = typ
+						} else {
+							pctx.errors.add(errorf(node, "unsupported type %q", typ))
 						}
 					}
 					visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
