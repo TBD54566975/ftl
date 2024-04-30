@@ -309,7 +309,10 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		return false
 	},
 	"enumType": func(module *schema.Module, v schema.Enum) string {
-		return genType(module, v.Variants[0].Type)
+		if tValue, ok := v.Variants[0].Value.(*schema.TypeValue); ok {
+			return genType(module, tValue.Value)
+		}
+		return ""
 	},
 	"enumInterfaceFunc": func(v schema.Enum) string {
 		r := []rune(v.Name)

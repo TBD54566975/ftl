@@ -2,6 +2,7 @@ package compile
 
 import (
 	"context"
+	"fmt"
 	"go/token"
 	"go/types"
 	"os"
