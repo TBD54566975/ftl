@@ -227,24 +227,29 @@ export class Data extends Message<Data> {
   comments: string[] = [];
 
   /**
-   * @generated from field: string name = 3;
+   * @generated from field: bool export = 3;
+   */
+  export = false;
+
+  /**
+   * @generated from field: string name = 4;
    */
   name = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Field fields = 4;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.TypeParameter typeParameters = 5;
+   */
+  typeParameters: TypeParameter[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Field fields = 6;
    */
   fields: Field[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 5;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 7;
    */
   metadata: Metadata[] = [];
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.TypeParameter typeParameters = 6;
-   */
-  typeParameters: TypeParameter[] = [];
 
   constructor(data?: PartialMessage<Data>) {
     super();
@@ -256,10 +261,11 @@ export class Data extends Message<Data> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "fields", kind: "message", T: Field, repeated: true },
-    { no: 5, name: "metadata", kind: "message", T: Metadata, repeated: true },
-    { no: 6, name: "typeParameters", kind: "message", T: TypeParameter, repeated: true },
+    { no: 3, name: "export", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "typeParameters", kind: "message", T: TypeParameter, repeated: true },
+    { no: 6, name: "fields", kind: "message", T: Field, repeated: true },
+    { no: 7, name: "metadata", kind: "message", T: Metadata, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Data {
@@ -427,17 +433,22 @@ export class Enum extends Message<Enum> {
   comments: string[] = [];
 
   /**
-   * @generated from field: string name = 3;
+   * @generated from field: bool export = 3;
+   */
+  export = false;
+
+  /**
+   * @generated from field: string name = 4;
    */
   name = "";
 
   /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.Type type = 4;
+   * @generated from field: optional xyz.block.ftl.v1.schema.Type type = 5;
    */
   type?: Type;
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.EnumVariant variants = 5;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.EnumVariant variants = 6;
    */
   variants: EnumVariant[] = [];
 
@@ -451,9 +462,10 @@ export class Enum extends Message<Enum> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "type", kind: "message", T: Type, opt: true },
-    { no: 5, name: "variants", kind: "message", T: EnumVariant, repeated: true },
+    { no: 3, name: "export", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "type", kind: "message", T: Type, opt: true },
+    { no: 6, name: "variants", kind: "message", T: EnumVariant, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Enum {
@@ -2019,27 +2031,32 @@ export class Verb extends Message<Verb> {
   pos?: Position;
 
   /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: repeated string comments = 3;
+   * @generated from field: repeated string comments = 2;
    */
   comments: string[] = [];
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type request = 4;
+   * @generated from field: bool export = 3;
+   */
+  export = false;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type request = 5;
    */
   request?: Type;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type response = 5;
+   * @generated from field: xyz.block.ftl.v1.schema.Type response = 6;
    */
   response?: Type;
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 6;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 7;
    */
   metadata: Metadata[] = [];
 
@@ -2053,11 +2070,12 @@ export class Verb extends Message<Verb> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 31634, name: "runtime", kind: "message", T: VerbRuntime, opt: true },
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "request", kind: "message", T: Type },
-    { no: 5, name: "response", kind: "message", T: Type },
-    { no: 6, name: "metadata", kind: "message", T: Metadata, repeated: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "export", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "request", kind: "message", T: Type },
+    { no: 6, name: "response", kind: "message", T: Type },
+    { no: 7, name: "metadata", kind: "message", T: Metadata, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {

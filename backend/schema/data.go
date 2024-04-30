@@ -15,10 +15,11 @@ type Data struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Comments       []string         `parser:"@Comment*" protobuf:"2"`
-	Name           string           `parser:"'data' @Ident" protobuf:"3"`
-	TypeParameters []*TypeParameter `parser:"( '<' @@ (',' @@)* '>' )?" protobuf:"6"`
-	Fields         []*Field         `parser:"'{' @@* '}'" protobuf:"4"`
-	Metadata       []Metadata       `parser:"@@*" protobuf:"5"`
+	Export         bool             `parser:"@'export'?" protobuf:"3"`
+	Name           string           `parser:"'data' @Ident" protobuf:"4"`
+	TypeParameters []*TypeParameter `parser:"( '<' @@ (',' @@)* '>' )?" protobuf:"5"`
+	Fields         []*Field         `parser:"'{' @@* '}'" protobuf:"6"`
+	Metadata       []Metadata       `parser:"@@*" protobuf:"7"`
 }
 
 var _ Decl = (*Data)(nil)
@@ -148,7 +149,8 @@ func (d *Data) schemaChildren() []Node {
 	return children
 }
 
-func (d *Data) GetName() string { return d.Name }
+func (d *Data) GetName() string  { return d.Name }
+func (d *Data) IsExported() bool { return d.Export }
 
 func (d *Data) String() string {
 	w := &strings.Builder{}
@@ -164,6 +166,9 @@ func (d *Data) String() string {
 		}
 		typeParameters += ">"
 	}
+	if d.Export {
+		fmt.Fprint(w, "export ")
+	}
 	fmt.Fprintf(w, "data %s%s {\n", d.Name, typeParameters)
 	for _, f := range d.Fields {
 		fmt.Fprintln(w, indent(f.String()))
@@ -175,9 +180,11 @@ func (d *Data) String() string {
 
 func (d *Data) ToProto() proto.Message {
 	return &schemapb.Data{
-		Pos:            posToProto(d.Pos),
-		TypeParameters: nodeListToProto[*schemapb.TypeParameter](d.TypeParameters),
+		Pos: posToProto(d.Pos),
+
 		Name:           d.Name,
+		Export:         d.Export,
+		TypeParameters: nodeListToProto[*schemapb.TypeParameter](d.TypeParameters),
 		Fields:         nodeListToProto[*schemapb.Field](d.Fields),
 		Comments:       d.Comments,
 	}
@@ -185,8 +192,10 @@ func (d *Data) ToProto() proto.Message {
 
 func DataFromProto(s *schemapb.Data) *Data {
 	return &Data{
-		Pos:            posFromProto(s.Pos),
+		Pos: posFromProto(s.Pos),
+
 		Name:           s.Name,
+		Export:         s.Export,
 		TypeParameters: typeParametersToSchema(s.TypeParameters),
 		Fields:         fieldListToSchema(s.Fields),
 		Comments:       s.Comments,

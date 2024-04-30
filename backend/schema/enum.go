@@ -13,9 +13,10 @@ type Enum struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Comments []string       `parser:"@Comment*" protobuf:"2"`
-	Name     string         `parser:"'enum' @Ident" protobuf:"3"`
-	Type     Type           `parser:"(':' @@)?" protobuf:"4,optional"`
-	Variants []*EnumVariant `parser:"'{' @@* '}'" protobuf:"5"`
+	Export   bool           `parser:"@'export'?" protobuf:"3"`
+	Name     string         `parser:"'enum' @Ident" protobuf:"4"`
+	Type     Type           `parser:"(':' @@)?" protobuf:"5,optional"`
+	Variants []*EnumVariant `parser:"'{' @@* '}'" protobuf:"6"`
 }
 
 var _ Decl = (*Enum)(nil)
@@ -26,6 +27,9 @@ func (e *Enum) Position() Position { return e.Pos }
 func (e *Enum) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(e.Comments))
+	if e.Export {
+		fmt.Fprint(w, "export ")
+	}
 	fmt.Fprintf(w, "enum %s", e.Name)
 	if e.Type != nil {
 		fmt.Fprintf(w, ": %s", e.Type)
@@ -54,6 +58,7 @@ func (e *Enum) ToProto() proto.Message {
 		Pos:      posToProto(e.Pos),
 		Comments: e.Comments,
 		Name:     e.Name,
+		Export:   e.Export,
 		Variants: nodeListToProto[*schemapb.EnumVariant](e.Variants),
 	}
 	if e.Type != nil {
@@ -62,12 +67,14 @@ func (e *Enum) ToProto() proto.Message {
 	return se
 }
 
-func (e *Enum) GetName() string { return e.Name }
+func (e *Enum) GetName() string  { return e.Name }
+func (e *Enum) IsExported() bool { return e.Export }
 
 func EnumFromProto(s *schemapb.Enum) *Enum {
 	e := &Enum{
 		Pos:      posFromProto(s.Pos),
 		Name:     s.Name,
+		Export:   s.Export,
 		Comments: s.Comments,
 		Variants: enumVariantListToSchema(s.Variants),
 	}

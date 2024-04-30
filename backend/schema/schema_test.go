@@ -24,11 +24,11 @@ module todo {
 
   postgres database testdb
 
-  data CreateRequest {
+  export data CreateRequest {
     name {String: String}? +alias json "rqn"
   }
 
-  data CreateResponse {
+  export data CreateResponse {
     name [String] +alias json "rsn"
   }
 
@@ -42,10 +42,10 @@ module todo {
     when Time
   }
 
-  verb create(todo.CreateRequest) todo.CreateResponse
+  export verb create(todo.CreateRequest) todo.CreateResponse
       +calls todo.destroy  +database calls todo.testdb
 
-  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
+  export verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{name}
 
   verb scheduled(Unit) Unit
@@ -60,7 +60,7 @@ module foo {
 	Green = "Green"
   }
 
-  enum ColorInt: Int {
+  export enum ColorInt: Int {
 	Red = 0
 	Blue = 1
 	Green = 2
@@ -76,6 +76,9 @@ module foo {
 	B [String]
 	C Int
   }
+
+  verb callTodoCreate(todo.CreateRequest) todo.CreateResponse
+      +calls todo.create
 }
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(testSchema.String()))
@@ -264,7 +267,7 @@ func TestParsing(t *testing.T) {
 						message String
 					}
 
-					verb echo(builtin.HttpRequest<echo.EchoRequest>) builtin.HttpResponse<echo.EchoResponse, String>
+					export verb echo(builtin.HttpRequest<echo.EchoRequest>) builtin.HttpResponse<echo.EchoResponse, String>
 						+ingress http GET /echo
 						+calls time.time
 
@@ -278,7 +281,7 @@ func TestParsing(t *testing.T) {
 						time Time
 					}
 
-					verb time(builtin.HttpRequest<time.TimeRequest>) builtin.HttpResponse<time.TimeResponse, String>
+					export verb time(builtin.HttpRequest<time.TimeRequest>) builtin.HttpResponse<time.TimeResponse, String>
 						+ingress http GET /time
 				}
 				`,
@@ -290,6 +293,7 @@ func TestParsing(t *testing.T) {
 						&Data{Name: "EchoResponse", Fields: []*Field{{Name: "message", Type: &String{}}}},
 						&Verb{
 							Name:     "echo",
+							Export:   true,
 							Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "echo", Name: "EchoRequest"}}},
 							Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "echo", Name: "EchoResponse"}, &String{}}},
 							Metadata: []Metadata{
@@ -305,6 +309,7 @@ func TestParsing(t *testing.T) {
 						&Data{Name: "TimeResponse", Fields: []*Field{{Name: "time", Type: &Time{}}}},
 						&Verb{
 							Name:     "time",
+							Export:   true,
 							Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "time", Name: "TimeRequest"}}},
 							Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "time", Name: "TimeResponse"}, &String{}}},
 							Metadata: []Metadata{
@@ -389,10 +394,10 @@ module todo {
   secret secretValue String
   postgres database testdb
 
-  data CreateRequest {
+  export data CreateRequest {
     name {String: String}? +alias json "rqn"
   }
-  data CreateResponse {
+  export data CreateResponse {
     name [String] +alias json "rsn"
   }
   data DestroyRequest {
@@ -403,9 +408,9 @@ module todo {
     name String
 	when Time
   }
-  verb create(todo.CreateRequest) todo.CreateResponse
+  export verb create(todo.CreateRequest) todo.CreateResponse
   	+calls todo.destroy +database calls todo.testdb
-  verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
+  export verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
   	+ingress http GET /todo/destroy/{name}
   verb scheduled(Unit) Unit
     +cron */10 * * 1-10,11-31 * * *
@@ -427,7 +432,7 @@ func TestParseEnum(t *testing.T) {
 		Green = "Green"
 	 }
 	
-	 enum ColorInt: Int {
+	 export enum ColorInt: Int {
 		Red = 0
 		Blue = 1
 		Green = 2
@@ -443,6 +448,9 @@ func TestParseEnum(t *testing.T) {
 		A String
 		B String
 	 }
+
+	 verb callTodoCreate(todo.CreateRequest) todo.CreateResponse
+      +calls todo.create
 	}
 	`
 	actual, err := ParseModuleString("", input)
@@ -470,13 +478,15 @@ var testSchema = MustValidate(&Schema{
 					Type: "postgres",
 				},
 				&Data{
-					Name: "CreateRequest",
+					Name:   "CreateRequest",
+					Export: true,
 					Fields: []*Field{
 						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJSON, Alias: "rqn"}}},
 					},
 				},
 				&Data{
-					Name: "CreateResponse",
+					Name:   "CreateResponse",
+					Export: true,
 					Fields: []*Field{
 						{Name: "name", Type: &Array{Element: &String{}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJSON, Alias: "rsn"}}},
 					},
@@ -495,6 +505,7 @@ var testSchema = MustValidate(&Schema{
 					},
 				},
 				&Verb{Name: "create",
+					Export:   true,
 					Request:  &Ref{Module: "todo", Name: "CreateRequest"},
 					Response: &Ref{Module: "todo", Name: "CreateResponse"},
 					Metadata: []Metadata{
@@ -502,6 +513,7 @@ var testSchema = MustValidate(&Schema{
 						&MetadataDatabases{Calls: []*Ref{{Module: "todo", Name: "testdb"}}},
 					}},
 				&Verb{Name: "destroy",
+					Export:   true,
 					Request:  &Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyRequest"}}},
 					Response: &Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []Type{&Ref{Module: "todo", Name: "DestroyResponse"}, &String{}}},
 					Metadata: []Metadata{
@@ -541,8 +553,9 @@ var testSchema = MustValidate(&Schema{
 					},
 				},
 				&Enum{
-					Name: "ColorInt",
-					Type: &Int{},
+					Name:   "ColorInt",
+					Type:   &Int{},
+					Export: true,
 					Variants: []*EnumVariant{
 						{Name: "Red", Value: &IntValue{Value: 0}},
 						{Name: "Blue", Value: &IntValue{Value: 1}},
@@ -564,6 +577,12 @@ var testSchema = MustValidate(&Schema{
 						{Name: "B", Value: &TypeValue{Value: Type(&String{})}},
 					},
 				},
+				&Verb{Name: "callTodoCreate",
+					Request:  &Ref{Module: "todo", Name: "CreateRequest"},
+					Response: &Ref{Module: "todo", Name: "CreateResponse"},
+					Metadata: []Metadata{
+						&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "create"}}},
+					}},
 			},
 		},
 	},

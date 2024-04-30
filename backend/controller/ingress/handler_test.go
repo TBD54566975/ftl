@@ -44,16 +44,16 @@ func TestIngress(t *testing.T) {
 				foo String
 			}
 
-			verb getAlias(HttpRequest<test.AliasRequest>) HttpResponse<Empty, Empty>
+			export verb getAlias(HttpRequest<test.AliasRequest>) HttpResponse<Empty, Empty>
 				+ingress http GET /getAlias
 
-			verb getPath(HttpRequest<test.PathParameterRequest>) HttpResponse<Empty, Empty>
+			export verb getPath(HttpRequest<test.PathParameterRequest>) HttpResponse<Empty, Empty>
 				+ingress http GET /getPath/{username}
 
-			verb postMissingTypes(HttpRequest<test.MissingTypes>) HttpResponse<Empty, Empty>
+			export verb postMissingTypes(HttpRequest<test.MissingTypes>) HttpResponse<Empty, Empty>
 				+ingress http POST /postMissingTypes
 
-			verb postJsonPayload(HttpRequest<test.JsonPayload>) HttpResponse<Empty, Empty>
+			export verb postJsonPayload(HttpRequest<test.JsonPayload>) HttpResponse<Empty, Empty>
 				+ingress http POST /postJsonPayload
 		}
 	`)

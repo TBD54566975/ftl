@@ -47,6 +47,7 @@ var (
 		participle.Lexer(Lexer),
 		participle.Elide("Whitespace"),
 		participle.Unquote(),
+		participle.UseLookahead(2),
 		participle.Map(func(token lexer.Token) (lexer.Token, error) {
 			token.Value = strings.TrimSpace(strings.TrimPrefix(token.Value, "//"))
 			return token, nil
@@ -142,6 +143,7 @@ type Named interface {
 type Decl interface {
 	Symbol
 	GetName() string
+	IsExported() bool
 	schemaDecl()
 }
 

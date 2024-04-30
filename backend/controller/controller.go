@@ -657,14 +657,20 @@ func (s *Service) callWithRequest(ctx context.Context, req *connect.Request[ftlv
 	if req.Msg.Body == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
-	verbRef := schema.RefFromProto(req.Msg.Verb)
 
 	sch, err := s.getActiveSchema(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = ingress.ValidateCallBody(req.Msg.Body, verbRef, sch)
+	verbRef := schema.RefFromProto(req.Msg.Verb)
+	verb := &schema.Verb{}
+	err = sch.ResolveRefToType(verbRef, verb)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ingress.ValidateCallBody(req.Msg.Body, verb, sch)
 	if err != nil {
 		return nil, err
 	}
@@ -682,6 +688,14 @@ func (s *Service) callWithRequest(ctx context.Context, req *connect.Request[ftlv
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
 		return nil, err
+	}
+
+	if !verb.IsExported() {
+		for _, caller := range callers {
+			if caller.Module != module {
+				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
+			}
+		}
 	}
 
 	var requestKey model.RequestKey

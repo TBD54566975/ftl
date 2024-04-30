@@ -52,7 +52,7 @@ func TestExtractModuleSchema(t *testing.T) {
 
   postgres database testDb
 
-  enum Color: String {
+  export enum Color: String {
     Red = "Red"
     Blue = "Blue"
     Green = "Green"
@@ -85,6 +85,10 @@ func TestExtractModuleSchema(t *testing.T) {
     field String
   }
 
+  export data ExportedData {
+    field String
+  }
+
   data Nested {
   }
 
@@ -113,7 +117,10 @@ func TestExtractModuleSchema(t *testing.T) {
   data SourceResp {
   }
 
-  verb nothing(Unit) Unit
+  export verb http(builtin.HttpRequest<one.Req>) builtin.HttpResponse<one.Resp, Unit>  
+      +ingress http GET /get
+
+  export verb nothing(Unit) Unit
 
   verb sink(one.SinkReq) Unit
 
@@ -211,7 +218,7 @@ func TestParseDirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	parsed, ok := visitType(nil, token.NoPos, timeRef).Get()
+	parsed, ok := visitType(nil, token.NoPos, timeRef, false).Get()
 	assert.True(t, ok)
 	_, ok = parsed.(*schema.Time)
 	assert.True(t, ok)
@@ -230,7 +237,7 @@ func TestParseBasicTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, ok := visitType(nil, token.NoPos, tt.input).Get()
+			parsed, ok := visitType(nil, token.NoPos, tt.input, false).Get()
 			assert.True(t, ok)
 			assert.Equal(t, tt.expected, parsed)
 		})

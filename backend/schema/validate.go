@@ -112,26 +112,27 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			switch n := n.(type) {
 			case *Ref:
 				if mdecl := scopes.Resolve(*n); mdecl != nil {
-					switch decl := mdecl.Symbol.(type) {
-					case *Verb, *Enum, *Database, *Config, *Secret:
-						if module, ok := mdecl.Module.Get(); ok {
-							n.Module = module.Name
-						}
-						if len(n.TypeParameters) != 0 {
-							merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters", typeName(decl), n.Name))
-						}
-					case *Data:
-						if module, ok := mdecl.Module.Get(); ok {
-							n.Module = module.Name
-						}
-						if len(n.TypeParameters) != len(decl.TypeParameters) {
-							merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
-								n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
+					if decl, ok := mdecl.Symbol.(Decl); ok {
+						if mod, ok := mdecl.Module.Get(); ok {
+							n.Module = mod.Name
 						}
 
-					case *TypeParameter:
-					default:
-						merr = append(merr, errorf(n, "invalid reference %q at %q", n, mdecl.Symbol.Position()))
+						if n.Module != module.Name && !decl.IsExported() {
+							merr = append(merr, errorf(n, "%s %q must be exported", typeName(decl), n.String()))
+						}
+
+						if dataDecl, ok := decl.(*Data); ok {
+							if len(n.TypeParameters) != len(dataDecl.TypeParameters) {
+								merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
+									n.Name, len(n.TypeParameters), len(dataDecl.TypeParameters)))
+							}
+						} else if len(n.TypeParameters) != 0 && !decl.IsExported() {
+							merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters", typeName(decl), n.Name))
+						}
+					} else {
+						if _, ok := mdecl.Symbol.(*TypeParameter); !ok {
+							merr = append(merr, errorf(n, "invalid reference %q at %q", n, mdecl.Symbol.Position()))
+						}
 					}
 				} else {
 					merr = append(merr, errorf(n, "unknown reference %q", n))

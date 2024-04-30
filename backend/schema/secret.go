@@ -19,6 +19,7 @@ var _ Decl = (*Secret)(nil)
 var _ Symbol = (*Secret)(nil)
 
 func (s *Secret) GetName() string    { return s.Name }
+func (s *Secret) IsExported() bool   { return false }
 func (s *Secret) Position() Position { return s.Pos }
 func (s *Secret) String() string     { return fmt.Sprintf("secret %s %s", s.Name, s.Type) }
 
