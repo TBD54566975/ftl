@@ -10,6 +10,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -31,11 +32,13 @@ func TestDAL(t *testing.T) {
 
 	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
 	deploymentChanges := []DeploymentNotification{}
-	go func() {
+	wg := errgroup.Group{}
+	wg.Go(func() error {
 		for change := range deploymentChangesCh {
 			deploymentChanges = append(deploymentChanges, change)
 		}
-	}()
+		return nil
+	})
 
 	t.Run("UpsertModule", func(t *testing.T) {
 		err = dal.UpsertModule(ctx, "go", "test")
@@ -346,10 +349,12 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("VerifyDeploymentNotifications", func(t *testing.T) {
+		dal.DeploymentChanges.Unsubscribe(deploymentChangesCh)
 		expectedDeploymentChanges := []DeploymentNotification{
 			{Message: optional.Some(Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},
 			{Message: optional.Some(Deployment{Language: "go", Module: "test", MinReplicas: 1, Schema: &schema.Module{Name: "test"}})},
 		}
+		_ = wg.Wait()
 		assert.Equal(t, expectedDeploymentChanges, deploymentChanges,
 			assert.Exclude[model.DeploymentKey](), assert.Exclude[time.Time](), assert.IgnoreGoStringer())
 	})

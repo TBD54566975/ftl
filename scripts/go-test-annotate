@@ -7,7 +7,7 @@ set -euo pipefail
 # then match lines containing lines that look like error messages.
 
 fail=0
-if ! gotestsum --format-hide-empty-pkg --junitfile junit-go.xml --junitfile-hide-empty-pkg -- -fullpath ./...; then
+if ! gotestsum --format-hide-empty-pkg --junitfile junit-go.xml --junitfile-hide-empty-pkg -- -race -fullpath ./...; then
   fail=1
 fi
 
