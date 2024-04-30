@@ -70,10 +70,18 @@ func WithDSN(name string, dbType DBType, dsn string) func(context.Context) error
 	}
 }
 
-// WithFakeVerb sets up a mock implementation for a verb
+// WhenVerb replaces an implementation for a verb
 //
-// To be used with Context(...)
-func WithFakeVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context.Context, req Req) (resp Resp, err error)) func(context.Context) error {
+// To be used when setting up a context for a test:
+// ctx := ftltest.Context(
+//
+//	ftltest.WhenVerb(Example.Verb, func(ctx context.Context, req Example.Req) (Example.Resp, error) {
+//	    ...
+//	}),
+//	... other options
+//
+// )
+func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context.Context, req Req) (resp Resp, err error)) func(context.Context) error {
 	return func(ctx context.Context) error {
 		ref := ftl.CallToRef(verb)
 		overrider, ok := ftl.CallOverriderFromContext(ctx)
