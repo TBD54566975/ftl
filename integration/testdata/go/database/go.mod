@@ -43,4 +43,4 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 )
 
-replace github.com/TBD54566975/ftl => /Users/alec/dev/ftl
+replace github.com/TBD54566975/ftl => ../../../..
