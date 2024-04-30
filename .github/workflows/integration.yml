@@ -19,7 +19,7 @@ jobs:
         id: extract-tests
         run: |
           # shellcheck disable=SC2046
-          echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(grep '^func Test' integration/*_test.go ./backend/controller/cronjobs | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
+          echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(grep '^func Test' $(find integration -name '*_test.go') | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
   integration:
     needs: prepare
     runs-on: ubuntu-latest
@@ -42,4 +42,4 @@ jobs:
       - name: Download Go Modules
         run: go mod download
       - name: Run ${{ matrix.test }}
-        run: go test -v -tags integration -run ${{ matrix.test }} ./integration
+        run: go test -v -tags integration -run ${{ matrix.test }} ./integration/...

@@ -45,7 +45,7 @@ build-generate:
 build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
-  for tool in $@; do mk "{{RELEASE}}/$tool" : !(build) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
+  for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable"
 
