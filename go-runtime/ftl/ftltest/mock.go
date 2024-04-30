@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/rpc"
-
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
 type mockFunc func(ctx context.Context, req any) (resp any, err error)
