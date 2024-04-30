@@ -48,6 +48,12 @@ sql:
             nullable: true
             go_type:
               type: "NullCronJobKey"
+          - db_type: "lease_key"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/leases.Key"
+          - db_type: "lease_key"
+            nullable: true
+            go_type:
+              type: "NullLeaseKey"
           - db_type: "deployment_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
           - db_type: "cron_job_state"
@@ -87,12 +93,6 @@ sql:
             go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
           - column: "events.payload"
             go_type: "encoding/json.RawMessage"
-          - column: "leases.key"
-            go_type: "github.com/TBD54566975/ftl/backend/controller/leases.Key"
-          - column: "leases.key"
-            nullable: true
-            go_type:
-              type: "NullLeaseKey"
     rules:
       - sqlc/db-prepare
       # - postgresql-query-too-costly

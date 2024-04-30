@@ -37,6 +37,8 @@ var (
 	ErrConflict = errors.New("conflict")
 	// ErrNotFound is returned by select methods in the DAL when no results are found.
 	ErrNotFound = errors.New("not found")
+	// ErrConstraint is returned by select methods in the DAL when a constraint is violated.
+	ErrConstraint = errors.New("constraint violation")
 )
 
 type IngressRoute struct {
@@ -1148,10 +1150,18 @@ func translatePGError(err error) error {
 	}
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		if pgErr.Code == pgerrcode.ForeignKeyViolation {
+		switch pgErr.Code {
+		case pgerrcode.ForeignKeyViolation:
 			return fmt.Errorf("%s: %w", strings.TrimSuffix(strings.TrimPrefix(pgErr.ConstraintName, pgErr.TableName+"_"), "_id_fkey"), ErrNotFound)
-		} else if pgErr.Code == pgerrcode.UniqueViolation {
+		case pgerrcode.UniqueViolation:
 			return ErrConflict
+		case pgerrcode.IntegrityConstraintViolation,
+			pgerrcode.RestrictViolation,
+			pgerrcode.NotNullViolation,
+			pgerrcode.CheckViolation,
+			pgerrcode.ExclusionViolation:
+			return fmt.Errorf("%s: %w", pgErr.Message, ErrConstraint)
+		default:
 		}
 	} else if isNotFound(err) {
 		return ErrNotFound

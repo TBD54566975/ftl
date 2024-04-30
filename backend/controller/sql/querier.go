@@ -15,6 +15,10 @@ import (
 )
 
 type Querier interface {
+	// Reserve a pending async call for execution, returning the associated lease
+	// reservation key.
+	AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error)
+	AddAsyncCall(ctx context.Context, arg AddAsyncCallParams) (bool, error)
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
@@ -65,12 +69,14 @@ type Querier interface {
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, timeout time.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error)
-	NewLease(ctx context.Context, key leases.Key, expiresAt time.Time) (uuid.UUID, error)
+	NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error)
 	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
-	RenewLease(ctx context.Context, expiresIn time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
+	RenewLease(ctx context.Context, ttl time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
 	ReplaceDeployment(ctx context.Context, oldDeployment model.DeploymentKey, newDeployment model.DeploymentKey, minReplicas int32) (int64, error)
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error)
+	// Creates a new FSM execution, including initial async call and transition.
+	SendFSMEvent(ctx context.Context, arg SendFSMEventParams) (int64, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error)
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)

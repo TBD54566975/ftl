@@ -17,6 +17,93 @@ import (
 	"github.com/google/uuid"
 )
 
+type AsyncCallOrigin string
+
+const (
+	AsyncCallOriginCron   AsyncCallOrigin = "cron"
+	AsyncCallOriginFsm    AsyncCallOrigin = "fsm"
+	AsyncCallOriginPubsub AsyncCallOrigin = "pubsub"
+)
+
+func (e *AsyncCallOrigin) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AsyncCallOrigin(s)
+	case string:
+		*e = AsyncCallOrigin(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AsyncCallOrigin: %T", src)
+	}
+	return nil
+}
+
+type NullAsyncCallOrigin struct {
+	AsyncCallOrigin AsyncCallOrigin
+	Valid           bool // Valid is true if AsyncCallOrigin is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAsyncCallOrigin) Scan(value interface{}) error {
+	if value == nil {
+		ns.AsyncCallOrigin, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AsyncCallOrigin.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAsyncCallOrigin) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AsyncCallOrigin), nil
+}
+
+type AsyncCallState string
+
+const (
+	AsyncCallStatePending   AsyncCallState = "pending"
+	AsyncCallStateExecuting AsyncCallState = "executing"
+	AsyncCallStateSuccess   AsyncCallState = "success"
+	AsyncCallStateError     AsyncCallState = "error"
+)
+
+func (e *AsyncCallState) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AsyncCallState(s)
+	case string:
+		*e = AsyncCallState(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AsyncCallState: %T", src)
+	}
+	return nil
+}
+
+type NullAsyncCallState struct {
+	AsyncCallState AsyncCallState
+	Valid          bool // Valid is true if AsyncCallState is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAsyncCallState) Scan(value interface{}) error {
+	if value == nil {
+		ns.AsyncCallState, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AsyncCallState.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAsyncCallState) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AsyncCallState), nil
+}
+
 type ControllerState string
 
 const (
@@ -145,6 +232,49 @@ func (ns NullEventType) Value() (driver.Value, error) {
 	return string(ns.EventType), nil
 }
 
+type FsmStatus string
+
+const (
+	FsmStatusRunning   FsmStatus = "running"
+	FsmStatusCompleted FsmStatus = "completed"
+	FsmStatusFailed    FsmStatus = "failed"
+)
+
+func (e *FsmStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FsmStatus(s)
+	case string:
+		*e = FsmStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FsmStatus: %T", src)
+	}
+	return nil
+}
+
+type NullFsmStatus struct {
+	FsmStatus FsmStatus
+	Valid     bool // Valid is true if FsmStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFsmStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.FsmStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FsmStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFsmStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FsmStatus), nil
+}
+
 type Origin string
 
 const (
@@ -239,6 +369,19 @@ type Artefact struct {
 	Content   []byte
 }
 
+type AsyncCall struct {
+	ID        int64
+	CreatedAt time.Time
+	LeaseID   optional.Option[int64]
+	Verb      string
+	State     AsyncCallState
+	Origin    AsyncCallOrigin
+	OriginKey string
+	Request   []byte
+	Response  []byte
+	Error     optional.Option[string]
+}
+
 type Controller struct {
 	ID       int64
 	Key      model.ControllerKey
@@ -289,6 +432,21 @@ type Event struct {
 	CustomKey3   optional.Option[string]
 	CustomKey4   optional.Option[string]
 	Payload      json.RawMessage
+}
+
+type FsmExecution struct {
+	ID        int64
+	CreatedAt time.Time
+	Key       string
+	Name      string
+	Status    FsmStatus
+	State     string
+}
+
+type FsmTransition struct {
+	ID              int64
+	FsmExecutionsID int64
+	AsyncCallsID    int64
 }
 
 type IngressRoute struct {

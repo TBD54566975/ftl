@@ -18,9 +18,8 @@ var _ leases.Leaser = (*DAL)(nil)
 
 // Lease represents a lease that is held by a controller.
 type Lease struct {
-	idempotencyKey uuid.UUID
-	context        any
 	key            leases.Key
+	idempotencyKey uuid.UUID
 	db             *sql.DB
 	ttl            time.Duration
 	errch          chan error
@@ -72,13 +71,16 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 	if ttl < time.Second*5 {
 		return nil, fmt.Errorf("lease TTL must be at least 5 seconds")
 	}
-	idempotencyKey, err := d.db.NewLease(ctx, key, time.Now().Add(ttl))
+	idempotencyKey, err := d.db.NewLease(ctx, key, ttl)
 	if err != nil {
 		return nil, translatePGError(err)
 	}
+	return d.newLease(ctx, key, idempotencyKey, ttl), nil
+}
+
+func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) *Lease {
 	lease := &Lease{
 		idempotencyKey: idempotencyKey,
-		context:        nil,
 		key:            key,
 		db:             d.db,
 		ttl:            ttl,
@@ -86,7 +88,7 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 		errch:          make(chan error, 1),
 	}
 	go lease.renew(ctx)
-	return lease, nil
+	return lease
 }
 
 // ExpireLeases expires (deletes) all leases that have expired.
