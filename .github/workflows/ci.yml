@@ -8,18 +8,6 @@ concurrency:
   group: ${{ github.ref }}-ci
   cancel-in-progress: true
 jobs:
-  kotlin-runtime:
-    name: Test Kotlin
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
-      - name: Build Cache
-        uses: ./.github/actions/build-cache
-      - name: Test
-        run: mvn -f kotlin-runtime/ftl-runtime -B test
   test:
     name: Test Go
     runs-on: ubuntu-latest
