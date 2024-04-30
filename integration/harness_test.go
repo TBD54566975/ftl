@@ -126,11 +126,14 @@ func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
 type action func(t testing.TB, ic testContext) error
 
 type logWriter struct {
+	mu     sync.Mutex
 	logger interface{ Log(...any) }
 	buffer []byte
 }
 
 func (l *logWriter) Write(p []byte) (n int, err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	for {
 		index := bytes.IndexByte(p, '\n')
 		if index == -1 {
