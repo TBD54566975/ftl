@@ -46,6 +46,9 @@ func Context(options ...func(context.Context) error) context.Context {
 // )
 func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) func(context.Context) error {
 	return func(ctx context.Context) error {
+		if config.Module != ftl.Module() {
+			return fmt.Errorf("config %v does not match current module %s", config.Module, ftl.Module())
+		}
 		cm := cf.ConfigFromContext(ctx)
 		return cm.Set(ctx, cf.Ref{Module: optional.Some(config.Module), Name: config.Name}, value)
 	}
@@ -62,6 +65,9 @@ func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) func(conte
 // )
 func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(context.Context) error {
 	return func(ctx context.Context) error {
+		if secret.Module != ftl.Module() {
+			return fmt.Errorf("secret %v does not match current module %s", secret.Module, ftl.Module())
+		}
 		sm := cf.SecretsFromContext(ctx)
 		return sm.Set(ctx, cf.Ref{Module: optional.Some(secret.Module), Name: secret.Name}, value)
 	}
