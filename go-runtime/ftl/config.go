@@ -15,26 +15,25 @@ type ConfigType interface{ any }
 // Config declares a typed configuration key for the current module.
 func Config[T ConfigType](name string) ConfigValue[T] {
 	module := callerModule()
-	return ConfigValue[T]{module, name}
+	return ConfigValue[T]{Ref{module, name}}
 }
 
 // ConfigValue is a typed configuration key for the current module.
 type ConfigValue[T ConfigType] struct {
-	module string
-	name   string
+	Ref
 }
 
-func (c ConfigValue[T]) String() string { return fmt.Sprintf("config \"%s.%s\"", c.module, c.name) }
+func (c ConfigValue[T]) String() string { return fmt.Sprintf("config \"%s.%s\"", c.Module, c.Name) }
 
 func (c ConfigValue[T]) GoString() string {
 	var t T
-	return fmt.Sprintf("ftl.ConfigValue[%T](\"%s.%s\")", t, c.module, c.name)
+	return fmt.Sprintf("ftl.ConfigValue[%T](\"%s.%s\")", t, c.Module, c.Name)
 }
 
 // Get returns the value of the configuration key from FTL.
 func (c ConfigValue[T]) Get(ctx context.Context) (out T) {
 	cm := configuration.ConfigFromContext(ctx)
-	ref := configuration.NewRef(c.module, c.name)
+	ref := configuration.NewRef(c.Module, c.Name)
 	err := cm.Get(ctx, ref, &out)
 	if err != nil {
 		panic(fmt.Errorf("failed to get %s: %w", c, err))
