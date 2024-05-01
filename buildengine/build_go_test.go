@@ -31,6 +31,13 @@ func TestGenerateGoModule(t *testing.T) {
 						{Name: "GreenInt", Value: &schema.IntValue{Value: 2}},
 					},
 				},
+				&schema.Enum{
+					Name: "TypeEnum",
+					Variants: []*schema.EnumVariant{
+						{Name: "A", Value: &schema.TypeValue{Value: &schema.Int{}}},
+						{Name: "B", Value: &schema.TypeValue{Value: &schema.String{}}},
+					},
+				},
 				&schema.Data{Name: "EchoRequest"},
 				&schema.Data{Name: "EchoResponse"},
 				&schema.Verb{
@@ -84,6 +91,13 @@ const (
   BlueInt ColorInt = 1
   GreenInt ColorInt = 2
 )
+
+//ftl:enum
+type TypeEnum interface { typeEnum() }
+type A Int
+func (A) typeEnum() {}
+type B String
+func (B) typeEnum() {}
 
 type EchoRequest struct {
 }

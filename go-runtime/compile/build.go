@@ -294,7 +294,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"valueEnum": func(d schema.Decl) bool {
 		if e, ok := d.(*schema.Enum); ok {
-			if len(e.Variants) > 0 && e.Variants[0].Value != nil {
+			if e.Type != nil {
 				return true
 			}
 		}
@@ -302,7 +302,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"typeEnum": func(d schema.Decl) bool {
 		if e, ok := d.(*schema.Enum); ok {
-			if len(e.Variants) > 0 && e.Variants[0].Value == nil {
+			if e.Type == nil {
 				return true
 			}
 		}

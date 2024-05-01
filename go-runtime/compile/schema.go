@@ -421,6 +421,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	switch node.Tok {
 	case token.TYPE:
 		if node.Doc == nil {
+			_ = maybeVisitTypeEnumVariant(pctx, node, false)
 			return
 		}
 		directives, err := parseDirectives(node, fset, node.Doc)
