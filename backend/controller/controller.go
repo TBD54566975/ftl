@@ -190,21 +190,27 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 
-	// Use min, max backoff if we are running in production, otherwise use develBackoff if available.
+	// Use min, max backoff if we are running in production, otherwise use
+	// (1s, 1s) or develBackoff if available.
 	maybeDevelBackoff := func(min, max time.Duration, develBackoff ...backoff.Backoff) backoff.Backoff {
 		if len(develBackoff) > 1 {
 			panic("too many devel backoffs")
 		}
-		if _, devel := runnerScaling.(*localscaling.LocalScaling); devel && len(develBackoff) == 1 {
-			return develBackoff[0]
+		if _, devel := runnerScaling.(*localscaling.LocalScaling); devel {
+			if len(develBackoff) == 1 {
+				return develBackoff[0]
+			}
+			return backoff.Backoff{Min: time.Second, Max: time.Second}
 		}
 		return makeBackoff(min, max)
 	}
 
 	// Parallel tasks.
 	svc.tasks.Parallel(maybeDevelBackoff(time.Second, time.Second*5), svc.syncRoutes)
-	svc.tasks.Parallel(maybeDevelBackoff(time.Second*3, time.Second*5, makeBackoff(time.Second*2, time.Second*2)), svc.heartbeatController)
+	svc.tasks.Parallel(maybeDevelBackoff(time.Second*3, time.Second*5), svc.heartbeatController)
 	svc.tasks.Parallel(maybeDevelBackoff(time.Second*5, time.Second*5), svc.updateControllersList)
+	svc.tasks.Parallel(maybeDevelBackoff(time.Second*5, time.Second*10), svc.executeAsyncCalls)
+
 	// This should be a singleton task, but because this is the task that
 	// actually expires the leases used to run singleton tasks, it must be
 	// parallel.
@@ -649,7 +655,12 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), "")
 }
 
-func (s *Service) callWithRequest(ctx context.Context, req *connect.Request[ftlv1.CallRequest], key optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
+func (s *Service) callWithRequest(
+	ctx context.Context,
+	req *connect.Request[ftlv1.CallRequest],
+	key optional.Option[model.RequestKey],
+	sourceAddress string,
+) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
 	if req.Msg.Verb == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("verb is required"))
@@ -709,7 +720,7 @@ func (s *Service) callWithRequest(ctx context.Context, req *connect.Request[ftlv
 			return nil, err
 		} else if !ok {
 			requestKey = model.NewRequestKey(model.OriginIngress, "grpc")
-			requestSource = req.Peer().Addr
+			sourceAddress = req.Peer().Addr
 			isNewRequestKey = true
 		} else {
 			requestKey = k
@@ -717,7 +728,7 @@ func (s *Service) callWithRequest(ctx context.Context, req *connect.Request[ftlv
 	}
 	if isNewRequestKey {
 		headers.SetRequestKey(req.Header(), requestKey)
-		if err = s.dal.CreateRequest(ctx, requestKey, requestSource); err != nil {
+		if err = s.dal.CreateRequest(ctx, requestKey, sourceAddress); err != nil {
 			return nil, err
 		}
 	}
@@ -1000,6 +1011,53 @@ func (s *Service) reconcileRunners(ctx context.Context) (time.Duration, error) {
 	}
 
 	return time.Second, nil
+}
+
+func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) {
+	logger := log.FromContext(ctx)
+	logger.Tracef("Acquiring async call")
+
+	call, err := s.dal.AcquireAsyncCall(ctx)
+	if errors.Is(err, dal.ErrNotFound) {
+		return time.Second * 2, nil
+	} else if err != nil {
+		return 0, err
+	}
+	defer call.Release() //nolint:errcheck
+
+	logger = logger.Scope(fmt.Sprintf("%s:%s:%s", call.Origin, call.OriginKey, call.Verb))
+
+	logger.Tracef("Executing async call")
+	req := &ftlv1.CallRequest{ //nolint:forcetypeassert
+		Verb: call.Verb.ToProto().(*schemapb.Ref),
+		Body: call.Request,
+	}
+	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), s.config.Advertise.String())
+	if err != nil {
+		return 0, fmt.Errorf("async call failed: %w", err)
+	}
+	var callError optional.Option[string]
+	if perr := resp.Msg.GetError(); perr != nil {
+		logger.Warnf("Async call failed: %s", perr.Message)
+		callError = optional.Some(perr.Message)
+	} else {
+		logger.Debugf("Async call succeeded")
+	}
+	err = s.dal.CompleteAsyncCall(ctx, call, resp.Msg.GetBody(), callError)
+	if err != nil {
+		return 0, fmt.Errorf("failed to complete async call: %w", err)
+	}
+	switch call.Origin {
+	case dal.AsyncCallOriginFSM:
+		return time.Second * 2, s.onAsyncFSMCallCompletion(ctx, call, resp.Msg)
+
+	default:
+		panic(fmt.Sprintf("unexpected async call origin: %s", call.Origin))
+	}
+}
+
+func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, call *dal.AsyncCall, response *ftlv1.CallResponse) error {
+	return nil
 }
 
 func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {

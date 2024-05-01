@@ -42,6 +42,12 @@ sql:
             nullable: true
             go_type:
               type: "NullRunnerKey"
+          - db_type: "schema_ref"
+            go_type: "github.com/TBD54566975/ftl/backend/schema.Ref"
+          - db_type: "schema_ref"
+            nullable: true
+            go_type:
+              type: "NullSchemaRef"
           - db_type: "cron_job_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.CronJobKey"
           - db_type: "cron_job_key"

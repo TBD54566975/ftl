@@ -910,7 +910,7 @@ func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
 	return model.CronJob{
 		Key:           row.Key,
 		DeploymentKey: row.DeploymentKey,
-		Verb:          model.VerbRef{Module: row.Module, Name: row.Verb},
+		Verb:          schema.Ref{Module: row.Module, Name: row.Verb},
 		Schedule:      row.Schedule,
 		StartTime:     row.StartTime,
 		NextExecution: row.NextExecution,
@@ -949,7 +949,7 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attempte
 			CronJob: model.CronJob{
 				Key:           row.Key,
 				DeploymentKey: row.DeploymentKey,
-				Verb:          model.VerbRef{Module: row.Module, Name: row.Verb},
+				Verb:          schema.Ref{Module: row.Module, Name: row.Verb},
 				Schedule:      row.Schedule,
 				StartTime:     row.StartTime,
 				NextExecution: row.NextExecution,

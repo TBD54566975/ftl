@@ -40,6 +40,9 @@ CREATE TABLE modules
     name     TEXT UNIQUE NOT NULL
 );
 
+-- [<module>.]<name> represented as a schema.Ref
+CREATE DOMAIN schema_ref AS TEXT;
+
 -- Proto-encoded module schema.
 CREATE DOMAIN module_schema_pb AS BYTEA;
 
@@ -405,7 +408,7 @@ CREATE TABLE async_calls (
     -- with (lease_id IS NULL AND async_call_state != 'pending')
     lease_id BIGINT REFERENCES leases(id) ON DELETE SET NULL,
 
-    verb TEXT NOT NULL,
+    verb schema_ref NOT NULL,
     state async_call_state NOT NULL DEFAULT 'pending',
     -- Origin of the call.
     origin async_call_origin NOT NULL,

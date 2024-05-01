@@ -9,6 +9,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
+	"github.com/benbjohnson/clock"
+	"github.com/jpillora/backoff"
+
 	db "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -16,10 +21,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
-	"github.com/benbjohnson/clock"
-	"github.com/jpillora/backoff"
 )
 
 type ExtendedDAL interface {
@@ -161,7 +162,7 @@ func newJobs(t *testing.T, moduleName string, cronPattern string, clock clock.Cl
 		assert.NoError(t, err)
 		newJobs = append(newJobs, model.CronJob{
 			Key:           model.NewCronJobKey(moduleName, fmt.Sprintf("verb%d", i)),
-			Verb:          model.VerbRef{Module: moduleName, Name: fmt.Sprintf("verb%d", i)},
+			Verb:          schema.Ref{Module: moduleName, Name: fmt.Sprintf("verb%d", i)},
 			Schedule:      pattern.String(),
 			StartTime:     now,
 			NextExecution: next,

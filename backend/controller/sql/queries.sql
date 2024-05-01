@@ -505,10 +505,32 @@ WITH async_call AS (
 UPDATE async_calls
 SET state = 'executing', lease_id = (SELECT id FROM lease)
 WHERE id = (SELECT id FROM async_call)
-RETURNING id AS async_call_id, (SELECT idempotency_key FROM lease) AS lease_idempotency_key, (SELECT key FROM lease) AS lease_key;
+RETURNING
+  id AS async_call_id,
+  (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
+  (SELECT key FROM lease) AS lease_key,
+  origin,
+  origin_key,
+  verb,
+  request;
+
+-- name: CompleteAsyncCall :one
+UPDATE async_calls
+SET state = 'success',
+    response = @response,
+    error = @error
+WHERE id = @id
+RETURNING true;
+
+-- name: LoadAsyncCall :one
+SELECT *
+FROM async_calls
+WHERE id = @id;
 
 -- name: SendFSMEvent :one
 -- Creates a new FSM execution, including initial async call and transition.
+--
+-- "key" is the unique identifier for the FSM execution.
 WITH execution AS (
   INSERT INTO fsm_executions (key, name, state)
   VALUES (@key, @name, @state)

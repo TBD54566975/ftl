@@ -31,13 +31,24 @@ WITH async_call AS (
 UPDATE async_calls
 SET state = 'executing', lease_id = (SELECT id FROM lease)
 WHERE id = (SELECT id FROM async_call)
-RETURNING id AS async_call_id, (SELECT idempotency_key FROM lease) AS lease_idempotency_key, (SELECT key FROM lease) AS lease_key
+RETURNING
+  id AS async_call_id,
+  (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
+  (SELECT key FROM lease) AS lease_key,
+  origin,
+  origin_key,
+  verb,
+  request
 `
 
 type AcquireAsyncCallRow struct {
 	AsyncCallID         int64
 	LeaseIdempotencyKey uuid.UUID
 	LeaseKey            leases.Key
+	Origin              AsyncCallOrigin
+	OriginKey           string
+	Verb                schema.Ref
+	Request             []byte
 }
 
 // Reserve a pending async call for execution, returning the associated lease
@@ -45,7 +56,15 @@ type AcquireAsyncCallRow struct {
 func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error) {
 	row := q.db.QueryRow(ctx, acquireAsyncCall, ttl)
 	var i AcquireAsyncCallRow
-	err := row.Scan(&i.AsyncCallID, &i.LeaseIdempotencyKey, &i.LeaseKey)
+	err := row.Scan(
+		&i.AsyncCallID,
+		&i.LeaseIdempotencyKey,
+		&i.LeaseKey,
+		&i.Origin,
+		&i.OriginKey,
+		&i.Verb,
+		&i.Request,
+	)
 	return i, err
 }
 
@@ -56,7 +75,7 @@ RETURNING true
 `
 
 type AddAsyncCallParams struct {
-	Verb      string
+	Verb      schema.Ref
 	Origin    AsyncCallOrigin
 	OriginKey string
 	Request   []byte
@@ -94,6 +113,22 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 		arg.Path,
 	)
 	return err
+}
+
+const completeAsyncCall = `-- name: CompleteAsyncCall :one
+UPDATE async_calls
+SET state = 'success',
+    response = $1,
+    error = $2
+WHERE id = $3
+RETURNING true
+`
+
+func (q *Queries) CompleteAsyncCall(ctx context.Context, response []byte, error optional.Option[string], iD int64) (bool, error) {
+	row := q.db.QueryRow(ctx, completeAsyncCall, response, error, iD)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const createArtefact = `-- name: CreateArtefact :one
@@ -1507,6 +1542,30 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 	return count, err
 }
 
+const loadAsyncCall = `-- name: LoadAsyncCall :one
+SELECT id, created_at, lease_id, verb, state, origin, origin_key, request, response, error
+FROM async_calls
+WHERE id = $1
+`
+
+func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error) {
+	row := q.db.QueryRow(ctx, loadAsyncCall, id)
+	var i AsyncCall
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.LeaseID,
+		&i.Verb,
+		&i.State,
+		&i.Origin,
+		&i.OriginKey,
+		&i.Request,
+		&i.Response,
+		&i.Error,
+	)
+	return i, err
+}
+
 const newLease = `-- name: NewLease :one
 INSERT INTO leases (idempotency_key, key, expires_at)
 VALUES (gen_random_uuid(), $1::lease_key, (NOW() AT TIME ZONE 'utc') + $2::interval)
@@ -1624,11 +1683,13 @@ type SendFSMEventParams struct {
 	Key     string
 	Name    string
 	State   string
-	Verb    string
+	Verb    schema.Ref
 	Request []byte
 }
 
 // Creates a new FSM execution, including initial async call and transition.
+//
+// "key" is the unique identifier for the FSM execution.
 func (q *Queries) SendFSMEvent(ctx context.Context, arg SendFSMEventParams) (int64, error) {
 	row := q.db.QueryRow(ctx, sendFSMEvent,
 		arg.Key,

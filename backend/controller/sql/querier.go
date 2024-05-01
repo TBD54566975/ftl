@@ -20,6 +20,7 @@ type Querier interface {
 	AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error)
 	AddAsyncCall(ctx context.Context, arg AddAsyncCallParams) (bool, error)
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
+	CompleteAsyncCall(ctx context.Context, response []byte, error optional.Option[string], iD int64) (bool, error)
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
@@ -69,6 +70,7 @@ type Querier interface {
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, timeout time.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error)
+	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error)
 	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
 	RenewLease(ctx context.Context, ttl time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
@@ -76,6 +78,8 @@ type Querier interface {
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error)
 	// Creates a new FSM execution, including initial async call and transition.
+	//
+	// "key" is the unique identifier for the FSM execution.
 	SendFSMEvent(ctx context.Context, arg SendFSMEventParams) (int64, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error)
