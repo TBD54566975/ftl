@@ -4,9 +4,7 @@ package ftltest
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
-	"strings"
 
 	"github.com/alecthomas/types/optional"
 
@@ -72,30 +70,6 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(conte
 		}
 		sm := cf.SecretsFromContext(ctx)
 		return sm.Set(ctx, cf.Ref{Module: optional.Some(secret.Module), Name: secret.Name}, value)
-	}
-}
-
-// WithDatabase sets up a database based on the name
-//
-// A DSN will be read at the environment variable `FTL_POSTGRES_DSN_<MODULE>_<DBNAME>`
-// If no DSN is found an error will be returned
-//
-// To be used when setting up a context for a test:
-// ctx := ftltest.Context(
-//
-//	ftltest.WithDatabase(dbHandle, "..."),
-//	... other options
-//
-// )
-func WithDatabase(database ftl.Database, name string) func(context.Context) error {
-	return func(ctx context.Context) error {
-		envarKey := "FTL_POSTGRES_DSN_" + strings.ToUpper(ftl.Module()) + "_" + strings.ToUpper(name)
-		dsn, ok := os.LookupEnv(envarKey)
-		if !ok {
-			return fmt.Errorf("could not find DSN for database %s at environment variable %s", name, envarKey)
-		}
-		dbProvider := modulecontext.DBProviderFromContext(ctx)
-		return dbProvider.Add(database.Name, database.DBType, dsn)
 	}
 }
 
