@@ -386,7 +386,7 @@ func goNodePosToSchemaPos(node ast.Node) (schema.Position, int) {
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}, fset.Position(node.End()).Column
 }
 
-func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl) bool {
+func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, isExported bool) bool {
 	if len(node.Specs) != 1 {
 		return false
 	}
@@ -403,7 +403,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl) bool {
 			// and pctx.enumInterfaces.
 			if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
 				if types.Implements(named, interfaceNode) {
-					if typ, ok := visitType(pctx, node.Pos(), named).Get(); ok {
+					if typ, ok := visitType(pctx, node.Pos(), named, isExported).Get(); ok {
 						enumVariant.Value = &schema.TypeValue{Value: typ}
 					} else {
 						pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
@@ -420,9 +420,6 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl) bool {
 func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	switch node.Tok {
 	case token.TYPE:
-		if maybeVisitTypeEnumVariant(pctx, node) {
-			return
-		}
 		if node.Doc == nil {
 			return
 		}
@@ -430,6 +427,19 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 		if err != nil {
 			pctx.errors.add(err)
 		}
+
+		// If any directives on this node are exported, then the node is
+		// considered exported for type enum variant purposes
+		enumVarIsExported := false
+		for _, dir := range directives {
+			if exportableDir, ok := dir.(exportable); ok {
+				enumVarIsExported = enumVarIsExported || exportableDir.IsExported()
+			}
+		}
+		if maybeVisitTypeEnumVariant(pctx, node, enumVarIsExported) {
+			return
+		}
+
 		for _, dir := range directives {
 			switch dir.(type) {
 			case *directiveVerb, *directiveData, *directiveEnum:
@@ -471,6 +481,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 							Pos:      goPosToSchemaPos(node.Pos()),
 							Comments: visitComments(node.Doc),
 							Name:     strcase.ToUpperCamel(t.Name.Name),
+							Export:   isExported,
 						}
 						pctx.enums[t.Name.Name] = enum
 						pctx.nativeNames[enum] = t.Name.Name
