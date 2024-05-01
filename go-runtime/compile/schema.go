@@ -33,12 +33,12 @@ var (
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
 
-	ftlCallFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
-	ftlConfigFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
-	ftlSecretFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
-	ftlDatabaseFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
-	ftlUnitTypePath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
-	aliasFieldTag       = "json"
+	ftlCallFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
+	ftlConfigFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
+	ftlSecretFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
+	ftlPostgresDBFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
+	ftlUnitTypePath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
+	aliasFieldTag         = "json"
 )
 
 // NativeNames is a map of top-level declarations to their native Go names.
@@ -182,8 +182,8 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr) {
 	case ftlConfigFuncPath, ftlSecretFuncPath:
 		// Secret/config declaration: ftl.Config[<type>](<name>)
 		parseConfigDecl(pctx, node, fn)
-	case ftlDatabaseFuncPath:
-		parseDatabaseDecl(pctx, node)
+	case ftlPostgresDBFuncPath:
+		parseDatabaseDecl(pctx, node, schema.PostgresDatabaseType)
 	}
 }
 
@@ -281,7 +281,7 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 	pctx.module.Decls = append(pctx.module.Decls, decl)
 }
 
-func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr) {
+func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
 	var name string
 	if len(node.Args) == 1 {
 		if literal, ok := node.Args[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
@@ -311,6 +311,7 @@ func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr) {
 	decl := &schema.Database{
 		Pos:  goPosToSchemaPos(node.Pos()),
 		Name: name,
+		Type: dbType,
 	}
 	pctx.module.Decls = append(pctx.module.Decls, decl)
 }

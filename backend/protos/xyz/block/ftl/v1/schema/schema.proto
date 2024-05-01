@@ -44,6 +44,7 @@ message Database {
   optional Position pos = 1;
   string name = 2;
   repeated string comments = 3;
+  string type = 4;
 }
 
 message Decl {

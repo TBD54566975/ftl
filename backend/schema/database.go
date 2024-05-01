@@ -9,10 +9,13 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+const PostgresDatabaseType = "postgres"
+
 type Database struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"3"`
+	Type     string   `parser:"@'postgres'" protobuf:"4"`
 	Name     string   `parser:"'database' @Ident" protobuf:"2"`
 }
 
@@ -26,7 +29,7 @@ func (d *Database) schemaChildren() []Node { return nil }
 func (d *Database) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(d.Comments))
-	fmt.Fprintf(w, "database %s", d.Name)
+	fmt.Fprintf(w, "%s database %s", d.Type, d.Name)
 	return w.String()
 }
 
@@ -34,6 +37,7 @@ func (d *Database) ToProto() proto.Message {
 	return &schemapb.Database{
 		Pos:      posToProto(d.Pos),
 		Name:     d.Name,
+		Type:     d.Type,
 		Comments: d.Comments,
 	}
 }
@@ -45,5 +49,6 @@ func DatabaseFromProto(s *schemapb.Database) *Database {
 		Pos:      posFromProto(s.Pos),
 		Name:     s.Name,
 		Comments: s.Comments,
+		Type:     s.Type,
 	}
 }
