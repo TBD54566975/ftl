@@ -21,7 +21,6 @@ import (
 )
 
 func TestServiceWithMockDal(t *testing.T) {
-	t.Skip("TODO(matt2e): Fails -race, fix me")
 	t.Parallel()
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
@@ -40,7 +39,6 @@ func TestServiceWithMockDal(t *testing.T) {
 }
 
 func TestHashRing(t *testing.T) {
-	t.Skip("TODO(matt2e): Fails -race, fix me")
 	// This test uses multiple mock clocks to progress time for each controller individually
 	// This allows us to compare attempts for each cron job and know which controller attempted it
 	t.Parallel()
@@ -82,20 +80,24 @@ func TestHashRing(t *testing.T) {
 	// to build a map of verb to controller keys
 	controllersForVerbs := map[string][]model.ControllerKey{}
 	for _, c := range controllers {
+		mockDal.lock.Lock()
 		beforeAttemptCount := map[string]int{}
 		for k, v := range mockDal.attemptCountMap {
 			beforeAttemptCount[k] = v
 		}
+		mockDal.lock.Unlock()
 
 		c.mockClock.Add(time.Second * 15)
 		time.Sleep(time.Millisecond * 100)
 
+		mockDal.lock.Lock()
 		for k, v := range mockDal.attemptCountMap {
 			if beforeAttemptCount[k] == v {
 				continue
 			}
 			controllersForVerbs[k] = append(controllersForVerbs[k], c.key)
 		}
+		mockDal.lock.Unlock()
 	}
 
 	// Check if each job has the same key list
