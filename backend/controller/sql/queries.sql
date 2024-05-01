@@ -461,18 +461,18 @@ RETURNING id;
 
 -- name: NewLease :one
 INSERT INTO leases (idempotency_key, key, expires_at)
-VALUES (gen_random_uuid(), @key, @expires_at::timestamptz)
+VALUES (gen_random_uuid(), @key::lease_key, (NOW() AT TIME ZONE 'utc') + @ttl::interval)
 RETURNING idempotency_key;
 
 -- name: RenewLease :one
 UPDATE leases
-SET expires_at = (NOW() AT TIME ZONE 'utc') + @expires_in::interval
-WHERE idempotency_key = @idempotency_key AND key = @key
+SET expires_at = (NOW() AT TIME ZONE 'utc') + @ttl::interval
+WHERE idempotency_key = @idempotency_key AND key = @key::lease_key
 RETURNING true;
 
 -- name: ReleaseLease :one
 DELETE FROM leases
-WHERE idempotency_key = @idempotency_key AND key = @key
+WHERE idempotency_key = @idempotency_key AND key = @key::lease_key
 RETURNING true;
 
 -- name: ExpireLeases :one
@@ -483,3 +483,42 @@ WITH expired AS (
 )
 SELECT COUNT(*)
 FROM expired;
+
+-- name: AddAsyncCall :one
+INSERT INTO async_calls (verb, origin, origin_key, request)
+VALUES (@verb, @origin, @origin_key, @request)
+RETURNING true;
+
+-- name: AcquireAsyncCall :one
+-- Reserve a pending async call for execution, returning the associated lease
+-- reservation key.
+WITH async_call AS (
+  SELECT id
+  FROM async_calls
+  WHERE state = 'pending'
+  LIMIT 1
+), lease AS (
+  INSERT INTO leases (idempotency_key, key, expires_at)
+  VALUES (gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + @ttl::interval)
+  RETURNING *
+)
+UPDATE async_calls
+SET state = 'executing', lease_id = (SELECT id FROM lease)
+WHERE id = (SELECT id FROM async_call)
+RETURNING id AS async_call_id, (SELECT idempotency_key FROM lease) AS lease_idempotency_key, (SELECT key FROM lease) AS lease_key;
+
+-- name: SendFSMEvent :one
+-- Creates a new FSM execution, including initial async call and transition.
+WITH execution AS (
+  INSERT INTO fsm_executions (key, name, state)
+  VALUES (@key, @name, @state)
+  ON CONFLICT(key) DO UPDATE SET state = @state
+  RETURNING id
+), call AS (
+  INSERT INTO async_calls (verb, request, origin, origin_key)
+  VALUES (@verb, @request, 'fsm', @key)
+  RETURNING id
+)
+INSERT INTO fsm_transitions (fsm_executions_id, async_calls_id)
+VALUES ((SELECT id FROM execution), (SELECT id FROM call))
+RETURNING id;

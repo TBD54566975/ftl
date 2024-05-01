@@ -12,8 +12,8 @@ github.com/TBD54566975/scaffolder v0.8.0 h1:DWl1K3dWcLsOPAYGQGPQXtffrml6XCB0tF05
 github.com/TBD54566975/scaffolder v0.8.0/go.mod h1:Ab/jbQ4q8EloYL0nbkdh2DVvkGc4nxr1OcIbdMpTxxg=
 github.com/TBD54566975/scaffolder/extensions/javascript v0.8.0 h1:FvsUx2k5WhPwuSW2V8WAoZeOv+rps78NGHHKHHx0Fpg=
 github.com/TBD54566975/scaffolder/extensions/javascript v0.8.0/go.mod h1:eFaN113dwz5MO58yycBPGEyPO7/l9NhDtHPjA2ZuKPg=
-github.com/alecthomas/assert/v2 v2.8.1 h1:YCxnYR6jjpfnEK5AK5SysALKdUEBPGH4Y7As6tBnDw0=
-github.com/alecthomas/assert/v2 v2.8.1/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
+github.com/alecthomas/assert/v2 v2.9.0 h1:ZcLG8ccMEtlMLkLW4gwGpBWBb0N8MUCmsy1lYBVd1xQ=
+github.com/alecthomas/assert/v2 v2.9.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
 github.com/alecthomas/atomic v0.1.0-alpha2 h1:dqwXmax66gXvHhsOS4pGPZKqYOlTkapELkLb3MNdlH8=
 github.com/alecthomas/atomic v0.1.0-alpha2/go.mod h1:zD6QGEyw49HIq19caJDc2NMXAy8rNi9ROrxtMXATfyI=
 github.com/alecthomas/concurrency v0.0.2 h1:Q3kGPtLbleMbH9lHX5OBFvJygfyFw29bXZKBg+IEVuo=

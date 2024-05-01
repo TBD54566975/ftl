@@ -17,6 +17,63 @@ import (
 	"github.com/google/uuid"
 )
 
+const acquireAsyncCall = `-- name: AcquireAsyncCall :one
+WITH async_call AS (
+  SELECT id
+  FROM async_calls
+  WHERE state = 'pending'
+  LIMIT 1
+), lease AS (
+  INSERT INTO leases (idempotency_key, key, expires_at)
+  VALUES (gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + $1::interval)
+  RETURNING id, idempotency_key, key, created_at, expires_at
+)
+UPDATE async_calls
+SET state = 'executing', lease_id = (SELECT id FROM lease)
+WHERE id = (SELECT id FROM async_call)
+RETURNING id AS async_call_id, (SELECT idempotency_key FROM lease) AS lease_idempotency_key, (SELECT key FROM lease) AS lease_key
+`
+
+type AcquireAsyncCallRow struct {
+	AsyncCallID         int64
+	LeaseIdempotencyKey uuid.UUID
+	LeaseKey            leases.Key
+}
+
+// Reserve a pending async call for execution, returning the associated lease
+// reservation key.
+func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error) {
+	row := q.db.QueryRow(ctx, acquireAsyncCall, ttl)
+	var i AcquireAsyncCallRow
+	err := row.Scan(&i.AsyncCallID, &i.LeaseIdempotencyKey, &i.LeaseKey)
+	return i, err
+}
+
+const addAsyncCall = `-- name: AddAsyncCall :one
+INSERT INTO async_calls (verb, origin, origin_key, request)
+VALUES ($1, $2, $3, $4)
+RETURNING true
+`
+
+type AddAsyncCallParams struct {
+	Verb      string
+	Origin    AsyncCallOrigin
+	OriginKey string
+	Request   []byte
+}
+
+func (q *Queries) AddAsyncCall(ctx context.Context, arg AddAsyncCallParams) (bool, error) {
+	row := q.db.QueryRow(ctx, addAsyncCall,
+		arg.Verb,
+		arg.Origin,
+		arg.OriginKey,
+		arg.Request,
+	)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
 VALUES ((SELECT id FROM deployments WHERE key = $1::deployment_key), $2, $3, $4)
@@ -1452,12 +1509,12 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 
 const newLease = `-- name: NewLease :one
 INSERT INTO leases (idempotency_key, key, expires_at)
-VALUES (gen_random_uuid(), $1, $2::timestamptz)
+VALUES (gen_random_uuid(), $1::lease_key, (NOW() AT TIME ZONE 'utc') + $2::interval)
 RETURNING idempotency_key
 `
 
-func (q *Queries) NewLease(ctx context.Context, key leases.Key, expiresAt time.Time) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, newLease, key, expiresAt)
+func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, newLease, key, ttl)
 	var idempotency_key uuid.UUID
 	err := row.Scan(&idempotency_key)
 	return idempotency_key, err
@@ -1465,7 +1522,7 @@ func (q *Queries) NewLease(ctx context.Context, key leases.Key, expiresAt time.T
 
 const releaseLease = `-- name: ReleaseLease :one
 DELETE FROM leases
-WHERE idempotency_key = $1 AND key = $2
+WHERE idempotency_key = $1 AND key = $2::lease_key
 RETURNING true
 `
 
@@ -1479,12 +1536,12 @@ func (q *Queries) ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, ke
 const renewLease = `-- name: RenewLease :one
 UPDATE leases
 SET expires_at = (NOW() AT TIME ZONE 'utc') + $1::interval
-WHERE idempotency_key = $2 AND key = $3
+WHERE idempotency_key = $2 AND key = $3::lease_key
 RETURNING true
 `
 
-func (q *Queries) RenewLease(ctx context.Context, expiresIn time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
-	row := q.db.QueryRow(ctx, renewLease, expiresIn, idempotencyKey, key)
+func (q *Queries) RenewLease(ctx context.Context, ttl time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
+	row := q.db.QueryRow(ctx, renewLease, ttl, idempotencyKey, key)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -1545,6 +1602,44 @@ func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Tim
 		&i.Labels,
 	)
 	return i, err
+}
+
+const sendFSMEvent = `-- name: SendFSMEvent :one
+WITH execution AS (
+  INSERT INTO fsm_executions (key, name, state)
+  VALUES ($1, $2, $3)
+  ON CONFLICT(key) DO UPDATE SET state = $3
+  RETURNING id
+), call AS (
+  INSERT INTO async_calls (verb, request, origin, origin_key)
+  VALUES ($4, $5, 'fsm', $1)
+  RETURNING id
+)
+INSERT INTO fsm_transitions (fsm_executions_id, async_calls_id)
+VALUES ((SELECT id FROM execution), (SELECT id FROM call))
+RETURNING id
+`
+
+type SendFSMEventParams struct {
+	Key     string
+	Name    string
+	State   string
+	Verb    string
+	Request []byte
+}
+
+// Creates a new FSM execution, including initial async call and transition.
+func (q *Queries) SendFSMEvent(ctx context.Context, arg SendFSMEventParams) (int64, error) {
+	row := q.db.QueryRow(ctx, sendFSMEvent,
+		arg.Key,
+		arg.Name,
+		arg.State,
+		arg.Verb,
+		arg.Request,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec

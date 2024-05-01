@@ -61,7 +61,10 @@ func (l *Key) Value() (driver.Value, error) {
 }
 
 func ParseLeaseKey(s string) (Key, error) {
-	parts := strings.Split(s, ".")
+	if !strings.HasPrefix(s, "/system/") && !strings.HasPrefix(s, "/module/") {
+		return nil, fmt.Errorf("invalid lease key: %q", s)
+	}
+	parts := strings.Split(s, "/")
 	for i, part := range parts {
 		var err error
 		parts[i], err = url.PathUnescape(part)
@@ -69,5 +72,5 @@ func ParseLeaseKey(s string) (Key, error) {
 			return nil, err
 		}
 	}
-	return Key(parts), nil
+	return Key(parts[1:]), nil
 }

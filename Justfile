@@ -30,7 +30,11 @@ clean:
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
-  watchexec -e go -- just build ftl
+  watchexec -e go -e sql -f sqlc.yaml -- "just build-sqlc && just build ftl"
+
+# Run "ftl dev" with live-reloading whenever source changes.
+dev *args:
+  watchexec -r -e go -e sql -f sqlc.yaml -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
 build-all: build-frontend build-generate build-kt-runtime build-protos build-sqlc build-zips
@@ -56,8 +60,8 @@ init-db:
   dbmate --migrations-dir backend/controller/sql/schema up
 
 # Regenerate SQLC code (requires init-db to be run first)
-build-sqlc: init-db
-  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- sqlc generate
+build-sqlc:
+  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- "just init-db && sqlc generate"
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips: build-kt-runtime
