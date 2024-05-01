@@ -270,35 +270,36 @@ func TestErrorReporting(t *testing.T) {
 			filename+":16:18-52: duplicate secret declaration at 15:18-52\n"+
 			filename+":19:14-44: duplicate database declaration at 18:14-44\n"+
 			filename+":29:2-23: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum\n"+
-			filename+":33:2-10: unsupported type \"error\" for field \"BadParam\"\n"+
-			filename+":36:2-17: unsupported type \"uint64\" for field \"AnotherBadParam\"\n"+
-			filename+":39:3-3: unexpected token \"export\" (expected Directive)\n"+
-			filename+":45:36-39: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":45:50-50: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":46:16-29: call first argument must be a function in an ftl module\n"+
-			filename+":47:2-46: call must have exactly three arguments\n"+
-			filename+":48:16-25: call first argument must be a function\n"+
-			filename+":53:1-2: must have at most two parameters (context.Context, struct)\n"+
-			filename+":53:69-69: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":58:22-27: first parameter must be of type context.Context but is ftl/failing.Request\n"+
-			filename+":58:37-43: second parameter must be a struct but is string\n"+
-			filename+":58:53-53: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":63:43-47: second parameter must not be ftl.Unit\n"+
-			filename+":63:59-59: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":68:1-2: first parameter must be context.Context\n"+
-			filename+":68:18-18: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":73:1-2: must have at most two results (struct, error)\n"+
-			filename+":73:41-44: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":78:1-2: must at least return an error\n"+
-			filename+":78:36-39: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":82:35-38: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":82:48-48: must return an error but is ftl/failing.Response\n"+
-			filename+":87:41-44: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":87:55-55: first result must be a struct but is string\n"+
-			filename+":87:63-63: must return an error but is string\n"+
-			filename+":87:63-63: second result must not be ftl.Unit\n"+
-			filename+":94:1-1: duplicate verb name \"WrongResponse\"\n"+
-			filename+":100:2-12: struct field unexported must be exported by starting with an uppercase letter",
+			filename+":35:2-40: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum\n"+
+			filename+":41:2-10: unsupported type \"error\" for field \"BadParam\"\n"+
+			filename+":44:2-17: unsupported type \"uint64\" for field \"AnotherBadParam\"\n"+
+			filename+":47:3-3: unexpected token \"export\" (expected Directive)\n"+
+			filename+":53:36-39: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":53:50-50: unsupported response type \"ftl/failing.Response\"\n"+
+			filename+":54:16-29: call first argument must be a function in an ftl module\n"+
+			filename+":55:2-46: call must have exactly three arguments\n"+
+			filename+":56:16-25: call first argument must be a function\n"+
+			filename+":61:1-2: must have at most two parameters (context.Context, struct)\n"+
+			filename+":61:69-69: unsupported response type \"ftl/failing.Response\"\n"+
+			filename+":66:22-27: first parameter must be of type context.Context but is ftl/failing.Request\n"+
+			filename+":66:37-43: second parameter must be a struct but is string\n"+
+			filename+":66:53-53: unsupported response type \"ftl/failing.Response\"\n"+
+			filename+":71:43-47: second parameter must not be ftl.Unit\n"+
+			filename+":71:59-59: unsupported response type \"ftl/failing.Response\"\n"+
+			filename+":76:1-2: first parameter must be context.Context\n"+
+			filename+":76:18-18: unsupported response type \"ftl/failing.Response\"\n"+
+			filename+":81:1-2: must have at most two results (struct, error)\n"+
+			filename+":81:41-44: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":86:1-2: must at least return an error\n"+
+			filename+":86:36-39: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":90:35-38: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":90:48-48: must return an error but is ftl/failing.Response\n"+
+			filename+":95:41-44: unsupported request type \"ftl/failing.Request\"\n"+
+			filename+":95:55-55: first result must be a struct but is string\n"+
+			filename+":95:63-63: must return an error but is string\n"+
+			filename+":95:63-63: second result must not be ftl.Unit\n"+
+			filename+":102:1-1: duplicate verb name \"WrongResponse\"\n"+
+			filename+":108:2-12: struct field unexported must be exported by starting with an uppercase letter",
 	)
 }
 

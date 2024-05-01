@@ -22,12 +22,11 @@ const (
   {{- end}}
 )
 {{- else if typeEnum . }}
-{{$enumName := .Name -}}
 //ftl:enum
 type {{.Name|title}} interface { {{enumInterfaceFunc .}}() }
 {{- range .Variants }}
-type {{.Name|title}} {.Type}}
-func {{.Name|title}} {{enumInterfaceFunc .}}() {}
+type {{.Name|title}} {.Value.Value}}
+func ({{.Name|title}}) {{enumInterfaceFunc .}}() {}
 {{- end}}
 {{- else if is "Data" . }}
 type {{.Name|title}}

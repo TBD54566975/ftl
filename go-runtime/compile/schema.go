@@ -511,15 +511,23 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	}
 }
 
-// maybeErrorOnInvalidEnumMixing identifies the invalid enum usage pattern where type enums and
-// value get mixed incorrectly:
+// maybeErrorOnInvalidEnumMixing ensures value enums are not set as variants of type enums.
+// How this gets parsed:
 //
 // //ftl:enum
 // type TypeEnum interface { typeEnum() }
 //
 // type BadValueEnum int
-// func (BadValueEnum) typeEnum() {} // This causes BadValueEnum to be parsed as a TypeEnum variant
-// const A BadValueEnum = 1 // This line should error because BadValueEnum is not in pctx.enums
+//
+// // This line causes BadValueEnum to be parsed as a TypeEnum variant. At this point, we
+// // cannot determine if BadValueEnum is intended to be a value enum, so we must treat it
+// // as any other type enum variant.
+// func (BadValueEnum) typeEnum() {}
+//
+// // This line will error because this is where we find out that BadValueEnum is intended
+// // to be a value enum, but value enums cannot be variants of type enums. BadValueEnum
+// // is not in pctx.enums.
+// const A BadValueEnum = 1
 func maybeErrorOnInvalidEnumMixing(pctx *parseContext, node *ast.ValueSpec, enumName string) {
 	for _, enum := range pctx.enums {
 		for _, variant := range enum.Variants {

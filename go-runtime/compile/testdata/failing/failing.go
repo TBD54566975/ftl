@@ -29,6 +29,14 @@ const (
 	A BadValueEnum = iota
 )
 
+type BadValueEnumOrderDoesntMatter int
+
+const (
+	A BadValueEnumOrderDoesntMatter = iota
+)
+
+func (BadValueEnumOrderDoesntMatter) typeEnum() {}
+
 type Request struct {
 	BadParam error
 }
