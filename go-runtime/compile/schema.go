@@ -403,10 +403,10 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl) bool {
 			// and pctx.enumInterfaces.
 			if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
 				if types.Implements(named, interfaceNode) {
-					if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type)).Get(); ok {
+					if typ, ok := visitType(pctx, node.Pos(), named).Get(); ok {
 						enumVariant.Value = &schema.TypeValue{Value: typ}
 					} else {
-						pctx.errors.add(errorf(node, "unsupported type %q", pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
+						pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
 					}
 					pctx.enums[enumName].Variants = append(pctx.enums[enumName].Variants, enumVariant)
 					return true
@@ -463,7 +463,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 							pctx.enums[t.Name.Name] = enum
 							pctx.nativeNames[enum] = t.Name.Name
 						} else {
-							pctx.errors.add(errorf(node, "unsupported type %q",
+							pctx.errors.add(errorf(node, "unsupported type %q for value enum",
 								pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
 						}
 					case *types.Interface:
@@ -477,7 +477,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						if typ, ok := typ.(*types.Interface); ok {
 							pctx.enumInterfaces[t.Name.Name] = typ
 						} else {
-							pctx.errors.add(errorf(node, "unsupported type %q", typ))
+							pctx.errors.add(errorf(node, "expected interface for type enum but got %q", typ))
 						}
 					}
 					visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)

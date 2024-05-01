@@ -30,9 +30,13 @@ func (List) typeEnum() {}
 type Exported struct {
 }
 
+func (Exported) typeEnum() {}
+
 type User struct {
 	Name string
 }
+
+func (User) typeEnum() {}
 
 type Payload[T any] struct {
 	Body T
