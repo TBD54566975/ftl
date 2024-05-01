@@ -14,12 +14,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-type DBType int32
-
-const (
-	DBTypePostgres = DBType(modulecontext.DBTypePostgres)
-)
-
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...func(context.Context) error) context.Context {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
@@ -43,31 +37,39 @@ func Context(options ...func(context.Context) error) context.Context {
 
 // WithConfig sets a configuration for the current module
 //
-// To be used with Context(...)
-func WithConfig(name string, value any) func(context.Context) error {
+// To be used when setting up a context for a test:
+// ctx := ftltest.Context(
+//
+//	ftltest.WithConfig(exampleEndpoint, "https://example.com"),
+//	... other options
+//
+// )
+func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) func(context.Context) error {
 	return func(ctx context.Context) error {
+		if config.Module != ftl.Module() {
+			return fmt.Errorf("config %v does not match current module %s", config.Module, ftl.Module())
+		}
 		cm := cf.ConfigFromContext(ctx)
-		return cm.Set(ctx, cf.Ref{Module: optional.Some(ftl.Module()), Name: name}, value)
+		return cm.Set(ctx, cf.Ref{Module: optional.Some(config.Module), Name: config.Name}, value)
 	}
 }
 
 // WithSecret sets a secret for the current module
 //
-// To be used with Context(...)
-func WithSecret(name string, value any) func(context.Context) error {
-	return func(ctx context.Context) error {
-		cm := cf.SecretsFromContext(ctx)
-		return cm.Set(ctx, cf.Ref{Module: optional.Some(ftl.Module()), Name: name}, value)
-	}
-}
-
-// WithDSN sets a DSN for the current module
+// To be used when setting up a context for a test:
+// ctx := ftltest.Context(
 //
-// To be used with Context(...)
-func WithDSN(name string, dbType DBType, dsn string) func(context.Context) error {
+//	ftltest.WithSecret(privateKey, "abc123"),
+//	... other options
+//
+// )
+func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(context.Context) error {
 	return func(ctx context.Context) error {
-		dbProvider := modulecontext.DBProviderFromContext(ctx)
-		return dbProvider.Add(name, modulecontext.DBType(dbType), dsn)
+		if secret.Module != ftl.Module() {
+			return fmt.Errorf("secret %v does not match current module %s", secret.Module, ftl.Module())
+		}
+		sm := cf.SecretsFromContext(ctx)
+		return sm.Set(ctx, cf.Ref{Module: optional.Some(secret.Module), Name: secret.Name}, value)
 	}
 }
 

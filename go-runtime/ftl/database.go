@@ -11,13 +11,15 @@ import (
 )
 
 type Database struct {
-	Name string
+	Name   string
+	DBType modulecontext.DBType
 }
 
 // PostgresDatabase returns a handler for the named database.
 func PostgresDatabase(name string) Database {
 	return Database{
-		Name: name,
+		Name:   name,
+		DBType: modulecontext.DBTypePostgres,
 	}
 }
 
