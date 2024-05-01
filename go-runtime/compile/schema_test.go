@@ -140,7 +140,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.NoError(t, err)
 	actual = schema.Normalise(actual)
 	expected := `module two {
-		enum TwoEnum: String {
+		export enum TwoEnum: String {
 		  Red = "Red"
 		  Blue = "Blue"
 		  Green = "Green"
@@ -149,24 +149,24 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		data Exported {
 		}
 
-		data Payload<T> {
+		export data Payload<T> {
 		  body T
 		}
 
-		data User {
+		export data User {
 		  name String
 		}
 
-		data UserResponse {
+		export data UserResponse {
 		  user two.User
 		}
 
-		verb callsTwo(two.Payload<String>) two.Payload<String>
+		export verb callsTwo(two.Payload<String>) two.Payload<String>
 			+calls two.two
 
-		verb returnsUser(Unit) two.UserResponse
+		export verb returnsUser(Unit) two.UserResponse
 
-		verb two(two.Payload<String>) two.Payload<String>
+		export verb two(two.Payload<String>) two.Payload<String>
 	  }
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))

@@ -82,6 +82,33 @@ func exec(cmd string, args ...string) action {
 	}
 }
 
+// execWithOutput runs a command from the test working directory.
+// The output is captured and is returned as part of the error.
+func execWithOutput(cmd string, args ...string) action {
+	return func(t testing.TB, ic testContext) error {
+		infof("Executing: %s %s", cmd, shellquote.Join(args...))
+		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
+		if err != nil {
+			return fmt.Errorf("command execution failed: %s, output: %s", err, string(output))
+		}
+		return nil
+	}
+}
+
+// expectError wraps an action and expects it to return an error with the given message.
+func expectError(action action, expectedErrorMsg string) action {
+	return func(t testing.TB, ic testContext) error {
+		err := action(t, ic)
+		if err == nil {
+			return fmt.Errorf("expected error %q, but got nil", expectedErrorMsg)
+		}
+		if !strings.Contains(err.Error(), expectedErrorMsg) {
+			return fmt.Errorf("expected error %q, but got %q", expectedErrorMsg, err.Error())
+		}
+		return nil
+	}
+}
+
 // Deploy a module from the working directory and wait for it to become available.
 func deploy(module string) action {
 	return chain(
