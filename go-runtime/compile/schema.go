@@ -386,9 +386,16 @@ func goNodePosToSchemaPos(node ast.Node) (schema.Position, int) {
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}, fset.Position(node.End()).Column
 }
 
-func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, isExported bool) bool {
+func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives []directive) bool {
 	if len(node.Specs) != 1 {
 		return false
+	}
+	// If any directives on this node are exported, then the node is considered exported for type enum variant purposes
+	isExported := false
+	for _, dir := range directives {
+		if exportableDir, ok := dir.(exportable); ok {
+			isExported = isExported || exportableDir.IsExported()
+		}
 	}
 	// `type NAME TYPE` e.g. type Scalar string
 	if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
@@ -420,24 +427,14 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, isExported
 func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	switch node.Tok {
 	case token.TYPE:
-		if node.Doc == nil {
-			_ = maybeVisitTypeEnumVariant(pctx, node, false)
-			return
-		}
 		directives, err := parseDirectives(node, fset, node.Doc)
 		if err != nil {
 			pctx.errors.add(err)
 		}
-
-		// If any directives on this node are exported, then the node is
-		// considered exported for type enum variant purposes
-		enumVarIsExported := false
-		for _, dir := range directives {
-			if exportableDir, ok := dir.(exportable); ok {
-				enumVarIsExported = enumVarIsExported || exportableDir.IsExported()
-			}
+		if maybeVisitTypeEnumVariant(pctx, node, directives) {
+			return
 		}
-		if maybeVisitTypeEnumVariant(pctx, node, enumVarIsExported) {
+		if node.Doc == nil {
 			return
 		}
 

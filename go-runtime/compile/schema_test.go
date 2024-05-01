@@ -153,7 +153,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  User two.User
 		}
 
-		data Exported {
+		export data Exported {
 		}
 
 		data Payload<T> {

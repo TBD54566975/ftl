@@ -26,7 +26,7 @@ type List []string
 
 func (List) typeEnum() {}
 
-//ftl:data
+//ftl:data export
 type Exported struct {
 }
 

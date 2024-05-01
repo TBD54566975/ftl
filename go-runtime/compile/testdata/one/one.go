@@ -50,17 +50,6 @@ const (
 	Third
 )
 
-//ftl:enum
-type ScalarOrList interface{ scalarOrList() }
-
-type Scalar string
-
-func (Scalar) scalarOrList() {}
-
-type List []string
-
-func (List) scalarOrList() {}
-
 type Nested struct {
 }
 
