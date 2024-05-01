@@ -61,12 +61,6 @@ type List []string
 
 func (List) scalarOrList() {}
 
-const (
-	First IotaExpr = iota*2 + 1
-	Second
-	Third
-)
-
 type Nested struct {
 }
 

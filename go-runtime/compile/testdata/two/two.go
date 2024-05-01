@@ -16,15 +16,15 @@ const (
 )
 
 //ftl:enum
-type TwoTypeEnum interface{ twoTypeEnum() }
+type TypeEnum interface{ typeEnum() }
 
 type Scalar string
 
-func (Scalar) twoTypeEnum() {}
+func (Scalar) typeEnum() {}
 
 type List []string
 
-func (List) twoTypeEnum() {}
+func (List) typeEnum() {}
 
 //ftl:data
 type Exported struct {

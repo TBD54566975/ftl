@@ -18,6 +18,17 @@ var duplSecret = ftl.Secret[string]("FTL_ENDPOINT")
 var goodDB = ftl.PostgresDatabase("testDb")
 var duplDB = ftl.PostgresDatabase("testDb")
 
+//ftl:enum
+type TypeEnum interface{ typeEnum() }
+
+type BadValueEnum int
+
+func (BadValueEnum) typeEnum() {}
+
+const (
+	A BadValueEnum = iota
+)
+
 type Request struct {
 	BadParam error
 }

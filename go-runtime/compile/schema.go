@@ -452,20 +452,20 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
 					switch typ.Underlying().(type) {
 					case *types.Basic:
-						enum := &schema.Enum{
-							Pos:      goPosToSchemaPos(node.Pos()),
-							Comments: visitComments(node.Doc),
-							Name:     strcase.ToUpperCamel(t.Name.Name),
-							Export:   isExported,
-						}
 						if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type), isExported).Get(); ok {
-							enum.Type = typ
+							enum := &schema.Enum{
+								Pos:      goPosToSchemaPos(node.Pos()),
+								Comments: visitComments(node.Doc),
+								Name:     strcase.ToUpperCamel(t.Name.Name),
+								Type:     typ,
+								Export:   isExported,
+							}
+							pctx.enums[t.Name.Name] = enum
+							pctx.nativeNames[enum] = t.Name.Name
 						} else {
 							pctx.errors.add(errorf(node, "unsupported type %q",
 								pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
 						}
-						pctx.enums[t.Name.Name] = enum
-						pctx.nativeNames[enum] = t.Name.Name
 					case *types.Interface:
 						enum := &schema.Enum{
 							Pos:      goPosToSchemaPos(node.Pos()),
@@ -511,12 +511,33 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	}
 }
 
+// maybeErrorOnInvalidEnumMixing identifies the invalid enum usage pattern where type enums and
+// value get mixed incorrectly:
+//
+// //ftl:enum
+// type TypeEnum interface { typeEnum() }
+//
+// type BadValueEnum int
+// func (BadValueEnum) typeEnum() {} // This causes BadValueEnum to be parsed as a TypeEnum variant
+// const A BadValueEnum = 1 // This line should error because BadValueEnum is not in pctx.enums
+func maybeErrorOnInvalidEnumMixing(pctx *parseContext, node *ast.ValueSpec, enumName string) {
+	for _, enum := range pctx.enums {
+		for _, variant := range enum.Variants {
+			if variant.Name == enumName {
+				pctx.errors.add(errorf(node, "cannot attach enum value to %s because it is a variant of type enum %s, not a value enum", enumName, enum.Name))
+			}
+		}
+	}
+}
+
 func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 	var enum *schema.Enum
-	if i, ok := node.Type.(*ast.Ident); ok {
+	i, ok := node.Type.(*ast.Ident)
+	if ok {
 		enum = pctx.enums[i.Name]
 	}
 	if enum == nil {
+		maybeErrorOnInvalidEnumMixing(pctx, node, i.Name)
 		return
 	}
 	c, ok := pctx.pkg.TypesInfo.Defs[node.Names[0]].(*types.Const)
