@@ -300,6 +300,8 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			switch e.Variants[0].Value.(type) {
 			case *schema.IntValue, *schema.StringValue:
 				return true
+			case *schema.TypeValue:
+				return false
 			}
 		}
 		return false
@@ -310,6 +312,8 @@ var scaffoldFuncs = scaffolder.FuncMap{
 				return false
 			}
 			switch e.Variants[0].Value.(type) {
+			case *schema.IntValue, *schema.StringValue:
+				return false
 			case *schema.TypeValue:
 				return true
 			}
