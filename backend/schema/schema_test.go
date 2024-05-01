@@ -22,7 +22,7 @@ module todo {
   config configValue String
   secret secretValue String
 
-  database testdb
+  postgres database testdb
 
   data CreateRequest {
     name {String: String}? +alias json "rqn"
@@ -387,7 +387,7 @@ func TestParseModule(t *testing.T) {
 module todo {
   config configValue String
   secret secretValue String
-  database testdb
+  postgres database testdb
 
   data CreateRequest {
     name {String: String}? +alias json "rqn"
@@ -467,6 +467,7 @@ var testSchema = MustValidate(&Schema{
 				},
 				&Database{
 					Name: "testdb",
+					Type: "postgres",
 				},
 				&Data{
 					Name: "CreateRequest",

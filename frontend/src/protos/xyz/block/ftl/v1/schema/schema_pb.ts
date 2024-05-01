@@ -298,6 +298,11 @@ export class Database extends Message<Database> {
    */
   comments: string[] = [];
 
+  /**
+   * @generated from field: string type = 4;
+   */
+  type = "";
+
   constructor(data?: PartialMessage<Database>) {
     super();
     proto3.util.initPartial(data, this);
@@ -309,6 +314,7 @@ export class Database extends Message<Database> {
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Database {

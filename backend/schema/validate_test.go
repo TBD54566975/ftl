@@ -233,8 +233,8 @@ func TestValidate(t *testing.T) {
 		{name: "DuplicateDatabases",
 			schema: `
 				module one {
-                                        database MY_DB
-                                        database MY_DB
+                                        postgres database MY_DB
+                                        postgres database MY_DB
 				}
 			`,
 			errs: []string{
