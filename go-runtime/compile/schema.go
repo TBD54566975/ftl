@@ -398,26 +398,28 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 		}
 	}
 	// `type NAME TYPE` e.g. type Scalar string
-	if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
-		enumVariant := &schema.EnumVariant{
-			Pos:      goPosToSchemaPos(node.Pos()),
-			Comments: visitComments(node.Doc),
-			Name:     strcase.ToUpperCamel(t.Name.Name),
-		}
-		for enumName, interfaceNode := range pctx.enumInterfaces {
-			// If the type declared is an enum variant, then it must implement
-			// the interface of a type enum we've already read into pctx.enums
-			// and pctx.enumInterfaces.
-			if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
-				if types.Implements(named, interfaceNode) {
-					if typ, ok := visitType(pctx, node.Pos(), named, isExported).Get(); ok {
-						enumVariant.Value = &schema.TypeValue{Value: typ}
-					} else {
-						pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
-					}
-					pctx.enums[enumName].Variants = append(pctx.enums[enumName].Variants, enumVariant)
-					return true
+	t, ok := node.Specs[0].(*ast.TypeSpec)
+	if !ok {
+		return false
+	}
+	enumVariant := &schema.EnumVariant{
+		Pos:      goPosToSchemaPos(node.Pos()),
+		Comments: visitComments(node.Doc),
+		Name:     strcase.ToUpperCamel(t.Name.Name),
+	}
+	for enumName, interfaceNode := range pctx.enumInterfaces {
+		// If the type declared is an enum variant, then it must implement
+		// the interface of a type enum we've already read into pctx.enums
+		// and pctx.enumInterfaces.
+		if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
+			if types.Implements(named, interfaceNode) {
+				if typ, ok := visitType(pctx, node.Pos(), named, isExported).Get(); ok {
+					enumVariant.Value = &schema.TypeValue{Value: typ}
+				} else {
+					pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
 				}
+				pctx.enums[enumName].Variants = append(pctx.enums[enumName].Variants, enumVariant)
+				return true
 			}
 		}
 	}
