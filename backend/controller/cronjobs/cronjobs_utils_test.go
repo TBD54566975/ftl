@@ -252,8 +252,10 @@ func testServiceWithDal(ctx context.Context, t *testing.T, dal ExtendedDAL, clk 
 		time.Sleep(time.Second * 2 * 3)
 	}
 
+	verbCallCountLock.Lock()
 	for _, j := range jobsToCreate {
 		count := verbCallCount[j.Verb.Name]
 		assert.Equal(t, count, 3, "expected verb %s to be called 3 times", j.Verb.Name)
 	}
+	verbCallCountLock.Unlock()
 }
