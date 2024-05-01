@@ -24,6 +24,10 @@ type directiveWrapper struct {
 //sumtype:decl
 type directive interface{ directive() }
 
+type exportable interface {
+	IsExported() bool
+}
+
 type directiveVerb struct {
 	Pos lexer.Position
 
@@ -37,6 +41,9 @@ func (d *directiveVerb) String() string {
 		return "ftl:verb export"
 	}
 	return "ftl:verb"
+}
+func (d *directiveVerb) IsExported() bool {
+	return d.Export
 }
 
 type directiveData struct {
@@ -53,6 +60,9 @@ func (d *directiveData) String() string {
 	}
 	return "ftl:data"
 }
+func (d *directiveData) IsExported() bool {
+	return d.Export
+}
 
 type directiveEnum struct {
 	Pos lexer.Position
@@ -67,6 +77,9 @@ func (d *directiveEnum) String() string {
 		return "ftl:enum export"
 	}
 	return "ftl:enum"
+}
+func (d *directiveEnum) IsExported() bool {
+	return d.Export
 }
 
 type directiveIngress struct {

@@ -34,10 +34,11 @@ message Config {
 message Data {
   optional Position pos = 1;
   repeated string comments = 2;
-  string name = 3;
-  repeated Field fields = 4;
-  repeated Metadata metadata = 5;
-  repeated TypeParameter typeParameters = 6;
+  bool export = 3;
+  string name = 4;
+  repeated TypeParameter typeParameters = 5;
+  repeated Field fields = 6;
+  repeated Metadata metadata = 7;
 }
 
 message Database {
@@ -61,9 +62,10 @@ message Decl {
 message Enum {
   optional Position pos = 1;
   repeated string comments = 2;
-  string name = 3;
-  optional Type type = 4;
-  repeated EnumVariant variants = 5;
+  bool export = 3;
+  string name = 4;
+  optional Type type = 5;
+  repeated EnumVariant variants = 6;
 }
 
 message EnumVariant {
@@ -260,9 +262,10 @@ message Verb {
   optional VerbRuntime runtime = 31634;
 
   optional Position pos = 1;
-  string name = 2;
-  repeated string comments = 3;
-  Type request = 4;
-  Type response = 5;
-  repeated Metadata metadata = 6;
+  repeated string comments = 2;
+  bool export = 3;
+  string name = 4;
+  Type request = 5;
+  Type response = 6;
+  repeated Metadata metadata = 7;
 }

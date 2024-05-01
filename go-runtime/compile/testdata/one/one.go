@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
+	"ftl/builtin"
 	"ftl/two"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-//ftl:enum
+//ftl:enum export
 type Color string
 
 const (
@@ -73,6 +74,11 @@ type Config struct {
 	Field string
 }
 
+//ftl:data export
+type ExportedData struct {
+	Field string
+}
+
 var configValue = ftl.Config[Config]("configValue")
 var secretValue = ftl.Secret[string]("secretValue")
 var testDb = ftl.PostgresDatabase("testDb")
@@ -100,7 +106,12 @@ func Source(ctx context.Context) (SourceResp, error) {
 	return SourceResp{}, nil
 }
 
-//ftl:verb
+//ftl:verb export
 func Nothing(ctx context.Context) error {
 	return nil
+}
+
+//ftl:ingress http GET /get
+func Http(ctx context.Context, req builtin.HttpRequest[Req]) (builtin.HttpResponse[Resp, ftl.Unit], error) {
+	return builtin.HttpResponse[Resp, ftl.Unit]{}, nil
 }

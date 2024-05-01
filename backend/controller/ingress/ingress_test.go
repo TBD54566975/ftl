@@ -94,7 +94,7 @@ func TestValidation(t *testing.T) {
 			schema:  `module test { data Nested { intValue Int } data Test { mapValue {String: test.Nested} } }`,
 			request: obj{"mapValue": obj{"key1": obj{"intValue": 10.0}, "key2": obj{"intValue": 20.0}}}},
 		{name: "OtherModuleRef",
-			schema:  `module other { data Other { intValue Int } } module test { data Test { otherRef other.Other } }`,
+			schema:  `module other { export data Other { intValue Int } } module test { data Test { otherRef other.Other } }`,
 			request: obj{"otherRef": obj{"intValue": 10.0}}},
 		{name: "AllowedMissingFieldTypes",
 			schema: `

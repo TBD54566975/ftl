@@ -42,7 +42,8 @@ func (d *Database) ToProto() proto.Message {
 	}
 }
 
-func (d *Database) GetName() string { return d.Name }
+func (d *Database) GetName() string  { return d.Name }
+func (d *Database) IsExported() bool { return false }
 
 func DatabaseFromProto(s *schemapb.Database) *Database {
 	return &Database{

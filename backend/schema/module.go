@@ -174,7 +174,8 @@ func (m *Module) ToProto() proto.Message {
 	}
 }
 
-func (m *Module) GetName() string { return m.Name }
+func (m *Module) GetName() string  { return m.Name }
+func (m *Module) IsExported() bool { return false }
 
 // ModuleFromProtoFile loads a module from the given proto-encoded file.
 func ModuleFromProtoFile(filename string) (*Module, error) {

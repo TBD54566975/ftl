@@ -13,11 +13,12 @@ import (
 type Verb struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string   `parser:"@Comment*" protobuf:"3"`
-	Name     string     `parser:"'verb' @Ident" protobuf:"2"`
-	Request  Type       `parser:"'(' @@ ')'" protobuf:"4"`
-	Response Type       `parser:"@@" protobuf:"5"`
-	Metadata []Metadata `parser:"@@*" protobuf:"6"`
+	Comments []string   `parser:"@Comment*" protobuf:"2"`
+	Export   bool       `parser:"@'export'?" protobuf:"3"`
+	Name     string     `parser:"'verb' @Ident" protobuf:"4"`
+	Request  Type       `parser:"'(' @@ ')'" protobuf:"5"`
+	Response Type       `parser:"@@" protobuf:"6"`
+	Metadata []Metadata `parser:"@@*" protobuf:"7"`
 }
 
 var _ Decl = (*Verb)(nil)
@@ -36,11 +37,15 @@ func (v *Verb) schemaChildren() []Node {
 	return children
 }
 
-func (v *Verb) GetName() string { return v.Name }
+func (v *Verb) GetName() string  { return v.Name }
+func (v *Verb) IsExported() bool { return v.Export }
 
 func (v *Verb) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(v.Comments))
+	if v.Export {
+		fmt.Fprint(w, "export ")
+	}
 	fmt.Fprintf(w, "verb %s(%s) %s", v.Name, v.Request, v.Response)
 	fmt.Fprint(w, indent(encodeMetadata(v.Metadata)))
 	return w.String()
@@ -78,6 +83,7 @@ func (v *Verb) GetMetadataCronJob() optional.Option[*MetadataCronJob] {
 func (v *Verb) ToProto() proto.Message {
 	return &schemapb.Verb{
 		Pos:      posToProto(v.Pos),
+		Export:   v.Export,
 		Name:     v.Name,
 		Comments: v.Comments,
 		Request:  typeToProto(v.Request),
@@ -89,6 +95,7 @@ func (v *Verb) ToProto() proto.Message {
 func VerbFromProto(s *schemapb.Verb) *Verb {
 	return &Verb{
 		Pos:      posFromProto(s.Pos),
+		Export:   s.Export,
 		Name:     s.Name,
 		Comments: s.Comments,
 		Request:  typeToSchema(s.Request),

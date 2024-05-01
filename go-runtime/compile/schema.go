@@ -236,7 +236,7 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 
 	// Type parameter
 	tp := pctx.pkg.TypesInfo.Types[index.Index].Type
-	st, ok := visitType(pctx, index.Index.Pos(), tp).Get()
+	st, ok := visitType(pctx, index.Index.Pos(), tp, false).Get()
 	if !ok {
 		pctx.errors.add(errorf(index.Index, "unsupported type %q", tp))
 		return
@@ -409,14 +409,19 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					pctx.errors.add(errorf(node, "ftl directive must be in the module package"))
 					return
 				}
+				isExported := false
+				if exportableDir, ok := dir.(exportable); ok {
+					isExported = exportableDir.IsExported()
+				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
 					if _, ok := pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying().(*types.Basic); ok {
 						enum := &schema.Enum{
 							Pos:      goPosToSchemaPos(node.Pos()),
 							Comments: visitComments(node.Doc),
 							Name:     strcase.ToUpperCamel(t.Name.Name),
+							Export:   isExported,
 						}
-						if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type)).Get(); ok {
+						if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type), isExported).Get(); ok {
 							enum.Type = typ
 						} else {
 							pctx.errors.add(errorf(node, "unsupported type %q",
@@ -425,7 +430,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						pctx.enums[t.Name.Name] = enum
 						pctx.nativeNames[enum] = t.Name.Name
 					}
-					visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type())
+					visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
 				}
 
 			case *directiveIngress, *directiveCronJob:
@@ -493,10 +498,12 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	}
 	var metadata []schema.Metadata
 	isVerb := false
+	isExported := false
 	for _, dir := range directives {
 		switch dir := dir.(type) {
 		case *directiveVerb:
 			isVerb = true
+			isExported = dir.Export
 			if pctx.module.Name == "" {
 				pctx.module.Name = pctx.pkg.Name
 			} else if pctx.module.Name != pctx.pkg.Name {
@@ -504,6 +511,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 			}
 		case *directiveIngress:
 			isVerb = true
+			isExported = true
 			typ := dir.Type
 			if typ == "" {
 				typ = "http"
@@ -516,6 +524,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 			})
 		case *directiveCronJob:
 			isVerb = true
+			isExported = false
 			metadata = append(metadata, &schema.MetadataCronJob{
 				Pos:  dir.Pos,
 				Cron: dir.Cron,
@@ -547,13 +556,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 
 	var req optional.Option[schema.Type]
 	if reqt.Ok() {
-		req = visitType(pctx, node.Pos(), params.At(1).Type())
+		req = visitType(pctx, node.Pos(), params.At(1).Type(), isExported)
 	} else {
 		req = optional.Some[schema.Type](&schema.Unit{})
 	}
 	var resp optional.Option[schema.Type]
 	if respt.Ok() {
-		resp = visitType(pctx, node.Pos(), results.At(0).Type())
+		resp = visitType(pctx, node.Pos(), results.At(0).Type(), isExported)
 	} else {
 		resp = optional.Some[schema.Type](&schema.Unit{})
 	}
@@ -570,6 +579,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	verb = &schema.Verb{
 		Pos:      goPosToSchemaPos(node.Pos()),
 		Comments: visitComments(node.Doc),
+		Export:   isExported,
 		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  reqV,
 		Response: resV,
@@ -596,7 +606,7 @@ func ftlModuleFromGoModule(pkgPath string) optional.Option[string] {
 	return optional.Some(strings.TrimSuffix(parts[1], "_test"))
 }
 
-func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Option[*schema.Ref] {
+func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type, isExported bool) optional.Option[*schema.Ref] {
 	named, ok := tnode.(*types.Named)
 	if !ok {
 		pctx.errors.add(noEndColumnErrorf(pos, "expected named type but got %s", tnode))
@@ -615,7 +625,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 			Name:   named.Obj().Name(),
 		}
 		for i := range named.TypeArgs().Len() {
-			if typeArg, ok := visitType(pctx, pos, named.TypeArgs().At(i)).Get(); ok {
+			if typeArg, ok := visitType(pctx, pos, named.TypeArgs().At(i), isExported).Get(); ok {
 				// Fully qualify the Ref if needed
 				if ref, okArg := typeArg.(*schema.Ref); okArg {
 					if ref.Module == "" {
@@ -630,8 +640,9 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 	}
 
 	out := &schema.Data{
-		Pos:  goPosToSchemaPos(pos),
-		Name: strcase.ToUpperCamel(named.Obj().Name()),
+		Pos:    goPosToSchemaPos(pos),
+		Name:   strcase.ToUpperCamel(named.Obj().Name()),
+		Export: isExported,
 	}
 	pctx.nativeNames[out] = named.Obj().Name()
 	dataRef := &schema.Ref{
@@ -645,7 +656,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 			Pos:  goPosToSchemaPos(pos),
 			Name: param.Obj().Name(),
 		})
-		if typeArg, ok := visitType(pctx, pos, named.TypeArgs().At(i)).Get(); ok {
+		if typeArg, ok := visitType(pctx, pos, named.TypeArgs().At(i), isExported).Get(); ok {
 			dataRef.TypeParameters = append(dataRef.TypeParameters, typeArg)
 		}
 	}
@@ -686,7 +697,7 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type) optional.O
 	fieldErrors := false
 	for i := range s.NumFields() {
 		f := s.Field(i)
-		if ft, ok := visitType(pctx, f.Pos(), f.Type()).Get(); ok {
+		if ft, ok := visitType(pctx, f.Pos(), f.Type(), isExported).Get(); ok {
 			// Check if field is exported
 			if len(f.Name()) > 0 && unicode.IsLower(rune(f.Name()[0])) {
 				pctx.errors.add(tokenErrorf(f.Pos(), f.Name(),
@@ -754,14 +765,14 @@ func visitConst(pctx *parseContext, cnode *types.Const) optional.Option[schema.V
 	return optional.None[schema.Value]()
 }
 
-func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Option[schema.Type] {
+func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported bool) optional.Option[schema.Type] {
 	if tparam, ok := tnode.(*types.TypeParam); ok {
 		return optional.Some[schema.Type](&schema.Ref{Pos: goPosToSchemaPos(pos), Name: tparam.Obj().Id()})
 	}
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		if named, ok := tnode.(*types.Named); ok {
-			if _, ok := visitType(pctx, pos, named.Underlying()).Get(); !ok {
+			if _, ok := visitType(pctx, pos, named.Underlying(), isExported).Get(); !ok {
 				return optional.None[schema.Type]()
 			}
 			nodePath := named.Obj().Pkg().Path()
@@ -810,7 +821,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 	case *types.Struct:
 		named, ok := tnode.(*types.Named)
 		if !ok {
-			if ref, ok := visitStruct(pctx, pos, tnode).Get(); ok {
+			if ref, ok := visitStruct(pctx, pos, tnode, isExported).Get(); ok {
 				return optional.Some[schema.Type](ref)
 			}
 			return optional.None[schema.Type]()
@@ -825,7 +836,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 			return optional.Some[schema.Type](&schema.Unit{Pos: goPosToSchemaPos(pos)})
 
 		case "github.com/TBD54566975/ftl/go-runtime/ftl.Option":
-			if underlying, ok := visitType(pctx, pos, named.TypeArgs().At(0)).Get(); ok {
+			if underlying, ok := visitType(pctx, pos, named.TypeArgs().At(0), isExported).Get(); ok {
 				return optional.Some[schema.Type](&schema.Optional{Pos: goPosToSchemaPos(pos), Type: underlying})
 			}
 			return optional.None[schema.Type]()
@@ -836,17 +847,17 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 				pctx.errors.add(noEndColumnErrorf(pos, "unsupported external type %s", nodePath+"."+named.Obj().Name()))
 				return optional.None[schema.Type]()
 			}
-			if ref, ok := visitStruct(pctx, pos, tnode).Get(); ok {
+			if ref, ok := visitStruct(pctx, pos, tnode, isExported).Get(); ok {
 				return optional.Some[schema.Type](ref)
 			}
 			return optional.None[schema.Type]()
 		}
 
 	case *types.Map:
-		return visitMap(pctx, pos, underlying)
+		return visitMap(pctx, pos, underlying, isExported)
 
 	case *types.Slice:
-		return visitSlice(pctx, pos, underlying)
+		return visitSlice(pctx, pos, underlying, isExported)
 
 	case *types.Interface:
 		if underlying.String() == "any" {
@@ -859,13 +870,13 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type) optional.Opt
 	}
 }
 
-func visitMap(pctx *parseContext, pos token.Pos, tnode *types.Map) optional.Option[schema.Type] {
-	key, ok := visitType(pctx, pos, tnode.Key()).Get()
+func visitMap(pctx *parseContext, pos token.Pos, tnode *types.Map, isExported bool) optional.Option[schema.Type] {
+	key, ok := visitType(pctx, pos, tnode.Key(), isExported).Get()
 	if !ok {
 		return optional.None[schema.Type]()
 	}
 
-	value, ok := visitType(pctx, pos, tnode.Elem()).Get()
+	value, ok := visitType(pctx, pos, tnode.Elem(), isExported).Get()
 	if !ok {
 		return optional.None[schema.Type]()
 	}
@@ -877,12 +888,12 @@ func visitMap(pctx *parseContext, pos token.Pos, tnode *types.Map) optional.Opti
 	})
 }
 
-func visitSlice(pctx *parseContext, pos token.Pos, tnode *types.Slice) optional.Option[schema.Type] {
+func visitSlice(pctx *parseContext, pos token.Pos, tnode *types.Slice, isExported bool) optional.Option[schema.Type] {
 	// If it's a []byte, treat it as a Bytes type.
 	if basic, ok := tnode.Elem().Underlying().(*types.Basic); ok && basic.Kind() == types.Byte {
 		return optional.Some[schema.Type](&schema.Bytes{Pos: goPosToSchemaPos(pos)})
 	}
-	value, ok := visitType(pctx, pos, tnode.Elem()).Get()
+	value, ok := visitType(pctx, pos, tnode.Elem(), isExported).Get()
 	if !ok {
 		return optional.None[schema.Type]()
 	}

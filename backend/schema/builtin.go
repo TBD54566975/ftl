@@ -7,7 +7,7 @@ const BuiltinsSource = `
 // Built-in types for FTL.
 builtin module builtin {
   // HTTP request structure used for HTTP ingress verbs.
-  data HttpRequest<Body> {
+  export data HttpRequest<Body> {
     method String
     path String
     pathParameters {String: String}
@@ -17,7 +17,7 @@ builtin module builtin {
   }
 
   // HTTP response structure used for HTTP ingress verbs.
-  data HttpResponse<Body, Error> {
+  export data HttpResponse<Body, Error> {
     status Int
     headers {String: [String]}
     // Either "body" or "error" must be present, not both.
@@ -25,7 +25,7 @@ builtin module builtin {
     error Error?
   }
 
-  data Empty {}
+  export data Empty {}
 }
 `
 
