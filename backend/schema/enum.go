@@ -84,6 +84,13 @@ func EnumFromProto(s *schemapb.Enum) *Enum {
 	return e
 }
 
+// IsValueEnum determines whether this is a type or value enum using `e.Type` alone
+// because value enums must always have a unified type across all variants, whereas type
+// enums by definition cannot have a unified type.
+func (e *Enum) IsValueEnum() bool {
+	return e.Type != nil
+}
+
 type EnumVariant struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

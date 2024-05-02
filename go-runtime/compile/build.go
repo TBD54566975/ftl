@@ -294,29 +294,13 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"valueEnum": func(d schema.Decl) bool {
 		if e, ok := d.(*schema.Enum); ok {
-			if len(e.Variants) == 0 {
-				return false
-			}
-			switch e.Variants[0].Value.(type) {
-			case *schema.IntValue, *schema.StringValue:
-				return true
-			case *schema.TypeValue:
-				return false
-			}
+			return e.IsValueEnum()
 		}
 		return false
 	},
 	"typeEnum": func(d schema.Decl) bool {
 		if e, ok := d.(*schema.Enum); ok {
-			if len(e.Variants) == 0 {
-				return false
-			}
-			switch e.Variants[0].Value.(type) {
-			case *schema.IntValue, *schema.StringValue:
-				return false
-			case *schema.TypeValue:
-				return true
-			}
+			return !e.IsValueEnum()
 		}
 		return false
 	},
