@@ -52,6 +52,11 @@ func TestExtractModuleSchema(t *testing.T) {
 
   postgres database testDb
 
+  enum BlobOrList {
+    Blob String
+    List [String]
+  }
+
   export enum Color: String {
     Red = "Red"
     Blue = "Blue"
@@ -104,8 +109,10 @@ func TestExtractModuleSchema(t *testing.T) {
     time Time
     user two.User +alias json "u"
     bytes Bytes
-    localEnumRef one.Color
-    externalEnumRef two.TwoEnum
+    localValueEnumRef one.Color
+    localTypeEnumRef one.BlobOrList
+    externalValueEnumRef two.TwoEnum
+    externalTypeEnumRef two.TypeEnum
   }
 
   data Resp {
