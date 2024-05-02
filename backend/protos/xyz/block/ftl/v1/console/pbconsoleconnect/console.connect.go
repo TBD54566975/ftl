@@ -5,14 +5,13 @@
 package pbconsoleconnect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	http "net/http"
-	strings "strings"
-
-	connect "connectrpc.com/connect"
 	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	console "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
+	http "net/http"
+	strings "strings"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are
