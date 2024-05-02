@@ -172,7 +172,6 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  Scalar String
 		  List [String]
 		  Exported two.Exported
-		  Private two.Private
 		  WithoutDirective two.WithoutDirective
 		}
 
@@ -181,9 +180,6 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 
 		export data Payload<T> {
 		  body T
-		}
-
-		export data Private {
 		}
 
 		export data User {
@@ -328,7 +324,8 @@ func TestErrorReporting(t *testing.T) {
 			filename+":83:1-1: duplicate verb name \"WrongResponse\"\n"+
 			filename+":89:2-12: struct field unexported must be exported by starting with an uppercase letter\n"+
 			filename+":100:2-23: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum\n"+
-			filename+":106:2-40: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum",
+			filename+":106:2-40: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum\n"+
+			filename+":115:1-26: parent enum \"ExportedTypeEnum\" is exported, but directive \"ftl:data\" on \"PrivateData\" is not. All variants of exported enums that have a directive must be explicitly exported as well",
 	)
 }
 

@@ -292,18 +292,6 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		panic(fmt.Sprintf("unsupported value %T", v))
 	},
-	"valueEnum": func(d schema.Decl) bool {
-		if e, ok := d.(*schema.Enum); ok {
-			return e.IsValueEnum()
-		}
-		return false
-	},
-	"typeEnum": func(d schema.Decl) bool {
-		if e, ok := d.(*schema.Enum); ok {
-			return !e.IsValueEnum()
-		}
-		return false
-	},
 	"enumInterfaceFunc": func(e schema.Enum) string {
 		r := []rune(e.Name)
 		for i, c := range r {

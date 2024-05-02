@@ -486,15 +486,6 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 	if len(node.Specs) != 1 {
 		return false
 	}
-	// If any directives on this node are exported, then the enum variant node is
-	// considered exported. Also, if the parent enum itself is exported, then all its
-	// variants should transitively also be exported.
-	isExported := false
-	for _, dir := range directives {
-		if exportableDir, ok := dir.(exportable); ok {
-			isExported = isExported || exportableDir.IsExported()
-		}
-	}
 	// `type NAME TYPE` e.g. type Scalar string
 	t, ok := node.Specs[0].(*ast.TypeSpec)
 	if !ok {
@@ -511,7 +502,20 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 		// and pctx.enumInterfaces.
 		if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
 			if types.Implements(named, interfaceNode) {
-				if typ, ok := visitType(pctx, node.Pos(), named, isExported || pctx.enums[enumName].Export).Get(); ok {
+				// If any directives on this node are exported, then the
+				// enum variant node is considered exported. Also, if the
+				// parent enum itself is exported, then all its variants
+				// should transitively also be exported.
+				isExported := pctx.enums[enumName].Export
+				for _, dir := range directives {
+					if exportableDir, ok := dir.(exportable); ok {
+						if pctx.enums[enumName].Export && !exportableDir.IsExported() {
+							pctx.errors.add(errorf(node, "parent enum %q is exported, but directive %q on %q is not. All variants of exported enums that have a directive must be explicitly exported as well", enumName, exportableDir, t.Name.Name))
+						}
+						isExported = isExported || exportableDir.IsExported()
+					}
+				}
+				if typ, ok := visitType(pctx, node.Pos(), named, isExported).Get(); ok {
 					enumVariant.Value = &schema.TypeValue{Value: typ}
 				} else {
 					pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
@@ -869,10 +873,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 			}
 			enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
 			if doneWithVisit {
-				if enumRef != nil {
-					return optional.Some[schema.Type](enumRef)
-				}
-				return optional.None[schema.Type]()
+				return enumRef
 			}
 		}
 
@@ -941,10 +942,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 		if named, ok := tnode.(*types.Named); ok {
 			enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
 			if doneWithVisit {
-				if enumRef != nil {
-					return optional.Some[schema.Type](enumRef)
-				}
-				return optional.None[schema.Type]()
+				return enumRef
 			}
 		}
 		return optional.None[schema.Type]()
@@ -954,16 +952,16 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	}
 }
 
-func visitEnumType(pctx *parseContext, pos token.Pos, named *types.Named) (schema.Type, bool) {
+func visitEnumType(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
 	if pctx.enums[named.Obj().Name()] != nil {
-		return &schema.Ref{
+		return optional.Some[schema.Type](&schema.Ref{
 			Pos:    goPosToSchemaPos(pos),
 			Module: pctx.module.Name,
 			Name:   named.Obj().Name(),
-		}, true
+		}), true
 	}
 	if named.Obj().Pkg() == nil {
-		return nil, false
+		return optional.None[schema.Type](), false
 	}
 	nodePath := named.Obj().Pkg().Path()
 	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
@@ -973,17 +971,17 @@ func visitEnumType(pctx *parseContext, pos token.Pos, named *types.Named) (schem
 		if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
 			pctx.errors.add(noEndColumnErrorf(pos,
 				"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
-			return nil, true
+			return optional.None[schema.Type](), true
 		}
 		base := path.Dir(pctx.pkg.PkgPath)
 		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
-		return &schema.Ref{
+		return optional.Some[schema.Type](&schema.Ref{
 			Pos:    goPosToSchemaPos(pos),
 			Module: destModule,
 			Name:   named.Obj().Name(),
-		}, true
+		}), true
 	}
-	return nil, false
+	return optional.None[schema.Type](), false
 }
 
 func visitMap(pctx *parseContext, pos token.Pos, tnode *types.Map, isExported bool) optional.Option[schema.Type] {

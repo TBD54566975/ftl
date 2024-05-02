@@ -107,3 +107,11 @@ const (
 )
 
 func (BadValueEnumOrderDoesntMatter) typeEnum() {}
+
+//ftl:enum export
+type ExportedTypeEnum interface{ exportedTypeEnum() }
+
+//ftl:data
+type PrivateData struct{}
+
+func (PrivateData) exportedTypeEnum() {}
