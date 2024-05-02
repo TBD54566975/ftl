@@ -32,6 +32,15 @@ type Exported struct {
 
 func (Exported) typeEnum() {}
 
+//ftl:data
+type Private struct{}
+
+func (Private) typeEnum() {}
+
+type WithoutDirective struct{}
+
+func (WithoutDirective) typeEnum() {}
+
 type User struct {
 	Name string
 }

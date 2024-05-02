@@ -150,6 +150,8 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  Scalar String
 		  List [String]
 		  Exported two.Exported
+		  Private two.Private
+		  WithoutDirective two.WithoutDirective
 		}
 
 		export data Exported {
@@ -159,12 +161,18 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  body T
 		}
 
+		data Private {
+		}
+
 		data User {
 		  name String
 		}
 
 		data UserResponse {
 		  user two.User
+		}
+
+		data WithoutDirective {
 		}
 
 		verb callsTwo(two.Payload<String>) two.Payload<String>
