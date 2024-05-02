@@ -4,20 +4,16 @@ package encoding
 
 import (
 	"bytes"
-	"encoding"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
+	"strings"
+	"time"
+	"unicode"
 
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
-)
-
-var (
-	textMarshaler   = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
-	textUnmarshaler = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
-	jsonMarshaler   = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
-	jsonUnmarshaler = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
 )
 
 func Marshal(v any) ([]byte, error) {
@@ -31,37 +27,29 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 		w.WriteString("null")
 		return nil
 	}
+
 	t := v.Type()
+
+	// Special-cased types
 	switch {
-	case t.Kind() == reflect.Ptr && t.Elem().Implements(jsonMarshaler):
-		v = v.Elem()
-		fallthrough
-
-	case t.Implements(jsonMarshaler):
-		enc := v.Interface().(json.Marshaler) //nolint:forcetypeassert
-		data, err := enc.MarshalJSON()
+	case t == reflect.TypeFor[time.Time]():
+		data, err := json.Marshal(v.Interface().(time.Time))
 		if err != nil {
 			return err
 		}
 		w.Write(data)
 		return nil
 
-	case t.Kind() == reflect.Ptr && t.Elem().Implements(textMarshaler):
-		v = v.Elem()
-		fallthrough
-
-	case t.Implements(textMarshaler):
-		enc := v.Interface().(encoding.TextMarshaler) //nolint:forcetypeassert
-		data, err := enc.MarshalText()
-		if err != nil {
-			return err
-		}
-		data, err = json.Marshal(string(data))
+	case t == reflect.TypeFor[json.RawMessage]():
+		data, err := json.Marshal(v.Interface().(json.RawMessage))
 		if err != nil {
 			return err
 		}
 		w.Write(data)
 		return nil
+
+	case isOption(v.Type()):
+		return encodeOption(v, w)
 	}
 
 	switch v.Kind() {
@@ -105,6 +93,24 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 	default:
 		panic(fmt.Sprintf("unsupported type: %s", v.Type()))
 	}
+}
+
+var ftlOptionTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
+
+func isOption(t reflect.Type) bool {
+	return strings.HasPrefix(t.PkgPath()+"."+t.Name(), ftlOptionTypePath)
+}
+
+func encodeOption(v reflect.Value, w *bytes.Buffer) error {
+	if v.NumField() != 2 {
+		return fmt.Errorf("value cannot have type ftl.Option since it has %d fields rather than 2: %v", v.NumField(), v)
+	}
+	optionOk := v.Field(1).Bool()
+	if !optionOk {
+		w.WriteString("null")
+		return nil
+	}
+	return encodeValue(v.Field(0), w)
 }
 
 func encodeStruct(v reflect.Value, w *bytes.Buffer) error {
@@ -213,36 +219,18 @@ func Unmarshal(data []byte, v any) error {
 
 func decodeValue(d *json.Decoder, v reflect.Value) error {
 	if !v.CanSet() {
-		return fmt.Errorf("cannot set value")
+		allBytes, _ := io.ReadAll(d.Buffered())
+		return fmt.Errorf("cannot set value: %v", string(allBytes))
 	}
 
 	t := v.Type()
+
+	// Special-case types
 	switch {
-	case v.Kind() != reflect.Ptr && v.CanAddr() && v.Addr().Type().Implements(jsonUnmarshaler):
-		v = v.Addr()
-		fallthrough
-
-	case t.Implements(jsonUnmarshaler):
-		if v.IsNil() {
-			v.Set(reflect.New(t.Elem()))
-		}
-		o := v.Interface()
-		return d.Decode(&o)
-
-	case v.Kind() != reflect.Ptr && v.CanAddr() && v.Addr().Type().Implements(textUnmarshaler):
-		v = v.Addr()
-		fallthrough
-
-	case t.Implements(textUnmarshaler):
-		if v.IsNil() {
-			v.Set(reflect.New(t.Elem()))
-		}
-		dec := v.Interface().(encoding.TextUnmarshaler) //nolint:forcetypeassert
-		var s string
-		if err := d.Decode(&s); err != nil {
-			return err
-		}
-		return dec.UnmarshalText([]byte(s))
+	case t == reflect.TypeFor[time.Time]():
+		return d.Decode(v.Addr().Interface())
+	case isOption(v.Type()):
+		return decodeOption(d, v)
 	}
 
 	switch v.Kind() {
@@ -250,13 +238,15 @@ func decodeValue(d *json.Decoder, v reflect.Value) error {
 		return decodeStruct(d, v)
 
 	case reflect.Ptr:
-		if token, err := d.Token(); err != nil {
-			return err
-		} else if token == nil {
+		return handleIfNextTokenIsNull(d, func(d *json.Decoder) error {
 			v.Set(reflect.Zero(v.Type()))
 			return nil
-		}
-		return decodeValue(d, v.Elem())
+		}, func(d *json.Decoder) error {
+			if v.IsNil() {
+				v.Set(reflect.New(v.Type().Elem()))
+			}
+			return decodeValue(d, v.Elem())
+		})
 
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
@@ -276,6 +266,63 @@ func decodeValue(d *json.Decoder, v reflect.Value) error {
 	default:
 		return d.Decode(v.Addr().Interface())
 	}
+}
+
+func handleIfNextTokenIsNull(d *json.Decoder, ifNullFn func(*json.Decoder) error, elseFn func(*json.Decoder) error) error {
+	isNull, err := isNextTokenNull(d)
+	if err != nil {
+		return err
+	}
+	if isNull {
+		err = ifNullFn(d)
+		if err != nil {
+			return err
+		}
+		// Consume the null token
+		_, err := d.Token()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return elseFn(d)
+}
+
+// isNextTokenNull implements a cheap/dirty version of `Peek()`, which json.Decoder does
+// not support.
+func isNextTokenNull(d *json.Decoder) (bool, error) {
+	s, err := io.ReadAll(d.Buffered())
+	if err != nil {
+		return false, err
+	}
+	if len(s) == 0 {
+		return false, fmt.Errorf("cannot check emptystring for token \"null\"")
+	}
+	if s[0] != ':' {
+		return false, fmt.Errorf("cannot check emptystring for token \"null\"")
+	}
+	i := 1
+	for len(s) > i && unicode.IsSpace(rune(s[i])) {
+		i++
+	}
+	if len(s) < i+4 {
+		return false, nil
+	}
+	return string(s[i:i+4]) == "null", nil
+}
+
+func decodeOption(d *json.Decoder, v reflect.Value) error {
+	return handleIfNextTokenIsNull(d, func(d *json.Decoder) error {
+		v.FieldByName("Okay").SetBool(false)
+		return nil
+	}, func(d *json.Decoder) error {
+		err := decodeValue(d, v.FieldByName("Val"))
+		if err != nil {
+			return err
+		}
+		v.FieldByName("Okay").SetBool(true)
+		return nil
+	})
 }
 
 func decodeStruct(d *json.Decoder, v reflect.Value) error {
