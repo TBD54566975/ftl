@@ -86,7 +86,7 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(conte
 // )
 func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context.Context, req Req) (resp Resp, err error)) func(context.Context) error {
 	return func(ctx context.Context) error {
-		ref := ftl.CallToRef(verb)
+		ref := ftl.FuncRef(verb)
 		overrider, ok := ftl.CallOverriderFromContext(ctx)
 		if !ok {
 			return fmt.Errorf("could not override %v with a fake, context not set up with call overrider", ref)

@@ -70,6 +70,33 @@ func chain(actions ...action) action {
 	}
 }
 
+// chdir changes the test working directory to the subdirectory for the duration of the action.
+func chdir(dir string, a action) action {
+	return func(t testing.TB, ic testContext) error {
+		dir := filepath.Join(ic.workDir, dir)
+		infof("Changing directory to %s", dir)
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		ic.workDir = dir
+		err = os.Chdir(dir)
+		if err != nil {
+			return err
+		}
+		defer os.Chdir(cwd)
+		return a(t, ic)
+	}
+}
+
+// debugShell opens a new Terminal window in the test working directory.
+func debugShell() action {
+	return func(t testing.TB, ic testContext) error {
+		infof("Starting debug shell")
+		return ftlexec.Command(ic, log.Debug, ic.workDir, "open", "-n", "-W", "-a", "Terminal", ".").RunBuffered(ic)
+	}
+}
+
 // exec runs a command from the test working directory.
 func exec(cmd string, args ...string) action {
 	return func(t testing.TB, ic testContext) error {
@@ -279,6 +306,7 @@ func jsonData(t testing.TB, body interface{}) []byte {
 	return b
 }
 
+// httpCall makes an HTTP call to the running FTL ingress endpoint.
 func httpCall(method string, path string, body []byte, onResponse func(resp *httpResponse) error) action {
 	return func(t testing.TB, ic testContext) error {
 		infof("HTTP %s %s", method, path)
