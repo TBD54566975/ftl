@@ -12,7 +12,7 @@ import {{$import}}
 {{end -}}
 
 {{range .Decls}}
-
+{{- if .IsExported}}
 {{- if is "Data" . }}
 {{- if and (eq $moduleName "builtin") (eq .Name "Empty")}}
 {{.Comments|comment -}}
@@ -51,4 +51,5 @@ fun {{.Name|lowerCamel}}(context: Context, req: {{type $ .Request}}): {{type $ .
 {{- end}}
 {{- end}}
 
+{{- end}}
 {{- end}}
