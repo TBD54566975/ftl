@@ -50,23 +50,53 @@ const (
 	Third
 )
 
+//ftl:enum
+type BlobOrList interface{ blobOrList() }
+
+type Blob string
+
+func (Blob) blobOrList() {}
+
+type List []string
+
+func (List) blobOrList() {}
+
 type Nested struct {
 }
 
+//ftl:enum
+type PrivateEnum interface{ privateEnum() }
+
+//ftl:data export
+type ExportedStruct struct{}
+
+func (ExportedStruct) privateEnum() {}
+
+//ftl:data
+type PrivateStruct struct{}
+
+func (PrivateStruct) privateEnum() {}
+
+type WithoutDirectiveStruct struct{}
+
+func (WithoutDirectiveStruct) privateEnum() {}
+
 type Req struct {
-	Int             int
-	Int64           int64
-	Float           float64
-	String          string
-	Slice           []string
-	Map             map[string]string
-	Nested          Nested
-	Optional        ftl.Option[Nested]
-	Time            time.Time
-	User            two.User `json:"u"`
-	Bytes           []byte
-	LocalEnumRef    Color
-	ExternalEnumRef two.TwoEnum
+	Int                  int
+	Int64                int64
+	Float                float64
+	String               string
+	Slice                []string
+	Map                  map[string]string
+	Nested               Nested
+	Optional             ftl.Option[Nested]
+	Time                 time.Time
+	User                 two.User `json:"u"`
+	Bytes                []byte
+	LocalValueEnumRef    Color
+	LocalTypeEnumRef     BlobOrList
+	ExternalValueEnumRef two.TwoEnum
+	ExternalTypeEnumRef  two.TypeEnum
 }
 type Resp struct{}
 

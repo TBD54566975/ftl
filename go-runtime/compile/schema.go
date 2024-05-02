@@ -45,6 +45,7 @@ var (
 type NativeNames map[schema.Decl]string
 
 type enums map[string]*schema.Enum
+type enumInterfaces map[string]*types.Interface
 
 func noEndColumnErrorf(pos token.Pos, format string, args ...interface{}) *schema.Error {
 	return tokenErrorf(pos, "", format, args...)
@@ -119,7 +120,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, []*schema.Err
 				merr = append(merr, perr)
 			}
 		}
-		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}, errors: errorSet{}}
+		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}, enumInterfaces: enumInterfaces{}, errors: errorSet{}}
 		for _, file := range pkg.Syntax {
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				switch node := node.(type) {
@@ -388,13 +389,17 @@ func goNodePosToSchemaPos(node ast.Node) (schema.Position, int) {
 func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	switch node.Tok {
 	case token.TYPE:
-		if node.Doc == nil {
-			return
-		}
 		directives, err := parseDirectives(node, fset, node.Doc)
 		if err != nil {
 			pctx.errors.add(err)
 		}
+		if maybeVisitTypeEnumVariant(pctx, node, directives) {
+			return
+		}
+		if node.Doc == nil {
+			return
+		}
+
 		for _, dir := range directives {
 			switch dir.(type) {
 			case *directiveVerb, *directiveData, *directiveEnum:
@@ -414,21 +419,37 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					isExported = exportableDir.IsExported()
 				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
-					if _, ok := pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying().(*types.Basic); ok {
+					typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
+					switch typ.Underlying().(type) {
+					case *types.Basic:
+						if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type), isExported).Get(); ok {
+							enum := &schema.Enum{
+								Pos:      goPosToSchemaPos(node.Pos()),
+								Comments: visitComments(node.Doc),
+								Name:     strcase.ToUpperCamel(t.Name.Name),
+								Type:     typ,
+								Export:   isExported,
+							}
+							pctx.enums[t.Name.Name] = enum
+							pctx.nativeNames[enum] = t.Name.Name
+						} else {
+							pctx.errors.add(errorf(node, "unsupported type %q for value enum",
+								pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
+						}
+					case *types.Interface:
 						enum := &schema.Enum{
 							Pos:      goPosToSchemaPos(node.Pos()),
 							Comments: visitComments(node.Doc),
 							Name:     strcase.ToUpperCamel(t.Name.Name),
 							Export:   isExported,
 						}
-						if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type), isExported).Get(); ok {
-							enum.Type = typ
-						} else {
-							pctx.errors.add(errorf(node, "unsupported type %q",
-								pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
-						}
 						pctx.enums[t.Name.Name] = enum
 						pctx.nativeNames[enum] = t.Name.Name
+						if typ, ok := typ.(*types.Interface); ok {
+							pctx.enumInterfaces[t.Name.Name] = typ
+						} else {
+							pctx.errors.add(errorf(node, "expected interface for type enum but got %q", typ))
+						}
 					}
 					visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
 				}
@@ -461,12 +482,60 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 	}
 }
 
+func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives []directive) bool {
+	if len(node.Specs) != 1 {
+		return false
+	}
+	// `type NAME TYPE` e.g. type Scalar string
+	t, ok := node.Specs[0].(*ast.TypeSpec)
+	if !ok {
+		return false
+	}
+	enumVariant := &schema.EnumVariant{
+		Pos:      goPosToSchemaPos(node.Pos()),
+		Comments: visitComments(node.Doc),
+		Name:     strcase.ToUpperCamel(t.Name.Name),
+	}
+	for enumName, interfaceNode := range pctx.enumInterfaces {
+		// If the type declared is an enum variant, then it must implement
+		// the interface of a type enum we've already read into pctx.enums
+		// and pctx.enumInterfaces.
+		if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
+			if types.Implements(named, interfaceNode) {
+				// If any directives on this node are exported, then the
+				// enum variant node is considered exported. Also, if the
+				// parent enum itself is exported, then all its variants
+				// should transitively also be exported.
+				isExported := pctx.enums[enumName].Export
+				for _, dir := range directives {
+					if exportableDir, ok := dir.(exportable); ok {
+						if pctx.enums[enumName].Export && !exportableDir.IsExported() {
+							pctx.errors.add(errorf(node, "parent enum %q is exported, but directive %q on %q is not. All variants of exported enums that have a directive must be explicitly exported as well", enumName, exportableDir, t.Name.Name))
+						}
+						isExported = exportableDir.IsExported()
+					}
+				}
+				if typ, ok := visitType(pctx, node.Pos(), named, isExported).Get(); ok {
+					enumVariant.Value = &schema.TypeValue{Value: typ}
+				} else {
+					pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
+				}
+				pctx.enums[enumName].Variants = append(pctx.enums[enumName].Variants, enumVariant)
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 	var enum *schema.Enum
-	if i, ok := node.Type.(*ast.Ident); ok {
+	i, ok := node.Type.(*ast.Ident)
+	if ok {
 		enum = pctx.enums[i.Name]
 	}
 	if enum == nil {
+		maybeErrorOnInvalidEnumMixing(pctx, node, i.Name)
 		return
 	}
 	c, ok := pctx.pkg.TypesInfo.Defs[node.Names[0]].(*types.Const)
@@ -485,6 +554,33 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 		enum.Variants = append(enum.Variants, variant)
 	} else {
 		pctx.errors.add(errorf(node, "unsupported type %q for enum variant %q", c.Type(), c.Name()))
+	}
+}
+
+// maybeErrorOnInvalidEnumMixing ensures value enums are not set as variants of type enums.
+// How this gets parsed:
+//
+// //ftl:enum
+// type TypeEnum interface { typeEnum() }
+//
+// type BadValueEnum int
+//
+// // This line causes BadValueEnum to be parsed as a TypeEnum variant. At this point, we
+// // cannot determine if BadValueEnum is intended to be a value enum, so we must treat it
+// // as any other type enum variant.
+// func (BadValueEnum) typeEnum() {}
+//
+// // This line will error because this is where we find out that BadValueEnum is intended
+// // to be a value enum, but value enums cannot be variants of type enums. BadValueEnum
+// // is not in pctx.enums.
+// const A BadValueEnum = 1
+func maybeErrorOnInvalidEnumMixing(pctx *parseContext, node *ast.ValueSpec, enumName string) {
+	for _, enum := range pctx.enums {
+		for _, variant := range enum.Variants {
+			if variant.Name == enumName {
+				pctx.errors.add(errorf(node, "cannot attach enum value to %s because it is a variant of type enum %s, not a value enum", enumName, enum.Name))
+			}
+		}
 	}
 }
 
@@ -775,29 +871,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 			if _, ok := visitType(pctx, pos, named.Underlying(), isExported).Get(); !ok {
 				return optional.None[schema.Type]()
 			}
-			nodePath := named.Obj().Pkg().Path()
-			if pctx.enums[named.Obj().Name()] != nil {
-				return optional.Some[schema.Type](&schema.Ref{
-					Pos:    goPosToSchemaPos(pos),
-					Module: pctx.module.Name,
-					Name:   named.Obj().Name(),
-				})
-			} else if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
-				// If this type is named and declared in another module, it's a reference.
-				// The only basic-typed references supported are enums.
-				if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
-					pctx.errors.add(noEndColumnErrorf(pos,
-						"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
-					return optional.None[schema.Type]()
-				}
-				base := path.Dir(pctx.pkg.PkgPath)
-				destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
-				enumRef := &schema.Ref{
-					Pos:    goPosToSchemaPos(pos),
-					Module: destModule,
-					Name:   named.Obj().Name(),
-				}
-				return optional.Some[schema.Type](enumRef)
+			enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
+			if doneWithVisit {
+				return enumRef
 			}
 		}
 
@@ -863,11 +939,49 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 		if underlying.String() == "any" {
 			return optional.Some[schema.Type](&schema.Any{Pos: goPosToSchemaPos(pos)})
 		}
+		if named, ok := tnode.(*types.Named); ok {
+			enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
+			if doneWithVisit {
+				return enumRef
+			}
+		}
 		return optional.None[schema.Type]()
 
 	default:
 		return optional.None[schema.Type]()
 	}
+}
+
+func visitEnumType(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
+	if pctx.enums[named.Obj().Name()] != nil {
+		return optional.Some[schema.Type](&schema.Ref{
+			Pos:    goPosToSchemaPos(pos),
+			Module: pctx.module.Name,
+			Name:   named.Obj().Name(),
+		}), true
+	}
+	if named.Obj().Pkg() == nil {
+		return optional.None[schema.Type](), false
+	}
+	nodePath := named.Obj().Pkg().Path()
+	if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
+		// If this type is named and declared in another module, it's a reference.
+		// The only basic-typed references and non-any interface-typed references
+		// supported are enums.
+		if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
+			pctx.errors.add(noEndColumnErrorf(pos,
+				"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
+			return optional.None[schema.Type](), true
+		}
+		base := path.Dir(pctx.pkg.PkgPath)
+		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
+		return optional.Some[schema.Type](&schema.Ref{
+			Pos:    goPosToSchemaPos(pos),
+			Module: destModule,
+			Name:   named.Obj().Name(),
+		}), true
+	}
+	return optional.None[schema.Type](), false
 }
 
 func visitMap(pctx *parseContext, pos token.Pos, tnode *types.Map, isExported bool) optional.Option[schema.Type] {
@@ -953,13 +1067,14 @@ func deref[T types.Object](pkg *packages.Package, node ast.Expr) (string, T) {
 }
 
 type parseContext struct {
-	pkg         *packages.Package
-	pkgs        []*packages.Package
-	module      *schema.Module
-	nativeNames NativeNames
-	enums       enums
-	activeVerb  *schema.Verb
-	errors      errorSet
+	pkg            *packages.Package
+	pkgs           []*packages.Package
+	module         *schema.Module
+	nativeNames    NativeNames
+	enums          enums
+	enumInterfaces enumInterfaces
+	activeVerb     *schema.Verb
+	errors         errorSet
 }
 
 // pathEnclosingInterval returns the PackageInfo and ast.Node that

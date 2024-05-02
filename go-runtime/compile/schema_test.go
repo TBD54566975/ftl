@@ -52,6 +52,11 @@ func TestExtractModuleSchema(t *testing.T) {
 
   database postgres testDb
 
+  enum BlobOrList {
+    Blob String
+    List [String]
+  }
+
   export enum Color: String {
     Red = "Red"
     Blue = "Blue"
@@ -75,6 +80,12 @@ func TestExtractModuleSchema(t *testing.T) {
     Third = 5
   }
 
+  enum PrivateEnum {
+    ExportedStruct one.ExportedStruct
+    PrivateStruct one.PrivateStruct
+    WithoutDirectiveStruct one.WithoutDirectiveStruct
+  }
+
   enum SimpleIota: Int {
     Zero = 0
     One = 1
@@ -89,7 +100,13 @@ func TestExtractModuleSchema(t *testing.T) {
     field String
   }
 
+  export data ExportedStruct {
+  }
+
   data Nested {
+  }
+
+  data PrivateStruct {
   }
 
   data Req {
@@ -104,8 +121,10 @@ func TestExtractModuleSchema(t *testing.T) {
     time Time
     user two.User +alias json "u"
     bytes Bytes
-    localEnumRef one.Color
-    externalEnumRef two.TwoEnum
+    localValueEnumRef one.Color
+    localTypeEnumRef one.BlobOrList
+    externalValueEnumRef two.TwoEnum
+    externalTypeEnumRef two.TypeEnum
   }
 
   data Resp {
@@ -115,6 +134,9 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   data SourceResp {
+  }
+
+  data WithoutDirectiveStruct {
   }
 
   export verb http(builtin.HttpRequest<one.Req>) builtin.HttpResponse<one.Resp, Unit>  
@@ -146,7 +168,14 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  Green = "Green"
         }
 
-		data Exported {
+                export enum TypeEnum {
+		  Scalar String
+		  List [String]
+		  Exported two.Exported
+		  WithoutDirective two.WithoutDirective
+		}
+
+		export data Exported {
 		}
 
 		export data Payload<T> {
@@ -159,6 +188,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 
 		export data UserResponse {
 		  user two.User
+		}
+
+		export data WithoutDirective {
 		}
 
 		export verb callsTwo(two.Payload<String>) two.Payload<String>
@@ -290,7 +322,10 @@ func TestErrorReporting(t *testing.T) {
 			filename+":76:63-63: must return an error but is string\n"+
 			filename+":76:63-63: second result must not be ftl.Unit\n"+
 			filename+":83:1-1: duplicate verb name \"WrongResponse\"\n"+
-			filename+":89:2-12: struct field unexported must be exported by starting with an uppercase letter",
+			filename+":89:2-12: struct field unexported must be exported by starting with an uppercase letter\n"+
+			filename+":100:2-23: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum\n"+
+			filename+":106:2-40: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum\n"+
+			filename+":115:1-26: parent enum \"ExportedTypeEnum\" is exported, but directive \"ftl:data\" on \"PrivateData\" is not. All variants of exported enums that have a directive must be explicitly exported as well",
 	)
 }
 

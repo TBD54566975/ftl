@@ -88,3 +88,30 @@ func WrongResponse(ctx context.Context, req Request) (string, ftl.Unit) {
 type BadStruct struct {
 	unexported string
 }
+
+//ftl:enum
+type TypeEnum interface{ typeEnum() }
+
+type BadValueEnum int
+
+func (BadValueEnum) typeEnum() {}
+
+const (
+	A BadValueEnum = iota
+)
+
+type BadValueEnumOrderDoesntMatter int
+
+const (
+	A BadValueEnumOrderDoesntMatter = iota
+)
+
+func (BadValueEnumOrderDoesntMatter) typeEnum() {}
+
+//ftl:enum export
+type ExportedTypeEnum interface{ exportedTypeEnum() }
+
+//ftl:data
+type PrivateData struct{}
+
+func (PrivateData) exportedTypeEnum() {}

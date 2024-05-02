@@ -15,9 +15,26 @@ const (
 	Green TwoEnum = "Green"
 )
 
-//ftl:data
+//ftl:enum export
+type TypeEnum interface{ typeEnum() }
+
+type Scalar string
+
+func (Scalar) typeEnum() {}
+
+type List []string
+
+func (List) typeEnum() {}
+
+//ftl:data export
 type Exported struct {
 }
+
+func (Exported) typeEnum() {}
+
+type WithoutDirective struct{}
+
+func (WithoutDirective) typeEnum() {}
 
 type User struct {
 	Name string

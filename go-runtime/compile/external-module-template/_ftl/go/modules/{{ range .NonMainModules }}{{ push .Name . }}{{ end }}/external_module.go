@@ -13,7 +13,7 @@ var _ = context.Background
 
 {{- range .Decls }}
 {{- if .IsExported}}
-{{if valueEnum .}}
+{{if and (is "Enum" .) .IsValueEnum}}
 {{$enumName := .Name -}}
 //ftl:enum
 type {{.Name|title}} {{type $ .Type}}
@@ -22,6 +22,16 @@ const (
   {{.Name|title}} {{$enumName}} = {{.Value|value}}
   {{- end}}
 )
+{{- else if is "Enum" . }}
+//ftl:enum
+{{$enumInterfaceFuncName := enumInterfaceFunc . -}}
+type {{.Name|title}} interface { {{$enumInterfaceFuncName}}() }
+{{- range .Variants }}
+{{if basicType $ .}}
+type {{.Name|title}} {{type $ .Value.Value}}
+{{end}}
+func ({{.Name|title}}) {{$enumInterfaceFuncName}}() {}
+{{- end}}
 {{- else if is "Data" . }}
 type {{.Name|title}}
 {{- if .TypeParameters}}[

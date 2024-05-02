@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/TBD54566975/scaffolder"
 	"golang.org/x/mod/modfile"
@@ -291,9 +292,23 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		panic(fmt.Sprintf("unsupported value %T", v))
 	},
-	"valueEnum": func(d schema.Decl) bool {
-		if e, ok := d.(*schema.Enum); ok {
-			if len(e.Variants) > 0 && e.Variants[0].Value != nil {
+	"enumInterfaceFunc": func(e schema.Enum) string {
+		r := []rune(e.Name)
+		for i, c := range r {
+			if unicode.IsUpper(c) {
+				r[i] = unicode.ToLower(c)
+			} else {
+				break
+			}
+		}
+		return string(r)
+	},
+	"basicType": func(m *schema.Module, v schema.EnumVariant) bool {
+		switch val := v.Value.(type) {
+		case *schema.IntValue, *schema.StringValue:
+			return false // This func should only return true for type enums
+		case *schema.TypeValue:
+			if _, ok := val.Value.(*schema.Ref); !ok {
 				return true
 			}
 		}
