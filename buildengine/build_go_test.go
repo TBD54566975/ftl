@@ -94,9 +94,13 @@ const (
 
 //ftl:enum
 type TypeEnum interface { typeEnum() }
-type A Int
+
+type A int
+
 func (A) typeEnum() {}
-type B String
+
+type B string
+
 func (B) typeEnum() {}
 
 type EchoRequest struct {
