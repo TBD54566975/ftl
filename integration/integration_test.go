@@ -208,3 +208,10 @@ func TestHttpIngress(t *testing.T) {
 		}),
 	)
 }
+
+func TestRuntimeReflection(t *testing.T) {
+	run(t,
+		copyModule("runtimereflection"),
+		chdir("runtimereflection", exec("go", "test", "-v", ".")),
+	)
+}

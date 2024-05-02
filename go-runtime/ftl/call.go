@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"runtime"
-	"strings"
 
 	"connectrpc.com/connect"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -58,33 +55,22 @@ func call[Req, Resp any](ctx context.Context, callee Ref, req Req) (resp Resp, e
 
 // Call a Verb through the FTL Controller.
 func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (Resp, error) {
-	return call[Req, Resp](ctx, CallToRef(verb), req)
+	return call[Req, Resp](ctx, FuncRef(verb), req)
 }
 
 // CallSink calls a Sink through the FTL controller.
 func CallSink[Req any](ctx context.Context, sink Sink[Req], req Req) error {
-	_, err := call[Req, Unit](ctx, CallToRef(sink), req)
+	_, err := call[Req, Unit](ctx, FuncRef(sink), req)
 	return err
 }
 
 // CallSource calls a Source through the FTL controller.
 func CallSource[Resp any](ctx context.Context, source Source[Resp]) (Resp, error) {
-	return call[Unit, Resp](ctx, CallToRef(source), Unit{})
+	return call[Unit, Resp](ctx, FuncRef(source), Unit{})
 }
 
 // CallEmpty calls a Verb with no request or response through the FTL controller.
 func CallEmpty(ctx context.Context, empty Empty) error {
-	_, err := call[Unit, Unit](ctx, CallToRef(empty), Unit{})
+	_, err := call[Unit, Unit](ctx, FuncRef(empty), Unit{})
 	return err
-}
-
-// CallToRef returns the Ref for a Verb, Sink, Source, or Empty.
-func CallToRef(call any) Ref {
-	ref := runtime.FuncForPC(reflect.ValueOf(call).Pointer()).Name()
-	return goRefToFTLRef(ref)
-}
-
-func goRefToFTLRef(ref string) Ref {
-	parts := strings.Split(ref[strings.LastIndex(ref, "/")+1:], ".")
-	return Ref{parts[len(parts)-2], strcase.ToLowerCamel(parts[len(parts)-1])}
 }

@@ -35,13 +35,12 @@ func TestSendFSMEvent(t *testing.T) {
 	assert.HasPrefix(t, call.Lease.String(), "/system/async_call/1:")
 	expectedCall := &AsyncCall{
 		ID:        1,
-		Lease:     call.Lease,
 		Origin:    AsyncCallOriginFSM,
 		OriginKey: "invoiceID",
 		Verb:      ref,
 		Request:   []byte(`{}`),
 	}
-	assert.Equal(t, expectedCall, call)
+	assert.Equal(t, expectedCall, call, assert.Exclude[*Lease]())
 
 	err = dal.CompleteAsyncCall(ctx, call, nil, optional.None[string]())
 	assert.EqualError(t, err, "must provide exactly one of response or error")

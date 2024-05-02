@@ -90,12 +90,12 @@ func handler[Req, Resp any](ref ftl.Ref, verb func(ctx context.Context, req Req)
 
 // HandleCall creates a Handler from a Verb.
 func HandleCall[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
-	return handler(ftl.CallToRef(verb), verb)
+	return handler(ftl.FuncRef(verb), verb)
 }
 
 // HandleSink creates a Handler from a Sink with no response.
 func HandleSink[Req any](sink func(ctx context.Context, req Req) error) Handler {
-	return handler(ftl.CallToRef(sink), func(ctx context.Context, req Req) (ftl.Unit, error) {
+	return handler(ftl.FuncRef(sink), func(ctx context.Context, req Req) (ftl.Unit, error) {
 		err := sink(ctx, req)
 		return ftl.Unit{}, err
 	})
@@ -103,14 +103,14 @@ func HandleSink[Req any](sink func(ctx context.Context, req Req) error) Handler 
 
 // HandleSource creates a Handler from a Source with no request.
 func HandleSource[Resp any](source func(ctx context.Context) (Resp, error)) Handler {
-	return handler(ftl.CallToRef(source), func(ctx context.Context, _ ftl.Unit) (Resp, error) {
+	return handler(ftl.FuncRef(source), func(ctx context.Context, _ ftl.Unit) (Resp, error) {
 		return source(ctx)
 	})
 }
 
 // HandleEmpty creates a Handler from a Verb with no request or response.
 func HandleEmpty(empty func(ctx context.Context) error) Handler {
-	return handler(ftl.CallToRef(empty), func(ctx context.Context, _ ftl.Unit) (ftl.Unit, error) {
+	return handler(ftl.FuncRef(empty), func(ctx context.Context, _ ftl.Unit) (ftl.Unit, error) {
 		err := empty(ctx)
 		return ftl.Unit{}, err
 	})
