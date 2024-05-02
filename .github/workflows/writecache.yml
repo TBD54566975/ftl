@@ -21,8 +21,6 @@ jobs:
         run: just init-db
       - name: Rebuild All
         run: just build-all
-      - name: Download Maven Dependencies
-        run: mvn -f kotlin-runtime/ftl-runtime dependency:resolve --batch-mode
       - name: Download Go Dependencies
         run: go mod download -x
       - id: find-go-build-cache

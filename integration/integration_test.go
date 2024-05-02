@@ -66,6 +66,17 @@ func TestInterModuleCall(t *testing.T) {
 	)
 }
 
+func TestNonExportedDecls(t *testing.T) {
+	run(t,
+		copyModule("time"),
+		deploy("time"),
+		copyModule("echo"),
+		deploy("echo"),
+		copyModule("notexportedverb"),
+		expectError(execWithOutput("ftl", "deploy", "notexportedverb"), "call first argument must be a function but is an unresolved reference to echo.Echo"),
+	)
+}
+
 func TestDatabase(t *testing.T) {
 	createDB(t, "database", "testdb")
 	run(t,

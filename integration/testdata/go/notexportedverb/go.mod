@@ -1,11 +1,11 @@
-module ftl/other
+module ftl/notexportedverb
 
 go 1.22.2
 
-require github.com/TBD54566975/ftl v0.129.2
+require github.com/TBD54566975/ftl v0.193.0
 
 require (
-	connectrpc.com/connect v1.16.0 // indirect
+	connectrpc.com/connect v1.14.0 // indirect
 	connectrpc.com/grpcreflect v1.2.0 // indirect
 	connectrpc.com/otelconnect v0.7.0 // indirect
 	github.com/BurntSushi/toml v1.3.2 // indirect
@@ -43,4 +43,4 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ../../../..
+replace github.com/TBD54566975/ftl => /Users/wesbillman/dev/ftl

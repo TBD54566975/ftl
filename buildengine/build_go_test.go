@@ -14,8 +14,9 @@ func TestGenerateGoModule(t *testing.T) {
 			schema.Builtins(),
 			{Name: "other", Decls: []schema.Decl{
 				&schema.Enum{
-					Name: "Color",
-					Type: &schema.String{},
+					Name:   "Color",
+					Export: true,
+					Type:   &schema.String{},
 					Variants: []*schema.EnumVariant{
 						{Name: "Red", Value: &schema.StringValue{Value: "Red"}},
 						{Name: "Blue", Value: &schema.StringValue{Value: "Blue"}},
@@ -23,8 +24,9 @@ func TestGenerateGoModule(t *testing.T) {
 					},
 				},
 				&schema.Enum{
-					Name: "ColorInt",
-					Type: &schema.Int{},
+					Name:   "ColorInt",
+					Export: true,
+					Type:   &schema.Int{},
 					Variants: []*schema.EnumVariant{
 						{Name: "RedInt", Value: &schema.IntValue{Value: 0}},
 						{Name: "BlueInt", Value: &schema.IntValue{Value: 1}},
@@ -38,27 +40,31 @@ func TestGenerateGoModule(t *testing.T) {
 						{Name: "B", Value: &schema.TypeValue{Value: &schema.String{}}},
 					},
 				},
-				&schema.Data{Name: "EchoRequest"},
-				&schema.Data{Name: "EchoResponse"},
+				&schema.Data{Name: "EchoRequest", Export: true},
+				&schema.Data{Name: "EchoResponse", Export: true},
 				&schema.Verb{
 					Name:     "echo",
+					Export:   true,
 					Request:  &schema.Ref{Name: "EchoRequest"},
 					Response: &schema.Ref{Name: "EchoResponse"},
 				},
-				&schema.Data{Name: "SinkReq"},
+				&schema.Data{Name: "SinkReq", Export: true},
 				&schema.Verb{
 					Name:     "sink",
+					Export:   true,
 					Request:  &schema.Ref{Name: "SinkReq"},
 					Response: &schema.Unit{},
 				},
-				&schema.Data{Name: "SourceResp"},
+				&schema.Data{Name: "SourceResp", Export: true},
 				&schema.Verb{
 					Name:     "source",
+					Export:   true,
 					Request:  &schema.Unit{},
 					Response: &schema.Ref{Name: "SourceResp"},
 				},
 				&schema.Verb{
 					Name:     "nothing",
+					Export:   true,
 					Request:  &schema.Unit{},
 					Response: &schema.Unit{},
 				},
@@ -150,10 +156,11 @@ func TestMetadataImportsExcluded(t *testing.T) {
 		Modules: []*schema.Module{
 			schema.Builtins(),
 			{Name: "test", Decls: []schema.Decl{
-				&schema.Data{Name: "Req"},
-				&schema.Data{Name: "Resp"},
+				&schema.Data{Name: "Req", Export: true},
+				&schema.Data{Name: "Resp", Export: true},
 				&schema.Verb{
 					Name:     "call",
+					Export:   true,
 					Request:  &schema.Ref{Name: "Req"},
 					Response: &schema.Ref{Name: "Resp"},
 					Metadata: []schema.Metadata{

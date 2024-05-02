@@ -6,7 +6,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-//ftl:enum
+//ftl:enum export
 type TwoEnum string
 
 const (
@@ -53,17 +53,17 @@ type UserResponse struct {
 	User User
 }
 
-//ftl:verb
+//ftl:verb export
 func Two(ctx context.Context, req Payload[string]) (Payload[string], error) {
 	return Payload[string]{}, nil
 }
 
-//ftl:verb
+//ftl:verb export
 func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
 	return ftl.Call(ctx, Two, req)
 }
 
-//ftl:verb
+//ftl:verb export
 func ReturnsUser(ctx context.Context) (UserResponse, error) {
 	return UserResponse{
 		User: User{

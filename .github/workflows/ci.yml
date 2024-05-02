@@ -18,8 +18,6 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
         uses: ./.github/actions/build-cache
-      - name: Build Kotlin
-        run: just build-kt-runtime
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Test

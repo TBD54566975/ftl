@@ -12,6 +12,7 @@ import (
 var _ = context.Background
 
 {{- range .Decls }}
+{{- if .IsExported}}
 {{if valueEnum .}}
 {{$enumName := .Name -}}
 //ftl:enum
@@ -63,6 +64,7 @@ func {{.Name|title}}(context.Context, {{type $ .Request}}) error {
 func {{.Name|title}}(context.Context, {{type $ .Request}}) ({{type $ .Response}}, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }
+{{- end}}
 {{- end}}
 {{- end}}
 {{- end}}

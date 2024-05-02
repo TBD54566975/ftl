@@ -15,7 +15,7 @@ type EchoResponse struct {
 	Message string `json:"message"`
 }
 
-//ftl:verb
+//ftl:verb export
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name.Default("anonymous"))}, nil
 }
