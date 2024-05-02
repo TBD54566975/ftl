@@ -34,7 +34,8 @@ func TestGenerateGoModule(t *testing.T) {
 					},
 				},
 				&schema.Enum{
-					Name: "TypeEnum",
+					Name:   "TypeEnum",
+					Export: true,
 					Variants: []*schema.EnumVariant{
 						{Name: "A", Value: &schema.TypeValue{Value: &schema.Int{}}},
 						{Name: "B", Value: &schema.TypeValue{Value: &schema.String{}}},

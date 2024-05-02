@@ -15,7 +15,7 @@ const (
 	Green TwoEnum = "Green"
 )
 
-//ftl:enum
+//ftl:enum export
 type TypeEnum interface{ typeEnum() }
 
 type Scalar string

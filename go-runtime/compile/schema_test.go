@@ -153,7 +153,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  Green = "Green"
         }
 
-                enum TypeEnum {
+                export enum TypeEnum {
 		  Scalar String
 		  List [String]
 		  Exported two.Exported
