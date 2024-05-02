@@ -67,6 +67,11 @@ type Nested struct {
 //ftl:enum
 type PrivateEnum interface{ privateEnum() }
 
+//ftl:data export
+type ExportedStruct struct{}
+
+func (ExportedStruct) privateEnum() {}
+
 //ftl:data
 type PrivateStruct struct{}
 

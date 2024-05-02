@@ -81,6 +81,7 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   enum PrivateEnum {
+    ExportedStruct one.ExportedStruct
     PrivateStruct one.PrivateStruct
     WithoutDirectiveStruct one.WithoutDirectiveStruct
   }
@@ -97,6 +98,9 @@ func TestExtractModuleSchema(t *testing.T) {
 
   export data ExportedData {
     field String
+  }
+
+  export data ExportedStruct {
   }
 
   data Nested {
