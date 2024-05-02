@@ -19,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -145,7 +146,7 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 			}
 			newJobs = append(newJobs, model.CronJob{
 				Key:           model.NewCronJobKey(module.Name, verb.Verb.Name),
-				Verb:          model.VerbRef{Module: module.Name, Name: verb.Verb.Name},
+				Verb:          schema.Ref{Module: module.Name, Name: verb.Verb.Name},
 				Schedule:      cronStr,
 				StartTime:     start,
 				NextExecution: next,

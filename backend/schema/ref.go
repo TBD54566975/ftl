@@ -1,11 +1,22 @@
 package schema
 
 import (
+	"database/sql"
+	"database/sql/driver"
+
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
+
+// RefKey is a map key for a reference.
+type RefKey struct {
+	Module string
+	Name   string
+}
+
+func (r RefKey) String() string { return makeRef(r.Module, r.Name) }
 
 // Ref is an untyped reference to a symbol.
 type Ref struct {
@@ -17,17 +28,24 @@ type Ref struct {
 	TypeParameters []Type `parser:"[ '<' @@ (',' @@)* '>' ]" protobuf:"4"`
 }
 
-// RefKey is a map key for a reference.
-type RefKey struct {
-	Module string
-	Name   string
-}
+var _ sql.Scanner = (*Ref)(nil)
+var _ driver.Valuer = (*Ref)(nil)
 
-func (r RefKey) String() string { return makeRef(r.Module, r.Name) }
+func (r Ref) Value() (driver.Value, error) { return r.String(), nil }
+
+func (r *Ref) Scan(src any) error {
+	p, err := ParseRef(src.(string))
+	if err != nil {
+		return err
+	}
+	*r = *p
+	return nil
+}
 
 func (r Ref) ToRefKey() RefKey {
 	return RefKey{Module: r.Module, Name: r.Name}
 }
+
 func (r *Ref) ToProto() proto.Message {
 	return &schemapb.Ref{
 		Pos:            posToProto(r.Pos),
@@ -75,7 +93,12 @@ func RefFromProto(s *schemapb.Ref) *Ref {
 }
 
 func ParseRef(ref string) (*Ref, error) {
-	return refParser.ParseString("", ref)
+	out, err := refParser.ParseString("", ref)
+	if err != nil {
+		return nil, err
+	}
+	out.Pos = Position{}
+	return out, nil
 }
 
 func refListToSchema(s []*schemapb.Ref) []*Ref {

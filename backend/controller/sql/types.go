@@ -9,9 +9,11 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
+type NullRef = optional.Option[schema.Ref]
 type NullUUID = optional.Option[uuid.UUID]
 type NullLeaseKey = optional.Option[leases.Key]
 type NullTime = optional.Option[time.Time]

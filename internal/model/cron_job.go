@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 type CronJobState string
@@ -14,7 +16,7 @@ const (
 type CronJob struct {
 	Key           CronJobKey
 	DeploymentKey DeploymentKey
-	Verb          VerbRef
+	Verb          schema.Ref
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time

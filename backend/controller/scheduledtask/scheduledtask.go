@@ -133,7 +133,7 @@ func (s *Scheduler) run(ctx context.Context) {
 						if errors.Is(err, leases.ErrConflict) {
 							logger.Scope(job.name).Tracef("Lease is held by another controller, will try again shortly.")
 						} else {
-							logger.Scope(job.name).Warnf("Failed to acquire lease: %s", err)
+							logger.Scope(job.name).Debugf("Failed to acquire lease: %s", err)
 						}
 						job.next = s.clock.Now().Add(job.retry.Duration())
 						continue
