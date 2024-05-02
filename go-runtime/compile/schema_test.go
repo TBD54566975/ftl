@@ -80,6 +80,11 @@ func TestExtractModuleSchema(t *testing.T) {
     Third = 5
   }
 
+  enum PrivateEnum {
+    PrivateStruct one.PrivateStruct
+    WithoutDirectiveStruct one.WithoutDirectiveStruct
+  }
+
   enum SimpleIota: Int {
     Zero = 0
     One = 1
@@ -95,6 +100,9 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   data Nested {
+  }
+
+  data PrivateStruct {
   }
 
   data Req {
@@ -122,6 +130,9 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   data SourceResp {
+  }
+
+  data WithoutDirectiveStruct {
   }
 
   export verb http(builtin.HttpRequest<one.Req>) builtin.HttpResponse<one.Resp, Unit>  
@@ -168,7 +179,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  body T
 		}
 
-		data Private {
+		export data Private {
 		}
 
 		export data User {
@@ -179,7 +190,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  user two.User
 		}
 
-		data WithoutDirective {
+		export data WithoutDirective {
 		}
 
 		export verb callsTwo(two.Payload<String>) two.Payload<String>

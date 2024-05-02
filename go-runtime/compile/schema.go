@@ -486,7 +486,9 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 	if len(node.Specs) != 1 {
 		return false
 	}
-	// If any directives on this node are exported, then the node is considered exported for type enum variant purposes
+	// If any directives on this node are exported, then the enum variant node is
+	// considered exported. Also, if the parent enum itself is exported, then all its
+	// variants should transitively also be exported.
 	isExported := false
 	for _, dir := range directives {
 		if exportableDir, ok := dir.(exportable); ok {
@@ -509,7 +511,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 		// and pctx.enumInterfaces.
 		if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
 			if types.Implements(named, interfaceNode) {
-				if typ, ok := visitType(pctx, node.Pos(), named, isExported).Get(); ok {
+				if typ, ok := visitType(pctx, node.Pos(), named, isExported || pctx.enums[enumName].Export).Get(); ok {
 					enumVariant.Value = &schema.TypeValue{Value: typ}
 				} else {
 					pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))

@@ -64,6 +64,18 @@ func (List) blobOrList() {}
 type Nested struct {
 }
 
+//ftl:enum
+type PrivateEnum interface{ privateEnum() }
+
+//ftl:data
+type PrivateStruct struct{}
+
+func (PrivateStruct) privateEnum() {}
+
+type WithoutDirectiveStruct struct{}
+
+func (WithoutDirectiveStruct) privateEnum() {}
+
 type Req struct {
 	Int                  int
 	Int64                int64
