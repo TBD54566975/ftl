@@ -37,7 +37,7 @@ dev *args:
   watchexec -r -e go -e sql -f sqlc.yaml -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
-build-all: build-frontend build-generate build-kt-runtime build-protos build-sqlc build-zips
+build-all: build-frontend build-generate build-protos build-sqlc build-zips
   @just build ftl ftl-controller ftl-runner ftl-initdb
 
 # Run "go generate" on all packages
@@ -86,11 +86,11 @@ package-extension: build-extension
 publish-extension: package-extension
   @cd extensions/vscode && vsce publish
 
-# Build the Kotlin runtime (if necessary)
+# Kotlin runtime is temporarily disabled; these instructions create a dummy zip in place of the kotlin runtime jar for
+# the runner.
 build-kt-runtime:
-  @mk {{KT_RUNTIME_OUT}} : kotlin-runtime/ftl-runtime -- mvn -f kotlin-runtime/ftl-runtime -Dmaven.test.skip=true -B install
-  @mk {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}} : {{KT_RUNTIME_OUT}} -- "mkdir -p $(dirname {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}}) && install -m 0600 {{KT_RUNTIME_OUT}} {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}}"
-  @mk {{RUNNER_TEMPLATE_ZIP}} : {{KT_RUNTIME_RUNNER_TEMPLATE_OUT}} -- "cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} ."
+  @mkdir -p build/template/ftl && touch build/template/ftl/temp.txt
+  @cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} .
 
 # Install Node dependencies
 npm-install:
