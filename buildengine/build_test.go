@@ -77,6 +77,17 @@ func assertGeneratedModule(generatedModulePath string, expectedContent string) a
 	}
 }
 
+func assertGeneratedMain(expectedContent string) assertion {
+	return func(t testing.TB, bctx buildContext) error {
+		t.Helper()
+		output := filepath.Join(bctx.moduleDir, bctx.buildDir, "go/main/main.go")
+		fileContent, err := os.ReadFile(output)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedContent, string(fileContent))
+		return nil
+	}
+}
+
 func assertBuildProtoErrors(msgs ...string) assertion {
 	return func(t testing.TB, bctx buildContext) error {
 		t.Helper()

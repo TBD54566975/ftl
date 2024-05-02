@@ -43,9 +43,9 @@ func TestExtractModuleSchema(t *testing.T) {
 	}
 	prebuildTestModule(t, "testdata/one", "testdata/two")
 
-	_, actual, _, err := ExtractModuleSchema("testdata/one")
+	r, err := ExtractModuleSchema("testdata/one")
 	assert.NoError(t, err)
-	actual = schema.Normalise(actual)
+	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module one {
   config configValue one.Config
   secret secretValue String
@@ -158,9 +158,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	_, actual, _, err := ExtractModuleSchema("testdata/two")
+	r, err := ExtractModuleSchema("testdata/two")
 	assert.NoError(t, err)
-	actual = schema.Normalise(actual)
+	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module two {
 		export enum TwoEnum: String {
 		  Red = "Red"
@@ -285,11 +285,11 @@ func TestErrorReporting(t *testing.T) {
 		t.SkipNow()
 	}
 	pwd, _ := os.Getwd()
-	_, _, schemaErrs, err := ExtractModuleSchema("testdata/failing")
+	r, err := ExtractModuleSchema("testdata/failing")
 	assert.NoError(t, err)
 
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
-	assert.EqualError(t, errors.Join(genericizeErrors(schemaErrs)...),
+	assert.EqualError(t, errors.Join(genericizeErrors(r.MustGet().Errors)...),
 		filename+":10:13-35: config and secret declarations must have a single string literal argument\n"+
 			filename+":13:18-52: duplicate config declaration at 12:18-52\n"+
 			filename+":16:18-52: duplicate secret declaration at 15:18-52\n"+
