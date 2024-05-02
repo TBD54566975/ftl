@@ -512,7 +512,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 						if pctx.enums[enumName].Export && !exportableDir.IsExported() {
 							pctx.errors.add(errorf(node, "parent enum %q is exported, but directive %q on %q is not. All variants of exported enums that have a directive must be explicitly exported as well", enumName, exportableDir, t.Name.Name))
 						}
-						isExported = isExported || exportableDir.IsExported()
+						isExported = exportableDir.IsExported()
 					}
 				}
 				if typ, ok := visitType(pctx, node.Pos(), named, isExported).Get(); ok {
