@@ -15,8 +15,8 @@ type Database struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"3"`
-	Type     string   `parser:"@'postgres'" protobuf:"4"`
-	Name     string   `parser:"'database' @Ident" protobuf:"2"`
+	Type     string   `parser:"'database' @'postgres'" protobuf:"4"`
+	Name     string   `parser:"@Ident" protobuf:"2"`
 }
 
 var _ Decl = (*Database)(nil)
@@ -29,7 +29,7 @@ func (d *Database) schemaChildren() []Node { return nil }
 func (d *Database) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, encodeComments(d.Comments))
-	fmt.Fprintf(w, "%s database %s", d.Type, d.Name)
+	fmt.Fprintf(w, "database %s %s", d.Type, d.Name)
 	return w.String()
 }
 
