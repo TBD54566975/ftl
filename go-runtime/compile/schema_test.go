@@ -150,10 +150,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		  Scalar String
 		  List [String]
 		  Exported two.Exported
-		  User two.User
 		}
 
-		data Exported {
+		export data Exported {
 		}
 
 		data Payload<T> {

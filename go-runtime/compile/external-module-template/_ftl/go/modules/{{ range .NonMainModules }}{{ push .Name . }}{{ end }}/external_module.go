@@ -26,7 +26,9 @@ const (
 {{$enumInterfaceFuncName := enumInterfaceFunc . -}}
 type {{.Name|title}} interface { {{$enumInterfaceFuncName}}() }
 {{- range .Variants }}
-type {{.Name|title}} {{.Value.Value}}
+{{if basicType $ .}}
+type {{.Name|title}} {{type $ .Value.Value}}
+{{end}}
 func ({{.Name|title}}) {{$enumInterfaceFuncName}}() {}
 {{- end}}
 {{- else if is "Data" . }}

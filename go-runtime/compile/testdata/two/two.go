@@ -36,8 +36,6 @@ type User struct {
 	Name string
 }
 
-func (User) typeEnum() {}
-
 type Payload[T any] struct {
 	Body T
 }

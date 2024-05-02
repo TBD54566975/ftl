@@ -320,8 +320,8 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		return false
 	},
-	"enumInterfaceFunc": func(v schema.Enum) string {
-		r := []rune(v.Name)
+	"enumInterfaceFunc": func(e schema.Enum) string {
+		r := []rune(e.Name)
 		for i, c := range r {
 			if unicode.IsUpper(c) {
 				r[i] = unicode.ToLower(c)
@@ -330,6 +330,17 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			}
 		}
 		return string(r)
+	},
+	"basicType": func(m *schema.Module, v schema.EnumVariant) bool {
+		switch val := v.Value.(type) {
+		case *schema.IntValue, *schema.StringValue:
+			return false // This func should only return true for type enums
+		case *schema.TypeValue:
+			if _, ok := val.Value.(*schema.Ref); !ok {
+				return true
+			}
+		}
+		return false
 	},
 }
 
