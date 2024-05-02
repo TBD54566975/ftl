@@ -50,7 +50,7 @@ func TestExtractModuleSchema(t *testing.T) {
   config configValue one.Config
   secret secretValue String
 
-  postgres database testDb
+  database postgres testDb
 
   export enum Color: String {
     Red = "Red"

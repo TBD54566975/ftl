@@ -22,7 +22,7 @@ module todo {
   config configValue String
   secret secretValue String
 
-  postgres database testdb
+  database postgres testdb
 
   export data CreateRequest {
     name {String: String}? +alias json "rqn"
@@ -392,7 +392,7 @@ func TestParseModule(t *testing.T) {
 module todo {
   config configValue String
   secret secretValue String
-  postgres database testdb
+  database postgres testdb
 
   export data CreateRequest {
     name {String: String}? +alias json "rqn"
