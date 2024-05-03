@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-
-	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 )
 
 type MockVerb func(ctx context.Context, req any) (resp any, err error)
