@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
+import { Duration, Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
 import { Module, Ref, Schema } from "./schema/schema_pb.js";
 
 /**
@@ -563,6 +563,86 @@ export class CallResponse_Error extends Message<CallResponse_Error> {
 
   static equals(a: CallResponse_Error | PlainMessage<CallResponse_Error> | undefined, b: CallResponse_Error | PlainMessage<CallResponse_Error> | undefined): boolean {
     return proto3.util.equals(CallResponse_Error, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.AcquireLeaseRequest
+ */
+export class AcquireLeaseRequest extends Message<AcquireLeaseRequest> {
+  /**
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  /**
+   * @generated from field: repeated string key = 2;
+   */
+  key: string[] = [];
+
+  /**
+   * @generated from field: google.protobuf.Duration ttl = 3;
+   */
+  ttl?: Duration;
+
+  constructor(data?: PartialMessage<AcquireLeaseRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.AcquireLeaseRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "ttl", kind: "message", T: Duration },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AcquireLeaseRequest {
+    return new AcquireLeaseRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AcquireLeaseRequest {
+    return new AcquireLeaseRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AcquireLeaseRequest {
+    return new AcquireLeaseRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AcquireLeaseRequest | PlainMessage<AcquireLeaseRequest> | undefined, b: AcquireLeaseRequest | PlainMessage<AcquireLeaseRequest> | undefined): boolean {
+    return proto3.util.equals(AcquireLeaseRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.AcquireLeaseResponse
+ */
+export class AcquireLeaseResponse extends Message<AcquireLeaseResponse> {
+  constructor(data?: PartialMessage<AcquireLeaseResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.AcquireLeaseResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AcquireLeaseResponse {
+    return new AcquireLeaseResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AcquireLeaseResponse {
+    return new AcquireLeaseResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AcquireLeaseResponse {
+    return new AcquireLeaseResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AcquireLeaseResponse | PlainMessage<AcquireLeaseResponse> | undefined, b: AcquireLeaseResponse | PlainMessage<AcquireLeaseResponse> | undefined): boolean {
+    return proto3.util.equals(AcquireLeaseResponse, a, b);
   }
 }
 

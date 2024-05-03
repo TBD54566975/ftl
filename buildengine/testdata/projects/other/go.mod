@@ -5,7 +5,7 @@ go 1.22.2
 require github.com/TBD54566975/ftl v0.129.2
 
 require (
-	connectrpc.com/connect v1.16.0 // indirect
+	connectrpc.com/connect v1.16.1 // indirect
 	connectrpc.com/grpcreflect v1.2.0 // indirect
 	connectrpc.com/otelconnect v0.7.0 // indirect
 	github.com/BurntSushi/toml v1.3.2 // indirect

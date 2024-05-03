@@ -1,10 +1,10 @@
-module ftl/two
+module ftl/leases
 
 go 1.22.2
 
 replace github.com/TBD54566975/ftl => ../../../..
 
-require github.com/TBD54566975/ftl v0.150.3
+require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 
 require (
 	connectrpc.com/connect v1.16.1 // indirect

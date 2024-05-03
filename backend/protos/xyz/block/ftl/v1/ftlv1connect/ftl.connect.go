@@ -42,6 +42,9 @@ const (
 	// VerbServiceGetModuleContextProcedure is the fully-qualified name of the VerbService's
 	// GetModuleContext RPC.
 	VerbServiceGetModuleContextProcedure = "/xyz.block.ftl.v1.VerbService/GetModuleContext"
+	// VerbServiceAcquireLeaseProcedure is the fully-qualified name of the VerbService's AcquireLease
+	// RPC.
+	VerbServiceAcquireLeaseProcedure = "/xyz.block.ftl.v1.VerbService/AcquireLease"
 	// VerbServiceCallProcedure is the fully-qualified name of the VerbService's Call RPC.
 	VerbServiceCallProcedure = "/xyz.block.ftl.v1.VerbService/Call"
 	// ControllerServicePingProcedure is the fully-qualified name of the ControllerService's Ping RPC.
@@ -101,6 +104,10 @@ type VerbServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// Get configuration state for the module
 	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error)
+	// Acquire (and renew) a lease for a deployment.
+	//
+	// Returns ResourceExhausted if the lease is held.
+	AcquireLease(context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
@@ -124,8 +131,12 @@ func NewVerbServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 		getModuleContext: connect.NewClient[v1.ModuleContextRequest, v1.ModuleContextResponse](
 			httpClient,
 			baseURL+VerbServiceGetModuleContextProcedure,
-			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-			connect.WithClientOptions(opts...),
+			opts...,
+		),
+		acquireLease: connect.NewClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse](
+			httpClient,
+			baseURL+VerbServiceAcquireLeaseProcedure,
+			opts...,
 		),
 		call: connect.NewClient[v1.CallRequest, v1.CallResponse](
 			httpClient,
@@ -139,6 +150,7 @@ func NewVerbServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 type verbServiceClient struct {
 	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
 	getModuleContext *connect.Client[v1.ModuleContextRequest, v1.ModuleContextResponse]
+	acquireLease     *connect.Client[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
 	call             *connect.Client[v1.CallRequest, v1.CallResponse]
 }
 
@@ -152,6 +164,11 @@ func (c *verbServiceClient) GetModuleContext(ctx context.Context, req *connect.R
 	return c.getModuleContext.CallUnary(ctx, req)
 }
 
+// AcquireLease calls xyz.block.ftl.v1.VerbService.AcquireLease.
+func (c *verbServiceClient) AcquireLease(ctx context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse] {
+	return c.acquireLease.CallBidiStream(ctx)
+}
+
 // Call calls xyz.block.ftl.v1.VerbService.Call.
 func (c *verbServiceClient) Call(ctx context.Context, req *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error) {
 	return c.call.CallUnary(ctx, req)
@@ -163,6 +180,10 @@ type VerbServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// Get configuration state for the module
 	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error)
+	// Acquire (and renew) a lease for a deployment.
+	//
+	// Returns ResourceExhausted if the lease is held.
+	AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
@@ -182,8 +203,12 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 	verbServiceGetModuleContextHandler := connect.NewUnaryHandler(
 		VerbServiceGetModuleContextProcedure,
 		svc.GetModuleContext,
-		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-		connect.WithHandlerOptions(opts...),
+		opts...,
+	)
+	verbServiceAcquireLeaseHandler := connect.NewBidiStreamHandler(
+		VerbServiceAcquireLeaseProcedure,
+		svc.AcquireLease,
+		opts...,
 	)
 	verbServiceCallHandler := connect.NewUnaryHandler(
 		VerbServiceCallProcedure,
@@ -196,6 +221,8 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 			verbServicePingHandler.ServeHTTP(w, r)
 		case VerbServiceGetModuleContextProcedure:
 			verbServiceGetModuleContextHandler.ServeHTTP(w, r)
+		case VerbServiceAcquireLeaseProcedure:
+			verbServiceAcquireLeaseHandler.ServeHTTP(w, r)
 		case VerbServiceCallProcedure:
 			verbServiceCallHandler.ServeHTTP(w, r)
 		default:
@@ -213,6 +240,10 @@ func (UnimplementedVerbServiceHandler) Ping(context.Context, *connect.Request[v1
 
 func (UnimplementedVerbServiceHandler) GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.GetModuleContext is not implemented"))
+}
+
+func (UnimplementedVerbServiceHandler) AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.AcquireLease is not implemented"))
 }
 
 func (UnimplementedVerbServiceHandler) Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error) {

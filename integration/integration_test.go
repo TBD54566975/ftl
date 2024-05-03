@@ -9,9 +9,15 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
+	"golang.org/x/sync/errgroup"
+
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
 func TestCron(t *testing.T) {
@@ -222,5 +228,40 @@ func TestModuleUnitTests(t *testing.T) {
 		copyModule("wrapped"),
 		build("time", "wrapped"),
 		testModule("wrapped"),
+	)
+}
+
+func TestLease(t *testing.T) {
+	run(t,
+		copyModule("leases"),
+		deploy("leases"),
+		func(t testing.TB, ic testContext) error {
+			// Start a lease.
+			wg := errgroup.Group{}
+			wg.Go(func() error {
+				infof("Acquiring lease")
+				_, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
+					Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
+					Body: []byte("{}"),
+				}))
+				return err
+			})
+
+			time.Sleep(time.Second)
+
+			infof("Trying to acquire lease again")
+			// Trying to obtain the lease again should fail.
+			resp, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
+				Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
+				Body: []byte("{}"),
+			}))
+			if err != nil {
+				return err
+			}
+			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "could not acquire lease") {
+				return fmt.Errorf("expected error but got: %#v", resp.Msg.GetError())
+			}
+			return wg.Wait()
+		},
 	)
 }
