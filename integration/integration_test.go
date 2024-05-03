@@ -212,6 +212,15 @@ func TestHttpIngress(t *testing.T) {
 func TestRuntimeReflection(t *testing.T) {
 	run(t,
 		copyModule("runtimereflection"),
-		chdir("runtimereflection", exec("go", "test", "-v", ".")),
+		testModule("runtimereflection"),
+	)
+}
+
+func TestModuleUnitTests(t *testing.T) {
+	run(t,
+		copyModule("time"),
+		copyModule("wrapped"),
+		build("time", "wrapped"),
+		testModule("wrapped"),
 	)
 }

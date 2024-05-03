@@ -5,7 +5,7 @@ import (
 )
 
 func FromProto(response *ftlv1.ModuleContextResponse) (*ModuleContext, error) {
-	moduleCtx := New()
+	moduleCtx := New(response.Module)
 	for name, data := range response.Configs {
 		moduleCtx.configs[name] = data
 	}

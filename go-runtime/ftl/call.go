@@ -14,12 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
-func call[Req, Resp any](ctx context.Context, callee Ref, req Req) (resp Resp, err error) {
-	reqData, err := encoding.Marshal(req)
-	if err != nil {
-		return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
-	}
-
+func call[Req, Resp any](ctx context.Context, callee Ref, req Req, inline Verb[Req, Resp]) (resp Resp, err error) {
 	behavior, err := modulecontext.FromContext(ctx).BehaviorForVerb(modulecontext.Ref(callee))
 	if err != nil {
 		return resp, fmt.Errorf("%s: %w", callee, err)
@@ -35,8 +30,17 @@ func call[Req, Resp any](ctx context.Context, callee Ref, req Req) (resp Resp, e
 		}
 		return resp, fmt.Errorf("%s: overridden verb had invalid response type %T, expected %v", callee, uncheckedResp, reflect.TypeFor[Resp]())
 	case modulecontext.DirectBehavior:
-		panic("not implemented")
+		resp, err = inline(ctx, req)
+		if err != nil {
+			return resp, fmt.Errorf("%s: %w", callee, err)
+		}
+		return resp, nil
 	case modulecontext.StandardBehavior:
+		reqData, err := encoding.Marshal(req)
+		if err != nil {
+			return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
+		}
+
 		client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 		cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData}))
 		if err != nil {
@@ -63,22 +67,28 @@ func call[Req, Resp any](ctx context.Context, callee Ref, req Req) (resp Resp, e
 
 // Call a Verb through the FTL Controller.
 func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (Resp, error) {
-	return call[Req, Resp](ctx, FuncRef(verb), req)
+	return call[Req, Resp](ctx, FuncRef(verb), req, verb)
 }
 
 // CallSink calls a Sink through the FTL controller.
 func CallSink[Req any](ctx context.Context, sink Sink[Req], req Req) error {
-	_, err := call[Req, Unit](ctx, FuncRef(sink), req)
+	_, err := call[Req, Unit](ctx, FuncRef(sink), req, func(ctx context.Context, req Req) (Unit, error) {
+		return Unit{}, sink(ctx, req)
+	})
 	return err
 }
 
 // CallSource calls a Source through the FTL controller.
 func CallSource[Resp any](ctx context.Context, source Source[Resp]) (Resp, error) {
-	return call[Unit, Resp](ctx, FuncRef(source), Unit{})
+	return call[Unit, Resp](ctx, FuncRef(source), Unit{}, func(ctx context.Context, req Unit) (Resp, error) {
+		return source(ctx)
+	})
 }
 
 // CallEmpty calls a Verb with no request or response through the FTL controller.
 func CallEmpty(ctx context.Context, empty Empty) error {
-	_, err := call[Unit, Unit](ctx, FuncRef(empty), Unit{})
+	_, err := call[Unit, Unit](ctx, FuncRef(empty), Unit{}, func(ctx context.Context, req Unit) (Unit, error) {
+		return Unit{}, empty(ctx)
+	})
 	return err
 }

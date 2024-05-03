@@ -144,6 +144,13 @@ func deploy(module string) action {
 	)
 }
 
+// Build modules from the working directory and wait for it to become available.
+func build(modules ...string) action {
+	args := []string{"build"}
+	args = append(args, modules...)
+	return exec("ftl", args...)
+}
+
 // wait for the given module to deploy.
 func wait(module string) action {
 	return func(t testing.TB, ic testContext) error {
@@ -345,4 +352,8 @@ func httpCall(method string, path string, body []byte, onResponse func(resp *htt
 			bodyBytes: bodyBytes,
 		})
 	}
+}
+
+func testModule(module string) action {
+	return chdir(module, exec("go", "test", "-v", "."))
 }

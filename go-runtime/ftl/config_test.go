@@ -13,7 +13,7 @@ import (
 func TestConfig(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	moduleCtx := modulecontext.New()
+	moduleCtx := modulecontext.New("test")
 	ctx = moduleCtx.ApplyToContext(ctx)
 
 	type C struct {
