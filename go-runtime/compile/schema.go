@@ -42,10 +42,11 @@ var (
 )
 
 // NativeNames is a map of top-level declarations to their native Go names.
-type NativeNames map[schema.Decl]string
+type NativeNames map[schema.Node]string
 
 type enums map[string]*schema.Enum
 type enumInterfaces map[string]*types.Interface
+type enumRefs map[string]*schema.Ref
 
 func noEndColumnErrorf(pos token.Pos, format string, args ...interface{}) *schema.Error {
 	return tokenErrorf(pos, "", format, args...)
@@ -91,20 +92,31 @@ func (e errorSet) addAll(errs ...*schema.Error) {
 	}
 }
 
+type ParseResult struct {
+	Module      *schema.Module
+	NativeNames NativeNames
+	// EnumRefs contains any external enums referenced by this module. The refs will be resolved and any type enums
+	// will be registered to the `ftl.TypeRegistry` and provided in the context for this module.
+	EnumRefs []*schema.Ref
+	// Errors contains schema validation errors encountered during parsing.
+	Errors []*schema.Error
+}
+
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
-func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, []*schema.Error /*schema errors*/, error /*exceptions*/) {
+func ExtractModuleSchema(dir string) (optional.Option[ParseResult], error) {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
 	}, "./...")
 	if err != nil {
-		return nil, nil, nil, err
+		return optional.None[ParseResult](), err
 	}
 	if len(pkgs) == 0 {
-		return nil, nil, nil, fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
+		return optional.None[ParseResult](), fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
 	}
 	nativeNames := NativeNames{}
+	eRefs := enumRefs{}
 	// Find module name
 	module := &schema.Module{}
 	merr := []error{}
@@ -112,7 +124,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, []*schema.Err
 	for _, pkg := range pkgs {
 		moduleName, ok := ftlModuleFromGoModule(pkg.PkgPath).Get()
 		if !ok {
-			return nil, nil, nil, fmt.Errorf("package %q is not in the ftl namespace", pkg.PkgPath)
+			return optional.None[ParseResult](), fmt.Errorf("package %q is not in the ftl namespace", pkg.PkgPath)
 		}
 		module.Name = moduleName
 		if len(pkg.Errors) > 0 {
@@ -120,7 +132,8 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, []*schema.Err
 				merr = append(merr, perr)
 			}
 		}
-		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{}, enumInterfaces: enumInterfaces{}, errors: errorSet{}}
+		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{},
+			enumInterfaces: enumInterfaces{}, enumRefs: eRefs, errors: errorSet{}}
 		for _, file := range pkg.Syntax {
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				switch node := node.(type) {
@@ -148,7 +161,7 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, []*schema.Err
 				return next()
 			})
 			if err != nil {
-				return nil, nil, nil, err
+				return optional.None[ParseResult](), err
 			}
 		}
 		for decl, nativeName := range pctx.nativeNames {
@@ -163,12 +176,16 @@ func ExtractModuleSchema(dir string) (NativeNames, *schema.Module, []*schema.Err
 	}
 	if len(schemaErrs) > 0 {
 		schema.SortErrorsByPosition(schemaErrs)
-		return nil, nil, schemaErrs, nil
+		return optional.Some(ParseResult{Errors: schemaErrs}), nil
 	}
 	if len(merr) > 0 {
-		return nil, nil, nil, errors.Join(merr...)
+		return optional.None[ParseResult](), errors.Join(merr...)
 	}
-	return nativeNames, module, nil, schema.ValidateModule(module)
+	return optional.Some(ParseResult{
+		NativeNames: nativeNames,
+		Module:      module,
+		EnumRefs:    maps.Values(eRefs),
+	}), schema.ValidateModule(module)
 }
 
 func visitCallExpr(pctx *parseContext, node *ast.CallExpr) {
@@ -422,12 +439,12 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
 					switch typ.Underlying().(type) {
 					case *types.Basic:
-						if typ, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(t.Type), isExported).Get(); ok {
+						if sType, ok := visitType(pctx, node.Pos(), typ, isExported).Get(); ok {
 							enum := &schema.Enum{
 								Pos:      goPosToSchemaPos(node.Pos()),
 								Comments: visitComments(node.Doc),
 								Name:     strcase.ToUpperCamel(t.Name.Name),
-								Type:     typ,
+								Type:     sType,
 								Export:   isExported,
 							}
 							pctx.enums[t.Name.Name] = enum
@@ -444,7 +461,9 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 							Export:   isExported,
 						}
 						pctx.enums[t.Name.Name] = enum
-						pctx.nativeNames[enum] = t.Name.Name
+						enumType := pctx.pkg.Types.Scope().Lookup(t.Name.Name)
+						enumName := enumType.Pkg().Name() + "." + enumType.Name()
+						pctx.nativeNames[enum] = enumName
 						if typ, ok := typ.(*types.Interface); ok {
 							pctx.enumInterfaces[t.Name.Name] = typ
 						} else {
@@ -521,6 +540,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 					pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
 				}
 				pctx.enums[enumName].Variants = append(pctx.enums[enumName].Variants, enumVariant)
+				pctx.nativeNames[enumVariant] = named.Obj().Pkg().Name() + "." + named.Obj().Name()
 				return true
 			}
 		}
@@ -872,6 +892,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 				return optional.None[schema.Type]()
 			}
 			enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
+			if er, ok := enumRef.Get(); ok {
+				pctx.enumRefs[named.Obj().Name()] = er.(*schema.Ref) //nolint:forcetypeassert
+			}
 			if doneWithVisit {
 				return enumRef
 			}
@@ -941,6 +964,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 		}
 		if named, ok := tnode.(*types.Named); ok {
 			enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
+			if er, ok := enumRef.Get(); ok {
+				pctx.enumRefs[named.Obj().Name()] = er.(*schema.Ref) //nolint:forcetypeassert
+			}
 			if doneWithVisit {
 				return enumRef
 			}
@@ -1073,6 +1099,7 @@ type parseContext struct {
 	nativeNames    NativeNames
 	enums          enums
 	enumInterfaces enumInterfaces
+	enumRefs       enumRefs
 	activeVerb     *schema.Verb
 	errors         errorSet
 }

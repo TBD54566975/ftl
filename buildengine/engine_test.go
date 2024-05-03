@@ -49,7 +49,7 @@ func TestEngine(t *testing.T) {
 	expected := map[string][]string{
 		"alpha":   {"another", "other", "builtin"},
 		"another": {"builtin"},
-		"other":   {"builtin"},
+		"other":   {"another", "builtin"},
 		"builtin": {},
 	}
 	graph, err := engine.Graph()

@@ -15,6 +15,8 @@ import (
 	"unicode"
 
 	"github.com/TBD54566975/scaffolder"
+	sets "github.com/deckarep/golang-set/v2"
+	gomaps "golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -50,6 +52,17 @@ type mainModuleContext struct {
 	Name         string
 	Verbs        []goVerb
 	Replacements []*modfile.Replace
+	SumTypes     []goSumType
+}
+
+type goSumType struct {
+	Discriminator string
+	Variants      []goSumTypeVariant
+}
+
+type goSumTypeVariant struct {
+	Name string
+	Type string
 }
 
 type ModifyFilesTransaction interface {
@@ -123,11 +136,13 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 
 	buildDir := buildDir(moduleDir)
 	logger.Debugf("Extracting schema")
-	nativeNames, main, schemaErrs, err := ExtractModuleSchema(moduleDir)
+	parseResult, err := ExtractModuleSchema(moduleDir)
 	if err != nil {
 		return fmt.Errorf("failed to extract module schema: %w", err)
 	}
-	if len(schemaErrs) > 0 {
+	pr := parseResult.MustGet()
+	main := pr.Module
+	if schemaErrs := pr.Errors; len(schemaErrs) > 0 {
 		if err := writeSchemaErrors(config, schemaErrs); err != nil {
 			return fmt.Errorf("failed to write errors: %w", err)
 		}
@@ -146,7 +161,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	goVerbs := make([]goVerb, 0, len(main.Decls))
 	for _, decl := range main.Decls {
 		if verb, ok := decl.(*schema.Verb); ok {
-			nativeName, ok := nativeNames[verb]
+			nativeName, ok := pr.NativeNames[verb]
 			if !ok {
 				return fmt.Errorf("missing native name for verb %s", verb.Name)
 			}
@@ -167,6 +182,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		Name:         main.Name,
 		Verbs:        goVerbs,
 		Replacements: replacements,
+		SumTypes:     getSumTypes(pr.EnumRefs, main, sch, pr.NativeNames),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -219,7 +235,6 @@ func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *sc
 		Schema:       schema,
 		Replacements: replacements,
 	})
-
 }
 
 func generateExternalModules(context ExternalModuleContext) error {
@@ -313,6 +328,23 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			}
 		}
 		return false
+	},
+	"mainImports": func(ctx mainModuleContext) []string {
+		imports := sets.NewSet[string]()
+		if len(ctx.Verbs) > 0 {
+			imports.Add(ctx.Name)
+		}
+		for _, st := range ctx.SumTypes {
+			if i := strings.LastIndex(st.Discriminator, "."); i != -1 {
+				imports.Add(st.Discriminator[:i])
+			}
+			for _, v := range st.Variants {
+				if i := strings.LastIndex(v.Type, "."); i != -1 {
+					imports.Add(v.Type[:i])
+				}
+			}
+		}
+		return imports.ToSlice()
 	},
 }
 
@@ -443,4 +475,47 @@ func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error)
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}
 	return os.WriteFile(filepath.Join(config.AbsDeployDir(), config.Errors), elBytes, 0600)
+}
+
+func getSumTypes(enumRefs []*schema.Ref, module *schema.Module, sch *schema.Schema, nativeNames NativeNames) []goSumType {
+	sumTypes := make(map[string]goSumType)
+	for _, d := range module.Decls {
+		if e, ok := d.(*schema.Enum); ok && !e.IsValueEnum() {
+			variants := make([]goSumTypeVariant, 0, len(e.Variants))
+			for _, v := range e.Variants {
+				variants = append(variants, goSumTypeVariant{
+					Name: v.Name,
+					Type: nativeNames[v],
+				})
+			}
+			stFqName := nativeNames[d]
+			sumTypes[stFqName] = goSumType{
+				Discriminator: nativeNames[d],
+				Variants:      variants,
+			}
+		}
+	}
+
+	// register sum types from other modules
+	for _, ref := range enumRefs {
+		if ref.Module == module.Name {
+			continue
+		}
+		resolved := sch.ResolveRef(ref)
+		if e, ok := resolved.(*schema.Enum); ok && !e.IsValueEnum() {
+			variants := make([]goSumTypeVariant, 0, len(e.Variants))
+			for _, v := range e.Variants {
+				variants = append(variants, goSumTypeVariant{
+					Name: v.Name,
+					Type: ref.Module + "." + v.Name,
+				})
+			}
+			stFqName := ref.Module + "." + e.Name
+			sumTypes[stFqName] = goSumType{
+				Discriminator: stFqName,
+				Variants:      variants,
+			}
+		}
+	}
+	return gomaps.Values(sumTypes)
 }

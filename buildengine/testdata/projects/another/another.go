@@ -7,6 +7,19 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
+//ftl:enum export
+type TypeEnum interface {
+	tag()
+}
+
+type A int
+
+func (A) tag() {}
+
+type B string
+
+func (B) tag() {}
+
 type EchoRequest struct {
 	Name ftl.Option[string] `json:"name"`
 }
