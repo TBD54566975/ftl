@@ -12,7 +12,7 @@ import (
 )
 
 func TestWrapped(t *testing.T) {
-	allOptions := []func(context.Context) error{
+	allOptions := []func(*ftltest.Options) error{
 		ftltest.WithConfig(myConfig, "helloworld"),
 		ftltest.WithSecret(mySecret, "shhhhh"),
 		ftltest.WithCallsAllowedWithinModule(),
@@ -23,7 +23,7 @@ func TestWrapped(t *testing.T) {
 
 	for _, tt := range []struct {
 		name          string
-		options       []func(context.Context) error
+		options       []func(*ftltest.Options) error
 		expectedError ftl.Option[string]
 	}{
 		{
