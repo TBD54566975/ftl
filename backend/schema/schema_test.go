@@ -177,7 +177,7 @@ func TestParserRoundTrip(t *testing.T) {
 	assert.NoError(t, err, "%s", testSchema.String())
 	actual, err = ValidateSchema(actual)
 	assert.NoError(t, err)
-	assert.Equal(t, Normalise(testSchema), Normalise(actual))
+	assert.Equal(t, Normalise(testSchema), Normalise(actual), assert.Exclude[Position]())
 }
 
 func TestParsing(t *testing.T) {
@@ -380,7 +380,7 @@ func TestParsing(t *testing.T) {
 				assert.NotZero(t, test.expected, "test.expected is nil")
 				assert.NotZero(t, test.expected.Modules, "test.expected.Modules is nil")
 				test.expected.Modules = append([]*Module{Builtins()}, test.expected.Modules...)
-				assert.Equal(t, Normalise(test.expected), Normalise(actual), assert.OmitEmpty())
+				assert.Equal(t, Normalise(test.expected), Normalise(actual), assert.OmitEmpty(), assert.Exclude[Position]())
 			}
 		})
 	}
@@ -431,19 +431,19 @@ func TestParseEnum(t *testing.T) {
 		Blue = "Blue"
 		Green = "Green"
 	 }
-	
+
 	 export enum ColorInt: Int {
 		Red = 0
 		Blue = 1
 		Green = 2
 	 }
-	
+
 	 enum TypeEnum {
 		A String
 		B [String]
 		C Int
 	 }
-	
+
 	 enum StringTypeEnum {
 		A String
 		B String
@@ -456,7 +456,7 @@ func TestParseEnum(t *testing.T) {
 	actual, err := ParseModuleString("", input)
 	assert.NoError(t, err)
 	actual = Normalise(actual)
-	assert.Equal(t, Normalise(testSchema.Modules[2]), actual)
+	assert.Equal(t, Normalise(testSchema.Modules[2]), actual, assert.Exclude[Position]())
 }
 
 var testSchema = MustValidate(&Schema{
