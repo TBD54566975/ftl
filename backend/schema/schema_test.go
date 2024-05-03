@@ -80,6 +80,36 @@ module foo {
   verb callTodoCreate(todo.CreateRequest) todo.CreateResponse
       +calls todo.create
 }
+
+module payments {
+  fsm payment {
+    start payments.created
+    start payments.paid
+    transition payments.created to payments.paid
+    transition payments.created to payments.failed
+    transition payments.paid to payments.completed
+  }
+
+  data OnlinePaymentCompleted {
+  }
+
+  data OnlinePaymentCreated {
+  }
+
+  data OnlinePaymentFailed {
+  }
+
+  data OnlinePaymentPaid {
+  }
+
+  verb completed(payments.OnlinePaymentCompleted) builtin.Empty
+
+  verb created(payments.OnlinePaymentCreated) builtin.Empty
+
+  verb failed(payments.OnlinePaymentFailed) builtin.Empty
+
+  verb paid(payments.OnlinePaymentPaid) builtin.Empty
+}
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(testSchema.String()))
 }
@@ -240,7 +270,7 @@ func TestParsing(t *testing.T) {
 			}},
 		{name: "KeywordAsName",
 			input:  `module int { data String { name String } verb verb(String) String }`,
-			errors: []string{"1:14-14: data structure name \"String\" is a reserved word"}},
+			errors: []string{"1:14-14: data name \"String\" is a reserved word"}},
 		{name: "BuiltinRef",
 			input: `module test { verb myIngress(HttpRequest<String>) HttpResponse<String, String> }`,
 			expected: &Schema{
@@ -583,6 +613,40 @@ var testSchema = MustValidate(&Schema{
 					Metadata: []Metadata{
 						&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "create"}}},
 					}},
+			},
+		},
+		{
+			Name: "payments",
+			Decls: []Decl{
+				&Data{Name: "OnlinePaymentCreated"},
+				&Data{Name: "OnlinePaymentPaid"},
+				&Data{Name: "OnlinePaymentFailed"},
+				&Data{Name: "OnlinePaymentCompleted"},
+				&Verb{Name: "created",
+					Request:  &Ref{Module: "payments", Name: "OnlinePaymentCreated"},
+					Response: &Ref{Module: "builtin", Name: "Empty"},
+				},
+				&Verb{Name: "paid",
+					Request:  &Ref{Module: "payments", Name: "OnlinePaymentPaid"},
+					Response: &Ref{Module: "builtin", Name: "Empty"},
+				},
+				&Verb{Name: "failed",
+					Request:  &Ref{Module: "payments", Name: "OnlinePaymentFailed"},
+					Response: &Ref{Module: "builtin", Name: "Empty"},
+				},
+				&Verb{Name: "completed",
+					Request:  &Ref{Module: "payments", Name: "OnlinePaymentCompleted"},
+					Response: &Ref{Module: "builtin", Name: "Empty"},
+				},
+				&FSM{
+					Name:  "payment",
+					Start: []*Ref{{Module: "payments", Name: "created"}, {Module: "payments", Name: "paid"}},
+					Transitions: []*FSMTransition{
+						{From: &Ref{Module: "payments", Name: "created"}, To: &Ref{Module: "payments", Name: "paid"}},
+						{From: &Ref{Module: "payments", Name: "created"}, To: &Ref{Module: "payments", Name: "failed"}},
+						{From: &Ref{Module: "payments", Name: "paid"}, To: &Ref{Module: "payments", Name: "completed"}},
+					},
+				},
 			},
 		},
 	},

@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &Config{}, &Secret{}}
+	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &Config{}, &Secret{}, &FSM{}}
 	nonOptionalTypeUnion = []Type{
 		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
 		&Map{}, &Any{}, &Unit{},

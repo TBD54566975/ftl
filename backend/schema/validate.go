@@ -52,6 +52,8 @@ func ValidateSchema(schema *Schema) (*Schema, error) {
 
 // ValidateModuleInSchema clones and normalises a schema and semantically validates a single module within it.
 // If no module is provided, all modules in the schema are validated.
+//
+//nolint:maintidx
 func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema, error) {
 	schema = dc.DeepCopy(schema)
 	modules := map[string]bool{}
@@ -111,52 +113,56 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			defer func() { indent-- }()
 			switch n := n.(type) {
 			case *Ref:
-				if mdecl := scopes.Resolve(*n); mdecl != nil {
-					if decl, ok := mdecl.Symbol.(Decl); ok {
-						if mod, ok := mdecl.Module.Get(); ok {
-							n.Module = mod.Name
-						}
+				mdecl := scopes.Resolve(*n)
+				if mdecl == nil {
+					merr = append(merr, errorf(n, "unknown reference %q", n))
+					break
+				}
 
-						if n.Module != module.Name && !decl.IsExported() {
-							merr = append(merr, errorf(n, "%s %q must be exported", typeName(decl), n.String()))
-						}
+				if decl, ok := mdecl.Symbol.(Decl); ok {
+					if mod, ok := mdecl.Module.Get(); ok {
+						n.Module = mod.Name
+					}
 
-						if dataDecl, ok := decl.(*Data); ok {
-							if len(n.TypeParameters) != len(dataDecl.TypeParameters) {
-								merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
-									n.Name, len(n.TypeParameters), len(dataDecl.TypeParameters)))
-							}
-						} else if len(n.TypeParameters) != 0 && !decl.IsExported() {
-							merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters", typeName(decl), n.Name))
+					if n.Module != module.Name && !decl.IsExported() {
+						merr = append(merr, errorf(n, "%s %q must be exported", typeName(decl), n.String()))
+					}
+
+					if dataDecl, ok := decl.(*Data); ok {
+						if len(n.TypeParameters) != len(dataDecl.TypeParameters) {
+							merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
+								n.Name, len(n.TypeParameters), len(dataDecl.TypeParameters)))
 						}
-					} else {
-						if _, ok := mdecl.Symbol.(*TypeParameter); !ok {
-							merr = append(merr, errorf(n, "invalid reference %q at %q", n, mdecl.Symbol.Position()))
-						}
+					} else if len(n.TypeParameters) != 0 && !decl.IsExported() {
+						merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters", typeName(decl), n.Name))
 					}
 				} else {
-					merr = append(merr, errorf(n, "unknown reference %q", n))
+					if _, ok := mdecl.Symbol.(*TypeParameter); !ok {
+						merr = append(merr, errorf(n, "invalid reference %q at %q", n, mdecl.Symbol.Position()))
+					}
 				}
 
 			case *Verb:
 				for _, md := range n.Metadata {
-					if md, ok := md.(*MetadataIngress); ok {
-						// Check for duplicate ingress keys
-						key := md.Method + " "
-						for _, path := range md.Path {
-							switch path := path.(type) {
-							case *IngressPathLiteral:
-								key += "/" + path.Text
-
-							case *IngressPathParameter:
-								key += "/{}"
-							}
-						}
-						if existing, ok := ingress[key]; ok {
-							merr = append(merr, errorf(md, "duplicate %s ingress %s for %s:%q and %s:%q", md.Type, key, existing.Pos, existing.Name, n.Pos, n.Name))
-						}
-						ingress[key] = n
+					md, ok := md.(*MetadataIngress)
+					if !ok {
+						continue
 					}
+					// Check for duplicate ingress keys
+					key := md.Method + " "
+					for _, path := range md.Path {
+						switch path := path.(type) {
+						case *IngressPathLiteral:
+							key += "/" + path.Text
+
+						case *IngressPathParameter:
+							key += "/{}"
+						}
+					}
+					if existing, ok := ingress[key]; ok {
+						merr = append(merr, errorf(md, "duplicate %s ingress %s for %s:%q and %s:%q", md.Type, key, existing.Pos, existing.Name, n.Pos, n.Name))
+					}
+					ingress[key] = n
 				}
 
 			case *Enum:
@@ -169,6 +175,30 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 					}
 				}
 				return next()
+
+			case *FSM:
+				if len(n.Start) == 0 {
+					merr = append(merr, errorf(n, "%q has no start states", n.Name))
+				}
+				for _, start := range n.Start {
+					if sym, decl := ResolveAs[*Verb](scopes, *start); decl == nil {
+						merr = append(merr, errorf(start, "unknown start verb %q", start))
+					} else if sym == nil {
+						merr = append(merr, errorf(start, "start state %q must be a verb", start))
+					}
+				}
+
+			case *FSMTransition:
+				if sym, decl := ResolveAs[*Verb](scopes, *n.From); decl == nil {
+					merr = append(merr, errorf(n, "unknown source verb %q", n.From))
+				} else if sym == nil {
+					merr = append(merr, errorf(n, "source state %q is not a verb", n.From))
+				}
+				if sym, decl := ResolveAs[*Verb](scopes, *n.To); decl == nil {
+					merr = append(merr, errorf(n, "unknown destination verb %q", n.To))
+				} else if sym == nil {
+					merr = append(merr, errorf(n, "destination state %q is not a verb", n.To))
+				}
 
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
@@ -213,11 +243,28 @@ func ValidateModule(module *Module) error {
 		merr = append(merr, err)
 	}
 	scopes = scopes.Push()
+	// Key is <type>:<name>
+	duplicateDecls := map[string]Decl{}
+
 	_ = Visit(module, func(n Node, next func() error) error {
 		if scoped, ok := n.(Scoped); ok {
 			pop := scopes
 			scopes = scopes.PushScope(scoped.Scope())
 			defer func() { scopes = pop }()
+		}
+		if n, ok := n.(Decl); ok {
+			tname := typeName(n)
+			duplKey := tname + ":" + n.GetName()
+			if dupl, ok := duplicateDecls[duplKey]; ok {
+				merr = append(merr, errorf(n, "duplicate %s %q, first defined at %s", tname, n.GetName(), dupl.Position()))
+			} else {
+				duplicateDecls[duplKey] = n
+			}
+			if !ValidateName(n.GetName()) {
+				merr = append(merr, errorf(n, "%s name %q is invalid", tname, n.GetName()))
+			} else if _, ok := primitivesScope[n.GetName()]; ok {
+				merr = append(merr, errorf(n, "%s name %q is a reserved word", tname, n.GetName()))
+			}
 		}
 		switch n := n.(type) {
 		case *Ref:
@@ -256,42 +303,13 @@ func ValidateModule(module *Module) error {
 			}
 
 		case *Verb:
-			if !ValidateName(n.Name) {
-				merr = append(merr, errorf(n, "Verb name %q is invalid", n.Name))
-			}
-			if _, ok := primitivesScope[n.Name]; ok {
-				merr = append(merr, errorf(n, "Verb name %q is a reserved word", n.Name))
-			}
-
 			merr = append(merr, validateVerbMetadata(scopes, module, n)...)
 
 		case *Data:
-			if !ValidateName(n.Name) {
-				merr = append(merr, errorf(n, "data structure name %q is invalid", n.Name))
-			}
-			if _, ok := primitivesScope[n.Name]; ok {
-				merr = append(merr, errorf(n, "data structure name %q is a reserved word", n.Name))
-			}
 			for _, md := range n.Metadata {
 				if md, ok := md.(*MetadataCalls); ok {
 					merr = append(merr, errorf(md, "metadata %q is not valid on data structures", strings.TrimSpace(md.String())))
 				}
-			}
-
-		case *Config:
-			if !ValidateName(n.Name) {
-				merr = append(merr, errorf(n, "config name %q is invalid", n.Name))
-			}
-			if _, ok := primitivesScope[n.Name]; ok {
-				merr = append(merr, errorf(n, "config name %q is a reserved word", n.Name))
-			}
-
-		case *Secret:
-			if !ValidateName(n.Name) {
-				merr = append(merr, errorf(n, "secret name %q is invalid", n.Name))
-			}
-			if _, ok := primitivesScope[n.Name]; ok {
-				merr = append(merr, errorf(n, "secret name %q is a reserved word", n.Name))
 			}
 
 		case *Field:
@@ -305,15 +323,13 @@ func ValidateModule(module *Module) error {
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
-			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue:
+			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
+			*FSM, *Config, *FSMTransition, *Secret:
 
-		case Named, Symbol, Type, Metadata, Decl, Value: // Union types.
+		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
 		return next()
 	})
-
-	// Scan declarations for duplicates
-	merr = append(merr, findDuplicateDecls(module.Decls)...)
 
 	merr = cleanErrors(merr)
 	sort.SliceStable(module.Decls, func(i, j int) bool {
@@ -329,45 +345,6 @@ func ValidateModule(module *Module) error {
 	return errors.Join(merr...)
 }
 
-func findDuplicateDecls(decls []Decl) []error {
-	merr := []error{}
-
-	configs := make(map[string]*Config)
-	secrets := make(map[string]*Secret)
-	dbs := make(map[string]*Database)
-
-	for _, d := range decls {
-		switch d := d.(type) {
-		case *Config:
-			if _, ok := configs[d.Name]; !ok {
-				configs[d.Name] = d
-				continue
-			}
-			match := configs[d.Name]
-			merr = append(merr, errorf(d, "duplicate config declaration at %d:%d", match.Pos.Line, match.Pos.Column))
-
-		case *Secret:
-			if _, ok := secrets[d.Name]; !ok {
-				secrets[d.Name] = d
-				continue
-			}
-			match := secrets[d.Name]
-			merr = append(merr, errorf(d, "duplicate secret declaration at %d:%d", match.Pos.Line, match.Pos.Column))
-
-		case *Database:
-			if _, ok := dbs[d.Name]; !ok { // no matches
-				dbs[d.Name] = d
-				continue
-			}
-			match := dbs[d.Name]
-			merr = append(merr, errorf(d, "duplicate database declaration at %d:%d", match.Pos.Line, match.Pos.Column))
-
-		default:
-		}
-	}
-	return merr
-}
-
 // getDeclSortingPriority (used for schema sorting) is pulled out into it's own switch so the Go sumtype check will fail
 // if a new Decl is added but not explicitly prioritized
 func getDeclSortingPriority(decl Decl) int {
@@ -381,10 +358,12 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 3
 	case *Enum:
 		priority = 4
-	case *Data:
+	case *FSM:
 		priority = 5
-	case *Verb:
+	case *Data:
 		priority = 6
+	case *Verb:
+		priority = 7
 	}
 	return priority
 }
@@ -577,5 +556,5 @@ func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, re
 
 // Give a type a human-readable name.
 func typeName(v any) string {
-	return reflect.Indirect(reflect.ValueOf(v)).Type().Name()
+	return strings.ToLower(reflect.Indirect(reflect.ValueOf(v)).Type().Name())
 }

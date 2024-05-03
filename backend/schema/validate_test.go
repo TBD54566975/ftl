@@ -114,7 +114,7 @@ func TestValidate(t *testing.T) {
 						+ingress http GET /string
 					export verb data(HttpRequest<Empty>) HttpResponse<Empty, Empty>
 						+ingress http GET /data
-					
+
 					// Invalid types.
 					export verb any(HttpRequest<Any>) HttpResponse<Any, Any>
 						+ingress http GET /any
@@ -201,46 +201,46 @@ func TestValidate(t *testing.T) {
 		{name: "DuplicateConfigs",
 			schema: `
 				module one {
-                                        config FTL_ENDPOINT String
-                                        config FTL_ENDPOINT Any
-                                        config FTL_ENDPOINT String
+                  	config FTL_ENDPOINT String
+                    config FTL_ENDPOINT Any
+                    config FTL_ENDPOINT String
 				}
 			`,
 			errs: []string{
-				"4:41-41: duplicate config declaration at 3:41",
-				"5:41-41: duplicate config declaration at 3:41",
+				`4:21-21: duplicate config "FTL_ENDPOINT", first defined at 3:20`,
+				`5:21-21: duplicate config "FTL_ENDPOINT", first defined at 3:20`,
 			},
 		},
 		{name: "DuplicateSecrets",
 			schema: `
 				module one {
-                                        secret MY_SECRET String
-                                        secret MY_SECRET Any
-                                        secret MY_SECRET String
+					secret MY_SECRET String
+					secret MY_SECRET Any
+					secret MY_SECRET String
 				}
 			`,
 			errs: []string{
-				"4:41-41: duplicate secret declaration at 3:41",
-				"5:41-41: duplicate secret declaration at 3:41",
+				`4:6-6: duplicate secret "MY_SECRET", first defined at 3:6`,
+				`5:6-6: duplicate secret "MY_SECRET", first defined at 3:6`,
 			},
 		},
 		{name: "ConfigAndSecretsWithSameName",
 			schema: `
 				module one {
-                                        config FTL_ENDPOINT String
-                                        secret FTL_ENDPOINT String
+					config FTL_ENDPOINT String
+					secret FTL_ENDPOINT String
 				}
 			`,
 		},
 		{name: "DuplicateDatabases",
 			schema: `
 				module one {
-                                        database postgres MY_DB
-                                        database postgres MY_DB
+					database postgres MY_DB
+					database postgres MY_DB
 				}
 			`,
 			errs: []string{
-				"4:41-41: duplicate database declaration at 3:41",
+				`4:6-6: duplicate database "MY_DB", first defined at 3:6`,
 			},
 		},
 		{name: "ValueEnumMismatchedVariantTypes",
@@ -252,7 +252,47 @@ func TestValidate(t *testing.T) {
 					}
 				}
 				`,
-			errs: []string{"4:7-7: enum variant \"A\" of type Int cannot have a value of type \"String\""}},
+			errs: []string{"4:7-7: enum variant \"A\" of type Int cannot have a value of type \"String\""},
+		},
+		{name: "InvalidFSM",
+			schema: `
+				module one {
+					verb A(Empty) Empty
+					verb B(one.C) Empty
+
+					fsm FSM {
+						transition one.C to one.B
+					}
+				}
+				`,
+			errs: []string{
+				`4:13-13: unknown reference "one.C"`,
+				`6:6-6: "FSM" has no start states`,
+				`7:18-18: unknown source verb "one.C"`,
+			},
+		},
+		{name: "DuplicateFSM",
+			schema: `
+				module one {
+					verb A(Empty) Empty
+					verb B(Empty) Empty
+					verb C(Empty) Empty
+
+					fsm FSM {
+						start one.A
+						transition one.A to one.B
+					}
+
+					fsm FSM {
+						start one.A
+						transition one.A to one.B
+					}
+				}
+				`,
+			errs: []string{
+				`12:6-6: duplicate fsm "FSM", first defined at 7:6`,
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -261,6 +301,7 @@ func TestValidate(t *testing.T) {
 			if test.errs == nil {
 				assert.NoError(t, err)
 			} else {
+				assert.Error(t, err)
 				errs := slices.Map(errors.UnwrapAll(err), func(e error) string { return e.Error() })
 				assert.Equal(t, test.errs, errs)
 			}
@@ -288,7 +329,7 @@ func TestValidateModuleWithSchema(t *testing.T) {
 						+calls one.one
 				}`,
 		},
-		{name: "Non-exported verb call",
+		{name: "NonExportedVerbCall",
 			schema: `
 				module one {
 					verb one(Empty) Empty
@@ -300,7 +341,7 @@ func TestValidateModuleWithSchema(t *testing.T) {
 						+calls one.one
 				}`,
 			errs: []string{
-				`4:14-14: Verb "one.one" must be exported`,
+				`4:14-14: verb "one.one" must be exported`,
 			},
 		},
 	}
