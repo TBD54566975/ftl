@@ -9,13 +9,14 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 func call[Req, Resp any](ctx context.Context, callee Ref, req Req, inline Verb[Req, Resp]) (resp Resp, err error) {
-	behavior, err := modulecontext.FromContext(ctx).BehaviorForVerb(modulecontext.Ref(callee))
+	behavior, err := modulecontext.FromContext(ctx).BehaviorForVerb(schema.Ref{Module: callee.Module, Name: callee.Name})
 	if err != nil {
 		return resp, fmt.Errorf("%s: %w", callee, err)
 	}

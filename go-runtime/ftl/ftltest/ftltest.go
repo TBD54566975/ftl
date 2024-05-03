@@ -3,30 +3,47 @@ package ftltest
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// Context suitable for use in testing FTL verbs with provided options
-func Context(options ...func(context.Context) error) context.Context {
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	context, err := modulecontext.FromEnvironment(ctx, ftl.Module(), true)
-	if err != nil {
-		panic(err)
-	}
-	ctx = context.ApplyToContext(ctx)
+type Options struct {
+	configs                 map[string][]byte
+	secrets                 map[string][]byte
+	mockVerbs               map[schema.RefKey]modulecontext.MockVerb
+	allowDirectVerbBehavior bool
+}
 
+// Context suitable for use in testing FTL verbs with provided options
+func Context(options ...func(*Options) error) context.Context {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+
+	state := &Options{
+		configs:   make(map[string][]byte),
+		secrets:   make(map[string][]byte),
+		mockVerbs: make(map[schema.RefKey]modulecontext.MockVerb),
+	}
 	for _, option := range options {
-		err = option(ctx)
+		err := option(state)
 		if err != nil {
 			panic(fmt.Sprintf("error applying option: %v", err))
 		}
 	}
-	return ctx
+
+	moduleCtx := modulecontext.New(ftl.Module())
+	moduleCtx, err := moduleCtx.UpdateFromEnvironment(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("error setting up module context from environment: %v", err))
+	}
+	moduleCtx = moduleCtx.Update(state.configs, state.secrets, map[string]modulecontext.Database{})
+	moduleCtx = moduleCtx.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior)
+	return moduleCtx.ApplyToContext(ctx)
 }
 
 // WithConfig sets a configuration for the current module
@@ -38,12 +55,17 @@ func Context(options ...func(context.Context) error) context.Context {
 //	... other options
 //
 // )
-func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) func(context.Context) error {
-	return func(ctx context.Context) error {
+func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) func(*Options) error {
+	return func(state *Options) error {
 		if config.Module != ftl.Module() {
 			return fmt.Errorf("config %v does not match current module %s", config.Module, ftl.Module())
 		}
-		return modulecontext.FromContext(ctx).SetConfig(config.Name, value)
+		data, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		state.configs[config.Name] = data
+		return nil
 	}
 }
 
@@ -56,12 +78,17 @@ func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) func(conte
 //	... other options
 //
 // )
-func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(context.Context) error {
-	return func(ctx context.Context) error {
+func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(*Options) error {
+	return func(state *Options) error {
 		if secret.Module != ftl.Module() {
 			return fmt.Errorf("secret %v does not match current module %s", secret.Module, ftl.Module())
 		}
-		return modulecontext.FromContext(ctx).SetSecret(secret.Name, value)
+		data, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		state.secrets[secret.Name] = data
+		return nil
 	}
 }
 
@@ -76,16 +103,16 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(conte
 //	... other options
 //
 // )
-func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context.Context, req Req) (resp Resp, err error)) func(context.Context) error {
-	return func(ctx context.Context) error {
+func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context.Context, req Req) (resp Resp, err error)) func(*Options) error {
+	return func(state *Options) error {
 		ref := ftl.FuncRef(verb)
-		modulecontext.FromContext(ctx).SetMockVerb(modulecontext.Ref(ref), func(ctx context.Context, req any) (resp any, err error) {
+		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 			request, ok := req.(Req)
 			if !ok {
 				return nil, fmt.Errorf("invalid request type %T for %v, expected %v", req, ref, reflect.TypeFor[Req]())
 			}
 			return fake(ctx, request)
-		})
+		}
 		return nil
 	}
 }
@@ -93,9 +120,9 @@ func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context
 // WithCallsAllowedWithinModule allows tests to enable calls to all verbs within the current module
 //
 // Any overrides provided by calling WhenVerb(...) will take precedence
-func WithCallsAllowedWithinModule() func(context.Context) error {
-	return func(ctx context.Context) error {
-		modulecontext.FromContext(ctx).AllowDirectVerbBehaviorWithinModule()
+func WithCallsAllowedWithinModule() func(*Options) error {
+	return func(state *Options) error {
+		state.allowDirectVerbBehavior = true
 		return nil
 	}
 }

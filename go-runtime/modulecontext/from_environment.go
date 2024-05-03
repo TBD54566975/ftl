@@ -9,42 +9,35 @@ import (
 	cf "github.com/TBD54566975/ftl/common/configuration"
 )
 
-// FromEnvironment creates a ModuleContext from the local environment.
+// UpdateFromEnvironment copies a ModuleContext and gathers configs, secrets and databases from the local environment.
 //
 // This is useful for testing and development, where the environment is used to provide
 // configurations, secrets and DSNs. The context is built from a combination of
 // the ftl-project.toml file and (for now) environment variables.
-func FromEnvironment(ctx context.Context, module string, isTesting bool) (*ModuleContext, error) {
+func (m ModuleContext) UpdateFromEnvironment(ctx context.Context) (ModuleContext, error) {
 	// TODO: split this func into separate purposes: explicitly reading a particular project file, and reading DSNs from environment
-	var moduleCtx *ModuleContext
-	if isTesting {
-		moduleCtx = NewForTesting(module)
-	} else {
-		moduleCtx = New(module)
-	}
-
 	cm, err := cf.NewDefaultConfigurationManagerFromEnvironment(ctx)
 	if err != nil {
-		return nil, err
+		return ModuleContext{}, err
 	}
-	configs, err := cm.MapForModule(ctx, module)
+	configs, err := cm.MapForModule(ctx, m.module)
 	if err != nil {
-		return nil, err
+		return ModuleContext{}, err
 	}
 	for name, data := range configs {
-		moduleCtx.SetConfigData(name, data)
+		m.configs[name] = data
 	}
 
 	sm, err := cf.NewDefaultSecretsManagerFromEnvironment(ctx)
 	if err != nil {
-		return nil, err
+		return ModuleContext{}, err
 	}
-	secrets, err := sm.MapForModule(ctx, module)
+	secrets, err := sm.MapForModule(ctx, m.module)
 	if err != nil {
-		return nil, err
+		return ModuleContext{}, err
 	}
 	for name, data := range secrets {
-		moduleCtx.SetSecretData(name, data)
+		m.secrets[name] = data
 	}
 
 	for _, entry := range os.Environ() {
@@ -53,23 +46,26 @@ func FromEnvironment(ctx context.Context, module string, isTesting bool) (*Modul
 		}
 		parts := strings.SplitN(entry, "=", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid DSN environment variable: %s", entry)
+			return ModuleContext{}, fmt.Errorf("invalid DSN environment variable: %s", entry)
 		}
 		key := parts[0]
 		value := parts[1]
 		// FTL_POSTGRES_DSN_MODULE_DBNAME
 		parts = strings.Split(key, "_")
 		if len(parts) != 5 {
-			return nil, fmt.Errorf("invalid DSN environment variable: %s", entry)
+			return ModuleContext{}, fmt.Errorf("invalid DSN environment variable: %s", entry)
 		}
 		moduleName := parts[3]
 		dbName := parts[4]
-		if !strings.EqualFold(moduleName, module) {
+		if !strings.EqualFold(moduleName, m.module) {
 			continue
 		}
-		if err := moduleCtx.AddDatabase(strings.ToLower(dbName), DBTypePostgres, value); err != nil {
-			return nil, err
+		dbName = strings.ToLower(dbName)
+		db, err := NewDatabase(DBTypePostgres, value)
+		if err != nil {
+			return ModuleContext{}, fmt.Errorf("could not create database %q with DSN %q: %w", dbName, value, err)
 		}
+		m.databases[dbName] = db
 	}
-	return moduleCtx, nil
+	return m, nil
 }
