@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 )
 
@@ -41,17 +43,21 @@ func (x DBType) String() string {
 
 // ModuleContext holds the context needed for a module, including configs, secrets and DSNs
 type ModuleContext struct {
-	isTesting bool
+	module    string
 	configs   map[string][]byte
 	secrets   map[string][]byte
 	databases map[string]dbEntry
-	mockVerbs map[Ref]MockVerb
+
+	isTesting               bool
+	mockVerbs               map[Ref]MockVerb
+	allowDirectVerbBehavior bool
 }
 
 type contextKeyModuleContext struct{}
 
-func New() *ModuleContext {
+func New(module string) *ModuleContext {
 	return &ModuleContext{
+		module:    module,
 		configs:   map[string][]byte{},
 		secrets:   map[string][]byte{},
 		databases: map[string]dbEntry{},
@@ -59,8 +65,8 @@ func New() *ModuleContext {
 	}
 }
 
-func NewForTesting() *ModuleContext {
-	moduleCtx := New()
+func NewForTesting(module string) *ModuleContext {
+	moduleCtx := New(module)
 	moduleCtx.isTesting = true
 	return moduleCtx
 }
@@ -164,16 +170,23 @@ func (m *ModuleContext) GetDatabase(name string, dbType DBType) (*sql.DB, error)
 func (m *ModuleContext) BehaviorForVerb(ref Ref) (VerbBehavior, error) {
 	if mock, ok := m.mockVerbs[ref]; ok {
 		return MockBehavior{Mock: mock}, nil
-	}
-	// TODO: add logic here for when to do direct behavior
-	if m.isTesting {
-		return StandardBehavior{}, fmt.Errorf("no mock found")
+	} else if m.allowDirectVerbBehavior && ref.Module == m.module {
+		return DirectBehavior{}, nil
+	} else if m.isTesting {
+		if ref.Module == m.module {
+			return StandardBehavior{}, fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()", strings.ToUpper(ref.Name[:1])+ref.Name[1:])
+		}
+		return StandardBehavior{}, fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s.%s, ...)", ref.Module, strings.ToUpper(ref.Name[:1])+ref.Name[1:])
 	}
 	return StandardBehavior{}, nil
 }
 
 func (m *ModuleContext) SetMockVerb(ref Ref, mock MockVerb) {
 	m.mockVerbs[ref] = mock
+}
+
+func (m *ModuleContext) AllowDirectVerbBehaviorWithinModule() {
+	m.allowDirectVerbBehavior = true
 }
 
 // VerbBehavior indicates how to execute a verb

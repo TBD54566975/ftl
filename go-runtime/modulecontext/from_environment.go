@@ -18,9 +18,9 @@ func FromEnvironment(ctx context.Context, module string, isTesting bool) (*Modul
 	// TODO: split this func into separate purposes: explicitly reading a particular project file, and reading DSNs from environment
 	var moduleCtx *ModuleContext
 	if isTesting {
-		moduleCtx = NewForTesting()
+		moduleCtx = NewForTesting(module)
 	} else {
-		moduleCtx = New()
+		moduleCtx = New(module)
 	}
 
 	cm, err := cf.NewDefaultConfigurationManagerFromEnvironment(ctx)

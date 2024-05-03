@@ -89,3 +89,13 @@ func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context
 		return nil
 	}
 }
+
+// WithCallsAllowedWithinModule allows tests to enable calls to all verbs within the current module
+//
+// Any overrides provided by calling WhenVerb(...) will take precedence
+func WithCallsAllowedWithinModule() func(context.Context) error {
+	return func(ctx context.Context) error {
+		modulecontext.FromContext(ctx).AllowDirectVerbBehaviorWithinModule()
+		return nil
+	}
+}
