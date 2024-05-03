@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/alecthomas/types/optional"
-
-	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -17,14 +14,11 @@ import (
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...func(context.Context) error) context.Context {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	context, err := modulecontext.FromEnvironment(ctx, ftl.Module())
+	context, err := modulecontext.FromEnvironment(ctx, ftl.Module(), true)
 	if err != nil {
 		panic(err)
 	}
 	ctx = context.ApplyToContext(ctx)
-
-	mockProvider := newMockVerbProvider()
-	ctx = ftl.ApplyCallOverriderToContext(ctx, mockProvider)
 
 	for _, option := range options {
 		err = option(ctx)
@@ -49,8 +43,7 @@ func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) func(conte
 		if config.Module != ftl.Module() {
 			return fmt.Errorf("config %v does not match current module %s", config.Module, ftl.Module())
 		}
-		cm := cf.ConfigFromContext(ctx)
-		return cm.Set(ctx, cf.Ref{Module: optional.Some(config.Module), Name: config.Name}, value)
+		return modulecontext.FromContext(ctx).SetConfig(config.Name, value)
 	}
 }
 
@@ -68,8 +61,7 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(conte
 		if secret.Module != ftl.Module() {
 			return fmt.Errorf("secret %v does not match current module %s", secret.Module, ftl.Module())
 		}
-		sm := cf.SecretsFromContext(ctx)
-		return sm.Set(ctx, cf.Ref{Module: optional.Some(secret.Module), Name: secret.Name}, value)
+		return modulecontext.FromContext(ctx).SetSecret(secret.Name, value)
 	}
 }
 
@@ -87,21 +79,13 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) func(conte
 func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context.Context, req Req) (resp Resp, err error)) func(context.Context) error {
 	return func(ctx context.Context) error {
 		ref := ftl.FuncRef(verb)
-		overrider, ok := ftl.CallOverriderFromContext(ctx)
-		if !ok {
-			return fmt.Errorf("could not override %v with a fake, context not set up with call overrider", ref)
-		}
-		mockProvider, ok := overrider.(*mockVerbProvider)
-		if !ok {
-			return fmt.Errorf("could not override %v with a fake, call overrider is not a MockProvider", ref)
-		}
-		mockProvider.mocks[ref] = func(ctx context.Context, req any) (resp any, err error) {
+		modulecontext.FromContext(ctx).SetMockVerb(modulecontext.Ref(ref), func(ctx context.Context, req any) (resp any, err error) {
 			request, ok := req.(Req)
 			if !ok {
 				return nil, fmt.Errorf("invalid request type %T for %v, expected %v", req, ref, reflect.TypeFor[Req]())
 			}
 			return fake(ctx, request)
-		}
+		})
 		return nil
 	}
 }

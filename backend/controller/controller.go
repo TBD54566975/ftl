@@ -640,11 +640,11 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("module %q not found", req.Msg.Module))
 	}
-	moduleContext, err := modulecontext.FromEnvironment(ctx, module.Name)
+	moduleContext, err := modulecontext.FromEnvironment(ctx, module.Name, false)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get module context: %w", err))
 	}
-	response, err := moduleContext.ToProto(ctx)
+	response, err := moduleContext.ToProto(module.Name)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not marshal module context: %w", err))
 	}

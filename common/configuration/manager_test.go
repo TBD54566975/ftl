@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -16,13 +17,7 @@ import (
 
 func TestManager(t *testing.T) {
 	keyring.MockInit() // There's no way to undo this :\
-
-	config := filepath.Join(t.TempDir(), "ftl-project.toml")
-	existing, err := os.ReadFile("testdata/ftl-project.toml")
-	assert.NoError(t, err)
-	err = os.WriteFile(config, existing, 0600)
-	assert.NoError(t, err)
-
+	config := tempConfigPath(t, "testdata/ftl-project.toml", "manager")
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	t.Run("Secrets", func(t *testing.T) {
@@ -58,6 +53,64 @@ func TestManager(t *testing.T) {
 			{Ref: Ref{Module: optional.Some[string]("echo"), Name: "default"}, Accessor: URL("inline://ImFub255bW91cyI")},
 		})
 	})
+}
+
+// TestMapPriority checks that module specific configs beat global configs when flattening for a module
+func TestMapPriority(t *testing.T) {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	config := tempConfigPath(t, "", "map")
+	cm, err := New(ctx,
+		ProjectConfigResolver[Configuration]{Config: []string{config}},
+		[]Provider[Configuration]{
+			InlineProvider[Configuration]{
+				Inline: true,
+			},
+		})
+	assert.NoError(t, err)
+	moduleName := "test"
+
+	// Set 50 configs and 50 global configs
+	// It's hard to tell if module config beats global configs because we are dealing with unordered maps, or because the logic is correct
+	// Repeating it 50 times hopefully gives us a good chance of catching inconsistencies
+	for i := range 50 {
+		key := fmt.Sprintf("key%d", i)
+
+		strValue := "HelloWorld"
+		globalStrValue := "GlobalHelloWorld"
+		if i%2 == 0 {
+			// sometimes try setting the module config first
+			assert.NoError(t, cm.Set(ctx, Ref{Module: optional.Some(moduleName), Name: key}, strValue))
+			assert.NoError(t, cm.Set(ctx, Ref{Module: optional.None[string](), Name: key}, globalStrValue))
+		} else {
+			// other times try setting the global config first
+			assert.NoError(t, cm.Set(ctx, Ref{Module: optional.None[string](), Name: key}, globalStrValue))
+			assert.NoError(t, cm.Set(ctx, Ref{Module: optional.Some(moduleName), Name: key}, strValue))
+		}
+	}
+	result, err := cm.MapForModule(ctx, moduleName)
+	assert.NoError(t, err)
+
+	for i := range 50 {
+		key := fmt.Sprintf("key%d", i)
+		assert.Equal(t, `"HelloWorld"`, string(result[key]), "module configs should beat global configs")
+	}
+}
+
+func tempConfigPath(t *testing.T, existingPath string, prefix string) string {
+	t.Helper()
+
+	config := filepath.Join(t.TempDir(), fmt.Sprintf("%s-ftl-project.toml", prefix))
+	var existing []byte
+	var err error
+	if existingPath == "" {
+		existing = []byte{}
+	} else {
+		existing, err = os.ReadFile(existingPath)
+		assert.NoError(t, err)
+	}
+	err = os.WriteFile(config, existing, 0600)
+	assert.NoError(t, err)
+	return config
 }
 
 // nolint

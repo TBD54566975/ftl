@@ -44,9 +44,7 @@ func configFromEnvironment() []string {
 func NewDefaultSecretsManagerFromEnvironment(ctx context.Context) (*Manager[Secrets], error) {
 	var cr Resolver[Secrets] = ProjectConfigResolver[Secrets]{Config: configFromEnvironment()}
 	return DefaultSecretsMixin{
-		InlineProvider: InlineProvider[Secrets]{
-			Inline: true,
-		},
+		InlineProvider: InlineProvider[Secrets]{},
 	}.NewSecretsManager(ctx, cr)
 }
 
@@ -55,9 +53,7 @@ func NewDefaultSecretsManagerFromEnvironment(ctx context.Context) (*Manager[Secr
 func NewDefaultConfigurationManagerFromEnvironment(ctx context.Context) (*Manager[Configuration], error) {
 	cr := ProjectConfigResolver[Configuration]{Config: configFromEnvironment()}
 	return DefaultConfigMixin{
-		InlineProvider: InlineProvider[Configuration]{
-			Inline: true,
-		},
+		InlineProvider: InlineProvider[Configuration]{},
 	}.NewConfigurationManager(ctx, cr)
 }
 
