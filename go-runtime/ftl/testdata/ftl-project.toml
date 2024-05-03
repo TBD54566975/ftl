@@ -1,8 +1,0 @@
-[global]
-
-[modules]
-  [modules.testing]
-    [modules.testing.configuration]
-      test = "inline://eyJvbmUiOiJvbmUiLCJ0d28iOiJ0d28ifQ"
-    [modules.testing.secrets]
-      secret = "inline://eyJvbmUiOiJvbmUiLCJ0d28iOiJ0d28ifQ"

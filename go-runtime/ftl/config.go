@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
 )
 
 // ConfigType is a type that can be used as a configuration value.
@@ -32,9 +32,7 @@ func (c ConfigValue[T]) GoString() string {
 
 // Get returns the value of the configuration key from FTL.
 func (c ConfigValue[T]) Get(ctx context.Context) (out T) {
-	cm := configuration.ConfigFromContext(ctx)
-	ref := configuration.NewRef(c.Module, c.Name)
-	err := cm.Get(ctx, ref, &out)
+	err := modulecontext.FromContext(ctx).GetConfig(c.Name, &out)
 	if err != nil {
 		panic(fmt.Errorf("failed to get %s: %w", c, err))
 	}
