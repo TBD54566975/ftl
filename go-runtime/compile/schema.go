@@ -624,9 +624,10 @@ func visitTypeValue(pctx *parseContext, named *types.Named, tnode ast.Expr, inde
 func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 	var enum *schema.Enum
 	i, ok := node.Type.(*ast.Ident)
-	if ok {
-		enum = pctx.enums[i.Name]
+	if !ok {
+		return
 	}
+	enum = pctx.enums[i.Name]
 	if enum == nil {
 		maybeErrorOnInvalidEnumMixing(pctx, node, i.Name)
 		return
