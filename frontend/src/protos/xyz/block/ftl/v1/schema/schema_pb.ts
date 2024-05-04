@@ -1680,6 +1680,43 @@ export class StringValue extends Message<StringValue> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.SumTypeVariants
+ */
+export class SumTypeVariants extends Message<SumTypeVariants> {
+  /**
+   * @generated from field: repeated string value = 1;
+   */
+  value: string[] = [];
+
+  constructor(data?: PartialMessage<SumTypeVariants>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.SumTypeVariants";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SumTypeVariants {
+    return new SumTypeVariants().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SumTypeVariants {
+    return new SumTypeVariants().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SumTypeVariants {
+    return new SumTypeVariants().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SumTypeVariants | PlainMessage<SumTypeVariants> | undefined, b: SumTypeVariants | PlainMessage<SumTypeVariants> | undefined): boolean {
+    return proto3.util.equals(SumTypeVariants, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Time
  */
 export class Time extends Message<Time> {
@@ -1876,6 +1913,49 @@ export class TypeParameter extends Message<TypeParameter> {
 
   static equals(a: TypeParameter | PlainMessage<TypeParameter> | undefined, b: TypeParameter | PlainMessage<TypeParameter> | undefined): boolean {
     return proto3.util.equals(TypeParameter, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.TypeRegistry
+ */
+export class TypeRegistry extends Message<TypeRegistry> {
+  /**
+   * @generated from field: map<string, xyz.block.ftl.v1.schema.Type> schemaTypes = 1;
+   */
+  schemaTypes: { [key: string]: Type } = {};
+
+  /**
+   * @generated from field: map<string, xyz.block.ftl.v1.schema.SumTypeVariants> sumTypes = 2;
+   */
+  sumTypes: { [key: string]: SumTypeVariants } = {};
+
+  constructor(data?: PartialMessage<TypeRegistry>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.TypeRegistry";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "schemaTypes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: Type} },
+    { no: 2, name: "sumTypes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: SumTypeVariants} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeRegistry {
+    return new TypeRegistry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypeRegistry {
+    return new TypeRegistry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypeRegistry {
+    return new TypeRegistry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TypeRegistry | PlainMessage<TypeRegistry> | undefined, b: TypeRegistry | PlainMessage<TypeRegistry> | undefined): boolean {
+    return proto3.util.equals(TypeRegistry, a, b);
   }
 }
 

@@ -21,8 +21,9 @@ var typesWithRuntime = map[string]bool{
 // for the FTL schema.
 func ProtobufSchema() string {
 	messages := map[string]string{}
-	generateMessage(reflect.TypeOf(Schema{}), messages)
-	generateMessage(reflect.TypeOf(ErrorList{}), messages)
+	generateMessage(reflect.TypeFor[Schema](), messages)
+	generateMessage(reflect.TypeFor[ErrorList](), messages)
+	generateMessage(reflect.TypeFor[TypeRegistry](), messages)
 	keys := maps.Keys(messages)
 	slices.Sort(keys)
 	w := &strings.Builder{}

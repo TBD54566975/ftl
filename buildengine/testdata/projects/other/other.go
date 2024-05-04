@@ -3,6 +3,7 @@ package other
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 
@@ -10,7 +11,7 @@ import (
 )
 
 //ftl:enum
-type D interface {
+type TypeEnum interface {
 	tag()
 }
 
@@ -30,13 +31,9 @@ type Int int
 
 func (Int) tag() {}
 
-//type Time time.Time
-//
-//func (Time) tag() {}
+type Time time.Time
 
-type U ftl.Unit
-
-func (U) tag() {}
+func (Time) tag() {}
 
 type List []string
 
@@ -54,8 +51,16 @@ type Struct struct{}
 
 func (Struct) tag() {}
 
+type Option ftl.Option[string]
+
+func (Option) tag() {}
+
+type Unit ftl.Unit
+
+func (Unit) tag() {}
+
 //ftl:enum
-type SecondSumType interface {
+type SecondTypeEnum interface {
 	tag2()
 }
 
