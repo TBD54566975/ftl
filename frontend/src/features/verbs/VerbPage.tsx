@@ -1,15 +1,17 @@
-import { Square3Stack3DIcon } from '@heroicons/react/24/outline'
+import { BoltIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CodeBlock } from '../../components/CodeBlock'
 import { Page } from '../../layout'
 import { CallEvent, EventType, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { callFilter, eventTypesFilter, streamEvents } from '../../services/console.service'
-import { CallList } from '../calls/CallList'
-import { VerbForm } from './VerbForm'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
+import { ResizablePanels } from '../../components/ResizablePanels'
+import { CodeBlock } from '../../components/CodeBlock'
+import { ExpandablePanelProps } from '../console/ExpandablePanel'
+import { CallList } from '../calls/CallList'
+import { VerbRequestForm } from './VerbRequestForm'
 
 export const VerbPage = () => {
   const { deploymentKey, verbName } = useParams()
@@ -34,7 +36,6 @@ export const VerbPage = () => {
           message: `The previous deployment of ${module?.deploymentKey} was not found. Showing the latest deployment of ${module?.name}.${verbName} instead.`,
           type: NotificationType.Info,
         })
-        setModule(module)
       }
     }
     setModule(module)
@@ -57,12 +58,29 @@ export const VerbPage = () => {
         },
       })
     }
+
     streamCalls()
 
     return () => {
       abortController.abort()
     }
   }, [module])
+
+  const panels = [
+    {
+      title: 'Schema',
+      expanded: true,
+      children: verb?.verb?.response?.toJsonString() && <CodeBlock code={verb?.schema} language='json' />,
+      padding: 'p-0',
+    },
+  ] as ExpandablePanelProps[]
+
+  const header = (
+    <div className='flex items-center gap-2 px-2 py-2'>
+      <BoltIcon className='h-5 w-5 text-indigo-600' />
+      <div className='flex flex-col min-w-0'>Verb</div>
+    </div>
+  )
 
   return (
     <SidePanelProvider>
@@ -75,20 +93,16 @@ export const VerbPage = () => {
             { label: module?.deploymentKey || '', link: `/deployments/${module?.deploymentKey}` },
           ]}
         />
-        <Page.Body className='p-4'>
-          <div className='flex-1 flex flex-col h-full'>
-            <div className='flex-1 flex flex-grow h-1/2 mb-4'>
-              <div className='mr-2 flex-1 w-1/2 overflow-y-auto'>
-                {verb?.verb?.request?.toJsonString() && <CodeBlock code={verb?.schema} language='json' />}
-              </div>
-              <div className='ml-2 flex-1 w-1/2 overflow-y-auto'>
-                <VerbForm module={module} verb={verb} />
-              </div>
-            </div>
-            <div className='flex-1 h-1/2'>
-              <CallList calls={calls} />
-            </div>
-          </div>
+        <Page.Body className='flex h-full'>
+          <ResizablePanels
+            mainContent={
+              <div className='flex mb-2'>
+                <VerbRequestForm module={module} verb={verb} />
+              </div>}
+            rightPanelHeader={header}
+            rightPanelPanels={panels}
+            bottomPanelContent={<CallList calls={calls} />}
+          />
         </Page.Body>
       </Page>
     </SidePanelProvider>

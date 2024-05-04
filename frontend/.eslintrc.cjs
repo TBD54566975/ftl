@@ -3,7 +3,7 @@ module.exports = {
     browser: true,
     es2021: true,
   },
-  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:react/recommended', 'prettier'],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:react/recommended'],
   overrides: [
     {
       env: {
@@ -22,6 +22,13 @@ module.exports = {
   },
   plugins: ['@typescript-eslint', 'react'],
   rules: {
+    'semi': ['error', 'never'],
+    'quotes': ['error', 'single', { 'avoidEscape': true, 'allowTemplateLiterals': true }],
+    'jsx-quotes': ['error', 'prefer-single'],
+    'no-trailing-spaces': 'error',
+    'no-multiple-empty-lines': ['error', { 'max': 1, 'maxEOF': 0, 'maxBOF': 0 }],
+    'eol-last': ['error', 'always'],
+    'max-len': ['error', { 'code': 120, 'tabWidth': 4, 'ignoreUrls': true, 'ignoreComments': false, 'ignoreRegExpLiterals': true, 'ignoreStrings': true, 'ignoreTemplateLiterals': true }],
     'react/react-in-jsx-scope': 'off',
     'react/jsx-uses-react': 'off',
     'func-style': ['error', 'expression'],
@@ -34,6 +41,30 @@ module.exports = {
         'ts-ignore': 'allow-with-description',
       },
     ],
+    'indent': ['error', 2, {
+      'SwitchCase': 1,
+      'VariableDeclarator': 1,
+      'outerIIFEBody': 1,
+      'MemberExpression': 1,
+      'FunctionDeclaration': {
+        'parameters': 1,
+        'body': 1
+      },
+      'FunctionExpression': {
+        'parameters': 1,
+        'body': 1
+      },
+      'CallExpression': {
+        'arguments': 1
+      },
+      'ArrayExpression': 1,
+      'ObjectExpression': 1,
+      'ImportDeclaration': 1,
+      'flatTernaryExpressions': false,
+      'ignoreComments': false
+    }],
+    'react/jsx-indent': ['error', 2],
+    'react/jsx-indent-props': ['error', 2]
   },
   settings: {
     react: {

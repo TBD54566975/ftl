@@ -204,12 +204,15 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 			return err
 		}
 
-		err = stream.Send(&pbconsole.StreamEventsResponse{
-			Events: slices.Map(events, eventDALToProto),
-		})
-		if err != nil {
-			return err
+		if len(events) > 0 {
+			err = stream.Send(&pbconsole.StreamEventsResponse{
+				Events: slices.Map(events, eventDALToProto),
+			})
+			if err != nil {
+				return err
+			}
 		}
+
 		lastEventTime = thisRequestTime
 		select {
 		case <-time.After(updateInterval):
