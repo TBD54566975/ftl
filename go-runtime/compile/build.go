@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	stdreflect "reflect"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -61,8 +62,9 @@ type goSumType struct {
 }
 
 type goSumTypeVariant struct {
-	Name string
-	Type string
+	Name       string
+	Type       string
+	SchemaType schema.Type
 }
 
 type ModifyFilesTransaction interface {
@@ -140,7 +142,11 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	if err != nil {
 		return fmt.Errorf("failed to extract module schema: %w", err)
 	}
-	pr := parseResult.MustGet()
+	pr, ok := parseResult.Get()
+	if !ok {
+		return fmt.Errorf("failed to extract module schema")
+	}
+
 	main := pr.Module
 	if schemaErrs := pr.Errors; len(schemaErrs) > 0 {
 		if err := writeSchemaErrors(config, schemaErrs); err != nil {
@@ -344,8 +350,27 @@ var scaffoldFuncs = scaffolder.FuncMap{
 				}
 			}
 		}
-		return imports.ToSlice()
+		out := imports.ToSlice()
+		slices.Sort(out)
+		return out
 	},
+	"schemaType": schemaType,
+}
+
+func schemaType(t schema.Type) string {
+	switch t := t.(type) {
+	case *schema.Int, *schema.Bool, *schema.String, *schema.Float, *schema.Unit, *schema.Any, *schema.Bytes, *schema.Time:
+		return fmt.Sprintf("&%s{}", strings.TrimLeft(stdreflect.TypeOf(t).String(), "*"))
+	case *schema.Ref:
+		return fmt.Sprintf("&schema.Ref{Module: %q, Name: %q}", t.Module, t.Name)
+	case *schema.Array:
+		return fmt.Sprintf("&schema.Array{Element: %s}", schemaType(t.Element))
+	case *schema.Map:
+		return fmt.Sprintf("&schema.Map{Key: %s, Value: %s}", schemaType(t.Key), schemaType(t.Value))
+	case *schema.Optional:
+		return fmt.Sprintf("&schema.Optional{Type: %s}", schemaType(t.Type))
+	}
+	panic(fmt.Sprintf("unsupported type %T", t))
 }
 
 func genType(module *schema.Module, t schema.Type) string {
@@ -483,9 +508,10 @@ func getSumTypes(enumRefs []*schema.Ref, module *schema.Module, sch *schema.Sche
 		if e, ok := d.(*schema.Enum); ok && !e.IsValueEnum() {
 			variants := make([]goSumTypeVariant, 0, len(e.Variants))
 			for _, v := range e.Variants {
-				variants = append(variants, goSumTypeVariant{
-					Name: v.Name,
-					Type: nativeNames[v],
+				variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+					Name:       v.Name,
+					Type:       nativeNames[v],
+					SchemaType: v.Value.(*schema.TypeValue).Value,
 				})
 			}
 			stFqName := nativeNames[d]
@@ -505,9 +531,10 @@ func getSumTypes(enumRefs []*schema.Ref, module *schema.Module, sch *schema.Sche
 		if e, ok := resolved.(*schema.Enum); ok && !e.IsValueEnum() {
 			variants := make([]goSumTypeVariant, 0, len(e.Variants))
 			for _, v := range e.Variants {
-				variants = append(variants, goSumTypeVariant{
-					Name: v.Name,
-					Type: ref.Module + "." + v.Name,
+				variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+					Name:       v.Name,
+					Type:       ref.Module + "." + v.Name,
+					SchemaType: v.Value.(*schema.TypeValue).Value,
 				})
 			}
 			stFqName := ref.Module + "." + e.Name
@@ -517,5 +544,9 @@ func getSumTypes(enumRefs []*schema.Ref, module *schema.Module, sch *schema.Sche
 			}
 		}
 	}
-	return gomaps.Values(sumTypes)
+	out := gomaps.Values(sumTypes)
+	slices.SortFunc(out, func(a, b goSumType) int {
+		return strings.Compare(a.Discriminator, b.Discriminator)
+	})
+	return out
 }

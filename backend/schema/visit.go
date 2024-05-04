@@ -17,6 +17,12 @@ func Visit(n Node, visit func(n Node, next func() error) error) error {
 // stubbed verbs.
 func VisitExcludingMetadataChildren(n Node, visit func(n Node, next func() error) error) error {
 	return visit(n, func() error {
+		if d, ok := n.(Decl); ok {
+			if !d.IsExported() {
+				// Skip non-exported nodes
+				return nil
+			}
+		}
 		if _, ok := n.(Metadata); !ok {
 			for _, child := range n.schemaChildren() {
 				_, isParentVerb := n.(*Verb)

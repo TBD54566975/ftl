@@ -38,6 +38,7 @@ var (
 	ftlSecretFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
 	ftlPostgresDBFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
 	ftlUnitTypePath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
+	ftlOptionTypePath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
 	aliasFieldTag         = "json"
 )
 
@@ -107,7 +108,7 @@ func ExtractModuleSchema(dir string) (optional.Option[ParseResult], error) {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
-		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
 	}, "./...")
 	if err != nil {
 		return optional.None[ParseResult](), err
@@ -534,8 +535,8 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 						isExported = exportableDir.IsExported()
 					}
 				}
-				if typ, ok := visitType(pctx, node.Pos(), named, isExported).Get(); ok {
-					enumVariant.Value = &schema.TypeValue{Value: typ}
+				if vType, ok := visitTypeValue(pctx, named, t.Type, nil, isExported).Get(); ok {
+					enumVariant.Value = vType
 				} else {
 					pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
 				}
@@ -546,6 +547,78 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 		}
 	}
 	return false
+}
+
+func visitTypeValue(pctx *parseContext, named *types.Named, tnode ast.Expr, index types.Type, isExported bool) optional.Option[*schema.TypeValue] {
+	switch typ := tnode.(type) {
+	// Selector expression e.g. ftl.Unit, ftl.Option, foo.Bar
+	case *ast.SelectorExpr:
+		var ident *ast.Ident
+		var ok bool
+		if ident, ok = typ.X.(*ast.Ident); !ok {
+			return optional.None[*schema.TypeValue]()
+		}
+
+		for _, im := range maps.Values(pctx.pkg.Imports) {
+			if im.Name != ident.Name {
+				continue
+			}
+			switch im.ID + "." + typ.Sel.Name {
+			case "time.Time":
+				return optional.Some(&schema.TypeValue{
+					Pos:   goPosToSchemaPos(tnode.Pos()),
+					Value: &schema.Time{},
+				})
+			case ftlUnitTypePath:
+				return optional.Some(&schema.TypeValue{
+					Pos:   goPosToSchemaPos(tnode.Pos()),
+					Value: &schema.Unit{},
+				})
+			case ftlOptionTypePath:
+				if index == nil {
+					return optional.None[*schema.TypeValue]()
+				}
+
+				if vt, ok := visitType(pctx, tnode.Pos(), index, isExported).Get(); ok {
+					return optional.Some(&schema.TypeValue{
+						Pos: goPosToSchemaPos(tnode.Pos()),
+						Value: &schema.Optional{
+							Pos:  goPosToSchemaPos(tnode.Pos()),
+							Type: vt,
+						},
+					})
+				}
+			default: // Data ref
+				externalModuleName, ok := ftlModuleFromGoModule(im.ID).Get()
+				if !ok {
+					pctx.errors.add(errorf(tnode, "package %q is not in the ftl namespace", im.ID))
+					return optional.None[*schema.TypeValue]()
+				}
+				return optional.Some(&schema.TypeValue{
+					Pos: goPosToSchemaPos(tnode.Pos()),
+					Value: &schema.Ref{
+						Pos:    goPosToSchemaPos(tnode.Pos()),
+						Module: externalModuleName,
+						Name:   typ.Sel.Name,
+					},
+				})
+			}
+		}
+
+	case *ast.IndexExpr: // Generic type, e.g. ftl.Option[string]
+		if se, ok := typ.X.(*ast.SelectorExpr); ok {
+			return visitTypeValue(pctx, named, se, pctx.pkg.TypesInfo.TypeOf(typ.Index), isExported)
+		}
+
+	default:
+		if typ, ok := visitType(pctx, tnode.Pos(), named, isExported).Get(); ok {
+			return optional.Some(&schema.TypeValue{Value: typ})
+		} else {
+			pctx.errors.add(errorf(tnode, "unsupported type %q for type enum variant", named))
+		}
+	}
+
+	return optional.None[*schema.TypeValue]()
 }
 
 func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
@@ -891,10 +964,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 			if _, ok := visitType(pctx, pos, named.Underlying(), isExported).Get(); !ok {
 				return optional.None[schema.Type]()
 			}
-			enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
-			if er, ok := enumRef.Get(); ok {
-				pctx.enumRefs[named.Obj().Name()] = er.(*schema.Ref) //nolint:forcetypeassert
-			}
+			enumRef, doneWithVisit := visitEnumRef(pctx, pos, named)
 			if doneWithVisit {
 				return enumRef
 			}
@@ -920,9 +990,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	case *types.Struct:
 		named, ok := tnode.(*types.Named)
 		if !ok {
-			if ref, ok := visitStruct(pctx, pos, tnode, isExported).Get(); ok {
-				return optional.Some[schema.Type](ref)
-			}
+			pctx.errors.add(noEndColumnErrorf(pos, "expected named type but got %s", tnode))
 			return optional.None[schema.Type]()
 		}
 
@@ -963,10 +1031,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 			return optional.Some[schema.Type](&schema.Any{Pos: goPosToSchemaPos(pos)})
 		}
 		if named, ok := tnode.(*types.Named); ok {
-			enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
-			if er, ok := enumRef.Get(); ok {
-				pctx.enumRefs[named.Obj().Name()] = er.(*schema.Ref) //nolint:forcetypeassert
-			}
+			enumRef, doneWithVisit := visitEnumRef(pctx, pos, named)
 			if doneWithVisit {
 				return enumRef
 			}
@@ -978,14 +1043,19 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	}
 }
 
-func visitEnumType(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
-	if pctx.enums[named.Obj().Name()] != nil {
-		return optional.Some[schema.Type](&schema.Ref{
-			Pos:    goPosToSchemaPos(pos),
-			Module: pctx.module.Name,
-			Name:   named.Obj().Name(),
-		}), true
+func visitEnumRef(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
+	enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
+	if er, ok := enumRef.Get(); ok {
+		refModuleName, ok := ftlModuleFromGoModule(named.Obj().Pkg().Path()).Get()
+		if !ok {
+			refModuleName = named.Obj().Pkg().Path()
+		}
+		pctx.enumRefs[refModuleName+"."+named.Obj().Name()] = er.(*schema.Ref) //nolint:forcetypeassert
 	}
+	return enumRef, doneWithVisit
+}
+
+func visitEnumType(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
 	if named.Obj().Pkg() == nil {
 		return optional.None[schema.Type](), false
 	}
@@ -1004,6 +1074,12 @@ func visitEnumType(pctx *parseContext, pos token.Pos, named *types.Named) (optio
 		return optional.Some[schema.Type](&schema.Ref{
 			Pos:    goPosToSchemaPos(pos),
 			Module: destModule,
+			Name:   named.Obj().Name(),
+		}), true
+	} else if pctx.enums[named.Obj().Name()] != nil {
+		return optional.Some[schema.Type](&schema.Ref{
+			Pos:    goPosToSchemaPos(pos),
+			Module: pctx.module.Name,
 			Name:   named.Obj().Name(),
 		}), true
 	}
