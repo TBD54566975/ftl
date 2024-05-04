@@ -30,6 +30,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
+	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
@@ -649,6 +650,36 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not marshal module context: %w", err))
 	}
 	return connect.NewResponse(response), nil
+}
+
+// AcquireLease acquires a lease on behalf of a module.
+//
+// This is a bidirectional stream where each request from the client must be
+// responded to with an empty response.
+func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
+	var lease leases.Lease
+	for {
+		msg, err := stream.Receive()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
+		}
+		if lease == nil {
+			lease, err = s.dal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration())
+			if err != nil {
+				if errors.Is(err, leases.ErrConflict) {
+					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))
+				}
+				return connect.NewError(connect.CodeInternal, fmt.Errorf("could not acquire lease: %w", err))
+			}
+			defer lease.Release() //nolint:errcheck
+		}
+		if err = stream.Send(&ftlv1.AcquireLeaseResponse{}); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not send lease response: %w", err))
+		}
+	}
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {

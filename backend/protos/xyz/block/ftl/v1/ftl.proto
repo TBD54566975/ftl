@@ -4,6 +4,7 @@ package xyz.block.ftl.v1;
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1";
@@ -72,6 +73,15 @@ message CallResponse {
   }
 }
 
+message AcquireLeaseRequest {
+  string module = 1;
+  repeated string key = 2;
+  google.protobuf.Duration ttl = 3;
+}
+
+message AcquireLeaseResponse {
+}
+
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.
@@ -80,9 +90,12 @@ service VerbService {
   }
 
   // Get configuration state for the module
-  rpc GetModuleContext(ModuleContextRequest) returns (ModuleContextResponse) {
-    option idempotency_level = NO_SIDE_EFFECTS;
-  }
+  rpc GetModuleContext(ModuleContextRequest) returns (ModuleContextResponse);
+
+  // Acquire (and renew) a lease for a deployment.
+  //
+  // Returns ResourceExhausted if the lease is held.
+  rpc AcquireLease(stream AcquireLeaseRequest) returns (stream AcquireLeaseResponse);
 
   // Issue a synchronous call to a Verb.
   rpc Call(CallRequest) returns (CallResponse);

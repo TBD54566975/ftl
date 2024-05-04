@@ -161,7 +161,11 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 }
 
 func (m *moduleServer) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
-	return nil, fmt.Errorf("not implemented")
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("GetModuleContext not implemented"))
+}
+
+func (m *moduleServer) AcquireLease(context.Context, *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, fmt.Errorf("AcquireLease not implemented"))
 }
 
 func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {

@@ -153,7 +153,11 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 }
 
 func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
-	return nil, fmt.Errorf("not implemented")
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("module context must be acquired from the controller"))
+}
+
+func (s *Service) AcquireLease(context.Context, *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("leases must be acquired from the controller"))
 }
 
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {

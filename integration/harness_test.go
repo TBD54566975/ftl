@@ -106,7 +106,6 @@ type testContext struct {
 
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
-	t.Helper()
 	waitCtx, done := context.WithTimeout(i, integrationTestTimeout)
 	defer done()
 	for {

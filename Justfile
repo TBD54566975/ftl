@@ -1,6 +1,7 @@
 set positional-arguments
 set shell := ["bash", "-c"]
 
+WATCHEXEC_ARGS := "-e proto -e go -e sql -f sqlc.yaml"
 RELEASE := "build/release"
 VERSION := `git describe --tags --always --dirty | sed -e 's/^v//'`
 KT_RUNTIME_OUT := "kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT.jar"
@@ -30,11 +31,11 @@ clean:
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
-  watchexec -e go -e sql -f sqlc.yaml -- "just build-sqlc && just build ftl"
+  watchexec {{WATCHEXEC_ARGS}} -- "just build-sqlc && just build ftl"
 
 # Run "ftl dev" with live-reloading whenever source changes.
 dev *args:
-  watchexec -r -e go -e sql -f sqlc.yaml -- "just build-sqlc && ftl dev {{args}}"
+  watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
 build-all: build-frontend build-generate build-protos build-sqlc build-zips

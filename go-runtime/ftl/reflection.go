@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
@@ -22,6 +23,7 @@ func Module() string {
 		}
 	}
 	if module == "" {
+		debug.PrintStack()
 		panic("must be called from an FTL module")
 	}
 	return module

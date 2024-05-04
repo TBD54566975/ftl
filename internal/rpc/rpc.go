@@ -165,11 +165,13 @@ func RetryStreamingClientStream[Req, Resp any](
 			retry.Reset()
 			logLevel = log.Warn
 		}
+
+		// We've hit an error.
 		_, _ = stream.CloseAndReceive()
 
 		errored = true
 		delay := retry.Duration()
-		if err != nil && !errors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
 		}
 		select {
