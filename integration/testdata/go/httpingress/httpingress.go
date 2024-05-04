@@ -23,6 +23,19 @@ type GetResponse struct {
 	Nested  Nested `json:"nested"`
 }
 
+//ftl:enum export
+type SumType interface {
+	tag()
+}
+
+type A string
+
+func (A) tag() {}
+
+type B []string
+
+func (B) tag() {}
+
 //ftl:ingress http GET /users/{userId}/posts/{postId}
 func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[GetResponse, string], error) {
 	return builtin.HttpResponse[GetResponse, string]{
@@ -148,4 +161,9 @@ func ArrayData(ctx context.Context, req builtin.HttpRequest[[]ArrayType]) (built
 	return builtin.HttpResponse[[]ArrayType, string]{
 		Body: ftl.Some(req.Body),
 	}, nil
+}
+
+//ftl:ingress http GET /typeenum
+func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType]) (builtin.HttpResponse[SumType, string], error) {
+	return builtin.HttpResponse[SumType, string]{Body: ftl.Some(req.Body)}, nil
 }

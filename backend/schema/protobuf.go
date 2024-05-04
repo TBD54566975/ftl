@@ -23,7 +23,6 @@ func ProtobufSchema() string {
 	messages := map[string]string{}
 	generateMessage(reflect.TypeFor[Schema](), messages)
 	generateMessage(reflect.TypeFor[ErrorList](), messages)
-	generateMessage(reflect.TypeFor[TypeRegistry](), messages)
 	keys := maps.Keys(messages)
 	slices.Sort(keys)
 	w := &strings.Builder{}

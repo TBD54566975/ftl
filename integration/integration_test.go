@@ -233,6 +233,12 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, jsonData(t, []obj{{"item": "a"}, {"item": "b"}}), resp.bodyBytes)
 			return nil
 		}),
+		httpCall(http.MethodGet, "/typeenum", jsonData(t, obj{"name": "A", "value": "hello"}), func(resp *httpResponse) error {
+			assert.Equal(t, 200, resp.status)
+			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
+			assert.Equal(t, jsonData(t, obj{"name": "A", "value": "hello"}), resp.bodyBytes)
+			return nil
+		}),
 	)
 }
 

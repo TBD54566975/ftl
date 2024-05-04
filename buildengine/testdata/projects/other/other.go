@@ -73,8 +73,9 @@ type B EchoRequest
 func (B) tag2() {}
 
 type EchoRequest struct {
-	Name            ftl.Option[string] `json:"name"`
-	ExternalSumType another.TypeEnum
+	Name                  ftl.Option[string] `json:"name"`
+	ExternalSumType       another.TypeEnum
+	ExternalNestedSumType another.TransitiveTypeEnum
 }
 
 type EchoResponse struct {

@@ -32,6 +32,7 @@ var jsonSchemaSample = &Schema{
 					{Name: "keyValue", Type: &Ref{Module: "foo", Name: "Generic", TypeParameters: []Type{&String{}, &Int{}}}},
 					{Name: "stringEnumRef", Type: &Ref{Module: "foo", Name: "StringEnum"}},
 					{Name: "intEnumRef", Type: &Ref{Module: "foo", Name: "IntEnum"}},
+					{Name: "typeEnumRef", Type: &Ref{Module: "foo", Name: "TypeEnum"}},
 				},
 			},
 			&Data{
@@ -47,6 +48,7 @@ var jsonSchemaSample = &Schema{
 			},
 			&Enum{
 				Name: "StringEnum",
+				Type: &String{},
 				Variants: []*EnumVariant{
 					{Name: "A", Value: &StringValue{Value: "A"}},
 					{Name: "B", Value: &StringValue{Value: "B"}},
@@ -54,9 +56,17 @@ var jsonSchemaSample = &Schema{
 			},
 			&Enum{
 				Name: "IntEnum",
+				Type: &Int{},
 				Variants: []*EnumVariant{
 					{Name: "Zero", Value: &IntValue{Value: 0}},
 					{Name: "One", Value: &IntValue{Value: 1}},
+				},
+			},
+			&Enum{
+				Name: "TypeEnum",
+				Variants: []*EnumVariant{
+					{Name: "StringVariant", Value: &TypeValue{Value: &String{}}},
+					{Name: "IntVariant", Value: &TypeValue{Value: &Int{}}},
 				},
 			},
 		}},
@@ -89,7 +99,8 @@ func TestDataToJSONSchema(t *testing.T) {
     "any",
     "keyValue",
     "stringEnumRef",
-    "intEnumRef"
+    "intEnumRef",
+    "typeEnumRef"
   ],
   "additionalProperties": false,
   "definitions": {
@@ -143,6 +154,34 @@ func TestDataToJSONSchema(t *testing.T) {
       "enum": [
         "A",
         "B"
+      ]
+    },
+    "foo.TypeEnum": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
       ]
     }
   },
@@ -245,6 +284,9 @@ func TestDataToJSONSchema(t *testing.T) {
     "time": {
       "type": "string",
       "format": "date-time"
+    },
+    "typeEnumRef": {
+      "$ref": "#/definitions/foo.TypeEnum"
     }
   },
   "type": "object"
@@ -270,7 +312,8 @@ func TestJSONSchemaValidation(t *testing.T) {
     "any": [{"name": "Name"}, "string", 1, 1.23, true, "2018-11-13T20:20:39+00:00", ["one"], {"one": 2}, null],
     "keyValue": {"key": "string", "value": 1},
 	"stringEnumRef": "A",
-	"intEnumRef": 0
+	"intEnumRef": 0,
+	"typeEnumRef": {"name": "IntVariant", "value": 0}
   }
    `
 
@@ -307,7 +350,8 @@ func TestInvalidEnumValidation(t *testing.T) {
     "any": [{"name": "Name"}, "string", 1, 1.23, true, "2018-11-13T20:20:39+00:00", ["one"], {"one": 2}, null],
     "keyValue": {"key": "string", "value": 1},
 	"stringEnumRef": "B",
-	"intEnumRef": 3
+	"intEnumRef": 3,
+	"typeEnumRef": {"name": "IntVariant", "value": 0}
   }
    `
 

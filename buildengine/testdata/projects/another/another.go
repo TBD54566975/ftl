@@ -20,6 +20,22 @@ type B string
 
 func (B) tag() {}
 
+//ftl:enum export
+type SecondTypeEnum interface{ typeEnum() }
+
+type One int
+
+func (One) typeEnum() {}
+
+type Two string
+
+func (Two) typeEnum() {}
+
+//ftl:data export
+type TransitiveTypeEnum struct {
+	TypeEnumRef SecondTypeEnum
+}
+
 type EchoRequest struct {
 	Name ftl.Option[string] `json:"name"`
 }

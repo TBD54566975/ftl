@@ -7,9 +7,6 @@ import (
 	"reflect"
 {{ end }}
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-{{- if .SumTypes }}
-	"github.com/TBD54566975/ftl/backend/schema"
-{{- end }}
 	"github.com/TBD54566975/ftl/common/plugin"
 {{- if .SumTypes }}
 	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
@@ -38,24 +35,17 @@ func main() {
 
 {{- if .SumTypes}}
 
-	goTypeRegistry := typeregistry.NewTypeRegistry()
-	schemaTypeRegistry := schema.NewTypeRegistry()
+	tr := typeregistry.NewTypeRegistry()
 {{- end}}
 {{- range .SumTypes}}
-	goTypeRegistry.RegisterSumType(reflect.TypeFor[{{.Discriminator}}](), map[string]reflect.Type{
+	tr.RegisterSumType(reflect.TypeFor[{{.Discriminator}}](), map[string]reflect.Type{
 		{{- range .Variants}}
 		"{{.Name}}": reflect.TypeFor[{{.Type}}](),
 		{{- end}}
 	})
-	schemaTypeRegistry.RegisterSumType("{{.Discriminator}}", map[string]schema.Type{
-		{{- range .Variants}}
-		"{{.Name}}": {{schemaType .SchemaType}},
-		{{- end}}
-	})
 {{- end}}
 {{- if .SumTypes}}
-	ctx = typeregistry.ContextWithTypeRegistry(ctx, goTypeRegistry)
-	ctx = schema.ContextWithTypeRegistry(ctx, schemaTypeRegistry.ToProto())
+	ctx = typeregistry.ContextWithTypeRegistry(ctx, tr)
 {{- end}}
 
 	plugin.Start(ctx, "{{.Name}}", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)

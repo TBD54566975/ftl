@@ -11,6 +11,11 @@ import (
 func TestTransformFromAliasedFields(t *testing.T) {
 	schemaText := `
 		module test {
+			enum TypeEnum {
+				A test.Inner
+				B String
+			}
+			
 			data Inner {
 				waz String +alias json "foo"
 			}
@@ -21,9 +26,11 @@ func TestTransformFromAliasedFields(t *testing.T) {
 				array [test.Inner]
 				map {String: test.Inner}
 				optional test.Inner
+				typeEnum test.TypeEnum
 			}
 		}
 		`
+
 	sch, err := schema.ParseString("test", schemaText)
 	assert.NoError(t, err)
 	actual, err := transformFromAliasedFields(&schema.Ref{Module: "test", Name: "Test"}, sch, map[string]any{
@@ -44,6 +51,10 @@ func TestTransformFromAliasedFields(t *testing.T) {
 		"optional": map[string]any{
 			"foo": "value",
 		},
+		"typeEnum": map[string]any{
+			"name":  "A",
+			"value": map[string]any{"foo": "value"},
+		},
 	})
 	expected := map[string]any{
 		"scalar": "value",
@@ -63,6 +74,10 @@ func TestTransformFromAliasedFields(t *testing.T) {
 		"optional": map[string]any{
 			"waz": "value",
 		},
+		"typeEnum": map[string]any{
+			"name":  "A",
+			"value": map[string]any{"waz": "value"},
+		},
 	}
 	assert.NoError(t, err)
 	assert.Equal(t, expected, actual)
@@ -71,6 +86,11 @@ func TestTransformFromAliasedFields(t *testing.T) {
 func TestTransformToAliasedFields(t *testing.T) {
 	schemaText := `
 		module test {
+			enum TypeEnum {
+				A test.Inner
+				B String
+			}
+
 			data Inner {
 				waz String +alias json "foo"
 			}
@@ -81,9 +101,11 @@ func TestTransformToAliasedFields(t *testing.T) {
 				array [test.Inner]
 				map {String: test.Inner}
 				optional test.Inner
+				typeEnum test.TypeEnum
 			}
 		}
 		`
+
 	sch, err := schema.ParseString("test", schemaText)
 	assert.NoError(t, err)
 	actual, err := transformToAliasedFields(&schema.Ref{Module: "test", Name: "Test"}, sch, map[string]any{
@@ -104,6 +126,10 @@ func TestTransformToAliasedFields(t *testing.T) {
 		"optional": map[string]any{
 			"waz": "value",
 		},
+		"typeEnum": map[string]any{
+			"name":  "A",
+			"value": map[string]any{"waz": "value"},
+		},
 	})
 	expected := map[string]any{
 		"bar": "value",
@@ -122,6 +148,10 @@ func TestTransformToAliasedFields(t *testing.T) {
 		},
 		"optional": map[string]any{
 			"foo": "value",
+		},
+		"typeEnum": map[string]any{
+			"name":  "A",
+			"value": map[string]any{"foo": "value"},
 		},
 	}
 	assert.NoError(t, err)

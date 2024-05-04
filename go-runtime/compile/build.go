@@ -188,7 +188,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		Name:         main.Name,
 		Verbs:        goVerbs,
 		Replacements: replacements,
-		SumTypes:     getSumTypes(pr.EnumRefs, main, sch, pr.NativeNames),
+		SumTypes:     getSumTypes(main, sch, pr.NativeNames),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -502,7 +502,7 @@ func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error)
 	return os.WriteFile(filepath.Join(config.AbsDeployDir(), config.Errors), elBytes, 0600)
 }
 
-func getSumTypes(enumRefs []*schema.Ref, module *schema.Module, sch *schema.Schema, nativeNames NativeNames) []goSumType {
+func getSumTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNames) []goSumType {
 	sumTypes := make(map[string]goSumType)
 	for _, d := range module.Decls {
 		if e, ok := d.(*schema.Enum); ok && !e.IsValueEnum() {
@@ -523,25 +523,19 @@ func getSumTypes(enumRefs []*schema.Ref, module *schema.Module, sch *schema.Sche
 	}
 
 	// register sum types from other modules
-	for _, ref := range enumRefs {
-		if ref.Module == module.Name {
-			continue
+	for _, e := range getExternalTypeEnums(module, sch) {
+		variants := make([]goSumTypeVariant, 0, len(e.resolved.Variants))
+		for _, v := range e.resolved.Variants {
+			variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+				Name:       v.Name,
+				Type:       e.ref.Module + "." + v.Name,
+				SchemaType: v.Value.(*schema.TypeValue).Value,
+			})
 		}
-		resolved := sch.ResolveRef(ref)
-		if e, ok := resolved.(*schema.Enum); ok && !e.IsValueEnum() {
-			variants := make([]goSumTypeVariant, 0, len(e.Variants))
-			for _, v := range e.Variants {
-				variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
-					Name:       v.Name,
-					Type:       ref.Module + "." + v.Name,
-					SchemaType: v.Value.(*schema.TypeValue).Value,
-				})
-			}
-			stFqName := ref.Module + "." + e.Name
-			sumTypes[stFqName] = goSumType{
-				Discriminator: stFqName,
-				Variants:      variants,
-			}
+		stFqName := e.ref.Module + "." + e.ref.Name
+		sumTypes[e.ref.ToRefKey().String()] = goSumType{
+			Discriminator: stFqName,
+			Variants:      variants,
 		}
 	}
 	out := gomaps.Values(sumTypes)
@@ -549,4 +543,33 @@ func getSumTypes(enumRefs []*schema.Ref, module *schema.Module, sch *schema.Sche
 		return strings.Compare(a.Discriminator, b.Discriminator)
 	})
 	return out
+}
+
+type externalEnum struct {
+	ref      *schema.Ref
+	resolved *schema.Enum
+}
+
+// getExternalTypeEnums resolve all type enum references in the full schema
+func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalEnum {
+	combinedSch := schema.Schema{
+		Modules: append(sch.Modules, module),
+	}
+	var externalTypeEnums []externalEnum
+	err := schema.Visit(&combinedSch, func(n schema.Node, next func() error) error {
+		if ref, ok := n.(*schema.Ref); ok && ref.Module != "" && ref.Module != module.Name {
+			decl := sch.ResolveRef(ref)
+			if e, ok := decl.(*schema.Enum); ok && !e.IsValueEnum() {
+				externalTypeEnums = append(externalTypeEnums, externalEnum{
+					ref:      ref,
+					resolved: e,
+				})
+			}
+		}
+		return next()
+	})
+	if err != nil {
+		panic(fmt.Sprintf("failed to resolve external type enums schema: %v", err))
+	}
+	return externalTypeEnums
 }

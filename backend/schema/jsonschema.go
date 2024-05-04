@@ -84,11 +84,29 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 		schema := &jsonschema.Schema{
 			Description: jsComments(node.Comments),
 		}
-		values := make([]any, len(node.Variants))
-		for i, v := range node.Variants {
-			values[i] = v.Value.GetValue()
+		if node.IsValueEnum() {
+			values := make([]any, len(node.Variants))
+			for i, v := range node.Variants {
+				values[i] = v.Value.GetValue()
+			}
+			return schema.WithEnum(values...)
 		}
-		return schema.WithEnum(values...)
+
+		variants := make([]jsonschema.SchemaOrBool, 0, len(node.Variants))
+		for _, v := range node.Variants {
+			obj := jsonschema.Object
+			str := jsonschema.String
+			variantSch := &jsonschema.Schema{
+				Description:          jsComments(v.Comments),
+				Type:                 &jsonschema.Type{SimpleTypes: &obj},
+				Properties:           map[string]jsonschema.SchemaOrBool{},
+				AdditionalProperties: jsBool(false),
+			}
+			variantSch.Properties["name"] = jsonschema.SchemaOrBool{TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &str}}}
+			variantSch.Properties["value"] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(v.Value.(*TypeValue).schemaValueType(), refs)} //nolint:forcetypeassert
+			variants = append(variants, jsonschema.SchemaOrBool{TypeObject: variantSch})
+		}
+		return schema.WithOneOf(variants...)
 
 	case *Int:
 		st := jsonschema.Integer

@@ -288,6 +288,8 @@ func TestValueForData(t *testing.T) {
 		{&schema.Array{Element: &schema.String{}}, []byte(`["test1", "test2"]`), []any{"test1", "test2"}},
 		{&schema.Map{Key: &schema.String{}, Value: &schema.String{}}, []byte(`{"key1": "value1", "key2": "value2"}`), obj{"key1": "value1", "key2": "value2"}},
 		{&schema.Ref{Module: "test", Name: "Test"}, []byte(`{"intValue": 10.0}`), obj{"intValue": 10.0}},
+		// type enum
+		{&schema.Ref{Module: "test", Name: "TypeEnum"}, []byte(`{"name": "A", "value": "hello"}`), obj{"name": "A", "value": "hello"}},
 	}
 
 	for _, test := range tests {
@@ -319,6 +321,13 @@ func TestEnumValidation(t *testing.T) {
 						{Name: "GreenInt", Value: &schema.IntValue{Value: 2}},
 					},
 				},
+				&schema.Enum{
+					Name: "TypeEnum",
+					Variants: []*schema.EnumVariant{
+						{Name: "String", Value: &schema.TypeValue{Value: &schema.String{}}},
+						{Name: "List", Value: &schema.TypeValue{Value: &schema.Array{Element: &schema.String{}}}},
+					},
+				},
 				&schema.Data{
 					Name: "StringEnumRequest",
 					Fields: []*schema.Field{
@@ -339,6 +348,14 @@ func TestEnumValidation(t *testing.T) {
 						}},
 					},
 				},
+				&schema.Data{
+					Name: "TypeEnumRequest",
+					Fields: []*schema.Field{
+						{Name: "message", Type: &schema.Optional{
+							Type: &schema.Ref{Name: "TypeEnum", Module: "test"},
+						}},
+					},
+				},
 			}},
 		},
 	}
@@ -354,6 +371,16 @@ func TestEnumValidation(t *testing.T) {
 		{&schema.Ref{Name: "OptionalEnumRequest", Module: "test"}, obj{"message": "Red"}, ""},
 		{&schema.Ref{Name: "StringEnumRequest", Module: "test"}, obj{"message": "akxznc"},
 			"akxznc is not a valid variant of enum test.Color"},
+		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": obj{"name": "String", "value": "Hello"}}, ""},
+		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": obj{"name": "String", "value": `["test1", "test2"]`}}, ""},
+		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": obj{"name": "String", "value": 0}},
+			"test.TypeEnumRequest.message has wrong type, expected String found int"},
+		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": obj{"name": "Invalid", "value": 0}},
+			"\"Invalid\" is not a valid variant of enum test.TypeEnum"},
+		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": obj{"name": 0, "value": 0}},
+			`invalid type for enum "test.TypeEnum"; name field must be a string, was int`},
+		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": "Hello"},
+			`malformed enum type test.TypeEnumRequest.message: expected structure is {"name": "<variant name>", "value": <variant value>}`},
 	}
 
 	for _, test := range tests {

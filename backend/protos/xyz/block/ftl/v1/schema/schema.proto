@@ -231,10 +231,6 @@ message StringValue {
   string value = 2;
 }
 
-message SumTypeVariants {
-  repeated string value = 1;
-}
-
 message Time {
   optional Position pos = 1;
 }
@@ -259,11 +255,6 @@ message Type {
 message TypeParameter {
   optional Position pos = 1;
   string name = 2;
-}
-
-message TypeRegistry {
-  map<string, Type> schemaTypes = 1;
-  map<string, SumTypeVariants> sumTypes = 2;
 }
 
 message TypeValue {
