@@ -2,6 +2,7 @@ package dal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -45,8 +46,13 @@ func (l *Lease) renew(ctx context.Context) {
 			cancel()
 
 			if err != nil {
-				logger.Errorf(err, "Failed to renew lease %s", l.key)
-				l.errch <- translatePGError(err)
+				err = translatePGError(err)
+				if errors.Is(err, ErrNotFound) {
+					logger.Warnf("Lease expired")
+				} else {
+					logger.Errorf(err, "Failed to renew lease %s", l.key)
+				}
+				l.errch <- err
 				return
 			}
 
