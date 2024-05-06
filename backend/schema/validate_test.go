@@ -257,7 +257,7 @@ func TestValidate(t *testing.T) {
 		{name: "InvalidFSM",
 			schema: `
 				module one {
-					verb A(Empty) Empty
+					verb A(Empty) Unit
 					verb B(one.C) Empty
 
 					fsm FSM {
@@ -269,14 +269,15 @@ func TestValidate(t *testing.T) {
 				`4:13-13: unknown reference "one.C"`,
 				`6:6-6: "FSM" has no start states`,
 				`7:18-18: unknown source verb "one.C"`,
+				`7:27-27: destination state "one.B" must be a sink but is verb`,
 			},
 		},
 		{name: "DuplicateFSM",
 			schema: `
 				module one {
-					verb A(Empty) Empty
-					verb B(Empty) Empty
-					verb C(Empty) Empty
+					verb A(Empty) Unit
+					verb B(Empty) Unit
+					verb C(Empty) Unit
 
 					fsm FSM {
 						start one.A

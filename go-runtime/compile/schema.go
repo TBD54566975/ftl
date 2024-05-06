@@ -34,6 +34,9 @@ var (
 	})
 
 	ftlCallFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
+	ftlFSMFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.FSM"
+	ftlTransitionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Transition"
+	ftlStartFuncPath      = "github.com/TBD54566975/ftl/go-runtime/ftl.Start"
 	ftlConfigFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
 	ftlSecretFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
 	ftlPostgresDBFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
@@ -201,56 +204,143 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr) {
 	case ftlConfigFuncPath, ftlSecretFuncPath:
 		// Secret/config declaration: ftl.Config[<type>](<name>)
 		parseConfigDecl(pctx, node, fn)
+
+	case ftlFSMFuncPath:
+		parseFSMDecl(pctx, node)
+
 	case ftlPostgresDBFuncPath:
 		parseDatabaseDecl(pctx, node, schema.PostgresDatabaseType)
 	}
 }
 
 func parseCall(pctx *parseContext, node *ast.CallExpr) {
+	if pctx.activeVerb == nil {
+		return
+	}
 	if len(node.Args) != 3 {
 		pctx.errors.add(errorf(node, "call must have exactly three arguments"))
 		return
 	}
-	_, verbFn := deref[*types.Func](pctx.pkg, node.Args[1])
-	if verbFn == nil {
+	ref := parseVerbRef(pctx, node.Args[1])
+	if ref == nil {
 		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
 			pctx.errors.add(errorf(node.Args[1], "call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel))
 		}
-		pctx.errors.add(errorf(node.Args[1], "call first argument must be a function"))
-		return
-	}
-	if pctx.activeVerb == nil {
-		return
-	}
-	moduleName, ok := ftlModuleFromGoModule(verbFn.Pkg().Path()).Get()
-	if !ok {
 		pctx.errors.add(errorf(node.Args[1], "call first argument must be a function in an ftl module"))
 		return
-	}
-	ref := &schema.Ref{
-		Pos:    goPosToSchemaPos(node.Pos()),
-		Module: moduleName,
-		Name:   strcase.ToLowerCamel(verbFn.Name()),
 	}
 	pctx.activeVerb.AddCall(ref)
 }
 
-func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
-	var name string
-	if len(node.Args) == 1 {
-		if literal, ok := node.Args[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
-			var err error
-			name, err = strconv.Unquote(literal.Value)
-			if err != nil {
-				pctx.errors.add(wrapf(node, err, ""))
-				return
-			}
-		}
+func parseVerbRef(pctx *parseContext, node ast.Expr) *schema.Ref {
+	_, verbFn := deref[*types.Func](pctx.pkg, node)
+	if verbFn == nil {
+		return nil
 	}
-	if name == "" {
-		pctx.errors.add(errorf(node, "config and secret declarations must have a single string literal argument"))
+	moduleName, ok := ftlModuleFromGoModule(verbFn.Pkg().Path()).Get()
+	if !ok {
+		return nil
+	}
+	return &schema.Ref{
+		Pos:    goPosToSchemaPos(node.Pos()),
+		Module: moduleName,
+		Name:   strcase.ToLowerCamel(verbFn.Name()),
+	}
+}
+
+func parseFSMDecl(pctx *parseContext, node *ast.CallExpr) {
+	var literal *ast.BasicLit
+	if len(node.Args) > 0 {
+		literal, _ = node.Args[0].(*ast.BasicLit)
+	}
+	if literal == nil || literal.Kind != token.STRING {
+		pctx.errors.add(errorf(node, "first argument to an FSM declaration must be the name as a string literal"))
 		return
 	}
+
+	name, err := strconv.Unquote(literal.Value)
+	if err != nil {
+		panic(err) // Should never happen
+	}
+
+	if !schema.ValidateName(name) {
+		pctx.errors.add(errorf(node, "FSM names must be valid identifiers"))
+	}
+
+	fsm := &schema.FSM{
+		Pos:  goPosToSchemaPos(node.Pos()),
+		Name: name,
+	}
+	pctx.module.Decls = append(pctx.module.Decls, fsm)
+
+	for _, arg := range node.Args[1:] {
+		call, ok := arg.(*ast.CallExpr)
+		if !ok {
+			pctx.errors.add(errorf(arg, "expected call to Start or Transition"))
+			continue
+		}
+		_, fn := deref[*types.Func](pctx.pkg, call.Fun)
+		if fn == nil {
+			pctx.errors.add(errorf(call, "expected call to Start or Transition"))
+			continue
+		}
+		parseFSMTransition(pctx, call, fn, fsm)
+	}
+}
+
+// Parse a Start or Transition call in an FSM declaration and add it to the FSM.
+func parseFSMTransition(pctx *parseContext, node *ast.CallExpr, fn *types.Func, fsm *schema.FSM) {
+	refs := make([]*schema.Ref, len(node.Args))
+	for i, arg := range node.Args {
+		ref := parseVerbRef(pctx, arg)
+		if ref == nil {
+			pctx.errors.add(errorf(arg, "expected a reference to a sink"))
+			return
+		}
+		refs[i] = ref
+	}
+	switch fn.FullName() {
+	case ftlStartFuncPath:
+		if len(refs) != 1 {
+			pctx.errors.add(errorf(node, "expected one reference to a sink"))
+			return
+		}
+		fsm.Start = append(fsm.Start, refs...)
+
+	case ftlTransitionFuncPath:
+		if len(refs) != 2 {
+			pctx.errors.add(errorf(node, "expected two references to sinks"))
+			return
+		}
+		fsm.Transitions = append(fsm.Transitions, &schema.FSMTransition{
+			Pos:  goPosToSchemaPos(node.Pos()),
+			From: refs[0],
+			To:   refs[1],
+		})
+
+	default:
+		pctx.errors.add(errorf(node, "expected call to Start or Transition"))
+	}
+}
+
+func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
+	var literal *ast.BasicLit
+	if len(node.Args) > 0 {
+		literal, _ = node.Args[0].(*ast.BasicLit)
+	}
+	if literal == nil || literal.Kind != token.STRING {
+		pctx.errors.add(errorf(node, "first argument to config and secret declarations must be the name as a string literal"))
+		return
+	}
+	name, err := strconv.Unquote(literal.Value)
+	if err != nil {
+		panic(err) // Should never happen
+	}
+
+	if !schema.ValidateName(name) {
+		pctx.errors.add(errorf(node, "config and secret names must be valid identifiers"))
+	}
+
 	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert
 
 	// Type parameter
@@ -530,7 +620,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 				for _, dir := range directives {
 					if exportableDir, ok := dir.(exportable); ok {
 						if pctx.enums[enumName].Export && !exportableDir.IsExported() {
-							pctx.errors.add(errorf(node, "parent enum %q is exported, but directive %q on %q is not. All variants of exported enums that have a directive must be explicitly exported as well", enumName, exportableDir, t.Name.Name))
+							pctx.errors.add(errorf(node, "parent enum %q is exported, but directive %q on %q is not: all variants of exported enums that have a directive must be explicitly exported as well", enumName, exportableDir, t.Name.Name))
 						}
 						isExported = exportableDir.IsExported()
 					}

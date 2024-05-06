@@ -184,20 +184,24 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 					if sym, decl := ResolveAs[*Verb](scopes, *start); decl == nil {
 						merr = append(merr, errorf(start, "unknown start verb %q", start))
 					} else if sym == nil {
-						merr = append(merr, errorf(start, "start state %q must be a verb", start))
+						merr = append(merr, errorf(start, "start state %q must be a sink", start))
+					} else if sym.Kind() != VerbKindSink {
+						merr = append(merr, errorf(start, "start state %q must be a sink but is %s", start, sym.Kind()))
 					}
 				}
 
 			case *FSMTransition:
 				if sym, decl := ResolveAs[*Verb](scopes, *n.From); decl == nil {
-					merr = append(merr, errorf(n, "unknown source verb %q", n.From))
+					merr = append(merr, errorf(n.From, "unknown source verb %q", n.From))
 				} else if sym == nil {
-					merr = append(merr, errorf(n, "source state %q is not a verb", n.From))
+					merr = append(merr, errorf(n.From, "source state %q is not a verb", n.From))
 				}
 				if sym, decl := ResolveAs[*Verb](scopes, *n.To); decl == nil {
-					merr = append(merr, errorf(n, "unknown destination verb %q", n.To))
+					merr = append(merr, errorf(n.To, "unknown destination verb %q", n.To))
 				} else if sym == nil {
-					merr = append(merr, errorf(n, "destination state %q is not a verb", n.To))
+					merr = append(merr, errorf(n.To, "destination state %q is not a sink", n.To))
+				} else if sym.Kind() != VerbKindSink {
+					merr = append(merr, errorf(n.To, "destination state %q must be a sink but is %s", n.To, sym.Kind()))
 				}
 
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,

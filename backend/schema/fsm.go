@@ -78,7 +78,7 @@ type FSMTransition struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
-	From     *Ref     `parser:"@@" protobuf:"3"`
+	From     *Ref     `parser:"@@" protobuf:"3,optional"`
 	To       *Ref     `parser:"'to' @@" protobuf:"4"`
 }
 

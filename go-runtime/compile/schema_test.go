@@ -13,7 +13,6 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -139,8 +138,8 @@ func TestExtractModuleSchema(t *testing.T) {
   data WithoutDirectiveStruct {
   }
 
-  export verb http(builtin.HttpRequest<one.Req>) builtin.HttpResponse<one.Resp, Unit>  
-      +ingress http GET /get
+  export verb http(builtin.HttpRequest<one.Req>) builtin.HttpResponse<one.Resp, Unit>
+    +ingress http GET /get
 
   export verb nothing(Unit) Unit
 
@@ -151,7 +150,7 @@ func TestExtractModuleSchema(t *testing.T) {
   verb verb(one.Req) one.Resp
 }
 `
-	assert.Equal(t, expected, actual.String())
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
 func TestExtractModuleSchemaTwo(t *testing.T) {
@@ -200,6 +199,46 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 
 		export verb two(two.Payload<String>) two.Payload<String>
 	  }
+`
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
+}
+
+func TestExtractModuleSchemaFSM(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	r, err := ExtractModuleSchema("testdata/fsm")
+	assert.NoError(t, err)
+	actual := schema.Normalise(r.MustGet().Module)
+	expected := `module fsm {
+		fsm payment {
+			start fsm.created
+			start fsm.paid
+			transition fsm.created to fsm.paid
+			transition fsm.created to fsm.failed
+			transition fsm.paid to fsm.completed
+		}
+
+		data OnlinePaymentCompleted {
+		}
+
+		data OnlinePaymentCreated {
+		}
+
+		data OnlinePaymentFailed {
+		}
+
+		data OnlinePaymentPaid {
+		}
+
+		verb completed(fsm.OnlinePaymentCompleted) Unit
+
+		verb created(fsm.OnlinePaymentCreated) Unit
+
+		verb failed(fsm.OnlinePaymentFailed) Unit
+
+		verb paid(fsm.OnlinePaymentPaid) Unit
+	}
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
@@ -281,9 +320,9 @@ func normaliseString(s string) string {
 }
 
 func TestErrorReporting(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
+	// if testing.Short() {
+	// 	t.SkipNow()
+	// }
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	pwd, _ := os.Getwd()
 	err := exec.Command(ctx, log.Debug, "testdata/failing", "go", "mod", "tidy").RunBuffered(ctx)
@@ -292,50 +331,46 @@ func TestErrorReporting(t *testing.T) {
 	assert.NoError(t, err)
 
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
-	assert.EqualError(t, errors.Join(genericizeErrors(r.MustGet().Errors)...),
-		filename+":10:13-35: config and secret declarations must have a single string literal argument\n"+
-			filename+":13:18-52: duplicate config declaration at 12:18-52\n"+
-			filename+":16:18-52: duplicate secret declaration at 15:18-52\n"+
-			filename+":19:14-44: duplicate database declaration at 18:14-44\n"+
-			filename+":22:2-10: unsupported type \"error\" for field \"BadParam\"\n"+
-			filename+":25:2-17: unsupported type \"uint64\" for field \"AnotherBadParam\"\n"+
-			filename+":28:3-3: unexpected token \"export\" (expected Directive)\n"+
-			filename+":34:36-39: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":34:50-50: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":35:16-29: call first argument must be a function in an ftl module\n"+
-			filename+":36:2-46: call must have exactly three arguments\n"+
-			filename+":37:16-25: call first argument must be a function\n"+
-			filename+":42:1-2: must have at most two parameters (context.Context, struct)\n"+
-			filename+":42:69-69: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":47:22-27: first parameter must be of type context.Context but is ftl/failing.Request\n"+
-			filename+":47:37-43: second parameter must be a struct but is string\n"+
-			filename+":47:53-53: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":52:43-47: second parameter must not be ftl.Unit\n"+
-			filename+":52:59-59: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":57:1-2: first parameter must be context.Context\n"+
-			filename+":57:18-18: unsupported response type \"ftl/failing.Response\"\n"+
-			filename+":62:1-2: must have at most two results (struct, error)\n"+
-			filename+":62:41-44: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":67:1-2: must at least return an error\n"+
-			filename+":67:36-39: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":71:35-38: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":71:48-48: must return an error but is ftl/failing.Response\n"+
-			filename+":76:41-44: unsupported request type \"ftl/failing.Request\"\n"+
-			filename+":76:55-55: first result must be a struct but is string\n"+
-			filename+":76:63-63: must return an error but is string\n"+
-			filename+":76:63-63: second result must not be ftl.Unit\n"+
-			filename+":83:1-1: duplicate verb name \"WrongResponse\"\n"+
-			filename+":89:2-12: struct field unexported must be exported by starting with an uppercase letter\n"+
-			filename+":100:2-23: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum\n"+
-			filename+":106:2-40: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum\n"+
-			filename+":115:1-26: parent enum \"ExportedTypeEnum\" is exported, but directive \"ftl:data\" on \"PrivateData\" is not. All variants of exported enums that have a directive must be explicitly exported as well",
-	)
-}
-
-func genericizeErrors(schemaErrs []*schema.Error) []error {
-	errs := make([]error, len(schemaErrs))
-	for i, schemaErr := range schemaErrs {
-		errs[i] = schemaErr
+	actual := slices.Map(r.MustGet().Errors, func(e *schema.Error) string { return strings.TrimPrefix(e.Error(), filename+":") })
+	expected := []string{
+		`10:13-34: first argument to config and secret declarations must be the name as a string literal`,
+		`13:18-52: duplicate config declaration at 12:18-52`,
+		`16:18-52: duplicate secret declaration at 15:18-52`,
+		`19:14-44: duplicate database declaration at 18:14-44`,
+		`22:2-10: unsupported type "error" for field "BadParam"`,
+		`25:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
+		`28:3-3: unexpected token "export" (expected Directive)`,
+		`34:36-39: unsupported request type "ftl/failing.Request"`,
+		`34:50-50: unsupported response type "ftl/failing.Response"`,
+		`35:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc`,
+		`35:16-29: call first argument must be a function in an ftl module`,
+		`36:2-46: call must have exactly three arguments`,
+		`37:16-25: call first argument must be a function in an ftl module`,
+		`42:1-2: must have at most two parameters (context.Context, struct)`,
+		`42:69-69: unsupported response type "ftl/failing.Response"`,
+		`47:22-27: first parameter must be of type context.Context but is ftl/failing.Request`,
+		`47:37-43: second parameter must be a struct but is string`,
+		`47:53-53: unsupported response type "ftl/failing.Response"`,
+		`52:43-47: second parameter must not be ftl.Unit`,
+		`52:59-59: unsupported response type "ftl/failing.Response"`,
+		`57:1-2: first parameter must be context.Context`,
+		`57:18-18: unsupported response type "ftl/failing.Response"`,
+		`62:1-2: must have at most two results (struct, error)`,
+		`62:41-44: unsupported request type "ftl/failing.Request"`,
+		`67:1-2: must at least return an error`,
+		`67:36-39: unsupported request type "ftl/failing.Request"`,
+		`71:35-38: unsupported request type "ftl/failing.Request"`,
+		`71:48-48: must return an error but is ftl/failing.Response`,
+		`76:41-44: unsupported request type "ftl/failing.Request"`,
+		`76:55-55: first result must be a struct but is string`,
+		`76:63-63: must return an error but is string`,
+		`76:63-63: second result must not be ftl.Unit`,
+		`83:1-1: duplicate verb name "WrongResponse"`,
+		`89:2-12: struct field unexported must be exported by starting with an uppercase letter`,
+		`100:2-23: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
+		`106:2-40: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
+		`115:1-26: parent enum "ExportedTypeEnum" is exported, but directive "ftl:data" on "PrivateData" is not: all variants of exported enums that have a directive must be explicitly exported as well`,
+		`119:21-60: config and secret names must be valid identifiers`,
 	}
-	return errs
+	assert.Equal(t, expected, actual)
 }
