@@ -284,7 +284,10 @@ func TestErrorReporting(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	pwd, _ := os.Getwd()
+	err := exec.Command(ctx, log.Debug, "testdata/failing", "go", "mod", "tidy").RunBuffered(ctx)
+	assert.NoError(t, err)
 	r, err := ExtractModuleSchema("testdata/failing")
 	assert.NoError(t, err)
 
