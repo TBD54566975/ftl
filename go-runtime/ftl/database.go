@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Register Postgres driver
 
-	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
+	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
 type Database struct {

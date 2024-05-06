@@ -7,11 +7,7 @@ import (
 	"strings"
 )
 
-// UpdateFromEnvironment copies a ModuleContext and gathers configs, secrets and databases from the local environment.
-//
-// This is useful for testing and development, where the environment is used to provide
-// configurations, secrets and DSNs. The context is built from a combination of
-// the ftl-project.toml file and (for now) environment variables.
+// DatabasesFromEnvironment finds DSNs in environment variables and creates a map of databases.
 func DatabasesFromEnvironment(ctx context.Context, module string) (map[string]Database, error) {
 	databases := map[string]Database{}
 	for _, entry := range os.Environ() {

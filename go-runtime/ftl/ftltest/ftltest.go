@@ -11,8 +11,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
 type OptionsState struct {
