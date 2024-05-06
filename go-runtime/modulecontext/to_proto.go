@@ -5,7 +5,7 @@ import (
 )
 
 // ToProto converts a ModuleContext to a proto response.
-func (m ModuleContext) ToProto() (*ftlv1.ModuleContextResponse, error) {
+func (m ModuleContext) ToProto() *ftlv1.ModuleContextResponse {
 	databases := make([]*ftlv1.ModuleContextResponse_DSN, 0, len(m.databases))
 	for name, entry := range m.databases {
 		databases = append(databases, &ftlv1.ModuleContextResponse_DSN{
@@ -19,5 +19,5 @@ func (m ModuleContext) ToProto() (*ftlv1.ModuleContextResponse, error) {
 		Configs:   m.configs,
 		Secrets:   m.secrets,
 		Databases: databases,
-	}, nil
+	}
 }

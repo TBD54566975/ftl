@@ -2,9 +2,9 @@ ftl-min-version = ""
 
 [global]
   [global.configuration]
-    foo = "inline://ImJhciI"
+    config = "inline://ImJhciI"
   [global.secrets]
-    foo = "inline://ImJhciI"
+    secret = "inline://ImJhciI"
 
 [executables]
   ftl = ""

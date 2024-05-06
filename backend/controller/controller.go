@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
@@ -632,23 +633,30 @@ nextModule:
 
 // GetModuleContext retrieves config, secrets and DSNs for a module.
 func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
-	// get module schema
-	schemas, err := s.dal.GetActiveDeploymentSchemas(ctx)
+	name := req.Msg.Module
+
+	cm, err := cf.NewDefaultConfigurationManagerFromConfig(ctx, cf.ConfigFromEnvironment())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get active schemas: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
 	}
-	module, ok := slices.Find(schemas, func(s *schema.Module) bool { return s.Name == req.Msg.Module })
-	if !ok {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("module %q not found", req.Msg.Module))
-	}
-	builder, err := modulecontext.NewBuilder(module.Name).UpdateFromEnvironment(ctx)
+	configs, err := cm.MapForModule(ctx, name)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get module context: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
 	}
-	response, err := builder.Build().ToProto()
+	sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, cf.ConfigFromEnvironment())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not marshal module context: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 	}
+	secrets, err := sm.MapForModule(ctx, name)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
+	}
+	databases, err := modulecontext.DatabasesFromEnvironment(ctx, name)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
+	}
+
+	response := modulecontext.NewBuilder(name).AddConfigs(configs).AddSecrets(secrets).AddDatabases(databases).Build().ToProto()
 	return connect.NewResponse(response), nil
 }
 
