@@ -53,7 +53,15 @@ func Context(options ...Option) context.Context {
 	return builder.Build().ApplyToContext(ctx)
 }
 
-// Needs Documentation
+// WithProjectFile loads config and secrets from a project file
+//
+// To be used when setting up a context for a test:
+// ctx := ftltest.Context(
+//
+//	ftltest.WithProjectFile("path/to/ftl-project.yaml"),
+//	... other options
+//
+// )
 func WithProjectFile(path string) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		if _, err := os.Stat(path); err != nil {
