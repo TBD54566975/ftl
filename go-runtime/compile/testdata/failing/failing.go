@@ -7,7 +7,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-var empty = ftl.Config[string]("")
+var empty = ftl.Config[string](1)
 
 var goodConfig = ftl.Config[string]("FTL_ENDPOINT")
 var duplConfig = ftl.Config[string]("FTL_ENDPOINT")
@@ -115,3 +115,5 @@ type ExportedTypeEnum interface{ exportedTypeEnum() }
 type PrivateData struct{}
 
 func (PrivateData) exportedTypeEnum() {}
+
+var invalidConfig = ftl.Config[string]("not an identifier")

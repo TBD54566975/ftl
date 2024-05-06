@@ -21,10 +21,10 @@ func encodeMetadata(metadata []Metadata) string {
 	}
 	w := &strings.Builder{}
 	fmt.Fprintln(w)
-	for _, c := range metadata {
-		fmt.Fprint(w, indent(c.String()))
+	for _, m := range metadata {
+		fmt.Fprintln(w, m.String())
 	}
-	return w.String()
+	return strings.TrimSuffix(w.String(), "\n")
 }
 
 func encodeComments(comments []string) string {

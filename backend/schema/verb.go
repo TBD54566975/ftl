@@ -24,6 +24,39 @@ type Verb struct {
 var _ Decl = (*Verb)(nil)
 var _ Symbol = (*Verb)(nil)
 
+// VerbKind is the kind of Verb: verb, sink, source or empty.
+type VerbKind string
+
+const (
+	// VerbKindVerb is a normal verb taking an input and an output of any non-unit type.
+	VerbKindVerb VerbKind = "verb"
+	// VerbKindSink is a verb that takes an input and returns unit.
+	VerbKindSink VerbKind = "sink"
+	// VerbKindSource is a verb that returns an output and takes unit.
+	VerbKindSource VerbKind = "source"
+	// VerbKindEmpty is a verb that takes unit and returns unit.
+	VerbKindEmpty VerbKind = "empty"
+)
+
+// Kind returns the kind of Verb this is.
+func (v *Verb) Kind() VerbKind {
+	_, inIsUnit := v.Request.(*Unit)
+	_, outIsUnit := v.Response.(*Unit)
+	switch {
+	case inIsUnit && outIsUnit:
+		return VerbKindEmpty
+
+	case inIsUnit:
+		return VerbKindSource
+
+	case outIsUnit:
+		return VerbKindSink
+
+	default:
+		return VerbKindVerb
+	}
+}
+
 func (v *Verb) Position() Position { return v.Pos }
 func (v *Verb) schemaDecl()        {}
 func (v *Verb) schemaSymbol()      {}

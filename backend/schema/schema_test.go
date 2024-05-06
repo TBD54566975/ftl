@@ -43,7 +43,8 @@ module todo {
   }
 
   export verb create(todo.CreateRequest) todo.CreateResponse
-      +calls todo.destroy  +database calls todo.testdb
+    +calls todo.destroy
+	+database calls todo.testdb
 
   export verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{name}
@@ -102,13 +103,13 @@ module payments {
   data OnlinePaymentPaid {
   }
 
-  verb completed(payments.OnlinePaymentCompleted) builtin.Empty
+  verb completed(payments.OnlinePaymentCompleted) Unit
 
-  verb created(payments.OnlinePaymentCreated) builtin.Empty
+  verb created(payments.OnlinePaymentCreated) Unit
 
-  verb failed(payments.OnlinePaymentFailed) builtin.Empty
+  verb failed(payments.OnlinePaymentFailed) Unit
 
-  verb paid(payments.OnlinePaymentPaid) builtin.Empty
+  verb paid(payments.OnlinePaymentPaid) Unit
 }
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(testSchema.String()))
@@ -624,19 +625,19 @@ var testSchema = MustValidate(&Schema{
 				&Data{Name: "OnlinePaymentCompleted"},
 				&Verb{Name: "created",
 					Request:  &Ref{Module: "payments", Name: "OnlinePaymentCreated"},
-					Response: &Ref{Module: "builtin", Name: "Empty"},
+					Response: &Unit{},
 				},
 				&Verb{Name: "paid",
 					Request:  &Ref{Module: "payments", Name: "OnlinePaymentPaid"},
-					Response: &Ref{Module: "builtin", Name: "Empty"},
+					Response: &Unit{},
 				},
 				&Verb{Name: "failed",
 					Request:  &Ref{Module: "payments", Name: "OnlinePaymentFailed"},
-					Response: &Ref{Module: "builtin", Name: "Empty"},
+					Response: &Unit{},
 				},
 				&Verb{Name: "completed",
 					Request:  &Ref{Module: "payments", Name: "OnlinePaymentCompleted"},
-					Response: &Ref{Module: "builtin", Name: "Empty"},
+					Response: &Unit{},
 				},
 				&FSM{
 					Name:  "payment",
