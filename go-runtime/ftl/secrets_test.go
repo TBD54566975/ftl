@@ -7,8 +7,8 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
 func TestSecret(t *testing.T) {

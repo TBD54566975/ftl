@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/TBD54566975/ftl/go-runtime/modulecontext"
+	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
 // ConfigType is a type that can be used as a configuration value.
