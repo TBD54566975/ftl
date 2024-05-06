@@ -186,7 +186,6 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		}
 
 		switch d := decl.(type) {
-		case *schema.Verb:
 		case *schema.Data:
 			if valueMap, ok := value.(map[string]any); ok {
 				if err := validateRequestMap(fieldType, path, valueMap, sch); err != nil {
@@ -219,7 +218,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 				return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
 			}
 
-		case *schema.Config, *schema.Database, *schema.Secret:
+		case *schema.Config, *schema.Database, *schema.Secret, *schema.Verb, *schema.FSM:
 
 		}
 

@@ -50,6 +50,9 @@ func ResolveTypeAs[S Symbol](scopes Scopes, t Type) (symbol S, decl *ModuleDecl)
 }
 
 // ResolveAs resolves a [Ref] to a concrete symbol and declaration.
+//
+// [decl] will be non-nil if the symbol is found, regardless of its type.
+// [symbol] will be non-nil if the symbol is of type [S].
 func ResolveAs[S Symbol](scopes Scopes, ref Ref) (symbol S, decl *ModuleDecl) {
 	decl = scopes.Resolve(ref)
 	if decl == nil {

@@ -383,6 +383,12 @@ export class Decl extends Message<Decl> {
      */
     value: Secret;
     case: "secret";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.FSM fsm = 7;
+     */
+    value: FSM;
+    case: "fsm";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Decl>) {
@@ -399,6 +405,7 @@ export class Decl extends Message<Decl> {
     { no: 4, name: "enum", kind: "message", T: Enum, oneof: "value" },
     { no: 5, name: "config", kind: "message", T: Config, oneof: "value" },
     { no: 6, name: "secret", kind: "message", T: Secret, oneof: "value" },
+    { no: 7, name: "fsm", kind: "message", T: FSM, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Decl {
@@ -623,6 +630,122 @@ export class ErrorList extends Message<ErrorList> {
 
   static equals(a: ErrorList | PlainMessage<ErrorList> | undefined, b: ErrorList | PlainMessage<ErrorList> | undefined): boolean {
     return proto3.util.equals(ErrorList, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.FSM
+ */
+export class FSM extends Message<FSM> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref start = 4;
+   */
+  start: Ref[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.FSMTransition transitions = 5;
+   */
+  transitions: FSMTransition[] = [];
+
+  constructor(data?: PartialMessage<FSM>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.FSM";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "start", kind: "message", T: Ref, repeated: true },
+    { no: 5, name: "transitions", kind: "message", T: FSMTransition, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FSM {
+    return new FSM().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FSM {
+    return new FSM().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FSM {
+    return new FSM().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FSM | PlainMessage<FSM> | undefined, b: FSM | PlainMessage<FSM> | undefined): boolean {
+    return proto3.util.equals(FSM, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.FSMTransition
+ */
+export class FSMTransition extends Message<FSMTransition> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref from = 3;
+   */
+  from?: Ref;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref to = 4;
+   */
+  to?: Ref;
+
+  constructor(data?: PartialMessage<FSMTransition>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.FSMTransition";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "from", kind: "message", T: Ref },
+    { no: 4, name: "to", kind: "message", T: Ref },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FSMTransition {
+    return new FSMTransition().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FSMTransition {
+    return new FSMTransition().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FSMTransition {
+    return new FSMTransition().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FSMTransition | PlainMessage<FSMTransition> | undefined, b: FSMTransition | PlainMessage<FSMTransition> | undefined): boolean {
+    return proto3.util.equals(FSMTransition, a, b);
   }
 }
 

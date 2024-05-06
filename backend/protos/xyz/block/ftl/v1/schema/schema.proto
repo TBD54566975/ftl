@@ -56,6 +56,7 @@ message Decl {
     Enum enum = 4;
     Config config = 5;
     Secret secret = 6;
+    FSM fsm = 7;
   }
 }
 
@@ -83,6 +84,21 @@ message Error {
 
 message ErrorList {
   repeated Error errors = 1;
+}
+
+message FSM {
+  optional Position pos = 1;
+  repeated string comments = 2;
+  string name = 3;
+  repeated Ref start = 4;
+  repeated FSMTransition transitions = 5;
+}
+
+message FSMTransition {
+  optional Position pos = 1;
+  repeated string comments = 2;
+  Ref from = 3;
+  Ref to = 4;
 }
 
 message Field {

@@ -1,6 +1,8 @@
 package schema
 
-import "github.com/TBD54566975/ftl/internal/reflect"
+import (
+	"github.com/TBD54566975/ftl/internal/reflect"
+)
 
 // Normalise clones and normalises (zeroes) positional information in schema Nodes.
 func Normalise[T Node](n T) T {
