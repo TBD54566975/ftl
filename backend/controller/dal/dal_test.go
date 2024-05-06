@@ -290,6 +290,12 @@ func TestDAL(t *testing.T) {
 			assert.NoError(t, err)
 			assertEventsEqual(t, []Event{logEvent}, events)
 		})
+
+		t.Run("ByRequests", func(t *testing.T) {
+			events, err := dal.QueryEvents(ctx, 1000, FilterRequests(requestKey))
+			assert.NoError(t, err)
+			assertEventsEqual(t, []Event{callEvent, logEvent}, events)
+		})
 	})
 
 	t.Run("GetRoutingTable", func(t *testing.T) {
