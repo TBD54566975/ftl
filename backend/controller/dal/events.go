@@ -277,7 +277,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	q += fmt.Sprintf(` AND e.deployment_id = ANY($%d::BIGINT[])`, param(deploymentIDs))
 
 	if filter.requests != nil {
-		q += fmt.Sprintf(` AND ir.name = ANY($%d::TEXT[])`, param(filter.requests))
+		q += fmt.Sprintf(` AND ir.key = ANY($%d::TEXT[])`, param(filter.requests))
 	}
 	if filter.types != nil {
 		// Why are we double casting? Because I hit "cannot find encode plan" and
