@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
@@ -40,6 +39,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
+	cf "github.com/TBD54566975/ftl/common/configuration"
 	frontend "github.com/TBD54566975/ftl/frontend"
 	"github.com/TBD54566975/ftl/internal/cors"
 	"github.com/TBD54566975/ftl/internal/log"
