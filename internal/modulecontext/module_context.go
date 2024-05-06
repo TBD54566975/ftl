@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -15,8 +16,9 @@ import (
 	"github.com/TBD54566975/ftl/internal/reflect"
 )
 
-type MockVerb func(ctx context.Context, req any) (resp any, err error)
-
+// Database represents a database connection based on a DSN
+//
+// It holds a private field for the database which is accessible through moduleCtx.GetDatabase(name)
 type Database struct {
 	DSN    string
 	DBType DBType
@@ -52,6 +54,11 @@ func (x DBType) String() string {
 	}
 }
 
+// Verb is a function that takes a request and returns a response but is not constrained by request/response type like ftl.Verb
+//
+// It is used for definitions of mock verbs as well as real implementations of verbs to directly execute
+type Verb func(ctx context.Context, req any) (resp any, err error)
+
 // ModuleContext holds the context needed for a module, including configs, secrets and DSNs
 //
 // ModuleContext is immutable
@@ -62,7 +69,7 @@ type ModuleContext struct {
 	databases map[string]Database
 
 	isTesting               bool
-	mockVerbs               map[schema.RefKey]MockVerb
+	mockVerbs               map[schema.RefKey]Verb
 	allowDirectVerbBehavior bool
 }
 
@@ -78,7 +85,7 @@ func NewBuilder(module string) *Builder {
 		configs:   map[string][]byte{},
 		secrets:   map[string][]byte{},
 		databases: map[string]Database{},
-		mockVerbs: map[schema.RefKey]MockVerb{},
+		mockVerbs: map[schema.RefKey]Verb{},
 	}
 }
 
@@ -107,7 +114,7 @@ func (b *Builder) AddDatabases(databases map[string]Database) *Builder {
 }
 
 // UpdateForTesting marks the builder as part of a test environment and adds mock verbs and flags for other test features.
-func (b *Builder) UpdateForTesting(mockVerbs map[schema.RefKey]MockVerb, allowDirectVerbBehavior bool) *Builder {
+func (b *Builder) UpdateForTesting(mockVerbs map[schema.RefKey]Verb, allowDirectVerbBehavior bool) *Builder {
 	b.isTesting = true
 	for name, verb := range mockVerbs {
 		b.mockVerbs[name] = verb
@@ -173,46 +180,40 @@ func (m ModuleContext) GetDatabase(name string, dbType DBType) (*sql.DB, error) 
 // BehaviorForVerb returns what to do to execute a verb
 //
 // This allows module context to dictate behavior based on testing options
-func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (VerbBehavior, error) {
+// Returning optional.Nil indicates the verb should be executed normally via the controller
+func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBehavior], error) {
 	if mock, ok := m.mockVerbs[ref.ToRefKey()]; ok {
-		return MockBehavior{Mock: mock}, nil
+		return optional.Some(VerbBehavior(MockBehavior{Mock: mock})), nil
 	} else if m.allowDirectVerbBehavior && ref.Module == m.module {
-		return DirectBehavior{}, nil
+		return optional.Some(VerbBehavior(DirectBehavior{})), nil
 	} else if m.isTesting {
 		if ref.Module == m.module {
-			return StandardBehavior{}, fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()", strings.ToUpper(ref.Name[:1])+ref.Name[1:])
+			return optional.None[VerbBehavior](), fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()", strings.ToUpper(ref.Name[:1])+ref.Name[1:])
 		}
-		return StandardBehavior{}, fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s.%s, ...)", ref.Module, strings.ToUpper(ref.Name[:1])+ref.Name[1:])
+		return optional.None[VerbBehavior](), fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s.%s, ...)", ref.Module, strings.ToUpper(ref.Name[:1])+ref.Name[1:])
 	}
-	return StandardBehavior{}, nil
+	return optional.None[VerbBehavior](), nil
 }
 
 // VerbBehavior indicates how to execute a verb
-//
-//sumtype:decl
 type VerbBehavior interface {
-	verbBehavior()
+	Call(ctx context.Context, verb Verb, request any) (any, error)
 }
-
-// StandardBehavior indicates that the verb should be executed via the controller
-type StandardBehavior struct{}
-
-func (StandardBehavior) verbBehavior() {}
-
-var _ VerbBehavior = StandardBehavior{}
 
 // DirectBehavior indicates that the verb should be executed by calling the function directly (for testing)
 type DirectBehavior struct{}
 
-func (DirectBehavior) verbBehavior() {}
+func (DirectBehavior) Call(ctx context.Context, verb Verb, req any) (any, error) {
+	return verb(ctx, req)
+}
 
 var _ VerbBehavior = DirectBehavior{}
 
 // MockBehavior indicates the verb has a mock implementation
 type MockBehavior struct {
-	Mock MockVerb
+	Mock Verb
 }
 
-func (MockBehavior) verbBehavior() {}
-
-var _ VerbBehavior = MockBehavior{}
+func (b MockBehavior) Call(ctx context.Context, verb Verb, req any) (any, error) {
+	return b.Mock(ctx, req)
+}
