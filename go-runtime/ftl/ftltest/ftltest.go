@@ -19,7 +19,7 @@ type OptionsState struct {
 	configs                 map[string][]byte
 	secrets                 map[string][]byte
 	databases               map[string]modulecontext.Database
-	mockVerbs               map[schema.RefKey]modulecontext.MockVerb
+	mockVerbs               map[schema.RefKey]modulecontext.Verb
 	allowDirectVerbBehavior bool
 }
 
@@ -39,7 +39,7 @@ func Context(options ...Option) context.Context {
 		configs:   make(map[string][]byte),
 		secrets:   make(map[string][]byte),
 		databases: databases,
-		mockVerbs: make(map[schema.RefKey]modulecontext.MockVerb),
+		mockVerbs: make(map[schema.RefKey]modulecontext.Verb),
 	}
 	for _, option := range options {
 		err := option(ctx, state)
