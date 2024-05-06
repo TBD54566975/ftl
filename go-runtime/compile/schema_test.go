@@ -320,9 +320,9 @@ func normaliseString(s string) string {
 }
 
 func TestErrorReporting(t *testing.T) {
-	// if testing.Short() {
-	// 	t.SkipNow()
-	// }
+	if testing.Short() {
+		t.SkipNow()
+	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	pwd, _ := os.Getwd()
 	err := exec.Command(ctx, log.Debug, "testdata/failing", "go", "mod", "tidy").RunBuffered(ctx)
