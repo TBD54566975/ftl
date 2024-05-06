@@ -15,5 +15,5 @@ func FromProto(response *ftlv1.ModuleContextResponse) (ModuleContext, error) {
 		}
 		databases[entry.Name] = db
 	}
-	return New(response.Module).Update(response.Configs, response.Secrets, databases), nil
+	return NewBuilder(response.Module).AddConfigs(response.Configs).AddSecrets(response.Secrets).AddDatabases(databases).Build(), nil
 }

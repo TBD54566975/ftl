@@ -22,13 +22,7 @@ func TestSecret(t *testing.T) {
 	data, err := json.Marshal(C{"one", "two"})
 	assert.NoError(t, err)
 
-	moduleCtx := modulecontext.New("test").Update(
-		map[string][]byte{},
-		map[string][]byte{
-			"test": data,
-		},
-		map[string]modulecontext.Database{},
-	)
+	moduleCtx := modulecontext.NewBuilder("test").AddSecrets(map[string][]byte{"test": data}).Build()
 	ctx = moduleCtx.ApplyToContext(ctx)
 
 	secret := Secret[C]("test")

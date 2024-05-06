@@ -12,6 +12,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/reflect"
 )
 
 type MockVerb func(ctx context.Context, req any) (resp any, err error)
@@ -52,6 +53,8 @@ func (x DBType) String() string {
 }
 
 // ModuleContext holds the context needed for a module, including configs, secrets and DSNs
+//
+// ModuleContext is immutable
 type ModuleContext struct {
 	module    string
 	configs   map[string][]byte
@@ -63,11 +66,14 @@ type ModuleContext struct {
 	allowDirectVerbBehavior bool
 }
 
+// Builder is used to build a ModuleContext
+type Builder ModuleContext
+
 type contextKeyModuleContext struct{}
 
-// New creates a new blank ModuleContext for the given module.
-func New(module string) ModuleContext {
-	return ModuleContext{
+// NewBuilder creates a new blank Builder for the given module.
+func NewBuilder(module string) *Builder {
+	return &Builder{
 		module:    module,
 		configs:   map[string][]byte{},
 		secrets:   map[string][]byte{},
@@ -76,28 +82,42 @@ func New(module string) ModuleContext {
 	}
 }
 
-// Update copies a ModuleContext and adds configs, secrets and databases.
-func (m ModuleContext) Update(configs map[string][]byte, secrets map[string][]byte, databases map[string]Database) ModuleContext {
+// AddConfigs adds configuration values (as bytes) to the builder
+func (b *Builder) AddConfigs(configs map[string][]byte) *Builder {
 	for name, data := range configs {
-		m.configs[name] = data
+		b.configs[name] = data
 	}
-	for name, data := range secrets {
-		m.secrets[name] = data
-	}
-	for name, db := range databases {
-		m.databases[name] = db
-	}
-	return m
+	return b
 }
 
-// UpdateForTesting copies a ModuleContext and marks it as part of a test environment and adds mock verbs and flags for other test features.
-func (m ModuleContext) UpdateForTesting(mockVerbs map[schema.RefKey]MockVerb, allowDirectVerbBehavior bool) ModuleContext {
-	m.isTesting = true
-	for name, verb := range mockVerbs {
-		m.mockVerbs[name] = verb
+// AddSecrets adds configuration values (as bytes) to the builder
+func (b *Builder) AddSecrets(secrets map[string][]byte) *Builder {
+	for name, data := range secrets {
+		b.secrets[name] = data
 	}
-	m.allowDirectVerbBehavior = allowDirectVerbBehavior
-	return m
+	return b
+}
+
+// AddDatabases adds databases to the builder
+func (b *Builder) AddDatabases(databases map[string]Database) *Builder {
+	for name, db := range databases {
+		b.databases[name] = db
+	}
+	return b
+}
+
+// UpdateForTesting marks the builder as part of a test environment and adds mock verbs and flags for other test features.
+func (b *Builder) UpdateForTesting(mockVerbs map[schema.RefKey]MockVerb, allowDirectVerbBehavior bool) *Builder {
+	b.isTesting = true
+	for name, verb := range mockVerbs {
+		b.mockVerbs[name] = verb
+	}
+	b.allowDirectVerbBehavior = allowDirectVerbBehavior
+	return b
+}
+
+func (b *Builder) Build() ModuleContext {
+	return ModuleContext(reflect.DeepCopy(*b))
 }
 
 // FromContext returns the ModuleContext attached to a context.
