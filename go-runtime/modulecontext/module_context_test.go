@@ -11,7 +11,7 @@ import (
 
 func TestGettingAndSettingFromContext(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	moduleCtx := New("test")
+	moduleCtx := NewBuilder("test").Build()
 	ctx = moduleCtx.ApplyToContext(ctx)
 	assert.Equal(t, moduleCtx, FromContext(ctx), "module context should be the same when read from context")
 }

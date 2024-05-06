@@ -36,14 +36,13 @@ func Context(options ...func(*Options) error) context.Context {
 		}
 	}
 
-	moduleCtx := modulecontext.New(ftl.Module())
-	moduleCtx, err := moduleCtx.UpdateFromEnvironment(ctx)
+	builder, err := modulecontext.NewBuilder(ftl.Module()).UpdateFromEnvironment(ctx)
 	if err != nil {
 		panic(fmt.Sprintf("error setting up module context from environment: %v", err))
 	}
-	moduleCtx = moduleCtx.Update(state.configs, state.secrets, map[string]modulecontext.Database{})
-	moduleCtx = moduleCtx.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior)
-	return moduleCtx.ApplyToContext(ctx)
+	builder = builder.AddConfigs(state.configs).AddSecrets(state.secrets).AddDatabases(map[string]modulecontext.Database{})
+	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior)
+	return builder.Build().ApplyToContext(ctx)
 }
 
 // WithConfig sets a configuration for the current module

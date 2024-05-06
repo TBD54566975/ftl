@@ -22,13 +22,7 @@ func TestConfig(t *testing.T) {
 	data, err := json.Marshal(C{"one", "two"})
 	assert.NoError(t, err)
 
-	moduleCtx := modulecontext.New("test").Update(
-		map[string][]byte{
-			"test": data,
-		},
-		map[string][]byte{},
-		map[string]modulecontext.Database{},
-	)
+	moduleCtx := modulecontext.NewBuilder("test").AddConfigs(map[string][]byte{"test": data}).Build()
 	ctx = moduleCtx.ApplyToContext(ctx)
 
 	config := Config[C]("test")

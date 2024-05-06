@@ -37,10 +37,9 @@ func TestFromEnvironment(t *testing.T) {
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	moduleContext, err := New("echo").UpdateFromEnvironment(ctx)
+	builder, err := NewBuilder("echo").UpdateFromEnvironment(ctx)
 	assert.NoError(t, err)
-
-	response, err := moduleContext.ToProto()
+	response, err := builder.Build().ToProto()
 	assert.NoError(t, err)
 
 	assert.Equal(t, &ftlv1.ModuleContextResponse{
