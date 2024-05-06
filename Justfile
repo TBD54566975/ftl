@@ -113,3 +113,7 @@ integration-tests *test:
 # Run README doc tests
 test-readme *args:
   mdcode run {{args}} README.md -- bash test.sh
+
+# Run "go mod tidy" on all packages including tests
+tidy:
+  find . -name go.mod -execdir go mod tidy \;
