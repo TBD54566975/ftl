@@ -8,6 +8,8 @@ import (
 )
 
 // DatabasesFromEnvironment finds DSNs in environment variables and creates a map of databases.
+//
+// Environment variables should be in the format FTL_POSTGRES_DSN__<MODULENAME>_<DBNAME>
 func DatabasesFromEnvironment(ctx context.Context, module string) (map[string]Database, error) {
 	databases := map[string]Database{}
 	for _, entry := range os.Environ() {
