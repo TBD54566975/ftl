@@ -2,7 +2,9 @@ package wrapped
 
 import (
 	"context"
+	"fmt"
 	"ftl/time"
+	"path/filepath"
 	"testing"
 	stdtime "time"
 
@@ -12,6 +14,12 @@ import (
 )
 
 func TestWrapped(t *testing.T) {
+	absProjectPath1, err := filepath.Abs("ftl-project-test-1.toml")
+	assert.NoError(t, err)
+	absProjectPath2, err := filepath.Abs("ftl-project-test-2.toml")
+	assert.NoError(t, err)
+	t.Setenv("FTL_CONFIG", fmt.Sprintf("%s,%s", absProjectPath1, absProjectPath2))
+
 	for _, tt := range []struct {
 		name          string
 		options       []ftltest.Option
@@ -56,7 +64,7 @@ func TestWrapped(t *testing.T) {
 		{
 			name: "WithProjectToml",
 			options: []ftltest.Option{
-				ftltest.WithProjectFile("ftl-project-test.toml"),
+				ftltest.WithProjectFiles("ftl-project-test-1.toml"),
 				ftltest.WithCallsAllowedWithinModule(),
 				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
@@ -64,6 +72,17 @@ func TestWrapped(t *testing.T) {
 			},
 			configValue: "bar",
 			secretValue: "bar",
+		}, {
+			name: "WithProjectTomlFromEnvar",
+			options: []ftltest.Option{
+				ftltest.WithProjectFiles(),
+				ftltest.WithCallsAllowedWithinModule(),
+				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
+					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
+				}),
+			},
+			configValue: "foobar",
+			secretValue: "foobar",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
