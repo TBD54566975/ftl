@@ -5,7 +5,7 @@ import { TimelinePage } from './features/timeline/TimelinePage.tsx'
 import { VerbPage } from './features/verbs/VerbPage.tsx'
 import { Layout } from './layout/Layout.tsx'
 import { NotFoundPage } from './layout/NotFoundPage.tsx'
-import ConsolePage from './features/console/ConsolePage.tsx'
+import { ConsolePage } from './features/console/ConsolePage.tsx'
 
 export const App = () => {
   return (
