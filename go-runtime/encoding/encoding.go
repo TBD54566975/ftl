@@ -33,7 +33,7 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 	// Special-cased types
 	switch {
 	case t == reflect.TypeFor[time.Time]():
-		data, err := json.Marshal(v.Interface())
+		data, err := json.Marshal(v.Interface().(time.Time))
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 		return nil
 
 	case t == reflect.TypeFor[json.RawMessage]():
-		data, err := json.Marshal(v.Interface())
+		data, err := json.Marshal(v.Interface().(json.RawMessage))
 		if err != nil {
 			return err
 		}
