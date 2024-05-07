@@ -67,7 +67,7 @@ func handler[Req, Resp any](ref ftl.Ref, verb func(ctx context.Context, req Req)
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
 			// Decode request.
 			var req Req
-			err := encoding.Unmarshal(reqdata, &req)
+			err := encoding.Unmarshal(ctx, reqdata, &req)
 			if err != nil {
 				return nil, fmt.Errorf("invalid request to verb %s: %w", ref, err)
 			}
@@ -78,7 +78,7 @@ func handler[Req, Resp any](ref ftl.Ref, verb func(ctx context.Context, req Req)
 				return nil, fmt.Errorf("call to verb %s failed: %w", ref, err)
 			}
 
-			respdata, err := encoding.Marshal(resp)
+			respdata, err := encoding.Marshal(ctx, resp)
 			if err != nil {
 				return nil, err
 			}

@@ -1,6 +1,7 @@
 package encoding_test
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -9,7 +10,23 @@ import (
 
 	. "github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
 )
+
+type discriminator interface {
+	tag()
+}
+
+type unregistered interface {
+	unregistered()
+}
+
+type variant struct {
+	Message string
+}
+
+func (variant) tag()          {}
+func (variant) unregistered() {}
 
 func TestMarshal(t *testing.T) {
 	type inner struct {
@@ -39,13 +56,23 @@ func TestMarshal(t *testing.T) {
 			Unit   ftl.Unit
 		}{String: "something", Unit: ftl.Unit{}}, expected: `{"string":"something","unit":{}}`},
 		{name: "Pointer", input: &struct{ String string }{"foo"}, err: `pointer types are not supported: *struct { String string }`},
+		{name: "SumType", input: struct{ D discriminator }{variant{"hello"}}, expected: `{"d":{"name":"Variant","value":{"message":"hello"}}}`},
+		{name: "UnregisteredSumType", input: struct{ D unregistered }{variant{"hello"}}, err: `the only supported interface types are enums or any, not encoding_test.unregistered`},
 	}
+
+	tr := typeregistry.NewTypeRegistry()
+	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
+		"Variant": reflect.TypeFor[variant](),
+	})
+	ctx := typeregistry.ContextWithTypeRegistry(context.Background(), tr)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := Marshal(tt.input)
+			actual, err := Marshal(ctx, tt.input)
 			assert.EqualError(t, err, tt.err)
-			assert.Equal(t, tt.expected, string(actual))
+			if err == nil {
+				assert.Equal(t, tt.expected, string(actual))
+			}
 		})
 	}
 }
@@ -85,13 +112,22 @@ func TestUnmarshal(t *testing.T) {
 			Bool   bool
 		}{ftl.None[int](), true}},
 		{name: "Pointer", input: `{"string":"foo"}`, expected: &struct{ String string }{}, err: `pointer types are not supported: *struct { String string }`},
+		{name: "SumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D discriminator }{variant{"hello"}}},
+		{name: "MalformedSumType", input: `{"d":{"message":"hello"}}`, expected: struct{ D discriminator }{}, err: `no name found for type enum variant`},
+		{name: "UnregisteredSumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D unregistered }{}, err: `the only supported interface types are enums or any, not encoding_test.unregistered`},
 	}
+
+	tr := typeregistry.NewTypeRegistry()
+	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
+		"Variant": reflect.TypeFor[variant](),
+	})
+	ctx := typeregistry.ContextWithTypeRegistry(context.Background(), tr)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eType := reflect.TypeOf(tt.expected)
 			o := reflect.New(eType)
-			err := Unmarshal([]byte(tt.input), o.Interface())
+			err := Unmarshal(ctx, []byte(tt.input), o.Interface())
 			assert.EqualError(t, err, tt.err)
 			if err == nil {
 				assert.Equal(t, tt.expected, o.Elem().Interface())
@@ -128,16 +164,23 @@ func TestRoundTrip(t *testing.T) {
 		{name: "Aliased", input: struct {
 			TokenID string `json:"token_id"`
 		}{"123"}},
+		{name: "SumType", input: struct{ D discriminator }{variant{"hello"}}},
 	}
+
+	tr := typeregistry.NewTypeRegistry()
+	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
+		"Variant": reflect.TypeFor[variant](),
+	})
+	ctx := typeregistry.ContextWithTypeRegistry(context.Background(), tr)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			marshaled, err := Marshal(tt.input)
+			marshaled, err := Marshal(ctx, tt.input)
 			assert.NoError(t, err)
 
 			eType := reflect.TypeOf(tt.input)
 			o := reflect.New(eType)
-			err = Unmarshal(marshaled, o.Interface())
+			err = Unmarshal(ctx, marshaled, o.Interface())
 			assert.NoError(t, err)
 
 			assert.Equal(t, tt.input, o.Elem().Interface())
