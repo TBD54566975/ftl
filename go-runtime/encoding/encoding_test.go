@@ -3,6 +3,7 @@ package encoding_test
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 
@@ -31,6 +32,8 @@ func TestMarshal(t *testing.T) {
 		{name: "SliceOfStrings", input: struct{ Slice []string }{[]string{"hello", "world"}}, expected: `{"slice":["hello","world"]}`},
 		{name: "Map", input: struct{ Map map[string]int }{map[string]int{"foo": 42}}, expected: `{"map":{"foo":42}}`},
 		{name: "Option", input: struct{ Option ftl.Option[int] }{ftl.Some(42)}, expected: `{"option":42}`},
+		{name: "OptionNull", input: struct{ Option ftl.Option[int] }{ftl.None[int]()}, expected: `{"option":null}`},
+		{name: "OptionZero", input: struct{ Option ftl.Option[int] }{ftl.Some(0)}, expected: `{"option":0}`},
 		{name: "OptionPtr", input: struct{ Option *ftl.Option[int] }{&somePtr}, expected: `{"option":42}`},
 		{name: "OptionStruct", input: struct{ Option ftl.Option[inner] }{ftl.Some(inner{"foo"})}, expected: `{"option":{"fooBar":"foo"}}`},
 		{name: "Unit", input: ftl.Unit{}, expected: `{}`},
@@ -69,6 +72,9 @@ func TestUnmarshal(t *testing.T) {
 		{name: "Slice", input: `{"slice":[1,2,3]}`, expected: struct{ Slice []int }{[]int{1, 2, 3}}},
 		{name: "SliceOfStrings", input: `{"slice":["hello","world"]}`, expected: struct{ Slice []string }{[]string{"hello", "world"}}},
 		{name: "Map", input: `{"map":{"foo":42}}`, expected: struct{ Map map[string]int }{map[string]int{"foo": 42}}},
+		{name: "OptionNull", input: `{"option":null}`, expected: struct{ Option ftl.Option[int] }{ftl.None[int]()}},
+		{name: "OptionNullWhitespace", input: `{"option": null}`, expected: struct{ Option ftl.Option[int] }{ftl.None[int]()}},
+		{name: "OptionZero", input: `{"option":0}`, expected: struct{ Option ftl.Option[int] }{ftl.Some(0)}},
 		{name: "Option", input: `{"option":42}`, expected: struct{ Option ftl.Option[int] }{ftl.Some(42)}},
 		{name: "OptionPtr", input: `{"option":42}`, expected: struct{ Option *ftl.Option[int] }{&somePtr}},
 		{name: "OptionStruct", input: `{"option":{"fooBar":"foo"}}`, expected: struct{ Option ftl.Option[inner] }{ftl.Some(inner{"foo"})}},
@@ -77,6 +83,12 @@ func TestUnmarshal(t *testing.T) {
 			String string
 			Unit   ftl.Unit
 		}{String: "something", Unit: ftl.Unit{}}},
+		// Whitespaces after each `:` and multiple fields to test handling of the
+		// two potential terminal delimiters: `}` and `,`
+		{name: "ComplexFormatting", input: `{"option": null, "bool": true}`, expected: struct {
+			Option ftl.Option[int]
+			Bool   bool
+		}{ftl.None[int](), true}},
 	}
 
 	for _, tt := range tests {
@@ -111,7 +123,9 @@ func TestRoundTrip(t *testing.T) {
 		{name: "Slice", input: struct{ Slice []int }{[]int{1, 2, 3}}},
 		{name: "SliceOfStrings", input: struct{ Slice []string }{[]string{"hello", "world"}}},
 		{name: "Map", input: struct{ Map map[string]int }{map[string]int{"foo": 42}}},
+		{name: "Time", input: struct{ Time time.Time }{time.Date(2009, time.November, 29, 21, 33, 0, 0, time.UTC)}},
 		{name: "Option", input: struct{ Option ftl.Option[int] }{ftl.Some(42)}},
+		{name: "OptionNull", input: struct{ Option ftl.Option[int] }{ftl.None[int]()}},
 		{name: "OptionPtr", input: struct{ Option *ftl.Option[int] }{&somePtr}},
 		{name: "OptionStruct", input: struct{ Option ftl.Option[inner] }{ftl.Some(inner{"foo"})}},
 		{name: "Unit", input: ftl.Unit{}},
