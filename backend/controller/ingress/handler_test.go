@@ -74,7 +74,7 @@ func TestIngress(t *testing.T) {
 		path       string
 		query      url.Values
 		payload    []byte
-		response   *ingress.HTTPResponse
+		response   optional.Option[ingress.HTTPResponse]
 		statusCode int
 	}{
 		{name: "InvalidRoute",
@@ -85,20 +85,22 @@ func TestIngress(t *testing.T) {
 			method:     "GET",
 			path:       "/getAlias",
 			query:      url.Values{"alias": {"value"}},
-			response:   &ingress.HTTPResponse{Body: []byte(`{}`)},
+			response:   optional.Some(ingress.HTTPResponse{Body: []byte(`{}`)}),
 			statusCode: http.StatusOK},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			rec.Body = &bytes.Buffer{}
-			if test.response == nil {
-				test.response = &ingress.HTTPResponse{Body: []byte(`{}`)}
+			var response ingress.HTTPResponse
+			var ok bool
+			if response, ok = test.response.Get(); ok {
+				response = ingress.HTTPResponse{Body: []byte(`{}`)}
 			}
 			req := httptest.NewRequest(test.method, test.path, bytes.NewBuffer(test.payload)).WithContext(ctx)
 			req.URL.RawQuery = test.query.Encode()
 			reqKey := model.NewRequestKey(model.OriginIngress, "test")
 			ingress.Handle(sch, reqKey, routes, rec, req, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], requestKey optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
-				body, err := encoding.Marshal(test.response)
+				body, err := encoding.Marshal(response)
 				assert.NoError(t, err)
 				return connect.NewResponse(&ftlv1.CallResponse{Response: &ftlv1.CallResponse_Body{Body: body}}), nil
 			})
@@ -108,7 +110,7 @@ func TestIngress(t *testing.T) {
 			if rec.Code >= 300 {
 				return
 			}
-			assert.Equal(t, test.response.Body, rec.Body.Bytes())
+			assert.Equal(t, response.Body, rec.Body.Bytes())
 		})
 	}
 }
