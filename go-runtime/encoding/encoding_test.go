@@ -123,7 +123,7 @@ func TestRoundTrip(t *testing.T) {
 		{name: "Slice", input: struct{ Slice []int }{[]int{1, 2, 3}}},
 		{name: "SliceOfStrings", input: struct{ Slice []string }{[]string{"hello", "world"}}},
 		{name: "Map", input: struct{ Map map[string]int }{map[string]int{"foo": 42}}},
-		{name: "Time", input: struct{ Time time.Time }{time.Unix(123456780, 0)}},
+		{name: "Time", input: struct{ Time time.Time }{time.Date(2009, time.November, 29, 21, 33, 0, 0, time.UTC)}},
 		{name: "Option", input: struct{ Option ftl.Option[int] }{ftl.Some(42)}},
 		{name: "OptionNull", input: struct{ Option ftl.Option[int] }{ftl.None[int]()}},
 		{name: "OptionPtr", input: struct{ Option *ftl.Option[int] }{&somePtr}},
