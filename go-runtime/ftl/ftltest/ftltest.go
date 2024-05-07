@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -63,7 +64,12 @@ func Context(options ...Option) context.Context {
 //
 // )
 func WithProjectFile(path string) Option {
+	// Convert to absolute path immediately in case working directory changes
+	path, err := filepath.Abs(path)
 	return func(ctx context.Context, state *OptionsState) error {
+		if err != nil {
+			return err
+		}
 		if _, err := os.Stat(path); err != nil {
 			return fmt.Errorf("error accessing project file: %w", err)
 		}
