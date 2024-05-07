@@ -16,7 +16,7 @@ func TestEngine(t *testing.T) {
 		t.SkipNow()
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, []string{"testdata/projects/alpha", "testdata/projects/other", "testdata/projects/another"}, nil)
+	engine, err := buildengine.New(ctx, nil, nil, []string{"testdata/projects/alpha", "testdata/projects/other", "testdata/projects/another"}, nil)
 	assert.NoError(t, err)
 
 	defer engine.Close()

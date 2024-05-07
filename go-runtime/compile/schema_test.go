@@ -28,7 +28,7 @@ func prebuildTestModule(t *testing.T, args ...string) {
 	dir, err := os.Getwd()
 	assert.NoError(t, err, "Failed to get current directory: %v", err)
 
-	ftlArgs := []string{"build"}
+	ftlArgs := []string{"build", "--config", "testdata/ftl-project.toml"}
 	ftlArgs = append(ftlArgs, args...)
 
 	cmd := exec.Command(ctx, log.Debug, dir, "ftl", ftlArgs...)
