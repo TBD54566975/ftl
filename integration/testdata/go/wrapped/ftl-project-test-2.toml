@@ -1,0 +1,12 @@
+ftl-min-version = ""
+
+[global]
+  [global.configuration]
+    config = "inline://ImZvb2JhciI"
+  [global.secrets]
+    secret = "inline://ImZvb2JhciI"
+
+[executables]
+  ftl = ""
+
+[commands]

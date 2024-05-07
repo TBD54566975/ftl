@@ -8,12 +8,14 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type OptionsState struct {
@@ -54,26 +56,46 @@ func Context(options ...Option) context.Context {
 	return builder.Build().ApplyToContext(ctx)
 }
 
-// WithProjectFile loads config and secrets from a project file
+// WithProjectFiles loads config and secrets from a project file
+//
+// Takes a list of paths to project files. If multiple paths are provided, they are loaded in order, with later files taking precedence.
+// If no paths are provided, the list is inferred from the FTL_CONFIG environment variable. If that is not found, an error is returned.
 //
 // To be used when setting up a context for a test:
 // ctx := ftltest.Context(
 //
-//	ftltest.WithProjectFile("path/to/ftl-project.yaml"),
+//	ftltest.WithProjectFiles("path/to/ftl-project.yaml"),
 //	... other options
 //
 // )
-func WithProjectFile(path string) Option {
+func WithProjectFiles(paths ...string) Option {
 	// Convert to absolute path immediately in case working directory changes
-	path, err := filepath.Abs(path)
-	return func(ctx context.Context, state *OptionsState) error {
+	var preprocessingErr error
+	if len(paths) == 0 {
+		envValue, ok := os.LookupEnv("FTL_CONFIG")
+		if !ok {
+			preprocessingErr = fmt.Errorf("loading project files: no path provided and FTL_CONFIG environment variable not set")
+		}
+		paths = strings.Split(envValue, ",")
+	}
+	paths = slices.Map(paths, func(p string) string {
+		path, err := filepath.Abs(p)
 		if err != nil {
-			return err
+			preprocessingErr = err
+			return ""
 		}
-		if _, err := os.Stat(path); err != nil {
-			return fmt.Errorf("error accessing project file: %w", err)
+		return path
+	})
+	return func(ctx context.Context, state *OptionsState) error {
+		if preprocessingErr != nil {
+			return preprocessingErr
 		}
-		cm, err := cf.NewDefaultConfigurationManagerFromConfig(ctx, []string{path})
+		for _, path := range paths {
+			if _, err := os.Stat(path); err != nil {
+				return fmt.Errorf("error accessing project file: %w", err)
+			}
+		}
+		cm, err := cf.NewDefaultConfigurationManagerFromConfig(ctx, paths)
 		if err != nil {
 			return fmt.Errorf("could not set up configs: %w", err)
 		}
@@ -85,7 +107,7 @@ func WithProjectFile(path string) Option {
 			state.configs[name] = data
 		}
 
-		sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, []string{path})
+		sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, paths)
 		if err != nil {
 			return fmt.Errorf("could not set up secrets: %w", err)
 		}
