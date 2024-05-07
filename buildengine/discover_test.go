@@ -43,6 +43,19 @@ func TestDiscoverModules(t *testing.T) {
 		},
 		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
+				Dir:       "testdata/projects/configsecret",
+				Language:  "go",
+				Realm:     "home",
+				Module:    "configsecret",
+				Deploy:    []string{"main"},
+				DeployDir: "_ftl",
+				Schema:    "schema.pb",
+				Errors:    "errors.pb",
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
+			},
+		},
+		Module{
+			ModuleConfig: moduleconfig.ModuleConfig{
 				Dir:      "testdata/projects/echokotlin",
 				Language: "kotlin",
 				Realm:    "home",
