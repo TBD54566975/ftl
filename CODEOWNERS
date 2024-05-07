@@ -1,2 +1,3 @@
-# Members of ftl-team will be round-robined per the code review settings in the team profile.
-*       @TBD54566975/ftl-team
+# Members of ftl-reviewers will be round-robined per the code review settings in the team profile:
+#   https://github.com/orgs/TBD54566975/teams/ftl-reviewers/edit/review_assignment
+*       @TBD54566975/ftl-reviewers @alecthomas
