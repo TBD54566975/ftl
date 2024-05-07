@@ -2,6 +2,7 @@
 package ftl
 
 import (
+	"bytes"
 	"database/sql"
 	"database/sql/driver"
 	"encoding"
@@ -16,8 +17,6 @@ import (
 type stdlib interface {
 	fmt.Stringer
 	fmt.GoStringer
-	json.Marshaler
-	json.Unmarshaler
 }
 
 // An Option type is a type that can contain a value or nothing.
@@ -198,4 +197,24 @@ func (o Option[T]) GoString() string {
 		return fmt.Sprintf("Some[%T](%#v)", o.value, o.value)
 	}
 	return fmt.Sprintf("None[%T]()", o.value)
+}
+
+func (o Option[T]) Marshal(w *bytes.Buffer, encode func(v reflect.Value, w *bytes.Buffer) error) error {
+	if o.ok {
+		return encode(reflect.ValueOf(&o.value).Elem(), w)
+	}
+	w.WriteString("null")
+	return nil
+}
+
+func (o *Option[T]) Unmarshal(d *json.Decoder, isNull bool, decode func(d *json.Decoder, v reflect.Value) error) error {
+	if isNull {
+		o.ok = false
+		return nil
+	}
+	if err := decode(d, reflect.ValueOf(&o.value).Elem()); err != nil {
+		return err
+	}
+	o.ok = true
+	return nil
 }
