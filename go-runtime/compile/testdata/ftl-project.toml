@@ -1,0 +1,5 @@
+[global.configuration]
+  configValue = "http://configValue"
+
+[modules.one.secrets]
+  secretValue = "keychain://secretValue"

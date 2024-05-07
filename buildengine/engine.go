@@ -512,12 +512,14 @@ func (e *Engine) validateConfigsAndSecretsMatch(ctx context.Context, builtModule
 	logger := log.FromContext(ctx)
 
 	configsProvidedGlobally := make(map[string]bool)
-	for configName, _ := range e.projectConfig.Global.Config {
-		configsProvidedGlobally[configName] = true
-	}
 	secretsProvidedGlobally := make(map[string]bool)
-	for secretName, _ := range e.projectConfig.Global.Secrets {
-		secretsProvidedGlobally[secretName] = true
+	if e.projectConfig != nil {
+		for configName, _ := range e.projectConfig.Global.Config {
+			configsProvidedGlobally[configName] = true
+		}
+		for secretName, _ := range e.projectConfig.Global.Secrets {
+			secretsProvidedGlobally[secretName] = true
+		}
 	}
 
 	configsUsed := make(map[string]bool)
@@ -533,14 +535,16 @@ func (e *Engine) validateConfigsAndSecretsMatch(ctx context.Context, builtModule
 		}
 	}
 
-	for configName, _ := range e.projectConfig.Global.Config {
-		if _, isUsed := configsUsed[configName]; !isUsed {
-			logger.Warnf("config %q is provided globally in ftl-project.toml, but is not required by any modules", configName)
+	if e.projectConfig != nil {
+		for configName, _ := range e.projectConfig.Global.Config {
+			if _, isUsed := configsUsed[configName]; !isUsed {
+				logger.Warnf("config %q is provided globally in ftl-project.toml, but is not required by any modules", configName)
+			}
 		}
-	}
-	for secretName, _ := range e.projectConfig.Global.Secrets {
-		if _, isUsed := secretsUsed[secretName]; !isUsed {
-			logger.Warnf("secret %q is provided globally in ftl-project.toml, but is not required by any modules", secretName)
+		for secretName, _ := range e.projectConfig.Global.Secrets {
+			if _, isUsed := secretsUsed[secretName]; !isUsed {
+				logger.Warnf("secret %q is provided globally in ftl-project.toml, but is not required by any modules", secretName)
+			}
 		}
 	}
 
@@ -571,18 +575,20 @@ func (e *Engine) validateConfigsAndSecretsMatchForModule(ctx context.Context, mo
 	// Index all provided configs into configsProvided and warn for unused configs
 	configsProvided := maps.Clone(globalConfig)
 	secretsProvided := maps.Clone(globalSecrets)
-	moduleConfigAndSecrets, moduleConfigAndSecretsExists := e.projectConfig.Modules[moduleName]
-	if moduleConfigAndSecretsExists {
-		for configName, _ := range moduleConfigAndSecrets.Config {
-			configsProvided[configName] = true
-			if _, isUsed := configsUsed[configName]; !isUsed {
-				logger.Warnf("config %q is provided for module %q in ftl-project.toml, but is not required", configName, moduleName)
+	if e.projectConfig != nil {
+		moduleConfigAndSecrets, moduleConfigAndSecretsExists := e.projectConfig.Modules[moduleName]
+		if moduleConfigAndSecretsExists {
+			for configName, _ := range moduleConfigAndSecrets.Config {
+				configsProvided[configName] = true
+				if _, isUsed := configsUsed[configName]; !isUsed {
+					logger.Warnf("config %q is provided for module %q in ftl-project.toml, but is not required", configName, moduleName)
+				}
 			}
-		}
-		for secretName, _ := range moduleConfigAndSecrets.Secrets {
-			secretsProvided[secretName] = true
-			if _, isUsed := secretsUsed[secretName]; !isUsed {
-				logger.Warnf("secret %q is provided for module %q in ftl-project.toml, but is not required", secretName, moduleName)
+			for secretName, _ := range moduleConfigAndSecrets.Secrets {
+				secretsProvided[secretName] = true
+				if _, isUsed := secretsUsed[secretName]; !isUsed {
+					logger.Warnf("secret %q is provided for module %q in ftl-project.toml, but is not required", secretName, moduleName)
+				}
 			}
 		}
 	}

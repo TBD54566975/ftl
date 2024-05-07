@@ -14,10 +14,17 @@ func TestProjectConfig(t *testing.T) {
 	actual, err := loadFile("testdata/ftl-project.toml")
 	assert.NoError(t, err)
 	expected := Config{
+		Global: ConfigAndSecrets{
+			Config: map[string]*URL{
+				"ftlEndpoint":          MustParseURL("http://ftlEndpoint"),
+				"ftlEndpointAlternate": MustParseURL("http://ftlEndpointAlternate"),
+			},
+		},
 		Modules: map[string]ConfigAndSecrets{
 			"module": {
 				Config: map[string]*URL{
-					"githubAccessToken": MustParseURL("keychain://githubAccessToken"),
+					"githubAccessToken":      MustParseURL("keychain://githubAccessToken"),
+					"someServiceAccessToken": MustParseURL("keychain://someServiceAccessToken"),
 				},
 				Secrets: map[string]*URL{
 					"companyApiKey": MustParseURL("op://devel/yj3jfj2vzsbiwqabprflnl27lm/companyApiKey"),
