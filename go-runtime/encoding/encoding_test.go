@@ -32,6 +32,11 @@ func TestMarshal(t *testing.T) {
 	type inner struct {
 		FooBar string
 	}
+	type validateOmitempty struct {
+		ShouldOmit   string `json:",omitempty"`
+		ShouldntOmit string `json:""`
+		NotTagged    string
+	}
 	tests := []struct {
 		name     string
 		input    any
@@ -58,6 +63,8 @@ func TestMarshal(t *testing.T) {
 		{name: "Pointer", input: &struct{ String string }{"foo"}, err: `pointer types are not supported: *struct { String string }`},
 		{name: "SumType", input: struct{ D discriminator }{variant{"hello"}}, expected: `{"d":{"name":"Variant","value":{"message":"hello"}}}`},
 		{name: "UnregisteredSumType", input: struct{ D unregistered }{variant{"hello"}}, err: `the only supported interface types are enums or any, not encoding_test.unregistered`},
+		{name: "OmitEmptyNotNull", input: validateOmitempty{"foo", "bar", "baz"}, expected: `{"shouldOmit":"foo","shouldntOmit":"bar","notTagged":"baz"}`},
+		{name: "OmitEmptyNull", input: validateOmitempty{}, expected: `{"shouldntOmit":"","notTagged":""}`},
 	}
 
 	tr := typeregistry.NewTypeRegistry()
