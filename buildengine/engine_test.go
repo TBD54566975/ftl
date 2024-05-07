@@ -8,6 +8,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -57,4 +58,27 @@ func TestEngine(t *testing.T) {
 	assert.Equal(t, expected, graph)
 	err = engine.Build(ctx)
 	assert.NoError(t, err)
+}
+
+func TestValidateConfigsAndSecretsMatch(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	projConfig, err := projectconfig.LoadConfig(ctx, []string{"testdata/projectconfigs/config-secret-validation-ftl-project.toml"})
+	assert.NoError(t, err)
+	engine, err := buildengine.New(ctx, nil, &projConfig, []string{"testdata/projects/configsecret"}, nil)
+	assert.NoError(t, err)
+
+	defer engine.Close()
+
+	err = engine.Build(ctx)
+
+	expectedErrs := []string{
+		"config \"missingConfig\" is not provided in ftl-project.toml, but is required by module \"configsecret\"",
+		"secret \"missingSecret\" is not provided in ftl-project.toml, but is required by module \"configsecret\"",
+	}
+	for _, expectedErr := range expectedErrs {
+		assert.Contains(t, err.Error(), expectedErr)
+	}
 }
