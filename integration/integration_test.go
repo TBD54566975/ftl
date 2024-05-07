@@ -226,8 +226,10 @@ func TestModuleUnitTests(t *testing.T) {
 	run(t,
 		copyModule("time"),
 		copyModule("wrapped"),
-		build("time", "wrapped"),
+		copyModule("verbtypes"),
+		build("time", "wrapped", "verbtypes"),
 		testModule("wrapped"),
+		testModule("verbtypes"),
 	)
 }
 

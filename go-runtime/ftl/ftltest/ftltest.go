@@ -151,7 +151,7 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 //	... other options
 //
 // )
-func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context.Context, req Req) (resp Resp, err error)) Option {
+func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake ftl.Verb[Req, Resp]) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		ref := ftl.FuncRef(verb)
 		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
@@ -160,6 +160,73 @@ func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake func(ctx context
 				return nil, fmt.Errorf("invalid request type %T for %v, expected %v", req, ref, reflect.TypeFor[Req]())
 			}
 			return fake(ctx, request)
+		}
+		return nil
+	}
+}
+
+// WhenSource replaces an implementation for a verb with no request
+//
+// To be used when setting up a context for a test:
+// ctx := ftltest.Context(
+//
+//	ftltest.WhenSource(Example.Source, func(ctx context.Context) (Example.Resp, error) {
+//	    ...
+//	}),
+//	... other options
+//
+// )
+func WhenSource[Resp any](source ftl.Source[Resp], fake func(ctx context.Context) (resp Resp, err error)) Option {
+	return func(ctx context.Context, state *OptionsState) error {
+		ref := ftl.FuncRef(source)
+		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
+			return fake(ctx)
+		}
+		return nil
+	}
+}
+
+// WhenSink replaces an implementation for a verb with no response
+//
+// To be used when setting up a context for a test:
+// ctx := ftltest.Context(
+//
+//	ftltest.WhenSink(Example.Sink, func(ctx context.Context, req Example.Req) error {
+//	    ...
+//	}),
+//	... other options
+//
+// )
+func WhenSink[Req any](sink ftl.Sink[Req], fake func(ctx context.Context, req Req) error) Option {
+	return func(ctx context.Context, state *OptionsState) error {
+		ref := ftl.FuncRef(sink)
+		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
+			request, ok := req.(Req)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type %T for %v, expected %v", req, ref, reflect.TypeFor[Req]())
+			}
+			return ftl.Unit{}, fake(ctx, request)
+		}
+		return nil
+	}
+}
+
+// WhenEmpty replaces an implementation for a verb with no request or response
+//
+// To be used when setting up a context for a test:
+// ctx := ftltest.Context(
+//
+//	ftltest.WhenEmpty(Example.Empty, func(ctx context.Context) error {
+//	    ...
+//	}),
+//	... other options
+//
+// )
+func WhenEmpty(empty ftl.Empty, fake func(ctx context.Context) (err error)) Option {
+	return func(ctx context.Context, state *OptionsState) error {
+		ref := ftl.FuncRef(empty)
+		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
+			return ftl.Unit{}, fake(ctx)
 		}
 		return nil
 	}
