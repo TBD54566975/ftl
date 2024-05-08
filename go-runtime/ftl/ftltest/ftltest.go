@@ -182,10 +182,9 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 // )
 func WithDatabase(dbHandle ftl.Database) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		envarName := fmt.Sprintf("FTL_POSTGRES_DSN_%s_%s", strings.ToUpper(ftl.Module()), strings.ToUpper(dbHandle.Name))
-		originalDSN, ok := os.LookupEnv(envarName)
-		if !ok {
-			return fmt.Errorf("missing DSN for database %s: expected to find it at the environment variable %s", dbHandle.Name, envarName)
+		originalDSN, err := modulecontext.GetDSNFromEnvar(ftl.Module(), dbHandle.Name)
+		if err != nil {
+			return err
 		}
 
 		// convert DSN by appending "_test" to table name
