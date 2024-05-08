@@ -118,6 +118,10 @@ export const isCron = (verb?: Verb) => {
   return !!cron(verb)
 }
 
+export const isExported = (verb?: Verb) => {
+  return verb?.verb?.export === true
+}
+
 export const createVerbRequest = (path: string, verb?: Verb,  editorText?: string, headers?: string) => {
   if (!verb || !editorText) {
     return new Uint8Array()

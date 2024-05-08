@@ -1,17 +1,16 @@
 import { RocketLaunchIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ButtonSmall } from '../../components/ButtonSmall'
 import { Card } from '../../components/Card'
 import { Page } from '../../layout'
-import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
 import { modulesFilter } from '../../services/console.service'
 import { Timeline } from '../timeline/Timeline'
-import { verbRefString } from '../verbs/verb.utils'
+import { isCron, isExported, isHttpIngress } from '../verbs/verb.utils'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
+import { Badge } from '../../components/Badge'
 
 const timeSettings = { isTailing: true, isPaused: false }
 
@@ -22,7 +21,6 @@ export const DeploymentPage = () => {
   const notification = useContext(NotificationsContext)
   const navgation = useNavigate()
   const [module, setModule] = useState<Module | undefined>()
-  const [calls, setCalls] = useState<Ref[]>([])
 
   const filters = useMemo(() => {
     if (!module?.deploymentKey) return []
@@ -51,38 +49,6 @@ export const DeploymentPage = () => {
     }
   }, [modules, deploymentKey])
 
-  useEffect(() => {
-    if (!module) return
-
-    const verbCalls: Ref[] = []
-
-    const metadata = module.verbs
-      .map((v) => v.verb)
-      .map((v) => v?.metadata)
-      .flat()
-
-    const metadataCalls = metadata
-      .filter((metadata) => metadata?.value.case === 'calls')
-      .map((metadata) => metadata?.value.value as MetadataCalls)
-
-    const calls = metadataCalls.map((metadata) => metadata?.calls).flat()
-
-    calls.forEach((call) => {
-      if (!verbCalls.find((v) => v.name === call.name && v.module === call.module)) {
-        verbCalls.push({ name: call.name, module: call.module } as Ref)
-      }
-    })
-
-    setCalls(Array.from(verbCalls))
-  }, [module])
-
-  const handleCallClick = (verb: Ref) => {
-    const module = modules?.modules.find((module) => module.name === verb.module)
-    if (module) {
-      navigate(`/deployments/${module.deploymentKey}/verbs/${verb.name}`)
-    }
-  }
-
   return (
     <SidePanelProvider>
       <Page>
@@ -92,9 +58,9 @@ export const DeploymentPage = () => {
           breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]}
         />
 
-        <Page.Body>
-          <div className='flex-1 flex flex-col h-full'>
-            <div className='flex-1 h-1/2 mb-4 p-4'>
+        <Page.Body className='flex'>
+          <div className=''>
+            <div className='flex-1 h-1/2 p-4 overflow-y-scroll'>
               <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
                 {module?.verbs.map((verb) => (
                   <Card
@@ -102,22 +68,22 @@ export const DeploymentPage = () => {
                     topBarColor='bg-green-500'
                     onClick={() => navigate(`/deployments/${module.deploymentKey}/verbs/${verb.verb?.name}`)}
                   >
-                    {verb.verb?.name}
-                    <p className='text-xs text-gray-400'>{verb.verb?.name}</p>
+                    <p className='trucate text-sm overflow-hidden'>{verb.verb?.name}</p>
+                    {badges(verb).length > 0 && (
+                      <div className='pt-1 space-x-1'>
+                        {badges(verb).map((badge) => (
+                          <Badge key={badge} name={badge} />
+                        ))}
+                      </div>
+                    )}
                   </Card>
                 ))}
               </div>
-              <h2 className='pt-4'>Calls</h2>
-              {calls.length === 0 && <p className='pt-2 text-sm text-gray-400'>Does not call other verbs</p>}
-              <ul className='pt-2 flex space-x-2'>
-                {calls?.map((verb) => (
-                  <li key={`${module?.name}-${verb.module}-${verb.name}`} className='text-xs'>
-                    <ButtonSmall onClick={() => handleCallClick(verb)}>{verbRefString(verb)}</ButtonSmall>
-                  </li>
-                ))}
-              </ul>
             </div>
-            <div className='flex-1 h-1/2 overflow-y-auto'>
+            <div
+              className='cursor-col-resize bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600 h-0.5'
+            />
+            <div className='flex-1 h-1/2 overflow-y-scroll'>
               {module?.deploymentKey && <Timeline timeSettings={timeSettings} filters={filters} />}
             </div>
           </div>
@@ -125,4 +91,13 @@ export const DeploymentPage = () => {
       </Page>
     </SidePanelProvider>
   )
+
+}
+
+const badges = (verb?: Verb) => {
+  const all: string[] = []
+  if (isHttpIngress(verb)) all.push('http')
+  if (isCron(verb)) all.push('cron')
+  if (isExported(verb)) all.push('exported')
+  return all
 }
