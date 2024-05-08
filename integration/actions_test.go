@@ -262,9 +262,22 @@ func queryRow(database string, query string, expected ...interface{}) action {
 }
 
 // Create a database for use by a module.
-func createDB(t testing.TB, module, dbName string) {
+func createDBAction(module, dbName string, isTest bool) action {
+	return func(t testing.TB, ic testContext) error {
+		createDB(t, module, dbName, isTest)
+		return nil
+	}
+}
+
+func createDB(t testing.TB, module, dbName string, isTestDb bool) {
+	// envars do not include test suffix
 	t.Setenv(fmt.Sprintf("FTL_POSTGRES_DSN_%s_%s", strings.ToUpper(module), strings.ToUpper(dbName)),
 		fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", dbName))
+
+	// insert test suffix if needed when actually setting up db
+	if isTestDb {
+		dbName += "_test"
+	}
 	infof("Creating database %s", dbName)
 	db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable")
 	assert.NoError(t, err, "failed to open database connection")
@@ -275,6 +288,9 @@ func createDB(t testing.TB, module, dbName string) {
 
 	err = db.Ping()
 	assert.NoError(t, err, "failed to ping database")
+
+	_, err = db.Exec("DROP DATABASE IF EXISTS " + dbName)
+	assert.NoError(t, err, "failed to delete existing database")
 
 	_, err = db.Exec("CREATE DATABASE " + dbName)
 	assert.NoError(t, err, "failed to create database")
