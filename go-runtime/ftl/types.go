@@ -13,6 +13,12 @@ type Handle[T any] interface {
 	Get(ctx context.Context) T
 }
 
+// HashableHandle is a Handle that can be hashed to determine when it's value has changed.
+type HashableHandle[T any] interface {
+	Handle[T]
+	Hash(ctx context.Context) []byte
+}
+
 // Unit is a type that has no value.
 //
 // It can be used as a parameter or return value to indicate that a function

@@ -152,6 +152,15 @@ func (m ModuleContext) GetConfig(name string, value any) error {
 	return json.Unmarshal(data, value)
 }
 
+// GetConfigData reads a configuration value for the module and returns the raw bytes.
+func (m ModuleContext) GetConfigData(name string) ([]byte, error) {
+	data, ok := m.configs[name]
+	if !ok {
+		return nil, fmt.Errorf("no config value for %q", name)
+	}
+	return data, nil
+}
+
 // GetSecret reads a secret value for the module.
 //
 // "value" must be a pointer to a Go type that can be unmarshalled from JSON.

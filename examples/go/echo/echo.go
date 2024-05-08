@@ -3,7 +3,9 @@ package echo
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"unsafe"
 
 	"ftl/time"
 
@@ -11,6 +13,13 @@ import (
 )
 
 var defaultName = ftl.Config[string]("default")
+var defaultMap = ftl.Map(defaultName, func(ctx context.Context, configStr string) (string, error) {
+	return configStr + " mapped", nil
+})
+var db = ftl.PostgresDatabase("echo")
+var dbMap = ftl.Map(db, func(ctx context.Context, db *sql.DB) (uintptr, error) {
+	return uintptr(unsafe.Pointer(db)), nil
+})
 
 // An echo request.
 type EchoRequest struct {

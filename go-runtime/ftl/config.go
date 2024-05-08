@@ -2,6 +2,7 @@ package ftl
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"runtime"
 	"strings"
@@ -37,6 +38,18 @@ func (c ConfigValue[T]) Get(ctx context.Context) (out T) {
 		panic(fmt.Errorf("failed to get %s: %w", c, err))
 	}
 	return
+}
+
+func (c ConfigValue[T]) Hash(ctx context.Context) []byte {
+	data, err := modulecontext.FromContext(ctx).GetConfigData(c.Name)
+	if err != nil {
+		panic(fmt.Errorf("failed to get %s: %w", c, err))
+	}
+
+	h := sha256.New()
+	h.Write([]byte(data))
+
+	return h.Sum(nil)
 }
 
 func callerModule() string {

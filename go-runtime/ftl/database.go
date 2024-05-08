@@ -2,8 +2,10 @@ package ftl
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"fmt"
+	"unsafe"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Register Postgres driver
 
@@ -33,4 +35,21 @@ func (d Database) Get(ctx context.Context) *sql.DB {
 		panic(err.Error())
 	}
 	return db
+}
+
+var _ HashableHandle[*sql.DB] = Database{}
+
+func (d Database) Hash(ctx context.Context) []byte {
+	// Convert the pointer to an integer
+	ptrInt := uintptr(unsafe.Pointer(d.Get(ctx)))
+
+	// Convert the integer to a byte slice
+	ptrBytes := make([]byte, 8)
+	for i := uint(0); i < 8; i++ {
+		ptrBytes[i] = byte((ptrInt >> (i * 8)) & 0xff)
+	}
+
+	h := sha256.New()
+	h.Write(ptrBytes)
+	return h.Sum(nil)
 }
