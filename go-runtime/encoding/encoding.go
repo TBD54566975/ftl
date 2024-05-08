@@ -60,7 +60,8 @@ func encodeValue(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 		enc := v.Interface().(OptionMarshaler) //nolint:forcetypeassert
 		return enc.Marshal(ctx, w, encodeValue)
 
-	//TODO: Remove once we support `omitempty` tag
+	// TODO(Issue #1439): remove this special case by removing all usage of
+	// json.RawMessage, which is not a type we support.
 	case t == reflect.TypeFor[json.RawMessage]():
 		data, err := json.Marshal(v.Interface())
 		if err != nil {
@@ -137,6 +138,9 @@ func encodeStruct(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 		// 	(t == reflect.TypeOf((*any)(nil)).Elem() && fv.IsZero()) {
 		// 	continue
 		// }
+		if isTaggedOmitempty(v, i) && fv.IsZero() {
+			continue
+		}
 		if afterFirst {
 			w.WriteRune(',')
 		}
@@ -148,6 +152,17 @@ func encodeStruct(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 	}
 	w.WriteRune('}')
 	return nil
+}
+
+func isTaggedOmitempty(v reflect.Value, i int) bool {
+	tag := v.Type().Field(i).Tag
+	tagVals := strings.Split(tag.Get("json"), ",")
+	for _, tagVal := range tagVals {
+		if strings.TrimSpace(tagVal) == "omitempty" {
+			return true
+		}
+	}
+	return false
 }
 
 func encodeBytes(v reflect.Value, w *bytes.Buffer) error {
