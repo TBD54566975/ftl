@@ -84,11 +84,17 @@ func TestNonExportedDecls(t *testing.T) {
 }
 
 func TestDatabase(t *testing.T) {
-	createDB(t, "database", "testdb")
+	createDB(t, "database", "testdb", false)
 	run(t,
+		// deploy real module against "testdb"
 		copyModule("database"),
 		deploy("database"),
 		call("database", "insert", obj{"data": "hello"}, func(response obj) error { return nil }),
+		queryRow("testdb", "SELECT data FROM requests", "hello"),
+
+		// run tests which should only affect "testdb_test"
+		createDBAction("database", "testdb", true),
+		testModule("database"),
 		queryRow("testdb", "SELECT data FROM requests", "hello"),
 	)
 }

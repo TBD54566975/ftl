@@ -3,8 +3,10 @@ package ftltest
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,6 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/slices"
+	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 )
 
 type OptionsState struct {
@@ -164,6 +167,64 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 			return err
 		}
 		state.secrets[secret.Name] = data
+		return nil
+	}
+}
+
+// WithDatabase sets up a database for testing by appending "_test" to the DSN and emptying all tables
+//
+// To be used when setting up a context for a test:
+// ctx := ftltest.Context(
+//
+//	ftltest.WithDatabase(db),
+//	... other options
+//
+// )
+func WithDatabase(dbHandle ftl.Database) Option {
+	return func(ctx context.Context, state *OptionsState) error {
+		envarName := fmt.Sprintf("FTL_POSTGRES_DSN_%s_%s", strings.ToUpper(ftl.Module()), strings.ToUpper(dbHandle.Name))
+		originalDSN, ok := os.LookupEnv(envarName)
+		if !ok {
+			return fmt.Errorf("missing DSN for database %s: expected to find it at the environment variable %s", dbHandle.Name, envarName)
+		}
+
+		// convert DSN by appending "_test" to table name
+		// postgres DSN format: postgresql://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]
+		// source: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
+		dsnURL, err := url.Parse(originalDSN)
+		if err != nil {
+			return fmt.Errorf("could not parse DSN: %w", err)
+		}
+		if dsnURL.Path == "" {
+			return fmt.Errorf("DSN for %s must include table name: %s", dbHandle.Name, originalDSN)
+		}
+		dsnURL.Path += "_test"
+		dsn := dsnURL.String()
+
+		// connect to db and clear out the contents of each table
+		sqlDB, err := sql.Open("pgx", dsn)
+		if err != nil {
+			return fmt.Errorf("could not create database %q with DSN %q: %w", dbHandle.Name, dsn, err)
+		}
+		_, err = sqlDB.ExecContext(ctx, `DO $$ 
+		DECLARE 
+		   table_name text; 
+		BEGIN 
+		   FOR table_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') 
+		   LOOP 
+			  EXECUTE 'DELETE FROM ' || table_name; 
+		   END LOOP; 
+		END $$;`)
+		if err != nil {
+			return fmt.Errorf("could not clear tables in database %q: %w", dbHandle.Name, err)
+		}
+
+		// replace original database with test database
+		replacementDB, err := modulecontext.NewDatabase(modulecontext.DBTypePostgres, dsn)
+		if err != nil {
+			return fmt.Errorf("could not create database %q with DSN %q: %w", dbHandle.Name, dsn, err)
+		}
+		state.databases[dbHandle.Name] = replacementDB
 		return nil
 	}
 }
