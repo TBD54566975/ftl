@@ -10,8 +10,8 @@ export const DeploymentsPage = () => {
   return (
     <Page>
       <Page.Header icon={<RocketLaunchIcon />} title='Deployments' />
-      <Page.Body className='p-4'>
-        <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
+      <Page.Body className='flex'>
+        <div className='p-4 grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 overflow-y-scroll'>
           {modules.modules.map((module) => (
             <DeploymentCard key={module.deploymentKey} deploymentKey={module.deploymentKey} />
           ))}

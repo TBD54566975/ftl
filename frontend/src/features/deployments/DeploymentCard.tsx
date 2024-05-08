@@ -28,7 +28,7 @@ export const DeploymentCard = ({ deploymentKey, className }: { deploymentKey: st
     >
       <div className='flex flex-col'>
         <div className='flex items-center'>
-          <p className={`truncate flex-grow min-w-0 ${deploymentTextColor(deploymentKey)}`}>{deploymentKey}</p>
+          <p className={`truncate flex-grow min-w-0 pr-2 ${deploymentTextColor(deploymentKey)}`}>{deploymentKey}</p>
           <Badge className='ml-auto' name={module?.language ?? ''} />
         </div>
 
