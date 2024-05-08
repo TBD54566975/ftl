@@ -3,14 +3,13 @@ package ftl
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	ftlencoding "github.com/TBD54566975/ftl/go-runtime/encoding"
 )
 
 // Stdlib interfaces types implement.
@@ -166,25 +165,6 @@ func (o Option[T]) Default(value T) T {
 	return value
 }
 
-func (o Option[T]) MarshalJSON() ([]byte, error) {
-	if o.ok {
-		return ftlencoding.Marshal(o.value)
-	}
-	return []byte("null"), nil
-}
-
-func (o *Option[T]) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
-		o.ok = false
-		return nil
-	}
-	if err := ftlencoding.Unmarshal(data, &o.value); err != nil {
-		return err
-	}
-	o.ok = true
-	return nil
-}
-
 func (o Option[T]) String() string {
 	if o.ok {
 		return fmt.Sprintf("%v", o.value)
@@ -199,20 +179,29 @@ func (o Option[T]) GoString() string {
 	return fmt.Sprintf("None[%T]()", o.value)
 }
 
-func (o Option[T]) Marshal(w *bytes.Buffer, encode func(v reflect.Value, w *bytes.Buffer) error) error {
+func (o Option[T]) Marshal(
+	ctx context.Context,
+	w *bytes.Buffer,
+	encode func(ctx context.Context, v reflect.Value, w *bytes.Buffer) error,
+) error {
 	if o.ok {
-		return encode(reflect.ValueOf(&o.value).Elem(), w)
+		return encode(ctx, reflect.ValueOf(&o.value).Elem(), w)
 	}
 	w.WriteString("null")
 	return nil
 }
 
-func (o *Option[T]) Unmarshal(d *json.Decoder, isNull bool, decode func(d *json.Decoder, v reflect.Value) error) error {
+func (o *Option[T]) Unmarshal(
+	ctx context.Context,
+	d *json.Decoder,
+	isNull bool,
+	decode func(ctx context.Context, d *json.Decoder, v reflect.Value) error,
+) error {
 	if isNull {
 		o.ok = false
 		return nil
 	}
-	if err := decode(d, reflect.ValueOf(&o.value).Elem()); err != nil {
+	if err := decode(ctx, d, reflect.ValueOf(&o.value).Elem()); err != nil {
 		return err
 	}
 	o.ok = true
