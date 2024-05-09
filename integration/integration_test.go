@@ -108,6 +108,17 @@ func TestSchemaGenerate(t *testing.T) {
 	)
 }
 
+func TestHttpEncodeOmitempty(t *testing.T) {
+	run(t,
+		copyModule("omitempty"),
+		deploy("omitempty"),
+		httpCall(http.MethodGet, "/get", jsonData(t, obj{}), func(resp *httpResponse) error {
+			assert.Equal(t, "{\"mustset\":\"\"}", repr.String(resp.jsonBody))
+			return nil
+		}),
+	)
+}
+
 func TestHttpIngress(t *testing.T) {
 	run(t,
 		copyModule("httpingress"),
