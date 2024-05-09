@@ -165,6 +165,25 @@ func (o Option[T]) Default(value T) T {
 	return value
 }
 
+func (o Option[T]) MarshalJSON() ([]byte, error) {
+	if o.ok {
+		return json.Marshal(o.value)
+	}
+	return []byte("null"), nil
+}
+
+func (o *Option[T]) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		o.ok = false
+		return nil
+	}
+	if err := json.Unmarshal(data, &o.value); err != nil {
+		return err
+	}
+	o.ok = true
+	return nil
+}
+
 func (o Option[T]) String() string {
 	if o.ok {
 		return fmt.Sprintf("%v", o.value)
