@@ -16,8 +16,8 @@ import (
 type HTTPResponse struct {
 	Status  int                 `json:"status,omitempty"`
 	Headers map[string][]string `json:"headers,omitempty"`
-	Body    json.RawMessage     `json:"body,omitempty"`
-	Error   json.RawMessage     `json:"error,omitempty"`
+	Body    []byte              `json:"body,omitempty"`
+	Error   []byte              `json:"error,omitempty"`
 }
 
 // ResponseForVerb returns the HTTP response for a given verb.
