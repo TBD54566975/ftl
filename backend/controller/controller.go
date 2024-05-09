@@ -102,6 +102,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		if err != nil {
 			return err
 		}
+		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
 	// Bring up the DB connection and DAL.
