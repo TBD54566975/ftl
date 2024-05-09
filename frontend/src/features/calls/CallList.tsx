@@ -55,9 +55,8 @@ export const CallList = ({ calls }: { calls: CallEvent[] | undefined }) => {
               {calls?.map((call, index) => (
                 <tr
                   key={`${index}-${call.timeStamp?.toDate().toUTCString()}`}
-                  className={`border-b border-gray-100 dark:border-slate-700 font-roboto-mono ${
-                    selectedCall?.equals(call) ? 'bg-indigo-50 dark:bg-slate-700' : ''
-                  } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
+                  className={`border-b border-gray-100 dark:border-slate-700 font-roboto-mono
+                   ${selectedCall?.equals(call) ? 'bg-indigo-50 dark:bg-slate-700' : ''} relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
                   onClick={() => handleCallClicked(call)}
                 >
                   <td className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>
@@ -66,10 +65,10 @@ export const CallList = ({ calls }: { calls: CallEvent[] | undefined }) => {
                   <td className='p-1 w-14 items-center flex-none text-gray-400 dark:text-gray-400 truncate'>
                     {formatDuration(call.duration)}
                   </td>
-                  <td className='p-1 w-40 flex-none text-indigo-500 dark:text-indigo-300'>
+                  <td className='p-1 w-40 flex-none text-indigo-500 dark:text-indigo-300 truncate' title={call.sourceVerbRef && verbRefString(call.sourceVerbRef)}>
                     {call.sourceVerbRef && verbRefString(call.sourceVerbRef)}
                   </td>
-                  <td className='p-1 w-40 flex-none text-indigo-500 dark:text-indigo-300'>
+                  <td className='p-1 w-40 flex-none text-indigo-500 dark:text-indigo-300 truncate' title={call.destinationVerbRef && verbRefString(call.destinationVerbRef)}>
                     {call.destinationVerbRef && verbRefString(call.destinationVerbRef)}
                   </td>
                   <td className='p-1 flex-1 flex-grow truncate' title={call.request}>

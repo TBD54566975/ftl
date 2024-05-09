@@ -40,6 +40,40 @@ func (*ConsoleService) Ping(context.Context, *connect.Request[ftlv1.PingRequest]
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
+func visitNode(sch *schema.Schema, n schema.Node, verbString *string) error {
+	return schema.Visit(n, func(n schema.Node, next func() error) error {
+		switch n := n.(type) {
+		case *schema.Ref:
+			data, err := sch.ResolveRefMonomorphised(n)
+			if err != nil {
+				return err
+			}
+			*verbString += data.String() + "\n\n"
+
+			err = visitNode(sch, data, verbString)
+			if err != nil {
+				return err
+			}
+		default:
+		}
+		return next()
+	})
+}
+
+func verbSchemaString(sch *schema.Schema, verb *schema.Verb) (string, error) {
+	var verbString string
+	err := visitNode(sch, verb.Request, &verbString)
+	if err != nil {
+		return "", err
+	}
+	err = visitNode(sch, verb.Response, &verbString)
+	if err != nil {
+		return "", err
+	}
+	verbString += verb.String()
+	return verbString, nil
+}
+
 func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pbconsole.GetModulesRequest]) (*connect.Response[pbconsole.GetModulesResponse], error) {
 	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
@@ -65,7 +99,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			case *schema.Verb:
 				//nolint:forcetypeassert
 				v := decl.ToProto().(*schemapb.Verb)
-				verbSchema := schema.VerbFromProto(v) // TODO: include all of the types that the verb references
+				verbSchema := schema.VerbFromProto(v)
 				var jsonRequestSchema string
 				if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
 					jsonSchema, err := schema.DataToJSONSchema(sch, *requestData)
@@ -78,9 +112,14 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 					}
 					jsonRequestSchema = string(jsonData)
 				}
+
+				schemaString, err := verbSchemaString(sch, decl)
+				if err != nil {
+					return nil, err
+				}
 				verbs = append(verbs, &pbconsole.Verb{
 					Verb:              v,
-					Schema:            verbSchema.String(),
+					Schema:            schemaString,
 					JsonRequestSchema: jsonRequestSchema,
 				})
 

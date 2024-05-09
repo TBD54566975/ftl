@@ -1,10 +1,10 @@
 import { Edge, Node } from 'reactflow'
 import { Module, Topology } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { MetadataCalls } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { groupPadding } from './GroupNode'
 import { verbHeight } from './VerbNode'
 import { secretHeight } from './SecretNode'
 import { configHeight } from './ConfigNode'
+import { verbCalls } from '../verbs/verb.utils'
 
 const groupWidth = 200
 const ITEM_SPACING = 10
@@ -78,9 +78,7 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
       })
 
       verbs.forEach((verb) => {
-        const calls = verb?.verb?.metadata
-          .filter((meta) => meta.value.case === 'calls')
-          .map((meta) => meta.value.value as MetadataCalls)
+        const calls = verbCalls(verb)
 
         nodes.push({
           id: `${module.name}.${verb.verb?.name}`,
