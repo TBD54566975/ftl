@@ -59,6 +59,16 @@ func encodeValue(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 	case t.Implements(optionMarshaler):
 		enc := v.Interface().(OptionMarshaler) //nolint:forcetypeassert
 		return enc.Marshal(ctx, w, encodeValue)
+
+	// TODO(Issue #1439): remove this special case by removing all usage of
+	// json.RawMessage, which is not a type we support.
+	case t == reflect.TypeFor[json.RawMessage]():
+		data, err := json.Marshal(v.Interface())
+		if err != nil {
+			return err
+		}
+		w.Write(data)
+		return nil
 	}
 
 	switch v.Kind() {
