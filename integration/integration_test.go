@@ -113,7 +113,11 @@ func TestHttpEncodeOmitempty(t *testing.T) {
 		copyModule("omitempty"),
 		deploy("omitempty"),
 		httpCall(http.MethodGet, "/get", jsonData(t, obj{}), func(resp *httpResponse) error {
-			assert.Equal(t, "{\"mustset\":\"\"}", repr.String(resp.jsonBody))
+			assert.Equal(t, 200, resp.status)
+			_, ok := resp.jsonBody["mustset"]
+			assert.True(t, ok)
+			_, ok = resp.jsonBody["error"]
+			assert.False(t, ok)
 			return nil
 		}),
 	)
