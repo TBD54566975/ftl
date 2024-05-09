@@ -37,6 +37,11 @@ func TestMarshal(t *testing.T) {
 		ShouldntOmit string `json:""`
 		NotTagged    string
 	}
+	type validateOmitemptyOption struct {
+		ShouldOmit   ftl.Option[string] `json:",omitempty"`
+		ShouldntOmit ftl.Option[string] `json:""`
+		NotTagged    ftl.Option[string]
+	}
 	tests := []struct {
 		name     string
 		input    any
@@ -65,6 +70,11 @@ func TestMarshal(t *testing.T) {
 		{name: "UnregisteredSumType", input: struct{ D unregistered }{variant{"hello"}}, err: `the only supported interface types are enums or any, not encoding_test.unregistered`},
 		{name: "OmitEmptyNotNull", input: validateOmitempty{"foo", "bar", "baz"}, expected: `{"shouldOmit":"foo","shouldntOmit":"bar","notTagged":"baz"}`},
 		{name: "OmitEmptyNull", input: validateOmitempty{}, expected: `{"shouldntOmit":"","notTagged":""}`},
+		{name: "OmitEmptyOptionNone", input: validateOmitemptyOption{
+			ShouldOmit:   ftl.None[string](),
+			ShouldntOmit: ftl.None[string](),
+			NotTagged:    ftl.None[string](),
+		}, expected: `{"shouldntOmit":null,"notTagged":null}`},
 	}
 
 	tr := typeregistry.NewTypeRegistry()
