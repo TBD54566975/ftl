@@ -31,7 +31,6 @@ func Server(ctx context.Context, timestamp time.Time, publicURL *url.URL, allowO
 	if err != nil {
 		return nil, err
 	}
-	logger.Infof("Web console available at: %s", publicURL.String())
 
 	if allowOrigin == nil {
 		return proxy, nil
