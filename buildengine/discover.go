@@ -13,31 +13,25 @@ import (
 // DiscoverProjects recursively loads all modules under the given directories
 // (or if none provided, the current working directory is used) and external
 // libraries in externalLibDirs.
-func DiscoverProjects(ctx context.Context, moduleDirs []string, externalLibDirs []string, stopOnError bool) ([]Project, error) {
+func DiscoverProjects(ctx context.Context, moduleDirs []string, externalLibDirs []string) ([]Project, error) {
 	out := []Project{}
 	logger := log.FromContext(ctx)
 
 	modules, err := discoverModules(moduleDirs...)
 	if err != nil {
 		logger.Tracef("error discovering modules: %v", err)
-		if stopOnError {
-			return nil, err
-		}
-	} else {
-		for _, module := range modules {
-			out = append(out, Project(module))
-		}
+		return nil, err
+	}
+	for _, module := range modules {
+		out = append(out, Project(module))
 	}
 	for _, dir := range externalLibDirs {
 		lib, err := LoadExternalLibrary(dir)
 		if err != nil {
 			logger.Tracef("error discovering external library: %v", err)
-			if stopOnError {
-				return nil, err
-			}
-		} else {
-			out = append(out, Project(lib))
+			return nil, err
 		}
+		out = append(out, Project(lib))
 	}
 	return out, nil
 }
