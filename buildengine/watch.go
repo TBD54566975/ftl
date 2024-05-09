@@ -89,7 +89,11 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 				return
 			}
 
-			projects, _ := DiscoverProjects(ctx, moduleDirs, externalLibDirs, false)
+			projects, err := DiscoverProjects(ctx, moduleDirs, externalLibDirs)
+			if err != nil {
+				logger.Tracef("error discovering projects: %v", err)
+				continue
+			}
 
 			projectsByDir := maps.FromSlice(projects, func(project Project) (string, Project) {
 				return project.Config().Dir, project

@@ -102,7 +102,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
 
-	projects, err := DiscoverProjects(ctx, moduleDirs, externalDirs, true)
+	projects, err := DiscoverProjects(ctx, moduleDirs, externalDirs)
 	if err != nil {
 		return nil, fmt.Errorf("could not find projects: %w", err)
 	}

@@ -12,7 +12,7 @@ import (
 
 func TestDiscoverModules(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	projects, err := DiscoverProjects(ctx, []string{"testdata/projects"}, []string{"testdata/projects/lib", "testdata/projects/libkotlin"}, true)
+	projects, err := DiscoverProjects(ctx, []string{"testdata/projects"}, []string{"testdata/projects/lib", "testdata/projects/libkotlin"})
 	assert.NoError(t, err)
 	expected := []Project{
 		Module{

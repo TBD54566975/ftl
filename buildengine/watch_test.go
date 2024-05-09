@@ -31,7 +31,7 @@ func TestWatch(t *testing.T) {
 
 	waitForEvents(t, events, []WatchEvent{})
 
-	// Initiate a bunch of changes.
+	// Initiate two modules
 	err := ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "two")
