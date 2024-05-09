@@ -85,17 +85,13 @@ func TestIngress(t *testing.T) {
 			method:     "GET",
 			path:       "/getAlias",
 			query:      url.Values{"alias": {"value"}},
-			response:   optional.Some(ingress.HTTPResponse{Body: []byte(`{}`)}),
+			response:   optional.Some(ingress.HTTPResponse{Body: []byte(`{"key":"value"}`)}),
 			statusCode: http.StatusOK},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			rec.Body = &bytes.Buffer{}
-			var response ingress.HTTPResponse
-			var ok bool
-			if response, ok = test.response.Get(); ok {
-				response = ingress.HTTPResponse{Body: []byte(`{}`)}
-			}
+			response, _ := test.response.Get()
 			req := httptest.NewRequest(test.method, test.path, bytes.NewBuffer(test.payload)).WithContext(ctx)
 			req.URL.RawQuery = test.query.Encode()
 			reqKey := model.NewRequestKey(model.OriginIngress, "test")
