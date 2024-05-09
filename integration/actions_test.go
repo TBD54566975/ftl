@@ -26,6 +26,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/scaffolder"
 )
 
@@ -271,7 +272,7 @@ func createDBAction(module, dbName string, isTest bool) action {
 
 func createDB(t testing.TB, module, dbName string, isTestDb bool) {
 	// envars do not include test suffix
-	t.Setenv(fmt.Sprintf("FTL_POSTGRES_DSN_%s_%s", strings.ToUpper(module), strings.ToUpper(dbName)),
+	t.Setenv(modulecontext.DSNEnvarName(module, dbName),
 		fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", dbName))
 
 	// insert test suffix if needed when actually setting up db

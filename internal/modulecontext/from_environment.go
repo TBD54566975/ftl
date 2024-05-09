@@ -41,3 +41,20 @@ func DatabasesFromEnvironment(ctx context.Context, module string) (map[string]Da
 	}
 	return databases, nil
 }
+
+// DSNEnvarName returns the name of the environment variable that is expected to hold the DSN for a database.
+//
+// The format is FTL_POSTGRES_DSN_<MODULE>_<DBNAME>
+func DSNEnvarName(module, name string) string {
+	return fmt.Sprintf("FTL_POSTGRES_DSN_%s_%s", strings.ToUpper(module), strings.ToUpper(name))
+}
+
+// GetDSNFromEnvar returns the DSN for a database from an environment variable.
+func GetDSNFromEnvar(module, name string) (string, error) {
+	envarName := DSNEnvarName(module, name)
+	dsn, ok := os.LookupEnv(envarName)
+	if !ok {
+		return "", fmt.Errorf("missing DSN for database %s: expected to find it at the environment variable %s", name, envarName)
+	}
+	return dsn, nil
+}

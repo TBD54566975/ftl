@@ -12,8 +12,7 @@ import (
 func TestFromEnvironment(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	t.Setenv("FTL_POSTGRES_DSN_ECHO_ECHO", "postgres://echo:echo@localhost:5432/echo")
-
+	t.Setenv(DSNEnvarName("echo", "echo"), "postgres://echo:echo@localhost:5432/echo")
 	databases, err := DatabasesFromEnvironment(ctx, "echo")
 	assert.NoError(t, err)
 
