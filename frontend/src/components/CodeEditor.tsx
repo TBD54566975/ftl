@@ -13,7 +13,6 @@ import { lintGutter } from '@codemirror/lint'
 import { lintKeymap } from '@codemirror/lint'
 import { linter } from '@codemirror/lint'
 import {
-
   indentOnInput,
   bracketMatching,
   foldGutter,
@@ -29,7 +28,7 @@ import {
 } from '@codemirror/autocomplete'
 
 import { useRef, useEffect, useCallback } from 'react'
-import { json, jsonParseLinter } from '@codemirror/lang-json'
+import { json5, json5ParseLinter } from 'codemirror-json5'
 import { jsonSchemaLinter, jsonSchemaHover, stateExtensions, handleRefresh } from 'codemirror-json-schema'
 import { useDarkMode } from '../providers/dark-mode-provider'
 import { defaultKeymap } from '@codemirror/commands'
@@ -81,7 +80,7 @@ export const CodeEditor = (
         indentOnInput(),
         drawSelection(),
         foldGutter(),
-        linter(jsonParseLinter(), {
+        linter(json5ParseLinter(), {
           delay: 300
         }),
         linter(jsonSchemaLinter(), {
@@ -101,8 +100,7 @@ export const CodeEditor = (
         extensions: [
           commonExtensions,
           isDarkMode ? atomone : githubLight,
-          json(),
-
+          json5(),
           editingExtensions
         ],
       })

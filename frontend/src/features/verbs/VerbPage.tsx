@@ -8,10 +8,9 @@ import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { callFilter, eventTypesFilter, streamEvents } from '../../services/console.service'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { ResizablePanels } from '../../components/ResizablePanels'
-import { CodeBlock } from '../../components/CodeBlock'
-import { ExpandablePanelProps } from '../console/ExpandablePanel'
 import { CallList } from '../calls/CallList'
 import { VerbRequestForm } from './VerbRequestForm'
+import { verbPanels } from './VerbRightPanel'
 
 export const VerbPage = () => {
   const { deploymentKey, verbName } = useParams()
@@ -66,15 +65,6 @@ export const VerbPage = () => {
     }
   }, [module])
 
-  const panels = [
-    {
-      title: 'Schema',
-      expanded: true,
-      children: verb?.verb?.response?.toJsonString() && <CodeBlock code={verb?.schema} language='json' />,
-      padding: 'p-0',
-    },
-  ] as ExpandablePanelProps[]
-
   const header = (
     <div className='flex items-center gap-2 px-2 py-2'>
       <BoltIcon className='h-5 w-5 text-indigo-600' />
@@ -100,7 +90,7 @@ export const VerbPage = () => {
                 <VerbRequestForm module={module} verb={verb} />
               </div>}
             rightPanelHeader={header}
-            rightPanelPanels={panels}
+            rightPanelPanels={verbPanels(verb)}
             bottomPanelContent={<CallList calls={calls} />}
           />
         </Page.Body>

@@ -1,6 +1,6 @@
 import { JsonValue } from 'type-fest/source/basic'
 import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { MetadataCronJob, MetadataIngress, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { MetadataCalls, MetadataCronJob, MetadataIngress, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { JSONSchemaFaker } from 'json-schema-faker'
 
 const basePath = 'http://localhost:8892/ingress/'
@@ -69,11 +69,11 @@ export const defaultRequest = (verb?: Verb): string => {
   return JSON.stringify(fake, null, 2) ?? '{}'
 }
 
-const ingress = (verb?: Verb) => {
+export const ingress = (verb?: Verb) => {
   return verb?.verb?.metadata?.find(meta => meta.value.case === 'ingress')?.value?.value as MetadataIngress || null
 }
 
-const cron = (verb?: Verb) => {
+export const cron = (verb?: Verb) => {
   return verb?.verb?.metadata?.find(meta => meta.value.case === 'cronJob')?.value?.value as MetadataCronJob || null
 }
 
@@ -84,10 +84,10 @@ export const requestType = (verb?: Verb) => {
   return ingress?.method ?? cron?.cron?.toUpperCase() ?? 'CALL'
 }
 
-export const requestPath = (module?: Module, verb?: Verb) => {
+export const httpRequestPath = (verb?: Verb) => {
   const ingress = verb?.verb?.metadata?.find(meta => meta.value.case === 'ingress')?.value?.value as MetadataIngress || null
   if (ingress) {
-    return basePath + ingress.path.map(p => {
+    return ingress.path.map(p => {
       switch (p.value.case) {
         case 'ingressPathLiteral':
           return p.value.value.text
@@ -98,6 +98,13 @@ export const requestPath = (module?: Module, verb?: Verb) => {
       }
     }).join('/')
   }
+}
+
+export const fullRequestPath = (module?: Module, verb?: Verb) => {
+  const ingress = verb?.verb?.metadata?.find(meta => meta.value.case === 'ingress')?.value?.value as MetadataIngress || null
+  if (ingress) {
+    return basePath + httpRequestPath(verb)
+  }
   const cron = verb?.verb?.metadata?.find(meta => meta.value.case === 'cronJob')?.value?.value as MetadataCronJob || null
   if (cron) {
     return cron.cron
@@ -107,7 +114,7 @@ export const requestPath = (module?: Module, verb?: Verb) => {
 }
 
 export const httpPopulatedRequestPath = ( module?: Module, verb?: Verb) => {
-  return requestPath(module, verb).replaceAll(/{([^}]*)}/g, '$1')
+  return fullRequestPath(module, verb).replaceAll(/{([^}]*)}/g, '$1')
 }
 
 export const isHttpIngress = (verb?: Verb) => {
@@ -140,4 +147,10 @@ export const createVerbRequest = (path: string, verb?: Verb,  editorText?: strin
 
   const buffer = Buffer.from(JSON.stringify(requestJson))
   return new Uint8Array(buffer)
+}
+
+export const verbCalls = (verb?: Verb) => {
+  return verb?.verb?.metadata
+    .filter((meta) => meta.value.case === 'calls')
+    .map((meta) => meta.value.value as MetadataCalls) ?? null
 }

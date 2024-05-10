@@ -6,7 +6,7 @@ import { CodeEditor, InitialState } from '../../components/CodeEditor'
 import { useClient } from '../../hooks/use-client'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { VerbFormInput } from './VerbFormInput'
-import { createVerbRequest, defaultRequest, httpPopulatedRequestPath, isHttpIngress, requestPath, requestType, simpleJsonSchema } from './verb.utils'
+import { createVerbRequest, defaultRequest, httpPopulatedRequestPath, isHttpIngress, fullRequestPath, requestType, simpleJsonSchema } from './verb.utils'
 
 export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb }) => {
   const client = useClient(VerbService)
@@ -53,12 +53,13 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
 
   const tabs = [
     { id: 'body', name: 'Body' },
-    { id: 'jsonschema', name: 'JSONSchema' }
   ]
 
   if (isHttpIngress(verb)) {
     tabs.push({ id: 'headers', name: 'Headers' })
   }
+
+  tabs.push({ id: 'verbschema', name: 'Verb Schema' }, { id: 'jsonschema', name: 'JSONSchema' })
 
   const handleSubmit = async (path: string) => {
     setResponse(null)
@@ -90,7 +91,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       <VerbFormInput
         requestType={requestType(verb)}
         initialPath={httpPopulatedRequestPath(module, verb)}
-        requestPath={requestPath(module, verb)}
+        requestPath={fullRequestPath(module, verb)}
         readOnly={!isHttpIngress(verb)}
         onSubmit={handleSubmit}
       />
@@ -123,12 +124,16 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
           {activeTabId === 'body' && (
             <CodeEditor key='body' initialState={initialEditorState} onTextChanged={handleEditorTextChanged} />
           )}
-          {activeTabId === 'headers' && (
-            <CodeEditor key='headers' initialState={initialHeadersState} onTextChanged={setHeadersText} />
+          {activeTabId === 'verbschema' && (
+            <CodeEditor key='verbschema' initialState={{ initialText: verb?.schema ?? 'what', readonly: true }} />
           )}
           {activeTabId === 'jsonschema' && (
             <CodeEditor key='jsonschema' initialState={{ initialText: verb?.jsonRequestSchema ?? '', readonly: true }} />
           )}
+          {activeTabId === 'headers' && (
+            <CodeEditor key='headers' initialState={initialHeadersState} onTextChanged={setHeadersText} />
+          )}
+
         </div>
 
         <div className='flex flex-col'>
