@@ -5,54 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/reflect"
 )
-
-// Database represents a database connection based on a DSN
-//
-// It holds a private field for the database which is accessible through moduleCtx.GetDatabase(name)
-type Database struct {
-	DSN    string
-	DBType DBType
-
-	db *sql.DB
-}
-
-// NewDatabase creates a Database that can be added to ModuleContext
-func NewDatabase(dbType DBType, dsn string) (Database, error) {
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return Database{}, err
-	}
-	return Database{
-		DSN:    dsn,
-		DBType: dbType,
-		db:     db,
-	}, nil
-}
-
-type DBType ftlv1.ModuleContextResponse_DBType
-
-const (
-	DBTypePostgres = DBType(ftlv1.ModuleContextResponse_POSTGRES)
-)
-
-func (x DBType) String() string {
-	switch x {
-	case DBTypePostgres:
-		return "Postgres"
-	default:
-		panic(fmt.Sprintf("unknown DB type: %s", strconv.Itoa(int(x))))
-	}
-}
 
 // Verb is a function that takes a request and returns a response but is not constrained by request/response type like ftl.Verb
 //
@@ -166,6 +126,7 @@ func (m ModuleContext) GetSecret(name string, value any) error {
 // GetDatabase gets a database connection
 //
 // Returns an error if no database with that name is found or it is not the expected type
+// When in a testing context (via ftltest), an error is returned if the database is not a test database
 func (m ModuleContext) GetDatabase(name string, dbType DBType) (*sql.DB, error) {
 	db, ok := m.databases[name]
 	if !ok {
@@ -173,6 +134,9 @@ func (m ModuleContext) GetDatabase(name string, dbType DBType) (*sql.DB, error) 
 	}
 	if db.DBType != dbType {
 		return nil, fmt.Errorf("database %s does not match expected type of %s", name, dbType)
+	}
+	if m.isTesting && !db.isTestDB {
+		return nil, fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase(db) as an option with ftltest.Context(...)", name)
 	}
 	return db.db, nil
 }

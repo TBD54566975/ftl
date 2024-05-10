@@ -219,7 +219,7 @@ func WithDatabase(dbHandle ftl.Database) Option {
 		}
 
 		// replace original database with test database
-		replacementDB, err := modulecontext.NewDatabase(modulecontext.DBTypePostgres, dsn)
+		replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypePostgres, dsn)
 		if err != nil {
 			return fmt.Errorf("could not create database %q with DSN %q: %w", dbHandle.Name, dsn, err)
 		}
