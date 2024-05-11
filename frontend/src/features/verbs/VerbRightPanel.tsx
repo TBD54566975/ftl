@@ -36,7 +36,6 @@ export const verbPanels = (verb?: Verb) => {
           <ArrowRightStartOnRectangleIcon className='h-4 w-4 text-blue-600' />
           <div className='truncate text-xs'>{`${c?.module}.${c?.name}`}</div>
         </div>
-
       )),
     })
   }

@@ -85,10 +85,7 @@ export const VerbPage = () => {
         />
         <Page.Body className='flex h-full'>
           <ResizablePanels
-            mainContent={
-              <div className='flex mb-2'>
-                <VerbRequestForm module={module} verb={verb} />
-              </div>}
+            mainContent={<VerbRequestForm module={module} verb={verb} />}
             rightPanelHeader={header}
             rightPanelPanels={verbPanels(verb)}
             bottomPanelContent={<CallList calls={calls} />}
