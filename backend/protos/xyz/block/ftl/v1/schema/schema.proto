@@ -97,7 +97,7 @@ message FSM {
 message FSMTransition {
   optional Position pos = 1;
   repeated string comments = 2;
-  Ref from = 3;
+  optional Ref from = 3;
   Ref to = 4;
 }
 

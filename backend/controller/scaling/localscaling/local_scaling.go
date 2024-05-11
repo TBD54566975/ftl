@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/alecthomas/kong"
 
@@ -95,6 +96,8 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		}); err != nil {
 			return err
 		}
+		config.HeartbeatPeriod = time.Second
+		config.HeartbeatJitter = time.Millisecond * 100
 
 		runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
 

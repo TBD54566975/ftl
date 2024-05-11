@@ -98,7 +98,6 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
 	for i := range s.Controllers {
 		config := controller.Config{
 			CommonConfig: s.CommonConfig,
