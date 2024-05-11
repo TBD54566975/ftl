@@ -62,7 +62,7 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
 
   return (
     <div
-      className='flex h-full w-full flex-col overflow-hidden'
+      className='flex h-full w-full flex-col'
       onMouseMove={(e) => {
         if (isDraggingHorizontal) onDragHorizontal(e)
         if (isDraggingVertical) onDragVertical(e)
@@ -72,7 +72,7 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
     >
       <div className='flex flex-1'>
         <div style={{ maxHeight: `calc(100vh - ${(bottomPanelHeight + 46)}px)` }}
-          className='overflow-y-auto flex-1 flex-col'>
+          className='flex-1 flex-col min-h-64'>
           {mainContent}
         </div>
         <div
@@ -80,12 +80,14 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
           onMouseDown={startDraggingHorizontal}
           style={{ width: '3px', cursor: 'col-resize' }}
         />
-        <RightPanel
-          width={rightPanelWidth}
-          bottomPanelHeight={bottomPanelHeight}
-          header={rightPanelHeader}
-          panels={rightPanelPanels}
-        />
+        <div
+          style={{ width: `${rightPanelWidth}px`, maxHeight: `calc(100vh - ${bottomPanelHeight + 46}px)` }}
+          className='flex flex-col h-full overflow-y-scroll'>
+          <RightPanel
+            header={rightPanelHeader}
+            panels={rightPanelPanels}
+          />
+        </div>
       </div>
       <div
         className='cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600'
