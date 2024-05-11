@@ -709,7 +709,7 @@ export class FSMTransition extends Message<FSMTransition> {
   comments: string[] = [];
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref from = 3;
+   * @generated from field: optional xyz.block.ftl.v1.schema.Ref from = 3;
    */
   from?: Ref;
 
@@ -728,7 +728,7 @@ export class FSMTransition extends Message<FSMTransition> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "from", kind: "message", T: Ref },
+    { no: 3, name: "from", kind: "message", T: Ref, opt: true },
     { no: 4, name: "to", kind: "message", T: Ref },
   ]);
 

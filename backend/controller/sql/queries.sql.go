@@ -23,6 +23,7 @@ WITH async_call AS (
   FROM async_calls
   WHERE state = 'pending'
   LIMIT 1
+  FOR UPDATE SKIP LOCKED
 ), lease AS (
   INSERT INTO leases (idempotency_key, key, expires_at)
   VALUES (gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + $1::interval)

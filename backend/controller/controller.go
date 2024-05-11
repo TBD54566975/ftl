@@ -69,6 +69,7 @@ type Config struct {
 	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
 	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
+	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	CommonConfig
@@ -177,6 +178,14 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
 	}
 	config.SetDefaults()
+
+	// Override some defaults during development mode.
+	_, devel := runnerScaling.(*localscaling.LocalScaling)
+	if devel {
+		config.RunnerTimeout = time.Second * 5
+		config.ControllerTimeout = time.Second * 5
+	}
+
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, db),
 		dal:                     db,
@@ -194,37 +203,44 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 
 	// Use min, max backoff if we are running in production, otherwise use
-	// (1s, 1s) or develBackoff if available.
-	maybeDevelBackoff := func(min, max time.Duration, develBackoff ...backoff.Backoff) backoff.Backoff {
+	// (1s, 1s) (or develBackoff). Will also wrap the job such that it its next
+	// runtime is capped at 1s.
+	maybeDevelTask := func(job scheduledtask.Job, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) (backoff.Backoff, scheduledtask.Job) {
 		if len(develBackoff) > 1 {
 			panic("too many devel backoffs")
 		}
-		if _, devel := runnerScaling.(*localscaling.LocalScaling); devel {
-			if len(develBackoff) == 1 {
-				return develBackoff[0]
+		if devel {
+			chain := job
+			job = func(ctx context.Context) (time.Duration, error) {
+				next, err := chain(ctx)
+				// Cap at 1s in development mode.
+				return min(next, maxNext), err
 			}
-			return backoff.Backoff{Min: time.Second, Max: time.Second}
+			if len(develBackoff) == 1 {
+				return develBackoff[0], job
+			}
+			return backoff.Backoff{Min: time.Second, Max: time.Second}, job
 		}
-		return makeBackoff(min, max)
+		return makeBackoff(minDelay, maxDelay), job
 	}
 
 	// Parallel tasks.
-	svc.tasks.Parallel(maybeDevelBackoff(time.Second, time.Second*5), svc.syncRoutes)
-	svc.tasks.Parallel(maybeDevelBackoff(time.Second*3, time.Second*5), svc.heartbeatController)
-	svc.tasks.Parallel(maybeDevelBackoff(time.Second*5, time.Second*5), svc.updateControllersList)
-	svc.tasks.Parallel(maybeDevelBackoff(time.Second*5, time.Second*10), svc.executeAsyncCalls)
+	svc.tasks.Parallel(maybeDevelTask(svc.syncRoutes, time.Second, time.Second, time.Second*5))
+	svc.tasks.Parallel(maybeDevelTask(svc.heartbeatController, time.Second, time.Second*3, time.Second*5))
+	svc.tasks.Parallel(maybeDevelTask(svc.updateControllersList, time.Second, time.Second*5, time.Second*5))
+	svc.tasks.Parallel(maybeDevelTask(svc.executeAsyncCalls, time.Second, time.Second*5, time.Second*10))
 
 	// This should be a singleton task, but because this is the task that
 	// actually expires the leases used to run singleton tasks, it must be
 	// parallel.
-	svc.tasks.Parallel(maybeDevelBackoff(time.Second, time.Second*5), svc.expireStaleLeases)
+	svc.tasks.Parallel(maybeDevelTask(svc.expireStaleLeases, time.Second*2, time.Second, time.Second*5))
 
 	// Singleton tasks use leases to only run on a single controller.
-	svc.tasks.Singleton(maybeDevelBackoff(time.Second*20, time.Second*20), svc.reapStaleControllers)
-	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*10), svc.reapStaleRunners)
-	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*20), svc.releaseExpiredReservations)
-	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*5), svc.reconcileDeployments)
-	svc.tasks.Singleton(maybeDevelBackoff(time.Second, time.Second*5), svc.reconcileRunners)
+	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleControllers, time.Second*2, time.Second*20, time.Second*20))
+	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleRunners, time.Second*2, time.Second, time.Second*10))
+	svc.tasks.Singleton(maybeDevelTask(svc.releaseExpiredReservations, time.Second*2, time.Second, time.Second*20))
+	svc.tasks.Singleton(maybeDevelTask(svc.reconcileDeployments, time.Second*2, time.Second, time.Second*5))
+	svc.tasks.Singleton(maybeDevelTask(svc.reconcileRunners, time.Second*2, time.Second, time.Second*5))
 	return svc, nil
 }
 
@@ -1089,7 +1105,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	}
 	switch call.Origin {
 	case dal.AsyncCallOriginFSM:
-		return time.Second * 2, s.onAsyncFSMCallCompletion(ctx, call, resp.Msg)
+		return time.Millisecond * 100, s.onAsyncFSMCallCompletion(ctx, call, resp.Msg)
 
 	default:
 		panic(fmt.Sprintf("unexpected async call origin: %s", call.Origin))
@@ -1166,7 +1182,7 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 // Periodically remove stale (ie. have not heartbeat recently) controllers from the database.
 func (s *Service) reapStaleControllers(ctx context.Context) (time.Duration, error) {
 	logger := log.FromContext(ctx)
-	count, err := s.dal.KillStaleControllers(context.Background(), s.config.RunnerTimeout)
+	count, err := s.dal.KillStaleControllers(context.Background(), s.config.ControllerTimeout)
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete stale controllers: %w", err)
 	} else if count > 0 {
