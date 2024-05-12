@@ -27,6 +27,6 @@ find backend/protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xarg
 (cd backend/protos && buf generate)
 
 echo "Formatting TypeScript..."
-(cd frontend && npm run lint:fix && npm run prettier)
+(cd frontend && npm run lint:fix)
 
 git diff
