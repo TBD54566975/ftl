@@ -1,13 +1,17 @@
 package ftl
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
 )
 
 // Module returns the FTL module currently being executed.
@@ -46,10 +50,85 @@ func FuncRef(call any) Ref {
 	return goRefToFTLRef(ref)
 }
 
+var allowAnyPackageForTesting = false
+
 func goRefToFTLRef(ref string) Ref {
-	if !strings.HasPrefix(ref, "ftl/") {
+	if !allowAnyPackageForTesting && !strings.HasPrefix(ref, "ftl/") {
 		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", ref))
 	}
 	parts := strings.Split(ref[strings.LastIndex(ref, "/")+1:], ".")
 	return Ref{parts[len(parts)-2], strcase.ToLowerCamel(parts[len(parts)-1])}
+}
+
+// Reflect returns the FTL schema for a Go type.
+func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
+	switch t.Kind() {
+	case reflect.Struct:
+		// Handle well-known types.
+		if reflect.TypeFor[time.Time]() == t {
+			return &schema.Time{}
+		}
+
+		// User-defined types.
+		return refForType(t)
+
+	case reflect.Slice:
+		return &schema.Array{Element: reflectSchemaType(ctx, t.Elem())}
+
+	case reflect.Map:
+		return &schema.Map{Key: reflectSchemaType(ctx, t.Key()), Value: reflectSchemaType(ctx, t.Elem())}
+
+	case reflect.Bool:
+		return &schema.Bool{}
+
+	case reflect.String:
+		if t.PkgPath() != "" { // Enum
+			return &schema.Ref{
+				Module: moduleForType(t),
+				Name:   strcase.ToUpperCamel(t.Name()),
+			}
+		}
+		return &schema.String{}
+
+	case reflect.Int:
+		if t.PkgPath() != "" { // Enum
+			return &schema.Ref{
+				Module: moduleForType(t),
+				Name:   strcase.ToUpperCamel(t.Name()),
+			}
+		}
+		return &schema.Int{}
+
+	case reflect.Float64:
+		return &schema.Float{}
+
+	case reflect.Interface:
+		if t.NumMethod() == 0 { // any
+			return &schema.Any{}
+		}
+		// Check if it's a sum-type discriminator.
+		registry, ok := typeregistry.FromContext(ctx).Get()
+		if !ok || !registry.IsSumTypeDiscriminator(t) {
+			panic(fmt.Sprintf("unsupported interface type %s", t))
+		}
+		return refForType(t)
+
+	default:
+		panic(fmt.Sprintf("unsupported FTL type %s", t))
+	}
+}
+
+// Return the FTL module for a type or panic if it's not an FTL type.
+func moduleForType(t reflect.Type) string {
+	module := t.PkgPath()
+	if !allowAnyPackageForTesting && !strings.HasPrefix(module, "ftl/") {
+		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", module))
+	}
+	parts := strings.Split(module, "/")
+	return parts[len(parts)-1]
+}
+
+func refForType(t reflect.Type) *schema.Ref {
+	module := moduleForType(t)
+	return &schema.Ref{Module: module, Name: strcase.ToUpperCamel(t.Name())}
 }
