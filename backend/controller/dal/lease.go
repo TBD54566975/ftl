@@ -13,8 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-const leaseRenewalInterval = time.Second * 2
-
 var _ leases.Leaser = (*DAL)(nil)
 
 // Lease represents a lease that is held by a controller.
@@ -35,12 +33,13 @@ func (l *Lease) String() string {
 // Periodically renew the lease until it is released.
 func (l *Lease) renew(ctx context.Context) {
 	defer close(l.errch)
-	logger := log.FromContext(ctx).Scope("lease(" + l.key.String() + ")")
-	logger.Debugf("Acquired lease %s", l.key)
+	leaseRenewalInterval := l.ttl / 2
+	logger := log.FromContext(ctx).Scope("lease:" + l.key.String())
+	logger.Debugf("Acquired lease")
 	for {
 		select {
 		case <-time.After(leaseRenewalInterval):
-			logger.Tracef("Renewing lease %s", l.key)
+			logger.Tracef("Renewing lease")
 			ctx, cancel := context.WithTimeout(ctx, leaseRenewalInterval)
 			_, err := l.db.RenewLease(ctx, l.ttl, l.idempotencyKey, l.key)
 			cancel()
@@ -60,7 +59,7 @@ func (l *Lease) renew(ctx context.Context) {
 			if l.leak { // For testing.
 				return
 			}
-			logger.Debugf("Releasing lease %s", l.key)
+			logger.Debugf("Releasing lease")
 			_, err := l.db.ReleaseLease(ctx, l.idempotencyKey, l.key)
 			l.errch <- translatePGError(err)
 			return
@@ -73,6 +72,9 @@ func (l *Lease) Release() error {
 	return <-l.errch
 }
 
+// AcquireLease acquires a lease for the given key.
+//
+// Will return ErrConflict if the lease is already held by another controller.
 func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duration) (leases.Lease, error) {
 	if ttl < time.Second*5 {
 		return nil, fmt.Errorf("lease TTL must be at least 5 seconds")

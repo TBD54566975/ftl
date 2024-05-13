@@ -339,7 +339,7 @@ func parseCall(pctx *parseContext, node *ast.CallExpr) {
 	if ref == nil {
 		ref = parseSelectorRef(node.Args[1])
 		var suffix string
-		if pctx.schema.Resolve(ref) != nil {
+		if pctx.schema.Resolve(ref).Ok() {
 			suffix = ", does it need to be exported?"
 		}
 		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {

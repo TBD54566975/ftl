@@ -63,7 +63,7 @@ func (e *Enum) ToProto() proto.Message {
 		Variants: nodeListToProto[*schemapb.EnumVariant](e.Variants),
 	}
 	if e.Type != nil {
-		se.Type = typeToProto(e.Type)
+		se.Type = TypeToProto(e.Type)
 	}
 	return se
 }
@@ -80,7 +80,7 @@ func EnumFromProto(s *schemapb.Enum) *Enum {
 		Variants: enumVariantListToSchema(s.Variants),
 	}
 	if s.Type != nil {
-		e.Type = typeToSchema(s.Type)
+		e.Type = TypeFromProto(s.Type)
 	}
 	return e
 }

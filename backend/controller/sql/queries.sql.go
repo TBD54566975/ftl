@@ -37,7 +37,6 @@ RETURNING
   (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
   (SELECT key FROM lease) AS lease_key,
   origin,
-  origin_key,
   verb,
   request
 `
@@ -46,9 +45,8 @@ type AcquireAsyncCallRow struct {
 	AsyncCallID         int64
 	LeaseIdempotencyKey uuid.UUID
 	LeaseKey            leases.Key
-	Origin              AsyncCallOrigin
-	OriginKey           string
-	Verb                schema.Ref
+	Origin              string
+	Verb                schema.RefKey
 	Request             []byte
 }
 
@@ -62,36 +60,10 @@ func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (Acqu
 		&i.LeaseIdempotencyKey,
 		&i.LeaseKey,
 		&i.Origin,
-		&i.OriginKey,
 		&i.Verb,
 		&i.Request,
 	)
 	return i, err
-}
-
-const addAsyncCall = `-- name: AddAsyncCall :one
-INSERT INTO async_calls (verb, origin, origin_key, request)
-VALUES ($1, $2, $3, $4)
-RETURNING true
-`
-
-type AddAsyncCallParams struct {
-	Verb      schema.Ref
-	Origin    AsyncCallOrigin
-	OriginKey string
-	Request   []byte
-}
-
-func (q *Queries) AddAsyncCall(ctx context.Context, arg AddAsyncCallParams) (bool, error) {
-	row := q.db.QueryRow(ctx, addAsyncCall,
-		arg.Verb,
-		arg.Origin,
-		arg.OriginKey,
-		arg.Request,
-	)
-	var column_1 bool
-	err := row.Scan(&column_1)
-	return column_1, err
 }
 
 const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
@@ -116,22 +88,6 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 	return err
 }
 
-const completeAsyncCall = `-- name: CompleteAsyncCall :one
-UPDATE async_calls
-SET state = 'success',
-    response = $1,
-    error = $2
-WHERE id = $3
-RETURNING true
-`
-
-func (q *Queries) CompleteAsyncCall(ctx context.Context, response []byte, error optional.Option[string], iD int64) (bool, error) {
-	row := q.db.QueryRow(ctx, completeAsyncCall, response, error, iD)
-	var column_1 bool
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const createArtefact = `-- name: CreateArtefact :one
 INSERT INTO artefacts (digest, content)
 VALUES ($1, $2)
@@ -141,6 +97,19 @@ RETURNING id
 // Create a new artefact and return the artefact ID.
 func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error) {
 	row := q.db.QueryRow(ctx, createArtefact, digest, content)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const createAsyncCall = `-- name: CreateAsyncCall :one
+INSERT INTO async_calls (verb, origin, request)
+VALUES ($1, $2, $3)
+RETURNING id
+`
+
+func (q *Queries) CreateAsyncCall(ctx context.Context, verb schema.RefKey, origin string, request []byte) (int64, error) {
+	row := q.db.QueryRow(ctx, createAsyncCall, verb, origin, request)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -321,6 +290,55 @@ func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const failAsyncCall = `-- name: FailAsyncCall :one
+UPDATE async_calls
+SET
+  state = 'error'::async_call_state,
+  error = $1::TEXT
+WHERE id = $2
+RETURNING true
+`
+
+func (q *Queries) FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error) {
+	row := q.db.QueryRow(ctx, failAsyncCall, error, iD)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const failFSMInstance = `-- name: FailFSMInstance :one
+UPDATE fsm_instances
+SET
+  current_state = '',
+  async_call_id = NULL,
+  status = 'failed'::fsm_status
+WHERE
+  fsm = $1::schema_ref AND key = $2::TEXT
+RETURNING true
+`
+
+func (q *Queries) FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
+	row := q.db.QueryRow(ctx, failFSMInstance, fsm, key)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const finishFSMTransition = `-- name: FinishFSMTransition :one
+UPDATE fsm_instances
+SET current_state = destination_state, destination_state = NULL, async_call_id = NULL
+WHERE fsm = $1::schema_ref AND key = $2::TEXT
+RETURNING true
+`
+
+// Mark an FSM transition as completed, updating the current state and clearing the async call ID.
+func (q *Queries) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
+	row := q.db.QueryRow(ctx, finishFSMTransition, fsm, key)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getActiveControllers = `-- name: GetActiveControllers :many
@@ -908,6 +926,28 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 		&i.ID_2,
 		&i.Language,
 		&i.Name,
+	)
+	return i, err
+}
+
+const getFSMInstance = `-- name: GetFSMInstance :one
+SELECT id, created_at, fsm, key, status, current_state, destination_state, async_call_id
+FROM fsm_instances
+WHERE fsm = $1::schema_ref AND key = $2
+`
+
+func (q *Queries) GetFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (FsmInstance, error) {
+	row := q.db.QueryRow(ctx, getFSMInstance, fsm, key)
+	var i FsmInstance
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Fsm,
+		&i.Key,
+		&i.Status,
+		&i.CurrentState,
+		&i.DestinationState,
+		&i.AsyncCallID,
 	)
 	return i, err
 }
@@ -1544,7 +1584,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, origin_key, request, response, error
+SELECT id, created_at, lease_id, verb, state, origin, request, response, error
 FROM async_calls
 WHERE id = $1
 `
@@ -1559,7 +1599,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.Verb,
 		&i.State,
 		&i.Origin,
-		&i.OriginKey,
 		&i.Request,
 		&i.Response,
 		&i.Error,
@@ -1664,46 +1703,6 @@ func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Tim
 	return i, err
 }
 
-const sendFSMEvent = `-- name: SendFSMEvent :one
-WITH execution AS (
-  INSERT INTO fsm_executions (key, name, state)
-  VALUES ($1, $2, $3)
-  ON CONFLICT(key) DO UPDATE SET state = $3
-  RETURNING id
-), call AS (
-  INSERT INTO async_calls (verb, request, origin, origin_key)
-  VALUES ($4, $5, 'fsm', $1)
-  RETURNING id
-)
-INSERT INTO fsm_transitions (fsm_executions_id, async_calls_id)
-VALUES ((SELECT id FROM execution), (SELECT id FROM call))
-RETURNING id
-`
-
-type SendFSMEventParams struct {
-	Key     string
-	Name    string
-	State   string
-	Verb    schema.Ref
-	Request []byte
-}
-
-// Creates a new FSM execution, including initial async call and transition.
-//
-// "key" is the unique identifier for the FSM execution.
-func (q *Queries) SendFSMEvent(ctx context.Context, arg SendFSMEventParams) (int64, error) {
-	row := q.db.QueryRow(ctx, sendFSMEvent,
-		arg.Key,
-		arg.Name,
-		arg.State,
-		arg.Verb,
-		arg.Request,
-	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2
@@ -1780,6 +1779,94 @@ func (q *Queries) StartCronJobs(ctx context.Context, keys []string) ([]StartCron
 		return nil, err
 	}
 	return items, nil
+}
+
+const startFSMTransition = `-- name: StartFSMTransition :one
+INSERT INTO fsm_instances (
+  fsm,
+  key,
+  destination_state,
+  async_call_id
+) VALUES (
+  $1,
+  $2,
+  $3::schema_ref,
+  $4::BIGINT
+)
+ON CONFLICT(fsm, key) DO
+UPDATE SET
+  destination_state = $3::schema_ref,
+  async_call_id = $4::BIGINT
+WHERE
+  fsm_instances.async_call_id IS NULL
+  AND fsm_instances.destination_state IS NULL
+RETURNING id, created_at, fsm, key, status, current_state, destination_state, async_call_id
+`
+
+type StartFSMTransitionParams struct {
+	Fsm              schema.RefKey
+	Key              string
+	DestinationState schema.RefKey
+	AsyncCallID      int64
+}
+
+// Start a new FSM transition, populating the destination state and async call ID.
+//
+// "key" is the unique identifier for the FSM execution.
+func (q *Queries) StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error) {
+	row := q.db.QueryRow(ctx, startFSMTransition,
+		arg.Fsm,
+		arg.Key,
+		arg.DestinationState,
+		arg.AsyncCallID,
+	)
+	var i FsmInstance
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Fsm,
+		&i.Key,
+		&i.Status,
+		&i.CurrentState,
+		&i.DestinationState,
+		&i.AsyncCallID,
+	)
+	return i, err
+}
+
+const succeedAsyncCall = `-- name: SucceedAsyncCall :one
+UPDATE async_calls
+SET
+  state = 'success'::async_call_state,
+  response = $1::JSONB
+WHERE id = $2
+RETURNING true
+`
+
+func (q *Queries) SucceedAsyncCall(ctx context.Context, response []byte, iD int64) (bool, error) {
+	row := q.db.QueryRow(ctx, succeedAsyncCall, response, iD)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const succeedFSMInstance = `-- name: SucceedFSMInstance :one
+UPDATE fsm_instances
+SET
+  current_state = destination_state,
+  destination_state = NULL,
+  async_call_id = NULL,
+  status = 'completed'::fsm_status
+WHERE
+  fsm = $1::schema_ref AND key = $2::TEXT
+RETURNING true
+`
+
+func (q *Queries) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
+	row := q.db.QueryRow(ctx, succeedFSMInstance, fsm, key)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const upsertController = `-- name: UpsertController :one

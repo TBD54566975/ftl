@@ -18,6 +18,13 @@ type Map struct {
 var _ Type = (*Map)(nil)
 var _ Symbol = (*Map)(nil)
 
+func (m *Map) Equal(other Type) bool {
+	o, ok := other.(*Map)
+	if !ok {
+		return false
+	}
+	return m.Key.Equal(o.Key) && m.Value.Equal(o.Value)
+}
 func (m *Map) Position() Position     { return m.Pos }
 func (m *Map) schemaChildren() []Node { return []Node{m.Key, m.Value} }
 func (*Map) schemaType()              {}
@@ -26,15 +33,15 @@ func (m *Map) String() string         { return fmt.Sprintf("{%s: %s}", m.Key.Str
 
 func (m *Map) ToProto() proto.Message {
 	return &schemapb.Map{
-		Key:   typeToProto(m.Key),
-		Value: typeToProto(m.Value),
+		Key:   TypeToProto(m.Key),
+		Value: TypeToProto(m.Value),
 	}
 }
 
 func mapToSchema(s *schemapb.Map) *Map {
 	return &Map{
 		Pos:   posFromProto(s.Pos),
-		Key:   typeToSchema(s.Key),
-		Value: typeToSchema(s.Value),
+		Key:   TypeFromProto(s.Key),
+		Value: TypeFromProto(s.Value),
 	}
 }

@@ -6,7 +6,7 @@ replace github.com/TBD54566975/ftl => ../../../..
 
 require (
 	github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
-	github.com/alecthomas/assert/v2 v2.9.0
+	github.com/alecthomas/assert/v2 v2.10.0
 	golang.org/x/sync v0.7.0
 )
 

@@ -20,5 +20,6 @@ func (*Any) schemaChildren() []Node   { return nil }
 func (*Any) schemaType()              {}
 func (*Any) schemaSymbol()            {}
 func (*Any) String() string           { return "Any" }
+func (*Any) Equal(other Type) bool    { _, ok := other.(*Any); return ok }
 func (a *Any) ToProto() proto.Message { return &schemapb.Any{Pos: posToProto(a.Pos)} }
 func (*Any) GetName() string          { return "Any" }

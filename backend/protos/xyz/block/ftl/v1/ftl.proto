@@ -54,10 +54,8 @@ message Metadata {
 message CallRequest {
   Metadata metadata = 1;
 
-  schema.Ref verb = 4;
+  schema.Ref verb = 2;
   bytes body = 3;
-
-  reserved 2;
 }
 
 message CallResponse {
@@ -81,6 +79,15 @@ message AcquireLeaseRequest {
 
 message AcquireLeaseResponse {}
 
+message SendFSMEventRequest {
+  schema.Ref fsm = 1;
+  string instance = 2;
+  schema.Type event = 3;
+  bytes body = 4;
+}
+
+message SendFSMEventResponse {}
+
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.
@@ -95,6 +102,9 @@ service VerbService {
   //
   // Returns ResourceExhausted if the lease is held.
   rpc AcquireLease(stream AcquireLeaseRequest) returns (stream AcquireLeaseResponse);
+
+  // Send an event to an FSM.
+  rpc SendFSMEvent(SendFSMEventRequest) returns (SendFSMEventResponse);
 
   // Issue a synchronous call to a Verb.
   rpc Call(CallRequest) returns (CallResponse);
@@ -252,11 +262,9 @@ message StatusResponse {
 
   message IngressRoute {
     string deployment_key = 1;
-    schema.Ref verb = 5;
+    schema.Ref verb = 2;
     string method = 3;
     string path = 4;
-
-    reserved 2;
   }
   repeated IngressRoute ingress_routes = 4;
 

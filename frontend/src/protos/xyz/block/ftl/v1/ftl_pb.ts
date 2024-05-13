@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
-import { Module, Ref, Schema } from "./schema/schema_pb.js";
+import { Module, Ref, Schema, Type } from "./schema/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.DeploymentChangeType
@@ -432,7 +432,7 @@ export class CallRequest extends Message<CallRequest> {
   metadata?: Metadata;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 4;
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 2;
    */
   verb?: Ref;
 
@@ -450,7 +450,7 @@ export class CallRequest extends Message<CallRequest> {
   static readonly typeName = "xyz.block.ftl.v1.CallRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: Metadata },
-    { no: 4, name: "verb", kind: "message", T: Ref },
+    { no: 2, name: "verb", kind: "message", T: Ref },
     { no: 3, name: "body", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
@@ -643,6 +643,92 @@ export class AcquireLeaseResponse extends Message<AcquireLeaseResponse> {
 
   static equals(a: AcquireLeaseResponse | PlainMessage<AcquireLeaseResponse> | undefined, b: AcquireLeaseResponse | PlainMessage<AcquireLeaseResponse> | undefined): boolean {
     return proto3.util.equals(AcquireLeaseResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.SendFSMEventRequest
+ */
+export class SendFSMEventRequest extends Message<SendFSMEventRequest> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref fsm = 1;
+   */
+  fsm?: Ref;
+
+  /**
+   * @generated from field: string instance = 2;
+   */
+  instance = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type event = 3;
+   */
+  event?: Type;
+
+  /**
+   * @generated from field: bytes body = 4;
+   */
+  body = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<SendFSMEventRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.SendFSMEventRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fsm", kind: "message", T: Ref },
+    { no: 2, name: "instance", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "event", kind: "message", T: Type },
+    { no: 4, name: "body", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SendFSMEventRequest {
+    return new SendFSMEventRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SendFSMEventRequest {
+    return new SendFSMEventRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SendFSMEventRequest {
+    return new SendFSMEventRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SendFSMEventRequest | PlainMessage<SendFSMEventRequest> | undefined, b: SendFSMEventRequest | PlainMessage<SendFSMEventRequest> | undefined): boolean {
+    return proto3.util.equals(SendFSMEventRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.SendFSMEventResponse
+ */
+export class SendFSMEventResponse extends Message<SendFSMEventResponse> {
+  constructor(data?: PartialMessage<SendFSMEventResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.SendFSMEventResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SendFSMEventResponse {
+    return new SendFSMEventResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SendFSMEventResponse {
+    return new SendFSMEventResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SendFSMEventResponse {
+    return new SendFSMEventResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SendFSMEventResponse | PlainMessage<SendFSMEventResponse> | undefined, b: SendFSMEventResponse | PlainMessage<SendFSMEventResponse> | undefined): boolean {
+    return proto3.util.equals(SendFSMEventResponse, a, b);
   }
 }
 
@@ -1915,7 +2001,7 @@ export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressR
   deploymentKey = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 5;
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 2;
    */
   verb?: Ref;
 
@@ -1938,7 +2024,7 @@ export class StatusResponse_IngressRoute extends Message<StatusResponse_IngressR
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse.IngressRoute";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "verb", kind: "message", T: Ref },
+    { no: 2, name: "verb", kind: "message", T: Ref },
     { no: 3, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);

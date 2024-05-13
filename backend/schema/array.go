@@ -15,6 +15,13 @@ type Array struct {
 var _ Type = (*Array)(nil)
 var _ Symbol = (*Array)(nil)
 
+func (a *Array) Equal(other Type) bool {
+	o, ok := other.(*Array)
+	if !ok {
+		return false
+	}
+	return a.Element.Equal(o.Element)
+}
 func (a *Array) Position() Position     { return a.Pos }
 func (a *Array) schemaChildren() []Node { return []Node{a.Element} }
 func (a *Array) schemaType()            {}
@@ -22,12 +29,12 @@ func (a *Array) schemaSymbol()          {}
 func (a *Array) String() string         { return "[" + a.Element.String() + "]" }
 
 func (a *Array) ToProto() proto.Message {
-	return &schemapb.Array{Element: typeToProto(a.Element)}
+	return &schemapb.Array{Element: TypeToProto(a.Element)}
 }
 
 func arrayToSchema(s *schemapb.Array) *Array {
 	return &Array{
 		Pos:     posFromProto(s.Pos),
-		Element: typeToSchema(s.Element),
+		Element: TypeFromProto(s.Element),
 	}
 }

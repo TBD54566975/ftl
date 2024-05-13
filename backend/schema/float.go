@@ -15,6 +15,7 @@ type Float struct {
 var _ Type = (*Float)(nil)
 var _ Symbol = (*Float)(nil)
 
+func (f *Float) Equal(other Type) bool  { _, ok := other.(*Float); return ok }
 func (f *Float) Position() Position     { return f.Pos }
 func (*Float) schemaChildren() []Node   { return nil }
 func (*Float) schemaType()              {}

@@ -45,6 +45,9 @@ const (
 	// VerbServiceAcquireLeaseProcedure is the fully-qualified name of the VerbService's AcquireLease
 	// RPC.
 	VerbServiceAcquireLeaseProcedure = "/xyz.block.ftl.v1.VerbService/AcquireLease"
+	// VerbServiceSendFSMEventProcedure is the fully-qualified name of the VerbService's SendFSMEvent
+	// RPC.
+	VerbServiceSendFSMEventProcedure = "/xyz.block.ftl.v1.VerbService/SendFSMEvent"
 	// VerbServiceCallProcedure is the fully-qualified name of the VerbService's Call RPC.
 	VerbServiceCallProcedure = "/xyz.block.ftl.v1.VerbService/Call"
 	// ControllerServicePingProcedure is the fully-qualified name of the ControllerService's Ping RPC.
@@ -108,6 +111,8 @@ type VerbServiceClient interface {
 	//
 	// Returns ResourceExhausted if the lease is held.
 	AcquireLease(context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
+	// Send an event to an FSM.
+	SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
@@ -138,6 +143,11 @@ func NewVerbServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			baseURL+VerbServiceAcquireLeaseProcedure,
 			opts...,
 		),
+		sendFSMEvent: connect.NewClient[v1.SendFSMEventRequest, v1.SendFSMEventResponse](
+			httpClient,
+			baseURL+VerbServiceSendFSMEventProcedure,
+			opts...,
+		),
 		call: connect.NewClient[v1.CallRequest, v1.CallResponse](
 			httpClient,
 			baseURL+VerbServiceCallProcedure,
@@ -151,6 +161,7 @@ type verbServiceClient struct {
 	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
 	getModuleContext *connect.Client[v1.ModuleContextRequest, v1.ModuleContextResponse]
 	acquireLease     *connect.Client[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
+	sendFSMEvent     *connect.Client[v1.SendFSMEventRequest, v1.SendFSMEventResponse]
 	call             *connect.Client[v1.CallRequest, v1.CallResponse]
 }
 
@@ -169,6 +180,11 @@ func (c *verbServiceClient) AcquireLease(ctx context.Context) *connect.BidiStrea
 	return c.acquireLease.CallBidiStream(ctx)
 }
 
+// SendFSMEvent calls xyz.block.ftl.v1.VerbService.SendFSMEvent.
+func (c *verbServiceClient) SendFSMEvent(ctx context.Context, req *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
+	return c.sendFSMEvent.CallUnary(ctx, req)
+}
+
 // Call calls xyz.block.ftl.v1.VerbService.Call.
 func (c *verbServiceClient) Call(ctx context.Context, req *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error) {
 	return c.call.CallUnary(ctx, req)
@@ -184,6 +200,8 @@ type VerbServiceHandler interface {
 	//
 	// Returns ResourceExhausted if the lease is held.
 	AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error
+	// Send an event to an FSM.
+	SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
@@ -210,6 +228,11 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 		svc.AcquireLease,
 		opts...,
 	)
+	verbServiceSendFSMEventHandler := connect.NewUnaryHandler(
+		VerbServiceSendFSMEventProcedure,
+		svc.SendFSMEvent,
+		opts...,
+	)
 	verbServiceCallHandler := connect.NewUnaryHandler(
 		VerbServiceCallProcedure,
 		svc.Call,
@@ -223,6 +246,8 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 			verbServiceGetModuleContextHandler.ServeHTTP(w, r)
 		case VerbServiceAcquireLeaseProcedure:
 			verbServiceAcquireLeaseHandler.ServeHTTP(w, r)
+		case VerbServiceSendFSMEventProcedure:
+			verbServiceSendFSMEventHandler.ServeHTTP(w, r)
 		case VerbServiceCallProcedure:
 			verbServiceCallHandler.ServeHTTP(w, r)
 		default:
@@ -244,6 +269,10 @@ func (UnimplementedVerbServiceHandler) GetModuleContext(context.Context, *connec
 
 func (UnimplementedVerbServiceHandler) AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.AcquireLease is not implemented"))
+}
+
+func (UnimplementedVerbServiceHandler) SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.SendFSMEvent is not implemented"))
 }
 
 func (UnimplementedVerbServiceHandler) Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error) {

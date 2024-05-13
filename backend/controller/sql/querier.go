@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
@@ -18,11 +19,10 @@ type Querier interface {
 	// Reserve a pending async call for execution, returning the associated lease
 	// reservation key.
 	AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error)
-	AddAsyncCall(ctx context.Context, arg AddAsyncCallParams) (bool, error)
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
-	CompleteAsyncCall(ctx context.Context, response []byte, error optional.Option[string], iD int64) (bool, error)
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
+	CreateAsyncCall(ctx context.Context, verb schema.RefKey, origin string, request []byte) (int64, error)
 	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
@@ -31,6 +31,10 @@ type Querier interface {
 	EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error)
 	ExpireLeases(ctx context.Context) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
+	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
+	FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
+	// Mark an FSM transition as completed, updating the current state and clearing the async call ID.
+	FinishFSMTransition(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
 	GetActiveControllers(ctx context.Context) ([]Controller, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
@@ -50,6 +54,7 @@ type Querier interface {
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, schema []byte, count int64) ([]GetDeploymentsWithArtefactsRow, error)
 	GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error)
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
+	GetFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (FsmInstance, error)
 	GetIdleRunners(ctx context.Context, labels []byte, limit int64) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
@@ -77,12 +82,14 @@ type Querier interface {
 	ReplaceDeployment(ctx context.Context, oldDeployment model.DeploymentKey, newDeployment model.DeploymentKey, minReplicas int32) (int64, error)
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error)
-	// Creates a new FSM execution, including initial async call and transition.
-	//
-	// "key" is the unique identifier for the FSM execution.
-	SendFSMEvent(ctx context.Context, arg SendFSMEventParams) (int64, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error)
+	// Start a new FSM transition, populating the destination state and async call ID.
+	//
+	// "key" is the unique identifier for the FSM execution.
+	StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error)
+	SucceedAsyncCall(ctx context.Context, response []byte, iD int64) (bool, error)
+	SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.

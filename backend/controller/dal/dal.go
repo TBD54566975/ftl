@@ -1207,7 +1207,7 @@ func translatePGError(err error) error {
 		case pgerrcode.ForeignKeyViolation:
 			return fmt.Errorf("%s: %w", strings.TrimSuffix(strings.TrimPrefix(pgErr.ConstraintName, pgErr.TableName+"_"), "_id_fkey"), ErrNotFound)
 		case pgerrcode.UniqueViolation:
-			return ErrConflict
+			return fmt.Errorf("%s: %w", pgErr.Message, ErrConflict)
 		case pgerrcode.IntegrityConstraintViolation,
 			pgerrcode.RestrictViolation,
 			pgerrcode.NotNullViolation,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	osExec "os/exec" //nolint:depguard
@@ -23,7 +24,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/container"
-	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -249,9 +249,10 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		logger.Debugf("Creating docker container '%s' for postgres db", ftlContainerName)
 
 		// check if port s.DBPort is already in use
-		_, err := exec.Capture(ctx, ".", "sh", "-c", fmt.Sprintf("lsof -i:%d", s.DBPort))
-		if err == nil {
+		if l, err := net.Listen("tcp", fmt.Sprintf(":%d", s.DBPort)); err != nil {
 			return "", fmt.Errorf("port %d is already in use", s.DBPort)
+		} else if err = l.Close(); err != nil {
+			return "", fmt.Errorf("failed to close listener: %w", err)
 		}
 
 		err = container.RunDB(ctx, ftlContainerName, s.DBPort)

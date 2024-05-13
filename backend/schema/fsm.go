@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -31,6 +32,28 @@ func FSMFromProto(pb *schemapb.FSM) *FSM {
 var _ Decl = (*FSM)(nil)
 var _ Symbol = (*FSM)(nil)
 
+// TerminalStates returns the terminal states of the FSM.
+func (f *FSM) TerminalStates() []*Ref {
+	var out []*Ref
+	all := map[string]struct{}{}
+	in := map[string]struct{}{}
+	for _, t := range f.Transitions {
+		all[t.From.String()] = struct{}{}
+		all[t.To.String()] = struct{}{}
+		in[t.From.String()] = struct{}{}
+	}
+	for key := range all {
+		if _, ok := in[key]; !ok {
+			ref, _ := ParseRef(key)
+			out = append(out, ref)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].String() < out[j].String()
+	})
+	return out
+
+}
 func (f *FSM) GetName() string    { return f.Name }
 func (f *FSM) IsExported() bool   { return false }
 func (f *FSM) Position() Position { return f.Pos }

@@ -15,6 +15,7 @@ type Time struct {
 var _ Type = (*Time)(nil)
 var _ Symbol = (*Time)(nil)
 
+func (t *Time) Equal(other Type) bool  { _, ok := other.(*Time); return ok }
 func (t *Time) Position() Position     { return t.Pos }
 func (*Time) schemaChildren() []Node   { return nil }
 func (*Time) schemaType()              {}

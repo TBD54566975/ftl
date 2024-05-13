@@ -267,7 +267,7 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`4:13-13: unknown reference "one.C"`,
+				`4:13-13: unknown reference "one.C", is the type annotated and exported?`,
 				`6:6-6: "FSM" has no start states`,
 				`7:18-18: unknown source verb "one.C"`,
 				`7:27-27: destination state "one.B" must be a sink but is verb`,

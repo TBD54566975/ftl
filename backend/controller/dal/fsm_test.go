@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/either"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -21,9 +21,13 @@ func TestSendFSMEvent(t *testing.T) {
 	_, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, ErrNotFound)
 
-	ref := schema.Ref{Module: "module", Name: "verb"}
-	err = dal.SendFSMEvent(ctx, "test", "invoiceID", "state", ref, []byte(`{}`))
+	ref := schema.RefKey{Module: "module", Name: "verb"}
+	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`))
 	assert.NoError(t, err)
+
+	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`))
+	assert.IsError(t, err, ErrConflict)
+	assert.EqualError(t, err, "transition already executing: conflict")
 
 	call, err := dal.AcquireAsyncCall(ctx)
 	assert.NoError(t, err)
@@ -34,18 +38,17 @@ func TestSendFSMEvent(t *testing.T) {
 
 	assert.HasPrefix(t, call.Lease.String(), "/system/async_call/1:")
 	expectedCall := &AsyncCall{
-		ID:        1,
-		Origin:    AsyncCallOriginFSM,
-		OriginKey: "invoiceID",
-		Verb:      ref,
-		Request:   []byte(`{}`),
+		ID:   1,
+		Verb: ref,
+		Origin: AsyncOriginFSM{
+			FSM: schema.RefKey{Module: "test", Name: "test"},
+			Key: "invoiceID",
+		},
+		Request: []byte(`{}`),
 	}
 	assert.Equal(t, expectedCall, call, assert.Exclude[*Lease]())
 
-	err = dal.CompleteAsyncCall(ctx, call, nil, optional.None[string]())
-	assert.EqualError(t, err, "must provide exactly one of response or error")
-
-	err = dal.CompleteAsyncCall(ctx, call, []byte(`{}`), optional.None[string]())
+	err = dal.CompleteAsyncCall(ctx, call, either.LeftOf[string]([]byte(`{}`)), func(tx *Tx) error { return nil })
 	assert.NoError(t, err)
 
 	actual, err := dal.LoadAsyncCall(ctx, call.ID)

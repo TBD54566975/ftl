@@ -103,7 +103,8 @@ func ingressListToProto(nodes []IngressPathComponent) []*schemapb.IngressPathCom
 	return out
 }
 
-func typeToProto(t Type) *schemapb.Type {
+// TypeToProto creates a schemapb.Type "sum type" from a concreate Type.
+func TypeToProto(t Type) *schemapb.Type {
 	switch t := t.(type) {
 	case *Any:
 		return &schemapb.Type{Value: &schemapb.Type_Any{Any: t.ToProto().(*schemapb.Any)}}

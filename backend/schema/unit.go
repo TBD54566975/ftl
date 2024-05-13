@@ -15,6 +15,7 @@ type Unit struct {
 var _ Type = (*Unit)(nil)
 var _ Symbol = (*Unit)(nil)
 
+func (u *Unit) Equal(other Type) bool              { _, ok := other.(*Unit); return ok }
 func (u *Unit) Position() Position                 { return u.Pos }
 func (u *Unit) schemaType()                        {}
 func (u *Unit) schemaSymbol()                      {}

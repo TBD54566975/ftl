@@ -17,49 +17,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type AsyncCallOrigin string
-
-const (
-	AsyncCallOriginCron   AsyncCallOrigin = "cron"
-	AsyncCallOriginFsm    AsyncCallOrigin = "fsm"
-	AsyncCallOriginPubsub AsyncCallOrigin = "pubsub"
-)
-
-func (e *AsyncCallOrigin) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = AsyncCallOrigin(s)
-	case string:
-		*e = AsyncCallOrigin(s)
-	default:
-		return fmt.Errorf("unsupported scan type for AsyncCallOrigin: %T", src)
-	}
-	return nil
-}
-
-type NullAsyncCallOrigin struct {
-	AsyncCallOrigin AsyncCallOrigin
-	Valid           bool // Valid is true if AsyncCallOrigin is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullAsyncCallOrigin) Scan(value interface{}) error {
-	if value == nil {
-		ns.AsyncCallOrigin, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.AsyncCallOrigin.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullAsyncCallOrigin) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.AsyncCallOrigin), nil
-}
-
 type AsyncCallState string
 
 const (
@@ -373,10 +330,9 @@ type AsyncCall struct {
 	ID        int64
 	CreatedAt time.Time
 	LeaseID   optional.Option[int64]
-	Verb      schema.Ref
+	Verb      schema.RefKey
 	State     AsyncCallState
-	Origin    AsyncCallOrigin
-	OriginKey string
+	Origin    string
 	Request   []byte
 	Response  []byte
 	Error     optional.Option[string]
@@ -434,19 +390,15 @@ type Event struct {
 	Payload      json.RawMessage
 }
 
-type FsmExecution struct {
-	ID        int64
-	CreatedAt time.Time
-	Key       string
-	Name      string
-	Status    FsmStatus
-	State     string
-}
-
-type FsmTransition struct {
-	ID              int64
-	FsmExecutionsID int64
-	AsyncCallsID    int64
+type FsmInstance struct {
+	ID               int64
+	CreatedAt        time.Time
+	Fsm              schema.RefKey
+	Key              string
+	Status           FsmStatus
+	CurrentState     NullRef
+	DestinationState NullRef
+	AsyncCallID      optional.Option[int64]
 }
 
 type IngressRoute struct {
