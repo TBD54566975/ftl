@@ -52,10 +52,6 @@ func TestHashRing(t *testing.T) {
 		lock:            sync.Mutex{},
 		attemptCountMap: map[string]int{},
 	}
-
-	verbCallCount := map[string]int{}
-	verbCallCountLock := sync.Mutex{}
-
 	moduleName := "initial"
 	jobsToCreate := newJobs(t, moduleName, "*/10 * * * * * *", mockDal.clock, 100)
 
@@ -68,14 +64,12 @@ func TestHashRing(t *testing.T) {
 	assert.NoError(t, err)
 
 	controllers := newControllers(ctx, 20, mockDal, func() clock.Clock { return clock.NewMock() }, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
-		verbRef := schema.RefFromProto(r.Msg.Verb)
-
-		verbCallCountLock.Lock()
-		verbCallCount[verbRef.Name]++
-		verbCallCountLock.Unlock()
-
 		return &connect.Response[ftlv1.CallResponse]{}, nil
 	})
+
+	// This should give time for each controller to start watching its own mock clock
+	// If we don;t wait here, we might hit a race condition outlined in issue #1368
+	time.Sleep(time.Millisecond * 100)
 
 	// progress time for each controller one at a time, noting which verbs got attempted each time
 	// to build a map of verb to controller keys
