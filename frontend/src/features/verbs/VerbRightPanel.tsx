@@ -7,7 +7,6 @@ import { ingress, isHttpIngress, httpRequestPath, verbCalls } from './verb.utils
 export const verbPanels = (verb?: Verb) => {
   const panels = [] as ExpandablePanelProps[]
 
-  console.log(verb?.schema)
   if (isHttpIngress(verb)) {
     const http = ingress(verb)
     const path = httpRequestPath(verb)

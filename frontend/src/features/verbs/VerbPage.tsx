@@ -28,7 +28,8 @@ export const VerbPage = () => {
     if (!module) {
       const lastIndex = deploymentKey.lastIndexOf('-')
       if (lastIndex !== -1) {
-        module = modules.modules.find((module) => module.name === deploymentKey.substring(0, lastIndex))
+        const moduleName = deploymentKey.substring(0, lastIndex).replaceAll('dpl-', '')
+        module = modules.modules.find((module) => module.name === moduleName)
         navgation(`/deployments/${module?.deploymentKey}/verbs/${verbName}`)
         notification.showNotification({
           title: 'Showing latest deployment',
