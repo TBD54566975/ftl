@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -37,16 +38,17 @@ import (
 )
 
 type Config struct {
-	Config             []string        `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
-	Bind               *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893" env:"FTL_RUNNER_BIND"`
-	Advertise          *url.URL        `help:"Endpoint the Runner should advertise (use --bind if omitted)." default:"" env:"FTL_RUNNER_ADVERTISE"`
-	Key                model.RunnerKey `help:"Runner key (auto)."`
-	ControllerEndpoint *url.URL        `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
-	TemplateDir        string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
-	DeploymentDir      string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
-	Language           []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin"`
-	HeartbeatPeriod    time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
-	HeartbeatJitter    time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
+	Config                []string        `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
+	Bind                  *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://localhost:8893" env:"FTL_RUNNER_BIND"`
+	Advertise             *url.URL        `help:"Endpoint the Runner should advertise (use --bind if omitted)." default:"" env:"FTL_RUNNER_ADVERTISE"`
+	Key                   model.RunnerKey `help:"Runner key (auto)."`
+	ControllerEndpoint    *url.URL        `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://localhost:8892"`
+	TemplateDir           string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
+	DeploymentDir         string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	DeploymentKeepHistory int             `help:"Number of deployments to keep history for." default:"3"`
+	Language              []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin"`
+	HeartbeatPeriod       time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
+	HeartbeatJitter       time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -64,11 +66,12 @@ func Start(ctx context.Context, config Config) error {
 
 	logger := log.FromContext(ctx).Attrs(map[string]string{"runner": config.Key.String()})
 	logger.Debugf("Starting FTL Runner")
-	logger.Debugf("Deployment directory: %s", config.DeploymentDir)
-	err = os.MkdirAll(config.DeploymentDir, 0700)
+
+	err = manageDeploymentDirectory(logger, config)
 	if err != nil {
-		return fmt.Errorf("failed to create deployment directory: %w", err)
+		return err
 	}
+
 	logger.Debugf("Using FTL endpoint: %s", config.ControllerEndpoint)
 	logger.Debugf("Listening on %s", config.Bind)
 
@@ -106,6 +109,61 @@ func Start(ctx context.Context, config Config) error {
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
 	)
+}
+
+// manageDeploymentDirectory ensures the deployment directory exists and removes old deployments.
+func manageDeploymentDirectory(logger *log.Logger, config Config) error {
+	logger.Debugf("Deployment directory: %s", config.DeploymentDir)
+	err := os.MkdirAll(config.DeploymentDir, 0700)
+	if err != nil {
+		return fmt.Errorf("failed to create deployment directory: %w", err)
+	}
+
+	// Clean up old deployments.
+	modules, err := os.ReadDir(config.DeploymentDir)
+	if err != nil {
+		return fmt.Errorf("failed to read deployment directory: %w", err)
+	}
+
+	for _, module := range modules {
+		if !module.IsDir() {
+			continue
+		}
+
+		moduleDir := filepath.Join(config.DeploymentDir, module.Name())
+		deployments, err := os.ReadDir(moduleDir)
+		if err != nil {
+			return fmt.Errorf("failed to read module directory: %w", err)
+		}
+
+		if len(deployments) < config.DeploymentKeepHistory {
+			continue
+		}
+
+		stats, err := slices.MapErr(deployments, func(d os.DirEntry) (os.FileInfo, error) {
+			return d.Info()
+		})
+		if err != nil {
+			return fmt.Errorf("failed to stat deployments: %w", err)
+		}
+
+		// Sort deployments by modified time, remove anything past the history limit.
+		sort.Slice(deployments, func(i, j int) bool {
+			return stats[i].ModTime().After(stats[j].ModTime())
+		})
+
+		for _, deployment := range deployments[config.DeploymentKeepHistory:] {
+			old := filepath.Join(moduleDir, deployment.Name())
+			logger.Debugf("Removing old deployment: %s", old)
+
+			err := os.RemoveAll(old)
+			if err != nil {
+				return fmt.Errorf("failed to remove old deployment: %w", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 var _ ftlv1connect.RunnerServiceHandler = (*Service)(nil)
