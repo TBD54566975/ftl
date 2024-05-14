@@ -49,6 +49,8 @@ func run(t *testing.T, actions ...action) {
 
 	rootDir := internal.GitRoot("")
 
+	t.Setenv("FTL_CONFIG", filepath.Join(tmpDir, "database/ftl-project.toml"))
+
 	// Build FTL binary
 	logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
 	ctx := log.ContextWithLogger(context.Background(), logger)

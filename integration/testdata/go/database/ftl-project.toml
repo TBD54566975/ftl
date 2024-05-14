@@ -1,0 +1,13 @@
+ftl-min-version = ""
+
+[global]
+
+[modules]
+  [modules.database]
+    [modules.database.secrets]
+      FTL_DSN_DATABASE_TESTDB = "inline://InBvc3RncmVzOi8vcG9zdGdyZXM6c2VjcmV0QGxvY2FsaG9zdDo1NDMyMC90ZXN0ZGI_c3NsbW9kZT1kaXNhYmxlIg"
+
+[executables]
+  ftl = ""
+
+[commands]
