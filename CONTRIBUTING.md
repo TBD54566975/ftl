@@ -158,12 +158,6 @@ Anyone from the community is welcome (and encouraged!) to raise issues via
 
 We have an [automated aggregation issue](https://github.com/TBD54566975/ftl/issues/728) that lists all the PRs and issues people are working on.
 
-### Discussions
-
-Design discussions and proposals take place on our [discussion forums](https://forums.tbd.website).
-
-We advocate an asynchronous, written debate model - so write up your thoughts and invite the community to join in!
-
 ### Continuous Integration
 
 Build and Test cycles are run on every commit to every branch on [GitHub Actions](https://github.com/TBD54566975/ftl/actions).
