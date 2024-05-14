@@ -12,9 +12,8 @@ import (
 func TestFromSecrets(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	t.Setenv(DSNSecretKey("echo", "echo"), "postgres://echo:echo@localhost:5432/echo")
 	secrets := map[string][]byte{
-		"FTL_DSN_ECHO_ECHO": []byte("postgres://echo:echo@localhost:5432/echo"),
+		"FTL_DSN_ECHO_ECHO": []byte("\"postgres://echo:echo@localhost:5432/echo\""),
 	}
 	databases, err := DatabasesFromSecrets(ctx, "echo", secrets)
 	assert.NoError(t, err)
