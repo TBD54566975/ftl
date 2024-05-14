@@ -41,7 +41,7 @@ func infof(format string, args ...any) {
 var buildOnce sync.Once
 
 // run an integration test.
-func run(t *testing.T, actions ...action) {
+func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	tmpDir := t.TempDir()
 
 	cwd, err := os.Getwd()
@@ -49,7 +49,9 @@ func run(t *testing.T, actions ...action) {
 
 	rootDir := internal.GitRoot("")
 
-	t.Setenv("FTL_CONFIG", filepath.Join(tmpDir, "database/ftl-project.toml"))
+	if ftlConfigPath != "" {
+		t.Setenv("FTL_CONFIG", filepath.Join(tmpDir, ftlConfigPath))
+	}
 
 	// Build FTL binary
 	logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
