@@ -25,7 +25,7 @@ func (e EnvarProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]by
 
 	value, ok := os.LookupEnv(envar)
 	if ok {
-		return base64.RawStdEncoding.DecodeString(value)
+		return base64.RawURLEncoding.DecodeString(value)
 	}
 	return nil, fmt.Errorf("environment variable %q is not set: %w", envar, ErrNotFound)
 }
@@ -36,7 +36,7 @@ func (e EnvarProvider[R]) Delete(ctx context.Context, ref Ref) error {
 
 func (e EnvarProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
 	envar := e.key(ref)
-	fmt.Printf("%s=%s\n", envar, base64.RawStdEncoding.EncodeToString(value))
+	fmt.Printf("%s=%s\n", envar, base64.RawURLEncoding.EncodeToString(value))
 	return &url.URL{Scheme: "envar", Host: ref.Name}, nil
 }
 
@@ -45,9 +45,9 @@ func (e EnvarProvider[R]) Writer() bool { return e.Envar }
 func (e EnvarProvider[R]) key(ref Ref) string {
 	key := e.prefix()
 	if m, ok := ref.Module.Get(); ok {
-		key += base64.RawStdEncoding.EncodeToString([]byte(m)) + "_"
+		key += base64.RawURLEncoding.EncodeToString([]byte(m)) + "_"
 	}
-	key += base64.RawStdEncoding.EncodeToString([]byte(ref.Name))
+	key += base64.RawURLEncoding.EncodeToString([]byte(ref.Name))
 	return key
 }
 
@@ -84,13 +84,13 @@ func (EnvarProvider[R]) prefix() string {
 // 	}
 // 	var module optional.Option[string]
 // 	if nameParts[2] != "" {
-// 		decoded, err := base64.RawStdEncoding.DecodeString(nameParts[2])
+// 		decoded, err := base64.RawURLEncoding.DecodeString(nameParts[2])
 // 		if err != nil {
 // 			return Entry{}, fmt.Errorf("invalid encoded module %q: %w", nameParts[2], err)
 // 		}
 // 		module = optional.Some(string(decoded))
 // 	}
-// 	decoded, err := base64.RawStdEncoding.DecodeString(nameParts[3])
+// 	decoded, err := base64.RawURLEncoding.DecodeString(nameParts[3])
 // 	if err != nil {
 // 		return Entry{}, fmt.Errorf("invalid encoded name %q: %w", nameParts[3], err)
 // 	}

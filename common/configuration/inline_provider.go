@@ -20,7 +20,7 @@ func (InlineProvider[R]) Key() string { return "inline" }
 func (i InlineProvider[R]) Writer() bool { return i.Inline }
 
 func (InlineProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	data, err := base64.RawStdEncoding.DecodeString(key.Host)
+	data, err := base64.RawURLEncoding.DecodeString(key.Host)
 	if err != nil {
 		return nil, fmt.Errorf("invalid base64 data in inline configuration: %w", err)
 	}
@@ -28,7 +28,7 @@ func (InlineProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byt
 }
 
 func (InlineProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	b64 := base64.RawStdEncoding.EncodeToString(value)
+	b64 := base64.RawURLEncoding.EncodeToString(value)
 	return &url.URL{Scheme: "inline", Host: b64}, nil
 }
 

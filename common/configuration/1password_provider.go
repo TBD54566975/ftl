@@ -31,7 +31,7 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 		return nil, fmt.Errorf("1Password CLI tool \"op\" not found: %w", err)
 	}
 
-	decoded, err := base64.RawStdEncoding.DecodeString(key.Host)
+	decoded, err := base64.RawURLEncoding.DecodeString(key.Host)
 	if err != nil {
 		return nil, fmt.Errorf("1Password secret reference must be a base64 encoded string: %w", err)
 	}
@@ -56,7 +56,7 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 	if !strings.HasPrefix(opref, "op://") {
 		return nil, fmt.Errorf("1Password secret reference must start with \"op://\"")
 	}
-	encoded := base64.RawStdEncoding.EncodeToString([]byte(opref))
+	encoded := base64.RawURLEncoding.EncodeToString([]byte(opref))
 	return &url.URL{Scheme: "op", Host: encoded}, nil
 }
 
