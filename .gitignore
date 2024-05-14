@@ -1,5 +1,6 @@
 .hermit/
 .vscode/
+!/.vscode/settings.json
 .idea/
 *.iml
 target/
