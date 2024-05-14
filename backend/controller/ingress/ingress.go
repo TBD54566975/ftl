@@ -194,6 +194,8 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 				typeMatches = true
 			}
 		case *schema.Enum:
+			var inputName any
+			inputName = value
 			for _, v := range d.Variants {
 				switch t := v.Value.(type) {
 				case *schema.StringValue:
@@ -211,11 +213,36 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 						}
 					}
 				case *schema.TypeValue:
-					//TODO: Implement
+					if reqVariant, ok := value.(map[string]any); ok {
+						vName, ok := reqVariant["name"]
+						if !ok {
+							return fmt.Errorf(`missing name field in enum type %q: expected structure is `+
+								"{\"name\": \"<variant name>\", \"value\": <variant value>}", value)
+						}
+						vNameStr, ok := vName.(string)
+						if !ok {
+							return fmt.Errorf(`invalid type for enum %q; name field must be a string, was %T`,
+								fieldType, vName)
+						}
+						inputName = fmt.Sprintf("%q", vNameStr)
+
+						vValue, ok := reqVariant["value"]
+						if !ok {
+							return fmt.Errorf(`missing value field in enum type %q: expected structure is `+
+								"{\"name\": \"<variant name>\", \"value\": <variant value>}", value)
+						}
+
+						if v.Name == vNameStr {
+							return validateValue(t.Value, path, vValue, sch)
+						}
+					} else {
+						return fmt.Errorf(`malformed enum type %s: expected structure is `+
+							"{\"name\": \"<variant name>\", \"value\": <variant value>}", path)
+					}
 				}
 			}
 			if !typeMatches {
-				return fmt.Errorf("%s is not a valid variant of enum %s", value, fieldType)
+				return fmt.Errorf("%s is not a valid variant of enum %s", inputName, fieldType)
 			}
 
 		case *schema.Config, *schema.Database, *schema.Secret, *schema.Verb, *schema.FSM:

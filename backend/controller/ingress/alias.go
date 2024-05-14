@@ -12,19 +12,55 @@ func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser 
 	}
 	switch t := t.(type) {
 	case *schema.Ref:
-		data, err := sch.ResolveRefMonomorphised(t)
-		if err != nil {
-			return fmt.Errorf("%s: failed to resolve data type: %w", t.Pos, err)
-		}
-		m, ok := obj.(map[string]any)
-		if !ok {
-			return fmt.Errorf("%s: expected map, got %T", t.Pos, obj)
-		}
-		for _, field := range data.Fields {
-			name := aliaser(m, field)
-			if err := transformAliasedFields(sch, field.Type, m[name], aliaser); err != nil {
-				return err
+		switch decl := sch.ResolveRef(t).(type) {
+		case *schema.Data:
+			data, err := sch.ResolveRefMonomorphised(t)
+			if err != nil {
+				return fmt.Errorf("%s: failed to resolve data type: %w", t.Pos, err)
 			}
+			m, ok := obj.(map[string]any)
+			if !ok {
+				return fmt.Errorf("%s: expected map, got %T", t.Pos, obj)
+			}
+			for _, field := range data.Fields {
+				name := aliaser(m, field)
+				if err := transformAliasedFields(sch, field.Type, m[name], aliaser); err != nil {
+					return err
+				}
+			}
+		case *schema.Enum:
+			if decl.IsValueEnum() {
+				return nil
+			}
+
+			// type enum
+			m, ok := obj.(map[string]any)
+			if !ok {
+				return fmt.Errorf("%s: expected map, got %T", t.Pos, obj)
+			}
+			name, ok := m["name"]
+			if !ok {
+				return fmt.Errorf("%s: expected type enum request to have 'name' field", t.Pos)
+			}
+			nameStr, ok := name.(string)
+			if !ok {
+				return fmt.Errorf("%s: expected 'name' field to be a string, got %T", t.Pos, name)
+			}
+
+			value, ok := m["value"]
+			if !ok {
+				return fmt.Errorf("%s: expected type enum request to have 'value' field", t.Pos)
+			}
+
+			for _, v := range decl.Variants {
+				if v.Name == nameStr {
+					if err := transformAliasedFields(sch, v.Value.(*schema.TypeValue).Value, value, aliaser); err != nil { //nolint:forcetypeassert
+						return err
+					}
+				}
+			}
+		case *schema.Config, *schema.Database, *schema.FSM, *schema.Secret, *schema.Verb:
+			return fmt.Errorf("%s: unsupported ref type %T", t.Pos, decl)
 		}
 
 	case *schema.Array:

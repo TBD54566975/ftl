@@ -166,11 +166,18 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				}
 
 			case *Enum:
-				if n.Type != nil {
+				if n.IsValueEnum() {
 					for _, v := range n.Variants {
 						if reflect.TypeOf(v.Value.schemaValueType()) != reflect.TypeOf(n.Type) {
 							merr = append(merr, errorf(v, "enum variant %q of type %s cannot have a value of "+
 								"type %q", v.Name, n.Type, v.Value.schemaValueType()))
+						}
+					}
+				} else {
+					for _, v := range n.Variants {
+						if _, ok := v.Value.(*TypeValue); !ok {
+							merr = append(merr, errorf(v, "type enum variant %q value must be a type, was %T",
+								v.Name, n))
 						}
 					}
 				}
@@ -550,8 +557,13 @@ func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, re
 		return
 	}
 	body = bodySym.Symbol
-	switch bodySym.Symbol.(type) {
+	switch t := bodySym.Symbol.(type) {
 	case *Bytes, *String, *Data, *Unit, *Float, *Int, *Bool, *Map, *Array: // Valid HTTP response payload types.
+	case *Enum:
+		// Type enums are valid but value enums are not.
+		if t.IsValueEnum() {
+			merr = append(merr, errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not enum %s", n.Name, reqOrResp, r, t.Name))
+		}
 	default:
 		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not %s", n.Name, reqOrResp, r, bodySym.Symbol))
 	}

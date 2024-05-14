@@ -261,6 +261,21 @@ func TestGeneratedTypeRegistry(t *testing.T) {
 						{Name: "B", Value: &schema.TypeValue{Value: &schema.String{}}},
 					},
 				},
+				&schema.Enum{
+					Name:   "SecondTypeEnum",
+					Export: true,
+					Variants: []*schema.EnumVariant{
+						{Name: "One", Value: &schema.TypeValue{Value: &schema.Int{}}},
+						{Name: "Two", Value: &schema.TypeValue{Value: &schema.String{}}},
+					},
+				},
+				&schema.Data{
+					Name:   "TransitiveTypeEnum",
+					Export: true,
+					Fields: []*schema.Field{
+						{Name: "TypeEnumRef", Type: &schema.Ref{Name: "SecondTypeEnum", Module: "another"}},
+					},
+				},
 			}},
 		},
 	}
