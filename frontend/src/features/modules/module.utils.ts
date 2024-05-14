@@ -47,3 +47,11 @@ export const callsIn = (modules: Module[], module: Module) => {
 }
 
 export const callsOut = (module: Module) => module.verbs?.flatMap((v) => verbCalls(v))
+
+export const deploymentKeyModuleName = (deploymentKey: string) => {
+  const lastIndex = deploymentKey.lastIndexOf('-')
+  if (lastIndex !== -1) {
+    return deploymentKey.substring(0, lastIndex).replaceAll('dpl-', '')
+  }
+  return null
+}
