@@ -11,6 +11,7 @@ import { isCron, isExported, isHttpIngress } from '../verbs/verb.utils'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { Badge } from '../../components/Badge'
+import { deploymentKeyModuleName } from '../modules/module.utils'
 
 const timeSettings = { isTailing: true, isPaused: false }
 
@@ -32,9 +33,9 @@ export const DeploymentPage = () => {
     if (modules.modules.length > 0 && deploymentKey) {
       let module = modules.modules.find((module) => module.deploymentKey === deploymentKey)
       if (!module) {
-        const lastIndex = deploymentKey.lastIndexOf('-')
-        if (lastIndex !== -1) {
-          module = modules.modules.find((module) => module.name === deploymentKey.substring(0, lastIndex))
+        const moduleName = deploymentKeyModuleName(deploymentKey)
+        if (moduleName) {
+          module = modules.modules.find((module) => module.name === moduleName)
           navgation(`/deployments/${module?.deploymentKey}`)
           notification.showNotification({
             title: 'Showing latest deployment',

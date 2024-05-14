@@ -11,6 +11,7 @@ import { ResizablePanels } from '../../components/ResizablePanels'
 import { CallList } from '../calls/CallList'
 import { VerbRequestForm } from './VerbRequestForm'
 import { verbPanels } from './VerbRightPanel'
+import { deploymentKeyModuleName } from '../modules/module.utils'
 
 export const VerbPage = () => {
   const { deploymentKey, verbName } = useParams()
@@ -26,9 +27,8 @@ export const VerbPage = () => {
 
     let module = modules.modules.find((module) => module.deploymentKey === deploymentKey)
     if (!module) {
-      const lastIndex = deploymentKey.lastIndexOf('-')
-      if (lastIndex !== -1) {
-        const moduleName = deploymentKey.substring(0, lastIndex).replaceAll('dpl-', '')
+      const moduleName = deploymentKeyModuleName(deploymentKey)
+      if (moduleName) {
         module = modules.modules.find((module) => module.name === moduleName)
         navgation(`/deployments/${module?.deploymentKey}/verbs/${verbName}`)
         notification.showNotification({
