@@ -1,0 +1,16 @@
+output:
+  - success
+  - failure
+pre-push:
+  parallel: true
+  commands:
+    test-backend:
+      run: just test-backend
+    lint-backend:
+      run: just lint-backend
+    test-frontend:
+      root: frontend/
+      run: just build-frontend
+    lint-frontend:
+      root: frontend/
+      run: just lint-frontend
