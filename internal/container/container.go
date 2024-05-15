@@ -6,9 +6,9 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
+	"github.com/alecthomas/types/once"
 	"github.com/alecthomas/types/optional"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -19,23 +19,12 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-var (
-	dockerClient     *client.Client
-	dockerClientOnce sync.Once
-
-	errDockerClient error
-)
-
-func newClient() (*client.Client, error) {
-	dockerClientOnce.Do(func() {
-		dockerClient, errDockerClient = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	})
-
-	return dockerClient, errDockerClient
-}
+var dockerClient = once.Once(func(ctx context.Context) (*client.Client, error) {
+	return client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+})
 
 func DoesExist(ctx context.Context, name string) (bool, error) {
-	cli, err := newClient()
+	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -53,7 +42,7 @@ func DoesExist(ctx context.Context, name string) (bool, error) {
 
 // Run starts a new detached container with the given image, name, port map, and (optional) volume mount.
 func Run(ctx context.Context, image, name string, hostPort, containerPort int, volume optional.Option[string]) error {
-	cli, err := newClient()
+	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
 	}
@@ -94,7 +83,7 @@ func Run(ctx context.Context, image, name string, hostPort, containerPort int, v
 
 // RunDB runs a new detached postgres container with the given name and exposed port.
 func RunDB(ctx context.Context, name string, port int) error {
-	cli, err := newClient()
+	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
 	}
@@ -141,7 +130,7 @@ func RunDB(ctx context.Context, name string, port int) error {
 
 // Start starts an existing container with the given name.
 func Start(ctx context.Context, name string) error {
-	cli, err := newClient()
+	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
 	}
@@ -159,7 +148,7 @@ func Exec(ctx context.Context, name string, command ...string) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Running command %q in container %q", command, name)
 
-	cli, err := newClient()
+	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
 	}
@@ -202,7 +191,7 @@ func Exec(ctx context.Context, name string, command ...string) error {
 
 // GetContainerPort returns the host TCP port of the given container's exposed port.
 func GetContainerPort(ctx context.Context, name string, port int) (int, error) {
-	cli, err := newClient()
+	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -230,7 +219,7 @@ func PollContainerHealth(ctx context.Context, containerName string, timeout time
 	logger := log.FromContext(ctx)
 	logger.Debugf("Waiting for %s to be healthy", containerName)
 
-	cli, err := newClient()
+	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
 	}
