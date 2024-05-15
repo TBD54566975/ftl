@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/alecthomas/types/optional"
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/ollama"
 
-	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -136,47 +136,35 @@ func query(ctx context.Context, prompt string) error {
 func (s *schemaImportCmd) setup(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 
-	nameFlag := fmt.Sprintf("name=^/%s$", ollamaContainerName)
-	output, err := exec.Capture(ctx, ".", "docker", "ps", "-a", "--filter", nameFlag, "--format", "{{.Names}}")
+	exists, err := container.DoesExist(ctx, ollamaContainerName)
 	if err != nil {
-		logger.Errorf(err, "%s", output)
 		return err
 	}
 
-	port := strconv.Itoa(s.OllamaPort)
-
-	if len(output) == 0 {
+	if !exists {
 		logger.Debugf("Creating docker container '%s' for ollama", ollamaContainerName)
 
 		// check if port s.OllamaPort is already in use
 		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", s.OllamaPort))
-		if err == nil {
-			return fmt.Errorf("port %d is already in use", s.OllamaPort)
+		if err != nil {
+			return fmt.Errorf("port %d is already in use: %w", s.OllamaPort, err)
 		}
 		_ = l.Close()
 
-		err = exec.Command(ctx, log.Debug, "./", "docker", "run",
-			"-d", // run detached so we can follow with other commands
-			"-v", ollamaVolume,
-			"-p", port+":11434",
-			"--name", ollamaContainerName,
-			"ollama/ollama").RunBuffered(ctx)
+		err = container.Run(ctx, "ollama/ollama", ollamaContainerName, s.OllamaPort, 11434, optional.Some(ollamaVolume))
 		if err != nil {
 			return err
 		}
 	} else {
 		// Start the existing container
-		_, err = exec.Capture(ctx, ".", "docker", "start", ollamaContainerName)
+		err = container.Start(ctx, ollamaContainerName)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Initialize Ollama
-	err = exec.Command(ctx, log.Debug, "./", "docker", "exec",
-		ollamaContainerName,
-		"ollama",
-		"run", ollamaModel).RunBuffered(ctx)
+	err = container.Exec(ctx, ollamaContainerName, "ollama", "run", ollamaModel)
 	if err != nil {
 		return err
 	}
