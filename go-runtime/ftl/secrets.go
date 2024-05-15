@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
@@ -13,12 +14,12 @@ type SecretType interface{ any }
 // Secret declares a typed secret for the current module.
 func Secret[T SecretType](name string) SecretValue[T] {
 	module := callerModule()
-	return SecretValue[T]{Ref{module, name}}
+	return SecretValue[T]{reflection.Ref{Module: module, Name: name}}
 }
 
 // SecretValue is a typed secret for the current module.
 type SecretValue[T SecretType] struct {
-	Ref
+	reflection.Ref
 }
 
 func (s SecretValue[T]) String() string { return fmt.Sprintf("secret \"%s\"", s.Ref) }

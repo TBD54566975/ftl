@@ -12,15 +12,15 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type callCmd struct {
-	Wait    time.Duration `short:"w" help:"Wait up to this elapsed time for the FTL cluster to become available." default:"1m"`
-	Verb    ftl.Ref       `arg:"" required:"" help:"Full path of Verb to call."`
-	Request string        `arg:"" optional:"" help:"JSON5 request payload." default:"{}"`
+	Wait    time.Duration  `short:"w" help:"Wait up to this elapsed time for the FTL cluster to become available." default:"1m"`
+	Verb    reflection.Ref `arg:"" required:"" help:"Full path of Verb to call."`
+	Request string         `arg:"" optional:"" help:"JSON5 request payload." default:"{}"`
 }
 
 func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient) error {

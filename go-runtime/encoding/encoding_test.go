@@ -10,7 +10,7 @@ import (
 
 	. "github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
 type discriminator interface {
@@ -77,11 +77,11 @@ func TestMarshal(t *testing.T) {
 		}, expected: `{"shouldntOmit":null,"notTagged":null}`},
 	}
 
-	tr := typeregistry.NewTypeRegistry()
+	tr := reflection.NewTypeRegistry()
 	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
 		"Variant": reflect.TypeFor[variant](),
 	})
-	ctx := typeregistry.ContextWithTypeRegistry(context.Background(), tr)
+	ctx := reflection.ContextWithTypeRegistry(context.Background(), tr)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -134,11 +134,11 @@ func TestUnmarshal(t *testing.T) {
 		{name: "UnregisteredSumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D unregistered }{}, err: `the only supported interface types are enums or any, not encoding_test.unregistered`},
 	}
 
-	tr := typeregistry.NewTypeRegistry()
+	tr := reflection.NewTypeRegistry()
 	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
 		"Variant": reflect.TypeFor[variant](),
 	})
-	ctx := typeregistry.ContextWithTypeRegistry(context.Background(), tr)
+	ctx := reflection.ContextWithTypeRegistry(context.Background(), tr)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -184,11 +184,11 @@ func TestRoundTrip(t *testing.T) {
 		{name: "SumType", input: struct{ D discriminator }{variant{"hello"}}},
 	}
 
-	tr := typeregistry.NewTypeRegistry()
+	tr := reflection.NewTypeRegistry()
 	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
 		"Variant": reflect.TypeFor[variant](),
 	})
-	ctx := typeregistry.ContextWithTypeRegistry(context.Background(), tr)
+	ctx := reflection.ContextWithTypeRegistry(context.Background(), tr)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

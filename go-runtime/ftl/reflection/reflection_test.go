@@ -1,4 +1,4 @@
-package ftl
+package reflection
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
 )
 
 type MySumType interface{ sealed() }
@@ -43,13 +42,9 @@ func TestReflectSchemaType(t *testing.T) {
 	allowAnyPackageForTesting = true
 	t.Cleanup(func() { allowAnyPackageForTesting = false })
 
-	tr := typeregistry.NewTypeRegistry()
-	tr.RegisterSumType(reflect.TypeFor[MySumType](), map[string]reflect.Type{
-		"Variant1": reflect.TypeFor[Variant1](),
-		"Variant2": reflect.TypeFor[Variant2](),
-	})
+	tr := NewTypeRegistry(WithSumType[MySumType](Variant1{}, Variant2{}))
 	ctx := context.Background()
-	ctx = typeregistry.ContextWithTypeRegistry(ctx, tr)
+	ctx = ContextWithTypeRegistry(ctx, tr)
 
 	v := AllTypesToReflect{SumType: &Variant1{}}
 
@@ -58,9 +53,9 @@ func TestReflectSchemaType(t *testing.T) {
 		value    any
 		expected schema.Type
 	}{
-		{"Data", &v, &schema.Ref{Module: "ftl", Name: "AllTypesToReflect"}},
-		{"SumType", &v.SumType, &schema.Ref{Module: "ftl", Name: "MySumType"}},
-		{"Enum", &v.Enum, &schema.Ref{Module: "ftl", Name: "Enum"}},
+		{"Data", &v, &schema.Ref{Module: "reflection", Name: "AllTypesToReflect"}},
+		{"SumType", &v.SumType, &schema.Ref{Module: "reflection", Name: "MySumType"}},
+		{"Enum", &v.Enum, &schema.Ref{Module: "reflection", Name: "Enum"}},
 		{"Int", &v.Int, &schema.Int{}},
 		{"String", &v.String, &schema.String{}},
 		{"Float", &v.Float, &schema.Float{}},

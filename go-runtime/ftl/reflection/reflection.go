@@ -1,4 +1,4 @@
-package ftl
+package reflection
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
 )
 
 // Module returns the FTL module currently being executed.
@@ -40,6 +39,14 @@ func TypeRef[T any]() Ref {
 	var v T
 	t := reflect.TypeOf(v)
 	return goRefToFTLRef(t.PkgPath() + "." + t.Name())
+}
+
+// TypeRefFromValue returns the Ref for a Go value.
+//
+// The value must be a named type such as a struct, enum, or sum type.
+func TypeRefFromValue(v any) Ref {
+	t := reflect.TypeOf(v)
+	return Ref{Module: moduleForType(t), Name: strcase.ToUpperCamel(t.Name())}
 }
 
 // FuncRef returns the Ref for a Go function.
@@ -107,7 +114,7 @@ func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
 			return &schema.Any{}
 		}
 		// Check if it's a sum-type discriminator.
-		registry, ok := typeregistry.FromContext(ctx).Get()
+		registry, ok := TypeRegistryFromContext(ctx).Get()
 		if !ok || !registry.IsSumTypeDiscriminator(t) {
 			panic(fmt.Sprintf("unsupported interface type %s", t))
 		}

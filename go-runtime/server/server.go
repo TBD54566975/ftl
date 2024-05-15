@@ -13,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
@@ -50,18 +51,18 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		if err != nil {
 			return nil, nil, err
 		}
-		hmap := maps.FromSlice(handlers, func(h Handler) (ftl.Ref, Handler) { return h.ref, h })
+		hmap := maps.FromSlice(handlers, func(h Handler) (reflection.Ref, Handler) { return h.ref, h })
 		return ctx, &moduleServer{handlers: hmap}, nil
 	}
 }
 
 // Handler for a Verb.
 type Handler struct {
-	ref ftl.Ref
+	ref reflection.Ref
 	fn  func(ctx context.Context, req []byte) ([]byte, error)
 }
 
-func handler[Req, Resp any](ref ftl.Ref, verb func(ctx context.Context, req Req) (Resp, error)) Handler {
+func handler[Req, Resp any](ref reflection.Ref, verb func(ctx context.Context, req Req) (Resp, error)) Handler {
 	return Handler{
 		ref: ref,
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
@@ -90,12 +91,12 @@ func handler[Req, Resp any](ref ftl.Ref, verb func(ctx context.Context, req Req)
 
 // HandleCall creates a Handler from a Verb.
 func HandleCall[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
-	return handler(ftl.FuncRef(verb), verb)
+	return handler(reflection.FuncRef(verb), verb)
 }
 
 // HandleSink creates a Handler from a Sink with no response.
 func HandleSink[Req any](sink func(ctx context.Context, req Req) error) Handler {
-	return handler(ftl.FuncRef(sink), func(ctx context.Context, req Req) (ftl.Unit, error) {
+	return handler(reflection.FuncRef(sink), func(ctx context.Context, req Req) (ftl.Unit, error) {
 		err := sink(ctx, req)
 		return ftl.Unit{}, err
 	})
@@ -103,14 +104,14 @@ func HandleSink[Req any](sink func(ctx context.Context, req Req) error) Handler 
 
 // HandleSource creates a Handler from a Source with no request.
 func HandleSource[Resp any](source func(ctx context.Context) (Resp, error)) Handler {
-	return handler(ftl.FuncRef(source), func(ctx context.Context, _ ftl.Unit) (Resp, error) {
+	return handler(reflection.FuncRef(source), func(ctx context.Context, _ ftl.Unit) (Resp, error) {
 		return source(ctx)
 	})
 }
 
 // HandleEmpty creates a Handler from a Verb with no request or response.
 func HandleEmpty(empty func(ctx context.Context) error) Handler {
-	return handler(ftl.FuncRef(empty), func(ctx context.Context, _ ftl.Unit) (ftl.Unit, error) {
+	return handler(reflection.FuncRef(empty), func(ctx context.Context, _ ftl.Unit) (ftl.Unit, error) {
 		err := empty(ctx)
 		return ftl.Unit{}, err
 	})
@@ -120,7 +121,7 @@ var _ ftlv1connect.VerbServiceHandler = (*moduleServer)(nil)
 
 // This is the server that is compiled into the same binary as user-defined Verbs.
 type moduleServer struct {
-	handlers map[ftl.Ref]Handler
+	handlers map[reflection.Ref]Handler
 }
 
 func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (response *connect.Response[ftlv1.CallResponse], err error) {
@@ -142,7 +143,7 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 			}}})
 		}
 	}()
-	handler, ok := m.handlers[ftl.RefFromProto(req.Msg.Verb)]
+	handler, ok := m.handlers[reflection.RefFromProto(req.Msg.Verb)]
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %q not found", req.Msg.Verb))
 	}

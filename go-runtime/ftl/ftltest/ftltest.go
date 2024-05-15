@@ -17,6 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -35,7 +36,7 @@ type Option func(context.Context, *OptionsState) error
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...Option) context.Context {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	name := ftl.Module()
+	name := reflection.Module()
 
 	state := &OptionsState{
 		configs:   make(map[string][]byte),
@@ -98,7 +99,7 @@ func WithProjectFiles(paths ...string) Option {
 		if err != nil {
 			return fmt.Errorf("could not set up configs: %w", err)
 		}
-		configs, err := cm.MapForModule(ctx, ftl.Module())
+		configs, err := cm.MapForModule(ctx, reflection.Module())
 		if err != nil {
 			return fmt.Errorf("could not read configs: %w", err)
 		}
@@ -110,7 +111,7 @@ func WithProjectFiles(paths ...string) Option {
 		if err != nil {
 			return fmt.Errorf("could not set up secrets: %w", err)
 		}
-		secrets, err := sm.MapForModule(ctx, ftl.Module())
+		secrets, err := sm.MapForModule(ctx, reflection.Module())
 		if err != nil {
 			return fmt.Errorf("could not read secrets: %w", err)
 		}
@@ -132,8 +133,8 @@ func WithProjectFiles(paths ...string) Option {
 // )
 func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		if config.Module != ftl.Module() {
-			return fmt.Errorf("config %v does not match current module %s", config.Module, ftl.Module())
+		if config.Module != reflection.Module() {
+			return fmt.Errorf("config %v does not match current module %s", config.Module, reflection.Module())
 		}
 		data, err := json.Marshal(value)
 		if err != nil {
@@ -155,8 +156,8 @@ func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) Option {
 // )
 func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		if secret.Module != ftl.Module() {
-			return fmt.Errorf("secret %v does not match current module %s", secret.Module, ftl.Module())
+		if secret.Module != reflection.Module() {
+			return fmt.Errorf("secret %v does not match current module %s", secret.Module, reflection.Module())
 		}
 		data, err := json.Marshal(value)
 		if err != nil {
@@ -178,7 +179,7 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 // )
 func WithDatabase(dbHandle ftl.Database) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		originalDSN, err := modulecontext.GetDSNFromSecret(ftl.Module(), dbHandle.Name, state.secrets)
+		originalDSN, err := modulecontext.GetDSNFromSecret(reflection.Module(), dbHandle.Name, state.secrets)
 		if err != nil {
 			return err
 		}
@@ -201,14 +202,14 @@ func WithDatabase(dbHandle ftl.Database) Option {
 		if err != nil {
 			return fmt.Errorf("could not create database %q with DSN %q: %w", dbHandle.Name, dsn, err)
 		}
-		_, err = sqlDB.ExecContext(ctx, `DO $$ 
-		DECLARE 
-		   table_name text; 
-		BEGIN 
-		   FOR table_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') 
-		   LOOP 
-			  EXECUTE 'DELETE FROM ' || table_name; 
-		   END LOOP; 
+		_, err = sqlDB.ExecContext(ctx, `DO $$
+		DECLARE
+		   table_name text;
+		BEGIN
+		   FOR table_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
+		   LOOP
+			  EXECUTE 'DELETE FROM ' || table_name;
+		   END LOOP;
 		END $$;`)
 		if err != nil {
 			return fmt.Errorf("could not clear tables in database %q: %w", dbHandle.Name, err)
@@ -237,7 +238,7 @@ func WithDatabase(dbHandle ftl.Database) Option {
 // )
 func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake ftl.Verb[Req, Resp]) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		ref := ftl.FuncRef(verb)
+		ref := reflection.FuncRef(verb)
 		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 			request, ok := req.(Req)
 			if !ok {
@@ -262,7 +263,7 @@ func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake ftl.Verb[Req, Re
 // )
 func WhenSource[Resp any](source ftl.Source[Resp], fake func(ctx context.Context) (resp Resp, err error)) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		ref := ftl.FuncRef(source)
+		ref := reflection.FuncRef(source)
 		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 			return fake(ctx)
 		}
@@ -283,7 +284,7 @@ func WhenSource[Resp any](source ftl.Source[Resp], fake func(ctx context.Context
 // )
 func WhenSink[Req any](sink ftl.Sink[Req], fake func(ctx context.Context, req Req) error) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		ref := ftl.FuncRef(sink)
+		ref := reflection.FuncRef(sink)
 		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 			request, ok := req.(Req)
 			if !ok {
@@ -308,7 +309,7 @@ func WhenSink[Req any](sink ftl.Sink[Req], fake func(ctx context.Context, req Re
 // )
 func WhenEmpty(empty ftl.Empty, fake func(ctx context.Context) (err error)) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		ref := ftl.FuncRef(empty)
+		ref := reflection.FuncRef(empty)
 		state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 			return ftl.Unit{}, fake(ctx)
 		}
