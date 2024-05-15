@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ import (
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	ftlreflect "github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/sha256"
@@ -165,6 +167,9 @@ type Service struct {
 	// Map from endpoint to client.
 	clients *ttlcache.Cache[string, clients]
 
+	// Complete schema synchronised from the database.
+	schema atomic.Value[*schema.Schema]
+
 	routes        atomic.Value[map[string][]dal.Route]
 	config        Config
 	runnerScaling scaling.RunnerScaling
@@ -191,16 +196,19 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 		dal:                     db,
 		key:                     key,
 		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
-		clients:                 ttlcache.New[string, clients](ttlcache.WithTTL[string, clients](time.Minute)),
+		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
 		runnerScaling:           runnerScaling,
 		increaseReplicaFailures: map[string]int{},
 	}
 	svc.routes.Store(map[string][]dal.Route{})
+	svc.schema.Store(&schema.Schema{})
 
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, db, svc.tasks, svc.callWithRequest)
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
+
+	go svc.syncSchema(ctx)
 
 	// Use min, max backoff if we are running in production, otherwise use
 	// (1s, 1s) (or develBackoff). Will also wrap the job such that it its next
@@ -1339,6 +1347,47 @@ func (s *Service) syncRoutes(ctx context.Context) (time.Duration, error) {
 	}
 	s.routes.Store(routes)
 	return time.Second, nil
+}
+
+// Synchronises Service.schema from the database.
+func (s *Service) syncSchema(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	modulesByName := map[string]*schema.Module{}
+	retry := backoff.Backoff{Max: time.Second * 5}
+	for {
+		err := s.watchModuleChanges(ctx, func(response *ftlv1.PullSchemaResponse) error {
+			switch response.ChangeType {
+			case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
+				moduleSchema, err := schema.ModuleFromProto(response.Schema)
+				if err != nil {
+					return err
+				}
+				modulesByName[moduleSchema.Name] = moduleSchema
+
+			case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
+				delete(modulesByName, response.ModuleName)
+			}
+
+			orderedModules := maps.Values(modulesByName)
+			sort.SliceStable(orderedModules, func(i, j int) bool {
+				return orderedModules[i].Name < orderedModules[j].Name
+			})
+			combined := &schema.Schema{Modules: orderedModules}
+			s.schema.Store(ftlreflect.DeepCopy(combined))
+			return nil
+		})
+		if err != nil {
+			next := retry.Duration()
+			logger.Warnf("Failed to watch module changes, retrying in %s: %s", next, err)
+			select {
+			case <-time.After(next):
+			case <-ctx.Done():
+				return
+			}
+		} else {
+			retry.Reset()
+		}
+	}
 }
 
 func (s *Service) getActiveSchema(ctx context.Context) (*schema.Schema, error) {
