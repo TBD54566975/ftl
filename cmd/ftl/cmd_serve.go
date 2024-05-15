@@ -9,7 +9,6 @@ import (
 	osExec "os/exec" //nolint:depguard
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -23,11 +22,11 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type serveCmd struct {
@@ -238,17 +237,15 @@ func isServeRunning(logger *log.Logger) (bool, error) {
 func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	logger := log.FromContext(ctx)
 
-	nameFlag := fmt.Sprintf("name=^/%s$", ftlContainerName)
-	output, err := exec.Capture(ctx, ".", "docker", "ps", "-a", "--filter", nameFlag, "--format", "{{.Names}}")
+	recreate := s.Recreate
+	port := s.DBPort
+
+	exists, err := container.DoesExist(ctx, ftlContainerName)
 	if err != nil {
-		logger.Errorf(err, "%s", output)
 		return "", err
 	}
 
-	recreate := s.Recreate
-	port := strconv.Itoa(s.DBPort)
-
-	if len(output) == 0 {
+	if !exists {
 		logger.Debugf("Creating docker container '%s' for postgres db", ftlContainerName)
 
 		// check if port s.DBPort is already in use
@@ -257,20 +254,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			return "", fmt.Errorf("port %d is already in use", s.DBPort)
 		}
 
-		err = exec.Command(ctx, log.Debug, "./", "docker", "run",
-			"-d", // run detached so we can follow with other commands
-			"--name", ftlContainerName,
-			"--user", "postgres",
-			"--restart", "always",
-			"-e", "POSTGRES_PASSWORD=secret",
-			"-p", port+":5432",
-			"--health-cmd=pg_isready",
-			"--health-interval=1s",
-			"--health-timeout=60s",
-			"--health-retries=60",
-			"--health-start-period=80s",
-			"postgres:latest", "postgres",
-		).RunBuffered(ctx)
+		err = container.RunDB(ctx, ftlContainerName, s.DBPort)
 		if err != nil {
 			return "", err
 		}
@@ -278,33 +262,26 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 		recreate = true
 	} else {
 		// Start the existing container
-		_, err = exec.Capture(ctx, ".", "docker", "start", ftlContainerName)
+		err = container.Start(ctx, ftlContainerName)
 		if err != nil {
 			return "", err
 		}
 
 		// Grab the port from the existing container
-		portOutput, err := exec.Capture(ctx, ".", "docker", "port", ftlContainerName, "5432/tcp")
+		port, err = container.GetContainerPort(ctx, ftlContainerName, 5432)
 		if err != nil {
-			logger.Errorf(err, "%s", portOutput)
 			return "", err
 		}
-		port = slices.Reduce(strings.Split(string(portOutput), "\n"), "", func(port string, line string) string {
-			if parts := strings.Split(line, ":"); len(parts) == 2 {
-				return parts[1]
-			}
-			return port
-		})
 
-		logger.Debugf("Reusing existing docker container %q on port %q for postgres db", ftlContainerName, port)
+		logger.Debugf("Reusing existing docker container %s on port %d for postgres db", ftlContainerName, port)
 	}
 
-	err = pollContainerHealth(ctx, ftlContainerName, 10*time.Second)
+	err = container.PollContainerHealth(ctx, ftlContainerName, 10*time.Second)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("db container failed to be healthy: %w", err)
 	}
 
-	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%s/ftl?sslmode=disable", port)
+	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%d/ftl?sslmode=disable", port)
 	logger.Debugf("Postgres DSN: %s", dsn)
 
 	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
@@ -313,32 +290,6 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 	}
 
 	return dsn, nil
-}
-
-func pollContainerHealth(ctx context.Context, containerName string, timeout time.Duration) error {
-	logger := log.FromContext(ctx)
-	logger.Debugf("Waiting for %s to be healthy", containerName)
-
-	pollCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	for {
-		select {
-		case <-pollCtx.Done():
-			return fmt.Errorf("timed out waiting for container to be healthy: %w", pollCtx.Err())
-
-		case <-time.After(1 * time.Millisecond):
-			output, err := exec.Capture(pollCtx, ".", "docker", "inspect", "--format", "{{.State.Health.Status}}", containerName)
-			if err != nil {
-				return err
-			}
-
-			status := strings.TrimSpace(string(output))
-			if status == "healthy" {
-				return nil
-			}
-		}
-	}
 }
 
 // waitForControllerOnline polls the controller service until it is online.
