@@ -668,7 +668,7 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 	}
-	databases, err := modulecontext.DatabasesFromEnvironment(ctx, name)
+	databases, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
 	}

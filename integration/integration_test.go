@@ -30,7 +30,7 @@ func TestCron(t *testing.T) {
 
 	t.Cleanup(func() { _ = os.Remove(tmpFile) })
 
-	run(t,
+	run(t, "",
 		copyModule("cron"),
 		deploy("cron"),
 		func(t testing.TB, ic testContext) error {
@@ -41,7 +41,7 @@ func TestCron(t *testing.T) {
 }
 
 func TestLifecycle(t *testing.T) {
-	run(t,
+	run(t, "",
 		exec("ftl", "init", "go", ".", "echo"),
 		deploy("echo"),
 		call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
@@ -54,7 +54,7 @@ func TestLifecycle(t *testing.T) {
 }
 
 func TestInterModuleCall(t *testing.T) {
-	run(t,
+	run(t, "",
 		copyModule("echo"),
 		copyModule("time"),
 		deploy("time"),
@@ -73,7 +73,7 @@ func TestInterModuleCall(t *testing.T) {
 }
 
 func TestNonExportedDecls(t *testing.T) {
-	run(t,
+	run(t, "",
 		copyModule("time"),
 		deploy("time"),
 		copyModule("echo"),
@@ -84,10 +84,10 @@ func TestNonExportedDecls(t *testing.T) {
 }
 
 func TestDatabase(t *testing.T) {
-	createDB(t, "database", "testdb", false)
-	run(t,
+	run(t, "database/ftl-project.toml",
 		// deploy real module against "testdb"
 		copyModule("database"),
+		createDBAction("database", "testdb", false),
 		deploy("database"),
 		call("database", "insert", obj{"data": "hello"}, func(response obj) error { return nil }),
 		queryRow("testdb", "SELECT data FROM requests", "hello"),
@@ -100,7 +100,7 @@ func TestDatabase(t *testing.T) {
 }
 
 func TestSchemaGenerate(t *testing.T) {
-	run(t,
+	run(t, "",
 		copyDir("../schema-generate", "schema-generate"),
 		mkdir("build/schema-generate"),
 		exec("ftl", "schema", "generate", "schema-generate", "build/schema-generate"),
@@ -109,7 +109,7 @@ func TestSchemaGenerate(t *testing.T) {
 }
 
 func TestHttpEncodeOmitempty(t *testing.T) {
-	run(t,
+	run(t, "",
 		copyModule("omitempty"),
 		deploy("omitempty"),
 		httpCall(http.MethodGet, "/get", jsonData(t, obj{}), func(resp *httpResponse) error {
@@ -124,7 +124,7 @@ func TestHttpEncodeOmitempty(t *testing.T) {
 }
 
 func TestHttpIngress(t *testing.T) {
-	run(t,
+	run(t, "",
 		copyModule("httpingress"),
 		deploy("httpingress"),
 		httpCall(http.MethodGet, "/users/123/posts/456", jsonData(t, obj{}), func(resp *httpResponse) error {
@@ -243,14 +243,14 @@ func TestHttpIngress(t *testing.T) {
 }
 
 func TestRuntimeReflection(t *testing.T) {
-	run(t,
+	run(t, "",
 		copyModule("runtimereflection"),
 		testModule("runtimereflection"),
 	)
 }
 
 func TestModuleUnitTests(t *testing.T) {
-	run(t,
+	run(t, "",
 		copyModule("time"),
 		copyModule("wrapped"),
 		copyModule("verbtypes"),
@@ -261,7 +261,7 @@ func TestModuleUnitTests(t *testing.T) {
 }
 
 func TestLease(t *testing.T) {
-	run(t,
+	run(t, "",
 		copyModule("leases"),
 		deploy("leases"),
 		func(t testing.TB, ic testContext) error {

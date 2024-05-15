@@ -37,15 +37,10 @@ func Context(options ...Option) context.Context {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	name := ftl.Module()
 
-	databases, err := modulecontext.DatabasesFromEnvironment(ctx, name)
-	if err != nil {
-		panic(fmt.Sprintf("error setting up module context from environment: %v", err))
-	}
-
 	state := &OptionsState{
 		configs:   make(map[string][]byte),
 		secrets:   make(map[string][]byte),
-		databases: databases,
+		databases: make(map[string]modulecontext.Database),
 		mockVerbs: make(map[schema.RefKey]modulecontext.Verb),
 	}
 	for _, option := range options {
@@ -183,7 +178,7 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 // )
 func WithDatabase(dbHandle ftl.Database) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		originalDSN, err := modulecontext.GetDSNFromEnvar(ftl.Module(), dbHandle.Name)
+		originalDSN, err := modulecontext.GetDSNFromSecret(ftl.Module(), dbHandle.Name, state.secrets)
 		if err != nil {
 			return err
 		}

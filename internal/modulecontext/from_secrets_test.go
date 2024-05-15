@@ -9,11 +9,13 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestFromEnvironment(t *testing.T) {
+func TestFromSecrets(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	t.Setenv(DSNEnvarName("echo", "echo"), "postgres://echo:echo@localhost:5432/echo")
-	databases, err := DatabasesFromEnvironment(ctx, "echo")
+	secrets := map[string][]byte{
+		"FTL_DSN_ECHO_ECHO": []byte("\"postgres://echo:echo@localhost:5432/echo\""),
+	}
+	databases, err := DatabasesFromSecrets(ctx, "echo", secrets)
 	assert.NoError(t, err)
 
 	response := NewBuilder("echo").AddDatabases(databases).Build().ToProto()
