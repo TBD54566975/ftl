@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/alecthomas/types/optional"
 	"net"
 	"os"
 	"path/filepath"
 
+	"github.com/alecthomas/types/optional"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/ollama"
 
