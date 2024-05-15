@@ -15,12 +15,13 @@ require (
 	github.com/alecthomas/kong v0.9.0
 	github.com/alecthomas/kong-toml v0.2.0
 	github.com/alecthomas/participle/v2 v2.1.1
-	github.com/alecthomas/types v0.14.0
+	github.com/alecthomas/types v0.15.0
 	github.com/amacneil/dbmate/v2 v2.15.0
 	github.com/beevik/etree v1.4.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/docker/docker v25.0.5+incompatible
+	github.com/docker/go-connections v0.5.0
 	github.com/go-logr/logr v1.4.1
 	github.com/gofrs/flock v0.8.1
 	github.com/golang/protobuf v1.5.4
@@ -65,7 +66,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
-	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
