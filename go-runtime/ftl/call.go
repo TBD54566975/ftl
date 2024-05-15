@@ -11,11 +11,12 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
-func call[Req, Resp any](ctx context.Context, callee Ref, req Req, inline Verb[Req, Resp]) (resp Resp, err error) {
+func call[Req, Resp any](ctx context.Context, callee reflection.Ref, req Req, inline Verb[Req, Resp]) (resp Resp, err error) {
 	override, err := modulecontext.FromContext(ctx).BehaviorForVerb(schema.Ref{Module: callee.Module, Name: callee.Name})
 	if err != nil {
 		return resp, fmt.Errorf("%s: %w", callee, err)
@@ -59,12 +60,12 @@ func call[Req, Resp any](ctx context.Context, callee Ref, req Req, inline Verb[R
 
 // Call a Verb through the FTL Controller.
 func Call[Req, Resp any](ctx context.Context, verb Verb[Req, Resp], req Req) (Resp, error) {
-	return call[Req, Resp](ctx, FuncRef(verb), req, verb)
+	return call[Req, Resp](ctx, reflection.FuncRef(verb), req, verb)
 }
 
 // CallSink calls a Sink through the FTL controller.
 func CallSink[Req any](ctx context.Context, sink Sink[Req], req Req) error {
-	_, err := call[Req, Unit](ctx, FuncRef(sink), req, func(ctx context.Context, req Req) (Unit, error) {
+	_, err := call[Req, Unit](ctx, reflection.FuncRef(sink), req, func(ctx context.Context, req Req) (Unit, error) {
 		return Unit{}, sink(ctx, req)
 	})
 	return err
@@ -72,14 +73,14 @@ func CallSink[Req any](ctx context.Context, sink Sink[Req], req Req) error {
 
 // CallSource calls a Source through the FTL controller.
 func CallSource[Resp any](ctx context.Context, source Source[Resp]) (Resp, error) {
-	return call[Unit, Resp](ctx, FuncRef(source), Unit{}, func(ctx context.Context, req Unit) (Resp, error) {
+	return call[Unit, Resp](ctx, reflection.FuncRef(source), Unit{}, func(ctx context.Context, req Unit) (Resp, error) {
 		return source(ctx)
 	})
 }
 
 // CallEmpty calls a Verb with no request or response through the FTL controller.
 func CallEmpty(ctx context.Context, empty Empty) error {
-	_, err := call[Unit, Unit](ctx, FuncRef(empty), Unit{}, func(ctx context.Context, req Unit) (Unit, error) {
+	_, err := call[Unit, Unit](ctx, reflection.FuncRef(empty), Unit{}, func(ctx context.Context, req Unit) (Unit, error) {
 		return Unit{}, empty(ctx)
 	})
 	return err
@@ -89,7 +90,7 @@ func widenVerb[Req, Resp any](verb Verb[Req, Resp]) Verb[any, any] {
 	return func(ctx context.Context, uncheckedReq any) (any, error) {
 		req, ok := uncheckedReq.(Req)
 		if !ok {
-			return nil, fmt.Errorf("invalid request type %T for %v, expected %v", uncheckedReq, FuncRef(verb), reflect.TypeFor[Req]())
+			return nil, fmt.Errorf("invalid request type %T for %v, expected %v", uncheckedReq, reflection.FuncRef(verb), reflect.TypeFor[Req]())
 		}
 		return verb(ctx, req)
 	}

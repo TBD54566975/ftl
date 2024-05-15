@@ -14,6 +14,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -67,7 +68,7 @@ func Lease(ctx context.Context, ttl time.Duration, key ...string) (LeaseHandle, 
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	stream := client.AcquireLease(ctx)
 
-	module := Module()
+	module := reflection.Module()
 	logger.Tracef("Acquiring lease")
 	req := &ftlv1.AcquireLeaseRequest{Key: key, Module: module, Ttl: durationpb.New(ttl)}
 	if err := stream.Send(req); err != nil {

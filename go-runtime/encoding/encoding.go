@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
 var (
@@ -101,7 +101,7 @@ func encodeValue(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 			return encodeValue(ctx, v.Elem(), w)
 		}
 
-		if tr, ok := typeregistry.FromContext(ctx).Get(); ok {
+		if tr, ok := reflection.TypeRegistryFromContext(ctx).Get(); ok {
 			if vName, ok := tr.GetVariantByType(v.Type(), v.Elem().Type()).Get(); ok {
 				sumType := struct {
 					Name  string
@@ -281,7 +281,7 @@ func decodeValue(ctx context.Context, d *json.Decoder, v reflect.Value) error {
 		return decodeMap(ctx, d, v)
 
 	case reflect.Interface:
-		if tr, ok := typeregistry.FromContext(ctx).Get(); ok {
+		if tr, ok := reflection.TypeRegistryFromContext(ctx).Get(); ok {
 			if tr.IsSumTypeDiscriminator(v.Type()) {
 				return decodeSumType(ctx, d, v)
 			}
@@ -391,7 +391,7 @@ func decodeMap(ctx context.Context, d *json.Decoder, v reflect.Value) error {
 }
 
 func decodeSumType(ctx context.Context, d *json.Decoder, v reflect.Value) error {
-	tr, ok := typeregistry.FromContext(ctx).Get()
+	tr, ok := reflection.TypeRegistryFromContext(ctx).Get()
 	if !ok {
 		return fmt.Errorf("no type registry found in context")
 	}

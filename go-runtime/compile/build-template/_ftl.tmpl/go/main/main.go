@@ -3,13 +3,10 @@ package main
 
 import (
 	"context"
-{{- if .SumTypes }}
-	"reflect"
-{{ end }}
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/plugin"
 {{- if .SumTypes }}
-	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 {{- end }}
 	"github.com/TBD54566975/ftl/go-runtime/server"
 {{ range mainImports . }}
@@ -35,17 +32,18 @@ func main() {
 
 {{- if .SumTypes}}
 
-	tr := typeregistry.NewTypeRegistry()
-{{- end}}
+	tr := reflection.NewTypeRegistry(
 {{- range .SumTypes}}
-	tr.RegisterSumType(reflect.TypeFor[{{.Discriminator}}](), map[string]reflect.Type{
-		{{- range .Variants}}
-		"{{.Name}}": reflect.TypeFor[{{.Type}}](),
-		{{- end}}
-	})
+		reflection.WithSumType[{{.Discriminator}}](
+			{{- range .Variants}}
+			*new({{.Type}}),
+			{{- end}}
+		),
+{{- end}}
+	)
 {{- end}}
 {{- if .SumTypes}}
-	ctx = typeregistry.ContextWithTypeRegistry(ctx, tr)
+	ctx = reflection.ContextWithTypeRegistry(ctx, tr)
 {{- end}}
 
 	plugin.Start(ctx, "{{.Name}}", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)

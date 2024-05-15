@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
@@ -15,12 +16,12 @@ type ConfigType interface{ any }
 // Config declares a typed configuration key for the current module.
 func Config[T ConfigType](name string) ConfigValue[T] {
 	module := callerModule()
-	return ConfigValue[T]{Ref{module, name}}
+	return ConfigValue[T]{reflection.Ref{Module: module, Name: name}}
 }
 
 // ConfigValue is a typed configuration key for the current module.
 type ConfigValue[T ConfigType] struct {
-	Ref
+	reflection.Ref
 }
 
 func (c ConfigValue[T]) String() string { return fmt.Sprintf("config \"%s\"", c.Ref) }

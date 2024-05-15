@@ -3,11 +3,9 @@ package main
 
 import (
 	"context"
-	"reflect"
-
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/typeregistry"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 
 	"ftl/another"
@@ -20,33 +18,34 @@ func main() {
 	)
 	ctx := context.Background()
 
-	tr := typeregistry.NewTypeRegistry()
-	tr.RegisterSumType(reflect.TypeFor[another.SecondTypeEnum](), map[string]reflect.Type{
-		"One": reflect.TypeFor[another.One](),
-		"Two": reflect.TypeFor[another.Two](),
-	})
-	tr.RegisterSumType(reflect.TypeFor[another.TypeEnum](), map[string]reflect.Type{
-		"A": reflect.TypeFor[another.A](),
-		"B": reflect.TypeFor[another.B](),
-	})
-	tr.RegisterSumType(reflect.TypeFor[other.SecondTypeEnum](), map[string]reflect.Type{
-		"A": reflect.TypeFor[other.A](),
-		"B": reflect.TypeFor[other.B](),
-	})
-	tr.RegisterSumType(reflect.TypeFor[other.TypeEnum](), map[string]reflect.Type{
-		"Bool": reflect.TypeFor[other.Bool](),
-		"Bytes": reflect.TypeFor[other.Bytes](),
-		"Float": reflect.TypeFor[other.Float](),
-		"Int": reflect.TypeFor[other.Int](),
-		"Time": reflect.TypeFor[other.Time](),
-		"List": reflect.TypeFor[other.List](),
-		"Map": reflect.TypeFor[other.Map](),
-		"String": reflect.TypeFor[other.String](),
-		"Struct": reflect.TypeFor[other.Struct](),
-		"Option": reflect.TypeFor[other.Option](),
-		"Unit": reflect.TypeFor[other.Unit](),
-	})
-	ctx = typeregistry.ContextWithTypeRegistry(ctx, tr)
+	tr := reflection.NewTypeRegistry(
+		reflection.WithSumType[another.SecondTypeEnum](
+			*new(another.One),
+			*new(another.Two),
+		),
+		reflection.WithSumType[another.TypeEnum](
+			*new(another.A),
+			*new(another.B),
+		),
+		reflection.WithSumType[other.SecondTypeEnum](
+			*new(other.A),
+			*new(other.B),
+		),
+		reflection.WithSumType[other.TypeEnum](
+			*new(other.Bool),
+			*new(other.Bytes),
+			*new(other.Float),
+			*new(other.Int),
+			*new(other.Time),
+			*new(other.List),
+			*new(other.Map),
+			*new(other.String),
+			*new(other.Struct),
+			*new(other.Option),
+			*new(other.Unit),
+		),
+	)
+	ctx = reflection.ContextWithTypeRegistry(ctx, tr)
 
 	plugin.Start(ctx, "other", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
 }
