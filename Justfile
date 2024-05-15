@@ -52,6 +52,10 @@ build +tools: build-protos build-zips build-frontend
   shopt -s extglob
   for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
 
+# Build all backend binaries
+build-backend:
+  just build ftl ftl-controller ftl-runner
+
 export DATABASE_URL := "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable"
 
 # Explicitly initialise the database
@@ -81,9 +85,11 @@ install-extension: build-extension
   @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && npm run compile"
   @cd extensions/vscode && vsce package && code --install-extension ftl-*.vsix
 
+# Build and package the VSCode extension
 package-extension: build-extension
   @cd extensions/vscode && vsce package
 
+# Publish the VSCode extension
 publish-extension: package-extension
   @cd extensions/vscode && vsce publish
 
@@ -117,3 +123,19 @@ test-readme *args:
 # Run "go mod tidy" on all packages including tests
 tidy:
   find . -name go.mod -execdir go mod tidy \;
+
+# Run backend tests
+test-backend:
+  @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./...
+
+# Run frontend tests
+test-frontend:
+  @cd frontend && npm run test
+
+# Lint the frontend
+lint-frontend: build-frontend
+  @cd frontend && npm run lint && tsc
+
+# Lint the backend
+lint-backend:
+  @golangci-lint run ./...
