@@ -64,6 +64,35 @@ func testBuild(
 	assert.NoError(t, err, "Error removing build directory")
 }
 
+func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
+	t.Helper()
+	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
+	abs, err := filepath.Abs(bctx.moduleDir)
+	assert.NoError(t, err, "Error getting absolute path for module directory")
+
+	// build to generate the build directory
+	module, err := LoadModule(abs)
+	assert.NoError(t, err)
+	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	assert.NoError(t, err)
+
+	// create a temporary file in the build directory
+	buildDir := filepath.Join(bctx.moduleDir, bctx.buildDir)
+	tempFile, err := os.Create(filepath.Join(buildDir, "test-clear-build.tmp"))
+	assert.NoError(t, err, "Error creating temporary file in module directory")
+	tempFile.Close()
+
+	// build to clear the old build directory
+	module, err = LoadModule(abs)
+	assert.NoError(t, err)
+	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	assert.NoError(t, err)
+
+	// ensure the temporary file was removed
+	_, err = os.Stat(filepath.Join(buildDir, "test-clear-build.tmp"))
+	assert.Error(t, err, "Build directory was not removed")
+}
+
 func assertGeneratedModule(generatedModulePath string, expectedContent string) assertion {
 	return func(t testing.TB, bctx buildContext) error {
 		t.Helper()

@@ -34,8 +34,8 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 	logger := log.FromContext(ctx).Scope(module.Module)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	// clear stale module errors before extracting schema
-	if err := os.RemoveAll(filepath.Join(module.AbsDeployDir(), module.Errors)); err != nil {
+	// clear the deploy directory before extracting schema
+	if err := os.RemoveAll(module.AbsDeployDir()); err != nil {
 		return fmt.Errorf("failed to clear errors: %w", err)
 	}
 

@@ -32,6 +32,21 @@ package ftl.test
 	})
 }
 
+func TestKotlinBuildClearsBuildDir(t *testing.T) {
+	sch := &schema.Schema{
+		Modules: []*schema.Module{
+			schema.Builtins(),
+			{Name: "test"},
+		},
+	}
+	bctx := buildContext{
+		moduleDir: "testdata/projects/echokotlin",
+		buildDir:  "target",
+		sch:       sch,
+	}
+	testBuildClearsBuildDir(t, bctx)
+}
+
 func TestGenerateAllTypes(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
