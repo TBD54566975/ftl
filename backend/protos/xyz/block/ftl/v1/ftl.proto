@@ -81,6 +81,7 @@ message AcquireLeaseRequest {
 
 message AcquireLeaseResponse {}
 
+
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.
@@ -340,6 +341,9 @@ service ControllerService {
   // Note that if there are no deployments this will block indefinitely, making it unsuitable for
   // just retrieving the schema. Use GetSchema for that.
   rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
+
+  // Returns a list of "<module>.<verb>"
+  rpc GetVerbs(VerbsRequest) returns (VerbsResponse);
 }
 
 message DeployRequest {
@@ -355,6 +359,12 @@ message ReserveRequest {
   string deployment_key = 1;
 }
 message ReserveResponse {}
+
+message VerbsRequest {}
+
+message VerbsResponse {
+  repeated string verbs = 1;
+}
 
 // RunnerService is the service that executes Deployments.
 //

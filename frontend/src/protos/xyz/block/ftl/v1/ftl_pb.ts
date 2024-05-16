@@ -647,6 +647,74 @@ export class AcquireLeaseResponse extends Message<AcquireLeaseResponse> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.VerbsRequest
+ */
+export class VerbsRequest extends Message<VerbsRequest> {
+  constructor(data?: PartialMessage<VerbsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.VerbsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbsRequest {
+    return new VerbsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerbsRequest {
+    return new VerbsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerbsRequest {
+    return new VerbsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerbsRequest | PlainMessage<VerbsRequest> | undefined, b: VerbsRequest | PlainMessage<VerbsRequest> | undefined): boolean {
+    return proto3.util.equals(VerbsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.VerbsResponse
+ */
+export class VerbsResponse extends Message<VerbsResponse> {
+  /**
+   * @generated from field: repeated string verbs = 1;
+   */
+  verbs: string[] = [];
+
+  constructor(data?: PartialMessage<VerbsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.VerbsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "verbs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbsResponse {
+    return new VerbsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerbsResponse {
+    return new VerbsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerbsResponse {
+    return new VerbsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerbsResponse | PlainMessage<VerbsResponse> | undefined, b: VerbsResponse | PlainMessage<VerbsResponse> | undefined): boolean {
+    return proto3.util.equals(VerbsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.GetSchemaRequest
  */
 export class GetSchemaRequest extends Message<GetSchemaRequest> {
