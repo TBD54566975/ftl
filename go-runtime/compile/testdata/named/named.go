@@ -1,10 +1,15 @@
-package typealias
+package named
 
-import "context"
+import (
+	"context"
+	"ftl/namedext"
+)
+
+// named module is for testing names types: typealiases and enums
 
 // ID testing if typealias before struct works
 //
-//ftl:typealias
+//ftl:typealias export
 type ID string
 
 // UserState, testing that defining an enum before struct works
@@ -18,12 +23,14 @@ const (
 	Inactive   UserState = "inactive"
 )
 
-//ftl:data
+//ftl:data export
 type User struct {
-	Id     ID
-	Name   Name
-	State  UserState
-	Source UserSource
+	Id           ID
+	Name         Name
+	State        UserState
+	Source       UserSource
+	Comment      namedext.Comment
+	EmailConsent namedext.EmailConsent
 }
 
 // Name testing if typealias after struct works
@@ -57,13 +64,3 @@ func PingUser(ctx context.Context, req User) error {
 func PingInternalUser(ctx context.Context, req InternalUser) error {
 	return nil
 }
-
-//TODO: type alias which is used as an enum. eg seasons
-
-//TODO: type alias of type alias
-
-//TODO: make sure typealias logic isnt breaking verb names (different namespaces)
-
-//TODO: refer to an external type alias, what happens?
-
-//TODO: something where we do not export the type alias but then it is used in an exported way, does that follow through to the original type?

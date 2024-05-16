@@ -91,6 +91,15 @@ func (e *Enum) IsValueEnum() bool {
 	return e.Type != nil
 }
 
+func (e *Enum) VariantForName(name string) (*EnumVariant, bool) {
+	for _, v := range e.Variants {
+		if name == v.Name {
+			return v, true
+		}
+	}
+	return nil, false
+}
+
 type EnumVariant struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

@@ -25,7 +25,7 @@ func (t *TypeAlias) Position() Position { return t.Pos }
 
 func (t *TypeAlias) String() string {
 	w := &strings.Builder{}
-	fmt.Fprint(w, encodeComments(t.Comments))
+	fmt.Fprint(w, EncodeComments(t.Comments))
 	if t.Export {
 		fmt.Fprint(w, "export ")
 	}
@@ -35,6 +35,9 @@ func (t *TypeAlias) String() string {
 func (*TypeAlias) schemaDecl()   {}
 func (*TypeAlias) schemaSymbol() {}
 func (t *TypeAlias) schemaChildren() []Node {
+	if t.Type == nil {
+		return []Node{}
+	}
 	return []Node{
 		t.Type,
 	}

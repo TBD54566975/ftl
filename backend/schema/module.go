@@ -117,6 +117,7 @@ func (m *Module) String() string {
 func (m *Module) AddData(data *Data) int {
 	for i, d := range m.Decls {
 		if d, ok := d.(*Data); ok && d.Name == data.Name {
+			d.Export = d.Export || data.Export
 			return i
 		}
 	}

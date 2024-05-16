@@ -15,59 +15,71 @@ type TypeEnum interface {
 	tag()
 }
 
-type Bool bool
+//ftl:typealias
+type MyBool bool
 
-func (Bool) tag() {}
+func (MyBool) tag() {}
 
-type Bytes []byte
+//ftl:typealias
+type MyBytes []byte
 
-func (Bytes) tag() {}
+func (MyBytes) tag() {}
 
-type Float float64
+//ftl:typealias
+type MyFloat float64
 
-func (Float) tag() {}
+func (MyFloat) tag() {}
 
-type Int int
+//ftl:typealias
+type MyInt int
 
-func (Int) tag() {}
+func (MyInt) tag() {}
 
-type Time time.Time
+//ftl:typealias
+type MyTime time.Time
 
-func (Time) tag() {}
+func (MyTime) tag() {}
 
+//ftl:typealias
 type List []string
 
 func (List) tag() {}
 
+//ftl:typealias
 type Map map[string]string
 
 func (Map) tag() {}
 
-type String string
+//ftl:typealias
+type MyString string
 
-func (String) tag() {}
+func (MyString) tag() {}
 
 type Struct struct{}
 
 func (Struct) tag() {}
 
-type Option ftl.Option[string]
+//ftl:typealias
+type MyOption ftl.Option[string]
 
-func (Option) tag() {}
+func (MyOption) tag() {}
 
-type Unit ftl.Unit
+//ftl:typealias
+type MyUnit ftl.Unit
 
-func (Unit) tag() {}
+func (MyUnit) tag() {}
 
 //ftl:enum
 type SecondTypeEnum interface {
 	tag2()
 }
 
+//ftl:typealias
 type A string
 
 func (A) tag2() {}
 
+//ftl:typealias
 type B EchoRequest
 
 func (B) tag2() {}

@@ -53,13 +53,20 @@ const (
 //ftl:enum
 type BlobOrList interface{ blobOrList() }
 
+//ftl:enum
+type BlobOrList2 interface{ blobOrList2() }
+
+//ftl:typealias
 type Blob string
 
-func (Blob) blobOrList() {}
+func (Blob) blobOrList()  {}
+func (Blob) blobOrList2() {}
 
+//ftl:typealias
 type List []string
 
-func (List) blobOrList() {}
+func (List) blobOrList()  {}
+func (List) blobOrList2() {}
 
 type Nested struct {
 }

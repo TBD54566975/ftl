@@ -32,9 +32,6 @@ type EchoResponse struct {
 	Message string `json:"message"`
 }
 
-//ftl:typealias
-type MyType string
-
 // Echo returns a greeting with the current time.
 //
 //ftl:verb

@@ -17,6 +17,10 @@ var _ = context.Background
 //
 {{- end}}
 {{- if .IsExported}}
+{{- if is "TypeAlias" . }}
+//ftl:typealias
+type {{.Name|title}} {{type $ .Type}}
+{{- end}}
 {{- if and (is "Enum" .) .IsValueEnum}}
 {{- $enumName := .Name}}
 //ftl:enum
