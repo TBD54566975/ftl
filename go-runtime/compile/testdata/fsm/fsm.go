@@ -6,6 +6,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
+// The payment FSM.
 var paymentFSM = ftl.FSM("payment",
 	ftl.Start(Created),
 	ftl.Start(Paid),
@@ -14,6 +15,9 @@ var paymentFSM = ftl.FSM("payment",
 	ftl.Transition(Paid, Completed),
 )
 
+// The message to be sent when the payment is completed.
+//
+// Otherwise, OnlinePaymentFailed will be sent.
 type OnlinePaymentCompleted struct{}
 type OnlinePaymentFailed struct{}
 type OnlinePaymentPaid struct{}
@@ -34,6 +38,8 @@ func Failed(ctx context.Context, in OnlinePaymentFailed) error {
 	return nil
 }
 
+// The message to be sent when the payment is paid.
+//
 //ftl:verb
 func Paid(ctx context.Context, in OnlinePaymentPaid) error {
 	return nil

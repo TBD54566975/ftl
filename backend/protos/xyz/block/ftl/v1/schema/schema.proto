@@ -27,8 +27,9 @@ message Bytes {
 
 message Config {
   optional Position pos = 1;
-  string name = 2;
-  Type type = 3;
+  repeated string comments = 2;
+  string name = 3;
+  Type type = 4;
 }
 
 message Data {
@@ -218,8 +219,9 @@ message Schema {
 
 message Secret {
   optional Position pos = 1;
-  string name = 2;
-  Type type = 3;
+  repeated string comments = 2;
+  string name = 3;
+  Type type = 4;
 }
 
 message String {

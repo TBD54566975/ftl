@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -22,7 +23,14 @@ var _ Symbol = (*Config)(nil)
 func (s *Config) GetName() string    { return s.Name }
 func (s *Config) IsExported() bool   { return false }
 func (s *Config) Position() Position { return s.Pos }
-func (s *Config) String() string     { return fmt.Sprintf("config %s %s", s.Name, s.Type) }
+func (s *Config) String() string {
+	w := &strings.Builder{}
+
+	fmt.Fprint(w, EncodeComments(s.Comments))
+	fmt.Fprintf(w, "config %s %s", s.Name, s.Type)
+
+	return w.String()
+}
 
 func (s *Config) ToProto() protoreflect.ProtoMessage {
 	return &schemapb.Config{

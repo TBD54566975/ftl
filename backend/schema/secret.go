@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -22,7 +23,14 @@ var _ Symbol = (*Secret)(nil)
 func (s *Secret) GetName() string    { return s.Name }
 func (s *Secret) IsExported() bool   { return false }
 func (s *Secret) Position() Position { return s.Pos }
-func (s *Secret) String() string     { return fmt.Sprintf("secret %s %s", s.Name, s.Type) }
+func (s *Secret) String() string {
+	w := &strings.Builder{}
+
+	fmt.Fprint(w, EncodeComments(s.Comments))
+	fmt.Fprintf(w, "secret %s %s", s.Name, s.Type)
+
+	return w.String()
+}
 
 func (s *Secret) ToProto() protoreflect.ProtoMessage {
 	return &schemapb.Secret{
@@ -33,14 +41,14 @@ func (s *Secret) ToProto() protoreflect.ProtoMessage {
 }
 
 func (s *Secret) schemaChildren() []Node { return []Node{s.Type} }
-
-func (s *Secret) schemaDecl()   {}
-func (s *Secret) schemaSymbol() {}
+func (s *Secret) schemaDecl()            {}
+func (s *Secret) schemaSymbol()          {}
 
 func SecretFromProto(p *schemapb.Secret) *Secret {
 	return &Secret{
-		Pos:  posFromProto(p.Pos),
-		Name: p.Name,
-		Type: typeToSchema(p.Type),
+		Pos:      posFromProto(p.Pos),
+		Name:     p.Name,
+		Comments: p.Comments,
+		Type:     typeToSchema(p.Type),
 	}
 }
