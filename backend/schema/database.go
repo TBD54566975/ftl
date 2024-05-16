@@ -15,8 +15,8 @@ type Database struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Name     string   `parser:"@Ident" protobuf:"3"`
 	Type     string   `parser:"'database' @'postgres'" protobuf:"4"`
+	Name     string   `parser:"@Ident" protobuf:"3"`
 }
 
 var _ Decl = (*Database)(nil)
