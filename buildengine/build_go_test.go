@@ -155,6 +155,21 @@ func Nothing(context.Context) error {
 	})
 }
 
+func TestGoBuildClearsBuildDir(t *testing.T) {
+	sch := &schema.Schema{
+		Modules: []*schema.Module{
+			schema.Builtins(),
+			{Name: "test"},
+		},
+	}
+	bctx := buildContext{
+		moduleDir: "testdata/projects/another",
+		buildDir:  "_ftl",
+		sch:       sch,
+	}
+	testBuildClearsBuildDir(t, bctx)
+}
+
 func TestMetadataImportsExcluded(t *testing.T) {
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
