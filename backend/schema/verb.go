@@ -75,7 +75,7 @@ func (v *Verb) IsExported() bool { return v.Export }
 
 func (v *Verb) String() string {
 	w := &strings.Builder{}
-	fmt.Fprint(w, encodeComments(v.Comments))
+	fmt.Fprint(w, EncodeComments(v.Comments))
 	if v.Export {
 		fmt.Fprint(w, "export ")
 	}

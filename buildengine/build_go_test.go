@@ -128,6 +128,7 @@ type EchoRequest struct {
 }
 
 // This is an echo data response.
+//
 type EchoResponse struct {
 }
 
@@ -219,6 +220,7 @@ import (
 var _ = context.Background
 
 // Request data type.
+//
 type Req struct {
 }
 

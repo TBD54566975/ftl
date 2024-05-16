@@ -32,7 +32,7 @@ func (f *Field) schemaChildren() []Node {
 }
 func (f *Field) String() string {
 	w := &strings.Builder{}
-	fmt.Fprint(w, encodeComments(f.Comments))
+	fmt.Fprint(w, EncodeComments(f.Comments))
 	fmt.Fprintf(w, "%s %s", f.Name, f.Type.String())
 	for _, md := range f.Metadata {
 		fmt.Fprintf(w, " %s", md.String())

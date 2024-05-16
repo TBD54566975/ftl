@@ -26,7 +26,7 @@ func (e *Enum) Position() Position { return e.Pos }
 
 func (e *Enum) String() string {
 	w := &strings.Builder{}
-	fmt.Fprint(w, encodeComments(e.Comments))
+	fmt.Fprint(w, EncodeComments(e.Comments))
 	if e.Export {
 		fmt.Fprint(w, "export ")
 	}
@@ -113,7 +113,7 @@ func (e *EnumVariant) schemaChildren() []Node { return []Node{e.Value} }
 
 func (e *EnumVariant) String() string {
 	w := &strings.Builder{}
-	fmt.Fprint(w, encodeComments(e.Comments))
+	fmt.Fprint(w, EncodeComments(e.Comments))
 	fmt.Fprintf(w, e.Name)
 	if e.Value != nil {
 		if _, ok := e.Value.(*TypeValue); ok {

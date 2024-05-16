@@ -19,9 +19,12 @@ func TestSchemaString(t *testing.T) {
 	expected := Builtins().String() + `
 // A comment
 module todo {
+  // A config value
   config configValue String
+  // Shhh
   secret secretValue String
 
+  // A database
   database postgres testdb
 
   export data CreateRequest {
@@ -421,8 +424,11 @@ func TestParseModule(t *testing.T) {
 	input := `
 // A comment
 module todo {
+  // A config value
   config configValue String
+  // Shhh
   secret secretValue String
+  // A database
   database postgres testdb
 
   export data CreateRequest {
@@ -497,16 +503,19 @@ var testSchema = MustValidate(&Schema{
 			Comments: []string{"A comment"},
 			Decls: []Decl{
 				&Secret{
-					Name: "secretValue",
-					Type: &String{},
+					Comments: []string{"Shhh"},
+					Name:     "secretValue",
+					Type:     &String{},
 				},
 				&Config{
-					Name: "configValue",
-					Type: &String{},
+					Comments: []string{"A config value"},
+					Name:     "configValue",
+					Type:     &String{},
 				},
 				&Database{
-					Name: "testdb",
-					Type: "postgres",
+					Comments: []string{"A database"},
+					Name:     "testdb",
+					Type:     "postgres",
 				},
 				&Data{
 					Name:   "CreateRequest",

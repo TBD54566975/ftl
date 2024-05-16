@@ -30,7 +30,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/reflect"
-	islices "github.com/TBD54566975/ftl/internal/slices"
 )
 
 type ExternalModuleContext struct {
@@ -261,17 +260,8 @@ func online() bool {
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{
-	"comment": func(s []string) string {
-		return strings.Join(islices.Map(s, func(line string) string {
-			commented := "//"
-			// Prevent trailing whitespace on empty lines.
-			if line != "" {
-				commented += " " + line
-			}
-			return commented
-		}), "\n")
-	},
-	"type": genType,
+	"comment": schema.EncodeComments,
+	"type":    genType,
 	"is": func(kind string, t schema.Node) bool {
 		return stdreflect.Indirect(stdreflect.ValueOf(t)).Type().Name() == kind
 	},

@@ -219,6 +219,9 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 			transition fsm.paid to fsm.completed
 		}
 
+		// The message to be sent when the payment is completed.
+		//
+		// Otherwise, OnlinePaymentFailed will be sent.
 		data OnlinePaymentCompleted {
 		}
 
@@ -237,6 +240,7 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 
 		verb failed(fsm.OnlinePaymentFailed) Unit
 
+		// The message to be sent when the payment is paid.
 		verb paid(fsm.OnlinePaymentPaid) Unit
 	}
 `
