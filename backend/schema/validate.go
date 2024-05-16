@@ -214,7 +214,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataCronJob,
-				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema,
+				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema, *TypeAlias,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named:
 			}
@@ -279,10 +279,11 @@ func ValidateModule(module *Module) error {
 		}
 		switch n := n.(type) {
 		case *Ref:
-			if scopes.Resolve(*n) == nil && n.Module == "" {
+			mdecl := scopes.Resolve(*n)
+			if mdecl == nil && n.Module == "" {
 				merr = append(merr, errorf(n, "unknown reference %q", n))
 			}
-			if mdecl := scopes.Resolve(*n); mdecl != nil {
+			if mdecl != nil {
 				moduleName := ""
 				if m, ok := mdecl.Module.Get(); ok {
 					moduleName = m.Name
@@ -335,7 +336,7 @@ func ValidateModule(module *Module) error {
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*FSM, *Config, *FSMTransition, *Secret:
+			*FSM, *Config, *FSMTransition, *Secret, *TypeAlias:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -367,14 +368,16 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 2
 	case *Database:
 		priority = 3
-	case *Enum:
+	case *TypeAlias:
 		priority = 4
-	case *FSM:
+	case *Enum:
 		priority = 5
-	case *Data:
+	case *FSM:
 		priority = 6
-	case *Verb:
+	case *Data:
 		priority = 7
+	case *Verb:
+		priority = 8
 	}
 	return priority
 }

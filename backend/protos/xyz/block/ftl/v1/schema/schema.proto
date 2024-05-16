@@ -55,9 +55,10 @@ message Decl {
     Verb verb = 2;
     Database database = 3;
     Enum enum = 4;
-    Config config = 5;
-    Secret secret = 6;
-    FSM fsm = 7;
+    TypeAlias typeAlias = 5;
+    Config config = 6;
+    Secret secret = 7;
+    FSM fsm = 8;
   }
 }
 
@@ -252,6 +253,14 @@ message Type {
     Ref ref = 11;
     Optional optional = 12;
   }
+}
+
+message TypeAlias {
+  optional Position pos = 1;
+  repeated string comments = 2;
+  bool export = 3;
+  string name = 4;
+  Type type = 5;
 }
 
 message TypeParameter {

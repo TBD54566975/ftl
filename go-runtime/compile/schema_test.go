@@ -247,6 +247,54 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
+func TestExtractModuleSchemaTypeAlias(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	r, err := ExtractModuleSchema("testdata/typealias")
+	assert.NoError(t, err)
+	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
+	actual := schema.Normalise(r.MustGet().Module)
+	expected := `module typealias {
+		typealias DoubleAliasedUser typealias.InternalUser
+
+		// ID testing if typealias before struct works
+		typealias Id String
+			
+		typealias InternalUser typealias.User
+		
+		// Name testing if typealias after struct works
+        typealias Name String
+        
+        // UserSource, testing that defining an enum after struct works
+        enum UserSource: String {
+        	Magazine = "magazine"
+        	Friend = "friend"
+        	Ad = "ad"
+        }
+        
+		// UserState, testing that defining an enum before struct works
+		enum UserState: String {
+			Registered = "registered"
+			Active = "active"
+			Inactive = "inactive"
+		}
+
+		data User {
+			id typealias.Id
+			name typealias.Name
+			state typealias.UserState
+			source typealias.UserSource
+		}
+		
+		verb pingInternalUser(typealias.InternalUser) Unit
+
+		verb pingUser(typealias.User) Unit
+	}
+`
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
+}
+
 func TestParseDirectives(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -259,6 +307,8 @@ func TestParseDirectives(t *testing.T) {
 		{name: "Data export", input: "ftl:data export", expected: &directiveData{Data: true, Export: true}},
 		{name: "Enum", input: "ftl:enum", expected: &directiveEnum{Enum: true}},
 		{name: "Enum export", input: "ftl:enum export", expected: &directiveEnum{Enum: true, Export: true}},
+		{name: "TypeAlias", input: "ftl:typealias", expected: &directiveTypeAlias{TypeAlias: true}},
+		{name: "TypeAlias export", input: "ftl:typealias export", expected: &directiveTypeAlias{TypeAlias: true, Export: true}},
 		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
 			Method: "GET",
 			Path: []schema.IngressPathComponent{

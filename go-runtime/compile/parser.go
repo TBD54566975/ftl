@@ -82,6 +82,24 @@ func (d *directiveEnum) IsExported() bool {
 	return d.Export
 }
 
+type directiveTypeAlias struct {
+	Pos lexer.Position
+
+	TypeAlias bool `parser:"@'typealias'"`
+	Export    bool `parser:"@'export'?"`
+}
+
+func (*directiveTypeAlias) directive() {}
+func (d *directiveTypeAlias) String() string {
+	if d.Export {
+		return "ftl:typealias export"
+	}
+	return "ftl:typealias"
+}
+func (d *directiveTypeAlias) IsExported() bool {
+	return d.Export
+}
+
 type directiveIngress struct {
 	Pos schema.Position
 
@@ -117,7 +135,7 @@ var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
-	participle.Union[directive](&directiveVerb{}, &directiveData{}, &directiveEnum{}, &directiveIngress{}, &directiveCronJob{}),
+	participle.Union[directive](&directiveVerb{}, &directiveData{}, &directiveEnum{}, &directiveTypeAlias{}, &directiveIngress{}, &directiveCronJob{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 

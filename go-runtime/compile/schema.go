@@ -50,6 +50,7 @@ type NativeNames map[schema.Node]string
 
 type enums map[string]*schema.Enum
 type enumInterfaces map[string]*types.Interface
+type enumRefs map[string]*schema.Ref
 
 func noEndColumnErrorf(pos token.Pos, format string, args ...interface{}) *schema.Error {
 	return tokenErrorf(pos, "", format, args...)
@@ -98,6 +99,9 @@ func (e errorSet) addAll(errs ...*schema.Error) {
 type ParseResult struct {
 	Module      *schema.Module
 	NativeNames NativeNames
+	// EnumRefs contains any external enums referenced by this module. The refs will be resolved and any type enums
+	// will be registered to the `ftl.TypeRegistry` and provided in the context for this module.
+	EnumRefs []*schema.Ref
 	// Errors contains schema validation errors encountered during parsing.
 	Errors []*schema.Error
 }
@@ -116,10 +120,16 @@ func ExtractModuleSchema(dir string) (optional.Option[ParseResult], error) {
 		return optional.None[ParseResult](), fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
 	}
 	nativeNames := NativeNames{}
+	eRefs := enumRefs{}
 	// Find module name
 	module := &schema.Module{}
 	merr := []error{}
 	schemaErrs := []*schema.Error{}
+
+	typeAliasNames, err := extractTypeAliasNames(pkgs)
+	if err != nil {
+		return optional.None[ParseResult](), err
+	}
 	for _, pkg := range pkgs {
 		moduleName, ok := ftlModuleFromGoModule(pkg.PkgPath).Get()
 		if !ok {
@@ -131,8 +141,17 @@ func ExtractModuleSchema(dir string) (optional.Option[ParseResult], error) {
 				merr = append(merr, perr)
 			}
 		}
-		pctx := &parseContext{pkg: pkg, pkgs: pkgs, module: module, nativeNames: NativeNames{}, enums: enums{},
-			enumInterfaces: enumInterfaces{}, errors: errorSet{}}
+		pctx := &parseContext{
+			pkg:            pkg,
+			pkgs:           pkgs,
+			module:         module,
+			nativeNames:    NativeNames{},
+			enums:          enums{},
+			enumInterfaces: enumInterfaces{},
+			enumRefs:       eRefs,
+			typeAliasNames: typeAliasNames,
+			errors:         errorSet{},
+		}
 		for _, file := range pkg.Syntax {
 			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
 				switch node := node.(type) {
@@ -183,6 +202,7 @@ func ExtractModuleSchema(dir string) (optional.Option[ParseResult], error) {
 	return optional.Some(ParseResult{
 		NativeNames: nativeNames,
 		Module:      module,
+		EnumRefs:    maps.Values(eRefs),
 	}), schema.ValidateModule(module)
 }
 
@@ -504,7 +524,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 
 		for _, dir := range directives {
 			switch dir.(type) {
-			case *directiveVerb, *directiveData, *directiveEnum:
+			case *directiveVerb, *directiveData, *directiveEnum, *directiveTypeAlias:
 				if len(node.Specs) != 1 {
 					pctx.errors.add(errorf(node, "error parsing ftl directive: expected "+
 						"exactly one type declaration"))
@@ -516,48 +536,19 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					pctx.errors.add(errorf(node, "ftl directive must be in the module package"))
 					return
 				}
-				isExported := false
-				if exportableDir, ok := dir.(exportable); ok {
-					isExported = exportableDir.IsExported()
-				}
 				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
-					typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
-					switch typ.Underlying().(type) {
-					case *types.Basic:
-						if sType, ok := visitType(pctx, node.Pos(), typ, isExported).Get(); ok {
-							enum := &schema.Enum{
-								Pos:      goPosToSchemaPos(node.Pos()),
-								Comments: visitComments(node.Doc),
-								Name:     strcase.ToUpperCamel(t.Name.Name),
-								Type:     sType,
-								Export:   isExported,
-							}
-							pctx.enums[t.Name.Name] = enum
-							pctx.nativeNames[enum] = t.Name.Name
-						} else {
-							pctx.errors.add(errorf(node, "unsupported type %q for value enum",
-								pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
-						}
-					case *types.Interface:
-						enum := &schema.Enum{
-							Pos:      goPosToSchemaPos(node.Pos()),
-							Comments: visitComments(node.Doc),
-							Name:     strcase.ToUpperCamel(t.Name.Name),
-							Export:   isExported,
-						}
-						pctx.enums[t.Name.Name] = enum
-						enumType := pctx.pkg.Types.Scope().Lookup(t.Name.Name)
-						enumName := enumType.Pkg().Name() + "." + enumType.Name()
-						pctx.nativeNames[enum] = enumName
-						if typ, ok := typ.(*types.Interface); ok {
-							pctx.enumInterfaces[t.Name.Name] = typ
-						} else {
-							pctx.errors.add(errorf(node, "expected interface for type enum but got %q", typ))
-						}
+					isExported := false
+					if exportableDir, ok := dir.(exportable); ok {
+						isExported = exportableDir.IsExported()
 					}
-					visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
+					if _, ok := dir.(*directiveEnum); ok {
+						visitEnumDecl(pctx, node, t, isExported)
+					} else if _, ok := dir.(*directiveTypeAlias); ok {
+						visitTypeAliasDecl(pctx, node, t, isExported)
+					} else {
+						visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
+					}
 				}
-
 			case *directiveIngress, *directiveCronJob:
 			}
 		}
@@ -803,7 +794,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 				Pos:  dir.Pos,
 				Cron: dir.Cron,
 			})
-		case *directiveData, *directiveEnum:
+		case *directiveData, *directiveEnum, *directiveTypeAlias:
 			pctx.errors.add(errorf(node, "unexpected directive %T", dir))
 		}
 	}
@@ -1043,13 +1034,39 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	if tparam, ok := tnode.(*types.TypeParam); ok {
 		return optional.Some[schema.Type](&schema.Ref{Pos: goPosToSchemaPos(pos), Name: tparam.Obj().Id()})
 	}
+	if named, ok := tnode.(*types.Named); ok {
+		if pctx.typeAliasNames[named.Obj().Name()] {
+			nodePath := named.Obj().Pkg().Path()
+			if !strings.HasPrefix(nodePath, pctx.pkg.PkgPath) {
+				// if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
+				// pctx.errors.add(noEndColumnErrorf(pos,
+				// 	"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
+				// return optional.None[schema.Type](), true
+				// }
+				base := path.Dir(pctx.pkg.PkgPath)
+				destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
+				return optional.Some[schema.Type](&schema.Ref{
+					Pos:    goPosToSchemaPos(pos),
+					Module: destModule,
+					Name:   strcase.ToUpperCamel(named.Obj().Name()),
+				})
+			} else {
+				return optional.Some[schema.Type](&schema.Ref{
+					Pos:    goPosToSchemaPos(pos),
+					Module: pctx.module.Name,
+					Name:   strcase.ToUpperCamel(named.Obj().Name()),
+				})
+			}
+		}
+	}
+
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		if named, ok := tnode.(*types.Named); ok {
 			if _, ok := visitType(pctx, pos, named.Underlying(), isExported).Get(); !ok {
 				return optional.None[schema.Type]()
 			}
-			enumRef, doneWithVisit := parseEnumRef(pctx, pos, named)
+			enumRef, doneWithVisit := visitEnumRef(pctx, pos, named)
 			if doneWithVisit {
 				return enumRef
 			}
@@ -1116,7 +1133,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 			return optional.Some[schema.Type](&schema.Any{Pos: goPosToSchemaPos(pos)})
 		}
 		if named, ok := tnode.(*types.Named); ok {
-			enumRef, doneWithVisit := parseEnumRef(pctx, pos, named)
+			enumRef, doneWithVisit := visitEnumRef(pctx, pos, named)
 			if doneWithVisit {
 				return enumRef
 			}
@@ -1128,7 +1145,74 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	}
 }
 
-func parseEnumRef(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
+func visitTypeAliasDecl(pctx *parseContext, node *ast.GenDecl, t *ast.TypeSpec, isExported bool) {
+	typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
+	if sType, ok := visitType(pctx, node.Pos(), typ, isExported).Get(); ok {
+		alias := &schema.TypeAlias{
+			Pos:      goPosToSchemaPos(node.Pos()),
+			Comments: visitComments(node.Doc),
+			Name:     strcase.ToUpperCamel(t.Name.Name),
+			Export:   isExported,
+			Type:     sType,
+		}
+		pctx.module.Decls = append(pctx.module.Decls, alias)
+		pctx.nativeNames[alias] = t.Name.Name
+	} else {
+		pctx.errors.add(errorf(node, "unsupported type %q for type alias",
+			pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
+	}
+}
+
+func visitEnumDecl(pctx *parseContext, node *ast.GenDecl, t *ast.TypeSpec, isExported bool) {
+	typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
+	switch typ.Underlying().(type) {
+	case *types.Basic:
+		if sType, ok := visitType(pctx, node.Pos(), typ, isExported).Get(); ok {
+			enum := &schema.Enum{
+				Pos:      goPosToSchemaPos(node.Pos()),
+				Comments: visitComments(node.Doc),
+				Name:     strcase.ToUpperCamel(t.Name.Name),
+				Type:     sType,
+				Export:   isExported,
+			}
+			pctx.enums[t.Name.Name] = enum
+			pctx.nativeNames[enum] = t.Name.Name
+		} else {
+			pctx.errors.add(errorf(node, "unsupported type %q for value enum",
+				pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
+		}
+	case *types.Interface:
+		enum := &schema.Enum{
+			Pos:      goPosToSchemaPos(node.Pos()),
+			Comments: visitComments(node.Doc),
+			Name:     strcase.ToUpperCamel(t.Name.Name),
+			Export:   isExported,
+		}
+		pctx.enums[t.Name.Name] = enum
+		enumType := pctx.pkg.Types.Scope().Lookup(t.Name.Name)
+		enumName := enumType.Pkg().Name() + "." + enumType.Name()
+		pctx.nativeNames[enum] = enumName
+		if typ, ok := typ.(*types.Interface); ok {
+			pctx.enumInterfaces[t.Name.Name] = typ
+		} else {
+			pctx.errors.add(errorf(node, "expected interface for type enum but got %q", typ))
+		}
+	}
+}
+
+func visitEnumRef(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
+	enumRef, doneWithVisit := visitEnumType(pctx, pos, named)
+	if er, ok := enumRef.Get(); ok {
+		refModuleName, ok := ftlModuleFromGoModule(named.Obj().Pkg().Path()).Get()
+		if !ok {
+			refModuleName = named.Obj().Pkg().Path()
+		}
+		pctx.enumRefs[refModuleName+"."+named.Obj().Name()] = er.(*schema.Ref) //nolint:forcetypeassert
+	}
+	return enumRef, doneWithVisit
+}
+
+func visitEnumType(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
 	if named.Obj().Pkg() == nil {
 		return optional.None[schema.Type](), false
 	}
@@ -1137,6 +1221,7 @@ func parseEnumRef(pctx *parseContext, pos token.Pos, named *types.Named) (option
 		// If this type is named and declared in another module, it's a reference.
 		// The only basic-typed references and non-any interface-typed references
 		// supported are enums.
+		// TODO: update above comment, it is not just enums anymore
 		if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
 			pctx.errors.add(noEndColumnErrorf(pos,
 				"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
@@ -1191,6 +1276,60 @@ func visitSlice(pctx *parseContext, pos token.Pos, tnode *types.Slice, isExporte
 		Pos:     goPosToSchemaPos(pos),
 		Element: value,
 	})
+}
+
+func extractTypeAliasNames(pkgs []*packages.Package) (map[string]bool, error) {
+	aliases := map[string]bool{}
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Syntax {
+			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
+				declNode, ok := node.(*ast.GenDecl)
+				if !ok || declNode.Tok != token.TYPE {
+					return next()
+				}
+
+				directives, parseErr := parseDirectives(node, fset, declNode.Doc)
+				if parseErr != nil {
+					// errors collected when visiting all nodes in the next pass
+					return next()
+				}
+
+				// TODO: is this the right place to make sure something isn't a type alias and something else?
+				for _, dir := range directives {
+					_, ok := dir.(*directiveTypeAlias)
+					if !ok {
+						continue
+					}
+					if len(declNode.Specs) != 1 {
+						// errors handled on next pass
+						continue
+					}
+					// if pctx.module.Name == "" {
+					// 	pctx.module.Name = pctx.pkg.Name
+					// } else if pctx.module.Name != pctx.pkg.Name && strings.TrimPrefix(pctx.pkg.Name, "ftl/") != pctx.module.Name {
+					// 	pctx.errors.add(errorf(node, "ftl directive must be in the module package"))
+					// 	return
+					// }
+					t, ok := declNode.Specs[0].(*ast.TypeSpec)
+					if !ok {
+						continue
+					}
+					// TODO: explain this better
+					// do not add to module decls immediately
+					// instead we add to a separate type alias map which then overrides any declarations we find by other visits of the type
+					//
+					// Now we are doing it without Type being set, but we'll fill that in later?
+					// EXPLAIN
+					aliases[t.Name.Name] = true
+				}
+				return next()
+			})
+			if err != nil {
+				return map[string]bool{}, err
+			}
+		}
+	}
+	return aliases, nil
 }
 
 func once[T any](f func() T) func() T {
@@ -1248,6 +1387,8 @@ type parseContext struct {
 	nativeNames    NativeNames
 	enums          enums
 	enumInterfaces enumInterfaces
+	enumRefs       enumRefs
+	typeAliasNames map[string]bool
 	activeVerb     *schema.Verb
 	errors         errorSet
 }
