@@ -15,6 +15,10 @@ var _ = context.Background
 {{- if .IsExported}}
 {{if and (is "Enum" .) .IsValueEnum}}
 {{$enumName := .Name -}}
+{{if .Comments -}}
+{{.Comments|comment}}
+//
+{{end -}}
 //ftl:enum
 type {{.Name|title}} {{type $ .Type}}
 const (
@@ -23,6 +27,9 @@ const (
   {{- end}}
 )
 {{- else if is "Enum" . }}
+{{.Comments|comment}}
+{{if .Comments}}//
+{{end -}}
 //ftl:enum
 {{$enumInterfaceFuncName := enumInterfaceFunc . -}}
 type {{.Name|title}} interface { {{$enumInterfaceFuncName}}() }
@@ -32,7 +39,10 @@ type {{.Name|title}} {{type $ .Value.Value}}
 {{end}}
 func ({{.Name|title}}) {{$enumInterfaceFuncName}}() {}
 {{- end}}
-{{- else if is "Data" . }}
+{{- else if is "Data" .}}
+{{if .Comments -}}
+{{.Comments|comment}}
+{{end -}}
 type {{.Name|title}}
 {{- if .TypeParameters}}[
 {{- range $i, $tp := .TypeParameters}}
@@ -43,9 +53,10 @@ type {{.Name|title}}
   {{.Name|title}} {{type $ .Type}} `json:"{{.Name}}"`
   {{- end}}
 }
-{{- else if is "Verb" . -}}
-{{.Comments|comment }}
-{{if .Comments}}//
+{{- else if is "Verb" .}}
+{{if .Comments -}}
+{{.Comments|comment}}
+//
 {{end -}}
 //ftl:verb
 {{- if and (eq (type $ .Request) "ftl.Unit") (eq (type $ .Response) "ftl.Unit")}}

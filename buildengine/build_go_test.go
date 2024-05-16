@@ -17,9 +17,10 @@ func TestGenerateGoModule(t *testing.T) {
 			schema.Builtins(),
 			{Name: "other", Decls: []schema.Decl{
 				&schema.Enum{
-					Name:   "Color",
-					Export: true,
-					Type:   &schema.String{},
+					Comments: []string{"This is an enum.", "", "It has 3 variants."},
+					Name:     "Color",
+					Export:   true,
+					Type:     &schema.String{},
 					Variants: []*schema.EnumVariant{
 						{Name: "Red", Value: &schema.StringValue{Value: "Red"}},
 						{Name: "Blue", Value: &schema.StringValue{Value: "Blue"}},
@@ -37,15 +38,18 @@ func TestGenerateGoModule(t *testing.T) {
 					},
 				},
 				&schema.Enum{
-					Name:   "TypeEnum",
-					Export: true,
+					Comments: []string{"This is type enum."},
+					Name:     "TypeEnum",
+					Export:   true,
 					Variants: []*schema.EnumVariant{
 						{Name: "A", Value: &schema.TypeValue{Value: &schema.Int{}}},
 						{Name: "B", Value: &schema.TypeValue{Value: &schema.String{}}},
 					},
 				},
 				&schema.Data{Name: "EchoRequest", Export: true},
-				&schema.Data{Name: "EchoResponse", Export: true},
+				&schema.Data{
+					Comments: []string{"This is an echo data response."},
+					Name:     "EchoResponse", Export: true},
 				&schema.Verb{
 					Name:     "echo",
 					Export:   true,
@@ -54,6 +58,7 @@ func TestGenerateGoModule(t *testing.T) {
 				},
 				&schema.Data{Name: "SinkReq", Export: true},
 				&schema.Verb{
+					Comments: []string{"This is a sink verb.", "", "Here is another line for this comment!"},
 					Name:     "sink",
 					Export:   true,
 					Request:  &schema.Ref{Name: "SinkReq"},
@@ -86,6 +91,10 @@ import (
 
 var _ = context.Background
 
+// This is an enum.
+//
+// It has 3 variants.
+//
 //ftl:enum
 type Color string
 const (
@@ -102,6 +111,8 @@ const (
   GreenInt ColorInt = 2
 )
 
+// This is type enum.
+//
 //ftl:enum
 type TypeEnum interface { typeEnum() }
 
@@ -116,6 +127,7 @@ func (B) typeEnum() {}
 type EchoRequest struct {
 }
 
+// This is an echo data response.
 type EchoResponse struct {
 }
 
@@ -127,6 +139,10 @@ func Echo(context.Context, EchoRequest) (EchoResponse, error) {
 type SinkReq struct {
 }
 
+// This is a sink verb.
+//
+// Here is another line for this comment!
+//
 //ftl:verb
 func Sink(context.Context, SinkReq) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
@@ -160,9 +176,12 @@ func TestMetadataImportsExcluded(t *testing.T) {
 		Modules: []*schema.Module{
 			schema.Builtins(),
 			{Name: "test", Decls: []schema.Decl{
-				&schema.Data{Name: "Req", Export: true},
+				&schema.Data{
+					Comments: []string{"Request data type."},
+					Name:     "Req", Export: true},
 				&schema.Data{Name: "Resp", Export: true},
 				&schema.Verb{
+					Comments: []string{"This is a verb."},
 					Name:     "call",
 					Export:   true,
 					Request:  &schema.Ref{Name: "Req"},
@@ -184,12 +203,15 @@ import (
 
 var _ = context.Background
 
+// Request data type.
 type Req struct {
 }
 
 type Resp struct {
 }
 
+// This is a verb.
+//
 //ftl:verb
 func Call(context.Context, Req) (Resp, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
