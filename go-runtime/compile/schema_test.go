@@ -289,6 +289,7 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 
 		// UserState, testing that defining an enum before struct works
 		export enum UserState: String {
+			Onboarded = "onboarded"
 			Registered = "registered"
 			Active = "active"
 			Inactive = "inactive"

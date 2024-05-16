@@ -12,6 +12,11 @@ import (
 //ftl:typealias export
 type ID string
 
+// Out of order
+const (
+	Onboarded UserState = "onboarded"
+)
+
 // UserState, testing that defining an enum before struct works
 //
 //ftl:enum
