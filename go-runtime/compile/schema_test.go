@@ -61,11 +61,6 @@ func TestExtractModuleSchema(t *testing.T) {
     List one.List
   }
 
-  enum BlobOrList2 {
-    Blob one.Blob
-    List one.List
-  }
-
   export enum Color: String {
     Red = "Red"
     Blue = "Blue"
