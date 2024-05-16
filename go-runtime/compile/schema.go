@@ -1204,7 +1204,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 					Module: pctx.module.Name,
 					Name:   strcase.ToUpperCamel(named.Obj().Name()),
 				})
-			case *schema.Data, *schema.Verb, *schema.Config, *schema.Secret, *schema.Database:
+			case *schema.Data, *schema.Verb, *schema.Config, *schema.Secret, *schema.Database, *schema.FSM:
 			}
 		}
 	}
@@ -1494,34 +1494,38 @@ func (p *parseContext) getDeclForTypeName(name string) (enum schema.Decl, ok boo
 
 func (p *parseContext) markAsExported(node schema.Node) {
 	_ = schema.Visit(node, func(n schema.Node, next func() error) error {
-		switch n := n.(type) {
-		case *schema.Enum:
-			n.Export = true
-		case *schema.TypeAlias:
-			n.Export = true
-		case *schema.Data:
-			n.Export = true
-		case *schema.Verb:
-			n.Export = true
-		case *schema.Ref:
-			if n.Module != "" && n.Module != p.module.Name {
-				break
+		if decl, ok := n.(schema.Decl); ok {
+			switch decl := decl.(type) {
+			case *schema.Enum:
+				decl.Export = true
+			case *schema.TypeAlias:
+				decl.Export = true
+			case *schema.Data:
+				decl.Export = true
+			case *schema.Verb:
+				decl.Export = true
+			case *schema.Config, *schema.Secret, *schema.Database, *schema.FSM:
+				return next()
+			}
+		} else if r, ok := n.(*schema.Ref); ok {
+			if r.Module != "" && r.Module != p.module.Name {
+				return next()
 			}
 			for _, d := range p.module.Decls {
 				switch d := d.(type) {
 				case *schema.Enum:
-					if d.Name != n.Name {
+					if d.Name != r.Name {
 						continue
 					}
 				case *schema.TypeAlias:
-					if d.Name != n.Name {
+					if d.Name != r.Name {
 						continue
 					}
 				case *schema.Data:
-					if d.Name != n.Name {
+					if d.Name != r.Name {
 						continue
 					}
-				case *schema.Verb, *schema.Config, *schema.Secret, *schema.Database:
+				case *schema.Verb, *schema.Config, *schema.Secret, *schema.Database, *schema.FSM:
 					// does not support implicit exporting
 					continue
 				default:
@@ -1533,7 +1537,6 @@ func (p *parseContext) markAsExported(node schema.Node) {
 					}
 				}
 			}
-		case *schema.Config, *schema.Secret, *schema.Database, *schema.TypeParameter, *schema.EnumVariant:
 		}
 		return next()
 	})
