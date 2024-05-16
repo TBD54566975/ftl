@@ -23,6 +23,7 @@ func TestVerbSchemaString(t *testing.T) {
 						{Name: "Name", Type: &schema.String{}},
 						{Name: "Nested", Type: &schema.Ref{Module: "foo", Name: "Nested"}},
 						{Name: "External", Type: &schema.Ref{Module: "bar", Name: "BarData"}},
+						{Name: "Enum", Type: &schema.Ref{Module: "foo", Name: "Color"}},
 					},
 				},
 				&schema.Data{
@@ -35,6 +36,16 @@ func TestVerbSchemaString(t *testing.T) {
 					Name: "Nested",
 					Fields: []*schema.Field{
 						{Name: "Field", Type: &schema.String{}},
+					},
+				},
+				&schema.Enum{
+					Name:   "Color",
+					Export: true,
+					Type:   &schema.String{},
+					Variants: []*schema.EnumVariant{
+						{Name: "Red", Value: &schema.StringValue{Value: "Red"}},
+						{Name: "Blue", Value: &schema.StringValue{Value: "Blue"}},
+						{Name: "Green", Value: &schema.StringValue{Value: "Green"}},
 					},
 				},
 			}},
@@ -54,6 +65,7 @@ func TestVerbSchemaString(t *testing.T) {
   Name String
   Nested foo.Nested
   External bar.BarData
+  Enum foo.Color
 }
 
 data Nested {
@@ -62,6 +74,12 @@ data Nested {
 
 export data BarData {
   Name String
+}
+
+export enum Color: String {
+  Red = "Red"
+  Blue = "Blue"
+  Green = "Green"
 }
 
 data EchoResponse {
