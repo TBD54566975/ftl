@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/alecthomas/types/optional"
 )
 
 type Enum struct {
