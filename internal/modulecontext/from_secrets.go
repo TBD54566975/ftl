@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// DatabasesFromSecrets finds DSNs in environment variables and creates a map of databases.
+// DatabasesFromSecrets finds DSNs in secrets and creates a map of databases.
 //
-// Environment variables should be in the format FTL_POSTGRES_DSN__<MODULENAME>_<DBNAME>
+// Secret keys should be in the format FTL_DSN_<MODULENAME>_<DBNAME>
 func DatabasesFromSecrets(ctx context.Context, module string, secrets map[string][]byte) (map[string]Database, error) {
 	databases := map[string]Database{}
 	for sName, maybeDSN := range secrets {
@@ -18,7 +18,7 @@ func DatabasesFromSecrets(ctx context.Context, module string, secrets map[string
 		// FTL_DSN_<MODULE>_<DBNAME>
 		parts := strings.Split(sName, "_")
 		if len(parts) != 4 {
-			return nil, fmt.Errorf("invalid DSN secret key %q should have format FTL_DSN_MODULE_DBNAME", sName)
+			return nil, fmt.Errorf("invalid DSN secret key %q should have format FTL_DSN_<MODULE>_<DBNAME>", sName)
 		}
 		moduleName := strings.ToLower(parts[2])
 		dbName := strings.ToLower(parts[3])

@@ -41,6 +41,8 @@ func infof(format string, args ...any) {
 var buildOnce sync.Once
 
 // run an integration test.
+// ftlConfigPath: if FTL_CONFIG should be set for this test, then pass in the relative
+//   path from integration/testdata/go/. e.g. "database/ftl-project.toml"
 func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	tmpDir := t.TempDir()
 
@@ -50,7 +52,11 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	rootDir := internal.GitRoot("")
 
 	if ftlConfigPath != "" {
-		t.Setenv("FTL_CONFIG", filepath.Join(tmpDir, ftlConfigPath))
+		// Use a path into the testdata directory instead of one relative to
+		// tmpDir. Otherwise we have a chicken and egg situation where the config
+		// can't be loaded until the module is copied over, and the config itself
+		// is used by FTL during startup.
+		t.Setenv("FTL_CONFIG", filepath.Join(cwd, "testdata", "go", ftlConfigPath))
 	}
 
 	// Build FTL binary
