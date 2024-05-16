@@ -76,7 +76,7 @@ type spacingRule struct {
 
 func (m *Module) String() string {
 	w := &strings.Builder{}
-	fmt.Fprint(w, encodeComments(m.Comments))
+	fmt.Fprint(w, EncodeComments(m.Comments))
 	if m.Builtin {
 		fmt.Fprint(w, "builtin ")
 	}

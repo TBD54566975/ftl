@@ -16,7 +16,7 @@ var _ = context.Background
 {{if and (is "Enum" .) .IsValueEnum}}
 {{$enumName := .Name -}}
 {{if .Comments -}}
-{{.Comments|comment}}
+{{.Comments|comment -}}
 //
 {{end -}}
 //ftl:enum
@@ -27,7 +27,7 @@ const (
   {{- end}}
 )
 {{- else if is "Enum" . }}
-{{.Comments|comment}}
+{{.Comments|comment -}}
 {{if .Comments}}//
 {{end -}}
 //ftl:enum
@@ -41,7 +41,7 @@ func ({{.Name|title}}) {{$enumInterfaceFuncName}}() {}
 {{- end}}
 {{- else if is "Data" .}}
 {{if .Comments -}}
-{{.Comments|comment}}
+{{.Comments|comment -}}
 {{end -}}
 type {{.Name|title}}
 {{- if .TypeParameters}}[
@@ -55,7 +55,7 @@ type {{.Name|title}}
 }
 {{- else if is "Verb" .}}
 {{if .Comments -}}
-{{.Comments|comment}}
+{{.Comments|comment -}}
 //
 {{end -}}
 //ftl:verb

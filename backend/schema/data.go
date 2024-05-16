@@ -155,7 +155,7 @@ func (d *Data) IsExported() bool { return d.Export }
 
 func (d *Data) String() string {
 	w := &strings.Builder{}
-	fmt.Fprint(w, encodeComments(d.Comments))
+	fmt.Fprint(w, EncodeComments(d.Comments))
 	typeParameters := ""
 	if len(d.TypeParameters) > 0 {
 		typeParameters = "<"

@@ -27,13 +27,20 @@ func encodeMetadata(metadata []Metadata) string {
 	return strings.TrimSuffix(w.String(), "\n")
 }
 
-func encodeComments(comments []string) string {
+func EncodeComments(comments []string) string {
 	if len(comments) == 0 {
 		return ""
 	}
+
 	w := &strings.Builder{}
 	for _, c := range comments {
-		fmt.Fprintf(w, "// %s\n", c)
+		space := ""
+		// Empty lines should not have a trailing space.
+		if c != "" {
+			space = " "
+		}
+
+		fmt.Fprintf(w, "//%s%s\n", space, c)
 	}
 	return w.String()
 }

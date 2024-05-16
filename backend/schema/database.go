@@ -28,7 +28,7 @@ func (*Database) schemaSymbol()            {}
 func (d *Database) schemaChildren() []Node { return nil }
 func (d *Database) String() string {
 	w := &strings.Builder{}
-	fmt.Fprint(w, encodeComments(d.Comments))
+	fmt.Fprint(w, EncodeComments(d.Comments))
 	fmt.Fprintf(w, "database %s %s", d.Type, d.Name)
 	return w.String()
 }
