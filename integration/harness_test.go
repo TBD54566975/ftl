@@ -16,6 +16,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
+	"github.com/otiai10/copy"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -48,9 +49,13 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	assert.NoError(t, err)
 
 	rootDir := internal.GitRoot("")
+	testData := filepath.Join(cwd, "testdata", "go")
 
 	if ftlConfigPath != "" {
-		t.Setenv("FTL_CONFIG", filepath.Join(tmpDir, ftlConfigPath))
+		tmpConfigPath := filepath.Join(tmpDir, ftlConfigPath)
+		infof("Copying %s to %s", filepath.Join(testData, ftlConfigPath), tmpConfigPath)
+		copy.Copy(filepath.Join(testData, ftlConfigPath), tmpConfigPath)
+		t.Setenv("FTL_CONFIG", tmpConfigPath)
 	}
 
 	// Build FTL binary
@@ -73,7 +78,7 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	ic := testContext{
 		Context:    ctx,
 		rootDir:    rootDir,
-		testData:   filepath.Join(cwd, "testdata", "go"),
+		testData:   testData,
 		workDir:    tmpDir,
 		binDir:     binDir,
 		controller: controller,
