@@ -193,6 +193,8 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 				}
 				typeMatches = true
 			}
+		case *schema.TypeAlias:
+			return validateValue(d.Type, path, value, sch)
 		case *schema.Enum:
 			var inputName any
 			inputName = value

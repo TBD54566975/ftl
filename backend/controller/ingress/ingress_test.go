@@ -107,7 +107,30 @@ func TestValidation(t *testing.T) {
 					unit Unit
 				}
 			}`,
-			request: obj{}},
+			request: obj{},
+		},
+		{name: "StringAlias",
+			schema: `module test {
+			typealias StringAlias String
+			 data Test { stringValue test.StringAlias }
+			 }`,
+			request: obj{"stringValue": "test"},
+		},
+		{name: "IntAlias",
+			schema: `module test {
+			typealias IntAlias Int
+			data Test { intValue test.IntAlias } 
+			}`,
+			request: obj{"intValue": 10.0},
+		},
+		{name: "DataAlias",
+			schema: `module test {
+			typealias IntAlias test.Inner
+			data Inner { string String }
+			data Test { obj test.IntAlias }
+			}`,
+			request: obj{"obj": obj{"string": "test"}},
+		},
 		{name: "RequiredFields",
 			schema:  `module test { data Test { int Int } }`,
 			request: obj{},
