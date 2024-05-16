@@ -2,6 +2,7 @@ package projectconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -84,6 +85,9 @@ func loadFile(path string) (Config, error) {
 	config := Config{}
 	md, err := toml.DecodeFile(path, &config)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return Config{}, nil
+		}
 		return Config{}, err
 	}
 	if len(md.Undecoded()) > 0 {
