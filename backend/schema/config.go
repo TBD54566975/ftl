@@ -48,8 +48,8 @@ func (s *Config) schemaSymbol()          {}
 func ConfigFromProto(p *schemapb.Config) *Config {
 	return &Config{
 		Pos:      posFromProto(p.Pos),
-		Name:     p.Name,
 		Comments: p.Comments,
+		Name:     p.Name,
 		Type:     typeToSchema(p.Type),
 	}
 }

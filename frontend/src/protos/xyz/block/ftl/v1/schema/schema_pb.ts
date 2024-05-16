@@ -301,14 +301,14 @@ export class Database extends Message<Database> {
   pos?: Position;
 
   /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: repeated string comments = 3;
+   * @generated from field: repeated string comments = 2;
    */
   comments: string[] = [];
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
 
   /**
    * @generated from field: string type = 4;
@@ -324,8 +324,8 @@ export class Database extends Message<Database> {
   static readonly typeName = "xyz.block.ftl.v1.schema.Database";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 

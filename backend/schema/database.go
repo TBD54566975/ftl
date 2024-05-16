@@ -14,9 +14,9 @@ const PostgresDatabaseType = "postgres"
 type Database struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" protobuf:"3"`
+	Comments []string `parser:"@Comment*" protobuf:"2"`
+	Name     string   `parser:"@Ident" protobuf:"3"`
 	Type     string   `parser:"'database' @'postgres'" protobuf:"4"`
-	Name     string   `parser:"@Ident" protobuf:"2"`
 }
 
 var _ Decl = (*Database)(nil)
@@ -36,9 +36,9 @@ func (d *Database) String() string {
 func (d *Database) ToProto() proto.Message {
 	return &schemapb.Database{
 		Pos:      posToProto(d.Pos),
+		Comments: d.Comments,
 		Name:     d.Name,
 		Type:     d.Type,
-		Comments: d.Comments,
 	}
 }
 
@@ -48,8 +48,8 @@ func (d *Database) IsExported() bool { return false }
 func DatabaseFromProto(s *schemapb.Database) *Database {
 	return &Database{
 		Pos:      posFromProto(s.Pos),
-		Name:     s.Name,
 		Comments: s.Comments,
+		Name:     s.Name,
 		Type:     s.Type,
 	}
 }
