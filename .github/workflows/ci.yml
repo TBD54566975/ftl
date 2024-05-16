@@ -126,10 +126,6 @@ jobs:
         run: npm run lint
       - name: VSCode Extension NPM Build
         run: just build-extension
-  integration:
-    name: Integration Tests
-    if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/integration.yml
   build-all:
     name: Rebuild All
     runs-on: ubuntu-latest
@@ -146,3 +142,51 @@ jobs:
         run: just init-db
       - name: Rebuild All
         run: just build-all
+  integration-shard:
+    name: Shard Integration Tests
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.extract-tests.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Extract test cases
+        id: extract-tests
+        run: |
+          # shellcheck disable=SC2046
+          echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build integration' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
+  integration-run:
+    name: Integration Test
+    needs: integration-shard
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.integration-shard.outputs.matrix)}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+        with:
+          cache: true
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Create DB
+        run: just init-db
+      - name: Download Go Modules
+        run: go mod download
+      - name: Run ${{ matrix.test }}
+        run: |
+          # shellcheck disable=SC2046
+          go test -v -race -tags integration -run ${{ matrix.test }} $(git grep -l '^//go:build integration' | xargs -I {} dirname './{}' | sort | uniq)
+  integration-success:
+    name: Integration Success
+    needs: [integration-run]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ok
+        run: echo "Integration tests passed"
