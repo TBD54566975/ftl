@@ -7,6 +7,7 @@ import (
 	"go/types"
 	"path"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -716,7 +717,12 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 
 	matchedEnumNames := []string{}
 
-	for enumName, interfaceNode := range pctx.enumInterfaces {
+	// iterate in a predictable way to make sure we are not flipflopping between builds of which type enum counts as first
+	allEnumNames := maps.Keys(pctx.enumInterfaces)
+	slices.Sort(allEnumNames)
+	for _, enumName := range allEnumNames {
+		interfaceNode := pctx.enumInterfaces[enumName]
+
 		// If the type declared is an enum variant, then it must implement
 		// the interface of a type enum
 		named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named)
@@ -766,6 +772,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 		pctx.nativeNames[enumVariant] = named.Obj().Pkg().Name() + "." + named.Obj().Name()
 	}
 	if len(matchedEnumNames) > 1 {
+		slices.Sort(matchedEnumNames)
 		pctx.errors.add(errorf(node, "type can not be a variant of more than 1 type enums (%s)", strings.Join(matchedEnumNames, ", ")))
 	}
 }
