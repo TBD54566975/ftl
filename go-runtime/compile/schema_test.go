@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"golang.org/x/tools/go/packages"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -51,9 +52,13 @@ func TestExtractModuleSchema(t *testing.T) {
 
   database postgres testDb
 
-  enum BlobOrList {
-    Blob String
-    List [String]
+  export typealias Blob String
+
+  export typealias List [String]
+
+  export enum BlobOrList {
+    Blob one.Blob
+    List one.List
   }
 
   export enum Color: String {
@@ -102,13 +107,13 @@ func TestExtractModuleSchema(t *testing.T) {
   export data ExportedStruct {
   }
 
-  data Nested {
+  export data Nested {
   }
 
   data PrivateStruct {
   }
 
-  data Req {
+  export data Req {
     int Int
     int64 Int
     float Float
@@ -126,7 +131,7 @@ func TestExtractModuleSchema(t *testing.T) {
     externalTypeEnumRef two.TypeEnum
   }
 
-  data Resp {
+  export data Resp {
   }
 
   data SinkReq {
@@ -159,16 +164,19 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/two")
 	assert.NoError(t, err)
+	assert.Equal(t, r.MustGet().Errors, nil)
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module two {
+		export typealias Scalar String
+
 		export enum TwoEnum: String {
 		  Red = "Red"
 		  Blue = "Blue"
 		  Green = "Green"
         }
 
-                export enum TypeEnum {
-		  Scalar String
+        export enum TypeEnum {
+		  Scalar two.Scalar
 		  List [String]
 		  Exported two.Exported
 		  WithoutDirective two.WithoutDirective
@@ -247,6 +255,58 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
+func TestExtractModuleSchemaNamedTypes(t *testing.T) {
+	prebuildTestModule(t, "testdata/named", "testdata/namedext")
+	if testing.Short() {
+		t.SkipNow()
+	}
+	r, err := ExtractModuleSchema("testdata/named")
+	assert.NoError(t, err)
+	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
+	actual := schema.Normalise(r.MustGet().Module)
+	expected := `module named {
+		typealias DoubleAliasedUser named.InternalUser
+
+		// ID testing if typealias before struct works
+		export typealias Id String
+
+		typealias InternalUser named.User
+
+		// Name testing if typealias after struct works
+		export typealias Name String
+
+		// UserSource, testing that defining an enum after struct works
+		export enum UserSource: String {
+			Magazine = "magazine"
+			Friend = "friend"
+			Ad = "ad"
+		}
+
+		// UserState, testing that defining an enum before struct works
+		export enum UserState: String {
+			Onboarded = "onboarded"
+			Registered = "registered"
+			Active = "active"
+			Inactive = "inactive"
+		}
+
+		export data User {
+			id named.Id
+			name named.Name
+			state named.UserState
+			source named.UserSource
+			comment namedext.Comment
+			emailConsent namedext.EmailConsent
+		}
+
+		verb pingInternalUser(named.InternalUser) Unit
+
+		verb pingUser(named.User) Unit
+	}
+	`
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
+}
+
 func TestParseDirectives(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -259,6 +319,8 @@ func TestParseDirectives(t *testing.T) {
 		{name: "Data export", input: "ftl:data export", expected: &directiveData{Data: true, Export: true}},
 		{name: "Enum", input: "ftl:enum", expected: &directiveEnum{Enum: true}},
 		{name: "Enum export", input: "ftl:enum export", expected: &directiveEnum{Enum: true, Export: true}},
+		{name: "TypeAlias", input: "ftl:typealias", expected: &directiveTypeAlias{TypeAlias: true}},
+		{name: "TypeAlias export", input: "ftl:typealias export", expected: &directiveTypeAlias{TypeAlias: true, Export: true}},
 		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
 			Method: "GET",
 			Path: []schema.IngressPathComponent{
@@ -293,7 +355,8 @@ func TestParseDirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	parsed, ok := visitType(nil, token.NoPos, timeRef, false).Get()
+	pctx := newParseContext(nil, []*packages.Package{}, &schema.Module{})
+	parsed, ok := visitType(pctx, token.NoPos, timeRef, false).Get()
 	assert.True(t, ok)
 	_, ok = parsed.(*schema.Time)
 	assert.True(t, ok)
@@ -371,10 +434,14 @@ func TestErrorReporting(t *testing.T) {
 		`76:63-63: second result must not be ftl.Unit`,
 		`83:1-1: duplicate verb name "WrongResponse"`,
 		`89:2-12: struct field unexported must be exported by starting with an uppercase letter`,
-		`100:2-23: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
-		`106:2-40: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
-		`115:1-26: parent enum "ExportedTypeEnum" is exported, but directive "ftl:data" on "PrivateData" is not: all variants of exported enums that have a directive must be explicitly exported as well`,
-		`119:21-60: config and secret names must be valid identifiers`,
+		`101:2-24: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
+		`108:2-41: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
+		`117:1-26: parent enum "ExportedTypeEnum" is exported, but directive "ftl:data" on "PrivateData" is not: all variants of exported enums that have a directive must be explicitly exported as well`,
+		`121:21-60: config and secret names must be valid identifiers`,
+		`127:1-26: only one directive expected for type alias`,
+		`133:2-2: type is not declared as an ftl enum or type alias`,
+		`133:2-7: unsupported type "ftl/failing.NonFTLAlias" for field "Value"`,
+		`143:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
 	}
 	assert.Equal(t, expected, actual)
 }

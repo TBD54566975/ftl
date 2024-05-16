@@ -379,19 +379,25 @@ export class Decl extends Message<Decl> {
     case: "enum";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Config config = 5;
+     * @generated from field: xyz.block.ftl.v1.schema.TypeAlias typeAlias = 5;
+     */
+    value: TypeAlias;
+    case: "typeAlias";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Config config = 6;
      */
     value: Config;
     case: "config";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Secret secret = 6;
+     * @generated from field: xyz.block.ftl.v1.schema.Secret secret = 7;
      */
     value: Secret;
     case: "secret";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.FSM fsm = 7;
+     * @generated from field: xyz.block.ftl.v1.schema.FSM fsm = 8;
      */
     value: FSM;
     case: "fsm";
@@ -409,9 +415,10 @@ export class Decl extends Message<Decl> {
     { no: 2, name: "verb", kind: "message", T: Verb, oneof: "value" },
     { no: 3, name: "database", kind: "message", T: Database, oneof: "value" },
     { no: 4, name: "enum", kind: "message", T: Enum, oneof: "value" },
-    { no: 5, name: "config", kind: "message", T: Config, oneof: "value" },
-    { no: 6, name: "secret", kind: "message", T: Secret, oneof: "value" },
-    { no: 7, name: "fsm", kind: "message", T: FSM, oneof: "value" },
+    { no: 5, name: "typeAlias", kind: "message", T: TypeAlias, oneof: "value" },
+    { no: 6, name: "config", kind: "message", T: Config, oneof: "value" },
+    { no: 7, name: "secret", kind: "message", T: Secret, oneof: "value" },
+    { no: 8, name: "fsm", kind: "message", T: FSM, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Decl {
@@ -1968,6 +1975,67 @@ export class Type extends Message<Type> {
 
   static equals(a: Type | PlainMessage<Type> | undefined, b: Type | PlainMessage<Type> | undefined): boolean {
     return proto3.util.equals(Type, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.TypeAlias
+ */
+export class TypeAlias extends Message<TypeAlias> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: bool export = 3;
+   */
+  export = false;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type type = 5;
+   */
+  type?: Type;
+
+  constructor(data?: PartialMessage<TypeAlias>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.TypeAlias";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "export", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "type", kind: "message", T: Type },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeAlias {
+    return new TypeAlias().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypeAlias {
+    return new TypeAlias().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypeAlias {
+    return new TypeAlias().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TypeAlias | PlainMessage<TypeAlias> | undefined, b: TypeAlias | PlainMessage<TypeAlias> | undefined): boolean {
+    return proto3.util.equals(TypeAlias, a, b);
   }
 }
 

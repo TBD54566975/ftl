@@ -92,18 +92,20 @@ type BadStruct struct {
 //ftl:enum
 type TypeEnum interface{ typeEnum() }
 
+//ftl:enum
 type BadValueEnum int
 
 func (BadValueEnum) typeEnum() {}
 
 const (
-	A BadValueEnum = iota
+	A1 BadValueEnum = iota
 )
 
+//ftl:enum
 type BadValueEnumOrderDoesntMatter int
 
 const (
-	A BadValueEnumOrderDoesntMatter = iota
+	A2 BadValueEnumOrderDoesntMatter = iota
 )
 
 func (BadValueEnumOrderDoesntMatter) typeEnum() {}
@@ -117,3 +119,28 @@ type PrivateData struct{}
 func (PrivateData) exportedTypeEnum() {}
 
 var invalidConfig = ftl.Config[string]("not an identifier")
+
+// There can be only one
+//
+//ftl:typealias
+//ftl:enum
+type TypeAliasAndEnum int
+
+type NonFTLAlias int
+
+//ftl:data
+type DataUsingNonFTLAlias struct {
+	Value NonFTLAlias
+}
+
+//ftl:enum
+type TypeEnum1 interface{ typeEnum1() }
+
+//ftl:enum
+type TypeEnum2 interface{ typeEnum2() }
+
+//ftl:typealias
+type ConformsToTwoTypeEnums string
+
+func (ConformsToTwoTypeEnums) typeEnum1() {}
+func (ConformsToTwoTypeEnums) typeEnum2() {}

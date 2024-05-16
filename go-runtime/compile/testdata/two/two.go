@@ -18,6 +18,7 @@ const (
 //ftl:enum export
 type TypeEnum interface{ typeEnum() }
 
+//ftl:typealias export
 type Scalar string
 
 func (Scalar) typeEnum() {}

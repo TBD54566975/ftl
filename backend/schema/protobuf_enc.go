@@ -46,6 +46,9 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 
 		case *FSM:
 			v = &schemapb.Decl_Fsm{Fsm: n.ToProto().(*schemapb.FSM)}
+
+		case *TypeAlias:
+			v = &schemapb.Decl_TypeAlias{TypeAlias: n.ToProto().(*schemapb.TypeAlias)}
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}

@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/alecthomas/types/optional"
 )
 
 type Enum struct {
@@ -89,6 +90,15 @@ func EnumFromProto(s *schemapb.Enum) *Enum {
 // enums by definition cannot have a unified type.
 func (e *Enum) IsValueEnum() bool {
 	return e.Type != nil
+}
+
+func (e *Enum) VariantForName(name string) optional.Option[*EnumVariant] {
+	for _, v := range e.Variants {
+		if name == v.Name {
+			return optional.Some(v)
+		}
+	}
+	return optional.None[*EnumVariant]()
 }
 
 type EnumVariant struct {

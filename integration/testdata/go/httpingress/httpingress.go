@@ -28,10 +28,12 @@ type SumType interface {
 	tag()
 }
 
+//ftl:typealias export
 type A string
 
 func (A) tag() {}
 
+//ftl:typealias export
 type B []string
 
 func (B) tag() {}

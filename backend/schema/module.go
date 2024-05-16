@@ -114,9 +114,13 @@ func (m *Module) String() string {
 }
 
 // AddData and return its index.
+//
+// If data is already in the module, the existing index is returned.
+// If the new data is exported but the existing data is not, it sets it to being exported.
 func (m *Module) AddData(data *Data) int {
 	for i, d := range m.Decls {
 		if d, ok := d.(*Data); ok && d.Name == data.Name {
+			d.Export = d.Export || data.Export
 			return i
 		}
 	}
