@@ -73,7 +73,7 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 
 	// no match found
 	if foundVerb == nil {
-		return fmt.Errorf("verb not found, did you mean one of these: %v", suggestions)
+		return fmt.Errorf("verb not found, did you mean one of these: %s", strings.Join(suggestions, ", "))
 	}
 
 	resp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{
