@@ -444,7 +444,7 @@ func TestErrorReporting(t *testing.T) {
 		`117:1-26: parent enum "ExportedTypeEnum" is exported, but directive "ftl:data" on "PrivateData" is not: all variants of exported enums that have a directive must be explicitly exported as well`,
 		`121:21-60: config and secret names must be valid identifiers`,
 		`127:1-26: only one directive expected for type alias`,
-		`133:2-2: type is not declared as an ftl type alias or enum: NonFTLAlias`,
+		`133:2-2: type is not declared as an ftl enum or type alias`,
 		`133:2-7: unsupported type "ftl/failing.NonFTLAlias" for field "Value"`,
 	}
 	assert.Equal(t, expected, actual)

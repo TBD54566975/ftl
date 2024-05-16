@@ -1202,7 +1202,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 			if doneWithVisit {
 				return ref
 			}
-			pctx.errors.add(noEndColumnErrorf(pos, "type is not declared as an ftl type alias or enum: %s", named.Obj().Name()))
+			pctx.errors.add(noEndColumnErrorf(pos, "type is not declared as an ftl enum or type alias"))
 			return optional.None[schema.Type]()
 		}
 
