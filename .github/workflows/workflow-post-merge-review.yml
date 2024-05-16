@@ -1,0 +1,16 @@
+name: Create Post-merge Review Issue
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  create-issue:
+    name: Create Issue
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cashapp/activate-hermit@v1
+      - run: post-merge-review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
