@@ -132,3 +132,15 @@ type NonFTLAlias int
 type DataUsingNonFTLAlias struct {
 	Value NonFTLAlias
 }
+
+//ftl:enum
+type TypeEnum1 interface{ typeEnum1() }
+
+//ftl:enum
+type TypeEnum2 interface{ typeEnum2() }
+
+//ftl:typealias
+type ConformsToTwoTypeEnums string
+
+func (ConformsToTwoTypeEnums) typeEnum1() {}
+func (ConformsToTwoTypeEnums) typeEnum2() {}

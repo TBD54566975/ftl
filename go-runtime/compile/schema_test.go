@@ -446,6 +446,7 @@ func TestErrorReporting(t *testing.T) {
 		`127:1-26: only one directive expected for type alias`,
 		`133:2-2: type is not declared as an ftl enum or type alias`,
 		`133:2-7: unsupported type "ftl/failing.NonFTLAlias" for field "Value"`,
+		`143:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
 	}
 	assert.Equal(t, expected, actual)
 }

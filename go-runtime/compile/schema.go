@@ -712,45 +712,59 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 		Comments: visitComments(node.Doc),
 		Name:     strcase.ToUpperCamel(t.Name.Name),
 	}
+
+	matchedEnumNames := []string{}
+
 	for enumName, interfaceNode := range pctx.enumInterfaces {
 		// If the type declared is an enum variant, then it must implement
-		// the interface of a type enum we've already read into pctx.enums
-		// and pctx.enumInterfaces.
-		if named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named); ok {
-			if types.Implements(named, interfaceNode) {
-				// If any directives on this node are exported, then the
-				// enum variant node is considered exported. Also, if the
-				// parent enum itself is exported, then all its variants
-				// should transitively also be exported.
-				enum, _, ok := pctx.getEnumForTypeName(enumName)
-				if !ok {
-					pctx.errors.add(errorf(node, "could not find enum called %s", enumName))
-					return
-				}
+		// the interface of a type enum
+		named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named)
+		if !ok {
+			continue
+		}
+		if !types.Implements(named, interfaceNode) {
+			continue
+		}
 
-				if enum.VariantForName(enumVariant.Name).Ok() {
-					return
-				}
+		enum, _, ok := pctx.getEnumForTypeName(enumName)
+		if !ok {
+			pctx.errors.add(errorf(node, "could not find enum called %s", enumName))
+			continue
+		}
 
-				isExported := enum.IsExported()
-				for _, dir := range directives {
-					if exportableDir, ok := dir.(exportable); ok {
-						if enum.Export && !exportableDir.IsExported() {
-							pctx.errors.add(errorf(node, "parent enum %q is exported, but directive %q on %q is not: all variants of exported enums that have a directive must be explicitly exported as well", enumName, exportableDir, t.Name.Name))
-						}
-						isExported = exportableDir.IsExported()
-					}
+		matchedEnumNames = append(matchedEnumNames, enumName)
+		if len(matchedEnumNames) > 1 {
+			continue
+		}
+
+		if enum.VariantForName(enumVariant.Name).Ok() {
+			continue
+		}
+
+		// If any directives on this node are exported, then the
+		// enum variant node is considered exported. Also, if the
+		// parent enum itself is exported, then all its variants
+		// should transitively also be exported.
+		isExported := enum.IsExported()
+		for _, dir := range directives {
+			if exportableDir, ok := dir.(exportable); ok {
+				if enum.Export && !exportableDir.IsExported() {
+					pctx.errors.add(errorf(node, "parent enum %q is exported, but directive %q on %q is not: all variants of exported enums that have a directive must be explicitly exported as well", enumName, exportableDir, t.Name.Name))
 				}
-				vType, ok := visitTypeValue(pctx, named, t.Type, nil, isExported).Get()
-				if !ok {
-					pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
-					return
-				}
-				enumVariant.Value = vType
-				enum.Variants = append(enum.Variants, enumVariant)
-				pctx.nativeNames[enumVariant] = named.Obj().Pkg().Name() + "." + named.Obj().Name()
+				isExported = exportableDir.IsExported()
 			}
 		}
+		vType, ok := visitTypeValue(pctx, named, t.Type, nil, isExported).Get()
+		if !ok {
+			pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
+			continue
+		}
+		enumVariant.Value = vType
+		enum.Variants = append(enum.Variants, enumVariant)
+		pctx.nativeNames[enumVariant] = named.Obj().Pkg().Name() + "." + named.Obj().Name()
+	}
+	if len(matchedEnumNames) > 1 {
+		pctx.errors.add(errorf(node, "type can not be a variant of more than 1 type enums (%s)", strings.Join(matchedEnumNames, ", ")))
 	}
 }
 
