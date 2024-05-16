@@ -12,13 +12,13 @@ import (
 var _ = context.Background
 
 {{- range .Decls }}
-{{- if .IsExported}}
-{{if and (is "Enum" .) .IsValueEnum}}
-{{$enumName := .Name -}}
-{{if .Comments -}}
+{{if .Comments}}
 {{.Comments|comment -}}
 //
-{{end -}}
+{{- end}}
+{{- if .IsExported}}
+{{- if and (is "Enum" .) .IsValueEnum}}
+{{- $enumName := .Name}}
 //ftl:enum
 type {{.Name|title}} {{type $ .Type}}
 const (
@@ -27,9 +27,6 @@ const (
   {{- end}}
 )
 {{- else if is "Enum" . }}
-{{.Comments|comment -}}
-{{if .Comments}}//
-{{end -}}
 //ftl:enum
 {{$enumInterfaceFuncName := enumInterfaceFunc . -}}
 type {{.Name|title}} interface { {{$enumInterfaceFuncName}}() }
@@ -40,9 +37,6 @@ type {{.Name|title}} {{type $ .Value.Value}}
 func ({{.Name|title}}) {{$enumInterfaceFuncName}}() {}
 {{- end}}
 {{- else if is "Data" .}}
-{{if .Comments -}}
-{{.Comments|comment -}}
-{{end -}}
 type {{.Name|title}}
 {{- if .TypeParameters}}[
 {{- range $i, $tp := .TypeParameters}}
@@ -54,10 +48,6 @@ type {{.Name|title}}
   {{- end}}
 }
 {{- else if is "Verb" .}}
-{{if .Comments -}}
-{{.Comments|comment -}}
-//
-{{end -}}
 //ftl:verb
 {{- if and (eq (type $ .Request) "ftl.Unit") (eq (type $ .Response) "ftl.Unit")}}
 func {{.Name|title}}(context.Context) error {
