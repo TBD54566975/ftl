@@ -47,7 +47,8 @@ var (
 		participle.Lexer(Lexer),
 		participle.Elide("Whitespace"),
 		participle.Unquote(),
-		participle.UseLookahead(2),
+		// Increase lookahead to allow comments to be attached to the next token.
+		participle.UseLookahead(participle.MaxLookahead),
 		participle.Map(func(token lexer.Token) (lexer.Token, error) {
 			token.Value = strings.TrimSpace(strings.TrimPrefix(token.Value, "//"))
 			return token, nil
