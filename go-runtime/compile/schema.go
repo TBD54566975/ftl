@@ -728,7 +728,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 					return
 				}
 
-				if _, exists := enum.VariantForName(enumVariant.Name); exists {
+				if enum.VariantForName(enumVariant.Name).Ok() {
 					return
 				}
 

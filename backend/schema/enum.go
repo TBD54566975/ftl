@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/alecthomas/types/optional"
 )
 
 type Enum struct {
@@ -91,13 +92,13 @@ func (e *Enum) IsValueEnum() bool {
 	return e.Type != nil
 }
 
-func (e *Enum) VariantForName(name string) (*EnumVariant, bool) {
+func (e *Enum) VariantForName(name string) optional.Option[*EnumVariant] {
 	for _, v := range e.Variants {
 		if name == v.Name {
-			return v, true
+			return optional.Some(v)
 		}
 	}
-	return nil, false
+	return optional.None[*EnumVariant]()
 }
 
 type EnumVariant struct {
