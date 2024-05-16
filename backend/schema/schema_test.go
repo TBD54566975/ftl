@@ -21,7 +21,6 @@ func TestSchemaString(t *testing.T) {
 module todo {
   // A config value
   config configValue String
-
   // Shhh
   secret secretValue String
 
@@ -425,8 +424,11 @@ func TestParseModule(t *testing.T) {
 	input := `
 // A comment
 module todo {
+  // A config value
   config configValue String
+  // Shhh
   secret secretValue String
+  // A database
   database postgres testdb
 
   export data CreateRequest {

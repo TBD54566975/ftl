@@ -34,9 +34,10 @@ func (s *Config) String() string {
 
 func (s *Config) ToProto() protoreflect.ProtoMessage {
 	return &schemapb.Config{
-		Pos:  posToProto(s.Pos),
-		Name: s.Name,
-		Type: typeToProto(s.Type),
+		Pos:      posToProto(s.Pos),
+		Comments: s.Comments,
+		Name:     s.Name,
+		Type:     typeToProto(s.Type),
 	}
 }
 
@@ -46,8 +47,9 @@ func (s *Config) schemaSymbol()          {}
 
 func ConfigFromProto(p *schemapb.Config) *Config {
 	return &Config{
-		Pos:  posFromProto(p.Pos),
-		Name: p.Name,
-		Type: typeToSchema(p.Type),
+		Pos:      posFromProto(p.Pos),
+		Name:     p.Name,
+		Comments: p.Comments,
+		Type:     typeToSchema(p.Type),
 	}
 }

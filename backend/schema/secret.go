@@ -34,9 +34,10 @@ func (s *Secret) String() string {
 
 func (s *Secret) ToProto() protoreflect.ProtoMessage {
 	return &schemapb.Secret{
-		Pos:  posToProto(s.Pos),
-		Name: s.Name,
-		Type: typeToProto(s.Type),
+		Pos:      posToProto(s.Pos),
+		Name:     s.Name,
+		Comments: s.Comments,
+		Type:     typeToProto(s.Type),
 	}
 }
 
@@ -44,11 +45,11 @@ func (s *Secret) schemaChildren() []Node { return []Node{s.Type} }
 func (s *Secret) schemaDecl()            {}
 func (s *Secret) schemaSymbol()          {}
 
-func SecretFromProto(p *schemapb.Secret) *Secret {
+func SecretFromProto(s *schemapb.Secret) *Secret {
 	return &Secret{
-		Pos:      posFromProto(p.Pos),
-		Name:     p.Name,
-		Comments: p.Comments,
-		Type:     typeToSchema(p.Type),
+		Pos:      posFromProto(s.Pos),
+		Name:     s.Name,
+		Comments: s.Comments,
+		Type:     typeToSchema(s.Type),
 	}
 }

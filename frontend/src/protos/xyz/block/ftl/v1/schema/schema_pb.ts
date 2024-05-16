@@ -173,12 +173,17 @@ export class Config extends Message<Config> {
   pos?: Position;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: string name = 3;
    */
   name = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type type = 3;
+   * @generated from field: xyz.block.ftl.v1.schema.Type type = 4;
    */
   type?: Type;
 
@@ -191,8 +196,9 @@ export class Config extends Message<Config> {
   static readonly typeName = "xyz.block.ftl.v1.schema.Config";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "type", kind: "message", T: Type },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "type", kind: "message", T: Type },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Config {
@@ -1683,12 +1689,17 @@ export class Secret extends Message<Secret> {
   pos?: Position;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: string name = 3;
    */
   name = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Type type = 3;
+   * @generated from field: xyz.block.ftl.v1.schema.Type type = 4;
    */
   type?: Type;
 
@@ -1701,8 +1712,9 @@ export class Secret extends Message<Secret> {
   static readonly typeName = "xyz.block.ftl.v1.schema.Secret";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "type", kind: "message", T: Type },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "type", kind: "message", T: Type },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Secret {
