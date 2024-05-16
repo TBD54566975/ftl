@@ -622,7 +622,8 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 					// On this second pass we can visit deeper and pull out the type information
 					typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
 					if _, ok := dir.(*directiveEnum); ok {
-						enum, enumInterface, ok := pctx.getEnumForTypeName(t.Name.Name)
+						enumOption, enumInterface := pctx.getEnumForTypeName(t.Name.Name)
+						enum, ok := enumOption.Get()
 						if !ok {
 							// This case can be reached if a type is both an enum and a typealias.
 							// Error is already reported in extractTypeDecls
@@ -726,7 +727,8 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 			continue
 		}
 
-		enum, _, ok := pctx.getEnumForTypeName(enumName)
+		enumOption, _ := pctx.getEnumForTypeName(enumName)
+		enum, ok := enumOption.Get()
 		if !ok {
 			pctx.errors.add(errorf(node, "could not find enum called %s", enumName))
 			continue
@@ -846,7 +848,8 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 	if !ok {
 		return
 	}
-	enum, enumInterface, ok := pctx.getEnumForTypeName(i.Name)
+	enumOption, enumInterface := pctx.getEnumForTypeName(i.Name)
+	enum, ok = enumOption.Get()
 	if !ok {
 		return
 	}
@@ -1454,25 +1457,25 @@ func (p *parseContext) isPathInPkg(path string) bool {
 	return strings.HasPrefix(path, p.pkg.PkgPath+"/")
 }
 
-func (p *parseContext) getEnumForTypeName(name string) (*schema.Enum, optional.Option[*types.Interface], bool) {
+// getEnumForTypeName returns the enum and interface for a given type name.
+func (p *parseContext) getEnumForTypeName(name string) (optional.Option[*schema.Enum], optional.Option[*types.Interface]) {
 	aDecl, ok := p.getDeclForTypeName(name)
 	if !ok {
-		return nil, optional.None[*types.Interface](), false
+		return optional.None[*schema.Enum](), optional.None[*types.Interface]()
 	}
 	decl, ok := aDecl.(*schema.Enum)
 	if !ok {
-		return nil, optional.None[*types.Interface](), false
+		return optional.None[*schema.Enum](), optional.None[*types.Interface]()
 	}
 	nativeName, ok := p.nativeNames[decl]
 	if !ok {
-		return nil, optional.None[*types.Interface](), false
+		return optional.None[*schema.Enum](), optional.None[*types.Interface]()
 	}
-
 	enumInterface, isTypeEnum := p.enumInterfaces[strings.Split(nativeName, ".")[1]]
 	if isTypeEnum {
-		return decl, optional.Some(enumInterface), true
+		return optional.Some(decl), optional.Some(enumInterface)
 	}
-	return decl, optional.None[*types.Interface](), true
+	return optional.Some(decl), optional.None[*types.Interface]()
 }
 
 func (p *parseContext) getDeclForTypeName(name string) (enum schema.Decl, ok bool) {
