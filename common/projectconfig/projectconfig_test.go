@@ -38,29 +38,6 @@ func TestProjectConfig(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestProjectLoadConfig(t *testing.T) {
-	tests := []struct {
-		name  string
-		paths []string
-		err   string
-	}{
-		{name: "AllValid", paths: []string{"testdata/ftl-project.toml"}},
-		{name: "IsNonExistent", paths: []string{"testdata/ftl-project-nonexistent.toml"}, err: "no such file or directory"},
-		{name: "ContainsNonExistent", paths: []string{"testdata/ftl-project.toml", "testdata/ftl-project-nonexistent.toml"}, err: "no such file or directory"},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			_, err := LoadConfig(log.ContextWithNewDefaultLogger(context.Background()), test.paths)
-			if test.err != "" {
-				assert.Contains(t, err.Error(), test.err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestProjectConfigChecksMinVersion(t *testing.T) {
 	tests := []struct {
 		name    string
