@@ -11,8 +11,9 @@ import (
 type Secret struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Name string `parser:"'secret' @Ident" protobuf:"2"`
-	Type Type   `parser:"@@" protobuf:"3"`
+	Comments []string `parser:"@Comment*" protobuf:"2"`
+	Name     string   `parser:"'secret' @Ident" protobuf:"3"`
+	Type     Type     `parser:"@@" protobuf:"4"`
 }
 
 var _ Decl = (*Secret)(nil)
