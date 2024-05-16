@@ -66,5 +66,7 @@ func ContextWithLogger(ctx context.Context, logger *Logger) context.Context {
 }
 
 func ContextWithNewDefaultLogger(ctx context.Context) context.Context {
-	return ContextWithLogger(ctx, Configure(os.Stderr, Config{Level: Debug}))
+	// Matches LOG_COLOR in log.Config. This is a special case for the default logger in testing.
+	color := os.Getenv("LOG_COLOR") != ""
+	return ContextWithLogger(ctx, Configure(os.Stderr, Config{Level: Debug, Color: color}))
 }
