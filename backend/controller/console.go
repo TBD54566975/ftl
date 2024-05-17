@@ -45,12 +45,13 @@ func visitNode(sch *schema.Schema, n schema.Node, verbString *string) error {
 		switch n := n.(type) {
 		case *schema.Ref:
 			decl := sch.ResolveRef(n)
-			*verbString += decl.String() + "\n\n"
-			err := visitNode(sch, decl, verbString)
-			if err != nil {
-				return err
+			if decl != nil {
+				*verbString += decl.String() + "\n\n"
+				err := visitNode(sch, decl, verbString)
+				if err != nil {
+					return err
+				}
 			}
-
 		default:
 		}
 		return next()
