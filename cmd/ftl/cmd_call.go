@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -56,7 +57,7 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 
 		// if we have suggestions, return a helpful error message. otherwise continue to the original error
 		if err == nil {
-			return fmt.Errorf("verb not found: %s\n\nDid you mean one of these?\n%s", c.Verb, suggestions)
+			return fmt.Errorf("verb not found: %s\n\nDid you mean one of these?\n%s", c.Verb, strings.Join(suggestions, "\n"))
 		}
 	}
 	if err != nil {
