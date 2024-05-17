@@ -658,8 +658,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						if sType, ok := visitType(pctx, node.Pos(), typ, isExported).Get(); ok {
 							typeAlias.Type = sType
 						} else {
-							pctx.errors.add(errorf(node, "unsupported type %q for type alias",
-								pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
+							pctx.errors.add(errorf(node, "unsupported type %q for type alias", typ.Underlying()))
 						}
 					} else {
 						visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
@@ -1219,15 +1218,10 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		if named, ok := tnode.(*types.Named); ok {
-			if _, ok := visitType(pctx, pos, named.Underlying(), isExported).Get(); !ok {
-				return optional.None[schema.Type]()
-			}
 			ref, doneWithVisit := visitNamedRef(pctx, pos, named)
 			if doneWithVisit {
 				return ref
 			}
-			pctx.errors.add(noEndColumnErrorf(pos, "type is not declared as an ftl enum or type alias"))
-			return optional.None[schema.Type]()
 		}
 
 		switch underlying.Kind() {

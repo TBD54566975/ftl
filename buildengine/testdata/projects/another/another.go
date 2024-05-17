@@ -12,12 +12,10 @@ type TypeEnum interface {
 	tag()
 }
 
-//ftl:typealias export
 type A int
 
 func (A) tag() {}
 
-//ftl:typealias export
 type B string
 
 func (B) tag() {}
@@ -25,7 +23,6 @@ func (B) tag() {}
 //ftl:enum export
 type SecondTypeEnum interface{ typeEnum() }
 
-//ftl:typealias export
 type One int
 
 func (One) typeEnum() {}
