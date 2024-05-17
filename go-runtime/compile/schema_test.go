@@ -43,7 +43,7 @@ func TestExtractModuleSchema(t *testing.T) {
 	}
 	prebuildTestModule(t, "testdata/one", "testdata/two")
 
-	r, err := ExtractModuleSchema("testdata/one")
+	r, err := ExtractModuleSchema("testdata/one", &schema.Schema{})
 	assert.NoError(t, err)
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module one {
@@ -158,7 +158,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	r, err := ExtractModuleSchema("testdata/two")
+	r, err := ExtractModuleSchema("testdata/two", &schema.Schema{})
 	assert.NoError(t, err)
 	assert.Equal(t, r.MustGet().Errors, nil)
 	actual := schema.Normalise(r.MustGet().Module)
@@ -209,7 +209,7 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	r, err := ExtractModuleSchema("testdata/fsm")
+	r, err := ExtractModuleSchema("testdata/fsm", &schema.Schema{})
 	assert.NoError(t, err)
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module fsm {
@@ -254,7 +254,7 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	r, err := ExtractModuleSchema("testdata/named")
+	r, err := ExtractModuleSchema("testdata/named", &schema.Schema{})
 	assert.NoError(t, err)
 	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
 	actual := schema.Normalise(r.MustGet().Module)
@@ -349,7 +349,7 @@ func TestParseDirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	pctx := newParseContext(nil, []*packages.Package{}, &schema.Module{})
+	pctx := newParseContext(nil, []*packages.Package{}, &schema.Module{}, &schema.Schema{})
 	parsed, ok := visitType(pctx, token.NoPos, timeRef, false).Get()
 	assert.True(t, ok)
 	_, ok = parsed.(*schema.Time)
@@ -388,7 +388,7 @@ func TestErrorReporting(t *testing.T) {
 	pwd, _ := os.Getwd()
 	err := exec.Command(ctx, log.Debug, "testdata/failing", "go", "mod", "tidy").RunBuffered(ctx)
 	assert.NoError(t, err)
-	r, err := ExtractModuleSchema("testdata/failing")
+	r, err := ExtractModuleSchema("testdata/failing", &schema.Schema{})
 	assert.NoError(t, err)
 
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)

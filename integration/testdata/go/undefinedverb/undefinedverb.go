@@ -1,10 +1,8 @@
-package notexportedverb
+package undefinedverb
 
 import (
 	"context"
 	"fmt"
-
-	"ftl/echo"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
@@ -19,7 +17,7 @@ type Response struct {
 
 //ftl:verb
 func ShouldFail(ctx context.Context, req Request) (Response, error) {
-	_, err := ftl.Call(ctx, echo.Echo, echo.EchoRequest{})
+	_, err := ftl.Call(ctx, echo.Undefined, echo.EchoRequest{})
 	if err != nil {
 		return Response{}, err
 	}
