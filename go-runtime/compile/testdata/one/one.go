@@ -53,12 +53,10 @@ const (
 //ftl:enum
 type BlobOrList interface{ blobOrList() }
 
-//ftl:typealias
 type Blob string
 
 func (Blob) blobOrList() {}
 
-//ftl:typealias
 type List []string
 
 func (List) blobOrList() {}

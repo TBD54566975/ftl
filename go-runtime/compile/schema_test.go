@@ -52,13 +52,9 @@ func TestExtractModuleSchema(t *testing.T) {
 
   database postgres testDb
 
-  export typealias Blob String
-
-  export typealias List [String]
-
   export enum BlobOrList {
-    Blob one.Blob
-    List one.List
+    Blob String
+    List [String]
   }
 
   export enum Color: String {
@@ -167,8 +163,6 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.Equal(t, r.MustGet().Errors, nil)
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module two {
-		export typealias Scalar String
-
 		export enum TwoEnum: String {
 		  Red = "Red"
 		  Blue = "Blue"
@@ -176,7 +170,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
         }
 
         export enum TypeEnum {
-		  Scalar two.Scalar
+		  Scalar String
 		  List [String]
 		  Exported two.Exported
 		  WithoutDirective two.WithoutDirective
@@ -439,8 +433,6 @@ func TestErrorReporting(t *testing.T) {
 		`117:1-26: parent enum "ExportedTypeEnum" is exported, but directive "ftl:data" on "PrivateData" is not: all variants of exported enums that have a directive must be explicitly exported as well`,
 		`121:21-60: config and secret names must be valid identifiers`,
 		`127:1-26: only one directive expected for type alias`,
-		`133:2-2: type is not declared as an ftl enum or type alias`,
-		`133:2-7: unsupported type "ftl/failing.NonFTLAlias" for field "Value"`,
 		`143:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
 	}
 	assert.Equal(t, expected, actual)
