@@ -104,7 +104,7 @@ type ParseResult struct {
 }
 
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
-func ExtractModuleSchema(dir string) (optional.Option[ParseResult], error) {
+func ExtractModuleSchema(dir string, sch *schema.Schema) (optional.Option[ParseResult], error) {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
@@ -137,7 +137,7 @@ func ExtractModuleSchema(dir string) (optional.Option[ParseResult], error) {
 				merr = append(merr, perr)
 			}
 		}
-		pctx := newParseContext(pkg, pkgs, module)
+		pctx := newParseContext(pkg, pkgs, module, sch)
 		err := extractTypeDecls(pctx)
 		if err != nil {
 			return optional.None[ParseResult](), err
@@ -320,13 +320,35 @@ func parseCall(pctx *parseContext, node *ast.CallExpr) {
 	}
 	ref := parseVerbRef(pctx, node.Args[1])
 	if ref == nil {
-		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
-			pctx.errors.add(errorf(node.Args[1], "call first argument must be a function but is an unresolved reference to %s.%s", sel.X, sel.Sel))
+		ref = parseSelectorRef(node.Args[1])
+		var suffix string
+		if pctx.schema.ResolveRef(ref) != nil {
+			suffix = ", does it need to be exported?"
 		}
-		pctx.errors.add(errorf(node.Args[1], "call first argument must be a function in an ftl module"))
+		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
+			pctx.errors.add(errorf(node.Args[1], "call first argument must be a function but is an unresolved reference to %s.%s%s", sel.X, sel.Sel, suffix))
+		}
+		pctx.errors.add(errorf(node.Args[1], "call first argument must be a function in an ftl module%s", suffix))
 		return
 	}
 	pctx.activeVerb.AddCall(ref)
+}
+
+func parseSelectorRef(node ast.Expr) *schema.Ref {
+	sel, ok := node.(*ast.SelectorExpr)
+	if !ok {
+		return nil
+	}
+	ident, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	return &schema.Ref{
+		Pos:    goPosToSchemaPos(node.Pos()),
+		Module: ident.Name,
+		Name:   strcase.ToLowerCamel(sel.Sel.Name),
+	}
+
 }
 
 func parseVerbRef(pctx *parseContext, node ast.Expr) *schema.Ref {
@@ -1416,9 +1438,10 @@ type parseContext struct {
 	enumInterfaces enumInterfaces
 	activeVerb     *schema.Verb
 	errors         errorSet
+	schema         *schema.Schema
 }
 
-func newParseContext(pkg *packages.Package, pkgs []*packages.Package, module *schema.Module) *parseContext {
+func newParseContext(pkg *packages.Package, pkgs []*packages.Package, module *schema.Module, sch *schema.Schema) *parseContext {
 	return &parseContext{
 		pkg:            pkg,
 		pkgs:           pkgs,
@@ -1426,6 +1449,7 @@ func newParseContext(pkg *packages.Package, pkgs []*packages.Package, module *sc
 		nativeNames:    NativeNames{},
 		enumInterfaces: enumInterfaces{},
 		errors:         errorSet{},
+		schema:         sch,
 	}
 }
 

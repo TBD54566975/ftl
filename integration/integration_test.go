@@ -79,7 +79,18 @@ func TestNonExportedDecls(t *testing.T) {
 		copyModule("echo"),
 		deploy("echo"),
 		copyModule("notexportedverb"),
-		expectError(execWithOutput("ftl", "deploy", "notexportedverb"), "call first argument must be a function but is an unresolved reference to echo.Echo"),
+		expectError(execWithOutput("ftl", "deploy", "notexportedverb"), "call first argument must be a function but is an unresolved reference to echo.Echo, does it need to be exported?"),
+	)
+}
+
+func TestUndefinedExportedDecls(t *testing.T) {
+	run(t, "",
+		copyModule("time"),
+		deploy("time"),
+		copyModule("echo"),
+		deploy("echo"),
+		copyModule("undefinedverb"),
+		expectError(execWithOutput("ftl", "deploy", "undefinedverb"), "call first argument must be a function but is an unresolved reference to echo.Undefined"),
 	)
 }
 

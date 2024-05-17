@@ -138,7 +138,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 
 	buildDir := buildDir(moduleDir)
 	logger.Debugf("Extracting schema")
-	parseResult, err := ExtractModuleSchema(moduleDir)
+	parseResult, err := ExtractModuleSchema(moduleDir, sch)
 	if err != nil {
 		return fmt.Errorf("failed to extract module schema: %w", err)
 	}
