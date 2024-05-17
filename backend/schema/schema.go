@@ -2,6 +2,7 @@ package schema
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -11,6 +12,8 @@ import (
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type Schema struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
@@ -90,7 +93,8 @@ func (s *Schema) ResolveRefToType(ref *Ref, out Decl) error {
 			}
 		}
 	}
-	return fmt.Errorf("could not resolve reference %v", ref)
+
+	return errors.Join(ErrNotFound, fmt.Errorf("could not resolve reference %v", ref))
 }
 
 // Module returns the named module if it exists.

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -43,43 +44,21 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 	}
 
 	logger.Debugf("Calling %s", c.Verb)
-	// lookup the verbs
-	res, err := ctlCli.GetVerbs(ctx, connect.NewRequest(&ftlv1.VerbsRequest{}))
-	if err != nil {
-		return err
-	}
 
-	var foundVerb *reflection.Ref
-	suggestions := []string{}
-	verbs := res.Msg.GetVerbs()
-	logger.Debugf("Found %d verbs", len(verbs))
-	needle := []rune(fmt.Sprintf("%s.%s", c.Verb.Module, c.Verb.Name))
-
-	// only consider suggesting verbs that are within 40% of the length of the needle
-	distanceThreshold := int(float64(len(needle))*0.4) + 1
-	for _, verb := range verbs {
-		d := lev.DistanceForStrings([]rune(verb), needle, lev.DefaultOptions)
-		logger.Debugf("Verb %s distance %d", verb, d)
-		// found a match, stop searching
-		if d == 0 {
-			foundVerb = &c.Verb
-			break
-		}
-
-		if d <= distanceThreshold {
-			suggestions = append(suggestions, verb)
-		}
-	}
-
-	// no match found
-	if foundVerb == nil {
-		return fmt.Errorf("verb not found, did you mean one of these: %s", strings.Join(suggestions, ", "))
-	}
-
+	// otherwise, we have a match so call the verb
 	resp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{
-		Verb: foundVerb.ToProto(),
+		Verb: c.Verb.ToProto(),
 		Body: requestJSON,
 	}))
+
+	if cerr := new(connect.Error); errors.As(err, &cerr) && cerr.Code() == connect.CodeNotFound {
+		suggestions, err := c.findSuggestions(ctx, ctlCli)
+
+		// if we have suggestions, return a helpful error message. otherwise continue to the original error
+		if err == nil {
+			return fmt.Errorf("verb not found: %s\n\nDid you mean one of these?\n%s", c.Verb, suggestions)
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -94,4 +73,56 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 		fmt.Println(string(resp.Body))
 	}
 	return nil
+}
+
+func (c *callCmd) findSuggestions(ctx context.Context, client ftlv1connect.ControllerServiceClient) ([]string, error) {
+	logger := log.FromContext(ctx)
+
+	// lookup the verbs
+	res, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	if err != nil {
+		return nil, err
+	}
+
+	modules := res.Msg.GetSchema().GetModules()
+	verbs := []string{}
+
+	// build a list of all the verbs
+	for _, module := range modules {
+		for _, decl := range module.GetDecls() {
+			v := decl.GetVerb()
+			if v == nil {
+				continue
+			}
+
+			verbName := fmt.Sprintf("%s.%s", module.Name, v.Name)
+			if verbName == fmt.Sprintf("%s.%s", c.Verb.Module, c.Verb.Name) {
+				break
+			}
+
+			verbs = append(verbs, module.Name+"."+v.Name)
+		}
+	}
+
+	suggestions := []string{}
+
+	logger.Debugf("Found %d verbs", len(verbs))
+	needle := []rune(fmt.Sprintf("%s.%s", c.Verb.Module, c.Verb.Name))
+
+	// only consider suggesting verbs that are within 40% of the length of the needle
+	distanceThreshold := int(float64(len(needle))*0.4) + 1
+	for _, verb := range verbs {
+		d := lev.DistanceForStrings([]rune(verb), needle, lev.DefaultOptions)
+		logger.Debugf("Verb %s distance %d", verb, d)
+
+		if d <= distanceThreshold {
+			suggestions = append(suggestions, verb)
+		}
+	}
+
+	if len(suggestions) > 0 {
+		return suggestions, nil
+	}
+
+	return nil, fmt.Errorf("no suggestions found")
 }

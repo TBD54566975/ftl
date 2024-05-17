@@ -88,9 +88,6 @@ const (
 	// ControllerServicePullSchemaProcedure is the fully-qualified name of the ControllerService's
 	// PullSchema RPC.
 	ControllerServicePullSchemaProcedure = "/xyz.block.ftl.v1.ControllerService/PullSchema"
-	// ControllerServiceGetVerbsProcedure is the fully-qualified name of the ControllerService's
-	// GetVerbs RPC.
-	ControllerServiceGetVerbsProcedure = "/xyz.block.ftl.v1.ControllerService/GetVerbs"
 	// RunnerServicePingProcedure is the fully-qualified name of the RunnerService's Ping RPC.
 	RunnerServicePingProcedure = "/xyz.block.ftl.v1.RunnerService/Ping"
 	// RunnerServiceReserveProcedure is the fully-qualified name of the RunnerService's Reserve RPC.
@@ -294,8 +291,6 @@ type ControllerServiceClient interface {
 	// Note that if there are no deployments this will block indefinitely, making it unsuitable for
 	// just retrieving the schema. Use GetSchema for that.
 	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest]) (*connect.ServerStreamForClient[v1.PullSchemaResponse], error)
-	// Returns a map of verbs by module name
-	GetVerbs(context.Context, *connect.Request[v1.VerbsRequest]) (*connect.Response[v1.VerbsResponse], error)
 }
 
 // NewControllerServiceClient constructs a client for the xyz.block.ftl.v1.ControllerService
@@ -379,11 +374,6 @@ func NewControllerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			baseURL+ControllerServicePullSchemaProcedure,
 			opts...,
 		),
-		getVerbs: connect.NewClient[v1.VerbsRequest, v1.VerbsResponse](
-			httpClient,
-			baseURL+ControllerServiceGetVerbsProcedure,
-			opts...,
-		),
 	}
 }
 
@@ -403,7 +393,6 @@ type controllerServiceClient struct {
 	streamDeploymentLogs   *connect.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 	getSchema              *connect.Client[v1.GetSchemaRequest, v1.GetSchemaResponse]
 	pullSchema             *connect.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
-	getVerbs               *connect.Client[v1.VerbsRequest, v1.VerbsResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.ControllerService.Ping.
@@ -476,11 +465,6 @@ func (c *controllerServiceClient) PullSchema(ctx context.Context, req *connect.R
 	return c.pullSchema.CallServerStream(ctx, req)
 }
 
-// GetVerbs calls xyz.block.ftl.v1.ControllerService.GetVerbs.
-func (c *controllerServiceClient) GetVerbs(ctx context.Context, req *connect.Request[v1.VerbsRequest]) (*connect.Response[v1.VerbsResponse], error) {
-	return c.getVerbs.CallUnary(ctx, req)
-}
-
 // ControllerServiceHandler is an implementation of the xyz.block.ftl.v1.ControllerService service.
 type ControllerServiceHandler interface {
 	// Ping service for readiness.
@@ -522,8 +506,6 @@ type ControllerServiceHandler interface {
 	// Note that if there are no deployments this will block indefinitely, making it unsuitable for
 	// just retrieving the schema. Use GetSchema for that.
 	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error
-	// Returns a map of verbs by module name
-	GetVerbs(context.Context, *connect.Request[v1.VerbsRequest]) (*connect.Response[v1.VerbsResponse], error)
 }
 
 // NewControllerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -603,11 +585,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 		svc.PullSchema,
 		opts...,
 	)
-	controllerServiceGetVerbsHandler := connect.NewUnaryHandler(
-		ControllerServiceGetVerbsProcedure,
-		svc.GetVerbs,
-		opts...,
-	)
 	return "/xyz.block.ftl.v1.ControllerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ControllerServicePingProcedure:
@@ -638,8 +615,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 			controllerServiceGetSchemaHandler.ServeHTTP(w, r)
 		case ControllerServicePullSchemaProcedure:
 			controllerServicePullSchemaHandler.ServeHTTP(w, r)
-		case ControllerServiceGetVerbsProcedure:
-			controllerServiceGetVerbsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -703,10 +678,6 @@ func (UnimplementedControllerServiceHandler) GetSchema(context.Context, *connect
 
 func (UnimplementedControllerServiceHandler) PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.PullSchema is not implemented"))
-}
-
-func (UnimplementedControllerServiceHandler) GetVerbs(context.Context, *connect.Request[v1.VerbsRequest]) (*connect.Response[v1.VerbsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.GetVerbs is not implemented"))
 }
 
 // RunnerServiceClient is a client for the xyz.block.ftl.v1.RunnerService service.
