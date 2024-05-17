@@ -177,7 +177,8 @@ func TestBuildRequestBody(t *testing.T) {
 				Verb:   test.verb,
 			}, r, sch)
 			if test.err != "" {
-				assert.EqualError(t, err, test.err)
+				assert.Contains(t, err.Error(), test.err)
+				assert.IsError(t, err, schema.ErrNotFound)
 				return
 			}
 			assert.NoError(t, err)
