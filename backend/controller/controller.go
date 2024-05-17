@@ -657,17 +657,12 @@ nextModule:
 func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
 	name := req.Msg.Module
 
-	cm, err := cf.NewDefaultConfigurationManagerFromConfig(ctx, cf.ConfigFromEnvironment())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
-	}
+	cm := cf.ConfigFromContext(ctx)
+	sm := cf.SecretsFromContext(ctx)
+
 	configs, err := cm.MapForModule(ctx, name)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
-	}
-	sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, cf.ConfigFromEnvironment())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 	}
 	secrets, err := sm.MapForModule(ctx, name)
 	if err != nil {
