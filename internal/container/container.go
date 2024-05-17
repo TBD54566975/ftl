@@ -40,6 +40,28 @@ func DoesExist(ctx context.Context, name string) (bool, error) {
 	return len(containers) > 0, nil
 }
 
+// Pull pulls the given image.
+func Pull(ctx context.Context, image string) error {
+	cli, err := dockerClient.Get(ctx)
+	if err != nil {
+		return err
+	}
+
+	reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to pull %s image: %w", image, err)
+	}
+	defer reader.Close()
+
+	logger := log.FromContext(ctx)
+	_, err = io.Copy(logger.WriterAt(log.Info), reader)
+	if err != nil {
+		return fmt.Errorf("failed to stream pull: %w", err)
+	}
+
+	return nil
+}
+
 // Run starts a new detached container with the given image, name, port map, and (optional) volume mount.
 func Run(ctx context.Context, image, name string, hostPort, containerPort int, volume optional.Option[string]) error {
 	cli, err := dockerClient.Get(ctx)
@@ -86,6 +108,20 @@ func RunDB(ctx context.Context, name string, port int) error {
 	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
+	}
+
+	const containerName = "postgres"
+
+	exists, err := DoesExist(ctx, containerName)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		err = Pull(ctx, "postgres:latest")
+		if err != nil {
+			return err
+		}
 	}
 
 	config := container.Config{

@@ -151,6 +151,11 @@ func (s *schemaImportCmd) setup(ctx context.Context) error {
 		}
 		_ = l.Close()
 
+		err = container.Pull(ctx, "ollama/ollama")
+		if err != nil {
+			return err
+		}
+
 		err = container.Run(ctx, "ollama/ollama", ollamaContainerName, s.OllamaPort, 11434, optional.Some(ollamaVolume))
 		if err != nil {
 			return err
