@@ -127,6 +127,10 @@ func ExtractModuleSchema(dir string) (optional.Option[ParseResult], error) {
 		if !ok {
 			return optional.None[ParseResult](), fmt.Errorf("package %q is not in the ftl namespace", pkg.PkgPath)
 		}
+		if len(strings.Split(pkg.PkgPath, "/")) > 2 {
+			// skip subpackages of a module
+			continue
+		}
 		module.Name = moduleName
 		if len(pkg.Errors) > 0 {
 			for _, perr := range pkg.Errors {
