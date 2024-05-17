@@ -19,9 +19,11 @@ var colours = map[Level]string{
 
 var _ Sink = (*plainSink)(nil)
 
-func newPlainSink(w io.Writer, logTime bool) *plainSink {
+func newPlainSink(w io.Writer, logTime bool, alwaysColor bool) *plainSink {
 	var isaTTY bool
-	if f, ok := w.(*os.File); ok {
+	if alwaysColor {
+		isaTTY = true
+	} else if f, ok := w.(*os.File); ok {
 		isaTTY = isatty.IsTerminal(f.Fd())
 	}
 	return &plainSink{
