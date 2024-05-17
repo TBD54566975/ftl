@@ -47,10 +47,13 @@ func (s *Schema) Hash() [sha256.Size]byte {
 	return sha256.Sum256([]byte(s.String()))
 }
 
+// ResolveRefMonomorphised -
+// If a Ref is not found, returns ErrNotFound.
 func (s *Schema) ResolveRefMonomorphised(ref *Ref) (*Data, error) {
 	out := &Data{}
-	err := s.ResolveRefToType(ref, out)
-	if err != nil {
+
+	if err := s.ResolveRefToType(ref, out); err != nil {
+		// If a ref is not found, returns ErrNotFound
 		return nil, err
 	}
 	return out.Monomorphise(ref)
