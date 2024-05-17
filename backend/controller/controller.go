@@ -1484,37 +1484,3 @@ func makeBackoff(min, max time.Duration) backoff.Backoff {
 		Factor: 2,
 	}
 }
-
-func (c *Service) GetVerbs(ctx context.Context, req *connect.Request[ftlv1.VerbsRequest]) (*connect.Response[ftlv1.VerbsResponse], error) {
-	logger := log.FromContext(ctx)
-	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
-	if err != nil {
-		logger.Errorf(err, "Failed to get deployments")
-		return nil, err
-	}
-	sch := &schema.Schema{
-		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
-			return d.Schema
-		}),
-	}
-	sch.Modules = append(sch.Modules, schema.Builtins())
-
-	// map verbs by module name so we can search them
-	moduVerbs := []string{}
-	for _, deployment := range deployments {
-		for _, decl := range deployment.Schema.Decls {
-			switch decl := decl.(type) {
-			case *schema.Verb:
-				//nolint:forcetypeassert
-				v := decl.ToProto().(*schemapb.Verb)
-				moduVerbs = append(moduVerbs, fmt.Sprintf("%s.%s", deployment.Module, v.Name))
-			}
-		}
-	}
-
-	return connect.NewResponse(
-		&ftlv1.VerbsResponse{
-			Verbs: moduVerbs,
-		},
-	), nil
-}
