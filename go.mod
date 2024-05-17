@@ -86,7 +86,6 @@ require (
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.50.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.26.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.2.0 // indirect

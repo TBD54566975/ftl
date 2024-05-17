@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"connectrpc.com/connect"
 	"github.com/jpillora/backoff"
-	lev "github.com/texttheater/golang-levenshtein/levenshtein"
 	"github.com/titanous/json5"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -75,6 +75,9 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 	return nil
 }
 
+// findSuggestions looks up the schema and finds verbs that are similar to the one that was not found
+// it uses the levenshtein distance to determine similarity - if the distance is less than 40% of the length of the verb,
+// it returns an error if no closely matching suggestions are found
 func (c *callCmd) findSuggestions(ctx context.Context, client ftlv1connect.ControllerServiceClient) ([]string, error) {
 	logger := log.FromContext(ctx)
 
@@ -107,12 +110,12 @@ func (c *callCmd) findSuggestions(ctx context.Context, client ftlv1connect.Contr
 	suggestions := []string{}
 
 	logger.Debugf("Found %d verbs", len(verbs))
-	needle := []rune(fmt.Sprintf("%s.%s", c.Verb.Module, c.Verb.Name))
+	needle := fmt.Sprintf("%s.%s", c.Verb.Module, c.Verb.Name)
 
 	// only consider suggesting verbs that are within 40% of the length of the needle
 	distanceThreshold := int(float64(len(needle))*0.4) + 1
 	for _, verb := range verbs {
-		d := lev.DistanceForStrings([]rune(verb), needle, lev.DefaultOptions)
+		d := levenshtein(verb, needle)
 		logger.Debugf("Verb %s distance %d", verb, d)
 
 		if d <= distanceThreshold {
@@ -125,4 +128,34 @@ func (c *callCmd) findSuggestions(ctx context.Context, client ftlv1connect.Contr
 	}
 
 	return nil, fmt.Errorf("no suggestions found")
+}
+
+// Levenshtein computes the Levenshtein distance between two strings.
+//
+// credit goes to https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Go
+func levenshtein(a, b string) int {
+	f := make([]int, utf8.RuneCountInString(b)+1)
+
+	for j := range f {
+		f[j] = j
+	}
+
+	for _, ca := range a {
+		j := 1
+		fj1 := f[0] // fj1 is the value of f[j - 1] in last iteration
+		f[0]++
+		for _, cb := range b {
+			mn := min(f[j]+1, f[j-1]+1) // delete & insert
+			if cb != ca {
+				mn = min(mn, fj1+1) // change
+			} else {
+				mn = min(mn, fj1) // matched
+			}
+
+			fj1, f[j] = f[j], mn // save f[j] to fj1(j is about to increase), update f[j] to mn
+			j++
+		}
+	}
+
+	return f[len(f)-1]
 }
