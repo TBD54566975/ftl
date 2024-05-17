@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/log"
 	"io"
 	"os"
 
@@ -84,22 +85,35 @@ Returns a JSON-encoded secret value.
 }
 
 func (s *secretGetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
+	logger := log.FromContext(ctx)
+
+	logger.Tracef("new secrets manager sr=%v", sr)
 	sm, err := scmd.NewSecretsManager(ctx, sr)
 	if err != nil {
 		return err
 	}
+
+	logger.Tracef("1sm = %v", sm)
+
 	var value any
+
+	logger.Tracef("1Getting secret %s", s.Ref)
 	err = sm.Get(ctx, s.Ref, &value)
 	if err != nil {
 		return err
 	}
 
+	logger.Tracef("1encoding json")
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
+
+	logger.Tracef("1Encoding secret %s", s.Ref)
 	err = enc.Encode(value)
 	if err != nil {
 		return fmt.Errorf("%s: %w", s.Ref, err)
 	}
+
+	logger.Tracef("1Returning secret %s", s.Ref)
 	return nil
 }
 
