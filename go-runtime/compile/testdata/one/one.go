@@ -145,3 +145,8 @@ func Nothing(ctx context.Context) error {
 func Http(ctx context.Context, req builtin.HttpRequest[Req]) (builtin.HttpResponse[Resp, ftl.Unit], error) {
 	return builtin.HttpResponse[Resp, ftl.Unit]{}, nil
 }
+
+//ftl:data
+type DataWithType[T any] struct {
+	Value T
+}
