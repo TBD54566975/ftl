@@ -96,6 +96,10 @@ func TestExtractModuleSchema(t *testing.T) {
     field String
   }
 
+  data DataWithType<T> {
+    value T
+  }
+  
   export data ExportedData {
     field String
   }

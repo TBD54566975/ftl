@@ -1109,7 +1109,11 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type, isExported
 			Pos:  goPosToSchemaPos(pos),
 			Name: param.Obj().Name(),
 		})
-		if typeArg, ok := visitType(pctx, pos, named.TypeArgs().At(i), isExported).Get(); ok {
+		typeArgs := named.TypeArgs()
+		if typeArgs == nil {
+			continue
+		}
+		if typeArg, ok := visitType(pctx, pos, typeArgs.At(i), isExported).Get(); ok {
 			dataRef.TypeParameters = append(dataRef.TypeParameters, typeArg)
 		}
 	}
