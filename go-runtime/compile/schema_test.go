@@ -65,7 +65,7 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   // Comments about ColorInt.
-  enum ColorInt: Int {
+  export enum ColorInt: Int {
     // RedInt is a color.
     RedInt = 0
     BlueInt = 1
@@ -92,6 +92,13 @@ func TestExtractModuleSchema(t *testing.T) {
     Two = 2
   }
 
+  export enum TypeEnum {
+    Option String?
+    InlineStruct one.InlineStruct
+    AliasedStruct one.UnderlyingStruct
+    ValueEnum one.ColorInt
+  }
+
   data Config {
     field String
   }
@@ -105,6 +112,9 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   export data ExportedStruct {
+  }
+
+  export data InlineStruct {
   }
 
   export data Nested {
@@ -138,6 +148,9 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   data SourceResp {
+  }
+
+  export data UnderlyingStruct {
   }
 
   data WithoutDirectiveStruct {
@@ -305,7 +318,7 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestParseDirectives(t *testing.T) {
+func TestParsedirectives(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -434,10 +447,11 @@ func TestErrorReporting(t *testing.T) {
 		`89:2-12: struct field unexported must be exported by starting with an uppercase letter`,
 		`101:2-24: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
 		`108:2-41: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
-		`117:1-26: parent enum "ExportedTypeEnum" is exported, but directive "ftl:data" on "PrivateData" is not: all variants of exported enums that have a directive must be explicitly exported as well`,
 		`121:21-60: config and secret names must be valid identifiers`,
 		`127:1-26: only one directive expected for type alias`,
 		`143:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
+		`149:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
+		`152:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
 	}
 	assert.Equal(t, expected, actual)
 }
