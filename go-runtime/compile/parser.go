@@ -28,79 +28,79 @@ type exportable interface {
 	IsExported() bool
 }
 
-type directiveVerb struct {
+type DirectiveVerb struct {
 	Pos lexer.Position
 
 	Verb   bool `parser:"@'verb'"`
 	Export bool `parser:"@'export'?"`
 }
 
-func (*directiveVerb) directive() {}
-func (d *directiveVerb) String() string {
+func (*DirectiveVerb) directive() {}
+func (d *DirectiveVerb) String() string {
 	if d.Export {
 		return "ftl:verb export"
 	}
 	return "ftl:verb"
 }
-func (d *directiveVerb) IsExported() bool {
+func (d *DirectiveVerb) IsExported() bool {
 	return d.Export
 }
 
-type directiveData struct {
+type DirectiveData struct {
 	Pos lexer.Position
 
 	Data   bool `parser:"@'data'"`
 	Export bool `parser:"@'export'?"`
 }
 
-func (*directiveData) directive() {}
-func (d *directiveData) String() string {
+func (*DirectiveData) directive() {}
+func (d *DirectiveData) String() string {
 	if d.Export {
 		return "ftl:data export"
 	}
 	return "ftl:data"
 }
-func (d *directiveData) IsExported() bool {
+func (d *DirectiveData) IsExported() bool {
 	return d.Export
 }
 
-type directiveEnum struct {
+type DirectiveEnum struct {
 	Pos lexer.Position
 
 	Enum   bool `parser:"@'enum'"`
 	Export bool `parser:"@'export'?"`
 }
 
-func (*directiveEnum) directive() {}
-func (d *directiveEnum) String() string {
+func (*DirectiveEnum) directive() {}
+func (d *DirectiveEnum) String() string {
 	if d.Export {
 		return "ftl:enum export"
 	}
 	return "ftl:enum"
 }
-func (d *directiveEnum) IsExported() bool {
+func (d *DirectiveEnum) IsExported() bool {
 	return d.Export
 }
 
-type directiveTypeAlias struct {
+type DirectiveTypeAlias struct {
 	Pos lexer.Position
 
 	TypeAlias bool `parser:"@'typealias'"`
 	Export    bool `parser:"@'export'?"`
 }
 
-func (*directiveTypeAlias) directive() {}
-func (d *directiveTypeAlias) String() string {
+func (*DirectiveTypeAlias) directive() {}
+func (d *DirectiveTypeAlias) String() string {
 	if d.Export {
 		return "ftl:typealias export"
 	}
 	return "ftl:typealias"
 }
-func (d *directiveTypeAlias) IsExported() bool {
+func (d *DirectiveTypeAlias) IsExported() bool {
 	return d.Export
 }
 
-type directiveIngress struct {
+type DirectiveIngress struct {
 	Pos schema.Position
 
 	Type   string                        `parser:"'ingress' @('http')?"`
@@ -108,8 +108,8 @@ type directiveIngress struct {
 	Path   []schema.IngressPathComponent `parser:"('/' @@)+"`
 }
 
-func (*directiveIngress) directive() {}
-func (d *directiveIngress) String() string {
+func (*DirectiveIngress) directive() {}
+func (d *DirectiveIngress) String() string {
 	w := &strings.Builder{}
 	fmt.Fprintf(w, "ftl:ingress %s", d.Method)
 	for _, p := range d.Path {
@@ -118,15 +118,15 @@ func (d *directiveIngress) String() string {
 	return w.String()
 }
 
-type directiveCronJob struct {
+type DirectiveCronJob struct {
 	Pos schema.Position
 
 	Cron string `parser:"'cron' Whitespace @((' ' | Number | '-' | '/' | '*' | ',')+)"`
 }
 
-func (*directiveCronJob) directive() {}
+func (*DirectiveCronJob) directive() {}
 
-func (d *directiveCronJob) String() string {
+func (d *DirectiveCronJob) String() string {
 	return fmt.Sprintf("cron %s", d.Cron)
 }
 
@@ -135,11 +135,11 @@ var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
-	participle.Union[directive](&directiveVerb{}, &directiveData{}, &directiveEnum{}, &directiveTypeAlias{}, &directiveIngress{}, &directiveCronJob{}),
+	participle.Union[directive](&DirectiveVerb{}, &DirectiveData{}, &DirectiveEnum{}, &DirectiveTypeAlias{}, &DirectiveIngress{}, &DirectiveCronJob{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
-func parseDirectives(node ast.Node, fset *token.FileSet, docs *ast.CommentGroup) ([]directive, *schema.Error) {
+func ParseDirectives(node ast.Node, fset *token.FileSet, docs *ast.CommentGroup) ([]directive, *schema.Error) {
 	if docs == nil {
 		return nil, nil
 	}

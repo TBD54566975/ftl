@@ -289,9 +289,9 @@ func TestGoModVersion(t *testing.T) {
 }
 
 func TestGeneratedTypeRegistry(t *testing.T) {
-	if !testing.Short() {
-		t.Skipf("skipping test in non-short mode")
-	}
+	//if !testing.Short() {
+	//	t.Skipf("skipping test in non-short mode")
+	//}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			{Name: "another", Decls: []schema.Decl{
