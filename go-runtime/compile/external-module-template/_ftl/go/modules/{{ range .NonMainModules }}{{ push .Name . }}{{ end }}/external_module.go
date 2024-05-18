@@ -31,7 +31,7 @@ const (
 {{$enumInterfaceFuncName := enumInterfaceFunc . -}}
 type {{.Name|title}} interface { {{$enumInterfaceFuncName}}() }
 {{- range .Variants }}
-{{if basicType $ .}}
+{{if (or (basicType $ .) (isStandaloneEnumVariant .))}}
 type {{.Name|title}} {{type $ .Value.Value}}
 {{end}}
 func ({{.Name|title}}) {{$enumInterfaceFuncName}}() {}
