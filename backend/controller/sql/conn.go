@@ -7,20 +7,26 @@ import (
 )
 
 type DBI interface {
+	Querier
+	Conn() ConnI
+	Begin(ctx context.Context) (*Tx, error)
+}
+
+type ConnI interface {
 	DBTX
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
 type DB struct {
-	conn DBI
+	conn ConnI
 	*Queries
 }
 
-func NewDB(conn DBI) *DB {
+func NewDB(conn ConnI) *DB {
 	return &DB{conn: conn, Queries: New(conn)}
 }
 
-func (d *DB) Conn() DBI { return d.conn }
+func (d *DB) Conn() ConnI { return d.conn }
 
 func (d *DB) Begin(ctx context.Context) (*Tx, error) {
 	tx, err := d.conn.Begin(ctx)
@@ -33,6 +39,12 @@ func (d *DB) Begin(ctx context.Context) (*Tx, error) {
 type Tx struct {
 	tx pgx.Tx
 	*Queries
+}
+
+func (t *Tx) Conn() ConnI { return t.tx }
+
+func (t *Tx) Begin(ctx context.Context) (*Tx, error) {
+	panic("recursive transactions are not supported")
 }
 
 func (t *Tx) Commit(ctx context.Context) error {

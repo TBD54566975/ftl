@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -55,6 +56,7 @@ type AcquireAsyncCallRow struct {
 // Reserve a pending async call for execution, returning the associated lease
 // reservation key.
 func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error) {
+	fmt.Printf("%#v\n", q.db)
 	row := q.db.QueryRow(ctx, acquireAsyncCall, ttl)
 	var i AcquireAsyncCallRow
 	err := row.Scan(

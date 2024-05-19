@@ -21,7 +21,7 @@ var _ leases.Leaser = (*DAL)(nil)
 type Lease struct {
 	key            leases.Key
 	idempotencyKey uuid.UUID
-	db             *sql.DB
+	db             sql.DBI
 	ttl            time.Duration
 	errch          chan error
 	release        chan bool
