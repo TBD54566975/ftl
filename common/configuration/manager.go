@@ -92,20 +92,12 @@ func (m *Manager[R]) Mutable() error {
 func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Tracef("resolving %s", ref)
 	key, err := m.resolver.Get(ctx, ref)
 
-	logger.Tracef("key: %v error: %v", key, err)
-
-	logger.Tracef("checking for %s in module scope", ref)
 	// Try again at the global scope if the value is not found in module scope.
 	if ref.Module.Ok() && errors.Is(err, ErrNotFound) {
 		ref.Module = optional.None[string]()
-
-		logger.Tracef("resolving %s", ref)
 		key, err = m.resolver.Get(ctx, ref)
-
-		logger.Tracef("error: %v", err)
 		if err != nil {
 			return nil, err
 		}
@@ -114,21 +106,16 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 		return nil, err
 	}
 
-	logger.Tracef("provider for %s: %s", ref, key.Scheme)
 	provider, ok := m.providers[key.Scheme]
-
-	logger.Tracef("provider ok %v", ok)
 	if !ok {
 		return nil, fmt.Errorf("no provider for scheme %q", key.Scheme)
 	}
 
-	logger.Tracef("providers loading %s from %s", ref, key)
 	data, err := provider.Load(ctx, ref, key)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", ref, err)
 	}
 
-	logger.Tracef("loaded %s from %s", ref, key)
 	return data, nil
 }
 
