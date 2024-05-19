@@ -97,7 +97,7 @@ func (s *Schema) ResolveRefToType(ref *Ref, out Decl) error {
 		}
 	}
 
-	return errors.Join(ErrNotFound, fmt.Errorf("could not resolve reference %v", ref))
+	return fmt.Errorf("could not resolve reference %v: %w", ref, ErrNotFound)
 }
 
 // Module returns the named module if it exists.
