@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/slices"
 	"net/url"
 	"regexp"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // OnePasswordProvider is a configuration provider that reads passwords from
@@ -27,6 +29,8 @@ func (o OnePasswordProvider) Key() string                               { return
 func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return nil }
 
 func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+	logger := log.FromContext(ctx)
+
 	_, err := exec.LookPath("op")
 	if err != nil {
 		return nil, fmt.Errorf("1Password CLI tool \"op\" not found: %w", err)
@@ -52,9 +56,52 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 	//	return nil, fmt.Errorf("error running 1password CLI tool \"op\": %w", err)
 	//}
 
-	output, err := exec.Capture(ctx, ".", "op", "get", "item", parsedRef.Vault, parsedRef.Item)
+	// A single password: op --format json item get --vault Personal "With Spaces" --fields=username
+	// { id, value }
+	// All fields:        op --format json item get --vault Personal "With Spaces"
+	// { fields: [ { id, value } ] }
 
-	return json.Marshal(string(output))
+	args := []string{"--format", "json", "item", "get", "--vault", parsedRef.Vault, parsedRef.Item}
+
+	v, fieldSpecified := parsedRef.Field.Get()
+	if fieldSpecified {
+		args = append(args, "--fields", v)
+	}
+
+	output, err := exec.Capture(ctx, ".", "op", args...)
+	if err != nil {
+		return nil, fmt.Errorf("run `op` with args %v: %w", args, err)
+	}
+
+	logger.Debugf("output: %s", output)
+	logger.Debugf("fieldSpecified: %v", fieldSpecified)
+
+	if fieldSpecified {
+		v, err := decodeSingleResponse(output)
+		if err != nil {
+			return nil, err
+		}
+		logger.Debugf("decoed v: %v", v)
+
+		return json.Marshal(v.Value)
+	} else {
+		v, err := decodeFullResponse(output)
+		if err != nil {
+			return nil, err
+		}
+
+		// Filter out anything without a value
+		filtered := slices.Filter(v, func(e entry) bool {
+			return e.Value != ""
+		})
+		// Map to id: value
+		var mapped = make(map[string]string)
+		for _, e := range filtered {
+			mapped[e.Id] = e.Value
+		}
+
+		return json.Marshal(mapped)
+	}
 }
 
 func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
@@ -71,6 +118,33 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 }
 
 func (o OnePasswordProvider) Writer() bool { return o.OnePassword }
+
+type entry struct {
+	Id    string `json:"id"`
+	Value string `json:"value"`
+}
+
+type full struct {
+	Fields []entry `json:"fields"`
+}
+
+// Decode a full response from op
+func decodeFullResponse(output []byte) ([]entry, error) {
+	var full full
+	if err := json.Unmarshal(output, &full); err != nil {
+		return nil, fmt.Errorf("error decoding op full response: %w", err)
+	}
+	return full.Fields, nil
+}
+
+// Decode a single response from op
+func decodeSingleResponse(output []byte) (*entry, error) {
+	var single entry
+	if err := json.Unmarshal(output, &single); err != nil {
+		return nil, fmt.Errorf("error decoding op single response: %w", err)
+	}
+	return &single, nil
+}
 
 // Custom parser for 1Password secret references because the format is not a standard URL, and we also need to
 // allow users to omit the field name so that we can support secrets with multiple fields.
