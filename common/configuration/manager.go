@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/log"
 	"os"
 	"strings"
 
@@ -90,10 +89,7 @@ func (m *Manager[R]) Mutable() error {
 // getData returns a data value for a configuration from the active providers.
 // The data can be unmarshalled from JSON.
 func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
-	logger := log.FromContext(ctx)
-
 	key, err := m.resolver.Get(ctx, ref)
-
 	// Try again at the global scope if the value is not found in module scope.
 	if ref.Module.Ok() && errors.Is(err, ErrNotFound) {
 		ref.Module = optional.None[string]()
@@ -102,20 +98,16 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 			return nil, err
 		}
 	} else if err != nil {
-		logger.Tracef("error 2: %v", err)
 		return nil, err
 	}
-
 	provider, ok := m.providers[key.Scheme]
 	if !ok {
 		return nil, fmt.Errorf("no provider for scheme %q", key.Scheme)
 	}
-
 	data, err := provider.Load(ctx, ref, key)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", ref, err)
 	}
-
 	return data, nil
 }
 

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"net/url"
 	"regexp"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // OnePasswordProvider is a configuration provider that reads passwords from
@@ -27,6 +27,19 @@ func (OnePasswordProvider) Role() Secrets                               { return
 func (o OnePasswordProvider) Key() string                               { return "op" }
 func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return nil }
 
+// Load returns either a single field if the op:// reference specifies a field, or all fields if not.
+//
+// A single value/password:
+// op://Personal/With Spaces
+// op --format json item get --vault Personal "With Spaces" --fields=username
+// { id, value, ... }
+// "value"
+//
+// All fields:
+// op://Personal/With Spaces/username
+// op --format json item get --vault Personal "With Spaces"
+// { fields: [ { id, value, ... } ], ... }
+// { id: value, ... }
 func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	_, err := exec.LookPath("op")
 	if err != nil {
@@ -43,17 +56,11 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 		return nil, fmt.Errorf("1Password secret reference invalid: %w", err)
 	}
 
-	// A single password: op --format json item get --vault Personal "With Spaces" --fields=username
-	// { id, value, ... }
-	// All fields:        op --format json item get --vault Personal "With Spaces"
-	// { fields: [ { id, value, ... } ], ... }
 	args := []string{"--format", "json", "item", "get", "--vault", parsedRef.Vault, parsedRef.Item}
-
 	v, fieldSpecified := parsedRef.Field.Get()
 	if fieldSpecified {
 		args = append(args, "--fields", v)
 	}
-
 	output, err := exec.Capture(ctx, ".", "op", args...)
 	if err != nil {
 		return nil, fmt.Errorf("run `op` with args %v: %w", args, err)
@@ -94,7 +101,6 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 	if !strings.HasPrefix(opref, "op://") {
 		return nil, fmt.Errorf("1Password secret reference must start with \"op://\"")
 	}
-
 	encoded := base64.RawURLEncoding.EncodeToString([]byte(opref))
 	return &url.URL{Scheme: "op", Host: encoded}, nil
 }
