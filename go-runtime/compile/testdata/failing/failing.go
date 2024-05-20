@@ -156,4 +156,13 @@ type NoMethodsTypeEnum interface{}
 type StructUsingSubpackage struct {
 	Message string            `json:"message"`
 	Data    child.ChildStruct `json:"data"`
+	String  child.ChildString `json:"string"`
+}
+
+//ftl:typealias
+type TypeAlias child.ChildStruct
+
+func aFunc() {
+	// nothing wrong with using a child struct normally
+	_ = child.ChildStruct{}
 }

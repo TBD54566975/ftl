@@ -453,6 +453,13 @@ func TestErrorReporting(t *testing.T) {
 		`150:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
 		`153:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
 		`156:1-2: could not find enum called NoMethodsTypeEnum`,
+		`158:2-2: unsupported type ftl/failing/child.ChildStruct from subpackage`,
+		`158:2-6: unsupported type "ftl/failing/child.ChildStruct" for field "Data"`,
+		`159:2-2: unsupported type ftl/failing/child.ChildString from subpackage`,
+		`159:2-8: unsupported type "ftl/failing/child.ChildString" for field "String"`,
+		`163:1-1: unsupported type ftl/failing/child.ChildStruct from subpackage`,
+		"163:1-33: could not find enum called NoMethodsTypeEnum",
+		`163:1-33: unsupported type "struct{Name string}" for type alias`,
 	}
 	assert.Equal(t, expected, actual)
 }

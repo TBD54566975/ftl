@@ -1086,6 +1086,10 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type, isExported
 	}
 	nodePath := named.Obj().Pkg().Path()
 	if !pctx.isPathInPkg(nodePath) {
+		if strings.HasPrefix(nodePath, pctx.pkg.PkgPath+"/") {
+			pctx.errors.add(noEndColumnErrorf(pos, "unsupported struct %s from subpackage", named.Obj().Name()))
+			return optional.None[*schema.Ref]()
+		}
 		destModule, ok := ftlModuleFromGoModule(nodePath).Get()
 		if !ok {
 			pctx.errors.add(tokenErrorf(pos, nodePath, "struct declared in non-FTL module %s", nodePath))
@@ -1303,9 +1307,14 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 
 		default:
 			nodePath := named.Obj().Pkg().Path()
-			if !pctx.isPathInPkg(nodePath) && !strings.HasPrefix(nodePath, "ftl/") {
-				pctx.errors.add(noEndColumnErrorf(pos, "unsupported external type %s", nodePath+"."+named.Obj().Name()))
-				return optional.None[schema.Type]()
+			if !pctx.isPathInPkg(nodePath) {
+				if !strings.HasPrefix(nodePath, "ftl/") {
+					pctx.errors.add(noEndColumnErrorf(pos, "unsupported external type %s", nodePath+"."+named.Obj().Name()))
+					return optional.None[schema.Type]()
+				} else if strings.HasPrefix(nodePath, pctx.pkg.PkgPath+"/") {
+					pctx.errors.add(noEndColumnErrorf(pos, "unsupported type %s from subpackage", nodePath+"."+named.Obj().Name()))
+					return optional.None[schema.Type]()
+				}
 			}
 			if ref, ok := visitStruct(pctx, pos, tnode, isExported).Get(); ok {
 				return optional.Some[schema.Type](ref)
@@ -1349,7 +1358,10 @@ func visitNamedRef(pctx *parseContext, pos token.Pos, named *types.Named, isExpo
 	nodePath := named.Obj().Pkg().Path()
 	destModule := pctx.module.Name
 	if !pctx.isPathInPkg(nodePath) {
-		if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
+		if strings.HasPrefix(nodePath, pctx.pkg.PkgPath+"/") {
+			pctx.errors.add(noEndColumnErrorf(pos, "unsupported type %s from subpackage", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
+			return optional.None[schema.Type]()
+		} else if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
 			pctx.errors.add(noEndColumnErrorf(pos,
 				"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
 			return optional.None[schema.Type]()
@@ -1500,6 +1512,9 @@ func (p *parseContext) pathEnclosingInterval(start, end token.Pos) (pkg *package
 //
 // if it is in a subpackage, it will return false
 func (p *parseContext) isPathInPkg(path string) bool {
+	if strings.Contains(path, "namedext") {
+		fmt.Printf("aaa\n")
+	}
 	// find all packages whose path is a prefix of the given path
 	pkgs := islices.Filter(p.pkgs, func(pkg *packages.Package) bool {
 		if path == pkg.PkgPath {
