@@ -73,24 +73,24 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 		}
 
 		return json.Marshal(v.Value)
-	} else {
-		v, err := decodeFull(output)
-		if err != nil {
-			return nil, err
-		}
-
-		// Filter out anything without a value
-		filtered := slices.Filter(v, func(e entry) bool {
-			return e.Value != ""
-		})
-		// Map to id: value
-		var mapped = make(map[string]string)
-		for _, e := range filtered {
-			mapped[e.Id] = e.Value
-		}
-
-		return json.Marshal(mapped)
 	}
+
+	full, err := decodeFull(output)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter out anything without a value
+	filtered := slices.Filter(full, func(e entry) bool {
+		return e.Value != ""
+	})
+	// Map to id: value
+	var mapped = make(map[string]string)
+	for _, e := range filtered {
+		mapped[e.ID] = e.Value
+	}
+
+	return json.Marshal(mapped)
 }
 
 func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
@@ -108,17 +108,17 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 func (o OnePasswordProvider) Writer() bool { return o.OnePassword }
 
 type entry struct {
-	Id    string `json:"id"`
+	ID    string `json:"id"`
 	Value string `json:"value"`
 }
 
-type full struct {
+type fullResponse struct {
 	Fields []entry `json:"fields"`
 }
 
 // Decode a full item response from op
 func decodeFull(output []byte) ([]entry, error) {
-	var full full
+	var full fullResponse
 	if err := json.Unmarshal(output, &full); err != nil {
 		return nil, fmt.Errorf("error decoding op full response: %w", err)
 	}
