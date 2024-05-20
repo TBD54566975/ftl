@@ -8,10 +8,19 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+type ErrorLevel int
+
+const (
+	INFO ErrorLevel = iota
+	WARN
+	ERROR
+)
+
 type Error struct {
-	Msg       string   `json:"msg" protobuf:"1"`
-	Pos       Position `json:"pos" protobuf:"2"`
-	EndColumn int      `json:"endCol" protobuf:"3"`
+	Msg       string     `json:"msg" protobuf:"1"`
+	Pos       Position   `json:"pos" protobuf:"2"`
+	EndColumn int        `json:"endCol" protobuf:"3"`
+	Level     ErrorLevel `json:"level" protobuf:"4"`
 }
 
 func (e Error) ToProto() *schemapb.Error {
@@ -67,9 +76,21 @@ func ErrorListFromProto(e *schemapb.ErrorList) *ErrorList {
 	}
 }
 
-func Errorf(pos Position, endColumn int, format string, args ...any) *Error {
-	err := Error{Msg: fmt.Sprintf(format, args...), Pos: pos, EndColumn: endColumn}
+func makeError(level ErrorLevel, pos Position, endColumn int, format string, args ...any) *Error {
+	err := Error{Msg: fmt.Sprintf(format, args...), Pos: pos, EndColumn: endColumn, Level: level}
 	return &err
+}
+
+func Infof(pos Position, endColumn int, format string, args ...any) *Error {
+	return makeError(INFO, pos, endColumn, format, args...)
+}
+
+func Warnf(pos Position, endColumn int, format string, args ...any) *Error {
+	return makeError(WARN, pos, endColumn, format, args...)
+}
+
+func Errorf(pos Position, endColumn int, format string, args ...any) *Error {
+	return makeError(ERROR, pos, endColumn, format, args...)
 }
 
 func Wrapf(pos Position, endColumn int, err error, format string, args ...any) *Error {
