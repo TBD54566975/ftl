@@ -732,8 +732,11 @@ func (s *Service) callWithRequest(
 
 	verbRef := schema.RefFromProto(req.Msg.Verb)
 	verb := &schema.Verb{}
-	err = sch.ResolveRefToType(verbRef, verb)
-	if err != nil {
+
+	if err = sch.ResolveRefToType(verbRef, verb); err != nil {
+		if errors.Is(err, schema.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
 		return nil, err
 	}
 
