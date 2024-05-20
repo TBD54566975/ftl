@@ -1512,9 +1512,6 @@ func (p *parseContext) pathEnclosingInterval(start, end token.Pos) (pkg *package
 //
 // if it is in a subpackage, it will return false
 func (p *parseContext) isPathInPkg(path string) bool {
-	if strings.Contains(path, "namedext") {
-		fmt.Printf("aaa\n")
-	}
 	// find all packages whose path is a prefix of the given path
 	pkgs := islices.Filter(p.pkgs, func(pkg *packages.Package) bool {
 		if path == pkg.PkgPath {
