@@ -16,6 +16,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	pc "github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -73,10 +74,11 @@ func WithProjectFiles(paths ...string) Option {
 	var preprocessingErr error
 	if len(paths) == 0 {
 		envValue, ok := os.LookupEnv("FTL_CONFIG")
-		if !ok {
-			preprocessingErr = fmt.Errorf("loading project files: no path provided and FTL_CONFIG environment variable not set")
+		if ok {
+			paths = strings.Split(envValue, ",")
+		} else {
+			paths = pc.ConfigPaths(paths)
 		}
-		paths = strings.Split(envValue, ",")
 	}
 	paths = slices.Map(paths, func(p string) string {
 		path, err := filepath.Abs(p)
