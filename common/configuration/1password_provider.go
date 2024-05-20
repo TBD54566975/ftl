@@ -30,13 +30,13 @@ func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return
 // Load returns either a single field if the op:// reference specifies a field, or all fields if not.
 //
 // A single value/password:
-// op://Personal/With Spaces
+// op://Personal/With Spaces/username
 // op --format json item get --vault Personal "With Spaces" --fields=username
 // { id, value, ... }
 // "value"
 //
 // All fields:
-// op://Personal/With Spaces/username
+// op://Personal/With Spaces
 // op --format json item get --vault Personal "With Spaces"
 // { fields: [ { id, value, ... } ], ... }
 // { id: value, ... }
@@ -85,7 +85,7 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 		return e.Value != ""
 	})
 	// Map to id: value
-	var mapped = make(map[string]string)
+	var mapped = make(map[string]string, len(filtered))
 	for _, e := range filtered {
 		mapped[e.ID] = e.Value
 	}
