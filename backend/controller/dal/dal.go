@@ -236,11 +236,64 @@ func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
 }
 
 type DAL struct {
-	db *sql.DB
+	db sql.DBI
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
 	// RouteChanges is a Topic that receives changes to the routing table.
+}
+
+// Tx is DAL within a transaction.
+type Tx struct {
+	*DAL
+}
+
+// CommitOrRollback can be used in a defer statement to commit or rollback a
+// transaction depending on whether the enclosing function returned an error.
+//
+//	func myFunc() (err error) {
+//	  tx, err := dal.Begin(ctx)
+//	  if err != nil { return err }
+//	  defer tx.CommitOrRollback(ctx, &err)
+//	  ...
+//	}
+func (t *Tx) CommitOrRollback(ctx context.Context, err *error) {
+	tx, ok := t.db.(*sql.Tx)
+	if !ok {
+		panic("inconcievable")
+	}
+	tx.CommitOrRollback(ctx, err)
+}
+
+func (t *Tx) Commit(ctx context.Context) error {
+	tx, ok := t.db.(*sql.Tx)
+	if !ok {
+		panic("inconcievable")
+	}
+	return tx.Commit(ctx)
+}
+
+func (t *Tx) Rollback(ctx context.Context) error {
+	tx, ok := t.db.(*sql.Tx)
+	if !ok {
+		panic("inconcievable")
+	}
+	return tx.Rollback(ctx)
+}
+
+func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
+	db, ok := d.db.(*sql.DB)
+	if !ok {
+		return nil, fmt.Errorf("can't nest transactions")
+	}
+	stx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, translatePGError(err)
+	}
+	return &Tx{&DAL{
+		db:                stx,
+		DeploymentChanges: d.DeploymentChanges,
+	}}, nil
 }
 
 func (d *DAL) GetActiveControllers(ctx context.Context) ([]Controller, error) {
@@ -1120,7 +1173,7 @@ func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 
 type artefactReader struct {
 	id     int64
-	db     *sql.DB
+	db     sql.DBI
 	offset int32
 }
 

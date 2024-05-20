@@ -350,6 +350,19 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		return out
 	},
 	"schemaType": schemaType,
+	// A standalone enum variant is one that is purely an alias to a type and does not appear
+	// elsewhere in the schema.
+	"isStandaloneEnumVariant": func(v schema.EnumVariant) bool {
+		tv, ok := v.Value.(*schema.TypeValue)
+		if !ok {
+			return false
+		}
+		if ref, ok := tv.Value.(*schema.Ref); ok {
+			return ref.Name != v.Name
+		}
+
+		return false
+	},
 }
 
 func schemaType(t schema.Type) string {

@@ -15,7 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func leaseExists(t *testing.T, conn sql.DBI, idempotencyKey uuid.UUID, key leases.Key) bool {
+func leaseExists(t *testing.T, conn sql.ConnI, idempotencyKey uuid.UUID, key leases.Key) bool {
 	t.Helper()
 	var count int
 	err := translatePGError(conn.
