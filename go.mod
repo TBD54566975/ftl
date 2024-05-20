@@ -20,7 +20,7 @@ require (
 	github.com/beevik/etree v1.4.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/deckarep/golang-set/v2 v2.6.0
-	github.com/docker/docker v25.0.5+incompatible
+	github.com/docker/docker v26.1.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/go-logr/logr v1.4.1
 	github.com/gofrs/flock v0.8.1
@@ -74,6 +74,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
