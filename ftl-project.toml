@@ -1,24 +1,12 @@
 module-dirs = ["examples/go"]
 external-dirs = []
-ftl-min-version = ""
 
 [global]
-  [global.configuration]
-    moo = "envar://moo"
-  [global.secrets]
-    ftl = "keychain://ftl"
-    p = "op://Personal/TestAbc/username"
-    s = "op://b3A6Ly9QZXJzb25hbC9UZXN0QWJjL3Bhc3N3b3Jk"
-    test = "inline://ImFyc3Qi"
-    z = "op://b3A6Ly9QZXJzb25hbC9UZXN0QWJj"
 
 [modules]
   [modules.echo]
     [modules.echo.configuration]
       default = "inline://ImFub255bW91cyI"
-
-[executables]
-  ftl = ""
 
 [commands]
   startup = ["echo 'FTL startup command ⚡️'"]
