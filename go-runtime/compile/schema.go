@@ -23,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/goast"
+	islices "github.com/TBD54566975/ftl/internal/slices"
 )
 
 var (
@@ -1495,11 +1496,26 @@ func (p *parseContext) pathEnclosingInterval(start, end token.Pos) (pkg *package
 	return nil, nil, false
 }
 
+// isPathInPkg checks that the path is within the current package
+//
+// if it is in a subpackage, it will return false
 func (p *parseContext) isPathInPkg(path string) bool {
-	if path == p.pkg.PkgPath {
-		return true
+	// find all packages whose path is a prefix of the given path
+	pkgs := islices.Filter(p.pkgs, func(pkg *packages.Package) bool {
+		if path == pkg.PkgPath {
+			return true
+		}
+		return strings.HasPrefix(path, pkg.PkgPath+"/")
+	})
+	if len(pkgs) == 0 {
+		return false
 	}
-	return strings.HasPrefix(path, p.pkg.PkgPath+"/")
+	// sort so we know if the current package is the longest prefix
+	paths := islices.Map(pkgs, func(pkg *packages.Package) string {
+		return pkg.PkgPath
+	})
+	slices.Sort(paths)
+	return paths[len(paths)-1] == p.pkg.PkgPath
 }
 
 // getEnumForTypeName returns the enum and interface for a given type name.

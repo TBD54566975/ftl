@@ -2,6 +2,7 @@ package failing
 
 import (
 	"context"
+	"ftl/failing/child"
 
 	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
@@ -150,3 +151,9 @@ type TypeEnum3 interface{ ExportedMethod() }
 
 //ftl:enum
 type NoMethodsTypeEnum interface{}
+
+//ftl:data
+type StructUsingSubpackage struct {
+	Message string            `json:"message"`
+	Data    child.ChildStruct `json:"data"`
+}
