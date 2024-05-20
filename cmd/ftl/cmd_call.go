@@ -15,6 +15,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -88,17 +89,20 @@ func (c *callCmd) findSuggestions(ctx context.Context, client ftlv1connect.Contr
 		return nil, err
 	}
 
-	modules := res.Msg.GetSchema().GetModules()
+	modules := make([]*schema.Module, 0, len(res.Msg.GetSchema().GetModules()))
+	for _, pbmodule := range res.Msg.GetSchema().GetModules() {
+		module, err := schema.ModuleFromProto(pbmodule)
+		if err != nil {
+			logger.Errorf(err, "failed to convert module from protobuf")
+			continue
+		}
+		modules = append(modules, module)
+	}
 	verbs := []string{}
 
 	// build a list of all the verbs
 	for _, module := range modules {
-		for _, decl := range module.GetDecls() {
-			v := decl.GetVerb()
-			if v == nil {
-				continue
-			}
-
+		for _, v := range module.Verbs() {
 			verbName := fmt.Sprintf("%s.%s", module.Name, v.Name)
 			if verbName == fmt.Sprintf("%s.%s", c.Verb.Module, c.Verb.Name) {
 				break

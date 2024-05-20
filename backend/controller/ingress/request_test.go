@@ -3,6 +3,7 @@ package ingress
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -96,10 +97,10 @@ func TestBuildRequestBody(t *testing.T) {
 	}{
 		{name: "UnknownVerb",
 			verb: "unknown",
-			err:  `could not resolve reference test.unknown`},
+			err:  fmt.Errorf("could not resolve reference test.unknown: %w", schema.ErrNotFound).Error()},
 		{name: "UnknownModule",
 			verb: "unknown",
-			err:  `could not resolve reference test.unknown`},
+			err:  fmt.Errorf("could not resolve reference test.unknown: %w", schema.ErrNotFound).Error()},
 		{name: "QueryParameterDecoding",
 			verb:      "getAlias",
 			method:    "GET",
@@ -177,8 +178,7 @@ func TestBuildRequestBody(t *testing.T) {
 				Verb:   test.verb,
 			}, r, sch)
 			if test.err != "" {
-				assert.Contains(t, err.Error(), test.err)
-				assert.IsError(t, err, schema.ErrNotFound)
+				assert.EqualError(t, err, test.err)
 				return
 			}
 			assert.NoError(t, err)
