@@ -2,7 +2,6 @@ package ingress
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -164,7 +163,7 @@ func TestBuildRequestBody(t *testing.T) {
 			if test.body == nil {
 				test.body = obj{}
 			}
-			body, err := encoding.Marshal(context.Background(), test.body)
+			body, err := encoding.Marshal(test.body)
 			assert.NoError(t, err)
 			requestURL := "http://127.0.0.1" + test.path
 			if test.query != nil {
@@ -184,7 +183,7 @@ func TestBuildRequestBody(t *testing.T) {
 			assert.NoError(t, err)
 			actualrv := reflect.New(reflect.TypeOf(test.expected))
 			actual := actualrv.Interface()
-			err = encoding.Unmarshal(context.Background(), requestBody, actual)
+			err = encoding.Unmarshal(requestBody, actual)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, actualrv.Elem().Interface(), assert.OmitEmpty())
 		})

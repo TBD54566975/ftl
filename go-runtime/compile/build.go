@@ -363,6 +363,19 @@ var scaffoldFuncs = scaffolder.FuncMap{
 
 		return false
 	},
+	"sumTypes": func(m *schema.Module) []*schema.Enum {
+		out := []*schema.Enum{}
+		for _, d := range m.Decls {
+			switch d := d.(type) {
+			// Type enums (i.e. sum types) are all the non-value enums
+			case *schema.Enum:
+				if !d.IsValueEnum() && d.IsExported() {
+					out = append(out, d)
+				}
+			}
+		}
+		return out
+	},
 }
 
 func schemaType(t schema.Type) string {
