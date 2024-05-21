@@ -87,7 +87,7 @@ func (b *Builder) Build() ModuleContext {
 	return ModuleContext(reflect.DeepCopy(*b))
 }
 
-// FromContext returns the ModuleContext attached to the context.
+// FromContext returns the ModuleContext attached to a context.
 func FromContext(ctx context.Context) ModuleContext {
 	m, ok := ctx.Value(contextKeyModuleContext{}).(ModuleContext)
 	if !ok {
@@ -97,7 +97,7 @@ func FromContext(ctx context.Context) ModuleContext {
 }
 
 // FromContextManagers composes a new ModuleContext from the ConfigurationManager and
-// SecretsManager attached to the context.
+// SecretsManager attached to the given context.
 func FromContextManagers(ctx context.Context, module string) (optional.Option[ModuleContext], error) {
 	cm := configuration.ConfigFromContext(ctx)
 	sm := configuration.SecretsFromContext(ctx)
@@ -160,6 +160,14 @@ func (m ModuleContext) GetDatabase(name string, dbType DBType) (*sql.DB, error) 
 		return nil, fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase(db) as an option with ftltest.Context(...)", name)
 	}
 	return db.db, nil
+}
+
+// ValidateModuleDecls logs warnings for each config/secret that is not used by a Decl and
+// returns errors for each config/secret that is referenced by a Decl but not provided by
+// this ModuleContext.
+func (m ModuleContext) ValidateModuleDecls(ctx context.Context, decls map[string]bool, configOrSecret string) []error {
+	logger := log.FromContext(ctx)
+	errs := []error{}
 }
 
 // BehaviorForVerb returns what to do to execute a verb

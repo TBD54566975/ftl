@@ -505,10 +505,35 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 	return nil
 }
 
-func validateConfigsAndSecretsMatch(ctx, builtModules) []error {
-	for moduleName, module := range builtModules {
-		optMC := modulecontext.FromContextManagers(ctx, module)
+func validateConfigsAndSecretsMatch(ctx context.Context, builtModules map[string]*schema.Module) []error {
+	errs := []error{}
+	for moduleName, builtModule := range builtModules {
+		configsUsed := makeDeclMap[*schema.Config](builtModule)
+		secretsUsed := makeDeclMap[*schema.Secret](builtModule)
+		optMC, err := modulecontext.FromContextManagers(ctx, module)
+		if err != nil {
+			return append(errs, err)
+		}
+		if optMC.Ok() {
+			errs = append(errs, optMC.Get().validateMapsMatch(ctx, configsUsed, "config")...)
+			errs = append(errs, optMC.Get().validateMapsMatch(ctx, secretsUsed, "secret")...)
+		} else {
+			// optMC should always be Ok when err is nil, but check just in case
+			return append(errs, errors.New("failed to retrieve modulecontext, but err was nil"))
+		}
 	}
+}
+
+func makeDeclMap[V *schema.Config | *schema.Secret](builtModule *schema.Module) map[string]bool {
+	used := make(map[string]bool)
+	for _, d := range module.Decls {
+		switch d := d.(type) {
+		case V:
+			used[d.Name] = true
+		default:
+		}
+	}
+	return used
 }
 
 func (e *Engine) tryBuild(ctx context.Context, mustBuild map[ProjectKey]bool, key ProjectKey, builtModules map[string]*schema.Module, schemas chan *schema.Module, callback buildCallback) error {
