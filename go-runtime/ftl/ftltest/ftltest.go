@@ -60,7 +60,8 @@ func Context(options ...Option) context.Context {
 // WithProjectFiles loads config and secrets from a project file
 //
 // Takes a list of paths to project files. If multiple paths are provided, they are loaded in order, with later files taking precedence.
-// If no paths are provided, the list is inferred from the FTL_CONFIG environment variable. If that is not found, an error is returned.
+// If no paths are provided, the list is inferred from the FTL_CONFIG environment variable. If that is not found, the ftl-project.toml
+// file in the git root is used. If ftl-project.toml is not found, no project files are loaded.
 //
 // To be used when setting up a context for a test:
 // ctx := ftltest.Context(
