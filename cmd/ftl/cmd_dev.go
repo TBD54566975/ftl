@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -74,7 +75,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			})
 		}
 
-		engine, err := buildengine.New(ctx, client, &projConfig, d.Dirs, d.External, opts...)
+		engine, err := buildengine.New(ctx, client, optional.Some(projConfig), d.Dirs, d.External, opts...)
 		if err != nil {
 			return err
 		}

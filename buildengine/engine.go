@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -48,7 +49,7 @@ func (b BuildStartedListenerFunc) OnBuildStarted(project Project) { b(project) }
 // Engine for building a set of modules.
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
-	projectConfig    *projectconfig.Config
+	projectConfig    optional.Option[projectconfig.Config]
 	projectMetas     *xsync.MapOf[ProjectKey, projectMeta]
 	moduleDirs       []string
 	externalDirs     []string
@@ -83,7 +84,7 @@ func WithListener(listener Listener) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig *projectconfig.Config, moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig optional.Option[projectconfig.Config], moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -513,11 +514,12 @@ func (e *Engine) validateConfigsAndSecretsMatch(ctx context.Context, builtModule
 
 	configsProvidedGlobally := make(map[string]bool)
 	secretsProvidedGlobally := make(map[string]bool)
-	if e.projectConfig != nil {
-		for configName := range e.projectConfig.Global.Config {
+	if e.projectConfig.Ok() {
+		pc, _ := e.projectConfig.Get()
+		for configName := range pc.Global.Config {
 			configsProvidedGlobally[configName] = true
 		}
-		for secretName := range e.projectConfig.Global.Secrets {
+		for secretName := range pc.Global.Secrets {
 			secretsProvidedGlobally[secretName] = true
 		}
 	}
@@ -535,13 +537,14 @@ func (e *Engine) validateConfigsAndSecretsMatch(ctx context.Context, builtModule
 		}
 	}
 
-	if e.projectConfig != nil {
-		for configName := range e.projectConfig.Global.Config {
+	if e.projectConfig.Ok() {
+		pc, _ := e.projectConfig.Get()
+		for configName := range pc.Global.Config {
 			if _, isUsed := configsUsed[configName]; !isUsed {
 				logger.Warnf("config %q is provided globally in ftl-project.toml, but is not required by any modules", configName)
 			}
 		}
-		for secretName := range e.projectConfig.Global.Secrets {
+		for secretName := range pc.Global.Secrets {
 			if _, isUsed := secretsUsed[secretName]; !isUsed {
 				logger.Warnf("secret %q is provided globally in ftl-project.toml, but is not required by any modules", secretName)
 			}
@@ -575,8 +578,9 @@ func (e *Engine) validateConfigsAndSecretsMatchForModule(ctx context.Context, mo
 	// Index all provided configs into configsProvided and warn for unused configs
 	configsProvided := maps.Clone(globalConfig)
 	secretsProvided := maps.Clone(globalSecrets)
-	if e.projectConfig != nil {
-		moduleConfigAndSecrets, moduleConfigAndSecretsExists := e.projectConfig.Modules[moduleName]
+	if e.projectConfig.Ok() {
+		pc, _ := e.projectConfig.Get()
+		moduleConfigAndSecrets, moduleConfigAndSecretsExists := pc.Modules[moduleName]
 		if moduleConfigAndSecretsExists {
 			for configName := range moduleConfigAndSecrets.Config {
 				configsProvided[configName] = true

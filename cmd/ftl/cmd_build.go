@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
@@ -25,7 +27,7 @@ func (b *buildCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 	if len(b.Dirs) == 0 && len(b.External) == 0 {
 		return errors.New("no directories specified")
 	}
-	engine, err := buildengine.New(ctx, client, &projConfig, b.Dirs, b.External, buildengine.Parallelism(b.Parallelism))
+	engine, err := buildengine.New(ctx, client, optional.Some(projConfig), b.Dirs, b.External, buildengine.Parallelism(b.Parallelism))
 	if err != nil {
 		return err
 	}

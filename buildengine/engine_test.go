@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
@@ -21,7 +22,7 @@ func TestEngine(t *testing.T) {
 		t.SkipNow()
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, nil, []string{"testdata/projects/alpha", "testdata/projects/other", "testdata/projects/another"}, nil)
+	engine, err := buildengine.New(ctx, nil, optional.None[projectconfig.Config](), []string{"testdata/projects/alpha", "testdata/projects/other", "testdata/projects/another"}, nil)
 	assert.NoError(t, err)
 
 	defer engine.Close()
@@ -71,7 +72,7 @@ func TestValidateConfigsAndSecretsMatch(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	projConfig, err := projectconfig.LoadConfig(ctx, []string{"testdata/projectconfigs/config-secret-validation-ftl-project.toml"})
 	assert.NoError(t, err)
-	engine, err := buildengine.New(ctx, nil, &projConfig, []string{"testdata/projects/configsecret"}, nil)
+	engine, err := buildengine.New(ctx, nil, optional.Some(projConfig), []string{"testdata/projects/configsecret"}, nil)
 	assert.NoError(t, err)
 
 	defer engine.Close()
