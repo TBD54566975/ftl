@@ -69,13 +69,13 @@ func TestDecodeSecretRef(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := decodeSecretRef(tt.ref)
+			got, err := vaultRef(tt.ref)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("decodeSecretRef() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("vaultRef() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("decodeSecretRef() got = %v, want %v", got, tt.want)
+				t.Errorf("vaultRef() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
