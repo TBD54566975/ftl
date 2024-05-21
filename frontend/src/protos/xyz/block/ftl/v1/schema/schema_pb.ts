@@ -579,6 +579,11 @@ export class Error extends Message<Error> {
    */
   endColumn = protoInt64.zero;
 
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Error.ErrorLevel level = 4;
+   */
+  level = Error_ErrorLevel.INFO;
+
   constructor(data?: PartialMessage<Error>) {
     super();
     proto3.util.initPartial(data, this);
@@ -590,6 +595,7 @@ export class Error extends Message<Error> {
     { no: 1, name: "msg", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "pos", kind: "message", T: Position },
     { no: 3, name: "endColumn", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "level", kind: "enum", T: proto3.getEnumType(Error_ErrorLevel) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Error {
@@ -608,6 +614,32 @@ export class Error extends Message<Error> {
     return proto3.util.equals(Error, a, b);
   }
 }
+
+/**
+ * @generated from enum xyz.block.ftl.v1.schema.Error.ErrorLevel
+ */
+export enum Error_ErrorLevel {
+  /**
+   * @generated from enum value: INFO = 0;
+   */
+  INFO = 0,
+
+  /**
+   * @generated from enum value: WARN = 1;
+   */
+  WARN = 1,
+
+  /**
+   * @generated from enum value: ERROR = 2;
+   */
+  ERROR = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(Error_ErrorLevel)
+proto3.util.setEnumType(Error_ErrorLevel, "xyz.block.ftl.v1.schema.Error.ErrorLevel", [
+  { no: 0, name: "INFO" },
+  { no: 1, name: "WARN" },
+  { no: 2, name: "ERROR" },
+]);
 
 /**
  * @generated from message xyz.block.ftl.v1.schema.ErrorList

@@ -97,7 +97,16 @@ func publishErrors(errByFilename map[string]errSet, s *Server) {
 		for _, e := range errs {
 			pp := e.Pos
 			sourceName := "ftl"
-			severity := protocol.DiagnosticSeverityError
+			var severity protocol.DiagnosticSeverity
+
+			switch e.Level {
+			case schema.ERROR:
+				severity = protocol.DiagnosticSeverityError
+			case schema.WARN:
+				severity = protocol.DiagnosticSeverityWarning
+			case schema.INFO:
+				severity = protocol.DiagnosticSeverityInformation
+			}
 
 			// If the end column is not set, set it to the length of the word.
 			if e.EndColumn <= pp.Column {
