@@ -496,11 +496,19 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		allErrors = append(allErrors, err)
 	}
 
+	allErrors = append(allErrors, validateConfigsAndSecretsMatch(ctx, builtModules)...)
+
 	if len(allErrors) > 0 {
 		return errors.Join(allErrors...)
 	}
 
 	return nil
+}
+
+func validateConfigsAndSecretsMatch(ctx, builtModules) []error {
+	for moduleName, module := range builtModules {
+		optMC := modulecontext.FromContextManagers(ctx, module)
+	}
 }
 
 func (e *Engine) tryBuild(ctx context.Context, mustBuild map[ProjectKey]bool, key ProjectKey, builtModules map[string]*schema.Module, schemas chan *schema.Module, callback buildCallback) error {

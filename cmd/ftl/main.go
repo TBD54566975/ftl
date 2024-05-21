@@ -79,14 +79,15 @@ func main() {
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	config, err := projectconfig.LoadConfig(ctx, cli.ConfigFlag)
+	configPaths := projectconfig.ConfigPaths(cli.ConfigFlag)
+	config, err := projectconfig.LoadConfig(ctx, configPaths)
 	if err != nil {
 		kctx.Fatalf(err.Error())
 	}
 	kctx.Bind(config)
 
-	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: cli.ConfigFlag}
-	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: cli.ConfigFlag}
+	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: configPaths}
+	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: configPaths}
 	kctx.BindTo(sr, (*cf.Resolver[cf.Secrets])(nil))
 	kctx.BindTo(cr, (*cf.Resolver[cf.Configuration])(nil))
 

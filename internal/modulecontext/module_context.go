@@ -87,13 +87,34 @@ func (b *Builder) Build() ModuleContext {
 	return ModuleContext(reflect.DeepCopy(*b))
 }
 
-// FromContext returns the ModuleContext attached to a context.
+// FromContext returns the ModuleContext attached to the context.
 func FromContext(ctx context.Context) ModuleContext {
 	m, ok := ctx.Value(contextKeyModuleContext{}).(ModuleContext)
 	if !ok {
 		panic("no ModuleContext in context")
 	}
 	return m
+}
+
+// FromContextManagers composes a new ModuleContext from the ConfigurationManager and
+// SecretsManager attached to the context.
+func FromContextManagers(ctx context.Context, module string) (optional.Option[ModuleContext], error) {
+	cm := configuration.ConfigFromContext(ctx)
+	sm := configuration.SecretsFromContext(ctx)
+	configs, err := cm.MapForModule(ctx, module)
+	if err != nil {
+		return optional.None[ModuleContext](), err
+	}
+	secrets, err := sm.MapForModule(ctx, module)
+	if err != nil {
+		return optional.None[ModuleContext](), err
+	}
+	databases, err := modulecontext.DatabasesFromSecrets(ctx, module, secrets)
+	if err != nil {
+		return optional.None[ModuleContext](), err
+	}
+	mc := modulecontext.NewBuilder(name).AddConfigs(configs).AddSecrets(secrets).AddDatabases(databases).Build()
+	return optional.Some(mc), nil
 }
 
 // ApplyToContext returns a Go context.Context with ModuleContext added.
