@@ -25,7 +25,7 @@ func (OnePasswordProvider) Role() Secrets                               { return
 func (o OnePasswordProvider) Key() string                               { return "op" }
 func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return nil }
 
-// Load returns the secret stored in 1password, quoted as valid JSON.
+// Load returns the secret stored in 1password, quoted as a JSON string.
 func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	if err := checkOpBinary(); err != nil {
 		return nil, err
@@ -61,16 +61,11 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 		return nil, err
 	}
 
-	// value is json encoded
 	var secret string
 	err := json.Unmarshal(value, &secret)
 	if err != nil {
 		return nil, fmt.Errorf("json unmarshal failed: %w", err)
 	}
-
-	logger := log.FromContext(ctx)
-	logger.Debugf("Storing password: %s", value)
-	logger.Debugf("module/title name: %s", ref)
 
 	url := &url.URL{Scheme: "op", Host: o.Vault}
 
@@ -91,6 +86,7 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 	if err != nil {
 		return nil, fmt.Errorf("edit item failed: %w", err)
 	}
+
 	return url, nil
 }
 
@@ -130,7 +126,6 @@ func getItem(ctx context.Context, vault string, ref Ref) (*item, error) {
 	args := []string{"--format", "json", "item", "get", "--vault", vault, ref.String()}
 	output, err := exec.Capture(ctx, ".", "op", args...)
 	logger.Debugf("Getting item with args %v", args)
-	logger.Debugf("Output: %s", output)
 	if err != nil {
 		if strings.Contains(string(output), "isn't a vault") {
 			return nil, fmt.Errorf("vault %q not found: %w", vault, err)
@@ -144,7 +139,6 @@ func getItem(ctx context.Context, vault string, ref Ref) (*item, error) {
 			return nil, notFoundError{vault, ref}
 		}
 
-		// Don't show the output in the error message because it may contain secrets.
 		return nil, fmt.Errorf("run `op` with args %v: %w", args, err)
 	}
 
@@ -157,9 +151,7 @@ func getItem(ctx context.Context, vault string, ref Ref) (*item, error) {
 
 // op item create --category Password --vault FTL --title mod.ule "password=val ue"
 func createItem(ctx context.Context, vault string, ref Ref, secret string) error {
-	logger := log.FromContext(ctx)
 	args := []string{"item", "create", "--category", "Password", "--vault", vault, "--title", ref.String(), "password=" + secret}
-	logger.Debugf("Creating item with args %v", args)
 	_, err := exec.Capture(ctx, ".", "op", args...)
 	if err != nil {
 		return fmt.Errorf("create item failed in vault %q, ref %q: %w", vault, ref, err)
