@@ -44,12 +44,16 @@ func Test1PasswordProvider(t *testing.T) {
 
 	value, err := getItem(ctx, vault, Ref{Name: module})
 	assert.NoError(t, err)
-	assert.Equal(t, "hunter1", value.Fields[0].Value)
+	secret, ok := value.value("password")
+	assert.True(t, ok)
+	assert.Equal(t, "hunter1", secret)
 
 	err = editItem(ctx, vault, Ref{Name: module}, "hunter2")
 	assert.NoError(t, err)
 
 	value, err = getItem(ctx, vault, Ref{Name: module})
 	assert.NoError(t, err)
-	assert.Equal(t, "hunter2", value.Fields[0].Value)
+	secret, ok = value.value("password")
+	assert.True(t, ok)
+	assert.Equal(t, "hunter2", secret)
 }

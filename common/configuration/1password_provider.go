@@ -37,14 +37,12 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 		return nil, fmt.Errorf("get item failed: %w", err)
 	}
 
-	secret, ok := slices.Find(full.Fields, func(item entry) bool {
-		return item.ID == "password"
-	})
+	secret, ok := full.value("password")
 	if !ok {
 		return nil, fmt.Errorf("password field not found in item %q", ref)
 	}
 
-	jsonSecret, err := json.Marshal(secret.Value)
+	jsonSecret, err := json.Marshal(secret)
 	if err != nil {
 		return nil, fmt.Errorf("json marshal failed: %w", err)
 	}
@@ -117,6 +115,13 @@ type item struct {
 type entry struct {
 	ID    string `json:"id"`
 	Value string `json:"value"`
+}
+
+func (i item) value(field string) (string, bool) {
+	secret, ok := slices.Find(i.Fields, func(item entry) bool {
+		return item.ID == field
+	})
+	return secret.Value, ok
 }
 
 // op --format json item get --vault Personal "With Spaces"
