@@ -19,7 +19,7 @@
       "enabled": false
     },
     {
-      "matchPackageNames": ["eslint"],
+      "matchPackageNames": ["eslint", "codemirror"],
       "enabled": false,
       "paths": ["frontend/**", "extensions/**"]
     },
