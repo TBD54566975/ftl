@@ -14,7 +14,3 @@ func TestProtoRoundtrip(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, Normalise(testSchema), Normalise(actual))
 }
-
-func TestErrorProtoGeneration(t *testing.T) {
-
-}
