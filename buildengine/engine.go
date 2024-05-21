@@ -522,16 +522,16 @@ func (e *Engine) validateConfigsAndSecretsMatch(ctx context.Context, builtModule
 		}
 	}
 
-	configsUsed := make(map[string]bool)
-	secretsUsed := make(map[string]bool)
+	configsUsed := make(map[string]*schema.Config)
+	secretsUsed := make(map[string]*schema.Secret)
 	for moduleName, module := range builtModules {
 		configsUsedInModule, secretsUsedInModule, moduleErrs := e.validateConfigsAndSecretsMatchForModule(ctx, moduleName, module, configsProvidedGlobally, secretsProvidedGlobally)
 		errs = append(errs, moduleErrs...)
-		for configName := range configsUsedInModule {
-			configsUsed[configName] = true
+		for configName, decl := range configsUsedInModule {
+			configsUsed[configName] = decl
 		}
-		for secretName := range secretsUsedInModule {
-			secretsUsed[secretName] = true
+		for secretName, decl := range secretsUsedInModule {
+			secretsUsed[secretName] = decl
 		}
 	}
 
@@ -556,18 +556,18 @@ func (e *Engine) validateConfigsAndSecretsMatch(ctx context.Context, builtModule
 // ftl-project.toml, with O(1) `contains` checks. This function logs warnings for any module-level
 // configs/secrets that are provided but not used, then returns maps whose keys are all the
 // configs/secrets used by this module.
-func (e *Engine) validateConfigsAndSecretsMatchForModule(ctx context.Context, moduleName string, module *schema.Module, globalConfig map[string]bool, globalSecrets map[string]bool) (map[string]bool, map[string]bool, []error) {
+func (e *Engine) validateConfigsAndSecretsMatchForModule(ctx context.Context, moduleName string, module *schema.Module, globalConfig map[string]bool, globalSecrets map[string]bool) (map[string]*schema.Config, map[string]*schema.Secret, []error) {
 	errs := []error{}
 	logger := log.FromContext(ctx)
 
-	configsUsed := make(map[string]bool)
-	secretsUsed := make(map[string]bool)
+	configsUsed := make(map[string]*schema.Config)
+	secretsUsed := make(map[string]*schema.Secret)
 	for _, d := range module.Decls {
 		switch d := d.(type) {
 		case *schema.Config:
-			configsUsed[d.Name] = true
+			configsUsed[d.Name] = d
 		case *schema.Secret:
-			secretsUsed[d.Name] = true
+			secretsUsed[d.Name] = d
 		default:
 		}
 	}
@@ -593,14 +593,15 @@ func (e *Engine) validateConfigsAndSecretsMatchForModule(ctx context.Context, mo
 		}
 	}
 
-	for configName := range configsUsed {
+	for configName, decl := range configsUsed {
 		if _, isProvided := configsProvided[configName]; !isProvided {
-			errs = append(errs, fmt.Errorf("config %q is not provided in ftl-project.toml, but is required by module %q", configName, moduleName))
+			errs = append(errs, schema.Errorf(decl.Pos, decl.Pos.Column, "config %q is not provided in ftl-project.toml, but is required by module %q", configName, moduleName))
 		}
 	}
-	for secretName := range secretsUsed {
+	for secretName, decl := range secretsUsed {
 		if _, isProvided := secretsProvided[secretName]; !isProvided {
-			errs = append(errs, fmt.Errorf("secret %q is not provided in ftl-project.toml, but is required by module %q", secretName, moduleName))
+			// TODO: look for good ways to get end column int
+			errs = append(errs, schema.Errorf(decl.Pos, decl.Pos.Column, "secret %q is not provided in ftl-project.toml, but is required by module %q", secretName, moduleName))
 		}
 	}
 

@@ -2,6 +2,9 @@ package buildengine_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -10,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 func TestEngine(t *testing.T) {
@@ -74,11 +78,13 @@ func TestValidateConfigsAndSecretsMatch(t *testing.T) {
 
 	err = engine.Build(ctx)
 
+	pwd, _ := os.Getwd()
+	filename := filepath.Join(pwd, "testdata/projects/configsecret/configsecret.go")
+	actual := slices.Map(strings.Split(err.Error(), "\n"), func(s string) string { return strings.TrimPrefix(s, filename+":") })
 	expectedErrs := []string{
-		"config \"missingConfig\" is not provided in ftl-project.toml, but is required by module \"configsecret\"",
-		"secret \"missingSecret\" is not provided in ftl-project.toml, but is required by module \"configsecret\"",
+		`12:21-21: config "missingConfig" is not provided in ftl-project.toml, but is required by module "configsecret"`,
+		`15:21-21: secret "missingSecret" is not provided in ftl-project.toml, but is required by module "configsecret"`,
 	}
-	for _, expectedErr := range expectedErrs {
-		assert.Contains(t, err.Error(), expectedErr)
-	}
+	assert.Equal(t, actual, expectedErrs)
+	//assert.Contains(t, err.Error(), "definitely not here!!")
 }
