@@ -11,6 +11,12 @@ This guide is for you.
 
 ## Development Prerequisites
 
+We recommend that you use OrbStack instead of Docker desktop when developing on this project:
+```
+brew install orbstack
+```
+or [OrbStack Website](https://orbstack.dev/)
+
 The tools used by this project are managed by
 [Hermit](https://cashapp.github.io/hermit/), a self-bootstrapping package
 installer. To activate the Hermit environment, cd into the source directory and

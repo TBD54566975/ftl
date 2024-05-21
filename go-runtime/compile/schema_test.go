@@ -65,7 +65,7 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   // Comments about ColorInt.
-  enum ColorInt: Int {
+  export enum ColorInt: Int {
     // RedInt is a color.
     RedInt = 0
     BlueInt = 1
@@ -92,6 +92,13 @@ func TestExtractModuleSchema(t *testing.T) {
     Two = 2
   }
 
+  export enum TypeEnum {
+    Option String?
+    InlineStruct one.InlineStruct
+    AliasedStruct one.UnderlyingStruct
+    ValueEnum one.ColorInt
+  }
+
   data Config {
     field String
   }
@@ -105,6 +112,9 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   export data ExportedStruct {
+  }
+
+  export data InlineStruct {
   }
 
   export data Nested {
@@ -138,6 +148,9 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   data SourceResp {
+  }
+
+  export data UnderlyingStruct {
   }
 
   data WithoutDirectiveStruct {
@@ -305,7 +318,7 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestParseDirectives(t *testing.T) {
+func TestParsedirectives(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -398,46 +411,55 @@ func TestErrorReporting(t *testing.T) {
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
 	actual := slices.Map(r.MustGet().Errors, func(e *schema.Error) string { return strings.TrimPrefix(e.Error(), filename+":") })
 	expected := []string{
-		`10:13-34: first argument to config and secret declarations must be the name as a string literal`,
-		`13:18-52: duplicate config declaration at 12:18-52`,
-		`16:18-52: duplicate secret declaration at 15:18-52`,
-		`19:14-44: duplicate database declaration at 18:14-44`,
-		`22:2-10: unsupported type "error" for field "BadParam"`,
-		`25:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
-		`28:3-3: unexpected token "export" (expected Directive)`,
-		`34:36-39: unsupported request type "ftl/failing.Request"`,
-		`34:50-50: unsupported response type "ftl/failing.Response"`,
-		`35:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc`,
-		`35:16-29: call first argument must be a function in an ftl module`,
-		`36:2-46: call must have exactly three arguments`,
-		`37:16-25: call first argument must be a function in an ftl module`,
-		`42:1-2: must have at most two parameters (context.Context, struct)`,
-		`42:69-69: unsupported response type "ftl/failing.Response"`,
-		`47:22-27: first parameter must be of type context.Context but is ftl/failing.Request`,
-		`47:37-43: second parameter must be a struct but is string`,
-		`47:53-53: unsupported response type "ftl/failing.Response"`,
-		`52:43-47: second parameter must not be ftl.Unit`,
-		`52:59-59: unsupported response type "ftl/failing.Response"`,
-		`57:1-2: first parameter must be context.Context`,
-		`57:18-18: unsupported response type "ftl/failing.Response"`,
-		`62:1-2: must have at most two results (struct, error)`,
-		`62:41-44: unsupported request type "ftl/failing.Request"`,
-		`67:1-2: must at least return an error`,
-		`67:36-39: unsupported request type "ftl/failing.Request"`,
-		`71:35-38: unsupported request type "ftl/failing.Request"`,
-		`71:48-48: must return an error but is ftl/failing.Response`,
-		`76:41-44: unsupported request type "ftl/failing.Request"`,
-		`76:55-55: first result must be a struct but is string`,
-		`76:63-63: must return an error but is string`,
-		`76:63-63: second result must not be ftl.Unit`,
-		`83:1-1: duplicate verb name "WrongResponse"`,
-		`89:2-12: struct field unexported must be exported by starting with an uppercase letter`,
-		`101:2-24: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
-		`108:2-41: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
-		`117:1-26: parent enum "ExportedTypeEnum" is exported, but directive "ftl:data" on "PrivateData" is not: all variants of exported enums that have a directive must be explicitly exported as well`,
-		`121:21-60: config and secret names must be valid identifiers`,
-		`127:1-26: only one directive expected for type alias`,
-		`143:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
+		`11:13-34: first argument to config and secret declarations must be the name as a string literal`,
+		`14:18-52: duplicate config declaration at 13:18-52`,
+		`17:18-52: duplicate secret declaration at 16:18-52`,
+		`20:14-44: duplicate database declaration at 19:14-44`,
+		`23:2-10: unsupported type "error" for field "BadParam"`,
+		`26:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
+		`29:3-3: unexpected token "export" (expected Directive)`,
+		`35:36-39: unsupported request type "ftl/failing.Request"`,
+		`35:50-50: unsupported response type "ftl/failing.Response"`,
+		`36:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc`,
+		`36:16-29: call first argument must be a function in an ftl module`,
+		`37:2-46: call must have exactly three arguments`,
+		`38:16-25: call first argument must be a function in an ftl module`,
+		`43:1-2: must have at most two parameters (context.Context, struct)`,
+		`43:69-69: unsupported response type "ftl/failing.Response"`,
+		`48:22-27: first parameter must be of type context.Context but is ftl/failing.Request`,
+		`48:37-43: second parameter must be a struct but is string`,
+		`48:53-53: unsupported response type "ftl/failing.Response"`,
+		`53:43-47: second parameter must not be ftl.Unit`,
+		`53:59-59: unsupported response type "ftl/failing.Response"`,
+		`58:1-2: first parameter must be context.Context`,
+		`58:18-18: unsupported response type "ftl/failing.Response"`,
+		`63:1-2: must have at most two results (struct, error)`,
+		`63:41-44: unsupported request type "ftl/failing.Request"`,
+		`68:1-2: must at least return an error`,
+		`68:36-39: unsupported request type "ftl/failing.Request"`,
+		`72:35-38: unsupported request type "ftl/failing.Request"`,
+		`72:48-48: must return an error but is ftl/failing.Response`,
+		`77:41-44: unsupported request type "ftl/failing.Request"`,
+		`77:55-55: first result must be a struct but is string`,
+		`77:63-63: must return an error but is string`,
+		`77:63-63: second result must not be ftl.Unit`,
+		`84:1-1: duplicate verb name "WrongResponse"`,
+		`90:2-12: struct field unexported must be exported by starting with an uppercase letter`,
+		`102:2-24: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
+		`109:2-41: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
+		`122:21-60: config and secret names must be valid identifiers`,
+		`128:1-26: only one directive expected for type alias`,
+		`144:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
+		`150:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
+		`153:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
+		`156:1-2: could not find enum called NoMethodsTypeEnum`,
+		`158:2-2: unsupported type ftl/failing/child.ChildStruct from subpackage`,
+		`158:2-6: unsupported type "ftl/failing/child.ChildStruct" for field "Data"`,
+		`159:2-2: unsupported type ftl/failing/child.ChildString from subpackage`,
+		`159:2-8: unsupported type "ftl/failing/child.ChildString" for field "String"`,
+		`163:1-1: unsupported type ftl/failing/child.ChildStruct from subpackage`,
+		"163:1-33: could not find enum called NoMethodsTypeEnum",
+		`163:1-33: unsupported type "struct{Name string}" for type alias`,
 	}
 	assert.Equal(t, expected, actual)
 }

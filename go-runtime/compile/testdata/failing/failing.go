@@ -2,6 +2,7 @@ package failing
 
 import (
 	"context"
+	"ftl/failing/child"
 
 	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
@@ -144,3 +145,24 @@ type ConformsToTwoTypeEnums string
 
 func (ConformsToTwoTypeEnums) typeEnum1() {}
 func (ConformsToTwoTypeEnums) typeEnum2() {}
+
+//ftl:enum
+type TypeEnum3 interface{ ExportedMethod() }
+
+//ftl:enum
+type NoMethodsTypeEnum interface{}
+
+//ftl:data
+type StructUsingSubpackage struct {
+	Message string            `json:"message"`
+	Data    child.ChildStruct `json:"data"`
+	String  child.ChildString `json:"string"`
+}
+
+//ftl:typealias
+type TypeAlias child.ChildStruct
+
+func aFunc() {
+	// nothing wrong with using a child struct normally
+	_ = child.ChildStruct{}
+}

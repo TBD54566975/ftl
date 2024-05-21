@@ -65,6 +65,29 @@ type Nested struct {
 }
 
 //ftl:enum
+type TypeEnum interface {
+	tag()
+}
+
+type Option ftl.Option[string]
+
+func (Option) tag() {}
+
+type InlineStruct struct{}
+
+func (InlineStruct) tag() {}
+
+type AliasedStruct UnderlyingStruct
+
+func (AliasedStruct) tag() {}
+
+type UnderlyingStruct struct{}
+
+type ValueEnum ColorInt
+
+func (ValueEnum) tag() {}
+
+//ftl:enum
 type PrivateEnum interface{ privateEnum() }
 
 //ftl:data export

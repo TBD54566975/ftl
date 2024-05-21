@@ -2,6 +2,7 @@ package schema
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -11,6 +12,8 @@ import (
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type Schema struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
@@ -44,10 +47,13 @@ func (s *Schema) Hash() [sha256.Size]byte {
 	return sha256.Sum256([]byte(s.String()))
 }
 
+// ResolveRefMonomorphised -
+// If a Ref is not found, returns ErrNotFound.
 func (s *Schema) ResolveRefMonomorphised(ref *Ref) (*Data, error) {
 	out := &Data{}
-	err := s.ResolveRefToType(ref, out)
-	if err != nil {
+
+	if err := s.ResolveRefToType(ref, out); err != nil {
+		// If a ref is not found, returns ErrNotFound
 		return nil, err
 	}
 	return out.Monomorphise(ref)
@@ -90,7 +96,8 @@ func (s *Schema) ResolveRefToType(ref *Ref, out Decl) error {
 			}
 		}
 	}
-	return fmt.Errorf("could not resolve reference %v", ref)
+
+	return fmt.Errorf("could not resolve reference %v: %w", ref, ErrNotFound)
 }
 
 // Module returns the named module if it exists.
