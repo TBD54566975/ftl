@@ -13,13 +13,54 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestWrapped(t *testing.T) {
+func TestWrappedWithConfigEnvar(t *testing.T) {
 	absProjectPath1, err := filepath.Abs("ftl-project-test-1.toml")
 	assert.NoError(t, err)
 	absProjectPath2, err := filepath.Abs("ftl-project-test-2.toml")
 	assert.NoError(t, err)
 	t.Setenv("FTL_CONFIG", fmt.Sprintf("%s,%s", absProjectPath1, absProjectPath2))
 
+	for _, tt := range []struct {
+		name          string
+		options       []ftltest.Option
+		configValue   string
+		secretValue   string
+		expectedError ftl.Option[string]
+	}{
+		{
+			name: "WithProjectTomlFromEnvar",
+			options: []ftltest.Option{
+				ftltest.WithProjectFiles(),
+				ftltest.WithCallsAllowedWithinModule(),
+				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
+					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
+				}),
+			},
+			configValue: "foobar",
+			secretValue: "foobar",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := ftltest.Context(
+				tt.options...,
+			)
+			myConfig.Get(ctx)
+			resp, err := Outer(ctx)
+
+			if expected, ok := tt.expectedError.Get(); ok {
+				assert.EqualError(t, err, expected)
+				return
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, "2024-01-01 00:00:00 +0000 UTC", resp.Output)
+			assert.Equal(t, tt.configValue, resp.Config)
+			assert.Equal(t, tt.secretValue, resp.Secret)
+		})
+	}
+}
+
+func TestWrapped(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
 		options       []ftltest.Option
@@ -62,7 +103,7 @@ func TestWrapped(t *testing.T) {
 			secretValue: "shhhhh",
 		},
 		{
-			name: "WithProjectToml",
+			name: "WithProjectTomlSpecified",
 			options: []ftltest.Option{
 				ftltest.WithProjectFiles("ftl-project-test-1.toml"),
 				ftltest.WithCallsAllowedWithinModule(),
@@ -73,7 +114,7 @@ func TestWrapped(t *testing.T) {
 			configValue: "bar",
 			secretValue: "bar",
 		}, {
-			name: "WithProjectTomlFromEnvar",
+			name: "WithProjectTomlFromRoot",
 			options: []ftltest.Option{
 				ftltest.WithProjectFiles(),
 				ftltest.WithCallsAllowedWithinModule(),
@@ -81,8 +122,8 @@ func TestWrapped(t *testing.T) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
 				}),
 			},
-			configValue: "foobar",
-			secretValue: "foobar",
+			configValue: "bazbaz",
+			secretValue: "bazbaz",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
