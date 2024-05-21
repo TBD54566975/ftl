@@ -58,6 +58,9 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
+	if strings.Contains(o.Vault, " ") {
+		return nil, fmt.Errorf("1Password vault name %q contains spaces, which is not supported", o.Vault)
+	}
 
 	var secret string
 	err := json.Unmarshal(value, &secret)

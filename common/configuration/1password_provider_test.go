@@ -1,6 +1,6 @@
 //go:build 1password
 
-// 1password needs to be running and have a vault named "ftl test".
+// 1password needs to be running and have a vault named "ftl-test".
 //
 // These tests will clean up before and after itself.
 
@@ -16,7 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-const vault = "ftl test"
+const vault = "ftl-test"
 const module = "test.module"
 
 func clean(ctx context.Context) bool {
