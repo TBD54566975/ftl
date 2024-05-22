@@ -556,10 +556,6 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 				merr = append(merr, errorf(md, "verb %s: %v", n.Name, err))
 				return
 			}
-			if minDuration == 0 {
-				merr = append(merr, errorf(md, "verb %s: retry duration must be atleast 1s", n.Name))
-				return
-			}
 			maxDuration, err := md.MaxBackoffDuration()
 			if err != nil {
 				merr = append(merr, errorf(md, "verb %s: %v", n.Name, err))

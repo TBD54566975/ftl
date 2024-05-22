@@ -24,8 +24,8 @@ type MetadataRetry struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	Count      *int   `parser:"'+' 'retry' (@Number Whitespace)?" protobuf:"2,optional"`
-	MinBackoff string `parser:"@(Number Ident)?" protobuf:"3"`
-	MaxBackoff string `parser:"@(Number Ident)?" protobuf:"4"`
+	MinBackoff string `parser:"@(Number (?! Whitespace) Ident)?" protobuf:"3"`
+	MaxBackoff string `parser:"@(Number (?! Whitespace) Ident)?" protobuf:"4"`
 }
 
 var _ Metadata = (*MetadataRetry)(nil)
@@ -46,10 +46,13 @@ func (m *MetadataRetry) String() string {
 }
 
 func (m *MetadataRetry) ToProto() proto.Message {
-	count := int64(*m.Count)
+	var count *int64
+	if m.Count != nil {
+		count = proto.Int64(int64(*m.Count))
+	}
 	return &schemapb.MetadataRetry{
 		Pos:        posToProto(m.Pos),
-		Count:      &count,
+		Count:      count,
 		MinBackoff: m.MinBackoff,
 		MaxBackoff: m.MaxBackoff,
 	}
@@ -86,7 +89,7 @@ func parseRetryDuration(str string) (time.Duration, error) {
 	for len(str) > 0 {
 		matches := re.FindStringSubmatchIndex(str)
 		if matches == nil {
-			return 0, fmt.Errorf("unable to parse retry backoff %q. Expected duration in format like '1m' or '30s'", str)
+			return 0, fmt.Errorf("unable to parse retry backoff %q - expected duration in format like '1m' or '30s'", str)
 		}
 		num, err := strconv.Atoi(str[matches[2]:matches[3]])
 		if err != nil {
@@ -105,10 +108,10 @@ func parseRetryDuration(str string) (time.Duration, error) {
 		case "s":
 			unitDuration = time.Second
 		default:
-			return 0, fmt.Errorf("retry has unknown unit %q. Use 'd', 'h', 'm' or 's'", unitStr)
+			return 0, fmt.Errorf("retry has unknown unit %q - use 'd', 'h', 'm' or 's'", unitStr)
 		}
 		if previousUnitDuration != 0 && previousUnitDuration <= unitDuration {
-			return 0, fmt.Errorf("retry has unit %q out of order. Units need to be ordered from largest to smallest", unitStr)
+			return 0, fmt.Errorf("retry has unit %q out of order - units need to be ordered from largest to smallest", unitStr)
 		}
 		previousUnitDuration = unitDuration
 		duration += time.Duration(num) * unitDuration

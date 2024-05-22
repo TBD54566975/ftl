@@ -135,8 +135,8 @@ type directiveRetry struct {
 	Pos schema.Position
 
 	Count      *int   `parser:"'retry' (@Number Whitespace)?"`
-	MinBackoff string `parser:"@(Number Ident)"`
-	MaxBackoff string `parser:"@(Number Ident)?"`
+	MinBackoff string `parser:"@(Number (?! Whitespace) Ident)?"`
+	MaxBackoff string `parser:"@(Number (?! Whitespace) Ident)?"`
 }
 
 func (*directiveRetry) directive() {}
