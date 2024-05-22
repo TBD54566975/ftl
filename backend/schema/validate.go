@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/errors"
 	dc "github.com/TBD54566975/ftl/internal/reflect"
+	islices "github.com/TBD54566975/ftl/internal/slices"
 )
 
 var (
@@ -215,7 +216,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataCronJob,
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema, *TypeAlias,
-				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant,
+				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named:
 			}
 			return next()
@@ -336,7 +337,7 @@ func ValidateModule(module *Module) error {
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*FSM, *Config, *FSMTransition, *Secret, *TypeAlias:
+			*FSM, *Config, *FSMTransition, *Secret, *TypeAlias, *MetadataRetry:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -520,6 +521,48 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			}
 			if _, ok := n.Response.(*Unit); !ok {
 				merr = append(merr, errorf(md, "verb %s: cron job can not have a response type", n.Name))
+			}
+		case *MetadataRetry:
+			// Only allow retries on FSM transitions for now
+			fsms := islices.Filter(module.Decls, func(d Decl) bool {
+				fsm, ok := d.(*FSM)
+				if !ok {
+					return false
+				}
+				starts := islices.Filter(fsm.Start, func(ref *Ref) bool {
+					return ref.Name == n.Name
+				})
+				if len(starts) > 0 {
+					return true
+				}
+				transitions := islices.Filter(fsm.Transitions, func(t *FSMTransition) bool {
+					return t.To.Name == n.Name
+				})
+				return len(transitions) > 0
+			})
+			if len(fsms) == 0 {
+				merr = append(merr, errorf(md, "verb %s: retries can only be added to FSM transitions", n.Name))
+				return
+			}
+
+			// Validate count
+			if md.Count != nil && *md.Count <= 0 {
+				merr = append(merr, errorf(md, "verb %s: retry count must be atleast 1", n.Name))
+			}
+
+			// Validate parsing of durations
+			minDuration, err := md.MinBackoffDuration()
+			if err != nil {
+				merr = append(merr, errorf(md, "verb %s: %v", n.Name, err))
+				return
+			}
+			maxDuration, err := md.MaxBackoffDuration()
+			if err != nil {
+				merr = append(merr, errorf(md, "verb %s: %v", n.Name, err))
+				return
+			}
+			if maxDuration, ok := maxDuration.Get(); ok && maxDuration < minDuration {
+				merr = append(merr, errorf(md, "verb %s: max backoff duration (%s) needs to be atleast as long as initial backoff (%s)", n.Name, md.MaxBackoff, md.MinBackoff))
 			}
 		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:
 		}

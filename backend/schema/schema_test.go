@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 
@@ -214,7 +215,9 @@ func TestParserRoundTrip(t *testing.T) {
 	assert.Equal(t, Normalise(testSchema), Normalise(actual), assert.Exclude[Position]())
 }
 
+//nolint:maintidx
 func TestParsing(t *testing.T) {
+	ten := 10
 	tests := []struct {
 		name     string
 		input    string
@@ -388,6 +391,116 @@ func TestParsing(t *testing.T) {
 								Module:         "test",
 								Name:           "Data",
 								TypeParameters: []Type{&String{}},
+							},
+						},
+					},
+				}},
+			},
+		},
+		{name: "RetryFSM",
+			input: `
+				module test {
+					verb A(Empty) Unit
+						+retry 10 1m5s 90s
+					verb B(Empty) Unit
+						+retry 1h1m5s
+					verb C(Empty) Unit
+						+retry 0h0m5s 1h0m0s
+
+					fsm FSM {
+						start test.A
+						transition test.A to test.B
+						transition test.A to test.C
+					}
+				}
+				`,
+			expected: &Schema{
+				Modules: []*Module{{
+					Name: "test",
+					Decls: []Decl{
+						&FSM{
+							Name: "FSM",
+							Start: []*Ref{
+								{
+									Module: "test",
+									Name:   "A",
+								},
+							},
+							Transitions: []*FSMTransition{
+								{
+									From: &Ref{
+										Module: "test",
+										Name:   "A",
+									},
+									To: &Ref{
+										Module: "test",
+										Name:   "B",
+									},
+								},
+								{
+									From: &Ref{
+										Module: "test",
+										Name:   "A",
+									},
+									To: &Ref{
+										Module: "test",
+										Name:   "C",
+									},
+								},
+							},
+						},
+						&Verb{
+							Comments: []string{},
+							Name:     "A",
+							Request: &Ref{
+								Module: "builtin",
+								Name:   "Empty",
+							},
+							Response: &Unit{
+								Unit: true,
+							},
+							Metadata: []Metadata{
+								&MetadataRetry{
+									Count:      &ten,
+									MinBackoff: "1m5s",
+									MaxBackoff: "90s",
+								},
+							},
+						},
+						&Verb{
+							Comments: []string{},
+							Name:     "B",
+							Request: &Ref{
+								Module: "builtin",
+								Name:   "Empty",
+							},
+							Response: &Unit{
+								Unit: true,
+							},
+							Metadata: []Metadata{
+								&MetadataRetry{
+									Count:      nil,
+									MinBackoff: "1h1m5s",
+									MaxBackoff: "",
+								},
+							},
+						},
+						&Verb{
+							Comments: []string{},
+							Name:     "C",
+							Request: &Ref{
+								Module: "builtin",
+								Name:   "Empty",
+							},
+							Response: &Unit{
+								Unit: true,
+							},
+							Metadata: []Metadata{
+								&MetadataRetry{
+									Count:      nil,
+									MinBackoff: "0h0m5s",
+									MaxBackoff: "1h0m0s",
+								},
 							},
 						},
 					},
@@ -661,3 +774,20 @@ var testSchema = MustValidate(&Schema{
 		},
 	},
 })
+
+func TestRetryParsing(t *testing.T) {
+	for _, tt := range []struct {
+		input   string
+		seconds int
+	}{
+		{"7s", 7},
+		{"9h", 9 * 60 * 60},
+		{"1d", 24 * 60 * 60},
+		{"1m90s", 60 + 90},
+		{"1h2m3s", 60*60 + 2*60 + 3},
+	} {
+		duration, err := parseRetryDuration(tt.input)
+		assert.NoError(t, err)
+		assert.Equal(t, time.Second*time.Duration(tt.seconds), duration)
+	}
+}

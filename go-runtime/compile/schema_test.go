@@ -228,6 +228,7 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/fsm", &schema.Schema{})
 	assert.NoError(t, err)
+	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module fsm {
 		fsm payment {
@@ -254,13 +255,17 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 		}
 
 		verb completed(fsm.OnlinePaymentCompleted) Unit
+			+retry 1s
 
 		verb created(fsm.OnlinePaymentCreated) Unit
+			+retry 5 1m30s 7m
 
 		verb failed(fsm.OnlinePaymentFailed) Unit
+			+retry 5 1h 1d
 
 		// The message to be sent when the payment is paid.
 		verb paid(fsm.OnlinePaymentPaid) Unit
+			+retry 5 60s
 	}
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))

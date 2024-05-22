@@ -295,7 +295,7 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 			pctx.module.Decls = append(pctx.module.Decls, alias)
 			pctx.nativeNames[alias] = nativeName
 			foundDeclType = optional.Some("type alias")
-		case *directiveData, *directiveIngress, *directiveVerb, *directiveCronJob:
+		case *directiveData, *directiveIngress, *directiveVerb, *directiveCronJob, *directiveRetry:
 			continue
 		}
 		if foundDeclType, ok := foundDeclType.Get(); ok {
@@ -708,7 +708,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
 					}
 				}
-			case *directiveIngress, *directiveCronJob:
+			case *directiveIngress, *directiveCronJob, *directiveRetry:
 			}
 		}
 		return
@@ -1000,6 +1000,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 			metadata = append(metadata, &schema.MetadataCronJob{
 				Pos:  dir.Pos,
 				Cron: dir.Cron,
+			})
+		case *directiveRetry:
+			metadata = append(metadata, &schema.MetadataRetry{
+				Pos:        dir.Pos,
+				Count:      dir.Count,
+				MinBackoff: dir.MinBackoff,
+				MaxBackoff: dir.MaxBackoff,
 			})
 		case *directiveData, *directiveEnum, *directiveTypeAlias:
 			pctx.errors.add(errorf(node, "unexpected directive %T", dir))

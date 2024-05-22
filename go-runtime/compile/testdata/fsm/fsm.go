@@ -24,16 +24,19 @@ type OnlinePaymentPaid struct{}
 type OnlinePaymentCreated struct{}
 
 //ftl:verb
+//ftl:retry 1s
 func Completed(ctx context.Context, in OnlinePaymentCompleted) error {
 	return nil
 }
 
 //ftl:verb
+//ftl:retry 5 1m30s 7m
 func Created(ctx context.Context, in OnlinePaymentCreated) error {
 	return nil
 }
 
 //ftl:verb
+//ftl:retry 5 1h 1d
 func Failed(ctx context.Context, in OnlinePaymentFailed) error {
 	return nil
 }
@@ -41,6 +44,7 @@ func Failed(ctx context.Context, in OnlinePaymentFailed) error {
 // The message to be sent when the payment is paid.
 //
 //ftl:verb
+//ftl:retry 5 60s
 func Paid(ctx context.Context, in OnlinePaymentPaid) error {
 	return nil
 }

@@ -1194,6 +1194,12 @@ export class Metadata extends Message<Metadata> {
      */
     value: MetadataAlias;
     case: "alias";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataRetry retry = 6;
+     */
+    value: MetadataRetry;
+    case: "retry";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Metadata>) {
@@ -1209,6 +1215,7 @@ export class Metadata extends Message<Metadata> {
     { no: 3, name: "cronJob", kind: "message", T: MetadataCronJob, oneof: "value" },
     { no: 4, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
     { no: 5, name: "alias", kind: "message", T: MetadataAlias, oneof: "value" },
+    { no: 6, name: "retry", kind: "message", T: MetadataRetry, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Metadata {
@@ -1458,6 +1465,61 @@ export class MetadataIngress extends Message<MetadataIngress> {
 
   static equals(a: MetadataIngress | PlainMessage<MetadataIngress> | undefined, b: MetadataIngress | PlainMessage<MetadataIngress> | undefined): boolean {
     return proto3.util.equals(MetadataIngress, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataRetry
+ */
+export class MetadataRetry extends Message<MetadataRetry> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: optional int64 count = 2;
+   */
+  count?: bigint;
+
+  /**
+   * @generated from field: string minBackoff = 3;
+   */
+  minBackoff = "";
+
+  /**
+   * @generated from field: string maxBackoff = 4;
+   */
+  maxBackoff = "";
+
+  constructor(data?: PartialMessage<MetadataRetry>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataRetry";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "count", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 3, name: "minBackoff", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "maxBackoff", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataRetry {
+    return new MetadataRetry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataRetry {
+    return new MetadataRetry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataRetry {
+    return new MetadataRetry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataRetry | PlainMessage<MetadataRetry> | undefined, b: MetadataRetry | PlainMessage<MetadataRetry> | undefined): boolean {
+    return proto3.util.equals(MetadataRetry, a, b);
   }
 }
 
