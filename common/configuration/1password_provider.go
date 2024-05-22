@@ -2,23 +2,23 @@ package configuration
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/kballard/go-shellquote"
 	"net/url"
 	"regexp"
 	"strings"
 
-	"github.com/alecthomas/types/optional"
-
 	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // OnePasswordProvider is a configuration provider that reads passwords from
 // 1Password vaults via the "op" command line tool.
 type OnePasswordProvider struct {
-	OnePassword bool `name:"op" help:"Write 1Password secret references - does not write to 1Password." group:"Provider:" xor:"configwriter"`
+	Vault string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"configwriter" placeholder:"VAULT"`
 }
 
 var _ MutableProvider[Secrets] = OnePasswordProvider{}
@@ -27,172 +27,154 @@ func (OnePasswordProvider) Role() Secrets                               { return
 func (o OnePasswordProvider) Key() string                               { return "op" }
 func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return nil }
 
-// Load returns either a single field if the op:// reference specifies a field, or all fields if not.
-//
-// A single value/password:
-// op://Personal/With Spaces/username
-// op --format json item get --vault Personal "With Spaces" --fields=username
-// { id, value, ... }
-// "value"
-//
-// All fields:
-// op://Personal/With Spaces
-// op --format json item get --vault Personal "With Spaces"
-// { fields: [ { id, value, ... } ], ... }
-// { id: value, ... }
+// Load returns the secret stored in 1password.
 func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	_, err := exec.LookPath("op")
-	if err != nil {
-		return nil, fmt.Errorf("1Password CLI tool \"op\" not found: %w", err)
-	}
-
-	decoded, err := base64.RawURLEncoding.DecodeString(key.Host)
-	if err != nil {
-		return nil, fmt.Errorf("1Password secret reference must be a base64 encoded string: %w", err)
-	}
-
-	parsedRef, err := decodeSecretRef(string(decoded))
-	if err != nil {
-		return nil, fmt.Errorf("1Password secret reference invalid: %w", err)
-	}
-
-	args := []string{"--format", "json", "item", "get", "--vault", parsedRef.Vault, parsedRef.Item}
-	v, fieldSpecified := parsedRef.Field.Get()
-	if fieldSpecified {
-		args = append(args, "--fields", v)
-	}
-	output, err := exec.Capture(ctx, ".", "op", args...)
-	if err != nil {
-		return nil, fmt.Errorf("run `op` with args %v: %w", args, err)
-	}
-
-	if fieldSpecified {
-		v, err := decodeSingle(output)
-		if err != nil {
-			return nil, err
-		}
-
-		return json.Marshal(v.Value)
-	}
-
-	full, err := decodeFull(output)
-	if err != nil {
+	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
 
-	// Filter out anything without a value
-	filtered := slices.Filter(full, func(e entry) bool {
-		return e.Value != ""
-	})
-	// Map to id: value
-	var mapped = make(map[string]string, len(filtered))
-	for _, e := range filtered {
-		mapped[e.ID] = e.Value
+	vault := key.Host
+	full, err := getItem(ctx, vault, ref)
+	if err != nil {
+		return nil, fmt.Errorf("get item failed: %w", err)
 	}
 
-	return json.Marshal(mapped)
+	secret, ok := full.password()
+	if !ok {
+		return nil, fmt.Errorf("password field not found in item %q", ref)
+	}
+
+	// Just to verify that it is JSON encoded.
+	var decoded interface{}
+	err = json.Unmarshal(secret, &decoded)
+	if err != nil {
+		return nil, fmt.Errorf("secret is not JSON encoded: %w", err)
+	}
+
+	return secret, nil
 }
 
+var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
+
+// Store will save the given secret in 1Password via the `op` command.
+//
+// op does not support "create or update" as a single command. Neither does it support specifying an ID on create.
+// Because of this, we need check if the item exists before creating it, and update it if it does.
 func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	var opref string
-	if err := json.Unmarshal(value, &opref); err != nil {
-		return nil, fmt.Errorf("1Password value must be a JSON string containing a 1Password secret refererence: %w", err)
+	if err := checkOpBinary(); err != nil {
+		return nil, err
 	}
-	if !strings.HasPrefix(opref, "op://") {
-		return nil, fmt.Errorf("1Password secret reference must start with \"op://\"")
+	if !vaultRegex.MatchString(o.Vault) {
+		return nil, fmt.Errorf("vault name %q contains invalid characters. a-z A-Z 0-9 _ . - are valid", o.Vault)
 	}
-	encoded := base64.RawURLEncoding.EncodeToString([]byte(opref))
-	return &url.URL{Scheme: "op", Host: encoded}, nil
+
+	url := &url.URL{Scheme: "op", Host: o.Vault}
+
+	_, err := getItem(ctx, o.Vault, ref)
+	if errors.As(err, new(itemNotFoundError)) {
+		err = createItem(ctx, o.Vault, ref, value)
+		if err != nil {
+			return nil, fmt.Errorf("create item failed: %w", err)
+		}
+		return url, nil
+
+	} else if err != nil {
+		return nil, fmt.Errorf("get item failed: %w", err)
+	}
+
+	err = editItem(ctx, o.Vault, ref, value)
+	if err != nil {
+		return nil, fmt.Errorf("edit item failed: %w", err)
+	}
+
+	return url, nil
 }
 
-func (o OnePasswordProvider) Writer() bool { return o.OnePassword }
+func (o OnePasswordProvider) Writer() bool { return o.Vault != "" }
+
+func checkOpBinary() error {
+	_, err := exec.LookPath("op")
+	if err != nil {
+		return fmt.Errorf("1Password CLI tool \"op\" not found: %w", err)
+	}
+	return nil
+}
+
+type itemNotFoundError struct {
+	vault string
+	ref   Ref
+}
+
+func (e itemNotFoundError) Error() string {
+	return fmt.Sprintf("item %q not found in vault %q", e.ref, e.vault)
+}
+
+// item is the JSON response from `op item get`.
+type item struct {
+	Fields []entry `json:"fields"`
+}
 
 type entry struct {
 	ID    string `json:"id"`
 	Value string `json:"value"`
 }
 
-type fullResponse struct {
-	Fields []entry `json:"fields"`
+func (i item) password() ([]byte, bool) {
+	secret, ok := slices.Find(i.Fields, func(item entry) bool {
+		return item.ID == "password"
+	})
+	return []byte(secret.Value), ok
 }
 
-// Decode a full item response from op
-func decodeFull(output []byte) ([]entry, error) {
-	var full fullResponse
+// op --format json item get --vault Personal "With Spaces"
+func getItem(ctx context.Context, vault string, ref Ref) (*item, error) {
+	logger := log.FromContext(ctx)
+
+	args := []string{"--format", "json", "item", "get", "--vault", vault, ref.String()}
+	output, err := exec.Capture(ctx, ".", "op", args...)
+	logger.Debugf("Getting item with args %s", shellquote.Join(args...))
+	if err != nil {
+		// This is specifically not itemNotFoundError, to distinguish between vault not found and item not found.
+		if strings.Contains(string(output), "isn't a vault") {
+			return nil, fmt.Errorf("vault %q not found: %w", vault, err)
+		}
+
+		// Item not found, seen two ways of reporting this:
+		if strings.Contains(string(output), "not found in vault") {
+			return nil, itemNotFoundError{vault, ref}
+		}
+		if strings.Contains(string(output), "isn't an item") {
+			return nil, itemNotFoundError{vault, ref}
+		}
+
+		return nil, fmt.Errorf("run `op` with args %s: %w", shellquote.Join(args...), err)
+	}
+
+	var full item
 	if err := json.Unmarshal(output, &full); err != nil {
 		return nil, fmt.Errorf("error decoding op full response: %w", err)
 	}
-	return full.Fields, nil
+	return &full, nil
 }
 
-// Decode a single field from op
-func decodeSingle(output []byte) (*entry, error) {
-	var single entry
-	if err := json.Unmarshal(output, &single); err != nil {
-		return nil, fmt.Errorf("error decoding op single response: %w", err)
+// op item create --category Password --vault FTL --title mod.ule "password=val ue"
+func createItem(ctx context.Context, vault string, ref Ref, secret []byte) error {
+	args := []string{"item", "create", "--category", "Password", "--vault", vault, "--title", ref.String(), "password=" + string(secret)}
+	_, err := exec.Capture(ctx, ".", "op", args...)
+	if err != nil {
+		return fmt.Errorf("create item failed in vault %q, ref %q: %w", vault, ref, err)
 	}
-	return &single, nil
+
+	return nil
 }
 
-// Custom parser for 1Password secret references because the format is not a standard URL, and we also need to
-// allow users to omit the field name so that we can support secrets with multiple fields.
-//
-// Does not support "section-name".
-//
-//	op://<vault-name>/<item-name>[/<field-name>]
-//
-// Secret references are case-insensitive and support the following characters:
-//
-//	alphanumeric characters (a-z, A-Z, 0-9), -, _, . and the whitespace character
-//
-// If an item or field name includes a / or an unsupported character, use the item
-// or field's unique identifier (ID) instead of its name.
-//
-// See https://developer.1password.com/docs/cli/secrets-reference-syntax/
-type secretRef struct {
-	Vault string
-	Item  string
-	Field optional.Option[string]
-}
-
-var validCharsRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_\. ]+$`)
-
-func decodeSecretRef(ref string) (*secretRef, error) {
-
-	// Take out and check the "op://" prefix
-	const prefix = "op://"
-	if !strings.HasPrefix(ref, prefix) {
-		return nil, fmt.Errorf("must start with \"op://\"")
-	}
-	ref = ref[len(prefix):]
-
-	parts := strings.Split(ref, "/")
-
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("must have at least 2 parts")
-	}
-	if len(parts) > 3 {
-		return nil, fmt.Errorf("must have at most 3 parts")
+// op item edit --vault ftl test "password=with space"
+func editItem(ctx context.Context, vault string, ref Ref, secret []byte) error {
+	args := []string{"item", "edit", "--vault", vault, ref.String(), "password=" + string(secret)}
+	_, err := exec.Capture(ctx, ".", "op", args...)
+	if err != nil {
+		return fmt.Errorf("edit item failed in vault %q, ref %q: %w", vault, ref, err)
 	}
 
-	for _, part := range parts {
-		if part == "" {
-			return nil, fmt.Errorf("url parts must not be empty")
-		}
-
-		if !validCharsRegex.MatchString(part) {
-			return nil, fmt.Errorf("url part %q contains unsupported characters. regex: %q", part, validCharsRegex)
-		}
-	}
-
-	secret := secretRef{
-		Vault: parts[0],
-		Item:  parts[1],
-		Field: optional.None[string](),
-	}
-	if len(parts) == 3 {
-		secret.Field = optional.Some(parts[2])
-	}
-
-	return &secret, nil
+	return nil
 }
