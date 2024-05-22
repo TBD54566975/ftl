@@ -49,8 +49,10 @@ func Test1PasswordProvider(t *testing.T) {
 	assert.Error(t, err)
 
 	var pw1 = []byte("hunter1")
-	// {"user":"root", "password":"hunter2🪤"}
-	var pw2 = []byte("{\"user\":\"root\", \"password\":\"hunter🪤\"}")
+	var pw2 = []byte(`{
+	  "user": "root",
+	  "password": "hunter🪤"
+	}`)
 
 	err = createItem(ctx, vault, Ref{Name: module}, pw1)
 	assert.NoError(t, err)
