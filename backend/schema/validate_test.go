@@ -368,6 +368,17 @@ func TestValidate(t *testing.T) {
 				`8:7-7: verb C: retry must have a minimum backoff of 1s`,
 			},
 		},
+		{name: "InvalidRetryInvalidSpace",
+			schema: `
+				module one {
+					verb A(Empty) Unit
+						+retry 10 5 s
+				}
+				`,
+			errs: []string{
+				`4:19: unexpected token "s"`,
+			},
+		},
 	}
 
 	for _, test := range tests {
