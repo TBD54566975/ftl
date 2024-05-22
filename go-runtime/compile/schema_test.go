@@ -231,7 +231,9 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module fsm {
-		fsm payment {
+		fsm payment
+			+retry 10 5s 10m
+		{
 			start fsm.created
 			start fsm.paid
 			transition fsm.created to fsm.paid

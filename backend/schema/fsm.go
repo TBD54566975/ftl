@@ -18,6 +18,7 @@ type FSM struct {
 	Name        string           `parser:"'fsm' @Ident '{'" protobuf:"3"`
 	Start       []*Ref           `parser:"('start' @@)*" protobuf:"4"` // Start states.
 	Transitions []*FSMTransition `parser:"('transition' @@)* '}'" protobuf:"5"`
+	Metadata    []Metadata       `parser:"@@*" protobuf:"6"`
 }
 
 func FSMFromProto(pb *schemapb.FSM) *FSM {
@@ -26,6 +27,7 @@ func FSMFromProto(pb *schemapb.FSM) *FSM {
 		Name:        pb.Name,
 		Start:       slices.Map(pb.Start, RefFromProto),
 		Transitions: slices.Map(pb.Transitions, FSMTransitionFromProto),
+		Metadata:    metadataListToSchema(pb.Metadata),
 	}
 }
 
@@ -62,7 +64,13 @@ func (f *FSM) schemaSymbol()      {}
 
 func (f *FSM) String() string {
 	w := &strings.Builder{}
-	fmt.Fprintf(w, "fsm %s {\n", f.Name)
+	if len(f.Metadata) == 0 {
+		fmt.Fprintf(w, "fsm %s {\n", f.Name)
+	} else {
+		fmt.Fprintf(w, "fsm %s\n", f.Name)
+		fmt.Fprint(w, indent(encodeMetadata(f.Metadata)))
+		fmt.Fprintf(w, "\n{\n")
+	}
 	for _, s := range f.Start {
 		fmt.Fprintf(w, "  start %s\n", s)
 	}
@@ -83,6 +91,7 @@ func (f *FSM) ToProto() protoreflect.ProtoMessage {
 		Transitions: slices.Map(f.Transitions, func(t *FSMTransition) *schemapb.FSMTransition {
 			return t.ToProto().(*schemapb.FSMTransition) //nolint: forcetypeassert
 		}),
+		Metadata: metadataListToProto(f.Metadata),
 	}
 }
 
@@ -93,6 +102,9 @@ func (f *FSM) schemaChildren() []Node {
 	}
 	for _, t := range f.Transitions {
 		out = append(out, t)
+	}
+	for _, m := range f.Metadata {
+		out = append(out, m)
 	}
 	return out
 }

@@ -164,6 +164,9 @@ func ExtractModuleSchema(dir string, sch *schema.Schema) (optional.Option[ParseR
 				case *ast.GenDecl:
 					visitGenDecl(pctx, node)
 
+				case *ast.CommentGroup:
+					visitComments(pctx, node)
+
 				default:
 				}
 				return next()
@@ -243,7 +246,7 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 			case *types.Basic:
 				enum := &schema.Enum{
 					Pos:      goPosToSchemaPos(node.Pos()),
-					Comments: visitComments(node.Doc),
+					Comments: parseComments(node.Doc),
 					Name:     strcase.ToUpperCamel(t.Name.Name),
 					Type:     nil, //TODO: explain
 					Export:   dir.IsExported(),
@@ -270,7 +273,7 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 
 				enum := &schema.Enum{
 					Pos:      goPosToSchemaPos(node.Pos()),
-					Comments: visitComments(node.Doc),
+					Comments: parseComments(node.Doc),
 					Name:     strcase.ToUpperCamel(t.Name.Name),
 					Export:   dir.IsExported(),
 				}
@@ -286,7 +289,7 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 		case *directiveTypeAlias:
 			alias := &schema.TypeAlias{
 				Pos:      goPosToSchemaPos(node.Pos()),
-				Comments: visitComments(node.Doc),
+				Comments: parseComments(node.Doc),
 				Name:     strcase.ToUpperCamel(t.Name.Name),
 				Export:   dir.IsExported(),
 				Type:     nil, //TODO: explain
@@ -404,8 +407,9 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr) {
 	}
 
 	fsm := &schema.FSM{
-		Pos:  goPosToSchemaPos(node.Pos()),
-		Name: name,
+		Pos:      goPosToSchemaPos(node.Pos()),
+		Name:     name,
+		Metadata: []schema.Metadata{},
 	}
 	pctx.module.Decls = append(pctx.module.Decls, fsm)
 
@@ -421,6 +425,25 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr) {
 			continue
 		}
 		parseFSMTransition(pctx, call, fn, fsm)
+	}
+
+	if commentGroup, ok := pctx.commentNodeByLine[fset.Position(node.Pos()).Line-1]; ok {
+		directives, err := parseDirectives(node, fset, commentGroup)
+		if err != nil {
+			pctx.errors.add(err)
+		}
+		for _, dir := range directives {
+			if dir, ok := dir.(*directiveRetry); ok {
+				fsm.Metadata = append(fsm.Metadata, &schema.MetadataRetry{
+					Pos:        dir.Pos,
+					Count:      dir.Count,
+					MinBackoff: dir.MinBackoff,
+					MaxBackoff: dir.MaxBackoff,
+				})
+			} else {
+				pctx.errors.add(errorf(node, "unexpected directive %T", dir))
+			}
+		}
 	}
 }
 
@@ -565,7 +588,7 @@ func visitFile(pctx *parseContext, node *ast.File) {
 	if node.Doc == nil {
 		return
 	}
-	pctx.module.Comments = visitComments(node.Doc)
+	pctx.module.Comments = parseComments(node.Doc)
 }
 
 func isType[T types.Type](t types.Type) bool {
@@ -753,7 +776,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 
 	enumVariant := &schema.EnumVariant{
 		Pos:      goPosToSchemaPos(node.Pos()),
-		Comments: visitComments(node.Doc),
+		Comments: parseComments(node.Doc),
 		Name:     strcase.ToUpperCamel(t.Name.Name),
 	}
 
@@ -918,7 +941,7 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 	if value, ok := visitConst(pctx, c).Get(); ok {
 		variant := &schema.EnumVariant{
 			Pos:      goPosToSchemaPos(c.Pos()),
-			Comments: visitComments(node.Doc),
+			Comments: parseComments(node.Doc),
 			Name:     strcase.ToUpperCamel(c.Id()),
 			Value:    value,
 		}
@@ -1056,7 +1079,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	}
 	verb = &schema.Verb{
 		Pos:      goPosToSchemaPos(node.Pos()),
-		Comments: visitComments(node.Doc),
+		Comments: parseComments(node.Doc),
 		Export:   isExported,
 		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  reqV,
@@ -1068,7 +1091,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	return verb
 }
 
-func visitComments(doc *ast.CommentGroup) []string {
+func visitComments(pctx *parseContext, node *ast.CommentGroup) {
+	for line := fset.Position(node.Pos()).Line; line <= fset.Position(node.End()).Line; line++ {
+		pctx.commentNodeByLine[line] = node
+	}
+}
+
+func parseComments(doc *ast.CommentGroup) []string {
 	comments := []string{}
 	if doc := doc.Text(); doc != "" {
 		comments = strings.Split(strings.TrimSpace(doc), "\n")
@@ -1160,11 +1189,11 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type, isExported
 			switch path := path[i].(type) {
 			case *ast.TypeSpec:
 				if path.Doc != nil {
-					out.Comments = visitComments(path.Doc)
+					out.Comments = parseComments(path.Doc)
 				}
 			case *ast.GenDecl:
 				if path.Doc != nil {
-					out.Comments = visitComments(path.Doc)
+					out.Comments = parseComments(path.Doc)
 				}
 			}
 		}
@@ -1458,25 +1487,27 @@ func deref[T types.Object](pkg *packages.Package, node ast.Expr) (string, T) {
 }
 
 type parseContext struct {
-	pkg            *packages.Package
-	pkgs           []*packages.Package
-	module         *schema.Module
-	nativeNames    NativeNames
-	enumInterfaces enumInterfaces
-	activeVerb     *schema.Verb
-	errors         errorSet
-	schema         *schema.Schema
+	pkg               *packages.Package
+	pkgs              []*packages.Package
+	module            *schema.Module
+	nativeNames       NativeNames
+	enumInterfaces    enumInterfaces
+	activeVerb        *schema.Verb
+	commentNodeByLine map[int]*ast.CommentGroup
+	errors            errorSet
+	schema            *schema.Schema
 }
 
 func newParseContext(pkg *packages.Package, pkgs []*packages.Package, module *schema.Module, sch *schema.Schema) *parseContext {
 	return &parseContext{
-		pkg:            pkg,
-		pkgs:           pkgs,
-		module:         module,
-		nativeNames:    NativeNames{},
-		enumInterfaces: enumInterfaces{},
-		errors:         errorSet{},
-		schema:         sch,
+		pkg:               pkg,
+		pkgs:              pkgs,
+		module:            module,
+		nativeNames:       NativeNames{},
+		enumInterfaces:    enumInterfaces{},
+		commentNodeByLine: map[int]*ast.CommentGroup{},
+		errors:            errorSet{},
+		schema:            sch,
 	}
 }
 

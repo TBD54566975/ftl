@@ -101,6 +101,7 @@ message FSM {
   string name = 3;
   repeated Ref start = 4;
   repeated FSMTransition transitions = 5;
+  repeated Metadata metadata = 6;
 }
 
 message FSMTransition {
