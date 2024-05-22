@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kballard/go-shellquote"
 	"net/url"
 	"strings"
 
@@ -25,7 +26,7 @@ func (OnePasswordProvider) Role() Secrets                               { return
 func (o OnePasswordProvider) Key() string                               { return "op" }
 func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return nil }
 
-// Load returns the secret stored in 1password, quoted as a JSON string.
+// Load returns the secret stored in 1password.
 func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	if err := checkOpBinary(); err != nil {
 		return nil, err
@@ -37,17 +38,19 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 		return nil, fmt.Errorf("get item failed: %w", err)
 	}
 
-	secret, ok := full.value("password")
+	secret, ok := full.password()
 	if !ok {
 		return nil, fmt.Errorf("password field not found in item %q", ref)
 	}
 
-	jsonSecret, err := json.Marshal(secret)
+	// Just to verify that it is JSON encoded.
+	var decoded interface{}
+	err = json.Unmarshal(secret, &decoded)
 	if err != nil {
-		return nil, fmt.Errorf("json marshal failed: %w", err)
+		return nil, fmt.Errorf("secret is not JSON encoded: %w", err)
 	}
 
-	return jsonSecret, nil
+	return secret, nil
 }
 
 // Store will save the given secret in 1Password via the `op` command.
@@ -62,18 +65,11 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 		return nil, fmt.Errorf("1Password vault name %q contains spaces, which is not supported", o.Vault)
 	}
 
-	var secret string
-	err := json.Unmarshal(value, &secret)
-	if err != nil {
-		return nil, fmt.Errorf("json unmarshal failed: %w", err)
-	}
-
 	url := &url.URL{Scheme: "op", Host: o.Vault}
 
-	_, err = getItem(ctx, o.Vault, ref)
-	var notFound notFoundError
-	if errors.As(err, &notFound) {
-		err = createItem(ctx, o.Vault, ref, secret)
+	_, err := getItem(ctx, o.Vault, ref)
+	if errors.As(err, new(itemNotFoundError)) {
+		err = createItem(ctx, o.Vault, ref, value)
 		if err != nil {
 			return nil, fmt.Errorf("create item failed: %w", err)
 		}
@@ -83,7 +79,7 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 		return nil, fmt.Errorf("get item failed: %w", err)
 	}
 
-	err = editItem(ctx, o.Vault, ref, secret)
+	err = editItem(ctx, o.Vault, ref, value)
 	if err != nil {
 		return nil, fmt.Errorf("edit item failed: %w", err)
 	}
@@ -101,12 +97,12 @@ func checkOpBinary() error {
 	return nil
 }
 
-type notFoundError struct {
+type itemNotFoundError struct {
 	vault string
 	ref   Ref
 }
 
-func (e notFoundError) Error() string {
+func (e itemNotFoundError) Error() string {
 	return fmt.Sprintf("item %q not found in vault %q", e.ref, e.vault)
 }
 
@@ -120,11 +116,11 @@ type entry struct {
 	Value string `json:"value"`
 }
 
-func (i item) value(field string) (string, bool) {
+func (i item) password() ([]byte, bool) {
 	secret, ok := slices.Find(i.Fields, func(item entry) bool {
-		return item.ID == field
+		return item.ID == "password"
 	})
-	return secret.Value, ok
+	return []byte(secret.Value), ok
 }
 
 // op --format json item get --vault Personal "With Spaces"
@@ -133,21 +129,22 @@ func getItem(ctx context.Context, vault string, ref Ref) (*item, error) {
 
 	args := []string{"--format", "json", "item", "get", "--vault", vault, ref.String()}
 	output, err := exec.Capture(ctx, ".", "op", args...)
-	logger.Debugf("Getting item with args %v", args)
+	logger.Debugf("Getting item with args %s", shellquote.Join(args...))
 	if err != nil {
+		// This is specifically not itemNotFoundError, ty distinguish between vault not found and item not found.
 		if strings.Contains(string(output), "isn't a vault") {
 			return nil, fmt.Errorf("vault %q not found: %w", vault, err)
 		}
 
 		// Item not found, seen two ways of reporting this:
 		if strings.Contains(string(output), "not found in vault") {
-			return nil, notFoundError{vault, ref}
+			return nil, itemNotFoundError{vault, ref}
 		}
 		if strings.Contains(string(output), "isn't an item") {
-			return nil, notFoundError{vault, ref}
+			return nil, itemNotFoundError{vault, ref}
 		}
 
-		return nil, fmt.Errorf("run `op` with args %v: %w", args, err)
+		return nil, fmt.Errorf("run `op` with args %s: %w", shellquote.Join(args...), err)
 	}
 
 	var full item
@@ -158,8 +155,8 @@ func getItem(ctx context.Context, vault string, ref Ref) (*item, error) {
 }
 
 // op item create --category Password --vault FTL --title mod.ule "password=val ue"
-func createItem(ctx context.Context, vault string, ref Ref, secret string) error {
-	args := []string{"item", "create", "--category", "Password", "--vault", vault, "--title", ref.String(), "password=" + secret}
+func createItem(ctx context.Context, vault string, ref Ref, secret []byte) error {
+	args := []string{"item", "create", "--category", "Password", "--vault", vault, "--title", ref.String(), "password=" + string(secret)}
 	_, err := exec.Capture(ctx, ".", "op", args...)
 	if err != nil {
 		return fmt.Errorf("create item failed in vault %q, ref %q: %w", vault, ref, err)
@@ -169,8 +166,8 @@ func createItem(ctx context.Context, vault string, ref Ref, secret string) error
 }
 
 // op item edit --vault ftl test "password=with space"
-func editItem(ctx context.Context, vault string, ref Ref, secret string) error {
-	args := []string{"item", "edit", "--vault", vault, ref.String(), "password=" + secret}
+func editItem(ctx context.Context, vault string, ref Ref, secret []byte) error {
+	args := []string{"item", "edit", "--vault", vault, ref.String(), "password=" + string(secret)}
 	_, err := exec.Capture(ctx, ".", "op", args...)
 	if err != nil {
 		return fmt.Errorf("edit item failed in vault %q, ref %q: %w", vault, ref, err)

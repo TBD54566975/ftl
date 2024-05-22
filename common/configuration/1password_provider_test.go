@@ -1,6 +1,6 @@
 //go:build 1password
 
-// 1password needs to be running and have a vault named "ftl-test".
+// 1password needs to be running and will temporarily make a "ftl-test" vault.
 //
 // These tests will clean up before and after itself.
 
@@ -19,8 +19,14 @@ import (
 const vault = "ftl-test"
 const module = "test.module"
 
+func createVault(ctx context.Context) error {
+	args := []string{"vault", "create", vault}
+	_, err := exec.Capture(ctx, ".", "op", args...)
+	return err
+}
+
 func clean(ctx context.Context) bool {
-	args := []string{"item", "delete", "--vault", vault, module}
+	args := []string{"vault", "delete", vault}
 	_, err := exec.Capture(ctx, ".", "op", args...)
 	return err == nil
 }
@@ -30,30 +36,37 @@ func Test1PasswordProvider(t *testing.T) {
 
 	// OK to fail the initial clean.
 	_ = clean(ctx)
-	defer func() {
+	t.Cleanup(func() {
 		if !clean(ctx) {
 			t.Fatal("clean failed")
 		}
-	}()
+	})
 
-	_, err := getItem(ctx, vault, Ref{Name: module})
+	err := createVault(ctx)
+	assert.NoError(t, err)
+
+	_, err = getItem(ctx, vault, Ref{Name: module})
 	assert.Error(t, err)
 
-	err = createItem(ctx, vault, Ref{Name: module}, "hunter1")
+	var pw1 = []byte("hunter1")
+	// {"user":"root", "password":"hunter2🪤"}
+	var pw2 = []byte("{\"user\":\"root\", \"password\":\"hunter🪤\"}")
+
+	err = createItem(ctx, vault, Ref{Name: module}, pw1)
 	assert.NoError(t, err)
 
 	value, err := getItem(ctx, vault, Ref{Name: module})
 	assert.NoError(t, err)
-	secret, ok := value.value("password")
+	secret, ok := value.password()
 	assert.True(t, ok)
-	assert.Equal(t, "hunter1", secret)
+	assert.Equal(t, pw1, secret)
 
-	err = editItem(ctx, vault, Ref{Name: module}, "hunter2")
+	err = editItem(ctx, vault, Ref{Name: module}, pw2)
 	assert.NoError(t, err)
 
 	value, err = getItem(ctx, vault, Ref{Name: module})
 	assert.NoError(t, err)
-	secret, ok = value.value("password")
+	secret, ok = value.password()
 	assert.True(t, ok)
-	assert.Equal(t, "hunter2", secret)
+	assert.Equal(t, pw2, secret)
 }
