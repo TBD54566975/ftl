@@ -161,6 +161,7 @@ message Metadata {
     MetadataCronJob cronJob = 3;
     MetadataDatabases databases = 4;
     MetadataAlias alias = 5;
+    MetadataRetry retry = 6;
   }
 }
 
@@ -190,6 +191,13 @@ message MetadataIngress {
   string type = 2;
   string method = 3;
   repeated IngressPathComponent path = 4;
+}
+
+message MetadataRetry {
+  optional Position pos = 1;
+  optional int64 count = 2;
+  string minBackoff = 3;
+  string maxBackoff = 4;
 }
 
 message Module {

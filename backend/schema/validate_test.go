@@ -276,7 +276,9 @@ func TestValidate(t *testing.T) {
 			schema: `
 				module one {
 					verb A(Empty) Unit
+						+retry 10 5s 20m
 					verb B(Empty) Unit
+						+retry 1m5s 20m30s
 					verb C(Empty) Unit
 
 					fsm FSM {
@@ -291,7 +293,78 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`12:6-6: duplicate fsm "FSM", first defined at 7:6`,
+				`14:6-6: duplicate fsm "FSM", first defined at 9:6`,
+			},
+		},
+		{name: "NonFSMVerbsWithRetry",
+			schema: `
+				module one {
+					verb A(Empty) Unit
+						+retry 10 5s 20m
+					verb B(Empty) Unit
+						+retry 1m5s 20m30s
+					verb C(Empty) Unit
+				}
+				`,
+			errs: []string{
+				`4:7-7: verb A: retries can only be added to FSM transitions`,
+				`6:7-7: verb B: retries can only be added to FSM transitions`,
+			},
+		},
+		{name: "InvalidRetryDurations",
+			schema: `
+				module one {
+					verb A(Empty) Unit
+						+retry 10 5s1m
+					verb B(Empty) Unit
+						+retry 1d1m5s1d
+					verb C(Empty) Unit
+						+retry 0h0m0s
+					verb D(Empty) Unit
+						+retry 1
+					verb E(Empty) Unit
+						+retry
+					verb F(Empty) Unit
+						+retry 20m20m
+					verb G(Empty) Unit
+						+retry 1s
+						+retry 1s
+					verb H(Empty) Unit
+						+retry 2mins
+					verb I(Empty) Unit
+						+retry 1m 1s
+					verb J(Empty) Unit
+						+retry 1d1s
+					verb K(Empty) Unit
+						+retry 0 5s
+
+					fsm FSM {
+						start one.A
+						transition one.A to one.B
+						transition one.A to one.C
+						transition one.A to one.D
+						transition one.A to one.E
+						transition one.A to one.F
+						transition one.A to one.G
+						transition one.A to one.H
+						transition one.A to one.I
+						transition one.A to one.J
+						transition one.A to one.K
+					}
+				}
+				`,
+			errs: []string{
+				`10:7-7: verb D: retry must have a minimum backoff`,
+				`12:7-7: verb E: retry must have a minimum backoff`,
+				`14:7-7: verb F: retry has unit "m" out of order. Units need to be ordered from largest to smallest`,
+				`17:7-7: verb can not have multiple instances of retry`,
+				`19:7-7: verb H: retry has unknown unit "mins". Use 'd', 'h', 'm' or 's'`,
+				`21:7-7: verb I: max backoff duration (1s) needs to be atleast as long as initial backoff (1m)`,
+				`23:7-7: verb J: retry backoff can not be larger than 1d`,
+				`25:7-7: verb K: retry count must be atleast 1`,
+				`4:7-7: verb A: retry has unit "m" out of order. Units need to be ordered from largest to smallest`,
+				`6:7-7: verb B: retry has unit "d" out of order. Units need to be ordered from largest to smallest`,
+				`8:7-7: verb C: retry must have a minimum backoff of 1s`,
 			},
 		},
 	}

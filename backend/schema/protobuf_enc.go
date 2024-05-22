@@ -75,6 +75,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataAlias:
 			v = &schemapb.Metadata_Alias{Alias: n.ToProto().(*schemapb.MetadataAlias)}
 
+		case *MetadataRetry:
+			v = &schemapb.Metadata_Retry{Retry: n.ToProto().(*schemapb.MetadataRetry)}
+
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}

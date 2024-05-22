@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"strconv"
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
@@ -130,12 +131,35 @@ func (d *directiveCronJob) String() string {
 	return fmt.Sprintf("cron %s", d.Cron)
 }
 
+type directiveRetry struct {
+	Pos schema.Position
+
+	Count      *int   `parser:"'retry' (@Number Whitespace)?"`
+	MinBackoff string `parser:"@(Number Ident)"`
+	MaxBackoff string `parser:"@(Number Ident)?"`
+}
+
+func (*directiveRetry) directive() {}
+
+func (d *directiveRetry) String() string {
+	components := []string{"retry"}
+	if d.Count != nil {
+		components = append(components, strconv.Itoa(*d.Count))
+	}
+	components = append(components, d.MinBackoff)
+	if len(d.MaxBackoff) > 0 {
+		components = append(components, d.MaxBackoff)
+	}
+	return strings.Join(components, " ")
+}
+
 var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
-	participle.Union[directive](&directiveVerb{}, &directiveData{}, &directiveEnum{}, &directiveTypeAlias{}, &directiveIngress{}, &directiveCronJob{}),
+	participle.Union[directive](&directiveVerb{}, &directiveData{}, &directiveEnum{}, &directiveTypeAlias{},
+		&directiveIngress{}, &directiveCronJob{}, &directiveRetry{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
