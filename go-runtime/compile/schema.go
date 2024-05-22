@@ -240,7 +240,7 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 		switch dir := dir.(type) {
 		case *directiveEnum:
 			typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
-			switch underlying := typ.Underlying().(type) {
+			switch typ.Underlying().(type) {
 			case *types.Basic:
 				enum := &schema.Enum{
 					Pos:      goPosToSchemaPos(node.Pos()),
@@ -252,23 +252,6 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 				pctx.module.Decls = append(pctx.module.Decls, enum)
 				pctx.nativeNames[enum] = nativeName
 			case *types.Interface:
-				if underlying.NumMethods() == 0 {
-					pctx.errors.add(errorf(node, "enum discriminator %q must define at least one method", t.Name.Name))
-					break
-				}
-
-				hasExportedMethod := false
-				for i, n := 0, underlying.NumMethods(); i < n; i++ {
-					if underlying.Method(i).Exported() {
-						pctx.errors.add(noEndColumnErrorf(underlying.Method(i).Pos(), "enum discriminator %q cannot "+
-							"contain exported methods", t.Name.Name))
-						hasExportedMethod = true
-					}
-				}
-				if hasExportedMethod {
-					break
-				}
-
 				enum := &schema.Enum{
 					Pos:      goPosToSchemaPos(node.Pos()),
 					Comments: visitComments(node.Doc),
@@ -688,7 +671,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 							}
 						}
 					} else if _, ok := dir.(*directiveTypeAlias); ok {
-						decl, ok := pctx.getDeclForTypeName(t.Name.Name).Get()
+						decl, ok := pctx.getDeclForTypeName(t.Name.Name)
 						if !ok {
 							pctx.errors.add(errorf(node, "could not find type alias declaration for %q", t.Name.Name))
 							return
@@ -799,7 +782,10 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 		isExported := enum.IsExported()
 		for _, dir := range directives {
 			if exportableDir, ok := dir.(exportable); ok {
-				isExported = exportableDir.IsExported() || isExported
+				if enum.Export && !exportableDir.IsExported() {
+					pctx.errors.add(errorf(node, "parent enum %q is exported, but directive %q on %q is not: all variants of exported enums that have a directive must be explicitly exported as well", enumName, exportableDir, t.Name.Name))
+				}
+				isExported = exportableDir.IsExported()
 			}
 		}
 		vType, ok := visitTypeValue(pctx, named, t.Type, nil, isExported).Get()
@@ -879,11 +865,7 @@ func visitTypeValue(pctx *parseContext, named *types.Named, tnode ast.Expr, inde
 		}
 
 	default:
-		variantNode := pctx.pkg.TypesInfo.TypeOf(tnode)
-		if _, ok := variantNode.(*types.Struct); ok {
-			variantNode = named
-		}
-		if typ, ok := visitType(pctx, tnode.Pos(), variantNode, isExported).Get(); ok {
+		if typ, ok := visitType(pctx, tnode.Pos(), named, isExported).Get(); ok {
 			return optional.Some(&schema.TypeValue{Value: typ})
 		} else {
 			pctx.errors.add(errorf(tnode, "unsupported type %q for type enum variant", named))
@@ -1256,14 +1238,20 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	if tparam, ok := tnode.(*types.TypeParam); ok {
 		return optional.Some[schema.Type](&schema.Ref{Pos: goPosToSchemaPos(pos), Name: tparam.Obj().Id()})
 	}
-
 	if named, ok := tnode.(*types.Named); ok {
 		// Handle refs to type aliases and enums, rather than the underlying type.
-		decl, ok := pctx.getDeclForTypeName(named.Obj().Name()).Get()
+		decl, ok := pctx.getDeclForTypeName(named.Obj().Name())
 		if ok {
 			switch decl.(type) {
 			case *schema.TypeAlias, *schema.Enum:
-				return visitNamedRef(pctx, pos, named, isExported)
+				if isExported {
+					pctx.markAsExported(decl)
+				}
+				return optional.Some[schema.Type](&schema.Ref{
+					Pos:    goPosToSchemaPos(pos),
+					Module: pctx.module.Name,
+					Name:   strcase.ToUpperCamel(named.Obj().Name()),
+				})
 			case *schema.Data, *schema.Verb, *schema.Config, *schema.Secret, *schema.Database, *schema.FSM:
 			}
 		}
@@ -1272,8 +1260,12 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		if named, ok := tnode.(*types.Named); ok {
-			return visitNamedRef(pctx, pos, named, isExported)
+			ref, doneWithVisit := visitNamedRef(pctx, pos, named)
+			if doneWithVisit {
+				return ref
+			}
 		}
+
 		switch underlying.Kind() {
 		case types.String:
 			return optional.Some[schema.Type](&schema.String{Pos: goPosToSchemaPos(pos)})
@@ -1340,7 +1332,10 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 			return optional.Some[schema.Type](&schema.Any{Pos: goPosToSchemaPos(pos)})
 		}
 		if named, ok := tnode.(*types.Named); ok {
-			return visitNamedRef(pctx, pos, named, isExported)
+			ref, doneWithVisit := visitNamedRef(pctx, pos, named)
+			if doneWithVisit {
+				return ref
+			}
 		}
 		return optional.None[schema.Type]()
 
@@ -1349,39 +1344,32 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	}
 }
 
-func visitNamedRef(pctx *parseContext, pos token.Pos, named *types.Named, isExported bool) optional.Option[schema.Type] {
+func visitNamedRef(pctx *parseContext, pos token.Pos, named *types.Named) (optional.Option[schema.Type], bool) {
 	if named.Obj().Pkg() == nil {
-		return optional.None[schema.Type]()
+		return optional.None[schema.Type](), false
 	}
-
-	// Update the visibility of the reference if the referencer is exported (ensuring refs are transitively
-	// exported as needed).
-	if isExported {
-		if decl, ok := pctx.getDeclForTypeName(named.Obj().Name()).Get(); ok {
-			pctx.markAsExported(decl)
-		}
-	}
-
 	nodePath := named.Obj().Pkg().Path()
-	destModule := pctx.module.Name
+	var ref *schema.Ref
 	if !pctx.isPathInPkg(nodePath) {
 		if strings.HasPrefix(nodePath, pctx.pkg.PkgPath+"/") {
 			pctx.errors.add(noEndColumnErrorf(pos, "unsupported type %s from subpackage", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
-			return optional.None[schema.Type]()
+			return optional.None[schema.Type](), true
 		} else if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
 			pctx.errors.add(noEndColumnErrorf(pos,
 				"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
-			return optional.None[schema.Type]()
+			return optional.None[schema.Type](), true
 		}
 		base := path.Dir(pctx.pkg.PkgPath)
-		destModule = path.Base(strings.TrimPrefix(nodePath, base+"/"))
+		destModule := path.Base(strings.TrimPrefix(nodePath, base+"/"))
+		ref = &schema.Ref{
+			Pos:    goPosToSchemaPos(pos),
+			Module: destModule,
+			Name:   named.Obj().Name(),
+		}
+		return optional.Some[schema.Type](ref), true
 	}
-	ref := &schema.Ref{
-		Pos:    goPosToSchemaPos(pos),
-		Module: destModule,
-		Name:   strcase.ToUpperCamel(named.Obj().Name()),
-	}
-	return optional.Some[schema.Type](ref)
+	return optional.None[schema.Type](), false
+
 }
 
 func visitMap(pctx *parseContext, pos token.Pos, tnode *types.Map, isExported bool) optional.Option[schema.Type] {
@@ -1539,7 +1527,7 @@ func (p *parseContext) isPathInPkg(path string) bool {
 
 // getEnumForTypeName returns the enum and interface for a given type name.
 func (p *parseContext) getEnumForTypeName(name string) (optional.Option[*schema.Enum], optional.Option[*types.Interface]) {
-	aDecl, ok := p.getDeclForTypeName(name).Get()
+	aDecl, ok := p.getDeclForTypeName(name)
 	if !ok {
 		return optional.None[*schema.Enum](), optional.None[*types.Interface]()
 	}
@@ -1558,7 +1546,7 @@ func (p *parseContext) getEnumForTypeName(name string) (optional.Option[*schema.
 	return optional.Some(decl), optional.None[*types.Interface]()
 }
 
-func (p *parseContext) getDeclForTypeName(name string) optional.Option[schema.Decl] {
+func (p *parseContext) getDeclForTypeName(name string) (enum schema.Decl, ok bool) {
 	for _, decl := range p.module.Decls {
 		nativeName, ok := p.nativeNames[decl]
 		if !ok {
@@ -1567,9 +1555,9 @@ func (p *parseContext) getDeclForTypeName(name string) optional.Option[schema.De
 		if nativeName != p.pkg.Name+"."+name {
 			continue
 		}
-		return optional.Some(decl)
+		return decl, true
 	}
-	return optional.None[schema.Decl]()
+	return nil, false
 }
 
 func (p *parseContext) markAsExported(node schema.Node) {

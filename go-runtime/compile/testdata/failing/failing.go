@@ -146,12 +146,6 @@ type ConformsToTwoTypeEnums string
 func (ConformsToTwoTypeEnums) typeEnum1() {}
 func (ConformsToTwoTypeEnums) typeEnum2() {}
 
-//ftl:enum
-type TypeEnum3 interface{ ExportedMethod() }
-
-//ftl:enum
-type NoMethodsTypeEnum interface{}
-
 //ftl:data
 type StructUsingSubpackage struct {
 	Message string            `json:"message"`

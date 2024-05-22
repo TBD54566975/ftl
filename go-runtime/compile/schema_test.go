@@ -65,7 +65,7 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   // Comments about ColorInt.
-  export enum ColorInt: Int {
+  enum ColorInt: Int {
     // RedInt is a color.
     RedInt = 0
     BlueInt = 1
@@ -92,13 +92,6 @@ func TestExtractModuleSchema(t *testing.T) {
     Two = 2
   }
 
-  export enum TypeEnum {
-    Option String?
-    InlineStruct one.InlineStruct
-    AliasedStruct one.UnderlyingStruct
-    ValueEnum one.ColorInt
-  }
-
   data Config {
     field String
   }
@@ -112,9 +105,6 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   export data ExportedStruct {
-  }
-
-  export data InlineStruct {
   }
 
   export data Nested {
@@ -148,9 +138,6 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   data SourceResp {
-  }
-
-  export data UnderlyingStruct {
   }
 
   data WithoutDirectiveStruct {
@@ -323,7 +310,7 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestParsedirectives(t *testing.T) {
+func TestParseDirectives(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -452,19 +439,16 @@ func TestErrorReporting(t *testing.T) {
 		`90:2-12: struct field unexported must be exported by starting with an uppercase letter`,
 		`102:2-24: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
 		`109:2-41: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
+		`118:1-26: parent enum "ExportedTypeEnum" is exported, but directive "ftl:data" on "PrivateData" is not: all variants of exported enums that have a directive must be explicitly exported as well`,
 		`122:21-60: config and secret names must be valid identifiers`,
 		`128:1-26: only one directive expected for type alias`,
 		`144:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
-		`150:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
-		`153:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
-		`156:1-2: could not find enum called NoMethodsTypeEnum`,
-		`158:2-2: unsupported type ftl/failing/child.ChildStruct from subpackage`,
-		`158:2-6: unsupported type "ftl/failing/child.ChildStruct" for field "Data"`,
-		`159:2-2: unsupported type ftl/failing/child.ChildString from subpackage`,
-		`159:2-8: unsupported type "ftl/failing/child.ChildString" for field "String"`,
-		`163:1-1: unsupported type ftl/failing/child.ChildStruct from subpackage`,
-		"163:1-33: could not find enum called NoMethodsTypeEnum",
-		`163:1-33: unsupported type "struct{Name string}" for type alias`,
+		`152:2-2: unsupported type ftl/failing/child.ChildStruct from subpackage`,
+		`152:2-6: unsupported type "ftl/failing/child.ChildStruct" for field "Data"`,
+		`153:2-2: unsupported type ftl/failing/child.ChildString from subpackage`,
+		`153:2-8: unsupported type "ftl/failing/child.ChildString" for field "String"`,
+		`157:1-1: unsupported type ftl/failing/child.ChildStruct from subpackage`,
+		`157:1-33: unsupported type "struct{Name string}" for type alias`,
 	}
 	assert.Equal(t, expected, actual)
 }
