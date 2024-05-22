@@ -215,6 +215,7 @@ func TestParserRoundTrip(t *testing.T) {
 	assert.Equal(t, Normalise(testSchema), Normalise(actual), assert.Exclude[Position]())
 }
 
+//nolint:maintidx
 func TestParsing(t *testing.T) {
 	ten := 10
 	tests := []struct {

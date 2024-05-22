@@ -10,6 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+//nolint:maintidx
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name   string
