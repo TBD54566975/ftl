@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/kballard/go-shellquote"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -17,7 +18,7 @@ import (
 // OnePasswordProvider is a configuration provider that reads passwords from
 // 1Password vaults via the "op" command line tool.
 type OnePasswordProvider struct {
-	Vault string `name:"op" help:"Store a secret in this 1Password vault." group:"Provider:" xor:"configwriter" placeholder:"VAULT"`
+	Vault string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"configwriter" placeholder:"VAULT"`
 }
 
 var _ MutableProvider[Secrets] = OnePasswordProvider{}
@@ -53,6 +54,8 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 	return secret, nil
 }
 
+var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
+
 // Store will save the given secret in 1Password via the `op` command.
 //
 // op does not support "create or update" as a single command. Neither does it support specifying an ID on create.
@@ -61,8 +64,8 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
-	if strings.Contains(o.Vault, " ") {
-		return nil, fmt.Errorf("1Password vault name %q contains spaces, which is not supported", o.Vault)
+	if !vaultRegex.MatchString(o.Vault) {
+		return nil, fmt.Errorf("vault name %q contains invalid characters. a-z A-Z 0-9 _ . - are valid", o.Vault)
 	}
 
 	url := &url.URL{Scheme: "op", Host: o.Vault}
@@ -131,7 +134,7 @@ func getItem(ctx context.Context, vault string, ref Ref) (*item, error) {
 	output, err := exec.Capture(ctx, ".", "op", args...)
 	logger.Debugf("Getting item with args %s", shellquote.Join(args...))
 	if err != nil {
-		// This is specifically not itemNotFoundError, ty distinguish between vault not found and item not found.
+		// This is specifically not itemNotFoundError, to distinguish between vault not found and item not found.
 		if strings.Contains(string(output), "isn't a vault") {
 			return nil, fmt.Errorf("vault %q not found: %w", vault, err)
 		}
