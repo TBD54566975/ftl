@@ -1,7 +1,6 @@
 package encoding_test
 
 import (
-	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -32,6 +31,9 @@ func TestMarshal(t *testing.T) {
 	type inner struct {
 		FooBar string
 	}
+	type sumtypeStruct struct {
+		D discriminator
+	}
 	type validateOmitempty struct {
 		ShouldOmit   string `json:",omitempty"`
 		ShouldntOmit string `json:""`
@@ -60,6 +62,7 @@ func TestMarshal(t *testing.T) {
 		{name: "OptionNull", input: struct{ Option ftl.Option[int] }{ftl.None[int]()}, expected: `{"option":null}`},
 		{name: "OptionZero", input: struct{ Option ftl.Option[int] }{ftl.Some(0)}, expected: `{"option":0}`},
 		{name: "OptionStruct", input: struct{ Option ftl.Option[inner] }{ftl.Some(inner{"foo"})}, expected: `{"option":{"fooBar":"foo"}}`},
+		{name: "OptionSumType", input: struct{ Option ftl.Option[sumtypeStruct] }{ftl.Some(sumtypeStruct{variant{"hello"}})}, expected: `{"option":{"d":{"name":"Variant","value":{"message":"hello"}}}}`},
 		{name: "Unit", input: ftl.Unit{}, expected: `{}`},
 		{name: "UnitField", input: struct {
 			String string
@@ -77,15 +80,14 @@ func TestMarshal(t *testing.T) {
 		}, expected: `{"shouldntOmit":null,"notTagged":null}`},
 	}
 
-	tr := reflection.NewTypeRegistry()
-	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
-		"Variant": reflect.TypeFor[variant](),
-	})
-	ctx := reflection.ContextWithTypeRegistry(context.Background(), tr)
+	reflection.AllowAnyPackageForTesting = true
+	defer func() { reflection.AllowAnyPackageForTesting = false }()
+	reflection.ResetTypeRegistry()
+	reflection.Register(reflection.WithSumType[discriminator](variant{}))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := Marshal(ctx, tt.input)
+			actual, err := Marshal(tt.input)
 			assert.EqualError(t, err, tt.err)
 			if err == nil {
 				assert.Equal(t, tt.expected, string(actual))
@@ -134,17 +136,16 @@ func TestUnmarshal(t *testing.T) {
 		{name: "UnregisteredSumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D unregistered }{}, err: `the only supported interface types are enums or any, not encoding_test.unregistered`},
 	}
 
-	tr := reflection.NewTypeRegistry()
-	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
-		"Variant": reflect.TypeFor[variant](),
-	})
-	ctx := reflection.ContextWithTypeRegistry(context.Background(), tr)
+	reflection.AllowAnyPackageForTesting = true
+	defer func() { reflection.AllowAnyPackageForTesting = false }()
+	reflection.ResetTypeRegistry()
+	reflection.Register(reflection.WithSumType[discriminator](variant{}))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eType := reflect.TypeOf(tt.expected)
 			o := reflect.New(eType)
-			err := Unmarshal(ctx, []byte(tt.input), o.Interface())
+			err := Unmarshal([]byte(tt.input), o.Interface())
 			assert.EqualError(t, err, tt.err)
 			if err == nil {
 				assert.Equal(t, tt.expected, o.Elem().Interface())
@@ -184,20 +185,19 @@ func TestRoundTrip(t *testing.T) {
 		{name: "SumType", input: struct{ D discriminator }{variant{"hello"}}},
 	}
 
-	tr := reflection.NewTypeRegistry()
-	tr.RegisterSumType(reflect.TypeFor[discriminator](), map[string]reflect.Type{
-		"Variant": reflect.TypeFor[variant](),
-	})
-	ctx := reflection.ContextWithTypeRegistry(context.Background(), tr)
+	reflection.AllowAnyPackageForTesting = true
+	defer func() { reflection.AllowAnyPackageForTesting = false }()
+	reflection.ResetTypeRegistry()
+	reflection.Register(reflection.WithSumType[discriminator](variant{}))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			marshaled, err := Marshal(ctx, tt.input)
+			marshaled, err := Marshal(tt.input)
 			assert.NoError(t, err)
 
 			eType := reflect.TypeOf(tt.input)
 			o := reflect.New(eType)
-			err = Unmarshal(ctx, marshaled, o.Interface())
+			err = Unmarshal(marshaled, o.Interface())
 			assert.NoError(t, err)
 
 			assert.Equal(t, tt.input, o.Elem().Interface())

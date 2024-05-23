@@ -1,7 +1,6 @@
 package reflection
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -57,10 +56,10 @@ func FuncRef(call any) Ref {
 	return goRefToFTLRef(ref)
 }
 
-var allowAnyPackageForTesting = false
+var AllowAnyPackageForTesting = false
 
 func goRefToFTLRef(ref string) Ref {
-	if !allowAnyPackageForTesting && !strings.HasPrefix(ref, "ftl/") {
+	if !AllowAnyPackageForTesting && !strings.HasPrefix(ref, "ftl/") {
 		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", ref))
 	}
 	parts := strings.Split(ref[strings.LastIndex(ref, "/")+1:], ".")
@@ -68,7 +67,7 @@ func goRefToFTLRef(ref string) Ref {
 }
 
 // Reflect returns the FTL schema for a Go type.
-func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
+func reflectSchemaType(t reflect.Type) schema.Type {
 	switch t.Kind() {
 	case reflect.Struct:
 		// Handle well-known types.
@@ -80,10 +79,10 @@ func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
 		return refForType(t)
 
 	case reflect.Slice:
-		return &schema.Array{Element: reflectSchemaType(ctx, t.Elem())}
+		return &schema.Array{Element: reflectSchemaType(t.Elem())}
 
 	case reflect.Map:
-		return &schema.Map{Key: reflectSchemaType(ctx, t.Key()), Value: reflectSchemaType(ctx, t.Elem())}
+		return &schema.Map{Key: reflectSchemaType(t.Key()), Value: reflectSchemaType(t.Elem())}
 
 	case reflect.Bool:
 		return &schema.Bool{}
@@ -114,8 +113,7 @@ func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
 			return &schema.Any{}
 		}
 		// Check if it's a sum-type discriminator.
-		registry, ok := TypeRegistryFromContext(ctx).Get()
-		if !ok || !registry.IsSumTypeDiscriminator(t) {
+		if !IsSumTypeDiscriminator(t) {
 			panic(fmt.Sprintf("unsupported interface type %s", t))
 		}
 		return refForType(t)
@@ -128,7 +126,7 @@ func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
 // Return the FTL module for a type or panic if it's not an FTL type.
 func moduleForType(t reflect.Type) string {
 	module := t.PkgPath()
-	if !allowAnyPackageForTesting && !strings.HasPrefix(module, "ftl/") {
+	if !AllowAnyPackageForTesting && !strings.HasPrefix(module, "ftl/") {
 		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", module))
 	}
 	parts := strings.Split(module, "/")

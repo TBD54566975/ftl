@@ -32,7 +32,7 @@ func call[Req, Resp any](ctx context.Context, callee reflection.Ref, req Req, in
 		return resp, fmt.Errorf("%s: overridden verb had invalid response type %T, expected %v", callee, uncheckedResp, reflect.TypeFor[Resp]())
 	}
 
-	reqData, err := encoding.Marshal(ctx, req)
+	reqData, err := encoding.Marshal(req)
 	if err != nil {
 		return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
 	}
@@ -47,7 +47,7 @@ func call[Req, Resp any](ctx context.Context, callee reflection.Ref, req Req, in
 		return resp, fmt.Errorf("%s: %s", callee, cresp.Error.Message)
 
 	case *ftlv1.CallResponse_Body:
-		err = encoding.Unmarshal(ctx, cresp.Body, &resp)
+		err = encoding.Unmarshal(cresp.Body, &resp)
 		if err != nil {
 			return resp, fmt.Errorf("%s: failed to decode response: %w", callee, err)
 		}

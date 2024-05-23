@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
@@ -12,13 +13,8 @@ import (
 	"ftl/other"
 )
 
-func main() {
-	verbConstructor := server.NewUserVerbServer("other",
-		server.HandleCall(other.Echo),
-	)
-	ctx := context.Background()
-
-	tr := reflection.NewTypeRegistry(
+func init() {
+	reflection.Register(
 		reflection.WithSumType[another.SecondTypeEnum](
 			*new(another.One),
 			*new(another.Two),
@@ -45,7 +41,11 @@ func main() {
 			*new(other.MyUnit),
 		),
 	)
-	ctx = reflection.ContextWithTypeRegistry(ctx, tr)
+}
 
-	plugin.Start(ctx, "other", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
+func main() {
+	verbConstructor := server.NewUserVerbServer("other",
+		server.HandleCall(other.Echo),
+	)
+	plugin.Start(context.Background(), "other", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
 }

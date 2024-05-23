@@ -3,7 +3,6 @@ package ftl
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding"
@@ -199,28 +198,26 @@ func (o Option[T]) GoString() string {
 }
 
 func (o Option[T]) Marshal(
-	ctx context.Context,
 	w *bytes.Buffer,
-	encode func(ctx context.Context, v reflect.Value, w *bytes.Buffer) error,
+	encode func(v reflect.Value, w *bytes.Buffer) error,
 ) error {
 	if o.ok {
-		return encode(ctx, reflect.ValueOf(&o.value).Elem(), w)
+		return encode(reflect.ValueOf(&o.value).Elem(), w)
 	}
 	w.WriteString("null")
 	return nil
 }
 
 func (o *Option[T]) Unmarshal(
-	ctx context.Context,
 	d *json.Decoder,
 	isNull bool,
-	decode func(ctx context.Context, d *json.Decoder, v reflect.Value) error,
+	decode func(d *json.Decoder, v reflect.Value) error,
 ) error {
 	if isNull {
 		o.ok = false
 		return nil
 	}
-	if err := decode(ctx, d, reflect.ValueOf(&o.value).Elem()); err != nil {
+	if err := decode(d, reflect.ValueOf(&o.value).Elem()); err != nil {
 		return err
 	}
 	o.ok = true

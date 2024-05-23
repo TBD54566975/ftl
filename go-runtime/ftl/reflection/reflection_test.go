@@ -1,7 +1,6 @@
 package reflection
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -39,12 +38,10 @@ type AllTypesToReflect struct {
 }
 
 func TestReflectSchemaType(t *testing.T) {
-	allowAnyPackageForTesting = true
-	t.Cleanup(func() { allowAnyPackageForTesting = false })
+	AllowAnyPackageForTesting = true
+	t.Cleanup(func() { AllowAnyPackageForTesting = false })
 
-	tr := NewTypeRegistry(WithSumType[MySumType](Variant1{}, Variant2{}))
-	ctx := context.Background()
-	ctx = ContextWithTypeRegistry(ctx, tr)
+	Register(WithSumType[MySumType](Variant1{}, Variant2{}))
 
 	v := AllTypesToReflect{SumType: &Variant1{}}
 
@@ -66,7 +63,7 @@ func TestReflectSchemaType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := reflectSchemaType(ctx, reflect.TypeOf(tt.value).Elem())
+			st := reflectSchemaType(reflect.TypeOf(tt.value).Elem())
 			assert.Equal(t, tt.expected, st)
 		})
 	}
@@ -74,7 +71,7 @@ func TestReflectSchemaType(t *testing.T) {
 	t.Run("InvalidType", func(t *testing.T) {
 		var invalid uint
 		assert.Panics(t, func() {
-			reflectSchemaType(ctx, reflect.TypeOf(&invalid).Elem())
+			reflectSchemaType(reflect.TypeOf(&invalid).Elem())
 		})
 	})
 }

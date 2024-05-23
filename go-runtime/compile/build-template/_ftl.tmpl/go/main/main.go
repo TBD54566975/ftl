@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/plugin"
 {{- if .SumTypes }}
@@ -13,6 +14,20 @@ import (
 	"ftl/{{.}}"
 {{- end}}
 )
+{{- if .SumTypes}}
+
+func init() {
+	reflection.Register(
+{{- range .SumTypes}}
+		reflection.WithSumType[{{.Discriminator}}](
+			{{- range .Variants}}
+			*new({{.Type}}),
+			{{- end}}
+		),
+{{- end}}
+	)
+}
+{{- end}}
 
 func main() {
 	verbConstructor := server.NewUserVerbServer("{{.Name}}",
@@ -28,23 +43,5 @@ func main() {
 	{{- end}}
 {{- end}}
 	)
-	ctx := context.Background()
-
-{{- if .SumTypes}}
-
-	tr := reflection.NewTypeRegistry(
-{{- range .SumTypes}}
-		reflection.WithSumType[{{.Discriminator}}](
-			{{- range .Variants}}
-			*new({{.Type}}),
-			{{- end}}
-		),
-{{- end}}
-	)
-{{- end}}
-{{- if .SumTypes}}
-	ctx = reflection.ContextWithTypeRegistry(ctx, tr)
-{{- end}}
-
-	plugin.Start(ctx, "{{.Name}}", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
+	plugin.Start(context.Background(), "{{.Name}}", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
 }

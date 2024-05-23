@@ -100,7 +100,7 @@ func TestIngress(t *testing.T) {
 			req.URL.RawQuery = test.query.Encode()
 			reqKey := model.NewRequestKey(model.OriginIngress, "test")
 			ingress.Handle(sch, reqKey, routes, rec, req, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], requestKey optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
-				body, err := encoding.Marshal(ctx, response)
+				body, err := encoding.Marshal(response)
 				assert.NoError(t, err)
 				return connect.NewResponse(&ftlv1.CallResponse{Response: &ftlv1.CallResponse_Body{Body: body}}), nil
 			})

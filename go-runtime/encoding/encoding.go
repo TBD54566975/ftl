@@ -4,7 +4,6 @@ package encoding
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -23,19 +22,19 @@ var (
 )
 
 type OptionMarshaler interface {
-	Marshal(ctx context.Context, w *bytes.Buffer, encode func(ctx context.Context, v reflect.Value, w *bytes.Buffer) error) error
+	Marshal(w *bytes.Buffer, encode func(v reflect.Value, w *bytes.Buffer) error) error
 }
 type OptionUnmarshaler interface {
-	Unmarshal(ctx context.Context, d *json.Decoder, isNull bool, decode func(ctx context.Context, d *json.Decoder, v reflect.Value) error) error
+	Unmarshal(d *json.Decoder, isNull bool, decode func(d *json.Decoder, v reflect.Value) error) error
 }
 
-func Marshal(ctx context.Context, v any) ([]byte, error) {
+func Marshal(v any) ([]byte, error) {
 	w := &bytes.Buffer{}
-	err := encodeValue(ctx, reflect.ValueOf(v), w)
+	err := encodeValue(reflect.ValueOf(v), w)
 	return w.Bytes(), err
 }
 
-func encodeValue(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
+func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 	if !v.IsValid() {
 		w.WriteString("null")
 		return nil
@@ -58,7 +57,7 @@ func encodeValue(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 
 	case t.Implements(optionMarshaler):
 		enc := v.Interface().(OptionMarshaler) //nolint:forcetypeassert
-		return enc.Marshal(ctx, w, encodeValue)
+		return enc.Marshal(w, encodeValue)
 
 	// TODO(Issue #1439): remove this special case by removing all usage of
 	// json.RawMessage, which is not a type we support.
@@ -73,16 +72,16 @@ func encodeValue(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 
 	switch v.Kind() {
 	case reflect.Struct:
-		return encodeStruct(ctx, v, w)
+		return encodeStruct(v, w)
 
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			return encodeBytes(v, w)
 		}
-		return encodeSlice(ctx, v, w)
+		return encodeSlice(v, w)
 
 	case reflect.Map:
-		return encodeMap(ctx, v, w)
+		return encodeMap(v, w)
 
 	case reflect.String:
 		return encodeString(v, w)
@@ -98,17 +97,15 @@ func encodeValue(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 
 	case reflect.Interface:
 		if t == reflect.TypeFor[any]() {
-			return encodeValue(ctx, v.Elem(), w)
+			return encodeValue(v.Elem(), w)
 		}
 
-		if tr, ok := reflection.TypeRegistryFromContext(ctx).Get(); ok {
-			if vName, ok := tr.GetVariantByType(v.Type(), v.Elem().Type()).Get(); ok {
-				sumType := struct {
-					Name  string
-					Value any
-				}{Name: vName, Value: v.Elem().Interface()}
-				return encodeValue(ctx, reflect.ValueOf(sumType), w)
-			}
+		if vName, ok := reflection.GetVariantByType(v.Type(), v.Elem().Type()).Get(); ok {
+			sumType := struct {
+				Name  string
+				Value any
+			}{Name: vName, Value: v.Elem().Interface()}
+			return encodeValue(reflect.ValueOf(sumType), w)
 		}
 
 		return fmt.Errorf("the only supported interface types are enums or any, not %s", t)
@@ -118,7 +115,7 @@ func encodeValue(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 	}
 }
 
-func encodeStruct(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
+func encodeStruct(v reflect.Value, w *bytes.Buffer) error {
 	w.WriteRune('{')
 	afterFirst := false
 	for i := range v.NumField() {
@@ -146,7 +143,7 @@ func encodeStruct(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 		}
 		afterFirst = true
 		w.WriteString(`"` + strcase.ToLowerCamel(ft.Name) + `":`)
-		if err := encodeValue(ctx, fv, w); err != nil {
+		if err := encodeValue(fv, w); err != nil {
 			return err
 		}
 	}
@@ -171,13 +168,13 @@ func encodeBytes(v reflect.Value, w *bytes.Buffer) error {
 	return nil
 }
 
-func encodeSlice(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
+func encodeSlice(v reflect.Value, w *bytes.Buffer) error {
 	w.WriteRune('[')
 	for i := range v.Len() {
 		if i > 0 {
 			w.WriteRune(',')
 		}
-		if err := encodeValue(ctx, v.Index(i), w); err != nil {
+		if err := encodeValue(v.Index(i), w); err != nil {
 			return err
 		}
 	}
@@ -185,7 +182,7 @@ func encodeSlice(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 	return nil
 }
 
-func encodeMap(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
+func encodeMap(v reflect.Value, w *bytes.Buffer) error {
 	w.WriteRune('{')
 	for i, key := range v.MapKeys() {
 		if i > 0 {
@@ -194,7 +191,7 @@ func encodeMap(ctx context.Context, v reflect.Value, w *bytes.Buffer) error {
 		w.WriteRune('"')
 		w.WriteString(key.String())
 		w.WriteString(`":`)
-		if err := encodeValue(ctx, v.MapIndex(key), w); err != nil {
+		if err := encodeValue(v.MapIndex(key), w); err != nil {
 			return err
 		}
 	}
@@ -226,17 +223,17 @@ func encodeString(v reflect.Value, w *bytes.Buffer) error {
 	return nil
 }
 
-func Unmarshal(ctx context.Context, data []byte, v any) error {
+func Unmarshal(data []byte, v any) error {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return fmt.Errorf("unmarshal expects a non-nil pointer")
 	}
 
 	d := json.NewDecoder(bytes.NewReader(data))
-	return decodeValue(ctx, d, rv.Elem())
+	return decodeValue(d, rv.Elem())
 }
 
-func decodeValue(ctx context.Context, d *json.Decoder, v reflect.Value) error {
+func decodeValue(d *json.Decoder, v reflect.Value) error {
 	if !v.CanSet() {
 		return fmt.Errorf("cannot set value: %s", v.Type())
 	}
@@ -261,30 +258,28 @@ func decodeValue(ctx context.Context, d *json.Decoder, v reflect.Value) error {
 		}
 		dec := v.Interface().(OptionUnmarshaler) //nolint:forcetypeassert
 		return handleIfNextTokenIsNull(d, func(d *json.Decoder) error {
-			return dec.Unmarshal(ctx, d, true, decodeValue)
+			return dec.Unmarshal(d, true, decodeValue)
 		}, func(d *json.Decoder) error {
-			return dec.Unmarshal(ctx, d, false, decodeValue)
+			return dec.Unmarshal(d, false, decodeValue)
 		})
 	}
 
 	switch v.Kind() {
 	case reflect.Struct:
-		return decodeStruct(ctx, d, v)
+		return decodeStruct(d, v)
 
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			return decodeBytes(d, v)
 		}
-		return decodeSlice(ctx, d, v)
+		return decodeSlice(d, v)
 
 	case reflect.Map:
-		return decodeMap(ctx, d, v)
+		return decodeMap(d, v)
 
 	case reflect.Interface:
-		if tr, ok := reflection.TypeRegistryFromContext(ctx).Get(); ok {
-			if tr.IsSumTypeDiscriminator(v.Type()) {
-				return decodeSumType(ctx, d, v)
-			}
+		if reflection.IsSumTypeDiscriminator(v.Type()) {
+			return decodeSumType(d, v)
 		}
 
 		if v.Type().NumMethod() != 0 {
@@ -297,7 +292,7 @@ func decodeValue(ctx context.Context, d *json.Decoder, v reflect.Value) error {
 	}
 }
 
-func decodeStruct(ctx context.Context, d *json.Decoder, v reflect.Value) error {
+func decodeStruct(d *json.Decoder, v reflect.Value) error {
 	if err := expectDelim(d, '{'); err != nil {
 		return err
 	}
@@ -325,7 +320,7 @@ func decodeStruct(ctx context.Context, d *json.Decoder, v reflect.Value) error {
 				field.Set(reflect.New(field.Type().Elem()))
 			}
 		default:
-			if err := decodeValue(ctx, d, field); err != nil {
+			if err := decodeValue(d, field); err != nil {
 				return err
 			}
 		}
@@ -345,14 +340,14 @@ func decodeBytes(d *json.Decoder, v reflect.Value) error {
 	return nil
 }
 
-func decodeSlice(ctx context.Context, d *json.Decoder, v reflect.Value) error {
+func decodeSlice(d *json.Decoder, v reflect.Value) error {
 	if err := expectDelim(d, '['); err != nil {
 		return err
 	}
 
 	for d.More() {
 		newElem := reflect.New(v.Type().Elem()).Elem()
-		if err := decodeValue(ctx, d, newElem); err != nil {
+		if err := decodeValue(d, newElem); err != nil {
 			return err
 		}
 		v.Set(reflect.Append(v, newElem))
@@ -362,7 +357,7 @@ func decodeSlice(ctx context.Context, d *json.Decoder, v reflect.Value) error {
 	return err
 }
 
-func decodeMap(ctx context.Context, d *json.Decoder, v reflect.Value) error {
+func decodeMap(d *json.Decoder, v reflect.Value) error {
 	if err := expectDelim(d, '{'); err != nil {
 		return err
 	}
@@ -379,7 +374,7 @@ func decodeMap(ctx context.Context, d *json.Decoder, v reflect.Value) error {
 		}
 
 		newElem := reflect.New(valType).Elem()
-		if err := decodeValue(ctx, d, newElem); err != nil {
+		if err := decodeValue(d, newElem); err != nil {
 			return err
 		}
 
@@ -390,12 +385,7 @@ func decodeMap(ctx context.Context, d *json.Decoder, v reflect.Value) error {
 	return err
 }
 
-func decodeSumType(ctx context.Context, d *json.Decoder, v reflect.Value) error {
-	tr, ok := reflection.TypeRegistryFromContext(ctx).Get()
-	if !ok {
-		return fmt.Errorf("no type registry found in context")
-	}
-
+func decodeSumType(d *json.Decoder, v reflect.Value) error {
 	var sumType struct {
 		Name  string
 		Value json.RawMessage
@@ -411,13 +401,13 @@ func decodeSumType(ctx context.Context, d *json.Decoder, v reflect.Value) error 
 		return fmt.Errorf("no value found for type enum variant")
 	}
 
-	variantType, ok := tr.GetVariantByName(v.Type(), sumType.Name).Get()
+	variantType, ok := reflection.GetVariantByName(v.Type(), sumType.Name).Get()
 	if !ok {
 		return fmt.Errorf("no enum variant found by name %s", sumType.Name)
 	}
 
 	out := reflect.New(variantType)
-	if err := decodeValue(ctx, json.NewDecoder(bytes.NewReader(sumType.Value)), out.Elem()); err != nil {
+	if err := decodeValue(json.NewDecoder(bytes.NewReader(sumType.Value)), out.Elem()); err != nil {
 		return err
 	}
 	if !out.Type().AssignableTo(v.Type()) {
