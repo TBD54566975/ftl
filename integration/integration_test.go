@@ -31,9 +31,9 @@ func TestCron(t *testing.T) {
 	t.Cleanup(func() { _ = os.Remove(tmpFile) })
 
 	run(t, "",
-		copyModule("cron"),
-		deploy("cron"),
-		func(t testing.TB, ic testContext) error {
+		CopyModule("cron"),
+		Deploy("cron"),
+		func(t testing.TB, ic TestContext) error {
 			_, err := os.Stat(tmpFile)
 			return err
 		},
@@ -42,9 +42,9 @@ func TestCron(t *testing.T) {
 
 func TestLifecycle(t *testing.T) {
 	run(t, "",
-		exec("ftl", "init", "go", ".", "echo"),
-		deploy("echo"),
-		call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
+		Exec("ftl", "init", "go", ".", "echo"),
+		Deploy("echo"),
+		Call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
 			if response["message"] != "Hello, Bob!" {
 				return fmt.Errorf("unexpected response: %v", response)
 			}
@@ -55,11 +55,11 @@ func TestLifecycle(t *testing.T) {
 
 func TestInterModuleCall(t *testing.T) {
 	run(t, "",
-		copyModule("echo"),
-		copyModule("time"),
-		deploy("time"),
-		deploy("echo"),
-		call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
+		CopyModule("echo"),
+		CopyModule("time"),
+		Deploy("time"),
+		Deploy("echo"),
+		Call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
 			message, ok := response["message"].(string)
 			if !ok {
 				return fmt.Errorf("unexpected response: %v", response)
@@ -74,56 +74,56 @@ func TestInterModuleCall(t *testing.T) {
 
 func TestNonExportedDecls(t *testing.T) {
 	run(t, "",
-		copyModule("time"),
-		deploy("time"),
-		copyModule("echo"),
-		deploy("echo"),
-		copyModule("notexportedverb"),
-		expectError(execWithOutput("ftl", "deploy", "notexportedverb"), "call first argument must be a function but is an unresolved reference to echo.Echo, does it need to be exported?"),
+		CopyModule("time"),
+		Deploy("time"),
+		CopyModule("echo"),
+		Deploy("echo"),
+		CopyModule("notexportedverb"),
+		ExpectError(ExecWithOutput("ftl", "deploy", "notexportedverb"), "call first argument must be a function but is an unresolved reference to echo.Echo, does it need to be exported?"),
 	)
 }
 
 func TestUndefinedExportedDecls(t *testing.T) {
 	run(t, "",
-		copyModule("time"),
-		deploy("time"),
-		copyModule("echo"),
-		deploy("echo"),
-		copyModule("undefinedverb"),
-		expectError(execWithOutput("ftl", "deploy", "undefinedverb"), "call first argument must be a function but is an unresolved reference to echo.Undefined"),
+		CopyModule("time"),
+		Deploy("time"),
+		CopyModule("echo"),
+		Deploy("echo"),
+		CopyModule("undefinedverb"),
+		ExpectError(ExecWithOutput("ftl", "deploy", "undefinedverb"), "call first argument must be a function but is an unresolved reference to echo.Undefined"),
 	)
 }
 
 func TestDatabase(t *testing.T) {
 	run(t, "database/ftl-project.toml",
 		// deploy real module against "testdb"
-		copyModule("database"),
-		createDBAction("database", "testdb", false),
-		deploy("database"),
-		call("database", "insert", obj{"data": "hello"}, func(response obj) error { return nil }),
-		queryRow("testdb", "SELECT data FROM requests", "hello"),
+		CopyModule("database"),
+		CreateDBAction("database", "testdb", false),
+		Deploy("database"),
+		Call("database", "insert", obj{"data": "hello"}, func(response obj) error { return nil }),
+		QueryRow("testdb", "SELECT data FROM requests", "hello"),
 
 		// run tests which should only affect "testdb_test"
-		createDBAction("database", "testdb", true),
-		testModule("database"),
-		queryRow("testdb", "SELECT data FROM requests", "hello"),
+		CreateDBAction("database", "testdb", true),
+		ExecModuleTest("database"),
+		QueryRow("testdb", "SELECT data FROM requests", "hello"),
 	)
 }
 
 func TestSchemaGenerate(t *testing.T) {
 	run(t, "",
-		copyDir("../schema-generate", "schema-generate"),
-		mkdir("build/schema-generate"),
-		exec("ftl", "schema", "generate", "schema-generate", "build/schema-generate"),
-		fileContains("build/schema-generate/test.txt", "olleh"),
+		CopyDir("../schema-generate", "schema-generate"),
+		Mkdir("build/schema-generate"),
+		Exec("ftl", "schema", "generate", "schema-generate", "build/schema-generate"),
+		FileContains("build/schema-generate/test.txt", "olleh"),
 	)
 }
 
 func TestHttpEncodeOmitempty(t *testing.T) {
 	run(t, "",
-		copyModule("omitempty"),
-		deploy("omitempty"),
-		httpCall(http.MethodGet, "/get", jsonData(t, obj{}), func(resp *httpResponse) error {
+		CopyModule("omitempty"),
+		Deploy("omitempty"),
+		HttpCall(http.MethodGet, "/get", JsonData(t, obj{}), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			_, ok := resp.jsonBody["mustset"]
 			assert.True(t, ok)
@@ -136,9 +136,9 @@ func TestHttpEncodeOmitempty(t *testing.T) {
 
 func TestHttpIngress(t *testing.T) {
 	run(t, "",
-		copyModule("httpingress"),
-		deploy("httpingress"),
-		httpCall(http.MethodGet, "/users/123/posts/456", jsonData(t, obj{}), func(resp *httpResponse) error {
+		CopyModule("httpingress"),
+		Deploy("httpingress"),
+		HttpCall(http.MethodGet, "/users/123/posts/456", JsonData(t, obj{}), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
@@ -154,7 +154,7 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, "This is good stuff", goodStuff)
 			return nil
 		}),
-		httpCall(http.MethodPost, "/users", jsonData(t, obj{"userId": 123, "postId": 345}), func(resp *httpResponse) error {
+		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"userId": 123, "postId": 345}), func(resp *HttpResponse) error {
 			assert.Equal(t, 201, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Post"])
 			success, ok := resp.jsonBody["success"].(bool)
@@ -163,91 +163,91 @@ func TestHttpIngress(t *testing.T) {
 			return nil
 		}),
 		// contains aliased field
-		httpCall(http.MethodPost, "/users", jsonData(t, obj{"user_id": 123, "postId": 345}), func(resp *httpResponse) error {
+		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"user_id": 123, "postId": 345}), func(resp *HttpResponse) error {
 			assert.Equal(t, 201, resp.status)
 			return nil
 		}),
-		httpCall(http.MethodPut, "/users/123", jsonData(t, obj{"postId": "346"}), func(resp *httpResponse) error {
+		HttpCall(http.MethodPut, "/users/123", JsonData(t, obj{"postId": "346"}), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
 			assert.Equal(t, map[string]any{}, resp.jsonBody)
 			return nil
 		}),
-		httpCall(http.MethodDelete, "/users/123", jsonData(t, obj{}), func(resp *httpResponse) error {
+		HttpCall(http.MethodDelete, "/users/123", JsonData(t, obj{}), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Delete"])
 			assert.Equal(t, map[string]any{}, resp.jsonBody)
 			return nil
 		}),
 
-		httpCall(http.MethodGet, "/html", jsonData(t, obj{}), func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/html", JsonData(t, obj{}), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/html; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>", string(resp.bodyBytes))
 			return nil
 		}),
 
-		httpCall(http.MethodPost, "/bytes", []byte("Hello, World!"), func(resp *httpResponse) error {
+		HttpCall(http.MethodPost, "/bytes", []byte("Hello, World!"), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/octet-stream"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
 			return nil
 		}),
 
-		httpCall(http.MethodGet, "/empty", nil, func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/empty", nil, func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, nil, resp.headers["Content-Type"])
 			assert.Equal(t, nil, resp.bodyBytes)
 			return nil
 		}),
 
-		httpCall(http.MethodGet, "/string", []byte("Hello, World!"), func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/string", []byte("Hello, World!"), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
 			return nil
 		}),
 
-		httpCall(http.MethodGet, "/int", []byte("1234"), func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/int", []byte("1234"), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("1234"), resp.bodyBytes)
 			return nil
 		}),
-		httpCall(http.MethodGet, "/float", []byte("1234.56789"), func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/float", []byte("1234.56789"), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("1234.56789"), resp.bodyBytes)
 			return nil
 		}),
-		httpCall(http.MethodGet, "/bool", []byte("true"), func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/bool", []byte("true"), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("true"), resp.bodyBytes)
 			return nil
 		}),
-		httpCall(http.MethodGet, "/error", nil, func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/error", nil, func(resp *HttpResponse) error {
 			assert.Equal(t, 500, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Error from FTL"), resp.bodyBytes)
 			return nil
 		}),
-		httpCall(http.MethodGet, "/array/string", jsonData(t, []string{"hello", "world"}), func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/array/string", JsonData(t, []string{"hello", "world"}), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
-			assert.Equal(t, jsonData(t, []string{"hello", "world"}), resp.bodyBytes)
+			assert.Equal(t, JsonData(t, []string{"hello", "world"}), resp.bodyBytes)
 			return nil
 		}),
-		httpCall(http.MethodPost, "/array/data", jsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(resp *httpResponse) error {
+		HttpCall(http.MethodPost, "/array/data", JsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
-			assert.Equal(t, jsonData(t, []obj{{"item": "a"}, {"item": "b"}}), resp.bodyBytes)
+			assert.Equal(t, JsonData(t, []obj{{"item": "a"}, {"item": "b"}}), resp.bodyBytes)
 			return nil
 		}),
-		httpCall(http.MethodGet, "/typeenum", jsonData(t, obj{"name": "A", "value": "hello"}), func(resp *httpResponse) error {
+		HttpCall(http.MethodGet, "/typeenum", JsonData(t, obj{"name": "A", "value": "hello"}), func(resp *HttpResponse) error {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
-			assert.Equal(t, jsonData(t, obj{"name": "A", "value": "hello"}), resp.bodyBytes)
+			assert.Equal(t, JsonData(t, obj{"name": "A", "value": "hello"}), resp.bodyBytes)
 			return nil
 		}),
 	)
@@ -255,27 +255,27 @@ func TestHttpIngress(t *testing.T) {
 
 func TestRuntimeReflection(t *testing.T) {
 	run(t, "",
-		copyModule("runtimereflection"),
-		testModule("runtimereflection"),
+		CopyModule("runtimereflection"),
+		ExecModuleTest("runtimereflection"),
 	)
 }
 
 func TestModuleUnitTests(t *testing.T) {
 	run(t, "",
-		copyModule("time"),
-		copyModule("wrapped"),
-		copyModule("verbtypes"),
-		build("time", "wrapped", "verbtypes"),
-		testModule("wrapped"),
-		testModule("verbtypes"),
+		CopyModule("time"),
+		CopyModule("wrapped"),
+		CopyModule("verbtypes"),
+		Build("time", "wrapped", "verbtypes"),
+		ExecModuleTest("wrapped"),
+		ExecModuleTest("verbtypes"),
 	)
 }
 
 func TestLease(t *testing.T) {
 	run(t, "",
-		copyModule("leases"),
-		deploy("leases"),
-		func(t testing.TB, ic testContext) error {
+		CopyModule("leases"),
+		Deploy("leases"),
+		func(t testing.TB, ic TestContext) error {
 			// Start a lease.
 			wg := errgroup.Group{}
 			wg.Go(func() error {

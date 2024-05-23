@@ -42,8 +42,9 @@ var buildOnce sync.Once
 
 // run an integration test.
 // ftlConfigPath: if FTL_CONFIG should be set for this test, then pass in the relative
-//   path from integration/testdata/go/. e.g. "database/ftl-project.toml"
-func run(t *testing.T, ftlConfigPath string, actions ...action) {
+//
+//	path from integration/testdata/go/. e.g. "database/ftl-project.toml"
+func run(t *testing.T, ftlConfigPath string, actions ...Action) {
 	tmpDir := t.TempDir()
 
 	cwd, err := os.Getwd()
@@ -76,7 +77,7 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	infof("Starting ftl cluster")
 	ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
 
-	ic := testContext{
+	ic := TestContext{
 		Context:    ctx,
 		rootDir:    rootDir,
 		testData:   filepath.Join(cwd, "testdata", "go"),
@@ -87,7 +88,7 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	}
 
 	infof("Waiting for controller to be ready")
-	ic.AssertWithRetry(t, func(t testing.TB, ic testContext) error {
+	ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) error {
 		_, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
 		return err
 	})
@@ -99,7 +100,7 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	}
 }
 
-type testContext struct {
+type TestContext struct {
 	context.Context
 	// Temporary directory the test is executing in.
 	workDir string
@@ -115,7 +116,7 @@ type testContext struct {
 }
 
 // AssertWithRetry asserts that the given action passes within the timeout.
-func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
+func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
 	waitCtx, done := context.WithTimeout(i, integrationTestTimeout)
 	defer done()
 	for {
@@ -132,7 +133,7 @@ func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
 	}
 }
 
-type action func(t testing.TB, ic testContext) error
+type Action func(t testing.TB, ic TestContext) error
 
 type logWriter struct {
 	mu     sync.Mutex
