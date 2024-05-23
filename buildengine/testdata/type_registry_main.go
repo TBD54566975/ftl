@@ -19,6 +19,10 @@ func init() {
 			*new(another.One),
 			*new(another.Two),
 		),
+		reflection.WithSumType[another.TypeEnum](
+			*new(another.A),
+			*new(another.B),
+		),
 		reflection.WithSumType[other.SecondTypeEnum](
 			*new(other.A),
 			*new(other.B),
