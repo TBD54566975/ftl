@@ -274,16 +274,23 @@ func TestModuleUnitTests(t *testing.T) {
 func TestLease(t *testing.T) {
 	run(t, "",
 		copyModule("leases"),
+		build("leases"),
+		// checks if leases work in a unit test environment
+		testModule("leases"),
 		deploy("leases"),
+		// checks if it leases work with a real controller
 		func(t testing.TB, ic testContext) error {
 			// Start a lease.
 			wg := errgroup.Group{}
 			wg.Go(func() error {
 				infof("Acquiring lease")
-				_, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
+				resp, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
 					Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
 					Body: []byte("{}"),
 				}))
+				if respErr := resp.Msg.GetError(); respErr != nil {
+					return fmt.Errorf("received error on first call: %v", respErr)
+				}
 				return err
 			})
 
@@ -298,7 +305,7 @@ func TestLease(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "could not acquire lease") {
+			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "lease already held") {
 				return fmt.Errorf("expected error but got: %#v", resp.Msg.GetError())
 			}
 			return wg.Wait()
