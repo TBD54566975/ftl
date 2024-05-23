@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/kballard/go-shellquote"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/kballard/go-shellquote"
 
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
