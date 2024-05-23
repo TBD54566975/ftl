@@ -323,6 +323,26 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
+func TestExtractModuleSchemaParent(t *testing.T) {
+	prebuildTestModule(t, "testdata/parent")
+	if testing.Short() {
+		t.SkipNow()
+	}
+	r, err := ExtractModuleSchema("testdata/parent", &schema.Schema{})
+	assert.NoError(t, err)
+	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
+	actual := schema.Normalise(r.MustGet().Module)
+	expected := `module parent {
+			export data ChildStruct {
+			name String?
+		}
+		
+		export verb verb(Unit) parent.ChildStruct
+	}
+	`
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
+}
+
 func TestParsedirectives(t *testing.T) {
 	tests := []struct {
 		name     string

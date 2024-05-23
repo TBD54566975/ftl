@@ -1267,7 +1267,11 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		if named, ok := tnode.(*types.Named); ok {
-			return visitNamedRef(pctx, pos, named, isExported)
+			if !pctx.isPathInPkg(named.Obj().Pkg().Path()) {
+				// external named types get treated as refs
+				return visitNamedRef(pctx, pos, named, isExported)
+			}
+			// internal named types without decls are treated as basic types
 		}
 		switch underlying.Kind() {
 		case types.String:
