@@ -27,6 +27,7 @@ type One int
 
 func (One) typeEnum() {}
 
+//ftl:typealias export
 type Two string
 
 func (Two) typeEnum() {}

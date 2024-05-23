@@ -35,21 +35,21 @@ type MyTime time.Time
 
 func (MyTime) tag() {}
 
-type MyList []string
+type List []string
 
-func (MyList) tag() {}
+func (List) tag() {}
 
-type MyMap map[string]string
+type Map map[string]string
 
-func (MyMap) tag() {}
+func (Map) tag() {}
 
 type MyString string
 
 func (MyString) tag() {}
 
-type MyStruct struct{}
+type Struct struct{}
 
-func (MyStruct) tag() {}
+func (Struct) tag() {}
 
 type MyOption ftl.Option[string]
 
