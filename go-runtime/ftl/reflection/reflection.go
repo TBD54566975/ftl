@@ -56,10 +56,10 @@ func FuncRef(call any) Ref {
 	return goRefToFTLRef(ref)
 }
 
-var allowAnyPackageForTesting = false
+var AllowAnyPackageForTesting = false
 
 func goRefToFTLRef(ref string) Ref {
-	if !allowAnyPackageForTesting && !strings.HasPrefix(ref, "ftl/") {
+	if !AllowAnyPackageForTesting && !strings.HasPrefix(ref, "ftl/") {
 		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", ref))
 	}
 	parts := strings.Split(ref[strings.LastIndex(ref, "/")+1:], ".")
@@ -126,7 +126,7 @@ func reflectSchemaType(t reflect.Type) schema.Type {
 // Return the FTL module for a type or panic if it's not an FTL type.
 func moduleForType(t reflect.Type) string {
 	module := t.PkgPath()
-	if !allowAnyPackageForTesting && !strings.HasPrefix(module, "ftl/") {
+	if !AllowAnyPackageForTesting && !strings.HasPrefix(module, "ftl/") {
 		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", module))
 	}
 	parts := strings.Split(module, "/")

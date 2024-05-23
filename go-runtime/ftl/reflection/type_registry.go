@@ -22,11 +22,8 @@ type sumTypeVariant struct {
 	goType reflect.Type
 }
 
-// TypeRegistryOption is a functional option for configuring a [TypeRegistry].
-type TypeRegistryOption func(t *TypeRegistry)
-
 // WithSumType adds a sum type and its variants to the type registry.
-func WithSumType[Discriminator any](variants ...Discriminator) TypeRegistryOption {
+func WithSumType[Discriminator any](variants ...Discriminator) func(t *TypeRegistry) {
 	return func(t *TypeRegistry) {
 		variantMap := map[string]reflect.Type{}
 		for _, v := range variants {
@@ -39,7 +36,7 @@ func WithSumType[Discriminator any](variants ...Discriminator) TypeRegistryOptio
 
 // newTypeRegistry creates a new [TypeRegistry] for instantiating types by their qualified
 // name at runtime.
-func newTypeRegistry(options ...TypeRegistryOption) *TypeRegistry {
+func newTypeRegistry(options ...func(t *TypeRegistry)) *TypeRegistry {
 	t := &TypeRegistry{
 		sumTypes:                 map[reflect.Type][]sumTypeVariant{},
 		variantsToDiscriminators: map[reflect.Type]reflect.Type{},
@@ -51,19 +48,15 @@ func newTypeRegistry(options ...TypeRegistryOption) *TypeRegistry {
 }
 
 // Register applies all the provided options to the singleton TypeRegistry
-func Register(options ...TypeRegistryOption) {
+func Register(options ...func(t *TypeRegistry)) {
 	for _, o := range options {
 		o(singletonTypeRegistry)
 	}
 }
 
-// RegisterSumType registers a Go sum type with the type registry.
+// registerSumType registers a Go sum type with the type registry.
 //
 // Sum types are represented as enums in the FTL schema.
-func RegisterSumType(discriminator reflect.Type, variants map[string]reflect.Type) {
-	singletonTypeRegistry.registerSumType(discriminator, variants)
-}
-
 func (t *TypeRegistry) registerSumType(discriminator reflect.Type, variants map[string]reflect.Type) {
 	var values []sumTypeVariant
 	for name, v := range variants {
@@ -74,6 +67,12 @@ func (t *TypeRegistry) registerSumType(discriminator reflect.Type, variants map[
 		})
 	}
 	t.sumTypes[discriminator] = values
+}
+
+// ResetTypeRegistry clears the contents of the singleton type registry for tests to
+// guarantee determinism.
+func ResetTypeRegistry() {
+	singletonTypeRegistry = newTypeRegistry()
 }
 
 // IsSumTypeDiscriminator returns true if the given type is a sum type discriminator.

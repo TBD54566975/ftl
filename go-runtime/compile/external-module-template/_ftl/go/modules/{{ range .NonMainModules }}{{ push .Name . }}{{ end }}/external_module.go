@@ -7,7 +7,7 @@ import (
 {{- range $import, $alias := (.|imports)}}
   {{if $alias}}{{$alias}} {{end}}"{{$import}}"
 {{- end}}
-{{- $sumTypes := sumTypes $}}
+{{- $sumTypes := $ | sumTypes}}
 {{- if $sumTypes}}
 
   "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"

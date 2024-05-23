@@ -38,8 +38,8 @@ type AllTypesToReflect struct {
 }
 
 func TestReflectSchemaType(t *testing.T) {
-	allowAnyPackageForTesting = true
-	t.Cleanup(func() { allowAnyPackageForTesting = false })
+	AllowAnyPackageForTesting = true
+	t.Cleanup(func() { AllowAnyPackageForTesting = false })
 
 	Register(WithSumType[MySumType](Variant1{}, Variant2{}))
 
