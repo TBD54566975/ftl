@@ -305,7 +305,7 @@ func TestLease(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "lease already held") {
+			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "could not acquire lease") {
 				return fmt.Errorf("expected error but got: %#v", resp.Msg.GetError())
 			}
 			return wg.Wait()
