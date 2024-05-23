@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
@@ -31,6 +32,7 @@ type ModuleContext struct {
 	isTesting               bool
 	mockVerbs               map[schema.RefKey]Verb
 	allowDirectVerbBehavior bool
+	leaseClient             optional.Option[LeaseClient]
 }
 
 // Builder is used to build a ModuleContext
@@ -74,12 +76,13 @@ func (b *Builder) AddDatabases(databases map[string]Database) *Builder {
 }
 
 // UpdateForTesting marks the builder as part of a test environment and adds mock verbs and flags for other test features.
-func (b *Builder) UpdateForTesting(mockVerbs map[schema.RefKey]Verb, allowDirectVerbBehavior bool) *Builder {
+func (b *Builder) UpdateForTesting(mockVerbs map[schema.RefKey]Verb, allowDirectVerbBehavior bool, leaseClient LeaseClient) *Builder {
 	b.isTesting = true
 	for name, verb := range mockVerbs {
 		b.mockVerbs[name] = verb
 	}
 	b.allowDirectVerbBehavior = allowDirectVerbBehavior
+	b.leaseClient = optional.Some[LeaseClient](leaseClient)
 	return b
 }
 
@@ -139,6 +142,19 @@ func (m ModuleContext) GetDatabase(name string, dbType DBType) (*sql.DB, error) 
 		return nil, fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase(db) as an option with ftltest.Context(...)", name)
 	}
 	return db.db, nil
+}
+
+// LeaseClient is the interface for acquiring, heartbeating and releasing leases
+type LeaseClient interface {
+	// Returns ResourceExhausted if the lease is held.
+	Acquire(ctx context.Context, module string, key []string, ttl time.Duration) error
+	Heartbeat(ctx context.Context, module string, key []string, ttl time.Duration) error
+	Release(ctx context.Context, key []string) error
+}
+
+// MockLeaseClient provides a mock lease client when testing
+func (m ModuleContext) MockLeaseClient() optional.Option[LeaseClient] {
+	return m.leaseClient
 }
 
 // BehaviorForVerb returns what to do to execute a verb
