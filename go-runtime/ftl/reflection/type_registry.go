@@ -6,6 +6,9 @@ import (
 	"github.com/alecthomas/types/optional"
 )
 
+// singletonTypeRegistry is the global type registry that all public functions in this
+// package interface with. It is not truly threadsafe. However, everything is initialized
+// in init() calls, which are safe, and the type registry is never mutated afterwards.
 var singletonTypeRegistry = newTypeRegistry()
 
 // TypeRegistry is used for dynamic type resolution at runtime. It stores associations between sum type discriminators
