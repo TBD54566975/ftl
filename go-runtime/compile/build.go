@@ -372,6 +372,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 				if !d.IsValueEnum() && d.IsExported() {
 					out = append(out, d)
 				}
+			default:
 			}
 		}
 		return out
