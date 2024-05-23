@@ -395,6 +395,11 @@ service RunnerService {
   rpc Terminate(TerminateRequest) returns (RegisterRunnerRequest);
 }
 
+message ConfigRef {
+  optional string module = 1;
+  string name = 2;
+}
+
 enum ConfigProvider {
   // Write values inline in the configuration file.
   CONFIG_INLINE = 0;
@@ -404,37 +409,36 @@ enum ConfigProvider {
 }
 
 message ListConfigRequest {
-  ConfigProvider provider = 1;
+  optional ConfigProvider provider = 1;
+  optional string module = 2;
+  optional bool include_values = 3;
 }
 message ListConfigResponse {
-  repeated string keys = 1;
-}
-
-message GetConfigRequest {
-  ConfigProvider provider = 1;
-  repeated string keys = 2;
-}
-message GetConfigResponse {
   message Config {
-    string key = 1;
-    string value = 2;
+    string refPath = 1;
+    optional string value = 2;
   }
   repeated Config configs = 1;
 }
 
+message GetConfigRequest {
+  optional ConfigProvider provider = 1;
+  ConfigRef ref = 2;
+}
+message GetConfigResponse {
+  string value = 1;
+}
+
 message SetConfigRequest {
-  message Config {
-    string key = 1;
-    string value = 2;
-  }
-  ConfigProvider provider = 1;
-  repeated Config configs = 2;
+  optional ConfigProvider provider = 1;
+  ConfigRef ref = 2;
+  string value = 3;
 }
 message SetConfigResponse {}
 
 message UnsetConfigRequest {
-  ConfigProvider provider = 1;
-  repeated string keys = 2;
+  optional ConfigProvider provider = 1;
+  ConfigRef ref = 2;
 }
 message UnsetConfigResponse {}
 
@@ -453,37 +457,36 @@ enum SecretProvider {
 }
 
 message ListSecretsRequest {
-  SecretProvider provider = 1;
+  optional SecretProvider provider = 1;
+  optional string module = 2;
+  optional bool include_values = 3;
 }
 message ListSecretsResponse {
-  repeated string keys = 1;
-}
-
-message GetSecretRequest {
-  SecretProvider provider = 1;
-  repeated string keys = 2;
-}
-message GetSecretResponse {
   message Secret {
-    string key = 1;
-    string value = 2;
+    string refPath = 1;
+    optional string value = 2;
   }
   repeated Secret secrets = 1;
 }
 
+message GetSecretRequest {
+  optional SecretProvider provider = 1;
+  ConfigRef ref = 2;
+}
+message GetSecretResponse {
+  string value = 1;
+}
+
 message SetSecretRequest {
-  message Secret {
-    string key = 1;
-    string value = 2;
-  }
-  SecretProvider provider = 1;
-  repeated Secret secrets = 2;
+  optional SecretProvider provider = 1;
+  ConfigRef ref = 2;
+  string value = 3;
 }
 message SetSecretResponse {}
 
 message UnsetSecretRequest {
-  SecretProvider provider = 1;
-  repeated string keys = 2;
+  optional SecretProvider provider = 1;
+  ConfigRef ref = 2;
 }
 message UnsetSecretResponse {}
 
