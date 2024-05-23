@@ -8,6 +8,8 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
+// Acquire acquires a lease and waits 5s before releasing it.
+//
 //ftl:verb
 func Acquire(ctx context.Context) error {
 	logger := ftl.LoggerFromContext(ctx)

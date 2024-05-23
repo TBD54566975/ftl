@@ -2,6 +2,7 @@ package ftltest
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ func TestDoubleAcquireLease(t *testing.T) {
 	err := client.Acquire(ctx, module, keys1, 1*time.Second)
 	assert.NoError(t, err)
 	err = client.Acquire(ctx, module, keys1, 1*time.Second)
-	assert.Equal(t, err, ftl.ErrLeaseHeld)
+	assert.True(t, errors.Is(err, ftl.ErrLeaseHeld), "expected lease to already be held")
 }
 
 func TestAcquireTwoDifferentLeases(t *testing.T) {
