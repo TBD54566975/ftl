@@ -53,9 +53,9 @@ func TestExpiry(t *testing.T) {
 	// wait longer than ttl
 	time.Sleep(1 * time.Second)
 	err = client.Heartbeat(ctx, module, keys1, 500*time.Millisecond)
-	assert.NotEqual(t, err, nil, "expected error for heartbeating expired lease")
+	assert.Error(t, err, "expected error for heartbeating expired lease")
 	err = client.Release(ctx, keys1)
-	assert.NotEqual(t, err, nil, "expected error for heartbeating expired lease")
+	assert.Error(t, err, "expected error for heartbeating expired lease")
 
 	// try and acquire again
 	err = client.Acquire(ctx, module, keys1, 1*time.Second)

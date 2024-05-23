@@ -70,7 +70,7 @@ func Lease(ctx context.Context, ttl time.Duration, key ...string) (LeaseHandle, 
 	logger.Tracef("Acquiring lease")
 	err := client.Acquire(ctx, module, key, ttl)
 	if err != nil {
-		if err != ErrLeaseHeld {
+		if errors.Is(err, ErrLeaseHeld) {
 			return LeaseHandle{}, ErrLeaseHeld
 		}
 		logger.Warnf("Lease acquisition failed: %s", err)

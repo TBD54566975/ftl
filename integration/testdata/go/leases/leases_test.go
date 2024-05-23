@@ -22,7 +22,7 @@ func TestLease(t *testing.T) {
 	// test that we get an error acquiring another lease at the same time
 	time.Sleep(1 * time.Second)
 	err := Acquire(ctx)
-	assert.NotEqual(t, err, nil, "expected error for acquiring lease while another is held")
+	assert.Error(t, err, "expected error for acquiring lease while another is held")
 
 	assert.NoError(t, wg.Wait(), "expected no error acquiring the initial lease")
 }
