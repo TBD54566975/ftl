@@ -18,7 +18,7 @@ var (
 
 func TestDoubleAcquireLease(t *testing.T) {
 	ctx := context.Background()
-	client := newMockLeaseClient()
+	client := newFakeLeaseClient()
 
 	// Acquire a lease, and immediately try to acquire it again.
 	err := client.Acquire(ctx, module, keys1, 1*time.Second)
@@ -29,7 +29,7 @@ func TestDoubleAcquireLease(t *testing.T) {
 
 func TestAcquireTwoDifferentLeases(t *testing.T) {
 	ctx := context.Background()
-	client := newMockLeaseClient()
+	client := newFakeLeaseClient()
 
 	err := client.Acquire(ctx, module, keys1, 1*time.Second)
 	assert.NoError(t, err)
@@ -39,7 +39,7 @@ func TestAcquireTwoDifferentLeases(t *testing.T) {
 
 func TestExpiry(t *testing.T) {
 	ctx := context.Background()
-	client := newMockLeaseClient()
+	client := newFakeLeaseClient()
 
 	err := client.Acquire(ctx, module, keys1, 500*time.Millisecond)
 	assert.NoError(t, err)
