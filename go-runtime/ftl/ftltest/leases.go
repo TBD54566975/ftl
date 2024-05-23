@@ -11,18 +11,18 @@ import (
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
-// leaseClient is a simple in-memory lease client for testing.
+// mockLeaseClient is a simple in-memory lease client for testing.
 //
 // It does not include any checks on module names, as it assumes that all leases are within the module being tested
-type leaseClient struct {
+type mockLeaseClient struct {
 	lock      sync.Mutex
 	deadlines map[string]time.Time
 }
 
-var _ modulecontext.LeaseClient = &leaseClient{}
+var _ modulecontext.LeaseClient = &mockLeaseClient{}
 
-func newLeaseClient() *leaseClient {
-	return &leaseClient{
+func newMockLeaseClient() *mockLeaseClient {
+	return &mockLeaseClient{
 		deadlines: make(map[string]time.Time),
 	}
 }
@@ -31,7 +31,7 @@ func keyForKeys(keys []string) string {
 	return strings.Join(keys, "\n")
 }
 
-func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, ttl time.Duration) error {
+func (c *mockLeaseClient) Acquire(ctx context.Context, module string, key []string, ttl time.Duration) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -46,7 +46,7 @@ func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, 
 	return nil
 }
 
-func (c *leaseClient) Heartbeat(ctx context.Context, module string, key []string, ttl time.Duration) error {
+func (c *mockLeaseClient) Heartbeat(ctx context.Context, module string, key []string, ttl time.Duration) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -61,7 +61,7 @@ func (c *leaseClient) Heartbeat(ctx context.Context, module string, key []string
 	return fmt.Errorf("could not heartbeat lease: no active lease found")
 }
 
-func (c *leaseClient) Release(ctx context.Context, key []string) error {
+func (c *mockLeaseClient) Release(ctx context.Context, key []string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

@@ -53,7 +53,7 @@ func Context(options ...Option) context.Context {
 	}
 
 	builder := modulecontext.NewBuilder(name).AddConfigs(state.configs).AddSecrets(state.secrets).AddDatabases(state.databases)
-	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newLeaseClient())
+	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newMockLeaseClient())
 	return builder.Build().ApplyToContext(ctx)
 }
 
