@@ -333,9 +333,10 @@ func parseCall(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	if activeFuncDecl == nil {
 		return
 	}
+	expectedVerbName := strcase.ToLowerCamel(activeFuncDecl.Name.Name)
 	var activeVerb *schema.Verb
 	for _, decl := range pctx.module.Decls {
-		if aVerb, ok := decl.(*schema.Verb); ok && aVerb.Name == activeFuncDecl.Name.Name {
+		if aVerb, ok := decl.(*schema.Verb); ok && aVerb.Name == expectedVerbName {
 			activeVerb = aVerb
 			break
 		}
@@ -436,7 +437,7 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 		parseFSMTransition(pctx, call, fn, fsm)
 	}
 
-	// find variable so we can look for attached directives
+	// find variable declaration that we are currently in so we can look for attached directives
 	var variableDecl *ast.GenDecl
 	for i := len(stack) - 1; i >= 0; i-- {
 		if decl, ok := stack[i].(*ast.GenDecl); ok && decl.Tok == token.VAR {
@@ -460,7 +461,7 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 				MaxBackoff: retryDir.MaxBackoff,
 			})
 		} else {
-			pctx.errors.add(errorf(node, "unexpected directive %T", dir))
+			pctx.errors.add(errorf(node, "unexpected directive attached for FSM: %T", dir))
 		}
 	}
 }

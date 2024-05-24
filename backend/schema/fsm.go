@@ -67,7 +67,7 @@ func (f *FSM) String() string {
 	if len(f.Metadata) == 0 {
 		fmt.Fprintf(w, "fsm %s {\n", f.Name)
 	} else {
-		fmt.Fprintf(w, "fsm %s\n", f.Name)
+		fmt.Fprintf(w, "fsm %s", f.Name)
 		fmt.Fprint(w, indent(encodeMetadata(f.Metadata)))
 		fmt.Fprintf(w, "\n{\n")
 	}
