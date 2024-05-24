@@ -3,7 +3,7 @@ package goast
 
 import (
 	"fmt"
-	goast "go/ast" //nolint:all
+	goast "go/ast"
 )
 
 type VisitorFunc func(stack []goast.Node, next func() error) error
