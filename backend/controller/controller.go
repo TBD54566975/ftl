@@ -793,7 +793,8 @@ func (s *Service) callWithRequest(
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 
-	resp, err := client.verb.Call(ctx, req)
+	response, err := client.verb.Call(ctx, req)
+	resp := connect.NewResponse(response.Msg)
 	var maybeResponse optional.Option[*ftlv1.CallResponse]
 	if resp != nil {
 		maybeResponse = optional.Some(resp.Msg)

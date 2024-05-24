@@ -196,7 +196,8 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("no deployment"))
 	}
-	return deployment.plugin.Client.Call(ctx, req)
+	response, err := deployment.plugin.Client.Call(ctx, req)
+	return connect.NewResponse(response.Msg), err
 }
 
 func (s *Service) Reserve(ctx context.Context, c *connect.Request[ftlv1.ReserveRequest]) (*connect.Response[ftlv1.ReserveResponse], error) {
