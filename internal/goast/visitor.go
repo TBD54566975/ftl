@@ -3,38 +3,38 @@ package goast
 
 import (
 	"fmt"
-	. "go/ast" //nolint:all
+	goast "go/ast" //nolint:all
 )
 
-type VisitorFunc func(stack []Node, next func() error) error
+type VisitorFunc func(stack []goast.Node, next func() error) error
 
 // Visit all nodes in the Go AST rooted at node, in depth-first order.
 //
 // The visitor function can call next() to continue traversal.
 //
 // Note that this is based on a direct copy of ast.Walk.
-func Visit(node Node, v VisitorFunc) error {
-	return visitStack([]Node{node}, v)
+func Visit(node goast.Node, v VisitorFunc) error {
+	return visitStack([]goast.Node{node}, v)
 }
 
-func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
+func visitStack(stack []goast.Node, v VisitorFunc) error { //nolint:maintidx
 	return v(stack, func() error {
 		// walk children
 		// (the order of the cases matches the order
 		// of the corresponding node sqltypes in ast.go)
-		children := []Node{}
+		children := []goast.Node{}
 
 		switch n := stack[len(stack)-1].(type) {
 		// Comments and fields
-		case *Comment:
+		case *goast.Comment:
 			// nothing to do
 
-		case *CommentGroup:
+		case *goast.CommentGroup:
 			for _, c := range n.List {
 				children = append(children, c)
 			}
 
-		case *Field:
+		case *goast.Field:
 			if n.Doc != nil {
 				children = append(children, n.Doc)
 			}
@@ -51,24 +51,24 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, n.Comment)
 			}
 
-		case *FieldList:
+		case *goast.FieldList:
 			for _, f := range n.List {
 				children = append(children, f)
 			}
 
 		// Expressions
-		case *BadExpr, *Ident, *BasicLit:
+		case *goast.BadExpr, *goast.Ident, *goast.BasicLit:
 			// nothing to do
 
-		case *Ellipsis:
+		case *goast.Ellipsis:
 			if n.Elt != nil {
 				children = append(children, n.Elt)
 			}
 
-		case *FuncLit:
+		case *goast.FuncLit:
 			children = append(children, n.Type, n.Body)
 
-		case *CompositeLit:
+		case *goast.CompositeLit:
 			if n.Type != nil {
 				children = append(children, n.Type)
 			}
@@ -76,22 +76,22 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, c)
 			}
 
-		case *ParenExpr:
+		case *goast.ParenExpr:
 			children = append(children, n.X)
 
-		case *SelectorExpr:
+		case *goast.SelectorExpr:
 			children = append(children, n.X, n.Sel)
 
-		case *IndexExpr:
+		case *goast.IndexExpr:
 			children = append(children, n.X, n.Index)
 
-		case *IndexListExpr:
+		case *goast.IndexListExpr:
 			children = append(children, n.X)
 			for _, index := range n.Indices {
 				children = append(children, index)
 			}
 
-		case *SliceExpr:
+		case *goast.SliceExpr:
 			children = append(children, n.X)
 			if n.Low != nil {
 				children = append(children, n.Low)
@@ -103,41 +103,41 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, n.Max)
 			}
 
-		case *TypeAssertExpr:
+		case *goast.TypeAssertExpr:
 			children = append(children, n.X)
 			if n.Type != nil {
 				children = append(children, n.Type)
 			}
 
-		case *CallExpr:
+		case *goast.CallExpr:
 			children = append(children, n.Fun)
 			for _, c := range n.Args {
 				children = append(children, c)
 			}
 
-		case *StarExpr:
+		case *goast.StarExpr:
 			children = append(children, n.X)
 
-		case *UnaryExpr:
+		case *goast.UnaryExpr:
 			children = append(children, n.X)
 
-		case *BinaryExpr:
+		case *goast.BinaryExpr:
 			children = append(children, n.X, n.Y)
 
-		case *KeyValueExpr:
+		case *goast.KeyValueExpr:
 			children = append(children, n.Key, n.Value)
 
 		// Types
-		case *ArrayType:
+		case *goast.ArrayType:
 			if n.Len != nil {
 				children = append(children, n.Len)
 			}
 			children = append(children, n.Elt)
 
-		case *StructType:
+		case *goast.StructType:
 			children = append(children, n.Fields)
 
-		case *FuncType:
+		case *goast.FuncType:
 			if n.TypeParams != nil {
 				children = append(children, n.TypeParams)
 			}
@@ -148,38 +148,38 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, n.Results)
 			}
 
-		case *InterfaceType:
+		case *goast.InterfaceType:
 			children = append(children, n.Methods)
 
-		case *MapType:
+		case *goast.MapType:
 			children = append(children, n.Key, n.Value)
 
-		case *ChanType:
+		case *goast.ChanType:
 			children = append(children, n.Value)
 
 		// Statements
-		case *BadStmt:
+		case *goast.BadStmt:
 			// nothing to do
 
-		case *DeclStmt:
+		case *goast.DeclStmt:
 			children = append(children, n.Decl)
 
-		case *EmptyStmt:
+		case *goast.EmptyStmt:
 			// nothing to do
 
-		case *LabeledStmt:
+		case *goast.LabeledStmt:
 			children = append(children, n.Label, n.Stmt)
 
-		case *ExprStmt:
+		case *goast.ExprStmt:
 			children = append(children, n.X)
 
-		case *SendStmt:
+		case *goast.SendStmt:
 			children = append(children, n.Chan, n.Value)
 
-		case *IncDecStmt:
+		case *goast.IncDecStmt:
 			children = append(children, n.X)
 
-		case *AssignStmt:
+		case *goast.AssignStmt:
 			for _, c := range n.Lhs {
 				children = append(children, c)
 			}
@@ -187,28 +187,28 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, c)
 			}
 
-		case *GoStmt:
+		case *goast.GoStmt:
 			children = append(children, n.Call)
 
-		case *DeferStmt:
+		case *goast.DeferStmt:
 			children = append(children, n.Call)
 
-		case *ReturnStmt:
+		case *goast.ReturnStmt:
 			for _, c := range n.Results {
 				children = append(children, c)
 			}
 
-		case *BranchStmt:
+		case *goast.BranchStmt:
 			if n.Label != nil {
 				children = append(children, n.Label)
 			}
 
-		case *BlockStmt:
+		case *goast.BlockStmt:
 			for _, c := range n.List {
 				children = append(children, c)
 			}
 
-		case *IfStmt:
+		case *goast.IfStmt:
 			if n.Init != nil {
 				children = append(children, n.Init)
 			}
@@ -217,7 +217,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, n.Else)
 			}
 
-		case *CaseClause:
+		case *goast.CaseClause:
 			for _, c := range n.List {
 				children = append(children, c)
 			}
@@ -225,7 +225,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, c)
 			}
 
-		case *SwitchStmt:
+		case *goast.SwitchStmt:
 			if n.Init != nil {
 				children = append(children, n.Init)
 			}
@@ -234,13 +234,13 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 			}
 			children = append(children, n.Body)
 
-		case *TypeSwitchStmt:
+		case *goast.TypeSwitchStmt:
 			if n.Init != nil {
 				children = append(children, n.Init)
 			}
 			children = append(children, n.Assign, n.Body)
 
-		case *CommClause:
+		case *goast.CommClause:
 			if n.Comm != nil {
 				children = append(children, n.Comm)
 			}
@@ -248,10 +248,10 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, c)
 			}
 
-		case *SelectStmt:
+		case *goast.SelectStmt:
 			children = append(children, n.Body)
 
-		case *ForStmt:
+		case *goast.ForStmt:
 			if n.Init != nil {
 				children = append(children, n.Init)
 			}
@@ -263,7 +263,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 			}
 			children = append(children, n.Body)
 
-		case *RangeStmt:
+		case *goast.RangeStmt:
 			if n.Key != nil {
 				children = append(children, n.Key)
 			}
@@ -273,7 +273,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 			children = append(children, n.X, n.Body)
 
 		// Declarations
-		case *ImportSpec:
+		case *goast.ImportSpec:
 			if n.Doc != nil {
 				children = append(children, n.Doc)
 			}
@@ -285,7 +285,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, n.Comment)
 			}
 
-		case *ValueSpec:
+		case *goast.ValueSpec:
 			if n.Doc != nil {
 				children = append(children, n.Doc)
 			}
@@ -302,7 +302,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, n.Comment)
 			}
 
-		case *TypeSpec:
+		case *goast.TypeSpec:
 			if n.Doc != nil {
 				children = append(children, n.Doc)
 			}
@@ -315,10 +315,10 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, n.Comment)
 			}
 
-		case *BadDecl:
+		case *goast.BadDecl:
 			// nothing to do
 
-		case *GenDecl:
+		case *goast.GenDecl:
 			if n.Doc != nil {
 				children = append(children, n.Doc)
 			}
@@ -326,7 +326,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 				children = append(children, s)
 			}
 
-		case *FuncDecl:
+		case *goast.FuncDecl:
 			if n.Doc != nil {
 				children = append(children, n.Doc)
 			}
@@ -339,7 +339,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 			}
 
 		// Files and packages
-		case *File:
+		case *goast.File:
 			if n.Doc != nil {
 				children = append(children, n.Doc)
 			}
@@ -351,7 +351,7 @@ func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 			// visited already through the individual
 			// nodes
 
-		case *Package:
+		case *goast.Package:
 			for _, f := range n.Files {
 				children = append(children, f)
 			}
