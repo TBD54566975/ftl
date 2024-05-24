@@ -6,7 +6,7 @@ import (
 	. "go/ast" //nolint:all
 )
 
-type VisitorFunc func(node Node, next func() error) error
+type VisitorFunc func(stack []Node, next func() error) error
 
 // Visit all nodes in the Go AST rooted at node, in depth-first order.
 //
@@ -14,52 +14,46 @@ type VisitorFunc func(node Node, next func() error) error
 //
 // Note that this is based on a direct copy of ast.Walk.
 func Visit(node Node, v VisitorFunc) error { //nolint:maintidx
-	return v(node, func() error {
+	return visitStack([]Node{node}, v)
+}
+
+func visitStack(stack []Node, v VisitorFunc) error {
+	return v(stack, func() error {
 		// walk children
 		// (the order of the cases matches the order
 		// of the corresponding node sqltypes in ast.go)
-		switch n := node.(type) {
+		children := []Node{}
+
+		switch n := stack[len(stack)-1].(type) {
 		// Comments and fields
 		case *Comment:
 			// nothing to do
 
 		case *CommentGroup:
 			for _, c := range n.List {
-				if err := Visit(c, v); err != nil {
-					return err
-				}
+				children = append(children, c)
 			}
 
 		case *Field:
 			if n.Doc != nil {
-				if err := Visit(n.Doc, v); err != nil {
-					return err
-				}
+				children = append(children, n.Doc)
 			}
-			if err := visitList(n.Names, v); err != nil {
-				return err
+			for _, c := range n.Names {
+				children = append(children, c)
 			}
 			if n.Type != nil {
-				if err := Visit(n.Type, v); err != nil {
-					return err
-				}
+				children = append(children, n.Type)
 			}
 			if n.Tag != nil {
-				if err := Visit(n.Tag, v); err != nil {
-					return err
-				}
+				children = append(children, n.Tag)
 			}
 			if n.Comment != nil {
-				if err := Visit(n.Comment, v); err != nil {
-					return err
-				}
+				children = append(children, n.Comment)
 			}
 
 		case *FieldList:
 			for _, f := range n.List {
-				if err := Visit(f, v); err != nil {
-					return err
-				}
+				children = append(children, f)
 			}
 
 		// Expressions
@@ -68,420 +62,257 @@ func Visit(node Node, v VisitorFunc) error { //nolint:maintidx
 
 		case *Ellipsis:
 			if n.Elt != nil {
-				if err := Visit(n.Elt, v); err != nil {
-					return err
-				}
+				children = append(children, n.Elt)
 			}
 
 		case *FuncLit:
-			if err := Visit(n.Type, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Body, v); err != nil {
-				return err
-			}
+			children = append(children, n.Type, n.Body)
 
 		case *CompositeLit:
 			if n.Type != nil {
-				if err := Visit(n.Type, v); err != nil {
-					return err
-				}
+				children = append(children, n.Type)
 			}
-			if err := visitList(n.Elts, v); err != nil {
-				return err
+			for _, c := range n.Elts {
+				children = append(children, c)
 			}
 
 		case *ParenExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
+			children = append(children, n.X)
 
 		case *SelectorExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Sel, v); err != nil {
-				return err
-			}
+			children = append(children, n.X, n.Sel)
 
 		case *IndexExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Index, v); err != nil {
-				return err
-			}
+			children = append(children, n.X, n.Index)
 
 		case *IndexListExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
+			children = append(children, n.X)
 			for _, index := range n.Indices {
-				if err := Visit(index, v); err != nil {
-					return err
-				}
+				children = append(children, index)
 			}
 
 		case *SliceExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
+			children = append(children, n.X)
 			if n.Low != nil {
-				if err := Visit(n.Low, v); err != nil {
-					return err
-				}
+				children = append(children, n.Low)
 			}
 			if n.High != nil {
-				if err := Visit(n.High, v); err != nil {
-					return err
-				}
+				children = append(children, n.High)
 			}
 			if n.Max != nil {
-				if err := Visit(n.Max, v); err != nil {
-					return err
-				}
+				children = append(children, n.Max)
 			}
 
 		case *TypeAssertExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
+			children = append(children, n.X)
 			if n.Type != nil {
-				if err := Visit(n.Type, v); err != nil {
-					return err
-				}
+				children = append(children, n.Type)
 			}
 
 		case *CallExpr:
-			if err := Visit(n.Fun, v); err != nil {
-				return err
-			}
-			if err := visitList(n.Args, v); err != nil {
-				return err
+			children = append(children, n.Fun)
+			for _, c := range n.Args {
+				children = append(children, c)
 			}
 
 		case *StarExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
+			children = append(children, n.X)
 
 		case *UnaryExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
+			children = append(children, n.X)
 
 		case *BinaryExpr:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Y, v); err != nil {
-				return err
-			}
+			children = append(children, n.X, n.Y)
 
 		case *KeyValueExpr:
-			if err := Visit(n.Key, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Value, v); err != nil {
-				return err
-			}
+			children = append(children, n.Key, n.Value)
 
 		// Types
 		case *ArrayType:
 			if n.Len != nil {
-				if err := Visit(n.Len, v); err != nil {
-					return err
-				}
+				children = append(children, n.Len)
 			}
-			if err := Visit(n.Elt, v); err != nil {
-				return err
-			}
+			children = append(children, n.Elt)
 
 		case *StructType:
-			if err := Visit(n.Fields, v); err != nil {
-				return err
-			}
+			children = append(children, n.Fields)
 
 		case *FuncType:
 			if n.TypeParams != nil {
-				if err := Visit(n.TypeParams, v); err != nil {
-					return err
-				}
+				children = append(children, n.TypeParams)
 			}
 			if n.Params != nil {
-				if err := Visit(n.Params, v); err != nil {
-					return err
-				}
+				children = append(children, n.Params)
 			}
 			if n.Results != nil {
-				if err := Visit(n.Results, v); err != nil {
-					return err
-				}
+				children = append(children, n.Results)
 			}
 
 		case *InterfaceType:
-			if err := Visit(n.Methods, v); err != nil {
-				return err
-			}
+			children = append(children, n.Methods)
 
 		case *MapType:
-			if err := Visit(n.Key, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Value, v); err != nil {
-				return err
-			}
+			children = append(children, n.Key, n.Value)
 
 		case *ChanType:
-			if err := Visit(n.Value, v); err != nil {
-				return err
-			}
+			children = append(children, n.Value)
 
 		// Statements
 		case *BadStmt:
 			// nothing to do
 
 		case *DeclStmt:
-			if err := Visit(n.Decl, v); err != nil {
-				return err
-			}
+			children = append(children, n.Decl)
 
 		case *EmptyStmt:
 			// nothing to do
 
 		case *LabeledStmt:
-			if err := Visit(n.Label, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Stmt, v); err != nil {
-				return err
-			}
+			children = append(children, n.Label, n.Stmt)
 
 		case *ExprStmt:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
+			children = append(children, n.X)
 
 		case *SendStmt:
-			if err := Visit(n.Chan, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Value, v); err != nil {
-				return err
-			}
+			children = append(children, n.Chan, n.Value)
 
 		case *IncDecStmt:
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
+			children = append(children, n.X)
 
 		case *AssignStmt:
-			if err := visitList(n.Lhs, v); err != nil {
-				return err
+			for _, c := range n.Lhs {
+				children = append(children, c)
 			}
-			if err := visitList(n.Rhs, v); err != nil {
-				return err
+			for _, c := range n.Rhs {
+				children = append(children, c)
 			}
 
 		case *GoStmt:
-			if err := Visit(n.Call, v); err != nil {
-				return err
-			}
+			children = append(children, n.Call)
 
 		case *DeferStmt:
-			if err := Visit(n.Call, v); err != nil {
-				return err
-			}
+			children = append(children, n.Call)
 
 		case *ReturnStmt:
-			if err := visitList(n.Results, v); err != nil {
-				return err
+			for _, c := range n.Results {
+				children = append(children, c)
 			}
 
 		case *BranchStmt:
 			if n.Label != nil {
-				if err := Visit(n.Label, v); err != nil {
-					return err
-				}
+				children = append(children, n.Label)
 			}
 
 		case *BlockStmt:
-			if err := visitList(n.List, v); err != nil {
-				return err
+			for _, c := range n.List {
+				children = append(children, c)
 			}
 
 		case *IfStmt:
 			if n.Init != nil {
-				if err := Visit(n.Init, v); err != nil {
-					return err
-				}
+				children = append(children, n.Init)
 			}
-			if err := Visit(n.Cond, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Body, v); err != nil {
-				return err
-			}
+			children = append(children, n.Cond, n.Body)
 			if n.Else != nil {
-				if err := Visit(n.Else, v); err != nil {
-					return err
-				}
+				children = append(children, n.Else)
 			}
 
 		case *CaseClause:
-			if err := visitList(n.List, v); err != nil {
-				return err
+			for _, c := range n.List {
+				children = append(children, c)
 			}
-			if err := visitList(n.Body, v); err != nil {
-				return err
+			for _, c := range n.Body {
+				children = append(children, c)
 			}
 
 		case *SwitchStmt:
 			if n.Init != nil {
-				if err := Visit(n.Init, v); err != nil {
-					return err
-				}
+				children = append(children, n.Init)
 			}
 			if n.Tag != nil {
-				if err := Visit(n.Tag, v); err != nil {
-					return err
-				}
+				children = append(children, n.Tag)
 			}
-			if err := Visit(n.Body, v); err != nil {
-				return err
-			}
+			children = append(children, n.Body)
 
 		case *TypeSwitchStmt:
 			if n.Init != nil {
-				if err := Visit(n.Init, v); err != nil {
-					return err
-				}
+				children = append(children, n.Init)
 			}
-			if err := Visit(n.Assign, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Body, v); err != nil {
-				return err
-			}
+			children = append(children, n.Assign, n.Body)
 
 		case *CommClause:
 			if n.Comm != nil {
-				if err := Visit(n.Comm, v); err != nil {
-					return err
-				}
+				children = append(children, n.Comm)
 			}
-			if err := visitList(n.Body, v); err != nil {
-				return err
+			for _, c := range n.Body {
+				children = append(children, c)
 			}
 
 		case *SelectStmt:
-			if err := Visit(n.Body, v); err != nil {
-				return err
-			}
+			children = append(children, n.Body)
 
 		case *ForStmt:
 			if n.Init != nil {
-				if err := Visit(n.Init, v); err != nil {
-					return err
-				}
+				children = append(children, n.Init)
 			}
 			if n.Cond != nil {
-				if err := Visit(n.Cond, v); err != nil {
-					return err
-				}
+				children = append(children, n.Cond)
 			}
 			if n.Post != nil {
-				if err := Visit(n.Post, v); err != nil {
-					return err
-				}
+				children = append(children, n.Post)
 			}
-			if err := Visit(n.Body, v); err != nil {
-				return err
-			}
+			children = append(children, n.Body)
 
 		case *RangeStmt:
 			if n.Key != nil {
-				if err := Visit(n.Key, v); err != nil {
-					return err
-				}
+				children = append(children, n.Key)
 			}
 			if n.Value != nil {
-				if err := Visit(n.Value, v); err != nil {
-					return err
-				}
+				children = append(children, n.Value)
 			}
-			if err := Visit(n.X, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Body, v); err != nil {
-				return err
-			}
+			children = append(children, n.X, n.Body)
 
 		// Declarations
 		case *ImportSpec:
 			if n.Doc != nil {
-				if err := Visit(n.Doc, v); err != nil {
-					return err
-				}
+				children = append(children, n.Doc)
 			}
 			if n.Name != nil {
-				if err := Visit(n.Name, v); err != nil {
-					return err
-				}
+				children = append(children, n.Name)
 			}
-			if err := Visit(n.Path, v); err != nil {
-				return err
-			}
+			children = append(children, n.Path)
 			if n.Comment != nil {
-				if err := Visit(n.Comment, v); err != nil {
-					return err
-				}
+				children = append(children, n.Comment)
 			}
 
 		case *ValueSpec:
 			if n.Doc != nil {
-				if err := Visit(n.Doc, v); err != nil {
-					return err
-				}
+				children = append(children, n.Doc)
 			}
-			if err := visitList(n.Names, v); err != nil {
-				return err
+			for _, c := range n.Names {
+				children = append(children, c)
 			}
 			if n.Type != nil {
-				if err := Visit(n.Type, v); err != nil {
-					return err
-				}
+				children = append(children, n.Type)
 			}
-			if err := visitList(n.Values, v); err != nil {
-				return err
+			for _, c := range n.Values {
+				children = append(children, c)
 			}
 			if n.Comment != nil {
-				if err := Visit(n.Comment, v); err != nil {
-					return err
-				}
+				children = append(children, n.Comment)
 			}
 
 		case *TypeSpec:
 			if n.Doc != nil {
-				if err := Visit(n.Doc, v); err != nil {
-					return err
-				}
+				children = append(children, n.Doc)
 			}
-			if err := Visit(n.Name, v); err != nil {
-				return err
-			}
+			children = append(children, n.Name)
 			if n.TypeParams != nil {
-				if err := Visit(n.TypeParams, v); err != nil {
-					return err
-				}
+				children = append(children, n.TypeParams)
 			}
-			if err := Visit(n.Type, v); err != nil {
-				return err
-			}
+			children = append(children, n.Type)
 			if n.Comment != nil {
-				if err := Visit(n.Comment, v); err != nil {
-					return err
-				}
+				children = append(children, n.Comment)
 			}
 
 		case *BadDecl:
@@ -489,51 +320,32 @@ func Visit(node Node, v VisitorFunc) error { //nolint:maintidx
 
 		case *GenDecl:
 			if n.Doc != nil {
-				if err := Visit(n.Doc, v); err != nil {
-					return err
-				}
+				children = append(children, n.Doc)
 			}
 			for _, s := range n.Specs {
-				if err := Visit(s, v); err != nil {
-					return err
-				}
+				children = append(children, s)
 			}
 
 		case *FuncDecl:
 			if n.Doc != nil {
-				if err := Visit(n.Doc, v); err != nil {
-					return err
-				}
+				children = append(children, n.Doc)
 			}
 			if n.Recv != nil {
-				if err := Visit(n.Recv, v); err != nil {
-					return err
-				}
+				children = append(children, n.Recv)
 			}
-			if err := Visit(n.Name, v); err != nil {
-				return err
-			}
-			if err := Visit(n.Type, v); err != nil {
-				return err
-			}
+			children = append(children, n.Name, n.Type)
 			if n.Body != nil {
-				if err := Visit(n.Body, v); err != nil {
-					return err
-				}
+				children = append(children, n.Body)
 			}
 
 		// Files and packages
 		case *File:
 			if n.Doc != nil {
-				if err := Visit(n.Doc, v); err != nil {
-					return err
-				}
+				children = append(children, n.Doc)
 			}
-			if err := Visit(n.Name, v); err != nil {
-				return err
-			}
-			if err := visitList(n.Decls, v); err != nil {
-				return err
+			children = append(children, n.Name)
+			for _, c := range n.Decls {
+				children = append(children, c)
 			}
 			// don't walk n.Comments - they have been
 			// visited already through the individual
@@ -541,23 +353,19 @@ func Visit(node Node, v VisitorFunc) error { //nolint:maintidx
 
 		case *Package:
 			for _, f := range n.Files {
-				if err := Visit(f, v); err != nil {
-					return err
-				}
+				children = append(children, f)
 			}
 		default:
 			panic(fmt.Sprintf("ast.Walk: unexpected node type %T", n))
 		}
 
+		for _, child := range children {
+			stack = append(stack, child)
+			if err := visitStack(stack, v); err != nil {
+				return err
+			}
+			stack = stack[:len(stack)-1]
+		}
 		return nil
 	})
-}
-
-func visitList[T Node](list []T, v VisitorFunc) error {
-	for _, x := range list {
-		if err := Visit(x, v); err != nil {
-			return err
-		}
-	}
-	return nil
 }
