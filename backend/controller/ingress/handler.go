@@ -62,7 +62,7 @@ func Handle(
 	switch msg := resp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Body:
 		verb := &schema.Verb{}
-		err = sch.ResolveRefToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
+		err = sch.ResolveToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

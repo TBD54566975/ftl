@@ -27,7 +27,7 @@ func ResponseForVerb(sch *schema.Schema, verb *schema.Verb, response HTTPRespons
 		return nil, nil, nil
 	}
 
-	bodyData, err := sch.ResolveRefMonomorphised(responseRef)
+	bodyData, err := sch.ResolveMonomorphised(responseRef)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to resolve response data type: %w", err)
 	}

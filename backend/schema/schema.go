@@ -47,19 +47,19 @@ func (s *Schema) Hash() [sha256.Size]byte {
 	return sha256.Sum256([]byte(s.String()))
 }
 
-// ResolveRefMonomorphised -
+// ResolveMonomorphised resolves a Ref to a monomorphised Data.
 // If a Ref is not found, returns ErrNotFound.
-func (s *Schema) ResolveRefMonomorphised(ref *Ref) (*Data, error) {
+func (s *Schema) ResolveMonomorphised(ref *Ref) (*Data, error) {
 	out := &Data{}
 
-	if err := s.ResolveRefToType(ref, out); err != nil {
+	if err := s.ResolveToType(ref, out); err != nil {
 		// If a ref is not found, returns ErrNotFound
 		return nil, err
 	}
 	return out.Monomorphise(ref)
 }
 
-func (s *Schema) ResolveRef(ref *Ref) Decl {
+func (s *Schema) Resolve(ref *Ref) Decl {
 	for _, module := range s.Modules {
 		if module.Name == ref.Module {
 			for _, decl := range module.Decls {
@@ -72,7 +72,7 @@ func (s *Schema) ResolveRef(ref *Ref) Decl {
 	return nil
 }
 
-func (s *Schema) ResolveRefToType(ref *Ref, out Decl) error {
+func (s *Schema) ResolveToType(ref *Ref, out Decl) error {
 	if reflect.ValueOf(out).Kind() != reflect.Ptr {
 		return fmt.Errorf("out parameter is not a pointer")
 	}

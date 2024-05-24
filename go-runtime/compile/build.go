@@ -15,13 +15,14 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/TBD54566975/scaffolder"
 	sets "github.com/deckarep/golang-set/v2"
 	gomaps "golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -580,7 +581,7 @@ func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalE
 	var externalTypeEnums []externalEnum
 	err := schema.Visit(&combinedSch, func(n schema.Node, next func() error) error {
 		if ref, ok := n.(*schema.Ref); ok && ref.Module != "" && ref.Module != module.Name {
-			decl := sch.ResolveRef(ref)
+			decl := sch.Resolve(ref)
 			if e, ok := decl.(*schema.Enum); ok && !e.IsValueEnum() {
 				externalTypeEnums = append(externalTypeEnums, externalEnum{
 					ref:      ref,
