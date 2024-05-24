@@ -69,7 +69,7 @@ func ValidateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error 
 }
 
 func getBodyField(ref *schema.Ref, sch *schema.Schema) (*schema.Field, error) {
-	data, err := sch.ResolveRefMonomorphised(ref)
+	data, err := sch.ResolveMonomorphised(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		}
 		typeMatches = true
 	case *schema.Ref:
-		decl := sch.ResolveRef(fieldType)
+		decl := sch.Resolve(fieldType)
 		if decl == nil {
 			return fmt.Errorf("unknown ref %v", fieldType)
 		}

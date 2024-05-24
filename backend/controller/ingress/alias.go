@@ -12,9 +12,9 @@ func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser 
 	}
 	switch t := t.(type) {
 	case *schema.Ref:
-		switch decl := sch.ResolveRef(t).(type) {
+		switch decl := sch.Resolve(t).(type) {
 		case *schema.Data:
-			data, err := sch.ResolveRefMonomorphised(t)
+			data, err := sch.ResolveMonomorphised(t)
 			if err != nil {
 				return fmt.Errorf("%s: failed to resolve data type: %w", t.Pos, err)
 			}
