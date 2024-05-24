@@ -13,11 +13,11 @@ type VisitorFunc func(stack []Node, next func() error) error
 // The visitor function can call next() to continue traversal.
 //
 // Note that this is based on a direct copy of ast.Walk.
-func Visit(node Node, v VisitorFunc) error { //nolint:maintidx
+func Visit(node Node, v VisitorFunc) error {
 	return visitStack([]Node{node}, v)
 }
 
-func visitStack(stack []Node, v VisitorFunc) error {
+func visitStack(stack []Node, v VisitorFunc) error { //nolint:maintidx
 	return v(stack, func() error {
 		// walk children
 		// (the order of the cases matches the order
