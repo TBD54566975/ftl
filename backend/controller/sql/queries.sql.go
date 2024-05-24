@@ -661,6 +661,20 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	return items, nil
 }
 
+const getConfig = `-- name: GetConfig :one
+SELECT accessor
+FROM configs
+WHERE module = $1
+  AND name = $2
+`
+
+func (q *Queries) GetConfig(ctx context.Context, module string, name string) (string, error) {
+	row := q.db.QueryRow(ctx, getConfig, module, name)
+	var accessor string
+	err := row.Scan(&accessor)
+	return accessor, err
+}
+
 const getCronJobs = `-- name: GetCronJobs :many
 SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
 FROM cron_jobs j
@@ -1652,6 +1666,37 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 	return count, err
 }
 
+const listConfigs = `-- name: ListConfigs :many
+SELECT id, module, name, accessor
+FROM configs
+ORDER BY module, name
+`
+
+func (q *Queries) ListConfigs(ctx context.Context) ([]Config, error) {
+	rows, err := q.db.Query(ctx, listConfigs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Config
+	for rows.Next() {
+		var i Config
+		if err := rows.Scan(
+			&i.ID,
+			&i.Module,
+			&i.Name,
+			&i.Accessor,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const loadAsyncCall = `-- name: LoadAsyncCall :one
 SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff
 FROM async_calls
@@ -1774,6 +1819,16 @@ func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Tim
 		&i.Labels,
 	)
 	return i, err
+}
+
+const setConfig = `-- name: SetConfig :exec
+INSERT INTO configs (module, name, accessor)
+VALUES ($1, $2, $3)
+`
+
+func (q *Queries) SetConfig(ctx context.Context, module string, name string, accessor string) error {
+	_, err := q.db.Exec(ctx, setConfig, module, name, accessor)
+	return err
 }
 
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
@@ -1940,6 +1995,16 @@ func (q *Queries) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const unsetConfig = `-- name: UnsetConfig :exec
+DELETE FROM configs
+WHERE module = $1 AND name = $2
+`
+
+func (q *Queries) UnsetConfig(ctx context.Context, module string, name string) error {
+	_, err := q.db.Exec(ctx, unsetConfig, module, name)
+	return err
 }
 
 const upsertController = `-- name: UpsertController :one

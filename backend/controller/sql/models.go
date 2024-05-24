@@ -342,6 +342,13 @@ type AsyncCall struct {
 	MaxBackoff        time.Duration
 }
 
+type Config struct {
+	ID       int64
+	Module   string
+	Name     string
+	Accessor string
+}
+
 type Controller struct {
 	ID       int64
 	Key      model.ControllerKey

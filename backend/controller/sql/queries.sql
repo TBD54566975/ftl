@@ -603,7 +603,6 @@ WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
 
-
 -- name: FailFSMInstance :one
 UPDATE fsm_instances
 SET
@@ -613,3 +612,22 @@ SET
 WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
+
+-- name: GetConfig :one
+SELECT accessor
+FROM configs
+WHERE module = @module
+  AND name = @name;
+
+-- name: ListConfigs :many
+SELECT *
+FROM configs
+ORDER BY module, name;
+
+-- name: SetConfig :exec
+INSERT INTO configs (module, name, accessor)
+VALUES ($1, $2, $3);
+
+-- name: UnsetConfig :exec
+DELETE FROM configs
+WHERE module = @module AND name = @name;
