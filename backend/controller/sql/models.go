@@ -343,10 +343,10 @@ type AsyncCall struct {
 }
 
 type Config struct {
-	ID       int64
-	Module   string
-	Name     string
-	Accessor string
+	ID     int64
+	Module optional.Option[string]
+	Name   string
+	Value  []byte
 }
 
 type Controller struct {

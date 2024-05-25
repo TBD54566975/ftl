@@ -46,14 +46,14 @@ func TestDBResolverRoundTrip(t *testing.T) {
 	}
 
 	ctx, cr := setup(t)
-	u := URL("db://asdfasdf")
+	u := URL("db://ImFzZGYi") // asdf
 	for _, test := range tests {
 		t.Run(test.TestName, func(t *testing.T) {
 			if test.PresetGlobal {
 				err := cr.Set(ctx, configuration.Ref{
 					Module: optional.None[string](),
 					Name:   "configname",
-				}, URL("db://qwerty"))
+				}, URL("db://InF3ZXJ0eSI")) // qwerty
 				assert.NoError(t, err)
 			}
 			err := cr.Set(ctx, configuration.Ref{

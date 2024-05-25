@@ -614,10 +614,13 @@ WHERE
 RETURNING true;
 
 -- name: GetConfig :one
-SELECT accessor
+SELECT value
 FROM configs
-WHERE module = @module
-  AND name = @name;
+WHERE
+  (module IS NULL OR module = @module)
+  AND name = @name
+ORDER BY module NULLS LAST
+LIMIT 1;
 
 -- name: ListConfigs :many
 SELECT *
@@ -625,7 +628,7 @@ FROM configs
 ORDER BY module, name;
 
 -- name: SetConfig :exec
-INSERT INTO configs (module, name, accessor)
+INSERT INTO configs (module, name, value)
 VALUES ($1, $2, $3);
 
 -- name: UnsetConfig :exec

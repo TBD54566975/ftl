@@ -6,7 +6,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/common/configuration"
-	"github.com/alecthomas/types/optional"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // DatabaseResolver loads values a project's configuration from the given database.
@@ -26,56 +26,42 @@ func (d *DAL) NewConfigResolver() DatabaseResolver {
 }
 
 func (d DatabaseResolver) Get(ctx context.Context, ref configuration.Ref) (*url.URL, error) {
-	module, moduleOk := ref.Module.Get()
-	if !moduleOk {
-		module = "" // global
-	}
-	accessor, err := d.db.GetConfig(ctx, module, ref.Name)
+	value, err := d.db.GetConfig(ctx, ref.Module, ref.Name)
 	if err != nil {
-		// If we could not find this config within the module, then try getting
-		// again with scope set to global
-		if moduleOk {
-			return d.Get(ctx, configuration.Ref{
-				Module: optional.None[string](),
-				Name:   ref.Name,
-			})
-		}
 		return nil, configuration.ErrNotFound
 	}
-	return url.Parse(accessor)
+	p := configuration.DBProvider{true}
+	return p.Store(ctx, ref, []byte(value))
 }
 
 func (d DatabaseResolver) List(ctx context.Context) ([]configuration.Entry, error) {
 	configs, err := d.db.ListConfigs(ctx)
 	if err != nil {
-		return nil, err
+		return nil, translatePGError(err)
 	}
-	entries := []configuration.Entry{}
-	for _, c := range configs {
-		u, err := url.Parse(c.Accessor)
-		if err != nil {
-			return nil, err
-		}
-		entries = append(entries, configuration.Entry{
-			Ref:      configuration.NewRef(c.Module, c.Name),
+	p := configuration.DBProvider{true}
+	return slices.Map(configs, func(c sql.Config) configuration.Entry {
+		ref := configuration.Ref{c.Module, c.Name}
+		// err can be ignored because Store always returns a nil error
+		u, _ := p.Store(ctx, ref, c.Value)
+		return configuration.Entry{
+			Ref:      ref,
 			Accessor: u,
-		})
-	}
-	return entries, nil
+		}
+	}), nil
 }
 
 func (d DatabaseResolver) Set(ctx context.Context, ref configuration.Ref, key *url.URL) error {
-	return d.db.SetConfig(ctx, moduleAsString(ref), ref.Name, key.String())
+	p := configuration.DBProvider{true}
+	value, err := p.Load(ctx, ref, key)
+	if err != nil {
+		return err
+	}
+	err = d.db.SetConfig(ctx, ref.Module, ref.Name, value)
+	return translatePGError(err)
 }
 
 func (d DatabaseResolver) Unset(ctx context.Context, ref configuration.Ref) error {
-	return d.db.UnsetConfig(ctx, moduleAsString(ref), ref.Name)
-}
-
-func moduleAsString(ref configuration.Ref) string {
-	module, ok := ref.Module.Get()
-	if !ok {
-		return ""
-	}
-	return module
+	err := d.db.UnsetConfig(ctx, ref.Module, ref.Name)
+	return translatePGError(err)
 }

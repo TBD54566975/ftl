@@ -2,6 +2,8 @@ package configuration
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"net/url"
 )
 
@@ -18,11 +20,16 @@ func (DBProvider) Key() string         { return "db" }
 func (d DBProvider) Writer() bool { return d.DB }
 
 func (DBProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	return []byte(key.Host), nil
+	data, err := base64.RawURLEncoding.DecodeString(key.Host)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64 data in db configuration: %w", err)
+	}
+	return data, nil
 }
 
 func (DBProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	return &url.URL{Scheme: "db", Host: string(value)}, nil
+	b64 := base64.RawURLEncoding.EncodeToString(value)
+	return &url.URL{Scheme: "db", Host: b64}, nil
 }
 
 func (DBProvider) Delete(ctx context.Context, ref Ref) error {

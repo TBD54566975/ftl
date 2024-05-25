@@ -10,8 +10,8 @@ import (
 
 func TestDBProvider(t *testing.T) {
 	ctx := context.Background()
-	u := URL("db://asdf")
-	b := []byte("asdf")
+	u := URL("db://ImFzZGYi")
+	b := []byte(`"asdf"`)
 	ref := Ref{
 		Module: optional.None[string](),
 		Name:   "name",
