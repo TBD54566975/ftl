@@ -30,8 +30,8 @@ func (d DatabaseResolver) Get(ctx context.Context, ref configuration.Ref) (*url.
 	if err != nil {
 		return nil, configuration.ErrNotFound
 	}
-	p := configuration.DBProvider{true}
-	return p.Store(ctx, ref, []byte(value))
+	p := configuration.DBProvider{DB: true}
+	return p.Store(ctx, ref, value)
 }
 
 func (d DatabaseResolver) List(ctx context.Context) ([]configuration.Entry, error) {
@@ -39,9 +39,9 @@ func (d DatabaseResolver) List(ctx context.Context) ([]configuration.Entry, erro
 	if err != nil {
 		return nil, translatePGError(err)
 	}
-	p := configuration.DBProvider{true}
+	p := configuration.DBProvider{DB: true}
 	return slices.Map(configs, func(c sql.Config) configuration.Entry {
-		ref := configuration.Ref{c.Module, c.Name}
+		ref := configuration.Ref{Module: c.Module, Name: c.Name}
 		// err can be ignored because Store always returns a nil error
 		u, _ := p.Store(ctx, ref, c.Value)
 		return configuration.Entry{
@@ -52,7 +52,7 @@ func (d DatabaseResolver) List(ctx context.Context) ([]configuration.Entry, erro
 }
 
 func (d DatabaseResolver) Set(ctx context.Context, ref configuration.Ref, key *url.URL) error {
-	p := configuration.DBProvider{true}
+	p := configuration.DBProvider{DB: true}
 	value, err := p.Load(ctx, ref, key)
 	if err != nil {
 		return err
