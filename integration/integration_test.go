@@ -312,3 +312,49 @@ func TestLease(t *testing.T) {
 		},
 	)
 }
+
+func TestFSM(t *testing.T) {
+	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
+	t.Setenv("FSM_LOG_FILE", logFilePath)
+	fsmInState := func(instance, status, state string) action {
+		return queryRow("ftl", fmt.Sprintf(`
+			SELECT status, current_state
+			FROM fsm_instances
+			WHERE fsm = 'fsm.fsm' AND key = '%s'
+		`, instance), status, state)
+	}
+	run(t, "",
+		copyModule("fsm"),
+		deploy("fsm"),
+
+		call("fsm", "sendOne", obj{"instance": "1"}, func(response obj) error { return nil }),
+		call("fsm", "sendOne", obj{"instance": "2"}, func(response obj) error { return nil }),
+		fileContains(logFilePath, "start 1"),
+		fileContains(logFilePath, "start 2"),
+		fsmInState("1", "running", "fsm.start"),
+		fsmInState("2", "running", "fsm.start"),
+
+		call("fsm", "sendOne", obj{"instance": "1"}, func(response obj) error { return nil }),
+		fileContains(logFilePath, "middle 1"),
+		fsmInState("1", "running", "fsm.middle"),
+
+		call("fsm", "sendOne", obj{"instance": "1"}, func(response obj) error { return nil }),
+		fileContains(logFilePath, "end 1"),
+		fsmInState("1", "completed", "fsm.end"),
+
+		fail(call("fsm", "sendOne", obj{"instance": "1"}, func(response obj) error { return nil }),
+			"FSM instance 1 is already in state fsm.end"),
+
+		// Invalid state transition
+		fail(call("fsm", "sendTwo", obj{"instance": "2"}, func(response obj) error { return nil }),
+			"invalid state transition"),
+
+		call("fsm", "sendOne", obj{"instance": "2"}, func(response obj) error { return nil }),
+		fileContains(logFilePath, "middle 2"),
+		fsmInState("2", "running", "fsm.middle"),
+
+		// Invalid state transition
+		fail(call("fsm", "sendTwo", obj{"instance": "2"}, func(response obj) error { return nil }),
+			"invalid state transition"),
+	)
+}

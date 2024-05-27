@@ -37,7 +37,7 @@ func (s *Config) ToProto() protoreflect.ProtoMessage {
 		Pos:      posToProto(s.Pos),
 		Comments: s.Comments,
 		Name:     s.Name,
-		Type:     typeToProto(s.Type),
+		Type:     TypeToProto(s.Type),
 	}
 }
 
@@ -50,6 +50,6 @@ func ConfigFromProto(p *schemapb.Config) *Config {
 		Pos:      posFromProto(p.Pos),
 		Comments: p.Comments,
 		Name:     p.Name,
-		Type:     typeToSchema(p.Type),
+		Type:     TypeFromProto(p.Type),
 	}
 }

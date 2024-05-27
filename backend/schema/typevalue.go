@@ -17,7 +17,7 @@ type TypeValue struct {
 func (t *TypeValue) ToProto() proto.Message {
 	return &schemapb.TypeValue{
 		Pos:   posToProto(t.Pos),
-		Value: typeToProto(t.Value),
+		Value: TypeToProto(t.Value),
 	}
 }
 

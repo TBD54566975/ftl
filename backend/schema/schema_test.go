@@ -257,12 +257,12 @@ func TestParsing(t *testing.T) {
 		{name: "InvalidRequestRef",
 			input: `module test { verb test(InvalidRequest) InvalidResponse}`,
 			errors: []string{
-				"1:25-25: unknown reference \"InvalidRequest\"",
-				"1:41-41: unknown reference \"InvalidResponse\""}},
+				"1:25-25: unknown reference \"InvalidRequest\", is the type annotated and exported?",
+				"1:41-41: unknown reference \"InvalidResponse\", is the type annotated and exported?"}},
 		{name: "InvalidRef",
 			input: `module test { data Data { user user.User }}`,
 			errors: []string{
-				"1:32-32: unknown reference \"user.User\""}},
+				"1:32-32: unknown reference \"user.User\", is the type annotated and exported?"}},
 		{name: "InvalidMetadataSyntax",
 			input: `module test { data Data {} calls }`,
 			errors: []string{
@@ -273,7 +273,7 @@ func TestParsing(t *testing.T) {
 			input: `module test { data Data {} +calls verb }`,
 			errors: []string{
 				"1:28-28: metadata \"+calls verb\" is not valid on data structures",
-				"1:35-35: unknown reference \"verb\"",
+				"1:35-35: unknown reference \"verb\", is the type annotated and exported?",
 			}},
 		{name: "KeywordAsName",
 			input:  `module int { data String { name String } verb verb(String) String }`,

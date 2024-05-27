@@ -8,7 +8,7 @@ require (
 	connectrpc.com/otelconnect v0.7.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/TBD54566975/scaffolder v1.0.0
-	github.com/alecthomas/assert/v2 v2.9.0
+	github.com/alecthomas/assert/v2 v2.10.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/kong v0.9.0

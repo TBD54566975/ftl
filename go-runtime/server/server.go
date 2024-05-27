@@ -172,3 +172,7 @@ func (m *moduleServer) AcquireLease(context.Context, *connect.BidiStream[ftlv1.A
 func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
+
+func (m *moduleServer) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("SendFSMEvent not implemented"))
+}

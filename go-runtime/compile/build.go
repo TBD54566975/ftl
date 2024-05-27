@@ -580,14 +580,23 @@ func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalE
 	}
 	var externalTypeEnums []externalEnum
 	err := schema.Visit(&combinedSch, func(n schema.Node, next func() error) error {
-		if ref, ok := n.(*schema.Ref); ok && ref.Module != "" && ref.Module != module.Name {
-			decl := sch.Resolve(ref)
-			if e, ok := decl.(*schema.Enum); ok && !e.IsValueEnum() {
-				externalTypeEnums = append(externalTypeEnums, externalEnum{
-					ref:      ref,
-					resolved: e,
-				})
-			}
+		ref, ok := n.(*schema.Ref)
+		if !ok {
+			return next()
+		}
+		if ref.Module != "" && ref.Module != module.Name {
+			return next()
+		}
+
+		decl, ok := sch.Resolve(ref).Get()
+		if !ok {
+			return next()
+		}
+		if e, ok := decl.(*schema.Enum); ok && !e.IsValueEnum() {
+			externalTypeEnums = append(externalTypeEnums, externalEnum{
+				ref:      ref,
+				resolved: e,
+			})
 		}
 		return next()
 	})

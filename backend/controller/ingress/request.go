@@ -103,7 +103,7 @@ func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, ref *schem
 	}
 
 	if ref, ok := bodyField.Type.(*schema.Ref); ok {
-		if _, ok := sch.Resolve(ref).(*schema.Data); ok {
+		if err := sch.ResolveToType(ref, &schema.Data{}); err == nil {
 			return buildRequestMap(route, r, ref, sch)
 		}
 	}

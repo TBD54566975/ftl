@@ -180,8 +180,8 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 		}
 		typeMatches = true
 	case *schema.Ref:
-		decl := sch.Resolve(fieldType)
-		if decl == nil {
+		decl, ok := sch.Resolve(fieldType).Get()
+		if !ok {
 			return fmt.Errorf("unknown ref %v", fieldType)
 		}
 

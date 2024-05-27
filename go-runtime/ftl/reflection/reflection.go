@@ -56,6 +56,15 @@ func FuncRef(call any) Ref {
 	return goRefToFTLRef(ref)
 }
 
+// TypeFromValue reflects a schema.Type from a Go value.
+//
+// The passed value must be a pointer to a value of the desired type. This is to
+// ensure that interface values aren't dereferenced automatically by the Go
+// compiler.
+func TypeFromValue[T any, TP interface{ *T }](v TP) schema.Type {
+	return ReflectTypeToSchemaType(reflect.TypeOf(v).Elem())
+}
+
 var AllowAnyPackageForTesting = false
 
 func goRefToFTLRef(ref string) Ref {
@@ -66,23 +75,26 @@ func goRefToFTLRef(ref string) Ref {
 	return Ref{parts[len(parts)-2], strcase.ToLowerCamel(parts[len(parts)-1])}
 }
 
-// Reflect returns the FTL schema for a Go type.
-func reflectSchemaType(t reflect.Type) schema.Type {
+// ReflectTypeToSchemaType returns the FTL schema for a Go reflect.Type.
+func ReflectTypeToSchemaType(t reflect.Type) schema.Type {
 	switch t.Kind() {
 	case reflect.Struct:
 		// Handle well-known types.
 		if reflect.TypeFor[time.Time]() == t {
 			return &schema.Time{}
 		}
+		// Check if it's a sum-type discriminator.
+		if sumType, ok := GetDiscriminatorByVariant(t).Get(); ok {
+			return refForType(sumType)
+		}
 
-		// User-defined types.
 		return refForType(t)
 
 	case reflect.Slice:
-		return &schema.Array{Element: reflectSchemaType(t.Elem())}
+		return &schema.Array{Element: ReflectTypeToSchemaType(t.Elem())}
 
 	case reflect.Map:
-		return &schema.Map{Key: reflectSchemaType(t.Key()), Value: reflectSchemaType(t.Elem())}
+		return &schema.Map{Key: ReflectTypeToSchemaType(t.Key()), Value: ReflectTypeToSchemaType(t.Elem())}
 
 	case reflect.Bool:
 		return &schema.Bool{}

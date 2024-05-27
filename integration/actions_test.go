@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -188,16 +189,46 @@ func fileExists(path string) action {
 	}
 }
 
-// Assert that a file exists in the working directory and contains the given text.
-func fileContains(path, content string) action {
+// Assert that a file exists and its content contains the given text.
+//
+// If "path" is relative it will be to the working directory.
+func fileContains(path, needle string) action {
 	return func(t testing.TB, ic testContext) error {
-		infof("Checking that %s contains %q", path, content)
-		data, err := os.ReadFile(filepath.Join(ic.workDir, path))
+		absPath := path
+		if !filepath.IsAbs(path) {
+			absPath = filepath.Join(ic.workDir, path)
+		}
+		infof("Checking that the content of %s is correct", absPath)
+		data, err := os.ReadFile(absPath)
 		if err != nil {
 			return err
 		}
-		if !strings.Contains(string(data), content) {
-			return fmt.Errorf("%q not found in %q", content, string(data))
+		actual := string(data)
+		if !strings.Contains(actual, needle) {
+			return fmt.Errorf("expected %q to contain %q", actual, needle)
+		}
+		return nil
+	}
+}
+
+// Assert that a file exists and its content is equal to the given text.
+//
+// If "path" is relative it will be to the working directory.
+func fileContent(path, expected string) action {
+	return func(t testing.TB, ic testContext) error {
+		absPath := path
+		if !filepath.IsAbs(path) {
+			absPath = filepath.Join(ic.workDir, path)
+		}
+		infof("Checking that the content of %s is correct", absPath)
+		data, err := os.ReadFile(absPath)
+		if err != nil {
+			return err
+		}
+		expected = strings.TrimSpace(expected)
+		actual := strings.TrimSpace(string(data))
+		if actual != expected {
+			return errors.New(assert.Diff(expected, actual))
 		}
 		return nil
 	}
@@ -232,6 +263,17 @@ func call(module, verb string, request obj, check func(response obj) error) acti
 	}
 }
 
+// Fail expects the next action to fail.
+func fail(next action, msg string, args ...any) action {
+	return func(t testing.TB, ic testContext) error {
+		err := next(t, ic)
+		if err == nil {
+			return fmt.Errorf("expected action to fail: "+msg, args...)
+		}
+		return nil
+	}
+}
+
 // Query a single row from a database.
 func queryRow(database string, query string, expected ...interface{}) action {
 	return func(t testing.TB, ic testContext) error {
@@ -254,7 +296,7 @@ func queryRow(database string, query string, expected ...interface{}) action {
 		}
 		for i, a := range actual {
 			if a != expected[i] {
-				return fmt.Errorf("expected %v, got %v", expected, actual)
+				return fmt.Errorf("%s:\n%s", query, assert.Diff(expected, actual))
 			}
 		}
 		return nil
@@ -366,6 +408,7 @@ func httpCall(method string, path string, body []byte, onResponse func(resp *htt
 	}
 }
 
+// Run "go test" in the given module.
 func testModule(module string) action {
 	return chdir(module, exec("go", "test", "-v", "."))
 }

@@ -42,7 +42,8 @@ var buildOnce sync.Once
 
 // run an integration test.
 // ftlConfigPath: if FTL_CONFIG should be set for this test, then pass in the relative
-//   path from integration/testdata/go/. e.g. "database/ftl-project.toml"
+//
+//	path from integration/testdata/go/. e.g. "database/ftl-project.toml"
 func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	tmpDir := t.TempDir()
 
@@ -116,6 +117,7 @@ type testContext struct {
 
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
+	t.Helper()
 	waitCtx, done := context.WithTimeout(i, integrationTestTimeout)
 	defer done()
 	for {

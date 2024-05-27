@@ -100,7 +100,8 @@ type Node interface {
 //sumtype:decl
 type Type interface {
 	Node
-	// schemaType is a marker to ensure that all sqltypes implement the Type interface.
+	Equal(other Type) bool
+	// schemaType is a marker to ensure that all types implement the Type interface.
 	schemaType()
 }
 
@@ -153,6 +154,18 @@ type Decl interface {
 type typeParserGrammar struct {
 	Type     Type `parser:"@@"`
 	Optional bool `parser:"@'?'?"`
+}
+
+// ParseType parses the string representation of a type.
+func ParseType(filename, input string) (Type, error) {
+	typ, err := typeParser.ParseString(filename, input)
+	if err != nil {
+		return nil, err
+	}
+	if typ.Optional {
+		return &Optional{Type: typ.Type}, nil
+	}
+	return typ.Type, nil
 }
 
 func parseType(pl *lexer.PeekingLexer) (Type, error) {

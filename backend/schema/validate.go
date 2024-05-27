@@ -116,7 +116,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			case *Ref:
 				mdecl := scopes.Resolve(*n)
 				if mdecl == nil {
-					merr = append(merr, errorf(n, "unknown reference %q", n))
+					merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 					break
 				}
 
@@ -282,7 +282,7 @@ func ValidateModule(module *Module) error {
 		case *Ref:
 			mdecl := scopes.Resolve(*n)
 			if mdecl == nil && n.Module == "" {
-				merr = append(merr, errorf(n, "unknown reference %q", n))
+				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 			}
 			if mdecl != nil {
 				moduleName := ""
@@ -312,7 +312,7 @@ func ValidateModule(module *Module) error {
 					}
 				}
 			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
-				merr = append(merr, errorf(n, "unknown reference %q", n))
+				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 			}
 
 		case *Verb:

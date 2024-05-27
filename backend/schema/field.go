@@ -44,7 +44,7 @@ func (f *Field) ToProto() proto.Message {
 	return &schemapb.Field{
 		Pos:      posToProto(f.Pos),
 		Name:     f.Name,
-		Type:     typeToProto(f.Type),
+		Type:     TypeToProto(f.Type),
 		Comments: f.Comments,
 		Metadata: metadataListToProto(f.Metadata),
 	}
@@ -73,7 +73,7 @@ func fieldToSchema(s *schemapb.Field) *Field {
 		Pos:      posFromProto(s.Pos),
 		Name:     s.Name,
 		Comments: s.Comments,
-		Type:     typeToSchema(s.Type),
+		Type:     TypeFromProto(s.Type),
 		Metadata: metadataListToSchema(s.Metadata),
 	}
 }

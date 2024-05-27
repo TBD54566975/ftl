@@ -43,11 +43,18 @@ sql:
             go_type:
               type: "NullRunnerKey"
           - db_type: "schema_ref"
-            go_type: "github.com/TBD54566975/ftl/backend/schema.Ref"
+            go_type: "github.com/TBD54566975/ftl/backend/schema.RefKey"
           - db_type: "schema_ref"
             nullable: true
             go_type:
-              type: "NullSchemaRef"
+              type: "NullRef"
+          - db_type: "schema_type"
+            go_type:
+              type: "Type"
+          - db_type: "schema_type"
+            nullable: true
+            go_type:
+              type: "NullType"
           - db_type: "cron_job_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.CronJobKey"
           - db_type: "cron_job_key"
@@ -81,6 +88,9 @@ sql:
           - db_type: "text"
             nullable: true
             go_type: "github.com/alecthomas/types/optional.Option[string]"
+          - db_type: "bytes"
+            nullable: true
+            go_type: "github.com/alecthomas/types/optional.Option[[]byte]"
           - db_type: "pg_catalog.int8"
             nullable: true
             go_type: "github.com/alecthomas/types/optional.Option[int64]"

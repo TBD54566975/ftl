@@ -29,7 +29,10 @@ func DataToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, error) {
 	// Resolve and encode all types reachable from the root.
 	root.Definitions = map[string]jsonschema.SchemaOrBool{}
 	for _, r := range refs {
-		decl := sch.Resolve(r)
+		decl, ok := sch.Resolve(r).Get()
+		if !ok {
+			return nil, fmt.Errorf("unknown ref %s", r)
+		}
 		switch n := decl.(type) {
 		case *Data:
 			if len(r.TypeParameters) > 0 {

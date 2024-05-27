@@ -48,7 +48,7 @@ func (t *TypeAlias) ToProto() proto.Message {
 		Comments: t.Comments,
 		Name:     t.Name,
 		Export:   t.Export,
-		Type:     typeToProto(t.Type),
+		Type:     TypeToProto(t.Type),
 	}
 }
 
@@ -61,6 +61,6 @@ func TypeAliasFromProto(s *schemapb.TypeAlias) *TypeAlias {
 		Name:     s.Name,
 		Export:   s.Export,
 		Comments: s.Comments,
-		Type:     typeToSchema(s.Type),
+		Type:     TypeFromProto(s.Type),
 	}
 }
