@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	DefaultRetryCount  = 100
 	MinBackoffLimitStr = "1s"
 	MinBackoffLimit    = 1 * time.Second
 	MaxBackoffLimitStr = "1d"

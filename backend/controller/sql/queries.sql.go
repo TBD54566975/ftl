@@ -21,7 +21,7 @@ const acquireAsyncCall = `-- name: AcquireAsyncCall :one
 WITH async_call AS (
   SELECT id
   FROM async_calls
-  WHERE state = 'pending'
+  WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
   LIMIT 1
   FOR UPDATE SKIP LOCKED
 ), lease AS (
@@ -38,7 +38,11 @@ RETURNING
   (SELECT key FROM lease) AS lease_key,
   origin,
   verb,
-  request
+  request,
+  scheduled_at,
+  remaining_attempts,
+  backoff,
+  max_backoff
 `
 
 type AcquireAsyncCallRow struct {
@@ -48,6 +52,10 @@ type AcquireAsyncCallRow struct {
 	Origin              string
 	Verb                schema.RefKey
 	Request             []byte
+	ScheduledAt         time.Time
+	RemainingAttempts   int32
+	Backoff             time.Duration
+	MaxBackoff          time.Duration
 }
 
 // Reserve a pending async call for execution, returning the associated lease
@@ -62,6 +70,10 @@ func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (Acqu
 		&i.Origin,
 		&i.Verb,
 		&i.Request,
+		&i.ScheduledAt,
+		&i.RemainingAttempts,
+		&i.Backoff,
+		&i.MaxBackoff,
 	)
 	return i, err
 }
@@ -103,13 +115,29 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 }
 
 const createAsyncCall = `-- name: CreateAsyncCall :one
-INSERT INTO async_calls (verb, origin, request)
-VALUES ($1, $2, $3)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff)
+VALUES ($1, $2, $3, $4, $5::interval, $6::interval)
 RETURNING id
 `
 
-func (q *Queries) CreateAsyncCall(ctx context.Context, verb schema.RefKey, origin string, request []byte) (int64, error) {
-	row := q.db.QueryRow(ctx, createAsyncCall, verb, origin, request)
+type CreateAsyncCallParams struct {
+	Verb              schema.RefKey
+	Origin            string
+	Request           []byte
+	RemainingAttempts int32
+	Backoff           time.Duration
+	MaxBackoff        time.Duration
+}
+
+func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createAsyncCall,
+		arg.Verb,
+		arg.Origin,
+		arg.Request,
+		arg.RemainingAttempts,
+		arg.Backoff,
+		arg.MaxBackoff,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -303,6 +331,43 @@ RETURNING true
 
 func (q *Queries) FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error) {
 	row := q.db.QueryRow(ctx, failAsyncCall, error, iD)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const failAsyncCallWithRetry = `-- name: FailAsyncCallWithRetry :one
+WITH updated AS (
+  UPDATE async_calls
+  SET state = 'error'::async_call_state,
+      error = $5::TEXT
+  WHERE id = $6::BIGINT
+  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff
+)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, scheduled_at)
+SELECT updated.verb, updated.origin, updated.request, $1, $2::interval, $3::interval, $4::TIMESTAMPTZ
+  FROM updated
+  RETURNING true
+`
+
+type FailAsyncCallWithRetryParams struct {
+	RemainingAttempts int32
+	Backoff           time.Duration
+	MaxBackoff        time.Duration
+	ScheduledAt       time.Time
+	Error             string
+	ID                int64
+}
+
+func (q *Queries) FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error) {
+	row := q.db.QueryRow(ctx, failAsyncCallWithRetry,
+		arg.RemainingAttempts,
+		arg.Backoff,
+		arg.MaxBackoff,
+		arg.ScheduledAt,
+		arg.Error,
+		arg.ID,
+	)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -1584,7 +1649,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, request, response, error
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff
 FROM async_calls
 WHERE id = $1
 `
@@ -1599,9 +1664,13 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.Verb,
 		&i.State,
 		&i.Origin,
+		&i.ScheduledAt,
 		&i.Request,
 		&i.Response,
 		&i.Error,
+		&i.RemainingAttempts,
+		&i.Backoff,
+		&i.MaxBackoff,
 	)
 	return i, err
 }

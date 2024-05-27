@@ -738,7 +738,8 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 	defer instance.Release() //nolint:errcheck
 
 	// Populated if we find a matching transition.
-	var destinationVerb *schema.Ref
+	var destinationRef *schema.Ref
+	var destinationVerb *schema.Verb
 
 	var candidates []string
 
@@ -752,7 +753,8 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 			return false, nil
 		}
 
-		destinationVerb = ref
+		destinationRef = ref
+		destinationVerb = verb
 		return true, nil
 	}
 
@@ -780,7 +782,7 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 		}
 	}
 
-	if destinationVerb == nil {
+	if destinationRef == nil {
 		if len(candidates) > 0 {
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				fmt.Errorf("no transition found from state %s for type %s, candidates are %s", instance.CurrentState, eventType, strings.Join(candidates, ", ")))
@@ -788,11 +790,62 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("no transition found from state %s for type %s", instance.CurrentState, eventType))
 	}
 
-	err = tx.StartFSMTransition(ctx, instance.FSM, instance.Key, destinationVerb.ToRefKey(), msg.Body)
+	retryCount, minBackoff, maxBackoff, err := s.retryParamsForTransition(fsm, destinationVerb)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	err = tx.StartFSMTransition(ctx, instance.FSM, instance.Key, destinationRef.ToRefKey(), msg.Body, retryCount, minBackoff, maxBackoff)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start fsm transition: %w", err))
 	}
 	return connect.NewResponse(&ftlv1.SendFSMEventResponse{}), nil
+}
+
+func (s *Service) retryParamsForTransition(fsm *schema.FSM, verb *schema.Verb) (count int, minBackoff, maxBackoff time.Duration, err error) {
+	// Find retry metadata
+	var retryMetadata *schema.MetadataRetry
+	for _, m := range verb.Metadata {
+		if m, ok := m.(*schema.MetadataRetry); ok {
+			retryMetadata = m
+			break
+		}
+	}
+
+	if retryMetadata == nil {
+		//default to fsm's retry metadata
+		for _, m := range fsm.Metadata {
+			if m, ok := m.(*schema.MetadataRetry); ok {
+				retryMetadata = m
+				break
+			}
+		}
+	}
+
+	if retryMetadata != nil {
+		if retryMetadata.Count != nil {
+			count = int(*retryMetadata.Count)
+		} else {
+			count = schema.DefaultRetryCount
+		}
+
+		minD, err := retryMetadata.MinBackoffDuration()
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("could not parse min backoff duration: %w", err)
+		}
+		minBackoff = minD
+
+		maxD, err := retryMetadata.MaxBackoffDuration()
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("could not parse max backoff duration: %w", err)
+		}
+		if maxD, ok := maxD.Get(); ok {
+			maxBackoff = maxD
+		} else {
+			maxBackoff = schema.MaxBackoffLimit
+		}
+	}
+	return count, minBackoff, maxBackoff, nil
 }
 
 func (s *Service) callWithRequest(
@@ -1188,9 +1241,14 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		callResult = either.LeftOf[string](resp.Msg.GetBody())
 	}
 	err = s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx) error {
+		failed := resp.Msg.GetError() != nil
+		if failed && call.RemainingAttempts > 0 {
+			// Will retry, do not propogate failure yet.
+			return nil
+		}
 		switch origin := call.Origin.(type) {
 		case dal.AsyncOriginFSM:
-			return s.onAsyncFSMCallCompletion(ctx, tx, origin, resp.Msg.GetError() != nil)
+			return s.onAsyncFSMCallCompletion(ctx, tx, origin, failed)
 
 		default:
 			panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))

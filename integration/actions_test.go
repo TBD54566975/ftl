@@ -18,12 +18,15 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 	"github.com/kballard/go-shellquote"
 	"github.com/otiai10/copy"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/scaffolder"
@@ -318,6 +321,69 @@ func createDB(t testing.TB, module, dbName string, isTestDb bool) {
 		_, err = db.Exec("DROP DATABASE " + dbName)
 		assert.NoError(t, err)
 	})
+}
+
+type asyncCallRow struct {
+	Verb              schema.RefKey
+	Origin            string
+	State             string
+	ScheduledAt       time.Time
+	Request           []byte
+	Response          []byte
+	Error             optional.Option[string]
+	RemainingAttempts int32
+	Backoff           time.Duration
+	MaxBackoff        time.Duration
+}
+
+func getAsyncCalls(callback func([]asyncCallRow) error) action {
+	return func(t testing.TB, ic testContext) error {
+		dsn := "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable"
+
+		pool, err := pgxpool.New(ic.Context, dsn)
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+
+		conn, err := pool.Acquire(ic.Context)
+		if err != nil {
+			return fmt.Errorf("failed to acquire PG PubSub connection: %w", err)
+		}
+		defer conn.Release()
+
+		rows, err := conn.Query(ic.Context, `
+		SELECT verb, origin, state, scheduled_at, request, response, error, remaining_attempts, backoff::interval, max_backoff::interval
+		FROM async_calls
+		ORDER BY created_at ASC`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		var items []asyncCallRow
+		for rows.Next() {
+			var i asyncCallRow
+			if err := rows.Scan(
+				&i.Verb,
+				&i.Origin,
+				&i.State,
+				&i.ScheduledAt,
+				&i.Request,
+				&i.Response,
+				&i.Error,
+				&i.RemainingAttempts,
+				&i.Backoff,
+				&i.MaxBackoff,
+			); err != nil {
+				return err
+			}
+			items = append(items, i)
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		return callback(items)
+	}
 }
 
 // Create a directory in the working directory

@@ -485,8 +485,8 @@ SELECT COUNT(*)
 FROM expired;
 
 -- name: CreateAsyncCall :one
-INSERT INTO async_calls (verb, origin, request)
-VALUES (@verb, @origin, @request)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff)
+VALUES (@verb, @origin, @request, @remaining_attempts, @backoff::interval, @max_backoff::interval)
 RETURNING id;
 
 -- name: AcquireAsyncCall :one
@@ -495,7 +495,7 @@ RETURNING id;
 WITH async_call AS (
   SELECT id
   FROM async_calls
-  WHERE state = 'pending'
+  WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
   LIMIT 1
   FOR UPDATE SKIP LOCKED
 ), lease AS (
@@ -512,7 +512,11 @@ RETURNING
   (SELECT key FROM lease) AS lease_key,
   origin,
   verb,
-  request;
+  request,
+  scheduled_at,
+  remaining_attempts,
+  backoff,
+  max_backoff;
 
 -- name: SucceedAsyncCall :one
 UPDATE async_calls
@@ -529,6 +533,19 @@ SET
   error = @error::TEXT
 WHERE id = @id
 RETURNING true;
+
+-- name: FailAsyncCallWithRetry :one
+WITH updated AS (
+  UPDATE async_calls
+  SET state = 'error'::async_call_state,
+      error = @error::TEXT
+  WHERE id = @id::BIGINT
+  RETURNING *
+)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, scheduled_at)
+SELECT updated.verb, updated.origin, updated.request, @remaining_attempts, @backoff::interval, @max_backoff::interval, @scheduled_at::TIMESTAMPTZ
+  FROM updated
+  RETURNING true;
 
 -- name: LoadAsyncCall :one
 SELECT *
