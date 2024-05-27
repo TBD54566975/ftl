@@ -15,7 +15,7 @@ func TestAWSSecretsBasics(t *testing.T) {
 
 	// Localstack!
 	asm := AWSSecrets[Secrets]{
-		AccessKeyId:     "test",
+		AccessKeyID:     "test",
 		SecretAccessKey: "test",
 		Region:          "us-west-2",
 		Endpoint:        Some("http://localhost:4566"),

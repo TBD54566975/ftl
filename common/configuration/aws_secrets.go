@@ -24,7 +24,7 @@ const schemeKey = "asm"
 //
 // The resolver does a direct/proxy map from a Ref to a URL, module.name <-> asm://module.name and does not access ASM at all.
 type AWSSecrets[R Role] struct {
-	AccessKeyId     string
+	AccessKeyID     string
 	SecretAccessKey string
 	Region          string
 	Endpoint        optional.Option[string]
@@ -35,9 +35,9 @@ var _ Provider[Secrets] = AWSSecrets[Secrets]{}
 var _ MutableProvider[Secrets] = AWSSecrets[Secrets]{}
 
 var (
-	asmClient *secretsmanager.Client
 	asmOnce   sync.Once
-	asmErr    error
+	asmClient *secretsmanager.Client
+	errClient error
 )
 
 func urlForRef(ref Ref) *url.URL {
@@ -53,8 +53,8 @@ func (a AWSSecrets[R]) client(ctx context.Context) (*secretsmanager.Client, erro
 
 		// Use a static credentials provider if access key and secret are provided.
 		// Otherwise, the SDK will use the default credential chain (env vars, iam, etc).
-		if a.AccessKeyId != "" {
-			credentials := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(a.AccessKeyId, a.SecretAccessKey, ""))
+		if a.AccessKeyID != "" {
+			credentials := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(a.AccessKeyID, a.SecretAccessKey, ""))
 			optFns = append(optFns, config.WithCredentialsProvider(credentials))
 		}
 
@@ -64,7 +64,7 @@ func (a AWSSecrets[R]) client(ctx context.Context) (*secretsmanager.Client, erro
 
 		cfg, err := config.LoadDefaultConfig(ctx, optFns...)
 		if err != nil {
-			err = fmt.Errorf("unable to load aws config: %w", err)
+			errClient = fmt.Errorf("unable to load aws config: %w", err)
 			return
 		}
 
@@ -77,7 +77,7 @@ func (a AWSSecrets[R]) client(ctx context.Context) (*secretsmanager.Client, erro
 
 	})
 
-	return asmClient, asmErr
+	return asmClient, errClient
 }
 
 func (a AWSSecrets[R]) Role() R {
