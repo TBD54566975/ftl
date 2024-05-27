@@ -7,6 +7,8 @@ import (
 )
 
 // The payment FSM.
+//
+//ftl:retry 10 5s 10m
 var paymentFSM = ftl.FSM("payment",
 	ftl.Start(Created),
 	ftl.Start(Paid),

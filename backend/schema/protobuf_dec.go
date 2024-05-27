@@ -136,6 +136,19 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Alias: s.Alias.Alias,
 		}
 
+	case *schemapb.Metadata_Retry:
+		var count *int
+		if s.Retry.Count != nil {
+			countValue := int(*s.Retry.Count)
+			count = &countValue
+		}
+		return &MetadataRetry{
+			Pos:        posFromProto(s.Retry.Pos),
+			Count:      count,
+			MinBackoff: s.Retry.MinBackoff,
+			MaxBackoff: s.Retry.MaxBackoff,
+		}
+
 	default:
 		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}
