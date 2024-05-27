@@ -14,10 +14,12 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
+	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestCron(t *testing.T) {
@@ -356,5 +358,59 @@ func TestFSM(t *testing.T) {
 		// Invalid state transition
 		fail(call("fsm", "sendTwo", obj{"instance": "2"}, func(response obj) error { return nil }),
 			"invalid state transition"),
+	)
+}
+
+func TestFSMRetry(t *testing.T) {
+	run(t, "",
+		copyModule("fsmretry"),
+		build("fsmretry"),
+		deploy("fsmretry"),
+		// start 2 FSM instances
+		call("fsmretry", "start", obj{"id": "1"}, func(response obj) error { return nil }),
+		call("fsmretry", "start", obj{"id": "2"}, func(response obj) error { return nil }),
+
+		sleep(2*time.Second),
+
+		// transition the FSM, should fail each time.
+		call("fsmretry", "startTransitionToTwo", obj{"id": "1"}, func(response obj) error { return nil }),
+		call("fsmretry", "startTransitionToThree", obj{"id": "2"}, func(response obj) error { return nil }),
+
+		sleep(10*time.Second), //6s is longest run of retries, but we need to make sure more retries don't occur
+
+		getAsyncCalls(func(rows []asyncCallRow) error {
+			fsm1Rows := []asyncCallRow{}
+			fsm2Rows := []asyncCallRow{}
+			for _, r := range rows {
+				if r.Origin == "fsm:fsmretry.fsm:1" {
+					fsm1Rows = append(fsm1Rows, r)
+				} else if r.Origin == "fsm:fsmretry.fsm:2" {
+					fsm2Rows = append(fsm2Rows, r)
+				}
+			}
+
+			// FSM 1
+			assert.Equal(t, 5, len(fsm1Rows), "unexpected number of calls for fsm 1: %v", fsm1Rows)
+
+			// first call creates the FSM with state 1
+			assert.Equal(t, "success", fsm1Rows[0].State)
+			assert.Equal(t, schema.RefKey{Module: "fsmretry", Name: "state1"}, fsm1Rows[0].Verb)
+			assert.NotZero(t, fsm1Rows[0].Response)
+
+			for i := 1; i < 5; i++ {
+				// next call fails to transition to state 2
+				assert.Equal(t, "error", fsm1Rows[i].State)
+				assert.Equal(t, schema.RefKey{Module: "fsmretry", Name: "state2"}, fsm1Rows[i].Verb, "unexpected verb for fsm1 call %d:\n%v", i, fsm1Rows[i])
+				assert.Equal(t, optional.Some("call to verb fsmretry.state2 failed: transition will never succeed"), fsm1Rows[i].Error, "unexpected error for fsm1 call %d:\n%v", i, fsm1Rows[i])
+				if i > 1 {
+					// should happen just after 1s from the previous async call
+					assert.True(t, fsm1Rows[i].ScheduledAt.Sub(fsm1Rows[i-1].ScheduledAt) >= time.Second, "fsm1 call %d happened faster than expected (%v):\n%v", i, fsm1Rows[i])
+					assert.True(t, fsm1Rows[i].ScheduledAt.Sub(fsm1Rows[i-1].ScheduledAt) < 2*time.Second, "fsm1 call %d happened slower than expected (%v):\n%v", i, fsm1Rows[i])
+				}
+			}
+
+			// TODO: check FSM 2 calls
+			return nil
+		}),
 	)
 }

@@ -22,7 +22,7 @@ type Querier interface {
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
-	CreateAsyncCall(ctx context.Context, verb schema.RefKey, origin string, request []byte) (int64, error)
+	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
 	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
@@ -32,6 +32,7 @@ type Querier interface {
 	ExpireLeases(ctx context.Context) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
+	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
 	FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
 	// Mark an FSM transition as completed, updating the current state and clearing the async call ID.
 	FinishFSMTransition(ctx context.Context, fsm schema.RefKey, key string) (bool, error)

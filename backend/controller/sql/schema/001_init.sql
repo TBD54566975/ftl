@@ -409,12 +409,19 @@ CREATE TABLE async_calls (
     state async_call_state NOT NULL DEFAULT 'pending',
     -- Originator of the call (cron, fsm, pubsub) in the form <type>:<payload>. See AsyncCallOrigin sum type.
     origin TEXT NOT NULL,
+    -- earliest timestamp to execute the call
+    scheduled_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     -- Request to send to the verb.
     request JSONB NOT NULL,
     -- Populated on success.
     response JSONB,
     -- Populated on error.
-    error TEXT
+    error TEXT,
+
+    -- retry state
+    remaining_attempts INT NOT NULL,
+    backoff            INTERVAL NOT NULL,
+    max_backoff        INTERVAL NOT NULL
 );
 
 CREATE INDEX async_calls_state_idx ON async_calls (state);
