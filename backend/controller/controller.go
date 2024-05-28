@@ -790,63 +790,16 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("no transition found from state %s for type %s", instance.CurrentState, eventType))
 	}
 
-	retryCount, minBackoff, maxBackoff, err := s.retryParamsForTransition(fsm, destinationVerb)
+	retryParams, err := schema.RetryParamsForFSMTransition(fsm, destinationVerb)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	err = tx.StartFSMTransition(ctx, instance.FSM, instance.Key, destinationRef.ToRefKey(), msg.Body, retryCount, minBackoff, maxBackoff)
+	err = tx.StartFSMTransition(ctx, instance.FSM, instance.Key, destinationRef.ToRefKey(), msg.Body, retryParams)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start fsm transition: %w", err))
 	}
 	return connect.NewResponse(&ftlv1.SendFSMEventResponse{}), nil
-}
-
-// retryParamsForTransition finds the retry metadata for the given transition and returns the retry count, min and max backoff.
-func (s *Service) retryParamsForTransition(fsm *schema.FSM, verb *schema.Verb) (count int, minBackoff, maxBackoff time.Duration, err error) {
-	// Find retry metadata
-	var retryMetadata *schema.MetadataRetry
-	for _, m := range verb.Metadata {
-		if m, ok := m.(*schema.MetadataRetry); ok {
-			retryMetadata = m
-			break
-		}
-	}
-
-	if retryMetadata == nil {
-		// default to fsm's retry metadata
-		for _, m := range fsm.Metadata {
-			if m, ok := m.(*schema.MetadataRetry); ok {
-				retryMetadata = m
-				break
-			}
-		}
-	}
-
-	if retryMetadata != nil {
-		if retryMetadata.Count != nil {
-			count = *retryMetadata.Count
-		} else {
-			count = schema.DefaultRetryCount
-		}
-
-		minD, err := retryMetadata.MinBackoffDuration()
-		if err != nil {
-			return 0, 0, 0, fmt.Errorf("could not parse min backoff duration: %w", err)
-		}
-		minBackoff = minD
-
-		maxD, err := retryMetadata.MaxBackoffDuration()
-		if err != nil {
-			return 0, 0, 0, fmt.Errorf("could not parse max backoff duration: %w", err)
-		}
-		if maxD, ok := maxD.Get(); ok {
-			maxBackoff = maxD
-		} else {
-			maxBackoff = schema.MaxBackoffLimit
-		}
-	}
-	return count, minBackoff, maxBackoff, nil
 }
 
 func (s *Service) callWithRequest(
