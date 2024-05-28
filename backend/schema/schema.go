@@ -47,37 +47,47 @@ func (s *Schema) Hash() [sha256.Size]byte {
 	return sha256.Sum256([]byte(s.String()))
 }
 
-// ResolveRefMonomorphised -
+// ResolveMonomorphised resolves a reference to a monomorphised Data type.
 // If a Ref is not found, returns ErrNotFound.
-func (s *Schema) ResolveRefMonomorphised(ref *Ref) (*Data, error) {
+func (s *Schema) ResolveMonomorphised(ref *Ref) (*Data, error) {
 	out := &Data{}
 
-	if err := s.ResolveRefToType(ref, out); err != nil {
+	err := s.ResolveToType(ref, out)
+	if err != nil {
 		// If a ref is not found, returns ErrNotFound
 		return nil, err
 	}
 	return out.Monomorphise(ref)
 }
 
-func (s *Schema) ResolveRef(ref *Ref) Decl {
+// Resolve a reference to a declaration.
+func (s *Schema) Resolve(ref *Ref) optional.Option[Decl] {
 	for _, module := range s.Modules {
 		if module.Name == ref.Module {
 			for _, decl := range module.Decls {
 				if decl.GetName() == ref.Name {
-					return decl
+					return optional.Some(decl)
 				}
 			}
 		}
 	}
-	return nil
+	return optional.None[Decl]()
 }
 
-func (s *Schema) ResolveRefToType(ref *Ref, out Decl) error {
+// ResolveToType resolves a reference to a declaration of the given type.
+//
+// The out parameter must be a pointer to a non-nil Decl implementation or this
+// will panic.
+//
+//	data := &Data{}
+//	err := s.ResolveToType(ref, data)
+func (s *Schema) ResolveToType(ref *Ref, out Decl) error {
+	// Programmer error.
 	if reflect.ValueOf(out).Kind() != reflect.Ptr {
-		return fmt.Errorf("out parameter is not a pointer")
+		panic(fmt.Errorf("out parameter is not a pointer"))
 	}
 	if reflect.ValueOf(out).Elem().Kind() == reflect.Invalid {
-		return fmt.Errorf("out parameter is a nil pointer")
+		panic(fmt.Errorf("out parameter is a nil pointer"))
 	}
 
 	for _, module := range s.Modules {
@@ -128,6 +138,7 @@ func (s *Schema) ToProto() proto.Message {
 	}
 }
 
+// TypeName returns the name of a type as a string, stripping any package prefix and correctly handling Ref aliases.
 func TypeName(v any) string {
 	t := reflect.Indirect(reflect.ValueOf(v)).Type()
 

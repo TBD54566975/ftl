@@ -15,13 +15,14 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/TBD54566975/scaffolder"
 	sets "github.com/deckarep/golang-set/v2"
 	gomaps "golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -363,6 +364,20 @@ var scaffoldFuncs = scaffolder.FuncMap{
 
 		return false
 	},
+	"sumTypes": func(m *schema.Module) []*schema.Enum {
+		out := []*schema.Enum{}
+		for _, d := range m.Decls {
+			switch d := d.(type) {
+			// Type enums (i.e. sum types) are all the non-value enums
+			case *schema.Enum:
+				if !d.IsValueEnum() && d.IsExported() {
+					out = append(out, d)
+				}
+			default:
+			}
+		}
+		return out
+	},
 }
 
 func schemaType(t schema.Type) string {
@@ -565,14 +580,23 @@ func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalE
 	}
 	var externalTypeEnums []externalEnum
 	err := schema.Visit(&combinedSch, func(n schema.Node, next func() error) error {
-		if ref, ok := n.(*schema.Ref); ok && ref.Module != "" && ref.Module != module.Name {
-			decl := sch.ResolveRef(ref)
-			if e, ok := decl.(*schema.Enum); ok && !e.IsValueEnum() {
-				externalTypeEnums = append(externalTypeEnums, externalEnum{
-					ref:      ref,
-					resolved: e,
-				})
-			}
+		ref, ok := n.(*schema.Ref)
+		if !ok {
+			return next()
+		}
+		if ref.Module != "" && ref.Module != module.Name {
+			return next()
+		}
+
+		decl, ok := sch.Resolve(ref).Get()
+		if !ok {
+			return next()
+		}
+		if e, ok := decl.(*schema.Enum); ok && !e.IsValueEnum() {
+			externalTypeEnums = append(externalTypeEnums, externalEnum{
+				ref:      ref,
+				resolved: e,
+			})
 		}
 		return next()
 	})

@@ -3,17 +3,21 @@ package sql
 import (
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
-type NullRef = optional.Option[schema.Ref]
+type NullType = optional.Option[Type]
+type NullRef = optional.Option[schema.RefKey]
 type NullUUID = optional.Option[uuid.UUID]
 type NullLeaseKey = optional.Option[leases.Key]
 type NullTime = optional.Option[time.Time]
@@ -34,3 +38,32 @@ var _ driver.Valuer = (*NullDeploymentKey)(nil)
 
 var _ sql.Scanner = (*NullRequestKey)(nil)
 var _ driver.Valuer = (*NullRequestKey)(nil)
+
+// Type is a database adapter type for schema.Type.
+//
+// It encodes to/from the protobuf representation of a Type.
+type Type struct {
+	schema.Type
+}
+
+func (t *Type) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		pb := &schemapb.Type{}
+		if err := proto.Unmarshal(src, pb); err != nil {
+			return err
+		}
+		t.Type = schema.TypeFromProto(pb)
+		return nil
+	default:
+		return fmt.Errorf("cannot scan %T", src)
+	}
+}
+
+func (t *Type) Value() (driver.Value, error) {
+	data, err := proto.Marshal(t.Type.ToProto())
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}

@@ -7,37 +7,79 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/types/either"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
-// AsyncCallOrigin represents the kind of originator of the async call.
-type AsyncCallOrigin sql.AsyncCallOrigin
+type asyncOriginParseRoot struct {
+	Key AsyncOrigin `parser:"@@"`
+}
 
-const (
-	AsyncCallOriginFSM    = AsyncCallOrigin(sql.AsyncCallOriginFsm)
-	AsyncCallOriginCron   = AsyncCallOrigin(sql.AsyncCallOriginCron)
-	AsyncCallOriginPubSub = AsyncCallOrigin(sql.AsyncCallOriginPubsub)
+var asyncOriginParser = participle.MustBuild[asyncOriginParseRoot](
+	participle.Union[AsyncOrigin](AsyncOriginFSM{}),
 )
 
+// AsyncOrigin is a sum type representing the originator of an async call.
+//
+// This is used to determine how to handle the result of the async call.
+type AsyncOrigin interface {
+	asyncOrigin()
+	// Origin returns the origin type.
+	Origin() string
+	String() string
+}
+
+// AsyncOriginFSM represents the context for the originator of an FSM async call.
+//
+// It is in the form fsm:<module>.<name>:<key>
+type AsyncOriginFSM struct {
+	FSM schema.RefKey `parser:"'fsm' ':' @@"`
+	Key string        `parser:"':' @(~EOF)+"`
+}
+
+var _ AsyncOrigin = AsyncOriginFSM{}
+
+func (AsyncOriginFSM) asyncOrigin()     {}
+func (a AsyncOriginFSM) Origin() string { return "fsm" }
+func (a AsyncOriginFSM) String() string { return fmt.Sprintf("fsm:%s:%s", a.FSM, a.Key) }
+
+// ParseAsyncOrigin parses an async origin key.
+func ParseAsyncOrigin(origin string) (AsyncOrigin, error) {
+	root, err := asyncOriginParser.ParseString("", origin)
+	if err != nil {
+		return nil, err
+	}
+	return root.Key, nil
+}
+
 type AsyncCall struct {
-	*Lease
-	ID     int64
-	Origin AsyncCallOrigin
-	// A key identifying the origin, e.g. the key of the FSM, cron job reference, etc.
-	OriginKey string
-	Verb      schema.Ref
-	Request   json.RawMessage
+	*Lease      // May be nil
+	ID          int64
+	Origin      AsyncOrigin
+	Verb        schema.RefKey
+	Request     json.RawMessage
+	ScheduledAt time.Time
+
+	RemainingAttempts int32
+	Backoff           time.Duration
+	MaxBackoff        time.Duration
 }
 
 // AcquireAsyncCall acquires a pending async call to execute.
 //
 // Returns ErrNotFound if there are no async calls to acquire.
-func (d *DAL) AcquireAsyncCall(ctx context.Context) (*AsyncCall, error) {
+func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error) {
+	tx, err := d.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+
 	ttl := time.Second * 5
-	row, err := d.db.AcquireAsyncCall(ctx, ttl)
+	row, err := tx.db.AcquireAsyncCall(ctx, ttl)
 	if err != nil {
 		err = translatePGError(err)
 		// We get a NULL constraint violation if there are no async calls to acquire, so translate it to ErrNotFound.
@@ -46,28 +88,63 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (*AsyncCall, error) {
 		}
 		return nil, fmt.Errorf("failed to acquire async call: %w", err)
 	}
+	origin, err := ParseAsyncOrigin(row.Origin)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
+	}
 	return &AsyncCall{
-		ID:        row.AsyncCallID,
-		Verb:      row.Verb,
-		Origin:    AsyncCallOrigin(row.Origin),
-		OriginKey: row.OriginKey,
-		Request:   row.Request,
-		Lease:     d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl),
+		ID:                row.AsyncCallID,
+		Verb:              row.Verb,
+		Origin:            origin,
+		Request:           row.Request,
+		Lease:             d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl),
+		ScheduledAt:       row.ScheduledAt,
+		RemainingAttempts: row.RemainingAttempts,
+		Backoff:           row.Backoff,
+		MaxBackoff:        row.MaxBackoff,
 	}, nil
 }
 
 // CompleteAsyncCall completes an async call.
 //
-// Either [response] or [responseError] must be provided, but not both.
-func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, response []byte, responseError optional.Option[string]) error {
-	if (response == nil) != responseError.Ok() {
-		return fmt.Errorf("must provide exactly one of response or error")
-	}
-	_, err := d.db.CompleteAsyncCall(ctx, response, responseError, call.ID)
+// "result" is either a []byte representing the successful response, or a string
+// representing a failure message.
+func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result either.Either[[]byte, string], finalise func(tx *Tx) error) (err error) {
+	tx, err := d.Begin(ctx)
 	if err != nil {
 		return translatePGError(err)
 	}
-	return nil
+	defer tx.CommitOrRollback(ctx, &err)
+
+	switch result := result.(type) {
+	case either.Left[[]byte, string]: // Successful response.
+		_, err = tx.db.SucceedAsyncCall(ctx, result.Get(), call.ID)
+		if err != nil {
+			return translatePGError(err)
+		}
+
+	case either.Right[[]byte, string]: // Failure message.
+		if call.RemainingAttempts > 0 {
+			_, err = d.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
+				ID:                call.ID,
+				Error:             result.Get(),
+				RemainingAttempts: call.RemainingAttempts - 1,
+				Backoff:           min(call.Backoff*2, call.MaxBackoff),
+				MaxBackoff:        call.MaxBackoff,
+				ScheduledAt:       time.Now().Add(call.Backoff),
+			})
+			if err != nil {
+				return translatePGError(err)
+			}
+		} else {
+			_, err = tx.db.FailAsyncCall(ctx, result.Get(), call.ID)
+			if err != nil {
+				return translatePGError(err)
+			}
+		}
+	}
+
+	return finalise(tx)
 }
 
 func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
@@ -75,11 +152,14 @@ func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 	if err != nil {
 		return nil, translatePGError(err)
 	}
+	origin, err := ParseAsyncOrigin(row.Origin)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
+	}
 	return &AsyncCall{
-		ID:        row.ID,
-		Verb:      row.Verb,
-		Origin:    AsyncCallOrigin(row.Origin),
-		OriginKey: row.OriginKey,
-		Request:   row.Request,
+		ID:      row.ID,
+		Verb:    row.Verb,
+		Origin:  origin,
+		Request: row.Request,
 	}, nil
 }

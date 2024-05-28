@@ -1,7 +1,6 @@
 package reflection
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -57,33 +56,45 @@ func FuncRef(call any) Ref {
 	return goRefToFTLRef(ref)
 }
 
-var allowAnyPackageForTesting = false
+// TypeFromValue reflects a schema.Type from a Go value.
+//
+// The passed value must be a pointer to a value of the desired type. This is to
+// ensure that interface values aren't dereferenced automatically by the Go
+// compiler.
+func TypeFromValue[T any, TP interface{ *T }](v TP) schema.Type {
+	return ReflectTypeToSchemaType(reflect.TypeOf(v).Elem())
+}
+
+var AllowAnyPackageForTesting = false
 
 func goRefToFTLRef(ref string) Ref {
-	if !allowAnyPackageForTesting && !strings.HasPrefix(ref, "ftl/") {
+	if !AllowAnyPackageForTesting && !strings.HasPrefix(ref, "ftl/") {
 		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", ref))
 	}
 	parts := strings.Split(ref[strings.LastIndex(ref, "/")+1:], ".")
 	return Ref{parts[len(parts)-2], strcase.ToLowerCamel(parts[len(parts)-1])}
 }
 
-// Reflect returns the FTL schema for a Go type.
-func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
+// ReflectTypeToSchemaType returns the FTL schema for a Go reflect.Type.
+func ReflectTypeToSchemaType(t reflect.Type) schema.Type {
 	switch t.Kind() {
 	case reflect.Struct:
 		// Handle well-known types.
 		if reflect.TypeFor[time.Time]() == t {
 			return &schema.Time{}
 		}
+		// Check if it's a sum-type discriminator.
+		if sumType, ok := GetDiscriminatorByVariant(t).Get(); ok {
+			return refForType(sumType)
+		}
 
-		// User-defined types.
 		return refForType(t)
 
 	case reflect.Slice:
-		return &schema.Array{Element: reflectSchemaType(ctx, t.Elem())}
+		return &schema.Array{Element: ReflectTypeToSchemaType(t.Elem())}
 
 	case reflect.Map:
-		return &schema.Map{Key: reflectSchemaType(ctx, t.Key()), Value: reflectSchemaType(ctx, t.Elem())}
+		return &schema.Map{Key: ReflectTypeToSchemaType(t.Key()), Value: ReflectTypeToSchemaType(t.Elem())}
 
 	case reflect.Bool:
 		return &schema.Bool{}
@@ -114,8 +125,7 @@ func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
 			return &schema.Any{}
 		}
 		// Check if it's a sum-type discriminator.
-		registry, ok := TypeRegistryFromContext(ctx).Get()
-		if !ok || !registry.IsSumTypeDiscriminator(t) {
+		if !IsSumTypeDiscriminator(t) {
 			panic(fmt.Sprintf("unsupported interface type %s", t))
 		}
 		return refForType(t)
@@ -128,13 +138,16 @@ func reflectSchemaType(ctx context.Context, t reflect.Type) schema.Type {
 // Return the FTL module for a type or panic if it's not an FTL type.
 func moduleForType(t reflect.Type) string {
 	module := t.PkgPath()
-	if !allowAnyPackageForTesting && !strings.HasPrefix(module, "ftl/") {
+	if !AllowAnyPackageForTesting && !strings.HasPrefix(module, "ftl/") {
 		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", module))
 	}
 	parts := strings.Split(module, "/")
 	return parts[len(parts)-1]
 }
 
+// refForType returns the schema.Ref for a Go type.
+//
+// This is not type checked in any way, so only valid types should be passed.
 func refForType(t reflect.Type) *schema.Ref {
 	module := moduleForType(t)
 	return &schema.Ref{Module: module, Name: strcase.ToUpperCamel(t.Name())}

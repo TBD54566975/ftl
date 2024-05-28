@@ -1,7 +1,6 @@
 package reflection
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -38,43 +37,40 @@ type AllTypesToReflect struct {
 	Map     map[string]int
 }
 
-func TestReflectSchemaType(t *testing.T) {
-	allowAnyPackageForTesting = true
-	t.Cleanup(func() { allowAnyPackageForTesting = false })
+func TestReflectTypeFromValue(t *testing.T) {
+	AllowAnyPackageForTesting = true
+	t.Cleanup(func() { AllowAnyPackageForTesting = false })
 
-	tr := NewTypeRegistry(WithSumType[MySumType](Variant1{}, Variant2{}))
-	ctx := context.Background()
-	ctx = ContextWithTypeRegistry(ctx, tr)
+	Register(SumType[MySumType](Variant1{}, Variant2{}))
 
-	v := AllTypesToReflect{SumType: &Variant1{}}
+	v := AllTypesToReflect{SumType: Variant1{}}
 
 	tests := []struct {
 		name     string
-		value    any
+		value    schema.Type
 		expected schema.Type
 	}{
-		{"Data", &v, &schema.Ref{Module: "reflection", Name: "AllTypesToReflect"}},
-		{"SumType", &v.SumType, &schema.Ref{Module: "reflection", Name: "MySumType"}},
-		{"Enum", &v.Enum, &schema.Ref{Module: "reflection", Name: "Enum"}},
-		{"Int", &v.Int, &schema.Int{}},
-		{"String", &v.String, &schema.String{}},
-		{"Float", &v.Float, &schema.Float{}},
-		{"Any", &v.Any, &schema.Any{}},
-		{"Array", &v.Array, &schema.Array{Element: &schema.Int{}}},
-		{"Map", &v.Map, &schema.Map{Key: &schema.String{}, Value: &schema.Int{}}},
-		{"Bool", &v.Bool, &schema.Bool{}},
+		{"Data", TypeFromValue(&v), &schema.Ref{Module: "reflection", Name: "AllTypesToReflect"}},
+		{"SumType", TypeFromValue(&v.SumType), &schema.Ref{Module: "reflection", Name: "MySumType"}},
+		{"Enum", TypeFromValue(&v.Enum), &schema.Ref{Module: "reflection", Name: "Enum"}},
+		{"Int", TypeFromValue(&v.Int), &schema.Int{}},
+		{"String", TypeFromValue(&v.String), &schema.String{}},
+		{"Float", TypeFromValue(&v.Float), &schema.Float{}},
+		{"Any", TypeFromValue(&v.Any), &schema.Any{}},
+		{"Array", TypeFromValue(&v.Array), &schema.Array{Element: &schema.Int{}}},
+		{"Map", TypeFromValue(&v.Map), &schema.Map{Key: &schema.String{}, Value: &schema.Int{}}},
+		{"Bool", TypeFromValue(&v.Bool), &schema.Bool{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := reflectSchemaType(ctx, reflect.TypeOf(tt.value).Elem())
-			assert.Equal(t, tt.expected, st)
+			assert.Equal(t, tt.expected, tt.value)
 		})
 	}
 
 	t.Run("InvalidType", func(t *testing.T) {
 		var invalid uint
 		assert.Panics(t, func() {
-			reflectSchemaType(ctx, reflect.TypeOf(&invalid).Elem())
+			ReflectTypeToSchemaType(reflect.TypeOf(&invalid).Elem())
 		})
 	})
 }

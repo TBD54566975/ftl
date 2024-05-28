@@ -119,8 +119,8 @@ func (v *Verb) ToProto() proto.Message {
 		Export:   v.Export,
 		Name:     v.Name,
 		Comments: v.Comments,
-		Request:  typeToProto(v.Request),
-		Response: typeToProto(v.Response),
+		Request:  TypeToProto(v.Request),
+		Response: TypeToProto(v.Response),
 		Metadata: metadataListToProto(v.Metadata),
 	}
 }
@@ -131,8 +131,8 @@ func VerbFromProto(s *schemapb.Verb) *Verb {
 		Export:   s.Export,
 		Name:     s.Name,
 		Comments: s.Comments,
-		Request:  typeToSchema(s.Request),
-		Response: typeToSchema(s.Response),
+		Request:  TypeFromProto(s.Request),
+		Response: TypeFromProto(s.Response),
 		Metadata: metadataListToSchema(s.Metadata),
 	}
 }

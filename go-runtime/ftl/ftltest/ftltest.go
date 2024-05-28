@@ -19,6 +19,7 @@ import (
 	pc "github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -37,6 +38,7 @@ type Option func(context.Context, *OptionsState) error
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...Option) context.Context {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	ctx = internal.WithContext(ctx, newFakeFTL())
 	name := reflection.Module()
 
 	state := &OptionsState{
@@ -53,7 +55,7 @@ func Context(options ...Option) context.Context {
 	}
 
 	builder := modulecontext.NewBuilder(name).AddConfigs(state.configs).AddSecrets(state.secrets).AddDatabases(state.databases)
-	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior)
+	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newFakeLeaseClient())
 	return builder.Build().ApplyToContext(ctx)
 }
 
@@ -64,12 +66,11 @@ func Context(options ...Option) context.Context {
 // file in the git root is used. If ftl-project.toml is not found, no project files are loaded.
 //
 // To be used when setting up a context for a test:
-// ctx := ftltest.Context(
 //
-//	ftltest.WithProjectFiles("path/to/ftl-project.yaml"),
-//	... other options
-//
-// )
+//	ctx := ftltest.Context(
+//		ftltest.WithProjectFiles("path/to/ftl-project.yaml"),
+//		// ... other options
+//	)
 func WithProjectFiles(paths ...string) Option {
 	// Convert to absolute path immediately in case working directory changes
 	var preprocessingErr error
@@ -128,12 +129,11 @@ func WithProjectFiles(paths ...string) Option {
 // WithConfig sets a configuration for the current module
 //
 // To be used when setting up a context for a test:
-// ctx := ftltest.Context(
 //
-//	ftltest.WithConfig(exampleEndpoint, "https://example.com"),
-//	... other options
-//
-// )
+//	ctx := ftltest.Context(
+//		ftltest.WithConfig(exampleEndpoint, "https://example.com"),
+//		// ... other options
+//	)
 func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		if config.Module != reflection.Module() {
@@ -151,12 +151,11 @@ func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) Option {
 // WithSecret sets a secret for the current module
 //
 // To be used when setting up a context for a test:
-// ctx := ftltest.Context(
 //
-//	ftltest.WithSecret(privateKey, "abc123"),
-//	... other options
-//
-// )
+//	ctx := ftltest.Context(
+//		ftltest.WithSecret(privateKey, "abc123"),
+//		// ... other options
+//	)
 func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		if secret.Module != reflection.Module() {
@@ -174,12 +173,11 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 // WithDatabase sets up a database for testing by appending "_test" to the DSN and emptying all tables
 //
 // To be used when setting up a context for a test:
-// ctx := ftltest.Context(
 //
-//	ftltest.WithDatabase(db),
-//	... other options
-//
-// )
+//	ctx := ftltest.Context(
+//		ftltest.WithDatabase(db),
+//		// ... other options
+//	)
 func WithDatabase(dbHandle ftl.Database) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		originalDSN, err := modulecontext.GetDSNFromSecret(reflection.Module(), dbHandle.Name, state.secrets)
@@ -231,14 +229,13 @@ func WithDatabase(dbHandle ftl.Database) Option {
 // WhenVerb replaces an implementation for a verb
 //
 // To be used when setting up a context for a test:
-// ctx := ftltest.Context(
 //
-//	ftltest.WhenVerb(Example.Verb, func(ctx context.Context, req Example.Req) (Example.Resp, error) {
-//	    ...
-//	}),
-//	... other options
-//
-// )
+//	ctx := ftltest.Context(
+//		ftltest.WhenVerb(Example.Verb, func(ctx context.Context, req Example.Req) (Example.Resp, error) {
+//	    	// ...
+//		}),
+//		// ... other options
+//	)
 func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake ftl.Verb[Req, Resp]) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		ref := reflection.FuncRef(verb)
@@ -256,14 +253,13 @@ func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake ftl.Verb[Req, Re
 // WhenSource replaces an implementation for a verb with no request
 //
 // To be used when setting up a context for a test:
-// ctx := ftltest.Context(
 //
-//	ftltest.WhenSource(Example.Source, func(ctx context.Context) (Example.Resp, error) {
-//	    ...
-//	}),
-//	... other options
-//
-// )
+//	ctx := ftltest.Context(
+//		ftltest.WhenSource(example.Source, func(ctx context.Context) (example.Resp, error) {
+//	    	// ...
+//		}),
+//		// ... other options
+//	)
 func WhenSource[Resp any](source ftl.Source[Resp], fake func(ctx context.Context) (resp Resp, err error)) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		ref := reflection.FuncRef(source)
@@ -277,14 +273,13 @@ func WhenSource[Resp any](source ftl.Source[Resp], fake func(ctx context.Context
 // WhenSink replaces an implementation for a verb with no response
 //
 // To be used when setting up a context for a test:
-// ctx := ftltest.Context(
 //
-//	ftltest.WhenSink(Example.Sink, func(ctx context.Context, req Example.Req) error {
-//	    ...
-//	}),
-//	... other options
-//
-// )
+//	ctx := ftltest.Context(
+//		ftltest.WhenSink(example.Sink, func(ctx context.Context, req example.Req) error {
+//	    	...
+//		}),
+//		// ... other options
+//	)
 func WhenSink[Req any](sink ftl.Sink[Req], fake func(ctx context.Context, req Req) error) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		ref := reflection.FuncRef(sink)
@@ -302,14 +297,12 @@ func WhenSink[Req any](sink ftl.Sink[Req], fake func(ctx context.Context, req Re
 // WhenEmpty replaces an implementation for a verb with no request or response
 //
 // To be used when setting up a context for a test:
-// ctx := ftltest.Context(
 //
-//	ftltest.WhenEmpty(Example.Empty, func(ctx context.Context) error {
-//	    ...
-//	}),
-//	... other options
-//
-// )
+//	ctx := ftltest.Context(
+//		ftltest.WhenEmpty(Example.Empty, func(ctx context.Context) error {
+//	    	...
+//		}),
+//	)
 func WhenEmpty(empty ftl.Empty, fake func(ctx context.Context) (err error)) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		ref := reflection.FuncRef(empty)

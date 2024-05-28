@@ -44,14 +44,14 @@ func visitNode(sch *schema.Schema, n schema.Node, verbString *string) error {
 	return schema.Visit(n, func(n schema.Node, next func() error) error {
 		switch n := n.(type) {
 		case *schema.Ref:
-			decl := sch.ResolveRef(n)
-			if decl != nil {
+			if decl, ok := sch.Resolve(n).Get(); ok {
 				*verbString += decl.String() + "\n\n"
 				err := visitNode(sch, decl, verbString)
 				if err != nil {
 					return err
 				}
 			}
+
 		default:
 		}
 		return next()

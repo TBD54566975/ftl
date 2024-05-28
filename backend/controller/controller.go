@@ -19,6 +19,7 @@ import (
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -711,6 +712,96 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), "")
 }
 
+func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.SendFSMEventRequest]) (resp *connect.Response[ftlv1.SendFSMEventResponse], err error) {
+	msg := req.Msg
+	sch := s.schema.Load()
+	// Resolve the FSM.
+	fsm := &schema.FSM{}
+	if err := sch.ResolveToType(schema.RefFromProto(msg.Fsm), fsm); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("fsm not found: %w", err))
+	}
+
+	eventType := schema.TypeFromProto(msg.Event)
+
+	fsmKey := schema.RefFromProto(msg.Fsm).ToRefKey()
+
+	tx, err := s.dal.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start transaction: %w", err))
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+
+	instance, err := tx.AcquireFSMInstance(ctx, fsmKey, msg.Instance)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("could not acquire fsm instance: %w", err))
+	}
+	defer instance.Release() //nolint:errcheck
+
+	// Populated if we find a matching transition.
+	var destinationRef *schema.Ref
+	var destinationVerb *schema.Verb
+
+	var candidates []string
+
+	updateCandidates := func(ref *schema.Ref) (brk bool, err error) {
+		verb := &schema.Verb{}
+		if err := sch.ResolveToType(ref, verb); err != nil {
+			return false, connect.NewError(connect.CodeNotFound, fmt.Errorf("fsm: destination verb %s not found: %w", ref, err))
+		}
+		candidates = append(candidates, verb.Name)
+		if !eventType.Equal(verb.Request) {
+			return false, nil
+		}
+
+		destinationRef = ref
+		destinationVerb = verb
+		return true, nil
+	}
+
+	// Check start transitions
+	if !instance.CurrentState.Ok() {
+		for _, start := range fsm.Start {
+			if brk, err := updateCandidates(start); err != nil {
+				return nil, err
+			} else if brk {
+				break
+			}
+		}
+	} else {
+		// Find the transition from the current state that matches the given event.
+		for _, transition := range fsm.Transitions {
+			instanceState, _ := instance.CurrentState.Get()
+			if transition.From.ToRefKey() != instanceState {
+				continue
+			}
+			if brk, err := updateCandidates(transition.To); err != nil {
+				return nil, err
+			} else if brk {
+				break
+			}
+		}
+	}
+
+	if destinationRef == nil {
+		if len(candidates) > 0 {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				fmt.Errorf("no transition found from state %s for type %s, candidates are %s", instance.CurrentState, eventType, strings.Join(candidates, ", ")))
+		}
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("no transition found from state %s for type %s", instance.CurrentState, eventType))
+	}
+
+	retryParams, err := schema.RetryParamsForFSMTransition(fsm, destinationVerb)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	err = tx.StartFSMTransition(ctx, instance.FSM, instance.Key, destinationRef.ToRefKey(), msg.Body, retryParams)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start fsm transition: %w", err))
+	}
+	return connect.NewResponse(&ftlv1.SendFSMEventResponse{}), nil
+}
+
 func (s *Service) callWithRequest(
 	ctx context.Context,
 	req *connect.Request[ftlv1.CallRequest],
@@ -733,7 +824,7 @@ func (s *Service) callWithRequest(
 	verbRef := schema.RefFromProto(req.Msg.Verb)
 	verb := &schema.Verb{}
 
-	if err = sch.ResolveRefToType(verbRef, verb); err != nil {
+	if err = sch.ResolveToType(verbRef, verb); err != nil {
 		if errors.Is(err, schema.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
@@ -793,7 +884,8 @@ func (s *Service) callWithRequest(
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 
-	resp, err := client.verb.Call(ctx, req)
+	response, err := client.verb.Call(ctx, req)
+	resp := connect.NewResponse(response.Msg)
 	var maybeResponse optional.Option[*ftlv1.CallResponse]
 	if resp != nil {
 		maybeResponse = optional.Some(resp.Msg)
@@ -1076,44 +1168,96 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 
 	call, err := s.dal.AcquireAsyncCall(ctx)
 	if errors.Is(err, dal.ErrNotFound) {
+		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
 	} else if err != nil {
 		return 0, err
 	}
 	defer call.Release() //nolint:errcheck
 
-	logger = logger.Scope(fmt.Sprintf("%s:%s:%s", call.Origin, call.OriginKey, call.Verb))
+	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb))
 
 	logger.Tracef("Executing async call")
-	req := &ftlv1.CallRequest{ //nolint:forcetypeassert
-		Verb: call.Verb.ToProto().(*schemapb.Ref),
+	req := &ftlv1.CallRequest{
+		Verb: call.Verb.ToProto(),
 		Body: call.Request,
 	}
 	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), s.config.Advertise.String())
 	if err != nil {
 		return 0, fmt.Errorf("async call failed: %w", err)
 	}
-	var callError optional.Option[string]
+	var callResult either.Either[[]byte, string]
 	if perr := resp.Msg.GetError(); perr != nil {
 		logger.Warnf("Async call failed: %s", perr.Message)
-		callError = optional.Some(perr.Message)
+		callResult = either.RightOf[[]byte](perr.Message)
 	} else {
 		logger.Debugf("Async call succeeded")
+		callResult = either.LeftOf[string](resp.Msg.GetBody())
 	}
-	err = s.dal.CompleteAsyncCall(ctx, call, resp.Msg.GetBody(), callError)
+	err = s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx) error {
+		failed := resp.Msg.GetError() != nil
+		if failed && call.RemainingAttempts > 0 {
+			// Will retry, do not propagate failure yet.
+			return nil
+		}
+		switch origin := call.Origin.(type) {
+		case dal.AsyncOriginFSM:
+			return s.onAsyncFSMCallCompletion(ctx, tx, origin, failed)
+
+		default:
+			panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))
+		}
+	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
-	switch call.Origin {
-	case dal.AsyncCallOriginFSM:
-		return time.Millisecond * 100, s.onAsyncFSMCallCompletion(ctx, call, resp.Msg)
-
-	default:
-		panic(fmt.Sprintf("unexpected async call origin: %s", call.Origin))
-	}
+	return 0, nil
 }
 
-func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, call *dal.AsyncCall, response *ftlv1.CallResponse) error {
+func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, origin dal.AsyncOriginFSM, failed bool) error {
+	logger := log.FromContext(ctx).Scope(origin.FSM.String())
+
+	instance, err := tx.AcquireFSMInstance(ctx, origin.FSM, origin.Key)
+	if err != nil {
+		return fmt.Errorf("could not acquire lock on FSM instance: %w", err)
+	}
+	defer instance.Release() //nolint:errcheck
+
+	if failed {
+		logger.Warnf("FSM %s failed async call", origin.FSM)
+		err := tx.FailFSMInstance(ctx, origin.FSM, origin.Key)
+		if err != nil {
+			return fmt.Errorf("failed to fail FSM instance: %w", err)
+		}
+		return nil
+	}
+
+	sch := s.schema.Load()
+
+	fsm := &schema.FSM{}
+	err = sch.ResolveToType(origin.FSM.ToRef(), fsm)
+	if err != nil {
+		return fmt.Errorf("could not resolve FSM: %w", err)
+	}
+
+	destinationState, _ := instance.DestinationState.Get()
+	// If we're heading to a terminal state we can just succeed the FSM.
+	for _, terminal := range fsm.TerminalStates() {
+		if terminal.ToRefKey() == destinationState {
+			logger.Debugf("FSM reached terminal state %s", destinationState)
+			err := tx.SucceedFSMInstance(ctx, origin.FSM, origin.Key)
+			if err != nil {
+				return fmt.Errorf("failed to succeed FSM instance: %w", err)
+			}
+			return nil
+		}
+
+	}
+
+	err = tx.FinishFSMTransition(ctx, origin.FSM, origin.Key)
+	if err != nil {
+		return fmt.Errorf("failed to complete FSM transition: %w", err)
+	}
 	return nil
 }
 

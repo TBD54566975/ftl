@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -17,6 +18,7 @@ type FSM struct {
 	Name        string           `parser:"'fsm' @Ident '{'" protobuf:"3"`
 	Start       []*Ref           `parser:"('start' @@)*" protobuf:"4"` // Start states.
 	Transitions []*FSMTransition `parser:"('transition' @@)* '}'" protobuf:"5"`
+	Metadata    []Metadata       `parser:"@@*" protobuf:"6"`
 }
 
 func FSMFromProto(pb *schemapb.FSM) *FSM {
@@ -25,12 +27,35 @@ func FSMFromProto(pb *schemapb.FSM) *FSM {
 		Name:        pb.Name,
 		Start:       slices.Map(pb.Start, RefFromProto),
 		Transitions: slices.Map(pb.Transitions, FSMTransitionFromProto),
+		Metadata:    metadataListToSchema(pb.Metadata),
 	}
 }
 
 var _ Decl = (*FSM)(nil)
 var _ Symbol = (*FSM)(nil)
 
+// TerminalStates returns the terminal states of the FSM.
+func (f *FSM) TerminalStates() []*Ref {
+	var out []*Ref
+	all := map[string]struct{}{}
+	in := map[string]struct{}{}
+	for _, t := range f.Transitions {
+		all[t.From.String()] = struct{}{}
+		all[t.To.String()] = struct{}{}
+		in[t.From.String()] = struct{}{}
+	}
+	for key := range all {
+		if _, ok := in[key]; !ok {
+			ref, _ := ParseRef(key)
+			out = append(out, ref)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].String() < out[j].String()
+	})
+	return out
+
+}
 func (f *FSM) GetName() string    { return f.Name }
 func (f *FSM) IsExported() bool   { return false }
 func (f *FSM) Position() Position { return f.Pos }
@@ -39,7 +64,13 @@ func (f *FSM) schemaSymbol()      {}
 
 func (f *FSM) String() string {
 	w := &strings.Builder{}
-	fmt.Fprintf(w, "fsm %s {\n", f.Name)
+	if len(f.Metadata) == 0 {
+		fmt.Fprintf(w, "fsm %s {\n", f.Name)
+	} else {
+		fmt.Fprintf(w, "fsm %s", f.Name)
+		fmt.Fprint(w, indent(encodeMetadata(f.Metadata)))
+		fmt.Fprintf(w, "\n{\n")
+	}
 	for _, s := range f.Start {
 		fmt.Fprintf(w, "  start %s\n", s)
 	}
@@ -60,6 +91,7 @@ func (f *FSM) ToProto() protoreflect.ProtoMessage {
 		Transitions: slices.Map(f.Transitions, func(t *FSMTransition) *schemapb.FSMTransition {
 			return t.ToProto().(*schemapb.FSMTransition) //nolint: forcetypeassert
 		}),
+		Metadata: metadataListToProto(f.Metadata),
 	}
 }
 
@@ -70,6 +102,9 @@ func (f *FSM) schemaChildren() []Node {
 	}
 	for _, t := range f.Transitions {
 		out = append(out, t)
+	}
+	for _, m := range f.Metadata {
+		out = append(out, m)
 	}
 	return out
 }

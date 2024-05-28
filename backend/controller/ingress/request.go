@@ -17,7 +17,7 @@ import (
 // BuildRequestBody extracts the HttpRequest body from an HTTP request.
 func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
 	verb := &schema.Verb{}
-	err := sch.ResolveRefToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
+	err := sch.ResolveToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, ref *schem
 	}
 
 	if ref, ok := bodyField.Type.(*schema.Ref); ok {
-		if _, ok := sch.ResolveRef(ref).(*schema.Data); ok {
+		if err := sch.ResolveToType(ref, &schema.Data{}); err == nil {
 			return buildRequestMap(route, r, ref, sch)
 		}
 	}
@@ -216,7 +216,7 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, 
 			requestMap[k] = v
 		}
 	default:
-		data, err := sch.ResolveRefMonomorphised(ref)
+		data, err := sch.ResolveMonomorphised(ref)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +235,7 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, 
 }
 
 func validateRequestMap(ref *schema.Ref, path path, request map[string]any, sch *schema.Schema) error {
-	data, err := sch.ResolveRefMonomorphised(ref)
+	data, err := sch.ResolveMonomorphised(ref)
 	if err != nil {
 		return err
 	}

@@ -31,9 +31,10 @@ import (
 
 // Scaffold a directory relative to the testdata directory to a directory relative to the working directory.
 func Scaffold(src, dest string, tmplCtx any) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Scaffolding %s -> %s", src, dest)
-		return scaffolder.Scaffold(filepath.Join(ic.testData, src), filepath.Join(ic.workDir, dest), tmplCtx)
+		err := scaffolder.Scaffold(filepath.Join(ic.testData, src), filepath.Join(ic.workDir, dest), tmplCtx)
+		assert.NoError(t, err)
 	}
 }
 
@@ -43,96 +44,87 @@ func Scaffold(src, dest string, tmplCtx any) Action {
 func CopyModule(module string) Action {
 	return Chain(
 		CopyDir(module, module),
-		func(t testing.TB, ic TestContext) error {
-			return ftlexec.Command(ic, log.Debug, filepath.Join(ic.workDir, module), "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.rootDir).RunBuffered(ic)
+		func(t testing.TB, ic TestContext) {
+			err := ftlexec.Command(ic, log.Debug, filepath.Join(ic.workDir, module), "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.rootDir).RunBuffered(ic)
+			assert.NoError(t, err)
 		},
 	)
 }
 
 // Copy a directory from the testdata directory to the working directory.
 func CopyDir(src, dest string) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Copying %s -> %s", src, dest)
-		return copy.Copy(filepath.Join(ic.testData, src), filepath.Join(ic.workDir, dest))
+		err := copy.Copy(filepath.Join(ic.testData, src), filepath.Join(ic.workDir, dest))
+		assert.NoError(t, err)
 	}
 }
 
 // Chain multiple actions together.
 func Chain(actions ...Action) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic testContext) {
 		for _, action := range actions {
-			err := action(t, ic)
-			if err != nil {
-				return err
-			}
+			action(t, ic)
 		}
-		return nil
 	}
 }
 
 // Chdir changes the test working directory to the subdirectory for the duration of the action.
 func Chdir(dir string, a Action) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		dir := filepath.Join(ic.workDir, dir)
 		infof("Changing directory to %s", dir)
 		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
+		assert.NoError(t, err)
 		ic.workDir = dir
 		err = os.Chdir(dir)
-		if err != nil {
-			return err
-		}
+		assert.NoError(t, err)
 		defer os.Chdir(cwd)
-		return a(t, ic)
+		a(t, ic)
 	}
 }
 
 // DebugShell opens a new Terminal window in the test working directory.
 func DebugShell() Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Starting debug shell")
-		return ftlexec.Command(ic, log.Debug, ic.workDir, "open", "-n", "-W", "-a", "Terminal", ".").RunBuffered(ic)
+		err := ftlexec.Command(ic, log.Debug, ic.workDir, "open", "-n", "-W", "-a", "Terminal", ".").RunBuffered(ic)
+		assert.NoError(t, err)
 	}
 }
 
 // Exec runs a command from the test working directory.
 func Exec(cmd string, args ...string) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Executing: %s %s", cmd, shellquote.Join(args...))
 		err := ftlexec.Command(ic, log.Debug, ic.workDir, cmd, args...).RunBuffered(ic)
-		if err != nil {
-			return err
-		}
-		return nil
+		assert.NoError(t, err)
 	}
 }
 
 // ExecWithOutput runs a command from the test working directory.
 // The output is captured and is returned as part of the error.
 func ExecWithOutput(cmd string, args ...string) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Executing: %s %s", cmd, shellquote.Join(args...))
 		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
-		if err != nil {
-			return fmt.Errorf("command execution failed: %s, output: %s", err, string(output))
-		}
-		return nil
+		assert.NoError(t, err, "%s", string(output))
 	}
 }
 
 // ExpectError wraps an action and expects it to return an error with the given message.
 func ExpectError(action Action, expectedErrorMsg string) Action {
-	return func(t testing.TB, ic TestContext) error {
-		err := action(t, ic)
-		if err == nil {
-			return fmt.Errorf("expected error %q, but got nil", expectedErrorMsg)
-		}
-		if !strings.Contains(err.Error(), expectedErrorMsg) {
-			return fmt.Errorf("expected error %q, but got %q", expectedErrorMsg, err.Error())
-		}
-		return nil
+	return func(t testing.TB, ic TestContext) {
+		defer func() {
+			if r := recover(); r != nil {
+				if e, ok := r.(TestingError); ok {
+					assert.Contains(t, string(e), expectedErrorMsg)
+				} else {
+					panic(r)
+				}
+			}
+		}()
+		Action(t, ic)
 	}
 }
 
@@ -153,119 +145,149 @@ func Build(modules ...string) Action {
 
 // Wait for the given module to deploy.
 func Wait(module string) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Waiting for %s to become ready", module)
-		ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) error {
+		// There's a bit of a bug here: wait() is already being retried by the
+		// test harness, so in the error case we'll be waiting N^2 times. This
+		// is fine for now, but we should fix this in the future.
+		ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
 			status, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
-			if err != nil {
-				return err
-			}
+			assert.NoError(t, err)
 			for _, deployment := range status.Msg.Deployments {
 				if deployment.Name == module {
-					return nil
+					return
 				}
 			}
-			return fmt.Errorf("deployment of module %q not found", module)
+			t.Fatalf("deployment of module %q not found", module)
 		})
-		return nil
 	}
 }
 
 func Sleep(duration time.Duration) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Sleeping for %s", duration)
 		time.Sleep(duration)
-		return nil
 	}
 }
 
 // Assert that a file exists in the working directory.
 func FileExists(path string) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Checking that %s exists", path)
 		_, err := os.Stat(filepath.Join(ic.workDir, path))
-		return err
+		assert.NoError(t, err)
 	}
 }
 
-// Assert that a file exists in the working directory and contains the given text.
-func FileContains(path, content string) Action {
-	return func(t testing.TB, ic TestContext) error {
-		infof("Checking that %s contains %q", path, content)
-		data, err := os.ReadFile(filepath.Join(ic.workDir, path))
-		if err != nil {
-			return err
+// Assert that a file exists and its content contains the given text.
+//
+// If "path" is relative it will be to the working directory.
+func FileContains(path, needle string) Action {
+	return func(t testing.TB, ic TestContext)  {
+		absPath := path
+		if !filepath.IsAbs(path) {
+			absPath = filepath.Join(ic.workDir, path)
 		}
-		if !strings.Contains(string(data), content) {
-			return fmt.Errorf("%q not found in %q", content, string(data))
+		infof("Checking that the content of %s is correct", absPath)
+		data, err := os.ReadFile(absPath)
+		assert.NoError(t, err)
+		actual := string(data)
+		assert.Contains(t, actual, needle)
+	}
+}
+
+// Assert that a file exists and its content is equal to the given text.
+//
+// If "path" is relative it will be to the working directory.
+func fileContent(path, expected string) action {
+	return func(t testing.TB, ic testContext) {
+		absPath := path
+		if !filepath.IsAbs(path) {
+			absPath = filepath.Join(ic.workDir, path)
 		}
-		return nil
+		infof("Checking that the content of %s is correct", absPath)
+		data, err := os.ReadFile(absPath)
+		assert.NoError(t, err)
+		expected = strings.TrimSpace(expected)
+		actual := strings.TrimSpace(string(data))
+		assert.Equal(t, expected, actual)
 	}
 }
 
 type obj map[string]any
 
 // Call a verb.
-func Call(module, verb string, request obj, check func(response obj) error) Action {
-	return func(t testing.TB, ic TestContext) error {
+//
+// "check" may be nil
+func Call(module, verb string, request obj, check func(t testing.TB, response obj)) Action {
+	return func(t testing.TB, ic TestContext) {
 		infof("Calling %s.%s", module, verb)
 		data, err := json.Marshal(request)
-		if err != nil {
-			return fmt.Errorf("failed to marshal request: %w", err)
-		}
+		assert.NoError(t, err)
 		resp, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
 			Verb: &schemapb.Ref{Module: module, Name: verb},
 			Body: data,
 		}))
-		if err != nil {
-			return fmt.Errorf("failed to call verb: %w", err)
-		}
+		assert.NoError(t, err)
 		var response obj
-		if resp.Msg.GetError() != nil {
-			return fmt.Errorf("verb failed: %s", resp.Msg.GetError().GetMessage())
-		}
+		assert.Zero(t, resp.Msg.GetError(), "verb failed: %s", resp.Msg.GetError().GetMessage())
 		err = json.Unmarshal(resp.Msg.GetBody(), &response)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal response: %w", err)
+		assert.NoError(t, err)
+		if check != nil {
+			check(t, response)
 		}
-		return check(response)
 	}
+}
+
+// Fail expects the next action to fail.
+func fail(next action, msg string, args ...any) action {
+	return func(t testing.TB, ic testContext) {
+		infof("Expecting failure of nested action")
+		panicked := true
+		defer func() {
+			if !panicked {
+				t.Fatalf("expected action to fail: "+msg, args...)
+			} else {
+				recover()
+			}
+		}()
+		next(t, ic)
+		panicked = false
+	}
+}
+
+// fetched and returns a row's column values
+func getRow(t testing.TB, ic testContext, database, query string, fieldCount int) []any {
+	infof("Querying %s: %s", database, query)
+	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
+	assert.NoError(t, err)
+	defer db.Close()
+	actual := make([]any, fieldCount)
+	for i := range actual {
+		actual[i] = new(any)
+	}
+	err = db.QueryRowContext(ic, query).Scan(actual...)
+	assert.NoError(t, err)
+	for i := range actual {
+		actual[i] = *actual[i].(*any)
+	}
+	return actual
 }
 
 // Query a single row from a database.
 func QueryRow(database string, query string, expected ...interface{}) Action {
 	return func(t testing.TB, ic TestContext) error {
-		infof("Querying %s: %s", database, query)
-		db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		actual := make([]any, len(expected))
-		for i := range actual {
-			actual[i] = new(any)
-		}
-		err = db.QueryRowContext(ic, query).Scan(actual...)
-		if err != nil {
-			return err
-		}
-		for i := range actual {
-			actual[i] = *actual[i].(*any)
-		}
+		actual := getRow(t, ic, database, query, len(expected))
 		for i, a := range actual {
-			if a != expected[i] {
-				return fmt.Errorf("expected %v, got %v", expected, actual)
-			}
+			assert.Equal(t, a, expected[i])
 		}
-		return nil
 	}
 }
 
 // Create a database for use by a module.
 func CreateDBAction(module, dbName string, isTest bool) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		CreateDB(t, module, dbName, isTest)
-		return nil
 	}
 }
 
@@ -306,9 +328,10 @@ func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
 
 // Create a directory in the working directory
 func Mkdir(dir string) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		infof("Creating directory %s", dir)
-		return os.MkdirAll(filepath.Join(ic.workDir, dir), 0700)
+		err := os.MkdirAll(filepath.Join(ic.workDir, dir), 0700)
+		assert.NoError(t, err)
 	}
 }
 
@@ -326,38 +349,30 @@ func JsonData(t testing.TB, body interface{}) []byte {
 }
 
 // HttpCall makes an HTTP call to the running FTL ingress endpoint.
-func HttpCall(method string, path string, body []byte, onResponse func(resp *HttpResponse) error) Action {
-	return func(t testing.TB, ic TestContext) error {
+func HttpCall(method string, path string, body []byte, onResponse func(t testing.TB, resp *httpResponse)) Action {
+	return func(t testing.TB, ic TestContext) {
 		infof("HTTP %s %s", method, path)
 		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8892/ingress"))
-		if err != nil {
-			return err
-		}
+		assert.NoError(t, err)
 
 		r, err := http.NewRequestWithContext(ic, method, baseURL.JoinPath(path).String(), bytes.NewReader(body))
-		if err != nil {
-			return err
-		}
+		assert.NoError(t, err)
 
 		r.Header.Add("Content-Type", "application/json")
 
 		client := http.Client{}
 		resp, err := client.Do(r)
-		if err != nil {
-			return err
-		}
+		assert.NoError(t, err)
 		defer resp.Body.Close()
 
 		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
+		assert.NoError(t, err)
 
 		var resBody map[string]any
 		// ignore the error here since some responses are just `[]byte`.
 		_ = json.Unmarshal(bodyBytes, &resBody)
 
-		return onResponse(&HttpResponse{
+		onResponse(t, &HttpResponse{
 			status:    resp.StatusCode,
 			headers:   resp.Header,
 			jsonBody:  resBody,
@@ -366,6 +381,7 @@ func HttpCall(method string, path string, body []byte, onResponse func(resp *Htt
 	}
 }
 
+// Run "go test" in the given module.
 func ExecModuleTest(module string) Action {
 	return Chdir(module, Exec("go", "test", "-v", "."))
 }

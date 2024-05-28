@@ -16,11 +16,18 @@ type Optional struct {
 var _ Type = (*Optional)(nil)
 var _ Symbol = (*Optional)(nil)
 
+func (o *Optional) Equal(other Type) bool {
+	ot, ok := other.(*Optional)
+	if !ok {
+		return false
+	}
+	return o.Type.Equal(ot.Type)
+}
 func (o *Optional) Position() Position     { return o.Pos }
 func (o *Optional) String() string         { return o.Type.String() + "?" }
 func (*Optional) schemaType()              {}
 func (*Optional) schemaSymbol()            {}
 func (o *Optional) schemaChildren() []Node { return []Node{o.Type} }
 func (o *Optional) ToProto() proto.Message {
-	return &schemapb.Optional{Pos: posToProto(o.Pos), Type: typeToProto(o.Type)}
+	return &schemapb.Optional{Pos: posToProto(o.Pos), Type: TypeToProto(o.Type)}
 }

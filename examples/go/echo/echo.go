@@ -12,17 +12,6 @@ import (
 
 var defaultName = ftl.Config[string]("default")
 
-//ftl:enum
-type Enum interface{ enum() }
-
-type A int
-
-func (A) enum() {}
-
-type B string
-
-func (B) enum() {}
-
 // An echo request.
 type EchoRequest struct {
 	Name ftl.Option[string] `json:"name"`

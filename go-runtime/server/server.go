@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
@@ -32,6 +33,7 @@ type UserVerbConfig struct {
 // This function is intended to be used by the code generator.
 func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
+		ctx = internal.WithContext(ctx, internal.New())
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
@@ -68,7 +70,7 @@ func handler[Req, Resp any](ref reflection.Ref, verb func(ctx context.Context, r
 		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
 			// Decode request.
 			var req Req
-			err := encoding.Unmarshal(ctx, reqdata, &req)
+			err := encoding.Unmarshal(reqdata, &req)
 			if err != nil {
 				return nil, fmt.Errorf("invalid request to verb %s: %w", ref, err)
 			}
@@ -79,7 +81,7 @@ func handler[Req, Resp any](ref reflection.Ref, verb func(ctx context.Context, r
 				return nil, fmt.Errorf("call to verb %s failed: %w", ref, err)
 			}
 
-			respdata, err := encoding.Marshal(ctx, resp)
+			respdata, err := encoding.Marshal(resp)
 			if err != nil {
 				return nil, err
 			}
@@ -171,4 +173,8 @@ func (m *moduleServer) AcquireLease(context.Context, *connect.BidiStream[ftlv1.A
 
 func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
+}
+
+func (m *moduleServer) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("SendFSMEvent not implemented"))
 }

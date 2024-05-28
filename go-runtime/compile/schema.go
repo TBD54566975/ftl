@@ -23,7 +23,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/goast"
-	islices "github.com/TBD54566975/ftl/internal/slices"
 )
 
 var (
@@ -144,23 +143,17 @@ func ExtractModuleSchema(dir string, sch *schema.Schema) (optional.Option[ParseR
 			return optional.None[ParseResult](), err
 		}
 		for _, file := range pkg.Syntax {
-			err := goast.Visit(file, func(node ast.Node, next func() error) (err error) {
+			err := goast.Visit(file, func(stack []ast.Node, next func() error) (err error) {
+				node := stack[len(stack)-1]
 				switch node := node.(type) {
 				case *ast.CallExpr:
-					visitCallExpr(pctx, node)
+					visitCallExpr(pctx, node, stack)
 
 				case *ast.File:
 					visitFile(pctx, node)
 
 				case *ast.FuncDecl:
-					verb := visitFuncDecl(pctx, node)
-					pctx.activeVerb = verb
-					err = next()
-					if err != nil {
-						return err
-					}
-					pctx.activeVerb = nil
-					return nil
+					visitFuncDecl(pctx, node)
 
 				case *ast.GenDecl:
 					visitGenDecl(pctx, node)
@@ -201,8 +194,8 @@ func ExtractModuleSchema(dir string, sch *schema.Schema) (optional.Option[ParseR
 //   - This get's filled in with the next pass
 func extractTypeDecls(pctx *parseContext) error {
 	for _, file := range pctx.pkg.Syntax {
-		err := goast.Visit(file, func(aNode ast.Node, next func() error) (err error) {
-			node, ok := aNode.(*ast.GenDecl)
+		err := goast.Visit(file, func(stack []ast.Node, next func() error) (err error) {
+			node, ok := (stack[len(stack)-1]).(*ast.GenDecl)
 			if !ok || node.Tok != token.TYPE {
 				return next()
 			}
@@ -244,7 +237,7 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 			case *types.Basic:
 				enum := &schema.Enum{
 					Pos:      goPosToSchemaPos(node.Pos()),
-					Comments: visitComments(node.Doc),
+					Comments: parseComments(node.Doc),
 					Name:     strcase.ToUpperCamel(t.Name.Name),
 					Type:     nil, //TODO: explain
 					Export:   dir.IsExported(),
@@ -271,14 +264,14 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 
 				enum := &schema.Enum{
 					Pos:      goPosToSchemaPos(node.Pos()),
-					Comments: visitComments(node.Doc),
+					Comments: parseComments(node.Doc),
 					Name:     strcase.ToUpperCamel(t.Name.Name),
 					Export:   dir.IsExported(),
 				}
-				if typ, ok := typ.(*types.Interface); ok {
+				if iTyp, ok := typ.(*types.Interface); ok {
 					pctx.nativeNames[enum] = nativeName
 					pctx.module.Decls = append(pctx.module.Decls, enum)
-					pctx.enumInterfaces[t.Name.Name] = typ
+					pctx.enumInterfaces[t.Name.Name] = iTyp
 				} else {
 					pctx.errors.add(errorf(node, "expected interface for type enum but got %q", typ))
 				}
@@ -287,7 +280,7 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 		case *directiveTypeAlias:
 			alias := &schema.TypeAlias{
 				Pos:      goPosToSchemaPos(node.Pos()),
-				Comments: visitComments(node.Doc),
+				Comments: parseComments(node.Doc),
 				Name:     strcase.ToUpperCamel(t.Name.Name),
 				Export:   dir.IsExported(),
 				Type:     nil, //TODO: explain
@@ -307,29 +300,48 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 	}
 }
 
-func visitCallExpr(pctx *parseContext, node *ast.CallExpr) {
+func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	_, fn := deref[*types.Func](pctx.pkg, node.Fun)
 	if fn == nil {
 		return
 	}
 	switch fn.FullName() {
 	case ftlCallFuncPath:
-		parseCall(pctx, node)
+		parseCall(pctx, node, stack)
 
 	case ftlConfigFuncPath, ftlSecretFuncPath:
 		// Secret/config declaration: ftl.Config[<type>](<name>)
 		parseConfigDecl(pctx, node, fn)
 
 	case ftlFSMFuncPath:
-		parseFSMDecl(pctx, node)
+		parseFSMDecl(pctx, node, stack)
 
 	case ftlPostgresDBFuncPath:
 		parseDatabaseDecl(pctx, node, schema.PostgresDatabaseType)
 	}
 }
 
-func parseCall(pctx *parseContext, node *ast.CallExpr) {
-	if pctx.activeVerb == nil {
+func parseCall(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
+	var activeFuncDecl *ast.FuncDecl
+	for i := len(stack) - 1; i >= 0; i-- {
+		if found, ok := stack[i].(*ast.FuncDecl); ok {
+			activeFuncDecl = found
+			break
+		}
+		// use element
+	}
+	if activeFuncDecl == nil {
+		return
+	}
+	expectedVerbName := strcase.ToLowerCamel(activeFuncDecl.Name.Name)
+	var activeVerb *schema.Verb
+	for _, decl := range pctx.module.Decls {
+		if aVerb, ok := decl.(*schema.Verb); ok && aVerb.Name == expectedVerbName {
+			activeVerb = aVerb
+			break
+		}
+	}
+	if activeVerb == nil {
 		return
 	}
 	if len(node.Args) != 3 {
@@ -340,7 +352,7 @@ func parseCall(pctx *parseContext, node *ast.CallExpr) {
 	if ref == nil {
 		ref = parseSelectorRef(node.Args[1])
 		var suffix string
-		if pctx.schema.ResolveRef(ref) != nil {
+		if pctx.schema.Resolve(ref).Ok() {
 			suffix = ", does it need to be exported?"
 		}
 		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
@@ -349,7 +361,7 @@ func parseCall(pctx *parseContext, node *ast.CallExpr) {
 		pctx.errors.add(errorf(node.Args[1], "call first argument must be a function in an ftl module%s", suffix))
 		return
 	}
-	pctx.activeVerb.AddCall(ref)
+	activeVerb.AddCall(ref)
 }
 
 func parseSelectorRef(node ast.Expr) *schema.Ref {
@@ -385,7 +397,7 @@ func parseVerbRef(pctx *parseContext, node ast.Expr) *schema.Ref {
 	}
 }
 
-func parseFSMDecl(pctx *parseContext, node *ast.CallExpr) {
+func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	var literal *ast.BasicLit
 	if len(node.Args) > 0 {
 		literal, _ = node.Args[0].(*ast.BasicLit)
@@ -405,8 +417,9 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr) {
 	}
 
 	fsm := &schema.FSM{
-		Pos:  goPosToSchemaPos(node.Pos()),
-		Name: name,
+		Pos:      goPosToSchemaPos(node.Pos()),
+		Name:     name,
+		Metadata: []schema.Metadata{},
 	}
 	pctx.module.Decls = append(pctx.module.Decls, fsm)
 
@@ -422,6 +435,34 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr) {
 			continue
 		}
 		parseFSMTransition(pctx, call, fn, fsm)
+	}
+
+	// find variable declaration that we are currently in so we can look for attached directives
+	var variableDecl *ast.GenDecl
+	for i := len(stack) - 1; i >= 0; i-- {
+		if decl, ok := stack[i].(*ast.GenDecl); ok && decl.Tok == token.VAR {
+			variableDecl = decl
+			break
+		}
+	}
+	if variableDecl == nil || variableDecl.Doc == nil {
+		return
+	}
+	directives, schemaErr := parseDirectives(node, fset, variableDecl.Doc)
+	if schemaErr != nil {
+		pctx.errors.add(schemaErr)
+	}
+	for _, dir := range directives {
+		if retryDir, ok := dir.(*directiveRetry); ok {
+			fsm.Metadata = append(fsm.Metadata, &schema.MetadataRetry{
+				Pos:        retryDir.Pos,
+				Count:      retryDir.Count,
+				MinBackoff: retryDir.MinBackoff,
+				MaxBackoff: retryDir.MaxBackoff,
+			})
+		} else {
+			pctx.errors.add(errorf(node, "unexpected directive attached for FSM: %T", dir))
+		}
 	}
 }
 
@@ -566,7 +607,7 @@ func visitFile(pctx *parseContext, node *ast.File) {
 	if node.Doc == nil {
 		return
 	}
-	pctx.module.Comments = visitComments(node.Doc)
+	pctx.module.Comments = parseComments(node.Doc)
 }
 
 func isType[T types.Type](t types.Type) bool {
@@ -754,7 +795,7 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 
 	enumVariant := &schema.EnumVariant{
 		Pos:      goPosToSchemaPos(node.Pos()),
-		Comments: visitComments(node.Doc),
+		Comments: parseComments(node.Doc),
 		Name:     strcase.ToUpperCamel(t.Name.Name),
 	}
 
@@ -919,7 +960,7 @@ func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
 	if value, ok := visitConst(pctx, c).Get(); ok {
 		variant := &schema.EnumVariant{
 			Pos:      goPosToSchemaPos(c.Pos()),
-			Comments: visitComments(node.Doc),
+			Comments: parseComments(node.Doc),
 			Name:     strcase.ToUpperCamel(c.Id()),
 			Value:    value,
 		}
@@ -1057,7 +1098,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	}
 	verb = &schema.Verb{
 		Pos:      goPosToSchemaPos(node.Pos()),
-		Comments: visitComments(node.Doc),
+		Comments: parseComments(node.Doc),
 		Export:   isExported,
 		Name:     strcase.ToLowerCamel(node.Name.Name),
 		Request:  reqV,
@@ -1069,7 +1110,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 	return verb
 }
 
-func visitComments(doc *ast.CommentGroup) []string {
+func parseComments(doc *ast.CommentGroup) []string {
 	comments := []string{}
 	if doc := doc.Text(); doc != "" {
 		comments = strings.Split(strings.TrimSpace(doc), "\n")
@@ -1093,10 +1134,6 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type, isExported
 	}
 	nodePath := named.Obj().Pkg().Path()
 	if !pctx.isPathInPkg(nodePath) {
-		if strings.HasPrefix(nodePath, pctx.pkg.PkgPath+"/") {
-			pctx.errors.add(noEndColumnErrorf(pos, "unsupported struct %s from subpackage", named.Obj().Name()))
-			return optional.None[*schema.Ref]()
-		}
 		destModule, ok := ftlModuleFromGoModule(nodePath).Get()
 		if !ok {
 			pctx.errors.add(tokenErrorf(pos, nodePath, "struct declared in non-FTL module %s", nodePath))
@@ -1165,11 +1202,11 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type, isExported
 			switch path := path[i].(type) {
 			case *ast.TypeSpec:
 				if path.Doc != nil {
-					out.Comments = visitComments(path.Doc)
+					out.Comments = parseComments(path.Doc)
 				}
 			case *ast.GenDecl:
 				if path.Doc != nil {
-					out.Comments = visitComments(path.Doc)
+					out.Comments = parseComments(path.Doc)
 				}
 			}
 		}
@@ -1272,7 +1309,11 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 	switch underlying := tnode.Underlying().(type) {
 	case *types.Basic:
 		if named, ok := tnode.(*types.Named); ok {
-			return visitNamedRef(pctx, pos, named, isExported)
+			if !pctx.isPathInPkg(named.Obj().Pkg().Path()) {
+				// external named types get treated as refs
+				return visitNamedRef(pctx, pos, named, isExported)
+			}
+			// internal named types without decls are treated as basic types
 		}
 		switch underlying.Kind() {
 		case types.String:
@@ -1314,14 +1355,9 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 
 		default:
 			nodePath := named.Obj().Pkg().Path()
-			if !pctx.isPathInPkg(nodePath) {
-				if !strings.HasPrefix(nodePath, "ftl/") {
-					pctx.errors.add(noEndColumnErrorf(pos, "unsupported external type %s", nodePath+"."+named.Obj().Name()))
-					return optional.None[schema.Type]()
-				} else if strings.HasPrefix(nodePath, pctx.pkg.PkgPath+"/") {
-					pctx.errors.add(noEndColumnErrorf(pos, "unsupported type %s from subpackage", nodePath+"."+named.Obj().Name()))
-					return optional.None[schema.Type]()
-				}
+			if !pctx.isPathInPkg(nodePath) && !strings.HasPrefix(nodePath, "ftl/") {
+				pctx.errors.add(noEndColumnErrorf(pos, "unsupported external type %s", nodePath+"."+named.Obj().Name()))
+				return optional.None[schema.Type]()
 			}
 			if ref, ok := visitStruct(pctx, pos, tnode, isExported).Get(); ok {
 				return optional.Some[schema.Type](ref)
@@ -1365,10 +1401,7 @@ func visitNamedRef(pctx *parseContext, pos token.Pos, named *types.Named, isExpo
 	nodePath := named.Obj().Pkg().Path()
 	destModule := pctx.module.Name
 	if !pctx.isPathInPkg(nodePath) {
-		if strings.HasPrefix(nodePath, pctx.pkg.PkgPath+"/") {
-			pctx.errors.add(noEndColumnErrorf(pos, "unsupported type %s from subpackage", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
-			return optional.None[schema.Type]()
-		} else if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
+		if !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
 			pctx.errors.add(noEndColumnErrorf(pos,
 				"unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name()))
 			return optional.None[schema.Type]()
@@ -1472,7 +1505,6 @@ type parseContext struct {
 	module         *schema.Module
 	nativeNames    NativeNames
 	enumInterfaces enumInterfaces
-	activeVerb     *schema.Verb
 	errors         errorSet
 	schema         *schema.Schema
 }
@@ -1515,26 +1547,11 @@ func (p *parseContext) pathEnclosingInterval(start, end token.Pos) (pkg *package
 	return nil, nil, false
 }
 
-// isPathInPkg checks that the path is within the current package
-//
-// if it is in a subpackage, it will return false
 func (p *parseContext) isPathInPkg(path string) bool {
-	// find all packages whose path is a prefix of the given path
-	pkgs := islices.Filter(p.pkgs, func(pkg *packages.Package) bool {
-		if path == pkg.PkgPath {
-			return true
-		}
-		return strings.HasPrefix(path, pkg.PkgPath+"/")
-	})
-	if len(pkgs) == 0 {
-		return false
+	if path == p.pkg.PkgPath {
+		return true
 	}
-	// sort so we know if the current package is the longest prefix
-	paths := islices.Map(pkgs, func(pkg *packages.Package) string {
-		return pkg.PkgPath
-	})
-	slices.Sort(paths)
-	return paths[len(paths)-1] == p.pkg.PkgPath
+	return strings.HasPrefix(path, p.pkg.PkgPath+"/")
 }
 
 // getEnumForTypeName returns the enum and interface for a given type name.

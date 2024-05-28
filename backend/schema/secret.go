@@ -37,7 +37,7 @@ func (s *Secret) ToProto() protoreflect.ProtoMessage {
 		Pos:      posToProto(s.Pos),
 		Name:     s.Name,
 		Comments: s.Comments,
-		Type:     typeToProto(s.Type),
+		Type:     TypeToProto(s.Type),
 	}
 }
 
@@ -50,6 +50,6 @@ func SecretFromProto(s *schemapb.Secret) *Secret {
 		Pos:      posFromProto(s.Pos),
 		Name:     s.Name,
 		Comments: s.Comments,
-		Type:     typeToSchema(s.Type),
+		Type:     TypeFromProto(s.Type),
 	}
 }

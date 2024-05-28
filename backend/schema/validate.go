@@ -116,7 +116,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			case *Ref:
 				mdecl := scopes.Resolve(*n)
 				if mdecl == nil {
-					merr = append(merr, errorf(n, "unknown reference %q", n))
+					merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 					break
 				}
 
@@ -282,7 +282,7 @@ func ValidateModule(module *Module) error {
 		case *Ref:
 			mdecl := scopes.Resolve(*n)
 			if mdecl == nil && n.Module == "" {
-				merr = append(merr, errorf(n, "unknown reference %q", n))
+				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 			}
 			if mdecl != nil {
 				moduleName := ""
@@ -312,7 +312,7 @@ func ValidateModule(module *Module) error {
 					}
 				}
 			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
-				merr = append(merr, errorf(n, "unknown reference %q", n))
+				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 			}
 
 		case *Verb:
@@ -551,17 +551,12 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			}
 
 			// Validate parsing of durations
-			minDuration, err := md.MinBackoffDuration()
+			retryParams, err := md.RetryParams()
 			if err != nil {
 				merr = append(merr, errorf(md, "verb %s: %v", n.Name, err))
 				return
 			}
-			maxDuration, err := md.MaxBackoffDuration()
-			if err != nil {
-				merr = append(merr, errorf(md, "verb %s: %v", n.Name, err))
-				return
-			}
-			if maxDuration, ok := maxDuration.Get(); ok && maxDuration < minDuration {
+			if retryParams.MaxBackoff < retryParams.MinBackoff {
 				merr = append(merr, errorf(md, "verb %s: max backoff duration (%s) needs to be atleast as long as initial backoff (%s)", n.Name, md.MaxBackoff, md.MinBackoff))
 			}
 		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:

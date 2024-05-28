@@ -11,7 +11,7 @@ import (
 //
 // It takes in the full schema in order to resolve and define references.
 func DataToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, error) {
-	data, err := sch.ResolveRefMonomorphised(&ref)
+	data, err := sch.ResolveMonomorphised(&ref)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,10 @@ func DataToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, error) {
 	// Resolve and encode all types reachable from the root.
 	root.Definitions = map[string]jsonschema.SchemaOrBool{}
 	for _, r := range refs {
-		decl := sch.ResolveRef(r)
+		decl, ok := sch.Resolve(r).Get()
+		if !ok {
+			return nil, fmt.Errorf("unknown ref %s", r)
+		}
 		switch n := decl.(type) {
 		case *Data:
 			if len(r.TypeParameters) > 0 {

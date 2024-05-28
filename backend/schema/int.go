@@ -15,6 +15,7 @@ type Int struct {
 var _ Type = (*Int)(nil)
 var _ Symbol = (*Int)(nil)
 
+func (i *Int) Equal(other Type) bool  { _, ok := other.(*Int); return ok }
 func (i *Int) Position() Position     { return i.Pos }
 func (*Int) schemaSymbol()            {}
 func (*Int) schemaChildren() []Node   { return nil }

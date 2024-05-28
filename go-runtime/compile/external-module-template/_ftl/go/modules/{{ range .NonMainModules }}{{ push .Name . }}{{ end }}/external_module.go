@@ -7,6 +7,11 @@ import (
 {{- range $import, $alias := (.|imports)}}
   {{if $alias}}{{$alias}} {{end}}"{{$import}}"
 {{- end}}
+{{- $sumTypes := $ | sumTypes}}
+{{- if $sumTypes}}
+
+  "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+{{- end}}
 )
 
 var _ = context.Background
@@ -71,4 +76,18 @@ func {{.Name|title}}(context.Context, {{type $ .Request}}) ({{type $ .Response}}
 {{- end}}
 {{- end}}
 {{- end}}
+{{- end}}
+{{- if $sumTypes}}
+
+func init() {
+  reflection.Register(
+{{- range $sumTypes}}
+    reflection.SumType[{{.Name|title}}](
+{{- range .Variants}}
+      *new({{.Name|title}}),
+{{- end}}
+    ),
+{{- end}}
+  )
+}
 {{- end}}

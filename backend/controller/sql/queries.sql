@@ -484,10 +484,10 @@ WITH expired AS (
 SELECT COUNT(*)
 FROM expired;
 
--- name: AddAsyncCall :one
-INSERT INTO async_calls (verb, origin, origin_key, request)
-VALUES (@verb, @origin, @origin_key, @request)
-RETURNING true;
+-- name: CreateAsyncCall :one
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff)
+VALUES (@verb, @origin, @request, @remaining_attempts, @backoff::interval, @max_backoff::interval)
+RETURNING id;
 
 -- name: AcquireAsyncCall :one
 -- Reserve a pending async call for execution, returning the associated lease
@@ -495,7 +495,7 @@ RETURNING true;
 WITH async_call AS (
   SELECT id
   FROM async_calls
-  WHERE state = 'pending'
+  WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
   LIMIT 1
   FOR UPDATE SKIP LOCKED
 ), lease AS (
@@ -511,37 +511,105 @@ RETURNING
   (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
   (SELECT key FROM lease) AS lease_key,
   origin,
-  origin_key,
   verb,
-  request;
+  request,
+  scheduled_at,
+  remaining_attempts,
+  backoff,
+  max_backoff;
 
--- name: CompleteAsyncCall :one
+-- name: SucceedAsyncCall :one
 UPDATE async_calls
-SET state = 'success',
-    response = @response,
-    error = @error
+SET
+  state = 'success'::async_call_state,
+  response = @response::JSONB
 WHERE id = @id
 RETURNING true;
+
+-- name: FailAsyncCall :one
+UPDATE async_calls
+SET
+  state = 'error'::async_call_state,
+  error = @error::TEXT
+WHERE id = @id
+RETURNING true;
+
+-- name: FailAsyncCallWithRetry :one
+WITH updated AS (
+  UPDATE async_calls
+  SET state = 'error'::async_call_state,
+      error = @error::TEXT
+  WHERE id = @id::BIGINT
+  RETURNING *
+)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, scheduled_at)
+SELECT updated.verb, updated.origin, updated.request, @remaining_attempts, @backoff::interval, @max_backoff::interval, @scheduled_at::TIMESTAMPTZ
+  FROM updated
+  RETURNING true;
 
 -- name: LoadAsyncCall :one
 SELECT *
 FROM async_calls
 WHERE id = @id;
 
--- name: SendFSMEvent :one
--- Creates a new FSM execution, including initial async call and transition.
+-- name: GetFSMInstance :one
+SELECT *
+FROM fsm_instances
+WHERE fsm = @fsm::schema_ref AND key = @key;
+
+-- name: StartFSMTransition :one
+-- Start a new FSM transition, populating the destination state and async call ID.
 --
 -- "key" is the unique identifier for the FSM execution.
-WITH execution AS (
-  INSERT INTO fsm_executions (key, name, state)
-  VALUES (@key, @name, @state)
-  ON CONFLICT(key) DO UPDATE SET state = @state
-  RETURNING id
-), call AS (
-  INSERT INTO async_calls (verb, request, origin, origin_key)
-  VALUES (@verb, @request, 'fsm', @key)
-  RETURNING id
+INSERT INTO fsm_instances (
+  fsm,
+  key,
+  destination_state,
+  async_call_id
+) VALUES (
+  @fsm,
+  @key,
+  @destination_state::schema_ref,
+  @async_call_id::BIGINT
 )
-INSERT INTO fsm_transitions (fsm_executions_id, async_calls_id)
-VALUES ((SELECT id FROM execution), (SELECT id FROM call))
-RETURNING id;
+ON CONFLICT(fsm, key) DO
+UPDATE SET
+  destination_state = @destination_state::schema_ref,
+  async_call_id = @async_call_id::BIGINT
+WHERE
+  fsm_instances.async_call_id IS NULL
+  AND fsm_instances.destination_state IS NULL
+RETURNING *;
+
+-- name: FinishFSMTransition :one
+-- Mark an FSM transition as completed, updating the current state and clearing the async call ID.
+UPDATE fsm_instances
+SET
+  current_state = destination_state,
+  destination_state = NULL,
+  async_call_id = NULL
+WHERE
+  fsm = @fsm::schema_ref AND key = @key::TEXT
+RETURNING true;
+
+-- name: SucceedFSMInstance :one
+UPDATE fsm_instances
+SET
+  current_state = destination_state,
+  destination_state = NULL,
+  async_call_id = NULL,
+  status = 'completed'::fsm_status
+WHERE
+  fsm = @fsm::schema_ref AND key = @key::TEXT
+RETURNING true;
+
+
+-- name: FailFSMInstance :one
+UPDATE fsm_instances
+SET
+  current_state = NULL,
+  async_call_id = NULL,
+  status = 'failed'::fsm_status
+WHERE
+  fsm = @fsm::schema_ref AND key = @key::TEXT
+RETURNING true;

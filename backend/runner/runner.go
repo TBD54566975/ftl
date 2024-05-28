@@ -196,7 +196,8 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("no deployment"))
 	}
-	return deployment.plugin.Client.Call(ctx, req)
+	response, err := deployment.plugin.Client.Call(ctx, req)
+	return connect.NewResponse(response.Msg), err
 }
 
 func (s *Service) Reserve(ctx context.Context, c *connect.Request[ftlv1.ReserveRequest]) (*connect.Response[ftlv1.ReserveResponse], error) {
@@ -216,6 +217,10 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 
 func (s *Service) AcquireLease(context.Context, *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("leases must be acquired from the controller"))
+}
+
+func (s *Service) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("FSM events must be sent to the controller"))
 }
 
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {

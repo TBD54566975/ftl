@@ -42,7 +42,7 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 	return out
 }
 
-func typeToSchema(s *schemapb.Type) Type {
+func TypeFromProto(s *schemapb.Type) Type {
 	switch s := s.Value.(type) {
 	case *schemapb.Type_Ref:
 		return RefFromProto(s.Ref)
@@ -63,7 +63,7 @@ func typeToSchema(s *schemapb.Type) Type {
 	case *schemapb.Type_Map:
 		return mapToSchema(s.Map)
 	case *schemapb.Type_Optional:
-		return &Optional{Pos: posFromProto(s.Optional.Pos), Type: typeToSchema(s.Optional.Type)}
+		return &Optional{Pos: posFromProto(s.Optional.Pos), Type: TypeFromProto(s.Optional.Type)}
 	case *schemapb.Type_Unit:
 		return &Unit{Pos: posFromProto(s.Unit.Pos)}
 	case *schemapb.Type_Any:
@@ -87,7 +87,7 @@ func valueToSchema(v *schemapb.Value) Value {
 	case *schemapb.Value_TypeValue:
 		return &TypeValue{
 			Pos:   posFromProto(s.TypeValue.Pos),
-			Value: typeToSchema(s.TypeValue.Value),
+			Value: TypeFromProto(s.TypeValue.Value),
 		}
 	}
 	panic(fmt.Sprintf("unhandled schema value: %T", v.Value))
@@ -134,6 +134,19 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Pos:   posFromProto(s.Alias.Pos),
 			Kind:  AliasKind(s.Alias.Kind),
 			Alias: s.Alias.Alias,
+		}
+
+	case *schemapb.Metadata_Retry:
+		var count *int
+		if s.Retry.Count != nil {
+			countValue := int(*s.Retry.Count)
+			count = &countValue
+		}
+		return &MetadataRetry{
+			Pos:        posFromProto(s.Retry.Pos),
+			Count:      count,
+			MinBackoff: s.Retry.MinBackoff,
+			MaxBackoff: s.Retry.MaxBackoff,
 		}
 
 	default:

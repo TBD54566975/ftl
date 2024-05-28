@@ -3,6 +3,7 @@ package schema
 import (
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 
 	"google.golang.org/protobuf/proto"
 
@@ -12,11 +13,22 @@ import (
 
 // RefKey is a map key for a reference.
 type RefKey struct {
-	Module string
-	Name   string
+	Module string `parser:"(@Ident '.')?"`
+	Name   string `parser:"@Ident"`
 }
 
-func (r RefKey) String() string { return makeRef(r.Module, r.Name) }
+func (r RefKey) ToRef() *Ref                  { return &Ref{Module: r.Module, Name: r.Name} }
+func (r RefKey) String() string               { return makeRef(r.Module, r.Name) }
+func (r RefKey) ToProto() *schemapb.Ref       { return &schemapb.Ref{Module: r.Module, Name: r.Name} }
+func (r RefKey) Value() (driver.Value, error) { return r.String(), nil }
+func (r *RefKey) Scan(src any) error {
+	p, err := ParseRef(src.(string))
+	if err != nil {
+		return fmt.Errorf("%v: %w", src, err)
+	}
+	*r = p.ToRefKey()
+	return nil
+}
 
 // Ref is an untyped reference to a symbol.
 type Ref struct {
@@ -51,8 +63,24 @@ func (r *Ref) ToProto() proto.Message {
 		Pos:            posToProto(r.Pos),
 		Module:         r.Module,
 		Name:           r.Name,
-		TypeParameters: slices.Map(r.TypeParameters, typeToProto),
+		TypeParameters: slices.Map(r.TypeParameters, TypeToProto),
 	}
+}
+
+func (r *Ref) Equal(other Type) bool {
+	or, ok := other.(*Ref)
+	if !ok {
+		return false
+	}
+	if r.Module != or.Module || r.Name != or.Name || len(r.TypeParameters) != len(or.TypeParameters) {
+		return false
+	}
+	for i, t := range r.TypeParameters {
+		if !t.Equal(or.TypeParameters[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *Ref) schemaChildren() []Node {
@@ -88,7 +116,7 @@ func RefFromProto(s *schemapb.Ref) *Ref {
 		Pos:            posFromProto(s.Pos),
 		Name:           s.Name,
 		Module:         s.Module,
-		TypeParameters: slices.Map(s.TypeParameters, typeToSchema),
+		TypeParameters: slices.Map(s.TypeParameters, TypeFromProto),
 	}
 }
 

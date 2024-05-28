@@ -15,6 +15,7 @@ type Bool struct {
 var _ Type = (*Bool)(nil)
 var _ Symbol = (*Bool)(nil)
 
+func (b *Bool) Equal(other Type) bool  { _, ok := other.(*Bool); return ok }
 func (b *Bool) Position() Position     { return b.Pos }
 func (*Bool) schemaChildren() []Node   { return nil }
 func (*Bool) schemaType()              {}

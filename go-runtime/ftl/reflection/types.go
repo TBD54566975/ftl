@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 // Ref is an untyped reference to a symbol.
@@ -31,9 +32,8 @@ func (v *Ref) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (v Ref) String() string { return v.Module + "." + v.Name }
-func (v Ref) ToProto() *schemapb.Ref {
-	return &schemapb.Ref{Module: v.Module, Name: v.Name}
-}
+func (v Ref) String() string         { return v.Module + "." + v.Name }
+func (v Ref) ToProto() *schemapb.Ref { return &schemapb.Ref{Module: v.Module, Name: v.Name} }
+func (v Ref) ToSchema() *schema.Ref  { return &schema.Ref{Module: v.Module, Name: v.Name} }
 
 func RefFromProto(p *schemapb.Ref) Ref { return Ref{Module: p.Module, Name: p.Name} }

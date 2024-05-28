@@ -33,9 +33,9 @@ func TestCron(t *testing.T) {
 	run(t, "",
 		CopyModule("cron"),
 		Deploy("cron"),
-		func(t testing.TB, ic TestContext) error {
+		func(t testing.TB, ic TestContext) {
 			_, err := os.Stat(tmpFile)
-			return err
+			assert.NoError(t, err)
 		},
 	)
 }
@@ -44,11 +44,8 @@ func TestLifecycle(t *testing.T) {
 	run(t, "",
 		Exec("ftl", "init", "go", ".", "echo"),
 		Deploy("echo"),
-		Call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
-			if response["message"] != "Hello, Bob!" {
-				return fmt.Errorf("unexpected response: %v", response)
-			}
-			return nil
+		Call("echo", "echo", obj{"name": "Bob"}, func(t testing.TB, response obj) {
+			assert.Equal(t, "Hello, Bob!", response["message"])
 		}),
 	)
 }
@@ -59,15 +56,12 @@ func TestInterModuleCall(t *testing.T) {
 		CopyModule("time"),
 		Deploy("time"),
 		Deploy("echo"),
-		Call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
+		Call("echo", "echo", obj{"name": "Bob"}, func(response obj) {
 			message, ok := response["message"].(string)
-			if !ok {
-				return fmt.Errorf("unexpected response: %v", response)
-			}
+			assert.True(t, ok, "message is not a string: %s", repr.String(response))
 			if !strings.HasPrefix(message, "Hello, Bob!!! It is ") {
-				return fmt.Errorf("unexpected response: %v", response)
+				t.Fatalf("unexpected response: %q", response)
 			}
-			return nil
 		}),
 	)
 }
@@ -100,7 +94,7 @@ func TestDatabase(t *testing.T) {
 		CopyModule("database"),
 		CreateDBAction("database", "testdb", false),
 		Deploy("database"),
-		Call("database", "insert", obj{"data": "hello"}, func(response obj) error { return nil }),
+		Call("database", "insert", obj{"data": "hello"}, nil),
 		QueryRow("testdb", "SELECT data FROM requests", "hello"),
 
 		// run tests which should only affect "testdb_test"
@@ -123,13 +117,12 @@ func TestHttpEncodeOmitempty(t *testing.T) {
 	run(t, "",
 		CopyModule("omitempty"),
 		Deploy("omitempty"),
-		HttpCall(http.MethodGet, "/get", JsonData(t, obj{}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/get", JsonData(t, obj{}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			_, ok := resp.jsonBody["mustset"]
 			assert.True(t, ok)
 			_, ok = resp.jsonBody["error"]
 			assert.False(t, ok)
-			return nil
 		}),
 	)
 }
@@ -138,7 +131,7 @@ func TestHttpIngress(t *testing.T) {
 	run(t, "",
 		CopyModule("httpingress"),
 		Deploy("httpingress"),
-		HttpCall(http.MethodGet, "/users/123/posts/456", JsonData(t, obj{}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/users/123/posts/456", JsonData(t, obj{}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
@@ -152,103 +145,87 @@ func TestHttpIngress(t *testing.T) {
 			goodStuff, ok := nested["good_stuff"].(string)
 			assert.True(t, ok, "good_stuff is not a string: %s", repr.String(resp.jsonBody))
 			assert.Equal(t, "This is good stuff", goodStuff)
-			return nil
 		}),
-		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"userId": 123, "postId": 345}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"userId": 123, "postId": 345}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 201, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Post"])
 			success, ok := resp.jsonBody["success"].(bool)
 			assert.True(t, ok, "success is not a bool: %s", repr.String(resp.jsonBody))
 			assert.True(t, success)
-			return nil
 		}),
 		// contains aliased field
-		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"user_id": 123, "postId": 345}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"user_id": 123, "postId": 345}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 201, resp.status)
-			return nil
 		}),
-		HttpCall(http.MethodPut, "/users/123", JsonData(t, obj{"postId": "346"}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodPut, "/users/123", JsonData(t, obj{"postId": "346"}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
 			assert.Equal(t, map[string]any{}, resp.jsonBody)
-			return nil
 		}),
-		HttpCall(http.MethodDelete, "/users/123", JsonData(t, obj{}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodDelete, "/users/123", JsonData(t, obj{}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Delete"])
 			assert.Equal(t, map[string]any{}, resp.jsonBody)
-			return nil
 		}),
 
-		HttpCall(http.MethodGet, "/html", JsonData(t, obj{}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/html", JsonData(t, obj{}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/html; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>", string(resp.bodyBytes))
-			return nil
 		}),
 
-		HttpCall(http.MethodPost, "/bytes", []byte("Hello, World!"), func(resp *HttpResponse) error {
+		HttpCall(http.MethodPost, "/bytes", []byte("Hello, World!"), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/octet-stream"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
-			return nil
 		}),
 
-		HttpCall(http.MethodGet, "/empty", nil, func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/empty", nil, func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, nil, resp.headers["Content-Type"])
 			assert.Equal(t, nil, resp.bodyBytes)
-			return nil
 		}),
 
-		HttpCall(http.MethodGet, "/string", []byte("Hello, World!"), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/string", []byte("Hello, World!"), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
-			return nil
 		}),
 
-		HttpCall(http.MethodGet, "/int", []byte("1234"), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/int", []byte("1234"), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("1234"), resp.bodyBytes)
-			return nil
 		}),
-		HttpCall(http.MethodGet, "/float", []byte("1234.56789"), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/float", []byte("1234.56789"), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("1234.56789"), resp.bodyBytes)
-			return nil
 		}),
-		HttpCall(http.MethodGet, "/bool", []byte("true"), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/bool", []byte("true"), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("true"), resp.bodyBytes)
-			return nil
 		}),
-		HttpCall(http.MethodGet, "/error", nil, func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/error", nil, func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 500, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Error from FTL"), resp.bodyBytes)
-			return nil
 		}),
-		HttpCall(http.MethodGet, "/array/string", JsonData(t, []string{"hello", "world"}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/array/string", JsonData(t, []string{"hello", "world"}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, JsonData(t, []string{"hello", "world"}), resp.bodyBytes)
-			return nil
 		}),
-		HttpCall(http.MethodPost, "/array/data", JsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodPost, "/array/data", JsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, JsonData(t, []obj{{"item": "a"}, {"item": "b"}}), resp.bodyBytes)
-			return nil
 		}),
-		HttpCall(http.MethodGet, "/typeenum", JsonData(t, obj{"name": "A", "value": "hello"}), func(resp *HttpResponse) error {
+		HttpCall(http.MethodGet, "/typeenum", JsonData(t, obj{"name": "A", "value": "hello"}), func(t testing.TB, resp *HttpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, JsonData(t, obj{"name": "A", "value": "hello"}), resp.bodyBytes)
-			return nil
 		}),
 	)
 }
@@ -274,16 +251,23 @@ func TestModuleUnitTests(t *testing.T) {
 func TestLease(t *testing.T) {
 	run(t, "",
 		CopyModule("leases"),
+		Build("leases"),
+		// checks if leases work in a unit test environment
+		TestModule("leases"),
 		Deploy("leases"),
-		func(t testing.TB, ic TestContext) error {
+		// checks if it leases work with a real controller
+		func(t testing.TB, ic TestContext) {
 			// Start a lease.
 			wg := errgroup.Group{}
 			wg.Go(func() error {
 				infof("Acquiring lease")
-				_, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
+				resp, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
 					Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
 					Body: []byte("{}"),
 				}))
+				if respErr := resp.Msg.GetError(); respErr != nil {
+					return fmt.Errorf("received error on first call: %v", respErr)
+				}
 				return err
 			})
 
@@ -295,13 +279,116 @@ func TestLease(t *testing.T) {
 				Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
 				Body: []byte("{}"),
 			}))
-			if err != nil {
-				return err
-			}
+			assert.NoError(t, err)
 			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "could not acquire lease") {
-				return fmt.Errorf("expected error but got: %#v", resp.Msg.GetError())
+				t.Fatalf("expected error but got: %#v", resp.Msg.GetError())
 			}
-			return wg.Wait()
+			err = wg.Wait()
+			assert.NoError(t, err)
 		},
+	)
+}
+
+func TestFSMGoTests(t *testing.T) {
+	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
+	t.Setenv("FSM_LOG_FILE", logFilePath)
+	run(t, "",
+		copyModule("fsm"),
+		build("fsm"),
+		testModule("fsm"),
+	)
+}
+
+func TestFSM(t *testing.T) {
+	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
+	t.Setenv("FSM_LOG_FILE", logFilePath)
+	fsmInState := func(instance, status, state string) action {
+		return queryRow("ftl", fmt.Sprintf(`
+			SELECT status, current_state
+			FROM fsm_instances
+			WHERE fsm = 'fsm.fsm' AND key = '%s'
+		`, instance), status, state)
+	}
+	run(t, "",
+		copyModule("fsm"),
+		deploy("fsm"),
+
+		call("fsm", "sendOne", obj{"instance": "1"}, nil),
+		call("fsm", "sendOne", obj{"instance": "2"}, nil),
+		fileContains(logFilePath, "start 1"),
+		fileContains(logFilePath, "start 2"),
+		fsmInState("1", "running", "fsm.start"),
+		fsmInState("2", "running", "fsm.start"),
+
+		call("fsm", "sendOne", obj{"instance": "1"}, nil),
+		fileContains(logFilePath, "middle 1"),
+		fsmInState("1", "running", "fsm.middle"),
+
+		call("fsm", "sendOne", obj{"instance": "1"}, nil),
+		fileContains(logFilePath, "end 1"),
+		fsmInState("1", "completed", "fsm.end"),
+
+		fail(call("fsm", "sendOne", obj{"instance": "1"}, nil),
+			"FSM instance 1 is already in state fsm.end"),
+
+		// Invalid state transition
+		fail(call("fsm", "sendTwo", obj{"instance": "2"}, nil),
+			"invalid state transition"),
+
+		call("fsm", "sendOne", obj{"instance": "2"}, nil),
+		fileContains(logFilePath, "middle 2"),
+		fsmInState("2", "running", "fsm.middle"),
+
+		// Invalid state transition
+		fail(call("fsm", "sendTwo", obj{"instance": "2"}, nil),
+			"invalid state transition"),
+	)
+}
+
+func TestFSMRetry(t *testing.T) {
+	checkRetries := func(origin, verb string, delays []time.Duration) action {
+		return func(t testing.TB, ic testContext) {
+			results := []any{}
+			for i := 0; i < len(delays); i++ {
+				values := getRow(t, ic, "ftl", fmt.Sprintf("SELECT scheduled_at FROM async_calls WHERE origin = '%s' AND verb = '%s' AND state = 'error' ORDER BY created_at LIMIT 1 OFFSET %d", origin, verb, i), 1)
+				results = append(results, values[0])
+			}
+			times := []time.Time{}
+			for i, r := range results {
+				ts, ok := r.(time.Time)
+				assert.True(t, ok, "unexpected time value: %v", r)
+				times = append(times, ts)
+				if i > 0 {
+					delay := times[i].Sub(times[i-1])
+					targetDelay := delays[i-1]
+					assert.True(t, delay >= targetDelay && delay < time.Second+targetDelay, "unexpected time diff for %s retry %d: %v (expected %v - %v)", origin, i, delay, targetDelay, time.Second+targetDelay)
+				}
+			}
+		}
+	}
+
+	run(t, "",
+		copyModule("fsmretry"),
+		build("fsmretry"),
+		deploy("fsmretry"),
+		// start 2 FSM instances
+		call("fsmretry", "start", obj{"id": "1"}, func(t testing.TB, response obj) {}),
+		call("fsmretry", "start", obj{"id": "2"}, func(t testing.TB, response obj) {}),
+
+		sleep(2*time.Second),
+
+		// transition the FSM, should fail each time.
+		call("fsmretry", "startTransitionToTwo", obj{"id": "1"}, func(t testing.TB, response obj) {}),
+		call("fsmretry", "startTransitionToThree", obj{"id": "2"}, func(t testing.TB, response obj) {}),
+
+		sleep(8*time.Second), //6s is longest run of retries
+
+		// both FSMs instances should have failed
+		queryRow("ftl", "SELECT COUNT(*) FROM fsm_instances WHERE status = 'failed'", int64(2)),
+
+		queryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:1", "fsmretry.state2"), int64(4)),
+		checkRetries("fsm:fsmretry.fsm:1", "fsmretry.state2", []time.Duration{time.Second, time.Second, time.Second}),
+		queryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:2", "fsmretry.state3"), int64(4)),
+		checkRetries("fsm:fsmretry.fsm:2", "fsmretry.state3", []time.Duration{time.Second, 2 * time.Second, 3 * time.Second}),
 	)
 }

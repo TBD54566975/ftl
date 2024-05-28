@@ -707,6 +707,11 @@ export class FSM extends Message<FSM> {
    */
   transitions: FSMTransition[] = [];
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 6;
+   */
+  metadata: Metadata[] = [];
+
   constructor(data?: PartialMessage<FSM>) {
     super();
     proto3.util.initPartial(data, this);
@@ -720,6 +725,7 @@ export class FSM extends Message<FSM> {
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "start", kind: "message", T: Ref, repeated: true },
     { no: 5, name: "transitions", kind: "message", T: FSMTransition, repeated: true },
+    { no: 6, name: "metadata", kind: "message", T: Metadata, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FSM {

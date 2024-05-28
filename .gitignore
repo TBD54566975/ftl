@@ -19,6 +19,7 @@ examples/**/go.work.sum
 testdata/**/go.work
 testdata/**/go.work.sum
 **/_ftl
+!go-runtime/compile/external-module-template/_ftl
 buildengine/.gitignore
 go.work*
 junit*.xml
