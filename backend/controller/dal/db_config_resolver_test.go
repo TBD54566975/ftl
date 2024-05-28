@@ -15,25 +15,25 @@ import (
 func TestDBConfigResolverList(t *testing.T) {
 	expected := []configuration.Entry{
 		{
-			configuration.Ref{
+			Ref: configuration.Ref{
 				Module: optional.Some("echo"),
 				Name:   "a",
 			},
-			&url.URL{Scheme: "db"},
+			Accessor: &url.URL{Scheme: "db"},
 		},
 		{
-			configuration.Ref{
+			Ref: configuration.Ref{
 				Module: optional.Some("echo"),
 				Name:   "b",
 			},
-			&url.URL{Scheme: "db"},
+			Accessor: &url.URL{Scheme: "db"},
 		},
 		{
-			configuration.Ref{
+			Ref: configuration.Ref{
 				Module: optional.None[string](),
 				Name:   "c",
 			},
-			&url.URL{Scheme: "db"},
+			Accessor: &url.URL{Scheme: "db"},
 		},
 	}
 
