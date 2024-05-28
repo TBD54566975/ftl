@@ -125,15 +125,11 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result eit
 
 	case either.Right[[]byte, string]: // Failure message.
 		if call.RemainingAttempts > 0 {
-			nextBackoff := call.Backoff * 2
-			if nextBackoff > call.MaxBackoff {
-				nextBackoff = call.MaxBackoff
-			}
 			_, err = d.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
 				ID:                call.ID,
 				Error:             result.Get(),
 				RemainingAttempts: call.RemainingAttempts - 1,
-				Backoff:           nextBackoff,
+				Backoff:           min(call.Backoff*2, call.MaxBackoff),
 				MaxBackoff:        call.MaxBackoff,
 				ScheduledAt:       time.Now().Add(call.Backoff),
 			})
