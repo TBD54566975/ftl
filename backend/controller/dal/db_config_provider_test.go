@@ -12,11 +12,11 @@ import (
 	"github.com/alecthomas/types/optional"
 )
 
-func TestDBResolverRoundTrip(t *testing.T) {
+func TestDBConfigProviderRoundTrip(t *testing.T) {
 	tests := []struct {
 		TestName     string
-		ModuleSet    optional.Option[string]
-		ModuleGet    optional.Option[string]
+		ModuleStore  optional.Option[string]
+		ModuleLoad   optional.Option[string]
 		PresetGlobal bool
 	}{
 		{
@@ -45,30 +45,30 @@ func TestDBResolverRoundTrip(t *testing.T) {
 		},
 	}
 
-	ctx, cr := setup(t)
-	u := URL("db://ImFzZGYi") // asdf
+	ctx, provider := setupDBConfigProvider(t)
+	b := []byte(`"asdf"`)
 	for _, test := range tests {
 		t.Run(test.TestName, func(t *testing.T) {
 			if test.PresetGlobal {
-				err := cr.Set(ctx, configuration.Ref{
+				_, err := provider.Store(ctx, configuration.Ref{
 					Module: optional.None[string](),
 					Name:   "configname",
-				}, URL("db://InF3ZXJ0eSI")) // qwerty
+				}, []byte(`"qwerty"`))
 				assert.NoError(t, err)
 			}
-			err := cr.Set(ctx, configuration.Ref{
-				Module: test.ModuleSet,
+			_, err := provider.Store(ctx, configuration.Ref{
+				Module: test.ModuleStore,
 				Name:   "configname",
-			}, u)
+			}, b)
 			assert.NoError(t, err)
-			gotURL, err := cr.Get(ctx, configuration.Ref{
-				Module: test.ModuleGet,
+			gotBytes, err := provider.Load(ctx, configuration.Ref{
+				Module: test.ModuleLoad,
 				Name:   "configname",
-			})
+			}, &url.URL{Scheme: "db"})
 			assert.NoError(t, err)
-			assert.Equal(t, u, gotURL)
-			err = cr.Unset(ctx, configuration.Ref{
-				Module: test.ModuleSet,
+			assert.Equal(t, b, gotBytes)
+			err = provider.Delete(ctx, configuration.Ref{
+				Module: test.ModuleStore,
 				Name:   "configname",
 			})
 			assert.NoError(t, err)
@@ -76,7 +76,7 @@ func TestDBResolverRoundTrip(t *testing.T) {
 	}
 }
 
-func setup(t *testing.T) (context.Context, DatabaseResolver) {
+func setupDBConfigProvider(t *testing.T) (context.Context, DBConfigProvider) {
 	t.Helper()
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
@@ -85,13 +85,5 @@ func setup(t *testing.T) (context.Context, DatabaseResolver) {
 	assert.NoError(t, err)
 	assert.NotZero(t, dal)
 
-	return ctx, dal.NewConfigResolver()
-}
-
-func URL(s string) *url.URL {
-	u, err := url.Parse(s)
-	if err != nil {
-		panic(err)
-	}
-	return u
+	return ctx, dal.NewConfigProvider()
 }
