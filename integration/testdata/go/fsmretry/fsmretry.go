@@ -37,6 +37,8 @@ func State2(ctx context.Context, in TransitionToTwoEvent) error {
 	return fmt.Errorf("transition will never succeed")
 }
 
+// State3 will have its retry policy defaulted to the fsm one
+//
 //ftl:verb
 func State3(ctx context.Context, in TransitionToThreeEvent) error {
 	return fmt.Errorf("transition will never succeed")

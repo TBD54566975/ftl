@@ -4,6 +4,7 @@ package simple_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	gensql "github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -323,6 +325,23 @@ func createDB(t testing.TB, module, dbName string, isTestDb bool) {
 	})
 }
 
+func connectToFTLDatabase(ctx context.Context, actionFunc func(conn *pgxpool.Conn) error) error {
+	dsn := "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable"
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire PG PubSub connection: %w", err)
+	}
+	defer conn.Release()
+
+	return actionFunc(conn)
+}
+
 type asyncCallRow struct {
 	Verb              schema.RefKey
 	Origin            string
@@ -338,51 +357,74 @@ type asyncCallRow struct {
 
 func getAsyncCalls(callback func([]asyncCallRow) error) action {
 	return func(t testing.TB, ic testContext) error {
-		dsn := "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable"
-
-		pool, err := pgxpool.New(ic.Context, dsn)
-		if err != nil {
-			return err
-		}
-		defer pool.Close()
-
-		conn, err := pool.Acquire(ic.Context)
-		if err != nil {
-			return fmt.Errorf("failed to acquire PG PubSub connection: %w", err)
-		}
-		defer conn.Release()
-
-		rows, err := conn.Query(ic.Context, `
+		return connectToFTLDatabase(ic.Context, func(conn *pgxpool.Conn) error {
+			rows, err := conn.Query(ic.Context, `
 		SELECT verb, origin, state, scheduled_at, request, response, error, remaining_attempts, backoff::interval, max_backoff::interval
 		FROM async_calls
 		ORDER BY created_at ASC`)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		var items []asyncCallRow
-		for rows.Next() {
-			var i asyncCallRow
-			if err := rows.Scan(
-				&i.Verb,
-				&i.Origin,
-				&i.State,
-				&i.ScheduledAt,
-				&i.Request,
-				&i.Response,
-				&i.Error,
-				&i.RemainingAttempts,
-				&i.Backoff,
-				&i.MaxBackoff,
-			); err != nil {
+			if err != nil {
 				return err
 			}
-			items = append(items, i)
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		return callback(items)
+			defer rows.Close()
+			var items []asyncCallRow
+			for rows.Next() {
+				var i asyncCallRow
+				if err := rows.Scan(
+					&i.Verb,
+					&i.Origin,
+					&i.State,
+					&i.ScheduledAt,
+					&i.Request,
+					&i.Response,
+					&i.Error,
+					&i.RemainingAttempts,
+					&i.Backoff,
+					&i.MaxBackoff,
+				); err != nil {
+					return err
+				}
+				items = append(items, i)
+			}
+			if err := rows.Err(); err != nil {
+				return err
+			}
+			return callback(items)
+		})
+	}
+}
+
+func getFSMInstances(callback func([]gensql.FsmInstance) error) action {
+	return func(t testing.TB, ic testContext) error {
+		return connectToFTLDatabase(ic.Context, func(conn *pgxpool.Conn) error {
+			rows, err := conn.Query(ic.Context, `
+			SELECT id, created_at, fsm, key, status, current_state, destination_state, async_call_id
+			FROM fsm_instances`)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			var items []gensql.FsmInstance
+			for rows.Next() {
+				var i gensql.FsmInstance
+				if err := rows.Scan(
+					&i.ID,
+					&i.CreatedAt,
+					&i.Fsm,
+					&i.Key,
+					&i.Status,
+					&i.CurrentState,
+					&i.DestinationState,
+					&i.AsyncCallID,
+				); err != nil {
+					return err
+				}
+				items = append(items, i)
+			}
+			if err := rows.Err(); err != nil {
+				return err
+			}
+			return callback(items)
+		})
 	}
 }
 

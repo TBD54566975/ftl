@@ -376,7 +376,7 @@ func (q *Queries) FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallW
 const failFSMInstance = `-- name: FailFSMInstance :one
 UPDATE fsm_instances
 SET
-  current_state = '',
+  current_state = NULL,
   async_call_id = NULL,
   status = 'failed'::fsm_status
 WHERE
@@ -393,8 +393,12 @@ func (q *Queries) FailFSMInstance(ctx context.Context, fsm schema.RefKey, key st
 
 const finishFSMTransition = `-- name: FinishFSMTransition :one
 UPDATE fsm_instances
-SET current_state = destination_state, destination_state = NULL, async_call_id = NULL
-WHERE fsm = $1::schema_ref AND key = $2::TEXT
+SET
+  current_state = destination_state,
+  destination_state = NULL,
+  async_call_id = NULL
+WHERE
+  fsm = $1::schema_ref AND key = $2::TEXT
 RETURNING true
 `
 

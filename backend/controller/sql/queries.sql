@@ -607,7 +607,7 @@ RETURNING true;
 -- name: FailFSMInstance :one
 UPDATE fsm_instances
 SET
-  current_state = '',
+  current_state = NULL,
   async_call_id = NULL,
   status = 'failed'::fsm_status
 WHERE
