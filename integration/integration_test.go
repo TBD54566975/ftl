@@ -56,7 +56,7 @@ func TestInterModuleCall(t *testing.T) {
 		CopyModule("time"),
 		Deploy("time"),
 		Deploy("echo"),
-		Call("echo", "echo", obj{"name": "Bob"}, func(response obj) {
+		Call("echo", "echo", obj{"name": "Bob"}, func(t testing.TB, response obj) {
 			message, ok := response["message"].(string)
 			assert.True(t, ok, "message is not a string: %s", repr.String(response))
 			if !strings.HasPrefix(message, "Hello, Bob!!! It is ") {
@@ -253,7 +253,7 @@ func TestLease(t *testing.T) {
 		CopyModule("leases"),
 		Build("leases"),
 		// checks if leases work in a unit test environment
-		TestModule("leases"),
+		ExecModuleTest("leases"),
 		Deploy("leases"),
 		// checks if it leases work with a real controller
 		func(t testing.TB, ic TestContext) {
@@ -293,61 +293,61 @@ func TestFSMGoTests(t *testing.T) {
 	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
 	t.Setenv("FSM_LOG_FILE", logFilePath)
 	run(t, "",
-		copyModule("fsm"),
-		build("fsm"),
-		testModule("fsm"),
+		CopyModule("fsm"),
+		Build("fsm"),
+		ExecModuleTest("fsm"),
 	)
 }
 
 func TestFSM(t *testing.T) {
 	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
 	t.Setenv("FSM_LOG_FILE", logFilePath)
-	fsmInState := func(instance, status, state string) action {
-		return queryRow("ftl", fmt.Sprintf(`
+	fsmInState := func(instance, status, state string) Action {
+		return QueryRow("ftl", fmt.Sprintf(`
 			SELECT status, current_state
 			FROM fsm_instances
 			WHERE fsm = 'fsm.fsm' AND key = '%s'
 		`, instance), status, state)
 	}
 	run(t, "",
-		copyModule("fsm"),
-		deploy("fsm"),
+		CopyModule("fsm"),
+		Deploy("fsm"),
 
-		call("fsm", "sendOne", obj{"instance": "1"}, nil),
-		call("fsm", "sendOne", obj{"instance": "2"}, nil),
-		fileContains(logFilePath, "start 1"),
-		fileContains(logFilePath, "start 2"),
+		Call("fsm", "sendOne", obj{"instance": "1"}, nil),
+		Call("fsm", "sendOne", obj{"instance": "2"}, nil),
+		FileContains(logFilePath, "start 1"),
+		FileContains(logFilePath, "start 2"),
 		fsmInState("1", "running", "fsm.start"),
 		fsmInState("2", "running", "fsm.start"),
 
-		call("fsm", "sendOne", obj{"instance": "1"}, nil),
-		fileContains(logFilePath, "middle 1"),
+		Call("fsm", "sendOne", obj{"instance": "1"}, nil),
+		FileContains(logFilePath, "middle 1"),
 		fsmInState("1", "running", "fsm.middle"),
 
-		call("fsm", "sendOne", obj{"instance": "1"}, nil),
-		fileContains(logFilePath, "end 1"),
+		Call("fsm", "sendOne", obj{"instance": "1"}, nil),
+		FileContains(logFilePath, "end 1"),
 		fsmInState("1", "completed", "fsm.end"),
 
-		fail(call("fsm", "sendOne", obj{"instance": "1"}, nil),
+		fail(Call("fsm", "sendOne", obj{"instance": "1"}, nil),
 			"FSM instance 1 is already in state fsm.end"),
 
 		// Invalid state transition
-		fail(call("fsm", "sendTwo", obj{"instance": "2"}, nil),
+		fail(Call("fsm", "sendTwo", obj{"instance": "2"}, nil),
 			"invalid state transition"),
 
-		call("fsm", "sendOne", obj{"instance": "2"}, nil),
-		fileContains(logFilePath, "middle 2"),
+		Call("fsm", "sendOne", obj{"instance": "2"}, nil),
+		FileContains(logFilePath, "middle 2"),
 		fsmInState("2", "running", "fsm.middle"),
 
 		// Invalid state transition
-		fail(call("fsm", "sendTwo", obj{"instance": "2"}, nil),
+		fail(Call("fsm", "sendTwo", obj{"instance": "2"}, nil),
 			"invalid state transition"),
 	)
 }
 
 func TestFSMRetry(t *testing.T) {
-	checkRetries := func(origin, verb string, delays []time.Duration) action {
-		return func(t testing.TB, ic testContext) {
+	checkRetries := func(origin, verb string, delays []time.Duration) Action {
+		return func(t testing.TB, ic TestContext) {
 			results := []any{}
 			for i := 0; i < len(delays); i++ {
 				values := getRow(t, ic, "ftl", fmt.Sprintf("SELECT scheduled_at FROM async_calls WHERE origin = '%s' AND verb = '%s' AND state = 'error' ORDER BY created_at LIMIT 1 OFFSET %d", origin, verb, i), 1)
@@ -368,27 +368,27 @@ func TestFSMRetry(t *testing.T) {
 	}
 
 	run(t, "",
-		copyModule("fsmretry"),
-		build("fsmretry"),
-		deploy("fsmretry"),
+		CopyModule("fsmretry"),
+		Build("fsmretry"),
+		Deploy("fsmretry"),
 		// start 2 FSM instances
-		call("fsmretry", "start", obj{"id": "1"}, func(t testing.TB, response obj) {}),
-		call("fsmretry", "start", obj{"id": "2"}, func(t testing.TB, response obj) {}),
+		Call("fsmretry", "start", obj{"id": "1"}, func(t testing.TB, response obj) {}),
+		Call("fsmretry", "start", obj{"id": "2"}, func(t testing.TB, response obj) {}),
 
-		sleep(2*time.Second),
+		Sleep(2*time.Second),
 
 		// transition the FSM, should fail each time.
-		call("fsmretry", "startTransitionToTwo", obj{"id": "1"}, func(t testing.TB, response obj) {}),
-		call("fsmretry", "startTransitionToThree", obj{"id": "2"}, func(t testing.TB, response obj) {}),
+		Call("fsmretry", "startTransitionToTwo", obj{"id": "1"}, func(t testing.TB, response obj) {}),
+		Call("fsmretry", "startTransitionToThree", obj{"id": "2"}, func(t testing.TB, response obj) {}),
 
-		sleep(8*time.Second), //6s is longest run of retries
+		Sleep(8*time.Second), //6s is longest run of retries
 
 		// both FSMs instances should have failed
-		queryRow("ftl", "SELECT COUNT(*) FROM fsm_instances WHERE status = 'failed'", int64(2)),
+		QueryRow("ftl", "SELECT COUNT(*) FROM fsm_instances WHERE status = 'failed'", int64(2)),
 
-		queryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:1", "fsmretry.state2"), int64(4)),
+		QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:1", "fsmretry.state2"), int64(4)),
 		checkRetries("fsm:fsmretry.fsm:1", "fsmretry.state2", []time.Duration{time.Second, time.Second, time.Second}),
-		queryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:2", "fsmretry.state3"), int64(4)),
+		QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:2", "fsmretry.state3"), int64(4)),
 		checkRetries("fsm:fsmretry.fsm:2", "fsmretry.state3", []time.Duration{time.Second, 2 * time.Second, 3 * time.Second}),
 	)
 }

@@ -62,7 +62,7 @@ func CopyDir(src, dest string) Action {
 
 // Chain multiple actions together.
 func Chain(actions ...Action) Action {
-	return func(t testing.TB, ic testContext) {
+	return func(t testing.TB, ic TestContext) {
 		for _, action := range actions {
 			action(t, ic)
 		}
@@ -124,7 +124,7 @@ func ExpectError(action Action, expectedErrorMsg string) Action {
 				}
 			}
 		}()
-		Action(t, ic)
+		action(t, ic)
 	}
 }
 
@@ -183,7 +183,7 @@ func FileExists(path string) Action {
 //
 // If "path" is relative it will be to the working directory.
 func FileContains(path, needle string) Action {
-	return func(t testing.TB, ic TestContext)  {
+	return func(t testing.TB, ic TestContext) {
 		absPath := path
 		if !filepath.IsAbs(path) {
 			absPath = filepath.Join(ic.workDir, path)
@@ -199,8 +199,8 @@ func FileContains(path, needle string) Action {
 // Assert that a file exists and its content is equal to the given text.
 //
 // If "path" is relative it will be to the working directory.
-func fileContent(path, expected string) action {
-	return func(t testing.TB, ic testContext) {
+func FileContent(path, expected string) Action {
+	return func(t testing.TB, ic TestContext) {
 		absPath := path
 		if !filepath.IsAbs(path) {
 			absPath = filepath.Join(ic.workDir, path)
@@ -240,8 +240,8 @@ func Call(module, verb string, request obj, check func(t testing.TB, response ob
 }
 
 // Fail expects the next action to fail.
-func fail(next action, msg string, args ...any) action {
-	return func(t testing.TB, ic testContext) {
+func fail(next Action, msg string, args ...any) Action {
+	return func(t testing.TB, ic TestContext) {
 		infof("Expecting failure of nested action")
 		panicked := true
 		defer func() {
@@ -257,7 +257,7 @@ func fail(next action, msg string, args ...any) action {
 }
 
 // fetched and returns a row's column values
-func getRow(t testing.TB, ic testContext, database, query string, fieldCount int) []any {
+func getRow(t testing.TB, ic TestContext, database, query string, fieldCount int) []any {
 	infof("Querying %s: %s", database, query)
 	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
 	assert.NoError(t, err)
@@ -276,7 +276,7 @@ func getRow(t testing.TB, ic testContext, database, query string, fieldCount int
 
 // Query a single row from a database.
 func QueryRow(database string, query string, expected ...interface{}) Action {
-	return func(t testing.TB, ic TestContext) error {
+	return func(t testing.TB, ic TestContext) {
 		actual := getRow(t, ic, database, query, len(expected))
 		for i, a := range actual {
 			assert.Equal(t, a, expected[i])
@@ -349,7 +349,7 @@ func JsonData(t testing.TB, body interface{}) []byte {
 }
 
 // HttpCall makes an HTTP call to the running FTL ingress endpoint.
-func HttpCall(method string, path string, body []byte, onResponse func(t testing.TB, resp *httpResponse)) Action {
+func HttpCall(method string, path string, body []byte, onResponse func(t testing.TB, resp *HttpResponse)) Action {
 	return func(t testing.TB, ic TestContext) {
 		infof("HTTP %s %s", method, path)
 		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8892/ingress"))

@@ -135,7 +135,7 @@ func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
 }
 
 // Run an assertion, wrapping testing.TB in an implementation that panics on failure, propagating the error.
-func (i testContext) runAssertionOnce(t testing.TB, assertion Action) (err error) {
+func (i TestContext) runAssertionOnce(t testing.TB, assertion Action) (err error) {
 	defer func() {
 		switch r := recover().(type) {
 		case TestingError:
