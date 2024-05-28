@@ -15,19 +15,19 @@ import (
 
 func init() {
 	reflection.Register(
-		reflection.WithSumType[another.SecondTypeEnum](
+		reflection.SumType[another.SecondTypeEnum](
 			*new(another.One),
 			*new(another.Two),
 		),
-		reflection.WithSumType[another.TypeEnum](
+		reflection.SumType[another.TypeEnum](
 			*new(another.A),
 			*new(another.B),
 		),
-		reflection.WithSumType[other.SecondTypeEnum](
+		reflection.SumType[other.SecondTypeEnum](
 			*new(other.A),
 			*new(other.B),
 		),
-		reflection.WithSumType[other.TypeEnum](
+		reflection.SumType[other.TypeEnum](
 			*new(other.MyBool),
 			*new(other.MyBytes),
 			*new(other.MyFloat),

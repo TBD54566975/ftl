@@ -19,7 +19,7 @@ import (
 func init() {
 	reflection.Register(
 {{- range .SumTypes}}
-		reflection.WithSumType[{{.Discriminator}}](
+		reflection.SumType[{{.Discriminator}}](
 			{{- range .Variants}}
 			*new({{.Type}}),
 			{{- end}}

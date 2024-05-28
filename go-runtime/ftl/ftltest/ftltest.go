@@ -19,6 +19,7 @@ import (
 	pc "github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -37,6 +38,7 @@ type Option func(context.Context, *OptionsState) error
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...Option) context.Context {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	ctx = internal.WithContext(ctx, newFakeFTL())
 	name := reflection.Module()
 
 	state := &OptionsState{

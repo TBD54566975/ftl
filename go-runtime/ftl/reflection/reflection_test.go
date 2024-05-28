@@ -41,7 +41,7 @@ func TestReflectTypeFromValue(t *testing.T) {
 	AllowAnyPackageForTesting = true
 	t.Cleanup(func() { AllowAnyPackageForTesting = false })
 
-	Register(WithSumType[MySumType](Variant1{}, Variant2{}))
+	Register(SumType[MySumType](Variant1{}, Variant2{}))
 
 	v := AllTypesToReflect{SumType: Variant1{}}
 

@@ -289,6 +289,16 @@ func TestLease(t *testing.T) {
 	)
 }
 
+func TestFSMGoTests(t *testing.T) {
+	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
+	t.Setenv("FSM_LOG_FILE", logFilePath)
+	run(t, "",
+		copyModule("fsm"),
+		build("fsm"),
+		testModule("fsm"),
+	)
+}
+
 func TestFSM(t *testing.T) {
 	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
 	t.Setenv("FSM_LOG_FILE", logFilePath)
