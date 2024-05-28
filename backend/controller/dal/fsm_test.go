@@ -3,6 +3,7 @@ package dal
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/either"
@@ -46,12 +47,12 @@ func TestSendFSMEvent(t *testing.T) {
 		},
 		Request: []byte(`{}`),
 	}
-	assert.Equal(t, expectedCall, call, assert.Exclude[*Lease]())
+	assert.Equal(t, expectedCall, call, assert.Exclude[*Lease](), assert.Exclude[time.Time]())
 
 	err = dal.CompleteAsyncCall(ctx, call, either.LeftOf[string]([]byte(`{}`)), func(tx *Tx) error { return nil })
 	assert.NoError(t, err)
 
 	actual, err := dal.LoadAsyncCall(ctx, call.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, call, actual, assert.Exclude[*Lease]())
+	assert.Equal(t, call, actual, assert.Exclude[*Lease](), assert.Exclude[time.Time]())
 }
