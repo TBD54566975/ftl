@@ -802,6 +802,7 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 	return connect.NewResponse(&ftlv1.SendFSMEventResponse{}), nil
 }
 
+// retryParamsForTransition finds the retry metadata for the given transition and returns the retry count, min and max backoff.
 func (s *Service) retryParamsForTransition(fsm *schema.FSM, verb *schema.Verb) (count int, minBackoff, maxBackoff time.Duration, err error) {
 	// Find retry metadata
 	var retryMetadata *schema.MetadataRetry
@@ -813,7 +814,7 @@ func (s *Service) retryParamsForTransition(fsm *schema.FSM, verb *schema.Verb) (
 	}
 
 	if retryMetadata == nil {
-		//default to fsm's retry metadata
+		// default to fsm's retry metadata
 		for _, m := range fsm.Metadata {
 			if m, ok := m.(*schema.MetadataRetry); ok {
 				retryMetadata = m
@@ -824,7 +825,7 @@ func (s *Service) retryParamsForTransition(fsm *schema.FSM, verb *schema.Verb) (
 
 	if retryMetadata != nil {
 		if retryMetadata.Count != nil {
-			count = int(*retryMetadata.Count)
+			count = *retryMetadata.Count
 		} else {
 			count = schema.DefaultRetryCount
 		}
@@ -1243,7 +1244,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	err = s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx) error {
 		failed := resp.Msg.GetError() != nil
 		if failed && call.RemainingAttempts > 0 {
-			// Will retry, do not propogate failure yet.
+			// Will retry, do not propagate failure yet.
 			return nil
 		}
 		switch origin := call.Origin.(type) {
