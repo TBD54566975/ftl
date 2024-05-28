@@ -166,7 +166,7 @@ func Nothing(context.Context) error {
 
 func init() {
   reflection.Register(
-    reflection.WithSumType[TypeEnum](
+    reflection.SumType[TypeEnum](
       *new(A),
       *new(B),
     ),

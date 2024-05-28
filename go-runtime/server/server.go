@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
@@ -32,6 +33,7 @@ type UserVerbConfig struct {
 // This function is intended to be used by the code generator.
 func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
+		ctx = internal.WithContext(ctx, internal.New())
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 

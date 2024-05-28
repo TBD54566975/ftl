@@ -4,12 +4,9 @@ import (
 	"reflect"
 
 	"github.com/alecthomas/types/optional"
-)
 
-// singletonTypeRegistry is the global type registry that all public functions in this
-// package interface with. It is not truly threadsafe. However, everything is initialized
-// in init() calls, which are safe, and the type registry is never mutated afterwards.
-var singletonTypeRegistry = newTypeRegistry()
+	"github.com/TBD54566975/ftl/backend/schema"
+)
 
 // TypeRegistry is used for dynamic type resolution at runtime. It stores associations between sum type discriminators
 // and their variants, for use in encoding and decoding.
@@ -18,6 +15,7 @@ var singletonTypeRegistry = newTypeRegistry()
 type TypeRegistry struct {
 	sumTypes                 map[reflect.Type][]sumTypeVariant
 	variantsToDiscriminators map[reflect.Type]reflect.Type
+	fsm                      map[string]ReflectedFSM
 }
 
 type sumTypeVariant struct {
@@ -25,8 +23,11 @@ type sumTypeVariant struct {
 	goType reflect.Type
 }
 
-// WithSumType adds a sum type and its variants to the type registry.
-func WithSumType[Discriminator any](variants ...Discriminator) func(t *TypeRegistry) {
+// Registree is a function that registers types with a [TypeRegistry].
+type Registree func(t *TypeRegistry)
+
+// SumType adds a sum type and its variants to the type registry.
+func SumType[Discriminator any](variants ...Discriminator) Registree {
 	return func(t *TypeRegistry) {
 		variantMap := map[string]reflect.Type{}
 		for _, v := range variants {
@@ -37,24 +38,34 @@ func WithSumType[Discriminator any](variants ...Discriminator) func(t *TypeRegis
 	}
 }
 
+// Transition represents a transition between two states in an FSM.
+type Transition struct {
+	From reflect.Value
+	To   reflect.Value
+}
+
+type ReflectedFSM struct {
+	Transitions []Transition
+	Schema      *schema.FSM
+}
+
+// FSM adds a finite state machine to the type registry.
+func FSM(name string, transitions ...Transition) Registree {
+	return func(t *TypeRegistry) { t.registerFSM(name, transitions) }
+}
+
 // newTypeRegistry creates a new [TypeRegistry] for instantiating types by their qualified
 // name at runtime.
-func newTypeRegistry(options ...func(t *TypeRegistry)) *TypeRegistry {
+func newTypeRegistry(options ...Registree) *TypeRegistry {
 	t := &TypeRegistry{
 		sumTypes:                 map[reflect.Type][]sumTypeVariant{},
 		variantsToDiscriminators: map[reflect.Type]reflect.Type{},
+		fsm:                      map[string]ReflectedFSM{},
 	}
 	for _, o := range options {
 		o(t)
 	}
 	return t
-}
-
-// Register applies all the provided options to the singleton TypeRegistry
-func Register(options ...func(t *TypeRegistry)) {
-	for _, o := range options {
-		o(singletonTypeRegistry)
-	}
 }
 
 // registerSumType registers a Go sum type with the type registry.
@@ -72,33 +83,34 @@ func (t *TypeRegistry) registerSumType(discriminator reflect.Type, variants map[
 	t.sumTypes[discriminator] = values
 }
 
-// ResetTypeRegistry clears the contents of the singleton type registry for tests to
-// guarantee determinism.
-func ResetTypeRegistry() {
-	singletonTypeRegistry = newTypeRegistry()
-}
-
-// IsSumTypeDiscriminator returns true if the given type is a sum type discriminator.
-func IsSumTypeDiscriminator(discriminator reflect.Type) bool {
-	return singletonTypeRegistry.isSumTypeDiscriminator(discriminator)
+func (t *TypeRegistry) registerFSM(name string, transitions []Transition) {
+	fsm := &schema.FSM{Name: name}
+	for _, transition := range transitions {
+		if !transition.From.IsValid() {
+			fsm.Start = append(fsm.Start, FuncRef(transition.To.Interface()).ToSchema())
+		} else {
+			fsm.Transitions = append(fsm.Transitions, &schema.FSMTransition{
+				From: FuncRef(transition.From.Interface()).ToSchema(),
+				To:   FuncRef(transition.To.Interface()).ToSchema(),
+			})
+		}
+	}
+	t.fsm[name] = ReflectedFSM{
+		Transitions: transitions,
+		Schema:      fsm,
+	}
 }
 
 func (t *TypeRegistry) isSumTypeDiscriminator(discriminator reflect.Type) bool {
 	return t.getSumTypeVariants(discriminator).Ok()
 }
 
-// GetDiscriminatorByVariant returns the discriminator type for the given variant type.
-func GetDiscriminatorByVariant(variant reflect.Type) optional.Option[reflect.Type] {
-	return singletonTypeRegistry.getDiscriminatorByVariant(variant)
+func (t *TypeRegistry) getFSM(name string) optional.Option[ReflectedFSM] {
+	return optional.Zero(t.fsm[name])
 }
 
 func (t *TypeRegistry) getDiscriminatorByVariant(variant reflect.Type) optional.Option[reflect.Type] {
 	return optional.Zero(t.variantsToDiscriminators[variant])
-}
-
-// GetVariantByName returns the variant type for the given discriminator and variant name.
-func GetVariantByName(discriminator reflect.Type, name string) optional.Option[reflect.Type] {
-	return singletonTypeRegistry.getVariantByName(discriminator, name)
 }
 
 func (t *TypeRegistry) getVariantByName(discriminator reflect.Type, name string) optional.Option[reflect.Type] {
@@ -112,11 +124,6 @@ func (t *TypeRegistry) getVariantByName(discriminator reflect.Type, name string)
 		}
 	}
 	return optional.None[reflect.Type]()
-}
-
-// GetVariantByType returns the variant name for the given discriminator and variant type.
-func GetVariantByType(discriminator reflect.Type, variantType reflect.Type) optional.Option[string] {
-	return singletonTypeRegistry.getVariantByType(discriminator, variantType)
 }
 
 func (t *TypeRegistry) getVariantByType(discriminator reflect.Type, variantType reflect.Type) optional.Option[string] {

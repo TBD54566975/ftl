@@ -145,6 +145,9 @@ func moduleForType(t reflect.Type) string {
 	return parts[len(parts)-1]
 }
 
+// refForType returns the schema.Ref for a Go type.
+//
+// This is not type checked in any way, so only valid types should be passed.
 func refForType(t reflect.Type) *schema.Ref {
 	module := moduleForType(t)
 	return &schema.Ref{Module: module, Name: strcase.ToUpperCamel(t.Name())}

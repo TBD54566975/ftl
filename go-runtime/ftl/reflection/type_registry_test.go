@@ -11,7 +11,7 @@ func TestTypeRegistry(t *testing.T) {
 	AllowAnyPackageForTesting = true
 	defer func() { AllowAnyPackageForTesting = false }()
 	ResetTypeRegistry()
-	Register(WithSumType[MySumType](Variant1{}, Variant2{}))
+	Register(SumType[MySumType](Variant1{}, Variant2{}))
 
 	svariant, ok := GetVariantByType(reflect.TypeFor[MySumType](), reflect.TypeFor[Variant1]()).Get()
 	assert.True(t, ok)

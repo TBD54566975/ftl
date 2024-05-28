@@ -82,7 +82,7 @@ func {{.Name|title}}(context.Context, {{type $ .Request}}) ({{type $ .Response}}
 func init() {
   reflection.Register(
 {{- range $sumTypes}}
-    reflection.WithSumType[{{.Name|title}}](
+    reflection.SumType[{{.Name|title}}](
 {{- range .Variants}}
       *new({{.Name|title}}),
 {{- end}}

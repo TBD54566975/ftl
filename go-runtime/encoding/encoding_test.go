@@ -83,7 +83,7 @@ func TestMarshal(t *testing.T) {
 	reflection.AllowAnyPackageForTesting = true
 	defer func() { reflection.AllowAnyPackageForTesting = false }()
 	reflection.ResetTypeRegistry()
-	reflection.Register(reflection.WithSumType[discriminator](variant{}))
+	reflection.Register(reflection.SumType[discriminator](variant{}))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestUnmarshal(t *testing.T) {
 	reflection.AllowAnyPackageForTesting = true
 	defer func() { reflection.AllowAnyPackageForTesting = false }()
 	reflection.ResetTypeRegistry()
-	reflection.Register(reflection.WithSumType[discriminator](variant{}))
+	reflection.Register(reflection.SumType[discriminator](variant{}))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestRoundTrip(t *testing.T) {
 	reflection.AllowAnyPackageForTesting = true
 	defer func() { reflection.AllowAnyPackageForTesting = false }()
 	reflection.ResetTypeRegistry()
-	reflection.Register(reflection.WithSumType[discriminator](variant{}))
+	reflection.Register(reflection.SumType[discriminator](variant{}))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
