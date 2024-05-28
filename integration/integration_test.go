@@ -350,7 +350,8 @@ func TestFSMRetry(t *testing.T) {
 				times = append(times, ts)
 				if i > 0 {
 					delay := times[i].Sub(times[i-1])
-					assert.True(t, delay < delays[i-1] || delay >= time.Second+delays[i-1], "unexpected time diff for %s retry %d: %v", origin, i, delay)
+					targetDelay := delays[i-1]
+					assert.True(t, delay >= targetDelay && delay < time.Second+targetDelay, "unexpected time diff for %s retry %d: %v (expected %v - %v)", origin, i, delay, targetDelay, time.Second+targetDelay)
 				}
 			}
 		}
