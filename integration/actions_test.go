@@ -4,7 +4,6 @@ package simple_test
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -19,7 +18,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 	"github.com/kballard/go-shellquote"
 	"github.com/otiai10/copy"
@@ -326,23 +324,6 @@ func createDB(t testing.TB, module, dbName string, isTestDb bool) {
 		_, err = db.Exec("DROP DATABASE " + dbName)
 		assert.NoError(t, err)
 	})
-}
-
-func connectToFTLDatabase(ctx context.Context, actionFunc func(conn *pgxpool.Conn) error) error {
-	dsn := "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable"
-	pool, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to acquire PG PubSub connection: %w", err)
-	}
-	defer conn.Release()
-
-	return actionFunc(conn)
 }
 
 // Create a directory in the working directory
