@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jpillora/backoff"
 
+	"github.com/TBD54566975/ftl/backend/controller/dalerrors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -102,7 +103,7 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 		deployment, err := decodeNotification(notification, func(key model.DeploymentKey) (Deployment, optional.Option[model.DeploymentKey], error) {
 			row, err := d.db.GetDeployment(ctx, key)
 			if err != nil {
-				return Deployment{}, optional.None[model.DeploymentKey](), translatePGError(err)
+				return Deployment{}, optional.None[model.DeploymentKey](), dalerrors.TranslatePGError(err)
 			}
 			return Deployment{
 				CreatedAt:   row.Deployment.CreatedAt,

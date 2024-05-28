@@ -1,12 +1,12 @@
-package dal
+package configuration
 
 import (
 	"context"
 	"net/url"
 	"testing"
 
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	"github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
@@ -50,24 +50,24 @@ func TestDBConfigProviderRoundTrip(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.TestName, func(t *testing.T) {
 			if test.PresetGlobal {
-				_, err := provider.Store(ctx, configuration.Ref{
+				_, err := provider.Store(ctx, Ref{
 					Module: optional.None[string](),
 					Name:   "configname",
 				}, []byte(`"qwerty"`))
 				assert.NoError(t, err)
 			}
-			_, err := provider.Store(ctx, configuration.Ref{
+			_, err := provider.Store(ctx, Ref{
 				Module: test.ModuleStore,
 				Name:   "configname",
 			}, b)
 			assert.NoError(t, err)
-			gotBytes, err := provider.Load(ctx, configuration.Ref{
+			gotBytes, err := provider.Load(ctx, Ref{
 				Module: test.ModuleLoad,
 				Name:   "configname",
 			}, &url.URL{Scheme: "db"})
 			assert.NoError(t, err)
 			assert.Equal(t, b, gotBytes)
-			err = provider.Delete(ctx, configuration.Ref{
+			err = provider.Delete(ctx, Ref{
 				Module: test.ModuleStore,
 				Name:   "configname",
 			})
@@ -81,9 +81,9 @@ func setupDBConfigProvider(t *testing.T) (context.Context, DBConfigProvider) {
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
+	dal, err := dal.New(ctx, conn)
 	assert.NoError(t, err)
 	assert.NotZero(t, dal)
 
-	return ctx, dal.NewConfigProvider()
+	return ctx, NewDBConfigProvider(dal.GetDB())
 }

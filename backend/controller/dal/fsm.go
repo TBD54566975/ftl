@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/dalerrors"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -39,7 +40,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 		MaxBackoff:        retryParams.MaxBackoff,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create FSM async call: %w", translatePGError(err))
+		return fmt.Errorf("failed to create FSM async call: %w", dalerrors.TranslatePGError(err))
 	}
 
 	// Start a transition.
@@ -50,9 +51,9 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 		AsyncCallID:      asyncCallID,
 	})
 	if err != nil {
-		err = translatePGError(err)
-		if errors.Is(err, ErrNotFound) {
-			return fmt.Errorf("transition already executing: %w", ErrConflict)
+		err = dalerrors.TranslatePGError(err)
+		if errors.Is(err, dalerrors.ErrNotFound) {
+			return fmt.Errorf("transition already executing: %w", dalerrors.ErrConflict)
 		}
 		return fmt.Errorf("failed to start FSM transition: %w", err)
 	}
@@ -61,17 +62,17 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 
 func (d *DAL) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.FinishFSMTransition(ctx, fsm, instanceKey)
-	return translatePGError(err)
+	return dalerrors.TranslatePGError(err)
 }
 
 func (d *DAL) FailFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.FailFSMInstance(ctx, fsm, instanceKey)
-	return translatePGError(err)
+	return dalerrors.TranslatePGError(err)
 }
 
 func (d *DAL) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.SucceedFSMInstance(ctx, fsm, instanceKey)
-	return translatePGError(err)
+	return dalerrors.TranslatePGError(err)
 }
 
 type FSMStatus = sql.FsmStatus
@@ -103,8 +104,8 @@ func (d *DAL) AcquireFSMInstance(ctx context.Context, fsm schema.RefKey, instanc
 	}
 	row, err := d.db.GetFSMInstance(ctx, fsm, instanceKey)
 	if err != nil {
-		err = translatePGError(err)
-		if !errors.Is(err, ErrNotFound) {
+		err = dalerrors.TranslatePGError(err)
+		if !errors.Is(err, dalerrors.ErrNotFound) {
 			return nil, err
 		}
 		row.Status = sql.FsmStatusRunning

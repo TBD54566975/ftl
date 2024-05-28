@@ -1,35 +1,35 @@
-package dal
+package configuration
 
 import (
 	"context"
 	"net/url"
 	"testing"
 
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	"github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 )
 
 func TestDBConfigResolverList(t *testing.T) {
-	expected := []configuration.Entry{
+	expected := []Entry{
 		{
-			Ref: configuration.Ref{
+			Ref: Ref{
 				Module: optional.Some("echo"),
 				Name:   "a",
 			},
 			Accessor: &url.URL{Scheme: "db"},
 		},
 		{
-			Ref: configuration.Ref{
+			Ref: Ref{
 				Module: optional.Some("echo"),
 				Name:   "b",
 			},
 			Accessor: &url.URL{Scheme: "db"},
 		},
 		{
-			Ref: configuration.Ref{
+			Ref: Ref{
 				Module: optional.None[string](),
 				Name:   "c",
 			},
@@ -58,9 +58,9 @@ func setupDBConfigInterfaces(t *testing.T) (context.Context, DBConfigResolver, D
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
+	dal, err := dal.New(ctx, conn)
 	assert.NoError(t, err)
 	assert.NotZero(t, dal)
 
-	return ctx, dal.NewConfigResolver(), dal.NewConfigProvider()
+	return ctx, NewDBConfigResolver(dal.GetDB()), NewDBConfigProvider(dal.GetDB())
 }
