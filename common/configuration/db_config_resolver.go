@@ -28,11 +28,11 @@ func (d DBConfigResolver) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 }
 
 func (d DBConfigResolver) List(ctx context.Context) ([]Entry, error) {
-	configs, err := d.db.ListConfigs(ctx)
+	configs, err := d.db.ListModuleConfiguration(ctx)
 	if err != nil {
 		return nil, dalerrors.TranslatePGError(err)
 	}
-	return slices.Map(configs, func(c sql.Config) Entry {
+	return slices.Map(configs, func(c sql.ModuleConfiguration) Entry {
 		return Entry{
 			Ref: Ref{
 				Module: c.Module,

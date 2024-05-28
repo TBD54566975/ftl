@@ -29,7 +29,7 @@ func (DBConfigProvider) Key() string         { return "db" }
 func (d DBConfigProvider) Writer() bool { return d.DB }
 
 func (d DBConfigProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	value, err := d.dalDB.GetConfig(ctx, ref.Module, ref.Name)
+	value, err := d.dalDB.GetModuleConfiguration(ctx, ref.Module, ref.Name)
 	if err != nil {
 		return nil, dalerrors.ErrNotFound
 	}
@@ -37,7 +37,7 @@ func (d DBConfigProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]by
 }
 
 func (d DBConfigProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	err := d.dalDB.SetConfig(ctx, ref.Module, ref.Name, value)
+	err := d.dalDB.SetModuleConfiguration(ctx, ref.Module, ref.Name, value)
 	if err != nil {
 		return nil, dalerrors.TranslatePGError(err)
 	}
@@ -45,6 +45,6 @@ func (d DBConfigProvider) Store(ctx context.Context, ref Ref, value []byte) (*ur
 }
 
 func (d DBConfigProvider) Delete(ctx context.Context, ref Ref) error {
-	err := d.dalDB.UnsetConfig(ctx, ref.Module, ref.Name)
+	err := d.dalDB.UnsetModuleConfiguration(ctx, ref.Module, ref.Name)
 	return dalerrors.TranslatePGError(err)
 }

@@ -342,13 +342,6 @@ type AsyncCall struct {
 	MaxBackoff        time.Duration
 }
 
-type Config struct {
-	ID     int64
-	Module optional.Option[string]
-	Name   string
-	Value  []byte
-}
-
 type Controller struct {
 	ID       int64
 	Key      model.ControllerKey
@@ -432,6 +425,14 @@ type Module struct {
 	ID       int64
 	Language string
 	Name     string
+}
+
+type ModuleConfiguration struct {
+	ID        int64
+	CreatedAt time.Time
+	Module    optional.Option[string]
+	Name      string
+	Value     []byte
 }
 
 type Request struct {

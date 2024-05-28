@@ -613,24 +613,24 @@ WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
 
--- name: GetConfig :one
+-- name: GetModuleConfiguration :one
 SELECT value
-FROM configs
+FROM module_configuration
 WHERE
   (module IS NULL OR module = @module)
   AND name = @name
 ORDER BY module NULLS LAST
 LIMIT 1;
 
--- name: ListConfigs :many
+-- name: ListModuleConfiguration :many
 SELECT *
-FROM configs
+FROM module_configuration
 ORDER BY module, name;
 
--- name: SetConfig :exec
-INSERT INTO configs (module, name, value)
+-- name: SetModuleConfiguration :exec
+INSERT INTO module_configuration (module, name, value)
 VALUES ($1, $2, $3);
 
--- name: UnsetConfig :exec
-DELETE FROM configs
+-- name: UnsetModuleConfiguration :exec
+DELETE FROM module_configuration
 WHERE module = @module AND name = @name;

@@ -661,23 +661,6 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	return items, nil
 }
 
-const getConfig = `-- name: GetConfig :one
-SELECT value
-FROM configs
-WHERE
-  (module IS NULL OR module = $1)
-  AND name = $2
-ORDER BY module NULLS LAST
-LIMIT 1
-`
-
-func (q *Queries) GetConfig(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
-	row := q.db.QueryRow(ctx, getConfig, module, name)
-	var value []byte
-	err := row.Scan(&value)
-	return value, err
-}
-
 const getCronJobs = `-- name: GetCronJobs :many
 SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
 FROM cron_jobs j
@@ -1121,6 +1104,23 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIng
 		return nil, err
 	}
 	return items, nil
+}
+
+const getModuleConfiguration = `-- name: GetModuleConfiguration :one
+SELECT value
+FROM module_configuration
+WHERE
+  (module IS NULL OR module = $1)
+  AND name = $2
+ORDER BY module NULLS LAST
+LIMIT 1
+`
+
+func (q *Queries) GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
+	row := q.db.QueryRow(ctx, getModuleConfiguration, module, name)
+	var value []byte
+	err := row.Scan(&value)
+	return value, err
 }
 
 const getModulesByID = `-- name: GetModulesByID :many
@@ -1669,23 +1669,24 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 	return count, err
 }
 
-const listConfigs = `-- name: ListConfigs :many
-SELECT id, module, name, value
-FROM configs
+const listModuleConfiguration = `-- name: ListModuleConfiguration :many
+SELECT id, created_at, module, name, value
+FROM module_configuration
 ORDER BY module, name
 `
 
-func (q *Queries) ListConfigs(ctx context.Context) ([]Config, error) {
-	rows, err := q.db.Query(ctx, listConfigs)
+func (q *Queries) ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error) {
+	rows, err := q.db.Query(ctx, listModuleConfiguration)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Config
+	var items []ModuleConfiguration
 	for rows.Next() {
-		var i Config
+		var i ModuleConfiguration
 		if err := rows.Scan(
 			&i.ID,
+			&i.CreatedAt,
 			&i.Module,
 			&i.Name,
 			&i.Value,
@@ -1824,16 +1825,6 @@ func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Tim
 	return i, err
 }
 
-const setConfig = `-- name: SetConfig :exec
-INSERT INTO configs (module, name, value)
-VALUES ($1, $2, $3)
-`
-
-func (q *Queries) SetConfig(ctx context.Context, module optional.Option[string], name string, value []byte) error {
-	_, err := q.db.Exec(ctx, setConfig, module, name, value)
-	return err
-}
-
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2
@@ -1843,6 +1834,16 @@ RETURNING 1
 
 func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error {
 	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
+	return err
+}
+
+const setModuleConfiguration = `-- name: SetModuleConfiguration :exec
+INSERT INTO module_configuration (module, name, value)
+VALUES ($1, $2, $3)
+`
+
+func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error {
+	_, err := q.db.Exec(ctx, setModuleConfiguration, module, name, value)
 	return err
 }
 
@@ -2000,13 +2001,13 @@ func (q *Queries) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key
 	return column_1, err
 }
 
-const unsetConfig = `-- name: UnsetConfig :exec
-DELETE FROM configs
+const unsetModuleConfiguration = `-- name: UnsetModuleConfiguration :exec
+DELETE FROM module_configuration
 WHERE module = $1 AND name = $2
 `
 
-func (q *Queries) UnsetConfig(ctx context.Context, module optional.Option[string], name string) error {
-	_, err := q.db.Exec(ctx, unsetConfig, module, name)
+func (q *Queries) UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error {
+	_, err := q.db.Exec(ctx, unsetModuleConfiguration, module, name)
 	return err
 }
 
