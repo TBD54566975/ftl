@@ -33,9 +33,9 @@ func TestCron(t *testing.T) {
 	run(t, "",
 		copyModule("cron"),
 		deploy("cron"),
-		func(t testing.TB, ic testContext) error {
+		func(t testing.TB, ic testContext) {
 			_, err := os.Stat(tmpFile)
-			return err
+			assert.NoError(t, err)
 		},
 	)
 }
@@ -44,11 +44,8 @@ func TestLifecycle(t *testing.T) {
 	run(t, "",
 		exec("ftl", "init", "go", ".", "echo"),
 		deploy("echo"),
-		call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
-			if response["message"] != "Hello, Bob!" {
-				return fmt.Errorf("unexpected response: %v", response)
-			}
-			return nil
+		call("echo", "echo", obj{"name": "Bob"}, func(t testing.TB, response obj) {
+			assert.Equal(t, "Hello, Bob!", response["message"])
 		}),
 	)
 }
@@ -59,15 +56,12 @@ func TestInterModuleCall(t *testing.T) {
 		copyModule("time"),
 		deploy("time"),
 		deploy("echo"),
-		call("echo", "echo", obj{"name": "Bob"}, func(response obj) error {
+		call("echo", "echo", obj{"name": "Bob"}, func(t testing.TB, response obj) {
 			message, ok := response["message"].(string)
-			if !ok {
-				return fmt.Errorf("unexpected response: %v", response)
-			}
+			assert.True(t, ok, "message is not a string: %s", repr.String(response))
 			if !strings.HasPrefix(message, "Hello, Bob!!! It is ") {
-				return fmt.Errorf("unexpected response: %v", response)
+				t.Fatalf("unexpected response: %q", response)
 			}
-			return nil
 		}),
 	)
 }
@@ -100,7 +94,7 @@ func TestDatabase(t *testing.T) {
 		copyModule("database"),
 		createDBAction("database", "testdb", false),
 		deploy("database"),
-		call("database", "insert", obj{"data": "hello"}, func(response obj) error { return nil }),
+		call("database", "insert", obj{"data": "hello"}, nil),
 		queryRow("testdb", "SELECT data FROM requests", "hello"),
 
 		// run tests which should only affect "testdb_test"
@@ -123,13 +117,12 @@ func TestHttpEncodeOmitempty(t *testing.T) {
 	run(t, "",
 		copyModule("omitempty"),
 		deploy("omitempty"),
-		httpCall(http.MethodGet, "/get", jsonData(t, obj{}), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/get", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			_, ok := resp.jsonBody["mustset"]
 			assert.True(t, ok)
 			_, ok = resp.jsonBody["error"]
 			assert.False(t, ok)
-			return nil
 		}),
 	)
 }
@@ -138,7 +131,7 @@ func TestHttpIngress(t *testing.T) {
 	run(t, "",
 		copyModule("httpingress"),
 		deploy("httpingress"),
-		httpCall(http.MethodGet, "/users/123/posts/456", jsonData(t, obj{}), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/users/123/posts/456", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
@@ -152,103 +145,87 @@ func TestHttpIngress(t *testing.T) {
 			goodStuff, ok := nested["good_stuff"].(string)
 			assert.True(t, ok, "good_stuff is not a string: %s", repr.String(resp.jsonBody))
 			assert.Equal(t, "This is good stuff", goodStuff)
-			return nil
 		}),
-		httpCall(http.MethodPost, "/users", jsonData(t, obj{"userId": 123, "postId": 345}), func(resp *httpResponse) error {
+		httpCall(http.MethodPost, "/users", jsonData(t, obj{"userId": 123, "postId": 345}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 201, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Post"])
 			success, ok := resp.jsonBody["success"].(bool)
 			assert.True(t, ok, "success is not a bool: %s", repr.String(resp.jsonBody))
 			assert.True(t, success)
-			return nil
 		}),
 		// contains aliased field
-		httpCall(http.MethodPost, "/users", jsonData(t, obj{"user_id": 123, "postId": 345}), func(resp *httpResponse) error {
+		httpCall(http.MethodPost, "/users", jsonData(t, obj{"user_id": 123, "postId": 345}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 201, resp.status)
-			return nil
 		}),
-		httpCall(http.MethodPut, "/users/123", jsonData(t, obj{"postId": "346"}), func(resp *httpResponse) error {
+		httpCall(http.MethodPut, "/users/123", jsonData(t, obj{"postId": "346"}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
 			assert.Equal(t, map[string]any{}, resp.jsonBody)
-			return nil
 		}),
-		httpCall(http.MethodDelete, "/users/123", jsonData(t, obj{}), func(resp *httpResponse) error {
+		httpCall(http.MethodDelete, "/users/123", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Delete"])
 			assert.Equal(t, map[string]any{}, resp.jsonBody)
-			return nil
 		}),
 
-		httpCall(http.MethodGet, "/html", jsonData(t, obj{}), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/html", jsonData(t, obj{}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/html; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>", string(resp.bodyBytes))
-			return nil
 		}),
 
-		httpCall(http.MethodPost, "/bytes", []byte("Hello, World!"), func(resp *httpResponse) error {
+		httpCall(http.MethodPost, "/bytes", []byte("Hello, World!"), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/octet-stream"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
-			return nil
 		}),
 
-		httpCall(http.MethodGet, "/empty", nil, func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/empty", nil, func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, nil, resp.headers["Content-Type"])
 			assert.Equal(t, nil, resp.bodyBytes)
-			return nil
 		}),
 
-		httpCall(http.MethodGet, "/string", []byte("Hello, World!"), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/string", []byte("Hello, World!"), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
-			return nil
 		}),
 
-		httpCall(http.MethodGet, "/int", []byte("1234"), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/int", []byte("1234"), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("1234"), resp.bodyBytes)
-			return nil
 		}),
-		httpCall(http.MethodGet, "/float", []byte("1234.56789"), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/float", []byte("1234.56789"), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("1234.56789"), resp.bodyBytes)
-			return nil
 		}),
-		httpCall(http.MethodGet, "/bool", []byte("true"), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/bool", []byte("true"), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("true"), resp.bodyBytes)
-			return nil
 		}),
-		httpCall(http.MethodGet, "/error", nil, func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/error", nil, func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 500, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Error from FTL"), resp.bodyBytes)
-			return nil
 		}),
-		httpCall(http.MethodGet, "/array/string", jsonData(t, []string{"hello", "world"}), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/array/string", jsonData(t, []string{"hello", "world"}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, jsonData(t, []string{"hello", "world"}), resp.bodyBytes)
-			return nil
 		}),
-		httpCall(http.MethodPost, "/array/data", jsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(resp *httpResponse) error {
+		httpCall(http.MethodPost, "/array/data", jsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, jsonData(t, []obj{{"item": "a"}, {"item": "b"}}), resp.bodyBytes)
-			return nil
 		}),
-		httpCall(http.MethodGet, "/typeenum", jsonData(t, obj{"name": "A", "value": "hello"}), func(resp *httpResponse) error {
+		httpCall(http.MethodGet, "/typeenum", jsonData(t, obj{"name": "A", "value": "hello"}), func(t testing.TB, resp *httpResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, jsonData(t, obj{"name": "A", "value": "hello"}), resp.bodyBytes)
-			return nil
 		}),
 	)
 }
@@ -279,7 +256,7 @@ func TestLease(t *testing.T) {
 		testModule("leases"),
 		deploy("leases"),
 		// checks if it leases work with a real controller
-		func(t testing.TB, ic testContext) error {
+		func(t testing.TB, ic testContext) {
 			// Start a lease.
 			wg := errgroup.Group{}
 			wg.Go(func() error {
@@ -302,13 +279,12 @@ func TestLease(t *testing.T) {
 				Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
 				Body: []byte("{}"),
 			}))
-			if err != nil {
-				return err
-			}
+			assert.NoError(t, err)
 			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "could not acquire lease") {
-				return fmt.Errorf("expected error but got: %#v", resp.Msg.GetError())
+				t.Fatalf("expected error but got: %#v", resp.Msg.GetError())
 			}
-			return wg.Wait()
+			err = wg.Wait()
+			assert.NoError(t, err)
 		},
 	)
 }
@@ -327,34 +303,34 @@ func TestFSM(t *testing.T) {
 		copyModule("fsm"),
 		deploy("fsm"),
 
-		call("fsm", "sendOne", obj{"instance": "1"}, func(response obj) error { return nil }),
-		call("fsm", "sendOne", obj{"instance": "2"}, func(response obj) error { return nil }),
+		call("fsm", "sendOne", obj{"instance": "1"}, nil),
+		call("fsm", "sendOne", obj{"instance": "2"}, nil),
 		fileContains(logFilePath, "start 1"),
 		fileContains(logFilePath, "start 2"),
 		fsmInState("1", "running", "fsm.start"),
 		fsmInState("2", "running", "fsm.start"),
 
-		call("fsm", "sendOne", obj{"instance": "1"}, func(response obj) error { return nil }),
+		call("fsm", "sendOne", obj{"instance": "1"}, nil),
 		fileContains(logFilePath, "middle 1"),
 		fsmInState("1", "running", "fsm.middle"),
 
-		call("fsm", "sendOne", obj{"instance": "1"}, func(response obj) error { return nil }),
+		call("fsm", "sendOne", obj{"instance": "1"}, nil),
 		fileContains(logFilePath, "end 1"),
 		fsmInState("1", "completed", "fsm.end"),
 
-		fail(call("fsm", "sendOne", obj{"instance": "1"}, func(response obj) error { return nil }),
+		fail(call("fsm", "sendOne", obj{"instance": "1"}, nil),
 			"FSM instance 1 is already in state fsm.end"),
 
 		// Invalid state transition
-		fail(call("fsm", "sendTwo", obj{"instance": "2"}, func(response obj) error { return nil }),
+		fail(call("fsm", "sendTwo", obj{"instance": "2"}, nil),
 			"invalid state transition"),
 
-		call("fsm", "sendOne", obj{"instance": "2"}, func(response obj) error { return nil }),
+		call("fsm", "sendOne", obj{"instance": "2"}, nil),
 		fileContains(logFilePath, "middle 2"),
 		fsmInState("2", "running", "fsm.middle"),
 
 		// Invalid state transition
-		fail(call("fsm", "sendTwo", obj{"instance": "2"}, func(response obj) error { return nil }),
+		fail(call("fsm", "sendTwo", obj{"instance": "2"}, nil),
 			"invalid state transition"),
 	)
 }

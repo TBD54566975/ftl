@@ -5,6 +5,7 @@ package simple_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -88,9 +89,9 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	}
 
 	infof("Waiting for controller to be ready")
-	ic.AssertWithRetry(t, func(t testing.TB, ic testContext) error {
+	ic.AssertWithRetry(t, func(t testing.TB, ic testContext) {
 		_, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
-		return err
+		assert.NoError(t, err)
 	})
 
 	infof("Starting test")
@@ -117,11 +118,10 @@ type testContext struct {
 
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
-	t.Helper()
 	waitCtx, done := context.WithTimeout(i, integrationTestTimeout)
 	defer done()
 	for {
-		err := assertion(t, i)
+		err := i.runAssertionOnce(t, assertion)
 		if err == nil {
 			return
 		}
@@ -134,7 +134,25 @@ func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
 	}
 }
 
-type action func(t testing.TB, ic testContext) error
+// Run an assertion, wrapping testing.TB in an implementation that panics on failure, propagating the error.
+func (i testContext) runAssertionOnce(t testing.TB, assertion action) (err error) {
+	defer func() {
+		switch r := recover().(type) {
+		case TestingError:
+			err = errors.New(string(r))
+
+		case nil:
+			return
+
+		default:
+			panic(r)
+		}
+	}()
+	assertion(T{t}, i)
+	return nil
+}
+
+type action func(t testing.TB, ic testContext)
 
 type logWriter struct {
 	mu     sync.Mutex
