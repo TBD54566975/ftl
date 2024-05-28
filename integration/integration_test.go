@@ -336,36 +336,23 @@ func TestFSM(t *testing.T) {
 }
 
 func TestFSMRetry(t *testing.T) {
-	retryCallQuery := func(origin string, verb string, offset int) string {
-		return fmt.Sprintf("SELECT scheduled_at FROM async_calls WHERE origin = '%s' AND verb = '%s' AND state = 'error' ORDER BY created_at LIMIT 1 OFFSET %d", origin, verb, offset)
-	}
-
 	checkRetries := func(origin, verb string, delays []time.Duration) action {
-		return func(t testing.TB, ic testContext) error {
+		return func(t testing.TB, ic testContext) {
 			results := []any{}
 			for i := 0; i < len(delays); i++ {
-				values, err := getRow(ic, "ftl", retryCallQuery(origin, verb, i), 1)
-				if err != nil {
-					return err
-				}
+				values := getRow(t, ic, "ftl", fmt.Sprintf("SELECT scheduled_at FROM async_calls WHERE origin = '%s' AND verb = '%s' AND state = 'error' ORDER BY created_at LIMIT 1 OFFSET %d", origin, verb, i), 1)
 				results = append(results, values[0])
 			}
-
 			times := []time.Time{}
 			for i, r := range results {
-				t, ok := r.(time.Time)
-				if !ok {
-					return fmt.Errorf("unexpected time value: %v", r)
-				}
-				times = append(times, t)
+				ts, ok := r.(time.Time)
+				assert.True(t, ok, "unexpected time value: %v", r)
+				times = append(times, ts)
 				if i > 0 {
 					delay := times[i].Sub(times[i-1])
-					if delay < delays[i-1] || delay >= time.Second+delays[i-1] {
-						return fmt.Errorf("unexpected time diff for %s retry %d: %v", origin, i, delay)
-					}
+					assert.True(t, delay < delays[i-1] || delay >= time.Second+delays[i-1], "unexpected time diff for %s retry %d: %v", origin, i, delay)
 				}
 			}
-			return nil
 		}
 	}
 
@@ -374,14 +361,14 @@ func TestFSMRetry(t *testing.T) {
 		build("fsmretry"),
 		deploy("fsmretry"),
 		// start 2 FSM instances
-		call("fsmretry", "start", obj{"id": "1"}, func(response obj) error { return nil }),
-		call("fsmretry", "start", obj{"id": "2"}, func(response obj) error { return nil }),
+		call("fsmretry", "start", obj{"id": "1"}, func(t testing.TB, response obj) {}),
+		call("fsmretry", "start", obj{"id": "2"}, func(t testing.TB, response obj) {}),
 
 		sleep(2*time.Second),
 
 		// transition the FSM, should fail each time.
-		call("fsmretry", "startTransitionToTwo", obj{"id": "1"}, func(response obj) error { return nil }),
-		call("fsmretry", "startTransitionToThree", obj{"id": "2"}, func(response obj) error { return nil }),
+		call("fsmretry", "startTransitionToTwo", obj{"id": "1"}, func(t testing.TB, response obj) {}),
+		call("fsmretry", "startTransitionToThree", obj{"id": "2"}, func(t testing.TB, response obj) {}),
 
 		sleep(8*time.Second), //6s is longest run of retries
 

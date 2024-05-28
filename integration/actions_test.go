@@ -259,7 +259,7 @@ func fail(next action, msg string, args ...any) action {
 }
 
 // fetched and returns a row's column values
-func getRow(ic testContext, database, query string, fieldCount int) []any {
+func getRow(t testing.TB, ic testContext, database, query string, fieldCount int) []any {
 	infof("Querying %s: %s", database, query)
 	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
 	assert.NoError(t, err)
@@ -278,8 +278,8 @@ func getRow(ic testContext, database, query string, fieldCount int) []any {
 
 // Query a single row from a database.
 func queryRow(database string, query string, expected ...interface{}) action {
-	return func(t testing.TB, ic testContext) error {
-		actual := getRow(ic, database, query, len(expected))
+	return func(t testing.TB, ic testContext) {
+		actual := getRow(t, ic, database, query, len(expected))
 		for i, a := range actual {
 			assert.Equal(t, a, expected[i])
 		}
