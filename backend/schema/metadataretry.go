@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
 const (
+	DefaultRetryCount  = 100
 	MinBackoffLimitStr = "1s"
 	MinBackoffLimit    = 1 * time.Second
 	MaxBackoffLimitStr = "1d"
@@ -56,28 +56,6 @@ func (m *MetadataRetry) ToProto() proto.Message {
 		MinBackoff: m.MinBackoff,
 		MaxBackoff: m.MaxBackoff,
 	}
-}
-
-func (m *MetadataRetry) MinBackoffDuration() (time.Duration, error) {
-	if m.MinBackoff == "" {
-		return 0, fmt.Errorf("retry must have a minimum backoff")
-	}
-	duration, err := parseRetryDuration(m.MinBackoff)
-	if err != nil {
-		return 0, err
-	}
-	return duration, nil
-}
-
-func (m *MetadataRetry) MaxBackoffDuration() (optional.Option[time.Duration], error) {
-	if m.MaxBackoff == "" {
-		return optional.None[time.Duration](), nil
-	}
-	duration, err := parseRetryDuration(m.MaxBackoff)
-	if err != nil {
-		return optional.None[time.Duration](), err
-	}
-	return optional.Some(duration), nil
 }
 
 func parseRetryDuration(str string) (time.Duration, error) {
@@ -124,4 +102,69 @@ func parseRetryDuration(str string) (time.Duration, error) {
 		return 0, fmt.Errorf("retry backoff can not be larger than %v", MaxBackoffLimitStr)
 	}
 	return duration, nil
+}
+
+type RetryParams struct {
+	Count      int
+	MinBackoff time.Duration
+	MaxBackoff time.Duration
+}
+
+func (m *MetadataRetry) RetryParams() (RetryParams, error) {
+	params := RetryParams{}
+	// count
+	if m.Count != nil {
+		params.Count = *m.Count
+	} else {
+		params.Count = DefaultRetryCount
+	}
+
+	// min backoff
+	if m.MinBackoff == "" {
+		return RetryParams{}, fmt.Errorf("retry must have a minimum backoff")
+	}
+	minBackoff, err := parseRetryDuration(m.MinBackoff)
+	if err != nil {
+		return RetryParams{}, fmt.Errorf("could not parse min backoff duration: %w", err)
+	}
+	params.MinBackoff = minBackoff
+
+	// max backoff
+	if m.MaxBackoff == "" {
+		params.MaxBackoff = MaxBackoffLimit
+	} else {
+		maxBackoff, err := parseRetryDuration(m.MaxBackoff)
+		if err != nil {
+			return RetryParams{}, fmt.Errorf("could not parse max backoff duration: %w", err)
+		}
+		params.MaxBackoff = maxBackoff
+	}
+	return params, nil
+}
+
+// RetryParamsForFSMTransition finds the retry metadata for the given transition and returns the retry count, min and max backoff.
+func RetryParamsForFSMTransition(fsm *FSM, verb *Verb) (RetryParams, error) {
+	// Find retry metadata
+	var retryMetadata *MetadataRetry
+	for _, m := range verb.Metadata {
+		if m, ok := m.(*MetadataRetry); ok {
+			retryMetadata = m
+			break
+		}
+	}
+
+	if retryMetadata == nil {
+		// default to fsm's retry metadata
+		for _, m := range fsm.Metadata {
+			if m, ok := m.(*MetadataRetry); ok {
+				retryMetadata = m
+				break
+			}
+		}
+	}
+
+	if retryMetadata == nil {
+		return RetryParams{}, nil
+	}
+	return retryMetadata.RetryParams()
 }

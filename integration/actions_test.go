@@ -256,22 +256,28 @@ func fail(next action, msg string, args ...any) action {
 	}
 }
 
+// fetched and returns a row's column values
+func getRow(t testing.TB, ic testContext, database, query string, fieldCount int) []any {
+	infof("Querying %s: %s", database, query)
+	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
+	assert.NoError(t, err)
+	defer db.Close()
+	actual := make([]any, fieldCount)
+	for i := range actual {
+		actual[i] = new(any)
+	}
+	err = db.QueryRowContext(ic, query).Scan(actual...)
+	assert.NoError(t, err)
+	for i := range actual {
+		actual[i] = *actual[i].(*any)
+	}
+	return actual
+}
+
 // Query a single row from a database.
 func queryRow(database string, query string, expected ...interface{}) action {
 	return func(t testing.TB, ic testContext) {
-		infof("Querying %s: %s", database, query)
-		db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
-		assert.NoError(t, err)
-		defer db.Close()
-		actual := make([]any, len(expected))
-		for i := range actual {
-			actual[i] = new(any)
-		}
-		err = db.QueryRowContext(ic, query).Scan(actual...)
-		assert.NoError(t, err)
-		for i := range actual {
-			actual[i] = *actual[i].(*any)
-		}
+		actual := getRow(t, ic, database, query, len(expected))
 		for i, a := range actual {
 			assert.Equal(t, a, expected[i])
 		}

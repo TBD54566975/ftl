@@ -27,10 +27,17 @@ import (
 // future execution.
 //
 // Note: no validation of the FSM is performed.
-func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executionKey string, destinationState schema.RefKey, request json.RawMessage) (err error) {
+func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executionKey string, destinationState schema.RefKey, request json.RawMessage, retryParams schema.RetryParams) (err error) {
 	// Create an async call for the event.
 	origin := AsyncOriginFSM{FSM: fsm, Key: executionKey}
-	asyncCallID, err := d.db.CreateAsyncCall(ctx, destinationState, origin.String(), request)
+	asyncCallID, err := d.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
+		Verb:              destinationState,
+		Origin:            origin.String(),
+		Request:           request,
+		RemainingAttempts: int32(retryParams.Count),
+		Backoff:           retryParams.MinBackoff,
+		MaxBackoff:        retryParams.MaxBackoff,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create FSM async call: %w", translatePGError(err))
 	}

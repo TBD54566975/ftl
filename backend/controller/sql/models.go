@@ -327,15 +327,19 @@ type Artefact struct {
 }
 
 type AsyncCall struct {
-	ID        int64
-	CreatedAt time.Time
-	LeaseID   optional.Option[int64]
-	Verb      schema.RefKey
-	State     AsyncCallState
-	Origin    string
-	Request   []byte
-	Response  []byte
-	Error     optional.Option[string]
+	ID                int64
+	CreatedAt         time.Time
+	LeaseID           optional.Option[int64]
+	Verb              schema.RefKey
+	State             AsyncCallState
+	Origin            string
+	ScheduledAt       time.Time
+	Request           []byte
+	Response          []byte
+	Error             optional.Option[string]
+	RemainingAttempts int32
+	Backoff           time.Duration
+	MaxBackoff        time.Duration
 }
 
 type Controller struct {

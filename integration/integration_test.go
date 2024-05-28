@@ -334,3 +334,51 @@ func TestFSM(t *testing.T) {
 			"invalid state transition"),
 	)
 }
+
+func TestFSMRetry(t *testing.T) {
+	checkRetries := func(origin, verb string, delays []time.Duration) action {
+		return func(t testing.TB, ic testContext) {
+			results := []any{}
+			for i := 0; i < len(delays); i++ {
+				values := getRow(t, ic, "ftl", fmt.Sprintf("SELECT scheduled_at FROM async_calls WHERE origin = '%s' AND verb = '%s' AND state = 'error' ORDER BY created_at LIMIT 1 OFFSET %d", origin, verb, i), 1)
+				results = append(results, values[0])
+			}
+			times := []time.Time{}
+			for i, r := range results {
+				ts, ok := r.(time.Time)
+				assert.True(t, ok, "unexpected time value: %v", r)
+				times = append(times, ts)
+				if i > 0 {
+					delay := times[i].Sub(times[i-1])
+					targetDelay := delays[i-1]
+					assert.True(t, delay >= targetDelay && delay < time.Second+targetDelay, "unexpected time diff for %s retry %d: %v (expected %v - %v)", origin, i, delay, targetDelay, time.Second+targetDelay)
+				}
+			}
+		}
+	}
+
+	run(t, "",
+		copyModule("fsmretry"),
+		build("fsmretry"),
+		deploy("fsmretry"),
+		// start 2 FSM instances
+		call("fsmretry", "start", obj{"id": "1"}, func(t testing.TB, response obj) {}),
+		call("fsmretry", "start", obj{"id": "2"}, func(t testing.TB, response obj) {}),
+
+		sleep(2*time.Second),
+
+		// transition the FSM, should fail each time.
+		call("fsmretry", "startTransitionToTwo", obj{"id": "1"}, func(t testing.TB, response obj) {}),
+		call("fsmretry", "startTransitionToThree", obj{"id": "2"}, func(t testing.TB, response obj) {}),
+
+		sleep(8*time.Second), //6s is longest run of retries
+
+		// both FSMs instances should have failed
+		queryRow("ftl", "SELECT COUNT(*) FROM fsm_instances WHERE status = 'failed'", int64(2)),
+
+		queryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:1", "fsmretry.state2"), int64(4)),
+		checkRetries("fsm:fsmretry.fsm:1", "fsmretry.state2", []time.Duration{time.Second, time.Second, time.Second}),
+		queryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:2", "fsmretry.state3"), int64(4)),
+		checkRetries("fsm:fsmretry.fsm:2", "fsmretry.state3", []time.Duration{time.Second, 2 * time.Second, 3 * time.Second}),
+	)
+}

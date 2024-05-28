@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/either"
 
+	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
@@ -55,11 +56,16 @@ func ParseAsyncOrigin(origin string) (AsyncOrigin, error) {
 }
 
 type AsyncCall struct {
-	*Lease  // May be nil
-	ID      int64
-	Origin  AsyncOrigin
-	Verb    schema.RefKey
-	Request json.RawMessage
+	*Lease      // May be nil
+	ID          int64
+	Origin      AsyncOrigin
+	Verb        schema.RefKey
+	Request     json.RawMessage
+	ScheduledAt time.Time
+
+	RemainingAttempts int32
+	Backoff           time.Duration
+	MaxBackoff        time.Duration
 }
 
 // AcquireAsyncCall acquires a pending async call to execute.
@@ -87,11 +93,15 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 	return &AsyncCall{
-		ID:      row.AsyncCallID,
-		Verb:    row.Verb,
-		Origin:  origin,
-		Request: row.Request,
-		Lease:   d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl),
+		ID:                row.AsyncCallID,
+		Verb:              row.Verb,
+		Origin:            origin,
+		Request:           row.Request,
+		Lease:             d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl),
+		ScheduledAt:       row.ScheduledAt,
+		RemainingAttempts: row.RemainingAttempts,
+		Backoff:           row.Backoff,
+		MaxBackoff:        row.MaxBackoff,
 	}, nil
 }
 
@@ -114,9 +124,23 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result eit
 		}
 
 	case either.Right[[]byte, string]: // Failure message.
-		_, err = tx.db.FailAsyncCall(ctx, result.Get(), call.ID)
-		if err != nil {
-			return translatePGError(err)
+		if call.RemainingAttempts > 0 {
+			_, err = d.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
+				ID:                call.ID,
+				Error:             result.Get(),
+				RemainingAttempts: call.RemainingAttempts - 1,
+				Backoff:           min(call.Backoff*2, call.MaxBackoff),
+				MaxBackoff:        call.MaxBackoff,
+				ScheduledAt:       time.Now().Add(call.Backoff),
+			})
+			if err != nil {
+				return translatePGError(err)
+			}
+		} else {
+			_, err = tx.db.FailAsyncCall(ctx, result.Get(), call.ID)
+			if err != nil {
+				return translatePGError(err)
+			}
 		}
 	}
 
