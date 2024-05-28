@@ -18,9 +18,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	gensql "github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 	"github.com/kballard/go-shellquote"
@@ -28,7 +26,6 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/schema"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/scaffolder"
@@ -261,22 +258,28 @@ func fail(next action, msg string, args ...any) action {
 	}
 }
 
+// fetched and returns a row's column values
+func getRow(ic testContext, database, query string, fieldCount int) []any {
+	infof("Querying %s: %s", database, query)
+	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
+	assert.NoError(t, err)
+	defer db.Close()
+	actual := make([]any, fieldCount)
+	for i := range actual {
+		actual[i] = new(any)
+	}
+	err = db.QueryRowContext(ic, query).Scan(actual...)
+	assert.NoError(t, err)
+	for i := range actual {
+		actual[i] = *actual[i].(*any)
+	}
+	return actual
+}
+
 // Query a single row from a database.
 func queryRow(database string, query string, expected ...interface{}) action {
-	return func(t testing.TB, ic testContext) {
-		infof("Querying %s: %s", database, query)
-		db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
-		assert.NoError(t, err)
-		defer db.Close()
-		actual := make([]any, len(expected))
-		for i := range actual {
-			actual[i] = new(any)
-		}
-		err = db.QueryRowContext(ic, query).Scan(actual...)
-		assert.NoError(t, err)
-		for i := range actual {
-			actual[i] = *actual[i].(*any)
-		}
+	return func(t testing.TB, ic testContext) error {
+		actual := getRow(ic, database, query, len(expected))
 		for i, a := range actual {
 			assert.Equal(t, a, expected[i])
 		}
@@ -340,92 +343,6 @@ func connectToFTLDatabase(ctx context.Context, actionFunc func(conn *pgxpool.Con
 	defer conn.Release()
 
 	return actionFunc(conn)
-}
-
-type asyncCallRow struct {
-	Verb              schema.RefKey
-	Origin            string
-	State             string
-	ScheduledAt       time.Time
-	Request           []byte
-	Response          []byte
-	Error             optional.Option[string]
-	RemainingAttempts int32
-	Backoff           time.Duration
-	MaxBackoff        time.Duration
-}
-
-func getAsyncCalls(callback func([]asyncCallRow) error) action {
-	return func(t testing.TB, ic testContext) error {
-		return connectToFTLDatabase(ic.Context, func(conn *pgxpool.Conn) error {
-			rows, err := conn.Query(ic.Context, `
-		SELECT verb, origin, state, scheduled_at, request, response, error, remaining_attempts, backoff::interval, max_backoff::interval
-		FROM async_calls
-		ORDER BY created_at ASC`)
-			if err != nil {
-				return err
-			}
-			defer rows.Close()
-			var items []asyncCallRow
-			for rows.Next() {
-				var i asyncCallRow
-				if err := rows.Scan(
-					&i.Verb,
-					&i.Origin,
-					&i.State,
-					&i.ScheduledAt,
-					&i.Request,
-					&i.Response,
-					&i.Error,
-					&i.RemainingAttempts,
-					&i.Backoff,
-					&i.MaxBackoff,
-				); err != nil {
-					return err
-				}
-				items = append(items, i)
-			}
-			if err := rows.Err(); err != nil {
-				return err
-			}
-			return callback(items)
-		})
-	}
-}
-
-func getFSMInstances(callback func([]gensql.FsmInstance) error) action {
-	return func(t testing.TB, ic testContext) error {
-		return connectToFTLDatabase(ic.Context, func(conn *pgxpool.Conn) error {
-			rows, err := conn.Query(ic.Context, `
-			SELECT id, created_at, fsm, key, status, current_state, destination_state, async_call_id
-			FROM fsm_instances`)
-			if err != nil {
-				return err
-			}
-			defer rows.Close()
-			var items []gensql.FsmInstance
-			for rows.Next() {
-				var i gensql.FsmInstance
-				if err := rows.Scan(
-					&i.ID,
-					&i.CreatedAt,
-					&i.Fsm,
-					&i.Key,
-					&i.Status,
-					&i.CurrentState,
-					&i.DestinationState,
-					&i.AsyncCallID,
-				); err != nil {
-					return err
-				}
-				items = append(items, i)
-			}
-			if err := rows.Err(); err != nil {
-				return err
-			}
-			return callback(items)
-		})
-	}
 }
 
 // Create a directory in the working directory

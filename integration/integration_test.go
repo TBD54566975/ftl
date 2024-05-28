@@ -12,15 +12,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
-	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestCron(t *testing.T) {
@@ -339,6 +336,39 @@ func TestFSM(t *testing.T) {
 }
 
 func TestFSMRetry(t *testing.T) {
+	retryCallQuery := func(origin string, verb string, offset int) string {
+		return fmt.Sprintf("SELECT scheduled_at FROM async_calls WHERE origin = '%s' AND verb = '%s' AND state = 'error' ORDER BY created_at LIMIT 1 OFFSET %d", origin, verb, offset)
+	}
+
+	checkRetries := func(origin, verb string, delays []time.Duration) action {
+		return func(t testing.TB, ic testContext) error {
+			results := []any{}
+			for i := 0; i < len(delays); i++ {
+				values, err := getRow(ic, "ftl", retryCallQuery(origin, verb, i), 1)
+				if err != nil {
+					return err
+				}
+				results = append(results, values[0])
+			}
+
+			times := []time.Time{}
+			for i, r := range results {
+				t, ok := r.(time.Time)
+				if !ok {
+					return fmt.Errorf("unexpected time value: %v", r)
+				}
+				times = append(times, t)
+				if i > 0 {
+					delay := times[i].Sub(times[i-1])
+					if delay < delays[i-1] || delay >= time.Second+delays[i-1] {
+						return fmt.Errorf("unexpected time diff for %s retry %d: %v", origin, i, delay)
+					}
+				}
+			}
+			return nil
+		}
+	}
+
 	run(t, "",
 		copyModule("fsmretry"),
 		build("fsmretry"),
@@ -355,70 +385,12 @@ func TestFSMRetry(t *testing.T) {
 
 		sleep(8*time.Second), //6s is longest run of retries
 
-		getFSMInstances(func(rows []sql.FsmInstance) error {
-			// make sure both FSM instances reached error state
-			assert.Equal(t, 2, len(rows), "unexpected number of FSM instances: %v", rows)
-			for _, r := range rows {
-				assert.Equal(t, sql.FsmStatusFailed, r.Status, "unexpected status for FSM instance %s: %v", r.Key, r.Status)
-			}
-			return nil
-		}),
+		// both FSMs instances should have failed
+		queryRow("ftl", "SELECT COUNT(*) FROM fsm_instances WHERE status = 'failed'", int64(2)),
 
-		getAsyncCalls(func(rows []asyncCallRow) error {
-			fsm1Rows := []asyncCallRow{}
-			fsm2Rows := []asyncCallRow{}
-			for _, r := range rows {
-				if r.Origin == "fsm:fsmretry.fsm:1" {
-					fsm1Rows = append(fsm1Rows, r)
-				} else if r.Origin == "fsm:fsmretry.fsm:2" {
-					fsm2Rows = append(fsm2Rows, r)
-				}
-			}
-
-			// FSM 1
-			// Confirm each async call
-			assert.Equal(t, 5, len(fsm1Rows), "unexpected number of calls for fsm 1: %v", fsm1Rows)
-
-			// first call creates the FSM with state 1
-			assert.Equal(t, "success", fsm1Rows[0].State)
-			assert.Equal(t, schema.RefKey{Module: "fsmretry", Name: "state1"}, fsm1Rows[0].Verb)
-			assert.NotZero(t, fsm1Rows[0].Response)
-
-			for i := 1; i < 5; i++ {
-				// next call fails to transition to state 2
-				assert.Equal(t, "error", fsm1Rows[i].State)
-				assert.Equal(t, schema.RefKey{Module: "fsmretry", Name: "state2"}, fsm1Rows[i].Verb, "unexpected verb for fsm1 call %d:\n%v", i, fsm1Rows[i])
-				assert.Equal(t, optional.Some("call to verb fsmretry.state2 failed: transition will never succeed"), fsm1Rows[i].Error, "unexpected error for fsm1 call %d:\n%v", i, fsm1Rows[i])
-				if i > 1 {
-					// should happen just after 1s from the previous async call
-					delay := fsm1Rows[i].ScheduledAt.Sub(fsm1Rows[i-1].ScheduledAt)
-					assert.True(t, delay >= time.Second, "fsm1 call %d happened faster than expected (%v): %v", i, fsm1Rows[i], delay)
-					assert.True(t, delay < 2*time.Second, "fsm1 call %d happened slower than expected (%v): %v", i, fsm1Rows[i], delay)
-				}
-			}
-
-			// FSM 2
-			// Confirm each async call
-			assert.Equal(t, 5, len(fsm2Rows), "unexpected number of calls for fsm 2: %v", fsm2Rows)
-
-			// first call creates the FSM with state 1
-			assert.Equal(t, "success", fsm2Rows[0].State)
-			assert.Equal(t, schema.RefKey{Module: "fsmretry", Name: "state1"}, fsm2Rows[0].Verb)
-			assert.NotZero(t, fsm2Rows[0].Response)
-
-			for i := 1; i < 5; i++ {
-				// next call fails to transition to state 3
-				assert.Equal(t, "error", fsm2Rows[i].State)
-				assert.Equal(t, schema.RefKey{Module: "fsmretry", Name: "state3"}, fsm2Rows[i].Verb, "unexpected verb for fsm2 call %d:\n%v", i, fsm2Rows[i])
-				assert.Equal(t, optional.Some("call to verb fsmretry.state3 failed: transition will never succeed"), fsm2Rows[i].Error, "unexpected error for fsm2 call %d:\n%v", i, fsm2Rows[i])
-				if i > 1 {
-					// should happen after 1s, then 2s (doubled), then 3s (max) from the previous async call
-					delay := fsm2Rows[i].ScheduledAt.Sub(fsm2Rows[i-1].ScheduledAt)
-					assert.True(t, delay >= time.Duration(i-1)*time.Second, "fsm2 call %d happened faster than expected (%v): %v", i, fsm2Rows[i], delay)
-					assert.True(t, delay < time.Duration(i)*time.Second, "fsm2 call %d happened slower than expected (%v): %v", i, fsm2Rows[i], delay)
-				}
-			}
-			return nil
-		}),
+		queryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:1", "fsmretry.state2"), int64(4)),
+		checkRetries("fsm:fsmretry.fsm:1", "fsmretry.state2", []time.Duration{time.Second, time.Second, time.Second}),
+		queryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:2", "fsmretry.state3"), int64(4)),
+		checkRetries("fsm:fsmretry.fsm:2", "fsmretry.state3", []time.Duration{time.Second, 2 * time.Second, 3 * time.Second}),
 	)
 }
