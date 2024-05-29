@@ -485,7 +485,7 @@ func TestModuleConfiguration(t *testing.T) {
 
 		gotList, err := dal.db.ListModuleConfiguration(ctx)
 		assert.NoError(t, err)
-		for i, _ := range sortedList {
+		for i := range sortedList {
 			assert.Equal(t, sortedList[i].Module, gotList[i].Module)
 			assert.Equal(t, sortedList[i].Name, gotList[i].Name)
 		}
