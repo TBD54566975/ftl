@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -34,7 +33,7 @@ func (d DBConfigResolver) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 func (d DBConfigResolver) List(ctx context.Context) ([]Entry, error) {
 	configs, err := d.dal.ListModuleConfiguration(ctx)
 	if err != nil {
-		return nil, dal.TranslatePGError(err)
+		return nil, err
 	}
 	return slices.Map(configs, func(c sql.ModuleConfiguration) Entry {
 		return Entry{

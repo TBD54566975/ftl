@@ -45,7 +45,7 @@ func (l *Lease) renew(ctx context.Context) {
 			cancel()
 
 			if err != nil {
-				err = TranslatePGError(err)
+				err = translatePGError(err)
 				if errors.Is(err, ErrNotFound) {
 					logger.Warnf("Lease expired")
 				} else {
@@ -61,7 +61,7 @@ func (l *Lease) renew(ctx context.Context) {
 			}
 			logger.Debugf("Releasing lease")
 			_, err := l.db.ReleaseLease(ctx, l.idempotencyKey, l.key)
-			l.errch <- TranslatePGError(err)
+			l.errch <- translatePGError(err)
 			return
 		}
 	}
@@ -81,7 +81,7 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 	}
 	idempotencyKey, err := d.db.NewLease(ctx, key, ttl)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return d.newLease(ctx, key, idempotencyKey, ttl), nil
 }
@@ -106,5 +106,5 @@ func (d *DAL) ExpireLeases(ctx context.Context) error {
 	if count > 0 {
 		log.FromContext(ctx).Warnf("Expired %d leases", count)
 	}
-	return TranslatePGError(err)
+	return translatePGError(err)
 }

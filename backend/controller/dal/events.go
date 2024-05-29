@@ -260,7 +260,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 	rows, err := d.db.Conn().Query(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	deploymentIDs := []int64{}
 	for rows.Next() {
@@ -315,7 +315,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	// Issue query.
 	rows, err = d.db.Conn().Query(ctx, q, args...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", q, TranslatePGError(err))
+		return nil, fmt.Errorf("%s: %w", q, translatePGError(err))
 	}
 	defer rows.Close()
 

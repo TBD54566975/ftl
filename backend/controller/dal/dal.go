@@ -288,7 +288,7 @@ func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
 	}
 	stx, err := db.Begin(ctx)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return &Tx{&DAL{
 		db:                stx,
@@ -299,7 +299,7 @@ func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
 func (d *DAL) GetActiveControllers(ctx context.Context) ([]Controller, error) {
 	controllers, err := d.db.GetActiveControllers(ctx)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.Map(controllers, func(in sql.Controller) Controller {
 		return Controller{
@@ -312,23 +312,23 @@ func (d *DAL) GetActiveControllers(ctx context.Context) ([]Controller, error) {
 func (d *DAL) GetStatus(ctx context.Context) (Status, error) {
 	controllers, err := d.GetActiveControllers(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get control planes: %w", TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get control planes: %w", translatePGError(err))
 	}
 	runners, err := d.db.GetActiveRunners(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get active runners: %w", TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get active runners: %w", translatePGError(err))
 	}
 	deployments, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get active deployments: %w", TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get active deployments: %w", translatePGError(err))
 	}
 	ingressRoutes, err := d.db.GetActiveIngressRoutes(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get ingress routes: %w", TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get ingress routes: %w", translatePGError(err))
 	}
 	routes, err := d.db.GetRoutingTable(ctx, nil)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get routing table: %w", TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get routing table: %w", translatePGError(err))
 	}
 	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
 		labels := model.Labels{}
@@ -401,7 +401,7 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 	runners := []Runner{}
 	rows, err := d.db.GetRunnersForDeployment(ctx, deployment)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	for _, row := range rows {
 		attrs := model.Labels{}
@@ -422,14 +422,14 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 
 func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err error) {
 	_, err = d.db.UpsertModule(ctx, language, name)
-	return TranslatePGError(err)
+	return translatePGError(err)
 }
 
 // GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
 func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
 	have, err := d.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	haveStr := slices.Map(have, func(in sql.GetArtefactDigestsRow) sha256.SHA256 {
 		return sha256.FromBytes(in.Digest)
@@ -441,7 +441,7 @@ func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) 
 func (d *DAL) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
 	sha256digest := sha256.Sum(content)
 	_, err = d.db.CreateArtefact(ctx, sha256digest[:], content)
-	return sha256digest, TranslatePGError(err)
+	return sha256digest, translatePGError(err)
 }
 
 type IngressRoutingEntry struct {
@@ -485,7 +485,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	// TODO(aat): "schema" containing language?
 	_, err = tx.UpsertModule(ctx, language, moduleSchema.Name)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to upsert module: %w", TranslatePGError(err))
+		return model.DeploymentKey{}, fmt.Errorf("failed to upsert module: %w", translatePGError(err))
 	}
 
 	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
@@ -493,7 +493,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	// Create the deployment
 	err = tx.CreateDeployment(ctx, moduleSchema.Name, schemaBytes, deploymentKey)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", TranslatePGError(err))
+		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", translatePGError(err))
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
@@ -516,7 +516,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("failed to associate artefact with deployment: %w", TranslatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to associate artefact with deployment: %w", translatePGError(err))
 		}
 	}
 
@@ -529,7 +529,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("failed to create ingress route: %w", TranslatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to create ingress route: %w", translatePGError(err))
 		}
 	}
 
@@ -546,7 +546,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			NextExecution: job.NextExecution,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", TranslatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", translatePGError(err))
 		}
 	}
 
@@ -556,7 +556,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 func (d *DAL) GetDeployment(ctx context.Context, key model.DeploymentKey) (*model.Deployment, error) {
 	deployment, err := d.db.GetDeployment(ctx, key)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return d.loadDeployment(ctx, deployment)
 }
@@ -578,7 +578,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 		Labels:        attrBytes,
 	})
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 	if runner.Deployment.Ok() && !deploymentID.Ok() {
 		return fmt.Errorf("deployment %s not found", runner.Deployment)
@@ -602,7 +602,7 @@ func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int6
 func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 	count, err := d.db.DeregisterRunner(ctx, key)
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 	if count == 0 {
 		return ErrNotFound
@@ -622,18 +622,18 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.D
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
 		cancel()
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	runner, err := tx.ReserveRunner(ctx, time.Now().Add(reservationTimeout), deployment, jsonLabels)
 	if err != nil {
 		if rerr := tx.Rollback(context.Background()); rerr != nil {
-			err = errors.Join(err, TranslatePGError(rerr))
+			err = errors.Join(err, translatePGError(rerr))
 		}
 		cancel()
 		if isNotFound(err) {
 			return nil, fmt.Errorf("no idle runners found matching labels %s: %w", jsonLabels, ErrNotFound)
 		}
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	runnerLabels := model.Labels{}
 	if err := json.Unmarshal(runner.Labels, &runnerLabels); err != nil {
@@ -664,12 +664,12 @@ type postgresClaim struct {
 
 func (p *postgresClaim) Commit(ctx context.Context) error {
 	defer p.cancel()
-	return TranslatePGError(p.tx.Commit(ctx))
+	return translatePGError(p.tx.Commit(ctx))
 }
 
 func (p *postgresClaim) Rollback(ctx context.Context) error {
 	defer p.cancel()
-	return TranslatePGError(p.tx.Rollback(ctx))
+	return translatePGError(p.tx.Rollback(ctx))
 }
 
 func (p *postgresClaim) Runner() Runner { return p.runner }
@@ -679,19 +679,19 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 
 	defer tx.CommitOrRollback(ctx, &err)
 
 	deployment, err := d.db.GetDeployment(ctx, key)
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 
 	err = d.db.SetDeploymentDesiredReplicas(ctx, key, int32(minReplicas))
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 
 	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
@@ -700,7 +700,7 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 		PrevMinReplicas: deployment.MinReplicas,
 	})
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 
 	return nil
@@ -711,13 +711,13 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 
 	defer tx.CommitOrRollback(ctx, &err)
 	newDeployment, err := tx.GetDeployment(ctx, newDeploymentKey)
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
@@ -727,19 +727,19 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	if err == nil {
 		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Key, newDeploymentKey, int32(minReplicas))
 		if err != nil {
-			return TranslatePGError(err)
+			return translatePGError(err)
 		}
 		if count == 1 {
 			return fmt.Errorf("deployment already exists: %w", ErrConflict)
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !isNotFound(err) {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	} else {
 		// Set the desired replicas for the new deployment
 		err = tx.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
 		if err != nil {
-			return TranslatePGError(err)
+			return translatePGError(err)
 		}
 	}
 
@@ -751,7 +751,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		Replaced:      replacedDeploymentKey,
 	})
 	if err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 
 	return nil
@@ -765,7 +765,7 @@ func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconc
 		if isNotFound(err) {
 			return nil, nil
 		}
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.Map(counts, func(t sql.GetDeploymentsNeedingReconciliationRow) Reconciliation {
 		return Reconciliation{
@@ -785,7 +785,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 		if isNotFound(err) {
 			return nil, nil
 		}
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.MapErr(rows, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
 		return Deployment{
@@ -806,7 +806,7 @@ func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]Deployment, 
 		if isNotFound(err) {
 			return nil, nil
 		}
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.MapErr(rows, func(in sql.GetDeploymentsWithMinReplicasRow) (Deployment, error) {
 		return Deployment{
@@ -823,7 +823,7 @@ func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]Deployment, 
 func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module, error) {
 	rows, err := d.db.GetActiveDeploymentSchemas(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active deployments: %w", TranslatePGError(err))
+		return nil, fmt.Errorf("could not get active deployments: %w", translatePGError(err))
 	}
 	return slices.MapErr(rows, func(in sql.GetActiveDeploymentSchemasRow) (*schema.Module, error) { return in.Schema, nil })
 }
@@ -845,7 +845,7 @@ type Process struct {
 func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 	rows, err := d.db.GetProcessList(ctx)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.MapErr(rows, func(row sql.GetProcessListRow) (Process, error) {
 		var runner optional.Option[ProcessRunner]
@@ -893,7 +893,7 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 	if isNotFound(err) {
 		return nil, nil
 	} else if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.MapErr(runners, func(row sql.Runner) (Runner, error) {
 		rowLabels := model.Labels{}
@@ -918,7 +918,7 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string][]Route, error) {
 	routes, err := d.db.GetRoutingTable(ctx, modules)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	if len(routes) == 0 {
 		return nil, fmt.Errorf("no routes found: %w", ErrNotFound)
@@ -941,7 +941,7 @@ func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
 	state, err := d.db.GetRunnerState(ctx, runnerKey)
 	if err != nil {
-		return "", TranslatePGError(err)
+		return "", translatePGError(err)
 	}
 	return RunnerState(state), nil
 }
@@ -949,14 +949,14 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (Ru
 func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {
 	row, err := d.db.GetRunner(ctx, runnerKey)
 	if err != nil {
-		return Runner{}, TranslatePGError(err)
+		return Runner{}, translatePGError(err)
 	}
 	return runnerFromDB(row), nil
 }
 
 func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	count, err := d.db.ExpireRunnerReservations(ctx)
-	return count, TranslatePGError(err)
+	return count, translatePGError(err)
 }
 
 func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
@@ -975,7 +975,7 @@ func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
 func (d *DAL) GetCronJobs(ctx context.Context) ([]model.CronJob, error) {
 	rows, err := d.db.GetCronJobs(ctx)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.Map(rows, cronJobFromRow), nil
 }
@@ -993,7 +993,7 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attempte
 	}
 	rows, err := d.db.StartCronJobs(ctx, slices.Map(jobs, func(job model.CronJob) string { return job.Key.String() }))
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 
 	attemptedJobs = []AttemptedCronJob{}
@@ -1021,7 +1021,7 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attempte
 func (d *DAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time) (model.CronJob, error) {
 	row, err := d.db.EndCronJob(ctx, next, job.Key, job.StartTime)
 	if err != nil {
-		return model.CronJob{}, TranslatePGError(err)
+		return model.CronJob{}, translatePGError(err)
 	}
 	return cronJobFromRow(sql.GetCronJobsRow(row)), nil
 }
@@ -1030,7 +1030,7 @@ func (d *DAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time)
 func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]model.CronJob, error) {
 	rows, err := d.db.GetStaleCronJobs(ctx, duration)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.Map(rows, func(row sql.GetStaleCronJobsRow) model.CronJob {
 		return cronJobFromRow(sql.GetCronJobsRow(row))
@@ -1046,7 +1046,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	if name, ok := log.RequestKey.Get(); ok {
 		requestKey = optional.Some(name.String())
 	}
-	return TranslatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
+	return translatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
 		DeploymentKey: log.DeploymentKey,
 		RequestKey:    requestKey,
 		TimeStamp:     log.Time,
@@ -1067,7 +1067,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	}
 	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	out.Artefacts = slices.Map(artefacts, func(row sql.GetDeploymentArtefactsRow) *model.Artefact {
 		return &model.Artefact{
@@ -1082,7 +1082,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 
 func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr string) error {
 	if err := d.db.CreateRequest(ctx, sql.Origin(key.Payload.Origin), key, addr); err != nil {
-		return TranslatePGError(err)
+		return translatePGError(err)
 	}
 	return nil
 }
@@ -1090,7 +1090,7 @@ func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr stri
 func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRoute, error) {
 	routes, err := d.db.GetIngressRoutes(ctx, method)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	if len(routes) == 0 {
 		return nil, ErrNotFound
@@ -1109,7 +1109,7 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRou
 
 func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {
 	id, err := d.db.UpsertController(ctx, key, addr)
-	return id, TranslatePGError(err)
+	return id, translatePGError(err)
 }
 
 func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
@@ -1121,7 +1121,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if rn, ok := call.RequestKey.Get(); ok {
 		requestKey = optional.Some(rn.String())
 	}
-	return TranslatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
+	return translatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
 		DeploymentKey: call.DeploymentKey,
 		RequestKey:    requestKey,
 		TimeStamp:     call.Time,
@@ -1140,7 +1140,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
 	rows, err := d.db.GetActiveRunners(ctx)
 	if err != nil {
-		return nil, TranslatePGError(err)
+		return nil, translatePGError(err)
 	}
 	return slices.Map(rows, func(row sql.GetActiveRunnersRow) Runner {
 		return runnerFromDB(sql.GetRunnerRow(row))
@@ -1182,7 +1182,7 @@ func (r *artefactReader) Close() error { return nil }
 func (r *artefactReader) Read(p []byte) (n int, err error) {
 	content, err := r.db.GetArtefactContentRange(context.Background(), r.offset+1, int32(len(p)), r.id)
 	if err != nil {
-		return 0, TranslatePGError(err)
+		return 0, translatePGError(err)
 	}
 	copy(p, content)
 	clen := len(content)
@@ -1197,7 +1197,7 @@ func isNotFound(err error) bool {
 	return errors.Is(err, stdsql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows)
 }
 
-func TranslatePGError(err error) error {
+func translatePGError(err error) error {
 	if err == nil {
 		return nil
 	}
