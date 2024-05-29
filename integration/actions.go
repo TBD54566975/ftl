@@ -1,6 +1,6 @@
 //go:build integration
 
-package simple_test
+package integration
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ import (
 // Scaffold a directory relative to the testdata directory to a directory relative to the working directory.
 func Scaffold(src, dest string, tmplCtx any) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Scaffolding %s -> %s", src, dest)
+		Infof("Scaffolding %s -> %s", src, dest)
 		err := scaffolder.Scaffold(filepath.Join(ic.testData, src), filepath.Join(ic.workDir, dest), tmplCtx)
 		assert.NoError(t, err)
 	}
@@ -54,7 +54,7 @@ func CopyModule(module string) Action {
 // Copy a directory from the testdata directory to the working directory.
 func CopyDir(src, dest string) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Copying %s -> %s", src, dest)
+		Infof("Copying %s -> %s", src, dest)
 		err := copy.Copy(filepath.Join(ic.testData, src), filepath.Join(ic.workDir, dest))
 		assert.NoError(t, err)
 	}
@@ -73,7 +73,7 @@ func Chain(actions ...Action) Action {
 func Chdir(dir string, a Action) Action {
 	return func(t testing.TB, ic TestContext) {
 		dir := filepath.Join(ic.workDir, dir)
-		infof("Changing directory to %s", dir)
+		Infof("Changing directory to %s", dir)
 		cwd, err := os.Getwd()
 		assert.NoError(t, err)
 		ic.workDir = dir
@@ -87,7 +87,7 @@ func Chdir(dir string, a Action) Action {
 // DebugShell opens a new Terminal window in the test working directory.
 func DebugShell() Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Starting debug shell")
+		Infof("Starting debug shell")
 		err := ftlexec.Command(ic, log.Debug, ic.workDir, "open", "-n", "-W", "-a", "Terminal", ".").RunBuffered(ic)
 		assert.NoError(t, err)
 	}
@@ -96,7 +96,7 @@ func DebugShell() Action {
 // Exec runs a command from the test working directory.
 func Exec(cmd string, args ...string) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Executing: %s %s", cmd, shellquote.Join(args...))
+		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
 		err := ftlexec.Command(ic, log.Debug, ic.workDir, cmd, args...).RunBuffered(ic)
 		assert.NoError(t, err)
 	}
@@ -106,7 +106,7 @@ func Exec(cmd string, args ...string) Action {
 // The output is captured and is returned as part of the error.
 func ExecWithOutput(cmd string, args ...string) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Executing: %s %s", cmd, shellquote.Join(args...))
+		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
 		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
 		assert.NoError(t, err, "%s", string(output))
 	}
@@ -146,12 +146,12 @@ func Build(modules ...string) Action {
 // Wait for the given module to deploy.
 func Wait(module string) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Waiting for %s to become ready", module)
+		Infof("Waiting for %s to become ready", module)
 		// There's a bit of a bug here: wait() is already being retried by the
 		// test harness, so in the error case we'll be waiting N^2 times. This
 		// is fine for now, but we should fix this in the future.
 		ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
-			status, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+			status, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
 			assert.NoError(t, err)
 			for _, deployment := range status.Msg.Deployments {
 				if deployment.Name == module {
@@ -165,7 +165,7 @@ func Wait(module string) Action {
 
 func Sleep(duration time.Duration) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Sleeping for %s", duration)
+		Infof("Sleeping for %s", duration)
 		time.Sleep(duration)
 	}
 }
@@ -173,7 +173,7 @@ func Sleep(duration time.Duration) Action {
 // Assert that a file exists in the working directory.
 func FileExists(path string) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Checking that %s exists", path)
+		Infof("Checking that %s exists", path)
 		_, err := os.Stat(filepath.Join(ic.workDir, path))
 		assert.NoError(t, err)
 	}
@@ -188,7 +188,7 @@ func FileContains(path, needle string) Action {
 		if !filepath.IsAbs(path) {
 			absPath = filepath.Join(ic.workDir, path)
 		}
-		infof("Checking that the content of %s is correct", absPath)
+		Infof("Checking that the content of %s is correct", absPath)
 		data, err := os.ReadFile(absPath)
 		assert.NoError(t, err)
 		actual := string(data)
@@ -205,7 +205,7 @@ func FileContent(path, expected string) Action {
 		if !filepath.IsAbs(path) {
 			absPath = filepath.Join(ic.workDir, path)
 		}
-		infof("Checking that the content of %s is correct", absPath)
+		Infof("Checking that the content of %s is correct", absPath)
 		data, err := os.ReadFile(absPath)
 		assert.NoError(t, err)
 		expected = strings.TrimSpace(expected)
@@ -214,22 +214,22 @@ func FileContent(path, expected string) Action {
 	}
 }
 
-type obj map[string]any
+type Obj map[string]any
 
 // Call a verb.
 //
 // "check" may be nil
-func Call(module, verb string, request obj, check func(t testing.TB, response obj)) Action {
+func Call(module, verb string, request Obj, check func(t testing.TB, response Obj)) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Calling %s.%s", module, verb)
+		Infof("Calling %s.%s", module, verb)
 		data, err := json.Marshal(request)
 		assert.NoError(t, err)
-		resp, err := ic.verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
+		resp, err := ic.Verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
 			Verb: &schemapb.Ref{Module: module, Name: verb},
 			Body: data,
 		}))
 		assert.NoError(t, err)
-		var response obj
+		var response Obj
 		assert.Zero(t, resp.Msg.GetError(), "verb failed: %s", resp.Msg.GetError().GetMessage())
 		err = json.Unmarshal(resp.Msg.GetBody(), &response)
 		assert.NoError(t, err)
@@ -239,10 +239,10 @@ func Call(module, verb string, request obj, check func(t testing.TB, response ob
 	}
 }
 
-// Fail expects the next action to fail.
-func fail(next Action, msg string, args ...any) Action {
+// Fail expects the next action to Fail.
+func Fail(next Action, msg string, args ...any) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Expecting failure of nested action")
+		Infof("Expecting failure of nested action")
 		panicked := true
 		defer func() {
 			if !panicked {
@@ -257,8 +257,8 @@ func fail(next Action, msg string, args ...any) Action {
 }
 
 // fetched and returns a row's column values
-func getRow(t testing.TB, ic TestContext, database, query string, fieldCount int) []any {
-	infof("Querying %s: %s", database, query)
+func GetRow(t testing.TB, ic TestContext, database, query string, fieldCount int) []any {
+	Infof("Querying %s: %s", database, query)
 	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
 	assert.NoError(t, err)
 	defer db.Close()
@@ -277,7 +277,7 @@ func getRow(t testing.TB, ic TestContext, database, query string, fieldCount int
 // Query a single row from a database.
 func QueryRow(database string, query string, expected ...interface{}) Action {
 	return func(t testing.TB, ic TestContext) {
-		actual := getRow(t, ic, database, query, len(expected))
+		actual := GetRow(t, ic, database, query, len(expected))
 		for i, a := range actual {
 			assert.Equal(t, a, expected[i])
 		}
@@ -296,7 +296,7 @@ func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
 	if isTestDb {
 		dbName += "_test"
 	}
-	infof("Creating database %s", dbName)
+	Infof("Creating database %s", dbName)
 	db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable")
 	assert.NoError(t, err, "failed to open database connection")
 	t.Cleanup(func() {
@@ -329,17 +329,17 @@ func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
 // Create a directory in the working directory
 func Mkdir(dir string) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("Creating directory %s", dir)
+		Infof("Creating directory %s", dir)
 		err := os.MkdirAll(filepath.Join(ic.workDir, dir), 0700)
 		assert.NoError(t, err)
 	}
 }
 
 type HTTPResponse struct {
-	status    int
-	headers   map[string][]string
-	jsonBody  map[string]any
-	bodyBytes []byte
+	Status    int
+	Headers   map[string][]string
+	JsonBody  map[string]any
+	BodyBytes []byte
 }
 
 func JsonData(t testing.TB, body interface{}) []byte {
@@ -351,7 +351,7 @@ func JsonData(t testing.TB, body interface{}) []byte {
 // HttpCall makes an HTTP call to the running FTL ingress endpoint.
 func HttpCall(method string, path string, body []byte, onResponse func(t testing.TB, resp *HTTPResponse)) Action {
 	return func(t testing.TB, ic TestContext) {
-		infof("HTTP %s %s", method, path)
+		Infof("HTTP %s %s", method, path)
 		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8892/ingress"))
 		assert.NoError(t, err)
 
@@ -373,10 +373,10 @@ func HttpCall(method string, path string, body []byte, onResponse func(t testing
 		_ = json.Unmarshal(bodyBytes, &resBody)
 
 		onResponse(t, &HTTPResponse{
-			status:    resp.StatusCode,
-			headers:   resp.Header,
-			jsonBody:  resBody,
-			bodyBytes: bodyBytes,
+			Status:    resp.StatusCode,
+			Headers:   resp.Header,
+			JsonBody:  resBody,
+			BodyBytes: bodyBytes,
 		})
 	}
 }

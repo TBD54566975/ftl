@@ -1,6 +1,6 @@
 //go:build integration
 
-package simple_test
+package integration
 
 import (
 	"bytes"
@@ -35,7 +35,7 @@ var integrationTestTimeout = func() time.Duration {
 	return d
 }()
 
-func infof(format string, args ...any) {
+func Infof(format string, args ...any) {
 	fmt.Printf("\033[32m\033[1mINFO: "+format+"\033[0m\n", args...)
 }
 
@@ -70,7 +70,7 @@ func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
 	binDir := filepath.Join(rootDir, "build", "release")
 
 	buildOnce.Do(func() {
-		infof("Building ftl")
+		Infof("Building ftl")
 		err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 		assert.NoError(t, err)
 	})
@@ -78,7 +78,7 @@ func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
 	controller := rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 	verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
-	infof("Starting ftl cluster")
+	Infof("Starting ftl cluster")
 	ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
 
 	ic := TestContext{
@@ -87,17 +87,17 @@ func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
 		testData:   filepath.Join(cwd, "testdata", "go"),
 		workDir:    tmpDir,
 		binDir:     binDir,
-		controller: controller,
-		verbs:      verbs,
+		Controller: controller,
+		Verbs:      verbs,
 	}
 
-	infof("Waiting for controller to be ready")
+	Infof("Waiting for controller to be ready")
 	ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
-		_, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+		_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
 		assert.NoError(t, err)
 	})
 
-	infof("Starting test")
+	Infof("Starting test")
 
 	for _, action := range actions {
 		ic.AssertWithRetry(t, action)
@@ -115,8 +115,8 @@ type TestContext struct {
 	// Path to the "bin" directory.
 	binDir string
 
-	controller ftlv1connect.ControllerServiceClient
-	verbs      ftlv1connect.VerbServiceClient
+	Controller ftlv1connect.ControllerServiceClient
+	Verbs      ftlv1connect.VerbServiceClient
 }
 
 // AssertWithRetry asserts that the given action passes within the timeout.
