@@ -10,7 +10,6 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/either"
 
-	"github.com/TBD54566975/ftl/backend/controller/dalerrors"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
@@ -82,10 +81,10 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 	ttl := time.Second * 5
 	row, err := tx.db.AcquireAsyncCall(ctx, ttl)
 	if err != nil {
-		err = dalerrors.TranslatePGError(err)
+		err = TranslatePGError(err)
 		// We get a NULL constraint violation if there are no async calls to acquire, so translate it to ErrNotFound.
-		if errors.Is(err, dalerrors.ErrConstraint) {
-			return nil, fmt.Errorf("no pending async calls: %w", dalerrors.ErrNotFound)
+		if errors.Is(err, ErrConstraint) {
+			return nil, fmt.Errorf("no pending async calls: %w", ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to acquire async call: %w", err)
 	}
@@ -113,7 +112,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result either.Either[[]byte, string], finalise func(tx *Tx) error) (err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
-		return dalerrors.TranslatePGError(err)
+		return TranslatePGError(err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
@@ -121,7 +120,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result eit
 	case either.Left[[]byte, string]: // Successful response.
 		_, err = tx.db.SucceedAsyncCall(ctx, result.Get(), call.ID)
 		if err != nil {
-			return dalerrors.TranslatePGError(err)
+			return TranslatePGError(err)
 		}
 
 	case either.Right[[]byte, string]: // Failure message.
@@ -135,12 +134,12 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result eit
 				ScheduledAt:       time.Now().Add(call.Backoff),
 			})
 			if err != nil {
-				return dalerrors.TranslatePGError(err)
+				return TranslatePGError(err)
 			}
 		} else {
 			_, err = tx.db.FailAsyncCall(ctx, result.Get(), call.ID)
 			if err != nil {
-				return dalerrors.TranslatePGError(err)
+				return TranslatePGError(err)
 			}
 		}
 	}
@@ -151,7 +150,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result eit
 func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 	row, err := d.db.LoadAsyncCall(ctx, id)
 	if err != nil {
-		return nil, dalerrors.TranslatePGError(err)
+		return nil, TranslatePGError(err)
 	}
 	origin, err := ParseAsyncOrigin(row.Origin)
 	if err != nil {

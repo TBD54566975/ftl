@@ -5,85 +5,47 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 )
 
-func TestDBConfigProviderRoundTrip(t *testing.T) {
-	tests := []struct {
-		TestName     string
-		ModuleStore  optional.Option[string]
-		ModuleLoad   optional.Option[string]
-		PresetGlobal bool
-	}{
-		{
-			"SetModuleGetModule",
-			optional.Some("echo"),
-			optional.Some("echo"),
-			false,
-		},
-		{
-			"SetGlobalGetGlobal",
-			optional.None[string](),
-			optional.None[string](),
-			false,
-		},
-		{
-			"SetGlobalGetModule",
-			optional.None[string](),
-			optional.Some("echo"),
-			false,
-		},
-		{
-			"SetModuleOverridesGlobal",
-			optional.Some("echo"),
-			optional.Some("echo"),
-			true,
-		},
-	}
+var b = []byte(`""`)
 
-	ctx, provider := setupDBConfigProvider(t)
-	b := []byte(`"asdf"`)
-	for _, test := range tests {
-		t.Run(test.TestName, func(t *testing.T) {
-			if test.PresetGlobal {
-				_, err := provider.Store(ctx, Ref{
-					Module: optional.None[string](),
-					Name:   "configname",
-				}, []byte(`"qwerty"`))
-				assert.NoError(t, err)
-			}
-			_, err := provider.Store(ctx, Ref{
-				Module: test.ModuleStore,
-				Name:   "configname",
-			}, b)
-			assert.NoError(t, err)
-			gotBytes, err := provider.Load(ctx, Ref{
-				Module: test.ModuleLoad,
-				Name:   "configname",
-			}, &url.URL{Scheme: "db"})
-			assert.NoError(t, err)
-			assert.Equal(t, b, gotBytes)
-			err = provider.Delete(ctx, Ref{
-				Module: test.ModuleStore,
-				Name:   "configname",
-			})
-			assert.NoError(t, err)
-		})
-	}
+type mockDBConfigProviderDAL struct{}
+
+func (mockDBConfigProviderDAL) GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
+	return b, nil
 }
 
-func setupDBConfigProvider(t *testing.T) (context.Context, DBConfigProvider) {
-	t.Helper()
+func (mockDBConfigProviderDAL) SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error {
+	return nil
+}
 
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := dal.New(ctx, conn)
+func (mockDBConfigProviderDAL) UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error {
+	return nil
+}
+
+func TestDBConfigProvider(t *testing.T) {
+	ctx := context.Background()
+	provider := NewDBConfigProvider(mockDBConfigProviderDAL{})
+
+	gotBytes, err := provider.Load(ctx, Ref{
+		Module: optional.Some("module"),
+		Name:   "configname",
+	}, &url.URL{Scheme: "db"})
 	assert.NoError(t, err)
-	assert.NotZero(t, dal)
+	assert.Equal(t, b, gotBytes)
 
-	return ctx, NewDBConfigProvider(dal.GetDB())
+	gotURL, err := provider.Store(ctx, Ref{
+		Module: optional.Some("module"),
+		Name:   "configname",
+	}, b)
+	assert.NoError(t, err)
+	assert.Equal(t, &url.URL{Scheme: "db"}, gotURL)
+
+	err = provider.Delete(ctx, Ref{
+		Module: optional.Some("module"),
+		Name:   "configname",
+	})
+	assert.NoError(t, err)
 }

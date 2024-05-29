@@ -4,21 +4,25 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/backend/controller/dalerrors"
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // DBConfigResolver loads values a project's configuration from the given database.
 type DBConfigResolver struct {
-	db sql.DBI
+	dal DBConfigResolverDAL
+}
+
+type DBConfigResolverDAL interface {
+	ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfiguration, error)
 }
 
 // DBConfigResolver should only be used for config, not secrets
 var _ Resolver[Configuration] = DBConfigResolver{}
 
-func NewDBConfigResolver(db sql.DBI) DBConfigResolver {
-	return DBConfigResolver{db: db}
+func NewDBConfigResolver(db DBConfigResolverDAL) DBConfigResolver {
+	return DBConfigResolver{dal: db}
 }
 
 func (d DBConfigResolver) Role() Configuration { return Configuration{} }
@@ -28,9 +32,9 @@ func (d DBConfigResolver) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 }
 
 func (d DBConfigResolver) List(ctx context.Context) ([]Entry, error) {
-	configs, err := d.db.ListModuleConfiguration(ctx)
+	configs, err := d.dal.ListModuleConfiguration(ctx)
 	if err != nil {
-		return nil, dalerrors.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return slices.Map(configs, func(c sql.ModuleConfiguration) Entry {
 		return Entry{

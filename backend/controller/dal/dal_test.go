@@ -12,7 +12,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/TBD54566975/ftl/backend/controller/dalerrors"
+	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -88,7 +88,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetMissingDeployment", func(t *testing.T) {
 		_, err := dal.GetDeployment(ctx, model.NewDeploymentKey("invalid"))
-		assert.IsError(t, err, dalerrors.ErrNotFound)
+		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("GetMissingArtefacts", func(t *testing.T) {
@@ -119,7 +119,7 @@ func TestDAL(t *testing.T) {
 			State:    RunnerStateIdle,
 		})
 		assert.Error(t, err)
-		assert.IsError(t, err, dalerrors.ErrConflict)
+		assert.IsError(t, err, ErrConflict)
 	})
 
 	t.Run("GetIdleRunnersForLanguage", func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestDAL(t *testing.T) {
 	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
 		_, err := dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey("invalid"), time.Second, labels)
 		assert.Error(t, err)
-		assert.IsError(t, err, dalerrors.ErrNotFound)
+		assert.IsError(t, err, ErrNotFound)
 		assert.EqualError(t, err, "deployment: not found")
 	})
 
@@ -192,7 +192,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("ReserveRunnerForDeploymentFailsOnInvalidDeployment", func(t *testing.T) {
 		_, err = dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey("test"), time.Second, labels)
-		assert.IsError(t, err, dalerrors.ErrNotFound)
+		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
@@ -319,7 +319,7 @@ func TestDAL(t *testing.T) {
 			Deployment: optional.Some(model.NewDeploymentKey("test")),
 		})
 		assert.Error(t, err)
-		assert.IsError(t, err, dalerrors.ErrNotFound)
+		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("ReleaseRunnerReservation", func(t *testing.T) {
@@ -342,7 +342,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetRoutingTable", func(t *testing.T) {
 		_, err := dal.GetRoutingTable(ctx, []string{deployment.Module})
-		assert.IsError(t, err, dalerrors.ErrNotFound)
+		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("DeregisterRunner", func(t *testing.T) {
@@ -352,7 +352,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
 		err = dal.DeregisterRunner(ctx, model.NewRunnerKey("localhost", "8080"))
-		assert.IsError(t, err, dalerrors.ErrNotFound)
+		assert.IsError(t, err, ErrNotFound)
 	})
 
 	t.Run("VerifyDeploymentNotifications", func(t *testing.T) {
@@ -400,4 +400,94 @@ func normaliseEvents(events []Event) []Event {
 func assertEventsEqual(t *testing.T, expected, actual []Event) {
 	t.Helper()
 	assert.Equal(t, normaliseEvents(expected), normaliseEvents(actual))
+}
+
+func TestModuleConfiguration(t *testing.T) {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	conn := sqltest.OpenForTesting(ctx, t)
+	dal, err := New(ctx, conn)
+	assert.NoError(t, err)
+	assert.NotZero(t, dal)
+
+	tests := []struct {
+		TestName     string
+		ModuleSet    optional.Option[string]
+		ModuleGet    optional.Option[string]
+		PresetGlobal bool
+	}{
+		{
+			"SetModuleGetModule",
+			optional.Some("echo"),
+			optional.Some("echo"),
+			false,
+		},
+		{
+			"SetGlobalGetGlobal",
+			optional.None[string](),
+			optional.None[string](),
+			false,
+		},
+		{
+			"SetGlobalGetModule",
+			optional.None[string](),
+			optional.Some("echo"),
+			false,
+		},
+		{
+			"SetModuleOverridesGlobal",
+			optional.Some("echo"),
+			optional.Some("echo"),
+			true,
+		},
+	}
+
+	b := []byte(`"asdf"`)
+	for _, test := range tests {
+		t.Run(test.TestName, func(t *testing.T) {
+			if test.PresetGlobal {
+				err := dal.db.SetModuleConfiguration(ctx, optional.None[string](), "configname", []byte(`"qwerty"`))
+				assert.NoError(t, err)
+			}
+			err := dal.db.SetModuleConfiguration(ctx, test.ModuleSet, "configname", b)
+			assert.NoError(t, err)
+			gotBytes, err := dal.db.GetModuleConfiguration(ctx, test.ModuleGet, "configname")
+			assert.NoError(t, err)
+			assert.Equal(t, b, gotBytes)
+			err = dal.db.UnsetModuleConfiguration(ctx, test.ModuleGet, "configname")
+			assert.NoError(t, err)
+		})
+	}
+
+	t.Run("List", func(t *testing.T) {
+		sortedList := []sql.ModuleConfiguration{
+			{
+				Module: optional.Some("echo"),
+				Name:   "a",
+			},
+			{
+				Module: optional.Some("echo"),
+				Name:   "b",
+			},
+			{
+				Module: optional.None[string](),
+				Name:   "a",
+			},
+		}
+
+		// Insert entries in a separate order from how they should be returned to
+		// test sorting logic in the SQL query
+		err := dal.db.SetModuleConfiguration(ctx, sortedList[1].Module, sortedList[1].Name, []byte(`""`))
+		assert.NoError(t, err)
+		err = dal.db.SetModuleConfiguration(ctx, sortedList[2].Module, sortedList[2].Name, []byte(`""`))
+		assert.NoError(t, err)
+		err = dal.db.SetModuleConfiguration(ctx, sortedList[0].Module, sortedList[0].Name, []byte(`""`))
+		assert.NoError(t, err)
+
+		gotList, err := dal.db.ListModuleConfiguration(ctx)
+		assert.NoError(t, err)
+		for i, _ := range sortedList {
+			assert.Equal(t, sortedList[i].Module, gotList[i].Module)
+			assert.Equal(t, sortedList[i].Name, gotList[i].Name)
+		}
+	})
 }

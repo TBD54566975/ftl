@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
-	"github.com/TBD54566975/ftl/backend/controller/dalerrors"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -28,7 +27,7 @@ func GetIngressRoute(routes []dal.IngressRoute, method string, path string) (*da
 	})
 
 	if len(matchedRoutes) == 0 {
-		return nil, dalerrors.ErrNotFound
+		return nil, dal.ErrNotFound
 	}
 
 	// TODO: add load balancing at some point

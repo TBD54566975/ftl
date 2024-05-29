@@ -10,7 +10,6 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/TBD54566975/ftl/backend/controller/dalerrors"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -261,7 +260,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 	rows, err := d.db.Conn().Query(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
-		return nil, dalerrors.TranslatePGError(err)
+		return nil, TranslatePGError(err)
 	}
 	deploymentIDs := []int64{}
 	for rows.Next() {
@@ -316,7 +315,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	// Issue query.
 	rows, err = d.db.Conn().Query(ctx, q, args...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", q, dalerrors.TranslatePGError(err))
+		return nil, fmt.Errorf("%s: %w", q, TranslatePGError(err))
 	}
 	defer rows.Close()
 
