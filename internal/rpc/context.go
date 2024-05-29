@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
@@ -131,6 +132,20 @@ func (m *metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerF
 	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (streaming handler)", s.Spec().Procedure)
+		// Intercept and log any panics, then re-panic.
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				if rerr, ok := r.(error); ok {
+					err = rerr
+				} else {
+					err = fmt.Errorf("%v", r)
+				}
+				stack := string(debug.Stack())
+				logger.Errorf(err, "panic in WrapStreamingHandler: %s", stack)
+				panic(err)
+			}
+		}()
 		ctx, err := propagateHeaders(ctx, s.Spec().IsClient, s.RequestHeader())
 		if err != nil {
 			return err
@@ -151,6 +166,20 @@ func (m *metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc 
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (unary)", req.Spec().Procedure)
+		// Intercept and log any panics, then re-panic.
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				if rerr, ok := r.(error); ok {
+					err = rerr
+				} else {
+					err = fmt.Errorf("%v", r)
+				}
+				stack := string(debug.Stack())
+				logger.Errorf(err, "panic in WrapUnary: %s", stack)
+				panic(err)
+			}
+		}()
 		ctx, err := propagateHeaders(ctx, req.Spec().IsClient, req.Header())
 		if err != nil {
 			return nil, err
