@@ -41,11 +41,14 @@ func infof(format string, args ...any) {
 
 var buildOnce sync.Once
 
-// run an integration test.
+// Run an integration test.
 // ftlConfigPath: if FTL_CONFIG should be set for this test, then pass in the relative
 //
-//	path from integration/testdata/go/. e.g. "database/ftl-project.toml"
-func run(t *testing.T, ftlConfigPath string, actions ...Action) {
+//	path based on ./testdata/go/ where "." denotes the directory containing the
+//	integration test (e.g. for "integration/harness_test.go" supplying
+//	"database/ftl-project.toml" would set FTL_CONFIG to
+//	"integration/testdata/go/database/ftl-project.toml").
+func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
 	tmpDir := t.TempDir()
 
 	cwd, err := os.Getwd()

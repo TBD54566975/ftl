@@ -30,7 +30,7 @@ func TestCron(t *testing.T) {
 
 	t.Cleanup(func() { _ = os.Remove(tmpFile) })
 
-	run(t, "",
+	Run(t, "",
 		CopyModule("cron"),
 		Deploy("cron"),
 		func(t testing.TB, ic TestContext) {
@@ -41,7 +41,7 @@ func TestCron(t *testing.T) {
 }
 
 func TestLifecycle(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		Exec("ftl", "init", "go", ".", "echo"),
 		Deploy("echo"),
 		Call("echo", "echo", obj{"name": "Bob"}, func(t testing.TB, response obj) {
@@ -51,7 +51,7 @@ func TestLifecycle(t *testing.T) {
 }
 
 func TestInterModuleCall(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyModule("echo"),
 		CopyModule("time"),
 		Deploy("time"),
@@ -67,7 +67,7 @@ func TestInterModuleCall(t *testing.T) {
 }
 
 func TestNonExportedDecls(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyModule("time"),
 		Deploy("time"),
 		CopyModule("echo"),
@@ -78,7 +78,7 @@ func TestNonExportedDecls(t *testing.T) {
 }
 
 func TestUndefinedExportedDecls(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyModule("time"),
 		Deploy("time"),
 		CopyModule("echo"),
@@ -89,7 +89,7 @@ func TestUndefinedExportedDecls(t *testing.T) {
 }
 
 func TestDatabase(t *testing.T) {
-	run(t, "database/ftl-project.toml",
+	Run(t, "database/ftl-project.toml",
 		// deploy real module against "testdb"
 		CopyModule("database"),
 		CreateDBAction("database", "testdb", false),
@@ -105,7 +105,7 @@ func TestDatabase(t *testing.T) {
 }
 
 func TestSchemaGenerate(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyDir("../schema-generate", "schema-generate"),
 		Mkdir("build/schema-generate"),
 		Exec("ftl", "schema", "generate", "schema-generate", "build/schema-generate"),
@@ -114,10 +114,10 @@ func TestSchemaGenerate(t *testing.T) {
 }
 
 func TestHttpEncodeOmitempty(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyModule("omitempty"),
 		Deploy("omitempty"),
-		HttpCall(http.MethodGet, "/get", JsonData(t, obj{}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/get", JsonData(t, obj{}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			_, ok := resp.jsonBody["mustset"]
 			assert.True(t, ok)
@@ -128,10 +128,10 @@ func TestHttpEncodeOmitempty(t *testing.T) {
 }
 
 func TestHttpIngress(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyModule("httpingress"),
 		Deploy("httpingress"),
-		HttpCall(http.MethodGet, "/users/123/posts/456", JsonData(t, obj{}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/users/123/posts/456", JsonData(t, obj{}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Get"])
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
@@ -146,7 +146,7 @@ func TestHttpIngress(t *testing.T) {
 			assert.True(t, ok, "good_stuff is not a string: %s", repr.String(resp.jsonBody))
 			assert.Equal(t, "This is good stuff", goodStuff)
 		}),
-		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"userId": 123, "postId": 345}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"userId": 123, "postId": 345}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 201, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Post"])
 			success, ok := resp.jsonBody["success"].(bool)
@@ -154,75 +154,75 @@ func TestHttpIngress(t *testing.T) {
 			assert.True(t, success)
 		}),
 		// contains aliased field
-		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"user_id": 123, "postId": 345}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodPost, "/users", JsonData(t, obj{"user_id": 123, "postId": 345}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 201, resp.status)
 		}),
-		HttpCall(http.MethodPut, "/users/123", JsonData(t, obj{"postId": "346"}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodPut, "/users/123", JsonData(t, obj{"postId": "346"}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Put"])
 			assert.Equal(t, map[string]any{}, resp.jsonBody)
 		}),
-		HttpCall(http.MethodDelete, "/users/123", JsonData(t, obj{}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodDelete, "/users/123", JsonData(t, obj{}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.headers["Delete"])
 			assert.Equal(t, map[string]any{}, resp.jsonBody)
 		}),
 
-		HttpCall(http.MethodGet, "/html", JsonData(t, obj{}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/html", JsonData(t, obj{}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/html; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, "<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>", string(resp.bodyBytes))
 		}),
 
-		HttpCall(http.MethodPost, "/bytes", []byte("Hello, World!"), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodPost, "/bytes", []byte("Hello, World!"), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/octet-stream"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
 		}),
 
-		HttpCall(http.MethodGet, "/empty", nil, func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/empty", nil, func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, nil, resp.headers["Content-Type"])
 			assert.Equal(t, nil, resp.bodyBytes)
 		}),
 
-		HttpCall(http.MethodGet, "/string", []byte("Hello, World!"), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/string", []byte("Hello, World!"), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.bodyBytes)
 		}),
 
-		HttpCall(http.MethodGet, "/int", []byte("1234"), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/int", []byte("1234"), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("1234"), resp.bodyBytes)
 		}),
-		HttpCall(http.MethodGet, "/float", []byte("1234.56789"), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/float", []byte("1234.56789"), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("1234.56789"), resp.bodyBytes)
 		}),
-		HttpCall(http.MethodGet, "/bool", []byte("true"), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/bool", []byte("true"), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("true"), resp.bodyBytes)
 		}),
-		HttpCall(http.MethodGet, "/error", nil, func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/error", nil, func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 500, resp.status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, []byte("Error from FTL"), resp.bodyBytes)
 		}),
-		HttpCall(http.MethodGet, "/array/string", JsonData(t, []string{"hello", "world"}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/array/string", JsonData(t, []string{"hello", "world"}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, JsonData(t, []string{"hello", "world"}), resp.bodyBytes)
 		}),
-		HttpCall(http.MethodPost, "/array/data", JsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodPost, "/array/data", JsonData(t, []obj{{"item": "a"}, {"item": "b"}}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, JsonData(t, []obj{{"item": "a"}, {"item": "b"}}), resp.bodyBytes)
 		}),
-		HttpCall(http.MethodGet, "/typeenum", JsonData(t, obj{"name": "A", "value": "hello"}), func(t testing.TB, resp *HttpResponse) {
+		HttpCall(http.MethodGet, "/typeenum", JsonData(t, obj{"name": "A", "value": "hello"}), func(t testing.TB, resp *HTTPResponse) {
 			assert.Equal(t, 200, resp.status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.headers["Content-Type"])
 			assert.Equal(t, JsonData(t, obj{"name": "A", "value": "hello"}), resp.bodyBytes)
@@ -231,14 +231,14 @@ func TestHttpIngress(t *testing.T) {
 }
 
 func TestRuntimeReflection(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyModule("runtimereflection"),
 		ExecModuleTest("runtimereflection"),
 	)
 }
 
 func TestModuleUnitTests(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyModule("time"),
 		CopyModule("wrapped"),
 		CopyModule("verbtypes"),
@@ -249,7 +249,7 @@ func TestModuleUnitTests(t *testing.T) {
 }
 
 func TestLease(t *testing.T) {
-	run(t, "",
+	Run(t, "",
 		CopyModule("leases"),
 		Build("leases"),
 		// checks if leases work in a unit test environment
@@ -292,7 +292,7 @@ func TestLease(t *testing.T) {
 func TestFSMGoTests(t *testing.T) {
 	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
 	t.Setenv("FSM_LOG_FILE", logFilePath)
-	run(t, "",
+	Run(t, "",
 		CopyModule("fsm"),
 		Build("fsm"),
 		ExecModuleTest("fsm"),
@@ -309,7 +309,7 @@ func TestFSM(t *testing.T) {
 			WHERE fsm = 'fsm.fsm' AND key = '%s'
 		`, instance), status, state)
 	}
-	run(t, "",
+	Run(t, "",
 		CopyModule("fsm"),
 		Deploy("fsm"),
 
@@ -367,7 +367,7 @@ func TestFSMRetry(t *testing.T) {
 		}
 	}
 
-	run(t, "",
+	Run(t, "",
 		CopyModule("fsmretry"),
 		Build("fsmretry"),
 		Deploy("fsmretry"),

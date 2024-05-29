@@ -335,7 +335,7 @@ func Mkdir(dir string) Action {
 	}
 }
 
-type HttpResponse struct {
+type HTTPResponse struct {
 	status    int
 	headers   map[string][]string
 	jsonBody  map[string]any
@@ -349,7 +349,7 @@ func JsonData(t testing.TB, body interface{}) []byte {
 }
 
 // HttpCall makes an HTTP call to the running FTL ingress endpoint.
-func HttpCall(method string, path string, body []byte, onResponse func(t testing.TB, resp *HttpResponse)) Action {
+func HttpCall(method string, path string, body []byte, onResponse func(t testing.TB, resp *HTTPResponse)) Action {
 	return func(t testing.TB, ic TestContext) {
 		infof("HTTP %s %s", method, path)
 		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8892/ingress"))
@@ -372,7 +372,7 @@ func HttpCall(method string, path string, body []byte, onResponse func(t testing
 		// ignore the error here since some responses are just `[]byte`.
 		_ = json.Unmarshal(bodyBytes, &resBody)
 
-		onResponse(t, &HttpResponse{
+		onResponse(t, &HTTPResponse{
 			status:    resp.StatusCode,
 			headers:   resp.Header,
 			jsonBody:  resBody,
