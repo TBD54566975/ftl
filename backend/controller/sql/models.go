@@ -427,6 +427,14 @@ type Module struct {
 	Name     string
 }
 
+type ModuleConfiguration struct {
+	ID        int64
+	CreatedAt time.Time
+	Module    optional.Option[string]
+	Name      string
+	Value     []byte
+}
+
 type Request struct {
 	ID         int64
 	Origin     Origin

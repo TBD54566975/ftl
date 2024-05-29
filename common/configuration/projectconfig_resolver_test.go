@@ -40,6 +40,37 @@ func TestSet(t *testing.T) {
 	})
 }
 
+func TestGetGlobal(t *testing.T) {
+	config := filepath.Join(t.TempDir(), "ftl-project.toml")
+	existing, err := os.ReadFile("testdata/ftl-project.toml")
+	assert.NoError(t, err)
+	err = os.WriteFile(config, existing, 0600)
+	assert.NoError(t, err)
+
+	t.Run("ExistingModule", func(t *testing.T) {
+		setAndAssert(t, "echo", []string{config})
+	})
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+
+	cf, err := New(ctx,
+		ProjectConfigResolver[Configuration]{Config: []string{config}},
+		[]Provider[Configuration]{
+			EnvarProvider[Configuration]{},
+			InlineProvider[Configuration]{Inline: true}, // Writer
+		})
+	assert.NoError(t, err)
+
+	var got *url.URL
+	want := URL("inline://qwertyqwerty")
+	err = cf.Set(ctx, Ref{Module: optional.None[string](), Name: "default"}, want)
+	assert.NoError(t, err)
+	err = cf.Get(ctx, Ref{Module: optional.Some[string]("somemodule"), Name: "default"}, &got)
+	assert.NoError(t, err)
+
+	// Get should return `want` even though it was only set globally
+	assert.Equal(t, want, got)
+}
+
 func setAndAssert(t *testing.T, module string, config []string) {
 	t.Helper()
 

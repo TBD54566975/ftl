@@ -59,6 +59,7 @@ type Querier interface {
 	GetIdleRunners(ctx context.Context, labels []byte, limit int64) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
+	GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	// Retrieve routing information for a runner.
@@ -76,6 +77,7 @@ type Querier interface {
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, timeout time.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error)
+	ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error)
 	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
@@ -84,6 +86,7 @@ type Querier interface {
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
+	SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error
 	StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error)
 	// Start a new FSM transition, populating the destination state and async call ID.
 	//
@@ -91,6 +94,7 @@ type Querier interface {
 	StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error)
 	SucceedAsyncCall(ctx context.Context, response []byte, iD int64) (bool, error)
 	SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
+	UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
