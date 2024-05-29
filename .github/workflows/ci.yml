@@ -182,7 +182,7 @@ jobs:
       - name: Run ${{ matrix.test }}
         run: |
           # shellcheck disable=SC2046
-          go test -v -race -tags integration -run ${{ matrix.test }} ./...
+          go test -v -race -tags integration -run ${{ matrix.test }} $(git grep -l '^//go:build integration' | xargs -I {} dirname './{}' | sort | uniq)
   integration-success:
     name: Integration Success
     needs: [integration-run]
