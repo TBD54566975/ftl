@@ -445,15 +445,15 @@ func TestModuleConfiguration(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.TestName, func(t *testing.T) {
 			if test.PresetGlobal {
-				err := dal.db.SetModuleConfiguration(ctx, optional.None[string](), "configname", []byte(`"qwerty"`))
+				err := dal.SetModuleConfiguration(ctx, optional.None[string](), "configname", []byte(`"qwerty"`))
 				assert.NoError(t, err)
 			}
-			err := dal.db.SetModuleConfiguration(ctx, test.ModuleSet, "configname", b)
+			err := dal.SetModuleConfiguration(ctx, test.ModuleSet, "configname", b)
 			assert.NoError(t, err)
-			gotBytes, err := dal.db.GetModuleConfiguration(ctx, test.ModuleGet, "configname")
+			gotBytes, err := dal.GetModuleConfiguration(ctx, test.ModuleGet, "configname")
 			assert.NoError(t, err)
 			assert.Equal(t, b, gotBytes)
-			err = dal.db.UnsetModuleConfiguration(ctx, test.ModuleGet, "configname")
+			err = dal.UnsetModuleConfiguration(ctx, test.ModuleGet, "configname")
 			assert.NoError(t, err)
 		})
 	}
@@ -476,14 +476,14 @@ func TestModuleConfiguration(t *testing.T) {
 
 		// Insert entries in a separate order from how they should be returned to
 		// test sorting logic in the SQL query
-		err := dal.db.SetModuleConfiguration(ctx, sortedList[1].Module, sortedList[1].Name, []byte(`""`))
+		err := dal.SetModuleConfiguration(ctx, sortedList[1].Module, sortedList[1].Name, []byte(`""`))
 		assert.NoError(t, err)
-		err = dal.db.SetModuleConfiguration(ctx, sortedList[2].Module, sortedList[2].Name, []byte(`""`))
+		err = dal.SetModuleConfiguration(ctx, sortedList[2].Module, sortedList[2].Name, []byte(`""`))
 		assert.NoError(t, err)
-		err = dal.db.SetModuleConfiguration(ctx, sortedList[0].Module, sortedList[0].Name, []byte(`""`))
+		err = dal.SetModuleConfiguration(ctx, sortedList[0].Module, sortedList[0].Name, []byte(`""`))
 		assert.NoError(t, err)
 
-		gotList, err := dal.db.ListModuleConfiguration(ctx)
+		gotList, err := dal.ListModuleConfiguration(ctx)
 		assert.NoError(t, err)
 		for i := range sortedList {
 			assert.Equal(t, sortedList[i].Module, gotList[i].Module)

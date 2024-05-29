@@ -1147,6 +1147,32 @@ func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
 	}), nil
 }
 
+func (d *DAL) GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
+	b, err := d.db.GetModuleConfiguration(ctx, module, name)
+	if err != nil {
+		return nil, translatePGError(err)
+	}
+	return b, nil
+}
+
+func (d *DAL) SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error {
+	err := d.db.SetModuleConfiguration(ctx, module, name, value)
+	return translatePGError(err)
+}
+
+func (d *DAL) UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error {
+	err := d.db.UnsetModuleConfiguration(ctx, module, name)
+	return translatePGError(err)
+}
+
+func (d *DAL) ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfiguration, error) {
+	l, err := d.db.ListModuleConfiguration(ctx)
+	if err != nil {
+		return nil, translatePGError(err)
+	}
+	return l, nil
+}
+
 // Check if a deployment exists that exactly matches the given artefacts and schema.
 func (*DAL) checkForExistingDeployments(ctx context.Context, tx *sql.Tx, moduleSchema *schema.Module, artefacts []DeploymentArtefact) (model.DeploymentKey, error) {
 	schemaBytes, err := schema.ModuleToBytes(moduleSchema)
