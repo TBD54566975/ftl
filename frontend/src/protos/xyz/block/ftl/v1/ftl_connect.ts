@@ -339,10 +339,10 @@ export const AdminService = {
     /**
      * List configuration.
      *
-     * @generated from rpc xyz.block.ftl.v1.AdminService.ListConfig
+     * @generated from rpc xyz.block.ftl.v1.AdminService.ConfigList
      */
-    listConfig: {
-      name: "ListConfig",
+    configList: {
+      name: "ConfigList",
       I: ListConfigRequest,
       O: ListConfigResponse,
       kind: MethodKind.Unary,
@@ -350,10 +350,10 @@ export const AdminService = {
     /**
      * Get a config value.
      *
-     * @generated from rpc xyz.block.ftl.v1.AdminService.GetConfig
+     * @generated from rpc xyz.block.ftl.v1.AdminService.ConfigGet
      */
-    getConfig: {
-      name: "GetConfig",
+    configGet: {
+      name: "ConfigGet",
       I: GetConfigRequest,
       O: GetConfigResponse,
       kind: MethodKind.Unary,
@@ -361,10 +361,10 @@ export const AdminService = {
     /**
      * Set a config value.
      *
-     * @generated from rpc xyz.block.ftl.v1.AdminService.SetConfig
+     * @generated from rpc xyz.block.ftl.v1.AdminService.ConfigSet
      */
-    setConfig: {
-      name: "SetConfig",
+    configSet: {
+      name: "ConfigSet",
       I: SetConfigRequest,
       O: SetConfigResponse,
       kind: MethodKind.Unary,
@@ -372,10 +372,10 @@ export const AdminService = {
     /**
      * Unset a config value.
      *
-     * @generated from rpc xyz.block.ftl.v1.AdminService.UnsetConfig
+     * @generated from rpc xyz.block.ftl.v1.AdminService.ConfigUnset
      */
-    unsetConfig: {
-      name: "UnsetConfig",
+    configUnset: {
+      name: "ConfigUnset",
       I: UnsetConfigRequest,
       O: UnsetConfigResponse,
       kind: MethodKind.Unary,
@@ -383,10 +383,10 @@ export const AdminService = {
     /**
      * List secrets.
      *
-     * @generated from rpc xyz.block.ftl.v1.AdminService.ListSecrets
+     * @generated from rpc xyz.block.ftl.v1.AdminService.SecretsList
      */
-    listSecrets: {
-      name: "ListSecrets",
+    secretsList: {
+      name: "SecretsList",
       I: ListSecretsRequest,
       O: ListSecretsResponse,
       kind: MethodKind.Unary,
@@ -394,10 +394,10 @@ export const AdminService = {
     /**
      * Get a secret.
      *
-     * @generated from rpc xyz.block.ftl.v1.AdminService.GetSecret
+     * @generated from rpc xyz.block.ftl.v1.AdminService.SecretGet
      */
-    getSecret: {
-      name: "GetSecret",
+    secretGet: {
+      name: "SecretGet",
       I: GetSecretRequest,
       O: GetSecretResponse,
       kind: MethodKind.Unary,
@@ -405,10 +405,10 @@ export const AdminService = {
     /**
      * Set a secret.
      *
-     * @generated from rpc xyz.block.ftl.v1.AdminService.SetSecret
+     * @generated from rpc xyz.block.ftl.v1.AdminService.SecretSet
      */
-    setSecret: {
-      name: "SetSecret",
+    secretSet: {
+      name: "SecretSet",
       I: SetSecretRequest,
       O: SetSecretResponse,
       kind: MethodKind.Unary,
@@ -416,10 +416,10 @@ export const AdminService = {
     /**
      * Unset a secret.
      *
-     * @generated from rpc xyz.block.ftl.v1.AdminService.UnsetSecret
+     * @generated from rpc xyz.block.ftl.v1.AdminService.SecretUnset
      */
-    unsetSecret: {
-      name: "UnsetSecret",
+    secretUnset: {
+      name: "SecretUnset",
       I: UnsetSecretRequest,
       O: UnsetSecretResponse,
       kind: MethodKind.Unary,

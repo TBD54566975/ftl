@@ -130,7 +130,13 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	}
 	logger.Debugf("Listening on %s", config.Bind)
 
-	admin := NewAdminService()
+	cm := cf.ConfigFromContext(ctx)
+	sm := cf.SecretsFromContext(ctx)
+
+	logger.Warnf("config manager: %+v", cm)
+	logger.Warnf("secrets manager: %+v", sm)
+
+	admin := NewAdminService(cm, sm)
 	console := NewConsoleService(dal)
 
 	ingressHandler := http.Handler(svc)

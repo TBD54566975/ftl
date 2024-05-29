@@ -39,6 +39,8 @@ type serveCmd struct {
 	Stop           bool          `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
 	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"1m"`
 	controller.CommonConfig
+	// cf.DefaultConfigMixin
+	// cf.DefaultSecretsMixin
 }
 
 const ftlContainerName = "ftl-db-1"

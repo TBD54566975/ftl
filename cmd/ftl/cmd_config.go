@@ -48,7 +48,7 @@ type configListCmd struct {
 }
 
 func (s *configListCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
-	resp, err := admin.ListConfig(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
+	resp, err := admin.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
 		// Provider: TODO(saf)
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
@@ -80,7 +80,7 @@ Returns a JSON-encoded configuration value.
 
 func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
 	module := s.Ref.Module.Default("")
-	resp, err := admin.GetConfig(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
+	resp, err := admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
 		// Provider: TODO(saf)
 		Ref: &ftlv1.ConfigRef{
 			Module: &module,
@@ -121,9 +121,16 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1conn
 		configValue = string(config)
 	}
 
+	var cp ftlv1.ConfigProvider
+	if scmd.Inline {
+		cp = ftlv1.ConfigProvider_CONFIG_INLINE
+	} else if scmd.Envar {
+		cp = ftlv1.ConfigProvider_CONFIG_ENVAR
+	}
+
 	module := s.Ref.Module.Default("")
-	_, err = admin.SetConfig(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
-		// Provider: TODO(saf)
+	_, err = admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
+		Provider: &cp,
 		Ref: &ftlv1.ConfigRef{
 			Module: &module,
 			Name:   s.Ref.Name,
@@ -142,7 +149,7 @@ type configUnsetCmd struct {
 
 func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
 	module := s.Ref.Module.Default("")
-	_, err := admin.UnsetConfig(ctx, connect.NewRequest(&ftlv1.UnsetConfigRequest{
+	_, err := admin.ConfigUnset(ctx, connect.NewRequest(&ftlv1.UnsetConfigRequest{
 		// Provider: TODO(saf)
 		Ref: &ftlv1.ConfigRef{
 			Module: &module,
