@@ -2729,9 +2729,9 @@ export class ListConfigResponse_Config extends Message<ListConfigResponse_Config
   refPath = "";
 
   /**
-   * @generated from field: optional string value = 2;
+   * @generated from field: optional bytes value = 2;
    */
-  value?: string;
+  value?: Uint8Array;
 
   constructor(data?: PartialMessage<ListConfigResponse_Config>) {
     super();
@@ -2742,7 +2742,7 @@ export class ListConfigResponse_Config extends Message<ListConfigResponse_Config
   static readonly typeName = "xyz.block.ftl.v1.ListConfigResponse.Config";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "refPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListConfigResponse_Config {
@@ -2810,9 +2810,9 @@ export class GetConfigRequest extends Message<GetConfigRequest> {
  */
 export class GetConfigResponse extends Message<GetConfigResponse> {
   /**
-   * @generated from field: string value = 1;
+   * @generated from field: bytes value = 1;
    */
-  value = "";
+  value = new Uint8Array(0);
 
   constructor(data?: PartialMessage<GetConfigResponse>) {
     super();
@@ -2822,7 +2822,7 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.GetConfigResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigResponse {
@@ -2857,9 +2857,9 @@ export class SetConfigRequest extends Message<SetConfigRequest> {
   ref?: ConfigRef;
 
   /**
-   * @generated from field: string value = 3;
+   * @generated from field: bytes value = 3;
    */
-  value = "";
+  value = new Uint8Array(0);
 
   constructor(data?: PartialMessage<SetConfigRequest>) {
     super();
@@ -2871,7 +2871,7 @@ export class SetConfigRequest extends Message<SetConfigRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "provider", kind: "enum", T: proto3.getEnumType(ConfigProvider), opt: true },
     { no: 2, name: "ref", kind: "message", T: ConfigRef },
-    { no: 3, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetConfigRequest {
@@ -3092,9 +3092,9 @@ export class ListSecretsResponse_Secret extends Message<ListSecretsResponse_Secr
   refPath = "";
 
   /**
-   * @generated from field: optional string value = 2;
+   * @generated from field: optional bytes value = 2;
    */
-  value?: string;
+  value?: Uint8Array;
 
   constructor(data?: PartialMessage<ListSecretsResponse_Secret>) {
     super();
@@ -3105,7 +3105,7 @@ export class ListSecretsResponse_Secret extends Message<ListSecretsResponse_Secr
   static readonly typeName = "xyz.block.ftl.v1.ListSecretsResponse.Secret";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "refPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSecretsResponse_Secret {
@@ -3173,9 +3173,9 @@ export class GetSecretRequest extends Message<GetSecretRequest> {
  */
 export class GetSecretResponse extends Message<GetSecretResponse> {
   /**
-   * @generated from field: string value = 1;
+   * @generated from field: bytes value = 1;
    */
-  value = "";
+  value = new Uint8Array(0);
 
   constructor(data?: PartialMessage<GetSecretResponse>) {
     super();
@@ -3185,7 +3185,7 @@ export class GetSecretResponse extends Message<GetSecretResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.GetSecretResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSecretResponse {
@@ -3220,9 +3220,9 @@ export class SetSecretRequest extends Message<SetSecretRequest> {
   ref?: ConfigRef;
 
   /**
-   * @generated from field: string value = 3;
+   * @generated from field: bytes value = 3;
    */
-  value = "";
+  value = new Uint8Array(0);
 
   constructor(data?: PartialMessage<SetSecretRequest>) {
     super();
@@ -3234,7 +3234,7 @@ export class SetSecretRequest extends Message<SetSecretRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "provider", kind: "enum", T: proto3.getEnumType(SecretProvider), opt: true },
     { no: 2, name: "ref", kind: "message", T: ConfigRef },
-    { no: 3, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetSecretRequest {

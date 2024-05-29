@@ -96,7 +96,6 @@ func main() {
 
 	// Add config manager to context.
 	cm, err := cf.NewConfigurationManager(ctx, cr)
-	logger.Warnf("main config: %+v", cm)
 	if err != nil {
 		kctx.Fatalf(err.Error())
 	}

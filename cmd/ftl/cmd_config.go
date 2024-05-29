@@ -47,7 +47,7 @@ type configListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
-func (s *configListCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
+func (s *configListCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
 	resp, err := admin.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
 		// Provider: TODO(saf)
 		Module:        &s.Module,
@@ -59,8 +59,8 @@ func (s *configListCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1con
 
 	for _, config := range resp.Msg.Configs {
 		fmt.Printf("%s", config.RefPath)
-		if config.Value != nil && *config.Value != "" {
-			fmt.Printf(" = %s\n", *config.Value)
+		if config.Value != nil && len(config.Value) > 0 {
+			fmt.Printf(" = %s\n", config.Value)
 		} else {
 			fmt.Println()
 		}
@@ -78,7 +78,7 @@ Returns a JSON-encoded configuration value.
 `
 }
 
-func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
+func (s *configGetCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
 	module := s.Ref.Module.Default("")
 	resp, err := admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
 		// Provider: TODO(saf)
@@ -90,7 +90,13 @@ func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1conn
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
-	fmt.Println(resp.Msg.Value)
+
+	var value any
+	err = json.Unmarshal(resp.Msg.Value, &value)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal config value: %w", err)
+	}
+	fmt.Println(value)
 	return nil
 }
 
@@ -112,13 +118,13 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1conn
 		}
 	}
 
-	var configValue string
+	var configValue []byte
 	if s.JSON {
 		if err := json.Unmarshal(config, &configValue); err != nil {
 			return fmt.Errorf("config is not valid JSON: %w", err)
 		}
 	} else {
-		configValue = string(config)
+		configValue = config
 	}
 
 	var cp ftlv1.ConfigProvider

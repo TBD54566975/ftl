@@ -416,7 +416,7 @@ message ListConfigRequest {
 message ListConfigResponse {
   message Config {
     string refPath = 1;
-    optional string value = 2;
+    optional bytes value = 2;
   }
   repeated Config configs = 1;
 }
@@ -426,13 +426,13 @@ message GetConfigRequest {
   ConfigRef ref = 2;
 }
 message GetConfigResponse {
-  string value = 1;
+  bytes value = 1;
 }
 
 message SetConfigRequest {
   optional ConfigProvider provider = 1;
   ConfigRef ref = 2;
-  string value = 3;
+  bytes value = 3;
 }
 message SetConfigResponse {}
 
@@ -464,7 +464,7 @@ message ListSecretsRequest {
 message ListSecretsResponse {
   message Secret {
     string refPath = 1;
-    optional string value = 2;
+    optional bytes value = 2;
   }
   repeated Secret secrets = 1;
 }
@@ -474,13 +474,13 @@ message GetSecretRequest {
   ConfigRef ref = 2;
 }
 message GetSecretResponse {
-  string value = 1;
+  bytes value = 1;
 }
 
 message SetSecretRequest {
   optional SecretProvider provider = 1;
   ConfigRef ref = 2;
-  string value = 3;
+  bytes value = 3;
 }
 message SetSecretResponse {}
 
@@ -490,7 +490,8 @@ message UnsetSecretRequest {
 }
 message UnsetSecretResponse {}
 
-// AdminService centralizes project configuration access and provides CRUD operations.
+// AdminService is the service that provides and updates admin data. For example,
+// it is used to encapsulate configuration and secrets.
 service AdminService {
   rpc Ping(PingRequest) returns (PingResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;

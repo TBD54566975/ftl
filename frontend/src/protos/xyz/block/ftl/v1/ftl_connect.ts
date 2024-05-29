@@ -319,7 +319,8 @@ export const RunnerService = {
 } as const;
 
 /**
- * AdminService centralizes project configuration access and provides CRUD operations.
+ * AdminService is the service that provides and updates admin data. For example,
+ * it is used to encapsulate configuration and secrets.
  *
  * @generated from service xyz.block.ftl.v1.AdminService
  */
