@@ -80,7 +80,7 @@ func WithRequestName(ctx context.Context, key model.RequestKey) context.Context 
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
-	interceptors := []connect.Interceptor{MetadataInterceptor(log.Debug), otelInterceptor()}
+	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), otelInterceptor()}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
@@ -91,7 +91,7 @@ func DefaultClientOptions(level log.Level) []connect.ClientOption {
 }
 
 func DefaultHandlerOptions() []connect.HandlerOption {
-	interceptors := []connect.Interceptor{MetadataInterceptor(log.Debug), otelInterceptor()}
+	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), otelInterceptor()}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
@@ -104,6 +104,76 @@ func otelInterceptor() connect.Interceptor {
 		panic(err)
 	}
 	return otel
+}
+
+// PanicInterceptor intercepts panics and logs them.
+func PanicInterceptor() connect.Interceptor {
+	return &panicInterceptor{}
+}
+
+type panicInterceptor struct{}
+
+func (*panicInterceptor) WrapStreamingClient(req connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return func(ctx context.Context, s connect.Spec) connect.StreamingClientConn {
+		logger := log.FromContext(ctx)
+		// Intercept and log any panics, then re-panic.
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				if rerr, ok := r.(error); ok {
+					err = rerr
+				} else {
+					err = fmt.Errorf("%v", r)
+				}
+				stack := string(debug.Stack())
+				logger.Errorf(err, "panic in WrapStreamingClient: %s", stack)
+				panic(err)
+			}
+		}()
+		return req(ctx, s)
+	}
+}
+
+func (*panicInterceptor) WrapStreamingHandler(req connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
+		logger := log.FromContext(ctx)
+		// Intercept and log any panics, then re-panic.
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				if rerr, ok := r.(error); ok {
+					err = rerr
+				} else {
+					err = fmt.Errorf("%v", r)
+				}
+				stack := string(debug.Stack())
+				logger.Errorf(err, "panic in WrapStreamingHandler: %s", stack)
+				panic(err)
+			}
+		}()
+		return req(ctx, s)
+	}
+}
+
+func (*panicInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		logger := log.FromContext(ctx)
+		// Intercept and log any panics, then re-panic.
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				if rerr, ok := r.(error); ok {
+					err = rerr
+				} else {
+					err = fmt.Errorf("%v", r)
+				}
+				stack := string(debug.Stack())
+				logger.Errorf(err, "panic in WrapUnary: %s", stack)
+				panic(err)
+			}
+		}()
+		return uf(ctx, req)
+	}
 }
 
 // MetadataInterceptor propagates FTL metadata through servers and clients.
@@ -132,20 +202,6 @@ func (m *metadataInterceptor) WrapStreamingHandler(req connect.StreamingHandlerF
 	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (streaming handler)", s.Spec().Procedure)
-		// Intercept and log any panics, then re-panic.
-		defer func() {
-			if r := recover(); r != nil {
-				var err error
-				if rerr, ok := r.(error); ok {
-					err = rerr
-				} else {
-					err = fmt.Errorf("%v", r)
-				}
-				stack := string(debug.Stack())
-				logger.Errorf(err, "panic in WrapStreamingHandler: %s", stack)
-				panic(err)
-			}
-		}()
 		ctx, err := propagateHeaders(ctx, s.Spec().IsClient, s.RequestHeader())
 		if err != nil {
 			return err
@@ -166,20 +222,6 @@ func (m *metadataInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc 
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		logger := log.FromContext(ctx)
 		logger.Tracef("%s (unary)", req.Spec().Procedure)
-		// Intercept and log any panics, then re-panic.
-		defer func() {
-			if r := recover(); r != nil {
-				var err error
-				if rerr, ok := r.(error); ok {
-					err = rerr
-				} else {
-					err = fmt.Errorf("%v", r)
-				}
-				stack := string(debug.Stack())
-				logger.Errorf(err, "panic in WrapUnary: %s", stack)
-				panic(err)
-			}
-		}()
 		ctx, err := propagateHeaders(ctx, req.Spec().IsClient, req.Header())
 		if err != nil {
 			return nil, err
