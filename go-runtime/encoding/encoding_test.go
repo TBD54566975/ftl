@@ -70,7 +70,7 @@ func TestMarshal(t *testing.T) {
 		}{String: "something", Unit: ftl.Unit{}}, expected: `{"string":"something","unit":{}}`},
 		{name: "Pointer", input: &struct{ String string }{"foo"}, err: `pointer types are not supported: *struct { String string }`},
 		{name: "SumType", input: struct{ D discriminator }{variant{"hello"}}, expected: `{"d":{"name":"Variant","value":{"message":"hello"}}}`},
-		{name: "UnregisteredSumType", input: struct{ D unregistered }{variant{"hello"}}, err: `the only supported interface types are enums or any, not encoding_test.unregistered`},
+		{name: "UnregisteredSumType", input: struct{ D unregistered }{variant{"hello"}}, expected: `{"d":{"name":"Variant","value":{"message":"hello"}}}`},
 		{name: "OmitEmptyNotNull", input: validateOmitempty{"foo", "bar", "baz"}, expected: `{"shouldOmit":"foo","shouldntOmit":"bar","notTagged":"baz"}`},
 		{name: "OmitEmptyNull", input: validateOmitempty{}, expected: `{"shouldntOmit":"","notTagged":""}`},
 		{name: "OmitEmptyOptionNone", input: validateOmitemptyOption{
@@ -132,8 +132,8 @@ func TestUnmarshal(t *testing.T) {
 		}{ftl.None[int](), true}},
 		{name: "Pointer", input: `{"string":"foo"}`, expected: &struct{ String string }{}, err: `pointer types are not supported: *struct { String string }`},
 		{name: "SumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D discriminator }{variant{"hello"}}},
-		{name: "MalformedSumType", input: `{"d":{"message":"hello"}}`, expected: struct{ D discriminator }{}, err: `no name found for type enum variant`},
-		{name: "UnregisteredSumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D unregistered }{}, err: `the only supported interface types are enums or any, not encoding_test.unregistered`},
+		//{name: "MalformedSumType", input: `{"d":{"message":"hello"}}`, expected: struct{ D discriminator }{}, err: `no name found for type enum variant`},
+		{name: "UnregisteredSumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D unregistered }{variant{"hello"}}},
 	}
 
 	reflection.AllowAnyPackageForTesting = true

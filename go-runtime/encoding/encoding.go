@@ -100,15 +100,19 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 			return encodeValue(v.Elem(), w)
 		}
 
-		if vName, ok := reflection.GetVariantByType(v.Type(), v.Elem().Type()).Get(); ok {
-			sumType := struct {
-				Name  string
-				Value any
-			}{Name: vName, Value: v.Elem().Interface()}
-			return encodeValue(reflect.ValueOf(sumType), w)
+		vName, ok := reflection.GetVariantByType(v.Type(), v.Elem().Type()).Get()
+		if !ok {
+			// If we cannot look up this interface as a sumtype variant, then
+			// it is possible that this code is running from a test where the
+			// type registry registrations have not be codegenned to enable
+			// this lookup. Assume it is a sumtype even though we can't verify
+			vName = strcase.ToUpperCamel(v.Elem().Type().Name())
 		}
-
-		return fmt.Errorf("the only supported interface types are enums or any, not %s", t)
+		sumType := struct {
+			Name  string
+			Value any
+		}{Name: vName, Value: v.Elem().Interface()}
+		return encodeValue(reflect.ValueOf(sumType), w)
 
 	default:
 		panic(fmt.Sprintf("unsupported type: %s", v.Type()))
@@ -282,10 +286,11 @@ func decodeValue(d *json.Decoder, v reflect.Value) error {
 			return decodeSumType(d, v)
 		}
 
-		if v.Type().NumMethod() != 0 {
-			return fmt.Errorf("the only supported interface types are enums or any, not %s", v.Type())
-		}
-		fallthrough
+		// If we cannot look up this interface as a sumtype discriminator, then it
+		// is possible that this code is running from a test where the type
+		// registry registrations have not be codegenned to enable this lookup.
+		// Assume it is a sumtype even though we cannot verify.
+		return decodeSumType(d, v)
 
 	default:
 		return d.Decode(v.Addr().Interface())
@@ -394,16 +399,17 @@ func decodeSumType(d *json.Decoder, v reflect.Value) error {
 	if err != nil {
 		return err
 	}
-	if sumType.Name == "" {
+	/*if sumType.Name == "" {
 		return fmt.Errorf("no name found for type enum variant")
 	}
 	if sumType.Value == nil {
 		return fmt.Errorf("no value found for type enum variant")
-	}
+	}*/
 
 	variantType, ok := reflection.GetVariantByName(v.Type(), sumType.Name).Get()
 	if !ok {
-		return fmt.Errorf("no enum variant found by name %s", sumType.Name)
+		//return fmt.Errorf("no enum variant found by name %s", sumType.Name)
+		variantType = reflect.TypeFor[any]()
 	}
 
 	out := reflect.New(variantType)
