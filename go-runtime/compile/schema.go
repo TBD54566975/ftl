@@ -455,7 +455,6 @@ func parseSelectorRef(node ast.Expr) *schema.Ref {
 		Module: ident.Name,
 		Name:   strcase.ToLowerCamel(sel.Sel.Name),
 	}
-
 }
 
 func parseVerbRef(pctx *parseContext, node ast.Expr) *schema.Ref {
@@ -675,32 +674,14 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	var name string
 	var topicRef *schema.Ref
 	if len(node.Args) != 2 {
-		pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+		pctx.errors.add(errorf(node, "subscription registration must have 2 arguments"))
 		return
 	}
 	if topicIdent, ok := node.Args[0].(*ast.Ident); ok {
-		// Topic is within module
-		// we will find the subscription name from the string literal parameter
-		topicValueSpec, ok := topicIdent.Obj.Decl.(*ast.ValueSpec)
-		if !ok || len(topicValueSpec.Values) != 1 {
+		topicRef = parseSelectorRef(topicIdent)
+		if topicRef == nil {
 			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
 			return
-		}
-
-		topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr)
-		if !ok {
-			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
-			return
-		}
-		topicName, schemaErr := extractStringLiteralArg(topicCallExpr, 0)
-		if schemaErr != nil {
-			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
-			return
-		}
-		topicRef = &schema.Ref{
-			Pos:    goPosToSchemaPos(topicIdent.Pos()),
-			Module: pctx.module.Name,
-			Name:   topicName,
 		}
 	} else if topicSelExp, ok := node.Args[0].(*ast.SelectorExpr); ok {
 		// External topic
