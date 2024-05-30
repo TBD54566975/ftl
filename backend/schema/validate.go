@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/optional"
@@ -145,25 +146,30 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 
 			case *Verb:
 				for _, md := range n.Metadata {
-					md, ok := md.(*MetadataIngress)
-					if !ok {
-						continue
-					}
-					// Check for duplicate ingress keys
-					key := md.Method + " "
-					for _, path := range md.Path {
-						switch path := path.(type) {
-						case *IngressPathLiteral:
-							key += "/" + path.Text
+					switch md := md.(type) {
+					case *MetadataSubscriber:
+						subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.Some(schema))
+						merr = append(merr, subErrs...)
 
-						case *IngressPathParameter:
-							key += "/{}"
+					case *MetadataIngress:
+						// Check for duplicate ingress keys
+						key := md.Method + " "
+						for _, path := range md.Path {
+							switch path := path.(type) {
+							case *IngressPathLiteral:
+								key += "/" + path.Text
+
+							case *IngressPathParameter:
+								key += "/{}"
+							}
 						}
+						if existing, ok := ingress[key]; ok {
+							merr = append(merr, errorf(md, "duplicate %s ingress %s for %s:%q and %s:%q", md.Type, key, existing.Pos, existing.Name, n.Pos, n.Name))
+						}
+						ingress[key] = n
+
+					case *MetadataCronJob, *MetadataRetry, *MetadataCalls, *MetadataDatabases, *MetadataAlias:
 					}
-					if existing, ok := ingress[key]; ok {
-						merr = append(merr, errorf(md, "duplicate %s ingress %s for %s:%q and %s:%q", md.Type, key, existing.Pos, existing.Name, n.Pos, n.Name))
-					}
-					ingress[key] = n
 				}
 
 			case *Enum:
@@ -217,7 +223,8 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataCronJob,
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema, *TypeAlias,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
-				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named:
+				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
+				*MetadataSubscriber, *Subscription, *Topic:
 			}
 			return next()
 		})
@@ -332,12 +339,25 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
+		case *Topic:
+			// Topic names must:
+			// - be idents: this allows us to generate external module files with the variable name as the topic name (with first letter uppercased, so it is visible to the module)
+			// - start with a lower case letter: this allows us to deterministically derive the topic name from the generated variable name
+			if !ValidateName(n.Name) || !unicode.IsLower(rune(n.Name[0])) {
+				merr = append(merr, errorf(n, "invalid name: must consist of only letters, numbers and underscores, and start with a lowercase letter."))
+			}
+
+		case *Subscription:
+			if !ValidateName(n.Name) {
+				merr = append(merr, errorf(n, "invalid name: must consist of only letters, numbers and underscores, and start with a letter."))
+			}
+
 		case *Array, *Bool, *Database, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*FSM, *Config, *FSMTransition, *Secret, *TypeAlias, *MetadataRetry:
+			*FSM, *Config, *FSMTransition, *Secret, *TypeAlias, *MetadataRetry, *MetadataSubscriber:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -369,16 +389,20 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 2
 	case *Database:
 		priority = 3
-	case *TypeAlias:
+	case *Topic:
 		priority = 4
-	case *Enum:
+	case *Subscription:
 		priority = 5
-	case *FSM:
+	case *TypeAlias:
 		priority = 6
-	case *Data:
+	case *Enum:
 		priority = 7
-	case *Verb:
+	case *FSM:
 		priority = 8
+	case *Data:
+		priority = 9
+	case *Verb:
+		priority = 10
 	}
 	return priority
 }
@@ -484,9 +508,11 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 	metadataTypes := map[reflect.Type]bool{}
 	for _, md := range n.Metadata {
 		reflected := reflect.TypeOf(md)
-		if _, seen := metadataTypes[reflected]; seen {
-			merr = append(merr, errorf(md, "verb can not have multiple instances of %s", strings.ToLower(strings.TrimPrefix(reflected.String(), "*schema.Metadata"))))
-			continue
+		if _, allowsMultiple := md.(*MetadataSubscriber); !allowsMultiple {
+			if _, seen := metadataTypes[reflected]; seen {
+				merr = append(merr, errorf(md, "verb can not have multiple instances of %s", strings.ToLower(strings.TrimPrefix(reflected.String(), "*schema.Metadata"))))
+				continue
+			}
 		}
 		metadataTypes[reflected] = true
 
@@ -559,6 +585,9 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			if retryParams.MaxBackoff < retryParams.MinBackoff {
 				merr = append(merr, errorf(md, "verb %s: max backoff duration (%s) needs to be atleast as long as initial backoff (%s)", n.Name, md.MaxBackoff, md.MinBackoff))
 			}
+		case *MetadataSubscriber:
+			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
+			merr = append(merr, subErrs...)
 		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:
 		}
 	}
@@ -609,6 +638,44 @@ func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, re
 		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not %s", n.Name, reqOrResp, r, bodySym.Symbol))
 	}
 	return
+}
+
+func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, scopes Scopes, schema optional.Option[*Schema]) (merr []error) {
+	merr = []error{}
+	var subscription *Subscription
+	for _, decl := range module.Decls {
+		if sub, ok := decl.(*Subscription); ok && sub.Name == md.Name {
+			subscription = sub
+			break
+		}
+	}
+	if subscription == nil {
+		merr = append(merr, errorf(md, "verb %s: could not find subscription %q", v.Name, md.Name))
+		return
+	}
+
+	topicDecl := scopes.Resolve(*subscription.Topic)
+	if topicDecl == nil {
+		if subscription.Topic.Module != "" && subscription.Topic.Module != module.Name && !schema.Ok() {
+			// can not validate subscriptions from external modules until we have the whole schema
+			return
+		}
+		merr = append(merr, errorf(md, "verb %s: could not resolve topic %q for subscription %q", v.Name, subscription.Topic, md.Name))
+		return
+	}
+	topic, ok := topicDecl.Symbol.(*Topic)
+	if !ok {
+		merr = append(merr, errorf(md, "verb %s: expected topic but found %T for %q", v.Name, topicDecl, subscription.Topic))
+		return
+	}
+
+	if !v.Request.Equal(topic.Event) {
+		merr = append(merr, errorf(md, "verb %s: request type %v differs from subscription's event type %v", v.Name, v.Request, topic.Event))
+	}
+	if _, ok := v.Response.(*Unit); !ok {
+		merr = append(merr, errorf(md, "verb %s: must be a sink to subscribe but found response type %v", v.Name, v.Response))
+	}
+	return merr
 }
 
 // Give a type a human-readable name.

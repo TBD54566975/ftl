@@ -167,21 +167,23 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	logger.Debugf("Generating main module")
 	goVerbs := make([]goVerb, 0, len(main.Decls))
 	for _, decl := range main.Decls {
-		if verb, ok := decl.(*schema.Verb); ok {
-			nativeName, ok := pr.NativeNames[verb]
-			if !ok {
-				return fmt.Errorf("missing native name for verb %s", verb.Name)
-			}
-
-			goverb := goVerb{Name: nativeName}
-			if _, ok := verb.Request.(*schema.Unit); !ok {
-				goverb.HasRequest = true
-			}
-			if _, ok := verb.Response.(*schema.Unit); !ok {
-				goverb.HasResponse = true
-			}
-			goVerbs = append(goVerbs, goverb)
+		verb, ok := decl.(*schema.Verb)
+		if !ok {
+			continue
 		}
+		nativeName, ok := pr.NativeNames[verb]
+		if !ok {
+			return fmt.Errorf("missing native name for verb %s", verb.Name)
+		}
+
+		goverb := goVerb{Name: nativeName}
+		if _, ok := verb.Request.(*schema.Unit); !ok {
+			goverb.HasRequest = true
+		}
+		if _, ok := verb.Response.(*schema.Unit); !ok {
+			goverb.HasResponse = true
+		}
+		goVerbs = append(goVerbs, goverb)
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
 		GoVersion:    goModVersion,
@@ -209,8 +211,8 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
+	modulesDir := filepath.Join(buildDir, "go", "modules")
 	wg.Go(func() error {
-		modulesDir := filepath.Join(buildDir, "go", "modules")
 		if err := exec.Command(wgctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", modulesDir, err)
 		}
@@ -377,6 +379,15 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			}
 		}
 		return out
+	},
+	"needsFTLImport": func(m *schema.Module) bool {
+		for _, d := range m.Decls {
+			if topic, ok := d.(*schema.Topic); ok && topic.IsExported() {
+				// uses ftl.RegisterTopic(...) function calls
+				return true
+			}
+		}
+		return false
 	},
 }
 

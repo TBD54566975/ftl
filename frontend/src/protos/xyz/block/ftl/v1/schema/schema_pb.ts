@@ -401,6 +401,18 @@ export class Decl extends Message<Decl> {
      */
     value: FSM;
     case: "fsm";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Topic topic = 9;
+     */
+    value: Topic;
+    case: "topic";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Subscription subscription = 10;
+     */
+    value: Subscription;
+    case: "subscription";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Decl>) {
@@ -419,6 +431,8 @@ export class Decl extends Message<Decl> {
     { no: 6, name: "config", kind: "message", T: Config, oneof: "value" },
     { no: 7, name: "secret", kind: "message", T: Secret, oneof: "value" },
     { no: 8, name: "fsm", kind: "message", T: FSM, oneof: "value" },
+    { no: 9, name: "topic", kind: "message", T: Topic, oneof: "value" },
+    { no: 10, name: "subscription", kind: "message", T: Subscription, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Decl {
@@ -1206,6 +1220,12 @@ export class Metadata extends Message<Metadata> {
      */
     value: MetadataRetry;
     case: "retry";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataSubscriber subscriber = 7;
+     */
+    value: MetadataSubscriber;
+    case: "subscriber";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Metadata>) {
@@ -1222,6 +1242,7 @@ export class Metadata extends Message<Metadata> {
     { no: 4, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
     { no: 5, name: "alias", kind: "message", T: MetadataAlias, oneof: "value" },
     { no: 6, name: "retry", kind: "message", T: MetadataRetry, oneof: "value" },
+    { no: 7, name: "subscriber", kind: "message", T: MetadataSubscriber, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Metadata {
@@ -1526,6 +1547,49 @@ export class MetadataRetry extends Message<MetadataRetry> {
 
   static equals(a: MetadataRetry | PlainMessage<MetadataRetry> | undefined, b: MetadataRetry | PlainMessage<MetadataRetry> | undefined): boolean {
     return proto3.util.equals(MetadataRetry, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataSubscriber
+ */
+export class MetadataSubscriber extends Message<MetadataSubscriber> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<MetadataSubscriber>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataSubscriber";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataSubscriber {
+    return new MetadataSubscriber().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataSubscriber {
+    return new MetadataSubscriber().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataSubscriber {
+    return new MetadataSubscriber().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataSubscriber | PlainMessage<MetadataSubscriber> | undefined, b: MetadataSubscriber | PlainMessage<MetadataSubscriber> | undefined): boolean {
+    return proto3.util.equals(MetadataSubscriber, a, b);
   }
 }
 
@@ -1922,6 +1986,61 @@ export class StringValue extends Message<StringValue> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.Subscription
+ */
+export class Subscription extends Message<Subscription> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref topic = 4;
+   */
+  topic?: Ref;
+
+  constructor(data?: PartialMessage<Subscription>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Subscription";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "topic", kind: "message", T: Ref },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscription {
+    return new Subscription().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subscription {
+    return new Subscription().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subscription {
+    return new Subscription().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Subscription | PlainMessage<Subscription> | undefined, b: Subscription | PlainMessage<Subscription> | undefined): boolean {
+    return proto3.util.equals(Subscription, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Time
  */
 export class Time extends Message<Time> {
@@ -1955,6 +2074,67 @@ export class Time extends Message<Time> {
 
   static equals(a: Time | PlainMessage<Time> | undefined, b: Time | PlainMessage<Time> | undefined): boolean {
     return proto3.util.equals(Time, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.Topic
+ */
+export class Topic extends Message<Topic> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: repeated string comments = 2;
+   */
+  comments: string[] = [];
+
+  /**
+   * @generated from field: bool export = 3;
+   */
+  export = false;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Type event = 5;
+   */
+  event?: Type;
+
+  constructor(data?: PartialMessage<Topic>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Topic";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "export", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "event", kind: "message", T: Type },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Topic {
+    return new Topic().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Topic {
+    return new Topic().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Topic {
+    return new Topic().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Topic | PlainMessage<Topic> | undefined, b: Topic | PlainMessage<Topic> | undefined): boolean {
+    return proto3.util.equals(Topic, a, b);
   }
 }
 

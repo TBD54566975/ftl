@@ -78,3 +78,13 @@ func Find[T any](slice []T, fn func(T) bool) (T, bool) {
 	var zero T
 	return zero, false
 }
+
+func FindVariant[T any, U any](slice []U) (T, bool) {
+	for _, el := range slice {
+		if found, ok := any(el).(T); ok {
+			return found, true
+		}
+	}
+	var zero T
+	return zero, false
+}

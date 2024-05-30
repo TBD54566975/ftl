@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const (
@@ -145,26 +146,15 @@ func (m *MetadataRetry) RetryParams() (RetryParams, error) {
 // RetryParamsForFSMTransition finds the retry metadata for the given transition and returns the retry count, min and max backoff.
 func RetryParamsForFSMTransition(fsm *FSM, verb *Verb) (RetryParams, error) {
 	// Find retry metadata
-	var retryMetadata *MetadataRetry
-	for _, m := range verb.Metadata {
-		if m, ok := m.(*MetadataRetry); ok {
-			retryMetadata = m
-			break
-		}
-	}
-
-	if retryMetadata == nil {
+	retryMetadata, ok := slices.FindVariant[*MetadataRetry](verb.Metadata)
+	if !ok {
 		// default to fsm's retry metadata
-		for _, m := range fsm.Metadata {
-			if m, ok := m.(*MetadataRetry); ok {
-				retryMetadata = m
-				break
-			}
+		retryMetadata, ok = slices.FindVariant[*MetadataRetry](fsm.Metadata)
+		if !ok {
+			// no retry
+			return RetryParams{}, nil
 		}
 	}
 
-	if retryMetadata == nil {
-		return RetryParams{}, nil
-	}
 	return retryMetadata.RetryParams()
 }

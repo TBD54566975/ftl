@@ -507,7 +507,157 @@ func TestParsing(t *testing.T) {
 				}},
 			},
 		},
+		{name: "PubSub",
+			input: `
+				module test {
+					export topic topicA test.eventA
+				
+					topic topicB test.eventB
+
+					subscription subA1 test.topicA
+
+					subscription subA2 test.topicA
+
+					subscription subB test.topicB
+
+					export data eventA {
+					}
+
+					data eventB {
+					}
+
+					verb consumesA(test.eventA) Unit
+						+subscribe subA1
+
+					verb consumesB1(test.eventB) Unit
+						+subscribe subB
+
+					verb consumesBothASubs(test.eventA) Unit
+						+subscribe subA1
+						+subscribe subA2
+				}
+			`,
+			expected: &Schema{
+				Modules: []*Module{{
+					Name: "test",
+					Decls: []Decl{
+						&Topic{
+							Export: true,
+							Name:   "topicA",
+							Event: &Ref{
+								Module: "test",
+								Name:   "eventA",
+							},
+						},
+						&Topic{
+							Name: "topicB",
+							Event: &Ref{
+								Module: "test",
+								Name:   "eventB",
+							},
+						},
+						&Subscription{
+							Name: "subA1",
+							Topic: &Ref{
+								Module: "test",
+								Name:   "topicA",
+							},
+						},
+						&Subscription{
+							Name: "subA2",
+							Topic: &Ref{
+								Module: "test",
+								Name:   "topicA",
+							},
+						},
+						&Subscription{
+							Name: "subB",
+							Topic: &Ref{
+								Module: "test",
+								Name:   "topicB",
+							},
+						},
+						&Data{
+							Export: true,
+							Name:   "eventA",
+						},
+						&Data{
+							Name: "eventB",
+						},
+						&Verb{
+							Name: "consumesA",
+							Request: &Ref{
+								Module: "test",
+								Name:   "eventA",
+							},
+							Response: &Unit{
+								Unit: true,
+							},
+							Metadata: []Metadata{
+								&MetadataSubscriber{
+									Name: "subA1",
+								},
+							},
+						},
+						&Verb{
+							Name: "consumesB1",
+							Request: &Ref{
+								Module: "test",
+								Name:   "eventB",
+							},
+							Response: &Unit{
+								Unit: true,
+							},
+							Metadata: []Metadata{
+								&MetadataSubscriber{
+									Name: "subB",
+								},
+							},
+						},
+						&Verb{
+							Name: "consumesBothASubs",
+							Request: &Ref{
+								Module: "test",
+								Name:   "eventA",
+							},
+							Response: &Unit{
+								Unit: true,
+							},
+							Metadata: []Metadata{
+								&MetadataSubscriber{
+									Name: "subA1",
+								},
+								&MetadataSubscriber{
+									Name: "subA2",
+								},
+							},
+						},
+					}},
+				},
+			},
+		},
+		{name: "PubSubErrors",
+			input: `
+				module test {
+					export topic topicA test.eventA
+
+					subscription subA test.topicB
+
+					export data eventA {
+					}
+
+					verb consumesB(test.eventB) Unit
+						+subscribe subB
+				}
+			`,
+			errors: []string{
+				`10:21-21: unknown reference "test.eventB", is the type annotated and exported?`,
+				`11:7-7: verb consumesB: could not find subscription "subB"`,
+				`5:24-24: unknown reference "test.topicB", is the type annotated and exported?`,
+			},
+		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			actual, err := ParseString("", test.input)

@@ -153,13 +153,39 @@ func (d *directiveRetry) String() string {
 	return strings.Join(components, " ")
 }
 
+// used to subscribe a sink to a subscription
+type directiveSubscriber struct {
+	Pos schema.Position
+
+	Name string `parser:"'subscribe' @Ident"`
+}
+
+func (*directiveSubscriber) directive() {}
+
+func (d *directiveSubscriber) String() string {
+	return fmt.Sprintf("subscribe %s", d.Name)
+}
+
+// most declarations include export in other directives, but some don't have any other way.
+type directiveExport struct {
+	Pos schema.Position
+
+	Export bool `parser:"@'export'"`
+}
+
+func (*directiveExport) directive() {}
+
+func (d *directiveExport) String() string {
+	return "export"
+}
+
 var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
 	participle.Union[directive](&directiveVerb{}, &directiveData{}, &directiveEnum{}, &directiveTypeAlias{},
-		&directiveIngress{}, &directiveCronJob{}, &directiveRetry{}),
+		&directiveIngress{}, &directiveCronJob{}, &directiveRetry{}, &directiveSubscriber{}, &directiveExport{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
