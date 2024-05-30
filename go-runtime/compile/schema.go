@@ -314,23 +314,29 @@ func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 	}
 }
 
-func topicNameFromCallExpr(node *ast.CallExpr) (string, *schema.Error) {
-	if len(node.Args) == 1 {
-		if literal, ok := node.Args[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
-			var err error
-			name, err := strconv.Unquote(literal.Value)
-			if err != nil {
-				return "", wrapf(node, err, "")
-			}
-			return name, nil
-		}
+func extractStringLiteralArgument(node *ast.CallExpr, argIndex int) (string, *schema.Error) {
+	if argIndex >= len(node.Args) {
+		return "", errorf(node, "expected string argument at index %d", argIndex)
 	}
-	return "", errorf(node, "must have a single string literal argument")
+
+	literal, ok := node.Args[argIndex].(*ast.BasicLit)
+	if !ok || literal.Kind != token.STRING {
+		return "", errorf(node, "expected string literal for argument at index %d", argIndex)
+	}
+
+	s, err := strconv.Unquote(literal.Value)
+	if err != nil {
+		return "", wrapf(node, err, "")
+	}
+	if s == "" {
+		return "", errorf(node, "expected non-empty string literal for argument at index %d", argIndex)
+	}
+	return s, nil
 }
 
 // extractTopicDecl expects: _ = ftl.RegisterTopic[EventType]("name_literal")
 func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
-	name, nameErr := topicNameFromCallExpr(node)
+	name, nameErr := extractStringLiteralArgument(node, 0)
 	if nameErr != nil {
 		pctx.errors.add(nameErr)
 		return
@@ -469,20 +475,11 @@ func parseVerbRef(pctx *parseContext, node ast.Expr) *schema.Ref {
 }
 
 func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
-	var literal *ast.BasicLit
-	if len(node.Args) > 0 {
-		literal, _ = node.Args[0].(*ast.BasicLit)
-	}
-	if literal == nil || literal.Kind != token.STRING {
-		pctx.errors.add(errorf(node, "first argument to an FSM declaration must be the name as a string literal"))
+	name, schemaErr := extractStringLiteralArgument(node, 0)
+	if schemaErr != nil {
+		pctx.errors.add(schemaErr)
 		return
 	}
-
-	name, err := strconv.Unquote(literal.Value)
-	if err != nil {
-		panic(err) // Should never happen
-	}
-
 	if !schema.ValidateName(name) {
 		pctx.errors.add(errorf(node, "FSM names must be valid identifiers"))
 	}
@@ -559,19 +556,11 @@ func parseFSMTransition(pctx *parseContext, node *ast.CallExpr, fn *types.Func, 
 }
 
 func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
-	var literal *ast.BasicLit
-	if len(node.Args) > 0 {
-		literal, _ = node.Args[0].(*ast.BasicLit)
-	}
-	if literal == nil || literal.Kind != token.STRING {
-		pctx.errors.add(errorf(node, "first argument to config and secret declarations must be the name as a string literal"))
+	name, schemaErr := extractStringLiteralArgument(node, 0)
+	if schemaErr != nil {
+		pctx.errors.add(schemaErr)
 		return
 	}
-	name, err := strconv.Unquote(literal.Value)
-	if err != nil {
-		panic(err) // Should never happen
-	}
-
 	if !schema.ValidateName(name) {
 		pctx.errors.add(errorf(node, "config and secret names must be valid identifiers"))
 	}
@@ -626,19 +615,9 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 }
 
 func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
-	var name string
-	if len(node.Args) == 1 {
-		if literal, ok := node.Args[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
-			var err error
-			name, err = strconv.Unquote(literal.Value)
-			if err != nil {
-				pctx.errors.add(wrapf(node, err, ""))
-				return
-			}
-		}
-	}
-	if name == "" {
-		pctx.errors.add(errorf(node, "config and secret declarations must have a single string literal argument"))
+	name, schemaErr := extractStringLiteralArgument(node, 0)
+	if schemaErr != nil {
+		pctx.errors.add(schemaErr)
 		return
 	}
 
@@ -664,7 +643,7 @@ func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
 func parseTopicDecl(pctx *parseContext, node *ast.CallExpr) {
 	// already extracted topic in the initial pass of the ast graph
 	// we did not do event type resolution yet, so we need to do that now
-	name, nameErr := topicNameFromCallExpr(node)
+	name, nameErr := extractStringLiteralArgument(node, 0)
 	if nameErr != nil {
 		// error already added in previous pass
 		return
@@ -700,19 +679,16 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 			// Topic is within module
 			// we will find the subscription name from the string literal parameter
 			if topicValueSpec, ok := topicIdent.Obj.Decl.(*ast.ValueSpec); ok && len(topicValueSpec.Values) == 1 {
-				if topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr); ok && len(topicCallExpr.Args) == 1 {
-					if topicNameLiteral, ok := topicCallExpr.Args[0].(*ast.BasicLit); ok && topicNameLiteral.Kind == token.STRING {
-						var err error
-						topicName, err := strconv.Unquote(topicNameLiteral.Value)
-						if err != nil {
-							pctx.errors.add(wrapf(node, err, ""))
-							return
-						}
-						topicRef = &schema.Ref{
-							Pos:    goPosToSchemaPos(topicIdent.Pos()),
-							Module: pctx.module.Name,
-							Name:   topicName,
-						}
+				if topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr); ok {
+					topicName, schemaErr := extractStringLiteralArgument(topicCallExpr, 0)
+					if schemaErr != nil {
+						pctx.errors.add(schemaErr)
+						return
+					}
+					topicRef = &schema.Ref{
+						Pos:    goPosToSchemaPos(topicIdent.Pos()),
+						Module: pctx.module.Name,
+						Name:   topicName,
 					}
 				}
 			}
@@ -731,18 +707,12 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 		}
 
 		// name
-		if nameLiteral, ok := node.Args[1].(*ast.BasicLit); ok && nameLiteral.Kind == token.STRING {
-			var err error
-			name, err = strconv.Unquote(nameLiteral.Value)
-			if err != nil {
-				pctx.errors.add(wrapf(node, err, ""))
-				return
-			}
+		var schemaErr *schema.Error
+		name, schemaErr = extractStringLiteralArgument(node, 1)
+		if schemaErr != nil {
+			pctx.errors.add(schemaErr)
+			return
 		}
-	}
-	if name == "" {
-		pctx.errors.add(errorf(node, "topic registration must have a name as a string literal argument"))
-		return
 	}
 	if topicRef == nil {
 		pctx.errors.add(errorf(node, "subscription registration must have a topic"))

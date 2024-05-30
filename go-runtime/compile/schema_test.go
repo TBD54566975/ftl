@@ -491,7 +491,7 @@ func TestErrorReporting(t *testing.T) {
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
 	actual := slices.Map(r.MustGet().Errors, func(e *schema.Error) string { return strings.TrimPrefix(e.Error(), filename+":") })
 	expected := []string{
-		`10:13-34: first argument to config and secret declarations must be the name as a string literal`,
+		`10:13-34: expected string literal for argument at index 0`,
 		`13:18-52: duplicate config declaration at 12:18-52`,
 		`16:18-52: duplicate secret declaration at 15:18-52`,
 		`19:14-44: duplicate database declaration at 18:14-44`,
