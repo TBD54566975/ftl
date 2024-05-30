@@ -1,4 +1,4 @@
-package simple_test
+package integration
 
 import (
 	"fmt"

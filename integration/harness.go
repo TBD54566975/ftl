@@ -1,6 +1,6 @@
 //go:build integration
 
-package simple_test
+package integration
 
 import (
 	"bytes"
@@ -35,17 +35,20 @@ var integrationTestTimeout = func() time.Duration {
 	return d
 }()
 
-func infof(format string, args ...any) {
+func Infof(format string, args ...any) {
 	fmt.Printf("\033[32m\033[1mINFO: "+format+"\033[0m\n", args...)
 }
 
 var buildOnce sync.Once
 
-// run an integration test.
+// Run an integration test.
 // ftlConfigPath: if FTL_CONFIG should be set for this test, then pass in the relative
 //
-//	path from integration/testdata/go/. e.g. "database/ftl-project.toml"
-func run(t *testing.T, ftlConfigPath string, actions ...action) {
+//	path based on ./testdata/go/ where "." denotes the directory containing the
+//	integration test (e.g. for "integration/harness_test.go" supplying
+//	"database/ftl-project.toml" would set FTL_CONFIG to
+//	"integration/testdata/go/database/ftl-project.toml").
+func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
 	tmpDir := t.TempDir()
 
 	cwd, err := os.Getwd()
@@ -67,7 +70,7 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	binDir := filepath.Join(rootDir, "build", "release")
 
 	buildOnce.Do(func() {
-		infof("Building ftl")
+		Infof("Building ftl")
 		err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 		assert.NoError(t, err)
 	})
@@ -75,33 +78,33 @@ func run(t *testing.T, ftlConfigPath string, actions ...action) {
 	controller := rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 	verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
-	infof("Starting ftl cluster")
+	Infof("Starting ftl cluster")
 	ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
 
-	ic := testContext{
+	ic := TestContext{
 		Context:    ctx,
 		rootDir:    rootDir,
 		testData:   filepath.Join(cwd, "testdata", "go"),
 		workDir:    tmpDir,
 		binDir:     binDir,
-		controller: controller,
-		verbs:      verbs,
+		Controller: controller,
+		Verbs:      verbs,
 	}
 
-	infof("Waiting for controller to be ready")
-	ic.AssertWithRetry(t, func(t testing.TB, ic testContext) {
-		_, err := ic.controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+	Infof("Waiting for controller to be ready")
+	ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
+		_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
 		assert.NoError(t, err)
 	})
 
-	infof("Starting test")
+	Infof("Starting test")
 
 	for _, action := range actions {
 		ic.AssertWithRetry(t, action)
 	}
 }
 
-type testContext struct {
+type TestContext struct {
 	context.Context
 	// Temporary directory the test is executing in.
 	workDir string
@@ -112,12 +115,12 @@ type testContext struct {
 	// Path to the "bin" directory.
 	binDir string
 
-	controller ftlv1connect.ControllerServiceClient
-	verbs      ftlv1connect.VerbServiceClient
+	Controller ftlv1connect.ControllerServiceClient
+	Verbs      ftlv1connect.VerbServiceClient
 }
 
 // AssertWithRetry asserts that the given action passes within the timeout.
-func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
+func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
 	waitCtx, done := context.WithTimeout(i, integrationTestTimeout)
 	defer done()
 	for {
@@ -135,7 +138,7 @@ func (i testContext) AssertWithRetry(t testing.TB, assertion action) {
 }
 
 // Run an assertion, wrapping testing.TB in an implementation that panics on failure, propagating the error.
-func (i testContext) runAssertionOnce(t testing.TB, assertion action) (err error) {
+func (i TestContext) runAssertionOnce(t testing.TB, assertion Action) (err error) {
 	defer func() {
 		switch r := recover().(type) {
 		case TestingError:
@@ -152,7 +155,7 @@ func (i testContext) runAssertionOnce(t testing.TB, assertion action) (err error
 	return nil
 }
 
-type action func(t testing.TB, ic testContext)
+type Action func(t testing.TB, ic TestContext)
 
 type logWriter struct {
 	mu     sync.Mutex
