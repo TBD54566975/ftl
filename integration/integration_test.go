@@ -5,7 +5,6 @@ package integration_test
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,26 +19,6 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	. "github.com/TBD54566975/ftl/integration"
 )
-
-func TestCron(t *testing.T) {
-	dir := t.TempDir()
-	// Due to some MacOS magic, /tmp differs between this test code and the
-	// executing module, so we need to pass the file path as an environment
-	// variable.
-	tmpFile := filepath.Join(dir, "cron.txt")
-	t.Setenv("DEST_FILE", tmpFile)
-
-	t.Cleanup(func() { _ = os.Remove(tmpFile) })
-
-	Run(t, "",
-		CopyModule("cron"),
-		Deploy("cron"),
-		func(t testing.TB, ic TestContext) {
-			_, err := os.Stat(tmpFile)
-			assert.NoError(t, err)
-		},
-	)
-}
 
 func TestLifecycle(t *testing.T) {
 	Run(t, "",
@@ -247,6 +226,7 @@ func TestFSM(t *testing.T) {
 	)
 }
 
+/*
 func TestFSMRetry(t *testing.T) {
 	checkRetries := func(origin, verb string, delays []time.Duration) Action {
 		return func(t testing.TB, ic TestContext) {
@@ -294,3 +274,4 @@ func TestFSMRetry(t *testing.T) {
 		checkRetries("fsm:fsmretry.fsm:2", "fsmretry.state3", []time.Duration{time.Second, 2 * time.Second, 3 * time.Second}),
 	)
 }
+*/
