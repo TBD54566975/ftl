@@ -314,7 +314,7 @@ func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 	}
 }
 
-func extractStringLiteralArgument(node *ast.CallExpr, argIndex int) (string, *schema.Error) {
+func extractStringLiteralArg(node *ast.CallExpr, argIndex int) (string, *schema.Error) {
 	if argIndex >= len(node.Args) {
 		return "", errorf(node, "expected string argument at index %d", argIndex)
 	}
@@ -336,7 +336,7 @@ func extractStringLiteralArgument(node *ast.CallExpr, argIndex int) (string, *sc
 
 // extractTopicDecl expects: _ = ftl.RegisterTopic[EventType]("name_literal")
 func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
-	name, nameErr := extractStringLiteralArgument(node, 0)
+	name, nameErr := extractStringLiteralArg(node, 0)
 	if nameErr != nil {
 		pctx.errors.add(nameErr)
 		return
@@ -475,7 +475,7 @@ func parseVerbRef(pctx *parseContext, node ast.Expr) *schema.Ref {
 }
 
 func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
-	name, schemaErr := extractStringLiteralArgument(node, 0)
+	name, schemaErr := extractStringLiteralArg(node, 0)
 	if schemaErr != nil {
 		pctx.errors.add(schemaErr)
 		return
@@ -556,7 +556,7 @@ func parseFSMTransition(pctx *parseContext, node *ast.CallExpr, fn *types.Func, 
 }
 
 func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
-	name, schemaErr := extractStringLiteralArgument(node, 0)
+	name, schemaErr := extractStringLiteralArg(node, 0)
 	if schemaErr != nil {
 		pctx.errors.add(schemaErr)
 		return
@@ -615,7 +615,7 @@ func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
 }
 
 func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
-	name, schemaErr := extractStringLiteralArgument(node, 0)
+	name, schemaErr := extractStringLiteralArg(node, 0)
 	if schemaErr != nil {
 		pctx.errors.add(schemaErr)
 		return
@@ -643,7 +643,7 @@ func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
 func parseTopicDecl(pctx *parseContext, node *ast.CallExpr) {
 	// already extracted topic in the initial pass of the ast graph
 	// we did not do event type resolution yet, so we need to do that now
-	name, nameErr := extractStringLiteralArgument(node, 0)
+	name, nameErr := extractStringLiteralArg(node, 0)
 	if nameErr != nil {
 		// error already added in previous pass
 		return
@@ -680,7 +680,7 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 			// we will find the subscription name from the string literal parameter
 			if topicValueSpec, ok := topicIdent.Obj.Decl.(*ast.ValueSpec); ok && len(topicValueSpec.Values) == 1 {
 				if topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr); ok {
-					topicName, schemaErr := extractStringLiteralArgument(topicCallExpr, 0)
+					topicName, schemaErr := extractStringLiteralArg(topicCallExpr, 0)
 					if schemaErr != nil {
 						pctx.errors.add(schemaErr)
 						return
@@ -708,7 +708,7 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 
 		// name
 		var schemaErr *schema.Error
-		name, schemaErr = extractStringLiteralArgument(node, 1)
+		name, schemaErr = extractStringLiteralArg(node, 1)
 		if schemaErr != nil {
 			pctx.errors.add(schemaErr)
 			return
