@@ -119,6 +119,8 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 		logger.Tracef("Deployment notification: %s", deployment)
 		d.DeploymentChanges.Publish(deployment)
 
+	case "topics":
+		// TODO: handle topics notifications
 	default:
 		panic(fmt.Sprintf("unknown table %q in DB notification", notification.Table))
 	}

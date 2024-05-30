@@ -1633,6 +1633,40 @@ func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) 
 	return err
 }
 
+const insertSubscriber = `-- name: InsertSubscriber :exec
+INSERT INTO topic_subscribers (key, topic_subscriptions_id, deployment_id, sink)
+VALUES (
+  $1::subscriber_key,
+  (
+    SELECT topic_subscriptions.id as id
+    FROM topic_subscriptions
+    INNER JOIN modules ON topic_subscriptions.module_id = modules.id
+    WHERE modules.name = $2::TEXT
+      AND topic_subscriptions.name = $3::TEXT
+  ),
+  (SELECT id FROM deployments WHERE key = $4::deployment_key),
+  $5::TEXT)
+`
+
+type InsertSubscriberParams struct {
+	Key              model.SubscriberKey
+	Module           string
+	SubscriptionName string
+	Deployment       model.DeploymentKey
+	Sink             string
+}
+
+func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error {
+	_, err := q.db.Exec(ctx, insertSubscriber,
+		arg.Key,
+		arg.Module,
+		arg.SubscriptionName,
+		arg.Deployment,
+		arg.Sink,
+	)
+	return err
+}
+
 const killStaleControllers = `-- name: KillStaleControllers :one
 WITH matches AS (
     UPDATE controller
@@ -2090,4 +2124,70 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (opt
 	var deployment_id optional.Option[int64]
 	err := row.Scan(&deployment_id)
 	return deployment_id, err
+}
+
+const upsertSubscription = `-- name: UpsertSubscription :exec
+INSERT INTO topic_subscriptions (key, topic_id, module_id, name)
+VALUES (
+  $1::subscription_key,
+  (
+    SELECT topics.id as id
+    FROM topics
+    INNER JOIN modules ON topics.module_id = modules.id
+    WHERE modules.name = $2::TEXT
+      AND topics.name = $3::TEXT
+  ),
+  (SELECT id FROM modules WHERE name = $4::TEXT),
+  $5::TEXT
+)
+ON CONFLICT (name, module_id) DO UPDATE SET topic_id = excluded.topic_id
+RETURNING id
+`
+
+type UpsertSubscriptionParams struct {
+	Key         model.SubscriptionKey
+	TopicModule string
+	TopicName   string
+	Module      string
+	Name        string
+}
+
+func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error {
+	_, err := q.db.Exec(ctx, upsertSubscription,
+		arg.Key,
+		arg.TopicModule,
+		arg.TopicName,
+		arg.Module,
+		arg.Name,
+	)
+	return err
+}
+
+const upsertTopic = `-- name: UpsertTopic :exec
+INSERT INTO topics (key, module_id, name, type)
+VALUES (
+  $1::topic_key,
+  (SELECT id FROM modules WHERE name = $2::TEXT LIMIT 1),
+  $3::TEXT,
+  $4::TEXT
+)
+ON CONFLICT (name, module_id) DO UPDATE SET type = $4::TEXT
+RETURNING id
+`
+
+type UpsertTopicParams struct {
+	Topic     model.TopicKey
+	Module    string
+	Name      string
+	EventType string
+}
+
+func (q *Queries) UpsertTopic(ctx context.Context, arg UpsertTopicParams) error {
+	_, err := q.db.Exec(ctx, upsertTopic,
+		arg.Topic,
+		arg.Module,
+		arg.Name,
+		arg.EventType,
+	)
+	return err
 }

@@ -74,6 +74,7 @@ type Querier interface {
 	InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
 	InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error
+	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, timeout time.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error)
@@ -103,6 +104,8 @@ type Querier interface {
 	// there is no corresponding deployment, then the deployment ID is -1
 	// and the parent statement will fail due to a foreign key constraint.
 	UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (optional.Option[int64], error)
+	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
+	UpsertTopic(ctx context.Context, arg UpsertTopicParams) error
 }
 
 var _ Querier = (*Queries)(nil)
