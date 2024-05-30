@@ -228,7 +228,7 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/fsm", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
+	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module fsm {
 		fsm payment
@@ -280,7 +280,7 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/named", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
+	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module named {
 		typealias DoubleAliasedUser named.InternalUser
@@ -332,7 +332,7 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/parent", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, r.MustGet().Errors, nil, "expected no schema errors")
+	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module parent {
 			export data ChildStruct {
@@ -342,6 +342,62 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 		export verb verb(Unit) parent.ChildStruct
 	}
 	`
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
+}
+
+func TestExtractModulePubSub(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	r, err := ExtractModuleSchema("testdata/pubsub", &schema.Schema{})
+	assert.NoError(t, err)
+	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
+	actual := schema.Normalise(r.MustGet().Module)
+	expected := `module pubsub {
+		topic payins pubsub.PayinEvent
+
+		// publicBroadcast is a topic that broadcasts payin events to the public.
+		// out of order with subscription registration to test ordering doesn't matter.
+		export topic publicBroadcast pubsub.PayinEvent
+		
+		subscription broadcastSubscription pubsub.publicBroadcast
+
+		subscription paymentProcessing pubsub.payins
+         
+        export data PayinEvent {
+        	name String
+        }
+        
+		verb broadcast(Unit) Unit
+
+        verb payin(Unit) Unit
+
+        verb processBroadcast(pubsub.PayinEvent) Unit
+        	+subscribe broadcastSubscription
+        
+        verb processPayin(pubsub.PayinEvent) Unit
+        	+subscribe paymentProcessing
+	}
+`
+	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
+}
+
+func TestExtractModuleSubscriber(t *testing.T) {
+	prebuildTestModule(t, "testdata/pubsub", "testdata/subscriber")
+	if testing.Short() {
+		t.SkipNow()
+	}
+	r, err := ExtractModuleSchema("testdata/subscriber", &schema.Schema{})
+	assert.NoError(t, err)
+	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
+	actual := schema.Normalise(r.MustGet().Module)
+	expected := `module subscriber {
+		subscription subscriptionToExternalTopic pubsub.publicBroadcast
+
+        verb consumesSubscriptionFromExternalTopic(pubsub.PayinEvent) Unit
+		+subscribe subscriptionToExternalTopic
+	}
+`
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
@@ -444,7 +500,7 @@ func TestErrorReporting(t *testing.T) {
 		`19:14-44: duplicate database declaration at 18:14-44`,
 		`22:2-10: unsupported type "error" for field "BadParam"`,
 		`25:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
-		`28:3-3: unexpected token "export" (expected Directive)`,
+		`29:1-2: unexpected directive *compile.directiveExport`,
 		`34:36-39: unsupported request type "ftl/failing.Request"`,
 		`34:50-50: unsupported response type "ftl/failing.Response"`,
 		`35:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc`,

@@ -12,6 +12,10 @@ import (
 
   "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 {{- end}}
+{{- if $ | needsFTLImport }}
+
+  "github.com/TBD54566975/ftl/go-runtime/ftl"
+{{- end}}
 )
 
 var _ = context.Background
@@ -22,7 +26,9 @@ var _ = context.Background
 //
 {{- end}}
 {{- if .IsExported}}
-{{- if and (is "Enum" .) .IsValueEnum}}
+{{- if is "Topic" .}}
+var {{.Name|title}} = ftl.RegisterTopic[{{type $ .Event}}]("{{.Name}}")
+{{- else if and (is "Enum" .) .IsValueEnum}}
 {{- $enumName := .Name}}
 //ftl:enum
 type {{.Name|title}} {{type $ .Type}}

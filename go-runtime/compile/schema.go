@@ -34,16 +34,18 @@ var (
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
 
-	ftlCallFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
-	ftlFSMFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.FSM"
-	ftlTransitionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Transition"
-	ftlStartFuncPath      = "github.com/TBD54566975/ftl/go-runtime/ftl.Start"
-	ftlConfigFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
-	ftlSecretFuncPath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
-	ftlPostgresDBFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
-	ftlUnitTypePath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
-	ftlOptionTypePath     = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
-	aliasFieldTag         = "json"
+	ftlCallFuncPath         = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
+	ftlFSMFuncPath          = "github.com/TBD54566975/ftl/go-runtime/ftl.FSM"
+	ftlTransitionFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Transition"
+	ftlStartFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.Start"
+	ftlConfigFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
+	ftlSecretFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
+	ftlPostgresDBFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
+	ftlUnitTypePath         = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
+	ftlOptionTypePath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
+	ftlTopicFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.RegisterTopic"
+	ftlSubscriptionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.RegisterSubscription"
+	aliasFieldTag           = "json"
 )
 
 // NativeNames is a map of top-level declarations to their native Go names.
@@ -79,6 +81,7 @@ func tokenWrapf(pos token.Pos, tokenText string, err error, format string, args 
 	return schema.Wrapf(goPos, endColumn, err, format, args...)
 }
 
+//nolint:unparam
 func wrapf(node ast.Node, err error, format string, args ...interface{}) *schema.Error {
 	pos, endCol := goNodePosToSchemaPos(node)
 	return schema.Wrapf(pos, endCol, err, format, args...)
@@ -138,7 +141,7 @@ func ExtractModuleSchema(dir string, sch *schema.Schema) (optional.Option[ParseR
 			}
 		}
 		pctx := newParseContext(pkg, pkgs, module, sch)
-		err := extractTypeDecls(pctx)
+		err := extractInitialDecls(pctx)
 		if err != nil {
 			return optional.None[ParseResult](), err
 		}
@@ -186,20 +189,31 @@ func ExtractModuleSchema(dir string, sch *schema.Schema) (optional.Option[ParseR
 	}), schema.ValidateModule(module)
 }
 
-// extractTypeDecls traverses the package's AST and extracts type declarations (type aliases and enums)
+// extractInitialDecls traverses the package's AST and extracts declarations needed up front (type aliases, enums and topics)
 //
 // This allows us to know if a type is a type alias or an enum regardless of ordering when visiting each ast node.
 // - The Decls get added to the pctx's module, nativeNames and enumInterfaces.
 // - We only want to do a simple pass, so we do not resolve references to other types. This means the TypeAlias and Enum decls have Type = nil
 //   - This get's filled in with the next pass
-func extractTypeDecls(pctx *parseContext) error {
+//
+// It also helps with topics because we need to know the stack when visiting a topic decl, but the subscription may occur first.
+// In this case there is no way for the subscription to make the topic exported.
+func extractInitialDecls(pctx *parseContext) error {
 	for _, file := range pctx.pkg.Syntax {
 		err := goast.Visit(file, func(stack []ast.Node, next func() error) (err error) {
-			node, ok := (stack[len(stack)-1]).(*ast.GenDecl)
-			if !ok || node.Tok != token.TYPE {
-				return next()
+			switch node := stack[len(stack)-1].(type) {
+			case *ast.GenDecl:
+				if node.Tok == token.TYPE {
+					extractTypeDecl(pctx, node)
+				}
+
+			case *ast.CallExpr:
+				_, fn := deref[*types.Func](pctx.pkg, node.Fun)
+				if fn != nil && fn.FullName() == ftlTopicFuncPath {
+					extractTopicDecl(pctx, node, stack)
+				}
 			}
-			extractTypeDeclsForNode(pctx, node)
+
 			return next()
 		})
 		if err != nil {
@@ -209,7 +223,7 @@ func extractTypeDecls(pctx *parseContext) error {
 	return nil
 }
 
-func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
+func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 	directives, parseErr := parseDirectives(node, fset, node.Doc)
 	if parseErr != nil {
 		// errors collected when visiting all nodes in the next pass
@@ -239,7 +253,7 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 					Pos:      goPosToSchemaPos(node.Pos()),
 					Comments: parseComments(node.Doc),
 					Name:     strcase.ToUpperCamel(t.Name.Name),
-					Type:     nil, //TODO: explain
+					Type:     nil, // nil until next pass, when we can visit the full type graph
 					Export:   dir.IsExported(),
 				}
 				pctx.module.Decls = append(pctx.module.Decls, enum)
@@ -283,12 +297,12 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 				Comments: parseComments(node.Doc),
 				Name:     strcase.ToUpperCamel(t.Name.Name),
 				Export:   dir.IsExported(),
-				Type:     nil, //TODO: explain
+				Type:     nil, // nil until next pass, when we can visit the full type graph
 			}
 			pctx.module.Decls = append(pctx.module.Decls, alias)
 			pctx.nativeNames[alias] = nativeName
 			foundDeclType = optional.Some("type alias")
-		case *directiveData, *directiveIngress, *directiveVerb, *directiveCronJob, *directiveRetry:
+		case *directiveData, *directiveIngress, *directiveVerb, *directiveCronJob, *directiveRetry, *directiveExport, *directiveSubscriber:
 			continue
 		}
 		if foundDeclType, ok := foundDeclType.Get(); ok {
@@ -298,6 +312,57 @@ func extractTypeDeclsForNode(pctx *parseContext, node *ast.GenDecl) {
 			break
 		}
 	}
+}
+
+func topicNameFromCallExpr(node *ast.CallExpr) (string, *schema.Error) {
+	if len(node.Args) == 1 {
+		if literal, ok := node.Args[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
+			var err error
+			name, err := strconv.Unquote(literal.Value)
+			if err != nil {
+				return "", wrapf(node, err, "")
+			}
+			return name, nil
+		}
+	}
+	return "", errorf(node, "must have a single string literal argument")
+}
+
+// extractTopicDecl expects: _ = ftl.RegisterTopic[EventType]("name_literal")
+func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
+	name, nameErr := topicNameFromCallExpr(node)
+	if nameErr != nil {
+		pctx.errors.add(nameErr)
+		return
+	}
+
+	comments, directives := parseCommentsAndDirectivesForCall(pctx, stack)
+	export := false
+	for _, dir := range directives {
+		if _, ok := dir.(*directiveExport); ok {
+			export = true
+		} else {
+			pctx.errors.add(errorf(node, "unexpected directive attached for topic: %T", dir))
+		}
+	}
+
+	// Check for duplicates
+	_, endCol := goNodePosToSchemaPos(node)
+	for _, d := range pctx.module.Decls {
+		existing, ok := d.(*schema.Topic)
+		if ok && existing.Name == name {
+			pctx.errors.add(errorf(node, "duplicate topic registration at %d:%d-%d", existing.Pos.Line, existing.Pos.Column, endCol))
+			return
+		}
+	}
+
+	pctx.module.Decls = append(pctx.module.Decls, &schema.Topic{
+		Pos:      goPosToSchemaPos(node.Pos()),
+		Name:     name,
+		Export:   export,
+		Comments: comments,
+		Event:    nil, // event is nil until we the next pass, when we can visit the full graph
+	})
 }
 
 func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
@@ -318,6 +383,12 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 
 	case ftlPostgresDBFuncPath:
 		parseDatabaseDecl(pctx, node, schema.PostgresDatabaseType)
+
+	case ftlTopicFuncPath:
+		parseTopicDecl(pctx, node)
+
+	case ftlSubscriptionFuncPath:
+		parseSubscriptionDecl(pctx, node)
 	}
 }
 
@@ -437,21 +508,7 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 		parseFSMTransition(pctx, call, fn, fsm)
 	}
 
-	// find variable declaration that we are currently in so we can look for attached directives
-	var variableDecl *ast.GenDecl
-	for i := len(stack) - 1; i >= 0; i-- {
-		if decl, ok := stack[i].(*ast.GenDecl); ok && decl.Tok == token.VAR {
-			variableDecl = decl
-			break
-		}
-	}
-	if variableDecl == nil || variableDecl.Doc == nil {
-		return
-	}
-	directives, schemaErr := parseDirectives(node, fset, variableDecl.Doc)
-	if schemaErr != nil {
-		pctx.errors.add(schemaErr)
-	}
+	_, directives := parseCommentsAndDirectivesForCall(pctx, stack)
 	for _, dir := range directives {
 		if retryDir, ok := dir.(*directiveRetry); ok {
 			fsm.Metadata = append(fsm.Metadata, &schema.MetadataRetry{
@@ -603,6 +660,133 @@ func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
 	pctx.module.Decls = append(pctx.module.Decls, decl)
 }
 
+// parseTopicDecl expects: _ = ftl.RegisterTopic[EventType]("name_literal")
+func parseTopicDecl(pctx *parseContext, node *ast.CallExpr) {
+	// already extracted topic in the initial pass of the ast graph
+	// we did not do event type resolution yet, so we need to do that now
+	name, nameErr := topicNameFromCallExpr(node)
+	if nameErr != nil {
+		// error already added in previous pass
+		return
+	}
+
+	var topic *schema.Topic
+	for _, d := range pctx.module.Decls {
+		if d, ok := d.(*schema.Topic); ok && d.Name == name {
+			topic = d
+		}
+	}
+
+	// update topic's event type
+	indexExpr, ok := node.Fun.(*ast.IndexExpr)
+	if !ok {
+		pctx.errors.add(errorf(node, "must have an event type as a type parameter"))
+		return
+	}
+	typeParamType, ok := visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.TypeOf(indexExpr.Index), topic.Export).Get()
+	if !ok {
+		pctx.errors.add(errorf(node, "invalid event type"))
+		return
+	}
+	topic.Event = typeParamType
+}
+
+// parseSubscriptionDecl expects: var _ = ftl.RegisterSubscription(topicHandle, "name_literal")
+func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
+	var name string
+	var topicRef *schema.Ref
+	if len(node.Args) == 2 {
+		if topicIdent, ok := node.Args[0].(*ast.Ident); ok {
+			// Topic is within module
+			// we will find the subscription name from the string literal parameter
+			if topicValueSpec, ok := topicIdent.Obj.Decl.(*ast.ValueSpec); ok && len(topicValueSpec.Values) == 1 {
+				if topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr); ok && len(topicCallExpr.Args) == 1 {
+					if topicNameLiteral, ok := topicCallExpr.Args[0].(*ast.BasicLit); ok && topicNameLiteral.Kind == token.STRING {
+						var err error
+						topicName, err := strconv.Unquote(topicNameLiteral.Value)
+						if err != nil {
+							pctx.errors.add(wrapf(node, err, ""))
+							return
+						}
+						topicRef = &schema.Ref{
+							Pos:    goPosToSchemaPos(topicIdent.Pos()),
+							Module: pctx.module.Name,
+							Name:   topicName,
+						}
+					}
+				}
+			}
+		} else if topicSelExp, ok := node.Args[0].(*ast.SelectorExpr); ok {
+			// External topic
+			// we will derive subscription name from generated variable name
+			moduleIdent, moduleOk := topicSelExp.X.(*ast.Ident)
+			if moduleOk {
+				varName := topicSelExp.Sel.Name
+				topicRef = &schema.Ref{
+					Pos:    goPosToSchemaPos(moduleIdent.Pos()),
+					Module: moduleIdent.Name,
+					Name:   strings.ToLower(string(varName[0])) + varName[1:],
+				}
+			}
+		}
+
+		// name
+		if nameLiteral, ok := node.Args[1].(*ast.BasicLit); ok && nameLiteral.Kind == token.STRING {
+			var err error
+			name, err = strconv.Unquote(nameLiteral.Value)
+			if err != nil {
+				pctx.errors.add(wrapf(node, err, ""))
+				return
+			}
+		}
+	}
+	if name == "" {
+		pctx.errors.add(errorf(node, "topic registration must have a name as a string literal argument"))
+		return
+	}
+	if topicRef == nil {
+		pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+		return
+	}
+
+	// Check for duplicates
+	_, endCol := goNodePosToSchemaPos(node)
+	for _, d := range pctx.module.Decls {
+		existing, ok := d.(*schema.Subscription)
+		if ok && existing.Name == name {
+			pctx.errors.add(errorf(node, "duplicate topic registration at %d:%d-%d", existing.Pos.Line, existing.Pos.Column, endCol))
+			return
+		}
+	}
+
+	decl := &schema.Subscription{
+		Pos:   goPosToSchemaPos(node.Pos()),
+		Name:  name,
+		Topic: topicRef,
+	}
+
+	pctx.module.Decls = append(pctx.module.Decls, decl)
+}
+
+// parseCommentsAndDirectivesForCall finds the variable declaration that we are currently in so we can look for attached comments and directives
+func parseCommentsAndDirectivesForCall(pctx *parseContext, stack []ast.Node) (comments []string, directives []directive) {
+	var variableDecl *ast.GenDecl
+	for i := len(stack) - 1; i >= 0; i-- {
+		if decl, ok := stack[i].(*ast.GenDecl); ok && decl.Tok == token.VAR {
+			variableDecl = decl
+			break
+		}
+	}
+	if variableDecl == nil || variableDecl.Doc == nil {
+		return []string{}, []directive{}
+	}
+	directives, schemaErr := parseDirectives(stack[len(stack)-1], fset, variableDecl.Doc)
+	if schemaErr != nil {
+		pctx.errors.add(schemaErr)
+	}
+	return parseComments(variableDecl.Doc), directives
+}
+
 func visitFile(pctx *parseContext, node *ast.File) {
 	if node.Doc == nil {
 		return
@@ -749,7 +933,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
 					}
 				}
-			case *directiveIngress, *directiveCronJob, *directiveRetry:
+			case *directiveIngress, *directiveCronJob, *directiveRetry, *directiveExport, *directiveSubscriber:
 			}
 		}
 		return
@@ -1049,7 +1233,13 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 				MinBackoff: dir.MinBackoff,
 				MaxBackoff: dir.MaxBackoff,
 			})
-		case *directiveData, *directiveEnum, *directiveTypeAlias:
+		case *directiveSubscriber:
+			isVerb = true
+			metadata = append(metadata, &schema.MetadataSubscriber{
+				Pos:  dir.Pos,
+				Name: dir.Name,
+			})
+		case *directiveData, *directiveEnum, *directiveTypeAlias, *directiveExport:
 			pctx.errors.add(errorf(node, "unexpected directive %T", dir))
 		}
 	}
@@ -1301,7 +1491,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 			switch decl.(type) {
 			case *schema.TypeAlias, *schema.Enum:
 				return visitNamedRef(pctx, pos, named, isExported)
-			case *schema.Data, *schema.Verb, *schema.Config, *schema.Secret, *schema.Database, *schema.FSM:
+			case *schema.Data, *schema.Verb, *schema.Config, *schema.Secret, *schema.Database, *schema.FSM, *schema.Topic, *schema.Subscription:
 			}
 		}
 	}
@@ -1601,7 +1791,9 @@ func (p *parseContext) markAsExported(node schema.Node) {
 				decl.Export = true
 			case *schema.Verb:
 				decl.Export = true
-			case *schema.Config, *schema.Secret, *schema.Database, *schema.FSM:
+			case *schema.Topic:
+				decl.Export = true
+			case *schema.Config, *schema.Secret, *schema.Database, *schema.FSM, *schema.Subscription:
 				return next()
 			}
 		} else if r, ok := n.(*schema.Ref); ok {
@@ -1610,16 +1802,8 @@ func (p *parseContext) markAsExported(node schema.Node) {
 			}
 			for _, d := range p.module.Decls {
 				switch d := d.(type) {
-				case *schema.Enum:
-					if d.Name != r.Name {
-						continue
-					}
-				case *schema.TypeAlias:
-					if d.Name != r.Name {
-						continue
-					}
-				case *schema.Data:
-					if d.Name != r.Name {
+				case *schema.Enum, *schema.TypeAlias, *schema.Data, *schema.Topic, *schema.Subscription:
+					if named, ok := d.(schema.Named); !ok || named.GetName() != r.Name {
 						continue
 					}
 				case *schema.Verb, *schema.Config, *schema.Secret, *schema.Database, *schema.FSM:

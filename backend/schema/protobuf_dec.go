@@ -37,6 +37,10 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 			out = append(out, SecretFromProto(n.Secret))
 		case *schemapb.Decl_Fsm:
 			out = append(out, FSMFromProto(n.Fsm))
+		case *schemapb.Decl_Topic:
+			out = append(out, TopicFromProto(n.Topic))
+		case *schemapb.Decl_Subscription:
+			out = append(out, SubscriptionFromProto(n.Subscription))
 		}
 	}
 	return out
@@ -147,6 +151,12 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Count:      count,
 			MinBackoff: s.Retry.MinBackoff,
 			MaxBackoff: s.Retry.MaxBackoff,
+		}
+
+	case *schemapb.Metadata_Subscriber:
+		return &MetadataSubscriber{
+			Pos:  posFromProto(s.Subscriber.Pos),
+			Name: s.Subscriber.Name,
 		}
 
 	default:

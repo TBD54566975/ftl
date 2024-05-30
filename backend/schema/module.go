@@ -84,12 +84,14 @@ func (m *Module) String() string {
 
 	// print decls with spacing rules
 	typeSpacingRules := map[reflect.Type]spacingRule{
-		reflect.TypeOf(&Config{}):   {gapWithinType: false},
-		reflect.TypeOf(&Secret{}):   {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Config{})}},
-		reflect.TypeOf(&Database{}): {gapWithinType: false},
-		reflect.TypeOf(&Enum{}):     {gapWithinType: true},
-		reflect.TypeOf(&Data{}):     {gapWithinType: true},
-		reflect.TypeOf(&Verb{}):     {gapWithinType: true},
+		reflect.TypeOf(&Config{}):       {gapWithinType: false},
+		reflect.TypeOf(&Secret{}):       {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Config{})}},
+		reflect.TypeOf(&Database{}):     {gapWithinType: false},
+		reflect.TypeOf(&Topic{}):        {gapWithinType: true},
+		reflect.TypeOf(&Subscription{}): {gapWithinType: true},
+		reflect.TypeOf(&Enum{}):         {gapWithinType: true},
+		reflect.TypeOf(&Data{}):         {gapWithinType: true},
+		reflect.TypeOf(&Verb{}):         {gapWithinType: true},
 	}
 
 	lastTypePrinted := optional.None[reflect.Type]()

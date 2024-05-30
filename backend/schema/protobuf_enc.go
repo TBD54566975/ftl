@@ -49,6 +49,12 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 
 		case *TypeAlias:
 			v = &schemapb.Decl_TypeAlias{TypeAlias: n.ToProto().(*schemapb.TypeAlias)}
+
+		case *Topic:
+			v = &schemapb.Decl_Topic{Topic: n.ToProto().(*schemapb.Topic)}
+
+		case *Subscription:
+			v = &schemapb.Decl_Subscription{Subscription: n.ToProto().(*schemapb.Subscription)}
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}
@@ -77,6 +83,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 
 		case *MetadataRetry:
 			v = &schemapb.Metadata_Retry{Retry: n.ToProto().(*schemapb.MetadataRetry)}
+
+		case *MetadataSubscriber:
+			v = &schemapb.Metadata_Subscriber{Subscriber: n.ToProto().(*schemapb.MetadataSubscriber)}
 
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))

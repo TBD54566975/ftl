@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &TypeAlias{}, &Config{}, &Secret{}, &FSM{}}
+	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &TypeAlias{}, &Config{}, &Secret{}, &FSM{}, &Topic{}, &Subscription{}}
 	nonOptionalTypeUnion = []Type{
 		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
 		&Map{}, &Any{}, &Unit{},
@@ -21,7 +21,7 @@ var (
 		&Ref{},
 	}
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
-	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataCronJob{}, &MetadataDatabases{}, &MetadataAlias{}, &MetadataRetry{}}
+	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataCronJob{}, &MetadataDatabases{}, &MetadataAlias{}, &MetadataRetry{}, &MetadataSubscriber{}}
 	ingressUnion  = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
 	valueUnion    = []Value{&StringValue{}, &IntValue{}, &TypeValue{}}
 

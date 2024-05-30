@@ -247,7 +247,7 @@ func validateValue(fieldType schema.Type, path path, value any, sch *schema.Sche
 				return fmt.Errorf("%s is not a valid variant of enum %s", inputName, fieldType)
 			}
 
-		case *schema.Config, *schema.Database, *schema.Secret, *schema.Verb, *schema.FSM:
+		case *schema.Config, *schema.Database, *schema.Secret, *schema.Verb, *schema.FSM, *schema.Topic, *schema.Subscription:
 
 		}
 
