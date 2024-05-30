@@ -408,7 +408,7 @@ func decodeSumType(d *json.Decoder, v reflect.Value) error {
 
 	variantType, ok := reflection.GetVariantByName(v.Type(), sumType.Name).Get()
 	if !ok {
-		//return fmt.Errorf("no enum variant found by name %s", sumType.Name)
+		// return fmt.Errorf("no enum variant found by name %s", sumType.Name)
 		variantType = reflect.TypeFor[any]()
 	}
 

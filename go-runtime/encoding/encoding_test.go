@@ -132,7 +132,7 @@ func TestUnmarshal(t *testing.T) {
 		}{ftl.None[int](), true}},
 		{name: "Pointer", input: `{"string":"foo"}`, expected: &struct{ String string }{}, err: `pointer types are not supported: *struct { String string }`},
 		{name: "SumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D discriminator }{variant{"hello"}}},
-		//{name: "MalformedSumType", input: `{"d":{"message":"hello"}}`, expected: struct{ D discriminator }{}, err: `no name found for type enum variant`},
+		{name: "MalformedSumType", input: `{"d":{"message":"hello"}}`, expected: struct{ D discriminator }{}, err: `no name found for type enum variant`},
 		{name: "UnregisteredSumType", input: `{"d":{"name":"Variant","value":{"message":"hello"}}}`, expected: struct{ D unregistered }{variant{"hello"}}},
 	}
 
