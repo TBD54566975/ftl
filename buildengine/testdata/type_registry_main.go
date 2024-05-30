@@ -9,20 +9,11 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 
-	"ftl/another"
 	"ftl/other"
 )
 
 func init() {
 	reflection.Register(
-		reflection.SumType[another.SecondTypeEnum](
-			*new(another.One),
-			*new(another.Two),
-		),
-		reflection.SumType[another.TypeEnum](
-			*new(another.A),
-			*new(another.B),
-		),
 		reflection.SumType[other.SecondTypeEnum](
 			*new(other.A),
 			*new(other.B),

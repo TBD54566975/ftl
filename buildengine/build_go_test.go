@@ -300,7 +300,6 @@ func TestGoModVersion(t *testing.T) {
 }
 
 func TestGeneratedTypeRegistry(t *testing.T) {
-	t.Skip("FLAKY")
 	if testing.Short() {
 		t.Skipf("skipping test in non-short mode")
 	}
