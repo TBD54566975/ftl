@@ -123,7 +123,7 @@ func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 			*MetadataIngress, *MetadataCronJob, *MetadataAlias, *Module,
 			*Schema, *String, *Time, Type, *TypeParameter, *Unit, *Verb, *Enum,
 			*EnumVariant, Value, *IntValue, *StringValue, *TypeValue, Symbol,
-			Named, *FSM, *FSMTransition, *TypeAlias:
+			Named, *FSM, *FSMTransition, *TypeAlias, *Topic, *Subscription, *MetadataSubscriber:
 		}
 		return next()
 	})

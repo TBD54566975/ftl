@@ -379,6 +379,43 @@ func TestValidate(t *testing.T) {
 				`4:19: unexpected token "s"`,
 			},
 		},
+		{name: "InvalidPubSub",
+			schema: `
+			module test {
+				export topic topicA test.eventA
+			
+				topic topicB test.eventB
+
+				topic StartsWithUpperCase test.eventA
+
+				subscription subA test.topicA
+
+				subscription subB test.topicB
+
+				export data eventA {
+				}
+
+				data eventB {
+				}
+
+				verb wrongEventType(test.eventA) Unit
+					+subscribe subB
+
+				verb SourceCantSubscribe(Unit) test.eventB
+					+subscribe subB
+
+				verb EmptyCantSubscribe(Unit) Unit
+					+subscribe subB
+			}
+			`,
+			errs: []string{
+				`20:6-6: verb wrongEventType: request type test.eventA differs from subscription's event type test.eventB`,
+				`23:6-6: verb SourceCantSubscribe: must be a sink to subscribe but found response type test.eventB`,
+				`23:6-6: verb SourceCantSubscribe: request type Unit differs from subscription's event type test.eventB`,
+				`26:6-6: verb EmptyCantSubscribe: request type Unit differs from subscription's event type test.eventB`,
+				`7:5-5: invalid name: must consist of only letters, numbers and underscores, and start with a lowercase letter.`,
+			},
+		},
 	}
 
 	for _, test := range tests {

@@ -65,7 +65,7 @@ func transformAliasedFields(sch *schema.Schema, t schema.Type, obj any, aliaser 
 			}
 		case *schema.TypeAlias:
 			return transformAliasedFields(sch, decl.Type, obj, aliaser)
-		case *schema.Config, *schema.Database, *schema.FSM, *schema.Secret, *schema.Verb:
+		case *schema.Config, *schema.Database, *schema.FSM, *schema.Secret, *schema.Verb, *schema.Topic, *schema.Subscription:
 			return fmt.Errorf("%s: unsupported ref type %T", t.Pos, decl)
 		}
 
