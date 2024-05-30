@@ -613,6 +613,26 @@ WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
 
+-- name: UpsertTopic :exec
+-- TODO: what should happen if type is updated?
+INSERT INTO topics (key, module_id, name, type)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (name) DO UPDATE SET (type) = ($4);
+RETURNING id;
+
+-- name: GetAllSubscriptions :many
+
+-- name: GetTrailingSubscriptions :many
+-- pass in subscriptions based on hash ring
+-- use tx
+
+-- name: GetSubscribersForSubscriptions :many
+-- use tx
+
+-- name: ProgressSubscription :exec
+-- use tx
+
+
 -- name: GetModuleConfiguration :one
 SELECT value
 FROM module_configuration
