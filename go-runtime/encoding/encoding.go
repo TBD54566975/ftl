@@ -391,24 +391,39 @@ func decodeMap(d *json.Decoder, v reflect.Value) error {
 }
 
 func decodeSumType(d *json.Decoder, v reflect.Value) error {
+	s, err := io.ReadAll(d.Buffered())
+	if err != nil {
+		return err
+	}
+	if len(s) == 0 {
+		// Interface types other than sumtypes are not supported, but this func
+		// creates a value of type `any` when the type registry is not hooked up
+		// (C+F "any" below for reference), so once recursing back to decodeValue,
+		// that call routes back to this function. If the buffer is empty by that
+		// point, just return nil to end the recursion.
+		return nil
+	}
 	var sumType struct {
 		Name  string
 		Value json.RawMessage
 	}
-	err := d.Decode(&sumType)
+	err = d.Decode(&sumType)
 	if err != nil {
 		return err
 	}
-	/*if sumType.Name == "" {
+	if sumType.Name == "" {
 		return fmt.Errorf("no name found for type enum variant")
 	}
 	if sumType.Value == nil {
 		return fmt.Errorf("no value found for type enum variant")
-	}*/
+	}
 
 	variantType, ok := reflection.GetVariantByName(v.Type(), sumType.Name).Get()
 	if !ok {
-		// return fmt.Errorf("no enum variant found by name %s", sumType.Name)
+		// When running unit tests using ftltest, sumtypes are never registered,
+		// so we cannot look up the correct variant type. In this case, we assume
+		// any value with kind=interface is a sumtype, so hardcode `any` here to
+		// force that assumption through.
 		variantType = reflect.TypeFor[any]()
 	}
 
