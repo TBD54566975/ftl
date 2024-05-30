@@ -216,23 +216,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(modulesDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
-	modulesDirFiles, err := os.ReadDir(modulesDir)
-	if err != nil && !os.IsNotExist(err) {
-		// could not read external modules directory
-		_ = wg.Wait()
-		return fmt.Errorf("failed to read directory %s: %w", modulesDir, err)
-	}
-	for _, f := range modulesDirFiles {
-		dir := filepath.Join(moduleDir, f.Name())
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			wg.Go(func() error {
-				if err := exec.Command(wgctx, log.Debug, dir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
-					return fmt.Errorf("%s: failed to tidy go.mod: %w", dir, err)
-				}
-				return filesTransaction.ModifiedFiles(filepath.Join(dir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
-			})
-		}
-	}
 	if err := wg.Wait(); err != nil {
 		return err
 	}
