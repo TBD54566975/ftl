@@ -674,48 +674,58 @@ func parseTopicDecl(pctx *parseContext, node *ast.CallExpr) {
 func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	var name string
 	var topicRef *schema.Ref
-	if len(node.Args) == 2 {
-		if topicIdent, ok := node.Args[0].(*ast.Ident); ok {
-			// Topic is within module
-			// we will find the subscription name from the string literal parameter
-			if topicValueSpec, ok := topicIdent.Obj.Decl.(*ast.ValueSpec); ok && len(topicValueSpec.Values) == 1 {
-				if topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr); ok {
-					topicName, schemaErr := extractStringLiteralArg(topicCallExpr, 0)
-					if schemaErr != nil {
-						pctx.errors.add(schemaErr)
-						return
-					}
-					topicRef = &schema.Ref{
-						Pos:    goPosToSchemaPos(topicIdent.Pos()),
-						Module: pctx.module.Name,
-						Name:   topicName,
-					}
-				}
-			}
-		} else if topicSelExp, ok := node.Args[0].(*ast.SelectorExpr); ok {
-			// External topic
-			// we will derive subscription name from generated variable name
-			moduleIdent, moduleOk := topicSelExp.X.(*ast.Ident)
-			if moduleOk {
-				varName := topicSelExp.Sel.Name
-				topicRef = &schema.Ref{
-					Pos:    goPosToSchemaPos(moduleIdent.Pos()),
-					Module: moduleIdent.Name,
-					Name:   strings.ToLower(string(varName[0])) + varName[1:],
-				}
-			}
-		}
-
-		// name
-		var schemaErr *schema.Error
-		name, schemaErr = extractStringLiteralArg(node, 1)
-		if schemaErr != nil {
-			pctx.errors.add(schemaErr)
+	if len(node.Args) != 2 {
+		pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+		return
+	}
+	if topicIdent, ok := node.Args[0].(*ast.Ident); ok {
+		// Topic is within module
+		// we will find the subscription name from the string literal parameter
+		topicValueSpec, ok := topicIdent.Obj.Decl.(*ast.ValueSpec)
+		if !ok || len(topicValueSpec.Values) != 1 {
+			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
 			return
 		}
-	}
-	if topicRef == nil {
+
+		topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr)
+		if !ok {
+			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+			return
+		}
+		topicName, schemaErr := extractStringLiteralArg(topicCallExpr, 0)
+		if schemaErr != nil {
+			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+			return
+		}
+		topicRef = &schema.Ref{
+			Pos:    goPosToSchemaPos(topicIdent.Pos()),
+			Module: pctx.module.Name,
+			Name:   topicName,
+		}
+	} else if topicSelExp, ok := node.Args[0].(*ast.SelectorExpr); ok {
+		// External topic
+		// we will derive subscription name from generated variable name
+		moduleIdent, moduleOk := topicSelExp.X.(*ast.Ident)
+		if !moduleOk {
+			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+			return
+		}
+		varName := topicSelExp.Sel.Name
+		topicRef = &schema.Ref{
+			Pos:    goPosToSchemaPos(moduleIdent.Pos()),
+			Module: moduleIdent.Name,
+			Name:   strings.ToLower(string(varName[0])) + varName[1:],
+		}
+	} else {
 		pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+		return
+	}
+
+	// name
+	var schemaErr *schema.Error
+	name, schemaErr = extractStringLiteralArg(node, 1)
+	if schemaErr != nil {
+		pctx.errors.add(schemaErr)
 		return
 	}
 
