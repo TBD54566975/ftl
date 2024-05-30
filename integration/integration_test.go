@@ -18,6 +18,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	. "github.com/TBD54566975/ftl/integration"
 )
 
 func TestCron(t *testing.T) {
