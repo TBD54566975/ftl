@@ -62,7 +62,7 @@ func TestGetGlobal(t *testing.T) {
 
 	var got *url.URL
 	want := URL("inline://qwertyqwerty")
-	err = cf.Set(ctx, "inline", Ref{Module: optional.None[string](), Name: "default"}, want)
+	err = cf.Set(ctx, "inline", optional.None[string](), Ref{Module: optional.None[string](), Name: "default"}, want)
 	assert.NoError(t, err)
 	err = cf.Get(ctx, Ref{Module: optional.Some[string]("somemodule"), Name: "default"}, &got)
 	assert.NoError(t, err)
@@ -86,7 +86,7 @@ func setAndAssert(t *testing.T, module string, config []string) {
 
 	var got *url.URL
 	want := URL("inline://asdfasdf")
-	err = cf.Set(ctx, "inline", Ref{Module: optional.Some[string](module), Name: "default"}, want)
+	err = cf.Set(ctx, "inline", optional.None[string](), Ref{Module: optional.Some[string](module), Name: "default"}, want)
 	assert.NoError(t, err)
 	err = cf.Get(ctx, Ref{Module: optional.Some[string](module), Name: "default"}, &got)
 	assert.NoError(t, err)

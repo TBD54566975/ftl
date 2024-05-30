@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
+
+	"github.com/alecthomas/types/optional"
 )
 
 // InlineProvider is a configuration provider that stores configuration in its key.
@@ -21,7 +23,10 @@ func (InlineProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byt
 	return data, nil
 }
 
-func (InlineProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (InlineProvider[R]) Store(ctx context.Context, host optional.Option[string], ref Ref, value []byte) (*url.URL, error) {
+	if h, ok := host.Get(); ok && h != "" {
+		return nil, fmt.Errorf("inline configuration does not support host: %s", h)
+	}
 	b64 := base64.RawURLEncoding.EncodeToString(value)
 	return &url.URL{Scheme: "inline", Host: b64}, nil
 }

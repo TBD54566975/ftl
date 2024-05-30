@@ -8,6 +8,7 @@ import (
 	"os"
 
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/alecthomas/types/optional"
 )
 
 type configCmd struct {
@@ -137,7 +138,7 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[
 	} else {
 		configValue = string(config)
 	}
-	return sm.Set(ctx, providerKey, s.Ref, configValue)
+	return sm.Set(ctx, providerKey, optional.None[string](), s.Ref, configValue)
 }
 
 type configUnsetCmd struct {

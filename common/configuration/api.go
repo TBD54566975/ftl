@@ -90,7 +90,7 @@ type Provider[R Role] interface {
 	Key() string
 	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
 	// Store a configuration value and return its key.
-	Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
+	Store(ctx context.Context, host optional.Option[string], ref Ref, value []byte) (*url.URL, error)
 	// Delete a configuration value.
 	Delete(ctx context.Context, ref Ref) error
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/alecthomas/types/optional"
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 
@@ -120,6 +121,7 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[
 	}
 
 	var providerKey string
+	host := optional.None[string]()
 	if scmd.Envar {
 		providerKey = "envar"
 	} else if scmd.Inline {
@@ -128,6 +130,7 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[
 		providerKey = "keychain"
 	} else if scmd.Vault != "" {
 		providerKey = "op"
+		host = optional.Some[string](scmd.Vault)
 	}
 
 	// Prompt for a secret if stdin is a terminal, otherwise read from stdin.
@@ -154,7 +157,7 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[
 	} else {
 		secretValue = string(secret)
 	}
-	return sm.Set(ctx, providerKey, s.Ref, secretValue)
+	return sm.Set(ctx, providerKey, host, s.Ref, secretValue)
 }
 
 type secretUnsetCmd struct {

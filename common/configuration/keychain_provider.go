@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
 	keyring "github.com/zalando/go-keyring"
 )
 
@@ -26,12 +27,12 @@ func (k KeychainProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]by
 	return []byte(value), nil
 }
 
-func (k KeychainProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	err := keyring.Set(k.serviceName(ref), ref.Name, string(value))
+func (k KeychainProvider) Store(ctx context.Context, host optional.Option[string], ref Ref, value []byte) (*url.URL, error) {
+	err := keyring.Set(k.serviceName(ref), host.Default(ref.Name), string(value))
 	if err != nil {
 		return nil, err
 	}
-	return &url.URL{Scheme: "keychain", Host: ref.Name}, nil
+	return &url.URL{Scheme: "keychain", Host: host.Default(ref.Name)}, nil
 }
 
 func (k KeychainProvider) Delete(ctx context.Context, ref Ref) error {

@@ -101,7 +101,7 @@ func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
 }
 
 // Set a configuration value.
-func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) error {
+func (m *Manager[R]) Set(ctx context.Context, pkey string, host optional.Option[string], ref Ref, value any) error {
 	provider, ok := m.providers[pkey]
 	if !ok {
 		return fmt.Errorf("no provider for key %q", pkey)
@@ -110,7 +110,7 @@ func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) e
 	if err != nil {
 		return err
 	}
-	key, err := provider.Store(ctx, ref, data)
+	key, err := provider.Store(ctx, host, ref, data)
 	if err != nil {
 		return err
 	}
