@@ -167,21 +167,23 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	logger.Debugf("Generating main module")
 	goVerbs := make([]goVerb, 0, len(main.Decls))
 	for _, decl := range main.Decls {
-		if verb, ok := decl.(*schema.Verb); ok {
-			nativeName, ok := pr.NativeNames[verb]
-			if !ok {
-				return fmt.Errorf("missing native name for verb %s", verb.Name)
-			}
-
-			goverb := goVerb{Name: nativeName}
-			if _, ok := verb.Request.(*schema.Unit); !ok {
-				goverb.HasRequest = true
-			}
-			if _, ok := verb.Response.(*schema.Unit); !ok {
-				goverb.HasResponse = true
-			}
-			goVerbs = append(goVerbs, goverb)
+		verb, ok := decl.(*schema.Verb)
+		if !ok {
+			continue
 		}
+		nativeName, ok := pr.NativeNames[verb]
+		if !ok {
+			return fmt.Errorf("missing native name for verb %s", verb.Name)
+		}
+
+		goverb := goVerb{Name: nativeName}
+		if _, ok := verb.Request.(*schema.Unit); !ok {
+			goverb.HasRequest = true
+		}
+		if _, ok := verb.Response.(*schema.Unit); !ok {
+			goverb.HasResponse = true
+		}
+		goVerbs = append(goVerbs, goverb)
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
 		GoVersion:    goModVersion,

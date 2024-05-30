@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type Verb struct {
@@ -86,29 +87,23 @@ func (v *Verb) String() string {
 
 // AddCall adds a call reference to the Verb.
 func (v *Verb) AddCall(verb *Ref) {
-	for _, c := range v.Metadata {
-		if c, ok := c.(*MetadataCalls); ok {
-			c.Calls = append(c.Calls, verb)
-			return
-		}
+	if c, ok := slices.FindVariant[*MetadataCalls](v.Metadata); ok {
+		c.Calls = append(c.Calls, verb)
+		return
 	}
 	v.Metadata = append(v.Metadata, &MetadataCalls{Calls: []*Ref{verb}})
 }
 
 func (v *Verb) GetMetadataIngress() optional.Option[*MetadataIngress] {
-	for _, m := range v.Metadata {
-		if m, ok := m.(*MetadataIngress); ok {
-			return optional.Some(m)
-		}
+	if m, ok := slices.FindVariant[*MetadataIngress](v.Metadata); ok {
+		return optional.Some(m)
 	}
 	return optional.None[*MetadataIngress]()
 }
 
 func (v *Verb) GetMetadataCronJob() optional.Option[*MetadataCronJob] {
-	for _, m := range v.Metadata {
-		if m, ok := m.(*MetadataCronJob); ok {
-			return optional.Some(m)
-		}
+	if m, ok := slices.FindVariant[*MetadataCronJob](v.Metadata); ok {
+		return optional.Some(m)
 	}
 	return optional.None[*MetadataCronJob]()
 }
