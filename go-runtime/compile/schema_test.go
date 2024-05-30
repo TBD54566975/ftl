@@ -355,13 +355,10 @@ func TestExtractModulePubSub(t *testing.T) {
 	actual := schema.Normalise(r.MustGet().Module)
 	expected := `module pubsub {
 		topic payins pubsub.PayinEvent
-
 		// publicBroadcast is a topic that broadcasts payin events to the public.
 		// out of order with subscription registration to test ordering doesn't matter.
 		export topic publicBroadcast pubsub.PayinEvent
-		
 		subscription broadcastSubscription pubsub.publicBroadcast
-
 		subscription paymentProcessing pubsub.payins
          
         export data PayinEvent {

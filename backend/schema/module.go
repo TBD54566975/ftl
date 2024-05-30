@@ -87,8 +87,8 @@ func (m *Module) String() string {
 		reflect.TypeOf(&Config{}):       {gapWithinType: false},
 		reflect.TypeOf(&Secret{}):       {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Config{})}},
 		reflect.TypeOf(&Database{}):     {gapWithinType: false},
-		reflect.TypeOf(&Topic{}):        {gapWithinType: true},
-		reflect.TypeOf(&Subscription{}): {gapWithinType: true},
+		reflect.TypeOf(&Topic{}):        {gapWithinType: false},
+		reflect.TypeOf(&Subscription{}): {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Topic{})}},
 		reflect.TypeOf(&Enum{}):         {gapWithinType: true},
 		reflect.TypeOf(&Data{}):         {gapWithinType: true},
 		reflect.TypeOf(&Verb{}):         {gapWithinType: true},
@@ -102,8 +102,10 @@ func (m *Module) String() string {
 			rules = spacingRule{gapWithinType: true}
 		}
 		if lastType, ok := lastTypePrinted.Get(); ok {
-			if lastType == t && rules.gapWithinType {
-				fmt.Fprintln(w)
+			if lastType == t {
+				if rules.gapWithinType {
+					fmt.Fprintln(w)
+				}
 			} else if !slices.Contains(rules.skipGapAfterTypes, lastType) {
 				fmt.Fprintln(w)
 			}
