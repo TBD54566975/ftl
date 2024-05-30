@@ -20,6 +20,11 @@ type secretCmd struct {
 	Get   secretGetCmd   `cmd:"" help:"Get a secret."`
 	Set   secretSetCmd   `cmd:"" help:"Set a secret."`
 	Unset secretUnsetCmd `cmd:"" help:"Unset a secret."`
+
+	Envar    bool   `help:"Print configuration as environment variables." group:"Provider:" xor:"secretwriter"`
+	Inline   bool   `help:"Write values inline in the configuration file." group:"Provider:" xor:"secretwriter"`
+	Keychain bool   `help:"Write to the system keychain." group:"Provider:" xor:"secretwriter"`
+	Vault    string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"secretwriter" placeholder:"VAULT"`
 }
 
 func (s *secretCmd) Help() string {
@@ -114,8 +119,15 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[
 		return err
 	}
 
-	if err := sm.Mutable(); err != nil {
-		return err
+	var providerKey string
+	if scmd.Envar {
+		providerKey = "envar"
+	} else if scmd.Inline {
+		providerKey = "inline"
+	} else if scmd.Keychain {
+		providerKey = "keychain"
+	} else if scmd.Vault != "" {
+		providerKey = "op"
 	}
 
 	// Prompt for a secret if stdin is a terminal, otherwise read from stdin.
@@ -142,7 +154,7 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[
 	} else {
 		secretValue = string(secret)
 	}
-	return sm.Set(ctx, s.Ref, secretValue)
+	return sm.Set(ctx, providerKey, s.Ref, secretValue)
 }
 
 type secretUnsetCmd struct {
@@ -154,5 +166,17 @@ func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolve
 	if err != nil {
 		return err
 	}
-	return sm.Unset(ctx, s.Ref)
+
+	var providerKey string
+	if scmd.Envar {
+		providerKey = "envar"
+	} else if scmd.Inline {
+		providerKey = "inline"
+	} else if scmd.Keychain {
+		providerKey = "keychain"
+	} else if scmd.Vault != "" {
+		providerKey = "op"
+	}
+
+	return sm.Unset(ctx, providerKey, s.Ref)
 }

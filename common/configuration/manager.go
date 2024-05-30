@@ -28,7 +28,6 @@ func (Configuration) String() string { return "configuration" }
 // the Resolver and Provider interfaces.
 type Manager[R Role] struct {
 	providers map[string]Provider[R]
-	writer    MutableProvider[R]
 	resolver  Resolver[R]
 }
 
@@ -60,30 +59,9 @@ func New[R Role](ctx context.Context, resolver Resolver[R], providers []Provider
 	}
 	for _, p := range providers {
 		m.providers[p.Key()] = p
-		if mutable, ok := p.(MutableProvider[R]); ok && mutable.Writer() {
-			if m.writer != nil {
-				return nil, fmt.Errorf("multiple writers %s and %s", m.writer.Key(), p.Key())
-			}
-			m.writer = mutable
-		}
 	}
 	m.resolver = resolver
 	return m, nil
-}
-
-// Mutable returns an error if the configuration manager doesn't have a
-// writeable provider configured.
-func (m *Manager[R]) Mutable() error {
-	if m.writer != nil {
-		return nil
-	}
-	writers := []string{}
-	for _, p := range m.providers {
-		if mutable, ok := p.(MutableProvider[R]); ok {
-			writers = append(writers, "--"+mutable.Key())
-		}
-	}
-	return fmt.Errorf("no writeable configuration provider available, specify one of %s", strings.Join(writers, ", "))
 }
 
 // getData returns a data value for a configuration from the active providers.
@@ -123,15 +101,16 @@ func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
 }
 
 // Set a configuration value.
-func (m *Manager[R]) Set(ctx context.Context, ref Ref, value any) error {
-	if err := m.Mutable(); err != nil {
-		return err
+func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) error {
+	provider, ok := m.providers[pkey]
+	if !ok {
+		return fmt.Errorf("no provider for key %q", pkey)
 	}
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
-	key, err := m.writer.Store(ctx, ref, data)
+	key, err := provider.Store(ctx, ref, data)
 	if err != nil {
 		return err
 	}
@@ -170,13 +149,13 @@ func (m *Manager[R]) MapForModule(ctx context.Context, module string) (map[strin
 }
 
 // Unset a configuration value in all providers.
-func (m *Manager[R]) Unset(ctx context.Context, ref Ref) error {
-	for _, provider := range m.providers {
-		if mutable, ok := provider.(MutableProvider[R]); ok {
-			if err := mutable.Delete(ctx, ref); err != nil && !errors.Is(err, ErrNotFound) {
-				return err
-			}
-		}
+func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref Ref) error {
+	provider, ok := m.providers[pkey]
+	if !ok {
+		return fmt.Errorf("no provider for key %q", pkey)
+	}
+	if err := provider.Delete(ctx, ref); err != nil && !errors.Is(err, ErrNotFound) {
+		return err
 	}
 	return m.resolver.Unset(ctx, ref)
 }

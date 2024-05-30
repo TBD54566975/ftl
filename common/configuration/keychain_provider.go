@@ -10,16 +10,10 @@ import (
 	keyring "github.com/zalando/go-keyring"
 )
 
-type KeychainProvider struct {
-	Keychain bool `help:"Write to the system keychain." group:"Provider:" xor:"configwriter"`
-}
-
-var _ MutableProvider[Secrets] = KeychainProvider{}
+type KeychainProvider struct{}
 
 func (KeychainProvider) Role() Secrets { return Secrets{} }
 func (k KeychainProvider) Key() string { return "keychain" }
-
-func (k KeychainProvider) Writer() bool { return k.Keychain }
 
 func (k KeychainProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	value, err := keyring.Get(k.serviceName(ref), key.Host)

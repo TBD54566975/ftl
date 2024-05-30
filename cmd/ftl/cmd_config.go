@@ -17,6 +17,9 @@ type configCmd struct {
 	Get   configGetCmd   `cmd:"" help:"Get a configuration value."`
 	Set   configSetCmd   `cmd:"" help:"Set a configuration value."`
 	Unset configUnsetCmd `cmd:"" help:"Unset a configuration value."`
+
+	Envar  bool `help:"Print configuration as environment variables." group:"Provider:" xor:"configwriter"`
+	Inline bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"configwriter"`
 }
 
 func (s *configCmd) Help() string {
@@ -109,8 +112,11 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[
 		return err
 	}
 
-	if err := sm.Mutable(); err != nil {
-		return err
+	var providerKey string
+	if scmd.Inline {
+		providerKey = "inline"
+	} else if scmd.Envar {
+		providerKey = "envar"
 	}
 
 	var config []byte
@@ -131,7 +137,7 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[
 	} else {
 		configValue = string(config)
 	}
-	return sm.Set(ctx, s.Ref, configValue)
+	return sm.Set(ctx, providerKey, s.Ref, configValue)
 }
 
 type configUnsetCmd struct {
@@ -143,5 +149,13 @@ func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolve
 	if err != nil {
 		return err
 	}
-	return sm.Unset(ctx, s.Ref)
+
+	var providerKey string
+	if scmd.Inline {
+		providerKey = "inline"
+	} else if scmd.Envar {
+		providerKey = "envar"
+	}
+
+	return sm.Unset(ctx, providerKey, s.Ref)
 }
