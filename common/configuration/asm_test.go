@@ -14,7 +14,7 @@ func TestAWSSecretsBasics(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	// Localstack!
-	asm := AWSSecrets[Secrets]{
+	asm := ASM[Secrets]{
 		AccessKeyID:     "test",
 		SecretAccessKey: "test",
 		Region:          "us-west-2",

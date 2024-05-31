@@ -18,21 +18,19 @@ import (
 	"github.com/aws/smithy-go"
 )
 
-const schemeKey = "asm"
-
-// AWSSecrets implements Resolver and Provider for AWS Secrets Manager (ASM).
+// ASM implements Resolver and Provider for AWS Secrets Manager (ASM).
 //
 // The resolver does a direct/proxy map from a Ref to a URL, module.name <-> asm://module.name and does not access ASM at all.
-type AWSSecrets[R Role] struct {
+type ASM[R Secrets] struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Region          string
 	Endpoint        optional.Option[string]
 }
 
-var _ Resolver[Secrets] = AWSSecrets[Secrets]{}
-var _ Provider[Secrets] = AWSSecrets[Secrets]{}
-var _ MutableProvider[Secrets] = AWSSecrets[Secrets]{}
+var _ Resolver[Secrets] = ASM[Secrets]{}
+var _ Provider[Secrets] = ASM[Secrets]{}
+var _ MutableProvider[Secrets] = ASM[Secrets]{}
 
 var (
 	asmOnce   sync.Once
@@ -40,14 +38,14 @@ var (
 	errClient error
 )
 
-func urlForRef(ref Ref) *url.URL {
+func asmURLForRef(ref Ref) *url.URL {
 	return &url.URL{
-		Scheme: schemeKey,
+		Scheme: "asm",
 		Host:   ref.String(),
 	}
 }
 
-func (a AWSSecrets[R]) client(ctx context.Context) (*secretsmanager.Client, error) {
+func (a ASM[R]) client(ctx context.Context) (*secretsmanager.Client, error) {
 	asmOnce.Do(func() {
 		var optFns []func(*config.LoadOptions) error
 
@@ -80,21 +78,21 @@ func (a AWSSecrets[R]) client(ctx context.Context) (*secretsmanager.Client, erro
 	return asmClient, errClient
 }
 
-func (a AWSSecrets[R]) Role() R {
+func (a ASM[R]) Role() R {
 	var r R
 	return r
 }
 
-func (a AWSSecrets[R]) Key() string {
-	return schemeKey
+func (a ASM[R]) Key() string {
+	return "asm"
 }
 
-func (a AWSSecrets[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
-	return urlForRef(ref), nil
+func (a ASM[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
+	return asmURLForRef(ref), nil
 }
 
-func (a AWSSecrets[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
-	expectedKey := urlForRef(ref)
+func (a ASM[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
+	expectedKey := asmURLForRef(ref)
 	if key.String() != expectedKey.String() {
 		return fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
 	}
@@ -103,11 +101,11 @@ func (a AWSSecrets[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
 }
 
 // Unset does nothing because this resolver does not record any state.
-func (a AWSSecrets[R]) Unset(ctx context.Context, ref Ref) error {
+func (a ASM[R]) Unset(ctx context.Context, ref Ref) error {
 	return nil
 }
 
-func (a AWSSecrets[R]) List(ctx context.Context) ([]Entry, error) {
+func (a ASM[R]) List(ctx context.Context) ([]Entry, error) {
 	c, err := a.client(ctx)
 	if err != nil {
 		return nil, err
@@ -131,14 +129,14 @@ func (a AWSSecrets[R]) List(ctx context.Context) ([]Entry, error) {
 
 		return Entry{
 			Ref:      ref,
-			Accessor: urlForRef(ref),
+			Accessor: asmURLForRef(ref),
 		}, nil
 	})
 }
 
 // Load only supports loading "string" secrets, not binary secrets.
-func (a AWSSecrets[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	expectedKey := urlForRef(ref)
+func (a ASM[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+	expectedKey := asmURLForRef(ref)
 	if key.String() != expectedKey.String() {
 		return nil, fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
 	}
@@ -163,12 +161,12 @@ func (a AWSSecrets[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte,
 	return []byte(*out.SecretString), nil
 }
 
-func (a AWSSecrets[R]) Writer() bool {
+func (a ASM[R]) Writer() bool {
 	return true
 }
 
 // Store and if the secret already exists, update it.
-func (a AWSSecrets[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (a ASM[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
 	c, err := a.client(ctx)
 	if err != nil {
 		return nil, err
@@ -194,10 +192,10 @@ func (a AWSSecrets[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.U
 		return nil, fmt.Errorf("unable to store secret: %w", err)
 	}
 
-	return urlForRef(ref), nil
+	return asmURLForRef(ref), nil
 }
 
-func (a AWSSecrets[R]) Delete(ctx context.Context, ref Ref) error {
+func (a ASM[R]) Delete(ctx context.Context, ref Ref) error {
 	c, err := a.client(ctx)
 	if err != nil {
 		return err
