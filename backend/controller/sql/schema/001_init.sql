@@ -352,12 +352,17 @@ CREATE TABLE topic_subscriptions (
 
     topic_id BIGINT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
 
+     -- Each subscription is associated with an owning module.
+    module_id BIGINT NOT NULL REFERENCES modules(id),
+
     -- Name of the subscription.
     name TEXT UNIQUE NOT NULL,
 
     -- Cursor pointing into the topic_events table.
-    cursor BIGINT NOT NULL REFERENCES topic_events(id) ON DELETE CASCADE
+    cursor BIGINT REFERENCES topic_events(id) ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX topic_subscriptions_module_name_idx ON topic_subscriptions(module_id, name);
 
 CREATE DOMAIN subscriber_key AS TEXT;
 
@@ -373,7 +378,7 @@ CREATE TABLE topic_subscribers (
 
    deployment_id BIGINT NOT NULL REFERENCES deployments(id) ON DELETE CASCADE,
    -- Name of the verb to call on the deployment.
-   verb TEXT NOT NULL
+   sink TEXT NOT NULL
 );
 
 CREATE DOMAIN lease_key AS TEXT;

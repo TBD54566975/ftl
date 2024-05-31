@@ -488,6 +488,41 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		return model.DeploymentKey{}, fmt.Errorf("failed to upsert module: %w", translatePGError(err))
 	}
 
+	// upsert topics
+	for _, decl := range moduleSchema.Decls {
+		t, ok := decl.(*schema.Topic)
+		if !ok {
+			continue
+		}
+		err := tx.UpsertTopic(ctx, sql.UpsertTopicParams{
+			Topic:     model.NewTopicKey(moduleSchema.Name, t.Name),
+			Module:    moduleSchema.Name,
+			Name:      t.Name,
+			EventType: t.Event.String(),
+		})
+		if err != nil {
+			return model.DeploymentKey{}, fmt.Errorf("could not insert topic: %w", translatePGError(err))
+		}
+	}
+
+	// upsert subscriptions
+	for _, decl := range moduleSchema.Decls {
+		s, ok := decl.(*schema.Subscription)
+		if !ok {
+			continue
+		}
+		err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
+			Key:         model.NewSubscriptionKey(moduleSchema.Name, s.Name),
+			Module:      moduleSchema.Name,
+			TopicModule: s.Topic.Module,
+			TopicName:   s.Topic.Name,
+			Name:        s.Name,
+		})
+		if err != nil {
+			return model.DeploymentKey{}, fmt.Errorf("could not insert subscription: %w", translatePGError(err))
+		}
+	}
+
 	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
 
 	// Create the deployment
@@ -547,6 +582,30 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		})
 		if err != nil {
 			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", translatePGError(err))
+		}
+	}
+
+	// create subscribers
+	for _, decl := range moduleSchema.Decls {
+		v, ok := decl.(*schema.Verb)
+		if !ok {
+			continue
+		}
+		for _, md := range v.Metadata {
+			s, ok := md.(*schema.MetadataSubscriber)
+			if !ok {
+				continue
+			}
+			err := tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
+				Key:              model.NewSubscriberKey(moduleSchema.Name, s.Name, v.Name),
+				Module:           moduleSchema.Name,
+				SubscriptionName: s.Name,
+				Deployment:       deploymentKey,
+				Sink:             v.Name,
+			})
+			if err != nil {
+				return model.DeploymentKey{}, fmt.Errorf("could not insert subscriber: %w", translatePGError(err))
+			}
 		}
 	}
 

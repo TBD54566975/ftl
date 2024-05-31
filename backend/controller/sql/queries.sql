@@ -613,6 +613,52 @@ WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
 
+-- name: UpsertTopic :exec
+INSERT INTO topics (key, module_id, name, type)
+VALUES (
+  sqlc.arg('topic')::topic_key,
+  (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT LIMIT 1),
+  sqlc.arg('name')::TEXT,
+  sqlc.arg('event_type')::TEXT
+)
+ON CONFLICT (name, module_id) DO 
+UPDATE SET 
+  type = sqlc.arg('event_type')::TEXT
+RETURNING id;
+
+-- name: UpsertSubscription :exec
+INSERT INTO topic_subscriptions (key, topic_id, module_id, name)
+VALUES (
+  sqlc.arg('key')::subscription_key,
+  (
+    SELECT topics.id as id
+    FROM topics
+    INNER JOIN modules ON topics.module_id = modules.id
+    WHERE modules.name = sqlc.arg('topic_module')::TEXT
+      AND topics.name = sqlc.arg('topic_name')::TEXT
+  ),
+  (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT),
+  sqlc.arg('name')::TEXT
+)
+ON CONFLICT (name, module_id) DO
+UPDATE SET 
+  topic_id = excluded.topic_id
+RETURNING id;
+
+-- name: InsertSubscriber :exec
+INSERT INTO topic_subscribers (key, topic_subscriptions_id, deployment_id, sink)
+VALUES (
+  sqlc.arg('key')::subscriber_key,
+  (
+    SELECT topic_subscriptions.id as id
+    FROM topic_subscriptions
+    INNER JOIN modules ON topic_subscriptions.module_id = modules.id
+    WHERE modules.name = sqlc.arg('module')::TEXT
+      AND topic_subscriptions.name = sqlc.arg('subscription_name')::TEXT
+  ),
+  (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key),
+  sqlc.arg('sink')::TEXT);
+
 -- name: GetModuleConfiguration :one
 SELECT value
 FROM module_configuration

@@ -457,7 +457,7 @@ type Runner struct {
 
 type Topic struct {
 	ID        int64
-	Key       interface{}
+	Key       model.TopicKey
 	CreatedAt time.Time
 	ModuleID  int64
 	Name      string
@@ -473,18 +473,19 @@ type TopicEvent struct {
 
 type TopicSubscriber struct {
 	ID                   int64
-	Key                  interface{}
+	Key                  model.SubscriberKey
 	CreatedAt            time.Time
 	TopicSubscriptionsID int64
 	DeploymentID         int64
-	Verb                 string
+	Sink                 string
 }
 
 type TopicSubscription struct {
 	ID        int64
-	Key       interface{}
+	Key       model.SubscriptionKey
 	CreatedAt time.Time
 	TopicID   int64
+	ModuleID  int64
 	Name      string
-	Cursor    int64
+	Cursor    optional.Option[int64]
 }

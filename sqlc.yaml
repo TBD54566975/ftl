@@ -109,6 +109,12 @@ sql:
             go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
           - column: "events.payload"
             go_type: "encoding/json.RawMessage"
+          - db_type: "topic_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.TopicKey"
+          - db_type: "subscription_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.SubscriptionKey"
+          - db_type: "subscriber_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.SubscriberKey"
     rules:
       - sqlc/db-prepare
       # - postgresql-query-too-costly
