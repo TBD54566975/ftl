@@ -111,7 +111,7 @@ func WithProjectFiles(paths ...string) Option {
 			state.configs[name] = data
 		}
 
-		sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, paths)
+		sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, paths, "")
 		if err != nil {
 			return fmt.Errorf("could not set up secrets: %w", err)
 		}

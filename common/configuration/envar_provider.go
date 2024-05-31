@@ -10,11 +10,7 @@ import (
 
 // EnvarProvider is a configuration provider that reads secrets or configuration
 // from environment variables.
-type EnvarProvider[R Role] struct {
-	Envar bool `help:"Print configuration as environment variables." xor:"configwriter" group:"Provider:"`
-}
-
-var _ MutableProvider[Configuration] = EnvarProvider[Configuration]{}
+type EnvarProvider[R Role] struct{}
 
 func (EnvarProvider[R]) Role() R     { var r R; return r }
 func (EnvarProvider[R]) Key() string { return "envar" }
@@ -39,8 +35,6 @@ func (e EnvarProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*ur
 	fmt.Printf("%s=%s\n", envar, base64.RawURLEncoding.EncodeToString(value))
 	return &url.URL{Scheme: "envar", Host: ref.Name}, nil
 }
-
-func (e EnvarProvider[R]) Writer() bool { return e.Envar }
 
 func (e EnvarProvider[R]) key(ref Ref) string {
 	key := e.prefix()

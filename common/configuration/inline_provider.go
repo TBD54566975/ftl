@@ -8,16 +8,10 @@ import (
 )
 
 // InlineProvider is a configuration provider that stores configuration in its key.
-type InlineProvider[R Role] struct {
-	Inline bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"configwriter"`
-}
-
-var _ MutableProvider[Configuration] = InlineProvider[Configuration]{}
+type InlineProvider[R Role] struct{}
 
 func (InlineProvider[R]) Role() R     { var r R; return r }
 func (InlineProvider[R]) Key() string { return "inline" }
-
-func (i InlineProvider[R]) Writer() bool { return i.Inline }
 
 func (InlineProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	data, err := base64.RawURLEncoding.DecodeString(key.Host)

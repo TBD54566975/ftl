@@ -24,6 +24,9 @@ var cli struct {
 	LogConfig           log.Config           `embed:"" prefix:"log-"`
 	ControllerConfig    controller.Config    `embed:""`
 	ConfigFlag          []string             `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]"`
+
+	// Specify the 1Password vault to access secrets from.
+	Vault string `name:"opvault" help:"1Password vault to be used for secrets. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." placeholder:"VAULT"`
 }
 
 func main() {
@@ -56,7 +59,7 @@ func main() {
 	ctx = cf.ContextWithConfig(ctx, cm)
 
 	// Add secrets manager to context.
-	sm, err := cf.NewSecretsManager(ctx, sr)
+	sm, err := cf.NewSecretsManager(ctx, sr, cli.Vault)
 	if err != nil {
 		kctx.Fatalf(err.Error())
 	}

@@ -44,6 +44,9 @@ type CLI struct {
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
+
+	// Specify the 1Password vault to access secrets from.
+	Vault string `name:"opvault" help:"1Password vault to be used for secrets. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." placeholder:"VAULT"`
 }
 
 var cli CLI
@@ -98,7 +101,7 @@ func main() {
 	ctx = cf.ContextWithConfig(ctx, cm)
 
 	// Add secrets manager to context.
-	sm, err := cf.NewSecretsManager(ctx, sr)
+	sm, err := cf.NewSecretsManager(ctx, sr, cli.Vault)
 	if err != nil {
 		kctx.Fatalf(err.Error())
 	}

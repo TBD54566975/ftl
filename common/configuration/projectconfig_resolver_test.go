@@ -56,13 +56,13 @@ func TestGetGlobal(t *testing.T) {
 		ProjectConfigResolver[Configuration]{Config: []string{config}},
 		[]Provider[Configuration]{
 			EnvarProvider[Configuration]{},
-			InlineProvider[Configuration]{Inline: true}, // Writer
+			InlineProvider[Configuration]{},
 		})
 	assert.NoError(t, err)
 
 	var got *url.URL
 	want := URL("inline://qwertyqwerty")
-	err = cf.Set(ctx, Ref{Module: optional.None[string](), Name: "default"}, want)
+	err = cf.Set(ctx, "inline", Ref{Module: optional.None[string](), Name: "default"}, want)
 	assert.NoError(t, err)
 	err = cf.Get(ctx, Ref{Module: optional.Some[string]("somemodule"), Name: "default"}, &got)
 	assert.NoError(t, err)
@@ -80,13 +80,13 @@ func setAndAssert(t *testing.T, module string, config []string) {
 		ProjectConfigResolver[Configuration]{Config: config},
 		[]Provider[Configuration]{
 			EnvarProvider[Configuration]{},
-			InlineProvider[Configuration]{Inline: true}, // Writer
+			InlineProvider[Configuration]{},
 		})
 	assert.NoError(t, err)
 
 	var got *url.URL
 	want := URL("inline://asdfasdf")
-	err = cf.Set(ctx, Ref{Module: optional.Some[string](module), Name: "default"}, want)
+	err = cf.Set(ctx, "inline", Ref{Module: optional.Some[string](module), Name: "default"}, want)
 	assert.NoError(t, err)
 	err = cf.Get(ctx, Ref{Module: optional.Some[string](module), Name: "default"}, &got)
 	assert.NoError(t, err)

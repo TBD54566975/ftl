@@ -19,14 +19,14 @@ import (
 // OnePasswordProvider is a configuration provider that reads passwords from
 // 1Password vaults via the "op" command line tool.
 type OnePasswordProvider struct {
-	Vault string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"configwriter" placeholder:"VAULT"`
+	Vault string
 }
 
-var _ MutableProvider[Secrets] = OnePasswordProvider{}
-
-func (OnePasswordProvider) Role() Secrets                               { return Secrets{} }
-func (o OnePasswordProvider) Key() string                               { return "op" }
-func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error { return nil }
+func (OnePasswordProvider) Role() Secrets { return Secrets{} }
+func (o OnePasswordProvider) Key() string { return "op" }
+func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error {
+	return nil
+}
 
 // Load returns the secret stored in 1password.
 func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
@@ -90,8 +90,6 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 
 	return url, nil
 }
-
-func (o OnePasswordProvider) Writer() bool { return o.Vault != "" }
 
 func checkOpBinary() error {
 	_, err := exec.LookPath("op")
