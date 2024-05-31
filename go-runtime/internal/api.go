@@ -17,6 +17,9 @@ type FTL interface {
 
 	// PublishEvent sends an event to a pubsub topic.
 	PublishEvent(ctx context.Context, topic string, event any) error
+
+	// CallMap calls Get on an instance of an ftl.Map.
+	CallMap(ctx context.Context, mapper any, mapImpl func(context.Context) (any, error)) any
 }
 
 type ftlContextKey struct{}

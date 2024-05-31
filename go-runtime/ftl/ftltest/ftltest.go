@@ -37,16 +37,17 @@ type Option func(context.Context, *OptionsState) error
 
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...Option) context.Context {
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx = internal.WithContext(ctx, newFakeFTL())
-	name := reflection.Module()
-
 	state := &OptionsState{
 		configs:   make(map[string][]byte),
 		secrets:   make(map[string][]byte),
 		databases: make(map[string]modulecontext.Database),
 		mockVerbs: make(map[schema.RefKey]modulecontext.Verb),
 	}
+
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	ctx = internal.WithContext(ctx, newFakeFTL())
+	name := reflection.Module()
+
 	for _, option := range options {
 		err := option(ctx, state)
 		if err != nil {
@@ -319,6 +320,44 @@ func WhenEmpty(empty ftl.Empty, fake func(ctx context.Context) (err error)) Opti
 func WithCallsAllowedWithinModule() Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		state.allowDirectVerbBehavior = true
+		return nil
+	}
+}
+
+// WhenMap injects a fake implementation of a Mapping function
+//
+// To be used when setting up a context for a test:
+//
+//	ctx := ftltest.Context(
+//		ftltest.WhenMap(Example.MapHandle, func(ctx context.Context) (U, error) {
+//	    	// ...
+//		}),
+//		// ... other options
+//	)
+func WhenMap[T, U any](mapper *ftl.MapHandle[T, U], fake func(context.Context) (any, error)) Option {
+	return func(ctx context.Context, state *OptionsState) error {
+		someFTL := internal.FromContext(ctx)
+		fakeFTL, ok := someFTL.(*fakeFTL)
+		if !ok {
+			return fmt.Errorf("could not retrieve fakeFTL for saving a mock Map in test")
+		}
+		fakeFTL.addMapMock(mapper, fake)
+		return nil
+	}
+}
+
+// WithMapsAllowed allows all `ftl.Map` calls to pass through to their original
+// implementation.
+//
+// Any overrides provided by calling WhenMap(...) will take precedence.
+func WithMapsAllowed() Option {
+	return func(ctx context.Context, state *OptionsState) error {
+		someFTL := internal.FromContext(ctx)
+		fakeFTL, ok := someFTL.(*fakeFTL)
+		if !ok {
+			return fmt.Errorf("could not retrieve fakeFTL for saving a mock Map in test")
+		}
+		fakeFTL.startAllowingMapCalls()
 		return nil
 	}
 }
