@@ -5,11 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"sync"
 
 	"github.com/TBD54566975/ftl/internal/slices"
 
-	"github.com/alecthomas/types/optional"
+	. "github.com/alecthomas/types/optional" //nolint:stylecheck
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -22,21 +21,12 @@ import (
 //
 // The resolver does a direct/proxy map from a Ref to a URL, module.name <-> asm://module.name and does not access ASM at all.
 type ASM[R Secrets] struct {
-	AccessKeyID     string
-	SecretAccessKey string
-	Region          string
-	Endpoint        optional.Option[string]
+	client secretsmanager.Client
 }
 
-var _ Resolver[Secrets] = ASM[Secrets]{}
-var _ Provider[Secrets] = ASM[Secrets]{}
-var _ MutableProvider[Secrets] = ASM[Secrets]{}
-
-var (
-	asmOnce   sync.Once
-	asmClient *secretsmanager.Client
-	errClient error
-)
+var _ Resolver[Secrets] = &ASM[Secrets]{}
+var _ Provider[Secrets] = &ASM[Secrets]{}
+var _ MutableProvider[Secrets] = &ASM[Secrets]{}
 
 func asmURLForRef(ref Ref) *url.URL {
 	return &url.URL{
@@ -45,53 +35,61 @@ func asmURLForRef(ref Ref) *url.URL {
 	}
 }
 
-func (a ASM[R]) client(ctx context.Context) (*secretsmanager.Client, error) {
-	asmOnce.Do(func() {
-		var optFns []func(*config.LoadOptions) error
-
-		// Use a static credentials provider if access key and secret are provided.
-		// Otherwise, the SDK will use the default credential chain (env vars, iam, etc).
-		if a.AccessKeyID != "" {
-			credentials := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(a.AccessKeyID, a.SecretAccessKey, ""))
-			optFns = append(optFns, config.WithCredentialsProvider(credentials))
-		}
-
-		if a.Region != "" {
-			optFns = append(optFns, config.WithRegion(a.Region))
-		}
-
-		cfg, err := config.LoadDefaultConfig(ctx, optFns...)
-		if err != nil {
-			errClient = fmt.Errorf("unable to load aws config: %w", err)
-			return
-		}
-
-		asmClient = secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
-			e, ok := a.Endpoint.Get()
-			if ok {
-				o.BaseEndpoint = aws.String(e)
-			}
-		})
-
-	})
-
-	return asmClient, errClient
+// NewASMWithDefaultCredentials creates a new ASM resolver/provider that uses the default AWS SDK credentials chain.
+func NewASMWithDefaultCredentials(ctx context.Context) (*ASM[Secrets], error) {
+	return NewASM(ctx, None[string](), None[string](), None[string](), None[string]())
 }
 
-func (a ASM[R]) Role() R {
+// NewASM creates a new ASM resolver/provider with optional access key, secret access key, region, and endpoint.
+func NewASM(ctx context.Context, accessKeyID, secretAccessKey, region, endpoint Option[string]) (*ASM[Secrets], error) {
+	var optFns []func(*config.LoadOptions) error
+
+	// Use a static credentials provider if access key and secret are provided.
+	// Otherwise, the SDK will use the default credential chain (env vars, iam, etc).
+	if access, oka := accessKeyID.Get(); oka {
+		secret, oks := secretAccessKey.Get()
+		if !oks {
+			return nil, errors.New("secret access key must be provided if access key ID is provided")
+		}
+		cc := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(access, secret, ""))
+		optFns = append(optFns, config.WithCredentialsProvider(cc))
+	}
+
+	if r, ok := region.Get(); ok {
+		optFns = append(optFns, config.WithRegion(r))
+	}
+
+	cfg, err := config.LoadDefaultConfig(ctx, optFns...)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load aws config: %w", err)
+	}
+
+	asmClient := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
+		e, ok := endpoint.Get()
+		if ok {
+			o.BaseEndpoint = aws.String(e)
+		}
+	})
+	asm := ASM[Secrets]{
+		client: *asmClient,
+	}
+	return &asm, nil
+}
+
+func (a *ASM[R]) Role() R {
 	var r R
 	return r
 }
 
-func (a ASM[R]) Key() string {
+func (a *ASM[R]) Key() string {
 	return "asm"
 }
 
-func (a ASM[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
+func (a *ASM[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 	return asmURLForRef(ref), nil
 }
 
-func (a ASM[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
+func (a *ASM[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
 	expectedKey := asmURLForRef(ref)
 	if key.String() != expectedKey.String() {
 		return fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
@@ -101,21 +99,16 @@ func (a ASM[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
 }
 
 // Unset does nothing because this resolver does not record any state.
-func (a ASM[R]) Unset(ctx context.Context, ref Ref) error {
+func (a *ASM[R]) Unset(ctx context.Context, ref Ref) error {
 	return nil
 }
 
 // List all secrets in the account. This might require multiple calls to the AWS API if there are more than 100 secrets.
-func (a ASM[R]) List(ctx context.Context) ([]Entry, error) {
-	c, err := a.client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	nextToken := optional.None[string]()
+func (a *ASM[R]) List(ctx context.Context) ([]Entry, error) {
+	nextToken := None[string]()
 	entries := []Entry{}
 	for {
-		out, err := c.ListSecrets(ctx, &secretsmanager.ListSecretsInput{
+		out, err := a.client.ListSecrets(ctx, &secretsmanager.ListSecretsInput{
 			MaxResults: aws.Int32(100),
 			NextToken:  nextToken.Ptr(),
 		})
@@ -144,7 +137,7 @@ func (a ASM[R]) List(ctx context.Context) ([]Entry, error) {
 
 		entries = append(entries, page...)
 
-		nextToken = optional.Ptr[string](out.NextToken)
+		nextToken = Ptr[string](out.NextToken)
 		if !nextToken.Ok() {
 			break
 		}
@@ -154,18 +147,13 @@ func (a ASM[R]) List(ctx context.Context) ([]Entry, error) {
 }
 
 // Load only supports loading "string" secrets, not binary secrets.
-func (a ASM[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (a *ASM[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	expectedKey := asmURLForRef(ref)
 	if key.String() != expectedKey.String() {
 		return nil, fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
 	}
 
-	c, err := a.client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := c.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+	out, err := a.client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(ref.String()),
 	})
 	if err != nil {
@@ -180,18 +168,13 @@ func (a ASM[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
 	return []byte(*out.SecretString), nil
 }
 
-func (a ASM[R]) Writer() bool {
+func (a *ASM[R]) Writer() bool {
 	return true
 }
 
 // Store and if the secret already exists, update it.
-func (a ASM[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	c, err := a.client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = c.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
+func (a *ASM[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+	_, err := a.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(ref.String()),
 		SecretString: aws.String(string(value)),
 	})
@@ -199,7 +182,7 @@ func (a ASM[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, err
 	// https://github.com/aws/aws-sdk-go-v2/issues/1110#issuecomment-1054643716
 	var apiErr smithy.APIError
 	if errors.As(err, &apiErr) && apiErr.ErrorCode() == "ResourceExistsException" {
-		_, err = c.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
+		_, err = a.client.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
 			SecretId:     aws.String(ref.String()),
 			SecretString: aws.String(string(value)),
 		})
@@ -214,14 +197,9 @@ func (a ASM[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, err
 	return asmURLForRef(ref), nil
 }
 
-func (a ASM[R]) Delete(ctx context.Context, ref Ref) error {
-	c, err := a.client(ctx)
-	if err != nil {
-		return err
-	}
-
+func (a *ASM[R]) Delete(ctx context.Context, ref Ref) error {
 	var t = true
-	_, err = c.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
+	_, err := a.client.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
 		SecretId:                   aws.String(ref.String()),
 		ForceDeleteWithoutRecovery: &t,
 	})
