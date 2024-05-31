@@ -2,6 +2,7 @@ package projectconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -52,6 +53,20 @@ func ConfigPaths(input []string) []string {
 
 func GetDefaultConfigPath() string {
 	return filepath.Join(internal.GitRoot(""), "ftl-project.toml")
+}
+
+func CreateFilesIfNonexistent(ctx context.Context, paths []string) error {
+	logger := log.FromContext(ctx)
+	for _, path := range paths {
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			logger.Warnf("Creating a new project config file at %q because the file does not already exist", path)
+			err = Save(path, Config{})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func LoadConfig(ctx context.Context, input []string) (Config, error) {

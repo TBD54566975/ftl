@@ -51,6 +51,14 @@ func TestLifecycle(t *testing.T) {
 	)
 }
 
+func TestCmdsCreateProjectTomlFilesIfNonexistent(t *testing.T) {
+	Run(t, "",
+		CopyModule("time"),
+		Exec("ftl", "config", "list", "--config", "ftl-project-nonexistent.toml"),
+		FileExists("ftl-project-nonexistent.toml"),
+	)
+}
+
 func TestInterModuleCall(t *testing.T) {
 	Run(t, "",
 		CopyModule("echo"),
