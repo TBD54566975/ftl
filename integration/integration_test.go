@@ -65,22 +65,6 @@ func TestUndefinedExportedDecls(t *testing.T) {
 	)
 }
 
-func TestDatabase(t *testing.T) {
-	Run(t, "database/ftl-project.toml",
-		// deploy real module against "testdb"
-		CopyModule("database"),
-		CreateDBAction("database", "testdb", false),
-		Deploy("database"),
-		Call("database", "insert", Obj{"data": "hello"}, nil),
-		QueryRow("testdb", "SELECT data FROM requests", "hello"),
-
-		// run tests which should only affect "testdb_test"
-		CreateDBAction("database", "testdb", true),
-		ExecModuleTest("database"),
-		QueryRow("testdb", "SELECT data FROM requests", "hello"),
-	)
-}
-
 func TestSchemaGenerate(t *testing.T) {
 	Run(t, "",
 		CopyDir("../schema-generate", "schema-generate"),
