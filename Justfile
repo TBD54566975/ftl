@@ -109,12 +109,12 @@ build-protos: npm-install
   @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
 
-# Run integration test(s)
+# Run integration test(s) (executed serially to avoid ftl instance clashing between integration tests)
 integration-tests *test:
   #!/bin/bash
   set -euo pipefail
   testName=${1:-}
-  go test -fullpath -count 1 -v -tags integration -run "$testName" ./...
+  go test -fullpath -count 1 -v -tags integration -run "$testName" -p 1 ./...
 
 # Run README doc tests
 test-readme *args:

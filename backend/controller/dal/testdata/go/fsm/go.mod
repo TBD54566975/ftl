@@ -1,13 +1,12 @@
-module ftl/leases
+module ftl/fsm
 
 go 1.22.2
 
-replace github.com/TBD54566975/ftl => ../../../..
+toolchain go1.22.3
 
 require (
-	github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
+	github.com/TBD54566975/ftl v0.224.0
 	github.com/alecthomas/assert/v2 v2.10.0
-	golang.org/x/sync v0.7.0
 )
 
 require (
@@ -45,7 +44,11 @@ require (
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 )
+
+replace github.com/TBD54566975/ftl => ../../../../../..
+

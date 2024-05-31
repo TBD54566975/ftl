@@ -3,20 +3,13 @@
 package integration_test
 
 import (
-	"fmt"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
-	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
-	"golang.org/x/sync/errgroup"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	. "github.com/TBD54566975/ftl/integration"
 )
 
@@ -128,150 +121,3 @@ func TestModuleUnitTests(t *testing.T) {
 		ExecModuleTest("verbtypes"),
 	)
 }
-
-func TestLease(t *testing.T) {
-	Run(t, "",
-		CopyModule("leases"),
-		Build("leases"),
-		// checks if leases work in a unit test environment
-		ExecModuleTest("leases"),
-		Deploy("leases"),
-		// checks if it leases work with a real controller
-		func(t testing.TB, ic TestContext) {
-			// Start a lease.
-			wg := errgroup.Group{}
-			wg.Go(func() error {
-				Infof("Acquiring lease")
-				resp, err := ic.Verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
-					Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
-					Body: []byte("{}"),
-				}))
-				if respErr := resp.Msg.GetError(); respErr != nil {
-					return fmt.Errorf("received error on first call: %v", respErr)
-				}
-				return err
-			})
-
-			time.Sleep(time.Second)
-
-			Infof("Trying to acquire lease again")
-			// Trying to obtain the lease again should fail.
-			resp, err := ic.Verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
-				Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
-				Body: []byte("{}"),
-			}))
-			assert.NoError(t, err)
-			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "could not acquire lease") {
-				t.Fatalf("expected error but got: %#v", resp.Msg.GetError())
-			}
-			err = wg.Wait()
-			assert.NoError(t, err)
-		},
-	)
-}
-
-func TestFSMGoTests(t *testing.T) {
-	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
-	t.Setenv("FSM_LOG_FILE", logFilePath)
-	Run(t, "",
-		CopyModule("fsm"),
-		Build("fsm"),
-		ExecModuleTest("fsm"),
-	)
-}
-
-func TestFSM(t *testing.T) {
-	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
-	t.Setenv("FSM_LOG_FILE", logFilePath)
-	fsmInState := func(instance, status, state string) Action {
-		return QueryRow("ftl", fmt.Sprintf(`
-			SELECT status, current_state
-			FROM fsm_instances
-			WHERE fsm = 'fsm.fsm' AND key = '%s'
-		`, instance), status, state)
-	}
-	Run(t, "",
-		CopyModule("fsm"),
-		Deploy("fsm"),
-
-		Call("fsm", "sendOne", Obj{"instance": "1"}, nil),
-		Call("fsm", "sendOne", Obj{"instance": "2"}, nil),
-		FileContains(logFilePath, "start 1"),
-		FileContains(logFilePath, "start 2"),
-		fsmInState("1", "running", "fsm.start"),
-		fsmInState("2", "running", "fsm.start"),
-
-		Call("fsm", "sendOne", Obj{"instance": "1"}, nil),
-		FileContains(logFilePath, "middle 1"),
-		fsmInState("1", "running", "fsm.middle"),
-
-		Call("fsm", "sendOne", Obj{"instance": "1"}, nil),
-		FileContains(logFilePath, "end 1"),
-		fsmInState("1", "completed", "fsm.end"),
-
-		Fail(Call("fsm", "sendOne", Obj{"instance": "1"}, nil),
-			"FSM instance 1 is already in state fsm.end"),
-
-		// Invalid state transition
-		Fail(Call("fsm", "sendTwo", Obj{"instance": "2"}, nil),
-			"invalid state transition"),
-
-		Call("fsm", "sendOne", Obj{"instance": "2"}, nil),
-		FileContains(logFilePath, "middle 2"),
-		fsmInState("2", "running", "fsm.middle"),
-
-		// Invalid state transition
-		Fail(Call("fsm", "sendTwo", Obj{"instance": "2"}, nil),
-			"invalid state transition"),
-	)
-}
-
-/*
-func TestFSMRetry(t *testing.T) {
-	checkRetries := func(origin, verb string, delays []time.Duration) Action {
-		return func(t testing.TB, ic TestContext) {
-			results := []any{}
-			for i := 0; i < len(delays); i++ {
-				values := GetRow(t, ic, "ftl", fmt.Sprintf("SELECT scheduled_at FROM async_calls WHERE origin = '%s' AND verb = '%s' AND state = 'error' ORDER BY created_at LIMIT 1 OFFSET %d", origin, verb, i), 1)
-				results = append(results, values[0])
-			}
-			times := []time.Time{}
-			for i, r := range results {
-				ts, ok := r.(time.Time)
-				assert.True(t, ok, "unexpected time value: %v", r)
-				times = append(times, ts)
-				if i > 0 {
-					delay := times[i].Sub(times[i-1])
-					targetDelay := delays[i-1]
-					assert.True(t, delay >= targetDelay && delay < time.Second+targetDelay, "unexpected time diff for %s retry %d: %v (expected %v - %v)", origin, i, delay, targetDelay, time.Second+targetDelay)
-				}
-			}
-		}
-	}
-
-	Run(t, "",
-		CopyModule("fsmretry"),
-		Build("fsmretry"),
-		Deploy("fsmretry"),
-		// start 2 FSM instances
-		Call("fsmretry", "start", Obj{"id": "1"}, func(t testing.TB, response Obj) {}),
-		Call("fsmretry", "start", Obj{"id": "2"}, func(t testing.TB, response Obj) {}),
-
-		Sleep(2*time.Second),
-
-		// transition the FSM, should fail each time.
-		Call("fsmretry", "startTransitionToTwo", Obj{"id": "1"}, func(t testing.TB, response Obj) {}),
-		Call("fsmretry", "startTransitionToThree", Obj{"id": "2"}, func(t testing.TB, response Obj) {}),
-
-		Sleep(8*time.Second), //6s is longest run of retries
-
-		// both FSMs instances should have failed
-		QueryRow("ftl", "SELECT COUNT(*) FROM fsm_instances WHERE status = 'failed'", int64(2)),
-
-		QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:1", "fsmretry.state2"), int64(4)),
-		checkRetries("fsm:fsmretry.fsm:1", "fsmretry.state2", []time.Duration{time.Second, time.Second, time.Second}),
-		QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:2", "fsmretry.state3"), int64(4)),
-		checkRetries("fsm:fsmretry.fsm:2", "fsmretry.state3", []time.Duration{time.Second, 2 * time.Second, 3 * time.Second}),
-	)
-}
-*/
