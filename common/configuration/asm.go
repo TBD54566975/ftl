@@ -105,33 +105,52 @@ func (a ASM[R]) Unset(ctx context.Context, ref Ref) error {
 	return nil
 }
 
+// List all secrets in the account. This might require multiple calls to the AWS API if there are more than 100 secrets.
 func (a ASM[R]) List(ctx context.Context) ([]Entry, error) {
 	c, err := a.client(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := c.ListSecrets(ctx, &secretsmanager.ListSecretsInput{})
-	if err != nil {
-		return nil, fmt.Errorf("unable to list secrets: %w", err)
-	}
-
-	var activeSecrets = slices.Filter(out.SecretList, func(s types.SecretListEntry) bool {
-		return s.DeletedDate == nil
-	})
-
-	return slices.MapErr(activeSecrets, func(s types.SecretListEntry) (Entry, error) {
-		var ref Ref
-		ref, err = ParseRef(*s.Name)
+	nextToken := optional.None[string]()
+	entries := []Entry{}
+	for {
+		out, err := c.ListSecrets(ctx, &secretsmanager.ListSecretsInput{
+			MaxResults: aws.Int32(100),
+			NextToken:  nextToken.Ptr(),
+		})
 		if err != nil {
-			return Entry{}, fmt.Errorf("unable to parse ref: %w", err)
+			return nil, fmt.Errorf("unable to list secrets: %w", err)
 		}
 
-		return Entry{
-			Ref:      ref,
-			Accessor: asmURLForRef(ref),
-		}, nil
-	})
+		var activeSecrets = slices.Filter(out.SecretList, func(s types.SecretListEntry) bool {
+			return s.DeletedDate == nil
+		})
+		page, err := slices.MapErr(activeSecrets, func(s types.SecretListEntry) (Entry, error) {
+			var ref Ref
+			ref, err = ParseRef(*s.Name)
+			if err != nil {
+				return Entry{}, fmt.Errorf("unable to parse ref: %w", err)
+			}
+
+			return Entry{
+				Ref:      ref,
+				Accessor: asmURLForRef(ref),
+			}, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, page...)
+
+		nextToken = optional.Ptr[string](out.NextToken)
+		if !nextToken.Ok() {
+			break
+		}
+	}
+
+	return entries, nil
 }
 
 // Load only supports loading "string" secrets, not binary secrets.
