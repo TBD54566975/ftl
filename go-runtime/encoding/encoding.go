@@ -432,7 +432,7 @@ func decodeSumType(d *json.Decoder, v reflect.Value) error {
 		variantType = reflect.TypeFor[any]()
 		// Discriminator type doesn't work because of error:
 		// json: cannot unmarshal object into Go value of type encoding_test.unregistered
-		//variantType = v.Type()
+		// variantType = v.Type()
 		/*out := reflect.New(variantType) // pointer to the child type
 		if err := json.NewDecoder(bytes.NewReader(sumType.Value)).Decode(out.Elem().Addr().Interface()); err != nil {
 			return err
