@@ -240,17 +240,33 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	logger := log.FromContext(ctx)
 
 	schemaChanges := make(chan schemaChange, 128)
-	e.schemaChanges.Subscribe(schemaChanges)
-	defer e.schemaChanges.Unsubscribe(schemaChanges)
+	subscription, err := e.schemaChanges.Subscribe(schemaChanges)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to schema changes: %w", err)
+	}
+	defer func() {
+		if err := e.schemaChanges.Unsubscribe(subscription); err != nil {
+			logger.Errorf("failed to unsubscribe: %v", err)
+		}
+	}()
 
 	watchEvents := make(chan WatchEvent, 128)
 	topic, err := e.watcher.Watch(ctx, period, e.moduleDirs, e.externalDirs)
 	if err != nil {
 		return err
 	}
-	topic.Subscribe(watchEvents)
-	defer topic.Unsubscribe(watchEvents)
-	defer topic.Close()
+	sub, err := topic.Subscribe(watchEvents)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to watch events: %w", err)
+	}
+	defer func() {
+		if err := topic.Unsubscribe(sub); err != nil {
+			logger.Errorf("failed to unsubscribe: %v", err)
+		}
+		if err := topic.Close(); err != nil {
+			logger.Errorf("failed to close topic: %v", err)
+		}
+	}()
 
 	// Build and deploy all modules first.
 	err = e.buildAndDeploy(ctx, 1, true)
