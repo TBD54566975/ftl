@@ -2140,7 +2140,9 @@ VALUES (
   (SELECT id FROM modules WHERE name = $4::TEXT),
   $5::TEXT
 )
-ON CONFLICT (name, module_id) DO UPDATE SET topic_id = excluded.topic_id
+ON CONFLICT (name, module_id) DO
+UPDATE SET 
+  topic_id = excluded.topic_id
 RETURNING id
 `
 
@@ -2171,7 +2173,9 @@ VALUES (
   $3::TEXT,
   $4::TEXT
 )
-ON CONFLICT (name, module_id) DO UPDATE SET type = $4::TEXT
+ON CONFLICT (name, module_id) DO 
+UPDATE SET 
+  type = $4::TEXT
 RETURNING id
 `
 

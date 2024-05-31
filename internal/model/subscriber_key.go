@@ -2,13 +2,12 @@ package model
 
 import (
 	"errors"
-	"strings"
 )
 
 type SubscriberKey = KeyType[SubscriberPayload, *SubscriberPayload]
 
 func NewSubscriberKey(module, subscription, sink string) SubscriberKey {
-	return newKey[SubscriberPayload](strings.Join([]string{module, subscription, sink}, "-"))
+	return newKey[SubscriberPayload](module, subscription)
 }
 
 func ParseSubscriberKey(key string) (SubscriberKey, error) {
@@ -16,18 +15,20 @@ func ParseSubscriberKey(key string) (SubscriberKey, error) {
 }
 
 type SubscriberPayload struct {
-	Ref string
+	Module       string
+	Subscription string
 }
 
 var _ KeyPayload = (*SubscriberPayload)(nil)
 
-func (d *SubscriberPayload) Kind() string   { return "subr" }
-func (d *SubscriberPayload) String() string { return d.Ref }
-func (d *SubscriberPayload) Parse(parts []string) error {
-	if len(parts) == 0 {
-		return errors.New("expected <module>-<subscription>-<sink> but got empty string")
+func (s *SubscriberPayload) Kind() string   { return "subr" }
+func (s *SubscriberPayload) String() string { return s.Module + "-" + s.Subscription }
+func (s *SubscriberPayload) Parse(parts []string) error {
+	if len(parts) != 2 {
+		return errors.New("expected <module>-<subscription> but got empty string")
 	}
-	d.Ref = strings.Join(parts, "-")
+	s.Module = parts[0]
+	s.Subscription = parts[1]
 	return nil
 }
-func (d *SubscriberPayload) RandomBytes() int { return 10 }
+func (s *SubscriberPayload) RandomBytes() int { return 10 }

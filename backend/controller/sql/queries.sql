@@ -621,7 +621,9 @@ VALUES (
   sqlc.arg('name')::TEXT,
   sqlc.arg('event_type')::TEXT
 )
-ON CONFLICT (name, module_id) DO UPDATE SET type = sqlc.arg('event_type')::TEXT
+ON CONFLICT (name, module_id) DO 
+UPDATE SET 
+  type = sqlc.arg('event_type')::TEXT
 RETURNING id;
 
 -- name: UpsertSubscription :exec
@@ -638,7 +640,9 @@ VALUES (
   (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT),
   sqlc.arg('name')::TEXT
 )
-ON CONFLICT (name, module_id) DO UPDATE SET topic_id = excluded.topic_id
+ON CONFLICT (name, module_id) DO
+UPDATE SET 
+  topic_id = excluded.topic_id
 RETURNING id;
 
 -- name: InsertSubscriber :exec
