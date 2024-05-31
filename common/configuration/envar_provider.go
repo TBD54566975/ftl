@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-
-	"github.com/alecthomas/types/optional"
 )
 
 // EnvarProvider is a configuration provider that reads secrets or configuration
@@ -32,8 +30,8 @@ func (e EnvarProvider[R]) Delete(ctx context.Context, ref Ref) error {
 	return nil
 }
 
-func (e EnvarProvider[R]) Store(ctx context.Context, host optional.Option[string], ref Ref, value []byte) (*url.URL, error) {
-	envar := host.Default(e.key(ref))
+func (e EnvarProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+	envar := e.key(ref)
 	fmt.Printf("%s=%s\n", envar, base64.RawURLEncoding.EncodeToString(value))
 	return &url.URL{Scheme: "envar", Host: ref.Name}, nil
 }

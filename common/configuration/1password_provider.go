@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/alecthomas/types/optional"
 	"github.com/kballard/go-shellquote"
 
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -19,7 +18,9 @@ import (
 
 // OnePasswordProvider is a configuration provider that reads passwords from
 // 1Password vaults via the "op" command line tool.
-type OnePasswordProvider struct{}
+type OnePasswordProvider struct {
+	Vault string
+}
 
 func (OnePasswordProvider) Role() Secrets { return Secrets{} }
 func (o OnePasswordProvider) Key() string { return "op" }
@@ -60,24 +61,19 @@ var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 //
 // op does not support "create or update" as a single command. Neither does it support specifying an ID on create.
 // Because of this, we need check if the item exists before creating it, and update it if it does.
-func (o OnePasswordProvider) Store(ctx context.Context, host optional.Option[string], ref Ref, value []byte) (*url.URL, error) {
-	if !host.Ok() {
-		return nil, fmt.Errorf("host is required to store in 1Password")
-	}
-	vault := host.MustGet()
-
+func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
 	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
-	if !vaultRegex.MatchString(vault) {
-		return nil, fmt.Errorf("vault name %q contains invalid characters. a-z A-Z 0-9 _ . - are valid", vault)
+	if !vaultRegex.MatchString(o.Vault) {
+		return nil, fmt.Errorf("vault name %q contains invalid characters. a-z A-Z 0-9 _ . - are valid", o.Vault)
 	}
 
-	url := &url.URL{Scheme: "op", Host: vault}
+	url := &url.URL{Scheme: "op", Host: o.Vault}
 
-	_, err := getItem(ctx, vault, ref)
+	_, err := getItem(ctx, o.Vault, ref)
 	if errors.As(err, new(itemNotFoundError)) {
-		err = createItem(ctx, vault, ref, value)
+		err = createItem(ctx, o.Vault, ref, value)
 		if err != nil {
 			return nil, fmt.Errorf("create item failed: %w", err)
 		}
@@ -87,7 +83,7 @@ func (o OnePasswordProvider) Store(ctx context.Context, host optional.Option[str
 		return nil, fmt.Errorf("get item failed: %w", err)
 	}
 
-	err = editItem(ctx, vault, ref, value)
+	err = editItem(ctx, o.Vault, ref, value)
 	if err != nil {
 		return nil, fmt.Errorf("edit item failed: %w", err)
 	}

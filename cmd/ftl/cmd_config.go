@@ -8,7 +8,6 @@ import (
 	"os"
 
 	cf "github.com/TBD54566975/ftl/common/configuration"
-	"github.com/alecthomas/types/optional"
 )
 
 type configCmd struct {
@@ -30,13 +29,22 @@ etc.
 `
 }
 
+func (s *configCmd) providerKey() string {
+	if s.Envar {
+		return "envar"
+	} else if s.Inline {
+		return "inline"
+	}
+	return ""
+}
+
 type configListCmd struct {
 	Values bool   `help:"List configuration values."`
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
 func (s *configListCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := scmd.NewConfigurationManager(ctx, cr)
+	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
@@ -82,7 +90,7 @@ Returns a JSON-encoded configuration value.
 }
 
 func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := scmd.NewConfigurationManager(ctx, cr)
+	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
@@ -108,16 +116,9 @@ type configSetCmd struct {
 }
 
 func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := scmd.NewConfigurationManager(ctx, cr)
+	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
-	}
-
-	var providerKey string
-	if scmd.Inline {
-		providerKey = "inline"
-	} else if scmd.Envar {
-		providerKey = "envar"
 	}
 
 	var config []byte
@@ -138,7 +139,7 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[
 	} else {
 		configValue = string(config)
 	}
-	return sm.Set(ctx, providerKey, optional.None[string](), s.Ref, configValue)
+	return sm.Set(ctx, scmd.providerKey(), s.Ref, configValue)
 }
 
 type configUnsetCmd struct {
@@ -146,17 +147,10 @@ type configUnsetCmd struct {
 }
 
 func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := scmd.NewConfigurationManager(ctx, cr)
+	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
 
-	var providerKey string
-	if scmd.Inline {
-		providerKey = "inline"
-	} else if scmd.Envar {
-		providerKey = "envar"
-	}
-
-	return sm.Unset(ctx, providerKey, s.Ref)
+	return sm.Unset(ctx, scmd.providerKey(), s.Ref)
 }

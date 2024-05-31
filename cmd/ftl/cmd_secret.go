@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/alecthomas/types/optional"
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 
@@ -15,17 +14,17 @@ import (
 )
 
 type secretCmd struct {
-	cf.DefaultSecretsMixin
-
 	List  secretListCmd  `cmd:"" help:"List secrets."`
 	Get   secretGetCmd   `cmd:"" help:"Get a secret."`
 	Set   secretSetCmd   `cmd:"" help:"Set a secret."`
 	Unset secretUnsetCmd `cmd:"" help:"Unset a secret."`
 
-	Envar    bool   `help:"Print configuration as environment variables." group:"Provider:" xor:"secretwriter"`
-	Inline   bool   `help:"Write values inline in the configuration file." group:"Provider:" xor:"secretwriter"`
-	Keychain bool   `help:"Write to the system keychain." group:"Provider:" xor:"secretwriter"`
-	Vault    string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"secretwriter" placeholder:"VAULT"`
+	Envar    bool `help:"Write configuration as environment variables." group:"Provider:" xor:"secretwriter"`
+	Inline   bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"secretwriter"`
+	Keychain bool `help:"Write to the system keychain." group:"Provider:" xor:"secretwriter"`
+
+	//TODO: with AdminService, the following will move to the controller as "vault" and "op" will be a bool flag.
+	Vault string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"secretwriter" placeholder:"VAULT"`
 }
 
 func (s *secretCmd) Help() string {
@@ -38,13 +37,26 @@ variables, and so on.
 `
 }
 
+func (s *secretCmd) providerKey() string {
+	if s.Envar {
+		return "envar"
+	} else if s.Inline {
+		return "inline"
+	} else if s.Keychain {
+		return "keychain"
+	} else if s.Vault != "" {
+		return "op"
+	}
+	return ""
+}
+
 type secretListCmd struct {
 	Values bool   `help:"List secret values."`
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List secrets only in this module."`
 }
 
 func (s *secretListCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
-	sm, err := scmd.NewSecretsManager(ctx, sr)
+	sm, err := cf.NewSecretsManager(ctx, sr, scmd.Vault)
 	if err != nil {
 		return err
 	}
@@ -90,7 +102,7 @@ Returns a JSON-encoded secret value.
 }
 
 func (s *secretGetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
-	sm, err := scmd.NewSecretsManager(ctx, sr)
+	sm, err := cf.NewSecretsManager(ctx, sr, scmd.Vault)
 	if err != nil {
 		return err
 	}
@@ -115,22 +127,9 @@ type secretSetCmd struct {
 }
 
 func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
-	sm, err := scmd.NewSecretsManager(ctx, sr)
+	sm, err := cf.NewSecretsManager(ctx, sr, scmd.Vault)
 	if err != nil {
 		return err
-	}
-
-	var providerKey string
-	host := optional.None[string]()
-	if scmd.Envar {
-		providerKey = "envar"
-	} else if scmd.Inline {
-		providerKey = "inline"
-	} else if scmd.Keychain {
-		providerKey = "keychain"
-	} else if scmd.Vault != "" {
-		providerKey = "op"
-		host = optional.Some[string](scmd.Vault)
 	}
 
 	// Prompt for a secret if stdin is a terminal, otherwise read from stdin.
@@ -157,7 +156,7 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[
 	} else {
 		secretValue = string(secret)
 	}
-	return sm.Set(ctx, providerKey, host, s.Ref, secretValue)
+	return sm.Set(ctx, scmd.providerKey(), s.Ref, secretValue)
 }
 
 type secretUnsetCmd struct {
@@ -165,21 +164,9 @@ type secretUnsetCmd struct {
 }
 
 func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
-	sm, err := scmd.NewSecretsManager(ctx, sr)
+	sm, err := cf.NewSecretsManager(ctx, sr, scmd.Vault)
 	if err != nil {
 		return err
 	}
-
-	var providerKey string
-	if scmd.Envar {
-		providerKey = "envar"
-	} else if scmd.Inline {
-		providerKey = "inline"
-	} else if scmd.Keychain {
-		providerKey = "keychain"
-	} else if scmd.Vault != "" {
-		providerKey = "op"
-	}
-
-	return sm.Unset(ctx, providerKey, s.Ref)
+	return sm.Unset(ctx, scmd.providerKey(), s.Ref)
 }

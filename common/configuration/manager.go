@@ -40,16 +40,16 @@ func ConfigFromEnvironment() []string {
 
 // NewDefaultSecretsManagerFromConfig creates a new secrets manager from
 // the project config found in the config paths.
-func NewDefaultSecretsManagerFromConfig(ctx context.Context, config []string) (*Manager[Secrets], error) {
+func NewDefaultSecretsManagerFromConfig(ctx context.Context, config []string, opVault string) (*Manager[Secrets], error) {
 	var cr Resolver[Secrets] = ProjectConfigResolver[Secrets]{Config: config}
-	return DefaultSecretsMixin{}.NewSecretsManager(ctx, cr)
+	return NewSecretsManager(ctx, cr, opVault)
 }
 
 // NewDefaultConfigurationManagerFromConfig creates a new configuration manager from
 // the project config found in the config paths.
 func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config []string) (*Manager[Configuration], error) {
 	cr := ProjectConfigResolver[Configuration]{Config: config}
-	return DefaultConfigMixin{}.NewConfigurationManager(ctx, cr)
+	return NewConfigurationManager(ctx, cr)
 }
 
 // New configuration manager.
@@ -101,7 +101,7 @@ func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
 }
 
 // Set a configuration value.
-func (m *Manager[R]) Set(ctx context.Context, pkey string, host optional.Option[string], ref Ref, value any) error {
+func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) error {
 	provider, ok := m.providers[pkey]
 	if !ok {
 		return fmt.Errorf("no provider for key %q", pkey)
@@ -110,7 +110,7 @@ func (m *Manager[R]) Set(ctx context.Context, pkey string, host optional.Option[
 	if err != nil {
 		return err
 	}
-	key, err := provider.Store(ctx, host, ref, data)
+	key, err := provider.Store(ctx, ref, data)
 	if err != nil {
 		return err
 	}

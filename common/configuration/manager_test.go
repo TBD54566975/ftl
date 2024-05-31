@@ -22,7 +22,7 @@ func TestManager(t *testing.T) {
 
 	t.Run("Secrets", func(t *testing.T) {
 		kcp := KeychainProvider{}
-		_, err := kcp.Store(ctx, optional.None[string](), Ref{Name: "mutable"}, []byte("hello"))
+		_, err := kcp.Store(ctx, Ref{Name: "mutable"}, []byte("hello"))
 		assert.NoError(t, err)
 		cf, err := New(ctx,
 			ProjectConfigResolver[Secrets]{Config: []string{config}},
@@ -77,12 +77,12 @@ func TestMapPriority(t *testing.T) {
 		globalStrValue := "GlobalHelloWorld"
 		if i%2 == 0 {
 			// sometimes try setting the module config first
-			assert.NoError(t, cm.Set(ctx, "inline", optional.None[string](), Ref{Module: optional.Some(moduleName), Name: key}, strValue))
-			assert.NoError(t, cm.Set(ctx, "inline", optional.None[string](), Ref{Module: optional.None[string](), Name: key}, globalStrValue))
+			assert.NoError(t, cm.Set(ctx, "inline", Ref{Module: optional.Some(moduleName), Name: key}, strValue))
+			assert.NoError(t, cm.Set(ctx, "inline", Ref{Module: optional.None[string](), Name: key}, globalStrValue))
 		} else {
 			// other times try setting the global config first
-			assert.NoError(t, cm.Set(ctx, "inline", optional.None[string](), Ref{Module: optional.None[string](), Name: key}, globalStrValue))
-			assert.NoError(t, cm.Set(ctx, "inline", optional.None[string](), Ref{Module: optional.Some(moduleName), Name: key}, strValue))
+			assert.NoError(t, cm.Set(ctx, "inline", Ref{Module: optional.None[string](), Name: key}, globalStrValue))
+			assert.NoError(t, cm.Set(ctx, "inline", Ref{Module: optional.Some(moduleName), Name: key}, strValue))
 		}
 	}
 	result, err := cm.MapForModule(ctx, moduleName)
@@ -146,7 +146,7 @@ func testManager[R Role](
 	assert.IsError(t, err, ErrNotFound)
 
 	// Change value.
-	err = cf.Set(ctx, providerKey, optional.None[string](), Ref{Name: "mutable"}, "hello")
+	err = cf.Set(ctx, providerKey, Ref{Name: "mutable"}, "hello")
 	assert.NoError(t, err)
 
 	err = cf.Get(ctx, Ref{Name: "mutable"}, &fooValue)
