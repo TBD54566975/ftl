@@ -46,7 +46,7 @@ type CLI struct {
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
 
 	// Specify the 1Password vault to access secrets from.
-	Vault string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"secretwriter" placeholder:"VAULT"`
+	Vault string `name:"opvault" help:"1Password vault to be used for secrets. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." placeholder:"VAULT"`
 }
 
 var cli CLI

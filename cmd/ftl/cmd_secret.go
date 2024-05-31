@@ -23,7 +23,7 @@ type secretCmd struct {
 	Inline   bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"secretwriter"`
 	Keychain bool `help:"Write to the system keychain." group:"Provider:" xor:"secretwriter"`
 
-	//TODO: with AdminService, the following will move to the controller as "vault" and "op" will be a bool flag.
+	//TODO: with AdminService, the controller will accept --opvault=VAULT and the following should be replaced with an --op bool flag.
 	Vault string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"secretwriter" placeholder:"VAULT"`
 }
 

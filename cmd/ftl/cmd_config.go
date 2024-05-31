@@ -43,7 +43,7 @@ type configListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
-func (s *configListCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
+func (s *configListCmd) Run(ctx context.Context, cr cf.Resolver[cf.Configuration]) error {
 	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ Returns a JSON-encoded configuration value.
 `
 }
 
-func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
+func (s *configGetCmd) Run(ctx context.Context, cr cf.Resolver[cf.Configuration]) error {
 	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
