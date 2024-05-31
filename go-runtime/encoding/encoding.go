@@ -286,11 +286,14 @@ func decodeValue(d *json.Decoder, v reflect.Value) error {
 			return decodeSumType(d, v)
 		}
 
-		// If we cannot look up this interface as a sumtype discriminator, then it
-		// is possible that this code is running from a test where the type
-		// registry registrations have not be codegenned to enable this lookup.
-		// Assume it is a sumtype even though we cannot verify.
-		return decodeSumType(d, v)
+		if v.Type().NumMethod() != 0 {
+			// If we cannot look up this interface as a sumtype discriminator, then it
+			// is possible that this code is running from a test where the type
+			// registry registrations have not be codegenned to enable this lookup.
+			// Assume it is a sumtype even though we cannot verify.
+			return decodeSumType(d, v)
+		}
+		fallthrough
 
 	default:
 		return d.Decode(v.Addr().Interface())
@@ -424,10 +427,20 @@ func decodeSumType(d *json.Decoder, v reflect.Value) error {
 		// so we cannot look up the correct variant type. In this case, we assume
 		// any value with kind=interface is a sumtype, so hardcode `any` here to
 		// force that assumption through.
+		// Any doesn't work because of error:
+		// cannot assign *interface {} to encoding_test.unregistered
 		variantType = reflect.TypeFor[any]()
+		// Discriminator type doesn't work because of error:
+		// json: cannot unmarshal object into Go value of type encoding_test.unregistered
+		//variantType = v.Type()
+		/*out := reflect.New(variantType) // pointer to the child type
+		if err := json.NewDecoder(bytes.NewReader(sumType.Value)).Decode(out.Elem().Addr().Interface()); err != nil {
+			return err
+		}
+		return fmt.Errorf("%v", out.Elem())*/
 	}
 
-	out := reflect.New(variantType)
+	out := reflect.New(variantType) // pointer to the child type
 	if err := decodeValue(json.NewDecoder(bytes.NewReader(sumType.Value)), out.Elem()); err != nil {
 		return err
 	}
