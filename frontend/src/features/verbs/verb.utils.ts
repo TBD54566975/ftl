@@ -3,7 +3,7 @@ import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { MetadataCalls, MetadataCronJob, MetadataIngress, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { JSONSchemaFaker } from 'json-schema-faker'
 
-const basePath = 'http://localhost:8892/ingress/'
+const basePath = 'http://localhost:8891/'
 
 export const verbRefString = (verb: Ref): string => {
   return `${verb.module}.${verb.name}`

@@ -114,7 +114,7 @@ integration-tests *test:
   #!/bin/bash
   set -euo pipefail
   testName=${1:-}
-  go test -fullpath -count 1 -v -tags integration -run "$testName" ./...
+  go test -fullpath -count 1 -v -tags integration -run "$testName" -p 1 ./...
 
 # Run README doc tests
 test-readme *args:
