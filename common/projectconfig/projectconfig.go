@@ -57,13 +57,14 @@ func GetDefaultConfigPath() string {
 
 // CreateWritableFileIfNonexistent checks the last config file in the list of specified
 // paths and creates the file if it does not already exist.
-func CreateWritableFileIfNonexistent(ctx context.Context, paths []string) error {
+func CreateWritableFileIfNonexistent(ctx context.Context, input []string) error {
 	logger := log.FromContext(ctx)
 
-	if len(paths) == 0 {
+	configPaths := ConfigPaths(input)
+	if len(configPaths) == 0 {
 		return nil
 	}
-	path := paths[len(paths)-1]
+	path := configPaths[len(configPaths)-1]
 
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		logger.Warnf("Creating a new project config file at %q because the file does not already exist", path)
