@@ -1,11 +1,13 @@
-module ftl/wrapped
+module ftl/verbtypes
 
 go 1.22.2
 
 require (
-	github.com/TBD54566975/ftl v0.193.0
+	github.com/TBD54566975/ftl v0.201.0
 	github.com/alecthomas/assert/v2 v2.10.0
 )
+
+replace github.com/TBD54566975/ftl => ../../../../../../..
 
 require (
 	connectrpc.com/connect v1.16.1 // indirect
@@ -47,5 +49,3 @@ require (
 	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 )
-
-replace github.com/TBD54566975/ftl => ../../../..

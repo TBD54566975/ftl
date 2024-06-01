@@ -1,9 +1,9 @@
-module ftl/runtimereflection
+module ftl/wrapped
 
 go 1.22.2
 
 require (
-	github.com/TBD54566975/ftl v0.194.0
+	github.com/TBD54566975/ftl v0.193.0
 	github.com/alecthomas/assert/v2 v2.10.0
 )
 
@@ -11,7 +11,10 @@ require (
 	connectrpc.com/connect v1.16.1 // indirect
 	connectrpc.com/grpcreflect v1.2.0 // indirect
 	connectrpc.com/otelconnect v0.7.0 // indirect
+	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/TBD54566975/scaffolder v1.0.0 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
+	github.com/alecthomas/kong v0.9.0 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/alecthomas/types v0.16.0 // indirect
@@ -45,4 +48,4 @@ require (
 	google.golang.org/protobuf v1.34.1 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ../../../..
+replace github.com/TBD54566975/ftl => ../../../../../../..
