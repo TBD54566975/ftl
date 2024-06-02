@@ -10,8 +10,6 @@ import (
 
 	. "github.com/alecthomas/types/optional" //nolint:stylecheck
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/smithy-go"
@@ -33,47 +31,6 @@ func asmURLForRef(ref Ref) *url.URL {
 		Scheme: "asm",
 		Host:   ref.String(),
 	}
-}
-
-// NewASMWithDefaultCredentials creates a new ASM resolver/provider that uses the default AWS SDK credentials chain.
-func NewASMWithDefaultCredentials(ctx context.Context) (*ASM, error) {
-	return NewASM(ctx, None[string](), None[string](), None[string](), None[string]())
-}
-
-// NewASM creates a new ASM resolver/provider with optional access key, secret access key, region, and endpoint.
-func NewASM(ctx context.Context, accessKeyID, secretAccessKey, region, endpoint Option[string]) (*ASM, error) {
-	var optFns []func(*config.LoadOptions) error
-
-	// Use a static credentials provider if access key and secret are provided.
-	// Otherwise, the SDK will use the default credential chain (env vars, iam, etc).
-	if access, oka := accessKeyID.Get(); oka {
-		secret, oks := secretAccessKey.Get()
-		if !oks {
-			return nil, errors.New("secret access key must be provided if access key ID is provided")
-		}
-		cc := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(access, secret, ""))
-		optFns = append(optFns, config.WithCredentialsProvider(cc))
-	}
-
-	if r, ok := region.Get(); ok {
-		optFns = append(optFns, config.WithRegion(r))
-	}
-
-	cfg, err := config.LoadDefaultConfig(ctx, optFns...)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load aws config: %w", err)
-	}
-
-	asmClient := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
-		e, ok := endpoint.Get()
-		if ok {
-			o.BaseEndpoint = aws.String(e)
-		}
-	})
-	asm := ASM{
-		client: *asmClient,
-	}
-	return &asm, nil
 }
 
 func (a *ASM) Role() Secrets {

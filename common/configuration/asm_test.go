@@ -3,6 +3,10 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"sort"
 	"testing"
 
@@ -12,23 +16,23 @@ import (
 	. "github.com/alecthomas/types/optional"
 )
 
-func localstack() *ASM {
-	asm, err := NewASM(
-		context.Background(),
-		Some("test"),
-		Some("test"),
-		Some("us-west-2"),
-		Some("http://localhost:4566"),
-	)
+func localstack(t *testing.T, ctx context.Context) ASM {
+	cc := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider("test", "test", ""))
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(cc), config.WithRegion("us-west-2"))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
+
+	sm := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
+		o.BaseEndpoint = aws.String("http://localhost:4566")
+	})
+	asm := ASM{client: *sm}
 	return asm
 }
 
 func TestASMWorkflow(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	asm := localstack()
+	asm := localstack(t, ctx)
 	url := URL("asm://foo.bar")
 	ref := Ref{Module: Some("foo"), Name: "bar"}
 	var mySecret = []byte("my secret")
@@ -80,7 +84,7 @@ func TestASMWorkflow(t *testing.T) {
 // Suggest not running this against a real AWS account (especially in CI) due to the cost. Maybe costs a few $.
 func TestASMPagination(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	asm := localstack()
+	asm := localstack(t, ctx)
 
 	// Create 210 secrets, so we paginate at least twice.
 	for i := range 210 {
