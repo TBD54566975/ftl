@@ -24,7 +24,6 @@ type ASM struct {
 
 var _ Resolver[Secrets] = &ASM{}
 var _ Provider[Secrets] = &ASM{}
-var _ MutableProvider[Secrets] = &ASM{}
 
 func asmURLForRef(ref Ref) *url.URL {
 	return &url.URL{
@@ -33,19 +32,19 @@ func asmURLForRef(ref Ref) *url.URL {
 	}
 }
 
-func (a *ASM) Role() Secrets {
+func (ASM) Role() Secrets {
 	return Secrets{}
 }
 
-func (a *ASM) Key() string {
+func (ASM) Key() string {
 	return "asm"
 }
 
-func (a *ASM) Get(ctx context.Context, ref Ref) (*url.URL, error) {
+func (ASM) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 	return asmURLForRef(ref), nil
 }
 
-func (a *ASM) Set(ctx context.Context, ref Ref, key *url.URL) error {
+func (ASM) Set(ctx context.Context, ref Ref, key *url.URL) error {
 	expectedKey := asmURLForRef(ref)
 	if key.String() != expectedKey.String() {
 		return fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
@@ -55,12 +54,12 @@ func (a *ASM) Set(ctx context.Context, ref Ref, key *url.URL) error {
 }
 
 // Unset does nothing because this resolver does not record any state.
-func (a *ASM) Unset(ctx context.Context, ref Ref) error {
+func (ASM) Unset(ctx context.Context, ref Ref) error {
 	return nil
 }
 
 // List all secrets in the account. This might require multiple calls to the AWS API if there are more than 100 secrets.
-func (a *ASM) List(ctx context.Context) ([]Entry, error) {
+func (a ASM) List(ctx context.Context) ([]Entry, error) {
 	nextToken := None[string]()
 	entries := []Entry{}
 	for {
@@ -103,7 +102,7 @@ func (a *ASM) List(ctx context.Context) ([]Entry, error) {
 }
 
 // Load only supports loading "string" secrets, not binary secrets.
-func (a *ASM) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (a ASM) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	expectedKey := asmURLForRef(ref)
 	if key.String() != expectedKey.String() {
 		return nil, fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
@@ -124,12 +123,8 @@ func (a *ASM) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	return []byte(*out.SecretString), nil
 }
 
-func (a *ASM) Writer() bool {
-	return true
-}
-
 // Store and if the secret already exists, update it.
-func (a *ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (a ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
 	_, err := a.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(ref.String()),
 		SecretString: aws.String(string(value)),
@@ -153,7 +148,7 @@ func (a *ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error
 	return asmURLForRef(ref), nil
 }
 
-func (a *ASM) Delete(ctx context.Context, ref Ref) error {
+func (a ASM) Delete(ctx context.Context, ref Ref) error {
 	var t = true
 	_, err := a.client.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
 		SecretId:                   aws.String(ref.String()),
