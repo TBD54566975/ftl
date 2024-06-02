@@ -12,7 +12,7 @@ import (
 	. "github.com/alecthomas/types/optional"
 )
 
-func localstack() *ASM[Secrets] {
+func localstack() *ASM {
 	asm, err := NewASM(
 		context.Background(),
 		Some("test"),
@@ -79,10 +79,6 @@ func TestASMWorkflow(t *testing.T) {
 
 // Suggest not running this against a real AWS account (especially in CI) due to the cost. Maybe costs a few $.
 func TestASMPagination(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode. takes ~0.5s to run.")
-	}
-
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm := localstack()
 

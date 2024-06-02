@@ -20,13 +20,13 @@ import (
 // ASM implements Resolver and Provider for AWS Secrets Manager (ASM).
 //
 // The resolver does a direct/proxy map from a Ref to a URL, module.name <-> asm://module.name and does not access ASM at all.
-type ASM[R Secrets] struct {
+type ASM struct {
 	client secretsmanager.Client
 }
 
-var _ Resolver[Secrets] = &ASM[Secrets]{}
-var _ Provider[Secrets] = &ASM[Secrets]{}
-var _ MutableProvider[Secrets] = &ASM[Secrets]{}
+var _ Resolver[Secrets] = &ASM{}
+var _ Provider[Secrets] = &ASM{}
+var _ MutableProvider[Secrets] = &ASM{}
 
 func asmURLForRef(ref Ref) *url.URL {
 	return &url.URL{
@@ -36,12 +36,12 @@ func asmURLForRef(ref Ref) *url.URL {
 }
 
 // NewASMWithDefaultCredentials creates a new ASM resolver/provider that uses the default AWS SDK credentials chain.
-func NewASMWithDefaultCredentials(ctx context.Context) (*ASM[Secrets], error) {
+func NewASMWithDefaultCredentials(ctx context.Context) (*ASM, error) {
 	return NewASM(ctx, None[string](), None[string](), None[string](), None[string]())
 }
 
 // NewASM creates a new ASM resolver/provider with optional access key, secret access key, region, and endpoint.
-func NewASM(ctx context.Context, accessKeyID, secretAccessKey, region, endpoint Option[string]) (*ASM[Secrets], error) {
+func NewASM(ctx context.Context, accessKeyID, secretAccessKey, region, endpoint Option[string]) (*ASM, error) {
 	var optFns []func(*config.LoadOptions) error
 
 	// Use a static credentials provider if access key and secret are provided.
@@ -70,26 +70,25 @@ func NewASM(ctx context.Context, accessKeyID, secretAccessKey, region, endpoint 
 			o.BaseEndpoint = aws.String(e)
 		}
 	})
-	asm := ASM[Secrets]{
+	asm := ASM{
 		client: *asmClient,
 	}
 	return &asm, nil
 }
 
-func (a *ASM[R]) Role() R {
-	var r R
-	return r
+func (a *ASM) Role() Secrets {
+	return Secrets{}
 }
 
-func (a *ASM[R]) Key() string {
+func (a *ASM) Key() string {
 	return "asm"
 }
 
-func (a *ASM[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
+func (a *ASM) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 	return asmURLForRef(ref), nil
 }
 
-func (a *ASM[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
+func (a *ASM) Set(ctx context.Context, ref Ref, key *url.URL) error {
 	expectedKey := asmURLForRef(ref)
 	if key.String() != expectedKey.String() {
 		return fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
@@ -99,12 +98,12 @@ func (a *ASM[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
 }
 
 // Unset does nothing because this resolver does not record any state.
-func (a *ASM[R]) Unset(ctx context.Context, ref Ref) error {
+func (a *ASM) Unset(ctx context.Context, ref Ref) error {
 	return nil
 }
 
 // List all secrets in the account. This might require multiple calls to the AWS API if there are more than 100 secrets.
-func (a *ASM[R]) List(ctx context.Context) ([]Entry, error) {
+func (a *ASM) List(ctx context.Context) ([]Entry, error) {
 	nextToken := None[string]()
 	entries := []Entry{}
 	for {
@@ -147,7 +146,7 @@ func (a *ASM[R]) List(ctx context.Context) ([]Entry, error) {
 }
 
 // Load only supports loading "string" secrets, not binary secrets.
-func (a *ASM[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (a *ASM) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	expectedKey := asmURLForRef(ref)
 	if key.String() != expectedKey.String() {
 		return nil, fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
@@ -168,12 +167,12 @@ func (a *ASM[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error
 	return []byte(*out.SecretString), nil
 }
 
-func (a *ASM[R]) Writer() bool {
+func (a *ASM) Writer() bool {
 	return true
 }
 
 // Store and if the secret already exists, update it.
-func (a *ASM[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (a *ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
 	_, err := a.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(ref.String()),
 		SecretString: aws.String(string(value)),
@@ -197,7 +196,7 @@ func (a *ASM[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, er
 	return asmURLForRef(ref), nil
 }
 
-func (a *ASM[R]) Delete(ctx context.Context, ref Ref) error {
+func (a *ASM) Delete(ctx context.Context, ref Ref) error {
 	var t = true
 	_, err := a.client.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
 		SecretId:                   aws.String(ref.String()),
