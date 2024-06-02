@@ -138,6 +138,8 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
+		logger.Infof("HTTP ingress server listening on: %s", config.IngressBind)
+
 		return ftlhttp.Serve(ctx, config.IngressBind, ingressHandler)
 	})
 
