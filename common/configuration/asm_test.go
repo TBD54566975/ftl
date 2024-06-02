@@ -16,7 +16,8 @@ import (
 	. "github.com/alecthomas/types/optional"
 )
 
-func localstack(t *testing.T, ctx context.Context) ASM {
+func localstack(ctx context.Context, t *testing.T) ASM {
+	t.Helper()
 	cc := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider("test", "test", ""))
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(cc), config.WithRegion("us-west-2"))
 	if err != nil {
@@ -32,7 +33,7 @@ func localstack(t *testing.T, ctx context.Context) ASM {
 
 func TestASMWorkflow(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	asm := localstack(t, ctx)
+	asm := localstack(ctx, t)
 	url := URL("asm://foo.bar")
 	ref := Ref{Module: Some("foo"), Name: "bar"}
 	var mySecret = []byte("my secret")
@@ -84,7 +85,7 @@ func TestASMWorkflow(t *testing.T) {
 // Suggest not running this against a real AWS account (especially in CI) due to the cost. Maybe costs a few $.
 func TestASMPagination(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	asm := localstack(t, ctx)
+	asm := localstack(ctx, t)
 
 	// Create 210 secrets, so we paginate at least twice.
 	for i := range 210 {
