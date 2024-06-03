@@ -3,10 +3,6 @@ package configuration
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"sort"
 	"testing"
 
@@ -14,6 +10,10 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	. "github.com/alecthomas/types/optional"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
 func localstack(ctx context.Context, t *testing.T) ASM {
@@ -34,51 +34,46 @@ func localstack(ctx context.Context, t *testing.T) ASM {
 func TestASMWorkflow(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm := localstack(ctx, t)
-	url := URL("asm://foo.bar")
 	ref := Ref{Module: Some("foo"), Name: "bar"}
 	var mySecret = []byte("my secret")
-
-	err := asm.Set(ctx, ref, url)
+	manager, err := New(ctx, asm, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
-	url1, err := asm.Get(ctx, ref)
-	assert.NoError(t, err)
-	assert.Equal(t, url, url1)
+	var gotSecret []byte
+	err = manager.Get(ctx, ref, &gotSecret)
+	assert.Error(t, err)
 
-	items, err := asm.List(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, items, []Entry{})
-
-	url2, err := asm.Store(ctx, ref, mySecret)
-	assert.NoError(t, err)
-	assert.Equal(t, url, url2)
-
-	items, err = asm.List(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, items, []Entry{{Ref: ref, Accessor: url}})
-
-	item, err := asm.Load(ctx, ref, url)
-	assert.NoError(t, err)
-	assert.Equal(t, item, mySecret)
-
-	// Store a second time to make sure it is updating
-	var mySecret2 = []byte("hunter1")
-	url3, err := asm.Store(ctx, ref, mySecret2)
-	assert.NoError(t, err)
-	assert.Equal(t, url, url3)
-
-	item, err = asm.Load(ctx, ref, url)
-	assert.NoError(t, err)
-	assert.Equal(t, item, mySecret2)
-
-	err = asm.Delete(ctx, ref)
-	assert.NoError(t, err)
-
-	items, err = asm.List(ctx)
+	items, err := manager.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, items, []Entry{})
 
-	_, err = asm.Load(ctx, ref, url)
+	err = manager.Set(ctx, "asm", ref, mySecret)
+	assert.NoError(t, err)
+
+	items, err = manager.List(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, items, []Entry{{Ref: ref, Accessor: URL("asm://foo.bar")}})
+
+	err = manager.Get(ctx, ref, &gotSecret)
+	assert.NoError(t, err)
+
+	// Set again to make sure it updates.
+	mySecret = []byte("hunter1")
+	err = manager.Set(ctx, "asm", ref, mySecret)
+	assert.NoError(t, err)
+
+	err = manager.Get(ctx, ref, &gotSecret)
+	assert.NoError(t, err)
+	assert.Equal(t, gotSecret, mySecret)
+
+	err = manager.Unset(ctx, "asm", ref)
+	assert.NoError(t, err)
+
+	items, err = manager.List(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, items, []Entry{})
+
+	err = manager.Get(ctx, ref, &gotSecret)
 	assert.Error(t, err)
 }
 
@@ -86,15 +81,17 @@ func TestASMWorkflow(t *testing.T) {
 func TestASMPagination(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm := localstack(ctx, t)
+	manager, err := New(ctx, asm, []Provider[Secrets]{asm})
+	assert.NoError(t, err)
 
 	// Create 210 secrets, so we paginate at least twice.
 	for i := range 210 {
 		ref := NewRef("foo", fmt.Sprintf("bar%03d", i))
-		_, err := asm.Store(ctx, ref, []byte(fmt.Sprintf("hunter%03d", i)))
+		err := manager.Set(ctx, "asm", ref, []byte(fmt.Sprintf("hunter%03d", i)))
 		assert.NoError(t, err)
 	}
 
-	items, err := asm.List(ctx)
+	items, err := manager.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, len(items), 210)
 
@@ -109,7 +106,8 @@ func TestASMPagination(t *testing.T) {
 		if i%10 != 0 {
 			continue
 		}
-		secret, err := asm.Load(ctx, item.Ref, item.Accessor)
+		var secret []byte
+		err := manager.Get(ctx, item.Ref, &secret)
 		assert.NoError(t, err)
 		assert.Equal(t, secret, []byte(fmt.Sprintf("hunter%03d", i)))
 	}
@@ -117,12 +115,12 @@ func TestASMPagination(t *testing.T) {
 	// Delete them
 	for i := range 210 {
 		ref := NewRef("foo", fmt.Sprintf("bar%03d", i))
-		err := asm.Delete(ctx, ref)
+		err := manager.Unset(ctx, "asm", ref)
 		assert.NoError(t, err)
 	}
 
 	// Make sure they are all gone
-	items, err = asm.List(ctx)
+	items, err = manager.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, len(items), 0)
 }
