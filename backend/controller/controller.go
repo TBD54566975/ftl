@@ -31,6 +31,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
@@ -384,6 +385,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 			return &ftlv1.StatusResponse_Controller{
 				Key:      c.Key.String(),
 				Endpoint: c.Endpoint,
+				Version:  ftl.Version,
 			}
 		}),
 		Runners:     protoRunners,

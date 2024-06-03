@@ -236,6 +236,7 @@ message StatusResponse {
   message Controller {
     string key = 1;
     string endpoint = 2;
+    string version = 3;
   }
   repeated Controller controllers = 1;
 
