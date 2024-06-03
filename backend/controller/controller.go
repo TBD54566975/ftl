@@ -26,10 +26,12 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
 	"golang.org/x/exp/maps"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
@@ -45,6 +47,7 @@ import (
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	frontend "github.com/TBD54566975/ftl/frontend"
 	"github.com/TBD54566975/ftl/internal/cors"
+	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -67,6 +70,7 @@ type CommonConfig struct {
 
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
+	IngressBind                  *url.URL            `help:"Socket to bind to for ingress." default:"http://localhost:8891" env:"FTL_CONTROLLER_INGRESS_BIND"`
 	Key                          model.ControllerKey `help:"Controller key (auto)."`
 	DSN                          string              `help:"DAL DSN." default:"postgres://localhost:54320/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
@@ -128,18 +132,28 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 
 	console := NewConsoleService(dal)
 
-	ingressHandler := http.StripPrefix("/ingress", svc)
+	ingressHandler := http.Handler(svc)
 	if len(config.AllowOrigins) > 0 {
 		ingressHandler = cors.Middleware(slices.Map(config.AllowOrigins, func(u *url.URL) string { return u.String() }), ingressHandler)
 	}
 
-	return rpc.Serve(ctx, config.Bind,
-		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
-		rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
-		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
-		rpc.HTTP("/ingress/", ingressHandler),
-		rpc.HTTP("/", consoleHandler),
-	)
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		logger.Infof("HTTP ingress server listening on: %s", config.IngressBind)
+
+		return ftlhttp.Serve(ctx, config.IngressBind, ingressHandler)
+	})
+
+	g.Go(func() error {
+		return rpc.Serve(ctx, config.Bind,
+			rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
+			rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
+			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
+			rpc.HTTP("/", consoleHandler),
+		)
+	})
+
+	return g.Wait()
 }
 
 var _ ftlv1connect.ControllerServiceHandler = (*Service)(nil)
@@ -371,6 +385,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 			return &ftlv1.StatusResponse_Controller{
 				Key:      c.Key.String(),
 				Endpoint: c.Endpoint,
+				Version:  ftl.Version,
 			}
 		}),
 		Runners:     protoRunners,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
@@ -79,7 +80,7 @@ func WithRequestName(ctx context.Context, key model.RequestKey) context.Context 
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
-	interceptors := []connect.Interceptor{MetadataInterceptor(log.Debug), otelInterceptor()}
+	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), otelInterceptor()}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
@@ -90,7 +91,7 @@ func DefaultClientOptions(level log.Level) []connect.ClientOption {
 }
 
 func DefaultHandlerOptions() []connect.HandlerOption {
-	interceptors := []connect.Interceptor{MetadataInterceptor(log.Debug), otelInterceptor()}
+	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), otelInterceptor()}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
@@ -103,6 +104,51 @@ func otelInterceptor() connect.Interceptor {
 		panic(err)
 	}
 	return otel
+}
+
+// PanicInterceptor intercepts panics and logs them.
+func PanicInterceptor() connect.Interceptor {
+	return &panicInterceptor{}
+}
+
+type panicInterceptor struct{}
+
+// Intercept and log any panics, then re-panic. Defer calls to this function to
+// trap panics in the calling function.
+func handlePanic(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	if r := recover(); r != nil {
+		var err error
+		if rerr, ok := r.(error); ok {
+			err = rerr
+		} else {
+			err = fmt.Errorf("%v", r)
+		}
+		stack := string(debug.Stack())
+		logger.Errorf(err, "panic in RPC: %s", stack)
+		panic(err)
+	}
+}
+
+func (*panicInterceptor) WrapStreamingClient(req connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return func(ctx context.Context, s connect.Spec) connect.StreamingClientConn {
+		defer handlePanic(ctx)
+		return req(ctx, s)
+	}
+}
+
+func (*panicInterceptor) WrapStreamingHandler(req connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	return func(ctx context.Context, s connect.StreamingHandlerConn) error {
+		defer handlePanic(ctx)
+		return req(ctx, s)
+	}
+}
+
+func (*panicInterceptor) WrapUnary(uf connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		defer handlePanic(ctx)
+		return uf(ctx, req)
+	}
 }
 
 // MetadataInterceptor propagates FTL metadata through servers and clients.
