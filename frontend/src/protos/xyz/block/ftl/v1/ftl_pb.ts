@@ -1822,6 +1822,11 @@ export class StatusResponse_Controller extends Message<StatusResponse_Controller
    */
   endpoint = "";
 
+  /**
+   * @generated from field: string version = 3;
+   */
+  version = "";
+
   constructor(data?: PartialMessage<StatusResponse_Controller>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1832,6 +1837,7 @@ export class StatusResponse_Controller extends Message<StatusResponse_Controller
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Controller {
