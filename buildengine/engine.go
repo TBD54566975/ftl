@@ -241,7 +241,10 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 
 	schemaChanges := make(chan schemaChange, 128)
 	e.schemaChanges.Subscribe(schemaChanges)
-	defer e.schemaChanges.Unsubscribe(schemaChanges)
+	defer func() {
+		e.schemaChanges.Unsubscribe(schemaChanges)
+		close(schemaChanges)
+	}()
 
 	watchEvents := make(chan WatchEvent, 128)
 	topic, err := e.watcher.Watch(ctx, period, e.moduleDirs, e.externalDirs)
@@ -249,8 +252,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		return err
 	}
 	topic.Subscribe(watchEvents)
-	defer topic.Unsubscribe(watchEvents)
-	defer topic.Close()
+	defer func() {
+		topic.Unsubscribe(watchEvents)
+		topic.Close()
+		close(watchEvents)
+	}()
 
 	// Build and deploy all modules first.
 	err = e.buildAndDeploy(ctx, 1, true)
