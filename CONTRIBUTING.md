@@ -43,7 +43,7 @@ Once the Hermit environment is activated you can type the following to start a
 hot-reloading ftl agent:
 
 ```
-$ ftl dev ./examples/go
+$ ftl dev --recreate ./examples/go
 ```
 
 ## Development processes

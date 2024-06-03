@@ -21,7 +21,7 @@ func TestManager(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	t.Run("Secrets", func(t *testing.T) {
-		kcp := KeychainProvider{Keychain: true}
+		kcp := KeychainProvider{}
 		_, err := kcp.Store(ctx, Ref{Name: "mutable"}, []byte("hello"))
 		assert.NoError(t, err)
 		cf, err := New(ctx,
@@ -32,7 +32,7 @@ func TestManager(t *testing.T) {
 				kcp,
 			})
 		assert.NoError(t, err)
-		testManager(t, ctx, cf, "FTL_SECRET_YmF6", []Entry{
+		testManager(t, ctx, cf, "keychain", "FTL_SECRET_YmF6", []Entry{
 			{Ref: Ref{Name: "baz"}, Accessor: URL("envar://baz")},
 			{Ref: Ref{Name: "foo"}, Accessor: URL("inline://ImJhciI")},
 			{Ref: Ref{Name: "mutable"}, Accessor: URL("keychain://mutable")},
@@ -43,10 +43,10 @@ func TestManager(t *testing.T) {
 			ProjectConfigResolver[Configuration]{Config: []string{config}},
 			[]Provider[Configuration]{
 				EnvarProvider[Configuration]{},
-				InlineProvider[Configuration]{Inline: true}, // Writer
+				InlineProvider[Configuration]{},
 			})
 		assert.NoError(t, err)
-		testManager(t, ctx, cf, "FTL_CONFIG_YmF6", []Entry{
+		testManager(t, ctx, cf, "inline", "FTL_CONFIG_YmF6", []Entry{
 			{Ref: Ref{Name: "baz"}, Accessor: URL("envar://baz")},
 			{Ref: Ref{Name: "foo"}, Accessor: URL("inline://ImJhciI")},
 			{Ref: Ref{Name: "mutable"}, Accessor: URL("inline://ImhlbGxvIg")},
@@ -62,9 +62,7 @@ func TestMapPriority(t *testing.T) {
 	cm, err := New(ctx,
 		ProjectConfigResolver[Configuration]{Config: []string{config}},
 		[]Provider[Configuration]{
-			InlineProvider[Configuration]{
-				Inline: true,
-			},
+			InlineProvider[Configuration]{},
 		})
 	assert.NoError(t, err)
 	moduleName := "test"
@@ -79,12 +77,12 @@ func TestMapPriority(t *testing.T) {
 		globalStrValue := "GlobalHelloWorld"
 		if i%2 == 0 {
 			// sometimes try setting the module config first
-			assert.NoError(t, cm.Set(ctx, Ref{Module: optional.Some(moduleName), Name: key}, strValue))
-			assert.NoError(t, cm.Set(ctx, Ref{Module: optional.None[string](), Name: key}, globalStrValue))
+			assert.NoError(t, cm.Set(ctx, "inline", Ref{Module: optional.Some(moduleName), Name: key}, strValue))
+			assert.NoError(t, cm.Set(ctx, "inline", Ref{Module: optional.None[string](), Name: key}, globalStrValue))
 		} else {
 			// other times try setting the global config first
-			assert.NoError(t, cm.Set(ctx, Ref{Module: optional.None[string](), Name: key}, globalStrValue))
-			assert.NoError(t, cm.Set(ctx, Ref{Module: optional.Some(moduleName), Name: key}, strValue))
+			assert.NoError(t, cm.Set(ctx, "inline", Ref{Module: optional.None[string](), Name: key}, globalStrValue))
+			assert.NoError(t, cm.Set(ctx, "inline", Ref{Module: optional.Some(moduleName), Name: key}, strValue))
 		}
 	}
 	result, err := cm.MapForModule(ctx, moduleName)
@@ -118,6 +116,7 @@ func testManager[R Role](
 	t *testing.T,
 	ctx context.Context,
 	cf *Manager[R],
+	providerKey string,
 	envarName string,
 	expectedListing []Entry,
 ) {
@@ -147,7 +146,7 @@ func testManager[R Role](
 	assert.IsError(t, err, ErrNotFound)
 
 	// Change value.
-	err = cf.Set(ctx, Ref{Name: "mutable"}, "hello")
+	err = cf.Set(ctx, providerKey, Ref{Name: "mutable"}, "hello")
 	assert.NoError(t, err)
 
 	err = cf.Get(ctx, Ref{Name: "mutable"}, &fooValue)
@@ -159,7 +158,7 @@ func testManager[R Role](
 	assert.Equal(t, expectedListing, actualListing)
 
 	// Delete value
-	err = cf.Unset(ctx, Ref{Name: "foo"})
+	err = cf.Unset(ctx, "envar", Ref{Name: "foo"})
 	assert.NoError(t, err)
 	err = cf.Get(ctx, Ref{Name: "foo"}, &fooValue)
 	assert.IsError(t, err, ErrNotFound)

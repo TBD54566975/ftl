@@ -19,8 +19,6 @@ type DBConfigProviderDAL interface {
 	UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error
 }
 
-var _ MutableProvider[Configuration] = DBConfigProvider{}
-
 func NewDBConfigProvider(dal DBConfigProviderDAL) DBConfigProvider {
 	return DBConfigProvider{
 		dal: dal,
@@ -29,7 +27,6 @@ func NewDBConfigProvider(dal DBConfigProviderDAL) DBConfigProvider {
 
 func (DBConfigProvider) Role() Configuration { return Configuration{} }
 func (DBConfigProvider) Key() string         { return "db" }
-func (DBConfigProvider) Writer() bool        { return true }
 
 func (d DBConfigProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	value, err := d.dal.GetModuleConfiguration(ctx, ref.Module, ref.Name)

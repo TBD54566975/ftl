@@ -89,26 +89,6 @@ type Provider[R Role] interface {
 	Role() R
 	Key() string
 	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
-}
-
-// A MutableProvider is a Provider that can update configuration.
-type MutableProvider[R Role] interface {
-	Provider[R]
-	// Writer returns true if this provider should be used to store configuration.
-	//
-	// Only one provider should return true.
-	//
-	// To be usable from the CLI, each provider must be a Kong-compatible struct
-	// containing a flag that this method should return. For example:
-	//
-	// 	type InlineProvider struct {
-	// 		Inline bool `help:"Write values inline." group:"Provider:" xor:"configwriter"`
-	// 	}
-	//
-	//	func (i InlineProvider) Writer() bool { return i.Inline }
-	//
-	// The "xor" tag is used to ensure that only one writer is selected.
-	Writer() bool
 	// Store a configuration value and return its key.
 	Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
 	// Delete a configuration value.

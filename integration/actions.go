@@ -352,7 +352,7 @@ func JsonData(t testing.TB, body interface{}) []byte {
 func HttpCall(method string, path string, body []byte, onResponse func(t testing.TB, resp *HTTPResponse)) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("HTTP %s %s", method, path)
-		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8892/ingress"))
+		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8891"))
 		assert.NoError(t, err)
 
 		r, err := http.NewRequestWithContext(ic, method, baseURL.JoinPath(path).String(), bytes.NewReader(body))

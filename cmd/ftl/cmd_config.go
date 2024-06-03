@@ -17,6 +17,9 @@ type configCmd struct {
 	Get   configGetCmd   `cmd:"" help:"Get a configuration value."`
 	Set   configSetCmd   `cmd:"" help:"Set a configuration value."`
 	Unset configUnsetCmd `cmd:"" help:"Unset a configuration value."`
+
+	Envar  bool `help:"Print configuration as environment variables." group:"Provider:" xor:"configwriter"`
+	Inline bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"configwriter"`
 }
 
 func (s *configCmd) Help() string {
@@ -26,13 +29,22 @@ etc.
 `
 }
 
+func (s *configCmd) providerKey() string {
+	if s.Envar {
+		return "envar"
+	} else if s.Inline {
+		return "inline"
+	}
+	return ""
+}
+
 type configListCmd struct {
 	Values bool   `help:"List configuration values."`
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
-func (s *configListCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := scmd.NewConfigurationManager(ctx, cr)
+func (s *configListCmd) Run(ctx context.Context, cr cf.Resolver[cf.Configuration]) error {
+	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
@@ -77,8 +89,8 @@ Returns a JSON-encoded configuration value.
 `
 }
 
-func (s *configGetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := scmd.NewConfigurationManager(ctx, cr)
+func (s *configGetCmd) Run(ctx context.Context, cr cf.Resolver[cf.Configuration]) error {
+	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
@@ -104,12 +116,8 @@ type configSetCmd struct {
 }
 
 func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := scmd.NewConfigurationManager(ctx, cr)
+	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
-		return err
-	}
-
-	if err := sm.Mutable(); err != nil {
 		return err
 	}
 
@@ -131,7 +139,7 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[
 	} else {
 		configValue = string(config)
 	}
-	return sm.Set(ctx, s.Ref, configValue)
+	return sm.Set(ctx, scmd.providerKey(), s.Ref, configValue)
 }
 
 type configUnsetCmd struct {
@@ -139,9 +147,10 @@ type configUnsetCmd struct {
 }
 
 func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := scmd.NewConfigurationManager(ctx, cr)
+	sm, err := cf.NewConfigurationManager(ctx, cr)
 	if err != nil {
 		return err
 	}
-	return sm.Unset(ctx, s.Ref)
+
+	return sm.Unset(ctx, scmd.providerKey(), s.Ref)
 }
