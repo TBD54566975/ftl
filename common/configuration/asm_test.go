@@ -27,7 +27,7 @@ func localstack(ctx context.Context, t *testing.T) ASM {
 	sm := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
 		o.BaseEndpoint = aws.String("http://localhost:4566")
 	})
-	asm := ASM{client: *sm}
+	asm := ASM{Client: *sm}
 	return asm
 }
 

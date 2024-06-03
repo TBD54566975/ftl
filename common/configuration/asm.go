@@ -19,7 +19,7 @@ import (
 //
 // The resolver does a direct/proxy map from a Ref to a URL, module.name <-> asm://module.name and does not access ASM at all.
 type ASM struct {
-	client secretsmanager.Client
+	Client secretsmanager.Client
 }
 
 var _ Resolver[Secrets] = &ASM{}
@@ -63,7 +63,7 @@ func (a ASM) List(ctx context.Context) ([]Entry, error) {
 	nextToken := None[string]()
 	entries := []Entry{}
 	for {
-		out, err := a.client.ListSecrets(ctx, &secretsmanager.ListSecretsInput{
+		out, err := a.Client.ListSecrets(ctx, &secretsmanager.ListSecretsInput{
 			MaxResults: aws.Int32(100),
 			NextToken:  nextToken.Ptr(),
 		})
@@ -108,7 +108,7 @@ func (a ASM) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 		return nil, fmt.Errorf("key does not match expected key for ref: %s", expectedKey)
 	}
 
-	out, err := a.client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+	out, err := a.Client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(ref.String()),
 	})
 	if err != nil {
@@ -125,7 +125,7 @@ func (a ASM) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 
 // Store and if the secret already exists, update it.
 func (a ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	_, err := a.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
+	_, err := a.Client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(ref.String()),
 		SecretString: aws.String(string(value)),
 	})
@@ -133,7 +133,7 @@ func (a ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
 	// https://github.com/aws/aws-sdk-go-v2/issues/1110#issuecomment-1054643716
 	var apiErr smithy.APIError
 	if errors.As(err, &apiErr) && apiErr.ErrorCode() == "ResourceExistsException" {
-		_, err = a.client.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
+		_, err = a.Client.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
 			SecretId:     aws.String(ref.String()),
 			SecretString: aws.String(string(value)),
 		})
@@ -150,7 +150,7 @@ func (a ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
 
 func (a ASM) Delete(ctx context.Context, ref Ref) error {
 	var t = true
-	_, err := a.client.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
+	_, err := a.Client.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
 		SecretId:                   aws.String(ref.String()),
 		ForceDeleteWithoutRecovery: &t,
 	})
