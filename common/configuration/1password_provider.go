@@ -65,6 +65,9 @@ func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (
 	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
+	if o.Vault == "" {
+		return nil, fmt.Errorf("vault missing, specify vault as a flag to the controller")
+	}
 	if !vaultRegex.MatchString(o.Vault) {
 		return nil, fmt.Errorf("vault name %q contains invalid characters. a-z A-Z 0-9 _ . - are valid", o.Vault)
 	}

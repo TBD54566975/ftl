@@ -409,9 +409,8 @@ enum ConfigProvider {
 }
 
 message ListConfigRequest {
-  optional ConfigProvider provider = 1;
-  optional string module = 2;
-  optional bool include_values = 3;
+  optional string module = 1;
+  optional bool include_values = 2;
 }
 message ListConfigResponse {
   message Config {
@@ -422,8 +421,7 @@ message ListConfigResponse {
 }
 
 message GetConfigRequest {
-  optional ConfigProvider provider = 1;
-  ConfigRef ref = 2;
+  ConfigRef ref = 1;
 }
 message GetConfigResponse {
   bytes value = 1;
@@ -457,9 +455,8 @@ enum SecretProvider {
 }
 
 message ListSecretsRequest {
-  optional SecretProvider provider = 1;
-  optional string module = 2;
-  optional bool include_values = 3;
+  optional string module = 1;
+  optional bool include_values = 2;
 }
 message ListSecretsResponse {
   message Secret {
@@ -470,8 +467,7 @@ message ListSecretsResponse {
 }
 
 message GetSecretRequest {
-  optional SecretProvider provider = 1;
-  ConfigRef ref = 2;
+  ConfigRef ref = 1;
 }
 message GetSecretResponse {
   bytes value = 1;

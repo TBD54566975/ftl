@@ -12,11 +12,10 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/alecthomas/types/optional"
 )
 
 type configCmd struct {
-	cf.DefaultConfigMixin
-
 	List  configListCmd  `cmd:"" help:"List configuration."`
 	Get   configGetCmd   `cmd:"" help:"Get a configuration value."`
 	Set   configSetCmd   `cmd:"" help:"Set a configuration value."`
@@ -33,13 +32,21 @@ etc.
 `
 }
 
-func (s *configCmd) providerKey() string {
-	if s.Envar {
-		return "envar"
-	} else if s.Inline {
-		return "inline"
+func configRefFromRef(ref cf.Ref) *ftlv1.ConfigRef {
+	module := ref.Module.Default("")
+	return &ftlv1.ConfigRef{
+		Module: &module,
+		Name:   ref.Name,
 	}
-	return ""
+}
+
+func (s *configCmd) provider() optional.Option[ftlv1.ConfigProvider] {
+	if s.Envar {
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_ENVAR)
+	} else if s.Inline {
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_INLINE)
+	}
+	return optional.None[ftlv1.ConfigProvider]()
 }
 
 type configListCmd struct {
@@ -49,12 +56,11 @@ type configListCmd struct {
 
 func (s *configListCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
 	resp, err := admin.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
-		// Provider: TODO(saf)
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
 	}))
 	if err != nil {
-		return fmt.Errorf("failed to list config: %w", err)
+		return err
 	}
 
 	for _, config := range resp.Msg.Configs {
@@ -79,22 +85,17 @@ Returns a JSON-encoded configuration value.
 }
 
 func (s *configGetCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
-	module := s.Ref.Module.Default("")
 	resp, err := admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
-		// Provider: TODO(saf)
-		Ref: &ftlv1.ConfigRef{
-			Module: &module,
-			Name:   s.Ref.Name,
-		},
+		Ref: configRefFromRef(s.Ref),
 	}))
 	if err != nil {
-		return fmt.Errorf("failed to get config: %w", err)
+		return err
 	}
 
 	var value any
 	err = json.Unmarshal(resp.Msg.Value, &value)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal config value: %w", err)
+		return fmt.Errorf("%s: %w", s.Ref, err)
 	}
 	fmt.Println(value)
 	return nil
@@ -127,24 +128,16 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1conn
 		configValue = config
 	}
 
-	var cp ftlv1.ConfigProvider
-	if scmd.Inline {
-		cp = ftlv1.ConfigProvider_CONFIG_INLINE
-	} else if scmd.Envar {
-		cp = ftlv1.ConfigProvider_CONFIG_ENVAR
-	}
-
-	module := s.Ref.Module.Default("")
-	_, err = admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
-		Provider: &cp,
-		Ref: &ftlv1.ConfigRef{
-			Module: &module,
-			Name:   s.Ref.Name,
-		},
+	req := &ftlv1.SetConfigRequest{
+		Ref:   configRefFromRef(s.Ref),
 		Value: configValue,
-	}))
+	}
+	if provider, ok := scmd.provider().Get(); ok {
+		req.Provider = &provider
+	}
+	_, err = admin.ConfigSet(ctx, connect.NewRequest(req))
 	if err != nil {
-		return fmt.Errorf("failed to set config: %w", err)
+		return err
 	}
 	return nil
 }
@@ -154,16 +147,15 @@ type configUnsetCmd struct {
 }
 
 func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
-	module := s.Ref.Module.Default("")
-	_, err := admin.ConfigUnset(ctx, connect.NewRequest(&ftlv1.UnsetConfigRequest{
-		// Provider: TODO(saf)
-		Ref: &ftlv1.ConfigRef{
-			Module: &module,
-			Name:   s.Ref.Name,
-		},
-	}))
+	req := &ftlv1.UnsetConfigRequest{
+		Ref: configRefFromRef(s.Ref),
+	}
+	if provider, ok := scmd.provider().Get(); ok {
+		req.Provider = &provider
+	}
+	_, err := admin.ConfigUnset(ctx, connect.NewRequest(req))
 	if err != nil {
-		return fmt.Errorf("failed to unset config: %w", err)
+		return err
 	}
 	return nil
 }
