@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -50,8 +51,10 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if err := updateGitIgnore(i.Dir); err != nil {
 		return err
 	}
+	if err := projectconfig.CreateDefaultFileIfNonexistent(ctx); err != nil {
+		return err
+	}
 	logger.Debugf("Running go mod tidy")
-
 	return exec.Command(ctx, log.Debug, filepath.Join(i.Dir, i.Name), "go", "mod", "tidy").RunBuffered(ctx)
 }
 

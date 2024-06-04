@@ -55,6 +55,22 @@ func GetDefaultConfigPath() string {
 	return filepath.Join(internal.GitRoot(""), "ftl-project.toml")
 }
 
+// CreateDefaultFileIfNonexistent creates the ftl-project.toml file in the Git root if it
+// does not already exist.
+func CreateDefaultFileIfNonexistent(ctx context.Context) error {
+	path := GetDefaultConfigPath()
+	_, err := os.Stat(path)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	logger := log.FromContext(ctx)
+	logger.Warnf("Creating a new project config file at %q because the file does not already exist", path)
+	return Save(path, Config{})
+}
+
 func LoadConfig(ctx context.Context, input []string) (Config, error) {
 	logger := log.FromContext(ctx)
 	configPaths := ConfigPaths(input)
