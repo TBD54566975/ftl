@@ -1,12 +1,18 @@
 module-dirs = ["examples/go"]
 external-dirs = []
+ftl-min-version = ""
 
 [global]
+  [global.configuration]
+    key = "inline://InZhbHVlIg"
 
 [modules]
   [modules.echo]
     [modules.echo.configuration]
       default = "inline://ImFub255bW91cyI"
+
+[executables]
+  ftl = ""
 
 [commands]
   startup = ["echo 'FTL startup command ⚡️'"]

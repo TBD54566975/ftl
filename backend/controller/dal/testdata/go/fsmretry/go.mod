@@ -1,8 +1,10 @@
-module ftl/httpingress
+module ftl/fsmretry
 
 go 1.22.2
 
-require github.com/TBD54566975/ftl v0.189.0
+toolchain go1.22.3
+
+require github.com/TBD54566975/ftl v0.225.0
 
 require (
 	connectrpc.com/connect v1.16.1 // indirect
