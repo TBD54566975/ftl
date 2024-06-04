@@ -43,7 +43,6 @@ func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) 
 }
 
 func (r *RealFTL) PublishEvent(ctx context.Context, topic string, event any) error {
-	fmt.Printf("impl: publish event")
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	body, err := encoding.Marshal(event)
 	if err != nil {
