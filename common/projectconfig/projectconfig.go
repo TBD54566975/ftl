@@ -55,27 +55,6 @@ func GetDefaultConfigPath() string {
 	return filepath.Join(internal.GitRoot(""), "ftl-project.toml")
 }
 
-// CreateWritableFileIfNonexistent checks the last config file in the list of specified
-// paths and creates the file if it does not already exist.
-func CreateWritableFileIfNonexistent(ctx context.Context, input []string) error {
-	logger := log.FromContext(ctx)
-
-	configPaths := ConfigPaths(input)
-	if len(configPaths) == 0 {
-		return nil
-	}
-	path := configPaths[len(configPaths)-1]
-
-	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		logger.Warnf("Creating a new project config file at %q because the file does not already exist", path)
-		err = Save(path, Config{})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func LoadConfig(ctx context.Context, input []string) (Config, error) {
 	logger := log.FromContext(ctx)
 	configPaths := ConfigPaths(input)
@@ -97,6 +76,16 @@ func LoadWritableConfig(ctx context.Context, input []string) (Config, error) {
 		return Config{}, nil
 	}
 	target := configPaths[len(configPaths)-1]
+
+	logger := log.FromContext(ctx)
+	if _, err := os.Stat(target); errors.Is(err, os.ErrNotExist) {
+		logger.Warnf("Creating a new project config file at %q because the file does not already exist", target)
+		err = Save(target, Config{})
+		if err != nil {
+			return Config{}, err
+		}
+	}
+
 	log.FromContext(ctx).Tracef("Loading config from %s", target)
 	return loadFile(target)
 }

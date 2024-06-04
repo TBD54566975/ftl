@@ -82,8 +82,6 @@ func main() {
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	err := projectconfig.CreateWritableFileIfNonexistent(ctx, cli.ConfigFlag)
-	kctx.FatalIfErrorf(err)
 	config, err := projectconfig.LoadConfig(ctx, cli.ConfigFlag)
 	if err != nil {
 		kctx.Fatalf(err.Error())
