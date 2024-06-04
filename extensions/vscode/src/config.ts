@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as fs from 'fs'
 import * as path from 'path'
-import { exec } from 'child_process'
+import { exec, execSync } from 'child_process'
 import { promisify } from 'util'
 import semver from 'semver'
 
@@ -43,6 +43,22 @@ export const findFileInWorkspace = async (rootPath: string, fileName: string): P
     console.error('Failed to read directory:', rootPath)
   }
   return null
+}
+
+export const resolveFtlPath = (workspaceRoot: string, config: vscode.WorkspaceConfiguration): string => {
+  const ftlPath = config.get<string>("executablePath")
+  if (!ftlPath || ftlPath.trim() === '') {
+    try {
+      // Use `which` for Unix-based systems, `where` for Windows
+      const command = process.platform === 'win32' ? 'where ftl' : 'which ftl'
+      return execSync(command).toString().trim()
+    } catch (error) {
+      vscode.window.showErrorMessage('Error: ftl binary not found in PATH.')
+      throw new Error('ftl binary not found in PATH')
+    }
+  }
+
+  return path.isAbsolute(ftlPath) ? ftlPath : path.join(workspaceRoot || '', ftlPath)
 }
 
 export const getFTLVersion = async (ftlPath: string): Promise<string> => {
