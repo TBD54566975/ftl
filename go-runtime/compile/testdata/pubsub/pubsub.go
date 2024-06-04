@@ -26,17 +26,17 @@ func ProcessPayin(ctx context.Context, event PayinEvent) error {
 	return nil
 }
 
-var _ = ftl.RegisterSubscription(payinsVar, "paymentProcessing")
+var _ = ftl.Subscription(payinsVar, "paymentProcessing")
 
-var payinsVar = ftl.RegisterTopic[PayinEvent]("payins")
+var payinsVar = ftl.Topic[PayinEvent]("payins")
 
-var _ = ftl.RegisterSubscription(broadcast, "broadcastSubscription")
+var _ = ftl.Subscription(broadcast, "broadcastSubscription")
 
 // publicBroadcast is a topic that broadcasts payin events to the public.
 // out of order with subscription registration to test ordering doesn't matter.
 //
 //ftl:export
-var broadcast = ftl.RegisterTopic[PayinEvent]("publicBroadcast")
+var broadcast = ftl.Topic[PayinEvent]("publicBroadcast")
 
 //ftl:verb
 func Broadcast(ctx context.Context) error {

@@ -383,7 +383,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	"needsFTLImport": func(m *schema.Module) bool {
 		for _, d := range m.Decls {
 			if topic, ok := d.(*schema.Topic); ok && topic.IsExported() {
-				// uses ftl.RegisterTopic(...) function calls
+				// uses ftl.Topic(...) function calls
 				return true
 			}
 		}

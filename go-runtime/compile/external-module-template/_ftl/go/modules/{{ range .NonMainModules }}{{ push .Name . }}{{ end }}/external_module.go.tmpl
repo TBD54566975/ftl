@@ -27,7 +27,7 @@ var _ = context.Background
 {{- end}}
 {{- if .IsExported}}
 {{- if is "Topic" .}}
-var {{.Name|title}} = ftl.RegisterTopic[{{type $ .Event}}]("{{.Name}}")
+var {{.Name|title}} = ftl.Topic[{{type $ .Event}}]("{{.Name}}")
 {{- else if and (is "Enum" .) .IsValueEnum}}
 {{- $enumName := .Name}}
 //ftl:enum

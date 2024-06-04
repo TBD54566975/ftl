@@ -7,7 +7,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-var _ = ftl.RegisterSubscription(pubsub.PublicBroadcast, "subscriptionToExternalTopic")
+var _ = ftl.Subscription(pubsub.PublicBroadcast, "subscriptionToExternalTopic")
 
 //ftl:subscribe subscriptionToExternalTopic
 func ConsumesSubscriptionFromExternalTopic(ctx context.Context, req pubsub.PayinEvent) error {
