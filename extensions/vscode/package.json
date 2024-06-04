@@ -25,7 +25,6 @@
       "properties": {
         "ftl.executablePath": {
           "type": "string",
-          "default": "ftl",
           "description": "Path to the FTL executable. Leave as 'ftl' to use the system PATH."
         },
         "ftl.devCommandFlags": {

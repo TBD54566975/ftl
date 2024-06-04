@@ -7,7 +7,7 @@ import {
 } from "vscode-languageclient/node"
 import * as vscode from "vscode"
 import { FTLStatus } from "./status"
-import { checkMinimumVersion, getFTLVersion, getProjectOrWorkspaceRoot, isFTLRunning } from "./config"
+import { checkMinimumVersion, getFTLVersion, getProjectOrWorkspaceRoot, isFTLRunning, resolveFtlPath } from "./config"
 import path from "path"
 
 export const MIN_FTL_VERSION = '0.169.0'
@@ -116,7 +116,6 @@ async function promptStartClient(context: vscode.ExtensionContext): Promise<void
     return
   }
 
-
   const options = ['Always', 'Yes', 'No', 'Never']
   const result = await vscode.window.showInformationMessage(
     'FTL project detected. Would you like to start the FTL development server?',
@@ -145,11 +144,13 @@ async function startClient(context: ExtensionContext) {
   console.log("Starting client")
 
   const ftlConfig = vscode.workspace.getConfiguration("ftl")
-  const ftlPath = ftlConfig.get<string>("executablePath") ?? "ftl"
-  const workspaceRootPath = await getProjectOrWorkspaceRoot()
-  const ftlAbsolutePath = path.isAbsolute(ftlPath) ? ftlPath : path.resolve(workspaceRootPath, ftlPath)
 
-  const ftlOK = await FTLPreflightCheck(ftlAbsolutePath)
+  const workspaceRootPath = await getProjectOrWorkspaceRoot()
+  const resolvedFtlPath = resolveFtlPath(workspaceRootPath, ftlConfig)
+
+  console.log('ftl path', resolvedFtlPath)
+
+  const ftlOK = await FTLPreflightCheck(resolvedFtlPath)
   if (!ftlOK) {
     FTLStatus.disabled(statusBarItem)
     return
@@ -163,18 +164,18 @@ async function startClient(context: ExtensionContext) {
   const flags = ["--lsp", ...userFlags]
   let serverOptions: ServerOptions = {
     run: {
-      command: `${ftlAbsolutePath}`,
+      command: `${resolvedFtlPath}`,
       args: ["dev", ".", ...flags],
       options: { cwd: workspaceRootPath }
     },
     debug: {
-      command: `${ftlAbsolutePath}`,
+      command: `${resolvedFtlPath}`,
       args: ["dev", ".", ...flags],
       options: { cwd: workspaceRootPath }
     },
   }
 
-  outputChannel.appendLine(`Running ${ftlAbsolutePath} with flags: ${flags.join(" ")}`)
+  outputChannel.appendLine(`Running ${resolvedFtlPath} with flags: ${flags.join(" ")}`)
   console.log(serverOptions.debug.args)
 
   let clientOptions: LanguageClientOptions = {
