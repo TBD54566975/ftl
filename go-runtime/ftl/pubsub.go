@@ -6,29 +6,29 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 )
 
-// RegisterTopic declares a topic
+// Topic declares a topic
 //
 // Topics publish events, and subscriptions can listen to them.
-func RegisterTopic[E any](name string) Topic[E] {
-	return Topic[E]{name: name}
+func Topic[E any](name string) TopicHandle[E] {
+	return TopicHandle[E]{name: name}
 }
 
-type Topic[E any] struct {
+type TopicHandle[E any] struct {
 	name string
 }
 
 // Publish publishes an event to a topic
-func (t Topic[E]) Publish(ctx context.Context, event E) error {
+func (t TopicHandle[E]) Publish(ctx context.Context, event E) error {
 	return internal.FromContext(ctx).PublishEvent(ctx, t.name, event)
 }
 
-// RegisterSubscription declares a subscription to a topic
+// Subscription declares a subscription to a topic
 //
 // Sinks can consume events from the subscription by including a "ftl:subscibe <subscription_name>" directive
-func RegisterSubscription[E any](topic Topic[E], name string) Subscription[E] {
-	return Subscription[E]{name: name}
+func Subscription[E any](topic TopicHandle[E], name string) SubscriptionHandle[E] {
+	return SubscriptionHandle[E]{name: name}
 }
 
-type Subscription[E any] struct {
+type SubscriptionHandle[E any] struct {
 	name string
 }

@@ -43,8 +43,8 @@ var (
 	ftlPostgresDBFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
 	ftlUnitTypePath         = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
 	ftlOptionTypePath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
-	ftlTopicFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.RegisterTopic"
-	ftlSubscriptionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.RegisterSubscription"
+	ftlTopicFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.Topic"
+	ftlSubscriptionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Subscription"
 	aliasFieldTag           = "json"
 )
 
@@ -334,7 +334,7 @@ func extractStringLiteralArg(node *ast.CallExpr, argIndex int) (string, *schema.
 	return s, nil
 }
 
-// extractTopicDecl expects: _ = ftl.RegisterTopic[EventType]("name_literal")
+// extractTopicDecl expects: _ = ftl.Topic[EventType]("name_literal")
 func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	name, nameErr := extractStringLiteralArg(node, 0)
 	if nameErr != nil {
@@ -639,7 +639,7 @@ func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
 	pctx.module.Decls = append(pctx.module.Decls, decl)
 }
 
-// parseTopicDecl expects: _ = ftl.RegisterTopic[EventType]("name_literal")
+// parseTopicDecl expects: _ = ftl.Topic[EventType]("name_literal")
 func parseTopicDecl(pctx *parseContext, node *ast.CallExpr) {
 	// already extracted topic in the initial pass of the ast graph
 	// we did not do event type resolution yet, so we need to do that now
@@ -670,7 +670,7 @@ func parseTopicDecl(pctx *parseContext, node *ast.CallExpr) {
 	topic.Event = typeParamType
 }
 
-// parseSubscriptionDecl expects: var _ = ftl.RegisterSubscription(topicHandle, "name_literal")
+// parseSubscriptionDecl expects: var _ = ftl.Subscription(topicHandle, "name_literal")
 func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	var name string
 	var topicRef *schema.Ref
