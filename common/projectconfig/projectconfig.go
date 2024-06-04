@@ -2,6 +2,7 @@ package projectconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -75,6 +76,16 @@ func LoadWritableConfig(ctx context.Context, input []string) (Config, error) {
 		return Config{}, nil
 	}
 	target := configPaths[len(configPaths)-1]
+
+	logger := log.FromContext(ctx)
+	if _, err := os.Stat(target); errors.Is(err, os.ErrNotExist) {
+		logger.Warnf("Creating a new project config file at %q because the file does not already exist", target)
+		err = Save(target, Config{})
+		if err != nil {
+			return Config{}, err
+		}
+	}
+
 	log.FromContext(ctx).Tracef("Loading config from %s", target)
 	return loadFile(target)
 }
