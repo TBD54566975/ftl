@@ -1,10 +1,5 @@
 package projectconfig
 
-import (
-	"errors"
-	"os"
-)
-
 // Merge configuration files.
 //
 // Config is merged left to right, with later files taking precedence over earlier files.
@@ -13,10 +8,7 @@ func Merge(paths ...string) (Config, error) {
 	for _, path := range paths {
 		partial, err := loadFile(path)
 		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				return config, err
-			}
-			continue
+			return config, err
 		}
 		config = merge(config, partial)
 	}
