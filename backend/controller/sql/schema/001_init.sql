@@ -395,9 +395,7 @@ CREATE TABLE topic_subscriptions (
     -- Cursor pointing into the topic_events table.
     cursor BIGINT REFERENCES topic_events(id) ON DELETE CASCADE,
 
-    -- when a subscription is handling an event, lease_id and active event are filled in
-    -- if a lease expires, active event will still be set, indicating a async call has already been scheduled
-    -- this state must be handled separately
+    -- State is 'executing' when there is an unfinished async_call for the current cursor.
     state topic_subscription_state NOT NULL DEFAULT 'idle'
 );
 
