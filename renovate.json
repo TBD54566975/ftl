@@ -10,21 +10,38 @@
   ],
   "packageRules": [
     {
-      "matchPackageNames": ["jbr", "ktfmt", "golangci-lint"],
-      "matchManagers": ["hermit"],
+      "matchPackageNames": [
+        "jbr",
+        "ktfmt",
+        "golangci-lint",
+        "svu"
+      ],
+      "matchManagers": [
+        "hermit"
+      ],
       "enabled": false
     },
     {
-      "matchFileNames": ["**/testdata/**/go.mod"],
+      "matchFileNames": [
+        "**/testdata/**/go.mod"
+      ],
       "enabled": false
     },
     {
-      "matchPackageNames": ["eslint", "codemirror"],
+      "matchPackageNames": [
+        "eslint",
+        "codemirror"
+      ],
       "enabled": false,
-      "paths": ["frontend/**", "extensions/**"]
+      "paths": [
+        "frontend/**",
+        "extensions/**"
+      ]
     },
     {
-      "matchPackageNames": ["connectrpc.com/connect"],
+      "matchPackageNames": [
+        "connectrpc.com/connect"
+      ],
       "enabled": false
     }
   ]
