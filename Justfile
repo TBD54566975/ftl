@@ -128,10 +128,6 @@ tidy:
 test-backend:
   @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./...
 
-# Run frontend tests
-test-frontend:
-  @cd frontend && npm run test
-
 # Lint the frontend
 lint-frontend: build-frontend
   @cd frontend && npm run lint && tsc

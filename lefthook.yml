@@ -8,7 +8,7 @@ pre-push:
       run: just test-backend
     lint-backend:
       run: just lint-backend
-    test-frontend:
+    build-frontend:
       root: frontend/
       run: just build-frontend
     lint-frontend:
