@@ -2,6 +2,8 @@ module github.com/TBD54566975/ftl
 
 go 1.22.2
 
+retract v1.1.0
+
 require (
 	connectrpc.com/connect v1.16.1
 	connectrpc.com/grpcreflect v1.2.0
