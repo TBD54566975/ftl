@@ -1,8 +1,8 @@
-module ftl/httpingress
+module ftl/notexportedverb
 
 go 1.22.2
 
-require github.com/TBD54566975/ftl v0.189.0
+require github.com/TBD54566975/ftl v0.193.0
 
 require (
 	connectrpc.com/connect v1.16.1 // indirect
@@ -40,4 +40,4 @@ require (
 	google.golang.org/protobuf v1.34.1 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ./../../../../../..
+replace github.com/TBD54566975/ftl => ./../../../../..

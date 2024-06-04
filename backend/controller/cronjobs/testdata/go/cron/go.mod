@@ -1,4 +1,4 @@
-module ftl/httpingress
+module ftl/cron
 
 go 1.22.2
 
