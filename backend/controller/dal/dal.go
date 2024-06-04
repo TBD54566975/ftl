@@ -282,16 +282,12 @@ func (t *Tx) Rollback(ctx context.Context) error {
 }
 
 func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
-	db, ok := d.db.(*sql.DB)
-	if !ok {
-		return nil, fmt.Errorf("can't nest transactions")
-	}
-	stx, err := db.Begin(ctx)
+	tx, err := d.db.Begin(ctx)
 	if err != nil {
 		return nil, translatePGError(err)
 	}
 	return &Tx{&DAL{
-		db:                stx,
+		db:                tx,
 		DeploymentChanges: d.DeploymentChanges,
 	}}, nil
 }

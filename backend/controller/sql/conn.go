@@ -2,6 +2,7 @@ package sql
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -37,22 +38,41 @@ func (d *DB) Begin(ctx context.Context) (*Tx, error) {
 }
 
 type Tx struct {
-	tx pgx.Tx
+	tx         pgx.Tx
+	savepoints []string
 	*Queries
 }
 
 func (t *Tx) Conn() ConnI { return t.tx }
 
 func (t *Tx) Begin(ctx context.Context) (*Tx, error) {
-	panic("recursive transactions are not supported")
+	savepoint := fmt.Sprintf("savepoint_%d", len(t.savepoints))
+	t.savepoints = append(t.savepoints, savepoint)
+	_, err := t.tx.Exec(ctx, `SAVEPOINT `+savepoint)
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{tx: t.tx, savepoints: t.savepoints, Queries: t.Queries}, nil
 }
 
 func (t *Tx) Commit(ctx context.Context) error {
-	return t.tx.Commit(ctx)
+	if len(t.savepoints) == 0 {
+		return t.tx.Commit(ctx)
+	}
+	savepoint := t.savepoints[len(t.savepoints)-1]
+	t.savepoints = t.savepoints[:len(t.savepoints)-1]
+	_, err := t.tx.Exec(ctx, `RELEASE SAVEPOINT `+savepoint)
+	return err
 }
 
 func (t *Tx) Rollback(ctx context.Context) error {
-	return t.tx.Rollback(ctx)
+	if len(t.savepoints) == 0 {
+		return t.tx.Rollback(ctx)
+	}
+	savepoint := t.savepoints[len(t.savepoints)-1]
+	t.savepoints = t.savepoints[:len(t.savepoints)-1]
+	_, err := t.tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+savepoint)
+	return err
 }
 
 // CommitOrRollback can be used in a defer statement to commit or rollback a
