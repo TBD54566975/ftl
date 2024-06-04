@@ -223,6 +223,10 @@ func (s *Service) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEv
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("FSM events must be sent to the controller"))
 }
 
+func (s *Service) PublishEvent(context.Context, *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("topic events must be sent to the controller"))
+}
+
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
 	if err, ok := s.registrationFailure.Load().Get(); ok {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to register runner: %w", err))

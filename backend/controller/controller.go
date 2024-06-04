@@ -817,6 +817,15 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 	return connect.NewResponse(&ftlv1.SendFSMEventResponse{}), nil
 }
 
+func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
+	// Publish the event.
+	err := s.dal.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Body)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
+	}
+	return connect.NewResponse(&ftlv1.PublishEventResponse{}), nil
+}
+
 func (s *Service) callWithRequest(
 	ctx context.Context,
 	req *connect.Request[ftlv1.CallRequest],

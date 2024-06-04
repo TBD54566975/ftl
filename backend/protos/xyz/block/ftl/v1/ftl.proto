@@ -88,6 +88,13 @@ message SendFSMEventRequest {
 
 message SendFSMEventResponse {}
 
+message PublishEventRequest {
+  schema.Ref topic = 1;
+  bytes body = 2;
+}
+
+message PublishEventResponse {}
+
 // VerbService is a common interface shared by multiple services for calling Verbs.
 service VerbService {
   // Ping service for readiness.
@@ -105,6 +112,9 @@ service VerbService {
 
   // Send an event to an FSM.
   rpc SendFSMEvent(SendFSMEventRequest) returns (SendFSMEventResponse);
+
+  // Publish an event to a topic.
+  rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
 
   // Issue a synchronous call to a Verb.
   rpc Call(CallRequest) returns (CallResponse);

@@ -178,3 +178,7 @@ func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.Ping
 func (m *moduleServer) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("SendFSMEvent not implemented"))
 }
+
+func (m *moduleServer) PublishEvent(context.Context, *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("PublishEvent not implemented"))
+}
