@@ -17,11 +17,15 @@ const (
 	controllersPerSubscription = 2
 )
 
-type Manager struct {
-	key model.ControllerKey
+type DAL interface {
+	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]model.Subscription, error)
+	ProgressSubscription(ctx context.Context, subscription model.Subscription) error
+	CompleteEventForSubscription(ctx context.Context, module, name string) error
+}
 
-	// TODO: swap out DAL for a smaller interface once we know what funcs we want
-	dal           *dal.DAL
+type Manager struct {
+	key           model.ControllerKey
+	dal           DAL
 	hashRingState atomic.Value[*hashRingState]
 }
 
