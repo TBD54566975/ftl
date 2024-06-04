@@ -21,3 +21,7 @@ var _ internal.FTL = &fakeFTL{}
 func (f *fakeFTL) FSMSend(ctx context.Context, fsm string, instance string, event any) error {
 	return f.fsm.SendEvent(ctx, fsm, instance, event)
 }
+
+func (f *fakeFTL) PublishEvent(ctx context.Context, topic string, event any) error {
+	panic("not implemented")
+}

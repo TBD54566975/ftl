@@ -41,3 +41,19 @@ func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) 
 	}
 	return nil
 }
+
+func (r *RealFTL) PublishEvent(ctx context.Context, topic string, event any) error {
+	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
+	body, err := encoding.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+	_, err = client.PublishEvent(ctx, connect.NewRequest(&ftlv1.PublishEventRequest{
+		Topic: &schemapb.Ref{Module: reflection.Module(), Name: topic},
+		Body:  body,
+	}))
+	if err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+	return nil
+}

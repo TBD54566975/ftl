@@ -659,6 +659,20 @@ VALUES (
   (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key),
   sqlc.arg('sink')::TEXT);
 
+-- name: PublishEventForTopic :exec
+INSERT INTO topic_events ("key", topic_id, payload)
+VALUES (
+  sqlc.arg('key')::topic_event_key,
+  (
+    SELECT topics.id
+    FROM topics
+    INNER JOIN modules ON topics.module_id = modules.id
+    WHERE modules.name = sqlc.arg('module')::TEXT
+      AND topics.name = sqlc.arg('topic')::TEXT
+  ),
+  sqlc.arg('payload')
+);
+
 -- name: GetModuleConfiguration :one
 SELECT value
 FROM module_configuration

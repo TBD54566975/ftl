@@ -121,6 +121,8 @@ func (d *DAL) publishNotification(ctx context.Context, notification event, logge
 
 	case "topics":
 		// TODO: handle topics notifications
+	case "topic_events":
+		// TODO: handle topic events notifications
 	default:
 		panic(fmt.Sprintf("unknown table %q in DB notification", notification.Table))
 	}

@@ -14,6 +14,9 @@ import (
 type FTL interface {
 	// FSMSend sends an event to an instance of an FSM.
 	FSMSend(ctx context.Context, fsm, instance string, data any) error
+
+	// PublishEvent sends an event to a pubsub topic.
+	PublishEvent(ctx context.Context, topic string, event any) error
 }
 
 type ftlContextKey struct{}
