@@ -320,6 +320,8 @@ CREATE TABLE topics (
 
 CREATE UNIQUE INDEX topics_module_name_idx ON topics(module_id, name);
 
+CREATE UNIQUE INDEX topics_key_idx ON topics (key);
+
 CREATE TRIGGER topics_notify_event
     AFTER INSERT OR UPDATE OR DELETE
     ON topics
@@ -337,6 +339,10 @@ CREATE TABLE topic_events (
     topic_id BIGINT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
     payload BYTEA NOT NULL
 );
+
+CREATE UNIQUE INDEX topic_events_key_idx ON topic_events (key);
+
+CREATE INDEX topic_events_topic_idx ON topic_events (topic_id);
 
 CREATE TRIGGER topic_events_notify_event
     AFTER INSERT OR UPDATE OR DELETE
@@ -397,6 +403,8 @@ CREATE TABLE topic_subscriptions (
 
 CREATE UNIQUE INDEX topic_subscriptions_module_name_idx ON topic_subscriptions(module_id, name);
 
+CREATE UNIQUE INDEX topic_subscriptions_key_idx ON topic_subscriptions (key);
+
 CREATE DOMAIN subscriber_key AS TEXT;
 
 -- A subscriber to a topic.
@@ -413,6 +421,8 @@ CREATE TABLE topic_subscribers (
    -- Name of the verb to call on the deployment.
    sink schema_ref NOT NULL
 );
+
+CREATE INDEX topic_subscribers_subscription_idx ON topic_subscribers (topic_subscriptions_id);
 
 CREATE DOMAIN lease_key AS TEXT;
 

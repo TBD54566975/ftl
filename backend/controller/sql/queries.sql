@@ -660,7 +660,11 @@ VALUES (
   sqlc.arg('sink'));
 
 -- name: PublishEventForTopic :exec
-INSERT INTO topic_events ("key", topic_id, payload)
+INSERT INTO topic_events (
+    "key",
+    topic_id,
+    payload
+  )
 VALUES (
   sqlc.arg('key')::topic_event_key,
   (
@@ -744,7 +748,8 @@ WITH module AS (
 )
 UPDATE topic_subscriptions
 SET state = 'idle'
-WHERE name = @name::TEXT;
+WHERE name = @name::TEXT
+      AND module_id = (SELECT id FROM module);
 
 -- name: GetModuleConfiguration :one
 SELECT value

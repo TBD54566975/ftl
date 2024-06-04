@@ -126,6 +126,7 @@ WITH module AS (
 UPDATE topic_subscriptions
 SET state = 'idle'
 WHERE name = $1::TEXT
+      AND module_id = (SELECT id FROM module)
 `
 
 func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string, module string) error {
@@ -1920,7 +1921,11 @@ func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl time.Duratio
 }
 
 const publishEventForTopic = `-- name: PublishEventForTopic :exec
-INSERT INTO topic_events ("key", topic_id, payload)
+INSERT INTO topic_events (
+    "key",
+    topic_id,
+    payload
+  )
 VALUES (
   $1::topic_event_key,
   (
