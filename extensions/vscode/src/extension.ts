@@ -61,7 +61,7 @@ export async function activate(context: ExtensionContext) {
   statusBarItem.command = "ftl.statusItemClicked"
   statusBarItem.show()
 
-  await promptStartClient(context)
+  promptStartClient(context)
 
   context.subscriptions.push(
     restartCmd,
@@ -104,44 +104,46 @@ async function FTLPreflightCheck(ftlPath: string) {
   return true
 }
 
-async function promptStartClient(context: vscode.ExtensionContext): Promise<void> {
+async function promptStartClient(context: vscode.ExtensionContext) {
   const configuration = vscode.workspace.getConfiguration('ftl')
   const startClientOption = configuration.get<string>('startClientOption')
+
+  FTLStatus.disabled(statusBarItem)
 
   if (startClientOption === 'always') {
     await startClient(context)
     return
   } else if (startClientOption === 'never') {
-    FTLStatus.disabled(statusBarItem)
     return
   }
 
   const options = ['Always', 'Yes', 'No', 'Never']
-  const result = await vscode.window.showInformationMessage(
+  vscode.window.showInformationMessage(
     'FTL project detected. Would you like to start the FTL development server?',
     ...options
-  )
-
-  switch (result) {
-    case 'Always':
-      configuration.update('startClientOption', 'always', vscode.ConfigurationTarget.Global)
-      await startClient(context)
-      break
-    case 'Yes':
-      await startClient(context)
-      break
-    case 'No':
-      FTLStatus.disabled(statusBarItem)
-      break
-    case 'Never':
-      configuration.update('startClientOption', 'never', vscode.ConfigurationTarget.Global)
-      FTLStatus.disabled(statusBarItem)
-      break
-  }
+  ).then(async (result) => {
+    switch (result) {
+      case 'Always':
+        configuration.update('startClientOption', 'always', vscode.ConfigurationTarget.Global)
+        await startClient(context)
+        break
+      case 'Yes':
+        await startClient(context)
+        break
+      case 'No':
+        FTLStatus.disabled(statusBarItem)
+        break
+      case 'Never':
+        configuration.update('startClientOption', 'never', vscode.ConfigurationTarget.Global)
+        FTLStatus.disabled(statusBarItem)
+        break
+    }
+  })
 }
 
 async function startClient(context: ExtensionContext) {
   console.log("Starting client")
+  FTLStatus.starting(statusBarItem)
 
   const ftlConfig = vscode.workspace.getConfiguration("ftl")
 
@@ -156,7 +158,6 @@ async function startClient(context: ExtensionContext) {
     return
   }
 
-  FTLStatus.starting(statusBarItem)
   outputChannel = vscode.window.createOutputChannel("FTL", 'log')
 
   const userFlags = ftlConfig.get<string[]>("devCommandFlags") ?? []
