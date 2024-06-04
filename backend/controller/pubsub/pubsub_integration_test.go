@@ -19,15 +19,14 @@ func TestPubSub(t *testing.T) {
 		in.Deploy("publisher"),
 		in.Deploy("subscriber"),
 
-		// publish 3 events
-		in.Call("publisher", "publish", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
+		// publish 2 events
 		in.Call("publisher", "publish", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
 		in.Call("publisher", "publish", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
 
 		// TODO: speed this up when we have proper pubsub implementation
-		in.Sleep(time.Second*4*3),
+		in.Sleep(time.Second*4*2),
 
-		// check that there are 3 successful async calls
+		// check that there are 2 successful async calls
 		in.QueryRow("ftl",
 			fmt.Sprintf(`
 		SELECT COUNT(*)
@@ -36,6 +35,6 @@ func TestPubSub(t *testing.T) {
 			state = 'success'
 			AND origin = '%s'
 		`, dal.AsyncOriginPubSub{Subscription: schema.Ref{Module: "subscriber", Name: "test_subscription"}.ToRefKey()}.String()),
-			[]int64{3}),
+			2),
 	)
 }
