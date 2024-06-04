@@ -81,6 +81,7 @@ type Querier interface {
 	ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error)
+	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
 	RenewLease(ctx context.Context, ttl time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
 	ReplaceDeployment(ctx context.Context, oldDeployment model.DeploymentKey, newDeployment model.DeploymentKey, minReplicas int32) (int64, error)

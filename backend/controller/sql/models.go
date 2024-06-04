@@ -467,6 +467,7 @@ type Topic struct {
 type TopicEvent struct {
 	ID        int64
 	CreatedAt time.Time
+	Key       model.TopicEventKey
 	TopicID   int64
 	Payload   []byte
 }

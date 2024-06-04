@@ -1,5 +1,11 @@
 package ftl
 
+import (
+	"context"
+
+	"github.com/TBD54566975/ftl/go-runtime/internal"
+)
+
 // RegisterTopic declares a topic
 //
 // Topics publish events, and subscriptions can listen to them.
@@ -12,8 +18,8 @@ type Topic[E any] struct {
 }
 
 // Publish publishes an event to a topic
-func (t Topic[E]) Publish(event E) error {
-	panic("not implemented")
+func (t Topic[E]) Publish(ctx context.Context, event E) error {
+	return internal.FromContext(ctx).PublishEvent(ctx, t.name, event)
 }
 
 // RegisterSubscription declares a subscription to a topic

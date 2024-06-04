@@ -13,7 +13,7 @@ type PayinEvent struct {
 
 //ftl:verb
 func Payin(ctx context.Context) error {
-	if err := payinsVar.Publish(PayinEvent{Name: "Test"}); err != nil {
+	if err := payinsVar.Publish(ctx, PayinEvent{Name: "Test"}); err != nil {
 		return fmt.Errorf("failed to publish event: %w", err)
 	}
 	return nil
@@ -40,7 +40,7 @@ var broadcast = ftl.RegisterTopic[PayinEvent]("publicBroadcast")
 
 //ftl:verb
 func Broadcast(ctx context.Context) error {
-	if err := broadcast.Publish(PayinEvent{Name: "Broadcast"}); err != nil {
+	if err := broadcast.Publish(ctx, PayinEvent{Name: "Broadcast"}); err != nil {
 		return fmt.Errorf("failed to publish broadcast event: %w", err)
 	}
 	return nil

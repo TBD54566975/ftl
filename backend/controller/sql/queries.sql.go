@@ -1775,6 +1775,38 @@ func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl time.Duratio
 	return idempotency_key, err
 }
 
+const publishEventForTopic = `-- name: PublishEventForTopic :exec
+INSERT INTO topic_events (key, topic_id, payload)
+VALUES (
+  $1::topic_event_key,
+  (
+    SELECT topics.id
+    FROM topics
+    INNER JOIN modules ON topics.module_id = modules.id
+    WHERE modules.name = $2::TEXT
+      AND topics.name = $3::TEXT
+  ),
+  $4
+)
+`
+
+type PublishEventForTopicParams struct {
+	Key     model.TopicEventKey
+	Module  string
+	Topic   string
+	Payload []byte
+}
+
+func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error {
+	_, err := q.db.Exec(ctx, publishEventForTopic,
+		arg.Key,
+		arg.Module,
+		arg.Topic,
+		arg.Payload,
+	)
+	return err
+}
+
 const releaseLease = `-- name: ReleaseLease :one
 DELETE FROM leases
 WHERE idempotency_key = $1 AND key = $2::lease_key
