@@ -4,10 +4,6 @@ import (
 	"context"
 )
 
-// DefaultConfigMixin is a Kong mixin that provides the default configuration manager.
-type DefaultConfigMixin struct {
-}
-
 // NewConfigurationManager creates a new configuration manager with the default configuration providers.
 func NewConfigurationManager(ctx context.Context, resolver Resolver[Configuration]) (*Manager[Configuration], error) {
 	return New(ctx, resolver, []Provider[Configuration]{

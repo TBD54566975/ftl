@@ -100,11 +100,20 @@ func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
 	return json.Unmarshal(data, value)
 }
 
+func (m *Manager[R]) availableProviderKeys() []string {
+	keys := make([]string, 0, len(m.providers))
+	for k := range m.providers {
+		keys = append(keys, "--"+k)
+	}
+	return keys
+}
+
 // Set a configuration value.
 func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) error {
 	provider, ok := m.providers[pkey]
 	if !ok {
-		return fmt.Errorf("no provider for key %q", pkey)
+		pkeys := strings.Join(m.availableProviderKeys(), ", ")
+		return fmt.Errorf("no provider for key %q, specify one of: %s", pkey, pkeys)
 	}
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -152,7 +161,8 @@ func (m *Manager[R]) MapForModule(ctx context.Context, module string) (map[strin
 func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref Ref) error {
 	provider, ok := m.providers[pkey]
 	if !ok {
-		return fmt.Errorf("no provider for key %q", pkey)
+		pkeys := strings.Join(m.availableProviderKeys(), ", ")
+		return fmt.Errorf("no provider for key %q, specify one of %s", pkey, pkeys)
 	}
 	if err := provider.Delete(ctx, ref); err != nil && !errors.Is(err, ErrNotFound) {
 		return err

@@ -7,12 +7,15 @@ import (
 	"io"
 	"os"
 
+	"connectrpc.com/connect"
+
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/alecthomas/types/optional"
 )
 
 type configCmd struct {
-	cf.DefaultConfigMixin
-
 	List  configListCmd  `cmd:"" help:"List configuration."`
 	Get   configGetCmd   `cmd:"" help:"Get a configuration value."`
 	Set   configSetCmd   `cmd:"" help:"Set a configuration value."`
@@ -29,13 +32,21 @@ etc.
 `
 }
 
-func (s *configCmd) providerKey() string {
-	if s.Envar {
-		return "envar"
-	} else if s.Inline {
-		return "inline"
+func configRefFromRef(ref cf.Ref) *ftlv1.ConfigRef {
+	module := ref.Module.Default("")
+	return &ftlv1.ConfigRef{
+		Module: &module,
+		Name:   ref.Name,
 	}
-	return ""
+}
+
+func (s *configCmd) provider() optional.Option[ftlv1.ConfigProvider] {
+	if s.Envar {
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_ENVAR)
+	} else if s.Inline {
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_INLINE)
+	}
+	return optional.None[ftlv1.ConfigProvider]()
 }
 
 type configListCmd struct {
@@ -43,40 +54,24 @@ type configListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
-func (s *configListCmd) Run(ctx context.Context, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := cf.NewConfigurationManager(ctx, cr)
+func (s *configListCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
+	resp, err := admin.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
+		Module:        &s.Module,
+		IncludeValues: &s.Values,
+	}))
 	if err != nil {
 		return err
 	}
-	listing, err := sm.List(ctx)
-	if err != nil {
-		return err
-	}
-	for _, config := range listing {
-		module, ok := config.Module.Get()
-		if s.Module != "" && module != s.Module {
-			continue
-		}
-		if ok {
-			fmt.Printf("%s.%s", module, config.Name)
-		} else {
-			fmt.Print(config.Name)
-		}
-		if s.Values {
-			var value any
-			err := sm.Get(ctx, config.Ref, &value)
-			if err != nil {
-				fmt.Printf(" (error: %s)\n", err)
-			} else {
-				data, _ := json.Marshal(value)
-				fmt.Printf(" = %s\n", data)
-			}
+
+	for _, config := range resp.Msg.Configs {
+		fmt.Printf("%s", config.RefPath)
+		if config.Value != nil && len(config.Value) > 0 {
+			fmt.Printf(" = %s\n", config.Value)
 		} else {
 			fmt.Println()
 		}
 	}
 	return nil
-
 }
 
 type configGetCmd struct {
@@ -89,23 +84,20 @@ Returns a JSON-encoded configuration value.
 `
 }
 
-func (s *configGetCmd) Run(ctx context.Context, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := cf.NewConfigurationManager(ctx, cr)
-	if err != nil {
-		return err
-	}
-	var value any
-	err = sm.Get(ctx, s.Ref, &value)
+func (s *configGetCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
+	resp, err := admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
+		Ref: configRefFromRef(s.Ref),
+	}))
 	if err != nil {
 		return err
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	err = enc.Encode(value)
+	var value any
+	err = json.Unmarshal(resp.Msg.Value, &value)
 	if err != nil {
 		return fmt.Errorf("%s: %w", s.Ref, err)
 	}
+	fmt.Println(value)
 	return nil
 }
 
@@ -115,12 +107,8 @@ type configSetCmd struct {
 	Value *string `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
 }
 
-func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := cf.NewConfigurationManager(ctx, cr)
-	if err != nil {
-		return err
-	}
-
+func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
+	var err error
 	var config []byte
 	if s.Value != nil {
 		config = []byte(*s.Value)
@@ -131,26 +119,43 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[
 		}
 	}
 
-	var configValue any
+	var configValue []byte
 	if s.JSON {
 		if err := json.Unmarshal(config, &configValue); err != nil {
 			return fmt.Errorf("config is not valid JSON: %w", err)
 		}
 	} else {
-		configValue = string(config)
+		configValue = config
 	}
-	return sm.Set(ctx, scmd.providerKey(), s.Ref, configValue)
+
+	req := &ftlv1.SetConfigRequest{
+		Ref:   configRefFromRef(s.Ref),
+		Value: configValue,
+	}
+	if provider, ok := scmd.provider().Get(); ok {
+		req.Provider = &provider
+	}
+	_, err = admin.ConfigSet(ctx, connect.NewRequest(req))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type configUnsetCmd struct {
 	Ref cf.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
-func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, cr cf.Resolver[cf.Configuration]) error {
-	sm, err := cf.NewConfigurationManager(ctx, cr)
+func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
+	req := &ftlv1.UnsetConfigRequest{
+		Ref: configRefFromRef(s.Ref),
+	}
+	if provider, ok := scmd.provider().Get(); ok {
+		req.Provider = &provider
+	}
+	_, err := admin.ConfigUnset(ctx, connect.NewRequest(req))
 	if err != nil {
 		return err
 	}
-
-	return sm.Unset(ctx, scmd.providerKey(), s.Ref)
+	return nil
 }

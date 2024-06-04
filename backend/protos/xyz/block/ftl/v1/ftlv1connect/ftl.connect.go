@@ -27,6 +27,8 @@ const (
 	ControllerServiceName = "xyz.block.ftl.v1.ControllerService"
 	// RunnerServiceName is the fully-qualified name of the RunnerService service.
 	RunnerServiceName = "xyz.block.ftl.v1.RunnerService"
+	// AdminServiceName is the fully-qualified name of the AdminService service.
+	AdminServiceName = "xyz.block.ftl.v1.AdminService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -102,6 +104,27 @@ const (
 	RunnerServiceDeployProcedure = "/xyz.block.ftl.v1.RunnerService/Deploy"
 	// RunnerServiceTerminateProcedure is the fully-qualified name of the RunnerService's Terminate RPC.
 	RunnerServiceTerminateProcedure = "/xyz.block.ftl.v1.RunnerService/Terminate"
+	// AdminServicePingProcedure is the fully-qualified name of the AdminService's Ping RPC.
+	AdminServicePingProcedure = "/xyz.block.ftl.v1.AdminService/Ping"
+	// AdminServiceConfigListProcedure is the fully-qualified name of the AdminService's ConfigList RPC.
+	AdminServiceConfigListProcedure = "/xyz.block.ftl.v1.AdminService/ConfigList"
+	// AdminServiceConfigGetProcedure is the fully-qualified name of the AdminService's ConfigGet RPC.
+	AdminServiceConfigGetProcedure = "/xyz.block.ftl.v1.AdminService/ConfigGet"
+	// AdminServiceConfigSetProcedure is the fully-qualified name of the AdminService's ConfigSet RPC.
+	AdminServiceConfigSetProcedure = "/xyz.block.ftl.v1.AdminService/ConfigSet"
+	// AdminServiceConfigUnsetProcedure is the fully-qualified name of the AdminService's ConfigUnset
+	// RPC.
+	AdminServiceConfigUnsetProcedure = "/xyz.block.ftl.v1.AdminService/ConfigUnset"
+	// AdminServiceSecretsListProcedure is the fully-qualified name of the AdminService's SecretsList
+	// RPC.
+	AdminServiceSecretsListProcedure = "/xyz.block.ftl.v1.AdminService/SecretsList"
+	// AdminServiceSecretGetProcedure is the fully-qualified name of the AdminService's SecretGet RPC.
+	AdminServiceSecretGetProcedure = "/xyz.block.ftl.v1.AdminService/SecretGet"
+	// AdminServiceSecretSetProcedure is the fully-qualified name of the AdminService's SecretSet RPC.
+	AdminServiceSecretSetProcedure = "/xyz.block.ftl.v1.AdminService/SecretSet"
+	// AdminServiceSecretUnsetProcedure is the fully-qualified name of the AdminService's SecretUnset
+	// RPC.
+	AdminServiceSecretUnsetProcedure = "/xyz.block.ftl.v1.AdminService/SecretUnset"
 )
 
 // VerbServiceClient is a client for the xyz.block.ftl.v1.VerbService service.
@@ -882,4 +905,280 @@ func (UnimplementedRunnerServiceHandler) Deploy(context.Context, *connect.Reques
 
 func (UnimplementedRunnerServiceHandler) Terminate(context.Context, *connect.Request[v1.TerminateRequest]) (*connect.Response[v1.RegisterRunnerRequest], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Terminate is not implemented"))
+}
+
+// AdminServiceClient is a client for the xyz.block.ftl.v1.AdminService service.
+type AdminServiceClient interface {
+	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// List configuration.
+	ConfigList(context.Context, *connect.Request[v1.ListConfigRequest]) (*connect.Response[v1.ListConfigResponse], error)
+	// Get a config value.
+	ConfigGet(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
+	// Set a config value.
+	ConfigSet(context.Context, *connect.Request[v1.SetConfigRequest]) (*connect.Response[v1.SetConfigResponse], error)
+	// Unset a config value.
+	ConfigUnset(context.Context, *connect.Request[v1.UnsetConfigRequest]) (*connect.Response[v1.UnsetConfigResponse], error)
+	// List secrets.
+	SecretsList(context.Context, *connect.Request[v1.ListSecretsRequest]) (*connect.Response[v1.ListSecretsResponse], error)
+	// Get a secret.
+	SecretGet(context.Context, *connect.Request[v1.GetSecretRequest]) (*connect.Response[v1.GetSecretResponse], error)
+	// Set a secret.
+	SecretSet(context.Context, *connect.Request[v1.SetSecretRequest]) (*connect.Response[v1.SetSecretResponse], error)
+	// Unset a secret.
+	SecretUnset(context.Context, *connect.Request[v1.UnsetSecretRequest]) (*connect.Response[v1.UnsetSecretResponse], error)
+}
+
+// NewAdminServiceClient constructs a client for the xyz.block.ftl.v1.AdminService service. By
+// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
+// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
+// connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) AdminServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	return &adminServiceClient{
+		ping: connect.NewClient[v1.PingRequest, v1.PingResponse](
+			httpClient,
+			baseURL+AdminServicePingProcedure,
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
+		configList: connect.NewClient[v1.ListConfigRequest, v1.ListConfigResponse](
+			httpClient,
+			baseURL+AdminServiceConfigListProcedure,
+			opts...,
+		),
+		configGet: connect.NewClient[v1.GetConfigRequest, v1.GetConfigResponse](
+			httpClient,
+			baseURL+AdminServiceConfigGetProcedure,
+			opts...,
+		),
+		configSet: connect.NewClient[v1.SetConfigRequest, v1.SetConfigResponse](
+			httpClient,
+			baseURL+AdminServiceConfigSetProcedure,
+			opts...,
+		),
+		configUnset: connect.NewClient[v1.UnsetConfigRequest, v1.UnsetConfigResponse](
+			httpClient,
+			baseURL+AdminServiceConfigUnsetProcedure,
+			opts...,
+		),
+		secretsList: connect.NewClient[v1.ListSecretsRequest, v1.ListSecretsResponse](
+			httpClient,
+			baseURL+AdminServiceSecretsListProcedure,
+			opts...,
+		),
+		secretGet: connect.NewClient[v1.GetSecretRequest, v1.GetSecretResponse](
+			httpClient,
+			baseURL+AdminServiceSecretGetProcedure,
+			opts...,
+		),
+		secretSet: connect.NewClient[v1.SetSecretRequest, v1.SetSecretResponse](
+			httpClient,
+			baseURL+AdminServiceSecretSetProcedure,
+			opts...,
+		),
+		secretUnset: connect.NewClient[v1.UnsetSecretRequest, v1.UnsetSecretResponse](
+			httpClient,
+			baseURL+AdminServiceSecretUnsetProcedure,
+			opts...,
+		),
+	}
+}
+
+// adminServiceClient implements AdminServiceClient.
+type adminServiceClient struct {
+	ping        *connect.Client[v1.PingRequest, v1.PingResponse]
+	configList  *connect.Client[v1.ListConfigRequest, v1.ListConfigResponse]
+	configGet   *connect.Client[v1.GetConfigRequest, v1.GetConfigResponse]
+	configSet   *connect.Client[v1.SetConfigRequest, v1.SetConfigResponse]
+	configUnset *connect.Client[v1.UnsetConfigRequest, v1.UnsetConfigResponse]
+	secretsList *connect.Client[v1.ListSecretsRequest, v1.ListSecretsResponse]
+	secretGet   *connect.Client[v1.GetSecretRequest, v1.GetSecretResponse]
+	secretSet   *connect.Client[v1.SetSecretRequest, v1.SetSecretResponse]
+	secretUnset *connect.Client[v1.UnsetSecretRequest, v1.UnsetSecretResponse]
+}
+
+// Ping calls xyz.block.ftl.v1.AdminService.Ping.
+func (c *adminServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
+	return c.ping.CallUnary(ctx, req)
+}
+
+// ConfigList calls xyz.block.ftl.v1.AdminService.ConfigList.
+func (c *adminServiceClient) ConfigList(ctx context.Context, req *connect.Request[v1.ListConfigRequest]) (*connect.Response[v1.ListConfigResponse], error) {
+	return c.configList.CallUnary(ctx, req)
+}
+
+// ConfigGet calls xyz.block.ftl.v1.AdminService.ConfigGet.
+func (c *adminServiceClient) ConfigGet(ctx context.Context, req *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
+	return c.configGet.CallUnary(ctx, req)
+}
+
+// ConfigSet calls xyz.block.ftl.v1.AdminService.ConfigSet.
+func (c *adminServiceClient) ConfigSet(ctx context.Context, req *connect.Request[v1.SetConfigRequest]) (*connect.Response[v1.SetConfigResponse], error) {
+	return c.configSet.CallUnary(ctx, req)
+}
+
+// ConfigUnset calls xyz.block.ftl.v1.AdminService.ConfigUnset.
+func (c *adminServiceClient) ConfigUnset(ctx context.Context, req *connect.Request[v1.UnsetConfigRequest]) (*connect.Response[v1.UnsetConfigResponse], error) {
+	return c.configUnset.CallUnary(ctx, req)
+}
+
+// SecretsList calls xyz.block.ftl.v1.AdminService.SecretsList.
+func (c *adminServiceClient) SecretsList(ctx context.Context, req *connect.Request[v1.ListSecretsRequest]) (*connect.Response[v1.ListSecretsResponse], error) {
+	return c.secretsList.CallUnary(ctx, req)
+}
+
+// SecretGet calls xyz.block.ftl.v1.AdminService.SecretGet.
+func (c *adminServiceClient) SecretGet(ctx context.Context, req *connect.Request[v1.GetSecretRequest]) (*connect.Response[v1.GetSecretResponse], error) {
+	return c.secretGet.CallUnary(ctx, req)
+}
+
+// SecretSet calls xyz.block.ftl.v1.AdminService.SecretSet.
+func (c *adminServiceClient) SecretSet(ctx context.Context, req *connect.Request[v1.SetSecretRequest]) (*connect.Response[v1.SetSecretResponse], error) {
+	return c.secretSet.CallUnary(ctx, req)
+}
+
+// SecretUnset calls xyz.block.ftl.v1.AdminService.SecretUnset.
+func (c *adminServiceClient) SecretUnset(ctx context.Context, req *connect.Request[v1.UnsetSecretRequest]) (*connect.Response[v1.UnsetSecretResponse], error) {
+	return c.secretUnset.CallUnary(ctx, req)
+}
+
+// AdminServiceHandler is an implementation of the xyz.block.ftl.v1.AdminService service.
+type AdminServiceHandler interface {
+	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// List configuration.
+	ConfigList(context.Context, *connect.Request[v1.ListConfigRequest]) (*connect.Response[v1.ListConfigResponse], error)
+	// Get a config value.
+	ConfigGet(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
+	// Set a config value.
+	ConfigSet(context.Context, *connect.Request[v1.SetConfigRequest]) (*connect.Response[v1.SetConfigResponse], error)
+	// Unset a config value.
+	ConfigUnset(context.Context, *connect.Request[v1.UnsetConfigRequest]) (*connect.Response[v1.UnsetConfigResponse], error)
+	// List secrets.
+	SecretsList(context.Context, *connect.Request[v1.ListSecretsRequest]) (*connect.Response[v1.ListSecretsResponse], error)
+	// Get a secret.
+	SecretGet(context.Context, *connect.Request[v1.GetSecretRequest]) (*connect.Response[v1.GetSecretResponse], error)
+	// Set a secret.
+	SecretSet(context.Context, *connect.Request[v1.SetSecretRequest]) (*connect.Response[v1.SetSecretResponse], error)
+	// Unset a secret.
+	SecretUnset(context.Context, *connect.Request[v1.UnsetSecretRequest]) (*connect.Response[v1.UnsetSecretResponse], error)
+}
+
+// NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
+// path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	adminServicePingHandler := connect.NewUnaryHandler(
+		AdminServicePingProcedure,
+		svc.Ping,
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceConfigListHandler := connect.NewUnaryHandler(
+		AdminServiceConfigListProcedure,
+		svc.ConfigList,
+		opts...,
+	)
+	adminServiceConfigGetHandler := connect.NewUnaryHandler(
+		AdminServiceConfigGetProcedure,
+		svc.ConfigGet,
+		opts...,
+	)
+	adminServiceConfigSetHandler := connect.NewUnaryHandler(
+		AdminServiceConfigSetProcedure,
+		svc.ConfigSet,
+		opts...,
+	)
+	adminServiceConfigUnsetHandler := connect.NewUnaryHandler(
+		AdminServiceConfigUnsetProcedure,
+		svc.ConfigUnset,
+		opts...,
+	)
+	adminServiceSecretsListHandler := connect.NewUnaryHandler(
+		AdminServiceSecretsListProcedure,
+		svc.SecretsList,
+		opts...,
+	)
+	adminServiceSecretGetHandler := connect.NewUnaryHandler(
+		AdminServiceSecretGetProcedure,
+		svc.SecretGet,
+		opts...,
+	)
+	adminServiceSecretSetHandler := connect.NewUnaryHandler(
+		AdminServiceSecretSetProcedure,
+		svc.SecretSet,
+		opts...,
+	)
+	adminServiceSecretUnsetHandler := connect.NewUnaryHandler(
+		AdminServiceSecretUnsetProcedure,
+		svc.SecretUnset,
+		opts...,
+	)
+	return "/xyz.block.ftl.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case AdminServicePingProcedure:
+			adminServicePingHandler.ServeHTTP(w, r)
+		case AdminServiceConfigListProcedure:
+			adminServiceConfigListHandler.ServeHTTP(w, r)
+		case AdminServiceConfigGetProcedure:
+			adminServiceConfigGetHandler.ServeHTTP(w, r)
+		case AdminServiceConfigSetProcedure:
+			adminServiceConfigSetHandler.ServeHTTP(w, r)
+		case AdminServiceConfigUnsetProcedure:
+			adminServiceConfigUnsetHandler.ServeHTTP(w, r)
+		case AdminServiceSecretsListProcedure:
+			adminServiceSecretsListHandler.ServeHTTP(w, r)
+		case AdminServiceSecretGetProcedure:
+			adminServiceSecretGetHandler.ServeHTTP(w, r)
+		case AdminServiceSecretSetProcedure:
+			adminServiceSecretSetHandler.ServeHTTP(w, r)
+		case AdminServiceSecretUnsetProcedure:
+			adminServiceSecretUnsetHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedAdminServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedAdminServiceHandler struct{}
+
+func (UnimplementedAdminServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.Ping is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ConfigList(context.Context, *connect.Request[v1.ListConfigRequest]) (*connect.Response[v1.ListConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.ConfigList is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ConfigGet(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.ConfigGet is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ConfigSet(context.Context, *connect.Request[v1.SetConfigRequest]) (*connect.Response[v1.SetConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.ConfigSet is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ConfigUnset(context.Context, *connect.Request[v1.UnsetConfigRequest]) (*connect.Response[v1.UnsetConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.ConfigUnset is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SecretsList(context.Context, *connect.Request[v1.ListSecretsRequest]) (*connect.Response[v1.ListSecretsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretsList is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SecretGet(context.Context, *connect.Request[v1.GetSecretRequest]) (*connect.Response[v1.GetSecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretGet is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SecretSet(context.Context, *connect.Request[v1.SetSecretRequest]) (*connect.Response[v1.SetSecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretSet is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SecretUnset(context.Context, *connect.Request[v1.UnsetSecretRequest]) (*connect.Response[v1.UnsetSecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretUnset is not implemented"))
 }

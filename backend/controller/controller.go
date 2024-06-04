@@ -130,6 +130,10 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	}
 	logger.Debugf("Listening on %s", config.Bind)
 
+	cm := cf.ConfigFromContext(ctx)
+	sm := cf.SecretsFromContext(ctx)
+
+	admin := NewAdminService(cm, sm)
 	console := NewConsoleService(dal)
 
 	ingressHandler := http.Handler(svc)
@@ -148,6 +152,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		return rpc.Serve(ctx, config.Bind,
 			rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
+			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 			rpc.HTTP("/", consoleHandler),
 		)

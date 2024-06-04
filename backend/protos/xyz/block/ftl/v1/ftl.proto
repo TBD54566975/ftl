@@ -394,3 +394,126 @@ service RunnerService {
   // Terminate the deployment on this Runner.
   rpc Terminate(TerminateRequest) returns (RegisterRunnerRequest);
 }
+
+message ConfigRef {
+  optional string module = 1;
+  string name = 2;
+}
+
+enum ConfigProvider {
+  // Write values inline in the configuration file.
+  CONFIG_INLINE = 0;
+
+  // Print configuration as environment variables.
+  CONFIG_ENVAR = 1;
+}
+
+message ListConfigRequest {
+  optional string module = 1;
+  optional bool include_values = 2;
+}
+message ListConfigResponse {
+  message Config {
+    string refPath = 1;
+    optional bytes value = 2;
+  }
+  repeated Config configs = 1;
+}
+
+message GetConfigRequest {
+  ConfigRef ref = 1;
+}
+message GetConfigResponse {
+  bytes value = 1;
+}
+
+message SetConfigRequest {
+  optional ConfigProvider provider = 1;
+  ConfigRef ref = 2;
+  bytes value = 3;
+}
+message SetConfigResponse {}
+
+message UnsetConfigRequest {
+  optional ConfigProvider provider = 1;
+  ConfigRef ref = 2;
+}
+message UnsetConfigResponse {}
+
+enum SecretProvider {
+  // Write values inline in the configuration file.
+  SECRET_INLINE = 0;
+
+  // Print configuration as environment variables.
+  SECRET_ENVAR = 1;
+
+  // Write to the system keychain.
+  SECRET_KEYCHAIN = 2;
+
+  // Store a secret in the 1Password vault.
+  SECRET_OP = 3;
+}
+
+message ListSecretsRequest {
+  optional string module = 1;
+  optional bool include_values = 2;
+}
+message ListSecretsResponse {
+  message Secret {
+    string refPath = 1;
+    optional bytes value = 2;
+  }
+  repeated Secret secrets = 1;
+}
+
+message GetSecretRequest {
+  ConfigRef ref = 1;
+}
+message GetSecretResponse {
+  bytes value = 1;
+}
+
+message SetSecretRequest {
+  optional SecretProvider provider = 1;
+  ConfigRef ref = 2;
+  bytes value = 3;
+}
+message SetSecretResponse {}
+
+message UnsetSecretRequest {
+  optional SecretProvider provider = 1;
+  ConfigRef ref = 2;
+}
+message UnsetSecretResponse {}
+
+// AdminService is the service that provides and updates admin data. For example,
+// it is used to encapsulate configuration and secrets.
+service AdminService {
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // List configuration.
+  rpc ConfigList(ListConfigRequest) returns (ListConfigResponse);
+
+  // Get a config value.
+  rpc ConfigGet(GetConfigRequest) returns (GetConfigResponse);
+
+  // Set a config value.
+  rpc ConfigSet(SetConfigRequest) returns (SetConfigResponse);
+
+  // Unset a config value.
+  rpc ConfigUnset(UnsetConfigRequest) returns (UnsetConfigResponse);
+
+  // List secrets.
+  rpc SecretsList(ListSecretsRequest) returns (ListSecretsResponse);
+
+  // Get a secret.
+  rpc SecretGet(GetSecretRequest) returns (GetSecretResponse);
+
+  // Set a secret.
+  rpc SecretSet(SetSecretRequest) returns (SetSecretResponse);
+
+  // Unset a secret.
+  rpc SecretUnset(UnsetSecretRequest) returns (UnsetSecretResponse);
+}

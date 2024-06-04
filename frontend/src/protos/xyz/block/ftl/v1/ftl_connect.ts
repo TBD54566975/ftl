@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcquireLeaseRequest, AcquireLeaseResponse, CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, ModuleContextRequest, ModuleContextResponse, PingRequest, PingResponse, ProcessListRequest, ProcessListResponse, PublishEventRequest, PublishEventResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ReserveRequest, ReserveResponse, SendFSMEventRequest, SendFSMEventResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { AcquireLeaseRequest, AcquireLeaseResponse, CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetConfigRequest, GetConfigResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, GetSecretRequest, GetSecretResponse, ListConfigRequest, ListConfigResponse, ListSecretsRequest, ListSecretsResponse, ModuleContextRequest, ModuleContextResponse, PingRequest, PingResponse, ProcessListRequest, ProcessListResponse, PublishEventRequest, PublishEventResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ReserveRequest, ReserveResponse, SendFSMEventRequest, SendFSMEventResponse, SetConfigRequest, SetConfigResponse, SetSecretRequest, SetSecretResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UnsetConfigRequest, UnsetConfigResponse, UnsetSecretRequest, UnsetSecretResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -313,6 +313,116 @@ export const RunnerService = {
       name: "Terminate",
       I: TerminateRequest,
       O: RegisterRunnerRequest,
+      kind: MethodKind.Unary,
+    },
+  }
+} as const;
+
+/**
+ * AdminService is the service that provides and updates admin data. For example,
+ * it is used to encapsulate configuration and secrets.
+ *
+ * @generated from service xyz.block.ftl.v1.AdminService
+ */
+export const AdminService = {
+  typeName: "xyz.block.ftl.v1.AdminService",
+  methods: {
+    /**
+     * @generated from rpc xyz.block.ftl.v1.AdminService.Ping
+     */
+    ping: {
+      name: "Ping",
+      I: PingRequest,
+      O: PingResponse,
+      kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
+    },
+    /**
+     * List configuration.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.ConfigList
+     */
+    configList: {
+      name: "ConfigList",
+      I: ListConfigRequest,
+      O: ListConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get a config value.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.ConfigGet
+     */
+    configGet: {
+      name: "ConfigGet",
+      I: GetConfigRequest,
+      O: GetConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Set a config value.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.ConfigSet
+     */
+    configSet: {
+      name: "ConfigSet",
+      I: SetConfigRequest,
+      O: SetConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Unset a config value.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.ConfigUnset
+     */
+    configUnset: {
+      name: "ConfigUnset",
+      I: UnsetConfigRequest,
+      O: UnsetConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * List secrets.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.SecretsList
+     */
+    secretsList: {
+      name: "SecretsList",
+      I: ListSecretsRequest,
+      O: ListSecretsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get a secret.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.SecretGet
+     */
+    secretGet: {
+      name: "SecretGet",
+      I: GetSecretRequest,
+      O: GetSecretResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Set a secret.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.SecretSet
+     */
+    secretSet: {
+      name: "SecretSet",
+      I: SetSecretRequest,
+      O: SetSecretResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Unset a secret.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.SecretUnset
+     */
+    secretUnset: {
+      name: "SecretUnset",
+      I: UnsetSecretRequest,
+      O: UnsetSecretResponse,
       kind: MethodKind.Unary,
     },
   }

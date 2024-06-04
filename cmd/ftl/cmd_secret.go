@@ -7,9 +7,14 @@ import (
 	"io"
 	"os"
 
+	"connectrpc.com/connect"
+
+	"github.com/alecthomas/types/optional"
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 )
 
@@ -22,9 +27,7 @@ type secretCmd struct {
 	Envar    bool `help:"Write configuration as environment variables." group:"Provider:" xor:"secretwriter"`
 	Inline   bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"secretwriter"`
 	Keychain bool `help:"Write to the system keychain." group:"Provider:" xor:"secretwriter"`
-
-	//TODO: with AdminService, the controller will accept --opvault=VAULT and the following should be replaced with an --op bool flag.
-	Vault string `name:"op" help:"Store a secret in this 1Password vault. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"secretwriter" placeholder:"VAULT"`
+	Op       bool `help:"Write to the controller's 1Password vault. Requires that a vault be specified to the controller. The name of the item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"secretwriter"`
 }
 
 func (s *secretCmd) Help() string {
@@ -37,17 +40,17 @@ variables, and so on.
 `
 }
 
-func (s *secretCmd) providerKey() string {
+func (s *secretCmd) provider() optional.Option[ftlv1.SecretProvider] {
 	if s.Envar {
-		return "envar"
+		return optional.Some(ftlv1.SecretProvider_SECRET_ENVAR)
 	} else if s.Inline {
-		return "inline"
+		return optional.Some(ftlv1.SecretProvider_SECRET_INLINE)
 	} else if s.Keychain {
-		return "keychain"
-	} else if s.Vault != "" {
-		return "op"
+		return optional.Some(ftlv1.SecretProvider_SECRET_KEYCHAIN)
+	} else if s.Op {
+		return optional.Some(ftlv1.SecretProvider_SECRET_OP)
 	}
-	return ""
+	return optional.None[ftlv1.SecretProvider]()
 }
 
 type secretListCmd struct {
@@ -55,40 +58,23 @@ type secretListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List secrets only in this module."`
 }
 
-func (s *secretListCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
-	sm, err := cf.NewSecretsManager(ctx, sr, scmd.Vault)
+func (s *secretListCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
+	resp, err := admin.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
+		Module:        &s.Module,
+		IncludeValues: &s.Values,
+	}))
 	if err != nil {
 		return err
 	}
-	listing, err := sm.List(ctx)
-	if err != nil {
-		return err
-	}
-	for _, secret := range listing {
-		module, ok := secret.Module.Get()
-		if s.Module != "" && module != s.Module {
-			continue
-		}
-		if ok {
-			fmt.Printf("%s.%s", module, secret.Name)
-		} else {
-			fmt.Print(secret.Name)
-		}
-		if s.Values {
-			var value any
-			err := sm.Get(ctx, secret.Ref, &value)
-			if err != nil {
-				fmt.Printf(" (error: %s)\n", err)
-			} else {
-				data, _ := json.Marshal(value)
-				fmt.Printf(" = %s\n", data)
-			}
+	for _, secret := range resp.Msg.Secrets {
+		fmt.Printf("%s", secret.RefPath)
+		if secret.Value != nil && len(secret.Value) > 0 {
+			fmt.Printf(" = %s\n", secret.Value)
 		} else {
 			fmt.Println()
 		}
 	}
 	return nil
-
 }
 
 type secretGetCmd struct {
@@ -101,23 +87,19 @@ Returns a JSON-encoded secret value.
 `
 }
 
-func (s *secretGetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
-	sm, err := cf.NewSecretsManager(ctx, sr, scmd.Vault)
-	if err != nil {
-		return err
-	}
-	var value any
-	err = sm.Get(ctx, s.Ref, &value)
+func (s *secretGetCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
+	resp, err := admin.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{
+		Ref: configRefFromRef(s.Ref),
+	}))
 	if err != nil {
 		return err
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	err = enc.Encode(value)
-	if err != nil {
+	var value any
+	if err := json.Unmarshal(resp.Msg.Value, &value); err != nil {
 		return fmt.Errorf("%s: %w", s.Ref, err)
 	}
+	fmt.Println(value)
 	return nil
 }
 
@@ -126,13 +108,9 @@ type secretSetCmd struct {
 	Ref  cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
-	sm, err := cf.NewSecretsManager(ctx, sr, scmd.Vault)
-	if err != nil {
-		return err
-	}
-
+func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, admin ftlv1connect.AdminServiceClient) error {
 	// Prompt for a secret if stdin is a terminal, otherwise read from stdin.
+	var err error
 	var secret []byte
 	if isatty.IsTerminal(0) {
 		fmt.Print("Secret: ")
@@ -148,25 +126,43 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[
 		}
 	}
 
-	var secretValue any
+	var secretValue []byte
 	if s.JSON {
 		if err := json.Unmarshal(secret, &secretValue); err != nil {
 			return fmt.Errorf("secret is not valid JSON: %w", err)
 		}
 	} else {
-		secretValue = string(secret)
+		secretValue = secret
 	}
-	return sm.Set(ctx, scmd.providerKey(), s.Ref, secretValue)
+
+	req := &ftlv1.SetSecretRequest{
+		Ref:   configRefFromRef(s.Ref),
+		Value: secretValue,
+	}
+	if provider, ok := scmd.provider().Get(); ok {
+		req.Provider = &provider
+	}
+	_, err = admin.SecretSet(ctx, connect.NewRequest(req))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type secretUnsetCmd struct {
 	Ref cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, sr cf.Resolver[cf.Secrets]) error {
-	sm, err := cf.NewSecretsManager(ctx, sr, scmd.Vault)
+func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, admin ftlv1connect.AdminServiceClient) error {
+	req := &ftlv1.UnsetSecretRequest{
+		Ref: configRefFromRef(s.Ref),
+	}
+	if provider, ok := scmd.provider().Get(); ok {
+		req.Provider = &provider
+	}
+	_, err := admin.SecretUnset(ctx, connect.NewRequest(req))
 	if err != nil {
 		return err
 	}
-	return sm.Unset(ctx, scmd.providerKey(), s.Ref)
+	return nil
 }
