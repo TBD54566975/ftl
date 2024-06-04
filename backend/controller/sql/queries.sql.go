@@ -100,6 +100,39 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 	return err
 }
 
+const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
+WITH event AS (
+  SELECT id, created_at, key, topic_id, payload
+  FROM topic_events
+  WHERE "key" = $2::topic_event_key
+)
+UPDATE topic_subscriptions
+SET state = 'executing',
+    cursor = (SELECT id FROM event)
+WHERE id = $1
+`
+
+func (q *Queries) BeginConsumingTopicEvent(ctx context.Context, subscriptionID optional.Option[int64], event NullTopicEventKey) error {
+	_, err := q.db.Exec(ctx, beginConsumingTopicEvent, subscriptionID, event)
+	return err
+}
+
+const completeEventForSubscription = `-- name: CompleteEventForSubscription :exec
+WITH module AS (
+  SELECT id
+  FROM modules
+  WHERE name = $2::TEXT
+)
+UPDATE topic_subscriptions
+SET state = 'idle'
+WHERE name = $1::TEXT
+`
+
+func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string, module string) error {
+	_, err := q.db.Exec(ctx, completeEventForSubscription, name, module)
+	return err
+}
+
 const createArtefact = `-- name: CreateArtefact :one
 INSERT INTO artefacts (digest, content)
 VALUES ($1, $2)
@@ -1149,6 +1182,36 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 	return items, nil
 }
 
+const getNextEventForSubscription = `-- name: GetNextEventForSubscription :one
+WITH cursor AS (
+  SELECT
+    created_at,
+    id
+  FROM topic_events
+  WHERE "key" = $2::topic_event_key
+)
+SELECT events."key" as event,
+        events.payload
+FROM topics
+LEFT JOIN topic_events as events ON events.topic_id = topics.id
+WHERE topics.key = $1::topic_key
+  AND (events.created_at, events.id) > (SELECT COALESCE(MAX(cursor.created_at), '1900-01-01'), COALESCE(MAX(cursor.id), 0) FROM cursor)
+ORDER BY events.created_at, events.id
+LIMIT 1
+`
+
+type GetNextEventForSubscriptionRow struct {
+	Event   NullTopicEventKey
+	Payload []byte
+}
+
+func (q *Queries) GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor NullTopicEventKey) (GetNextEventForSubscriptionRow, error) {
+	row := q.db.QueryRow(ctx, getNextEventForSubscription, topic, cursor)
+	var i GetNextEventForSubscriptionRow
+	err := row.Scan(&i.Event, &i.Payload)
+	return i, err
+}
+
 const getProcessList = `-- name: GetProcessList :many
 SELECT d.min_replicas,
        d.key   AS deployment_key,
@@ -1435,6 +1498,51 @@ func (q *Queries) GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) 
 	return items, nil
 }
 
+const getSubscriptionsNeedingUpdate = `-- name: GetSubscriptionsNeedingUpdate :many
+SELECT
+  subs.key::subscription_key as key,
+  topic_events.key as cursor,
+  topics.key::topic_key as topic,
+  subs.name
+FROM topic_subscriptions subs
+LEFT JOIN topics ON subs.topic_id = topics.id
+LEFT JOIN topic_events ON subs.cursor = topic_events.id
+WHERE subs.cursor IS DISTINCT FROM topics.head
+  AND subs.state = 'idle'
+`
+
+type GetSubscriptionsNeedingUpdateRow struct {
+	Key    model.SubscriptionKey
+	Cursor NullTopicEventKey
+	Topic  model.TopicKey
+	Name   string
+}
+
+func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error) {
+	rows, err := q.db.Query(ctx, getSubscriptionsNeedingUpdate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSubscriptionsNeedingUpdateRow
+	for rows.Next() {
+		var i GetSubscriptionsNeedingUpdateRow
+		if err := rows.Scan(
+			&i.Key,
+			&i.Cursor,
+			&i.Topic,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertCallEvent = `-- name: InsertCallEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
@@ -1645,7 +1753,7 @@ VALUES (
       AND topic_subscriptions.name = $3::TEXT
   ),
   (SELECT id FROM deployments WHERE key = $4::deployment_key),
-  $5::TEXT)
+  $5)
 `
 
 type InsertSubscriberParams struct {
@@ -1653,7 +1761,7 @@ type InsertSubscriberParams struct {
 	Module           string
 	SubscriptionName string
 	Deployment       model.DeploymentKey
-	Sink             string
+	Sink             schema.RefKey
 }
 
 func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error {
@@ -1762,6 +1870,42 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 	return i, err
 }
 
+const lockSubscriptionAndGetSink = `-- name: LockSubscriptionAndGetSink :one
+WITH subscriber AS (
+  -- choose a random subscriber to execute the event
+  SELECT
+    subscribers.sink as sink
+  FROM topic_subscribers as subscribers
+  JOIN deployments ON subscribers.deployment_id = deployments.id
+  JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
+  WHERE topic_subscriptions.key = $1::subscription_key
+    AND deployments.min_replicas > 0
+  ORDER BY RANDOM()
+  LIMIT 1
+)
+SELECT
+  id as subscription_id,
+  (SELECT sink FROM subscriber) AS sink
+FROM topic_subscriptions
+WHERE state = 'idle'
+  AND key = $1::subscription_key
+  AND cursor IS NOT DISTINCT FROM (SELECT id FROM topic_events WHERE "key" = $2::topic_event_key)
+FOR UPDATE
+`
+
+type LockSubscriptionAndGetSinkRow struct {
+	SubscriptionID int64
+	Sink           schema.RefKey
+}
+
+// get a lock on the subscription row, guaranteeing that it is idle and has not consumed more events
+func (q *Queries) LockSubscriptionAndGetSink(ctx context.Context, key model.SubscriptionKey, cursor NullTopicEventKey) (LockSubscriptionAndGetSinkRow, error) {
+	row := q.db.QueryRow(ctx, lockSubscriptionAndGetSink, key, cursor)
+	var i LockSubscriptionAndGetSinkRow
+	err := row.Scan(&i.SubscriptionID, &i.Sink)
+	return i, err
+}
+
 const newLease = `-- name: NewLease :one
 INSERT INTO leases (idempotency_key, key, expires_at)
 VALUES (gen_random_uuid(), $1::lease_key, (NOW() AT TIME ZONE 'utc') + $2::interval)
@@ -1776,7 +1920,7 @@ func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl time.Duratio
 }
 
 const publishEventForTopic = `-- name: PublishEventForTopic :exec
-INSERT INTO topic_events (key, topic_id, payload)
+INSERT INTO topic_events ("key", topic_id, payload)
 VALUES (
   $1::topic_event_key,
   (

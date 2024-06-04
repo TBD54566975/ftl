@@ -26,6 +26,10 @@ type NullRunnerKey = optional.Option[model.RunnerKey]
 type NullCronJobKey = optional.Option[model.CronJobKey]
 type NullDeploymentKey = optional.Option[model.DeploymentKey]
 type NullRequestKey = optional.Option[model.RequestKey]
+type NullTopicKey = optional.Option[model.TopicKey]
+type NullSubscriptionKey = optional.Option[model.SubscriptionKey]
+type NullSubscriberKey = optional.Option[model.SubscriberKey]
+type NullTopicEventKey = optional.Option[model.TopicEventKey]
 
 var _ sql.Scanner = (*NullRunnerKey)(nil)
 var _ driver.Valuer = (*NullRunnerKey)(nil)
@@ -38,6 +42,18 @@ var _ driver.Valuer = (*NullDeploymentKey)(nil)
 
 var _ sql.Scanner = (*NullRequestKey)(nil)
 var _ driver.Valuer = (*NullRequestKey)(nil)
+
+var _ sql.Scanner = (*NullTopicKey)(nil)
+var _ driver.Valuer = (*NullTopicKey)(nil)
+
+var _ sql.Scanner = (*NullSubscriptionKey)(nil)
+var _ driver.Valuer = (*NullSubscriptionKey)(nil)
+
+var _ sql.Scanner = (*NullSubscriberKey)(nil)
+var _ driver.Valuer = (*NullSubscriberKey)(nil)
+
+var _ sql.Scanner = (*NullTopicEventKey)(nil)
+var _ driver.Valuer = (*NullTopicEventKey)(nil)
 
 // Type is a database adapter type for schema.Type.
 //

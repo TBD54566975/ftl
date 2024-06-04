@@ -313,7 +313,9 @@ CREATE TABLE topics (
     name TEXT NOT NULL,
 
     -- Data reference to the payload data type in the owning module's schema.
-    type TEXT NOT NULL
+    type TEXT NOT NULL,
+
+    head BIGINT NULL
 );
 
 CREATE UNIQUE INDEX topics_module_name_idx ON topics(module_id, name);
@@ -342,7 +344,31 @@ CREATE TRIGGER topic_events_notify_event
     FOR EACH ROW
 EXECUTE PROCEDURE notify_event();
 
+-- Automatically update module_name when deployment_id is set or unset.
+CREATE OR REPLACE FUNCTION topics_update_head() RETURNS TRIGGER AS
+$$
+BEGIN
+    UPDATE topics
+    SET head = NEW.id
+    WHERE id = NEW.topic_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER topics_update_head
+    BEFORE INSERT OR UPDATE
+    ON topic_events
+    FOR EACH ROW
+EXECUTE PROCEDURE topics_update_head();
+
 CREATE DOMAIN subscription_key AS TEXT;
+
+CREATE TYPE topic_subscription_state AS ENUM (
+    -- The subscription is available to consume events.
+    'idle',
+    -- The subscriptions is currently handling an event.
+    'executing'
+);
 
 -- A subscription to a topic.
 --
@@ -361,7 +387,12 @@ CREATE TABLE topic_subscriptions (
     name TEXT UNIQUE NOT NULL,
 
     -- Cursor pointing into the topic_events table.
-    cursor BIGINT REFERENCES topic_events(id) ON DELETE CASCADE
+    cursor BIGINT REFERENCES topic_events(id) ON DELETE CASCADE,
+
+    -- when a subscription is handling an event, lease_id and active event are filled in
+    -- if a lease expires, active event will still be set, indicating a async call has already been scheduled
+    -- this state must be handled separately
+    state topic_subscription_state NOT NULL DEFAULT 'idle'
 );
 
 CREATE UNIQUE INDEX topic_subscriptions_module_name_idx ON topic_subscriptions(module_id, name);
@@ -380,7 +411,7 @@ CREATE TABLE topic_subscribers (
 
    deployment_id BIGINT NOT NULL REFERENCES deployments(id) ON DELETE CASCADE,
    -- Name of the verb to call on the deployment.
-   sink TEXT NOT NULL
+   sink schema_ref NOT NULL
 );
 
 CREATE DOMAIN lease_key AS TEXT;

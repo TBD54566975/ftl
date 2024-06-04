@@ -592,12 +592,16 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			if !ok {
 				continue
 			}
+			sinkRef := schema.Ref{
+				Module: moduleSchema.Name,
+				Name:   v.Name,
+			}.ToRefKey()
 			err := tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
 				Key:              model.NewSubscriberKey(moduleSchema.Name, s.Name, v.Name),
 				Module:           moduleSchema.Name,
 				SubscriptionName: s.Name,
 				Deployment:       deploymentKey,
-				Sink:             v.Name,
+				Sink:             sinkRef,
 			})
 			if err != nil {
 				return model.DeploymentKey{}, fmt.Errorf("could not insert subscriber: %w", translatePGError(err))

@@ -83,6 +83,30 @@ sql:
             nullable: true
             go_type:
               type: "NullRequestKey"
+          - db_type: "topic_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.TopicKey"
+          - db_type: "topic_key"
+            nullable: true
+            go_type:
+              type: "NullTopicKey"
+          - db_type: "subscription_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.SubscriptionKey"
+          - db_type: "subscription_key"
+            nullable: true
+            go_type:
+              type: "NullSubscriptionKey"
+          - db_type: "subscriber_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.SubscriberKey"
+          - db_type: "subscriber_key"
+            nullable: true
+            go_type:
+              type: "NullSubscriberKey"
+          - db_type: "topic_event_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.TopicEventKey"
+          - db_type: "topic_event_key"
+            nullable: true
+            go_type:
+              type: "NullTopicEventKey"
           - db_type: "text"
             go_type: "string"
           - db_type: "text"
@@ -109,14 +133,6 @@ sql:
             go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
           - column: "events.payload"
             go_type: "encoding/json.RawMessage"
-          - db_type: "topic_key"
-            go_type: "github.com/TBD54566975/ftl/internal/model.TopicKey"
-          - db_type: "subscription_key"
-            go_type: "github.com/TBD54566975/ftl/internal/model.SubscriptionKey"
-          - db_type: "subscriber_key"
-            go_type: "github.com/TBD54566975/ftl/internal/model.SubscriberKey"
-          - db_type: "topic_event_key"
-            go_type: "github.com/TBD54566975/ftl/internal/model.TopicEventKey"
     rules:
       - sqlc/db-prepare
       # - postgresql-query-too-costly

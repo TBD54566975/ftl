@@ -37,6 +37,7 @@ func TestLease(t *testing.T) {
 	dal, err := New(ctx, conn)
 	assert.NoError(t, err)
 
+	// TTL is too short, expect an error
 	_, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*1)
 	assert.Error(t, err)
 

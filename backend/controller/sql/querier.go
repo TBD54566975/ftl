@@ -20,6 +20,8 @@ type Querier interface {
 	// reservation key.
 	AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error)
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
+	BeginConsumingTopicEvent(ctx context.Context, subscriptionID optional.Option[int64], event NullTopicEventKey) error
+	CompleteEventForSubscription(ctx context.Context, name string, module string) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
@@ -61,6 +63,7 @@ type Querier interface {
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
 	GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
+	GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor NullTopicEventKey) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	// Retrieve routing information for a runner.
 	GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error)
@@ -69,6 +72,7 @@ type Querier interface {
 	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
 	GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) ([]GetStaleCronJobsRow, error)
+	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
 	InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error
 	InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error
@@ -80,6 +84,8 @@ type Querier interface {
 	KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error)
 	ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
+	// get a lock on the subscription row, guaranteeing that it is idle and has not consumed more events
+	LockSubscriptionAndGetSink(ctx context.Context, key model.SubscriptionKey, cursor NullTopicEventKey) (LockSubscriptionAndGetSinkRow, error)
 	NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
