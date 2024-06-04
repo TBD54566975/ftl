@@ -21,7 +21,7 @@
   ],
   "source": "index.html",
   "dependencies": {
-    "@bufbuild/protoc-gen-es": "1.9.0",
+    "@bufbuild/protoc-gen-es": "1.10.0",
     "@codemirror/commands": "^6.5.0",
     "@codemirror/gutter": "^0.19.9",
     "@codemirror/language": "^6.10.1",
@@ -56,7 +56,7 @@
     "vite": "^4.4.9"
   },
   "devDependencies": {
-    "@swc/core": "1.5.7",
+    "@swc/core": "1.5.24",
     "@types/codemirror": "^5.60.15",
     "@types/p5": "1.7.6",
     "@types/react": "18.3.3",
@@ -69,7 +69,7 @@
     "chokidar": "3.6.0",
     "eslint": "^8.57.0",
     "eslint-plugin-compat": "4.2.0",
-    "eslint-plugin-react": "7.34.1",
+    "eslint-plugin-react": "7.34.2",
     "fast-glob": "3.3.2",
     "identity-obj-proxy": "3.0.0",
     "lint-staged": "15.2.5",
