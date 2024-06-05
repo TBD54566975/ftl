@@ -57,3 +57,11 @@ func (r *RealFTL) PublishEvent(ctx context.Context, topic string, event any) err
 	}
 	return nil
 }
+
+func (r *RealFTL) CallMap(ctx context.Context, mapper any, mapImpl func(context.Context) (any, error)) any {
+	t, err := mapImpl(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
