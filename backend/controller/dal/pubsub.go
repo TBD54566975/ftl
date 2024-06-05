@@ -3,7 +3,6 @@ package dal
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -63,18 +62,15 @@ func (d *DAL) ProgressSubscription(ctx context.Context, subscription model.Subsc
 	}
 
 	origin := AsyncOriginPubSub{
-		Subscription: schema.Ref{
+		Subscription: schema.RefKey{
 			Module: subscription.Key.Payload.Module,
 			Name:   subscription.Key.Payload.Name,
-		}.ToRefKey(),
+		},
 	}
 	_, err = tx.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
-		Verb:              result.Sink,
-		Origin:            origin.String(),
-		Request:           nextCursor.Payload,
-		RemainingAttempts: 0,
-		Backoff:           time.Duration(0),
-		MaxBackoff:        time.Duration(0),
+		Verb:    result.Sink,
+		Origin:  origin.String(),
+		Request: nextCursor.Payload,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to schedule async task for subscription: %w", translatePGError(err))

@@ -34,7 +34,7 @@ func TestPubSub(t *testing.T) {
 		WHERE
 			state = 'success'
 			AND origin = '%s'
-		`, dal.AsyncOriginPubSub{Subscription: schema.Ref{Module: "subscriber", Name: "test_subscription"}.ToRefKey()}.String()),
+		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "test_subscription"}}.String()),
 			2),
 	)
 }

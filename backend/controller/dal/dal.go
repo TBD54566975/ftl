@@ -592,10 +592,10 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			if !ok {
 				continue
 			}
-			sinkRef := schema.Ref{
+			sinkRef := schema.RefKey{
 				Module: moduleSchema.Name,
 				Name:   v.Name,
-			}.ToRefKey()
+			}
 			err := tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
 				Key:              model.NewSubscriberKey(moduleSchema.Name, s.Name, v.Name),
 				Module:           moduleSchema.Name,
