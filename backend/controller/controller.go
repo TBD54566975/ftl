@@ -1219,19 +1219,21 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		Body: call.Request,
 	}
 	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), s.config.Advertise.String())
-	if err != nil {
-		return 0, fmt.Errorf("async call failed: %w", err)
-	}
 	var callResult either.Either[[]byte, string]
-	if perr := resp.Msg.GetError(); perr != nil {
+	failed := false
+	if err != nil {
+		logger.Warnf("Async call could not be called: %v", err)
+		callResult = either.RightOf[[]byte](err.Error())
+		failed = true
+	} else if perr := resp.Msg.GetError(); perr != nil {
 		logger.Warnf("Async call failed: %s", perr.Message)
 		callResult = either.RightOf[[]byte](perr.Message)
+		failed = true
 	} else {
 		logger.Debugf("Async call succeeded")
 		callResult = either.LeftOf[string](resp.Msg.GetBody())
 	}
 	err = s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx) error {
-		failed := resp.Msg.GetError() != nil
 		if failed && call.RemainingAttempts > 0 {
 			// Will retry, do not propagate failure yet.
 			return nil
