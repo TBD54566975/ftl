@@ -36,6 +36,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
@@ -182,6 +183,7 @@ type Service struct {
 
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
+	pubSub                  *pubsub.Manager
 	controllerListListeners []ControllerListListener
 
 	// Map from endpoint to client.
@@ -227,6 +229,10 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, db, svc.tasks, svc.callWithRequest)
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
+
+	pubSub := pubsub.New(ctx, key, db)
+	svc.pubSub = pubSub
+	svc.controllerListListeners = append(svc.controllerListListeners, pubSub)
 
 	go svc.syncSchema(ctx)
 
@@ -1232,6 +1238,9 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		switch origin := call.Origin.(type) {
 		case dal.AsyncOriginFSM:
 			return s.onAsyncFSMCallCompletion(ctx, tx, origin, failed)
+
+		case dal.AsyncOriginPubSub:
+			return s.pubSub.OnCallCompletion(ctx, tx, origin, failed)
 
 		default:
 			panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))

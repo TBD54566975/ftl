@@ -84,13 +84,15 @@ func (s *serveCmd) Run(ctx context.Context) error {
 
 	wg, ctx := errgroup.WithContext(ctx)
 
-	bindAllocator, err := bind.NewBindAllocator(s.Bind)
+	bindAllocator, err := bind.NewBindAllocator(s.IngressBind)
 	if err != nil {
 		return err
 	}
 
 	controllerAddresses := make([]*url.URL, 0, s.Controllers)
+	ingressAddresses := make([]*url.URL, 0, s.Controllers)
 	for range s.Controllers {
+		ingressAddresses = append(ingressAddresses, bindAllocator.Next())
 		controllerAddresses = append(controllerAddresses, bindAllocator.Next())
 	}
 
@@ -102,7 +104,7 @@ func (s *serveCmd) Run(ctx context.Context) error {
 		config := controller.Config{
 			CommonConfig: s.CommonConfig,
 			Bind:         controllerAddresses[i],
-			IngressBind:  s.IngressBind,
+			IngressBind:  ingressAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
 		}

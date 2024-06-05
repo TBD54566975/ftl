@@ -14,6 +14,7 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -532,6 +533,30 @@ func TestErrorReporting(t *testing.T) {
 		`143:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
 		`149:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
 		`152:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
+	}
+	assert.Equal(t, expected, actual)
+}
+
+// Where parsing is correct but validation of the schema fails
+func TestValidationFailures(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	pwd, _ := os.Getwd()
+	err := exec.Command(ctx, log.Debug, "testdata/validation", "go", "mod", "tidy").RunBuffered(ctx)
+	assert.NoError(t, err)
+	_, err = ExtractModuleSchema("testdata/validation", &schema.Schema{})
+	assert.Error(t, err)
+	errs := errors.UnwrapAll(err)
+
+	filename := filepath.Join(pwd, `testdata/validation/validation.go`)
+	actual := slices.Map(errs, func(e error) string {
+		return strings.TrimPrefix(e.Error(), filename+":")
+	})
+	expected := []string{
+		`11:3-3: verb badYear: invalid cron expression "* * * * * 9999": value 9999 out of allowed year range of 0-3000`,
+		`16:3-3: verb allZeroes: invalid cron expression "0 0 0 0 0": value 0 out of allowed day of month range of 1-31`,
 	}
 	assert.Equal(t, expected, actual)
 }

@@ -319,6 +319,48 @@ func (ns NullRunnerState) Value() (driver.Value, error) {
 	return string(ns.RunnerState), nil
 }
 
+type TopicSubscriptionState string
+
+const (
+	TopicSubscriptionStateIdle      TopicSubscriptionState = "idle"
+	TopicSubscriptionStateExecuting TopicSubscriptionState = "executing"
+)
+
+func (e *TopicSubscriptionState) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TopicSubscriptionState(s)
+	case string:
+		*e = TopicSubscriptionState(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TopicSubscriptionState: %T", src)
+	}
+	return nil
+}
+
+type NullTopicSubscriptionState struct {
+	TopicSubscriptionState TopicSubscriptionState
+	Valid                  bool // Valid is true if TopicSubscriptionState is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTopicSubscriptionState) Scan(value interface{}) error {
+	if value == nil {
+		ns.TopicSubscriptionState, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TopicSubscriptionState.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTopicSubscriptionState) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TopicSubscriptionState), nil
+}
+
 type Artefact struct {
 	ID        int64
 	CreatedAt time.Time
@@ -462,6 +504,7 @@ type Topic struct {
 	ModuleID  int64
 	Name      string
 	Type      string
+	Head      optional.Option[int64]
 }
 
 type TopicEvent struct {
@@ -478,7 +521,7 @@ type TopicSubscriber struct {
 	CreatedAt            time.Time
 	TopicSubscriptionsID int64
 	DeploymentID         int64
-	Sink                 string
+	Sink                 schema.RefKey
 }
 
 type TopicSubscription struct {
@@ -489,4 +532,5 @@ type TopicSubscription struct {
 	ModuleID  int64
 	Name      string
 	Cursor    optional.Option[int64]
+	State     TopicSubscriptionState
 }

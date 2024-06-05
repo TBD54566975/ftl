@@ -313,10 +313,14 @@ CREATE TABLE topics (
     name TEXT NOT NULL,
 
     -- Data reference to the payload data type in the owning module's schema.
-    type TEXT NOT NULL
+    type TEXT NOT NULL,
+
+    head BIGINT NULL
 );
 
 CREATE UNIQUE INDEX topics_module_name_idx ON topics(module_id, name);
+
+CREATE UNIQUE INDEX topics_key_idx ON topics (key);
 
 CREATE TRIGGER topics_notify_event
     AFTER INSERT OR UPDATE OR DELETE
@@ -336,13 +340,41 @@ CREATE TABLE topic_events (
     payload BYTEA NOT NULL
 );
 
+CREATE UNIQUE INDEX topic_events_key_idx ON topic_events (key);
+
+CREATE INDEX topic_events_topic_idx ON topic_events (topic_id);
+
 CREATE TRIGGER topic_events_notify_event
     AFTER INSERT OR UPDATE OR DELETE
     ON topic_events
     FOR EACH ROW
 EXECUTE PROCEDURE notify_event();
 
+-- Automatically update module_name when deployment_id is set or unset.
+CREATE OR REPLACE FUNCTION topics_update_head() RETURNS TRIGGER AS
+$$
+BEGIN
+    UPDATE topics
+    SET head = NEW.id
+    WHERE id = NEW.topic_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER topics_update_head
+    BEFORE INSERT OR UPDATE
+    ON topic_events
+    FOR EACH ROW
+EXECUTE PROCEDURE topics_update_head();
+
 CREATE DOMAIN subscription_key AS TEXT;
+
+CREATE TYPE topic_subscription_state AS ENUM (
+    -- The subscription is available to consume events.
+    'idle',
+    -- The subscriptions is currently handling an event.
+    'executing'
+);
 
 -- A subscription to a topic.
 --
@@ -361,10 +393,15 @@ CREATE TABLE topic_subscriptions (
     name TEXT UNIQUE NOT NULL,
 
     -- Cursor pointing into the topic_events table.
-    cursor BIGINT REFERENCES topic_events(id) ON DELETE CASCADE
+    cursor BIGINT REFERENCES topic_events(id) ON DELETE CASCADE,
+
+    -- State is 'executing' when there is an unfinished async_call for the current cursor.
+    state topic_subscription_state NOT NULL DEFAULT 'idle'
 );
 
 CREATE UNIQUE INDEX topic_subscriptions_module_name_idx ON topic_subscriptions(module_id, name);
+
+CREATE UNIQUE INDEX topic_subscriptions_key_idx ON topic_subscriptions (key);
 
 CREATE DOMAIN subscriber_key AS TEXT;
 
@@ -380,8 +417,10 @@ CREATE TABLE topic_subscribers (
 
    deployment_id BIGINT NOT NULL REFERENCES deployments(id) ON DELETE CASCADE,
    -- Name of the verb to call on the deployment.
-   sink TEXT NOT NULL
+   sink schema_ref NOT NULL
 );
+
+CREATE INDEX topic_subscribers_subscription_idx ON topic_subscribers (topic_subscriptions_id);
 
 CREATE DOMAIN lease_key AS TEXT;
 
