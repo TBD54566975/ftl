@@ -17,6 +17,18 @@ func posFromProto(pos *schemapb.Position) Position {
 	}
 }
 
+func levelFromProto(level schemapb.Error_ErrorLevel) ErrorLevel {
+	switch level {
+	case schemapb.Error_INFO:
+		return INFO
+	case schemapb.Error_WARN:
+		return WARN
+	case schemapb.Error_ERROR:
+		return ERROR
+	}
+	panic(fmt.Sprintf("unhandled ErrorLevel %v", level))
+}
+
 func declListToSchema(s []*schemapb.Decl) []Decl {
 	var out []Decl
 	for _, n := range s {
