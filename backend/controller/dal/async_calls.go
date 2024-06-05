@@ -19,7 +19,7 @@ type asyncOriginParseRoot struct {
 }
 
 var asyncOriginParser = participle.MustBuild[asyncOriginParseRoot](
-	participle.Union[AsyncOrigin](AsyncOriginFSM{}),
+	participle.Union[AsyncOrigin](AsyncOriginFSM{}, AsyncOriginPubSub{}),
 )
 
 // AsyncOrigin is a sum type representing the originator of an async call.
@@ -45,6 +45,19 @@ var _ AsyncOrigin = AsyncOriginFSM{}
 func (AsyncOriginFSM) asyncOrigin()     {}
 func (a AsyncOriginFSM) Origin() string { return "fsm" }
 func (a AsyncOriginFSM) String() string { return fmt.Sprintf("fsm:%s:%s", a.FSM, a.Key) }
+
+// AsyncOriginPubSub represents the context for the originator of an PubSub async call.
+//
+// It is in the form fsm:<module>.<subscription_name>
+type AsyncOriginPubSub struct {
+	Subscription schema.RefKey `parser:"'sub' ':' @@"`
+}
+
+var _ AsyncOrigin = AsyncOriginPubSub{}
+
+func (AsyncOriginPubSub) asyncOrigin()     {}
+func (a AsyncOriginPubSub) Origin() string { return "sub" }
+func (a AsyncOriginPubSub) String() string { return fmt.Sprintf("sub:%s", a.Subscription) }
 
 // ParseAsyncOrigin parses an async origin key.
 func ParseAsyncOrigin(origin string) (AsyncOrigin, error) {
