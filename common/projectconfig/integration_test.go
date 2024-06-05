@@ -32,3 +32,14 @@ func TestCmdsCreateProjectTomlFilesIfNonexistent(t *testing.T) {
 	err = os.Remove(configPath)
 	assert.NoError(t, err)
 }
+
+func TestDefaultToRootWhenModuleDirsMissing(t *testing.T) {
+	in.Run(t, "no-module-dirs-ftl-project.toml",
+		in.CopyModule("echo"),
+		in.Exec("ftl", "build"), // Needs to be `ftl build`, not `ftl build echo`
+		in.Deploy("echo"),
+		in.Call("echo", "echo", in.Obj{"name": "Bob"}, func(t testing.TB, response in.Obj) {
+			assert.Equal(t, "Hello, Bob!", response["message"])
+		}),
+	)
+}
