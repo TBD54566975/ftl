@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/internal"
@@ -43,22 +44,34 @@ func ConfigPaths(input []string) []string {
 	if len(input) > 0 {
 		return input
 	}
-	path := GetDefaultConfigPath()
-	_, err := os.Stat(path)
-	if err == nil {
-		return []string{path}
+	path, ok := GetDefaultConfigPath().Get()
+	if !ok {
+		return []string{}
 	}
-	return []string{}
+	_, err := os.Stat(path)
+	if err != nil {
+		return []string{}
+	}
+	return []string{path}
 }
 
-func GetDefaultConfigPath() string {
-	return filepath.Join(internal.GitRoot(""), "ftl-project.toml")
+func GetDefaultConfigPath() optional.Option[string] {
+	gitRoot, ok := internal.GitRoot("").Get()
+	if !ok {
+		return optional.None[string]()
+	}
+	return optional.Some(filepath.Join(gitRoot, "ftl-project.toml"))
 }
 
 // CreateDefaultFileIfNonexistent creates the ftl-project.toml file in the Git root if it
 // does not already exist.
 func CreateDefaultFileIfNonexistent(ctx context.Context) error {
-	path := GetDefaultConfigPath()
+	logger := log.FromContext(ctx)
+	path, ok := GetDefaultConfigPath().Get()
+	if !ok {
+		logger.Warnf("Failed to find Git root, so cannot verify whether an ftl-project.toml file exists there")
+		return nil
+	}
 	_, err := os.Stat(path)
 	if err == nil {
 		return nil
@@ -66,7 +79,6 @@ func CreateDefaultFileIfNonexistent(ctx context.Context) error {
 	if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	logger := log.FromContext(ctx)
 	logger.Warnf("Creating a new project config file at %q because the file does not already exist", path)
 	return Save(path, Config{})
 }

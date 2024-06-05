@@ -102,8 +102,8 @@ func initGitIgnore(dir string) []string {
 	if err == nil {
 		ignore = append(ignore, loadGitIgnore(home)...)
 	}
-	gitRoot := internal.GitRoot(dir)
-	if gitRoot != "" {
+	gitRoot, ok := internal.GitRoot(dir).Get()
+	if ok {
 		for current := dir; strings.HasPrefix(current, gitRoot); current = path.Dir(current) {
 			ignore = append(ignore, loadGitIgnore(current)...)
 		}
