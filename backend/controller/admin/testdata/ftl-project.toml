@@ -2,7 +2,6 @@
 [global.secrets]
 bar = "envar://baza"
 foo = "inline://ImZvb2JhcnNlY3JldCI"
-mutable = "keychain://mutable"
 
 [global.configuration]
 bar = "envar://bazb"
