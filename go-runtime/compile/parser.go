@@ -248,7 +248,6 @@ func parseDirectives(node ast.Node, fset *token.FileSet, docs *ast.CommentGroup)
 			Column:   pos.Column + 2, // Skip "//"
 		}
 
-		// TODO: We need to adjust position information embedded in the schema.
 		directive, err := directiveParser.ParseString(pos.Filename, line.Text[2:])
 		if err != nil {
 			// Adjust the Participle-reported position relative to the AST node.
