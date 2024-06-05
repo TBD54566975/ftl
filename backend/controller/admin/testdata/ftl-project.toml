@@ -1,0 +1,15 @@
+[global]
+[global.secrets]
+bar = "envar://baza"
+foo = "inline://ImZvb2JhcnNlY3JldCI"
+mutable = "keychain://mutable"
+
+[global.configuration]
+bar = "envar://bazb"
+foo = "inline://ImZvb2JhciI"
+mutable = "inline://ImhlbGxvd29ybGQi"
+
+[modules]
+  [modules.echo]
+    [modules.echo.configuration]
+      default = "inline://ImFub255bW91cyI"
