@@ -154,7 +154,7 @@ async function startClient(context: ExtensionContext) {
   const ftlConfig = vscode.workspace.getConfiguration("ftl")
 
   const workspaceRootPath = await getProjectOrWorkspaceRoot()
-  const resolvedFtlPath = resolveFtlPath(workspaceRootPath, ftlConfig)
+  const resolvedFtlPath = await resolveFtlPath(workspaceRootPath, ftlConfig)
 
   outputChannel.appendLine(`VSCode workspace root path: ${workspaceRootPath}`)
   outputChannel.appendLine(`FTL path: ${resolvedFtlPath}`)
