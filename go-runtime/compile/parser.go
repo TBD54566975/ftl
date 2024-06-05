@@ -242,7 +242,6 @@ func parseDirectives(node ast.Node, fset *token.FileSet, docs *ast.CommentGroup)
 			continue
 		}
 		pos := fset.Position(line.Pos())
-		// Adjust the Participle-reported position relative to the AST node.
 		ppos := schema.Position{
 			Filename: pos.Filename,
 			Line:     pos.Line,

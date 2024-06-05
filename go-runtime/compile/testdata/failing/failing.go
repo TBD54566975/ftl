@@ -150,3 +150,13 @@ type TypeEnum3 interface{ ExportedMethod() }
 
 //ftl:enum
 type NoMethodsTypeEnum interface{}
+
+//ftl:cron * * * * *
+func GoodCron(ctx context.Context) error {
+	return nil
+}
+
+//ftl:cron 0 0 0 0 0
+func BadCron(ctx context.Context) error {
+	return nil
+}
