@@ -6,7 +6,4 @@ ftl-min-version = ""
   [global.secrets]
     secret = "inline://ImZvb2JhciI"
 
-[executables]
-  ftl = ""
-
 [commands]

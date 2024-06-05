@@ -10,6 +10,3 @@ external-dirs = ["e/f", "g/h"]
 
 [commands]
   startup = ["echo 'Executing global pre-build command'"]
-
-[executables]
-  ftl = "ftl"

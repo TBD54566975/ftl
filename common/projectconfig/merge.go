@@ -50,9 +50,6 @@ func mergeRootKeys(a, b Config) Config {
 	if b.ExternalDirs != nil {
 		a.ExternalDirs = b.ExternalDirs
 	}
-	if b.Executables.FTL != "" {
-		a.Executables.FTL = b.Executables.FTL
-	}
 	if len(b.Commands.Startup) > 0 {
 		a.Commands.Startup = b.Commands.Startup
 	}
