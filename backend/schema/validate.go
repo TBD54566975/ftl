@@ -540,7 +540,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 		case *MetadataCronJob:
 			_, err := cron.Parse(md.Cron)
 			if err != nil {
-				merr = append(merr, err)
+				merr = append(merr, errorf(md, "verb %s: invalid cron expression %q: %v", n.Name, md.Cron, err))
 			}
 			if _, ok := n.Request.(*Unit); !ok {
 				merr = append(merr, errorf(md, "verb %s: cron job can not have a request type", n.Name))

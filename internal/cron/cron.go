@@ -55,11 +55,11 @@ func Next(pattern Pattern, allowCurrentTime bool) (time.Time, error) {
 	return NextAfter(pattern, time.Now().UTC(), allowCurrentTime)
 }
 
-// NextAfter calculcates the next time that matches the pattern after the origin time
+// NextAfter calculates the next time that matches the pattern after the origin time
 // If inclusive is true, the origin time is considered a valid match
 // All calculations are done in UTC, and the result is returned in UTC
 func NextAfter(pattern Pattern, origin time.Time, inclusive bool) (time.Time, error) {
-	// set original to the first acceptable time, irregardless of pattern
+	// set original to the first acceptable time, regardless of pattern
 	origin = origin.UTC()
 	if !inclusive || origin.Nanosecond() != 0 {
 		origin = origin.Add(time.Second - time.Duration(origin.Nanosecond())*time.Nanosecond)
