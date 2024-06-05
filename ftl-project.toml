@@ -11,8 +11,5 @@ ftl-min-version = ""
     [modules.echo.configuration]
       default = "inline://ImFub255bW91cyI"
 
-[executables]
-  ftl = ""
-
 [commands]
   startup = ["echo 'FTL startup command ⚡️'"]

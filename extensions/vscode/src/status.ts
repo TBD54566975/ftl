@@ -1,12 +1,6 @@
 import * as vscode from "vscode"
 
 export namespace FTLStatus {
-  export const disabled = (statusBarItem: vscode.StatusBarItem) => {
-    statusBarItem.text = `$(circle-slash) FTL`
-    statusBarItem.tooltip =
-      "FTL is disabled because it requires an 'ftl-project.toml' or 'ftl.toml' file in the workspace."
-  }
-
   export const starting = (statusBarItem: vscode.StatusBarItem) => {
     statusBarItem.text = `$(sync~spin) FTL`
     statusBarItem.tooltip = "FTL is starting..."

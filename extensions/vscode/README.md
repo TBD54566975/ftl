@@ -41,9 +41,9 @@ Configure the FTL extension by setting the following options in your Visual Stud
   }
   ```
 
-- `ftl.startClientOption`: Controls if and when to automatically start the FTL development server. Available options are "always" and "never". If not set, the extension will prompt to start the server when opening a FTL project.
+- `ftl.automaticallyStartServer`: Controls if and when to automatically start the FTL development server. Available options are "always" and "never". If not set, the extension will prompt to start the server when opening a FTL project.
   ```json
   {
-    "ftl.startClientOption": "always"
+    "ftl.automaticallyStartServer": "always"
   }
   ```
