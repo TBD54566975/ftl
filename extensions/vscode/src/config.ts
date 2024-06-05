@@ -4,6 +4,7 @@ import * as path from 'path'
 import { exec, execSync } from 'child_process'
 import { promisify } from 'util'
 import semver from 'semver'
+import { lookpath } from "lookpath"
 
 const execAsync = promisify(exec)
 
@@ -17,36 +18,15 @@ export const getProjectOrWorkspaceRoot = async (): Promise<string> => {
   return workspaceFolders[0].uri.fsPath
 }
 
-export const findFileInWorkspace = async (rootPath: string, fileName: string): Promise<string | null> => {
-  try {
-    const filesAndFolders = await fs.promises.readdir(rootPath, { withFileTypes: true })
-
-    for (const dirent of filesAndFolders) {
-      const fullPath = path.join(rootPath, dirent.name)
-      if (dirent.isDirectory()) {
-        const result = await findFileInWorkspace(fullPath, fileName)
-        if (result) { return result }
-      } else if (dirent.isFile() && dirent.name === fileName) {
-        return fullPath
-      }
-    }
-  } catch (error) {
-    console.error('Failed to read directory:', rootPath)
-  }
-  return null
-}
-
-export const resolveFtlPath = (workspaceRoot: string, config: vscode.WorkspaceConfiguration): string => {
+export const resolveFtlPath = async (workspaceRoot: string, config: vscode.WorkspaceConfiguration): Promise<string> => {
   const ftlPath = config.get<string>("executablePath")
   if (!ftlPath || ftlPath.trim() === '') {
-    try {
-      // Use `which` for Unix-based systems, `where` for Windows
-      const command = process.platform === 'win32' ? 'where ftl' : 'which ftl'
-      return execSync(command).toString().trim()
-    } catch (error) {
-      vscode.window.showErrorMessage('Error: ftl binary not found in PATH.')
-      throw new Error('ftl binary not found in PATH')
+    const path = await lookpath('ftl')
+    if (path) {
+      return path
     }
+    vscode.window.showErrorMessage("FTL executable not found in PATH.")
+    throw new Error("FTL executable not found in PATH.")
   }
 
   return path.isAbsolute(ftlPath) ? ftlPath : path.join(workspaceRoot || '', ftlPath)
