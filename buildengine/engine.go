@@ -180,23 +180,31 @@ func (e *Engine) Close() error {
 }
 
 func createLockFile() (string, error) {
-	lockFile := filepath.Join(internal.GitRoot(""), "_ftl", "build.lock")
+	gitRoot, ok := internal.GitRoot("").Get()
+	if !ok {
+		return "", fmt.Errorf("could not get git root")
+	}
+	lockFile := filepath.Join(gitRoot, "_ftl", "build.lock")
 	if err := os.MkdirAll(filepath.Dir(lockFile), 0750); err != nil {
-		return "", fmt.Errorf("failed to create directory for build.lock file: %w", err)
+		return "", err
 	}
 	if _, err := os.Stat(lockFile); err == nil || !errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("build.lock file already exists at: %s", lockFile)
 	}
 	if err := os.WriteFile(lockFile, []byte(""), 0640); err != nil {
-		return "", fmt.Errorf("failed to write build.lock file: %w", err)
+		return "", err
 	}
 	return lockFile, nil
 }
 
 func deleteLockFile() error {
-	lockFile := filepath.Join(internal.GitRoot(""), "_ftl", "build.lock")
+	gitRoot, ok := internal.GitRoot("").Get()
+	if !ok {
+		return fmt.Errorf("could not get git root")
+	}
+	lockFile := filepath.Join(gitRoot, "_ftl", "build.lock")
 	if err := os.Remove(lockFile); err != nil {
-		return fmt.Errorf("failed to remove build.lock file: %w", err)
+		return err
 	}
 	return nil
 }
