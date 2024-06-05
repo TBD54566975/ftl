@@ -15,7 +15,7 @@ import (
 )
 
 func TestSet(t *testing.T) {
-	defaultPath, ok := projectconfig.GetDefaultConfigPath().Get()
+	defaultPath, ok := projectconfig.DefaultConfigPath().Get()
 	assert.True(t, ok)
 	origConfigBytes, err := os.ReadFile(defaultPath)
 	assert.NoError(t, err)

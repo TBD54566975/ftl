@@ -44,7 +44,7 @@ func ConfigPaths(input []string) []string {
 	if len(input) > 0 {
 		return input
 	}
-	path, ok := GetDefaultConfigPath().Get()
+	path, ok := DefaultConfigPath().Get()
 	if !ok {
 		return []string{}
 	}
@@ -55,7 +55,7 @@ func ConfigPaths(input []string) []string {
 	return []string{path}
 }
 
-func GetDefaultConfigPath() optional.Option[string] {
+func DefaultConfigPath() optional.Option[string] {
 	gitRoot, ok := internal.GitRoot("").Get()
 	if !ok {
 		return optional.None[string]()
@@ -67,7 +67,7 @@ func GetDefaultConfigPath() optional.Option[string] {
 // does not already exist.
 func CreateDefaultFileIfNonexistent(ctx context.Context) error {
 	logger := log.FromContext(ctx)
-	path, ok := GetDefaultConfigPath().Get()
+	path, ok := DefaultConfigPath().Get()
 	if !ok {
 		logger.Warnf("Failed to find Git root, so cannot verify whether an ftl-project.toml file exists there")
 		return nil

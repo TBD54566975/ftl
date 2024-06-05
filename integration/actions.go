@@ -38,6 +38,15 @@ func Scaffold(src, dest string, tmplCtx any) Action {
 	}
 }
 
+// GitInit calls git init on the working directory.
+func GitInit() Action {
+	return func(t testing.TB, ic TestContext) {
+		Infof("Running `git init` on the working directory: %s", ic.workDir)
+		err := ftlexec.Command(ic, log.Debug, ic.workDir, "git", "init", ic.workDir).RunBuffered(ic)
+		assert.NoError(t, err)
+	}
+}
+
 // Copy a module from the testdata directory to the working directory.
 //
 // Ensures that replace directives are correctly handled.

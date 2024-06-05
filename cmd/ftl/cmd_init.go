@@ -126,7 +126,7 @@ var scaffoldFuncs = template.FuncMap{
 func updateGitIgnore(dir string) error {
 	gitRoot, ok := internal.GitRoot(dir).Get()
 	if !ok {
-		gitRoot = ""
+		return nil
 	}
 	f, err := os.OpenFile(path.Join(gitRoot, ".gitignore"), os.O_RDWR|os.O_CREATE, 0644) //nolint:gosec
 	if err != nil {
