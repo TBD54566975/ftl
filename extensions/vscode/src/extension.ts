@@ -19,7 +19,8 @@ let statusBarItem: vscode.StatusBarItem
 let outputChannel: vscode.OutputChannel
 
 export async function activate(context: ExtensionContext) {
-  console.log('"ftl" extension activated')
+  outputChannel = vscode.window.createOutputChannel("FTL", 'log')
+  outputChannel.appendLine("FTL extension activated")
 
   let restartCmd = vscode.commands.registerCommand(
     `${clientId}.restart`,
@@ -106,14 +107,17 @@ async function FTLPreflightCheck(ftlPath: string) {
 
 async function promptStartClient(context: vscode.ExtensionContext) {
   const configuration = vscode.workspace.getConfiguration('ftl')
-  const startClientOption = configuration.get<string>('startClientOption')
+  outputChannel.appendLine(`FTL configuration: ${JSON.stringify(configuration)}`)
+  const automaticallyStartServer = configuration.get<string>('automaticallyStartServer')
 
-  FTLStatus.disabled(statusBarItem)
+  FTLStatus.stopped(statusBarItem)
 
-  if (startClientOption === 'always') {
+  if (automaticallyStartServer === 'always') {
+    outputChannel.appendLine(`FTL development server automatically started`)
     await startClient(context)
     return
-  } else if (startClientOption === 'never') {
+  } else if (automaticallyStartServer === 'never') {
+    outputChannel.appendLine(`FTL development server not started ('automaticallyStartServer' set to 'never' in settings.json)`)
     return
   }
 
@@ -124,25 +128,27 @@ async function promptStartClient(context: vscode.ExtensionContext) {
   ).then(async (result) => {
     switch (result) {
       case 'Always':
-        configuration.update('startClientOption', 'always', vscode.ConfigurationTarget.Global)
+        configuration.update('automaticallyStartServer', 'always', vscode.ConfigurationTarget.Global)
         await startClient(context)
         break
       case 'Yes':
         await startClient(context)
         break
       case 'No':
-        FTLStatus.disabled(statusBarItem)
+        outputChannel.appendLine('FTL development server disabled')
+        FTLStatus.stopped(statusBarItem)
         break
       case 'Never':
-        configuration.update('startClientOption', 'never', vscode.ConfigurationTarget.Global)
-        FTLStatus.disabled(statusBarItem)
+        outputChannel.appendLine('FTL development server set to never auto start')
+        configuration.update('automaticallyStartServer', 'never', vscode.ConfigurationTarget.Global)
+        FTLStatus.stopped(statusBarItem)
         break
     }
   })
 }
 
 async function startClient(context: ExtensionContext) {
-  console.log("Starting client")
+  outputChannel.appendLine("Starting lsp client")
   FTLStatus.starting(statusBarItem)
 
   const ftlConfig = vscode.workspace.getConfiguration("ftl")
@@ -150,28 +156,27 @@ async function startClient(context: ExtensionContext) {
   const workspaceRootPath = await getProjectOrWorkspaceRoot()
   const resolvedFtlPath = resolveFtlPath(workspaceRootPath, ftlConfig)
 
-  console.log('ftl path', resolvedFtlPath)
+  outputChannel.appendLine(`VSCode workspace root path: ${workspaceRootPath}`)
+  outputChannel.appendLine(`FTL path: ${resolvedFtlPath}`)
 
   const ftlOK = await FTLPreflightCheck(resolvedFtlPath)
   if (!ftlOK) {
-    FTLStatus.disabled(statusBarItem)
+    FTLStatus.stopped(statusBarItem)
     return
   }
 
-  outputChannel = vscode.window.createOutputChannel("FTL", 'log')
-
   const userFlags = ftlConfig.get<string[]>("devCommandFlags") ?? []
 
-  const flags = ["--lsp", ...userFlags]
+  const flags = [...userFlags, "--lsp"]
   let serverOptions: ServerOptions = {
     run: {
       command: `${resolvedFtlPath}`,
-      args: ["dev", ".", ...flags],
+      args: ["dev", ...flags],
       options: { cwd: workspaceRootPath }
     },
     debug: {
       command: `${resolvedFtlPath}`,
-      args: ["dev", ".", ...flags],
+      args: ["dev", ...flags],
       options: { cwd: workspaceRootPath }
     },
   }
@@ -194,7 +199,6 @@ async function startClient(context: ExtensionContext) {
     clientOptions
   )
 
-  console.log("Starting client")
   context.subscriptions.push(client)
 
   client.start().then(

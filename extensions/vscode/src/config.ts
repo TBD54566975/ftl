@@ -14,15 +14,6 @@ export const getProjectOrWorkspaceRoot = async (): Promise<string> => {
     return ""
   }
 
-  // Check each folder for the 'ftl-project.toml' file
-  for (const folder of workspaceFolders) {
-    const workspaceRootPath = folder.uri.fsPath
-    const ftlProjectPath = await findFileInWorkspace(workspaceRootPath, 'ftl-project.toml')
-    if (ftlProjectPath) {
-      return ftlProjectPath.replace('ftl-project.toml', '')
-    }
-  }
-
   return workspaceFolders[0].uri.fsPath
 }
 
