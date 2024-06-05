@@ -9,7 +9,7 @@ import (
 )
 
 //ftl:export
-var topic = ftl.RegisterTopic[PubSubEvent]("test_topic")
+var topic = ftl.Topic[PubSubEvent]("test_topic")
 
 type PubSubEvent struct {
 	Time time.Time

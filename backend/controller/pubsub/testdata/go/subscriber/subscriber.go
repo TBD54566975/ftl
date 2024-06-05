@@ -7,7 +7,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-var _ = ftl.RegisterSubscription(publisher.Test_topic, "test_subscription")
+var _ = ftl.Subscription(publisher.Test_topic, "test_subscription")
 
 //ftl:verb
 //ftl:subscribe test_subscription
