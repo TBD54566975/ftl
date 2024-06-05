@@ -27,9 +27,6 @@ func TestProjectConfig(t *testing.T) {
 		},
 		ModuleDirs:   []string{"a/b/c", "d"},
 		ExternalDirs: []string{"e/f", "g/h"},
-		Executables: Executables{
-			FTL: "ftl",
-		},
 		Commands: Commands{
 			Startup: []string{"echo 'Executing global pre-build command'"},
 		},
