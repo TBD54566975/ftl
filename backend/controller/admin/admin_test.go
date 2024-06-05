@@ -20,25 +20,14 @@ func TestAdminService(t *testing.T) {
 	config := tempConfigPath(t, "testdata/ftl-project.toml", "admin")
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cm, err := cf.New(ctx,
-		cf.ProjectConfigResolver[cf.Configuration]{Config: []string{config}},
-		[]cf.Provider[cf.Configuration]{
-			cf.EnvarProvider[cf.Configuration]{},
-			cf.InlineProvider[cf.Configuration]{},
-		})
+	cm, err := cf.NewConfigurationManager(ctx, cf.ProjectConfigResolver[cf.Configuration]{Config: []string{config}})
 	assert.NoError(t, err)
-
-	// Skip for now, this is failing in GH CI and I give up.
-	// kcp := cf.KeychainProvider{}
-	// _, err = kcp.Store(ctx, cf.Ref{Name: "mutable"}, []byte("\"helloworldsecret\""))
-	// assert.NoError(t, err)
 
 	sm, err := cf.New(ctx,
 		cf.ProjectConfigResolver[cf.Secrets]{Config: []string{config}},
 		[]cf.Provider[cf.Secrets]{
 			cf.EnvarProvider[cf.Secrets]{},
 			cf.InlineProvider[cf.Secrets]{},
-			// kcp,
 		})
 	assert.NoError(t, err)
 	admin := NewAdminService(cm, sm)
@@ -49,15 +38,14 @@ func TestAdminService(t *testing.T) {
 
 	testAdminConfigs(t, ctx, "FTL_CONFIG_YmFy", admin, []expectedEntry{
 		{Ref: cf.Ref{Name: "bar"}, Value: string(expectedEnvarValue)},
-		{Ref: cf.Ref{Name: "foo"}, Value: "\"foobar\""},
-		{Ref: cf.Ref{Name: "mutable"}, Value: "\"helloworld\""},
-		{Ref: cf.Ref{Module: optional.Some[string]("echo"), Name: "default"}, Value: "\"anonymous\""},
+		{Ref: cf.Ref{Name: "foo"}, Value: `"foobar"`},
+		{Ref: cf.Ref{Name: "mutable"}, Value: `"helloworld"`},
+		{Ref: cf.Ref{Module: optional.Some[string]("echo"), Name: "default"}, Value: `"anonymous"`},
 	})
 
 	testAdminSecrets(t, ctx, "FTL_SECRET_YmFy", admin, []expectedEntry{
 		{Ref: cf.Ref{Name: "bar"}, Value: string(expectedEnvarValue)},
-		{Ref: cf.Ref{Name: "foo"}, Value: "\"foobarsecret\""},
-		// {Ref: cf.Ref{Name: "mutable"}, Value: "\"helloworldsecret\""},
+		{Ref: cf.Ref{Name: "foo"}, Value: `"foobarsecret"`},
 	})
 }
 
@@ -90,6 +78,7 @@ func testAdminConfigs(
 	admin *AdminService,
 	entries []expectedEntry,
 ) {
+	t.Helper()
 	t.Setenv(envarName, "eyJiYXIiOiJiYXJmb28ifQ") // bar={"bar": "barfoo"}
 
 	module := ""
@@ -124,6 +113,7 @@ func testAdminSecrets(
 	admin *AdminService,
 	entries []expectedEntry,
 ) {
+	t.Helper()
 	t.Setenv(envarName, "eyJiYXIiOiJiYXJmb28ifQ") // bar={"bar": "barfoo"}
 
 	module := ""
