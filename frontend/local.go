@@ -4,6 +4,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -22,7 +23,12 @@ func Server(ctx context.Context, timestamp time.Time, publicURL *url.URL, allowO
 	logger := log.FromContext(ctx)
 	logger.Debugf("Building console...")
 
-	err := exec.Command(ctx, log.Debug, internal.GitRoot(""), "just", "build-frontend").RunBuffered(ctx)
+	gitRoot, ok := internal.GitRoot("").Get()
+	if !ok {
+		return nil, fmt.Errorf("failed to find Git root")
+	}
+
+	err := exec.Command(ctx, log.Debug, gitRoot, "just", "build-frontend").RunBuffered(ctx)
 	if err != nil {
 		return nil, err
 	}

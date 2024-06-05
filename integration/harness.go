@@ -54,7 +54,8 @@ func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
 
-	rootDir := internal.GitRoot("")
+	rootDir, ok := internal.GitRoot("").Get()
+	assert.True(t, ok)
 
 	if ftlConfigPath != "" {
 		// Use a path into the testdata directory instead of one relative to
