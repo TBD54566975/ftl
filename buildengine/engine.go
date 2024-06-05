@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/projectconfig"
+	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -83,6 +85,13 @@ func WithListener(listener Listener) Option {
 //
 // "dirs" are directories to scan for local modules.
 func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
+	logger := log.FromContext(ctx)
+	lockFile, err := createLockFile()
+	if err != nil {
+		return nil, err
+	}
+	logger.Infof("Created build.lock file at %s", lockFile)
+
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -161,9 +170,34 @@ func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, 
 	}
 }
 
-// Close stops the Engine's schema sync.
+// Close stops the Engine's schema sync and deletes the build lock file.
 func (e *Engine) Close() error {
+	if err := deleteLockFile(); err != nil {
+		fmt.Println("deleteLockFile: %w", err)
+	}
 	e.cancel()
+	return nil
+}
+
+func createLockFile() (string, error) {
+	lockFile := filepath.Join(internal.GitRoot(""), "_ftl", "build.lock")
+	if err := os.MkdirAll(filepath.Dir(lockFile), 0750); err != nil {
+		return "", fmt.Errorf("failed to create directory for build.lock file: %w", err)
+	}
+	if _, err := os.Stat(lockFile); err == nil || !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("build.lock file already exists at: %s", lockFile)
+	}
+	if err := os.WriteFile(lockFile, []byte(""), 0640); err != nil {
+		return "", fmt.Errorf("failed to write build.lock file: %w", err)
+	}
+	return lockFile, nil
+}
+
+func deleteLockFile() error {
+	lockFile := filepath.Join(internal.GitRoot(""), "_ftl", "build.lock")
+	if err := os.Remove(lockFile); err != nil {
+		return fmt.Errorf("failed to remove build.lock file: %w", err)
+	}
 	return nil
 }
 

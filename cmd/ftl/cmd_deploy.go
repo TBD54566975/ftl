@@ -21,5 +21,6 @@ func (d *deployCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer engine.Close()
 	return engine.Deploy(ctx, d.Replicas, !d.NoWait)
 }

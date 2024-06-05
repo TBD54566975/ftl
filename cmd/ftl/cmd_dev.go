@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -58,6 +62,9 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		g.Go(func() error { return d.ServeCmd.Run(ctx) })
 	}
 
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 	g.Go(func() error {
 		err := waitForControllerOnline(ctx, d.ServeCmd.StartupTimeout, client)
 		if err != nil {
@@ -78,6 +85,15 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		if err != nil {
 			return err
 		}
+
+		// Close the engine on an interrupt signal.
+		go func() {
+			<-sigs
+			err = engine.Close()
+			fmt.Println("Interrupted, closing engine.")
+		}()
+
+		defer engine.Close()
 		return engine.Dev(ctx, d.Watch, projConfig.Commands)
 	})
 
