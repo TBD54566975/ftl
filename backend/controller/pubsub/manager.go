@@ -10,8 +10,15 @@ import (
 	"github.com/jpillora/backoff"
 )
 
+const (
+	// Events can be added simultaneously, which can cause events with out of order create_at values
+	// By adding a delay, we ensure that by the time we read the events, no new events will be added
+	// with earlier created_at values.
+	eventConsumptionDelay = 500 * time.Millisecond
+)
+
 type DAL interface {
-	ProgressSubscriptions(ctx context.Context) (count int, err error)
+	ProgressSubscriptions(ctx context.Context, eventConsumptionDelay time.Duration) (count int, err error)
 	CompleteEventForSubscription(ctx context.Context, module, name string) error
 }
 
@@ -46,7 +53,7 @@ func New(ctx context.Context, dal *dal.DAL, scheduler Scheduler, asyncCallListen
 }
 
 func (m *Manager) progressSubscriptions(ctx context.Context) (time.Duration, error) {
-	count, err := m.dal.ProgressSubscriptions(ctx)
+	count, err := m.dal.ProgressSubscriptions(ctx, eventConsumptionDelay)
 	if err != nil {
 		return 0, err
 	}

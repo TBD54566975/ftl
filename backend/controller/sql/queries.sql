@@ -678,16 +678,20 @@ VALUES (
 );
 
 -- name: GetSubscriptionsNeedingUpdate :many
+-- Results may not be ready to be scheduled yet due to event consumption delay
+-- Sorting ensures that brand new events (that may not be ready for consumption)
+-- don't prevent older events from being consumed
 SELECT
   subs.key::subscription_key as key,
-  topic_events.key as cursor,
+  curser.key as cursor,
   topics.key::topic_key as topic,
   subs.name
 FROM topic_subscriptions subs
 LEFT JOIN topics ON subs.topic_id = topics.id
-LEFT JOIN topic_events ON subs.cursor = topic_events.id
+LEFT JOIN topic_events curser ON subs.cursor = curser.id
 WHERE subs.cursor IS DISTINCT FROM topics.head
   AND subs.state = 'idle'
+ORDER BY curser.created_at
 LIMIT 3
 FOR UPDATE OF subs SKIP LOCKED;
 
@@ -700,7 +704,8 @@ WITH cursor AS (
   WHERE "key" = sqlc.narg('cursor')::topic_event_key
 )
 SELECT events."key" as event,
-        events.payload
+        events.payload,
+        events.created_at
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
 WHERE topics.key = sqlc.arg('topic')::topic_key

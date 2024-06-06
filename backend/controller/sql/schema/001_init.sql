@@ -351,11 +351,18 @@ CREATE TRIGGER topic_events_notify_event
 EXECUTE PROCEDURE notify_event();
 
 -- Automatically update module_name when deployment_id is set or unset.
+-- Subquery ensures that two events added at the same time that the head is calculated properly
 CREATE OR REPLACE FUNCTION topics_update_head() RETURNS TRIGGER AS
 $$
 BEGIN
     UPDATE topics
-    SET head = NEW.id
+    SET head = (
+        SELECT id
+        FROM topic_events
+        WHERE topic_id = NEW.topic_id
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    )
     WHERE id = NEW.topic_id;
     RETURN NEW;
 END;

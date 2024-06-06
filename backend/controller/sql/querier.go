@@ -73,6 +73,9 @@ type Querier interface {
 	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
 	GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) ([]GetStaleCronJobsRow, error)
+	// Results may not be ready to be scheduled yet due to event consumption delay
+	// Sorting ensures that brand new events (that may not be ready for consumption)
+	// don't prevent older events from being consumed
 	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
 	InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error

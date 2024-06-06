@@ -3,9 +3,11 @@ package dal
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -38,12 +40,14 @@ func (d *DAL) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]model.Subscr
 	}), nil
 }
 
-func (d *DAL) ProgressSubscriptions(ctx context.Context) (count int, err error) {
+func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay time.Duration) (count int, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
+
+	logger := log.FromContext(ctx)
 
 	// get subscriptions needing update
 	// also gets a lock on the subscription, and skips any subscriptions locked by others
@@ -52,6 +56,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context) (count int, err error) 
 		return 0, fmt.Errorf("could not get subscriptions to progress: %w", translatePGError(err))
 	}
 
+	successful := 0
 	for _, subscription := range subs {
 		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, subscription.Topic, subscription.Cursor)
 		if err != nil {
@@ -60,6 +65,10 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context) (count int, err error) 
 		nextCursorKey, ok := nextCursor.Event.Get()
 		if !ok {
 			return 0, fmt.Errorf("could not find event to progress subscription: %w", translatePGError(err))
+		}
+		if nextCreatedAt, ok := nextCursor.CreatedAt.Get(); ok && nextCreatedAt.Add(eventConsumptionDelay).After(time.Now()) {
+			logger.Tracef("Skipping subscription %s because event is too new", subscription.Key)
+			continue
 		}
 
 		sink, err := tx.db.GetRandomSubscriberSink(ctx, subscription.Key)
@@ -86,8 +95,9 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context) (count int, err error) 
 		if err != nil {
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", translatePGError(err))
 		}
+		successful++
 	}
-	return len(subs), nil
+	return successful, nil
 }
 
 func (d *DAL) CompleteEventForSubscription(ctx context.Context, module, name string) error {

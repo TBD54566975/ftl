@@ -1192,7 +1192,8 @@ WITH cursor AS (
   WHERE "key" = $2::topic_event_key
 )
 SELECT events."key" as event,
-        events.payload
+        events.payload,
+        events.created_at
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
 WHERE topics.key = $1::topic_key
@@ -1202,14 +1203,15 @@ LIMIT 1
 `
 
 type GetNextEventForSubscriptionRow struct {
-	Event   optional.Option[model.TopicEventKey]
-	Payload []byte
+	Event     optional.Option[model.TopicEventKey]
+	Payload   []byte
+	CreatedAt optional.Option[time.Time]
 }
 
 func (q *Queries) GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
 	row := q.db.QueryRow(ctx, getNextEventForSubscription, topic, cursor)
 	var i GetNextEventForSubscriptionRow
-	err := row.Scan(&i.Event, &i.Payload)
+	err := row.Scan(&i.Event, &i.Payload, &i.CreatedAt)
 	return i, err
 }
 
@@ -1521,14 +1523,15 @@ func (q *Queries) GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) 
 const getSubscriptionsNeedingUpdate = `-- name: GetSubscriptionsNeedingUpdate :many
 SELECT
   subs.key::subscription_key as key,
-  topic_events.key as cursor,
+  curser.key as cursor,
   topics.key::topic_key as topic,
   subs.name
 FROM topic_subscriptions subs
 LEFT JOIN topics ON subs.topic_id = topics.id
-LEFT JOIN topic_events ON subs.cursor = topic_events.id
+LEFT JOIN topic_events curser ON subs.cursor = curser.id
 WHERE subs.cursor IS DISTINCT FROM topics.head
   AND subs.state = 'idle'
+ORDER BY curser.created_at
 LIMIT 3
 FOR UPDATE OF subs SKIP LOCKED
 `
@@ -1540,6 +1543,9 @@ type GetSubscriptionsNeedingUpdateRow struct {
 	Name   string
 }
 
+// Results may not be ready to be scheduled yet due to event consumption delay
+// Sorting ensures that brand new events (that may not be ready for consumption)
+// don't prevent older events from being consumed
 func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error) {
 	rows, err := q.db.Query(ctx, getSubscriptionsNeedingUpdate)
 	if err != nil {
