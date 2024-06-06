@@ -288,7 +288,7 @@ func QueryRow(database string, query string, expected ...interface{}) Action {
 	return func(t testing.TB, ic TestContext) {
 		actual := GetRow(t, ic, database, query, len(expected))
 		for i, a := range actual {
-			assert.Equal(t, a, expected[i])
+			assert.Equal(t, expected[i], a)
 		}
 	}
 }

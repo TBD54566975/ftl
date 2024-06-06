@@ -369,7 +369,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER topics_update_head
-    BEFORE INSERT OR UPDATE
+    AFTER INSERT OR UPDATE
     ON topic_events
     FOR EACH ROW
 EXECUTE PROCEDURE topics_update_head();
