@@ -1256,10 +1256,8 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		// Allow for handling of completion based on origin
 		switch origin := call.Origin.(type) {
 		case dal.AsyncOriginFSM:
-			fmt.Printf("telling pubsub that a call failed\n")
-			err := s.onAsyncFSMCallCompletion(ctx, tx, origin, failed)
-			fmt.Printf("telling pubsub that a call failed ended with error: %v\n", err)
-			return err
+			return s.onAsyncFSMCallCompletion(ctx, tx, origin, failed)
+
 		case dal.AsyncOriginPubSub:
 			return s.pubSub.OnCallCompletion(ctx, tx, origin, failed)
 
