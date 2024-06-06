@@ -12,6 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/alecthomas/types/optional"
 )
 
 // BuildRequestBody extracts the HttpRequest body from an HTTP request.
@@ -311,33 +312,51 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 			continue
 		}
 
-		switch field.Type.(type) {
-		case *schema.Bytes, *schema.Map, *schema.Optional, *schema.Time,
-			*schema.Unit, *schema.Ref, *schema.Any:
+		val, err := valueForField(field.Type, value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse query parameter %q: %w", key, err)
+		}
 
-		case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
-			if len(value) > 1 {
-				return nil, fmt.Errorf("multiple values for %q are not supported", key)
-			}
-			if hasInvalidQueryChars(value[0]) {
-				return nil, fmt.Errorf("complex value %q is not supported, use '@json=' instead", value[0])
-			}
-			queryMap[key] = value[0]
-
-		case *schema.Array:
-			for _, v := range value {
-				if hasInvalidQueryChars(v) {
-					return nil, fmt.Errorf("complex value %q is not supported, use '@json=' instead", v)
-				}
-			}
-			queryMap[key] = value
-
-		default:
-			panic(fmt.Sprintf("unsupported type %T for query parameter field %q", field.Type, key))
+		if v, ok := val.Get(); ok {
+			queryMap[key] = v
 		}
 	}
 
 	return queryMap, nil
+}
+
+func valueForField(typ schema.Type, value []string) (optional.Option[any], error) {
+	switch t := typ.(type) {
+	case *schema.Bytes, *schema.Map, *schema.Time,
+		*schema.Unit, *schema.Ref, *schema.Any:
+
+	case *schema.Int, *schema.Float, *schema.String, *schema.Bool:
+		if len(value) > 1 {
+			return optional.None[any](), fmt.Errorf("multiple values are not supported")
+		}
+		if hasInvalidQueryChars(value[0]) {
+			return optional.None[any](), fmt.Errorf("complex value %q is not supported, use '@json=' instead", value[0])
+		}
+		return optional.Some[any](value[0]), nil
+
+	case *schema.Array:
+		for _, v := range value {
+			if hasInvalidQueryChars(v) {
+				return optional.None[any](), fmt.Errorf("complex value %q is not supported, use '@json=' instead", v)
+			}
+		}
+		return optional.Some[any](value), nil
+
+	case *schema.Optional:
+		if len(value) > 0 {
+			return valueForField(t.Type, value)
+		}
+
+	default:
+		panic(fmt.Sprintf("unsupported type %T", typ))
+	}
+
+	return optional.Some[any](value), nil
 }
 
 func decodeQueryJSON(query string) (map[string]any, error) {

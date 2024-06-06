@@ -373,7 +373,9 @@ func HttpCall(method string, path string, body []byte, onResponse func(t testing
 		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8891"))
 		assert.NoError(t, err)
 
-		r, err := http.NewRequestWithContext(ic, method, baseURL.JoinPath(path).String(), bytes.NewReader(body))
+		u, err := baseURL.Parse(path)
+		assert.NoError(t, err)
+		r, err := http.NewRequestWithContext(ic, method, u.String(), bytes.NewReader(body))
 		assert.NoError(t, err)
 
 		r.Header.Add("Content-Type", "application/json")
