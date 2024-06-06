@@ -372,6 +372,7 @@ func TestExtractModulePubSub(t *testing.T) {
 
         verb processBroadcast(pubsub.PayinEvent) Unit
         	+subscribe broadcastSubscription
+			+retry 10 1s
         
         verb processPayin(pubsub.PayinEvent) Unit
         	+subscribe paymentProcessing

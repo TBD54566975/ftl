@@ -73,7 +73,8 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 		subscriber, err := tx.db.GetRandomSubscriber(ctx, subscription.Key)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get lock on subscription: %w", translatePGError(err))
+			logger.Tracef("no subscriber for subscription %s", subscription.Key)
+			continue
 		}
 
 		err = tx.db.BeginConsumingTopicEvent(ctx, subscription.Key, nextCursorKey)

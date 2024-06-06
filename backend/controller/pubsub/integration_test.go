@@ -39,7 +39,7 @@ func TestPubSub(t *testing.T) {
 	)
 }
 
-func TestPubSubConsumptionDelay(t *testing.T) {
+func TestConsumptionDelay(t *testing.T) {
 	in.Run(t, "",
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
@@ -50,9 +50,9 @@ func TestPubSubConsumptionDelay(t *testing.T) {
 		// pubsub should trigger its poll a few times during this period
 		// each time it should continue processing each event until it reaches one that is too new to process
 		func(t testing.TB, ic in.TestContext) {
-			for i := 0; i < 60; i++ {
+			for i := 0; i < 200; i++ {
 				in.Call("publisher", "publishOne", in.Obj{}, func(t testing.TB, resp in.Obj) {})(t, ic)
-				time.Sleep(time.Millisecond * 50)
+				time.Sleep(time.Millisecond * 20)
 			}
 		},
 
@@ -78,5 +78,31 @@ func TestPubSubConsumptionDelay(t *testing.T) {
 		  JOIN async_call_times ON event_times.row_num = async_call_times.row_num
 		  WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) < 0.2;
 		`, 0),
+	)
+}
+
+func TestRetry(t *testing.T) {
+	retriesPerCall := 2
+	in.Run(t, "",
+		in.CopyModule("publisher"),
+		in.CopyModule("subscriber"),
+		in.Deploy("publisher"),
+		in.Deploy("subscriber"),
+
+		// publish events
+		in.Call("publisher", "publishOneToTopic2", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
+
+		in.Sleep(time.Second*6),
+
+		// check that there are the right amount of failed async calls
+		in.QueryRow("ftl",
+			fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM async_calls
+		WHERE
+			state = 'error'
+			AND origin = '%s'
+		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
+			1+retriesPerCall),
 	)
 }

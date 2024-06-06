@@ -308,8 +308,8 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`4:7-7: verb A: retries can only be added to FSM transitions`,
-				`6:7-7: verb B: retries can only be added to FSM transitions`,
+				`4:7-7: verb A: retries can only be added to subscribers or FSM transitions`,
+				`6:7-7: verb B: retries can only be added to subscribers or FSM transitions`,
 			},
 		},
 		{name: "InvalidRetryDurations",

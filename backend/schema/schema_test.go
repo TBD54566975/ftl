@@ -535,6 +535,7 @@ func TestParsing(t *testing.T) {
 					verb consumesBothASubs(test.eventA) Unit
 						+subscribe subA1
 						+subscribe subA2
+						+retry 1m5s 1h
 				}
 			`,
 			expected: &Schema{
@@ -629,6 +630,10 @@ func TestParsing(t *testing.T) {
 								},
 								&MetadataSubscriber{
 									Name: "subA2",
+								},
+								&MetadataRetry{
+									MinBackoff: "1m5s",
+									MaxBackoff: "1h",
 								},
 							},
 						},
