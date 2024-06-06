@@ -427,9 +427,10 @@ func parseCall(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	}
 	ref := parseVerbRef(pctx, node.Args[1])
 	if ref == nil {
-		ref, parsedRef := parseSelectorRef(node.Args[1])
 		var suffix string
-		if parsedRef && pctx.schema.Resolve(ref).Ok() {
+		var ok bool
+		ref, ok = parseSelectorRef(node.Args[1])
+		if ok && pctx.schema.Resolve(ref).Ok() {
 			suffix = ", does it need to be exported?"
 		}
 		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
