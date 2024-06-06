@@ -18,7 +18,7 @@ sql:
           - db_type: "uuid"
             nullable: true
             go_type:
-              type: "NullUUID"
+              type: "optional.Option[uuid.UUID]"
           - db_type: "timestamptz"
             go_type: "time.Time"
           - db_type: "pg_catalog.interval"
@@ -26,13 +26,13 @@ sql:
           - db_type: "pg_catalog.interval"
             nullable: true
             go_type:
-              type: "NullDuration"
+              type: "optional.Option[time.Duration]"
           - db_type: "module_schema_pb"
             go_type: "*github.com/TBD54566975/ftl/backend/schema.Module"
           - db_type: "timestamptz"
             nullable: true
             go_type:
-              type: "NullTime"
+              type: "optional.Option[time.Time]"
           - db_type: "pg_catalog.varchar"
             nullable: true
             go_type: "github.com/alecthomas/types/optional.Option[string]"
@@ -41,40 +41,40 @@ sql:
           - db_type: "runner_key"
             nullable: true
             go_type:
-              type: "NullRunnerKey"
+              type: "optional.Option[model.RunnerKey]"
           - db_type: "schema_ref"
             go_type: "github.com/TBD54566975/ftl/backend/schema.RefKey"
           - db_type: "schema_ref"
             nullable: true
             go_type:
-              type: "NullRef"
+              type: "optional.Option[schema.RefKey]"
           - db_type: "schema_type"
             go_type:
               type: "Type"
           - db_type: "schema_type"
             nullable: true
             go_type:
-              type: "NullType"
+              type: "optional.Option[Type]"
           - db_type: "cron_job_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.CronJobKey"
           - db_type: "cron_job_key"
             nullable: true
             go_type:
-              type: "NullCronJobKey"
+              type: "optional.Option[model.CronJobKey]"
           - db_type: "lease_key"
             go_type: "github.com/TBD54566975/ftl/backend/controller/leases.Key"
           - db_type: "lease_key"
             nullable: true
             go_type:
-              type: "NullLeaseKey"
+              type: "optional.Option[leases.Key]"
           - db_type: "deployment_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
-          - db_type: "cron_job_state"
-            go_type: "github.com/TBD54566975/ftl/internal/model.CronJobState"
           - db_type: "deployment_key"
             nullable: true
             go_type:
-              type: "NullDeploymentKey"
+              type: "optional.Option[model.DeploymentKey]"
+          - db_type: "cron_job_state"
+            go_type: "github.com/TBD54566975/ftl/internal/model.CronJobState"
           - db_type: "controller_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - db_type: "request_key"
@@ -82,31 +82,31 @@ sql:
           - db_type: "request_key"
             nullable: true
             go_type:
-              type: "NullRequestKey"
+              type: "optional.Option[model.RequestKey]"
           - db_type: "topic_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.TopicKey"
           - db_type: "topic_key"
             nullable: true
             go_type:
-              type: "NullTopicKey"
+              type: "optional.Option[model.TopicKey]"
           - db_type: "subscription_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.SubscriptionKey"
           - db_type: "subscription_key"
             nullable: true
             go_type:
-              type: "NullSubscriptionKey"
+              type: "optional.Option[model.SubscriptionKey]"
           - db_type: "subscriber_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.SubscriberKey"
           - db_type: "subscriber_key"
             nullable: true
             go_type:
-              type: "NullSubscriberKey"
+              type: "optional.Option[model.SubscriberKey]"
           - db_type: "topic_event_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.TopicEventKey"
           - db_type: "topic_event_key"
             nullable: true
             go_type:
-              type: "NullTopicEventKey"
+              type: "optional.Option[model.TopicEventKey]"
           - db_type: "text"
             go_type: "string"
           - db_type: "text"

@@ -20,7 +20,7 @@ type Querier interface {
 	// reservation key.
 	AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error)
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
-	BeginConsumingTopicEvent(ctx context.Context, subscriptionID optional.Option[int64], event NullTopicEventKey) error
+	BeginConsumingTopicEvent(ctx context.Context, subscriptionID optional.Option[int64], event optional.Option[model.TopicEventKey]) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
@@ -63,7 +63,7 @@ type Querier interface {
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
 	GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
-	GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor NullTopicEventKey) (GetNextEventForSubscriptionRow, error)
+	GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	// Retrieve routing information for a runner.
 	GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error)
@@ -85,7 +85,7 @@ type Querier interface {
 	ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	// get a lock on the subscription row, guaranteeing that it is idle and has not consumed more events
-	LockSubscriptionAndGetSink(ctx context.Context, key model.SubscriptionKey, cursor NullTopicEventKey) (LockSubscriptionAndGetSinkRow, error)
+	LockSubscriptionAndGetSink(ctx context.Context, key model.SubscriptionKey, cursor optional.Option[model.TopicEventKey]) (LockSubscriptionAndGetSinkRow, error)
 	NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
