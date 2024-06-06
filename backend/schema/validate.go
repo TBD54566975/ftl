@@ -574,7 +574,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 
 			// Validate count
 			if md.Count != nil && *md.Count <= 0 {
-				merr = append(merr, errorf(md, "verb %s: retry count must be atleast 1", n.Name))
+				merr = append(merr, errorf(md, "verb %s: retry count must be at least 1", n.Name))
 			}
 
 			// Validate parsing of durations
@@ -584,7 +584,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 				return
 			}
 			if retryParams.MaxBackoff < retryParams.MinBackoff {
-				merr = append(merr, errorf(md, "verb %s: max backoff duration (%s) needs to be atleast as long as initial backoff (%s)", n.Name, md.MaxBackoff, md.MinBackoff))
+				merr = append(merr, errorf(md, "verb %s: max backoff duration (%s) needs to be at least as long as initial backoff (%s)", n.Name, md.MaxBackoff, md.MinBackoff))
 			}
 		case *MetadataSubscriber:
 			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
