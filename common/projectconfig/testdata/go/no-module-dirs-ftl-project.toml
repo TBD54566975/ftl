@@ -1,0 +1,2 @@
+[commands]
+  startup = ["echo 'Executing global pre-build command'"]
