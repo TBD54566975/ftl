@@ -65,7 +65,7 @@ type Querier interface {
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
-	GetRandomSubscriberSink(ctx context.Context, key model.SubscriptionKey) (schema.RefKey, error)
+	GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error)
 	// Retrieve routing information for a runner.
 	GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error)
 	GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error)

@@ -71,9 +71,10 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			continue
 		}
 
-		sink, err := tx.db.GetRandomSubscriberSink(ctx, subscription.Key)
+		subscriber, err := tx.db.GetRandomSubscriber(ctx, subscription.Key)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get lock on subscription: %w", translatePGError(err))
+			logger.Tracef("no subscriber for subscription %s", subscription.Key)
+			continue
 		}
 
 		err = tx.db.BeginConsumingTopicEvent(ctx, subscription.Key, nextCursorKey)
@@ -88,9 +89,12 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			},
 		}
 		_, err = tx.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
-			Verb:    sink,
-			Origin:  origin.String(),
-			Request: nextCursor.Payload,
+			Verb:              subscriber.Sink,
+			Origin:            origin.String(),
+			Request:           nextCursor.Payload,
+			RemainingAttempts: subscriber.RetryAttempts,
+			Backoff:           subscriber.Backoff,
+			MaxBackoff:        subscriber.MaxBackoff,
 		})
 		if err != nil {
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", translatePGError(err))

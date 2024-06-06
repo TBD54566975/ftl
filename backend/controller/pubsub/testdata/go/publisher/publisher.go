@@ -25,7 +25,6 @@ func PublishTen(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		time.Sleep(time.Microsecond * 20)
 	}
 	return nil
 }
@@ -33,14 +32,18 @@ func PublishTen(ctx context.Context) error {
 //ftl:verb
 func PublishOne(ctx context.Context) error {
 	logger := ftl.LoggerFromContext(ctx)
-	for i := 0; i < 10; i++ {
-		t := time.Now()
-		logger.Infof("Publishing %v", t)
-		err := topic.Publish(ctx, PubSubEvent{Time: t})
-		if err != nil {
-			return err
-		}
-		time.Sleep(time.Microsecond * 20)
-	}
-	return nil
+	t := time.Now()
+	logger.Infof("Publishing %v", t)
+	return topic.Publish(ctx, PubSubEvent{Time: t})
+}
+
+//ftl:export
+var topic2 = ftl.Topic[PubSubEvent]("topic2")
+
+//ftl:verb
+func PublishOneToTopic2(ctx context.Context) error {
+	logger := ftl.LoggerFromContext(ctx)
+	t := time.Now()
+	logger.Infof("Publishing to topic2 %v", t)
+	return topic2.Publish(ctx, PubSubEvent{Time: t})
 }

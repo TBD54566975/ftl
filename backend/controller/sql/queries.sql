@@ -646,7 +646,15 @@ UPDATE SET
 RETURNING id;
 
 -- name: InsertSubscriber :exec
-INSERT INTO topic_subscribers (key, topic_subscriptions_id, deployment_id, sink)
+INSERT INTO topic_subscribers (
+  key,
+  topic_subscriptions_id,
+  deployment_id,
+  sink,
+  retry_attempts,
+  backoff,
+  max_backoff
+)
 VALUES (
   sqlc.arg('key')::subscriber_key,
   (
@@ -657,7 +665,11 @@ VALUES (
       AND topic_subscriptions.name = sqlc.arg('subscription_name')::TEXT
   ),
   (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key),
-  sqlc.arg('sink'));
+  sqlc.arg('sink'),
+  sqlc.arg('retry_attempts'),
+  sqlc.arg('backoff')::interval,
+  sqlc.arg('max_backoff')::interval
+);
 
 -- name: PublishEventForTopic :exec
 INSERT INTO topic_events (
@@ -713,9 +725,12 @@ WHERE topics.key = sqlc.arg('topic')::topic_key
 ORDER BY events.created_at, events.id
 LIMIT 1;
 
--- name: GetRandomSubscriberSink :one
+-- name: GetRandomSubscriber :one
 SELECT
-  subscribers.sink as sink
+  subscribers.sink as sink,
+  subscribers.retry_attempts as retry_attempts,
+  subscribers.backoff as backoff,
+  subscribers.max_backoff as max_backoff
 FROM topic_subscribers as subscribers
 JOIN deployments ON subscribers.deployment_id = deployments.id
 JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id

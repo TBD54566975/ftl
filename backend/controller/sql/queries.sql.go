@@ -1264,9 +1264,12 @@ func (q *Queries) GetProcessList(ctx context.Context) ([]GetProcessListRow, erro
 	return items, nil
 }
 
-const getRandomSubscriberSink = `-- name: GetRandomSubscriberSink :one
+const getRandomSubscriber = `-- name: GetRandomSubscriber :one
 SELECT
-  subscribers.sink as sink
+  subscribers.sink as sink,
+  subscribers.retry_attempts as retry_attempts,
+  subscribers.backoff as backoff,
+  subscribers.max_backoff as max_backoff
 FROM topic_subscribers as subscribers
 JOIN deployments ON subscribers.deployment_id = deployments.id
 JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
@@ -1276,11 +1279,23 @@ ORDER BY RANDOM()
 LIMIT 1
 `
 
-func (q *Queries) GetRandomSubscriberSink(ctx context.Context, key model.SubscriptionKey) (schema.RefKey, error) {
-	row := q.db.QueryRow(ctx, getRandomSubscriberSink, key)
-	var sink schema.RefKey
-	err := row.Scan(&sink)
-	return sink, err
+type GetRandomSubscriberRow struct {
+	Sink          schema.RefKey
+	RetryAttempts int32
+	Backoff       time.Duration
+	MaxBackoff    time.Duration
+}
+
+func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error) {
+	row := q.db.QueryRow(ctx, getRandomSubscriber, key)
+	var i GetRandomSubscriberRow
+	err := row.Scan(
+		&i.Sink,
+		&i.RetryAttempts,
+		&i.Backoff,
+		&i.MaxBackoff,
+	)
+	return i, err
 }
 
 const getRouteForRunner = `-- name: GetRouteForRunner :one
@@ -1770,7 +1785,15 @@ func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) 
 }
 
 const insertSubscriber = `-- name: InsertSubscriber :exec
-INSERT INTO topic_subscribers (key, topic_subscriptions_id, deployment_id, sink)
+INSERT INTO topic_subscribers (
+  key,
+  topic_subscriptions_id,
+  deployment_id,
+  sink,
+  retry_attempts,
+  backoff,
+  max_backoff
+)
 VALUES (
   $1::subscriber_key,
   (
@@ -1781,7 +1804,11 @@ VALUES (
       AND topic_subscriptions.name = $3::TEXT
   ),
   (SELECT id FROM deployments WHERE key = $4::deployment_key),
-  $5)
+  $5,
+  $6,
+  $7::interval,
+  $8::interval
+)
 `
 
 type InsertSubscriberParams struct {
@@ -1790,6 +1817,9 @@ type InsertSubscriberParams struct {
 	SubscriptionName string
 	Deployment       model.DeploymentKey
 	Sink             schema.RefKey
+	RetryAttempts    int32
+	Backoff          time.Duration
+	MaxBackoff       time.Duration
 }
 
 func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error {
@@ -1799,6 +1829,9 @@ func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberPara
 		arg.SubscriptionName,
 		arg.Deployment,
 		arg.Sink,
+		arg.RetryAttempts,
+		arg.Backoff,
+		arg.MaxBackoff,
 	)
 	return err
 }

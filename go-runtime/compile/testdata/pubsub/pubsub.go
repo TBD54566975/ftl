@@ -47,6 +47,7 @@ func Broadcast(ctx context.Context) error {
 }
 
 //ftl:subscribe broadcastSubscription
+//ftl:retry 10 1s
 func ProcessBroadcast(ctx context.Context, event PayinEvent) error {
 	logger := ftl.LoggerFromContext(ctx)
 	logger.Infof("Received broadcast event: %v", event)
