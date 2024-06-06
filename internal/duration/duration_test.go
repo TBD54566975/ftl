@@ -20,7 +20,7 @@ func TestGoodDurations(t *testing.T) {
 		{"1d1h1m1s", time.Hour*24 + time.Hour + time.Minute + time.Second},
 	}
 	for _, test := range tests {
-		duration, err := ParseDuration(test.input)
+		duration, err := Parse(test.input)
 		assert.NoError(t, err)
 		assert.Equal(t, test.expected, duration)
 	}
@@ -38,7 +38,7 @@ func TestBadDurations(t *testing.T) {
 		{"-1s"},
 	}
 	for _, test := range tests {
-		duration, err := ParseDuration(test.input)
+		duration, err := Parse(test.input)
 		assert.Error(t, err, test.input)
 		assert.Zero(t, duration)
 	}

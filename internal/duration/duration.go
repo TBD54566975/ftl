@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func ParseDuration(str string) (time.Duration, error) {
+func Parse(str string) (time.Duration, error) {
 	// regex is more lenient than what is valid to allow for better error messages.
 	re := regexp.MustCompile(`^(\d+)([a-zA-Z]+)`)
 

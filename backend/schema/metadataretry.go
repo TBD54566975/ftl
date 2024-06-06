@@ -60,7 +60,7 @@ func (m *MetadataRetry) ToProto() proto.Message {
 }
 
 func parseRetryDuration(str string) (time.Duration, error) {
-	dur, err := duration.ParseDuration(str)
+	dur, err := duration.Parse(str)
 	if err != nil {
 		return 0, fmt.Errorf("could not parse retry duration: %w", err)
 	}
