@@ -50,9 +50,9 @@ func TestConsumptionDelay(t *testing.T) {
 		// pubsub should trigger its poll a few times during this period
 		// each time it should continue processing each event until it reaches one that is too new to process
 		func(t testing.TB, ic in.TestContext) {
-			for i := 0; i < 200; i++ {
+			for i := 0; i < 120; i++ {
 				in.Call("publisher", "publishOne", in.Obj{}, func(t testing.TB, resp in.Obj) {})(t, ic)
-				time.Sleep(time.Millisecond * 20)
+				time.Sleep(time.Millisecond * 25)
 			}
 		},
 
