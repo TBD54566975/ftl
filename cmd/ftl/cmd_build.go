@@ -19,7 +19,7 @@ type buildCmd struct {
 func (b *buildCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 	if len(b.Dirs) == 0 && len(b.External) == 0 {
-		b.Dirs = projConfig.MustGetModuleDirs()
+		b.Dirs = projConfig.ModuleDirsOrDefault()
 		b.External = projConfig.ExternalDirs
 	}
 	if len(b.Dirs) == 0 && len(b.External) == 0 {
