@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/duration"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -60,49 +60,17 @@ func (m *MetadataRetry) ToProto() proto.Message {
 }
 
 func parseRetryDuration(str string) (time.Duration, error) {
-	// regex is more lenient than what is valid to allow for better error messages.
-	re := regexp.MustCompile(`(\d+)([a-zA-Z]+)`)
-
-	var duration time.Duration
-	previousUnitDuration := time.Duration(0)
-	for len(str) > 0 {
-		matches := re.FindStringSubmatchIndex(str)
-		if matches == nil {
-			return 0, fmt.Errorf("unable to parse retry backoff %q - expected duration in format like '1m' or '30s'", str)
-		}
-		num, err := strconv.Atoi(str[matches[2]:matches[3]])
-		if err != nil {
-			return 0, fmt.Errorf("unable to parse retry backoff text %q: %w", str, err)
-		}
-
-		unitStr := str[matches[4]:matches[5]]
-		var unitDuration time.Duration
-		switch unitStr {
-		case "d":
-			unitDuration = time.Hour * 24
-		case "h":
-			unitDuration = time.Hour
-		case "m":
-			unitDuration = time.Minute
-		case "s":
-			unitDuration = time.Second
-		default:
-			return 0, fmt.Errorf("retry has unknown unit %q - use 'd', 'h', 'm' or 's'", unitStr)
-		}
-		if previousUnitDuration != 0 && previousUnitDuration <= unitDuration {
-			return 0, fmt.Errorf("retry has unit %q out of order - units need to be ordered from largest to smallest", unitStr)
-		}
-		previousUnitDuration = unitDuration
-		duration += time.Duration(num) * unitDuration
-		str = str[matches[1]:]
+	dur, err := duration.ParseDuration(str)
+	if err != nil {
+		return 0, fmt.Errorf("could not parse retry duration: %w", err)
 	}
-	if duration < MinBackoffLimit {
+	if dur < MinBackoffLimit {
 		return 0, fmt.Errorf("retry must have a minimum backoff of %v", MinBackoffLimitStr)
 	}
-	if duration > MaxBackoffLimit {
+	if dur > MaxBackoffLimit {
 		return 0, fmt.Errorf("retry backoff can not be larger than %v", MaxBackoffLimitStr)
 	}
-	return duration, nil
+	return dur, nil
 }
 
 type RetryParams struct {
