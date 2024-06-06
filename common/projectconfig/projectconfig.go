@@ -136,6 +136,21 @@ func loadFile(path string) (Config, error) {
 		}
 		return Config{}, fmt.Errorf("unknown configuration keys: %s", strings.Join(keys, ", "))
 	}
+
+	// make modules-dir absolute to mimic the behavior of the CLI
+	for i, dir := range config.ModuleDirs {
+		if !filepath.IsAbs(dir) {
+			config.ModuleDirs[i] = filepath.Join(filepath.Dir(path), dir)
+		}
+	}
+
+	// make external-dirs absolute to mimic the behavior of the CLI
+	for i, dir := range config.ExternalDirs {
+		if !filepath.IsAbs(dir) {
+			config.ExternalDirs[i] = filepath.Join(filepath.Dir(path), dir)
+		}
+	}
+
 	return config, nil
 }
 
