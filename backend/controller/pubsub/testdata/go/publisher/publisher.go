@@ -16,9 +16,16 @@ type PubSubEvent struct {
 }
 
 //ftl:verb
-func Publish(ctx context.Context) error {
+func PublishTen(ctx context.Context) error {
 	logger := ftl.LoggerFromContext(ctx)
-	t := time.Now()
-	logger.Infof("Publishing %v", t)
-	return topic.Publish(ctx, PubSubEvent{Time: t})
+	for i := 0; i < 10; i++ {
+		t := time.Now()
+		logger.Infof("Publishing %v", t)
+		err := topic.Publish(ctx, PubSubEvent{Time: t})
+		if err != nil {
+			return err
+		}
+		time.Sleep(time.Microsecond * 20)
+	}
+	return nil
 }
