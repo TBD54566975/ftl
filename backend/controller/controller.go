@@ -198,6 +198,7 @@ type Service struct {
 	runnerScaling scaling.RunnerScaling
 
 	increaseReplicaFailures map[string]int
+	asyncCallsLock          sync.Mutex
 }
 
 func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
@@ -231,9 +232,8 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 
-	pubSub := pubsub.New(ctx, key, db)
+	pubSub := pubsub.New(ctx, db, svc.tasks, svc)
 	svc.pubSub = pubSub
-	svc.controllerListListeners = append(svc.controllerListListeners, pubSub)
 
 	go svc.syncSchema(ctx)
 
@@ -1198,7 +1198,22 @@ func (s *Service) reconcileRunners(ctx context.Context) (time.Duration, error) {
 	return time.Second, nil
 }
 
+// AsyncCallWasAdded is an optional notification that an async call was added by this controller
+//
+// It allows us to speed up execution of scheduled async calls rather than waiting for the next poll time.
+func (s *Service) AsyncCallWasAdded(ctx context.Context) {
+	go func() {
+		if _, err := s.executeAsyncCalls(ctx); err != nil {
+			log.FromContext(ctx).Errorf(err, "failed to progress subscriptions")
+		}
+	}()
+}
+
 func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) {
+	// There are multiple entry points into this function, but we want the controller to handle async calls one at a time.
+	s.asyncCallsLock.Lock()
+	defer s.asyncCallsLock.Unlock()
+
 	logger := log.FromContext(ctx)
 	logger.Tracef("Acquiring async call")
 
@@ -1238,6 +1253,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 			// Will retry, do not propagate failure yet.
 			return nil
 		}
+		// Allow for handling of completion based on origin
 		switch origin := call.Origin.(type) {
 		case dal.AsyncOriginFSM:
 			return s.onAsyncFSMCallCompletion(ctx, tx, origin, failed)
@@ -1252,6 +1268,20 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	if err != nil {
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
+	go func() {
+		// Post-commit notification based on origin
+		switch origin := call.Origin.(type) {
+		case dal.AsyncOriginFSM:
+			break
+
+		case dal.AsyncOriginPubSub:
+			s.pubSub.AsyncCallDidCommit(ctx, origin)
+
+		default:
+			break
+		}
+	}()
+
 	return 0, nil
 }
 

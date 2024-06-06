@@ -678,16 +678,22 @@ VALUES (
 );
 
 -- name: GetSubscriptionsNeedingUpdate :many
+-- Results may not be ready to be scheduled yet due to event consumption delay
+-- Sorting ensures that brand new events (that may not be ready for consumption)
+-- don't prevent older events from being consumed
 SELECT
   subs.key::subscription_key as key,
-  topic_events.key as cursor,
+  curser.key as cursor,
   topics.key::topic_key as topic,
   subs.name
 FROM topic_subscriptions subs
 LEFT JOIN topics ON subs.topic_id = topics.id
-LEFT JOIN topic_events ON subs.cursor = topic_events.id
+LEFT JOIN topic_events curser ON subs.cursor = curser.id
 WHERE subs.cursor IS DISTINCT FROM topics.head
-  AND subs.state = 'idle';
+  AND subs.state = 'idle'
+ORDER BY curser.created_at
+LIMIT 3
+FOR UPDATE OF subs SKIP LOCKED;
 
 -- name: GetNextEventForSubscription :one
 WITH cursor AS (
@@ -698,7 +704,8 @@ WITH cursor AS (
   WHERE "key" = sqlc.narg('cursor')::topic_event_key
 )
 SELECT events."key" as event,
-        events.payload
+        events.payload,
+        events.created_at
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
 WHERE topics.key = sqlc.arg('topic')::topic_key
@@ -706,28 +713,16 @@ WHERE topics.key = sqlc.arg('topic')::topic_key
 ORDER BY events.created_at, events.id
 LIMIT 1;
 
--- name: LockSubscriptionAndGetSink :one
-WITH subscriber AS (
-  -- choose a random subscriber to execute the event
-  SELECT
-    subscribers.sink as sink
-  FROM topic_subscribers as subscribers
-  JOIN deployments ON subscribers.deployment_id = deployments.id
-  JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
-  WHERE topic_subscriptions.key = sqlc.arg('key')::subscription_key
-    AND deployments.min_replicas > 0
-  ORDER BY RANDOM()
-  LIMIT 1
-)
--- get a lock on the subscription row, guaranteeing that it is idle and has not consumed more events
+-- name: GetRandomSubscriberSink :one
 SELECT
-  id as subscription_id,
-  (SELECT sink FROM subscriber) AS sink
-FROM topic_subscriptions
-WHERE state = 'idle'
-  AND key = sqlc.arg('key')::subscription_key
-  AND cursor IS NOT DISTINCT FROM (SELECT id FROM topic_events WHERE "key" = sqlc.narg('cursor')::topic_event_key)
-FOR UPDATE;
+  subscribers.sink as sink
+FROM topic_subscribers as subscribers
+JOIN deployments ON subscribers.deployment_id = deployments.id
+JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
+WHERE topic_subscriptions.key = sqlc.arg('key')::subscription_key
+  AND deployments.min_replicas > 0
+ORDER BY RANDOM()
+LIMIT 1;
 
 -- name: BeginConsumingTopicEvent :exec
 WITH event AS (
@@ -738,7 +733,7 @@ WITH event AS (
 UPDATE topic_subscriptions
 SET state = 'executing',
     cursor = (SELECT id FROM event)
-WHERE id = sqlc.arg('subscription_id');
+WHERE key = sqlc.arg('subscription')::subscription_key;
 
 -- name: CompleteEventForSubscription :exec
 WITH module AS (

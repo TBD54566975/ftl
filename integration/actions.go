@@ -78,6 +78,15 @@ func Chain(actions ...Action) Action {
 	}
 }
 
+// Repeat an action N times.
+func Repeat(n int, action Action) Action {
+	return func(t testing.TB, ic TestContext) {
+		for i := 0; i < n; i++ {
+			action(t, ic)
+		}
+	}
+}
+
 // Chdir changes the test working directory to the subdirectory for the duration of the action.
 func Chdir(dir string, a Action) Action {
 	return func(t testing.TB, ic TestContext) {
@@ -288,7 +297,7 @@ func QueryRow(database string, query string, expected ...interface{}) Action {
 	return func(t testing.TB, ic TestContext) {
 		actual := GetRow(t, ic, database, query, len(expected))
 		for i, a := range actual {
-			assert.Equal(t, a, expected[i])
+			assert.Equal(t, expected[i], a)
 		}
 	}
 }
