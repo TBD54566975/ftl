@@ -427,9 +427,10 @@ func parseCall(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	}
 	ref := parseVerbRef(pctx, node.Args[1])
 	if ref == nil {
-		ref = parseSelectorRef(node.Args[1])
 		var suffix string
-		if pctx.schema.Resolve(ref).Ok() {
+		var ok bool
+		ref, ok = parseSelectorRef(node.Args[1])
+		if ok && pctx.schema.Resolve(ref).Ok() {
 			suffix = ", does it need to be exported?"
 		}
 		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
@@ -441,20 +442,20 @@ func parseCall(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	activeVerb.AddCall(ref)
 }
 
-func parseSelectorRef(node ast.Expr) *schema.Ref {
+func parseSelectorRef(node ast.Expr) (*schema.Ref, bool) {
 	sel, ok := node.(*ast.SelectorExpr)
 	if !ok {
-		return nil
+		return nil, false
 	}
 	ident, ok := sel.X.(*ast.Ident)
 	if !ok {
-		return nil
+		return nil, false
 	}
 	return &schema.Ref{
 		Pos:    goPosToSchemaPos(node.Pos()),
 		Module: ident.Name,
 		Name:   strcase.ToLowerCamel(sel.Sel.Name),
-	}
+	}, true
 
 }
 
