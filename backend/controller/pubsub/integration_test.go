@@ -29,11 +29,11 @@ func TestPubSub(t *testing.T) {
 		// check that there are the right amount of successful async calls
 		in.QueryRow("ftl",
 			fmt.Sprintf(`
-		SELECT COUNT(*)
-		FROM async_calls
-		WHERE
-			state = 'success'
-			AND origin = '%s'
+				SELECT COUNT(*)
+				FROM async_calls
+				WHERE
+					state = 'success'
+					AND origin = '%s'
 		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "test_subscription"}}.String()),
 			events),
 	)
@@ -61,22 +61,22 @@ func TestConsumptionDelay(t *testing.T) {
 		// Get all event created ats, and all async call created ats
 		// Compare each, make sure none are less than 0.2s of each other
 		in.QueryRow("ftl", `
-		WITH event_times AS (
-			SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
-			FROM (
-			  select * from topic_events order by created_at
+			WITH event_times AS (
+				SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
+				FROM (
+				select * from topic_events order by created_at
+				)
+			),
+			async_call_times AS (
+				SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
+				FROM (
+				select * from async_calls ac order by created_at
+				)
 			)
-		  ),
-		  async_call_times AS (
-			SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
-			FROM (
-			  select * from async_calls ac order by created_at
-			)
-		  )
-		  SELECT COUNT(*)
-		  FROM event_times
-		  JOIN async_call_times ON event_times.row_num = async_call_times.row_num
-		  WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) < 0.2;
+			SELECT COUNT(*)
+			FROM event_times
+			JOIN async_call_times ON event_times.row_num = async_call_times.row_num
+			WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) < 0.2;
 		`, 0),
 	)
 }
@@ -97,11 +97,11 @@ func TestRetry(t *testing.T) {
 		// check that there are the right amount of failed async calls
 		in.QueryRow("ftl",
 			fmt.Sprintf(`
-		SELECT COUNT(*)
-		FROM async_calls
-		WHERE
-			state = 'error'
-			AND origin = '%s'
+				SELECT COUNT(*)
+				FROM async_calls
+				WHERE
+					state = 'error'
+					AND origin = '%s'
 		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
 			1+retriesPerCall),
 	)
