@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
 	sets "github.com/deckarep/golang-set/v2"
 	gomaps "golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
@@ -27,6 +27,7 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
+	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -139,39 +140,31 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 
 	buildDir := buildDir(moduleDir)
 	logger.Debugf("Extracting schema")
-	parseResult, err := ExtractModuleSchema(moduleDir, sch)
+	result, err := ExtractModuleSchema(config.Dir, sch)
 	if err != nil {
-		return fmt.Errorf("failed to extract module schema: %w", err)
-	}
-	pr, ok := parseResult.Get()
-	if !ok {
-		return fmt.Errorf("failed to extract module schema")
+		return err
 	}
 
-	main := pr.Module
-	if schemaErrs := pr.Errors; len(schemaErrs) > 0 {
-		if err := writeSchemaErrors(config, schemaErrs); err != nil {
-			return fmt.Errorf("failed to write errors: %w", err)
-		}
+	if err = writeSchemaErrors(config, result.Errors); err != nil {
+		return fmt.Errorf("failed to write schema errors: %w", err)
+	}
+	if schema.ContainsTerminalError(result.Errors) {
+		// Only bail if schema errors contain elements at level ERROR.
+		// If errors are only at levels below ERROR (e.g. INFO, WARN), the schema can still be used.
 		return nil
 	}
-	schemaBytes, err := proto.Marshal(main.ToProto())
-	if err != nil {
-		return fmt.Errorf("failed to marshal schema: %w", err)
-	}
-	err = os.WriteFile(filepath.Join(buildDir, "schema.pb"), schemaBytes, 0600)
-	if err != nil {
+	if err = writeSchema(config, result.Module); err != nil {
 		return fmt.Errorf("failed to write schema: %w", err)
 	}
 
 	logger.Debugf("Generating main module")
-	goVerbs := make([]goVerb, 0, len(main.Decls))
-	for _, decl := range main.Decls {
+	goVerbs := make([]goVerb, 0, len(result.Module.Decls))
+	for _, decl := range result.Module.Decls {
 		verb, ok := decl.(*schema.Verb)
 		if !ok {
 			continue
 		}
-		nativeName, ok := pr.NativeNames[verb]
+		nativeName, ok := result.NativeNames[verb]
 		if !ok {
 			return fmt.Errorf("missing native name for verb %s", verb.Name)
 		}
@@ -188,10 +181,10 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
 		GoVersion:    goModVersion,
 		FTLVersion:   ftlVersion,
-		Name:         main.Name,
+		Name:         result.Module.Name,
 		Verbs:        goVerbs,
 		Replacements: replacements,
-		SumTypes:     getSumTypes(main, sch, pr.NativeNames),
+		SumTypes:     getSumTypes(result.Module, sch, result.NativeNames),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -255,11 +248,6 @@ func generateExternalModules(context ExternalModuleContext) error {
 
 	funcs := maps.Clone(scaffoldFuncs)
 	return internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
-}
-
-func online() bool {
-	_, err := net.LookupHost("proxy.golang.org")
-	return err == nil
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{
@@ -525,6 +513,14 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 	return true
 }
 
+func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error {
+	schemaBytes, err := proto.Marshal(module.ToProto())
+	if err != nil {
+		return fmt.Errorf("failed to marshal schema: %w", err)
+	}
+	return os.WriteFile(filepath.Join(config.AbsDeployDir(), "schema.pb"), schemaBytes, 0600)
+}
+
 func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error) error {
 	el := schema.ErrorList{
 		Errors: errors,
@@ -615,4 +611,75 @@ func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalE
 		panic(fmt.Sprintf("failed to resolve external type enums schema: %v", err))
 	}
 	return externalTypeEnums
+}
+
+// ExtractModuleSchema statically parses Go FTL module source into a schema.Module
+//
+// TODO: once migrated off of the legacy extractor, we can inline `extract.Extract(dir)` and delete this
+// function
+func ExtractModuleSchema(dir string, sch *schema.Schema) (analyzers.ExtractResult, error) {
+	result, err := extract.Extract(dir)
+	if err != nil {
+		return analyzers.ExtractResult{}, err
+	}
+
+	// merge with legacy results for now
+	if err = legacyExtractModuleSchema(dir, sch, &result); err != nil {
+		return analyzers.ExtractResult{}, err
+	}
+
+	schema.SortErrorsByPosition(result.Errors)
+	if !schema.ContainsTerminalError(result.Errors) {
+		err = schema.ValidateModule(result.Module)
+		if err != nil {
+			return analyzers.ExtractResult{}, err
+		}
+	}
+	updateVisibility(result.Module)
+	return result, nil
+}
+
+// TODO: delete all of this once it's handled by the finalizer
+func updateVisibility(module *schema.Module) {
+	for _, d := range module.Decls {
+		if d.IsExported() {
+			updateTransitiveVisibility(d, module)
+		}
+	}
+}
+
+// TODO: delete
+func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
+	if !d.IsExported() {
+		return
+	}
+
+	_ = schema.Visit(d, func(n schema.Node, next func() error) error {
+		ref, ok := n.(*schema.Ref)
+		if !ok {
+			return next()
+		}
+
+		resolved := module.Resolve(*ref)
+		if resolved == nil || resolved.Symbol == nil {
+			return next()
+		}
+
+		if decl, ok := resolved.Symbol.(schema.Decl); ok {
+			switch t := decl.(type) {
+			case *schema.Data:
+				t.Export = true
+			case *schema.Enum:
+				t.Export = true
+			case *schema.TypeAlias:
+				t.Export = true
+			case *schema.Topic:
+				t.Export = true
+			case *schema.Verb:
+				t.Export = true
+			case *schema.Database, *schema.Config, *schema.FSM, *schema.Secret, *schema.Subscription:
+			}
+		}
+		return next()
+	})
 }

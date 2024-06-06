@@ -117,6 +117,41 @@ func (m *Module) String() string {
 	return w.String()
 }
 
+// AddDecls appends decls to the module.
+//
+// Decls are only added if they are not already present in the module or if they change the visibility of an existing
+// Decl.
+func (m *Module) AddDecls(decls []Decl) {
+	// decls are namespaced by their type.
+	typeQualifiedName := func(d Decl) string {
+		return reflect.TypeOf(d).Name() + "." + d.GetName()
+	}
+
+	existingDecls := map[string]Decl{}
+	for _, d := range m.Decls {
+		existingDecls[typeQualifiedName(d)] = d
+	}
+	for _, newDecl := range decls {
+		tqName := typeQualifiedName(newDecl)
+		if existingDecl, ok := existingDecls[tqName]; ok {
+			if newDecl.IsExported() && !existingDecl.IsExported() {
+				existingDecls[tqName] = newDecl
+			}
+			continue
+		}
+
+		existingDecls[tqName] = newDecl
+	}
+	m.Decls = maps.Values(existingDecls)
+}
+
+// AddDecl adds a single decl to the module.
+//
+// It is only added if not already present or if it changes the visibility of the existing Decl.
+func (m *Module) AddDecl(decl Decl) {
+	m.AddDecls([]Decl{decl})
+}
+
 // AddData and return its index.
 //
 // If data is already in the module, the existing index is returned.

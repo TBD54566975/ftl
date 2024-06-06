@@ -14,6 +14,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 	"golang.org/x/tools/go/ast/astutil"
@@ -21,7 +22,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
-	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/goast"
 )
 
@@ -99,51 +99,28 @@ func (e errorSet) addAll(errs ...*schema.Error) {
 	}
 }
 
-type ParseResult struct {
-	Module      *schema.Module
-	NativeNames NativeNames
-	// Errors contains schema validation errors encountered during parsing.
-	Errors []*schema.Error
-}
-
-// ExtractModuleSchema statically parses Go FTL module source into a schema.Module.
-func ExtractModuleSchema(dir string, sch *schema.Schema) (optional.Option[ParseResult], error) {
+func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *analyzers.ExtractResult) error {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
 	}, "./...")
 	if err != nil {
-		return optional.None[ParseResult](), err
+		return err
 	}
 	if len(pkgs) == 0 {
-		return optional.None[ParseResult](), fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
+		return fmt.Errorf("no packages found in %q, does \"go mod tidy\" need to be run?", dir)
 	}
-	// Find module name
-	module := &schema.Module{}
-	merr := []error{}
-	schemaErrs := []*schema.Error{}
-	nativeNames := NativeNames{}
 
 	for _, pkg := range pkgs {
-		moduleName, ok := ftlModuleFromGoModule(pkg.PkgPath).Get()
-		if !ok {
-			return optional.None[ParseResult](), fmt.Errorf("package %q is not in the ftl namespace", pkg.PkgPath)
-		}
 		if len(strings.Split(pkg.PkgPath, "/")) > 2 {
 			// skip subpackages of a module
 			continue
 		}
-		module.Name = moduleName
-		if len(pkg.Errors) > 0 {
-			for _, perr := range pkg.Errors {
-				merr = append(merr, perr)
-			}
-		}
-		pctx := newParseContext(pkg, pkgs, module, sch)
+		pctx := newParseContext(pkg, pkgs, sch, out)
 		err := extractInitialDecls(pctx)
 		if err != nil {
-			return optional.None[ParseResult](), err
+			return err
 		}
 		for _, file := range pkg.Syntax {
 			err := goast.Visit(file, func(stack []ast.Node, next func() error) (err error) {
@@ -166,33 +143,20 @@ func ExtractModuleSchema(dir string, sch *schema.Schema) (optional.Option[ParseR
 				return next()
 			})
 			if err != nil {
-				return optional.None[ParseResult](), err
+				return err
 			}
 		}
-		for decl, nativeName := range pctx.nativeNames {
-			nativeNames[decl] = nativeName
-		}
 		if len(pctx.errors) > 0 {
-			schemaErrs = append(schemaErrs, maps.Values(pctx.errors)...)
+			out.Errors = append(out.Errors, maps.Values(pctx.errors)...)
 		}
 	}
-	if len(schemaErrs) > 0 {
-		schema.SortErrorsByPosition(schemaErrs)
-		return optional.Some(ParseResult{Errors: schemaErrs}), nil
-	}
-	if len(merr) > 0 {
-		return optional.None[ParseResult](), errors.Join(merr...)
-	}
-	return optional.Some(ParseResult{
-		NativeNames: nativeNames,
-		Module:      module,
-	}), schema.ValidateModule(module)
+	return nil
 }
 
 // extractInitialDecls traverses the package's AST and extracts declarations needed up front (type aliases, enums and topics)
 //
 // This allows us to know if a type is a type alias or an enum regardless of ordering when visiting each ast node.
-// - The Decls get added to the pctx's module, nativeNames and enumInterfaces.
+// - The decls get added to the pctx's module, nativeNames and enumInterfaces.
 // - We only want to do a simple pass, so we do not resolve references to other types. This means the TypeAlias and Enum decls have Type = nil
 //   - This get's filled in with the next pass
 //
@@ -291,18 +255,7 @@ func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 				}
 			}
 			foundDeclType = optional.Some("enum")
-		case *directiveTypeAlias:
-			alias := &schema.TypeAlias{
-				Pos:      goPosToSchemaPos(node.Pos()),
-				Comments: parseComments(node.Doc),
-				Name:     strcase.ToUpperCamel(t.Name.Name),
-				Export:   dir.IsExported(),
-				Type:     nil, // nil until next pass, when we can visit the full type graph
-			}
-			pctx.module.Decls = append(pctx.module.Decls, alias)
-			pctx.nativeNames[alias] = nativeName
-			foundDeclType = optional.Some("type alias")
-		case *directiveData, *directiveIngress, *directiveVerb, *directiveCronJob, *directiveRetry, *directiveExport, *directiveSubscriber:
+		case *directiveTypeAlias, *directiveData, *directiveIngress, *directiveVerb, *directiveCronJob, *directiveRetry, *directiveExport, *directiveSubscriber:
 			continue
 		}
 		if foundDeclType, ok := foundDeclType.Get(); ok {
@@ -852,7 +805,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 
 		for _, dir := range directives {
 			switch dir.(type) {
-			case *directiveVerb, *directiveData, *directiveEnum, *directiveTypeAlias:
+			case *directiveVerb, *directiveData, *directiveEnum:
 				if len(node.Specs) != 1 {
 					pctx.errors.add(errorf(node, "error parsing ftl directive: expected "+
 						"exactly one type declaration"))
@@ -893,28 +846,11 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 								pctx.errors.add(errorf(node, "could not find interface for type enum"))
 							}
 						}
-					} else if _, ok := dir.(*directiveTypeAlias); ok {
-						decl, ok := pctx.getDeclForTypeName(t.Name.Name).Get()
-						if !ok {
-							pctx.errors.add(errorf(node, "could not find type alias declaration for %q", t.Name.Name))
-							return
-						}
-						typeAlias, ok := decl.(*schema.TypeAlias)
-						if !ok {
-							// This case can be reached if a type is both an enum and a typealias.
-							// Error is already reported in extractTypeDecls
-							return
-						}
-						if sType, ok := visitType(pctx, node.Pos(), typ, isExported).Get(); ok {
-							typeAlias.Type = sType
-						} else {
-							pctx.errors.add(errorf(node, "unsupported type %q for type alias", typ.Underlying()))
-						}
 					} else {
 						visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
 					}
 				}
-			case *directiveIngress, *directiveCronJob, *directiveRetry, *directiveExport, *directiveSubscriber:
+			case *directiveIngress, *directiveCronJob, *directiveRetry, *directiveExport, *directiveSubscriber, *directiveTypeAlias:
 			}
 		}
 		return
@@ -1680,12 +1616,15 @@ type parseContext struct {
 	schema         *schema.Schema
 }
 
-func newParseContext(pkg *packages.Package, pkgs []*packages.Package, module *schema.Module, sch *schema.Schema) *parseContext {
+func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schema.Schema, out *analyzers.ExtractResult) *parseContext {
+	if out.NativeNames == nil {
+		out.NativeNames = NativeNames{}
+	}
 	return &parseContext{
 		pkg:            pkg,
 		pkgs:           pkgs,
-		module:         module,
-		nativeNames:    NativeNames{},
+		module:         out.Module,
+		nativeNames:    out.NativeNames,
 		enumInterfaces: enumInterfaces{},
 		errors:         errorSet{},
 		schema:         sch,
