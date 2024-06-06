@@ -8,7 +8,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/types/optional"
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, payload []byte) error {
@@ -39,43 +38,56 @@ func (d *DAL) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]model.Subscr
 	}), nil
 }
 
-func (d *DAL) ProgressSubscription(ctx context.Context, subscription model.Subscription) error {
+func (d *DAL) ProgressSubscriptions(ctx context.Context) (count int, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	nextCursor, err := tx.db.GetNextEventForSubscription(ctx, subscription.Topic, subscription.Cursor)
+	// get subscriptions needing update
+	// also gets a lock on the subscription, and skips any subscriptions locked by others
+	subs, err := tx.db.GetSubscriptionsNeedingUpdate(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get next cursor: %w", translatePGError(err))
+		return 0, fmt.Errorf("could not get subscriptions to progress: %w", translatePGError(err))
 	}
 
-	result, err := tx.db.LockSubscriptionAndGetSink(ctx, subscription.Key, subscription.Cursor)
-	if err != nil {
-		return fmt.Errorf("failed to get lock on subscription: %w", translatePGError(err))
-	}
+	for _, subscription := range subs {
+		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, subscription.Topic, subscription.Cursor)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get next cursor: %w", translatePGError(err))
+		}
+		nextCursorKey, ok := nextCursor.Event.Get()
+		if !ok {
+			return 0, fmt.Errorf("could not find event to progress subscription: %w", translatePGError(err))
+		}
 
-	err = tx.db.BeginConsumingTopicEvent(ctx, optional.Some(result.SubscriptionID), nextCursor.Event)
-	if err != nil {
-		return fmt.Errorf("failed to progress subscription: %w", translatePGError(err))
-	}
+		sink, err := tx.db.GetRandomSubscriberSink(ctx, subscription.Key)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get lock on subscription: %w", translatePGError(err))
+		}
 
-	origin := AsyncOriginPubSub{
-		Subscription: schema.RefKey{
-			Module: subscription.Key.Payload.Module,
-			Name:   subscription.Key.Payload.Name,
-		},
+		err = tx.db.BeginConsumingTopicEvent(ctx, subscription.Key, nextCursorKey)
+		if err != nil {
+			return 0, fmt.Errorf("failed to progress subscription: %w", translatePGError(err))
+		}
+
+		origin := AsyncOriginPubSub{
+			Subscription: schema.RefKey{
+				Module: subscription.Key.Payload.Module,
+				Name:   subscription.Key.Payload.Name,
+			},
+		}
+		_, err = tx.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
+			Verb:    sink,
+			Origin:  origin.String(),
+			Request: nextCursor.Payload,
+		})
+		if err != nil {
+			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", translatePGError(err))
+		}
 	}
-	_, err = tx.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
-		Verb:    result.Sink,
-		Origin:  origin.String(),
-		Request: nextCursor.Payload,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to schedule async task for subscription: %w", translatePGError(err))
-	}
-	return nil
+	return len(subs), nil
 }
 
 func (d *DAL) CompleteEventForSubscription(ctx context.Context, module, name string) error {

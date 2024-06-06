@@ -109,11 +109,11 @@ WITH event AS (
 UPDATE topic_subscriptions
 SET state = 'executing',
     cursor = (SELECT id FROM event)
-WHERE id = $1
+WHERE key = $1::subscription_key
 `
 
-func (q *Queries) BeginConsumingTopicEvent(ctx context.Context, subscriptionID optional.Option[int64], event optional.Option[model.TopicEventKey]) error {
-	_, err := q.db.Exec(ctx, beginConsumingTopicEvent, subscriptionID, event)
+func (q *Queries) BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error {
+	_, err := q.db.Exec(ctx, beginConsumingTopicEvent, subscription, event)
 	return err
 }
 
@@ -1262,6 +1262,25 @@ func (q *Queries) GetProcessList(ctx context.Context) ([]GetProcessListRow, erro
 	return items, nil
 }
 
+const getRandomSubscriberSink = `-- name: GetRandomSubscriberSink :one
+SELECT
+  subscribers.sink as sink
+FROM topic_subscribers as subscribers
+JOIN deployments ON subscribers.deployment_id = deployments.id
+JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
+WHERE topic_subscriptions.key = $1::subscription_key
+  AND deployments.min_replicas > 0
+ORDER BY RANDOM()
+LIMIT 1
+`
+
+func (q *Queries) GetRandomSubscriberSink(ctx context.Context, key model.SubscriptionKey) (schema.RefKey, error) {
+	row := q.db.QueryRow(ctx, getRandomSubscriberSink, key)
+	var sink schema.RefKey
+	err := row.Scan(&sink)
+	return sink, err
+}
+
 const getRouteForRunner = `-- name: GetRouteForRunner :one
 SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key, r.state
 FROM runners r
@@ -1510,6 +1529,8 @@ LEFT JOIN topics ON subs.topic_id = topics.id
 LEFT JOIN topic_events ON subs.cursor = topic_events.id
 WHERE subs.cursor IS DISTINCT FROM topics.head
   AND subs.state = 'idle'
+LIMIT 3
+FOR UPDATE OF subs SKIP LOCKED
 `
 
 type GetSubscriptionsNeedingUpdateRow struct {
@@ -1868,42 +1889,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.Backoff,
 		&i.MaxBackoff,
 	)
-	return i, err
-}
-
-const lockSubscriptionAndGetSink = `-- name: LockSubscriptionAndGetSink :one
-WITH subscriber AS (
-  -- choose a random subscriber to execute the event
-  SELECT
-    subscribers.sink as sink
-  FROM topic_subscribers as subscribers
-  JOIN deployments ON subscribers.deployment_id = deployments.id
-  JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
-  WHERE topic_subscriptions.key = $1::subscription_key
-    AND deployments.min_replicas > 0
-  ORDER BY RANDOM()
-  LIMIT 1
-)
-SELECT
-  id as subscription_id,
-  (SELECT sink FROM subscriber) AS sink
-FROM topic_subscriptions
-WHERE state = 'idle'
-  AND key = $1::subscription_key
-  AND cursor IS NOT DISTINCT FROM (SELECT id FROM topic_events WHERE "key" = $2::topic_event_key)
-FOR UPDATE
-`
-
-type LockSubscriptionAndGetSinkRow struct {
-	SubscriptionID int64
-	Sink           schema.RefKey
-}
-
-// get a lock on the subscription row, guaranteeing that it is idle and has not consumed more events
-func (q *Queries) LockSubscriptionAndGetSink(ctx context.Context, key model.SubscriptionKey, cursor optional.Option[model.TopicEventKey]) (LockSubscriptionAndGetSinkRow, error) {
-	row := q.db.QueryRow(ctx, lockSubscriptionAndGetSink, key, cursor)
-	var i LockSubscriptionAndGetSinkRow
-	err := row.Scan(&i.SubscriptionID, &i.Sink)
 	return i, err
 }
 

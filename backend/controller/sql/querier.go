@@ -20,7 +20,7 @@ type Querier interface {
 	// reservation key.
 	AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error)
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
-	BeginConsumingTopicEvent(ctx context.Context, subscriptionID optional.Option[int64], event optional.Option[model.TopicEventKey]) error
+	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
@@ -65,6 +65,7 @@ type Querier interface {
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
+	GetRandomSubscriberSink(ctx context.Context, key model.SubscriptionKey) (schema.RefKey, error)
 	// Retrieve routing information for a runner.
 	GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error)
 	GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error)
@@ -84,8 +85,6 @@ type Querier interface {
 	KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error)
 	ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
-	// get a lock on the subscription row, guaranteeing that it is idle and has not consumed more events
-	LockSubscriptionAndGetSink(ctx context.Context, key model.SubscriptionKey, cursor optional.Option[model.TopicEventKey]) (LockSubscriptionAndGetSinkRow, error)
 	NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
