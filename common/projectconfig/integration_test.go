@@ -43,3 +43,9 @@ func TestDefaultToRootWhenModuleDirsMissing(t *testing.T) {
 		}),
 	)
 }
+
+func TestConfigCmdWithoutController(t *testing.T) {
+	in.RunWithoutController(t, "configs-ftl-project.toml",
+		in.ExecWithExpectedOutput("value\n", "ftl", "config", "get", "key"),
+	)
+}

@@ -120,6 +120,17 @@ func Exec(cmd string, args ...string) Action {
 	}
 }
 
+// ExecWithExpectedOutput runs a command from the test working directory.
+// The output is captured and is compared with the expected output.
+func ExecWithExpectedOutput(want string, cmd string, args ...string) Action {
+	return func(t testing.TB, ic TestContext) {
+		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
+		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
+		assert.NoError(t, err)
+		assert.Equal(t, output, []byte(want))
+	}
+}
+
 // ExecWithOutput runs a command from the test working directory.
 // The output is captured and is returned as part of the error.
 func ExecWithOutput(cmd string, args ...string) Action {

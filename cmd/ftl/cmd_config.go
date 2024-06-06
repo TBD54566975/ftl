@@ -9,8 +9,8 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/TBD54566975/ftl/backend/controller/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/alecthomas/types/optional"
 )
@@ -54,8 +54,8 @@ type configListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
-func (s *configListCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
-	resp, err := admin.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
+func (s *configListCmd) Run(ctx context.Context, adminClient admin.CmdClient) error {
+	resp, err := adminClient.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
 	}))
@@ -84,8 +84,8 @@ Returns a JSON-encoded configuration value.
 `
 }
 
-func (s *configGetCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
-	resp, err := admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
+func (s *configGetCmd) Run(ctx context.Context, adminClient admin.CmdClient) error {
+	resp, err := adminClient.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
 		Ref: configRefFromRef(s.Ref),
 	}))
 	if err != nil {
@@ -107,7 +107,7 @@ type configSetCmd struct {
 	Value *string `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
 }
 
-func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
+func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.CmdClient) error {
 	var err error
 	var config []byte
 	if s.Value != nil {
@@ -135,7 +135,7 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1conn
 	if provider, ok := scmd.provider().Get(); ok {
 		req.Provider = &provider
 	}
-	_, err = admin.ConfigSet(ctx, connect.NewRequest(req))
+	_, err = adminClient.ConfigSet(ctx, connect.NewRequest(req))
 	if err != nil {
 		return err
 	}
@@ -146,14 +146,14 @@ type configUnsetCmd struct {
 	Ref cf.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
-func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, admin ftlv1connect.AdminServiceClient) error {
+func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.CmdClient) error {
 	req := &ftlv1.UnsetConfigRequest{
 		Ref: configRefFromRef(s.Ref),
 	}
 	if provider, ok := scmd.provider().Get(); ok {
 		req.Provider = &provider
 	}
-	_, err := admin.ConfigUnset(ctx, connect.NewRequest(req))
+	_, err := adminClient.ConfigUnset(ctx, connect.NewRequest(req))
 	if err != nil {
 		return err
 	}
