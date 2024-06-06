@@ -1,47 +1,49 @@
-import { ExtensionContext } from "vscode"
+import { ExtensionContext } from 'vscode'
 
-import {
-  LanguageClient,
-  LanguageClientOptions,
-  ServerOptions,
-} from "vscode-languageclient/node"
-import * as vscode from "vscode"
-import { FTLStatus } from "./status"
-import { checkMinimumVersion, getFTLVersion, getProjectOrWorkspaceRoot, isFTLRunning, resolveFtlPath } from "./config"
-import path from "path"
+import * as vscode from 'vscode'
+import { FTLStatus } from './status'
+import { MIN_FTL_VERSION, checkMinimumVersion, getFTLVersion, getProjectOrWorkspaceRoot, isFTLRunning, resolveFtlPath } from './config'
+import { FTLClient } from './client'
 
-export const MIN_FTL_VERSION = '0.169.0'
-
-const clientName = "ftl languge server"
-const clientId = "ftl"
-let client: LanguageClient
+const extensionId = 'ftl'
+let client: FTLClient
 let statusBarItem: vscode.StatusBarItem
 let outputChannel: vscode.OutputChannel
 
-export async function activate(context: ExtensionContext) {
-  outputChannel = vscode.window.createOutputChannel("FTL", 'log')
-  outputChannel.appendLine("FTL extension activated")
+export const activate = async (context: ExtensionContext) => {
+  outputChannel = vscode.window.createOutputChannel('FTL', 'log')
+  outputChannel.appendLine('FTL extension activated')
 
-  let restartCmd = vscode.commands.registerCommand(
-    `${clientId}.restart`,
+  statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    100
+  )
+  statusBarItem.command = 'ftl.statusItemClicked'
+  statusBarItem.show()
+
+  client = new FTLClient(statusBarItem, outputChannel)
+
+  const restartCmd = vscode.commands.registerCommand(
+    `${extensionId}.restart`,
     async () => {
-      await stopClient()
-      startClient(context)
+      console.log('Restarting FTL client')
+      await client.stop()
+      console.log('FTL client stopped')
+      await startClient(context)
+      console.log('FTL client started')
     }
   )
 
-  let stopCmd = vscode.commands.registerCommand(
-    `${clientId}.stop`,
-    async () => {
-      await stopClient()
-    }
+  const stopCmd = vscode.commands.registerCommand(
+    `${extensionId}.stop`,
+    async () => client.stop()
   )
 
-  let showLogsCommand = vscode.commands.registerCommand("ftl.showLogs", () => {
+  const showLogsCommand = vscode.commands.registerCommand('ftl.showLogs', () => {
     outputChannel.show()
   })
 
-  let showCommands = vscode.commands.registerCommand('ftl.statusItemClicked', () => {
+  const showCommands = vscode.commands.registerCommand('ftl.statusItemClicked', () => {
     const ftlCommands = [
       { label: 'FTL: Restart Service', command: 'ftl.restart' },
       { label: 'FTL: Stop Service', command: 'ftl.stop' },
@@ -55,13 +57,6 @@ export async function activate(context: ExtensionContext) {
     })
   })
 
-  statusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    100
-  )
-  statusBarItem.command = "ftl.statusItemClicked"
-  statusBarItem.show()
-
   promptStartClient(context)
 
   context.subscriptions.push(
@@ -71,17 +66,17 @@ export async function activate(context: ExtensionContext) {
     showCommands,
     showLogsCommand
   )
+
+  outputChannel.show()
 }
 
-export async function deactivate() {
-  await stopClient()
-}
+export const deactivate = async () => client.stop()
 
-async function FTLPreflightCheck(ftlPath: string) {
+const FTLPreflightCheck = async (ftlPath: string) => {
   const ftlRunning = await isFTLRunning(ftlPath)
   if (ftlRunning) {
     vscode.window.showErrorMessage(
-      "FTL is already running. Please stop the other instance and restart the service."
+      'FTL is already running. Please stop the other instance and restart the service.'
     )
     return false
   }
@@ -89,6 +84,7 @@ async function FTLPreflightCheck(ftlPath: string) {
   let version: string
   try {
     version = await getFTLVersion(ftlPath)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     vscode.window.showErrorMessage(`${error.message}`)
     return false
@@ -105,7 +101,7 @@ async function FTLPreflightCheck(ftlPath: string) {
   return true
 }
 
-async function promptStartClient(context: vscode.ExtensionContext) {
+const promptStartClient = async (context: vscode.ExtensionContext) => {
   const configuration = vscode.workspace.getConfiguration('ftl')
   outputChannel.appendLine(`FTL configuration: ${JSON.stringify(configuration)}`)
   const automaticallyStartServer = configuration.get<string>('automaticallyStartServer')
@@ -147,12 +143,10 @@ async function promptStartClient(context: vscode.ExtensionContext) {
   })
 }
 
-async function startClient(context: ExtensionContext) {
-  outputChannel.appendLine("Starting lsp client")
+const startClient = async (context: ExtensionContext) => {
   FTLStatus.starting(statusBarItem)
 
-  const ftlConfig = vscode.workspace.getConfiguration("ftl")
-
+  const ftlConfig = vscode.workspace.getConfiguration('ftl')
   const workspaceRootPath = await getProjectOrWorkspaceRoot()
   const resolvedFtlPath = await resolveFtlPath(workspaceRootPath, ftlConfig)
 
@@ -165,72 +159,9 @@ async function startClient(context: ExtensionContext) {
     return
   }
 
-  const userFlags = ftlConfig.get<string[]>("devCommandFlags") ?? []
+  const userFlags = ftlConfig.get<string[]>('devCommandFlags') ?? []
 
-  const flags = [...userFlags, "--lsp"]
-  let serverOptions: ServerOptions = {
-    run: {
-      command: `${resolvedFtlPath}`,
-      args: ["dev", ...flags],
-      options: { cwd: workspaceRootPath }
-    },
-    debug: {
-      command: `${resolvedFtlPath}`,
-      args: ["dev", ...flags],
-      options: { cwd: workspaceRootPath }
-    },
-  }
+  const flags = [...userFlags, '--lsp']
 
-  outputChannel.appendLine(`Running ${resolvedFtlPath} with flags: ${flags.join(" ")}`)
-  console.log(serverOptions.debug.args)
-
-  let clientOptions: LanguageClientOptions = {
-    documentSelector: [
-      { scheme: "file", language: "kotlin" },
-      { scheme: "file", language: "go" },
-    ],
-    outputChannel,
-  }
-
-  client = new LanguageClient(
-    clientId,
-    clientName,
-    serverOptions,
-    clientOptions
-  )
-
-  context.subscriptions.push(client)
-
-  client.start().then(
-    () => {
-      FTLStatus.started(statusBarItem)
-      outputChannel.show()
-    },
-    (error) => {
-      console.log(`Error starting ${clientName}: ${error}`)
-      FTLStatus.error(statusBarItem, `Error starting ${clientName}: ${error}`)
-      outputChannel.appendLine(`Error starting ${clientName}: ${error}`)
-      outputChannel.show()
-    }
-  )
-}
-
-async function stopClient() {
-  if (!client) {
-    return
-  }
-  console.log("Disposing client")
-
-  client.diagnostics?.clear()
-  if (client["_serverProcess"]) {
-    process.kill(client["_serverProcess"].pid, "SIGINT")
-  }
-
-  //TODO: not sure why this isn't working well.
-  // await client.stop();
-
-  console.log("Client stopped")
-  client.outputChannel.dispose()
-  console.log("Output channel disposed")
-  FTLStatus.stopped(statusBarItem)
+  return client.start(resolvedFtlPath, workspaceRootPath, flags, context)
 }
