@@ -112,7 +112,7 @@ SET state = 'executing',
 WHERE id = $1
 `
 
-func (q *Queries) BeginConsumingTopicEvent(ctx context.Context, subscriptionID optional.Option[int64], event NullTopicEventKey) error {
+func (q *Queries) BeginConsumingTopicEvent(ctx context.Context, subscriptionID optional.Option[int64], event optional.Option[model.TopicEventKey]) error {
 	_, err := q.db.Exec(ctx, beginConsumingTopicEvent, subscriptionID, event)
 	return err
 }
@@ -1202,11 +1202,11 @@ LIMIT 1
 `
 
 type GetNextEventForSubscriptionRow struct {
-	Event   NullTopicEventKey
+	Event   optional.Option[model.TopicEventKey]
 	Payload []byte
 }
 
-func (q *Queries) GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor NullTopicEventKey) (GetNextEventForSubscriptionRow, error) {
+func (q *Queries) GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
 	row := q.db.QueryRow(ctx, getNextEventForSubscription, topic, cursor)
 	var i GetNextEventForSubscriptionRow
 	err := row.Scan(&i.Event, &i.Payload)
@@ -1230,7 +1230,7 @@ type GetProcessListRow struct {
 	MinReplicas      int32
 	DeploymentKey    model.DeploymentKey
 	DeploymentLabels []byte
-	RunnerKey        NullRunnerKey
+	RunnerKey        optional.Option[model.RunnerKey]
 	Endpoint         optional.Option[string]
 	RunnerLabels     []byte
 }
@@ -1273,7 +1273,7 @@ type GetRouteForRunnerRow struct {
 	Endpoint      string
 	RunnerKey     model.RunnerKey
 	ModuleName    optional.Option[string]
-	DeploymentKey NullDeploymentKey
+	DeploymentKey optional.Option[model.DeploymentKey]
 	State         RunnerState
 }
 
@@ -1304,7 +1304,7 @@ type GetRoutingTableRow struct {
 	Endpoint      string
 	RunnerKey     model.RunnerKey
 	ModuleName    optional.Option[string]
-	DeploymentKey NullDeploymentKey
+	DeploymentKey optional.Option[model.DeploymentKey]
 }
 
 func (q *Queries) GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error) {
@@ -1398,7 +1398,7 @@ type GetRunnersForDeploymentRow struct {
 	Key                model.RunnerKey
 	Created            time.Time
 	LastSeen           time.Time
-	ReservationTimeout NullTime
+	ReservationTimeout optional.Option[time.Time]
 	State              RunnerState
 	Endpoint           string
 	ModuleName         optional.Option[string]
@@ -1514,7 +1514,7 @@ WHERE subs.cursor IS DISTINCT FROM topics.head
 
 type GetSubscriptionsNeedingUpdateRow struct {
 	Key    model.SubscriptionKey
-	Cursor NullTopicEventKey
+	Cursor optional.Option[model.TopicEventKey]
 	Topic  model.TopicKey
 	Name   string
 }
@@ -1619,7 +1619,7 @@ type InsertDeploymentCreatedEventParams struct {
 	Language      string
 	ModuleName    string
 	MinReplicas   int32
-	Replaced      NullDeploymentKey
+	Replaced      optional.Option[model.DeploymentKey]
 }
 
 func (q *Queries) InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error {
@@ -1900,7 +1900,7 @@ type LockSubscriptionAndGetSinkRow struct {
 }
 
 // get a lock on the subscription row, guaranteeing that it is idle and has not consumed more events
-func (q *Queries) LockSubscriptionAndGetSink(ctx context.Context, key model.SubscriptionKey, cursor NullTopicEventKey) (LockSubscriptionAndGetSinkRow, error) {
+func (q *Queries) LockSubscriptionAndGetSink(ctx context.Context, key model.SubscriptionKey, cursor optional.Option[model.TopicEventKey]) (LockSubscriptionAndGetSinkRow, error) {
 	row := q.db.QueryRow(ctx, lockSubscriptionAndGetSink, key, cursor)
 	var i LockSubscriptionAndGetSinkRow
 	err := row.Scan(&i.SubscriptionID, &i.Sink)
@@ -2286,7 +2286,7 @@ type UpsertRunnerParams struct {
 	Endpoint      string
 	State         RunnerState
 	Labels        []byte
-	DeploymentKey NullDeploymentKey
+	DeploymentKey optional.Option[model.DeploymentKey]
 }
 
 // Upsert a runner and return the deployment ID that it is assigned to, if any.

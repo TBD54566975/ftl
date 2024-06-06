@@ -442,8 +442,8 @@ type FsmInstance struct {
 	Fsm              schema.RefKey
 	Key              string
 	Status           FsmStatus
-	CurrentState     NullRef
-	DestinationState NullRef
+	CurrentState     optional.Option[schema.RefKey]
+	DestinationState optional.Option[schema.RefKey]
 	AsyncCallID      optional.Option[int64]
 }
 
@@ -489,7 +489,7 @@ type Runner struct {
 	Key                model.RunnerKey
 	Created            time.Time
 	LastSeen           time.Time
-	ReservationTimeout NullTime
+	ReservationTimeout optional.Option[time.Time]
 	State              RunnerState
 	Endpoint           string
 	ModuleName         optional.Option[string]
