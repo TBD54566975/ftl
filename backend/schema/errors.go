@@ -28,6 +28,7 @@ func (e Error) ToProto() *schemapb.Error {
 		Msg:       e.Msg,
 		Pos:       posToProto(e.Pos),
 		EndColumn: int64(e.EndColumn),
+		Level:     levelToProto(e.Level),
 	}
 }
 
@@ -38,6 +39,7 @@ func errorFromProto(e *schemapb.Error) *Error {
 		Pos:       posFromProto(e.Pos),
 		Msg:       e.Msg,
 		EndColumn: int(e.EndColumn),
+		Level:     levelFromProto(e.Level),
 	}
 }
 
@@ -111,8 +113,7 @@ func Wrapf(pos Position, endColumn int, err error, format string, args ...any) *
 		newEndColumn = endColumn
 		args = append(args, err)
 	}
-	e := Error{Msg: fmt.Sprintf(format, args...), Pos: newPos, EndColumn: newEndColumn}
-	return &e
+	return makeError(ERROR, newPos, newEndColumn, format, args...)
 }
 
 func SortErrorsByPosition(merr []*Error) {

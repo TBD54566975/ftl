@@ -127,7 +127,7 @@ func assertBuildProtoErrors(msgs ...string) assertion {
 
 		expected := make([]*schema.Error, 0, len(msgs))
 		for _, msg := range msgs {
-			expected = append(expected, &schema.Error{Msg: msg})
+			expected = append(expected, &schema.Error{Msg: msg, Level: schema.ERROR})
 		}
 
 		// normalize results

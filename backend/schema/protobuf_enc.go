@@ -9,6 +9,18 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+func levelToProto(level ErrorLevel) schemapb.Error_ErrorLevel {
+	switch level {
+	case INFO:
+		return schemapb.Error_INFO
+	case WARN:
+		return schemapb.Error_WARN
+	case ERROR:
+		return schemapb.Error_ERROR
+	}
+	panic(fmt.Sprintf("unhandled ErrorLevel %v", level))
+}
+
 func posToProto(pos Position) *schemapb.Position {
 	return &schemapb.Position{Line: int64(pos.Line), Column: int64(pos.Column), Filename: pos.Filename}
 }
