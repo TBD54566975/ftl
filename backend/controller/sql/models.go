@@ -522,6 +522,9 @@ type TopicSubscriber struct {
 	TopicSubscriptionsID int64
 	DeploymentID         int64
 	Sink                 schema.RefKey
+	RetryAttempts        int32
+	Backoff              time.Duration
+	MaxBackoff           time.Duration
 }
 
 type TopicSubscription struct {

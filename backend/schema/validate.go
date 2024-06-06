@@ -550,24 +550,25 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			}
 		case *MetadataRetry:
 			// Only allow retries on FSM transitions for now
-			fsms := islices.Filter(module.Decls, func(d Decl) bool {
-				fsm, ok := d.(*FSM)
-				if !ok {
-					return false
+			_, isPartOfFSM := islices.Find(module.Decls, func(d Decl) bool {
+				if d, ok := d.(*FSM); ok {
+					// check if this verb part of the FSM
+					if _, isStart := islices.Find(d.Start, func(ref *Ref) bool {
+						return ref.Name == n.Name
+					}); isStart {
+						return true
+					}
+					if _, isTransition := islices.Find(d.Transitions, func(t *FSMTransition) bool {
+						return t.To.Name == n.Name
+					}); isTransition {
+						return true
+					}
 				}
-				starts := islices.Filter(fsm.Start, func(ref *Ref) bool {
-					return ref.Name == n.Name
-				})
-				if len(starts) > 0 {
-					return true
-				}
-				transitions := islices.Filter(fsm.Transitions, func(t *FSMTransition) bool {
-					return t.To.Name == n.Name
-				})
-				return len(transitions) > 0
+				return false
 			})
-			if len(fsms) == 0 {
-				merr = append(merr, errorf(md, "verb %s: retries can only be added to FSM transitions", n.Name))
+			_, isSubscriber := islices.FindVariant[*MetadataSubscriber](n.Metadata)
+			if !isPartOfFSM && !isSubscriber {
+				merr = append(merr, errorf(md, `verb %s: retries can only be added to subscribers or FSM transitions`, n.Name))
 				return
 			}
 

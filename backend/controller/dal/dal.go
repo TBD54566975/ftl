@@ -596,12 +596,22 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 				Module: moduleSchema.Name,
 				Name:   v.Name,
 			}
+			retryParams := schema.RetryParams{}
+			if retryMd, ok := slices.FindVariant[*schema.MetadataRetry](v.Metadata); ok {
+				retryParams, err = retryMd.RetryParams()
+				if err != nil {
+					return model.DeploymentKey{}, fmt.Errorf("could not parse retry parameters for %q: %w", v.Name, err)
+				}
+			}
 			err := tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
 				Key:              model.NewSubscriberKey(moduleSchema.Name, s.Name, v.Name),
 				Module:           moduleSchema.Name,
 				SubscriptionName: s.Name,
 				Deployment:       deploymentKey,
 				Sink:             sinkRef,
+				RetryAttempts:    int32(retryParams.Count),
+				Backoff:          retryParams.MinBackoff,
+				MaxBackoff:       retryParams.MaxBackoff,
 			})
 			if err != nil {
 				return model.DeploymentKey{}, fmt.Errorf("could not insert subscriber: %w", translatePGError(err))
