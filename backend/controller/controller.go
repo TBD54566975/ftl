@@ -198,6 +198,7 @@ type Service struct {
 	runnerScaling scaling.RunnerScaling
 
 	increaseReplicaFailures map[string]int
+	asyncCallsLock          sync.Mutex
 }
 
 func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
@@ -1201,12 +1202,18 @@ func (s *Service) reconcileRunners(ctx context.Context) (time.Duration, error) {
 //
 // It allows us to speed up execution of scheduled async calls rather than waiting for the next poll time.
 func (s *Service) AsyncCallWasAdded(ctx context.Context) {
-	if _, err := s.executeAsyncCalls(ctx); err != nil {
-		log.FromContext(ctx).Errorf(err, "failed to progress subscriptions")
-	}
+	go func() {
+		if _, err := s.executeAsyncCalls(ctx); err != nil {
+			log.FromContext(ctx).Errorf(err, "failed to progress subscriptions")
+		}
+	}()
 }
 
 func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) {
+	// There are multiple entry points into this function, but we want the controller to handle async calls one at a time.
+	s.asyncCallsLock.Lock()
+	defer s.asyncCallsLock.Unlock()
+
 	logger := log.FromContext(ctx)
 	logger.Tracef("Acquiring async call")
 

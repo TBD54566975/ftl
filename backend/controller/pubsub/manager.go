@@ -14,7 +14,7 @@ const (
 	// Events can be added simultaneously, which can cause events with out of order create_at values
 	// By adding a delay, we ensure that by the time we read the events, no new events will be added
 	// with earlier created_at values.
-	eventConsumptionDelay = 500 * time.Millisecond
+	eventConsumptionDelay = 200 * time.Millisecond
 )
 
 type DAL interface {
@@ -59,9 +59,7 @@ func (m *Manager) progressSubscriptions(ctx context.Context) (time.Duration, err
 	}
 	if count > 0 {
 		// notify controller that we added an async call
-		go func() {
-			m.asyncCallListener.AsyncCallWasAdded(ctx)
-		}()
+		m.asyncCallListener.AsyncCallWasAdded(ctx)
 	}
 	return time.Second, err
 }
