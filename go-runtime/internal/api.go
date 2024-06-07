@@ -19,7 +19,11 @@ type FTL interface {
 	PublishEvent(ctx context.Context, topic string, event any) error
 
 	// CallMap calls Get on an instance of an ftl.Map.
-	CallMap(ctx context.Context, mapper any, mapImpl func(context.Context) (any, error)) any
+	//
+	// "mapper" is a pointer to an instance of an ftl.MapHandle. "value" is the
+	// value being mapped. "mapImpl" is a function that will be called to
+	// compute the mapped value.
+	CallMap(ctx context.Context, mapper any, value any, mapImpl func(context.Context) (any, error)) any
 
 	// GetConfig unmarshals a configuration value into dest.
 	GetConfig(ctx context.Context, name string, dest any) error

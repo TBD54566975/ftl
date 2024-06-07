@@ -114,7 +114,7 @@ integration-tests *test:
   #!/bin/bash
   set -euo pipefail
   testName=${1:-}
-  go test -fullpath -count 1 -v -tags integration -run "$testName" -p 1 ./...
+  go test -fullpath -count 1 -v -tags integration -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build integration' | xargs -I {} dirname './{}')
 
 # Run README doc tests
 test-readme *args:

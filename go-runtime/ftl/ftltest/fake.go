@@ -71,7 +71,7 @@ func (f *fakeFTL) startAllowingMapCalls() {
 	f.allowMapCalls = true
 }
 
-func (f *fakeFTL) CallMap(ctx context.Context, mapper any, mapImpl func(context.Context) (any, error)) any {
+func (f *fakeFTL) CallMap(ctx context.Context, mapper any, value any, mapImpl func(context.Context) (any, error)) any {
 	key := makeMapKey(mapper)
 	mockMap, ok := f.mockMaps[key]
 	if ok {

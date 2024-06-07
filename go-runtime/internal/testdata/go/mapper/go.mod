@@ -1,8 +1,12 @@
-module ftl/other
+module ftl/mapper
 
 go 1.22.2
 
-require github.com/TBD54566975/ftl v0.129.2
+toolchain go1.22.3
+
+replace github.com/TBD54566975/ftl => /Users/alec/dev/ftl
+
+require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 
 require (
 	connectrpc.com/connect v1.16.1 // indirect
@@ -40,5 +44,3 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 )
-
-replace github.com/TBD54566975/ftl => ../../../..
