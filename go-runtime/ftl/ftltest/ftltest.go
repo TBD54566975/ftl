@@ -26,7 +26,6 @@ import (
 )
 
 type OptionsState struct {
-	configs                 map[string][]byte
 	secrets                 map[string][]byte
 	databases               map[string]modulecontext.Database
 	mockVerbs               map[schema.RefKey]modulecontext.Verb
@@ -38,7 +37,6 @@ type Option func(context.Context, *OptionsState) error
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...Option) context.Context {
 	state := &OptionsState{
-		configs:   make(map[string][]byte),
 		secrets:   make(map[string][]byte),
 		databases: make(map[string]modulecontext.Database),
 		mockVerbs: make(map[schema.RefKey]modulecontext.Verb),
@@ -55,7 +53,7 @@ func Context(options ...Option) context.Context {
 		}
 	}
 
-	builder := modulecontext.NewBuilder(name).AddConfigs(state.configs).AddSecrets(state.secrets).AddDatabases(state.databases)
+	builder := modulecontext.NewBuilder(name).AddSecrets(state.secrets).AddDatabases(state.databases)
 	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newFakeLeaseClient())
 	return builder.Build().ApplyToContext(ctx)
 }
@@ -108,8 +106,12 @@ func WithProjectFiles(paths ...string) Option {
 		if err != nil {
 			return fmt.Errorf("could not read configs: %w", err)
 		}
+
+		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
 		for name, data := range configs {
-			state.configs[name] = data
+			if err := fftl.setConfig(name, json.RawMessage(data)); err != nil {
+				return err
+			}
 		}
 
 		sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, paths, "")
@@ -140,11 +142,10 @@ func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) Option {
 		if config.Module != reflection.Module() {
 			return fmt.Errorf("config %v does not match current module %s", config.Module, reflection.Module())
 		}
-		data, err := json.Marshal(value)
-		if err != nil {
+		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+		if err := fftl.setConfig(config.Name, value); err != nil {
 			return err
 		}
-		state.configs[config.Name] = data
 		return nil
 	}
 }
@@ -336,12 +337,8 @@ func WithCallsAllowedWithinModule() Option {
 //	)
 func WhenMap[T, U any](mapper *ftl.MapHandle[T, U], fake func(context.Context) (any, error)) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		someFTL := internal.FromContext(ctx)
-		fakeFTL, ok := someFTL.(*fakeFTL)
-		if !ok {
-			return fmt.Errorf("could not retrieve fakeFTL for saving a mock Map in test")
-		}
-		fakeFTL.addMapMock(mapper, fake)
+		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+		fftl.addMapMock(mapper, fake)
 		return nil
 	}
 }
@@ -352,12 +349,8 @@ func WhenMap[T, U any](mapper *ftl.MapHandle[T, U], fake func(context.Context) (
 // Any overrides provided by calling WhenMap(...) will take precedence.
 func WithMapsAllowed() Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		someFTL := internal.FromContext(ctx)
-		fakeFTL, ok := someFTL.(*fakeFTL)
-		if !ok {
-			return fmt.Errorf("could not retrieve fakeFTL for saving a mock Map in test")
-		}
-		fakeFTL.startAllowingMapCalls()
+		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+		fftl.startAllowingMapCalls()
 		return nil
 	}
 }

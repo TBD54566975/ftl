@@ -13,16 +13,23 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 // RealFTL is the real implementation of the [internal.FTL] interface using the Controller.
-type RealFTL struct{}
+type RealFTL struct {
+	mctx modulecontext.ModuleContext
+}
 
 // New creates a new [RealFTL]
-func New() *RealFTL { return &RealFTL{} }
+func New(mctx modulecontext.ModuleContext) *RealFTL { return &RealFTL{mctx: mctx} }
 
 var _ FTL = &RealFTL{}
+
+func (r *RealFTL) GetConfig(ctx context.Context, name string, dest any) error {
+	return r.mctx.GetConfig(name, dest)
+}
 
 func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) error {
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)

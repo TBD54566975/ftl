@@ -2,10 +2,12 @@ package ftltest
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 )
 
@@ -13,6 +15,7 @@ type fakeFTL struct {
 	fsm           *fakeFSMManager
 	mockMaps      map[uintptr]mapImpl
 	allowMapCalls bool
+	configValues  map[string][]byte
 }
 
 // mapImpl is a function that takes an object and returns an object of a potentially different
@@ -22,12 +25,30 @@ type mapImpl func(context.Context) (any, error)
 func newFakeFTL() *fakeFTL {
 	return &fakeFTL{
 		fsm:           newFakeFSMManager(),
-		mockMaps:      make(map[uintptr]mapImpl),
+		mockMaps:      map[uintptr]mapImpl{},
 		allowMapCalls: false,
+		configValues:  map[string][]byte{},
 	}
 }
 
 var _ internal.FTL = &fakeFTL{}
+
+func (f *fakeFTL) setConfig(name string, value any) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	f.configValues[name] = data
+	return nil
+}
+
+func (f *fakeFTL) GetConfig(ctx context.Context, name string, dest any) error {
+	data, ok := f.configValues[name]
+	if !ok {
+		return fmt.Errorf("config value %q not found: %w", name, configuration.ErrNotFound)
+	}
+	return json.Unmarshal(data, dest)
+}
 
 func (f *fakeFTL) FSMSend(ctx context.Context, fsm string, instance string, event any) error {
 	return f.fsm.SendEvent(ctx, fsm, instance, event)

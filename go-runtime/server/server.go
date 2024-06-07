@@ -33,7 +33,6 @@ type UserVerbConfig struct {
 // This function is intended to be used by the code generator.
 func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
-		ctx = internal.WithContext(ctx, internal.New())
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
@@ -48,6 +47,7 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 			return nil, nil, err
 		}
 		ctx = moduleCtx.ApplyToContext(ctx)
+		ctx = internal.WithContext(ctx, internal.New(moduleCtx))
 
 		err = observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
