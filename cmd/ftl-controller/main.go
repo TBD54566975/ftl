@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/alecthomas/kong"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,7 +20,6 @@ import (
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
-	"github.com/alecthomas/kong"
 )
 
 var cli struct {
