@@ -72,9 +72,10 @@ func (s *Server) BuildStarted(dir string) {
 	})
 }
 
-// Post sends diagnostics to the client. err must be joined schema.Errors.
+// Post sends diagnostics to the client.
 func (s *Server) post(err error) {
 	errByFilename := make(map[string]errSet)
+	errUnspecified := []error{}
 
 	// Deduplicate and associate by filename.
 	for _, err := range ftlErrors.DeduplicateErrors(ftlErrors.UnwrapAll(err)) {
@@ -85,13 +86,16 @@ func (s *Server) post(err error) {
 				errByFilename[filename] = errSet{}
 			}
 			errByFilename[filename] = append(errByFilename[filename], ce)
+		} else {
+			errUnspecified = append(errUnspecified, err)
 		}
 	}
 
-	go publishErrors(errByFilename, s)
+	go publishPositionalErrors(errByFilename, s)
+	go publishUnspecifiedErrors(errUnspecified, s)
 }
 
-func publishErrors(errByFilename map[string]errSet, s *Server) {
+func publishPositionalErrors(errByFilename map[string]errSet, s *Server) {
 	for filename, errs := range errByFilename {
 		var diagnostics []protocol.Diagnostic
 		for _, e := range errs {
@@ -132,6 +136,22 @@ func publishErrors(errByFilename map[string]errSet, s *Server) {
 		uri := "file://" + filename
 		s.diagnostics.Store(uri, diagnostics)
 		s.publishDiagnostics(uri, diagnostics)
+	}
+}
+
+// publishUnspecifiedErrors sends non-positional errors to the client as alerts.
+func publishUnspecifiedErrors(errUnspecified []error, s *Server) {
+	if s.glspContext == nil {
+		return
+	}
+
+	for _, err := range errUnspecified {
+		message := fmt.Sprintf("FTL Error: %s", err)
+
+		go s.glspContext.Notify(protocol.ServerWindowShowMessage, protocol.ShowMessageParams{
+			Type:    protocol.MessageTypeError,
+			Message: message,
+		})
 	}
 }
 
