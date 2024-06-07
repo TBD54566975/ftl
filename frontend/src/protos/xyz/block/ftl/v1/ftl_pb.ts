@@ -90,11 +90,19 @@ export enum ConfigProvider {
    * @generated from enum value: CONFIG_ENVAR = 1;
    */
   CONFIG_ENVAR = 1,
+
+  /**
+   * Use the database as a configuration store.
+   *
+   * @generated from enum value: CONFIG_DB = 2;
+   */
+  CONFIG_DB = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ConfigProvider)
 proto3.util.setEnumType(ConfigProvider, "xyz.block.ftl.v1.ConfigProvider", [
   { no: 0, name: "CONFIG_INLINE" },
   { no: 1, name: "CONFIG_ENVAR" },
+  { no: 2, name: "CONFIG_DB" },
 ]);
 
 /**
@@ -128,6 +136,13 @@ export enum SecretProvider {
    * @generated from enum value: SECRET_OP = 3;
    */
   SECRET_OP = 3,
+
+  /**
+   * Store a secret in the AWS Secrets Manager.
+   *
+   * @generated from enum value: SECRET_ASM = 4;
+   */
+  SECRET_ASM = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SecretProvider)
 proto3.util.setEnumType(SecretProvider, "xyz.block.ftl.v1.SecretProvider", [
@@ -135,6 +150,7 @@ proto3.util.setEnumType(SecretProvider, "xyz.block.ftl.v1.SecretProvider", [
   { no: 1, name: "SECRET_ENVAR" },
   { no: 2, name: "SECRET_KEYCHAIN" },
   { no: 3, name: "SECRET_OP" },
+  { no: 4, name: "SECRET_ASM" },
 ]);
 
 /**

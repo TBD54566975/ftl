@@ -28,6 +28,7 @@ type secretCmd struct {
 	Inline   bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"secretwriter"`
 	Keychain bool `help:"Write to the system keychain." group:"Provider:" xor:"secretwriter"`
 	Op       bool `help:"Write to the controller's 1Password vault. Requires that a vault be specified to the controller. The name of the item will be the <ref> and the secret will be stored in the password field." group:"Provider:" xor:"secretwriter"`
+	ASM      bool `help:"Write to AWS secrets manager." group:"Provider:" xor:"secretwriter"`
 }
 
 func (s *secretCmd) Help() string {
@@ -49,6 +50,8 @@ func (s *secretCmd) provider() optional.Option[ftlv1.SecretProvider] {
 		return optional.Some(ftlv1.SecretProvider_SECRET_KEYCHAIN)
 	} else if s.Op {
 		return optional.Some(ftlv1.SecretProvider_SECRET_OP)
+	} else if s.ASM {
+		return optional.Some(ftlv1.SecretProvider_SECRET_ASM)
 	}
 	return optional.None[ftlv1.SecretProvider]()
 }

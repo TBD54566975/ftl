@@ -90,6 +90,8 @@ func configProviderKey(p *ftlv1.ConfigProvider) string {
 		return "inline"
 	case ftlv1.ConfigProvider_CONFIG_ENVAR:
 		return "envar"
+	case ftlv1.ConfigProvider_CONFIG_DB:
+		return "db"
 	}
 	return ""
 }
@@ -174,6 +176,8 @@ func secretProviderKey(p *ftlv1.SecretProvider) string {
 		return "keychain"
 	case ftlv1.SecretProvider_SECRET_OP:
 		return "op"
+	case ftlv1.SecretProvider_SECRET_ASM:
+		return "asm"
 	}
 	return ""
 }

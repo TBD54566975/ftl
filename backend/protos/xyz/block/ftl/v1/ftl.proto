@@ -406,6 +406,9 @@ enum ConfigProvider {
 
   // Print configuration as environment variables.
   CONFIG_ENVAR = 1;
+
+  // Use the database as a configuration store.
+  CONFIG_DB = 2;
 }
 
 message ListConfigRequest {
@@ -452,6 +455,9 @@ enum SecretProvider {
 
   // Store a secret in the 1Password vault.
   SECRET_OP = 3;
+
+  // Store a secret in the AWS Secrets Manager.
+  SECRET_ASM = 4;
 }
 
 message ListSecretsRequest {

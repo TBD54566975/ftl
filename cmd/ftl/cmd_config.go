@@ -23,6 +23,7 @@ type configCmd struct {
 
 	Envar  bool `help:"Print configuration as environment variables." group:"Provider:" xor:"configwriter"`
 	Inline bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"configwriter"`
+	DB     bool `help:"Write values to the database." group:"Provider:" xor:"configwriter"`
 }
 
 func (s *configCmd) Help() string {
@@ -45,6 +46,8 @@ func (s *configCmd) provider() optional.Option[ftlv1.ConfigProvider] {
 		return optional.Some(ftlv1.ConfigProvider_CONFIG_ENVAR)
 	} else if s.Inline {
 		return optional.Some(ftlv1.ConfigProvider_CONFIG_INLINE)
+	} else if s.DB {
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_DB)
 	}
 	return optional.None[ftlv1.ConfigProvider]()
 }
