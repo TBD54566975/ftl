@@ -9,10 +9,11 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	cf "github.com/TBD54566975/ftl/common/configuration"
-	"github.com/alecthomas/types/optional"
 )
 
 type configCmd struct {
@@ -94,13 +95,7 @@ func (s *configGetCmd) Run(ctx context.Context, adminClient admin.Client) error 
 	if err != nil {
 		return err
 	}
-
-	var value any
-	err = json.Unmarshal(resp.Msg.Value, &value)
-	if err != nil {
-		return fmt.Errorf("%s: %w", s.Ref, err)
-	}
-	fmt.Println(value)
+	fmt.Printf("%s\n", resp.Msg.Value)
 	return nil
 }
 

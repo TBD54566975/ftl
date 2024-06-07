@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	in "github.com/TBD54566975/ftl/integration"
 	"github.com/alecthomas/assert/v2"
+
+	in "github.com/TBD54566975/ftl/integration"
 )
 
 func TestCmdsCreateProjectTomlFilesIfNonexistent(t *testing.T) {
@@ -46,6 +47,6 @@ func TestDefaultToRootWhenModuleDirsMissing(t *testing.T) {
 
 func TestConfigCmdWithoutController(t *testing.T) {
 	in.RunWithoutController(t, "configs-ftl-project.toml",
-		in.ExecWithExpectedOutput("value\n", "ftl", "config", "get", "key"),
+		in.ExecWithExpectedOutput("\"value\"\n", "ftl", "config", "get", "key"),
 	)
 }

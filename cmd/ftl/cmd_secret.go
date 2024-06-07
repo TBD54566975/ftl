@@ -97,12 +97,7 @@ func (s *secretGetCmd) Run(ctx context.Context, adminClient admin.Client) error 
 	if err != nil {
 		return err
 	}
-
-	var value any
-	if err := json.Unmarshal(resp.Msg.Value, &value); err != nil {
-		return fmt.Errorf("%s: %w", s.Ref, err)
-	}
-	fmt.Println(value)
+	fmt.Printf("%s\n", resp.Msg.Value)
 	return nil
 }
 
