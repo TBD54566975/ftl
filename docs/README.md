@@ -118,13 +118,13 @@ Types that are transitively referenced by an exported declaration will be automa
 
 The following table describes the directives used to export the corresponding declaration:
 
-| Symbol   | Export syntax        |
-| -------- | -------------------- |
-| Verb     | `//ftl:verb export`  |
-| Data     | `//ftl:data export`  |
-| Enum/Sum type | `//ftl:enum export`  |
-| Typealias| `//ftl:typealias export` |
-| Topic    | `//ftl:export` [^1]  |
+| Symbol        | Export syntax            |
+| ------------- | ------------------------ |
+| Verb          | `//ftl:verb export`      |
+| Data          | `//ftl:data export`      |
+| Enum/Sum type | `//ftl:enum export`      |
+| Typealias     | `//ftl:typealias export` |
+| Topic         | `//ftl:export` [^1]      |
 
 eg.
 
@@ -158,13 +158,13 @@ func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.Http
 }
 ```
 
-> [!Important]
+> [!NOTE]
 > The `req` and `resp` types of HTTP `ingress` [verbs](#Verb) must be `builtin.HttpRequest` and `builtin.HttpResponse` respectively. These types provide the necessary fields for HTTP `ingress` (`headers`, `statusCode`, etc.)
-> 
 
 Key points to note
-* `path`, `query`, and `body` parameters are automatically mapped to the `req` and `resp` structures. In the example above, `{userId}` is extracted from the path parameter and `postId` is extracted from the query parameter.
-* `ingress` verbs will be automatically exported by default.
+
+- `path`, `query`, and `body` parameters are automatically mapped to the `req` and `resp` structures. In the example above, `{userId}` is extracted from the path parameter and `postId` is extracted from the query parameter.
+- `ingress` verbs will be automatically exported by default.
 
 ## Cron jobs
 
@@ -249,6 +249,9 @@ func SendInvoiceEmail(ctx context.Context, in Invoice) error {
 }
 ```
 
+> [!NOTE]
+> PubSub topics cannot be published to from outside the module that declared them, they can only be subscribed to. That is, if a topic is declared in module `A`, module `B` cannot publish to it.
+
 ## FSM
 
 FTL has first-class support for distributed [finite-state machines](https://en.wikipedia.org/wiki/Finite-state_machine). Each state in the state machine is a Sink, with events being values of the type of each sinks input. The FSM is declared once, with each executing instance of the FSM identified by a unique key when sending an event to it.
@@ -270,7 +273,7 @@ func SendDefaulted(ctx context.Context, in DefaultedInvoice) error {
 }
 
 //ftl:verb
-func Invoiced(ctx context.Context, in Invoice) error { 
+func Invoiced(ctx context.Context, in Invoice) error {
   if timedOut {
     return ftl.CallAsync(ctx, SendDefaulted, Timeout{...})
   }
@@ -310,13 +313,12 @@ func Invoiced(ctx context.Context, in Invoice) error {
 }
 ```
 
-*[Verb]: func(context.Context, In) (Out, error)
-*[Verbs]: func(context.Context, In) (Out, error)
-*[Sink]: func(context.Context, In) error
-*[Sinks]: func(context.Context, In) error
-*[Source]: func(context.Context) (Out, error)
-*[Sources]: func(context.Context) (Out, error)
-*[Empty]: func(context.Context) error
+_[Verb]: func(context.Context, In) (Out, error)
+_[Verbs]: func(context.Context, In) (Out, error)
+_[Sink]: func(context.Context, In) error
+_[Sinks]: func(context.Context, In) error
+_[Source]: func(context.Context) (Out, error)
+_[Sources]: func(context.Context) (Out, error) \*[Empty]: func(context.Context) error
 
 [^1]: Annotation of topics is usually unnecessary.
 [^2]: Note that until [type widening](https://github.com/TBD54566975/ftl/issues/1296) is implemented, external types are not supported.
