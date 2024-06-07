@@ -13,8 +13,8 @@ import (
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 
+	"github.com/TBD54566975/ftl/backend/controller/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 )
 
@@ -58,8 +58,8 @@ type secretListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List secrets only in this module."`
 }
 
-func (s *secretListCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
-	resp, err := admin.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
+func (s *secretListCmd) Run(ctx context.Context, adminClient admin.Client) error {
+	resp, err := adminClient.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
 	}))
@@ -87,8 +87,8 @@ Returns a JSON-encoded secret value.
 `
 }
 
-func (s *secretGetCmd) Run(ctx context.Context, admin ftlv1connect.AdminServiceClient) error {
-	resp, err := admin.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{
+func (s *secretGetCmd) Run(ctx context.Context, adminClient admin.Client) error {
+	resp, err := adminClient.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{
 		Ref: configRefFromRef(s.Ref),
 	}))
 	if err != nil {
@@ -108,7 +108,7 @@ type secretSetCmd struct {
 	Ref  cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, admin ftlv1connect.AdminServiceClient) error {
+func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.Client) error {
 	// Prompt for a secret if stdin is a terminal, otherwise read from stdin.
 	var err error
 	var secret []byte
@@ -142,7 +142,7 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, admin ftlv1conn
 	if provider, ok := scmd.provider().Get(); ok {
 		req.Provider = &provider
 	}
-	_, err = admin.SecretSet(ctx, connect.NewRequest(req))
+	_, err = adminClient.SecretSet(ctx, connect.NewRequest(req))
 	if err != nil {
 		return err
 	}
@@ -153,14 +153,14 @@ type secretUnsetCmd struct {
 	Ref cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, admin ftlv1connect.AdminServiceClient) error {
+func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.Client) error {
 	req := &ftlv1.UnsetSecretRequest{
 		Ref: configRefFromRef(s.Ref),
 	}
 	if provider, ok := scmd.provider().Get(); ok {
 		req.Provider = &provider
 	}
-	_, err := admin.SecretUnset(ctx, connect.NewRequest(req))
+	_, err := adminClient.SecretUnset(ctx, connect.NewRequest(req))
 	if err != nil {
 		return err
 	}

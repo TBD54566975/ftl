@@ -49,6 +49,21 @@ var buildOnce sync.Once
 //	"database/ftl-project.toml" would set FTL_CONFIG to
 //	"integration/testdata/go/database/ftl-project.toml").
 func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
+	run(t, ftlConfigPath, true, actions...)
+}
+
+// RunWithoutController runs an integration test without starting the controller.
+// ftlConfigPath: if FTL_CONFIG should be set for this test, then pass in the relative
+//
+//	path based on ./testdata/go/ where "." denotes the directory containing the
+//	integration test (e.g. for "integration/harness_test.go" supplying
+//	"database/ftl-project.toml" would set FTL_CONFIG to
+//	"integration/testdata/go/database/ftl-project.toml").
+func RunWithoutController(t *testing.T, ftlConfigPath string, actions ...Action) {
+	run(t, ftlConfigPath, false, actions...)
+}
+
+func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Action) {
 	tmpDir := t.TempDir()
 
 	cwd, err := os.Getwd()
@@ -76,27 +91,34 @@ func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
 		assert.NoError(t, err)
 	})
 
-	controller := rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 	verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
-	Infof("Starting ftl cluster")
-	ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
+	var controller ftlv1connect.ControllerServiceClient
+	if startController {
+		controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 
-	ic := TestContext{
-		Context:    ctx,
-		rootDir:    rootDir,
-		testData:   filepath.Join(cwd, "testdata", "go"),
-		workDir:    tmpDir,
-		binDir:     binDir,
-		Controller: controller,
-		Verbs:      verbs,
+		Infof("Starting ftl cluster")
+		ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
 	}
 
-	Infof("Waiting for controller to be ready")
-	ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
-		_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
-		assert.NoError(t, err)
-	})
+	ic := TestContext{
+		Context:  ctx,
+		rootDir:  rootDir,
+		testData: filepath.Join(cwd, "testdata", "go"),
+		workDir:  tmpDir,
+		binDir:   binDir,
+		Verbs:    verbs,
+	}
+
+	if startController {
+		ic.Controller = controller
+
+		Infof("Waiting for controller to be ready")
+		ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
+			_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+			assert.NoError(t, err)
+		})
+	}
 
 	Infof("Starting test")
 

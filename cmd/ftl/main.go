@@ -14,6 +14,7 @@ import (
 	kongtoml "github.com/alecthomas/kong-toml"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/common/projectconfig"
@@ -121,7 +122,9 @@ func main() {
 
 	adminServiceClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, adminServiceClient)
-	kctx.BindTo(adminServiceClient, (*ftlv1connect.AdminServiceClient)(nil))
+	adminClient, err := admin.NewClient(ctx, adminServiceClient, cli.Endpoint)
+	kctx.FatalIfErrorf(err)
+	kctx.BindTo(adminClient, (*admin.Client)(nil))
 
 	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
