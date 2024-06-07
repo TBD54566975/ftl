@@ -40,6 +40,9 @@ func TestServiceWithMockDal(t *testing.T) {
 }
 
 func TestHashRing(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	// This test uses multiple mock clocks to progress time for each controller individually
 	// This allows us to compare attempts for each cron job and know which controller attempted it
 	t.Parallel()

@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 var (
@@ -38,6 +39,9 @@ func TestAcquireTwoDifferentLeases(t *testing.T) {
 }
 
 func TestExpiry(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	ctx := context.Background()
 	client := newFakeLeaseClient()
 

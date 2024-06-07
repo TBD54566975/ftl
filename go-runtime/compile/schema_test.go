@@ -107,7 +107,7 @@ func TestExtractModuleSchema(t *testing.T) {
   data DataWithType<T> {
     value T
   }
-  
+
   export data ExportedData {
     field String
   }
@@ -275,6 +275,9 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 }
 
 func TestExtractModuleSchemaNamedTypes(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	prebuildTestModule(t, "testdata/named", "testdata/namedext")
 	if testing.Short() {
 		t.SkipNow()
@@ -327,6 +330,9 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 }
 
 func TestExtractModuleSchemaParent(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	prebuildTestModule(t, "testdata/parent")
 	if testing.Short() {
 		t.SkipNow()
@@ -339,7 +345,7 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 			export data ChildStruct {
 			name String?
 		}
-		
+
 		export verb verb(Unit) parent.ChildStruct
 	}
 	`
@@ -361,11 +367,11 @@ func TestExtractModulePubSub(t *testing.T) {
 		export topic publicBroadcast pubsub.PayinEvent
 		subscription broadcastSubscription pubsub.publicBroadcast
 		subscription paymentProcessing pubsub.payins
-         
+
         export data PayinEvent {
         	name String
         }
-        
+
 		verb broadcast(Unit) Unit
 
         verb payin(Unit) Unit
@@ -373,7 +379,7 @@ func TestExtractModulePubSub(t *testing.T) {
         verb processBroadcast(pubsub.PayinEvent) Unit
         	+subscribe broadcastSubscription
 			+retry 10 1s
-        
+
         verb processPayin(pubsub.PayinEvent) Unit
         	+subscribe paymentProcessing
 	}
@@ -382,6 +388,9 @@ func TestExtractModulePubSub(t *testing.T) {
 }
 
 func TestExtractModuleSubscriber(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	prebuildTestModule(t, "testdata/pubsub", "testdata/subscriber")
 	if testing.Short() {
 		t.SkipNow()

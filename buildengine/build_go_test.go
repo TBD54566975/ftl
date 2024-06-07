@@ -12,6 +12,9 @@ import (
 )
 
 func TestGenerateGoModule(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),
@@ -184,6 +187,9 @@ func init() {
 }
 
 func TestGoBuildClearsBuildDir(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),
@@ -199,6 +205,9 @@ func TestGoBuildClearsBuildDir(t *testing.T) {
 }
 
 func TestMetadataImportsExcluded(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
 			schema.Builtins(),
@@ -301,7 +310,7 @@ func TestGoModVersion(t *testing.T) {
 
 func TestGeneratedTypeRegistry(t *testing.T) {
 	if testing.Short() {
-		t.Skipf("skipping test in non-short mode")
+		t.SkipNow()
 	}
 	sch := &schema.Schema{
 		Modules: []*schema.Module{
