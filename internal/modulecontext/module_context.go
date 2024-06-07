@@ -40,6 +40,10 @@ type Builder ModuleContext
 
 type contextKeyModuleContext struct{}
 
+func Empty(module string) ModuleContext {
+	return NewBuilder(module).Build()
+}
+
 // NewBuilder creates a new blank Builder for the given module.
 func NewBuilder(module string) *Builder {
 	return &Builder{

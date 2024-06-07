@@ -20,6 +20,9 @@ type FTL interface {
 
 	// CallMap calls Get on an instance of an ftl.Map.
 	CallMap(ctx context.Context, mapper any, mapImpl func(context.Context) (any, error)) any
+
+	// GetConfig unmarshals a configuration value into dest.
+	GetConfig(ctx context.Context, name string, dest any) error
 }
 
 type ftlContextKey struct{}
