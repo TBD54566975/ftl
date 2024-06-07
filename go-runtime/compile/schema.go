@@ -327,7 +327,7 @@ func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 }
 
 func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
-	validateCallExpr(pctx, node, stack)
+	validateCallExpr(pctx, node)
 
 	_, fn := deref[*types.Func](pctx.pkg, node.Fun)
 	if fn == nil {
@@ -359,12 +359,11 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 // checks if the is directly:
 // - calling external verbs
 // - publishing to an external module's topic
-func validateCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
+func validateCallExpr(pctx *parseContext, node *ast.CallExpr) {
 	selExpr, ok := node.Fun.(*ast.SelectorExpr)
 	if !ok {
 		return
 	}
-
 	var lhsIdent *ast.Ident
 	if expr, ok := selExpr.X.(*ast.SelectorExpr); ok {
 		lhsIdent = expr.Sel
@@ -373,19 +372,16 @@ func validateCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 	} else {
 		return
 	}
-
 	lhsObject := pctx.pkg.TypesInfo.ObjectOf(lhsIdent)
 	if lhsObject == nil {
 		return
 	}
-
 	var lhsPkgPath string
 	if pkgName, ok := lhsObject.(*types.PkgName); ok {
 		lhsPkgPath = pkgName.Imported().Path()
 	} else {
 		lhsPkgPath = lhsObject.Pkg().Path()
 	}
-
 	var lhsIsExternal bool
 	if !pctx.isPathInPkg(lhsPkgPath) {
 		lhsIsExternal = true
