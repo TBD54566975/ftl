@@ -54,7 +54,7 @@ type configListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
-func (s *configListCmd) Run(ctx context.Context, adminClient admin.CmdClient) error {
+func (s *configListCmd) Run(ctx context.Context, adminClient admin.Client) error {
 	resp, err := adminClient.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
@@ -84,7 +84,7 @@ Returns a JSON-encoded configuration value.
 `
 }
 
-func (s *configGetCmd) Run(ctx context.Context, adminClient admin.CmdClient) error {
+func (s *configGetCmd) Run(ctx context.Context, adminClient admin.Client) error {
 	resp, err := adminClient.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
 		Ref: configRefFromRef(s.Ref),
 	}))
@@ -107,7 +107,7 @@ type configSetCmd struct {
 	Value *string `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
 }
 
-func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.CmdClient) error {
+func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.Client) error {
 	var err error
 	var config []byte
 	if s.Value != nil {
@@ -146,7 +146,7 @@ type configUnsetCmd struct {
 	Ref cf.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
-func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.CmdClient) error {
+func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.Client) error {
 	req := &ftlv1.UnsetConfigRequest{
 		Ref: configRefFromRef(s.Ref),
 	}

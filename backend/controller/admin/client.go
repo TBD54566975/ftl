@@ -11,7 +11,9 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-type CmdClient interface {
+// Client standardizes an common interface between the AdminService as accessed via gRPC
+// and a purely-local variant that doesn't require a running controller to access.
+type Client interface {
 	Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error)
 
 	// List configuration.
@@ -39,16 +41,20 @@ type CmdClient interface {
 	SecretUnset(ctx context.Context, req *connect.Request[ftlv1.UnsetSecretRequest]) (*connect.Response[ftlv1.UnsetSecretResponse], error)
 }
 
-// NewCmdClient takes the service client and endpoint flag received by the cmd interface
+// NewClient takes the service client and endpoint flag received by the cmd interface
 // and returns an appropriate interface for the cmd library to use.
 //
 // If the controller is not present AND endpoint is local, then inject a purely-local
 // implementation of the interface so that the user does not need to spin up a controller
 // just to run the `ftl config/secret` commands. Otherwise, return back the gRPC client.
-func NewCmdClient(ctx context.Context, adminClient ftlv1connect.AdminServiceClient, endpoint *url.URL) (CmdClient, error) {
-	_, err := adminClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
-	if isConnectUnavailableError(err) && isEndpointLocal(endpoint) {
-		return newLocalCmdClient(ctx), nil
+func NewClient(ctx context.Context, adminClient ftlv1connect.AdminServiceClient, endpoint *url.URL) (Client, error) {
+	isLocal, err := isEndpointLocal(endpoint)
+	if err != nil {
+		return adminClient, err
+	}
+	_, err = adminClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+	if isConnectUnavailableError(err) && isLocal {
+		return newLocalClient(ctx), nil
 	}
 	return adminClient, nil
 }
@@ -61,16 +67,16 @@ func isConnectUnavailableError(err error) bool {
 	return false
 }
 
-func isEndpointLocal(endpoint *url.URL) bool {
+func isEndpointLocal(endpoint *url.URL) (bool, error) {
 	h := endpoint.Hostname()
 	ips, err := net.LookupIP(h)
 	if err != nil {
-		panic(err.Error())
+		return false, err
 	}
 	for _, netip := range ips {
 		if netip.IsLoopback() {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }

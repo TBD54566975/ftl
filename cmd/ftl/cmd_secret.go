@@ -58,7 +58,7 @@ type secretListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List secrets only in this module."`
 }
 
-func (s *secretListCmd) Run(ctx context.Context, adminClient admin.CmdClient) error {
+func (s *secretListCmd) Run(ctx context.Context, adminClient admin.Client) error {
 	resp, err := adminClient.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
@@ -87,7 +87,7 @@ Returns a JSON-encoded secret value.
 `
 }
 
-func (s *secretGetCmd) Run(ctx context.Context, adminClient admin.CmdClient) error {
+func (s *secretGetCmd) Run(ctx context.Context, adminClient admin.Client) error {
 	resp, err := adminClient.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{
 		Ref: configRefFromRef(s.Ref),
 	}))
@@ -108,7 +108,7 @@ type secretSetCmd struct {
 	Ref  cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.CmdClient) error {
+func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.Client) error {
 	// Prompt for a secret if stdin is a terminal, otherwise read from stdin.
 	var err error
 	var secret []byte
@@ -153,7 +153,7 @@ type secretUnsetCmd struct {
 	Ref cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.CmdClient) error {
+func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.Client) error {
 	req := &ftlv1.UnsetSecretRequest{
 		Ref: configRefFromRef(s.Ref),
 	}

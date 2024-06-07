@@ -39,7 +39,9 @@ func TestIsEndpointLocal(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			u, err := url.Parse(test.Endpoint)
 			assert.NoError(t, err)
-			assert.Equal(t, isEndpointLocal(u), test.Want)
+			got, err := isEndpointLocal(u)
+			assert.NoError(t, err)
+			assert.Equal(t, got, test.Want)
 		})
 	}
 }

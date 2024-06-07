@@ -122,8 +122,9 @@ func main() {
 
 	adminServiceClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, adminServiceClient)
-	adminClient, err := admin.NewCmdClient(ctx, adminServiceClient, cli.Endpoint)
-	kctx.BindTo(adminClient, (*admin.CmdClient)(nil))
+	adminClient, err := admin.NewClient(ctx, adminServiceClient, cli.Endpoint)
+	kctx.FatalIfErrorf(err)
+	kctx.BindTo(adminClient, (*admin.Client)(nil))
 
 	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
