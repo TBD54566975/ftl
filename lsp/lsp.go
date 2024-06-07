@@ -78,9 +78,12 @@ func (s *Server) post(err error) {
 	errUnspecified := []error{}
 
 	// Deduplicate and associate by filename.
-	for _, err := range ftlErrors.DeduplicateErrors(ftlErrors.UnwrapAll(err)) {
+	for _, e := range ftlErrors.DeduplicateErrors(ftlErrors.UnwrapAll(err)) {
+		if !ftlErrors.Innermost(e) {
+			continue
+		}
 		var ce *schema.Error
-		if errors.As(err, &ce) {
+		if errors.As(e, &ce) {
 			filename := ce.Pos.Filename
 			if _, exists := errByFilename[filename]; !exists {
 				errByFilename[filename] = errSet{}

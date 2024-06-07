@@ -1,5 +1,9 @@
 package projectconfig
 
+import (
+	"path/filepath"
+)
+
 // Merge configuration files.
 //
 // Config is merged left to right, with later files taking precedence over earlier files.
@@ -11,7 +15,24 @@ func Merge(paths ...string) (Config, error) {
 			return config, err
 		}
 		config = merge(config, partial)
+
+		// Make module-dirs absolute to mimic the behavior of the CLI
+		config.absModuleDirs = []string{}
+		for _, dir := range config.ModuleDirs {
+			if !filepath.IsAbs(dir) {
+				absDir := filepath.Join(filepath.Dir(path), dir)
+				config.absModuleDirs = append(config.absModuleDirs, absDir)
+			} else {
+				config.absModuleDirs = append(config.absModuleDirs, dir)
+			}
+		}
+
+		// If no module-dirs are defined, default to the directory of the config file
+		if len(config.absModuleDirs) == 0 {
+			config.absModuleDirs = []string{filepath.Dir(path)}
+		}
 	}
+
 	return config, nil
 }
 
