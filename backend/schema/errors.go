@@ -117,6 +117,9 @@ func Wrapf(pos Position, endColumn int, err error, format string, args ...any) *
 }
 
 func SortErrorsByPosition(merr []*Error) {
+	if merr == nil {
+		return
+	}
 	sort.Slice(merr, func(i, j int) bool {
 		ipp := merr[i].Pos
 		jpp := merr[j].Pos
@@ -124,4 +127,13 @@ func SortErrorsByPosition(merr []*Error) {
 			(ipp.Line == jpp.Line && ipp.Column == jpp.Column && merr[i].EndColumn < merr[j].EndColumn) ||
 			(ipp.Line == jpp.Line && ipp.Column == jpp.Column && merr[i].EndColumn == merr[j].EndColumn && merr[i].Msg < merr[j].Msg)
 	})
+}
+
+func ContainsTerminalError(errs []*Error) bool {
+	for _, e := range errs {
+		if e.Level == ERROR {
+			return true
+		}
+	}
+	return false
 }

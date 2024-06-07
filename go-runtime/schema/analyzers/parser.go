@@ -1,17 +1,15 @@
-package compile
-
-// TODO: This file is now duplicated in go-runtime/schema/analyzers/parser.go. It should be removed
-// from here once the schema extraction refactoring is complete.
+package analyzers
 
 import (
 	"errors"
 	"fmt"
 	"go/ast"
-	"go/token"
 	"strconv"
 	"strings"
 
+	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 )
@@ -25,28 +23,20 @@ type directiveWrapper struct {
 }
 
 //sumtype:decl
-type directive interface {
-	directive()
-	SetPosition(pos schema.Position)
-}
+type directive interface{ directive() }
 
 type exportable interface {
 	IsExported() bool
 }
 
 type directiveVerb struct {
-	Pos schema.Position
+	Pos lexer.Position
 
 	Verb   bool `parser:"@'verb'"`
 	Export bool `parser:"@'export'?"`
 }
 
 func (*directiveVerb) directive() {}
-
-func (d *directiveVerb) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
-
 func (d *directiveVerb) String() string {
 	if d.Export {
 		return "ftl:verb export"
@@ -58,18 +48,13 @@ func (d *directiveVerb) IsExported() bool {
 }
 
 type directiveData struct {
-	Pos schema.Position
+	Pos lexer.Position
 
 	Data   bool `parser:"@'data'"`
 	Export bool `parser:"@'export'?"`
 }
 
 func (*directiveData) directive() {}
-
-func (d *directiveData) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
-
 func (d *directiveData) String() string {
 	if d.Export {
 		return "ftl:data export"
@@ -81,18 +66,13 @@ func (d *directiveData) IsExported() bool {
 }
 
 type directiveEnum struct {
-	Pos schema.Position
+	Pos lexer.Position
 
 	Enum   bool `parser:"@'enum'"`
 	Export bool `parser:"@'export'?"`
 }
 
 func (*directiveEnum) directive() {}
-
-func (d *directiveEnum) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
-
 func (d *directiveEnum) String() string {
 	if d.Export {
 		return "ftl:enum export"
@@ -104,18 +84,13 @@ func (d *directiveEnum) IsExported() bool {
 }
 
 type directiveTypeAlias struct {
-	Pos schema.Position
+	Pos lexer.Position
 
 	TypeAlias bool `parser:"@'typealias'"`
 	Export    bool `parser:"@'export'?"`
 }
 
 func (*directiveTypeAlias) directive() {}
-
-func (d *directiveTypeAlias) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
-
 func (d *directiveTypeAlias) String() string {
 	if d.Export {
 		return "ftl:typealias export"
@@ -135,11 +110,6 @@ type directiveIngress struct {
 }
 
 func (*directiveIngress) directive() {}
-
-func (d *directiveIngress) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
-
 func (d *directiveIngress) String() string {
 	w := &strings.Builder{}
 	fmt.Fprintf(w, "ftl:ingress %s", d.Method)
@@ -157,10 +127,6 @@ type directiveCronJob struct {
 
 func (*directiveCronJob) directive() {}
 
-func (d *directiveCronJob) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
-
 func (d *directiveCronJob) String() string {
 	return fmt.Sprintf("cron %s", d.Cron)
 }
@@ -174,10 +140,6 @@ type directiveRetry struct {
 }
 
 func (*directiveRetry) directive() {}
-
-func (d *directiveRetry) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
 
 func (d *directiveRetry) String() string {
 	components := []string{"retry"}
@@ -200,10 +162,6 @@ type directiveSubscriber struct {
 
 func (*directiveSubscriber) directive() {}
 
-func (d *directiveSubscriber) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
-
 func (d *directiveSubscriber) String() string {
 	return fmt.Sprintf("subscribe %s", d.Name)
 }
@@ -216,10 +174,6 @@ type directiveExport struct {
 }
 
 func (*directiveExport) directive() {}
-
-func (d *directiveExport) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
 
 func (d *directiveExport) String() string {
 	return "export"
@@ -235,36 +189,30 @@ var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
-func parseDirectives(node ast.Node, fset *token.FileSet, docs *ast.CommentGroup) ([]directive, *schema.Error) {
+func parseDirectives(pass *analysis.Pass, node ast.Node, docs *ast.CommentGroup) []directive {
 	if docs == nil {
-		return nil, nil
+		return nil
 	}
 	directives := []directive{}
 	for _, line := range docs.List {
 		if !strings.HasPrefix(line.Text, "//ftl:") {
 			continue
 		}
-		pos := fset.Position(line.Pos())
-		ppos := schema.Position{
-			Filename: pos.Filename,
-			Line:     pos.Line,
-			Column:   pos.Column + 2, // Skip "//"
-		}
-
+		pos := pass.Fset.Position(line.Pos())
+		// TODO: We need to adjust position information embedded in the schema.
 		directive, err := directiveParser.ParseString(pos.Filename, line.Text[2:])
 		if err != nil {
-			var scerr *schema.Error
+			// Adjust the Participle-reported position relative to the AST node.
 			var perr participle.Error
 			if errors.As(err, &perr) {
-				scerr = schema.Errorf(ppos, ppos.Column, "%s", perr.Message())
+				file := pass.Fset.File(node.Pos())
+				pass.Report(errorfAtPos(file.Pos(pos.Line), file.Pos(pos.Column+2), "%s", perr.Message()))
 			} else {
-				scerr = wrapf(node, err, "")
+				pass.Report(wrapf(node, err, ""))
 			}
-			return nil, scerr
+			return nil
 		}
-
-		directive.Directive.SetPosition(ppos)
 		directives = append(directives, directive.Directive)
 	}
-	return directives, nil
+	return directives
 }

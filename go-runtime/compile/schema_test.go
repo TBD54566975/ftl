@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 	"golang.org/x/tools/go/packages"
@@ -46,7 +47,7 @@ func TestExtractModuleSchema(t *testing.T) {
 
 	r, err := ExtractModuleSchema("testdata/one", &schema.Schema{})
 	assert.NoError(t, err)
-	actual := schema.Normalise(r.MustGet().Module)
+	actual := schema.Normalise(r.Module)
 	expected := `module one {
   config configValue one.Config
   secret secretValue String
@@ -178,8 +179,8 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/two", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, r.MustGet().Errors, nil)
-	actual := schema.Normalise(r.MustGet().Module)
+	assert.Equal(t, r.Errors, nil)
+	actual := schema.Normalise(r.Module)
 	expected := `module two {
 		export enum TwoEnum: String {
 		  Red = "Red"
@@ -229,8 +230,8 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/fsm", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
-	actual := schema.Normalise(r.MustGet().Module)
+	assert.Equal(t, nil, r.Errors, "expected no schema errors")
+	actual := schema.Normalise(r.Module)
 	expected := `module fsm {
 		fsm payment
 			+retry 10 5s 10m
@@ -284,8 +285,8 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/named", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
-	actual := schema.Normalise(r.MustGet().Module)
+	assert.Equal(t, nil, r.Errors, "expected no schema errors")
+	actual := schema.Normalise(r.Module)
 	expected := `module named {
 		typealias DoubleAliasedUser named.InternalUser
 
@@ -339,8 +340,8 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/parent", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
-	actual := schema.Normalise(r.MustGet().Module)
+	assert.Equal(t, nil, r.Errors, "expected no schema errors")
+	actual := schema.Normalise(r.Module)
 	expected := `module parent {
 			export data ChildStruct {
 			name String?
@@ -358,8 +359,8 @@ func TestExtractModulePubSub(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/pubsub", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
-	actual := schema.Normalise(r.MustGet().Module)
+	assert.Equal(t, nil, r.Errors, "expected no schema errors")
+	actual := schema.Normalise(r.Module)
 	expected := `module pubsub {
 		topic payins pubsub.PayinEvent
 		// publicBroadcast is a topic that broadcasts payin events to the public.
@@ -397,8 +398,8 @@ func TestExtractModuleSubscriber(t *testing.T) {
 	}
 	r, err := ExtractModuleSchema("testdata/subscriber", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, nil, r.MustGet().Errors, "expected no schema errors")
-	actual := schema.Normalise(r.MustGet().Module)
+	assert.Equal(t, nil, r.Errors, "expected no schema errors")
+	actual := schema.Normalise(r.Module)
 	expected := `module subscriber {
 		subscription subscriptionToExternalTopic pubsub.publicBroadcast
 
@@ -457,7 +458,7 @@ func TestParsedirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	pctx := newParseContext(nil, []*packages.Package{}, &schema.Module{}, &schema.Schema{})
+	pctx := newParseContext(nil, []*packages.Package{}, &schema.Schema{}, &analyzers.ExtractResult{Module: &schema.Module{}})
 	parsed, ok := visitType(pctx, token.NoPos, timeRef, false).Get()
 	assert.True(t, ok)
 	_, ok = parsed.(*schema.Time)
@@ -500,7 +501,7 @@ func TestErrorReporting(t *testing.T) {
 	assert.NoError(t, err)
 
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
-	actual := slices.Map(r.MustGet().Errors, func(e *schema.Error) string { return strings.TrimPrefix(e.Error(), filename+":") })
+	actual := slices.Map(r.Errors, func(e *schema.Error) string { return strings.TrimPrefix(e.Error(), filename+":") })
 	expected := []string{
 		`10:13-34: expected string literal for argument at index 0`,
 		`13:18-52: duplicate config declaration at 12:18-52`,
@@ -539,6 +540,7 @@ func TestErrorReporting(t *testing.T) {
 		`101:2-24: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
 		`108:2-41: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
 		`121:21-60: config and secret names must be valid identifiers`,
+		`127:1-26: only one directive expected for enum`,
 		`127:1-26: only one directive expected for type alias`,
 		`143:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
 		`149:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,

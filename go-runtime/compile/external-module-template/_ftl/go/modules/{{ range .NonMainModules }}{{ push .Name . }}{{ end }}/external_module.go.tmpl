@@ -21,11 +21,11 @@ import (
 var _ = context.Background
 
 {{- range .Decls }}
+{{- if .IsExported}}
 {{if .Comments}}
 {{.Comments|comment -}}
 //
 {{- end}}
-{{- if .IsExported}}
 {{- if is "Topic" .}}
 var {{.Name|title}} = ftl.Topic[{{type $ .Event}}]("{{.Name}}")
 {{- else if and (is "Enum" .) .IsValueEnum}}
