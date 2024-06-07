@@ -32,16 +32,12 @@ type Config struct {
 	ExternalDirs  []string                    `toml:"external-dirs"`
 	Commands      Commands                    `toml:"commands"`
 	FTLMinVersion string                      `toml:"ftl-min-version"`
+	absModuleDirs []string
 }
 
-// ModuleDirsOrDefault returns the module-dirs field from the ftl-project.toml, unless
+// AbsModuleDirsOrDefault returns the absolute path for the module-dirs field from the ftl-project.toml, unless
 // that is not defined, in which case it defaults to the root directory.
-func (c Config) ModuleDirsOrDefault() []string {
-	if len(c.ModuleDirs) > 0 {
-		return c.ModuleDirs
-	}
-	return []string{"."}
-}
+func (c Config) AbsModuleDirsOrDefault() []string { return c.absModuleDirs }
 
 // ConfigPaths returns the computed list of configuration paths to load.
 func ConfigPaths(input []string) []string {
@@ -136,6 +132,7 @@ func loadFile(path string) (Config, error) {
 		}
 		return Config{}, fmt.Errorf("unknown configuration keys: %s", strings.Join(keys, ", "))
 	}
+
 	return config, nil
 }
 
