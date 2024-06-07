@@ -25,8 +25,8 @@ func TestProjectConfig(t *testing.T) {
 				},
 			},
 		},
-		ModuleDirs:   []string{"testdata/a/b/c", "testdata/d"},
-		ExternalDirs: []string{"testdata/e/f", "testdata/g/h"},
+		ModuleDirs:   []string{"a/b/c", "d"},
+		ExternalDirs: []string{"e/f", "g/h"},
 		Commands: Commands{
 			Startup: []string{"echo 'Executing global pre-build command'"},
 		},
