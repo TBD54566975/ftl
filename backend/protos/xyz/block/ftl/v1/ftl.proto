@@ -452,6 +452,9 @@ enum SecretProvider {
 
   // Store a secret in the 1Password vault.
   SECRET_OP = 3;
+
+  // Store a secret in the AWS Secrets Manager.
+  SECRET_ASM = 4;
 }
 
 message ListSecretsRequest {

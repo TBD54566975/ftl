@@ -128,6 +128,13 @@ export enum SecretProvider {
    * @generated from enum value: SECRET_OP = 3;
    */
   SECRET_OP = 3,
+
+  /**
+   * Store a secret in the AWS Secrets Manager.
+   *
+   * @generated from enum value: SECRET_ASM = 4;
+   */
+  SECRET_ASM = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SecretProvider)
 proto3.util.setEnumType(SecretProvider, "xyz.block.ftl.v1.SecretProvider", [
@@ -135,6 +142,7 @@ proto3.util.setEnumType(SecretProvider, "xyz.block.ftl.v1.SecretProvider", [
   { no: 1, name: "SECRET_ENVAR" },
   { no: 2, name: "SECRET_KEYCHAIN" },
   { no: 3, name: "SECRET_OP" },
+  { no: 4, name: "SECRET_ASM" },
 ]);
 
 /**

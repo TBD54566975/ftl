@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
@@ -24,9 +26,6 @@ var cli struct {
 	LogConfig           log.Config           `embed:"" prefix:"log-"`
 	ControllerConfig    controller.Config    `embed:""`
 	ConfigFlag          []string             `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]"`
-
-	// Specify the 1Password vault to access secrets from.
-	Vault string `name:"opvault" help:"1Password vault to be used for secrets. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." placeholder:"VAULT"`
 }
 
 func main() {
@@ -58,8 +57,14 @@ func main() {
 	}
 	ctx = cf.ContextWithConfig(ctx, cm)
 
-	// Add secrets manager to context.
-	sm, err := cf.NewSecretsManager(ctx, sr, cli.Vault)
+	awsConfig, err := config.LoadDefaultConfig(ctx)
+	asmClient := secretsmanager.NewFromConfig(awsConfig)
+	sm, err := cf.New[cf.Secrets](ctx, sr, []cf.Provider[cf.Secrets]{
+		cf.InlineProvider[cf.Secrets]{},
+		cf.EnvarProvider[cf.Secrets]{},
+		cf.KeychainProvider{},
+		cf.ASM{Client: *asmClient},
+	})
 	if err != nil {
 		kctx.Fatalf(err.Error())
 	}

@@ -174,6 +174,8 @@ func secretProviderKey(p *ftlv1.SecretProvider) string {
 		return "keychain"
 	case ftlv1.SecretProvider_SECRET_OP:
 		return "op"
+	case ftlv1.SecretProvider_SECRET_ASM:
+		return "asm"
 	}
 	return ""
 }
