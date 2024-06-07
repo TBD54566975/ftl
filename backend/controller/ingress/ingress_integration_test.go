@@ -53,6 +53,16 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, map[string]any{}, resp.JsonBody)
 		}),
 
+		in.HttpCall(http.MethodGet, "/queryparams?foo=bar", in.JsonData(t, in.Obj{}), func(t testing.TB, resp *in.HTTPResponse) {
+			assert.Equal(t, 200, resp.Status)
+			assert.Equal(t, "bar", string(resp.BodyBytes))
+		}),
+
+		in.HttpCall(http.MethodGet, "/queryparams", in.JsonData(t, in.Obj{}), func(t testing.TB, resp *in.HTTPResponse) {
+			assert.Equal(t, 200, resp.Status)
+			assert.Equal(t, "No value", string(resp.BodyBytes))
+		}),
+
 		in.HttpCall(http.MethodGet, "/html", in.JsonData(t, in.Obj{}), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"text/html; charset=utf-8"}, resp.Headers["Content-Type"])

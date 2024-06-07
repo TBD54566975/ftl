@@ -97,6 +97,17 @@ func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builti
 	}, nil
 }
 
+type QueryParamRequest struct {
+	Foo ftl.Option[string] `json:"foo"`
+}
+
+//ftl:ingress http GET /queryparams
+func Query(ctx context.Context, req builtin.HttpRequest[QueryParamRequest]) (builtin.HttpResponse[string, string], error) {
+	return builtin.HttpResponse[string, string]{
+		Body: ftl.Some(req.Body.Foo.Default("No value")),
+	}, nil
+}
+
 type HtmlRequest struct{}
 
 //ftl:ingress http GET /html

@@ -24,6 +24,10 @@ type PathParameterRequest struct {
 	Username string
 }
 
+type QueryParameterRequest struct {
+	Foo ftl.Option[string] `json:"foo,omitempty"`
+}
+
 type MissingTypes struct {
 	Optional ftl.Option[string] `json:"optional,omitempty"`
 	Array    []string           `json:"array,omitempty"`
@@ -53,6 +57,10 @@ func TestBuildRequestBody(t *testing.T) {
 				aliased String +alias json "alias"
 			}
 
+			data QueryParameterRequest {
+				foo String?
+			}
+
 			data PathParameterRequest {
 				username String
 			}
@@ -74,6 +82,9 @@ func TestBuildRequestBody(t *testing.T) {
 
 			export verb getPath(HttpRequest<test.PathParameterRequest>) HttpResponse<Empty, Empty>
 				+ingress http GET /getPath/{username}
+
+			export verb optionalQuery(HttpRequest<test.QueryParameterRequest>) HttpResponse<Empty, Empty>
+				+ingress http GET /optionalQuery
 
 			export verb postMissingTypes(HttpRequest<test.MissingTypes>) HttpResponse<Empty, Empty>
 				+ingress http POST /postMissingTypes
@@ -140,6 +151,25 @@ func TestBuildRequestBody(t *testing.T) {
 				Method: "POST",
 				Path:   "/postJsonPayload",
 				Body:   PostJSONPayload{Foo: "bar"},
+			},
+		},
+		{name: "OptionalQueryParameter",
+			verb:      "optionalQuery",
+			method:    "GET",
+			path:      "/optionalQuery",
+			routePath: "/optionalQuery",
+			query: map[string][]string{
+				"foo": {"bar"},
+			},
+			expected: HTTPRequest[QueryParameterRequest]{
+				Method: "GET",
+				Path:   "/optionalQuery",
+				Query: map[string][]string{
+					"foo": {"bar"},
+				},
+				Body: QueryParameterRequest{
+					Foo: ftl.Some("bar"),
+				},
 			},
 		},
 		{name: "PathParameterDecoding",
