@@ -16,6 +16,7 @@ type fakeFTL struct {
 	mockMaps      map[uintptr]mapImpl
 	allowMapCalls bool
 	configValues  map[string][]byte
+	secretValues  map[string][]byte
 }
 
 // mapImpl is a function that takes an object and returns an object of a potentially different
@@ -28,6 +29,7 @@ func newFakeFTL() *fakeFTL {
 		mockMaps:      map[uintptr]mapImpl{},
 		allowMapCalls: false,
 		configValues:  map[string][]byte{},
+		secretValues:  map[string][]byte{},
 	}
 }
 
@@ -44,6 +46,23 @@ func (f *fakeFTL) setConfig(name string, value any) error {
 
 func (f *fakeFTL) GetConfig(ctx context.Context, name string, dest any) error {
 	data, ok := f.configValues[name]
+	if !ok {
+		return fmt.Errorf("secret value %q not found: %w", name, configuration.ErrNotFound)
+	}
+	return json.Unmarshal(data, dest)
+}
+
+func (f *fakeFTL) setSecret(name string, value any) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	f.secretValues[name] = data
+	return nil
+}
+
+func (f *fakeFTL) GetSecret(ctx context.Context, name string, dest any) error {
+	data, ok := f.secretValues[name]
 	if !ok {
 		return fmt.Errorf("config value %q not found: %w", name, configuration.ErrNotFound)
 	}

@@ -35,21 +35,3 @@ func DatabasesFromSecrets(ctx context.Context, module string, secrets map[string
 	}
 	return databases, nil
 }
-
-// DSNSecretKey returns the key for the secret that is expected to hold the DSN for a database.
-//
-// The format is FTL_DSN_<MODULE>_<DBNAME>
-func DSNSecretKey(module, name string) string {
-	return fmt.Sprintf("FTL_DSN_%s_%s", strings.ToUpper(module), strings.ToUpper(name))
-}
-
-// GetDSNFromSecret returns the DSN for a database from the relevant secret
-func GetDSNFromSecret(module, name string, secrets map[string][]byte) (string, error) {
-	key := DSNSecretKey(module, name)
-	dsn, ok := secrets[key]
-	if !ok {
-		return "", fmt.Errorf("secrets map %v is missing DSN with key %q", secrets, key)
-	}
-	dsnStr := string(dsn)
-	return dsnStr[1 : len(dsnStr)-1], nil // chop leading + trailing quotes
-}
