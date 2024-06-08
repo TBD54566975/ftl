@@ -47,6 +47,10 @@ func (r *RealFTL) GetConfig(ctx context.Context, name string, dest any) error {
 	return r.mctx.GetConfig(name, dest)
 }
 
+func (r *RealFTL) GetSecret(ctx context.Context, name string, dest any) error {
+	return r.mctx.GetSecret(name, dest)
+}
+
 func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) error {
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	body, err := encoding.Marshal(event)

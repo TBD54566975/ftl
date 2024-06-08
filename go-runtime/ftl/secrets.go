@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
+	"github.com/TBD54566975/ftl/go-runtime/internal"
 )
 
 // SecretType is a type that can be used as a secret value.
@@ -31,7 +31,7 @@ func (s SecretValue[T]) GoString() string {
 
 // Get returns the value of the secret from FTL.
 func (s SecretValue[T]) Get(ctx context.Context) (out T) {
-	if err := modulecontext.FromContext(ctx).GetSecret(s.Name, &out); err != nil {
+	if err := internal.FromContext(ctx).GetSecret(ctx, s.Name, &out); err != nil {
 		panic(fmt.Errorf("failed to get %s: %w", s, err))
 	}
 	return

@@ -9,17 +9,12 @@ import (
 
 type MapHandle[T, U any] struct {
 	fn     func(context.Context, T) (U, error)
-	getter Handle[T]
-}
-
-// Underlying returns the underlying value of the handle being mapped.
-func (mh *MapHandle[T, U]) Underlying(ctx context.Context) T {
-	return mh.getter.Get(ctx)
+	handle Handle[T]
 }
 
 // Get the mapped value.
 func (mh *MapHandle[T, U]) Get(ctx context.Context) U {
-	value := mh.getter.Get(ctx)
+	value := mh.handle.Get(ctx)
 	out := internal.FromContext(ctx).CallMap(ctx, mh, value, func(ctx context.Context) (any, error) {
 		return mh.fn(ctx, value)
 	})
@@ -34,6 +29,6 @@ func (mh *MapHandle[T, U]) Get(ctx context.Context) U {
 func Map[T, U any](getter Handle[T], fn func(context.Context, T) (U, error)) MapHandle[T, U] {
 	return MapHandle[T, U]{
 		fn:     fn,
-		getter: getter,
+		handle: getter,
 	}
 }

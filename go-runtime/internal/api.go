@@ -27,6 +27,9 @@ type FTL interface {
 
 	// GetConfig unmarshals a configuration value into dest.
 	GetConfig(ctx context.Context, name string, dest any) error
+
+	// GetSecret unmarshals a secret value into dest.
+	GetSecret(ctx context.Context, name string, dest any) error
 }
 
 type ftlContextKey struct{}

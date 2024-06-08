@@ -9,7 +9,7 @@ import (
 )
 
 func TestModuleUnitTests(t *testing.T) {
-	in.Run(t, "wrapped/ftl-project.toml",
+	in.RunWithoutController(t, "wrapped/ftl-project.toml",
 		in.GitInit(),
 		in.CopyModule("time"),
 		in.CopyModule("wrapped"),

@@ -26,7 +26,6 @@ import (
 )
 
 type OptionsState struct {
-	secrets                 map[string][]byte
 	databases               map[string]modulecontext.Database
 	mockVerbs               map[schema.RefKey]modulecontext.Verb
 	allowDirectVerbBehavior bool
@@ -37,7 +36,6 @@ type Option func(context.Context, *OptionsState) error
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...Option) context.Context {
 	state := &OptionsState{
-		secrets:   make(map[string][]byte),
 		databases: make(map[string]modulecontext.Database),
 		mockVerbs: make(map[schema.RefKey]modulecontext.Verb),
 	}
@@ -53,7 +51,7 @@ func Context(options ...Option) context.Context {
 		}
 	}
 
-	builder := modulecontext.NewBuilder(name).AddSecrets(state.secrets).AddDatabases(state.databases)
+	builder := modulecontext.NewBuilder(name).AddDatabases(state.databases)
 	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newFakeLeaseClient())
 	return builder.Build().ApplyToContext(ctx)
 }
@@ -123,7 +121,9 @@ func WithProjectFiles(paths ...string) Option {
 			return fmt.Errorf("could not read secrets: %w", err)
 		}
 		for name, data := range secrets {
-			state.secrets[name] = data
+			if err := fftl.setSecret(name, json.RawMessage(data)); err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -163,11 +163,10 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 		if secret.Module != reflection.Module() {
 			return fmt.Errorf("secret %v does not match current module %s", secret.Module, reflection.Module())
 		}
-		data, err := json.Marshal(value)
-		if err != nil {
+		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+		if err := fftl.setSecret(secret.Name, value); err != nil {
 			return err
 		}
-		state.secrets[secret.Name] = data
 		return nil
 	}
 }
@@ -182,7 +181,8 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 //	)
 func WithDatabase(dbHandle ftl.Database) Option {
 	return func(ctx context.Context, state *OptionsState) error {
-		originalDSN, err := modulecontext.GetDSNFromSecret(reflection.Module(), dbHandle.Name, state.secrets)
+		fftl := internal.FromContext(ctx)
+		originalDSN, err := getDSNFromSecret(fftl, reflection.Module(), dbHandle.Name)
 		if err != nil {
 			return err
 		}
@@ -353,4 +353,21 @@ func WithMapsAllowed() Option {
 		fftl.startAllowingMapCalls()
 		return nil
 	}
+}
+
+// dsnSecretKey returns the key for the secret that is expected to hold the DSN for a database.
+//
+// The format is FTL_DSN_<MODULE>_<DBNAME>
+func dsnSecretKey(module, name string) string {
+	return fmt.Sprintf("FTL_DSN_%s_%s", strings.ToUpper(module), strings.ToUpper(name))
+}
+
+// getDSNFromSecret returns the DSN for a database from the relevant secret
+func getDSNFromSecret(ftl internal.FTL, module, name string) (string, error) {
+	key := dsnSecretKey(module, name)
+	var dsn string
+	if err := ftl.GetSecret(context.Background(), key, &dsn); err != nil {
+		return "", fmt.Errorf("could not get DSN for database %q from secret %q: %w", name, key, err)
+	}
+	return dsn, nil
 }
