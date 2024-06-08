@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
+	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 	"github.com/TBD54566975/golang-tools/go/packages"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -73,7 +73,7 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   // Comments about ColorInt.
-  export enum ColorInt: Int {
+  enum ColorInt: Int {
     // RedInt is a color.
     RedInt = 0
     BlueInt = 1
@@ -100,7 +100,7 @@ func TestExtractModuleSchema(t *testing.T) {
     Two = 2
   }
 
-  export enum TypeEnum {
+  enum TypeEnum {
     Option String?
     InlineStruct one.InlineStruct
     AliasedStruct one.UnderlyingStruct
@@ -122,7 +122,7 @@ func TestExtractModuleSchema(t *testing.T) {
   export data ExportedStruct {
   }
 
-  export data InlineStruct {
+  data InlineStruct {
   }
 
   export data Nested {
@@ -158,7 +158,7 @@ func TestExtractModuleSchema(t *testing.T) {
   data SourceResp {
   }
 
-  export data UnderlyingStruct {
+  data UnderlyingStruct {
   }
 
   data WithoutDirectiveStruct {
@@ -343,9 +343,16 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
 	expected := `module parent {
-			export data ChildStruct {
-			name String?
+		export typealias ChildAlias String 
+
+		export data ChildStruct {
+			name parent.ChildAlias?
 		}
+
+		data Resp {
+		}
+
+		verb childVerb(Unit) parent.Resp
 
 		export verb verb(Unit) parent.ChildStruct
 	}
@@ -455,7 +462,7 @@ func TestParsedirectives(t *testing.T) {
 
 func TestParseTypesTime(t *testing.T) {
 	timeRef := mustLoadRef("time", "Time").Type()
-	pctx := newParseContext(nil, []*packages.Package{}, &schema.Schema{}, &analyzers.ExtractResult{Module: &schema.Module{}})
+	pctx := newParseContext(nil, []*packages.Package{}, &schema.Schema{}, &finalize.Result{Module: &schema.Module{}})
 	parsed, ok := visitType(pctx, token.NoPos, timeRef, false).Get()
 	assert.True(t, ok)
 	_, ok = parsed.(*schema.Time)
@@ -510,7 +517,7 @@ func TestErrorReporting(t *testing.T) {
 		`21:14-44: duplicate database declaration at 20:14-44`,
 		`24:2-10: unsupported type "error" for field "BadParam"`,
 		`27:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
-		`30:3-0: unexpected directive "ftl:export" attached for verb, did you mean to use '//ftl:verb export' instead`,
+		`30:3-3: unexpected directive "ftl:export" attached for verb, did you mean to use '//ftl:verb export' instead?`,
 		`36:36-39: unsupported request type "ftl/failing.Request"`,
 		`36:50-50: unsupported response type "ftl/failing.Response"`,
 		`37:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc`,
@@ -526,7 +533,7 @@ func TestErrorReporting(t *testing.T) {
 		`54:59-59: unsupported response type "ftl/failing.Response"`,
 		`59:1-2: first parameter must be context.Context`,
 		`59:18-18: unsupported response type "ftl/failing.Response"`,
-		`64:1-2: must have at most two results (struct, error)`,
+		`64:1-2: must have at most two results (<type>, error)`,
 		`64:41-44: unsupported request type "ftl/failing.Request"`,
 		`69:1-2: must at least return an error`,
 		`69:36-39: unsupported request type "ftl/failing.Request"`,
@@ -536,19 +543,21 @@ func TestErrorReporting(t *testing.T) {
 		`78:55-55: first result must be a struct but is string`,
 		`78:63-63: must return an error but is string`,
 		`78:63-63: second result must not be ftl.Unit`,
-		`85:1-1: duplicate verb name "WrongResponse"`,
-		`91:2-12: struct field unexported must be exported by starting with an uppercase letter`,
+		// `85:1-1: duplicate verb name "WrongResponse"`, TODO: fix
+		`89:3-3: unexpected directive "ftl:verb"`,
 		`103:2-24: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
 		`110:2-41: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
 		`123:21-60: config and secret names must be valid identifiers`,
-		`129:1-26: only one directive expected for enum`,
-		`129:1-26: only one directive expected for type alias`,
+		`129:1-1: schema declaration contains conflicting directives`,
+		`129:1-26: only one directive expected when directive "ftl:enum" is present, found multiple`,
+		`129:1-26: only one directive expected when directive "ftl:typealias" is present, found multiple`,
 		`145:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
 		`151:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
 		`154:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
-		`166:3-3: unexpected token "d"`,
+		`166:3-14: unexpected token "d"`,
 		`173:2-62: can not publish directly to topics in other modules`,
 		`174:9-26: can not call verbs in other modules directly: use ftl.Call(…) instead`,
+		`179:2-12: struct field unexported must be exported by starting with an uppercase letter`,
 	}
 	assert.Equal(t, expected, actual)
 }

@@ -33,13 +33,13 @@ func main() {
 	verbConstructor := server.NewUserVerbServer("{{.Name}}",
 {{- range .Verbs}}
 	{{- if and .HasRequest .HasResponse}}
-		server.HandleCall({{$.Name}}.{{.Name}}),
+		server.HandleCall({{.Package}}.{{.Name}}),
 	{{- else if .HasRequest}}
-		server.HandleSink({{$.Name}}.{{.Name}}),
+		server.HandleSink({{.Package}}.{{.Name}}),
 	{{- else if .HasResponse}}
-		server.HandleSource({{$.Name}}.{{.Name}}),
+		server.HandleSource({{.Package}}.{{.Name}}),
 	{{- else}}
-		server.HandleEmpty({{$.Name}}.{{.Name}}),
+		server.HandleEmpty({{.Package}}.{{.Name}}),
 	{{- end}}
 {{- end}}
 	)

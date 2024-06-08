@@ -10,14 +10,13 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
+	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
@@ -27,13 +26,7 @@ import (
 )
 
 var (
-	fset             = token.NewFileSet()
-	contextIfaceType = once(func() *types.Interface {
-		return mustLoadRef("context", "Context").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
-	})
-	errorIFaceType = once(func() *types.Interface {
-		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
-	})
+	fset = token.NewFileSet()
 
 	ftlPkgPath              = "github.com/TBD54566975/ftl/go-runtime/ftl"
 	ftlCallFuncPath         = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
@@ -100,7 +93,7 @@ func (e errorSet) add(err *schema.Error) {
 	e[err.Error()] = err
 }
 
-func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *analyzers.ExtractResult) error {
+func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *finalize.Result) error {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
@@ -129,12 +122,6 @@ func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *analyzers.Ex
 				switch node := node.(type) {
 				case *ast.CallExpr:
 					visitCallExpr(pctx, node, stack)
-
-				case *ast.File:
-					visitFile(pctx, node)
-
-				case *ast.FuncDecl:
-					visitFuncDecl(pctx, node)
 
 				case *ast.GenDecl:
 					visitGenDecl(pctx, node)
@@ -195,7 +182,6 @@ func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 		return
 	}
 
-	foundDeclType := optional.None[string]()
 	for _, dir := range directives {
 		if len(node.Specs) != 1 {
 			// errors handled on next pass
@@ -209,8 +195,7 @@ func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 		aType := pctx.pkg.Types.Scope().Lookup(t.Name.Name)
 		nativeName := aType.Pkg().Name() + "." + aType.Name()
 
-		switch dir := dir.(type) {
-		case *directiveEnum:
+		if ed, ok := dir.(*directiveEnum); ok {
 			typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
 			switch underlying := typ.Underlying().(type) {
 			case *types.Basic:
@@ -219,7 +204,7 @@ func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 					Comments: parseComments(node.Doc),
 					Name:     strcase.ToUpperCamel(t.Name.Name),
 					Type:     nil, // nil until next pass, when we can visit the full type graph
-					Export:   dir.IsExported(),
+					Export:   ed.IsExported(),
 				}
 				pctx.module.Decls = append(pctx.module.Decls, enum)
 				pctx.nativeNames[enum] = nativeName
@@ -245,7 +230,7 @@ func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 					Pos:      goPosToSchemaPos(node.Pos()),
 					Comments: parseComments(node.Doc),
 					Name:     strcase.ToUpperCamel(t.Name.Name),
-					Export:   dir.IsExported(),
+					Export:   ed.IsExported(),
 				}
 				if iTyp, ok := typ.(*types.Interface); ok {
 					pctx.nativeNames[enum] = nativeName
@@ -255,15 +240,6 @@ func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
 					pctx.errors.add(errorf(node, "expected interface for type enum but got %q", typ))
 				}
 			}
-			foundDeclType = optional.Some("enum")
-		case *directiveTypeAlias, *directiveData, *directiveIngress, *directiveVerb, *directiveCronJob, *directiveRetry, *directiveExport, *directiveSubscriber:
-			continue
-		}
-		if foundDeclType, ok := foundDeclType.Get(); ok {
-			if len(directives) > 1 {
-				pctx.errors.add(errorf(node, "only one directive expected for %v", foundDeclType))
-			}
-			break
 		}
 	}
 }
@@ -781,65 +757,6 @@ func commentsAndDirectivesForVar(pctx *parseContext, variableDecl *ast.GenDecl, 
 	return parseComments(variableDecl.Doc), directives
 }
 
-func visitFile(pctx *parseContext, node *ast.File) {
-	if node.Doc == nil {
-		return
-	}
-	pctx.module.Comments = parseComments(node.Doc)
-}
-
-func isType[T types.Type](t types.Type) bool {
-	if _, ok := t.(*types.Named); ok {
-		t = t.Underlying()
-	}
-	_, ok := t.(T)
-	return ok
-}
-
-func checkSignature(pctx *parseContext, node *ast.FuncDecl, sig *types.Signature) (req, resp optional.Option[*types.Var]) {
-	params := sig.Params()
-	results := sig.Results()
-
-	if params.Len() > 2 {
-		pctx.errors.add(errorf(node, "must have at most two parameters (context.Context, struct)"))
-	}
-	if params.Len() == 0 {
-		pctx.errors.add(errorf(node, "first parameter must be context.Context"))
-	} else if !types.AssertableTo(contextIfaceType(), params.At(0).Type()) {
-		pctx.errors.add(tokenErrorf(params.At(0).Pos(), params.At(0).Name(), "first parameter must be of type context.Context but is %s", params.At(0).Type()))
-	}
-
-	if params.Len() == 2 {
-		if !isType[*types.Struct](params.At(1).Type()) {
-			pctx.errors.add(tokenErrorf(params.At(1).Pos(), params.At(1).Name(), "second parameter must be a struct but is %s", params.At(1).Type()))
-		}
-		if params.At(1).Type().String() == ftlUnitTypePath {
-			pctx.errors.add(tokenErrorf(params.At(1).Pos(), params.At(1).Name(), "second parameter must not be ftl.Unit"))
-		}
-
-		req = optional.Some(params.At(1))
-	}
-
-	if results.Len() > 2 {
-		pctx.errors.add(errorf(node, "must have at most two results (struct, error)"))
-	}
-	if results.Len() == 0 {
-		pctx.errors.add(errorf(node, "must at least return an error"))
-	} else if !types.AssertableTo(errorIFaceType(), results.At(results.Len()-1).Type()) {
-		pctx.errors.add(tokenErrorf(results.At(results.Len()-1).Pos(), results.At(results.Len()-1).Name(), "must return an error but is %s", results.At(0).Type()))
-	}
-	if results.Len() == 2 {
-		if !isType[*types.Struct](results.At(0).Type()) {
-			pctx.errors.add(tokenErrorf(results.At(0).Pos(), results.At(0).Name(), "first result must be a struct but is %s", results.At(0).Type()))
-		}
-		if results.At(1).Type().String() == ftlUnitTypePath {
-			pctx.errors.add(tokenErrorf(results.At(1).Pos(), results.At(1).Name(), "second result must not be ftl.Unit"))
-		}
-		resp = optional.Some(results.At(0))
-	}
-	return req, resp
-}
-
 func goPosToSchemaPos(pos token.Pos) schema.Position {
 	p := fset.Position(pos)
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}
@@ -864,8 +781,7 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 		}
 
 		for _, dir := range directives {
-			switch dir.(type) {
-			case *directiveVerb, *directiveData, *directiveEnum:
+			if _, ok := dir.(*directiveEnum); ok {
 				if len(node.Specs) != 1 {
 					pctx.errors.add(errorf(node, "error parsing ftl directive: expected "+
 						"exactly one type declaration"))
@@ -910,7 +826,6 @@ func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
 						visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
 					}
 				}
-			case *directiveIngress, *directiveCronJob, *directiveRetry, *directiveExport, *directiveSubscriber, *directiveTypeAlias:
 			}
 		}
 		return
@@ -1159,128 +1074,6 @@ func maybeErrorOnInvalidEnumMixing(pctx *parseContext, node *ast.ValueSpec, enum
 			}
 		}
 	}
-}
-
-func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
-	if node.Doc == nil {
-		return nil
-	}
-	directives, err := parseDirectives(node, fset, node.Doc)
-	if err != nil {
-		pctx.errors.add(err)
-	}
-	var metadata []schema.Metadata
-	isVerb := false
-	isExported := false
-	for _, dir := range directives {
-		switch dir := dir.(type) {
-		case *directiveVerb:
-			isVerb = true
-			isExported = dir.Export
-			if pctx.module.Name == "" {
-				pctx.module.Name = pctx.pkg.Name
-			} else if pctx.module.Name != pctx.pkg.Name {
-				pctx.errors.add(errorf(node, "function verb directive must be in the module package"))
-			}
-		case *directiveIngress:
-			isVerb = true
-			isExported = true
-			typ := dir.Type
-			if typ == "" {
-				typ = "http"
-			}
-			metadata = append(metadata, &schema.MetadataIngress{
-				Pos:    dir.Pos,
-				Type:   typ,
-				Method: dir.Method,
-				Path:   dir.Path,
-			})
-		case *directiveCronJob:
-			isVerb = true
-			isExported = false
-			metadata = append(metadata, &schema.MetadataCronJob{
-				Pos:  dir.Pos,
-				Cron: dir.Cron.String(),
-			})
-		case *directiveRetry:
-			metadata = append(metadata, &schema.MetadataRetry{
-				Pos:        dir.Pos,
-				Count:      dir.Count,
-				MinBackoff: dir.MinBackoff,
-				MaxBackoff: dir.MaxBackoff,
-			})
-		case *directiveSubscriber:
-			isVerb = true
-			metadata = append(metadata, &schema.MetadataSubscriber{
-				Pos:  dir.Pos,
-				Name: dir.Name,
-			})
-		case *directiveExport:
-			pctx.errors.add(unexpectedDirectiveErrorf(dir, "unexpected directive %q attached for verb, did you mean to use '//ftl:verb export' instead", dir))
-		case *directiveData, *directiveEnum, *directiveTypeAlias:
-			pctx.errors.add(unexpectedDirectiveErrorf(dir, "unexpected directive %q attached for verb", dir))
-		}
-	}
-	if !isVerb {
-		return nil
-	}
-
-	if expName := exportedName(node.Name.Name); node.Name.Name != expName {
-		pctx.errors.add(errorf(node, "verb %q is not exported, did you mean to use %q instead?", node.Name.Name, expName))
-		return nil
-	}
-
-	for _, name := range pctx.nativeNames {
-		if name == node.Name.Name {
-			pctx.errors.add(noEndColumnErrorf(node.Pos(), "duplicate verb name %q", node.Name.Name))
-			return nil
-		}
-	}
-
-	fnt := pctx.pkg.TypesInfo.Defs[node.Name].(*types.Func) //nolint:forcetypeassert
-	sig := fnt.Type().(*types.Signature)                    //nolint:forcetypeassert
-	if sig.Recv() != nil {
-		pctx.errors.add(errorf(node, "ftl:verb cannot be a method"))
-		return nil
-	}
-	params := sig.Params()
-	results := sig.Results()
-	reqt, respt := checkSignature(pctx, node, sig)
-
-	var req optional.Option[schema.Type]
-	if reqt.Ok() {
-		req = visitType(pctx, node.Pos(), params.At(1).Type(), isExported)
-	} else {
-		req = optional.Some[schema.Type](&schema.Unit{})
-	}
-	var resp optional.Option[schema.Type]
-	if respt.Ok() {
-		resp = visitType(pctx, node.Pos(), results.At(0).Type(), isExported)
-	} else {
-		resp = optional.Some[schema.Type](&schema.Unit{})
-	}
-	reqV, reqOk := req.Get()
-	resV, respOk := resp.Get()
-	if !reqOk {
-		pctx.errors.add(tokenErrorf(params.At(1).Pos(), params.At(1).Name(),
-			"unsupported request type %q", params.At(1).Type()))
-	}
-	if !respOk {
-		pctx.errors.add(tokenErrorf(results.At(0).Pos(), results.At(0).Name(),
-			"unsupported response type %q", results.At(0).Type()))
-	}
-	verb = &schema.Verb{
-		Pos:      goPosToSchemaPos(node.Pos()),
-		Comments: parseComments(node.Doc),
-		Export:   isExported,
-		Name:     strcase.ToLowerCamel(node.Name.Name),
-		Request:  reqV,
-		Response: resV,
-		Metadata: metadata,
-	}
-	pctx.nativeNames[verb] = node.Name.Name
-	pctx.module.Decls = append(pctx.module.Decls, verb)
-	return verb
 }
 
 func parseComments(doc *ast.CommentGroup) []string {
@@ -1624,15 +1417,6 @@ func visitSlice(pctx *parseContext, pos token.Pos, tnode *types.Slice, isExporte
 	})
 }
 
-func once[T any](f func() T) func() T {
-	var once sync.Once
-	var t T
-	return func() T {
-		once.Do(func() { t = f() })
-		return t
-	}
-}
-
 // Lazy load the compile-time reference from a package.
 func mustLoadRef(pkg, name string) types.Object {
 	pkgs, err := packages.Load(&packages.Config{Fset: fset, Mode: packages.NeedTypes}, pkg)
@@ -1683,7 +1467,7 @@ type parseContext struct {
 	topicsByPos    map[schema.Position]*schema.Topic
 }
 
-func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schema.Schema, out *analyzers.ExtractResult) *parseContext {
+func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schema.Schema, out *finalize.Result) *parseContext {
 	if out.NativeNames == nil {
 		out.NativeNames = NativeNames{}
 	}
