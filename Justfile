@@ -135,3 +135,8 @@ lint-frontend: build-frontend
 # Lint the backend
 lint-backend:
   @golangci-lint run ./...
+
+# Run live docs server
+docs:
+  git submodule update --init --recursive
+  cd docs && zola serve
