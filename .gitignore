@@ -24,3 +24,4 @@ buildengine/.gitignore
 go.work*
 junit*.xml
 /readme-tests
+**/_ftl

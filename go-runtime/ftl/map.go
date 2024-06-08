@@ -12,9 +12,16 @@ type MapHandle[T, U any] struct {
 	getter Handle[T]
 }
 
+// Underlying returns the underlying value of the handle being mapped.
+func (mh *MapHandle[T, U]) Underlying(ctx context.Context) T {
+	return mh.getter.Get(ctx)
+}
+
+// Get the mapped value.
 func (mh *MapHandle[T, U]) Get(ctx context.Context) U {
-	out := internal.FromContext(ctx).CallMap(ctx, mh, func(ctx context.Context) (any, error) {
-		return mh.fn(ctx, mh.getter.Get(ctx))
+	value := mh.getter.Get(ctx)
+	out := internal.FromContext(ctx).CallMap(ctx, mh, value, func(ctx context.Context) (any, error) {
+		return mh.fn(ctx, value)
 	})
 	u, ok := out.(U)
 	if !ok {
