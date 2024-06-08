@@ -139,6 +139,15 @@ jobs:
         run: just init-db
       - name: Rebuild All
         run: just build-all
+  docs:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: cashapp/activate-hermit@v1
+      - run: cd docs && zola build
   integration-shard:
     name: Shard Integration Tests
     runs-on: ubuntu-latest
