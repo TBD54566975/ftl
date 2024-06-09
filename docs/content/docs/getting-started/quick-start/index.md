@@ -109,14 +109,18 @@ dev` to rebuild and redeploy the module.
 
 ### Open the console
 
-FTL has a console that allows navigation of the cluster topology, logs, traces,
+FTL has a console that allows interaction with the cluster topology, logs, traces,
 and more. Open a browser window at [https://localhost:8892](https://localhost:8892) to view it:
 
 [![FTL Console](console.png)](console.png)
 
 ### Call your verb
 
-Open a new terminal and use `ftl call` to call your verb:
+You can call verbs from the console:
+
+![console call](consolecall.png)
+
+Or from a terminal use `ftl call` to call your verb:
 
 [![ftl call](ftlcall.png)](ftlcall.png)
 
