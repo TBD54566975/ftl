@@ -79,7 +79,7 @@ func CreateDefaultFileIfNonexistent(ctx context.Context) error {
 	if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	logger.Warnf("Creating a new project config file at %q because the file does not already exist", path)
+	logger.Debugf("Creating a new project config file at %q", path)
 	return Save(path, Config{})
 }
 
@@ -107,7 +107,7 @@ func LoadWritableConfig(ctx context.Context, input []string) (Config, error) {
 
 	logger := log.FromContext(ctx)
 	if _, err := os.Stat(target); errors.Is(err, os.ErrNotExist) {
-		logger.Warnf("Creating a new project config file at %q because the file does not already exist", target)
+		logger.Debugf("Creating a new project config file at %q", target)
 		err = Save(target, Config{})
 		if err != nil {
 			return Config{}, err
