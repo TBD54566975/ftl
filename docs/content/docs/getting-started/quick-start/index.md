@@ -92,7 +92,13 @@ Any number of modules can be added to your project, adjacent to each other.
 
 ### Start the FTL cluster
 
-If using VSCode, opening the directory will prompt you to start FTL.
+#### VSCode
+
+If using VSCode, opening the directory will prompt you to start FTL:
+
+[![VSCode](vscode.png)](vscode.png)
+
+#### Manually
 
 Alternatively start the local FTL development cluster from the command-line:
 
