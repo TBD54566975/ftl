@@ -102,9 +102,7 @@ If using VSCode, opening the directory will prompt you to start FTL:
 
 Alternatively start the local FTL development cluster from the command-line:
 
-```
-ftl dev
-```
+[![ftl dev](ftldev.png)](ftldev.png)
 
 This will build and deploy all local modules. Modifying the code will cause `ftl
 dev` to rebuild and redeploy the module.
@@ -112,7 +110,15 @@ dev` to rebuild and redeploy the module.
 ### Open the console
 
 FTL has a console that allows navigation of the cluster topology, logs, traces,
-and more. Open a browser window at [https://localhost:8892](https://localhost:8892) to view it.
+and more. Open a browser window at [https://localhost:8892](https://localhost:8892) to view it:
+
+[![FTL Console](console.png)](console.png)
+
+### Call your verb
+
+Open a new terminal and use `ftl call` to call your verb:
+
+[![ftl call](ftlcall.png)](ftlcall.png)
 
 ### Create another module
 
