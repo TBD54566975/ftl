@@ -90,7 +90,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 	if err != nil {
 		return nil, err
 	}
-	logger.Infof("Acquired lock file at %s", lock.Path())
+	logger.Debugf("Acquired lock file at %s", lock.Path())
 
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
