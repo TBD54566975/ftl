@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/TBD54566975/ftl/go-runtime/encoding"
 )
 
 // DatabasesFromSecrets finds DSNs in secrets and creates a map of databases.
@@ -25,8 +27,10 @@ func DatabasesFromSecrets(ctx context.Context, module string, secrets map[string
 		if !strings.EqualFold(moduleName, module) {
 			continue
 		}
-		dsnStr := string(maybeDSN)
-		dsn := dsnStr[1 : len(dsnStr)-1] // chop leading + trailing quotes
+		var dsn string
+		if err := encoding.Unmarshal(maybeDSN, &dsn); err != nil {
+			return nil, fmt.Errorf("could not unmarshal DSN %q: %w", maybeDSN, err)
+		}
 		db, err := NewDatabase(DBTypePostgres, dsn)
 		if err != nil {
 			return nil, fmt.Errorf("could not create database %q with DSN %q: %w", dbName, maybeDSN, err)
