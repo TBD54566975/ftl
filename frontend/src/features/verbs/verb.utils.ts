@@ -32,6 +32,10 @@ const processJsonValue = (value: JsonValue): JsonValue =>{
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const simpleJsonSchema = (verb: Verb): any => {
+  if (!verb.jsonRequestSchema) {
+    return {}
+  }
+
   let schema = JSON.parse(verb.jsonRequestSchema)
 
   if (schema.properties && isHttpIngress(verb)) {
