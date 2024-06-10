@@ -50,6 +50,9 @@ const (
 	// VerbServiceSendFSMEventProcedure is the fully-qualified name of the VerbService's SendFSMEvent
 	// RPC.
 	VerbServiceSendFSMEventProcedure = "/xyz.block.ftl.v1.VerbService/SendFSMEvent"
+	// VerbServiceSetNextFSMEventProcedure is the fully-qualified name of the VerbService's
+	// SetNextFSMEvent RPC.
+	VerbServiceSetNextFSMEventProcedure = "/xyz.block.ftl.v1.VerbService/SetNextFSMEvent"
 	// VerbServicePublishEventProcedure is the fully-qualified name of the VerbService's PublishEvent
 	// RPC.
 	VerbServicePublishEventProcedure = "/xyz.block.ftl.v1.VerbService/PublishEvent"
@@ -142,6 +145,8 @@ type VerbServiceClient interface {
 	AcquireLease(context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
 	// Send an event to an FSM.
 	SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
+	// Set the next event for an FSM.
+	SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
 	// Publish an event to a topic.
 	PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error)
 	// Issue a synchronous call to a Verb.
@@ -179,6 +184,11 @@ func NewVerbServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			baseURL+VerbServiceSendFSMEventProcedure,
 			opts...,
 		),
+		setNextFSMEvent: connect.NewClient[v1.SendFSMEventRequest, v1.SendFSMEventResponse](
+			httpClient,
+			baseURL+VerbServiceSetNextFSMEventProcedure,
+			opts...,
+		),
 		publishEvent: connect.NewClient[v1.PublishEventRequest, v1.PublishEventResponse](
 			httpClient,
 			baseURL+VerbServicePublishEventProcedure,
@@ -198,6 +208,7 @@ type verbServiceClient struct {
 	getModuleContext *connect.Client[v1.ModuleContextRequest, v1.ModuleContextResponse]
 	acquireLease     *connect.Client[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
 	sendFSMEvent     *connect.Client[v1.SendFSMEventRequest, v1.SendFSMEventResponse]
+	setNextFSMEvent  *connect.Client[v1.SendFSMEventRequest, v1.SendFSMEventResponse]
 	publishEvent     *connect.Client[v1.PublishEventRequest, v1.PublishEventResponse]
 	call             *connect.Client[v1.CallRequest, v1.CallResponse]
 }
@@ -222,6 +233,11 @@ func (c *verbServiceClient) SendFSMEvent(ctx context.Context, req *connect.Reque
 	return c.sendFSMEvent.CallUnary(ctx, req)
 }
 
+// SetNextFSMEvent calls xyz.block.ftl.v1.VerbService.SetNextFSMEvent.
+func (c *verbServiceClient) SetNextFSMEvent(ctx context.Context, req *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
+	return c.setNextFSMEvent.CallUnary(ctx, req)
+}
+
 // PublishEvent calls xyz.block.ftl.v1.VerbService.PublishEvent.
 func (c *verbServiceClient) PublishEvent(ctx context.Context, req *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error) {
 	return c.publishEvent.CallUnary(ctx, req)
@@ -244,6 +260,8 @@ type VerbServiceHandler interface {
 	AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error
 	// Send an event to an FSM.
 	SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
+	// Set the next event for an FSM.
+	SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
 	// Publish an event to a topic.
 	PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error)
 	// Issue a synchronous call to a Verb.
@@ -277,6 +295,11 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 		svc.SendFSMEvent,
 		opts...,
 	)
+	verbServiceSetNextFSMEventHandler := connect.NewUnaryHandler(
+		VerbServiceSetNextFSMEventProcedure,
+		svc.SetNextFSMEvent,
+		opts...,
+	)
 	verbServicePublishEventHandler := connect.NewUnaryHandler(
 		VerbServicePublishEventProcedure,
 		svc.PublishEvent,
@@ -297,6 +320,8 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 			verbServiceAcquireLeaseHandler.ServeHTTP(w, r)
 		case VerbServiceSendFSMEventProcedure:
 			verbServiceSendFSMEventHandler.ServeHTTP(w, r)
+		case VerbServiceSetNextFSMEventProcedure:
+			verbServiceSetNextFSMEventHandler.ServeHTTP(w, r)
 		case VerbServicePublishEventProcedure:
 			verbServicePublishEventHandler.ServeHTTP(w, r)
 		case VerbServiceCallProcedure:
@@ -324,6 +349,10 @@ func (UnimplementedVerbServiceHandler) AcquireLease(context.Context, *connect.Bi
 
 func (UnimplementedVerbServiceHandler) SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.SendFSMEvent is not implemented"))
+}
+
+func (UnimplementedVerbServiceHandler) SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.SetNextFSMEvent is not implemented"))
 }
 
 func (UnimplementedVerbServiceHandler) PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error) {

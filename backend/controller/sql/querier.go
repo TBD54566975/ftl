@@ -71,6 +71,7 @@ type Querier interface {
 	GetLeaseInfo(ctx context.Context, key leases.Key) (GetLeaseInfoRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
+	GetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (FsmNextEvent, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error)
 	// Retrieve routing information for a runner.
@@ -106,6 +107,7 @@ type Querier interface {
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels json.RawMessage) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
+	SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error)
 	StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error)
 	// Start a new FSM transition, populating the destination state and async call ID.
 	//

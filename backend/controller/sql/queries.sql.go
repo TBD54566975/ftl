@@ -1452,6 +1452,25 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 	return i, err
 }
 
+const getNextFSMEvent = `-- name: GetNextFSMEvent :one
+SELECT id, created_at, fsm_instance_id, next_state, request
+FROM fsm_next_event
+WHERE fsm_instance_id = (SELECT id FROM fsm_instances WHERE fsm = $1::schema_ref AND key = $2)
+`
+
+func (q *Queries) GetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (FsmNextEvent, error) {
+	row := q.db.QueryRow(ctx, getNextFSMEvent, fsm, instanceKey)
+	var i FsmNextEvent
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.FsmInstanceID,
+		&i.NextState,
+		&i.Request,
+	)
+	return i, err
+}
+
 const getProcessList = `-- name: GetProcessList :many
 SELECT d.min_replicas,
        d.key   AS deployment_key,
@@ -2423,6 +2442,35 @@ func (q *Queries) SetSubscriptionCursor(ctx context.Context, column1 model.Subsc
 	return err
 }
 
+const setNextFSMEvent = `-- name: SetNextFSMEvent :one
+INSERT INTO fsm_next_event (fsm_instance_id, next_state, request)
+VALUES (
+  (SELECT id FROM fsm_instances WHERE fsm = $1::schema_ref AND key = $2),
+  $3,
+  $4
+)
+RETURNING id
+`
+
+type SetNextFSMEventParams struct {
+	Fsm         schema.RefKey
+	InstanceKey string
+	Event       schema.RefKey
+	Request     []byte
+}
+
+func (q *Queries) SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error) {
+	row := q.db.QueryRow(ctx, setNextFSMEvent,
+		arg.Fsm,
+		arg.InstanceKey,
+		arg.Event,
+		arg.Request,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const startCronJobs = `-- name: StartCronJobs :many
 WITH updates AS (
   UPDATE cron_jobs
@@ -2686,7 +2734,7 @@ VALUES (
   $6::TEXT
 )
 ON CONFLICT (name, module_id) DO
-UPDATE SET 
+UPDATE SET
   topic_id = excluded.topic_id,
   deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
 RETURNING 
@@ -2733,8 +2781,8 @@ VALUES (
   $3::TEXT,
   $4::TEXT
 )
-ON CONFLICT (name, module_id) DO 
-UPDATE SET 
+ON CONFLICT (name, module_id) DO
+UPDATE SET
   type = $4::TEXT
 RETURNING id
 `

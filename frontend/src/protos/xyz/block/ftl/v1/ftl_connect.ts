@@ -62,6 +62,17 @@ export const VerbService = {
       kind: MethodKind.Unary,
     },
     /**
+     * Set the next event for an FSM.
+     *
+     * @generated from rpc xyz.block.ftl.v1.VerbService.SetNextFSMEvent
+     */
+    setNextFSMEvent: {
+      name: "SetNextFSMEvent",
+      I: SendFSMEventRequest,
+      O: SendFSMEventResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
      * Publish an event to a topic.
      *
      * @generated from rpc xyz.block.ftl.v1.VerbService.PublishEvent

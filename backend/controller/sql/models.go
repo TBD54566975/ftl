@@ -455,6 +455,14 @@ type FsmInstance struct {
 	UpdatedAt        time.Time
 }
 
+type FsmNextEvent struct {
+	ID            int64
+	CreatedAt     time.Time
+	FsmInstanceID int64
+	NextState     schema.RefKey
+	Request       []byte
+}
+
 type IngressRoute struct {
 	Method       string
 	Path         string
