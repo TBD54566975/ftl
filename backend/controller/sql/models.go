@@ -447,6 +447,14 @@ type FsmInstance struct {
 	AsyncCallID      optional.Option[int64]
 }
 
+type FsmNextEvent struct {
+	ID            int64
+	CreatedAt     time.Time
+	FsmInstanceID int64
+	Event         schema.RefKey
+	Request       []byte
+}
+
 type IngressRoute struct {
 	Method       string
 	Path         string

@@ -27,9 +27,9 @@ import (
 // future execution.
 //
 // Note: no validation of the FSM is performed.
-func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executionKey string, destinationState schema.RefKey, request json.RawMessage, retryParams schema.RetryParams) (err error) {
+func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string, destinationState schema.RefKey, request json.RawMessage, retryParams schema.RetryParams) (err error) {
 	// Create an async call for the event.
-	origin := AsyncOriginFSM{FSM: fsm, Key: executionKey}
+	origin := AsyncOriginFSM{FSM: fsm, Key: instanceKey}
 	asyncCallID, err := d.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
 		Verb:              destinationState,
 		Origin:            origin.String(),
@@ -45,7 +45,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 	// Start a transition.
 	_, err = d.db.StartFSMTransition(ctx, sql.StartFSMTransitionParams{
 		Fsm:              fsm,
-		Key:              executionKey,
+		Key:              instanceKey,
 		DestinationState: destinationState,
 		AsyncCallID:      asyncCallID,
 	})
@@ -71,6 +71,16 @@ func (d *DAL) FailFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKe
 
 func (d *DAL) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.SucceedFSMInstance(ctx, fsm, instanceKey)
+	return translatePGError(err)
+}
+
+func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string, event schema.RefKey, request json.RawMessage) error {
+	_, err := d.db.SetNextFSMEvent(ctx, sql.SetNextFSMEventParams{
+		Fsm:         fsm,
+		InstanceKey: instanceKey,
+		Event:       event,
+		Request:     request,
+	})
 	return translatePGError(err)
 }
 
