@@ -29,6 +29,7 @@ type Server struct {
 	handler     protocol.Handler
 	logger      log.Logger
 	diagnostics *xsync.MapOf[protocol.DocumentUri, []protocol.Diagnostic]
+	documents   *documentStore
 }
 
 // NewServer creates a new language server.
@@ -39,13 +40,24 @@ func NewServer(ctx context.Context) *Server {
 		SetTrace:    setTrace,
 		LogTrace:    logTrace,
 	}
+
 	s := glspServer.NewServer(&handler, lsName, false)
 	server := &Server{
 		server:      s,
 		logger:      *log.FromContext(ctx).Scope("lsp"),
 		diagnostics: xsync.NewMapOf[protocol.DocumentUri, []protocol.Diagnostic](),
+		documents:   newDocumentStore(),
 	}
+
+	handler.TextDocumentDidOpen = server.textDocumentDidOpen()
+	handler.TextDocumentDidChange = server.textDocumentDidChange()
+	handler.TextDocumentDidClose = server.textDocumentDidClose()
+	handler.TextDocumentDidSave = server.textDocumentDidSave()
+	handler.TextDocumentCompletion = server.textDocumentCompletion()
+	handler.CompletionItemResolve = server.completionItemResolve()
+	handler.TextDocumentHover = server.textDocumentHover()
 	handler.Initialize = server.initialize()
+
 	return server
 }
 
@@ -179,6 +191,15 @@ func (s *Server) initialize() protocol.InitializeFunc {
 		}
 
 		serverCapabilities := s.handler.CreateServerCapabilities()
+		serverCapabilities.TextDocumentSync = protocol.TextDocumentSyncKindIncremental
+		serverCapabilities.HoverProvider = true
+
+		trueValue := true
+		serverCapabilities.CompletionProvider = &protocol.CompletionOptions{
+			ResolveProvider:   &trueValue,
+			TriggerCharacters: []string{"/", "f"},
+		}
+
 		return protocol.InitializeResult{
 			Capabilities: serverCapabilities,
 			ServerInfo: &protocol.InitializeResultServerInfo{
@@ -205,6 +226,41 @@ func logTrace(context *glsp.Context, params *protocol.LogTraceParams) error {
 func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
 	protocol.SetTraceValue(params.Value)
 	return nil
+}
+
+func (s *Server) textDocumentDidOpen() protocol.TextDocumentDidOpenFunc {
+	return func(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
+		uri := params.TextDocument.URI
+		content := params.TextDocument.Text
+		s.documents.set(uri, content)
+		return nil
+	}
+}
+
+func (s *Server) textDocumentDidChange() protocol.TextDocumentDidChangeFunc {
+	return func(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
+		doc, ok := s.documents.get(params.TextDocument.URI)
+		if !ok {
+			return nil
+		}
+
+		doc.update(params.ContentChanges)
+		return nil
+	}
+}
+
+func (s *Server) textDocumentDidClose() protocol.TextDocumentDidCloseFunc {
+	return func(context *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
+		uri := params.TextDocument.URI
+		s.documents.delete(uri)
+		return nil
+	}
+}
+
+func (s *Server) textDocumentDidSave() protocol.TextDocumentDidSaveFunc {
+	return func(context *glsp.Context, params *protocol.DidSaveTextDocumentParams) error {
+		return nil
+	}
 }
 
 // getLineOrWordLength returns the length of the line or the length of the word starting at the given column.
