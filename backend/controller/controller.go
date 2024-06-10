@@ -741,16 +741,12 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 
 func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.SendFSMEventRequest]) (resp *connect.Response[ftlv1.SendFSMEventResponse], err error) {
 	msg := req.Msg
-	sch := s.schema.Load()
+
 	// Resolve the FSM.
-	fsm := &schema.FSM{}
-	if err := sch.ResolveToType(schema.RefFromProto(msg.Fsm), fsm); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("fsm not found: %w", err))
+	fsm, eventType, fsmKey, err := s.resolveFSMEvent(msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
-
-	eventType := schema.TypeFromProto(msg.Event)
-
-	fsmKey := schema.RefFromProto(msg.Fsm).ToRefKey()
 
 	tx, err := s.dal.Begin(ctx)
 	if err != nil {
@@ -769,6 +765,8 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 	var destinationVerb *schema.Verb
 
 	var candidates []string
+
+	sch := s.schema.Load()
 
 	updateCandidates := func(ref *schema.Ref) (brk bool, err error) {
 		verb := &schema.Verb{}
@@ -827,6 +825,30 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start fsm transition: %w", err))
 	}
 	return connect.NewResponse(&ftlv1.SendFSMEventResponse{}), nil
+}
+
+func (s *Service) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
+	msg := req.Msg
+	fsm, eventType, fsmKey, err := s.resolveFSMEvent(msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	s.dal.SetNextFSMEvent(ctx, fsmKey, msg.Instance, eventType)
+	panic("??")
+}
+
+func (s *Service) resolveFSMEvent(msg *ftlv1.SendFSMEventRequest) (fsm *schema.FSM, eventType schema.Type, fsmKey schema.RefKey, err error) {
+	sch := s.schema.Load()
+
+	fsm = &schema.FSM{}
+	if err := sch.ResolveToType(schema.RefFromProto(msg.Fsm), fsm); err != nil {
+		return nil, nil, schema.RefKey{}, fmt.Errorf("fsm not found: %w", err)
+	}
+
+	eventType = schema.TypeFromProto(msg.Event)
+
+	fsmKey = schema.RefFromProto(msg.Fsm).ToRefKey()
+	return fsm, eventType, fsmKey, nil
 }
 
 func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {

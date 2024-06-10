@@ -1215,6 +1215,25 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, topic model.T
 	return i, err
 }
 
+const getNextFSMEvent = `-- name: GetNextFSMEvent :one
+SELECT id, created_at, fsm_instance_id, event, request
+FROM fsm_next_event
+WHERE fsm_instance_id = $1
+`
+
+func (q *Queries) GetNextFSMEvent(ctx context.Context, fsmInstanceID int64) (FsmNextEvent, error) {
+	row := q.db.QueryRow(ctx, getNextFSMEvent, fsmInstanceID)
+	var i FsmNextEvent
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.FsmInstanceID,
+		&i.Event,
+		&i.Request,
+	)
+	return i, err
+}
+
 const getProcessList = `-- name: GetProcessList :many
 SELECT d.min_replicas,
        d.key   AS deployment_key,
@@ -2086,6 +2105,35 @@ func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Op
 	return err
 }
 
+const setNextFSMEvent = `-- name: SetNextFSMEvent :one
+INSERT INTO fsm_next_event (fsm_instance_id, event, request)
+VALUES (
+  (SELECT id FROM fsm_instances WHERE fsm = $1::schema_ref AND key = $2),
+  $3,
+  $4
+)
+RETURNING id
+`
+
+type SetNextFSMEventParams struct {
+	Fsm         schema.RefKey
+	InstanceKey string
+	Event       schema.RefKey
+	Request     []byte
+}
+
+func (q *Queries) SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error) {
+	row := q.db.QueryRow(ctx, setNextFSMEvent,
+		arg.Fsm,
+		arg.InstanceKey,
+		arg.Event,
+		arg.Request,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const startCronJobs = `-- name: StartCronJobs :many
 WITH updates AS (
   UPDATE cron_jobs
@@ -2346,7 +2394,7 @@ VALUES (
   $5::TEXT
 )
 ON CONFLICT (name, module_id) DO
-UPDATE SET 
+UPDATE SET
   topic_id = excluded.topic_id
 RETURNING id
 `
@@ -2378,8 +2426,8 @@ VALUES (
   $3::TEXT,
   $4::TEXT
 )
-ON CONFLICT (name, module_id) DO 
-UPDATE SET 
+ON CONFLICT (name, module_id) DO
+UPDATE SET
   type = $4::TEXT
 RETURNING id
 `

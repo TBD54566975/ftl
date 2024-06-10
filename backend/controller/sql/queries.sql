@@ -613,6 +613,20 @@ WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
 
+-- name: SetNextFSMEvent :one
+INSERT INTO fsm_next_event (fsm_instance_id, event, request)
+VALUES (
+  (SELECT id FROM fsm_instances WHERE fsm = @fsm::schema_ref AND key = @instance_key),
+  @event,
+  @request
+)
+RETURNING id;
+
+-- name: GetNextFSMEvent :one
+SELECT *
+FROM fsm_next_event
+WHERE fsm_instance_id = @fsm_instance_id;
+
 -- name: UpsertTopic :exec
 INSERT INTO topics (key, module_id, name, type)
 VALUES (
@@ -621,8 +635,8 @@ VALUES (
   sqlc.arg('name')::TEXT,
   sqlc.arg('event_type')::TEXT
 )
-ON CONFLICT (name, module_id) DO 
-UPDATE SET 
+ON CONFLICT (name, module_id) DO
+UPDATE SET
   type = sqlc.arg('event_type')::TEXT
 RETURNING id;
 
@@ -641,7 +655,7 @@ VALUES (
   sqlc.arg('name')::TEXT
 )
 ON CONFLICT (name, module_id) DO
-UPDATE SET 
+UPDATE SET
   topic_id = excluded.topic_id
 RETURNING id;
 
