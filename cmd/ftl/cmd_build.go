@@ -29,6 +29,5 @@ func (b *buildCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 	if err != nil {
 		return err
 	}
-	defer engine.Close()
 	return engine.Build(ctx)
 }

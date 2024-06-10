@@ -14,6 +14,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/pubsub"
+	"github.com/gofrs/flock"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/exp/maps"
@@ -86,11 +87,11 @@ func WithListener(listener Listener) Option {
 // "dirs" are directories to scan for local modules.
 func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
 	logger := log.FromContext(ctx)
-	lockFile, err := createLockFile()
+	lock, err := acquireBuildLock()
 	if err != nil {
 		return nil, err
 	}
-	logger.Infof("Created build.lock file at %s", lockFile)
+	logger.Infof("Acquired lock file at %s", lock.Path())
 
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
@@ -110,6 +111,14 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
+
+	go func() {
+		<-ctx.Done()
+		err := lock.Unlock()
+		if err != nil {
+			logger.Errorf(err, "failed to unlock file at %s", lock.Path())
+		}
+	}()
 
 	projects, err := DiscoverProjects(ctx, moduleDirs, externalDirs)
 	if err != nil {
@@ -170,43 +179,30 @@ func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, 
 	}
 }
 
-// Close stops the Engine's schema sync and deletes the build lock file.
+// Close stops the Engine's schema sync.
 func (e *Engine) Close() error {
-	if err := deleteLockFile(); err != nil {
-		fmt.Println("deleteLockFile: %w", err)
-	}
 	e.cancel()
 	return nil
 }
 
-func createLockFile() (string, error) {
+func acquireBuildLock() (*flock.Flock, error) {
 	gitRoot, ok := internal.GitRoot("").Get()
 	if !ok {
-		return "", fmt.Errorf("could not get git root")
+		return nil, fmt.Errorf("could not get git root")
 	}
 	lockFile := filepath.Join(gitRoot, "_ftl", "build.lock")
 	if err := os.MkdirAll(filepath.Dir(lockFile), 0750); err != nil {
-		return "", err
+		return nil, err
 	}
-	if _, err := os.Stat(lockFile); err == nil || !errors.Is(err, os.ErrNotExist) {
-		return "", fmt.Errorf("build.lock file already exists at: %s", lockFile)
+	lock := flock.New(lockFile)
+	locked, err := lock.TryLock()
+	if err != nil {
+		return nil, err
 	}
-	if err := os.WriteFile(lockFile, []byte(""), 0640); err != nil {
-		return "", err
+	if !locked {
+		return nil, fmt.Errorf("failed to lock file at: %s", lockFile)
 	}
-	return lockFile, nil
-}
-
-func deleteLockFile() error {
-	gitRoot, ok := internal.GitRoot("").Get()
-	if !ok {
-		return fmt.Errorf("could not get git root")
-	}
-	lockFile := filepath.Join(gitRoot, "_ftl", "build.lock")
-	if err := os.Remove(lockFile); err != nil {
-		return err
-	}
-	return nil
+	return lock, nil
 }
 
 // Graph returns the dependency graph for the given modules.
