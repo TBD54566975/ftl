@@ -58,3 +58,13 @@ func TestEngine(t *testing.T) {
 	err = engine.Build(ctx)
 	assert.NoError(t, err)
 }
+
+func TestDissallowMultipleEngines(t *testing.T) {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	engine, err := buildengine.New(ctx, nil, []string{"testdata/projects/alpha"}, nil)
+	assert.NoError(t, err)
+	defer engine.Close()
+
+	_, err = buildengine.New(ctx, nil, []string{"testdata/projects/alpha"}, nil)
+	assert.Error(t, err)
+}

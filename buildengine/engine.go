@@ -24,7 +24,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/projectconfig"
-	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -186,11 +185,11 @@ func (e *Engine) Close() error {
 }
 
 func acquireBuildLock() (*flock.Flock, error) {
-	gitRoot, ok := internal.GitRoot("").Get()
-	if !ok {
-		return nil, fmt.Errorf("could not get git root")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
 	}
-	lockFile := filepath.Join(gitRoot, "_ftl", "build.lock")
+	lockFile := filepath.Join(homeDir, ".ftl", "build.lock")
 	if err := os.MkdirAll(filepath.Dir(lockFile), 0750); err != nil {
 		return nil, err
 	}
