@@ -101,6 +101,7 @@ type Node interface {
 //sumtype:decl
 type Type interface {
 	Node
+	// Equal returns true if this type is equal to another type.
 	Equal(other Type) bool
 	// schemaType is a marker to ensure that all types implement the Type interface.
 	schemaType()

@@ -864,16 +864,12 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 
 func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.SendFSMEventRequest]) (resp *connect.Response[ftlv1.SendFSMEventResponse], err error) {
 	msg := req.Msg
-	sch := s.schema.Load()
+
 	// Resolve the FSM.
-	fsm := &schema.FSM{}
-	if err := sch.ResolveToType(schema.RefFromProto(msg.Fsm), fsm); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("fsm not found: %w", err))
+	fsm, eventType, fsmKey, err := s.resolveFSMEvent(msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
-
-	eventType := schema.TypeFromProto(msg.Event)
-
-	fsmKey := schema.RefFromProto(msg.Fsm).ToRefKey()
 
 	tx, err := s.dal.Begin(ctx)
 	if err != nil {
@@ -892,6 +888,8 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 	var destinationVerb *schema.Verb
 
 	var candidates []string
+
+	sch := s.schema.Load()
 
 	updateCandidates := func(ref *schema.Ref) (brk bool, err error) {
 		verb := &schema.Verb{}
@@ -948,6 +946,45 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 	err = tx.StartFSMTransition(ctx, instance.FSM, instance.Key, destinationRef.ToRefKey(), msg.Body, retryParams)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start fsm transition: %w", err))
+	}
+	return connect.NewResponse(&ftlv1.SendFSMEventResponse{}), nil
+}
+
+func (s *Service) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv1.SendFSMEventRequest]) (resp *connect.Response[ftlv1.SendFSMEventResponse], err error) {
+	tx, err := s.dal.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start transaction: %w", err))
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+	sch := s.schema.Load()
+	msg := req.Msg
+	fsm, eventType, fsmKey, err := s.resolveFSMEvent(msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+
+	// Get the current state.
+	currentState, err := tx.GetFSMState(ctx, fsmKey, req.Msg.Instance)
+	if err != nil {
+		if errors.Is(err, dalerrs.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("fsm instance not found: %w", err))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get fsm instance: %w", err))
+	}
+
+	// Check if the transition is valid from the current state.
+	nextState, ok := fsm.NextState(sch, currentState, eventType).Get()
+	if !ok {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("invalid event %q for state %q", eventType, currentState))
+	}
+
+	// Set the next event.
+	err = tx.SetNextFSMEvent(ctx, fsmKey, msg.Instance, nextState.ToRefKey(), msg.Body)
+	if err != nil {
+		if errors.Is(err, dalerrs.ErrConflict) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("fsm instance already has its next state set: %w", err))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not set next fsm event: %w", err))
 	}
 	return connect.NewResponse(&ftlv1.SendFSMEventResponse{}), nil
 }
@@ -1567,7 +1604,7 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, orig
 
 	instance, err := tx.AcquireFSMInstance(ctx, origin.FSM, origin.Key)
 	if err != nil {
-		return fmt.Errorf("could not acquire lock on FSM instance: %w", err)
+		return fmt.Errorf("%s: could not acquire lock on FSM instance: %w", origin, err)
 	}
 	defer instance.Release() //nolint:errcheck
 
@@ -1575,7 +1612,7 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, orig
 		logger.Warnf("FSM %s failed async call", origin.FSM)
 		err := tx.FailFSMInstance(ctx, origin.FSM, origin.Key)
 		if err != nil {
-			return fmt.Errorf("failed to fail FSM instance: %w", err)
+			return fmt.Errorf("%s: failed to fail FSM instance: %w", origin, err)
 		}
 		return nil
 	}
@@ -1585,7 +1622,7 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, orig
 	fsm := &schema.FSM{}
 	err = sch.ResolveToType(origin.FSM.ToRef(), fsm)
 	if err != nil {
-		return fmt.Errorf("could not resolve FSM: %w", err)
+		return fmt.Errorf("%s: could not resolve FSM: %w", origin, err)
 	}
 
 	destinationState, _ := instance.DestinationState.Get()
@@ -1595,7 +1632,7 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, orig
 			logger.Debugf("FSM reached terminal state %s", destinationState)
 			err := tx.SucceedFSMInstance(ctx, origin.FSM, origin.Key)
 			if err != nil {
-				return fmt.Errorf("failed to succeed FSM instance: %w", err)
+				return fmt.Errorf("%s: failed to succeed FSM instance: %w", origin, err)
 			}
 			return nil
 		}
@@ -1604,9 +1641,39 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, orig
 
 	err = tx.FinishFSMTransition(ctx, origin.FSM, origin.Key)
 	if err != nil {
-		return fmt.Errorf("failed to complete FSM transition: %w", err)
+		return fmt.Errorf("%s: failed to complete FSM transition: %w", origin, err)
 	}
+
+	// If there's a next event enqueued, we immediately start it.
+	next, err := tx.GetNextFSMEvent(ctx, origin.FSM, origin.Key)
+	if err != nil {
+		return fmt.Errorf("%s: failed to get next FSM event: %w", origin, err)
+	}
+
+	if next, ok := next.Get(); ok {
+		s.SetNextFSMEvent(ctx, connect.NewRequest(&ftlv1.SendFSMEventRequest{
+			Fsm:      origin.FSM.ToProto(),
+			Instance: origin.Key,
+			Event:    next.DestinationState,
+			Body:     next.Request,
+		}))
+	}
+
 	return nil
+}
+
+func (s *Service) resolveFSMEvent(msg *ftlv1.SendFSMEventRequest) (fsm *schema.FSM, eventType schema.Type, fsmKey schema.RefKey, err error) {
+	sch := s.schema.Load()
+
+	fsm = &schema.FSM{}
+	if err := sch.ResolveToType(schema.RefFromProto(msg.Fsm), fsm); err != nil {
+		return nil, nil, schema.RefKey{}, fmt.Errorf("fsm not found: %w", err)
+	}
+
+	eventType = schema.TypeFromProto(msg.Event)
+
+	fsmKey = schema.RefFromProto(msg.Fsm).ToRefKey()
+	return fsm, eventType, fsmKey, nil
 }
 
 func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {

@@ -94,6 +94,7 @@ func Find[T any](slice []T, fn func(T) bool) (T, bool) {
 	return zero, false
 }
 
+// FindVariant finds the first element in a slice that can be cast to the given type.
 func FindVariant[T any, U any](slice []U) (T, bool) {
 	for _, el := range slice {
 		if found, ok := any(el).(T); ok {

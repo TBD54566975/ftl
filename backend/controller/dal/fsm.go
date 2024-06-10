@@ -30,14 +30,14 @@ import (
 // future execution.
 //
 // Note: no validation of the FSM is performed.
-func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executionKey string, destinationState schema.RefKey, request json.RawMessage, retryParams schema.RetryParams) (err error) {
+func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string, destinationState schema.RefKey, request json.RawMessage, retryParams schema.RetryParams) (err error) {
 	encryptedRequest, err := d.encryptors.Async.EncryptJSON(request)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt FSM request: %w", err)
 	}
 
 	// Create an async call for the event.
-	origin := AsyncOriginFSM{FSM: fsm, Key: executionKey}
+	origin := AsyncOriginFSM{FSM: fsm, Key: instanceKey}
 	asyncCallID, err := d.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
 		Verb:              destinationState,
 		Origin:            origin.String(),
@@ -61,7 +61,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 	// Start a transition.
 	instance, err := d.db.StartFSMTransition(ctx, sql.StartFSMTransitionParams{
 		Fsm:              fsm,
-		Key:              executionKey,
+		Key:              instanceKey,
 		DestinationState: destinationState,
 		AsyncCallID:      asyncCallID,
 	})
@@ -95,6 +95,44 @@ func (d *DAL) FailFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKe
 func (d *DAL) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.SucceedFSMInstance(ctx, fsm, instanceKey)
 	observability.FSM.InstanceCompleted(ctx, fsm)
+	return dalerrs.TranslatePGError(err)
+}
+
+func (d *DAL) GetFSMState(ctx context.Context, fsm schema.RefKey, instanceKey string) (optional.Option[schema.RefKey], error) {
+	instance, err := d.db.GetFSMInstance(ctx, fsm, instanceKey)
+	if err != nil {
+		return optional.None[schema.RefKey](), dalerrs.TranslatePGError(err)
+	}
+	return instance.CurrentState, nil
+}
+
+type NextFSMEvent struct {
+	DestinationState schema.RefKey
+	Request          json.RawMessage
+}
+
+// GetNextFSMEvent returns the next event for an FSM instance, if any.
+func (d *DAL) GetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (optional.Option[NextFSMEvent], error) {
+	next, err := d.db.GetNextFSMEvent(ctx, fsm, instanceKey)
+	if err != nil {
+		if errors.Is(err, dalerrs.ErrNotFound) {
+			return optional.None[NextFSMEvent](), nil
+		}
+		return optional.None[NextFSMEvent](), dalerrs.TranslatePGError(err)
+	}
+	return optional.Some(NextFSMEvent{
+		DestinationState: next.NextState,
+		Request:          next.Request,
+	}), nil
+}
+
+func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string, nextState schema.RefKey, request json.RawMessage) error {
+	_, err := d.db.SetNextFSMEvent(ctx, sql.SetNextFSMEventParams{
+		Fsm:         fsm,
+		InstanceKey: instanceKey,
+		Event:       nextState,
+		Request:     request,
+	})
 	return dalerrs.TranslatePGError(err)
 }
 
