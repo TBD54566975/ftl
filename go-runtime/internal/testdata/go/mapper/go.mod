@@ -4,7 +4,7 @@ go 1.22.2
 
 toolchain go1.22.3
 
-replace github.com/TBD54566975/ftl => /Users/alec/dev/ftl
+replace github.com/TBD54566975/ftl => ../../../../..
 
 require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 
