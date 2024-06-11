@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/pubsub"
+	"github.com/gofrs/flock"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/exp/maps"
@@ -83,6 +85,13 @@ func WithListener(listener Listener) Option {
 //
 // "dirs" are directories to scan for local modules.
 func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, externalDirs []string, options ...Option) (*Engine, error) {
+	logger := log.FromContext(ctx)
+	lock, err := acquireBuildLock()
+	if err != nil {
+		return nil, err
+	}
+	logger.Debugf("Acquired lock file at %s", lock.Path())
+
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -101,6 +110,14 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
+
+	go func() {
+		<-ctx.Done()
+		err := lock.Unlock()
+		if err != nil {
+			logger.Errorf(err, "failed to unlock file at %s", lock.Path())
+		}
+	}()
 
 	projects, err := DiscoverProjects(ctx, moduleDirs, externalDirs)
 	if err != nil {
@@ -165,6 +182,26 @@ func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, 
 func (e *Engine) Close() error {
 	e.cancel()
 	return nil
+}
+
+func acquireBuildLock() (*flock.Flock, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	lockFile := filepath.Join(homeDir, ".ftl", "build.lock")
+	if err := os.MkdirAll(filepath.Dir(lockFile), 0750); err != nil {
+		return nil, err
+	}
+	lock := flock.New(lockFile)
+	locked, err := lock.TryLock()
+	if err != nil {
+		return nil, err
+	}
+	if !locked {
+		return nil, fmt.Errorf("failed to lock file at: %s", lockFile)
+	}
+	return lock, nil
 }
 
 // Graph returns the dependency graph for the given modules.
