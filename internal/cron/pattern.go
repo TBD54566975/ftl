@@ -221,21 +221,21 @@ func Parse(text string) (Pattern, error) {
 }
 
 // A helper struct to build up a cron pattern with a short syntax.
-type ShortState struct {
+type shortState struct {
 	position    int
 	seenNonZero bool
 	components  []Component
 	err         error
 }
 
-func newShortState() ShortState {
-	return ShortState{
+func newShortState() shortState {
+	return shortState{
 		seenNonZero: false,
 		components:  make([]Component, 0, 7),
 	}
 }
 
-func (ss *ShortState) push(value int) {
+func (ss *shortState) push(value int) {
 	var component Component
 	if value == 0 {
 		if ss.seenNonZero {
@@ -254,11 +254,11 @@ func (ss *ShortState) push(value int) {
 	ss.components = append(ss.components, component)
 }
 
-func (ss *ShortState) full() {
+func (ss *shortState) full() {
 	ss.components = append(ss.components, newComponentWithFullRange())
 }
 
-func (ss ShortState) done() ([]Component, error) {
+func (ss shortState) done() ([]Component, error) {
 	if ss.err != nil {
 		return nil, ss.err
 	}
