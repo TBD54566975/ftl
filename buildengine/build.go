@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -13,12 +14,18 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/errors"
+	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+const BuildLockTimeout = time.Minute
+
 // Build a project in the given directory given the schema and project config.
+//
 // For a module, this will build the module. For an external library, this will build stubs for imported modules.
+//
+// A lock file is used to ensure that only one build is running at a time.
 func Build(ctx context.Context, sch *schema.Schema, project Project, filesTransaction ModifyFilesTransaction) error {
 	switch project := project.(type) {
 	case Module:
@@ -31,6 +38,11 @@ func Build(ctx context.Context, sch *schema.Schema, project Project, filesTransa
 }
 
 func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
+	release, err := flock.Acquire(ctx, filepath.Join(module.Dir, ".ftl-build-lock"), BuildLockTimeout)
+	if err != nil {
+		return err
+	}
+	defer release() //nolint:errcheck
 	logger := log.FromContext(ctx).Scope(module.Module)
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -40,7 +52,6 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 	}
 
 	logger.Infof("Building module")
-	var err error
 	switch module.Language {
 	case "go":
 		err = buildGoModule(ctx, sch, module, filesTransaction)
