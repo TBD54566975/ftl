@@ -38,10 +38,15 @@ type initGoCmd struct {
 	Name    string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
-func isValidGoPackageName(name string) bool {
-	validNamePattern := `^[a-zA-Z][a-zA-Z0-9_]*$`
-	matched, _ := regexp.MatchString(validNamePattern, name)
-	return matched
+func isValidModuleName(name string) bool {
+	validNamePattern := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
+	if !validNamePattern.MatchString(name) {
+		return false
+	}
+	if token.Lookup(name).IsKeyword() {
+		return false
+	}
+	return true
 }
 
 func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
@@ -50,17 +55,12 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	}
 
 	// Validate the module name with custom validation
-	if !isValidGoPackageName(i.Name) {
-		return fmt.Errorf("module name %q is not a valid Go package name", i.Name)
+	if !isValidModuleName(i.Name) {
+		return fmt.Errorf("module name %q must be a valid Go module name and not a reserved keyword", i.Name)
 	}
 
 	if !schema.ValidateName(i.Name) {
 		return fmt.Errorf("module name %q is invalid", i.Name)
-	}
-
-	// Check if the module name is a Go keyword
-	if token.Lookup(i.Name).IsKeyword() {
-		return fmt.Errorf("module name %q is a Go keyword and cannot be used", i.Name)
 	}
 
 	logger := log.FromContext(ctx)
