@@ -8,7 +8,7 @@ import (
 //
 // Config is merged left to right, with later files taking precedence over earlier files.
 func Merge(paths ...string) (Config, error) {
-	config := Config{}
+	config := Config{filePaths: paths}
 	for _, path := range paths {
 		partial, err := loadFile(path)
 		if err != nil {

@@ -33,13 +33,17 @@ type Config struct {
 	Commands      Commands                    `toml:"commands"`
 	FTLMinVersion string                      `toml:"ftl-min-version"`
 	absModuleDirs []string
+	filePaths     []string
 }
 
 // AbsModuleDirsOrDefault returns the absolute path for the module-dirs field from the ftl-project.toml, unless
 // that is not defined, in which case it defaults to the root directory.
 func (c Config) AbsModuleDirsOrDefault() []string { return c.absModuleDirs }
 
-// ConfigPaths returns the computed list of configuration paths to load.
+// FilePaths returns the list of configuration files that generated this Config.
+func (c Config) FilePaths() []string { return c.filePaths }
+
+// ConfigPaths returns the computed list of configuration paths to load, or an empty list if none are found.
 func ConfigPaths(input []string) []string {
 	if len(input) > 0 {
 		return input
@@ -80,7 +84,7 @@ func CreateDefaultFileIfNonexistent(ctx context.Context) error {
 		return err
 	}
 	logger.Debugf("Creating a new project config file at %q", path)
-	return Save(path, Config{})
+	return Save(path, Config{filePaths: []string{path}})
 }
 
 func LoadConfig(ctx context.Context, input []string) (Config, error) {
@@ -108,7 +112,7 @@ func LoadWritableConfig(ctx context.Context, input []string) (Config, error) {
 	logger := log.FromContext(ctx)
 	if _, err := os.Stat(target); errors.Is(err, os.ErrNotExist) {
 		logger.Debugf("Creating a new project config file at %q", target)
-		err = Save(target, Config{})
+		err = Save(target, Config{filePaths: []string{target}})
 		if err != nil {
 			return Config{}, err
 		}
@@ -120,7 +124,7 @@ func LoadWritableConfig(ctx context.Context, input []string) (Config, error) {
 
 // Load project config from a file.
 func loadFile(path string) (Config, error) {
-	config := Config{}
+	config := Config{filePaths: []string{path}}
 	md, err := toml.DecodeFile(path, &config)
 	if err != nil {
 		return Config{}, err

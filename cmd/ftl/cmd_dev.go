@@ -34,6 +34,9 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	if len(d.Dirs) == 0 && len(d.External) == 0 {
 		return errors.New("no directories specified")
 	}
+	if len(projConfig.FilePaths()) == 0 {
+		return errors.New("configuration file not found, create an ftl-project.toml file or specify one with -C")
+	}
 
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
@@ -45,7 +48,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	}
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
-			err := d.ServeCmd.Run(ctx)
+			err := d.ServeCmd.Run(ctx, projConfig)
 			if err != nil {
 				return err
 			}
@@ -55,7 +58,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return errors.New(ftlRunningErrorMsg)
 		}
 
-		g.Go(func() error { return d.ServeCmd.Run(ctx) })
+		g.Go(func() error { return d.ServeCmd.Run(ctx, projConfig) })
 	}
 
 	g.Go(func() error {

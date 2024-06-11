@@ -30,6 +30,7 @@ func TestProjectConfig(t *testing.T) {
 		Commands: Commands{
 			Startup: []string{"echo 'Executing global pre-build command'"},
 		},
+		filePaths: []string{"testdata/ftl-project.toml"},
 	}
 
 	assert.Equal(t, expected, actual)
@@ -41,18 +42,33 @@ func TestProjectLoadConfig(t *testing.T) {
 		paths []string
 		err   string
 	}{
-		{name: "AllValid", paths: []string{"testdata/ftl-project.toml"}},
+		{name: "SingleValid", paths: []string{"testdata/ftl-project.toml"}},
+		{name: "MultipleValid", paths: []string{"testdata/ftl-project.toml", "testdata/go/configs-ftl-project.toml"}},
 		{name: "IsNonExistent", paths: []string{"testdata/ftl-project-nonexistent.toml"}, err: "no such file or directory"},
 		{name: "ContainsNonExistent", paths: []string{"testdata/ftl-project.toml", "testdata/ftl-project-nonexistent.toml"}, err: "no such file or directory"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := LoadConfig(log.ContextWithNewDefaultLogger(context.Background()), test.paths)
+			config, err := LoadConfig(log.ContextWithNewDefaultLogger(context.Background()), test.paths)
 			if test.err != "" {
+				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err)
 			} else {
 				assert.NoError(t, err)
+
+				// Check that all test.paths exist in config.FilePaths
+				assert.Equal(t, len(test.paths), len(config.FilePaths()))
+				for _, path := range test.paths {
+					found := false
+					for _, configPath := range config.FilePaths() {
+						if path == configPath {
+							found = true
+							break
+						}
+					}
+					assert.True(t, found, "expected path %q not found in config.FilePaths", path)
+				}
 			}
 		})
 	}
