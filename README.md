@@ -77,3 +77,4 @@ ftl call alice.echo '{name: "Bob"}'
 hi
 hi
 hi
+hi
