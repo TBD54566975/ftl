@@ -1189,14 +1189,15 @@ WITH cursor AS (
     created_at,
     id
   FROM topic_events
-  WHERE "key" = $2::topic_event_key
+  WHERE "key" = $3::topic_event_key
 )
 SELECT events."key" as event,
         events.payload,
-        events.created_at
+        events.created_at,
+        NOW() - events.created_at >= $1::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
-WHERE topics.key = $1::topic_key
+WHERE topics.key = $2::topic_key
   AND (events.created_at, events.id) > (SELECT COALESCE(MAX(cursor.created_at), '1900-01-01'), COALESCE(MAX(cursor.id), 0) FROM cursor)
 ORDER BY events.created_at, events.id
 LIMIT 1
@@ -1206,12 +1207,18 @@ type GetNextEventForSubscriptionRow struct {
 	Event     optional.Option[model.TopicEventKey]
 	Payload   []byte
 	CreatedAt optional.Option[time.Time]
+	Ready     bool
 }
 
-func (q *Queries) GetNextEventForSubscription(ctx context.Context, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
-	row := q.db.QueryRow(ctx, getNextEventForSubscription, topic, cursor)
+func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDelay time.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
+	row := q.db.QueryRow(ctx, getNextEventForSubscription, consumptionDelay, topic, cursor)
 	var i GetNextEventForSubscriptionRow
-	err := row.Scan(&i.Event, &i.Payload, &i.CreatedAt)
+	err := row.Scan(
+		&i.Event,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.Ready,
+	)
 	return i, err
 }
 
