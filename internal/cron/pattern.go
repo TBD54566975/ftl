@@ -16,7 +16,7 @@ import (
 var (
 	lex = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "Whitespace", Pattern: `\s+`},
-		{Name: "DayOfWeek", Pattern: `(Mo|Tu|We|Th|Fr|Sa|Su)
+		{Name: "DayOfWeek", Pattern: `(?i)(Mo|Tu|We|Th|Fr|Sa|Su)[a-z]*`},
 		{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
 		{Name: "Comment", Pattern: `//.*`},
 		{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
@@ -26,7 +26,6 @@ var (
 
 	parserOptions = []participle.Option{
 		participle.Lexer(lex),
-		participle.CaseInsensitive("DayOfWeek"),
 		participle.Elide("Whitespace"),
 		participle.Unquote(),
 		participle.Map(func(token lexer.Token) (lexer.Token, error) {
@@ -40,7 +39,7 @@ var (
 
 type Pattern struct {
 	Duration   *string     `parser:"@(Number (?! Whitespace) Ident)+"`
-	DayOfWeek  *string     `parser:"| @DayOfWeek"`
+	DayOfWeek  *DayOfWeek  `parser:"| @DayOfWeek"`
 	Components []Component `parser:"| @@*"`
 }
 
@@ -50,77 +49,37 @@ func (p Pattern) String() string {
 	}), " ")
 }
 
-type ShortState struct {
-	position    int
-	seenNonZero bool
-	components  []Component
-	err         error
-}
-
-func newShortState() ShortState {
-	return ShortState{
-		seenNonZero: false,
-		components:  make([]Component, 0, 7),
-	}
-}
-
-func (ss *ShortState) push(value int) {
-	var component Component
-	if value == 0 {
-		if ss.seenNonZero {
-			component = newComponentWithFullRange()
-		} else {
-			component = newComponentWithValue(value)
-		}
-	} else {
-		if ss.seenNonZero {
-			ss.err = fmt.Errorf("only one non-zero component is allowed")
-		}
-		ss.seenNonZero = true
-		component = newComponentWithStep(value)
-	}
-
-	ss.components = append(ss.components, component)
-}
-
-func (ss *ShortState) skip() {
-	if ss.seenNonZero {
-		ss.components = append(ss.components, newComponentWithFullRange())
-	} else {
-		ss.components = append(ss.components, newComponentWithValue(0))
-	}
-}
-
-func (ss *ShortState) all() {
-	ss.components = append(ss.components, newComponentWithFullRange())
-}
-
-func (ss ShortState) done() ([]Component, error) {
-	if ss.err != nil {
-		return nil, ss.err
-	}
-	return ss.components, nil
-}
-
 func (p Pattern) standardizedComponents() ([]Component, error) {
 	if p.Duration != nil {
-		// Scan through seconds, minutes, hours, day of month, month, day of week
-		// All components should be 0 until a non-zero component is found, then all components after that should be *
-		// If a value is 1, it really means * anyway.
 		parsed, err := duration.ParseComponents(*p.Duration)
 		if err != nil {
 			return nil, err
+		}
+		// Do not allow durations with days, as it is confusing for the user.
+		if parsed.Days > 0 {
+			return nil, fmt.Errorf("durations with days are not allowed")
 		}
 
 		ss := newShortState()
 		ss.push(parsed.Seconds)
 		ss.push(parsed.Minutes)
 		ss.push(parsed.Hours)
-		ss.all() // Day of month
-		ss.all() // Month
-		ss.all() // Month
-		ss.all() // Year
+		ss.full() // Day of month
+		ss.full() // Month
+		ss.full() // Day of week
+		ss.full() // Year
 		return ss.done()
+	}
+
+	if p.DayOfWeek != nil {
+		dayOfWeekInt, err := p.DayOfWeek.toInt()
+		if err != nil {
+			return nil, err
+		}
+
+		components := newComponentsFilled()
+		components[5] = newComponentWithValue(dayOfWeekInt)
+		return components, nil
 	}
 
 	switch len(p.Components) {
@@ -171,6 +130,14 @@ func isComponentLikelyToBeYearComponent(component Component) bool {
 
 type Component struct {
 	List []Step `parser:"(@@ (',' @@)*)"`
+}
+
+func newComponentsFilled() []Component {
+	var c []Component
+	for range 7 {
+		c = append(c, newComponentWithFullRange())
+	}
+	return c
 }
 
 func newComponentWithFullRange() Component {
@@ -251,4 +218,74 @@ func Parse(text string) (Pattern, error) {
 		return Pattern{}, err
 	}
 	return *pattern, nil
+}
+
+// A helper struct to build up a cron pattern with a short syntax.
+type ShortState struct {
+	position    int
+	seenNonZero bool
+	components  []Component
+	err         error
+}
+
+func newShortState() ShortState {
+	return ShortState{
+		seenNonZero: false,
+		components:  make([]Component, 0, 7),
+	}
+}
+
+func (ss *ShortState) push(value int) {
+	var component Component
+	if value == 0 {
+		if ss.seenNonZero {
+			component = newComponentWithFullRange()
+		} else {
+			component = newComponentWithValue(value)
+		}
+	} else {
+		if ss.seenNonZero {
+			ss.err = fmt.Errorf("only one non-zero component is allowed")
+		}
+		ss.seenNonZero = true
+		component = newComponentWithStep(value)
+	}
+
+	ss.components = append(ss.components, component)
+}
+
+func (ss *ShortState) full() {
+	ss.components = append(ss.components, newComponentWithFullRange())
+}
+
+func (ss ShortState) done() ([]Component, error) {
+	if ss.err != nil {
+		return nil, ss.err
+	}
+	return ss.components, nil
+}
+
+type DayOfWeek string
+
+// toInt converts a DayOfWeek to an integer, where Sunday is 0 and Saturday is 6.
+// Case insensitively check the first two characters to match.
+func (d *DayOfWeek) toInt() (int, error) {
+	switch strings.ToLower(string(*d)[:2]) {
+	case "su":
+		return 0, nil
+	case "mo":
+		return 1, nil
+	case "tu":
+		return 2, nil
+	case "we":
+		return 3, nil
+	case "th":
+		return 4, nil
+	case "fr":
+		return 5, nil
+	case "sa":
+		return 6, nil
+	default:
+		return 0, fmt.Errorf("invalid day of week %q", *d)
+	}
 }
