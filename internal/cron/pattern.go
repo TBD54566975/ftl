@@ -16,6 +16,7 @@ import (
 var (
 	lex = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "Whitespace", Pattern: `\s+`},
+		{Name: "DayOfWeek", Pattern: `(Mo|Tu|We|Th|Fr|Sa|Su)
 		{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
 		{Name: "Comment", Pattern: `//.*`},
 		{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
@@ -25,6 +26,7 @@ var (
 
 	parserOptions = []participle.Option{
 		participle.Lexer(lex),
+		participle.CaseInsensitive("DayOfWeek"),
 		participle.Elide("Whitespace"),
 		participle.Unquote(),
 		participle.Map(func(token lexer.Token) (lexer.Token, error) {
@@ -38,6 +40,7 @@ var (
 
 type Pattern struct {
 	Duration   *string     `parser:"@(Number (?! Whitespace) Ident)+"`
+	DayOfWeek  *string     `parser:"| @DayOfWeek"`
 	Components []Component `parser:"| @@*"`
 }
 
@@ -115,8 +118,8 @@ func (p Pattern) standardizedComponents() ([]Component, error) {
 		ss.push(parsed.Hours)
 		ss.all() // Day of month
 		ss.all() // Month
-		ss.push(parsed.Days)
-		ss.skip()
+		ss.all() // Month
+		ss.all() // Year
 		return ss.done()
 	}
 
