@@ -10,10 +10,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
-	"golang.org/x/mod/module"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
@@ -38,14 +38,20 @@ type initGoCmd struct {
 	Name    string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
+func isValidGoPackageName(name string) bool {
+	validNamePattern := `^[a-zA-Z][a-zA-Z0-9_]*$`
+	matched, _ := regexp.MatchString(validNamePattern, name)
+	return matched
+}
+
 func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
 
-	// Validate the module name
-	if err := module.CheckPath(i.Name); err != nil {
-		return fmt.Errorf("module name %q is not a valid Go package name: %v", i.Name, err)
+	// Validate the module name with custom validation
+	if !isValidGoPackageName(i.Name) {
+		return fmt.Errorf("module name %q is not a valid Go package name", i.Name)
 	}
 
 	if !schema.ValidateName(i.Name) {
