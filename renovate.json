@@ -10,6 +10,13 @@
   ],
   "packageRules": [
     {
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true
+    },
+    {
       "matchPackageNames": [
         "jbr",
         "ktfmt",
