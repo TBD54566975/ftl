@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
+	"github.com/TBD54566975/golang-tools/go/packages"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
-	"golang.org/x/tools/go/packages"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/errors"
