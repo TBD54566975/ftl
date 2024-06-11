@@ -107,7 +107,7 @@ func TestNext(t *testing.T) {
 				time.Date(2024, 6, 9, 18, 20, 0, 0, time.UTC),
 			},
 		}},
-		// */5 * * * * *
+		// */5 * * * * * *
 		{"5s", [][]time.Time{
 			{
 				time.Date(2025, 6, 5, 3, 7, 5, 123, time.UTC),
@@ -133,7 +133,7 @@ func TestNext(t *testing.T) {
 				time.Date(2025, 6, 5, 4, 0, 0, 0, time.UTC),
 			},
 		}},
-		// 5h should be every 5 hours: 0 0 */5 * * *, ie 0,5,10,15,20
+		// 5h should be every 5 hours: 0 0 */5 * * * *, ie 0,5,10,15,20
 		{"5h", [][]time.Time{
 			{
 				time.Date(2025, 6, 5, 3, 7, 5, 123, time.UTC),

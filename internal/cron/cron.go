@@ -70,8 +70,6 @@ func NextAfter(pattern Pattern, origin time.Time, inclusive bool) (time.Time, er
 		return origin, err
 	}
 
-	fmt.Printf("components: %v\n", components)
-
 	for idx, component := range components {
 		if err = validateComponent(component, componentType(idx)); err != nil {
 			return origin, err
