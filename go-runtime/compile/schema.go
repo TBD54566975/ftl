@@ -17,12 +17,12 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
-	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/go/packages"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/internal/goast"
+	"github.com/TBD54566975/golang-tools/go/ast/astutil"
+	"github.com/TBD54566975/golang-tools/go/packages"
 )
 
 var (
