@@ -36,5 +36,11 @@ func SendInvoiceEmail(ctx context.Context, in Invoice) error {
 }
 ```
 
+Events can be published to a topic like so:
+
+```go
+invoicesTopic.Publish(ctx, Invoice{...})
+```
+
 > **NOTE!**
 > PubSub topics cannot be published to from outside the module that declared them, they can only be subscribed to. That is, if a topic is declared in module `A`, module `B` cannot publish to it.
