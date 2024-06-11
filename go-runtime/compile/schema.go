@@ -356,9 +356,9 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 }
 
 // validateCallExpr validates all function calls
-// checks if the is directly:
-// - calling external verbs
-// - publishing to an external module's topic
+// checks if the function call is:
+// - a direct verb call to an external module
+// - a direct publish call on an external module's topic
 func validateCallExpr(pctx *parseContext, node *ast.CallExpr) {
 	selExpr, ok := node.Fun.(*ast.SelectorExpr)
 	if !ok {
