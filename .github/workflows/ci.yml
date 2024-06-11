@@ -12,26 +12,36 @@ jobs:
     name: Test Go
     runs-on: ubuntu-latest
     steps:
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
         uses: ./.github/actions/build-cache
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Docker Compose
         run: docker compose up -d --wait
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Test
         run: go-test-annotate
   test-readme:
     name: Test README
     runs-on: ubuntu-latest
     steps:
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
         uses: ./.github/actions/build-cache
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Test README
@@ -40,14 +50,20 @@ jobs:
     name: SQL
     runs-on: ubuntu-latest
     steps:
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
         uses: ./.github/actions/build-cache
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Docker Compose
         run: docker compose up -d --wait
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Initialise database
         run: just init-db
       - name: Vet SQL
@@ -171,6 +187,8 @@ jobs:
       fail-fast: false
       matrix: ${{fromJson(needs.integration-shard.outputs.matrix)}}
     steps:
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
@@ -179,10 +197,16 @@ jobs:
           cache: true
       - name: Build Cache
         uses: ./.github/actions/build-cache
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Docker Compose
         run: docker compose up -d --wait
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Create DB
         run: just init-db
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Download Go Modules
         run: go mod download
       - name: Run ${{ matrix.test }}
@@ -194,5 +218,7 @@ jobs:
     needs: [integration-run]
     runs-on: ubuntu-latest
     steps:
+      - name: Show all TCP ports listening
+        run: sudo netstat -lpnt
       - name: Ok
         run: echo "Integration tests passed"
