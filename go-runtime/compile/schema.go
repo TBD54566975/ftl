@@ -34,6 +34,7 @@ var (
 		return mustLoadRef("builtin", "error").Type().Underlying().(*types.Interface) //nolint:forcetypeassert
 	})
 
+	ftlPkgPath              = "github.com/TBD54566975/ftl/go-runtime/ftl"
 	ftlCallFuncPath         = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
 	ftlFSMFuncPath          = "github.com/TBD54566975/ftl/go-runtime/ftl.FSM"
 	ftlTransitionFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Transition"
@@ -45,6 +46,7 @@ var (
 	ftlOptionTypePath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
 	ftlTopicFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.Topic"
 	ftlSubscriptionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Subscription"
+	ftlTopicHandleTypeName  = "TopicHandle"
 	aliasFieldTag           = "json"
 )
 
@@ -325,6 +327,8 @@ func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 }
 
 func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
+	validateCallExpr(pctx, node, stack)
+
 	_, fn := deref[*types.Func](pctx.pkg, node.Fun)
 	if fn == nil {
 		return
@@ -348,6 +352,60 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 
 	case ftlSubscriptionFuncPath:
 		parseSubscriptionDecl(pctx, node)
+	}
+}
+
+// validateCallExpr validates all function calls
+// checks if the is directly:
+// - calling external verbs
+// - publishing to an external module's topic
+func validateCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
+	selExpr, ok := node.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+
+	var lhsIdent *ast.Ident
+	if expr, ok := selExpr.X.(*ast.SelectorExpr); ok {
+		lhsIdent = expr.Sel
+	} else if ident, ok := selExpr.X.(*ast.Ident); ok {
+		lhsIdent = ident
+	} else {
+		return
+	}
+
+	lhsObject := pctx.pkg.TypesInfo.ObjectOf(lhsIdent)
+	if lhsObject == nil {
+		return
+	}
+
+	var lhsPkgPath string
+	if pkgName, ok := lhsObject.(*types.PkgName); ok {
+		lhsPkgPath = pkgName.Imported().Path()
+	} else {
+		lhsPkgPath = lhsObject.Pkg().Path()
+	}
+
+	var lhsIsExternal bool
+	if !pctx.isPathInPkg(lhsPkgPath) {
+		lhsIsExternal = true
+	}
+
+	if lhsType, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.X).(*types.Named); ok && lhsType.Obj().Pkg().Path() == ftlPkgPath {
+		// Calling a function on an FTL type
+		if lhsType.Obj().Name() == ftlTopicHandleTypeName && selExpr.Sel.Name == "Publish" {
+			if lhsIsExternal {
+				pctx.errors.add(errorf(node, "can not publish directly to topics in other modules"))
+			}
+		}
+		return
+	}
+
+	if lhsIsExternal && strings.HasPrefix(lhsPkgPath, "ftl/") {
+		if _, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.Sel).(*types.Signature); ok {
+			// can not call functions in external modules directly
+			pctx.errors.add(errorf(node, "can not call verbs in other modules directly: use ftl.Call(…) instead"))
+		}
 	}
 }
 

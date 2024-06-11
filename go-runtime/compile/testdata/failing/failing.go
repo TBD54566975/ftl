@@ -164,15 +164,7 @@ func BadCron(ctx context.Context) error {
 }
 
 //ftl:verb
-func ExternalPublish(ctx context.Context) error {
-	return ps.PublicBroadcast.Publish(ctx, ps.PayinEvent{Name: "Test"})
-}
-
-//ftl:verb
-func ObfuscatedPublish(ctx context.Context) error {
-	return obfuscatedTopic().Publish(ctx, ps.PayinEvent{Name: "Test"})
-}
-
-func obfuscatedTopic() ftl.TopicHandle[ps.PayinEvent] {
-	return ps.PublicBroadcast
+func BadPublish(ctx context.Context) error {
+	ps.PublicBroadcast.Publish(ctx, ps.PayinEvent{Name: "Test"})
+	return ps.Broadcast(ctx)
 }

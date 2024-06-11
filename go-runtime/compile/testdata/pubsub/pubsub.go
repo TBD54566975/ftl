@@ -38,7 +38,7 @@ var _ = ftl.Subscription(broadcast, "broadcastSubscription")
 //ftl:export
 var broadcast = ftl.Topic[PayinEvent]("publicBroadcast")
 
-//ftl:verb
+//ftl:verb export
 func Broadcast(ctx context.Context) error {
 	if err := broadcast.Publish(ctx, PayinEvent{Name: "Broadcast"}); err != nil {
 		return fmt.Errorf("failed to publish broadcast event: %w", err)
