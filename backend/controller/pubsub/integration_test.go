@@ -106,3 +106,17 @@ func TestRetry(t *testing.T) {
 			1+retriesPerCall),
 	)
 }
+
+func TestExternalPublishRuntimeCheck(t *testing.T) {
+	in.Run(t, "",
+		in.CopyModule("publisher"),
+		in.CopyModule("subscriber"),
+		in.Deploy("publisher"),
+		in.Deploy("subscriber"),
+
+		in.ExpectError(
+			in.Call("subscriber", "publishToExternalModule", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
+			"can not publish to another module's topic",
+		),
+	)
+}

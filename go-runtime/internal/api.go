@@ -2,6 +2,8 @@ package internal
 
 import (
 	"context"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 // FTL is the interface that the FTL runtime provides to user code.
@@ -16,7 +18,7 @@ type FTL interface {
 	FSMSend(ctx context.Context, fsm, instance string, data any) error
 
 	// PublishEvent sends an event to a pubsub topic.
-	PublishEvent(ctx context.Context, topic string, event any) error
+	PublishEvent(ctx context.Context, topic *schema.Ref, event any) error
 
 	// CallMap calls Get on an instance of an ftl.Map.
 	//

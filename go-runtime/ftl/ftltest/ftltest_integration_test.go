@@ -14,8 +14,12 @@ func TestModuleUnitTests(t *testing.T) {
 		in.CopyModule("time"),
 		in.CopyModule("wrapped"),
 		in.CopyModule("verbtypes"),
-		in.Build("time", "wrapped", "verbtypes"),
+		in.CopyModule("pubsub"),
+		in.CopyModule("subscriber"),
+		in.Build("time", "wrapped", "verbtypes", "pubsub", "subscriber"),
 		in.ExecModuleTest("wrapped"),
 		in.ExecModuleTest("verbtypes"),
+		in.ExecModuleTest("pubsub"),
+		in.ExecModuleTest("subscriber"),
 	)
 }
