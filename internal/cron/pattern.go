@@ -2,6 +2,7 @@ package cron
 
 import (
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/duration"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +37,8 @@ var (
 )
 
 type Pattern struct {
-	Components []Component `parser:"@@*"`
+	Duration   *string     `parser:"@(Number (?! Whitespace) Ident)+"`
+	Components []Component `parser:"| @@*"`
 }
 
 func (p Pattern) String() string {
@@ -45,7 +47,79 @@ func (p Pattern) String() string {
 	}), " ")
 }
 
+type ShortState struct {
+	position    int
+	seenNonZero bool
+	components  []Component
+	err         error
+}
+
+func newShortState() ShortState {
+	return ShortState{
+		seenNonZero: false,
+		components:  make([]Component, 0, 7),
+	}
+}
+
+func (ss *ShortState) push(value int) {
+	var component Component
+	if value == 0 {
+		if ss.seenNonZero {
+			component = newComponentWithFullRange()
+		} else {
+			component = newComponentWithValue(value)
+		}
+	} else {
+		if ss.seenNonZero {
+			ss.err = fmt.Errorf("only one non-zero component is allowed")
+		}
+		ss.seenNonZero = true
+		component = newComponentWithStep(value)
+	}
+
+	ss.components = append(ss.components, component)
+}
+
+func (ss *ShortState) skip() {
+	if ss.seenNonZero {
+		ss.components = append(ss.components, newComponentWithFullRange())
+	} else {
+		ss.components = append(ss.components, newComponentWithValue(0))
+	}
+}
+
+func (ss *ShortState) all() {
+	ss.components = append(ss.components, newComponentWithFullRange())
+}
+
+func (ss ShortState) done() ([]Component, error) {
+	if ss.err != nil {
+		return nil, ss.err
+	}
+	return ss.components, nil
+}
+
 func (p Pattern) standardizedComponents() ([]Component, error) {
+	if p.Duration != nil {
+		// Scan through seconds, minutes, hours, day of month, month, day of week
+		// All components should be 0 until a non-zero component is found, then all components after that should be *
+		// If a value is 1, it really means * anyway.
+		parsed, err := duration.ParseComponents(*p.Duration)
+		if err != nil {
+			return nil, err
+		}
+
+		ss := newShortState()
+		ss.push(parsed.Seconds)
+		ss.push(parsed.Minutes)
+		ss.push(parsed.Hours)
+		ss.all() // Day of month
+		ss.all() // Month
+		ss.push(parsed.Days)
+		ss.skip()
+		return ss.done()
+	}
+
 	switch len(p.Components) {
 	case 5:
 		// Convert "a b c d e" -> "0 a b c d e *"
@@ -111,6 +185,15 @@ func newComponentWithValue(value int) Component {
 		List: []Step{
 			newStepWithValue(value),
 		},
+	}
+}
+
+func newComponentWithStep(value int) Component {
+	var step Step
+	step.Step = &value
+	step.ValueRange.IsFullRange = true
+	return Component{
+		List: []Step{step},
 	}
 }
 

@@ -107,6 +107,54 @@ func TestNext(t *testing.T) {
 				time.Date(2024, 6, 9, 18, 20, 0, 0, time.UTC),
 			},
 		}},
+		// */5 * * * * *
+		{"5s", [][]time.Time{
+			{
+				time.Date(2025, 6, 5, 3, 7, 5, 123, time.UTC),
+				time.Date(2025, 6, 5, 3, 7, 10, 0, time.UTC),
+			},
+			{
+				time.Date(2025, 6, 5, 3, 59, 55, 123, time.UTC),
+				time.Date(2025, 6, 5, 4, 0, 0, 0, time.UTC),
+			},
+		}},
+		// 25m should be every 25 minutes: 0 */25 * * * * * ie 0,25,50
+		{"25m", [][]time.Time{
+			{
+				time.Date(2025, 6, 5, 3, 7, 5, 123, time.UTC),
+				time.Date(2025, 6, 5, 3, 25, 0, 0, time.UTC),
+			},
+			{
+				time.Date(2025, 6, 5, 3, 49, 5, 123, time.UTC),
+				time.Date(2025, 6, 5, 3, 50, 0, 0, time.UTC),
+			},
+			{
+				time.Date(2025, 6, 5, 3, 50, 5, 123, time.UTC),
+				time.Date(2025, 6, 5, 4, 0, 0, 0, time.UTC),
+			},
+		}},
+		// 5h should be every 5 hours: 0 0 */5 * * *, ie 0,5,10,15,20
+		{"5h", [][]time.Time{
+			{
+				time.Date(2025, 6, 5, 3, 7, 5, 123, time.UTC),
+				time.Date(2025, 6, 5, 5, 0, 0, 0, time.UTC),
+			},
+			{
+				time.Date(2025, 6, 5, 19, 59, 5, 123, time.UTC),
+				time.Date(2025, 6, 5, 20, 0, 0, 0, time.UTC),
+			},
+			{
+				time.Date(2025, 6, 5, 21, 59, 5, 123, time.UTC),
+				time.Date(2025, 6, 6, 0, 0, 0, 0, time.UTC),
+			},
+		}},
+		// Every wednesday
+		//{"wednesday", [][]time.Time{
+		//	{ // 2024-06-09 is a Sunday
+		//		time.Date(2024, 6, 9, 0, 0, 0, 0, time.UTC),
+		//		time.Date(2024, 6, 9, 0, 0, 0, 0, time.UTC),
+		//	},
+		//}},
 	} {
 		t.Run(fmt.Sprintf("CronSeries:%s", tt.str), func(t *testing.T) {
 			pattern, err := Parse(tt.str)
@@ -204,6 +252,18 @@ func TestSeries(t *testing.T) {
 			time.Date(2023, 12, 31, 23, 59, 0, 0, time.UTC),
 			time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC),
 			31,
+		},
+		{ // An hour worth of 5 minutes
+			"0 */5 * * * * *",
+			time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC),
+			time.Date(2025, 1, 2, 4, 4, 5, 6, time.UTC),
+			12,
+		},
+		{ // An hour worth of 5 minutes using shorthand
+			"5m",
+			time.Date(2025, 1, 2, 3, 4, 5, 6, time.UTC),
+			time.Date(2025, 1, 2, 4, 4, 5, 6, time.UTC),
+			12,
 		},
 	} {
 		t.Run(fmt.Sprintf("CronSeries:%s", tt.str), func(t *testing.T) {
