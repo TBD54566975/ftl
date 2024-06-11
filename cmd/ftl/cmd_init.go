@@ -5,10 +5,12 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"go/token"
 	"html/template"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
@@ -36,13 +38,31 @@ type initGoCmd struct {
 	Name    string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
+func isValidModuleName(name string) bool {
+	validNamePattern := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
+	if !validNamePattern.MatchString(name) {
+		return false
+	}
+	if token.Lookup(name).IsKeyword() {
+		return false
+	}
+	return true
+}
+
 func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
+
+	// Validate the module name with custom validation
+	if !isValidModuleName(i.Name) {
+		return fmt.Errorf("module name %q must be a valid Go module name and not a reserved keyword", i.Name)
+	}
+
 	if !schema.ValidateName(i.Name) {
 		return fmt.Errorf("module name %q is invalid", i.Name)
 	}
+
 	logger := log.FromContext(ctx)
 	logger.Debugf("Initializing FTL Go module %s in %s", i.Name, i.Dir)
 	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
