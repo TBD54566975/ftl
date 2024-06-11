@@ -58,7 +58,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 	successful := 0
 	for _, subscription := range subs {
-		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, eventConsumptionDelay.Seconds(), subscription.Topic, subscription.Cursor)
+		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, eventConsumptionDelay, subscription.Topic, subscription.Cursor)
 		if err != nil {
 			return 0, fmt.Errorf("failed to get next cursor: %w", translatePGError(err))
 		}

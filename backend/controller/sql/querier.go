@@ -63,7 +63,7 @@ type Querier interface {
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
 	GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
-	GetNextEventForSubscription(ctx context.Context, consumptionDelay float64, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
+	GetNextEventForSubscription(ctx context.Context, consumptionDelay time.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error)
 	// Retrieve routing information for a runner.

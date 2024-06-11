@@ -1194,7 +1194,7 @@ WITH cursor AS (
 SELECT events."key" as event,
         events.payload,
         events.created_at,
-        (EXTRACT(EPOCH FROM (NOW() - events.created_at))::double precision >= $1) AS ready
+        NOW() - events.created_at >= $1::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
 WHERE topics.key = $2::topic_key
@@ -1210,7 +1210,7 @@ type GetNextEventForSubscriptionRow struct {
 	Ready     bool
 }
 
-func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDelay float64, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
+func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDelay time.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
 	row := q.db.QueryRow(ctx, getNextEventForSubscription, consumptionDelay, topic, cursor)
 	var i GetNextEventForSubscriptionRow
 	err := row.Scan(
