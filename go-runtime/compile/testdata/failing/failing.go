@@ -5,6 +5,8 @@ import (
 
 	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
+
+	ps "ftl/pubsub"
 )
 
 var empty = ftl.Config[string](1)
@@ -159,4 +161,10 @@ func GoodCron(ctx context.Context) error {
 //ftl:cron 0 0 0 0 0
 func BadCron(ctx context.Context) error {
 	return nil
+}
+
+//ftl:verb
+func BadPublish(ctx context.Context) error {
+	ps.PublicBroadcast.Publish(ctx, ps.PayinEvent{Name: "Test"})
+	return ps.Broadcast(ctx)
 }
