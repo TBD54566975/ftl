@@ -8,10 +8,10 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-//go:embed markdown/verb.md
+//go:embed markdown/hover/verb.md
 var verbHoverContent string
 
-//go:embed markdown/enum.md
+//go:embed markdown/hover/enum.md
 var enumHoverContent string
 
 var hoverMap = map[string]string{

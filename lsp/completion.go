@@ -1,12 +1,22 @@
 package lsp
 
 import (
+	_ "embed"
 	"os"
 	"strings"
 
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
+
+//go:embed markdown/completion/verb.md
+var verbCompletionDocs string
+
+//go:embed markdown/completion/enumType.md
+var enumTypeCompletionDocs string
+
+//go:embed markdown/completion/enumValue.md
+var enumValueCompletionDocs string
 
 var (
 	snippetKind      = protocol.CompletionItemKindSnippet
@@ -24,13 +34,8 @@ func ${3:Name}(ctx context.Context, req ${1:Request}) (${2:Response}, error) {
 	return ${2:Response}{}, nil
 }`),
 		Documentation: &protocol.MarkupContent{
-			Kind: protocol.MarkupKindMarkdown,
-			Value: `Snippet for defining a verb function.
-			
-` + "```go" + `
-//ftl:verb
-func Name(ctx context.Context, req Request) (Response, error) {}
-` + "```",
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: verbCompletionDocs,
 		},
 		InsertTextFormat: &insertTextFormat,
 	}
@@ -47,18 +52,8 @@ const (
 	${3:Value2} ${1:Enum} = "${3:Value2}"
 )`),
 		Documentation: &protocol.MarkupContent{
-			Kind: protocol.MarkupKindMarkdown,
-			Value: `Snippet for defining a type enum.
-		
-` + "```go" + `
-//ftl:enum
-type MyEnum string
-
-const (
-	Value1 MyEnum = "Value1"
-	Value2 MyEnum = "Value2"
-)
-` + "```",
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: enumTypeCompletionDocs,
 		},
 		InsertTextFormat: &insertTextFormat,
 	}
@@ -74,16 +69,8 @@ type ${3:Value} struct {}
 func (${3:Value}) ${2:interface}() {}
 `),
 		Documentation: &protocol.MarkupContent{
-			Kind: protocol.MarkupKindMarkdown,
-			Value: `Snippet for defining a value enum value.
-
-` + "```go" + `
-//ftl:enum
-type Animal interface { animal() }
-
-type Cat struct {}
-func (Cat) animal() {}
-` + "```",
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: enumValueCompletionDocs,
 		},
 		InsertTextFormat: &insertTextFormat,
 	}
