@@ -58,7 +58,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 	successful := 0
 	for _, subscription := range subs {
-		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, subscription.Topic, subscription.Cursor)
+		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, float64(eventConsumptionDelay), subscription.Topic, subscription.Cursor)
 		if err != nil {
 			return 0, fmt.Errorf("failed to get next cursor: %w", translatePGError(err))
 		}
@@ -66,7 +66,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		if !ok {
 			return 0, fmt.Errorf("could not find event to progress subscription: %w", translatePGError(err))
 		}
-		if nextCreatedAt, ok := nextCursor.CreatedAt.Get(); ok && nextCreatedAt.Add(eventConsumptionDelay).After(time.Now()) {
+		if !nextCursor.Ready {
 			logger.Tracef("Skipping subscription %s because event is too new", subscription.Key)
 			continue
 		}

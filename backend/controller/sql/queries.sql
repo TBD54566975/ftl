@@ -717,7 +717,8 @@ WITH cursor AS (
 )
 SELECT events."key" as event,
         events.payload,
-        events.created_at
+        events.created_at,
+        (EXTRACT(EPOCH FROM (NOW() - events.created_at))::double precision >= sqlc.arg('consumption_delay')) AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
 WHERE topics.key = sqlc.arg('topic')::topic_key
