@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"go/build"
 	"go/token"
 	"html/template"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
+	"golang.org/x/mod/module"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
@@ -43,8 +43,9 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 		i.Name = filepath.Base(i.Dir)
 	}
 
-	if !build.IsLocalImport(i.Name) {
-		return fmt.Errorf("module name %q is not a valid Go package name", i.Name)
+	// Validate the module name
+	if err := module.CheckPath(i.Name); err != nil {
+		return fmt.Errorf("module name %q is not a valid Go package name: %v", i.Name, err)
 	}
 
 	if !schema.ValidateName(i.Name) {
