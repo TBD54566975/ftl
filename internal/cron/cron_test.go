@@ -282,7 +282,7 @@ func TestSeries(t *testing.T) {
 			5,
 		},
 		{ // A month of Fridays
-			"fr",
+			"fri",
 			// 2025-01-01 is a Wednesday
 			time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC),

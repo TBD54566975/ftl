@@ -16,7 +16,6 @@ import (
 var (
 	lex = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "Whitespace", Pattern: `\s+`},
-		{Name: "DayOfWeek", Pattern: `(?i)(Mo|Tu|We|Th|Fr|Sa|Su)[a-z]*`},
 		{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
 		{Name: "Comment", Pattern: `//.*`},
 		{Name: "String", Pattern: `"(?:\\.|[^"])*"`},
@@ -26,6 +25,7 @@ var (
 
 	parserOptions = []participle.Option{
 		participle.Lexer(lex),
+		participle.CaseInsensitive("Ident"),
 		participle.Elide("Whitespace"),
 		participle.Unquote(),
 		participle.Map(func(token lexer.Token) (lexer.Token, error) {
@@ -39,7 +39,7 @@ var (
 
 type Pattern struct {
 	Duration   *string     `parser:"@(Number (?! Whitespace) Ident)+"`
-	DayOfWeek  *DayOfWeek  `parser:"| @DayOfWeek"`
+	DayOfWeek  *DayOfWeek  `parser:"| @('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun')"`
 	Components []Component `parser:"| @@*"`
 }
 
@@ -268,24 +268,24 @@ func (ss shortState) done() ([]Component, error) {
 type DayOfWeek string
 
 // toInt converts a DayOfWeek to an integer, where Sunday is 0 and Saturday is 6.
-// Case insensitively check the first two characters to match.
+// Case insensitively check the first three characters to match.
 func (d *DayOfWeek) toInt() (int, error) {
-	switch strings.ToLower(string(*d)[:2]) {
-	case "su":
+	switch strings.ToLower(string(*d)[:3]) {
+	case "sun":
 		return 0, nil
-	case "mo":
+	case "mon":
 		return 1, nil
-	case "tu":
+	case "tue":
 		return 2, nil
-	case "we":
+	case "wed":
 		return 3, nil
-	case "th":
+	case "thu":
 		return 4, nil
-	case "fr":
+	case "fri":
 		return 5, nil
-	case "sa":
+	case "sat":
 		return 6, nil
 	default:
-		return 0, fmt.Errorf("invalid day of week %q", *d)
+		return 0, fmt.Errorf("invalid day of week: %q", *d)
 	}
 }
