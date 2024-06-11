@@ -5,6 +5,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"go/build"
+	"go/token"
 	"html/template"
 	"os"
 	"path"
@@ -40,9 +42,20 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if i.Name == "" {
 		i.Name = filepath.Base(i.Dir)
 	}
+
+	if !build.IsLocalImport(i.Name) {
+		return fmt.Errorf("module name %q is not a valid Go package name", i.Name)
+	}
+
 	if !schema.ValidateName(i.Name) {
 		return fmt.Errorf("module name %q is invalid", i.Name)
 	}
+
+	// Check if the module name is a Go keyword
+	if token.Lookup(i.Name).IsKeyword() {
+		return fmt.Errorf("module name %q is a Go keyword and cannot be used", i.Name)
+	}
+
 	logger := log.FromContext(ctx)
 	logger.Debugf("Initializing FTL Go module %s in %s", i.Name, i.Dir)
 	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
