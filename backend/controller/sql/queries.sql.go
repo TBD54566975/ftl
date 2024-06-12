@@ -256,6 +256,32 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
+const deleteOldSubscriptions = `-- name: DeleteOldSubscriptions :exec
+DELETE FROM topic_subscriptions
+WHERE module_id = (SELECT id FROM modules WHERE name = $1::TEXT)
+  AND NOT name = ANY ($2::TEXT[])
+`
+
+func (q *Queries) DeleteOldSubscriptions(ctx context.Context, module string, subscriptions []string) error {
+	_, err := q.db.Exec(ctx, deleteOldSubscriptions, module, subscriptions)
+	return err
+}
+
+const deleteSubscribers = `-- name: DeleteSubscribers :exec
+DELETE FROM topic_subscribers
+WHERE deployment_id IN (
+    SELECT deployments.id
+    FROM deployments
+    LEFT JOIN modules ON deployments.module_id = modules.id
+    WHERE modules.name = $1::TEXT
+)
+`
+
+func (q *Queries) DeleteSubscribers(ctx context.Context, module string) error {
+	_, err := q.db.Exec(ctx, deleteSubscribers, module)
+	return err
+}
+
 const deregisterRunner = `-- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
@@ -1278,10 +1304,8 @@ SELECT
   subscribers.backoff as backoff,
   subscribers.max_backoff as max_backoff
 FROM topic_subscribers as subscribers
-JOIN deployments ON subscribers.deployment_id = deployments.id
 JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
 WHERE topic_subscriptions.key = $1::subscription_key
-  AND deployments.min_replicas > 0
 ORDER BY RANDOM()
 LIMIT 1
 `

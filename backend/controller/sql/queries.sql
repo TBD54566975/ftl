@@ -645,6 +645,20 @@ UPDATE SET
   topic_id = excluded.topic_id
 RETURNING id;
 
+-- name: DeleteOldSubscriptions :exec
+DELETE FROM topic_subscriptions
+WHERE module_id = (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT)
+  AND NOT name = ANY (sqlc.arg('subscriptions')::TEXT[]);
+
+-- name: DeleteSubscribers :exec
+DELETE FROM topic_subscribers
+WHERE deployment_id IN (
+    SELECT deployments.id
+    FROM deployments
+    LEFT JOIN modules ON deployments.module_id = modules.id
+    WHERE modules.name = sqlc.arg('module')::TEXT
+);
+
 -- name: InsertSubscriber :exec
 INSERT INTO topic_subscribers (
   key,
@@ -733,10 +747,8 @@ SELECT
   subscribers.backoff as backoff,
   subscribers.max_backoff as max_backoff
 FROM topic_subscribers as subscribers
-JOIN deployments ON subscribers.deployment_id = deployments.id
 JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
 WHERE topic_subscriptions.key = sqlc.arg('key')::subscription_key
-  AND deployments.min_replicas > 0
 ORDER BY RANDOM()
 LIMIT 1;
 
