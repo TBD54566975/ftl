@@ -41,7 +41,7 @@ func Context(options ...Option) context.Context {
 	}
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx = internal.WithContext(ctx, newFakeFTL())
+	ctx = internal.WithContext(ctx, newFakeFTL(ctx))
 	name := reflection.Module()
 
 	for _, option := range options {
@@ -370,4 +370,62 @@ func getDSNFromSecret(ftl internal.FTL, module, name string) (string, error) {
 		return "", fmt.Errorf("could not get DSN for database %q from secret %q: %w", name, key, err)
 	}
 	return dsn, nil
+}
+
+// WithSubscriber adds a subscriber during a test
+//
+// By default, all subscribers are disabled in unit tests, and must be manually enabled by calling WithSubscriber(…).
+// This allows easy isolation for each unit test.
+//
+// WithSubscriber(…) can also be used to make an ad-hoc subscriber for your test by defining a new function as the sink.
+//
+// To be used when setting up a context for a test:
+//
+//	ctx := ftltest.Context(
+//		ftltest.WithSubscriber(paymentTopic, ProcessPayment),
+//		// ... other options
+//	)
+func WithSubscriber[E any](subscription ftl.SubscriptionHandle[E], sink ftl.Sink[E]) Option {
+	return func(ctx context.Context, state *OptionsState) error {
+		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+		addSubscriber(fftl.pubSub, subscription, sink)
+		return nil
+	}
+}
+
+// EventsForTopic returns all published events for a topic
+func EventsForTopic[E any](ctx context.Context, topic ftl.TopicHandle[E]) []E {
+	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+	return eventsForTopic(ctx, fftl.pubSub, topic)
+}
+
+type SubscriptionResult[E any] struct {
+	Event E
+	Error ftl.Option[error]
+}
+
+// ResultsForSubscription returns all consumed events for a subscription, with any resulting errors
+func ResultsForSubscription[E any](ctx context.Context, subscription ftl.SubscriptionHandle[E]) []SubscriptionResult[E] {
+	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+	return resultsForSubscription(ctx, fftl.pubSub, subscription)
+}
+
+// ErrorsForSubscription returns all errors encountered while consuming events for a subscription
+func ErrorsForSubscription[E any](ctx context.Context, subscription ftl.SubscriptionHandle[E]) []error {
+	errs := []error{}
+	for _, result := range ResultsForSubscription(ctx, subscription) {
+		if err, ok := result.Error.Get(); ok {
+			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
+// WaitForSubscriptionsToComplete waits until all subscriptions have consumed all events
+//
+// Subscriptions with no manually activated subscribers are ignored.
+// Make sure you have called WithSubscriber(…) for all subscriptions you want to wait for.
+func WaitForSubscriptionsToComplete(ctx context.Context) {
+	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+	fftl.pubSub.waitForSubscriptionsToComplete(ctx)
 }

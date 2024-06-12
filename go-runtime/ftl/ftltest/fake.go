@@ -7,30 +7,72 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
+	"github.com/alecthomas/types/optional"
 )
 
+// pubSubEvent is a sum type for all events that can be published to the pubsub system.
+// not to be confused with an event that gets published to a topic
+//
+//sumtype:decl
+type pubSubEvent interface {
+	// cronJobEvent is a marker to ensure that all events implement the interface.
+	pubSubEvent()
+}
+
+// publishEvent holds an event to be published to a topic
+type publishEvent struct {
+	topic   *schema.Ref
+	content any
+}
+
+func (publishEvent) pubSubEvent() {}
+
+// subscriptionDidConsumeEvent indicates that a call to a subscriber has completed
+type subscriptionDidConsumeEvent struct {
+	subscription string
+	err          error
+}
+
+func (subscriptionDidConsumeEvent) pubSubEvent() {}
+
+type subscription struct {
+	name        string
+	topic       *schema.Ref
+	cursor      optional.Option[int]
+	isExecuting bool
+	errors      map[int]error
+}
+
+type subscriber func(context.Context, any) error
+
 type fakeFTL struct {
-	fsm           *fakeFSMManager
+	fsm *fakeFSMManager
+
 	mockMaps      map[uintptr]mapImpl
 	allowMapCalls bool
 	configValues  map[string][]byte
 	secretValues  map[string][]byte
+	pubSub        *fakePubSub
 }
 
 // mapImpl is a function that takes an object and returns an object of a potentially different
 // type but is not constrained by input/output type like ftl.Map.
 type mapImpl func(context.Context) (any, error)
 
-func newFakeFTL() *fakeFTL {
-	return &fakeFTL{
+func newFakeFTL(ctx context.Context) *fakeFTL {
+	fake := &fakeFTL{
 		fsm:           newFakeFSMManager(),
 		mockMaps:      map[uintptr]mapImpl{},
 		allowMapCalls: false,
 		configValues:  map[string][]byte{},
 		secretValues:  map[string][]byte{},
+		pubSub:        newFakePubSub(ctx),
 	}
+
+	return fake
 }
 
 var _ internal.FTL = &fakeFTL{}
@@ -71,10 +113,6 @@ func (f *fakeFTL) GetSecret(ctx context.Context, name string, dest any) error {
 
 func (f *fakeFTL) FSMSend(ctx context.Context, fsm string, instance string, event any) error {
 	return f.fsm.SendEvent(ctx, fsm, instance, event)
-}
-
-func (f *fakeFTL) PublishEvent(ctx context.Context, topic string, event any) error {
-	panic("not implemented")
 }
 
 // addMapMock saves a new mock of ftl.Map to the internal map in fakeFTL.
@@ -120,4 +158,8 @@ func actuallyCallMap(ctx context.Context, impl mapImpl) any {
 		panic(err)
 	}
 	return out
+}
+
+func (f *fakeFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any) error {
+	return f.pubSub.publishEvent(topic, event)
 }

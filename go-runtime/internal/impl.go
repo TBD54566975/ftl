@@ -69,14 +69,17 @@ func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) 
 	return nil
 }
 
-func (r *RealFTL) PublishEvent(ctx context.Context, topic string, event any) error {
+func (r *RealFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any) error {
+	if topic.Module != reflection.Module() {
+		return fmt.Errorf("can not publish to another module's topic: %s", topic)
+	}
 	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
 	body, err := encoding.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 	_, err = client.PublishEvent(ctx, connect.NewRequest(&ftlv1.PublishEventRequest{
-		Topic: &schemapb.Ref{Module: reflection.Module(), Name: topic},
+		Topic: topic.ToProto().(*schemapb.Ref), //nolint: forcetypeassert
 		Body:  body,
 	}))
 	if err != nil {

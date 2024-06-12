@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"ftl/publisher"
+	"time"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
@@ -24,4 +25,11 @@ var _ = ftl.Subscription(publisher.Topic2, "doomed_subscription")
 //ftl:retry 2 1s 1s
 func ConsumeButFailAndRetry(ctx context.Context, req publisher.PubSubEvent) error {
 	return fmt.Errorf("always error: event %v", req.Time)
+}
+
+//ftl:verb
+func PublishToExternalModule(ctx context.Context) error {
+	// Get around compile-time checks
+	var topic = publisher.Test_topic
+	return topic.Publish(ctx, publisher.PubSubEvent{Time: time.Now()})
 }
