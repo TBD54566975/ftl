@@ -297,7 +297,17 @@ func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 		return
 	}
 
-	comments, directives := parseCommentsAndDirectivesForCall(pctx, stack)
+	varDecl, ok := varDeclForStack(stack)
+	if !ok {
+		pctx.errors.add(errorf(node, "expected topic declaration to be assigned to a variable"))
+		return
+	} else if len(varDecl.Specs) == 0 {
+		pctx.errors.add(errorf(node, "expected topic declaration to have at least 1 spec"))
+		return
+	}
+	topicVarPos := goPosToSchemaPos(varDecl.Specs[0].Pos())
+
+	comments, directives := commentsAndDirectivesForVar(pctx, varDecl, stack)
 	export := false
 	for _, dir := range directives {
 		if _, ok := dir.(*directiveExport); ok {
@@ -513,7 +523,11 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 		parseFSMTransition(pctx, call, fn, fsm)
 	}
 
-	_, directives := parseCommentsAndDirectivesForCall(pctx, stack)
+	varDecl, ok := varDeclForStack(stack)
+	if !ok {
+		return
+	}
+	_, directives := commentsAndDirectivesForVar(pctx, varDecl, stack)
 	for _, dir := range directives {
 		if retryDir, ok := dir.(*directiveRetry); ok {
 			fsm.Metadata = append(fsm.Metadata, &schema.MetadataRetry{
@@ -756,16 +770,19 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	pctx.module.Decls = append(pctx.module.Decls, decl)
 }
 
-// parseCommentsAndDirectivesForCall finds the variable declaration that we are currently in so we can look for attached comments and directives
-func parseCommentsAndDirectivesForCall(pctx *parseContext, stack []ast.Node) (comments []string, directives []directive) {
-	var variableDecl *ast.GenDecl
+// varDeclForCall finds the variable being set in the stack
+func varDeclForStack(stack []ast.Node) (varDecl *ast.GenDecl, ok bool) {
 	for i := len(stack) - 1; i >= 0; i-- {
 		if decl, ok := stack[i].(*ast.GenDecl); ok && decl.Tok == token.VAR {
-			variableDecl = decl
-			break
+			return decl, true
 		}
 	}
-	if variableDecl == nil || variableDecl.Doc == nil {
+	return nil, false
+}
+
+// commentsAndDirectivesForVar extracts comments and directives from a variable declaration
+func commentsAndDirectivesForVar(pctx *parseContext, variableDecl *ast.GenDecl, stack []ast.Node) (comments []string, directives []directive) {
+	if variableDecl.Doc == nil {
 		return []string{}, []directive{}
 	}
 	directives, schemaErr := parseDirectives(stack[len(stack)-1], fset, variableDecl.Doc)
