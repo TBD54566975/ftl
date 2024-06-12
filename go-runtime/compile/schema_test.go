@@ -286,9 +286,6 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 		t.SkipNow()
 	}
 	assert.NoError(t, prebuildTestModule(t, "testdata/named", "testdata/namedext"))
-	if testing.Short() {
-		t.SkipNow()
-	}
 	r, err := ExtractModuleSchema("testdata/named", &schema.Schema{})
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
@@ -341,9 +338,6 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 		t.SkipNow()
 	}
 	assert.NoError(t, prebuildTestModule(t, "testdata/parent"))
-	if testing.Short() {
-		t.SkipNow()
-	}
 	r, err := ExtractModuleSchema("testdata/parent", &schema.Schema{})
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
@@ -399,9 +393,6 @@ func TestExtractModuleSubscriber(t *testing.T) {
 		t.SkipNow()
 	}
 	assert.NoError(t, prebuildTestModule(t, "testdata/pubsub", "testdata/subscriber"))
-	if testing.Short() {
-		t.SkipNow()
-	}
 	r, err := ExtractModuleSchema("testdata/subscriber", &schema.Schema{})
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
