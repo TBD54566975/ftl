@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Show all TCP ports, active and listening
         run: sudo netstat -apnt
+      - name: Show random port range
+        run: cat /proc/sys/net/ipv4/ip_local_port_range
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
