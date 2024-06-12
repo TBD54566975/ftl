@@ -84,14 +84,25 @@ func main() {
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	config, err := projectconfig.Load(ctx, cli.ConfigFlag)
+	configPath := cli.ConfigFlag
+	if configPath == "" {
+		var ok bool
+		configPath, ok = projectconfig.DefaultConfigPath().Get()
+		if !ok {
+			kctx.Fatalf("could not determine default config path, either place an ftl-project.toml file in the root of your project, use --config=FILE, or set the FTL_CONFIG envar")
+		}
+	}
+
+	os.Setenv("FTL_CONFIG", configPath)
+
+	config, err := projectconfig.Load(ctx, configPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		kctx.Fatalf(err.Error())
 	}
 	kctx.Bind(config)
 
-	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: cli.ConfigFlag}
-	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: cli.ConfigFlag}
+	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: configPath}
+	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: configPath}
 	kctx.BindTo(sr, (*cf.Resolver[cf.Secrets])(nil))
 	kctx.BindTo(cr, (*cf.Resolver[cf.Configuration])(nil))
 

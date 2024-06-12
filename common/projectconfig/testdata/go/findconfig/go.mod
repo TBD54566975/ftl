@@ -1,10 +1,10 @@
-module ftl/echo
+module ftl/findconfig
 
 go 1.22.2
 
-replace github.com/TBD54566975/ftl => ../../..
+toolchain go1.22.4
 
-require github.com/TBD54566975/ftl v0.248.0
+require github.com/TBD54566975/ftl v1.1.5
 
 require (
 	connectrpc.com/connect v1.16.1 // indirect
@@ -42,3 +42,5 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )
+
+replace github.com/TBD54566975/ftl => ../../../../..

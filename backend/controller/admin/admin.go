@@ -99,7 +99,7 @@ func configProviderKey(p *ftlv1.ConfigProvider) string {
 // ConfigSet sets the configuration at the given ref to the provided value.
 func (s *AdminService) ConfigSet(ctx context.Context, req *connect.Request[ftlv1.SetConfigRequest]) (*connect.Response[ftlv1.SetConfigResponse], error) {
 	pkey := configProviderKey(req.Msg.Provider)
-	err := s.cm.Set(ctx, pkey, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), string(req.Msg.Value))
+	err := s.cm.SetJSON(ctx, pkey, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func secretProviderKey(p *ftlv1.SecretProvider) string {
 // SecretSet sets the secret at the given ref to the provided value.
 func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1.SetSecretRequest]) (*connect.Response[ftlv1.SetSecretResponse], error) {
 	pkey := secretProviderKey(req.Msg.Provider)
-	err := s.sm.Set(ctx, pkey, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), string(req.Msg.Value))
+	err := s.sm.SetJSON(ctx, pkey, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
 	if err != nil {
 		return nil, err
 	}

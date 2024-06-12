@@ -78,6 +78,9 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 		// can't be loaded until the module is copied over, and the config itself
 		// is used by FTL during startup.
 		t.Setenv("FTL_CONFIG", filepath.Join(cwd, "testdata", "go", ftlConfigPath))
+	} else {
+		err = os.WriteFile(filepath.Join(tmpDir, "ftl-project.toml"), []byte{}, 0644)
+		assert.NoError(t, err)
 	}
 
 	// Build FTL binary
@@ -142,6 +145,9 @@ type TestContext struct {
 	Verbs      ftlv1connect.VerbServiceClient
 }
 
+// WorkingDir returns the temporary directory the test is executing in.
+func (i TestContext) WorkingDir() string { return i.workDir }
+
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
 	waitCtx, done := context.WithTimeout(i, integrationTestTimeout)
@@ -166,6 +172,7 @@ func (i TestContext) runAssertionOnce(t testing.TB, assertion Action) (err error
 		switch r := recover().(type) {
 		case TestingError:
 			err = errors.New(string(r))
+			fmt.Println(string(r))
 
 		case nil:
 			return

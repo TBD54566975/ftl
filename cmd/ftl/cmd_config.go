@@ -93,7 +93,7 @@ func (s *configGetCmd) Run(ctx context.Context, adminClient admin.Client) error 
 		Ref: configRefFromRef(s.Ref),
 	}))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 	fmt.Printf("%s\n", resp.Msg.Value)
 	return nil
@@ -117,18 +117,23 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, adminClient adm
 		}
 	}
 
-	var configValue []byte
+	var configJSON json.RawMessage
 	if s.JSON {
-		if err := json.Unmarshal(config, &configValue); err != nil {
+		var jsonValue any
+		if err := json.Unmarshal(config, &jsonValue); err != nil {
 			return fmt.Errorf("config is not valid JSON: %w", err)
 		}
+		configJSON = config
 	} else {
-		configValue = config
+		configJSON, err = json.Marshal(string(config))
+		if err != nil {
+			return fmt.Errorf("failed to encode config as JSON: %w", err)
+		}
 	}
 
 	req := &ftlv1.SetConfigRequest{
 		Ref:   configRefFromRef(s.Ref),
-		Value: configValue,
+		Value: configJSON,
 	}
 	if provider, ok := scmd.provider().Get(); ok {
 		req.Provider = &provider

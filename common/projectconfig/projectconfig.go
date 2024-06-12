@@ -12,7 +12,6 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -76,11 +75,26 @@ func DefaultConfigPath() optional.Option[string] {
 		}
 		return optional.Some(absPath)
 	}
-	gitRoot, ok := internal.GitRoot("").Get()
-	if !ok {
+	dir, err := os.Getwd()
+	if err != nil {
 		return optional.None[string]()
 	}
-	return optional.Some(filepath.Join(gitRoot, "ftl-project.toml"))
+	// Find the first ftl-project.toml file in the parent directories.
+	for {
+		path := filepath.Join(dir, "ftl-project.toml")
+		_, err := os.Stat(path)
+		if err == nil {
+			return optional.Some(path)
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return optional.None[string]()
+		}
+		dir = filepath.Dir(dir)
+		if dir == "/" || dir == "." {
+			break
+		}
+	}
+	return optional.Some(filepath.Join(dir, "ftl-project.toml"))
 }
 
 // MaybeCreateDefault creates the ftl-project.toml file in the Git root if it

@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -108,18 +109,26 @@ func (m *Manager[R]) availableProviderKeys() []string {
 	return keys
 }
 
-// Set a configuration value.
+// Set a configuration value, encoding "value" as JSON before storing it.
 func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return m.SetJSON(ctx, pkey, ref, data)
+}
+
+// SetJSON sets a configuration value using raw JSON data.
+func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value json.RawMessage) error {
+	if err := checkJSON(value); err != nil {
+		return fmt.Errorf("invalid value for %s, must be JSON: %w", m.resolver.Role(), err)
+	}
 	provider, ok := m.providers[pkey]
 	if !ok {
 		pkeys := strings.Join(m.availableProviderKeys(), ", ")
 		return fmt.Errorf("no provider for key %q, specify one of: %s", pkey, pkeys)
 	}
-	data, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-	key, err := provider.Store(ctx, ref, data)
+	key, err := provider.Store(ctx, ref, value)
 	if err != nil {
 		return err
 	}
@@ -172,4 +181,11 @@ func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref Ref) error {
 
 func (m *Manager[R]) List(ctx context.Context) ([]Entry, error) {
 	return m.resolver.List(ctx)
+}
+
+func checkJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	var v any
+	return dec.Decode(&v)
 }

@@ -1,0 +1,5 @@
+[global]
+  [global.configuration]
+    test = "inline://InRlc3Qi"
+  [global.secrets]
+    test = "inline://InRlc3Qi"
