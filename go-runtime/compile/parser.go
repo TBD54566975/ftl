@@ -29,6 +29,7 @@ type directiveWrapper struct {
 type directive interface {
 	directive()
 	SetPosition(pos schema.Position)
+	GetPosition() schema.Position
 }
 
 type exportable interface {
@@ -46,6 +47,10 @@ func (*directiveVerb) directive() {}
 
 func (d *directiveVerb) SetPosition(pos schema.Position) {
 	d.Pos = pos
+}
+
+func (d *directiveVerb) GetPosition() schema.Position {
+	return d.Pos
 }
 
 func (d *directiveVerb) String() string {
@@ -71,6 +76,10 @@ func (d *directiveData) SetPosition(pos schema.Position) {
 	d.Pos = pos
 }
 
+func (d *directiveData) GetPosition() schema.Position {
+	return d.Pos
+}
+
 func (d *directiveData) String() string {
 	if d.Export {
 		return "ftl:data export"
@@ -94,6 +103,10 @@ func (d *directiveEnum) SetPosition(pos schema.Position) {
 	d.Pos = pos
 }
 
+func (d *directiveEnum) GetPosition() schema.Position {
+	return d.Pos
+}
+
 func (d *directiveEnum) String() string {
 	if d.Export {
 		return "ftl:enum export"
@@ -115,6 +128,10 @@ func (*directiveTypeAlias) directive() {}
 
 func (d *directiveTypeAlias) SetPosition(pos schema.Position) {
 	d.Pos = pos
+}
+
+func (d *directiveTypeAlias) GetPosition() schema.Position {
+	return d.Pos
 }
 
 func (d *directiveTypeAlias) String() string {
@@ -141,6 +158,10 @@ func (d *directiveIngress) SetPosition(pos schema.Position) {
 	d.Pos = pos
 }
 
+func (d *directiveIngress) GetPosition() schema.Position {
+	return d.Pos
+}
+
 func (d *directiveIngress) String() string {
 	w := &strings.Builder{}
 	fmt.Fprintf(w, "ftl:ingress %s", d.Method)
@@ -162,8 +183,12 @@ func (d *directiveCronJob) SetPosition(pos schema.Position) {
 	d.Pos = pos
 }
 
+func (d *directiveCronJob) GetPosition() schema.Position {
+	return d.Pos
+}
+
 func (d *directiveCronJob) String() string {
-	return fmt.Sprintf("cron %s", d.Cron)
+	return fmt.Sprintf("ftl:cron %s", d.Cron)
 }
 
 type directiveRetry struct {
@@ -178,6 +203,10 @@ func (*directiveRetry) directive() {}
 
 func (d *directiveRetry) SetPosition(pos schema.Position) {
 	d.Pos = pos
+}
+
+func (d *directiveRetry) GetPosition() schema.Position {
+	return d.Pos
 }
 
 func (d *directiveRetry) String() string {
@@ -205,6 +234,10 @@ func (d *directiveSubscriber) SetPosition(pos schema.Position) {
 	d.Pos = pos
 }
 
+func (d *directiveSubscriber) GetPosition() schema.Position {
+	return d.Pos
+}
+
 func (d *directiveSubscriber) String() string {
 	return fmt.Sprintf("subscribe %s", d.Name)
 }
@@ -222,8 +255,12 @@ func (d *directiveExport) SetPosition(pos schema.Position) {
 	d.Pos = pos
 }
 
+func (d *directiveExport) GetPosition() schema.Position {
+	return d.Pos
+}
+
 func (d *directiveExport) String() string {
-	return "export"
+	return "ftl:export"
 }
 
 var directiveParser = participle.MustBuild[directiveWrapper](

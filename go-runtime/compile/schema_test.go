@@ -510,7 +510,7 @@ func TestErrorReporting(t *testing.T) {
 		`21:14-44: duplicate database declaration at 20:14-44`,
 		`24:2-10: unsupported type "error" for field "BadParam"`,
 		`27:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
-		`31:1-2: unexpected directive *compile.directiveExport`,
+		`30:3-0: unexpected directive "ftl:export" attached for verb, did you mean to use '//ftl:verb export' instead`,
 		`36:36-39: unsupported request type "ftl/failing.Request"`,
 		`36:50-50: unsupported response type "ftl/failing.Response"`,
 		`37:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc`,

@@ -60,6 +60,10 @@ func noEndColumnErrorf(pos token.Pos, format string, args ...interface{}) *schem
 	return tokenErrorf(pos, "", format, args...)
 }
 
+func unexpectedDirectiveErrorf(dir directive, format string, args ...interface{}) *schema.Error {
+	return schema.Errorf(dir.GetPosition(), 0, format, args...)
+}
+
 func tokenErrorf(pos token.Pos, tokenText string, format string, args ...interface{}) *schema.Error {
 	goPos := goPosToSchemaPos(pos)
 	endColumn := goPos.Column
@@ -93,12 +97,6 @@ type errorSet map[string]*schema.Error
 
 func (e errorSet) add(err *schema.Error) {
 	e[err.Error()] = err
-}
-
-func (e errorSet) addAll(errs ...*schema.Error) {
-	for _, err := range errs {
-		e.add(err)
-	}
 }
 
 func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *analyzers.ExtractResult) error {
@@ -313,7 +311,7 @@ func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 		if _, ok := dir.(*directiveExport); ok {
 			export = true
 		} else {
-			pctx.errors.add(errorf(node, "unexpected directive attached for topic: %T", dir))
+			pctx.errors.add(unexpectedDirectiveErrorf(dir, "unexpected directive %q attached for topic", dir))
 		}
 	}
 
@@ -539,7 +537,7 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 				MaxBackoff: retryDir.MaxBackoff,
 			})
 		} else {
-			pctx.errors.add(errorf(node, "unexpected directive attached for FSM: %T", dir))
+			pctx.errors.add(unexpectedDirectiveErrorf(dir, "unexpected directive %q attached for FSM", dir))
 		}
 	}
 }
@@ -1216,8 +1214,10 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 				Pos:  dir.Pos,
 				Name: dir.Name,
 			})
-		case *directiveData, *directiveEnum, *directiveTypeAlias, *directiveExport:
-			pctx.errors.add(errorf(node, "unexpected directive %T", dir))
+		case *directiveExport:
+			pctx.errors.add(unexpectedDirectiveErrorf(dir, "unexpected directive %q attached for verb, did you mean to use '//ftl:verb export' instead", dir))
+		case *directiveData, *directiveEnum, *directiveTypeAlias:
+			pctx.errors.add(unexpectedDirectiveErrorf(dir, "unexpected directive %q attached for verb", dir))
 		}
 	}
 	if !isVerb {
