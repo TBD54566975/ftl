@@ -40,14 +40,14 @@ func ConfigFromEnvironment() []string {
 
 // NewDefaultSecretsManagerFromConfig creates a new secrets manager from
 // the project config found in the config paths.
-func NewDefaultSecretsManagerFromConfig(ctx context.Context, config []string, opVault string) (*Manager[Secrets], error) {
+func NewDefaultSecretsManagerFromConfig(ctx context.Context, config string, opVault string) (*Manager[Secrets], error) {
 	var cr Resolver[Secrets] = ProjectConfigResolver[Secrets]{Config: config}
 	return NewSecretsManager(ctx, cr, opVault)
 }
 
 // NewDefaultConfigurationManagerFromConfig creates a new configuration manager from
 // the project config found in the config paths.
-func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config []string) (*Manager[Configuration], error) {
+func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config string) (*Manager[Configuration], error) {
 	cr := ProjectConfigResolver[Configuration]{Config: config}
 	return NewConfigurationManager(ctx, cr)
 }

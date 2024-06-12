@@ -9,22 +9,23 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 )
 
 func TestAdminService(t *testing.T) {
 	config := tempConfigPath(t, "testdata/ftl-project.toml", "admin")
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cm, err := cf.NewConfigurationManager(ctx, cf.ProjectConfigResolver[cf.Configuration]{Config: []string{config}})
+	cm, err := cf.NewConfigurationManager(ctx, cf.ProjectConfigResolver[cf.Configuration]{Config: config})
 	assert.NoError(t, err)
 
 	sm, err := cf.New(ctx,
-		cf.ProjectConfigResolver[cf.Secrets]{Config: []string{config}},
+		cf.ProjectConfigResolver[cf.Secrets]{Config: config},
 		[]cf.Provider[cf.Secrets]{
 			cf.EnvarProvider[cf.Secrets]{},
 			cf.InlineProvider[cf.Secrets]{},

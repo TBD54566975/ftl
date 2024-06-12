@@ -11,9 +11,10 @@ import (
 )
 
 func TestProjectConfig(t *testing.T) {
-	actual, err := loadFile("testdata/ftl-project.toml")
+	actual, err := Load(context.Background(), "testdata/ftl-project.toml")
 	assert.NoError(t, err)
 	expected := Config{
+		Path: actual.Path,
 		Modules: map[string]ConfigAndSecrets{
 			"module": {
 				Config: map[string]*URL{
@@ -38,17 +39,16 @@ func TestProjectConfig(t *testing.T) {
 func TestProjectLoadConfig(t *testing.T) {
 	tests := []struct {
 		name  string
-		paths []string
+		paths string
 		err   string
 	}{
-		{name: "AllValid", paths: []string{"testdata/ftl-project.toml"}},
-		{name: "IsNonExistent", paths: []string{"testdata/ftl-project-nonexistent.toml"}, err: "no such file or directory"},
-		{name: "ContainsNonExistent", paths: []string{"testdata/ftl-project.toml", "testdata/ftl-project-nonexistent.toml"}, err: "no such file or directory"},
+		{name: "AllValid", paths: "testdata/ftl-project.toml"},
+		{name: "IsNonExistent", paths: "testdata/ftl-project-nonexistent.toml", err: "no such file or directory"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := LoadConfig(log.ContextWithNewDefaultLogger(context.Background()), test.paths)
+			_, err := Load(log.ContextWithNewDefaultLogger(context.Background()), test.paths)
 			if test.err != "" {
 				assert.Contains(t, err.Error(), test.err)
 			} else {
@@ -73,10 +73,13 @@ func TestProjectConfigChecksMinVersion(t *testing.T) {
 		{"BelowWithoutMinVersion", "testdata/ftl-project.toml", "0.0.1", false},
 	}
 
+	oldVersion := ftl.Version
+	t.Cleanup(func() { ftl.Version = oldVersion })
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ftl.Version = test.v
-			_, err := LoadConfig(log.ContextWithNewDefaultLogger(context.Background()), []string{test.path})
+			_, err := Load(log.ContextWithNewDefaultLogger(context.Background()), test.path)
 			if !test.wantErr {
 				assert.NoError(t, err)
 			} else {

@@ -27,15 +27,15 @@ func TestSet(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("ExistingModule", func(t *testing.T) {
-		setAndAssert(t, "echo", []string{config})
+		setAndAssert(t, "echo", config)
 	})
 	t.Run("NewModule", func(t *testing.T) {
-		setAndAssert(t, "echooo", []string{config})
+		setAndAssert(t, "echooo", config)
 	})
 	t.Run("MissingTOMLFile", func(t *testing.T) {
 		err := os.Remove(config)
 		assert.NoError(t, err)
-		setAndAssert(t, "echooooo", []string{})
+		setAndAssert(t, "echooooo", config)
 		err = os.WriteFile(defaultPath, origConfigBytes, 0600)
 		assert.NoError(t, err)
 	})
@@ -49,12 +49,12 @@ func TestGetGlobal(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("ExistingModule", func(t *testing.T) {
-		setAndAssert(t, "echo", []string{config})
+		setAndAssert(t, "echo", config)
 	})
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	cf, err := New(ctx,
-		ProjectConfigResolver[Configuration]{Config: []string{config}},
+		ProjectConfigResolver[Configuration]{Config: config},
 		[]Provider[Configuration]{
 			EnvarProvider[Configuration]{},
 			InlineProvider[Configuration]{},
@@ -72,7 +72,7 @@ func TestGetGlobal(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-func setAndAssert(t *testing.T, module string, config []string) {
+func setAndAssert(t *testing.T, module string, config string) {
 	t.Helper()
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
