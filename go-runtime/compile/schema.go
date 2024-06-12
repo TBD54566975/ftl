@@ -410,7 +410,7 @@ func validateCallExpr(pctx *parseContext, node *ast.CallExpr) {
 	}
 
 	if lhsIsExternal && strings.HasPrefix(lhsPkgPath, "ftl/") {
-		if _, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.Sel).(*types.Signature); ok {
+		if sig, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.Sel).(*types.Signature); ok && sig.Recv() == nil {
 			// can not call functions in external modules directly
 			pctx.errors.add(errorf(node, "can not call verbs in other modules directly: use ftl.Call(…) instead"))
 		}
