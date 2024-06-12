@@ -161,5 +161,5 @@ func actuallyCallMap(ctx context.Context, impl mapImpl) any {
 }
 
 func (f *fakeFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any) error {
-	return f.pubSub.publishEvent(ctx, topic, event)
+	return f.pubSub.publishEvent(topic, event)
 }

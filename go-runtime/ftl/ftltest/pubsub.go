@@ -40,10 +40,9 @@ func newFakePubSub(ctx context.Context) *fakePubSub {
 	return f
 }
 
-func (f *fakePubSub) publishEvent(ctx context.Context, topic *schema.Ref, event any) error {
+func (f *fakePubSub) publishEvent(topic *schema.Ref, event any) error {
 	f.publishWaitGroup.Add(1)
-	f.globalTopic.PublishSync(publishEvent{topic: topic, content: event})
-	return nil
+	return f.globalTopic.PublishSync(publishEvent{topic: topic, content: event})
 }
 
 // addSubscriber adds a subscriber to the fake FTL instance. Each subscriber included in the test must be manually added
@@ -59,11 +58,7 @@ func addSubscriber[E any](f *fakePubSub, sub ftl.SubscriptionHandle[E], sink ftl
 		}
 	}
 
-	subscribers, ok := f.subscribers[sub.Name]
-	if !ok {
-		subscribers = []subscriber{}
-	}
-	f.subscribers[sub.Name] = append(subscribers, func(ctx context.Context, event any) error {
+	f.subscribers[sub.Name] = append(f.subscribers[sub.Name], func(ctx context.Context, event any) error {
 		if event, ok := event.(E); ok {
 			return sink(ctx, event)
 		}
@@ -116,13 +111,16 @@ func resultsForSubscription[E any](ctx context.Context, f *fakePubSub, handle ft
 	if !subscription.isExecuting {
 		count++
 	}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		e := topic[i]
 		if event, ok := e.(E); ok {
-			results = append(results, SubscriptionResult[E]{
+			result := SubscriptionResult[E]{
 				Event: event,
-				Error: subscription.errors[i],
-			})
+			}
+			if err, ok := subscription.errors[i]; ok {
+				result.Error = ftl.Some(err)
+			}
+			results = append(results, result)
 		} else {
 			logger.Warnf("unexpected event type %T for subscription %s", e, handle.Name)
 		}
@@ -266,7 +264,7 @@ func (f *fakePubSub) checkSubscriptionsAreComplete(ctx context.Context, shouldPr
 	if shouldPrint {
 		// print out what we are waiting on
 		logger := log.FromContext(ctx).Scope("pubsub")
-		logger.Infof("waiting on subscriptions to complete after %ds:\n%s", int(time.Until(startTime).Seconds()*-1), strings.Join(slices.Map(remaining, func(r remainingState) string {
+		logger.Debugf("waiting on subscriptions to complete after %ds:\n%s", int(time.Until(startTime).Seconds()*-1), strings.Join(slices.Map(remaining, func(r remainingState) string {
 			var suffix string
 			if r.isExecuting {
 				suffix = ", 1 executing"

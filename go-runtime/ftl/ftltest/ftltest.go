@@ -396,26 +396,26 @@ func WithSubscriber[E any](subscription ftl.SubscriptionHandle[E], sink ftl.Sink
 // EventsForTopic returns all published events for a topic
 func EventsForTopic[E any](ctx context.Context, topic ftl.TopicHandle[E]) []E {
 	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
-	return eventsForTopic(ctx, fftl.pubSub, ftl.TopicHandle[E](topic))
+	return eventsForTopic(ctx, fftl.pubSub, topic)
 }
 
 type SubscriptionResult[E any] struct {
 	Event E
-	Error error
+	Error ftl.Option[error]
 }
 
 // ResultsForSubscription returns all consumed events for a subscription, with any resulting errors
 func ResultsForSubscription[E any](ctx context.Context, subscription ftl.SubscriptionHandle[E]) []SubscriptionResult[E] {
 	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
-	return resultsForSubscription(ctx, fftl.pubSub, ftl.SubscriptionHandle[E](subscription))
+	return resultsForSubscription(ctx, fftl.pubSub, subscription)
 }
 
 // ErrorsForSubscription returns all errors encountered while consuming events for a subscription
 func ErrorsForSubscription[E any](ctx context.Context, subscription ftl.SubscriptionHandle[E]) []error {
 	errs := []error{}
 	for _, result := range ResultsForSubscription(ctx, subscription) {
-		if result.Error != nil {
-			errs = append(errs, result.Error)
+		if err, ok := result.Error.Get(); ok {
+			errs = append(errs, err)
 		}
 	}
 	return errs
