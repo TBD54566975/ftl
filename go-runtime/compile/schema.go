@@ -327,13 +327,15 @@ func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 		}
 	}
 
-	pctx.module.Decls = append(pctx.module.Decls, &schema.Topic{
+	topic := &schema.Topic{
 		Pos:      goPosToSchemaPos(node.Pos()),
 		Name:     name,
 		Export:   export,
 		Comments: comments,
 		Event:    nil, // event is nil until we the next pass, when we can visit the full graph
-	})
+	}
+	pctx.module.Decls = append(pctx.module.Decls, topic)
+	pctx.topicsByPos[topicVarPos] = topic
 }
 
 func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
@@ -703,26 +705,15 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	if topicIdent, ok := node.Args[0].(*ast.Ident); ok {
 		// Topic is within module
 		// we will find the subscription name from the string literal parameter
-		topicValueSpec, ok := topicIdent.Obj.Decl.(*ast.ValueSpec)
-		if !ok || len(topicValueSpec.Values) != 1 {
-			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
-			return
-		}
-
-		topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr)
+		object := pctx.pkg.TypesInfo.ObjectOf(topicIdent)
+		topic, ok := pctx.topicsByPos[goPosToSchemaPos(object.Pos())]
 		if !ok {
-			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
-			return
-		}
-		topicName, schemaErr := extractStringLiteralArg(topicCallExpr, 0)
-		if schemaErr != nil {
-			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+			pctx.errors.add(errorf(node, "could not find topic declaration for topic variable"))
 			return
 		}
 		topicRef = &schema.Ref{
-			Pos:    goPosToSchemaPos(topicIdent.Pos()),
 			Module: pctx.module.Name,
-			Name:   topicName,
+			Name:   topic.Name,
 		}
 	} else if topicSelExp, ok := node.Args[0].(*ast.SelectorExpr); ok {
 		// External topic
@@ -734,7 +725,6 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 		}
 		varName := topicSelExp.Sel.Name
 		topicRef = &schema.Ref{
-			Pos:    goPosToSchemaPos(moduleIdent.Pos()),
 			Module: moduleIdent.Name,
 			Name:   strings.ToLower(string(varName[0])) + varName[1:],
 		}
@@ -1685,6 +1675,7 @@ type parseContext struct {
 	enumInterfaces enumInterfaces
 	errors         errorSet
 	schema         *schema.Schema
+	topicsByPos    map[schema.Position]*schema.Topic
 }
 
 func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schema.Schema, out *analyzers.ExtractResult) *parseContext {
@@ -1699,6 +1690,7 @@ func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schem
 		enumInterfaces: enumInterfaces{},
 		errors:         errorSet{},
 		schema:         sch,
+		topicsByPos:    map[schema.Position]*schema.Topic{},
 	}
 }
 
