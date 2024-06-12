@@ -37,15 +37,28 @@ type Config struct {
 	FTLMinVersion string                      `toml:"ftl-min-version"`
 }
 
+// Root directory of the project.
+func (c Config) Root() string {
+	if !filepath.IsAbs(c.Path) {
+		panic(fmt.Errorf("project config path must be absolute: %s", c.Path))
+	}
+	return filepath.Dir(c.Path)
+}
+
 // AbsModuleDirs returns the absolute path for the module-dirs field from the ftl-project.toml, unless
 // that is not defined, in which case it defaults to the root directory.
 func (c Config) AbsModuleDirs() []string {
 	if len(c.ModuleDirs) == 0 {
 		return []string{filepath.Dir(c.Path)}
 	}
+	root := c.Root()
 	absDirs := make([]string, len(c.ModuleDirs))
 	for i, dir := range c.ModuleDirs {
-		absDirs[i], _ = filepath.Abs(dir)
+		cleaned := filepath.Clean(filepath.Join(root, dir))
+		if !strings.HasPrefix(cleaned, root) {
+			panic(fmt.Errorf("module-dirs path %q is not within the project root %q", dir, root))
+		}
+		absDirs[i] = cleaned
 	}
 	return absDirs
 }
@@ -132,8 +145,15 @@ func Load(ctx context.Context, path string) (Config, error) {
 	if config.FTLMinVersion != "" && !ftl.IsVersionAtLeastMin(ftl.Version, config.FTLMinVersion) {
 		return config, fmt.Errorf("FTL version %q predates the minimum version %q", ftl.Version, config.FTLMinVersion)
 	}
-
 	config.Path = path
+
+	for _, dir := range config.ModuleDirs {
+		absDir := filepath.Clean(filepath.Join(config.Root(), dir))
+		if !strings.HasPrefix(absDir, config.Root()) {
+			return Config{}, fmt.Errorf("module-dirs path %q is not within the project root %q", dir, config.Root())
+		}
+	}
+
 	return config, nil
 }
 
