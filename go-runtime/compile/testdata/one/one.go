@@ -173,3 +173,13 @@ func Http(ctx context.Context, req builtin.HttpRequest[Req]) (builtin.HttpRespon
 type DataWithType[T any] struct {
 	Value T
 }
+
+type NonFTLInterface interface {
+	NonFTLInterface()
+}
+
+type NonFTLStruct struct {
+	Name string
+}
+
+func (NonFTLStruct) NonFTLInterface() {}
