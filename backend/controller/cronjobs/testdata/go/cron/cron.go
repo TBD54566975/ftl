@@ -25,7 +25,7 @@ func FiveMinutes(ctx context.Context) error {
 	return nil
 }
 
-//ftl:cron Saturday
+//ftl:cron Sat
 func Saturday(ctx context.Context) error {
 	return nil
 }
