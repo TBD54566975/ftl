@@ -19,3 +19,13 @@ type EchoResponse struct {
 func Cron(ctx context.Context) error {
 	return os.WriteFile(os.Getenv("DEST_FILE"), []byte("Hello, world!"), 0644)
 }
+
+//ftl:cron 5m
+func FiveMinutes(ctx context.Context) error {
+	return nil
+}
+
+//ftl:cron Sat
+func Saturday(ctx context.Context) error {
+	return nil
+}

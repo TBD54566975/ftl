@@ -163,6 +163,11 @@ func BadCron(ctx context.Context) error {
 	return nil
 }
 
+//ftl:cron 4d
+func DaysNotPossible(ctx context.Context) error {
+	return nil
+}
+
 //ftl:verb
 func BadPublish(ctx context.Context) error {
 	ps.PublicBroadcast.Publish(ctx, ps.PayinEvent{Name: "Test"})

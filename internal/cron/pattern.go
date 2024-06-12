@@ -38,12 +38,18 @@ var (
 )
 
 type Pattern struct {
-	Duration   *string     `parser:"@(Number (?! Whitespace) Ident)+"`
+	Duration   *string     `parser:"@(Number ('s' | 'm' | 'h'))"`
 	DayOfWeek  *DayOfWeek  `parser:"| @('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun')"`
 	Components []Component `parser:"| @@*"`
 }
 
 func (p Pattern) String() string {
+	if p.Duration != nil {
+		return *p.Duration
+	}
+	if p.DayOfWeek != nil {
+		return string(*p.DayOfWeek)
+	}
 	return strings.Join(slices.Map(p.Components, func(component Component) string {
 		return component.String()
 	}), " ")

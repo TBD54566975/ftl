@@ -11,7 +11,7 @@ import (
 type MetadataCronJob struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Cron string `parser:"'+' 'cron' Whitespace @((' ' | Number | '-' | '/' | '*' | ',')+)" protobuf:"2"`
+	Cron string `parser:"'+' 'cron' Whitespace @( (Number ('s' | 'm' | 'h')) | ('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun') | (' ' | Number | '-' | '/' | '*' | ',')+ )" protobuf:"2"`
 }
 
 var _ Metadata = (*MetadataCronJob)(nil)

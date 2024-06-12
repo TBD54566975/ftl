@@ -14,6 +14,7 @@ import (
 	"github.com/alecthomas/participle/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/cron"
 )
 
 // This file contains a parser for Go FTL directives.
@@ -152,7 +153,7 @@ func (d *directiveIngress) String() string {
 type directiveCronJob struct {
 	Pos schema.Position
 
-	Cron string `parser:"'cron' Whitespace @((' ' | Number | '-' | '/' | '*' | ',')+)"`
+	Cron cron.Pattern `parser:"'cron' @@"`
 }
 
 func (*directiveCronJob) directive() {}
