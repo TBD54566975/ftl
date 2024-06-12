@@ -36,13 +36,20 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
-		resp, err := verbServiceClient.GetModuleContext(ctx, connect.NewRequest(&ftlv1.ModuleContextRequest{
+		stream, err := verbServiceClient.GetModuleContext(ctx, connect.NewRequest(&ftlv1.ModuleContextRequest{
 			Module: moduleName,
 		}))
+		defer stream.Close()
+
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get config: %w", err)
 		}
-		moduleCtx, err := modulecontext.FromProto(resp.Msg)
+		// TODO use proper stream handling
+		if !stream.Receive() {
+			return nil, nil, fmt.Errorf("failed to retrieve ModuleContext from stream")
+		}
+		resp := stream.Msg()
+		moduleCtx, err := modulecontext.FromProto(resp)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -163,8 +170,8 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	}), nil
 }
 
-func (m *moduleServer) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("GetModuleContext not implemented"))
+func (m *moduleServer) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest], resp *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, fmt.Errorf("GetModuleContext not implemented"))
 }
 
 func (m *moduleServer) AcquireLease(context.Context, *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
