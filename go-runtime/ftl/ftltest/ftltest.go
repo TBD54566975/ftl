@@ -388,7 +388,7 @@ func getDSNFromSecret(ftl internal.FTL, module, name string) (string, error) {
 func WithSubscriber[E any](subscription ftl.SubscriptionHandle[E], sink ftl.Sink[E]) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
-		addSubscriber(fftl, subscription, sink)
+		addSubscriber(fftl.pubSub, subscription, sink)
 		return nil
 	}
 }
@@ -396,7 +396,7 @@ func WithSubscriber[E any](subscription ftl.SubscriptionHandle[E], sink ftl.Sink
 // EventsForTopic returns all published events for a topic
 func EventsForTopic[E any](ctx context.Context, topic ftl.TopicHandle[E]) []E {
 	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
-	return eventsForTopic(ctx, fftl, ftl.TopicHandle[E](topic))
+	return eventsForTopic(ctx, fftl.pubSub, ftl.TopicHandle[E](topic))
 }
 
 type SubscriptionResult[E any] struct {
@@ -407,7 +407,7 @@ type SubscriptionResult[E any] struct {
 // ResultsForSubscription returns all consumed events for a subscription, with any resulting errors
 func ResultsForSubscription[E any](ctx context.Context, subscription ftl.SubscriptionHandle[E]) []SubscriptionResult[E] {
 	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
-	return resultsForSubscription(ctx, fftl, ftl.SubscriptionHandle[E](subscription))
+	return resultsForSubscription(ctx, fftl.pubSub, ftl.SubscriptionHandle[E](subscription))
 }
 
 // ErrorsForSubscription returns all errors encountered while consuming events for a subscription
@@ -427,5 +427,5 @@ func ErrorsForSubscription[E any](ctx context.Context, subscription ftl.Subscrip
 // Make sure you have called WithSubscriber(…) for all subscriptions you want to wait for.
 func WaitForSubscriptionsToComplete(ctx context.Context) {
 	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
-	fftl.waitForSubscriptionsToComplete(ctx)
+	fftl.pubSub.waitForSubscriptionsToComplete(ctx)
 }
