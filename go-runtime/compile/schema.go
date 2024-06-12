@@ -746,7 +746,7 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	for _, d := range pctx.module.Decls {
 		existing, ok := d.(*schema.Subscription)
 		if ok && existing.Name == name {
-			pctx.errors.add(errorf(node, "duplicate topic registration at %d:%d-%d", existing.Pos.Line, existing.Pos.Column, endCol))
+			pctx.errors.add(errorf(node, "duplicate subscription registration at %d:%d-%d", existing.Pos.Line, existing.Pos.Column, endCol))
 			return
 		}
 	}
