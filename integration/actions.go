@@ -288,7 +288,7 @@ func Fail(next Action, msg string, args ...any) Action {
 // fetched and returns a row's column values
 func GetRow(t testing.TB, ic TestContext, database, query string, fieldCount int) []any {
 	Infof("Querying %s: %s", database, query)
-	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:54320/%s?sslmode=disable", database))
+	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:15432/%s?sslmode=disable", database))
 	assert.NoError(t, err)
 	defer db.Close()
 	actual := make([]any, fieldCount)
@@ -326,7 +326,7 @@ func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
 		dbName += "_test"
 	}
 	Infof("Creating database %s", dbName)
-	db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable")
+	db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable")
 	assert.NoError(t, err, "failed to open database connection")
 	t.Cleanup(func() {
 		err := db.Close()

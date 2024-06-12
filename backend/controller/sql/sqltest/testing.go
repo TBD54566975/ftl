@@ -24,7 +24,7 @@ func OpenForTesting(ctx context.Context, t testing.TB) *pgxpool.Pool {
 	assert.NoError(t, err)
 	t.Cleanup(func() { _ = release() })
 
-	testDSN := "postgres://localhost:54320/ftl-test?user=postgres&password=secret&sslmode=disable"
+	testDSN := "postgres://localhost:15432/ftl-test?user=postgres&password=secret&sslmode=disable"
 	conn, err := databasetesting.CreateForDevel(ctx, testDSN, true)
 	assert.NoError(t, err)
 	return conn
