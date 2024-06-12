@@ -2,8 +2,8 @@ ftl-min-version = ""
 
 [global]
   [global.configuration]
-    config = "inline://ImJhciI"
+    config = "inline://ImZvb2JhciI"
   [global.secrets]
-    secret = "inline://ImJhciI"
+    secret = "inline://ImZvb2JhciI"
 
 [commands]

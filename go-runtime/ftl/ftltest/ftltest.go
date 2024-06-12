@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -22,7 +21,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type OptionsState struct {
@@ -56,47 +54,44 @@ func Context(options ...Option) context.Context {
 	return builder.Build().ApplyToContext(ctx)
 }
 
-// WithProjectFiles loads config and secrets from a project file
+// WithDefaultProjectFile loads config and secrets from the default project
+// file, which is either the FTL_CONFIG environment variable or the
+// ftl-project.toml file in the git root.
+func WithDefaultProjectFile() Option {
+	return WithProjectFile("")
+}
+
+// WithProjectFile loads config and secrets from a project file
 //
-// Takes a list of paths to project files. If multiple paths are provided, they are loaded in order, with later files taking precedence.
-// If no paths are provided, the list is inferred from the FTL_CONFIG environment variable. If that is not found, the ftl-project.toml
-// file in the git root is used. If ftl-project.toml is not found, no project files are loaded.
+// Takes a path to an FTL project file. If an empty path is provided, the path
+// is inferred from the FTL_CONFIG environment variable. If that is not found,
+// the ftl-project.toml file in the git root is used. If a project file is not
+// found, an error is returned.
 //
 // To be used when setting up a context for a test:
 //
 //	ctx := ftltest.Context(
-//		ftltest.WithProjectFiles("path/to/ftl-project.yaml"),
+//		ftltest.WithProjectFile("path/to/ftl-project.yaml"),
 //		// ... other options
 //	)
-func WithProjectFiles(paths ...string) Option {
+func WithProjectFile(path string) Option {
 	// Convert to absolute path immediately in case working directory changes
 	var preprocessingErr error
-	if len(paths) == 0 {
-		envValue, ok := os.LookupEnv("FTL_CONFIG")
-		if ok {
-			paths = strings.Split(envValue, ",")
-		} else {
-			paths = pc.ConfigPaths(paths)
+	if path == "" {
+		var ok bool
+		path, ok = pc.DefaultConfigPath().Get()
+		if !ok {
+			preprocessingErr = fmt.Errorf("could not find default project file in $FTL_CONFIG or git")
 		}
 	}
-	paths = slices.Map(paths, func(p string) string {
-		path, err := filepath.Abs(p)
-		if err != nil {
-			preprocessingErr = err
-			return ""
-		}
-		return path
-	})
 	return func(ctx context.Context, state *OptionsState) error {
 		if preprocessingErr != nil {
 			return preprocessingErr
 		}
-		for _, path := range paths {
-			if _, err := os.Stat(path); err != nil {
-				return fmt.Errorf("error accessing project file: %w", err)
-			}
+		if _, err := os.Stat(path); err != nil {
+			return fmt.Errorf("error accessing project file: %w", err)
 		}
-		cm, err := cf.NewDefaultConfigurationManagerFromConfig(ctx, paths)
+		cm, err := cf.NewDefaultConfigurationManagerFromConfig(ctx, path)
 		if err != nil {
 			return fmt.Errorf("could not set up configs: %w", err)
 		}
@@ -112,7 +107,7 @@ func WithProjectFiles(paths ...string) Option {
 			}
 		}
 
-		sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, paths, "")
+		sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, path, "")
 		if err != nil {
 			return fmt.Errorf("could not set up secrets: %w", err)
 		}

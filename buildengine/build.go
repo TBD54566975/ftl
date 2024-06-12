@@ -38,7 +38,7 @@ func Build(ctx context.Context, sch *schema.Schema, project Project, filesTransa
 }
 
 func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
-	release, err := flock.Acquire(ctx, filepath.Join(module.Dir, ".ftl-build-lock"), BuildLockTimeout)
+	release, err := flock.Acquire(ctx, filepath.Join(module.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
 		return err
 	}

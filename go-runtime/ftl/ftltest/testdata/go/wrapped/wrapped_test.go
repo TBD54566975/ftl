@@ -2,23 +2,21 @@ package wrapped
 
 import (
 	"context"
-	"fmt"
 	"ftl/time"
 	"path/filepath"
 	"testing"
 	stdtime "time"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/ftltest"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestWrappedWithConfigEnvar(t *testing.T) {
 	absProjectPath1, err := filepath.Abs("ftl-project-test-1.toml")
 	assert.NoError(t, err)
-	absProjectPath2, err := filepath.Abs("ftl-project-test-2.toml")
-	assert.NoError(t, err)
-	t.Setenv("FTL_CONFIG", fmt.Sprintf("%s,%s", absProjectPath1, absProjectPath2))
+	t.Setenv("FTL_CONFIG", absProjectPath1)
 
 	for _, tt := range []struct {
 		name          string
@@ -30,7 +28,7 @@ func TestWrappedWithConfigEnvar(t *testing.T) {
 		{
 			name: "WithProjectTomlFromEnvar",
 			options: []ftltest.Option{
-				ftltest.WithProjectFiles(),
+				ftltest.WithDefaultProjectFile(),
 				ftltest.WithCallsAllowedWithinModule(),
 				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
@@ -53,9 +51,11 @@ func TestWrappedWithConfigEnvar(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.Equal(t, "2024-01-01 00:00:00 +0000 UTC", resp.Output)
-			assert.Equal(t, tt.configValue, resp.Config)
-			assert.Equal(t, tt.secretValue, resp.Secret)
+			assert.Equal(t, WrappedResponse{
+				Output: "2024-01-01 00:00:00 +0000 UTC",
+				Config: tt.configValue,
+				Secret: tt.secretValue,
+			}, resp)
 		})
 	}
 }
@@ -105,18 +105,18 @@ func TestWrapped(t *testing.T) {
 		{
 			name: "WithProjectTomlSpecified",
 			options: []ftltest.Option{
-				ftltest.WithProjectFiles("ftl-project-test-1.toml"),
+				ftltest.WithProjectFile("ftl-project-test-1.toml"),
 				ftltest.WithCallsAllowedWithinModule(),
 				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
 				}),
 			},
-			configValue: "bar",
-			secretValue: "bar",
+			configValue: "foobar",
+			secretValue: "foobar",
 		}, {
 			name: "WithProjectTomlFromRoot",
 			options: []ftltest.Option{
-				ftltest.WithProjectFiles(),
+				ftltest.WithDefaultProjectFile(),
 				ftltest.WithCallsAllowedWithinModule(),
 				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil

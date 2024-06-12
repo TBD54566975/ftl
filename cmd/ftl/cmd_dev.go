@@ -28,7 +28,7 @@ type devCmd struct {
 
 func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
 	if len(d.Dirs) == 0 && len(d.External) == 0 {
-		d.Dirs = projConfig.AbsModuleDirsOrDefault()
+		d.Dirs = projConfig.AbsModuleDirs()
 		d.External = projConfig.ExternalDirs
 	}
 	if len(d.Dirs) == 0 && len(d.External) == 0 {

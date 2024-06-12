@@ -16,7 +16,7 @@ import (
 //
 // See the [projectconfig] package for details on the configuration file format.
 type ProjectConfigResolver[R Role] struct {
-	Config []string `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
+	Config string `name:"config" short:"C" help:"Path to FTL project configuration file." env:"FTL_CONFIG" placeholder:"FILE" type:"existingfile"`
 }
 
 var _ Resolver[Configuration] = ProjectConfigResolver[Configuration]{}
@@ -25,7 +25,7 @@ var _ Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
 func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
 
 func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
-	config, err := pc.LoadConfig(ctx, p.Config)
+	config, err := pc.Load(ctx, p.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, e
 }
 
 func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
-	config, err := pc.LoadConfig(ctx, p.Config)
+	config, err := pc.Load(ctx, p.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
-	config, err := pc.LoadWritableConfig(ctx, p.Config)
+	config, err := pc.LoadOrCreate(ctx, p.Config)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL
 }
 
 func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
-	config, err := pc.LoadWritableConfig(ctx, p.Config)
+	config, err := pc.LoadOrCreate(ctx, p.Config)
 	if err != nil {
 		return err
 	}
@@ -148,6 +148,5 @@ func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.O
 	} else {
 		set(&config.Global, mapping)
 	}
-	configPaths := pc.ConfigPaths(p.Config)
-	return pc.Save(configPaths[len(configPaths)-1], config)
+	return pc.Save(config)
 }

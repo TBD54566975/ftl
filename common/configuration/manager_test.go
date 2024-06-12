@@ -25,7 +25,7 @@ func TestManager(t *testing.T) {
 		_, err := kcp.Store(ctx, Ref{Name: "mutable"}, []byte("hello"))
 		assert.NoError(t, err)
 		cf, err := New(ctx,
-			ProjectConfigResolver[Secrets]{Config: []string{config}},
+			ProjectConfigResolver[Secrets]{Config: config},
 			[]Provider[Secrets]{
 				EnvarProvider[Secrets]{},
 				InlineProvider[Secrets]{},
@@ -40,7 +40,7 @@ func TestManager(t *testing.T) {
 	})
 	t.Run("Configuration", func(t *testing.T) {
 		cf, err := New(ctx,
-			ProjectConfigResolver[Configuration]{Config: []string{config}},
+			ProjectConfigResolver[Configuration]{Config: config},
 			[]Provider[Configuration]{
 				EnvarProvider[Configuration]{},
 				InlineProvider[Configuration]{},
@@ -60,7 +60,7 @@ func TestMapPriority(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	config := tempConfigPath(t, "", "map")
 	cm, err := New(ctx,
-		ProjectConfigResolver[Configuration]{Config: []string{config}},
+		ProjectConfigResolver[Configuration]{Config: config},
 		[]Provider[Configuration]{
 			InlineProvider[Configuration]{},
 		})
