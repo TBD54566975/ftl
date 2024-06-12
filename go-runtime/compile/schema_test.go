@@ -546,8 +546,9 @@ func TestErrorReporting(t *testing.T) {
 		`145:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
 		`151:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
 		`154:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
-		`168:2-62: can not publish directly to topics in other modules`,
-		`169:9-26: can not call verbs in other modules directly: use ftl.Call(…) instead`,
+		`166:3-3: unexpected token "d"`,
+		`173:2-62: can not publish directly to topics in other modules`,
+		`174:9-26: can not call verbs in other modules directly: use ftl.Call(…) instead`,
 	}
 	assert.Equal(t, expected, actual)
 }

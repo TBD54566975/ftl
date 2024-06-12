@@ -1202,7 +1202,7 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 			isExported = false
 			metadata = append(metadata, &schema.MetadataCronJob{
 				Pos:  dir.Pos,
-				Cron: dir.Cron,
+				Cron: dir.Cron.String(),
 			})
 		case *directiveRetry:
 			metadata = append(metadata, &schema.MetadataRetry{

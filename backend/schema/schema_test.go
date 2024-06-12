@@ -53,8 +53,14 @@ module todo {
   export verb destroy(builtin.HttpRequest<todo.DestroyRequest>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{name}
 
+  verb mondays(Unit) Unit
+      +cron Mon
+
   verb scheduled(Unit) Unit
       +cron */10 * * 1-10,11-31 * * *
+
+  verb twiceADay(Unit) Unit
+      +cron 12h
 }
 
 module foo {
@@ -188,6 +194,14 @@ Module
       IngressPathLiteral
       IngressPathLiteral
       IngressPathParameter
+  Verb
+    Unit
+    Unit
+    MetadataCronJob
+  Verb
+    Unit
+    Unit
+    MetadataCronJob
   Verb
     Unit
     Unit
@@ -719,6 +733,10 @@ module todo {
   	+ingress http GET /todo/destroy/{name}
   verb scheduled(Unit) Unit
     +cron */10 * * 1-10,11-31 * * *
+  verb twiceADay(Unit) Unit
+    +cron 12h
+  verb mondays(Unit) Unit
+    +cron Mon
 }
 `
 	actual, err := ParseModuleString("", input)
@@ -842,6 +860,24 @@ var testSchema = MustValidate(&Schema{
 					Metadata: []Metadata{
 						&MetadataCronJob{
 							Cron: "*/10 * * 1-10,11-31 * * *",
+						},
+					},
+				},
+				&Verb{Name: "twiceADay",
+					Request:  &Unit{Unit: true},
+					Response: &Unit{Unit: true},
+					Metadata: []Metadata{
+						&MetadataCronJob{
+							Cron: "12h",
+						},
+					},
+				},
+				&Verb{Name: "mondays",
+					Request:  &Unit{Unit: true},
+					Response: &Unit{Unit: true},
+					Metadata: []Metadata{
+						&MetadataCronJob{
+							Cron: "Mon",
 						},
 					},
 				},
