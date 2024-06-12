@@ -297,7 +297,17 @@ func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 		return
 	}
 
-	comments, directives := parseCommentsAndDirectivesForCall(pctx, stack)
+	varDecl, ok := varDeclForStack(stack)
+	if !ok {
+		pctx.errors.add(errorf(node, "expected topic declaration to be assigned to a variable"))
+		return
+	} else if len(varDecl.Specs) == 0 {
+		pctx.errors.add(errorf(node, "expected topic declaration to have at least 1 spec"))
+		return
+	}
+	topicVarPos := goPosToSchemaPos(varDecl.Specs[0].Pos())
+
+	comments, directives := commentsAndDirectivesForVar(pctx, varDecl, stack)
 	export := false
 	for _, dir := range directives {
 		if _, ok := dir.(*directiveExport); ok {
@@ -317,13 +327,15 @@ func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 		}
 	}
 
-	pctx.module.Decls = append(pctx.module.Decls, &schema.Topic{
+	topic := &schema.Topic{
 		Pos:      goPosToSchemaPos(node.Pos()),
 		Name:     name,
 		Export:   export,
 		Comments: comments,
 		Event:    nil, // event is nil until we the next pass, when we can visit the full graph
-	})
+	}
+	pctx.module.Decls = append(pctx.module.Decls, topic)
+	pctx.topicsByPos[topicVarPos] = topic
 }
 
 func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
@@ -387,7 +399,7 @@ func validateCallExpr(pctx *parseContext, node *ast.CallExpr) {
 		lhsIsExternal = true
 	}
 
-	if lhsType, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.X).(*types.Named); ok && lhsType.Obj().Pkg().Path() == ftlPkgPath {
+	if lhsType, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.X).(*types.Named); ok && lhsType.Obj().Pkg() != nil && lhsType.Obj().Pkg().Path() == ftlPkgPath {
 		// Calling a function on an FTL type
 		if lhsType.Obj().Name() == ftlTopicHandleTypeName && selExpr.Sel.Name == "Publish" {
 			if lhsIsExternal {
@@ -398,7 +410,7 @@ func validateCallExpr(pctx *parseContext, node *ast.CallExpr) {
 	}
 
 	if lhsIsExternal && strings.HasPrefix(lhsPkgPath, "ftl/") {
-		if _, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.Sel).(*types.Signature); ok {
+		if sig, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.Sel).(*types.Signature); ok && sig.Recv() == nil {
 			// can not call functions in external modules directly
 			pctx.errors.add(errorf(node, "can not call verbs in other modules directly: use ftl.Call(…) instead"))
 		}
@@ -513,7 +525,11 @@ func parseFSMDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 		parseFSMTransition(pctx, call, fn, fsm)
 	}
 
-	_, directives := parseCommentsAndDirectivesForCall(pctx, stack)
+	varDecl, ok := varDeclForStack(stack)
+	if !ok {
+		return
+	}
+	_, directives := commentsAndDirectivesForVar(pctx, varDecl, stack)
 	for _, dir := range directives {
 		if retryDir, ok := dir.(*directiveRetry); ok {
 			fsm.Metadata = append(fsm.Metadata, &schema.MetadataRetry{
@@ -689,26 +705,15 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	if topicIdent, ok := node.Args[0].(*ast.Ident); ok {
 		// Topic is within module
 		// we will find the subscription name from the string literal parameter
-		topicValueSpec, ok := topicIdent.Obj.Decl.(*ast.ValueSpec)
-		if !ok || len(topicValueSpec.Values) != 1 {
-			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
-			return
-		}
-
-		topicCallExpr, ok := topicValueSpec.Values[0].(*ast.CallExpr)
+		object := pctx.pkg.TypesInfo.ObjectOf(topicIdent)
+		topic, ok := pctx.topicsByPos[goPosToSchemaPos(object.Pos())]
 		if !ok {
-			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
-			return
-		}
-		topicName, schemaErr := extractStringLiteralArg(topicCallExpr, 0)
-		if schemaErr != nil {
-			pctx.errors.add(errorf(node, "subscription registration must have a topic"))
+			pctx.errors.add(errorf(node, "could not find topic declaration for topic variable"))
 			return
 		}
 		topicRef = &schema.Ref{
-			Pos:    goPosToSchemaPos(topicIdent.Pos()),
 			Module: pctx.module.Name,
-			Name:   topicName,
+			Name:   topic.Name,
 		}
 	} else if topicSelExp, ok := node.Args[0].(*ast.SelectorExpr); ok {
 		// External topic
@@ -720,7 +725,6 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 		}
 		varName := topicSelExp.Sel.Name
 		topicRef = &schema.Ref{
-			Pos:    goPosToSchemaPos(moduleIdent.Pos()),
 			Module: moduleIdent.Name,
 			Name:   strings.ToLower(string(varName[0])) + varName[1:],
 		}
@@ -742,7 +746,7 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	for _, d := range pctx.module.Decls {
 		existing, ok := d.(*schema.Subscription)
 		if ok && existing.Name == name {
-			pctx.errors.add(errorf(node, "duplicate topic registration at %d:%d-%d", existing.Pos.Line, existing.Pos.Column, endCol))
+			pctx.errors.add(errorf(node, "duplicate subscription registration at %d:%d-%d", existing.Pos.Line, existing.Pos.Column, endCol))
 			return
 		}
 	}
@@ -756,16 +760,19 @@ func parseSubscriptionDecl(pctx *parseContext, node *ast.CallExpr) {
 	pctx.module.Decls = append(pctx.module.Decls, decl)
 }
 
-// parseCommentsAndDirectivesForCall finds the variable declaration that we are currently in so we can look for attached comments and directives
-func parseCommentsAndDirectivesForCall(pctx *parseContext, stack []ast.Node) (comments []string, directives []directive) {
-	var variableDecl *ast.GenDecl
+// varDeclForCall finds the variable being set in the stack
+func varDeclForStack(stack []ast.Node) (varDecl *ast.GenDecl, ok bool) {
 	for i := len(stack) - 1; i >= 0; i-- {
 		if decl, ok := stack[i].(*ast.GenDecl); ok && decl.Tok == token.VAR {
-			variableDecl = decl
-			break
+			return decl, true
 		}
 	}
-	if variableDecl == nil || variableDecl.Doc == nil {
+	return nil, false
+}
+
+// commentsAndDirectivesForVar extracts comments and directives from a variable declaration
+func commentsAndDirectivesForVar(pctx *parseContext, variableDecl *ast.GenDecl, stack []ast.Node) (comments []string, directives []directive) {
+	if variableDecl.Doc == nil {
 		return []string{}, []directive{}
 	}
 	directives, schemaErr := parseDirectives(stack[len(stack)-1], fset, variableDecl.Doc)
@@ -1668,6 +1675,7 @@ type parseContext struct {
 	enumInterfaces enumInterfaces
 	errors         errorSet
 	schema         *schema.Schema
+	topicsByPos    map[schema.Position]*schema.Topic
 }
 
 func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schema.Schema, out *analyzers.ExtractResult) *parseContext {
@@ -1682,6 +1690,7 @@ func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schem
 		enumInterfaces: enumInterfaces{},
 		errors:         errorSet{},
 		schema:         sch,
+		topicsByPos:    map[schema.Position]*schema.Topic{},
 	}
 }
 
