@@ -387,7 +387,7 @@ func validateCallExpr(pctx *parseContext, node *ast.CallExpr) {
 		lhsIsExternal = true
 	}
 
-	if lhsType, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.X).(*types.Named); ok && lhsType.Obj().Pkg().Path() == ftlPkgPath {
+	if lhsType, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.X).(*types.Named); ok && lhsType.Obj().Pkg() != nil && lhsType.Obj().Pkg().Path() == ftlPkgPath {
 		// Calling a function on an FTL type
 		if lhsType.Obj().Name() == ftlTopicHandleTypeName && selExpr.Sel.Name == "Publish" {
 			if lhsIsExternal {
