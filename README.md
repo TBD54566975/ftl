@@ -76,3 +76,4 @@ ftl call alice.echo '{name: "Bob"}'
 | [LICENSE](./LICENSE)                       | Apache License, Version 2.0                                                   |
 hi
 hi
+hi
