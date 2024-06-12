@@ -949,9 +949,8 @@ func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives
 		return
 	}
 	typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
-	if typeInterface, ok := typ.Underlying().(*types.Interface); ok {
+	if _, ok := typ.Underlying().(*types.Interface); ok {
 		// Type enums should not count as variants of themselves
-		pctx.enumInterfaces[t.Name.Name] = typeInterface
 		return
 	}
 
