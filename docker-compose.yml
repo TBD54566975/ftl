@@ -1,6 +1,22 @@
 version: "3.1"
 
 services:
+  otel-collector:
+    profiles:
+      - infra
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./otel-local-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+  localstack:
+    image: localstack/localstack
+    ports:
+      - 4566:4566
+    environment:
+      SERVICES: secretsmanager
+      DEBUG: 1
   db:
     image: postgres
     command: postgres
@@ -20,19 +36,4 @@ services:
       timeout: 60s
       retries: 60
       start_period: 80s
-  otel-collector:
-    profiles:
-      - infra
-    image: otel/opentelemetry-collector-contrib
-    volumes:
-      - ./otel-local-config.yaml:/etc/otelcol-contrib/config.yaml
-    ports:
-      - 4317:4317 # OTLP gRPC receiver
-      - 4318:4318 # OTLP http receiver
-  localstack:
-    image: localstack/localstack
-    ports:
-      - 4566:4566
-    environment:
-      SERVICES: secretsmanager
-      DEBUG: 1
+  
