@@ -1,6 +1,25 @@
 version: "3.1"
 
 services:
+  db:
+    image: postgres
+    command: postgres
+    user: postgres
+    # For local debugging
+    # -c logging_collector=on -c log_destination=stderr -c log_directory=/logs -c log_statement=all
+    # volumes:
+    #   - ./logs:/logs
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: secret
+    ports:
+      - 15432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 60s
+      retries: 60
+      start_period: 80s
   otel-collector:
     profiles:
       - infra
@@ -17,22 +36,3 @@ services:
     environment:
       SERVICES: secretsmanager
       DEBUG: 1
-  db:
-    image: postgres
-    command: postgres
-    user: postgres
-    # For local debugging
-    # -c logging_collector=on -c log_destination=stderr -c log_directory=/logs -c log_statement=all
-    # volumes:
-    #   - ./logs:/logs
-    restart: always
-    environment:
-      POSTGRES_PASSWORD: secret
-    ports:
-      - 54320:5432
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
-      interval: 1s
-      timeout: 60s
-      retries: 60
-      start_period: 80s

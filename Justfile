@@ -56,7 +56,7 @@ build +tools: build-protos build-zips build-frontend
 build-backend:
   just build ftl ftl-controller ftl-runner
 
-export DATABASE_URL := "postgres://postgres:secret@localhost:54320/ftl?sslmode=disable"
+export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
 
 # Explicitly initialise the database
 init-db:
