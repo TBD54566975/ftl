@@ -72,7 +72,9 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	w := NewWatcher()
 
 	// Initiate a module
-	err := ftl("init", "go", dir, "one")
+	err := git("init", dir)
+	assert.NoError(t, err)
+	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 
 	events, topic := startWatching(ctx, t, w, dir)
@@ -105,7 +107,9 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	// Initiate a module
-	err := ftl("init", "go", dir, "one")
+	err := git("init", dir)
+	assert.NoError(t, err)
+	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 
 	one := loadModule(t, dir, "one")
