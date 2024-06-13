@@ -9,3 +9,11 @@ const (
 	Value2 MyEnum = "Value2"
 )
 ```
+---
+//ftl:enum
+type ${1:Enum} string
+
+const (
+	${2:Value1} ${1:Enum} = "${2:Value1}"
+	${3:Value2} ${1:Enum} = "${3:Value2}"
+)

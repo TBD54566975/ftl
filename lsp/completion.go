@@ -18,68 +18,35 @@ var enumTypeCompletionDocs string
 //go:embed markdown/completion/enumValue.md
 var enumValueCompletionDocs string
 
-var (
-	snippetKind      = protocol.CompletionItemKindSnippet
-	insertTextFormat = protocol.InsertTextFormatSnippet
-
-	verbCompletionItem = protocol.CompletionItem{
-		Label:  "ftl:verb",
-		Kind:   &snippetKind,
-		Detail: stringPtr("FTL Verb"),
-		InsertText: stringPtr(`type ${1:Request} struct {}
-type ${2:Response} struct{}
-
-//ftl:verb
-func ${3:Name}(ctx context.Context, req ${1:Request}) (${2:Response}, error) {
-	return ${2:Response}{}, nil
-}`),
-		Documentation: &protocol.MarkupContent{
-			Kind:  protocol.MarkupKindMarkdown,
-			Value: verbCompletionDocs,
-		},
-		InsertTextFormat: &insertTextFormat,
-	}
-
-	enumTypeCompletionItem = protocol.CompletionItem{
-		Label:  "ftl:enum (sum type)",
-		Kind:   &snippetKind,
-		Detail: stringPtr("FTL Enum (sum type)"),
-		InsertText: stringPtr(`//ftl:enum
-type ${1:Enum} string
-
-const (
-	${2:Value1} ${1:Enum} = "${2:Value1}"
-	${3:Value2} ${1:Enum} = "${3:Value2}"
-)`),
-		Documentation: &protocol.MarkupContent{
-			Kind:  protocol.MarkupKindMarkdown,
-			Value: enumTypeCompletionDocs,
-		},
-		InsertTextFormat: &insertTextFormat,
-	}
-
-	enumValueCompletionItem = protocol.CompletionItem{
-		Label:  "ftl:enum (value)",
-		Kind:   &snippetKind,
-		Detail: stringPtr("FTL enum (value type)"),
-		InsertText: stringPtr(`//ftl:enum
-type ${1:Type} interface { ${2:interface}() }
-
-type ${3:Value} struct {}
-func (${3:Value}) ${2:interface}() {}
-`),
-		Documentation: &protocol.MarkupContent{
-			Kind:  protocol.MarkupKindMarkdown,
-			Value: enumValueCompletionDocs,
-		},
-		InsertTextFormat: &insertTextFormat,
-	}
-)
-
 var completionItems = []protocol.CompletionItem{
-	verbCompletionItem,
-	enumTypeCompletionItem,
-	enumValueCompletionItem,
+	completionItem("ftl:verb", "FTL Verb", verbCompletionDocs),
+	completionItem("ftl:enum (sum type)", "FTL Enum (sum type)", enumTypeCompletionDocs),
+	completionItem("ftl:enum (value)", "FTL Enum (value type)", enumValueCompletionDocs),
+}
+
+func completionItem(label, detail, markdown string) protocol.CompletionItem {
+	snippetKind := protocol.CompletionItemKindSnippet
+	insertTextFormat := protocol.InsertTextFormatSnippet
+
+	// Split markdown by "---"
+	// First half is completion docs, second half is insert text
+	parts := strings.Split(markdown, "---")
+	if len(parts) != 2 {
+		panic("invalid markdown. must contain exactly one '---' to separate completion docs from insert text")
+	}
+
+	insertText := strings.TrimSpace(parts[1])
+	return protocol.CompletionItem{
+		Label:      label,
+		Kind:       &snippetKind,
+		Detail:     &detail,
+		InsertText: &insertText,
+		Documentation: &protocol.MarkupContent{
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: strings.TrimSpace(parts[0]),
+		},
+		InsertTextFormat: &insertTextFormat,
+	}
 }
 
 func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
