@@ -35,6 +35,7 @@ var (
 	}
 
 	Lexer = lexer.MustSimple([]lexer.SimpleRule{
+		{Name: "EOL", Pattern: `[\r\n]`},
 		{Name: "Whitespace", Pattern: `\s+`},
 		{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
 		{Name: "Comment", Pattern: `//.*`},
@@ -45,7 +46,7 @@ var (
 
 	commonParserOptions = []participle.Option{
 		participle.Lexer(Lexer),
-		participle.Elide("Whitespace"),
+		participle.Elide("Whitespace", "EOL"),
 		participle.Unquote(),
 		// Increase lookahead to allow comments to be attached to the next token.
 		participle.UseLookahead(participle.MaxLookahead),
