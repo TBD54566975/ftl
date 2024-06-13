@@ -675,6 +675,55 @@ func TestParsing(t *testing.T) {
 				`5:24-24: unknown reference "test.topicB", is the type annotated and exported?`,
 			},
 		},
+		{name: "Cron",
+			input: `
+				module test {
+					verb A(Unit) Unit
+						+cron Wed
+					verb B(Unit) Unit
+						+cron */10 * * * * * *
+					verb C(Unit) Unit
+						+cron 12h
+				}
+			`,
+			expected: &Schema{
+				Modules: []*Module{{
+					Name: "test",
+					Decls: []Decl{
+						&Verb{
+							Name:     "A",
+							Request:  &Unit{Unit: true},
+							Response: &Unit{Unit: true},
+							Metadata: []Metadata{
+								&MetadataCronJob{
+									Cron: "Wed",
+								},
+							},
+						},
+						&Verb{
+							Name:     "B",
+							Request:  &Unit{Unit: true},
+							Response: &Unit{Unit: true},
+							Metadata: []Metadata{
+								&MetadataCronJob{
+									Cron: "*/10 * * * * * *",
+								},
+							},
+						},
+						&Verb{
+							Name:     "C",
+							Request:  &Unit{Unit: true},
+							Response: &Unit{Unit: true},
+							Metadata: []Metadata{
+								&MetadataCronJob{
+									Cron: "12h",
+								},
+							},
+						},
+					},
+				}},
+			},
+		},
 	}
 
 	for _, test := range tests {
